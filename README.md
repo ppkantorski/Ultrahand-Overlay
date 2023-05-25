@@ -59,10 +59,10 @@ command2 argument1 argument2 argument3
 
 # Available Commands
 
-- `create_directory <directory_name>`: Creates a new directory with the specified name.
-- `copy_file <source_path> <destination_path>`: Copies a file from the source path to the destination path.
-- `delete_file <file_path>`: Deletes the file at the specified path.
-- `move_file <source_path> <destination_path>`: Moves a file from the source path to the destination path.
+- `mkdir <directory_name>`: Creates a new directory with the specified name.
+- `copy <source_path> <destination_path>`: Copies a file from the source path to the destination path.
+- `delete <file_path>`: Deletes the file at the specified path.
+- `move <source_path> <destination_path>`: Moves a file from the source path to the destination path.
 
 You can configure these commands in the `config.ini` file by specifying them under the corresponding options. Make sure to provide the necessary arguments as described for each command.
 
