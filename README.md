@@ -45,10 +45,12 @@ The program reads options and commands from an INI file named `config.ini`, whic
 The structure of the INI file should follow the format:
 
 [Option 1]
+
 command1 argument1 argument2
 command2 argument1 argument2
 
 [Option 2]
+
 command1 argument1
 command2 argument1 argument2 argument3
 
