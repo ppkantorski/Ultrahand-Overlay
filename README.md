@@ -43,7 +43,7 @@ To compile and run the program, you need to have the following dependencies inst
 The program reads options and commands from an INI file named `config.ini`, which should be located at `/config/ultra-hand/config.ini`. If the file does not exist, the program will create a default `config.ini` file with some sample options and commands.
 
 The structure of the INI file should follow the format:
-
+```
 [Option 1]
 
 command1 argument1 argument2
@@ -53,6 +53,7 @@ command2 argument1 argument2
 
 command1 argument1
 command2 argument1 argument2 argument3
+```
 
 - Each option should be defined within square brackets `[Option]`.
 - Each command should be specified on a new line under the corresponding option.
