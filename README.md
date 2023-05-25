@@ -1,4 +1,4 @@
-# Ultra Hand Overlay (System Manager)
+# Ultra Hand Overlay (Systems Manager)
 
 The Ultra Hand File Management System is a C++ program that provides a user-friendly main menu overlay for performing various file operations. It is designed to run on various platforms, including the Nintendo Switch, and utilizes the TESLA library to create an interactive menu interface.
 
