@@ -40,7 +40,7 @@ To compile and run the program, you need to have the following dependencies inst
 
 ## Configuration
 
-The program reads options and commands from an INI file named `config.ini`. If the file does not exist, it creates a default INI file with some sample options and commands.
+The program reads options and commands from an INI file named `config.ini`, which should be located at `/config/ultra-hand/config.ini`. If the file does not exist, the program will create a default `config.ini` file with some sample options and commands.
 
 The structure of the INI file should follow the format:
 
@@ -52,10 +52,19 @@ command2 argument1 argument2
 command1 argument1
 command2 argument1 argument2 argument3
 
-
 - Each option should be defined within square brackets `[Option]`.
 - Each command should be specified on a new line under the corresponding option.
 - Arguments for each command should be separated by spaces.
+
+# Available Commands
+
+- `create_directory <directory_name>`: Creates a new directory with the specified name.
+- `copy_file <source_path> <destination_path>`: Copies a file from the source path to the destination path.
+- `delete_file <file_path>`: Deletes the file at the specified path.
+- `move_file <source_path> <destination_path>`: Moves a file from the source path to the destination path.
+
+You can configure these commands in the `config.ini` file by specifying them under the corresponding options. Make sure to provide the necessary arguments as described for each command.
+
 
 ## Contributing
 
