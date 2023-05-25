@@ -1,6 +1,6 @@
 # Ultra Hand Overlay (System Manager)
 
-The Ultra Hand File Management System is a C++ program that provides a user-friendly main menu overlay for performing various file operations. It utilizes the TESLA library to create an interactive menu interface on supported platforms.
+The Ultra Hand File Management System is a C++ program that provides a user-friendly main menu overlay for performing various file operations. It is designed to run on various platforms, including the Nintendo Switch, and utilizes the TESLA library to create an interactive menu interface.
 
 ## Features
 
@@ -8,6 +8,15 @@ The Ultra Hand File Management System is a C++ program that provides a user-frie
 - Copy files
 - Delete files
 - Move files
+
+## Nintendo Switch Compatibility
+The Ultra Hand File Management System is compatible with the Nintendo Switch, allowing users to manage files and perform file operations directly on their Switch console.
+
+To run the Ultra Hand File Management System on the Nintendo Switch, you need to have the necessary homebrew environment set up on your console. This typically involves running custom firmware or using homebrew launcher software. Once you have the homebrew environment set up, you can transfer the compiled executable file to your Switch and launch it using the homebrew launcher.
+
+Please note that running homebrew software on your Nintendo Switch may void your warranty and can carry certain risks. Ensure that you understand the implications and follow the appropriate guidelines and precautions when using homebrew software.
+
+
 
 ## Getting Started
 
