@@ -1,7 +1,7 @@
 # Ultrahand Overlay (HOS 16.0.0+)
 ![Alt Text](https://www.pcinvasion.com/wp-content/uploads/2023/05/How-to-Get-and-Use-Ultrahand-Ability-in-Tears-of-the-Kingdom.jpg)
 
-Ultrahand Overlay is a C++ program that provides a user-friendly main menu overlay for performing various file operations. It is designed to run on various platforms, including the Nintendo Switch, and utilizes the TESLA library to create an interactive menu interface.
+Ultrahand Overlay is a C++ program that provides a user-friendly main menu overlay for performing various file operations. It is designed to run on various platforms, including the Nintendo Switch, and utilizes the TESLA library to create an interactive menu interface. It allows you to perform actions such as creating directories, copying files, renaming files, moving directories, deleting files, and parsing INI files.
 
 ## Features
 
