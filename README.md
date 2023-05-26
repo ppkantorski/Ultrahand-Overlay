@@ -5,10 +5,14 @@ Ultrahand Overlay is a C++ program that provides a user-friendly main menu overl
 
 ## Features
 
-- Create directories
-- Copy files
-- Delete files
-- Move files
+Ultrahand is a command-line tool that provides functionality for managing files and directories on an SD card. It offers the following features:
+
+- Create directories: You can use Ultrahand to create directories on your SD card. Simply specify the directory path, and Ultrahand will create it for you.
+- Copy files: Ultrahand allows you to copy files from one location to another on your SD card. Just provide the source file path and the destination file path, and Ultrahand will handle the file copying process.
+- Delete files: With Ultrahand, you can easily delete files from your SD card. Just specify the file path, and Ultrahand will remove the file for you.
+- Move files: Ultrahand enables you to move files from one directory to another on your SD card. Provide the file path and the destination directory path, and Ultrahand will handle the file movement for you.
+
+
 
 ## Nintendo Switch Compatibility
 The Ultrahand File Management System is compatible with the Nintendo Switch, allowing users to manage files and perform file operations directly on their Switch console.
@@ -31,39 +35,62 @@ To compile and run the program, you need to have the following dependencies inst
 
 ### Usage
 
-1. After building the program, the executable file will be generated.
+To use Ultrahand, follow these steps:
 
-2. Transfer the executable file to your target platform or emulator.
+1. Create a directory named ultrahand in the config folder on your SD card.
+2. Place the config.ini file in the ultrahand directory. This file contains the configuration options for Ultrahand.
+3. Launch Ultrahand by executing the compiled binary.
 
-3. Run the executable to launch the Ultrahand File Management System.
+## Configuration Options
 
-4. Use the main menu interface to navigate and select file operations.
+The config.ini file contains multiple sections, each defining a set of commands that can be executed. The sections are enclosed in square brackets [ ], and the commands are listed below each section.
 
-## Configuration
-
-The program reads options and commands from an INI file named `config.ini`, which should be located at `/config/ultrahand/config.ini`. If the file does not exist, the program will create a default `config.ini` file with some sample options and commands.
-
-The structure of the INI file should follow the format:
+Here's an example of the config.ini file:
 ```
-[Option 1]
-command1 argument1 argument2
-command2 argument1 argument2
+[make directories]
+mkdir /config/ultrahand/example1/
+mkdir /config/ultrahand/example2/
 
-[Option 2]
-command1 argument1
-command2 argument1 argument2 argument3
+[copy files]
+copy /config/ultrahand/config.ini /config/ultrahand/example1/
+copy /config/ultrahand/config.ini /config/ultrahand/example2/
+
+[rename files]
+rename /config/ultrahand/example1/config.ini /config/ultrahand/example1/configX.ini
+rename /config/ultrahand/example2/config.ini /config/ultrahand/example2/configX.ini
+
+[move directories]
+move /config/ultrahand/example1/ /config/ultrahand/example3/
+move /config/ultrahand/example2/ /config/ultrahand/example4/
+
+[delete files]
+delete /config/ultrahand/example1/config.ini
+delete /config/ultrahand/example2/config.ini
+
+[delete directories]
+delete /config/ultrahand/example1/
+delete /config/ultrahand/example2/
+delete /config/ultrahand/example3/
+delete /config/ultrahand/example4/
+
+[parse ini file]
+copy /bootloader/hekate_ipl.ini /config/ultrahand/
+parse-ini /config/ultrahand/hekate_ipl.ini 'L4T Ubuntu Bionic' r2p_action working
 ```
+You can add your own sections and commands to customize the actions performed by Ultrahand.
 
-- Each option should be defined within square brackets `[Option]`.
-- Each command should be specified on a new line under the corresponding option.
-- Arguments for each command should be separated by spaces.
+Note: The paths specified in the commands should be relative to the SD card root directory and should start with /.
 
-# Available Commands
+### Command Reference
 
-- `mkdir <directory_name>`: Creates a new directory with the specified name.
-- `copy <source_path> <destination_path>`: Copies a file from the source path to the destination path.
-- `delete <file_path>`: Deletes the file at the specified path.
-- `move <source_path> <destination_path>`: Moves a file from the source path to the destination path.
+Ultrahand supports the following commands:
+
+- make or mkdir: Creates a directory. Usage: make <directory_path>
+- copy or cp: Copies a file. Usage: copy <source_file_path> <destination_file_path>
+- delete or del: Deletes a file. Usage: delete <file_path>
+- move: Moves a file to a directory. Usage: move <file_path> <destination_directory_path>
+- rename or mv: Renames a file. Usage: rename <file_path> <new_file_name>
+- parse-ini: Parses an INI file and updates a section with a desired key-value pair. Usage: parse-ini <file_to_parse> <desired_section> <desired_key> <desired_value>
 
 You can configure these commands in the `config.ini` file by specifying them under the corresponding options. Make sure to provide the necessary arguments as described for each command.
 
