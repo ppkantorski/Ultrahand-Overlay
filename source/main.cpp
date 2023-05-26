@@ -49,20 +49,22 @@ void renameFile(const std::string& fileToRename, const std::string& newFileName)
 
  // Perform copy action from "fromFile" to "toDirectory"
 void copyFile(const std::string& fromFile, const std::string& toDirectory) {
-          
     struct stat fileInfo;
     if (stat(fromFile.c_str(), &fileInfo) == 0 && S_ISREG(fileInfo.st_mode)) {
         // Source file exists and is a regular file
-          
+
         // Extract the source file name from the file path
         size_t lastSlashPos = fromFile.find_last_of('/');
         std::string fileName = (lastSlashPos != std::string::npos)
                                    ? fromFile.substr(lastSlashPos + 1)
                                    : fromFile;
-          
+
+        // Create the destination directory if it doesn't exist
+        createDirectory(toDirectory);
+
         // Create the destination file path
         std::string toFile = toDirectory + "/" + fileName;
-          
+
         FILE* srcFile = fopen(fromFile.c_str(), "rb");
         FILE* destFile = fopen(toFile.c_str(), "wb");
         if (srcFile && destFile) {
@@ -81,6 +83,7 @@ void copyFile(const std::string& fromFile, const std::string& toDirectory) {
         // Source file doesn't exist or is not a regular file
     }
 }
+
 
 
 void deleteFile(const std::string& fileToDelete) {
@@ -160,7 +163,15 @@ std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadO
     if (!configFile) {
         // Write the default INI file
         FILE* configFileOut = fopen(configIniPath.c_str(), "w");
-        fprintf(configFileOut, "[make directory]\nmkdir /config/ultra-hand/test/\nmkdir /config/ultra-hand/test2/\n[copy function]\ncopy /config/ultra-hand/config.ini /config/\ncopy /config/ultra-hand/config.ini /\n[delete function]\ndelete /config/config.ini\ndelete /config.ini");
+        fprintf(configFileOut, "[make directory]\n"
+                               "mkdir /config/ultra-hand/example1/\n"
+                               "mkdir /config/ultra-hand/example2/\n"
+                               "[copy function]\n"
+                               "copy /config/ultra-hand/config.ini /config/ultra-hand/example1/\n"
+                               "copy /config/ultra-hand/config.ini /config/ultra-hand/example2/\n"
+                               "[delete function]\n"
+                               "delete /config/ultra-hand/example1/config.ini\n"
+                               "delete /config/ultra-hand/example2/config.ini");
         fclose(configFileOut);
         configFile = fopen(configIniPath.c_str(), "r");
     }
