@@ -1,6 +1,7 @@
 #define TESLA_INIT_IMPL
 #include <tesla.hpp>
 #include <sys/stat.h>
+#include <dirent.h>
 
 Result Hinted = 1;
 
@@ -84,13 +85,77 @@ void copyFile(const std::string& fromFile, const std::string& toDirectory) {
     }
 }
 
+bool isDirectory(const std::string& path) {
+    struct stat pathStat;
+    if (stat(path.c_str(), &pathStat) == 0) {
+        return S_ISDIR(pathStat.st_mode);
+    }
+    return false;
+}
 
+bool deleteDirectory(const std::string& path) {
+    if (!isDirectory(path)) {
+        // Not a directory
+        return false;
+    }
 
-void deleteFile(const std::string& fileToDelete) {
-    if (std::remove(fileToDelete.c_str()) == 0) {
-        // Delete successful
+    DIR* dir = opendir(path.c_str());
+    if (dir == nullptr) {
+        // Error opening directory
+        return false;
+    }
+
+    struct dirent* entry;
+    while ((entry = readdir(dir)) != nullptr) {
+        std::string entryName = entry->d_name;
+        if (entryName != "." && entryName != "..") {
+            std::string entryPath = path + "/" + entryName;
+            if (isDirectory(entryPath)) {
+                if (!deleteDirectory(entryPath)) {
+                    // Error deleting subdirectory
+                    closedir(dir);
+                    return false;
+                }
+            } else {
+                if (std::remove(entryPath.c_str()) != 0) {
+                    // Error deleting file
+                    closedir(dir);
+                    return false;
+                }
+            }
+        }
+    }
+
+    closedir(dir);
+
+    if (rmdir(path.c_str()) == 0) {
+        // Deletion successful
+        return true;
+    }
+
+    return false;
+}
+
+void deleteFile(const std::string& pathToDelete) {
+    struct stat pathStat;
+    if (stat(pathToDelete.c_str(), &pathStat) == 0) {
+        if (S_ISREG(pathStat.st_mode)) {
+            if (std::remove(pathToDelete.c_str()) == 0) {
+                // Deletion successful
+            } else {
+                // Error deleting the file
+            }
+        } else if (S_ISDIR(pathStat.st_mode)) {
+            if (deleteDirectory(pathToDelete)) {
+                // Deletion successful
+            } else {
+                // Error deleting the directory
+            }
+        } else {
+            // Unsupported file type or invalid path
+        }
     } else {
-        // Error deleting the file
+        // Error accessing the file/directory
     }
 }
 
