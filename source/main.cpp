@@ -166,12 +166,23 @@ std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadO
         fprintf(configFileOut, "[make directory]\n"
                                "mkdir /config/ultra-hand/example1/\n"
                                "mkdir /config/ultra-hand/example2/\n"
-                               "[copy function]\n"
+                               "[copy file]\n"
                                "copy /config/ultra-hand/config.ini /config/ultra-hand/example1/\n"
                                "copy /config/ultra-hand/config.ini /config/ultra-hand/example2/\n"
-                               "[delete function]\n"
+                               "[rename file]\n"
+                               "rename /config/ultra-hand/example1/config.ini /config/ultra-hand/example1/configX.ini\n"
+                               "rename /config/ultra-hand/example2/config.ini /config/ultra-hand/example2/configX.ini\n"
+                               "[move directory]\n"
+                               "move /config/ultra-hand/example1/ /config/ultra-hand/example3/\n"
+                               "move /config/ultra-hand/example2/ /config/ultra-hand/example4/\n"
+                               "[delete file]\n"
                                "delete /config/ultra-hand/example1/config.ini\n"
-                               "delete /config/ultra-hand/example2/config.ini");
+                               "delete /config/ultra-hand/example2/config.ini\n"
+                               "[delete directories]\n"
+                               "delete /config/ultra-hand/example1/\n"
+                               "delete /config/ultra-hand/example2/\n"
+                               "delete /config/ultra-hand/example3/\n"
+                               "delete /config/ultra-hand/example4/");
         fclose(configFileOut);
         configFile = fopen(configIniPath.c_str(), "r");
     }
