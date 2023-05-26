@@ -12,6 +12,85 @@ void createDirectory(const std::string& directoryPath) {
     }
 }
 
+void moveFile(const std::string& fromFile, const std::string& toDirectory) {
+    struct stat fileInfo;
+    if (stat(fromFile.c_str(), &fileInfo) == 0 && S_ISREG(fileInfo.st_mode)) {
+        // Source file exists and is a regular file
+
+        // Extract the source file name from the file path
+        size_t lastSlashPos = fromFile.find_last_of('/');
+        std::string fileName = (lastSlashPos != std::string::npos)
+                                   ? fromFile.substr(lastSlashPos + 1)
+                                   : fromFile;
+
+        // Create the destination file path
+        std::string toFile = toDirectory + "/" + fileName;
+
+        if (std::rename(fromFile.c_str(), toFile.c_str()) == 0) {
+            // Move successful
+        } else {
+            // Error moving the file
+        }
+    } else {
+        // Source file doesn't exist or is not a regular file
+    }
+}
+
+void renameFile(const std::string& fileToRename, const std::string& newFileName) {
+    std::string directoryPath = fileToRename.substr(0, fileToRename.find_last_of('/'));
+    std::string newFilePath = directoryPath + "/" + newFileName;
+
+    if (std::rename(fileToRename.c_str(), newFilePath.c_str()) == 0) {
+        // Rename successful
+    } else {
+        // Error renaming the file
+    }
+}
+
+ // Perform copy action from "fromFile" to "toDirectory"
+void copyFile(const std::string& fromFile, const std::string& toDirectory) {
+          
+    struct stat fileInfo;
+    if (stat(fromFile.c_str(), &fileInfo) == 0 && S_ISREG(fileInfo.st_mode)) {
+        // Source file exists and is a regular file
+          
+        // Extract the source file name from the file path
+        size_t lastSlashPos = fromFile.find_last_of('/');
+        std::string fileName = (lastSlashPos != std::string::npos)
+                                   ? fromFile.substr(lastSlashPos + 1)
+                                   : fromFile;
+          
+        // Create the destination file path
+        std::string toFile = toDirectory + "/" + fileName;
+          
+        FILE* srcFile = fopen(fromFile.c_str(), "rb");
+        FILE* destFile = fopen(toFile.c_str(), "wb");
+        if (srcFile && destFile) {
+            char buffer[1024];
+            size_t bytesRead;
+            while ((bytesRead = fread(buffer, 1, sizeof(buffer), srcFile)) > 0) {
+                fwrite(buffer, 1, bytesRead, destFile);
+            }
+            fclose(srcFile);
+            fclose(destFile);
+            // Copy successful
+        } else {
+            // Error opening files or performing copy action
+        }
+    } else {
+        // Source file doesn't exist or is not a regular file
+    }
+}
+
+
+void deleteFile(const std::string& fileToDelete) {
+    if (std::remove(fileToDelete.c_str()) == 0) {
+        // Delete successful
+    } else {
+        // Error deleting the file
+    }
+}
+
 void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& commands) {
     for (const auto& command : commands) {
         // Check the command and perform the appropriate action
@@ -23,62 +102,26 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
         // Get the command name (first part of the command)
         std::string commandName = command[0];
 
-        if (commandName == "mkdir") {
+        if (commandName == "make" || commandName == "mkdir") {
             std::string toDirectory = "sdmc:" + command[1];
             createDirectory(toDirectory);
 
             // Perform actions based on the command name
-        } else if (commandName == "copy") {
+        } else if (commandName == "copy" || commandName == "cp") {
             // Copy command
             if (command.size() >= 3) {
-                std::string fromFile = "sdmc:" + command[1];
-                std::string toDirectory = "sdmc:" + command[2];
-                // Perform copy action from "fromFile" to "toDirectory"
-
-                struct stat fileInfo;
-                if (stat(fromFile.c_str(), &fileInfo) == 0 && S_ISREG(fileInfo.st_mode)) {
-                    // Source file exists and is a regular file
-
-                    // Extract the source file name from the file path
-                    size_t lastSlashPos = fromFile.find_last_of('/');
-                    std::string fileName = (lastSlashPos != std::string::npos)
-                                               ? fromFile.substr(lastSlashPos + 1)
-                                               : fromFile;
-
-                    // Create the destination file path
-                    std::string toFile = toDirectory + "/" + fileName;
-
-                    FILE* srcFile = fopen(fromFile.c_str(), "rb");
-                    FILE* destFile = fopen(toFile.c_str(), "wb");
-                    if (srcFile && destFile) {
-                        char buffer[1024];
-                        size_t bytesRead;
-                        while ((bytesRead = fread(buffer, 1, sizeof(buffer), srcFile)) > 0) {
-                            fwrite(buffer, 1, bytesRead, destFile);
-                        }
-                        fclose(srcFile);
-                        fclose(destFile);
-                        // Copy successful
-                    } else {
-                        // Error opening files or performing copy action
-                    }
-                } else {
-                    // Source file doesn't exist or is not a regular file
-                }
+                std::string fromPath = "sdmc:" + command[1];
+                std::string toPath = "sdmc:" + command[2];
+                copyFile(fromPath, toPath);
             } else {
                 // Invalid command format, display an error message or handle it accordingly
                 // ...
             }
-        } else if (commandName == "delete") {
+        } else if (commandName == "delete" || commandName == "del") {
             // Delete command
             if (command.size() >= 2) {
                 std::string fileToDelete = "sdmc:" + command[1];
-                // Perform delete action for "fileToDelete"
-                if (std::remove(fileToDelete.c_str()) == 0) {
-                    // Delete successful
-                } else {
-                    // Error deleting the file
-                }
+                deleteFile(fileToDelete);
             } else {
                 // Invalid command format, display an error message or handle it accordingly
                 // ...
@@ -88,29 +131,17 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
             if (command.size() >= 3) {
                 std::string fromFile = "sdmc:" + command[1];
                 std::string toDirectory = "sdmc:" + command[2];
-                // Perform move action from "fromFile" to "toDirectory"
-
-                struct stat fileInfo;
-                if (stat(fromFile.c_str(), &fileInfo) == 0 && S_ISREG(fileInfo.st_mode)) {
-                    // Source file exists and is a regular file
-
-                    // Extract the source file name from the file path
-                    size_t lastSlashPos = fromFile.find_last_of('/');
-                    std::string fileName = (lastSlashPos != std::string::npos)
-                                               ? fromFile.substr(lastSlashPos + 1)
-                                               : fromFile;
-
-                    // Create the destination file path
-                    std::string toFile = toDirectory + "/" + fileName;
-
-                    if (std::rename(fromFile.c_str(), toFile.c_str()) == 0) {
-                        // Move successful
-                    } else {
-                        // Error moving the file
-                    }
-                } else {
-                    // Source file doesn't exist or is not a regular file
-                }
+                moveFile(fromFile, toDirectory);
+            } else {
+                // Invalid command format, display an error message or handle it accordingly
+                // ...
+            }
+        } else if (commandName == "rename" || commandName == "mv") {
+            // Rename command
+            if (command.size() >= 3) {
+                std::string fileToRename = "sdmc:" + command[1];
+                std::string newFileName = "sdmc:" + command[2];
+                renameFile(fileToRename, newFileName);
             } else {
                 // Invalid command format, display an error message or handle it accordingly
                 // ...
