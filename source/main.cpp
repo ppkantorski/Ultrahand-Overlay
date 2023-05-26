@@ -94,6 +94,8 @@ void deleteFile(const std::string& fileToDelete) {
     }
 }
 
+
+
 void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& commands) {
     for (const auto& command : commands) {
         // Check the command and perform the appropriate action
@@ -149,6 +151,18 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                 // Invalid command format, display an error message or handle it accordingly
                 // ...
             }
+       // } else if (commandName == "parse") {
+       //     // Rename command
+       //     if (command.size() >= 3) {
+       //         std::string fileToParse = "sdmc:" + command[1];
+       //         std::string desiredKey = command[2];
+       //         std::string desiredValue = command[3];
+       //         parseIniFile(fileToRename, newFileName); // modify value. ex. key test in ini, old value false becomes true and ini is constructed 
+       //     } else {
+       //         // Invalid command format, display an error message or handle it accordingly
+       //         // ...
+       //     }
+       //     
         } else {
             // Unknown command, do nothing or display an error message
             // ...
@@ -237,7 +251,7 @@ public:
     MainMenu() {}
 
     virtual tsl::elm::Element* createUI() override {
-        auto rootFrame = new tsl::elm::OverlayFrame("Ultra Hand", APP_VERSION);
+        auto rootFrame = new tsl::elm::OverlayFrame("Ultrahand", APP_VERSION);
         auto list = new tsl::elm::List(6);
 
         // Create the directory if it doesn't exist
