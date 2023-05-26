@@ -243,7 +243,7 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                 // Invalid command format, display an error message or handle it accordingly
                 // ...
             }
-        } else if (commandName == "parse_ini") {
+        } else if (commandName == "parse-ini") {
             // Parse command
             if (command.size() >= 5) {
                 std::string fileToParse = "sdmc:" + command[1];
@@ -300,7 +300,7 @@ std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadO
                                "delete /config/ultrahand/example4/\n"
                                "[parse ini file]\n"
                                "copy /bootloader/hekate_ipl.ini /config/ultrahand/\n"
-                               "parse_ini /config/ultrahand/hekate_ipl.ini 'L4T Ubuntu Bionic' r2p_action working");
+                               "parse-ini /config/ultrahand/hekate_ipl.ini 'L4T Ubuntu Bionic' r2p_action working");
         fclose(configFileOut);
         configFile = fopen(configIniPath.c_str(), "r");
     }
