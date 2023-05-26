@@ -95,6 +95,98 @@ void deleteFile(const std::string& fileToDelete) {
 }
 
 
+// Trim leading and trailing whitespaces from a string
+std::string trim(const std::string& str) {
+    size_t first = str.find_first_not_of(' ');
+    size_t last = str.find_last_not_of(' ');
+    if (first == std::string::npos || last == std::string::npos) {
+        return "";
+    }
+    return str.substr(first, last - first + 1);
+}
+
+// Check if a string starts with a given prefix
+bool startsWith(const std::string& str, const std::string& prefix) {
+    return str.size() >= prefix.size() && str.compare(0, prefix.size(), prefix) == 0;
+}
+
+std::string removeQuotes(const std::string& str) {
+    std::size_t firstQuote = str.find_first_of('\'');
+    std::size_t lastQuote = str.find_last_of('\'');
+    if (firstQuote != std::string::npos && lastQuote != std::string::npos && firstQuote < lastQuote) {
+        return str.substr(firstQuote + 1, lastQuote - firstQuote - 1);
+    }
+    return str;
+}
+
+void parseIniFile(const std::string& fileToParse, const std::string& desiredSection,
+                  const std::string& desiredKey, const std::string& desiredValue) {
+    FILE* configFile = fopen(fileToParse.c_str(), "r");
+    if (!configFile) {
+        //printf("Failed to open the INI file.\n");
+        return;
+    }
+    std::string updatedDesiredSection = removeQuotes(desiredSection);
+    
+    char line[256];
+    //std::string logPath = fileToParse + ".log";
+    std::string tempPath = fileToParse + ".tmp";
+
+    //FILE* logFile = fopen(logPath.c_str(), "w");
+    
+    FILE* tempFile = fopen(tempPath.c_str(), "w");
+    
+    
+    //fprintf(logFile, "%s\n",updatedDesiredSection.c_str());
+    //fprintf(logFile, "%s\n",desiredKey.c_str());
+    //fprintf(logFile, "%s\n",desiredValue.c_str());
+   
+    
+    if (tempFile) {
+        std::string currentSection;
+
+        while (fgets(line, sizeof(line), configFile)) {
+            // Check if the line represents a section
+            if (line[0] == '[' && line[strlen(line) - 2] == ']') {
+                currentSection = removeQuotes(trim(std::string(line + 1, strlen(line) - 3)));
+            }
+            
+            //fprintf(logFile, "test 1 %s\n", desiredKey.c_str());
+            //fprintf(logFile, "test 2 %s\n", desiredValue.c_str());
+            
+            // Check if the line is in the desired section
+            if (currentSection == updatedDesiredSection) {
+                // Check if the line starts with the desired key
+                if (startsWith(line, desiredKey + "=")) {
+                    // Overwrite the value with the desired value
+                    fprintf(tempFile, "%s=%s\n", desiredKey.c_str(), desiredValue.c_str());
+                    continue;  // Skip writing the original line
+                }
+            }
+    
+            //if (!updatedDesiredSection.empty()) {
+            //    fprintf(tempFile, "[%s]\n", updatedDesiredSection.c_str());
+            //    updatedDesiredSection.clear(); // Only write the section name once
+            //}
+    
+            fprintf(tempFile, "%s", line);
+        }
+        
+        //fclose(logFile);
+        fclose(configFile);
+        fclose(tempFile);
+        //remove(fileToParse.c_str());  // Delete the old configuration file
+        //rename(tempPath.c_str(), fileToParse.c_str());  // Rename the temp file to the original name
+
+        //printf("INI file updated successfully.\n");
+    } else {
+        //printf("Failed to create temporary file.\n");
+    }
+}
+
+
+
+
 
 void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& commands) {
     for (const auto& command : commands) {
@@ -151,18 +243,27 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                 // Invalid command format, display an error message or handle it accordingly
                 // ...
             }
-       // } else if (commandName == "parse") {
-       //     // Rename command
-       //     if (command.size() >= 3) {
-       //         std::string fileToParse = "sdmc:" + command[1];
-       //         std::string desiredKey = command[2];
-       //         std::string desiredValue = command[3];
-       //         parseIniFile(fileToRename, newFileName); // modify value. ex. key test in ini, old value false becomes true and ini is constructed 
-       //     } else {
-       //         // Invalid command format, display an error message or handle it accordingly
-       //         // ...
-       //     }
-       //     
+        } else if (commandName == "parse") {
+            // Parse command
+            if (command.size() >= 5) {
+                std::string fileToParse = "sdmc:" + command[1];
+
+                std::string desiredSection;
+                for (size_t i = 2; i < command.size() - 2; ++i) {
+                    desiredSection += command[i];
+                    if (i < command.size() - 3) {
+                        desiredSection += " ";
+                    }
+                }
+
+                std::string desiredKey = command[command.size() - 2];
+                std::string desiredValue = command[command.size() - 1];
+                
+                parseIniFile(fileToParse.c_str(), desiredSection.c_str(), desiredKey.c_str(), desiredValue.c_str());
+            } else {
+                // Invalid command format, display an error message or handle it accordingly
+                // ...
+            }
         } else {
             // Unknown command, do nothing or display an error message
             // ...
@@ -177,26 +278,29 @@ std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadO
     if (!configFile) {
         // Write the default INI file
         FILE* configFileOut = fopen(configIniPath.c_str(), "w");
-        fprintf(configFileOut, "[make directory]\n"
+        fprintf(configFileOut, "[make directories]\n"
                                "mkdir /config/ultrahand/example1/\n"
                                "mkdir /config/ultrahand/example2/\n"
-                               "[copy file]\n"
+                               "[copy files]\n"
                                "copy /config/ultrahand/config.ini /config/ultrahand/example1/\n"
                                "copy /config/ultrahand/config.ini /config/ultrahand/example2/\n"
-                               "[rename file]\n"
+                               "[rename files]\n"
                                "rename /config/ultrahand/example1/config.ini /config/ultrahand/example1/configX.ini\n"
                                "rename /config/ultrahand/example2/config.ini /config/ultrahand/example2/configX.ini\n"
-                               "[move directory]\n"
+                               "[move directories]\n"
                                "move /config/ultrahand/example1/ /config/ultrahand/example3/\n"
                                "move /config/ultrahand/example2/ /config/ultrahand/example4/\n"
-                               "[delete file]\n"
+                               "[delete files]\n"
                                "delete /config/ultrahand/example1/config.ini\n"
                                "delete /config/ultrahand/example2/config.ini\n"
                                "[delete directories]\n"
                                "delete /config/ultrahand/example1/\n"
                                "delete /config/ultrahand/example2/\n"
                                "delete /config/ultrahand/example3/\n"
-                               "delete /config/ultrahand/example4/");
+                               "delete /config/ultrahand/example4/\n"
+                               "[parse ini file]\n"
+                               "copy /bootloader/hekate_ipl.ini /config/ultrahand/\n"
+                               "parse /config/ultrahand/hekate_ipl.ini 'L4T Ubuntu Bionic' r2p_action working");
         fclose(configFileOut);
         configFile = fopen(configIniPath.c_str(), "r");
     }
