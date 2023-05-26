@@ -41,7 +41,7 @@ To compile and run the program, you need to have the following dependencies inst
 
 ## Configuration
 
-The program reads options and commands from an INI file named `config.ini`, which should be located at `/config/ultra-hand/config.ini`. If the file does not exist, the program will create a default `config.ini` file with some sample options and commands.
+The program reads options and commands from an INI file named `config.ini`, which should be located at `/config/ultrahand/config.ini`. If the file does not exist, the program will create a default `config.ini` file with some sample options and commands.
 
 The structure of the INI file should follow the format:
 ```
