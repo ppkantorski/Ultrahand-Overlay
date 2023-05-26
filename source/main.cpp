@@ -178,25 +178,25 @@ std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadO
         // Write the default INI file
         FILE* configFileOut = fopen(configIniPath.c_str(), "w");
         fprintf(configFileOut, "[make directory]\n"
-                               "mkdir /config/ultra-hand/example1/\n"
-                               "mkdir /config/ultra-hand/example2/\n"
+                               "mkdir /config/ultrahand/example1/\n"
+                               "mkdir /config/ultrahand/example2/\n"
                                "[copy file]\n"
-                               "copy /config/ultra-hand/config.ini /config/ultra-hand/example1/\n"
-                               "copy /config/ultra-hand/config.ini /config/ultra-hand/example2/\n"
+                               "copy /config/ultrahand/config.ini /config/ultrahand/example1/\n"
+                               "copy /config/ultrahand/config.ini /config/ultrahand/example2/\n"
                                "[rename file]\n"
-                               "rename /config/ultra-hand/example1/config.ini /config/ultra-hand/example1/configX.ini\n"
-                               "rename /config/ultra-hand/example2/config.ini /config/ultra-hand/example2/configX.ini\n"
+                               "rename /config/ultrahand/example1/config.ini /config/ultrahand/example1/configX.ini\n"
+                               "rename /config/ultrahand/example2/config.ini /config/ultrahand/example2/configX.ini\n"
                                "[move directory]\n"
-                               "move /config/ultra-hand/example1/ /config/ultra-hand/example3/\n"
-                               "move /config/ultra-hand/example2/ /config/ultra-hand/example4/\n"
+                               "move /config/ultrahand/example1/ /config/ultrahand/example3/\n"
+                               "move /config/ultrahand/example2/ /config/ultrahand/example4/\n"
                                "[delete file]\n"
-                               "delete /config/ultra-hand/example1/config.ini\n"
-                               "delete /config/ultra-hand/example2/config.ini\n"
+                               "delete /config/ultrahand/example1/config.ini\n"
+                               "delete /config/ultrahand/example2/config.ini\n"
                                "[delete directories]\n"
-                               "delete /config/ultra-hand/example1/\n"
-                               "delete /config/ultra-hand/example2/\n"
-                               "delete /config/ultra-hand/example3/\n"
-                               "delete /config/ultra-hand/example4/");
+                               "delete /config/ultrahand/example1/\n"
+                               "delete /config/ultrahand/example2/\n"
+                               "delete /config/ultrahand/example3/\n"
+                               "delete /config/ultrahand/example4/");
         fclose(configFileOut);
         configFile = fopen(configIniPath.c_str(), "r");
     }
@@ -244,7 +244,7 @@ std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadO
 // Main menu
 class MainMenu : public tsl::Gui {
 private:
-    std::string directoryPath = "sdmc:/config/ultra-hand/";
+    std::string directoryPath = "sdmc:/config/ultrahand/";
     std::string configIniPath = directoryPath + "config.ini";
 
 public:
