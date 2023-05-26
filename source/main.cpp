@@ -175,8 +175,8 @@ void parseIniFile(const std::string& fileToParse, const std::string& desiredSect
         //fclose(logFile);
         fclose(configFile);
         fclose(tempFile);
-        //remove(fileToParse.c_str());  // Delete the old configuration file
-        //rename(tempPath.c_str(), fileToParse.c_str());  // Rename the temp file to the original name
+        remove(fileToParse.c_str());  // Delete the old configuration file
+        rename(tempPath.c_str(), fileToParse.c_str());  // Rename the temp file to the original name
 
         //printf("INI file updated successfully.\n");
     } else {
@@ -243,7 +243,7 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                 // Invalid command format, display an error message or handle it accordingly
                 // ...
             }
-        } else if (commandName == "parse") {
+        } else if (commandName == "parse_ini") {
             // Parse command
             if (command.size() >= 5) {
                 std::string fileToParse = "sdmc:" + command[1];
@@ -300,7 +300,7 @@ std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadO
                                "delete /config/ultrahand/example4/\n"
                                "[parse ini file]\n"
                                "copy /bootloader/hekate_ipl.ini /config/ultrahand/\n"
-                               "parse /config/ultrahand/hekate_ipl.ini 'L4T Ubuntu Bionic' r2p_action working");
+                               "parse_ini /config/ultrahand/hekate_ipl.ini 'L4T Ubuntu Bionic' r2p_action working");
         fclose(configFileOut);
         configFile = fopen(configIniPath.c_str(), "r");
     }
