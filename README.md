@@ -1,7 +1,7 @@
-# Ultra Hand Overlay (Systems Manager)
+# Ultrahand Overlay (Systems Manager)
 ![Alt Text](https://www.pcinvasion.com/wp-content/uploads/2023/05/How-to-Get-and-Use-Ultrahand-Ability-in-Tears-of-the-Kingdom.jpg)
 
-The Ultra Hand File Management System is a C++ program that provides a user-friendly main menu overlay for performing various file operations. It is designed to run on various platforms, including the Nintendo Switch, and utilizes the TESLA library to create an interactive menu interface.
+The Ultrahand File Management System is a C++ program that provides a user-friendly main menu overlay for performing various file operations. It is designed to run on various platforms, including the Nintendo Switch, and utilizes the TESLA library to create an interactive menu interface.
 
 ## Features
 
@@ -11,9 +11,9 @@ The Ultra Hand File Management System is a C++ program that provides a user-frie
 - Move files
 
 ## Nintendo Switch Compatibility
-The Ultra Hand File Management System is compatible with the Nintendo Switch, allowing users to manage files and perform file operations directly on their Switch console.
+The Ultrahand File Management System is compatible with the Nintendo Switch, allowing users to manage files and perform file operations directly on their Switch console.
 
-To run the Ultra Hand File Management System on the Nintendo Switch, you need to have the necessary homebrew environment set up on your console. Once you have the homebrew environment set up, you can transfer the compiled executable file to your Switch and launch it using the Tesla Overlay.
+To run the Ultrahand File Management System on the Nintendo Switch, you need to have the necessary homebrew environment set up on your console. Once you have the homebrew environment set up, you can transfer the compiled executable file to your Switch and launch it using the Tesla Overlay.
 
 Please note that running homebrew software on your Nintendo Switch may void your warranty and can carry certain risks. Ensure that you understand the implications and follow the appropriate guidelines and precautions when using homebrew software.
 
@@ -35,7 +35,7 @@ To compile and run the program, you need to have the following dependencies inst
 
 2. Transfer the executable file to your target platform or emulator.
 
-3. Run the executable to launch the Ultra Hand File Management System.
+3. Run the executable to launch the Ultrahand File Management System.
 
 4. Use the main menu interface to navigate and select file operations.
 
