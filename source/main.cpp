@@ -5,6 +5,32 @@
 
 Result Hinted = 1;
 
+std::vector<std::string> getSubdirectories(const std::string& directoryPath) {
+    std::vector<std::string> subdirectories;
+
+    DIR* dir = opendir(directoryPath.c_str());
+    if (dir != nullptr) {
+        struct dirent* entry;
+        while ((entry = readdir(dir)) != nullptr) {
+            std::string entryName = entry->d_name;
+
+            // Exclude current directory (.) and parent directory (..)
+            if (entryName != "." && entryName != "..") {
+                struct stat entryStat;
+                std::string fullPath = directoryPath + "/" + entryName;
+
+                if (stat(fullPath.c_str(), &entryStat) == 0 && S_ISDIR(entryStat.st_mode)) {
+                    subdirectories.push_back(entryName);
+                }
+            }
+        }
+
+        closedir(dir);
+    }
+
+    return subdirectories;
+}
+
 // Function to create a directory if it doesn't exist
 void createDirectory(const std::string& directoryPath) {
     struct stat st;
@@ -13,40 +39,44 @@ void createDirectory(const std::string& directoryPath) {
     }
 }
 
-void moveFile(const std::string& fromFile, const std::string& toDirectory) {
+void renameFileOrDirectory(const std::string& sourcePath, const std::string& destinationPath) {
     struct stat fileInfo;
-    if (stat(fromFile.c_str(), &fileInfo) == 0 && S_ISREG(fileInfo.st_mode)) {
-        // Source file exists and is a regular file
+    if (stat(sourcePath.c_str(), &fileInfo) == 0) {
+        // Source file or directory exists
 
-        // Extract the source file name from the file path
-        size_t lastSlashPos = fromFile.find_last_of('/');
-        std::string fileName = (lastSlashPos != std::string::npos)
-                                   ? fromFile.substr(lastSlashPos + 1)
-                                   : fromFile;
+        if (S_ISREG(fileInfo.st_mode)) {
+            // Source path is a regular file
 
-        // Create the destination file path
-        std::string toFile = toDirectory + "/" + fileName;
+            // Extract the source file name from the path
+            size_t lastSlashPos = sourcePath.find_last_of('/');
+            std::string fileName = (lastSlashPos != std::string::npos)
+                                       ? sourcePath.substr(lastSlashPos + 1)
+                                       : sourcePath;
 
-        if (std::rename(fromFile.c_str(), toFile.c_str()) == 0) {
-            // Move successful
+            // Create the destination file path
+            std::string destinationFile = destinationPath + "/" + fileName;
+
+            if (std::rename(sourcePath.c_str(), destinationFile.c_str()) == 0) {
+                // Rename successful
+            } else {
+                // Error renaming the file
+            }
+        } else if (S_ISDIR(fileInfo.st_mode)) {
+            // Source path is a directory
+
+            if (std::rename(sourcePath.c_str(), destinationPath.c_str()) == 0) {
+                // Rename successful
+            } else {
+                // Error renaming the directory
+            }
         } else {
-            // Error moving the file
+            // Source path is neither a file nor a directory
         }
     } else {
-        // Source file doesn't exist or is not a regular file
+        // Source path doesn't exist
     }
 }
 
-void renameFile(const std::string& fileToRename, const std::string& newFileName) {
-    std::string directoryPath = fileToRename.substr(0, fileToRename.find_last_of('/'));
-    std::string newFilePath = directoryPath + "/" + newFileName;
-
-    if (std::rename(fileToRename.c_str(), newFilePath.c_str()) == 0) {
-        // Rename successful
-    } else {
-        // Error renaming the file
-    }
-}
 
  // Perform copy action from "fromFile" to "toDirectory"
 void copyFile(const std::string& fromFile, const std::string& toDirectory) {
@@ -162,17 +192,16 @@ void deleteFile(const std::string& pathToDelete) {
 
 // Trim leading and trailing whitespaces from a string
 std::string trim(const std::string& str) {
-    size_t first = str.find_first_not_of(' ');
-    size_t last = str.find_last_not_of(' ');
-    if (first == std::string::npos || last == std::string::npos) {
+    size_t first = str.find_first_not_of(" \t\n\r\f\v");
+    size_t last = str.find_last_not_of(" \t\n\r\f\v");
+    if (first == std::string::npos || last == std::string::npos)
         return "";
-    }
     return str.substr(first, last - first + 1);
 }
 
 // Check if a string starts with a given prefix
 bool startsWith(const std::string& str, const std::string& prefix) {
-    return str.size() >= prefix.size() && str.compare(0, prefix.size(), prefix) == 0;
+    return str.compare(0, prefix.length(), prefix) == 0;
 }
 
 std::string removeQuotes(const std::string& str) {
@@ -288,22 +317,12 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                 // Invalid command format, display an error message or handle it accordingly
                 // ...
             }
-        } else if (commandName == "move") {
-            // Move command
-            if (command.size() >= 3) {
-                std::string fromFile = "sdmc:" + command[1];
-                std::string toDirectory = "sdmc:" + command[2];
-                moveFile(fromFile, toDirectory);
-            } else {
-                // Invalid command format, display an error message or handle it accordingly
-                // ...
-            }
-        } else if (commandName == "rename" || commandName == "mv") {
+        } else if (commandName == "rename" || commandName == "move" || commandName == "mv") {
             // Rename command
             if (command.size() >= 3) {
-                std::string fileToRename = "sdmc:" + command[1];
-                std::string newFileName = "sdmc:" + command[2];
-                renameFile(fileToRename, newFileName);
+                std::string pathToRename = "sdmc:" + command[1];
+                std::string newPathName = "sdmc:" + command[2];
+                renameFileOrDirectory(pathToRename, newPathName);
             } else {
                 // Invalid command format, display an error message or handle it accordingly
                 // ...
@@ -350,11 +369,11 @@ std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadO
                                "copy /config/ultrahand/config.ini /config/ultrahand/example1/\n"
                                "copy /config/ultrahand/config.ini /config/ultrahand/example2/\n"
                                "[rename files]\n"
-                               "rename /config/ultrahand/example1/config.ini /config/ultrahand/example1/configX.ini\n"
-                               "rename /config/ultrahand/example2/config.ini /config/ultrahand/example2/configX.ini\n"
-                               "[move directories]\n"
-                               "move /config/ultrahand/example1/ /config/ultrahand/example3/\n"
-                               "move /config/ultrahand/example2/ /config/ultrahand/example4/\n"
+                               "mv /config/ultrahand/example1/config.ini /config/ultrahand/example1/configX.ini\n"
+                               "mv /config/ultrahand/example2/config.ini /config/ultrahand/example2/configX.ini\n"
+                               "[rename directories]\n"
+                               "mv /config/ultrahand/example1/ /config/ultrahand/example3/\n"
+                               "mv /config/ultrahand/example2/ /config/ultrahand/example4/\n"
                                "[delete files]\n"
                                "delete /config/ultrahand/example1/config.ini\n"
                                "delete /config/ultrahand/example2/config.ini\n"
@@ -410,26 +429,31 @@ std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadO
     return options;
 }
 
-// Main menu
-class MainMenu : public tsl::Gui {
+std::string getFolderName(const std::string& path) {
+    size_t lastSlash = path.find_last_of('/');
+    if (lastSlash != std::string::npos && lastSlash + 1 < path.length()) {
+        return path.substr(lastSlash + 1);
+    }
+    return path;
+}
+
+// Sub menu
+class SubMenu : public tsl::Gui {
 private:
-    std::string directoryPath = "sdmc:/config/ultrahand/";
-    std::string configIniPath = directoryPath + "config.ini";
+    std::string subPath;
 
 public:
-    MainMenu() {}
+    SubMenu(const std::string& path) : subPath(path) {}
 
     virtual tsl::elm::Element* createUI() override {
-        auto rootFrame = new tsl::elm::OverlayFrame("Ultrahand", APP_VERSION);
+        auto rootFrame = new tsl::elm::OverlayFrame(getFolderName(subPath), APP_VERSION);
         auto list = new tsl::elm::List(6);
 
-        // Create the directory if it doesn't exist
-        createDirectory(directoryPath);
+        // Load options from INI file in the subdirectory
+        std::string subConfigIniPath = subPath + "config.ini";
+        std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> options = loadOptionsFromIni(subConfigIniPath);
 
-        // Load options from INI file
-        std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> options = loadOptionsFromIni(configIniPath);
-
-        // Populate the menu with options
+        // Populate the sub menu with options
         for (const auto& option : options) {
             auto listItem = new tsl::elm::ListItem(option.first);
 
@@ -452,6 +476,7 @@ public:
 
     virtual bool handleInput(uint64_t keysDown, uint64_t keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
         if (keysHeld & KEY_B) {
+            svcSleepThread(300'000'000);
             tsl::goBack();
             return true;
         }
@@ -459,18 +484,122 @@ public:
     }
 };
 
+
+// Main menu
+class MainMenu : public tsl::Gui {
+private:
+    std::string directoryPath = "sdmc:/config/ultrahand/";
+    std::string configIniPath = directoryPath + "config.ini";
+    std::string fullPath;
+
+public:
+    MainMenu() {}
+
+    virtual tsl::elm::Element* createUI() override {
+        auto rootFrame = new tsl::elm::OverlayFrame("Ultrahand", APP_VERSION);
+        auto list = new tsl::elm::List(6);
+
+        // Add a section break with small text to indicate the "Packages" section
+        //list->addItem(new tsl::elm::CategoryHeader("Packages"));
+
+        // Create the directory if it doesn't exist
+        createDirectory(directoryPath);
+
+        // Load options from INI file
+        std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> options = loadOptionsFromIni(configIniPath);
+
+        // Load subdirectories
+        std::vector<std::string> subdirectories = getSubdirectories(directoryPath);
+        std::sort(subdirectories.begin(), subdirectories.end()); // Sort subdirectories alphabetically
+        for (const auto& subdirectory : subdirectories) {
+            std::string subdirectoryIcon = "\u2605"; // Use a folder icon (replace with the actual font icon)
+            auto listItem = new tsl::elm::ListItem(subdirectoryIcon + " " + subdirectory);
+
+            listItem->setClickListener([this, subPath = directoryPath + subdirectory](uint64_t keys) {
+                if (keys & KEY_A) {
+                    tsl::changeTo<SubMenu>(subPath);
+                    return true;
+                }
+                return false;
+            });
+
+            list->addItem(listItem);
+        }
+        
+        // create a section break on the end  list that is drawn in with smmall text stating "Commands"
+        
+        // create a section break on the list that is drawn in with smmall text stating "Commands"
+
+        // Add a section break with small text to indicate the "Packages" section
+        //list->addItem(new tsl::elm::CategoryHeader("Commands"));
+
+        // Populate the menu with options
+        for (const auto& option : options) {
+            std::string optionName = option.first;
+            std::string optionIcon;
+
+            // Check if it's a subdirectory
+            struct stat entryStat;
+            fullPath = directoryPath + optionName;
+            //if (stat(fullPath.c_str(), &entryStat) == 0 && S_ISDIR(entryStat.st_mode)) {
+            //    optionIcon = "+ "; // Use a folder icon (replace with the actual font icon)
+            //} else {
+            //    optionIcon = "";
+            //    //optionIcon = "\uE001"; // Use a command icon (replace with the actual font icon)
+            //}
+            optionIcon = "";
+            auto listItem = new tsl::elm::ListItem(optionIcon + " " + optionName);
+
+            listItem->setClickListener([this, command = option.second, subPath = optionName](uint64_t keys) {
+                if (keys & KEY_A) {
+                    // Check if it's a subdirectory
+                    struct stat entryStat;
+                    fullPath = directoryPath + subPath;
+                    if (stat(fullPath.c_str(), &entryStat) == 0 && S_ISDIR(entryStat.st_mode)) {
+                        tsl::changeTo<SubMenu>(fullPath);
+                    } else {
+                        // Interpret and execute the command
+                        interpretAndExecuteCommand(command);
+                    }
+
+                    return true;
+                }
+                return false;
+            });
+
+            list->addItem(listItem);
+        }
+
+
+        rootFrame->setContent(list);
+
+        return rootFrame;
+    }
+
+    virtual bool handleInput(uint64_t keysDown, uint64_t keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
+        if (keysHeld & KEY_B) {
+            tsl::goBack();
+            return true;
+        }
+        return false;
+    }
+};
+
+
+
 // Overlay
 class Overlay : public tsl::Overlay {
 public:
     virtual void initServices() override {
-        //Initialize services
+        // Initialize services
         tsl::hlp::doWithSmSession([this]{});
         Hinted = envIsSyscallHinted(0x6F);
     }
 
-    virtual void exitServices() override {
-        //CloseThreads();
-    }
+    //virtual void closeThreads() override {
+    //    // CloseThreads();
+    //}
+
     virtual void onShow() override {}    // Called before overlay wants to change from invisible to visible state
     virtual void onHide() override {}    // Called before overlay wants to change from visible to invisible state
 
@@ -482,3 +611,4 @@ public:
 int main(int argc, char* argv[]) {
     return tsl::loop<Overlay>(argc, argv);
 }
+
