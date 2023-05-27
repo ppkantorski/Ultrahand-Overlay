@@ -213,7 +213,7 @@ std::string removeQuotes(const std::string& str) {
     return str;
 }
 
-void parseIniFile(const std::string& fileToParse, const std::string& desiredSection,
+void editIniFile(const std::string& fileToParse, const std::string& desiredSection,
                   const std::string& desiredKey, const std::string& desiredValue) {
     FILE* configFile = fopen(fileToParse.c_str(), "r");
     if (!configFile) {
@@ -327,7 +327,7 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                 // Invalid command format, display an error message or handle it accordingly
                 // ...
             }
-        } else if (commandName == "parse-ini") {
+        } else if (commandName == "edit-ini") {
             // Parse command
             if (command.size() >= 5) {
                 std::string fileToParse = "sdmc:" + command[1];
@@ -343,7 +343,7 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                 std::string desiredKey = command[command.size() - 2];
                 std::string desiredValue = command[command.size() - 1];
                 
-                parseIniFile(fileToParse.c_str(), desiredSection.c_str(), desiredKey.c_str(), desiredValue.c_str());
+                editIniFile(fileToParse.c_str(), desiredSection.c_str(), desiredKey.c_str(), desiredValue.c_str());
             } else {
                 // Invalid command format, display an error message or handle it accordingly
                 // ...
@@ -382,9 +382,9 @@ std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadO
                                "delete /config/ultrahand/example2/\n"
                                "delete /config/ultrahand/example3/\n"
                                "delete /config/ultrahand/example4/\n"
-                               "[parse ini file]\n"
+                               "[edit ini file]\n"
                                "copy /bootloader/hekate_ipl.ini /config/ultrahand/\n"
-                               "parse-ini /config/ultrahand/hekate_ipl.ini 'L4T Ubuntu Bionic' r2p_action working");
+                               "edit-ini /config/ultrahand/hekate_ipl.ini 'L4T Ubuntu Bionic' r2p_action working");
         fclose(configFileOut);
         configFile = fopen(configIniPath.c_str(), "r");
     }
@@ -450,7 +450,7 @@ public:
         auto list = new tsl::elm::List(6);
 
         // Load options from INI file in the subdirectory
-        std::string subConfigIniPath = subPath + "config.ini";
+        std::string subConfigIniPath = subPath + "/config.ini";
         std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> options = loadOptionsFromIni(subConfigIniPath);
 
         // Populate the sub menu with options
