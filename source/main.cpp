@@ -120,67 +120,49 @@ void renameFileOrDirectory(const std::string& sourcePath, const std::string& des
 
 
  // Perform copy action from "fromFile" to "toDirectory"
-void copyFile(const std::string& fromFile, const std::string& toDirectory) {
-    struct stat fileInfo;
-    if (stat(fromFile.c_str(), &fileInfo) == 0 && S_ISREG(fileInfo.st_mode)) {
-        // Source file exists and is a regular file
-
-        // Extract the source file name from the file path
+void copyFile(const std::string& fromFile, const std::string& toFile) {
+    struct stat toFileInfo;
+    if (stat(toFile.c_str(), &toFileInfo) == 0 && S_ISDIR(toFileInfo.st_mode)) {
+        // Destination is a directory
         size_t lastSlashPos = fromFile.find_last_of('/');
         std::string fileName = (lastSlashPos != std::string::npos)
                                    ? fromFile.substr(lastSlashPos + 1)
                                    : fromFile;
+        std::string toFilePath = toFile + "/" + fileName;
 
-        // Check if the destination file name is already present in the toDirectory
-        size_t fileNamePos = toDirectory.find(fileName);
-        if (fileNamePos != std::string::npos) {
-            // Destination file name is already present in the toDirectory
-            // Perform renaming by adding a suffix to the file name
-            std::string baseFileName = fileName.substr(0, fileName.find_last_of('.'));
-            std::string fileExtension = fileName.substr(fileName.find_last_of('.'));
-            std::string newFileName = baseFileName + "_copy" + fileExtension;
-
-            // Create the destination file path using the new file name
-            std::string toFile = toDirectory + "/" + newFileName;
-
-            FILE* srcFile = fopen(fromFile.c_str(), "rb");
-            FILE* destFile = fopen(toFile.c_str(), "wb");
-            if (srcFile && destFile) {
-                char buffer[1024];
-                size_t bytesRead;
-                while ((bytesRead = fread(buffer, 1, sizeof(buffer), srcFile)) > 0) {
-                    fwrite(buffer, 1, bytesRead, destFile);
-                }
-                fclose(srcFile);
-                fclose(destFile);
-                // Copy successful with renaming
-            } else {
-                // Error opening files or performing copy action
+        FILE* srcFile = fopen(fromFile.c_str(), "rb");
+        FILE* destFile = fopen(toFilePath.c_str(), "wb");
+        if (srcFile && destFile) {
+            char buffer[1024];
+            size_t bytesRead;
+            while ((bytesRead = fread(buffer, 1, sizeof(buffer), srcFile)) > 0) {
+                fwrite(buffer, 1, bytesRead, destFile);
             }
+            fclose(srcFile);
+            fclose(destFile);
+            //std::cout << "File copied successfully." << std::endl;
         } else {
-            // Destination file name not found in the toDirectory
-            // Create the destination file path using the original file name
-            std::string toFile = toDirectory + "/" + fileName;
-
-            FILE* srcFile = fopen(fromFile.c_str(), "rb");
-            FILE* destFile = fopen(toFile.c_str(), "wb");
-            if (srcFile && destFile) {
-                char buffer[1024];
-                size_t bytesRead;
-                while ((bytesRead = fread(buffer, 1, sizeof(buffer), srcFile)) > 0) {
-                    fwrite(buffer, 1, bytesRead, destFile);
-                }
-                fclose(srcFile);
-                fclose(destFile);
-                // Copy successful without renaming
-            } else {
-                // Error opening files or performing copy action
-            }
+            //std::cerr << "Error opening files or performing copy action." << std::endl;
         }
     } else {
-        // Source file doesn't exist or is not a regular file
+        // Destination is a file or doesn't exist
+        FILE* srcFile = fopen(fromFile.c_str(), "rb");
+        FILE* destFile = fopen(toFile.c_str(), "wb");
+        if (srcFile && destFile) {
+            char buffer[1024];
+            size_t bytesRead;
+            while ((bytesRead = fread(buffer, 1, sizeof(buffer), srcFile)) > 0) {
+                fwrite(buffer, 1, bytesRead, destFile);
+            }
+            fclose(srcFile);
+            fclose(destFile);
+            //std::cout << "File copied successfully." << std::endl;
+        } else {
+            //std::cerr << "Error opening files or performing copy action." << std::endl;
+        }
     }
 }
+
 
 
 
@@ -460,8 +442,8 @@ std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadO
                                "delete /config/ultrahand/example3/\n"
                                "delete /config/ultrahand/example4/\n"
                                "[edit ini file]\n"
-                               "copy /bootloader/hekate_ipl.ini /config/ultrahand/\n"
-                               "edit-ini /config/ultrahand/hekate_ipl.ini 'L4T Ubuntu Bionic' r2p_action working\n"
+                               "copy /bootloader/hekate_ipl.ini /config/ultrahand/test.ini\n"
+                               "edit-ini /config/ultrahand/test.ini 'L4T Ubuntu Bionic' r2p_action working\n"
                                "[shutdown]\n"
                                "shutdown\n"
                                "[reboot]\n"
