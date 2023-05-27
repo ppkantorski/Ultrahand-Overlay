@@ -15,7 +15,7 @@
 void logMessage(const std::string& message) {
     std::time_t currentTime = std::time(nullptr);
     std::string logEntry = std::asctime(std::localtime(&currentTime));
-    logEntry += message;
+    logEntry += message+"\n";
 
     FILE* file = fopen("sdmc:/config/ultrahand/log.txt", "a");
     if (file != nullptr) {
@@ -26,19 +26,19 @@ void logMessage(const std::string& message) {
 
 
 void reboot() {
-    logMessage("Rebooting...\n");
+    //logMessage("Rebooting...\n");
     // Implement the reboot functionality here
     spsmInitialize();
     spsmShutdown(true);
-    logMessage("Reboot failed..\n");
+    //logMessage("Reboot failed..\n");
 }
 
 void shutdown() {
-    logMessage("Shutting down...\n");
+    //logMessage("Shutting down...\n");
     // Implement the shutdown functionality here
     spsmInitialize();
     spsmShutdown(false);
-    logMessage("Shutdown failed..\n");
+    //logMessage("Shutdown failed..\n");
 }
 
 
@@ -265,68 +265,56 @@ std::string removeQuotes(const std::string& str) {
     return str;
 }
 
-void editIniFile(const std::string& fileToParse, const std::string& desiredSection,
-                  const std::string& desiredKey, const std::string& desiredValue) {
-    FILE* configFile = fopen(fileToParse.c_str(), "r");
+void editIniFile(const std::string& fileToEdit, const std::string& desiredSection,
+                 const std::string& desiredKey, const std::string& desiredValue) {
+    FILE* configFile = fopen(fileToEdit.c_str(), "r");
     if (!configFile) {
-        //printf("Failed to open the INI file.\n");
+        printf("Failed to open the INI file.\n");
         return;
     }
-    std::string updatedDesiredSection = removeQuotes(desiredSection);
-    
-    char line[256];
-    //std::string logPath = fileToParse + ".log";
-    std::string tempPath = fileToParse + ".tmp";
 
-    //FILE* logFile = fopen(logPath.c_str(), "w");
-    
+    std::string tempPath = fileToEdit + ".tmp";
     FILE* tempFile = fopen(tempPath.c_str(), "w");
-    
-    
-    //fprintf(logFile, "%s\n",updatedDesiredSection.c_str());
-    //fprintf(logFile, "%s\n",desiredKey.c_str());
-    //fprintf(logFile, "%s\n",desiredValue.c_str());
-   
-    
+
     if (tempFile) {
         std::string currentSection;
 
+        char line[256];
         while (fgets(line, sizeof(line), configFile)) {
+            std::string trimmedLine = trim(std::string(line));
+
             // Check if the line represents a section
-            if (line[0] == '[' && line[strlen(line) - 2] == ']') {
-                currentSection = removeQuotes(trim(std::string(line + 1, strlen(line) - 3)));
+            if (trimmedLine[0] == '[' && trimmedLine[trimmedLine.length() - 1] == ']') {
+                currentSection = removeQuotes(trim(std::string(trimmedLine.c_str() + 1, trimmedLine.length() - 2)));
+                //logMessage("currentSection: " + currentSection);
             }
-            
-            //fprintf(logFile, "test 1 %s\n", desiredKey.c_str());
-            //fprintf(logFile, "test 2 %s\n", desiredValue.c_str());
-            
+
+
             // Check if the line is in the desired section
-            if (currentSection == updatedDesiredSection) {
+            if (trim(currentSection) == trim(desiredSection)) {  // ITS NOT ENTERING AT ALLL
+                //logMessage("trimmedLine/desiredKey: "+trimmedLine+" "+desiredKey);
                 // Check if the line starts with the desired key
-                if (startsWith(line, desiredKey + "=")) {
+                if (startsWith(trimmedLine, desiredKey)) {
                     // Overwrite the value with the desired value
                     fprintf(tempFile, "%s=%s\n", desiredKey.c_str(), desiredValue.c_str());
+                    //logMessage(desiredKey+"="+desiredValue);
                     continue;  // Skip writing the original line
                 }
+            } else{
+                //logMessage("MISS MATCHED currentSection/desiredSection: "+currentSection+" "+desiredSection);
             }
-    
-            //if (!updatedDesiredSection.empty()) {
-            //    fprintf(tempFile, "[%s]\n", updatedDesiredSection.c_str());
-            //    updatedDesiredSection.clear(); // Only write the section name once
-            //}
-    
+
             fprintf(tempFile, "%s", line);
         }
-        
-        //fclose(logFile);
+
         fclose(configFile);
         fclose(tempFile);
-        remove(fileToParse.c_str());  // Delete the old configuration file
-        rename(tempPath.c_str(), fileToParse.c_str());  // Rename the temp file to the original name
+        remove(fileToEdit.c_str());  // Delete the old configuration file
+        rename(tempPath.c_str(), fileToEdit.c_str());  // Rename the temp file to the original name
 
-        //printf("INI file updated successfully.\n");
+        printf("INI file updated successfully.\n");
     } else {
-        //printf("Failed to create temporary file.\n");
+        printf("Failed to create temporary file.\n");
     }
 }
 
@@ -380,22 +368,22 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                 // ...
             }
         } else if (commandName == "edit-ini") {
-            // Parse command
+            // Edit command
             if (command.size() >= 5) {
-                std::string fileToParse = "sdmc:" + command[1];
+                std::string fileToEdit = "sdmc:" + command[1];
 
-                std::string desiredSection;
-                for (size_t i = 2; i < command.size() - 2; ++i) {
-                    desiredSection += command[i];
-                    if (i < command.size() - 3) {
-                        desiredSection += " ";
+                std::string desiredSection = command[2];
+                std::string desiredKey = command[3];
+
+                std::string desiredValue;
+                for (size_t i = 4; i < command.size(); ++i) {
+                    desiredValue += command[i];
+                    if (i < command.size() - 1) {
+                        desiredValue += " ";
                     }
                 }
 
-                std::string desiredKey = command[command.size() - 2];
-                std::string desiredValue = command[command.size() - 1];
-                
-                editIniFile(fileToParse.c_str(), desiredSection.c_str(), desiredKey.c_str(), desiredValue.c_str());
+                editIniFile(fileToEdit.c_str(), desiredSection.c_str(), desiredKey.c_str(), desiredValue.c_str());
             } else {
                 // Invalid command format, display an error message or handle it accordingly
                 // ...
@@ -557,7 +545,7 @@ private:
     std::string directoryPath = "sdmc:/config/ultrahand/";
     std::string configIniPath = directoryPath + "config.ini";
     std::string fullPath;
-    bool inSubmenu = false; // Added boolean to track submenu state
+    bool inSubMenu = false; // Added boolean to track submenu state
 
 public:
     MainMenu() {}
@@ -586,7 +574,7 @@ public:
                 if (keys & KEY_A) {
                     tsl::changeTo<SubMenu>(subPath);
                     
-                    inSubmenu = true; // Set boolean to true when entering a submenu
+                    inSubMenu = true; // Set boolean to true when entering a submenu
                     
                     return true;
                 }
@@ -647,7 +635,7 @@ public:
     }
 
     virtual bool handleInput(uint64_t keysDown, uint64_t keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
-        if (!inSubmenu && (keysHeld & KEY_B)) {
+        if (!inSubMenu && (keysHeld & KEY_B)) {
             // Only go back if not in a submenu and B button is held
 
             //svcSleepThread(900'000'000);
@@ -655,10 +643,10 @@ public:
             return true;
         }
 
-        if (inSubmenu && (keysHeld & KEY_B)) {
+        if (inSubMenu && (keysHeld & KEY_B)) {
             // Reset the submenu boolean if in a submenu and A button is released
             svcSleepThread(300'000'000);
-            inSubmenu = false;
+            inSubMenu = false;
         }
         return false;
     }
