@@ -1,1 +1,1 @@
-- Place this folder in ```/config/ultrahand/```.
+- Place the contents of the examples folder in ```/config/ultrahand/```.
