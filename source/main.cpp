@@ -278,7 +278,7 @@ void editIniFile(const std::string& fileToEdit, const std::string& desiredSectio
 
     if (tempFile) {
         std::string currentSection;
-
+        std::string formattedDesiredValue;
         char line[256];
         while (fgets(line, sizeof(line), configFile)) {
             trimmedLine = trim(std::string(line));
@@ -296,7 +296,8 @@ void editIniFile(const std::string& fileToEdit, const std::string& desiredSectio
                 // Check if the line starts with the desired key
                 if (startsWith(trimmedLine, desiredKey)) {
                     // Overwrite the value with the desired value
-                    fprintf(tempFile, "%s = %s\n", desiredKey.c_str(), removeQuotes(desiredValue.c_str()));
+                    formattedDesiredValue = removeQuotes(desiredValue);
+                    fprintf(tempFile, "%s = %s\n", desiredKey.c_str(), formattedDesiredValue.c_str());
                     //logMessage(desiredKey+"="+desiredValue);
                     continue;  // Skip writing the original line
                 }
