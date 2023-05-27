@@ -272,7 +272,7 @@ void editIniFile(const std::string& fileToEdit, const std::string& desiredSectio
         printf("Failed to open the INI file.\n");
         return;
     }
-
+    std::string trimmedLine;
     std::string tempPath = fileToEdit + ".tmp";
     FILE* tempFile = fopen(tempPath.c_str(), "w");
 
@@ -281,7 +281,7 @@ void editIniFile(const std::string& fileToEdit, const std::string& desiredSectio
 
         char line[256];
         while (fgets(line, sizeof(line), configFile)) {
-            std::string trimmedLine = trim(std::string(line));
+            trimmedLine = trim(std::string(line));
 
             // Check if the line represents a section
             if (trimmedLine[0] == '[' && trimmedLine[trimmedLine.length() - 1] == ']') {
@@ -296,7 +296,7 @@ void editIniFile(const std::string& fileToEdit, const std::string& desiredSectio
                 // Check if the line starts with the desired key
                 if (startsWith(trimmedLine, desiredKey)) {
                     // Overwrite the value with the desired value
-                    fprintf(tempFile, "%s=%s\n", desiredKey.c_str(), desiredValue.c_str());
+                    fprintf(tempFile, "%s=%s\n", desiredKey.c_str(), removeQuotes(desiredValue.c_str()));
                     //logMessage(desiredKey+"="+desiredValue);
                     continue;  // Skip writing the original line
                 }
