@@ -512,6 +512,9 @@ public:
         auto rootFrame = new tsl::elm::OverlayFrame(getFolderName(subPath), "Ultrahand Package");
         auto list = new tsl::elm::List();
 
+        // Add a section break with small text to indicate the "Packages" section
+        list->addItem(new tsl::elm::CategoryHeader("Commands"));
+
         // Load options from INI file in the subdirectory
         std::string subConfigIniPath = subPath + "/config.ini";
         std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> options = loadOptionsFromIni(subConfigIniPath);
