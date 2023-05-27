@@ -38,7 +38,7 @@ include $(DEVKITPRO)/libnx/switch_rules
 #   NACP building is skipped as well.
 #---------------------------------------------------------------------------------
 APP_TITLE   := Ultrahand
-APP_VERSION := 1.0.2
+APP_VERSION := 1.0.3
 TARGET	    := $(notdir $(CURDIR))
 BUILD	    := build
 SOURCES	    := source lib/Atmosphere-libs/libstratosphere/source/dmnt
