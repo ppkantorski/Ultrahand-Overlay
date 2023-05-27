@@ -1,1 +1,2 @@
-These files are for your Ubuntu setup for handling L4T Reboot properly.
+- These files are for your Ubuntu setup for handling L4T Reboot properly.
+- The config.ini in the example assumes a 3rd entry in hekate_ipl.ini for your Linux setup.
