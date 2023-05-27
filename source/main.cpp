@@ -2,8 +2,49 @@
 #include <tesla.hpp>
 #include <sys/stat.h>
 #include <dirent.h>
+#include <ctime>  // Add this include for time functions
 
-Result Hinted = 1;
+// C-Library commands
+//extern "C" {
+//    Result spsmInitialize(void);
+//    Result spsmShutdown(bool reboot);
+//}
+
+
+// For loggging messages and debugging
+void logMessage(const std::string& message) {
+    std::time_t currentTime = std::time(nullptr);
+    std::string logEntry = std::asctime(std::localtime(&currentTime));
+    logEntry += message;
+
+    FILE* file = fopen("sdmc:/config/ultrahand/log.txt", "a");
+    if (file != nullptr) {
+        fputs(logEntry.c_str(), file);
+        fclose(file);
+    }
+}
+
+
+void reboot() {
+    logMessage("Rebooting...\n");
+    // Implement the reboot functionality here
+    spsmInitialize();
+    spsmShutdown(true);
+    logMessage("Reboot failed..\n");
+}
+
+void shutdown() {
+    logMessage("Shutting down...\n");
+    // Implement the shutdown functionality here
+    spsmInitialize();
+    spsmShutdown(false);
+    logMessage("Shutdown failed..\n");
+}
+
+
+
+
+//Result Hinted = 1;
 
 std::vector<std::string> getSubdirectories(const std::string& directoryPath) {
     std::vector<std::string> subdirectories;
@@ -90,30 +131,59 @@ void copyFile(const std::string& fromFile, const std::string& toDirectory) {
                                    ? fromFile.substr(lastSlashPos + 1)
                                    : fromFile;
 
-        // Create the destination directory if it doesn't exist
-        createDirectory(toDirectory);
+        // Check if the destination file name is already present in the toDirectory
+        size_t fileNamePos = toDirectory.find(fileName);
+        if (fileNamePos != std::string::npos) {
+            // Destination file name is already present in the toDirectory
+            // Perform renaming by adding a suffix to the file name
+            std::string baseFileName = fileName.substr(0, fileName.find_last_of('.'));
+            std::string fileExtension = fileName.substr(fileName.find_last_of('.'));
+            std::string newFileName = baseFileName + "_copy" + fileExtension;
 
-        // Create the destination file path
-        std::string toFile = toDirectory + "/" + fileName;
+            // Create the destination file path using the new file name
+            std::string toFile = toDirectory + "/" + newFileName;
 
-        FILE* srcFile = fopen(fromFile.c_str(), "rb");
-        FILE* destFile = fopen(toFile.c_str(), "wb");
-        if (srcFile && destFile) {
-            char buffer[1024];
-            size_t bytesRead;
-            while ((bytesRead = fread(buffer, 1, sizeof(buffer), srcFile)) > 0) {
-                fwrite(buffer, 1, bytesRead, destFile);
+            FILE* srcFile = fopen(fromFile.c_str(), "rb");
+            FILE* destFile = fopen(toFile.c_str(), "wb");
+            if (srcFile && destFile) {
+                char buffer[1024];
+                size_t bytesRead;
+                while ((bytesRead = fread(buffer, 1, sizeof(buffer), srcFile)) > 0) {
+                    fwrite(buffer, 1, bytesRead, destFile);
+                }
+                fclose(srcFile);
+                fclose(destFile);
+                // Copy successful with renaming
+            } else {
+                // Error opening files or performing copy action
             }
-            fclose(srcFile);
-            fclose(destFile);
-            // Copy successful
         } else {
-            // Error opening files or performing copy action
+            // Destination file name not found in the toDirectory
+            // Create the destination file path using the original file name
+            std::string toFile = toDirectory + "/" + fileName;
+
+            FILE* srcFile = fopen(fromFile.c_str(), "rb");
+            FILE* destFile = fopen(toFile.c_str(), "wb");
+            if (srcFile && destFile) {
+                char buffer[1024];
+                size_t bytesRead;
+                while ((bytesRead = fread(buffer, 1, sizeof(buffer), srcFile)) > 0) {
+                    fwrite(buffer, 1, bytesRead, destFile);
+                }
+                fclose(srcFile);
+                fclose(destFile);
+                // Copy successful without renaming
+            } else {
+                // Error opening files or performing copy action
+            }
         }
     } else {
         // Source file doesn't exist or is not a regular file
     }
 }
+
+
+
 
 bool isDirectory(const std::string& path) {
     struct stat pathStat;
@@ -348,12 +418,19 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                 // Invalid command format, display an error message or handle it accordingly
                 // ...
             }
+        } else if (commandName == "reboot") {
+            // Reboot command
+            reboot();
+        } else if (commandName == "shutdown") {
+            // Reboot command
+            shutdown();
         } else {
             // Unknown command, do nothing or display an error message
             // ...
         }
     }
 }
+
 
 std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadOptionsFromIni(const std::string& configIniPath) {
     std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> options;
@@ -384,7 +461,11 @@ std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadO
                                "delete /config/ultrahand/example4/\n"
                                "[edit ini file]\n"
                                "copy /bootloader/hekate_ipl.ini /config/ultrahand/\n"
-                               "edit-ini /config/ultrahand/hekate_ipl.ini 'L4T Ubuntu Bionic' r2p_action working");
+                               "edit-ini /config/ultrahand/hekate_ipl.ini 'L4T Ubuntu Bionic' r2p_action working\n"
+                               "[shutdown]\n"
+                               "shutdown\n"
+                               "[reboot]\n"
+                               "reboot");
         fclose(configFileOut);
         configFile = fopen(configIniPath.c_str(), "r");
     }
@@ -447,7 +528,7 @@ public:
 
     virtual tsl::elm::Element* createUI() override {
         auto rootFrame = new tsl::elm::OverlayFrame(getFolderName(subPath), "Ultrahand Package");
-        auto list = new tsl::elm::List(6);
+        auto list = new tsl::elm::List();
 
         // Load options from INI file in the subdirectory
         std::string subConfigIniPath = subPath + "/config.ini";
@@ -491,16 +572,17 @@ private:
     std::string directoryPath = "sdmc:/config/ultrahand/";
     std::string configIniPath = directoryPath + "config.ini";
     std::string fullPath;
+    bool inSubmenu = false; // Added boolean to track submenu state
 
 public:
     MainMenu() {}
 
     virtual tsl::elm::Element* createUI() override {
         auto rootFrame = new tsl::elm::OverlayFrame("Ultrahand", APP_VERSION);
-        auto list = new tsl::elm::List(6);
+        auto list = new tsl::elm::List();
 
         // Add a section break with small text to indicate the "Packages" section
-        //list->addItem(new tsl::elm::CategoryHeader("Packages"));
+        list->addItem(new tsl::elm::CategoryHeader("Packages"));
 
         // Create the directory if it doesn't exist
         createDirectory(directoryPath);
@@ -518,6 +600,9 @@ public:
             listItem->setClickListener([this, subPath = directoryPath + subdirectory](uint64_t keys) {
                 if (keys & KEY_A) {
                     tsl::changeTo<SubMenu>(subPath);
+                    
+                    inSubmenu = true; // Set boolean to true when entering a submenu
+                    
                     return true;
                 }
                 return false;
@@ -531,7 +616,7 @@ public:
         // create a section break on the list that is drawn in with smmall text stating "Commands"
 
         // Add a section break with small text to indicate the "Packages" section
-        //list->addItem(new tsl::elm::CategoryHeader("Commands"));
+        list->addItem(new tsl::elm::CategoryHeader("Commands"));
 
         // Populate the menu with options
         for (const auto& option : options) {
@@ -577,9 +662,18 @@ public:
     }
 
     virtual bool handleInput(uint64_t keysDown, uint64_t keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
-        if (keysHeld & KEY_B) {
+        if (!inSubmenu && (keysHeld & KEY_B)) {
+            // Only go back if not in a submenu and B button is held
+
+            //svcSleepThread(900'000'000);
             tsl::goBack();
             return true;
+        }
+
+        if (inSubmenu && (keysHeld & KEY_B)) {
+            // Reset the submenu boolean if in a submenu and A button is released
+            svcSleepThread(300'000'000);
+            inSubmenu = false;
         }
         return false;
     }
@@ -592,13 +686,22 @@ class Overlay : public tsl::Overlay {
 public:
     virtual void initServices() override {
         // Initialize services
-        tsl::hlp::doWithSmSession([this]{});
-        Hinted = envIsSyscallHinted(0x6F);
+        //tsl::hlp::doWithSmSession([this]{});
+        //Hinted = envIsSyscallHinted(0x6F);
+        fsdevMountSdmc();
+        splInitialize();
+        spsmInitialize();
     }
 
     //virtual void closeThreads() override {
     //    // CloseThreads();
     //}
+    
+    virtual void exitServices() override {
+        spsmExit();
+        splExit();
+        fsdevUnmountAll();
+    }
 
     virtual void onShow() override {}    // Called before overlay wants to change from invisible to visible state
     virtual void onHide() override {}    // Called before overlay wants to change from visible to invisible state
