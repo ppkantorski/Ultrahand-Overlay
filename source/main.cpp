@@ -446,7 +446,7 @@ public:
     SubMenu(const std::string& path) : subPath(path) {}
 
     virtual tsl::elm::Element* createUI() override {
-        auto rootFrame = new tsl::elm::OverlayFrame(getFolderName(subPath), APP_VERSION);
+        auto rootFrame = new tsl::elm::OverlayFrame(getFolderName(subPath), "Ultrahand Package");
         auto list = new tsl::elm::List(6);
 
         // Load options from INI file in the subdirectory
