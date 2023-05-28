@@ -35,15 +35,15 @@ include $(DEVKITPRO)/libnx/switch_rules
 #	 - config.json
 #   If a JSON file is provided or autodetected, an ExeFS PFS0 (.nsp) is built instead
 #   of a homebrew executable (.nro). This is intended to be used for sysmodules.
-#   NACP building is skipped as well.
+#   NACP building is skipped as well. #lib/Atmosphere-libs/libexosphere/source/pmic
 #---------------------------------------------------------------------------------
 APP_TITLE	:= Ultrahand
 APP_AUTHOR	:= b0rd2dEAth
 APP_VERSION	:= 1.0.3
 TARGET	    := $(notdir $(CURDIR))
 BUILD	    := build
-SOURCES	    := source
-INCLUDES	:= common lib/libtesla/include
+SOURCES	    := source common 
+INCLUDES	:= common include lib/libtesla/include
 NO_ICON	    := 1
 
 #---------------------------------------------------------------------------------
@@ -63,8 +63,6 @@ LDFLAGS = -specs=$(DEVKITPRO)/libnx/switch.specs $(ARCH) -Wl,-Map,$(notdir $*.ma
 
 LIBS := -lnx
 
-# Enable compression for the .ovl file
-COMPRESS_OVL := 0
 
 #---------------------------------------------------------------------------------
 # list of directories containing libraries, this must be the top level containing
@@ -191,13 +189,6 @@ $(OUTPUT).ovl: $(OUTPUT).elf $(OUTPUT).nacp
 	@elf2nro $< $@ $(NROFLAGS)
 	@echo "built ... $(notdir $(OUTPUT).ovl)"
 
-ifdef COMPRESS_OVL
-	@echo "Compressing $(notdir $@)"
-	@$(DEVKITPRO)/tools/bin/squashfs-turbo -noI -noD -noF -comp xz -b 262144 $@
-	@echo "Compression complete"
-else
-	@echo "Compression disabled"
-endif
 
 
 $(OUTPUT).elf: $(OFILES)
