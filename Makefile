@@ -37,12 +37,13 @@ include $(DEVKITPRO)/libnx/switch_rules
 #   of a homebrew executable (.nro). This is intended to be used for sysmodules.
 #   NACP building is skipped as well.
 #---------------------------------------------------------------------------------
-APP_TITLE   := Ultrahand
-APP_VERSION := 1.0.3
+APP_TITLE	:= Ultrahand
+APP_AUTHOR	:= b0rd2dEAth
+APP_VERSION	:= 1.0.3
 TARGET	    := $(notdir $(CURDIR))
 BUILD	    := build
-SOURCES	    := source lib/Atmosphere-libs/libstratosphere/source/dmnt
-INCLUDES	:= include lib/Atmosphere-libs/libstratosphere/source/dmnt lib/Atmosphere-libs/libstratosphere/source lib/libtesla/include
+SOURCES	    := source
+INCLUDES	:= common lib/libtesla/include
 NO_ICON	    := 1
 
 #---------------------------------------------------------------------------------
@@ -50,7 +51,7 @@ NO_ICON	    := 1
 #---------------------------------------------------------------------------------
 ARCH := -march=armv8-a+crc+crypto -mtune=cortex-a57 -mtp=soft -fPIE
 
-CFLAGS := -g -Wall -O2 -ffunction-sections \
+CFLAGS := -Wall -Oz -ffunction-sections \
 			$(ARCH) $(DEFINES)
 
 CFLAGS += $(INCLUDE) -D__SWITCH__ -DAPP_VERSION="\"$(APP_VERSION)\""
@@ -58,9 +59,12 @@ CFLAGS += $(INCLUDE) -D__SWITCH__ -DAPP_VERSION="\"$(APP_VERSION)\""
 CXXFLAGS := $(CFLAGS) -fexceptions -std=c++20 -Wno-dangling-else
 
 ASFLAGS := -g $(ARCH)
-LDFLAGS = -specs=$(DEVKITPRO)/libnx/switch.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
+LDFLAGS = -specs=$(DEVKITPRO)/libnx/switch.specs $(ARCH) -Wl,-Map,$(notdir $*.map)
 
 LIBS := -lnx
+
+# Enable compression for the .ovl file
+COMPRESS_OVL := 0
 
 #---------------------------------------------------------------------------------
 # list of directories containing libraries, this must be the top level containing
@@ -166,6 +170,7 @@ $(BUILD):
 	@[ -d $@ ] || mkdir -p $@
 	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
 
+
 #---------------------------------------------------------------------------------
 clean:
 	@rm -fr $(BUILD) $(TARGET).ovl $(TARGET).nro $(TARGET).nacp $(TARGET).elf
@@ -185,6 +190,15 @@ all : $(OUTPUT).ovl
 $(OUTPUT).ovl: $(OUTPUT).elf $(OUTPUT).nacp 
 	@elf2nro $< $@ $(NROFLAGS)
 	@echo "built ... $(notdir $(OUTPUT).ovl)"
+
+ifdef COMPRESS_OVL
+	@echo "Compressing $(notdir $@)"
+	@$(DEVKITPRO)/tools/bin/squashfs-turbo -noI -noD -noF -comp xz -b 262144 $@
+	@echo "Compression complete"
+else
+	@echo "Compression disabled"
+endif
+
 
 $(OUTPUT).elf: $(OFILES)
 
