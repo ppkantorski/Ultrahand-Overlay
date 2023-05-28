@@ -3,6 +3,7 @@
 #include <sys/stat.h>
 #include <dirent.h>
 #include <ctime>  // Add this include for time functions
+#include <payload.hpp> // testing code found within Studious Pancake just for a "safer" reboot method only
 
 // C-Library commands
 //extern "C" {
@@ -28,23 +29,24 @@ void logMessage(const std::string& message) {
 void reboot() {
     //logMessage("Rebooting...\n");
     // Implement the reboot functionality here
-    spsmInitialize();
-    spsmShutdown(true);
+    //spsmInitialize();
+    //spsmShutdown(true);
+    Payload::RebootToHekate();
+    
+    
     //logMessage("Reboot failed..\n");
 }
 
 void shutdown() {
     //logMessage("Shutting down...\n");
     // Implement the shutdown functionality here
-    spsmInitialize();
-    spsmShutdown(false);
+    //spsmInitialize();
+    //spsmShutdown(false);
+    Payload::RebootToHekate();
     //logMessage("Shutdown failed..\n");
 }
 
 
-
-
-//Result Hinted = 1;
 
 std::vector<std::string> getSubdirectories(const std::string& directoryPath) {
     std::vector<std::string> subdirectories;
@@ -289,9 +291,9 @@ void editIniFile(const std::string& fileToEdit, const std::string& desiredSectio
                 //logMessage("currentSection: " + currentSection);
             }
 
-
+            formattedDesiredValue = removeQuotes(desiredSection);
             // Check if the line is in the desired section
-            if (trim(currentSection) == trim(desiredSection)) {  // ITS NOT ENTERING AT ALLL
+            if (trim(currentSection) == trim(formattedDesiredValue)) {  // ITS NOT ENTERING AT ALLL
                 //logMessage("trimmedLine/desiredKey: "+trimmedLine+" "+desiredKey);
                 // Check if the line starts with the desired key
                 if (startsWith(trimmedLine, desiredKey)) {
@@ -585,9 +587,6 @@ public:
             list->addItem(listItem);
         }
         
-        // create a section break on the end  list that is drawn in with smmall text stating "Commands"
-        
-        // create a section break on the list that is drawn in with smmall text stating "Commands"
 
         // Add a section break with small text to indicate the "Packages" section
         list->addItem(new tsl::elm::CategoryHeader("Commands"));
