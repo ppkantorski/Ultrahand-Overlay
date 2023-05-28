@@ -39,11 +39,11 @@ include $(DEVKITPRO)/libnx/switch_rules
 #---------------------------------------------------------------------------------
 APP_TITLE	:= Ultrahand
 APP_AUTHOR	:= b0rd2dEAth
-APP_VERSION	:= 1.0.3
+APP_VERSION	:= 1.0.4
 TARGET	    := $(notdir $(CURDIR))
 BUILD	    := build
 SOURCES	    := source common 
-INCLUDES	:= common include lib/libtesla/include
+INCLUDES	:= source common include lib/libtesla/include
 NO_ICON	    := 1
 
 #---------------------------------------------------------------------------------
@@ -51,7 +51,7 @@ NO_ICON	    := 1
 #---------------------------------------------------------------------------------
 ARCH := -march=armv8-a+crc+crypto -mtune=cortex-a57 -mtp=soft -fPIE
 
-CFLAGS := -Wall -Oz -ffunction-sections \
+CFLAGS := -g -Wall -O2 -ffunction-sections \
 			$(ARCH) $(DEFINES)
 
 CFLAGS += $(INCLUDE) -D__SWITCH__ -DAPP_VERSION="\"$(APP_VERSION)\""
@@ -59,7 +59,7 @@ CFLAGS += $(INCLUDE) -D__SWITCH__ -DAPP_VERSION="\"$(APP_VERSION)\""
 CXXFLAGS := $(CFLAGS) -fexceptions -std=c++20 -Wno-dangling-else
 
 ASFLAGS := -g $(ARCH)
-LDFLAGS = -specs=$(DEVKITPRO)/libnx/switch.specs $(ARCH) -Wl,-Map,$(notdir $*.map)
+LDFLAGS = -specs=$(DEVKITPRO)/libnx/switch.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
 
 LIBS := -lnx
 
