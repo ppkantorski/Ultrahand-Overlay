@@ -9,17 +9,17 @@
 #define SpsmShutdownMode_Reboot 1
 
 // For loggging messages and debugging
-void logMessage(const std::string& message) {
-    std::time_t currentTime = std::time(nullptr);
-    std::string logEntry = std::asctime(std::localtime(&currentTime));
-    logEntry += message+"\n";
-
-    FILE* file = fopen("sdmc:/config/ultrahand/log.txt", "a");
-    if (file != nullptr) {
-        fputs(logEntry.c_str(), file);
-        fclose(file);
-    }
-}
+//void logMessage(const std::string& message) {
+//    std::time_t currentTime = std::time(nullptr);
+//    std::string logEntry = std::asctime(std::localtime(&currentTime));
+//    logEntry += message+"\n";
+//
+//    FILE* file = fopen("sdmc:/config/ultrahand/log.txt", "a");
+//    if (file != nullptr) {
+//        fputs(logEntry.c_str(), file);
+//        fclose(file);
+//    }
+//}
 
 
 // Reboot command
@@ -198,7 +198,7 @@ bool moveFilesByPattern(const std::string& sourcePathPattern, const std::string&
 
  // Perform copy action from "fromFile" to file or directory
 void copyFile(const std::string& fromFile, const std::string& toFileOrDirectory) {
-    logMessage(fromFile + ' ' + toFileOrDirectory);
+    //logMessage(fromFile + ' ' + toFileOrDirectory);
     struct stat fromFileInfo;
     if (stat(fromFile.c_str(), &fromFileInfo) == 0) {
         if (S_ISREG(fromFileInfo.st_mode)) {
@@ -456,8 +456,8 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
 
         // Get the command name (first part of the command)
         std::string commandName = command[0];
-        logMessage(commandName);
-        logMessage(command[1]);
+        //logMessage(commandName);
+        //logMessage(command[1]);
 
         if (commandName == "make" || commandName == "mkdir") {
             std::string toDirectory = "sdmc:" + removeQuotes(command[1]);
