@@ -1,6 +1,77 @@
+#define NDEBUG
+#define STBTT_STATIC
 #define TESLA_INIT_IMPL
 #include <tesla.hpp>
 #include <utils.hpp>
+#include <sys/stat.h>
+
+
+
+
+
+// Text overlay
+class TextOverlay : public tsl::Gui {
+private:
+    std::string filePath;
+    std::string text;
+
+public:
+    TextOverlay(const std::string& file) : filePath(file) {}
+
+    virtual tsl::elm::Element* createUI() override {
+        auto rootFrame = new tsl::elm::OverlayFrame(getFolderName(filePath), "Ultrahand Config");
+
+        // Set the width of the OverlayFrame to be twice the usual width
+        const u16 overlayWidth = rootFrame->getWidth() * 2;
+        rootFrame->setBoundaries(rootFrame->getX(), rootFrame->getY(), overlayWidth, rootFrame->getHeight());
+
+        auto list = new tsl::elm::List();
+
+        // Add a section break with small text to indicate the "Packages" section
+        //list->addItem(new tsl::elm::CategoryHeader("config.ini"));
+        
+        filePath += "/config.ini";
+        // Read all lines from the file
+        std::string fileContent = readFileContent(filePath);
+        if (!fileContent.empty()) {
+            std::string line;
+            std::istringstream iss(fileContent);
+            while (std::getline(iss, line)) {
+                // Skip adding items if the line is empty or consists only of newlines
+                if (line.empty() || line.find_first_not_of('\n') == std::string::npos) {
+                    continue;
+                }
+        
+                // Check if the line begins with "[" and ends with "]"
+                if (line.front() == '[' && line.back() == ']') {
+                    // Create a CategoryHeader item
+                    std::string categoryText = line.substr(1, line.size() - 2); // Extract the text inside the brackets
+                    list->addItem(new tsl::elm::CategoryHeader(categoryText));
+                } else {
+                    // Create a ListItem item
+                    list->addItem(new tsl::elm::ListItem(line));
+                }
+            }
+        } else {
+            list->addItem(new tsl::elm::ListItem("Failed to open file: " + filePath));
+        }
+
+
+        rootFrame->setContent(list);
+        return rootFrame;
+    }
+
+    virtual bool handleInput(u64 keysDown, u64 keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
+        if (keysHeld & KEY_B) {
+            svcSleepThread(300'000'000);
+            tsl::goBack();
+            return true;
+        }
+        return false;
+    }
+};
+
+
 
 
 // Sub menu
@@ -61,7 +132,7 @@ private:
     std::string configIniPath = directoryPath + "config.ini";
     std::string fullPath;
     bool inSubMenu = false; // Added boolean to track submenu state
-
+    //bool inTextMenu = false;
 public:
     MainMenu() {}
 
@@ -87,9 +158,17 @@ public:
 
             listItem->setClickListener([this, subPath = directoryPath + subdirectory](uint64_t keys) {
                 if (keys & KEY_A) {
+                    inSubMenu = true; // Set boolean to true when entering a submenu
                     tsl::changeTo<SubMenu>(subPath);
                     
+                    
+                    return true;
+                }
+                else if (keys & KEY_X) {
                     inSubMenu = true; // Set boolean to true when entering a submenu
+                    //inTextMenu = true; // Set boolean to true when entering a submenu
+                    tsl::changeTo<TextOverlay>(subPath);
+                    
                     
                     return true;
                 }
@@ -109,7 +188,7 @@ public:
             std::string optionIcon;
 
             // Check if it's a subdirectory
-            struct stat entryStat;
+            //struct stat entryStat;
             fullPath = directoryPath + optionName;
             //if (stat(fullPath.c_str(), &entryStat) == 0 && S_ISDIR(entryStat.st_mode)) {
             //    optionIcon = "+ "; // Use a folder icon (replace with the actual font icon)
@@ -124,9 +203,9 @@ public:
                 if (keys & KEY_A) {
                     // Check if it's a subdirectory
                     struct stat entryStat;
-                    fullPath = directoryPath + subPath;
+                    std::string newPath = directoryPath + subPath;
                     if (stat(fullPath.c_str(), &entryStat) == 0 && S_ISDIR(entryStat.st_mode)) {
-                        tsl::changeTo<SubMenu>(fullPath);
+                        tsl::changeTo<SubMenu>(newPath);
                     } else {
                         // Interpret and execute the command
                         interpretAndExecuteCommand(command);
@@ -147,19 +226,20 @@ public:
     }
 
     virtual bool handleInput(uint64_t keysDown, uint64_t keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
-        if (!inSubMenu && (keysHeld & KEY_B)) {
+        if (!inSubMenu & (keysHeld & KEY_B)) {
             // Only go back if not in a submenu and B button is held
 
-            //svcSleepThread(900'000'000);
+            //svcSleepThread(300'000'000);
             tsl::goBack();
             return true;
         }
 
-        if (inSubMenu && (keysHeld & KEY_B)) {
+        if (inSubMenu & (keysHeld & KEY_B)) {
             // Reset the submenu boolean if in a submenu and A button is released
             svcSleepThread(300'000'000);
             inSubMenu = false;
         }
+        
         return false;
     }
 };
