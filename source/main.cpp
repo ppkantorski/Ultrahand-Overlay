@@ -20,19 +20,15 @@ public:
 
     virtual tsl::elm::Element* createUI() override {
         auto rootFrame = new tsl::elm::OverlayFrame(getFolderName(filePath), "Ultrahand Config");
-
-        // Set the width of the OverlayFrame to be twice the usual width
-        const u16 overlayWidth = rootFrame->getWidth() * 2;
-        rootFrame->setBoundaries(rootFrame->getX(), rootFrame->getY(), overlayWidth, rootFrame->getHeight());
-
         auto list = new tsl::elm::List();
 
         // Add a section break with small text to indicate the "Packages" section
-        //list->addItem(new tsl::elm::CategoryHeader("config.ini"));
-        
-        filePath += "/config.ini";
+        // list->addItem(new tsl::elm::CategoryHeader("config.ini"));
+
+        std::string configFile = filePath + "/config.ini"; // Create a local variable for the modified file path
+
         // Read all lines from the file
-        std::string fileContent = readFileContent(filePath);
+        std::string fileContent = readFileContent(configFile);
         if (!fileContent.empty()) {
             std::string line;
             std::istringstream iss(fileContent);
@@ -41,7 +37,7 @@ public:
                 if (line.empty() || line.find_first_not_of('\n') == std::string::npos) {
                     continue;
                 }
-        
+
                 // Check if the line begins with "[" and ends with "]"
                 if (line.front() == '[' && line.back() == ']') {
                     // Create a CategoryHeader item
@@ -49,13 +45,50 @@ public:
                     list->addItem(new tsl::elm::CategoryHeader(categoryText));
                 } else {
                     // Create a ListItem item
-                    list->addItem(new tsl::elm::ListItem(line));
+                    auto listItem = new tsl::elm::ListItem(line);
+                    listItem->setClickListener([line, this](uint64_t keys) {  // Add 'this' pointer capture
+                        if (keys & KEY_A) {
+                            
+                            
+                            // For fixing command argumetns with spaces in them
+                            // Split the line into command and arguments
+                            std::istringstream iss(line);
+                            std::vector<std::string> commandParts;
+                            std::string part;
+                            bool inQuotes = false;
+                            while (std::getline(iss, part, '\'')) {
+                                if (!part.empty()) {
+                                    if (!inQuotes) {
+                                        // Outside quotes, split on spaces
+                                        std::istringstream argIss(part);
+                                        std::string arg;
+                                        while (argIss >> arg) {
+                                            commandParts.push_back(arg);
+                                        }
+                                    } else {
+                                        // Inside quotes, treat as a whole argument
+                                        commandParts.push_back(part);
+                                    }
+                                }
+                                inQuotes = !inQuotes;
+                            }
+                            // Get the command name (first part of the command)
+                            std::string commandName = commandParts[0];
+                            std::vector<std::vector<std::string>> commandVec;
+                            commandVec.push_back(commandParts); // Store the command and arguments
+
+
+                            interpretAndExecuteCommand(commandVec);  // Use the member function
+                            return true;
+                        }
+                        return false;
+                    });
+                    list->addItem(listItem);
                 }
             }
         } else {
-            list->addItem(new tsl::elm::ListItem("Failed to open file: " + filePath));
+            list->addItem(new tsl::elm::ListItem("Failed to open file: " + configFile));
         }
-
 
         rootFrame->setContent(list);
         return rootFrame;
@@ -100,6 +133,7 @@ public:
             listItem->setClickListener([command = option.second](uint64_t keys) {
                 if (keys & KEY_A) {
                     // Interpret and execute the command
+                    
                     interpretAndExecuteCommand(command);
                     return true;
                 }
