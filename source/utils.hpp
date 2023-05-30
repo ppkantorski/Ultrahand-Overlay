@@ -374,13 +374,13 @@ std::string removeQuotes(const std::string& str) {
     return str;
 }
 
-void editIniFile(const std::string& fileToEdit, const std::string& desiredSection,
-                 const std::string& desiredKey, const std::string& desiredValue) {
+void editIniFile(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredValue) {
     FILE* configFile = fopen(fileToEdit.c_str(), "r");
     if (!configFile) {
         printf("Failed to open the INI file.\n");
         return;
     }
+
     std::string trimmedLine;
     std::string tempPath = fileToEdit + ".tmp";
     FILE* tempFile = fopen(tempPath.c_str(), "w");
@@ -395,19 +395,15 @@ void editIniFile(const std::string& fileToEdit, const std::string& desiredSectio
             // Check if the line represents a section
             if (trimmedLine[0] == '[' && trimmedLine[trimmedLine.length() - 1] == ']') {
                 currentSection = removeQuotes(trim(std::string(trimmedLine.c_str() + 1, trimmedLine.length() - 2)));
-                //logMessage("currentSection: " + currentSection);
             }
 
-            formattedDesiredValue = removeQuotes(desiredSection);
             // Check if the line is in the desired section
-            if (trim(currentSection) == trim(formattedDesiredValue)) {  // ITS NOT ENTERING AT ALLL
-                //logMessage("trimmedLine/desiredKey: "+trimmedLine+" "+desiredKey);
+            if (trim(currentSection) == trim(desiredSection)) {
                 // Check if the line starts with the desired key
                 if (startsWith(trimmedLine, desiredKey)) {
                     // Overwrite the value with the desired value
                     formattedDesiredValue = removeQuotes(desiredValue);
                     fprintf(tempFile, "%s = %s\n", desiredKey.c_str(), formattedDesiredValue.c_str());
-                    //logMessage(desiredKey+"="+desiredValue);
                     continue;  // Skip writing the original line
                 }
             }
