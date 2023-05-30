@@ -197,8 +197,8 @@ bool moveFilesByPattern(const std::string& sourcePathPattern, const std::string&
 
 
  // Perform copy action from "fromFile" to file or directory
+
 void copyFile(const std::string& fromFile, const std::string& toFileOrDirectory) {
-    //logMessage(fromFile + ' ' + toFileOrDirectory);
     struct stat fromFileInfo;
     if (stat(fromFile.c_str(), &fromFileInfo) == 0) {
         if (S_ISREG(fromFileInfo.st_mode)) {
@@ -219,9 +219,8 @@ void copyFile(const std::string& fromFile, const std::string& toFileOrDirectory)
                     }
                     fclose(srcFile);
                     fclose(destFile);
-                    //std::cout << "File copied successfully." << std::endl;
                 } else {
-                    //std::cerr << "Error opening files or performing copy action." << std::endl;
+                    // Error opening files or performing copy action.
                 }
             } else {
                 // Destination is a file or doesn't exist
@@ -235,7 +234,6 @@ void copyFile(const std::string& fromFile, const std::string& toFileOrDirectory)
                     }
                     fclose(srcFile);
                     fclose(destFile);
-                    //std::cout << "File copied successfully." << std::endl;
                 }
             }
         } else if (S_ISDIR(fromFileInfo.st_mode)) {
@@ -257,7 +255,7 @@ void copyFile(const std::string& fromFile, const std::string& toFileOrDirectory)
                         std::string fileName = entry->d_name;
                         if (fileName != "." && fileName != "..") {
                             std::string fromFilePath = fromFile + "/" + fileName;
-                            std::string toFilePath = toDirPath + "/" + fileName;
+                            std::string toFilePath = toDirPath;
                             copyFile(fromFilePath, toFilePath);
                         }
                     }
@@ -267,6 +265,7 @@ void copyFile(const std::string& fromFile, const std::string& toFileOrDirectory)
         }
     }
 }
+
 
 
 
