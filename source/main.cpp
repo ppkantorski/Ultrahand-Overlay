@@ -8,15 +8,14 @@
 
 
 
-
 // Text overlay
-class TextOverlay : public tsl::Gui {
+class ConfigOverlay : public tsl::Gui {
 private:
     std::string filePath;
     std::string text;
 
 public:
-    TextOverlay(const std::string& file) : filePath(file) {}
+    ConfigOverlay(const std::string& file) : filePath(file) {}
 
     virtual tsl::elm::Element* createUI() override {
         auto rootFrame = new tsl::elm::OverlayFrame(getFolderName(filePath), "Ultrahand Config");
@@ -201,7 +200,7 @@ public:
                 else if (keys & KEY_X) {
                     inSubMenu = true; // Set boolean to true when entering a submenu
                     //inTextMenu = true; // Set boolean to true when entering a submenu
-                    tsl::changeTo<TextOverlay>(subPath);
+                    tsl::changeTo<ConfigOverlay>(subPath);
                     
                     
                     return true;
@@ -286,7 +285,6 @@ public:
     virtual void initServices() override {
         // Initialize services
         //tsl::hlp::doWithSmSession([this]{});
-        //Hinted = envIsSyscallHinted(0x6F);
         fsdevMountSdmc();
         splInitialize();
         spsmInitialize();
