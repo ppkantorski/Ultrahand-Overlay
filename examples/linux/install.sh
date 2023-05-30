@@ -5,6 +5,7 @@ script_path="/usr/local/bin/l4t_reboot.py"
 
 # Move the script to the desired location
 mv "$(dirname "$0")/l4t_reboot.py" "$script_path"
+chmod +x "$script_path"
 
 # Create the .desktop file
 echo "[Desktop Entry]
