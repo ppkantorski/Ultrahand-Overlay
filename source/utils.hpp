@@ -349,6 +349,11 @@ void deleteFile(const std::string& pathToDelete) {
 }
 
 
+// Check if a string starts with a given prefix
+bool startsWith(const std::string& str, const std::string& prefix) {
+    return str.compare(0, prefix.length(), prefix) == 0;
+}
+
 
 // Trim leading and trailing whitespaces from a string
 std::string trim(const std::string& str) {
@@ -359,10 +364,6 @@ std::string trim(const std::string& str) {
     return str.substr(first, last - first + 1);
 }
 
-// Check if a string starts with a given prefix
-bool startsWith(const std::string& str, const std::string& prefix) {
-    return str.compare(0, prefix.length(), prefix) == 0;
-}
 
 std::string removeQuotes(const std::string& str) {
     std::size_t firstQuote = str.find_first_of('\'');
@@ -373,7 +374,17 @@ std::string removeQuotes(const std::string& str) {
     return str;
 }
 
-void editIniFile(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredValue) {
+std::string getValueFromLine(const std::string& line) {
+    std::size_t equalsPos = line.find('=');
+    if (equalsPos != std::string::npos) {
+        std::string value = line.substr(equalsPos + 1);
+        return trim(value);
+    }
+    return "";
+}
+
+
+void editIniFile(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredValue, const std::string& desiredNewKey) {
     FILE* configFile = fopen(fileToEdit.c_str(), "r");
     if (!configFile) {
         printf("Failed to open the INI file.\n");
@@ -386,7 +397,6 @@ void editIniFile(const std::string& fileToEdit, const std::string& desiredSectio
 
     if (tempFile) {
         std::string currentSection;
-        std::string formattedDesiredValue;
         char line[256];
         while (fgets(line, sizeof(line), configFile)) {
             trimmedLine = trim(std::string(line));
@@ -398,12 +408,24 @@ void editIniFile(const std::string& fileToEdit, const std::string& desiredSectio
 
             // Check if the line is in the desired section
             if (trim(currentSection) == trim(desiredSection)) {
-                // Check if the line starts with the desired key
-                if (startsWith(trimmedLine, desiredKey)) {
-                    // Overwrite the value with the desired value
-                    formattedDesiredValue = removeQuotes(desiredValue);
-                    fprintf(tempFile, "%s = %s\n", desiredKey.c_str(), formattedDesiredValue.c_str());
-                    continue;  // Skip writing the original line
+                // Tokenize the line based on "=" delimiter
+                std::string::size_type delimiterPos = trimmedLine.find('=');
+                if (delimiterPos != std::string::npos) {
+                    std::string lineKey = trim(trimmedLine.substr(0, delimiterPos));
+
+                    // Check if the line key matches the desired key
+                    if (lineKey == desiredKey) {
+                        std::string formattedDesiredValue = removeQuotes(desiredValue);
+                        std::string originalValue = getValueFromLine(trimmedLine); // Extract the original value
+
+                        // Write the modified line with the desired key and value
+                        if (!desiredNewKey.empty()) {
+                            fprintf(tempFile, "%s = %s\n", desiredNewKey.c_str(), originalValue.c_str());
+                        } else {
+                            fprintf(tempFile, "%s = %s\n", desiredKey.c_str(), formattedDesiredValue.c_str());
+                        }
+                        continue; // Skip writing the original line
+                    }
                 }
             }
 
@@ -412,16 +434,22 @@ void editIniFile(const std::string& fileToEdit, const std::string& desiredSectio
 
         fclose(configFile);
         fclose(tempFile);
-        remove(fileToEdit.c_str());  // Delete the old configuration file
-        rename(tempPath.c_str(), fileToEdit.c_str());  // Rename the temp file to the original name
+        remove(fileToEdit.c_str()); // Delete the old configuration file
+        rename(tempPath.c_str(), fileToEdit.c_str()); // Rename the temp file to the original name
 
-        //printf("INI file updated successfully.\n");
+        // printf("INI file updated successfully.\n");
     } else {
-        //printf("Failed to create temporary file.\n");
+        // printf("Failed to create temporary file.\n");
     }
 }
 
 
+void editIniFileValue(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredValue) {
+    editIniFile(fileToEdit, desiredSection, desiredKey, desiredValue, "");
+}
+void editIniFileKey(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredNewKey) {
+    editIniFile(fileToEdit, desiredSection, desiredKey, "", desiredNewKey);
+}
 
 
 
@@ -508,7 +536,7 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                 //std::cout << "Invalid move command. Usage: move <source_path> <destination_path>" << std::endl;
             }
 
-        } else if (commandName == "edit-ini") {
+        } else if (commandName == "edit-ini-val" || commandName == "edit-ini-value") {
             // Edit command
             if (command.size() >= 5) {
                 std::string fileToEdit = "sdmc:" + removeQuotes(command[1]);
@@ -524,7 +552,25 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                     }
                 }
 
-                editIniFile(fileToEdit.c_str(), desiredSection.c_str(), desiredKey.c_str(), desiredValue.c_str());
+                editIniFileValue(fileToEdit.c_str(), desiredSection.c_str(), desiredKey.c_str(), desiredValue.c_str());
+            }
+        } else if (commandName == "edit-ini-key") {
+            // Edit command
+            if (command.size() >= 5) {
+                std::string fileToEdit = "sdmc:" + removeQuotes(command[1]);
+
+                std::string desiredSection = removeQuotes(command[2]);
+                std::string desiredKey = removeQuotes(command[3]);
+
+                std::string desiredNewKey;
+                for (size_t i = 4; i < command.size(); ++i) {
+                    desiredNewKey += command[i];
+                    if (i < command.size() - 1) {
+                        desiredNewKey += " ";
+                    }
+                }
+
+                editIniFileKey(fileToEdit.c_str(), desiredSection.c_str(), desiredKey.c_str(), desiredNewKey.c_str());
             }
         } else if (commandName == "reboot") {
             // Reboot command
