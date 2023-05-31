@@ -5,84 +5,89 @@
 #include <utils.hpp>
 #include <sys/stat.h>
 
+// Overlay booleans
+bool inSubMenu = false;
+bool inConfigMenu = false;
 
 
-
-// Text overlay
+// Config overlay 
 class ConfigOverlay : public tsl::Gui {
 private:
     std::string filePath;
     std::string text;
+    std::string specificKey;
 
 public:
-    ConfigOverlay(const std::string& file) : filePath(file) {}
+    ConfigOverlay(const std::string& file, const std::string& key = "") : filePath(file), specificKey(key) {}
 
     virtual tsl::elm::Element* createUI() override {
+        inConfigMenu = true;
+        
         auto rootFrame = new tsl::elm::OverlayFrame(getFolderName(filePath), "Ultrahand Config");
         auto list = new tsl::elm::List();
 
-        // Add a section break with small text to indicate the "Packages" section
-        // list->addItem(new tsl::elm::CategoryHeader("config.ini"));
+        std::string configFile = filePath + "/config.ini";
 
-        std::string configFile = filePath + "/config.ini"; // Create a local variable for the modified file path
-
-        // Read all lines from the file
         std::string fileContent = readFileContent(configFile);
         if (!fileContent.empty()) {
             std::string line;
             std::istringstream iss(fileContent);
+            std::string currentCategory;
+            bool isInSection = false;
             while (std::getline(iss, line)) {
-                // Skip adding items if the line is empty or consists only of newlines
                 if (line.empty() || line.find_first_not_of('\n') == std::string::npos) {
                     continue;
                 }
 
-                // Check if the line begins with "[" and ends with "]"
                 if (line.front() == '[' && line.back() == ']') {
-                    // Create a CategoryHeader item
-                    std::string categoryText = line.substr(1, line.size() - 2); // Extract the text inside the brackets
-                    list->addItem(new tsl::elm::CategoryHeader(categoryText));
-                } else {
-                    // Create a ListItem item
-                    auto listItem = new tsl::elm::ListItem(line);
-                    listItem->setClickListener([line, this](uint64_t keys) {  // Add 'this' pointer capture
-                        if (keys & KEY_A) {
-                            
-                            
-                            // For fixing command argumetns with spaces in them
-                            // Split the line into command and arguments
-                            std::istringstream iss(line);
-                            std::vector<std::string> commandParts;
-                            std::string part;
-                            bool inQuotes = false;
-                            while (std::getline(iss, part, '\'')) {
-                                if (!part.empty()) {
-                                    if (!inQuotes) {
-                                        // Outside quotes, split on spaces
-                                        std::istringstream argIss(part);
-                                        std::string arg;
-                                        while (argIss >> arg) {
-                                            commandParts.push_back(arg);
-                                        }
-                                    } else {
-                                        // Inside quotes, treat as a whole argument
-                                        commandParts.push_back(part);
-                                    }
-                                }
-                                inQuotes = !inQuotes;
-                            }
-                            // Get the command name (first part of the command)
-                            std::string commandName = commandParts[0];
-                            std::vector<std::vector<std::string>> commandVec;
-                            commandVec.push_back(commandParts); // Store the command and arguments
-
-
-                            interpretAndExecuteCommand(commandVec);  // Use the member function
-                            return true;
+                    std::string categoryText = line.substr(1, line.size() - 2);
+                    if (!specificKey.empty()) {
+                        if (categoryText == specificKey) {
+                            currentCategory = categoryText;
+                            isInSection = true;
+                            list->addItem(new tsl::elm::CategoryHeader(categoryText));
+                        } else {
+                            currentCategory.clear();
+                            isInSection = false;
                         }
-                        return false;
-                    });
-                    list->addItem(listItem);
+                    } else {
+                        currentCategory = categoryText;
+                        isInSection = true;
+                        list->addItem(new tsl::elm::CategoryHeader(categoryText));
+                    }
+                } else {
+                    if (isInSection) {
+                        auto listItem = new tsl::elm::ListItem(line);
+                        listItem->setClickListener([line, this](uint64_t keys) {
+                            if (keys & KEY_A) {
+                                std::istringstream iss(line);
+                                std::vector<std::string> commandParts;
+                                std::string part;
+                                bool inQuotes = false;
+                                while (std::getline(iss, part, '\'')) {
+                                    if (!part.empty()) {
+                                        if (!inQuotes) {
+                                            std::istringstream argIss(part);
+                                            std::string arg;
+                                            while (argIss >> arg) {
+                                                commandParts.push_back(arg);
+                                            }
+                                        } else {
+                                            commandParts.push_back(part);
+                                        }
+                                    }
+                                    inQuotes = !inQuotes;
+                                }
+                                std::string commandName = commandParts[0];
+                                std::vector<std::vector<std::string>> commandVec;
+                                commandVec.push_back(commandParts);
+                                interpretAndExecuteCommand(commandVec);
+                                return true;
+                            }
+                            return false;
+                        });
+                        list->addItem(listItem);
+                    }
                 }
             }
         } else {
@@ -106,6 +111,8 @@ public:
 
 
 
+
+
 // Sub menu
 class SubMenu : public tsl::Gui {
 private:
@@ -115,6 +122,8 @@ public:
     SubMenu(const std::string& path) : subPath(path) {}
 
     virtual tsl::elm::Element* createUI() override {
+        inSubMenu = true;
+        
         auto rootFrame = new tsl::elm::OverlayFrame(getFolderName(subPath), "Ultrahand Package");
         auto list = new tsl::elm::List();
 
@@ -129,11 +138,15 @@ public:
         for (const auto& option : options) {
             auto listItem = new tsl::elm::ListItem(option.first);
 
-            listItem->setClickListener([command = option.second](uint64_t keys) {
+            listItem->setClickListener([command = option.second, keyName = option.first, subPath = this->subPath](uint64_t keys) {
                 if (keys & KEY_A) {
                     // Interpret and execute the command
-                    
                     interpretAndExecuteCommand(command);
+                    return true;
+                } else if (keys & KEY_X) {
+                    //inSubMenu = true; // Set boolean to true when entering a submenu
+                    inSubMenu = true;
+                    tsl::changeTo<ConfigOverlay>(subPath, keyName);
                     return true;
                 }
                 return false;
@@ -148,11 +161,12 @@ public:
     }
 
     virtual bool handleInput(uint64_t keysDown, uint64_t keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
-        if (keysHeld & KEY_B) {
+        if (!inConfigMenu & (keysHeld & KEY_B)) {
             svcSleepThread(300'000'000);
             tsl::goBack();
             return true;
         }
+        
         return false;
     }
 };
@@ -164,7 +178,7 @@ private:
     std::string directoryPath = "sdmc:/config/ultrahand/";
     std::string configIniPath = directoryPath + "config.ini";
     std::string fullPath;
-    bool inSubMenu = false; // Added boolean to track submenu state
+    //bool inSubMenu = false; // Added boolean to track submenu state
     //bool inTextMenu = false;
 public:
     MainMenu() {}
@@ -191,14 +205,14 @@ public:
 
             listItem->setClickListener([this, subPath = directoryPath + subdirectory](uint64_t keys) {
                 if (keys & KEY_A) {
-                    inSubMenu = true; // Set boolean to true when entering a submenu
+                    //inSubMenu = true; // Set boolean to true when entering a submenu
                     tsl::changeTo<SubMenu>(subPath);
                     
                     
                     return true;
                 }
                 else if (keys & KEY_X) {
-                    inSubMenu = true; // Set boolean to true when entering a submenu
+                    //inSubMenu = true; // Set boolean to true when entering a submenu
                     //inTextMenu = true; // Set boolean to true when entering a submenu
                     tsl::changeTo<ConfigOverlay>(subPath);
                     
@@ -259,7 +273,7 @@ public:
     }
 
     virtual bool handleInput(uint64_t keysDown, uint64_t keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
-        if (!inSubMenu & (keysHeld & KEY_B)) {
+        if (!inSubMenu & (!inConfigMenu & (keysHeld & KEY_B))) {
             // Only go back if not in a submenu and B button is held
 
             //svcSleepThread(300'000'000);
@@ -267,10 +281,16 @@ public:
             return true;
         }
 
-        if (inSubMenu & (keysHeld & KEY_B)) {
+        if (inSubMenu & !inConfigMenu & (keysHeld & KEY_B)) {
             // Reset the submenu boolean if in a submenu and A button is released
             svcSleepThread(300'000'000);
             inSubMenu = false;
+        }
+        
+        if (inConfigMenu & (keysHeld & KEY_B)) {
+            // Reset the submenu boolean if in a submenu and A button is released
+            svcSleepThread(300'000'000);
+            inConfigMenu = false;
         }
         
         return false;
