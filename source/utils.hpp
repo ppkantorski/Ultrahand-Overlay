@@ -209,6 +209,11 @@ void copyFile(const std::string& fromFile, const std::string& toFileOrDirectory)
                 std::string fileName = fromFile.substr(fromFile.find_last_of('/') + 1);
                 std::string toFilePath = toFileOrDirectory + "/" + fileName;
 
+                // Check if the destination file exists and remove it
+                if (stat(toFilePath.c_str(), &toFileInfo) == 0 && S_ISREG(toFileInfo.st_mode)) {
+                    std::remove(toFilePath.c_str());
+                }
+
                 FILE* srcFile = fopen(fromFile.c_str(), "rb");
                 FILE* destFile = fopen(toFilePath.c_str(), "wb");
                 if (srcFile && destFile) {
@@ -224,6 +229,11 @@ void copyFile(const std::string& fromFile, const std::string& toFileOrDirectory)
                 }
             } else {
                 // Destination is a file or doesn't exist
+                // Check if the destination file exists and remove it
+                if (stat(toFileOrDirectory.c_str(), &toFileInfo) == 0 && S_ISREG(toFileInfo.st_mode)) {
+                    std::remove(toFileOrDirectory.c_str());
+                }
+
                 FILE* srcFile = fopen(fromFile.c_str(), "rb");
                 FILE* destFile = fopen(toFileOrDirectory.c_str(), "wb");
                 if (srcFile && destFile) {
@@ -384,7 +394,7 @@ std::string getValueFromLine(const std::string& line) {
 }
 
 
-void editIniFile(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredValue, const std::string& desiredNewKey) {
+void setIniFile(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredValue, const std::string& desiredNewKey) {
     FILE* configFile = fopen(fileToEdit.c_str(), "r");
     if (!configFile) {
         printf("Failed to open the INI file.\n");
@@ -444,11 +454,11 @@ void editIniFile(const std::string& fileToEdit, const std::string& desiredSectio
 }
 
 
-void editIniFileValue(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredValue) {
-    editIniFile(fileToEdit, desiredSection, desiredKey, desiredValue, "");
+void setIniFileValue(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredValue) {
+    setIniFile(fileToEdit, desiredSection, desiredKey, desiredValue, "");
 }
-void editIniFileKey(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredNewKey) {
-    editIniFile(fileToEdit, desiredSection, desiredKey, "", desiredNewKey);
+void setIniFileKey(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredNewKey) {
+    setIniFile(fileToEdit, desiredSection, desiredKey, "", desiredNewKey);
 }
 
 
@@ -463,18 +473,18 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
         }
 
 
-        std::vector<std::string> arguments;
-        for (std::size_t i = 1; i < command.size(); ++i) {
-            std::string arg = command[i];
-
-            // Check if the argument is enclosed within quotes
-            if (!arg.empty() && arg.front() == '"' && arg.back() == '"') {
-                // Remove the quotes and add the argument
-                arg = arg.substr(1, arg.size() - 2);
-            }
-
-            arguments.push_back(arg);
-        }
+        //std::vector<std::string> arguments;
+        //for (std::size_t i = 1; i < command.size(); ++i) {
+        //    std::string arg = command[i];
+        //
+        //    // Check if the argument is enclosed within quotes
+        //    if (!arg.empty() && arg.front() == '"' && arg.back() == '"') {
+        //        // Remove the quotes and add the argument
+        //        arg = arg.substr(1, arg.size() - 2);
+        //    }
+        //
+        //    arguments.push_back(arg);
+        //}
 
 
         // Get the command name (first part of the command)
@@ -536,7 +546,7 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                 //std::cout << "Invalid move command. Usage: move <source_path> <destination_path>" << std::endl;
             }
 
-        } else if (commandName == "edit-ini-val" || commandName == "edit-ini-value") {
+        } else if (commandName == "set-ini-val" || commandName == "set-ini-value") {
             // Edit command
             if (command.size() >= 5) {
                 std::string fileToEdit = "sdmc:" + removeQuotes(command[1]);
@@ -552,9 +562,9 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                     }
                 }
 
-                editIniFileValue(fileToEdit.c_str(), desiredSection.c_str(), desiredKey.c_str(), desiredValue.c_str());
+                setIniFileValue(fileToEdit.c_str(), desiredSection.c_str(), desiredKey.c_str(), desiredValue.c_str());
             }
-        } else if (commandName == "edit-ini-key") {
+        } else if (commandName == "set-ini-key") {
             // Edit command
             if (command.size() >= 5) {
                 std::string fileToEdit = "sdmc:" + removeQuotes(command[1]);
@@ -570,7 +580,7 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                     }
                 }
 
-                editIniFileKey(fileToEdit.c_str(), desiredSection.c_str(), desiredKey.c_str(), desiredNewKey.c_str());
+                setIniFileKey(fileToEdit.c_str(), desiredSection.c_str(), desiredKey.c_str(), desiredNewKey.c_str());
             }
         } else if (commandName == "reboot") {
             // Reboot command
