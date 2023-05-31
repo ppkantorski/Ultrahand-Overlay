@@ -197,6 +197,27 @@ bool moveFilesByPattern(const std::string& sourcePathPattern, const std::string&
 
 
  // Perform copy action from "fromFile" to file or directory
+void copyFile(const std::string& fromFile, const std::string& toFileOrDirectory);
+
+void copySingleFile(const std::string& fromFile, const std::string& toFile) {
+    FILE* srcFile = fopen(fromFile.c_str(), "rb");
+    FILE* destFile = fopen(toFile.c_str(), "wb");
+    if (srcFile && destFile) {
+        const size_t bufferSize = 65536;  // Increase buffer size for improved performance
+        char buffer[bufferSize];
+        size_t bytesRead;
+
+        while ((bytesRead = fread(buffer, 1, bufferSize, srcFile)) > 0) {
+            fwrite(buffer, 1, bytesRead, destFile);
+        }
+
+        fclose(srcFile);
+        fclose(destFile);
+    } else {
+        // Error opening files or performing copy action.
+        // Handle the error accordingly.
+    }
+}
 
 void copyFile(const std::string& fromFile, const std::string& toFileOrDirectory) {
     struct stat fromFileInfo;
@@ -214,19 +235,7 @@ void copyFile(const std::string& fromFile, const std::string& toFileOrDirectory)
                     std::remove(toFilePath.c_str());
                 }
 
-                FILE* srcFile = fopen(fromFile.c_str(), "rb");
-                FILE* destFile = fopen(toFilePath.c_str(), "wb");
-                if (srcFile && destFile) {
-                    char buffer[1024];
-                    size_t bytesRead;
-                    while ((bytesRead = fread(buffer, 1, sizeof(buffer), srcFile)) > 0) {
-                        fwrite(buffer, 1, bytesRead, destFile);
-                    }
-                    fclose(srcFile);
-                    fclose(destFile);
-                } else {
-                    // Error opening files or performing copy action.
-                }
+                copySingleFile(fromFile, toFilePath);
             } else {
                 // Destination is a file or doesn't exist
                 // Check if the destination file exists and remove it
@@ -234,17 +243,7 @@ void copyFile(const std::string& fromFile, const std::string& toFileOrDirectory)
                     std::remove(toFileOrDirectory.c_str());
                 }
 
-                FILE* srcFile = fopen(fromFile.c_str(), "rb");
-                FILE* destFile = fopen(toFileOrDirectory.c_str(), "wb");
-                if (srcFile && destFile) {
-                    char buffer[1024];
-                    size_t bytesRead;
-                    while ((bytesRead = fread(buffer, 1, sizeof(buffer), srcFile)) > 0) {
-                        fwrite(buffer, 1, bytesRead, destFile);
-                    }
-                    fclose(srcFile);
-                    fclose(destFile);
-                }
+                copySingleFile(fromFile, toFileOrDirectory);
             }
         } else if (S_ISDIR(fromFileInfo.st_mode)) {
             // Source is a directory
@@ -275,7 +274,6 @@ void copyFile(const std::string& fromFile, const std::string& toFileOrDirectory)
         }
     }
 }
-
 
 
 
