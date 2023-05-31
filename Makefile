@@ -39,7 +39,7 @@ include $(DEVKITPRO)/libnx/switch_rules
 #---------------------------------------------------------------------------------
 APP_TITLE	:= Ultrahand
 APP_AUTHOR	:= b0rd2dEAth
-APP_VERSION	:= 1.0.5
+APP_VERSION	:= 1.0.6
 TARGET	    := $(notdir $(CURDIR))
 BUILD	    := build
 SOURCES	    := source common 
