@@ -3,7 +3,6 @@
 #include <sys/stat.h>
 #include <dirent.h>
 #include <fnmatch.h>
-//#include <payload.hpp>
 
 #define SpsmShutdownMode_Normal 0
 #define SpsmShutdownMode_Reboot 1
@@ -566,6 +565,36 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
         }
     }
 }
+
+
+std::string getVersionFromIni(const std::string& filePath) {
+    FILE* file = fopen(filePath.c_str(), "r");
+    if (file == nullptr) {
+        return ""; // Failed to open file
+    }
+
+    std::string version = "";
+    constexpr size_t BufferSize = 131072; // Choose a larger buffer size for reading lines
+    char line[BufferSize];
+
+    const std::string versionPrefix = ";version=";
+    const size_t versionPrefixLength = versionPrefix.length();
+
+    while (fgets(line, sizeof(line), file)) {
+        std::string strLine(line);
+        size_t startPos = strLine.find(versionPrefix);
+        if (startPos != std::string::npos) {
+            startPos += versionPrefixLength;
+            size_t endPos = strLine.find_first_of(" \t\r\n", startPos);
+            version = strLine.substr(startPos, endPos - startPos);
+            break;
+        }
+    }
+
+    fclose(file);
+    return version;
+}
+
 
 
 std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadOptionsFromIni(const std::string& configIniPath) {
