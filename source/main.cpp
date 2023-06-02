@@ -5,6 +5,7 @@
 #include <utils.hpp>
 #include <sys/stat.h>
 
+
 // Overlay booleans
 bool inSubMenu = false;
 bool inConfigMenu = false;
@@ -199,7 +200,8 @@ public:
         std::sort(subdirectories.begin(), subdirectories.end()); // Sort subdirectories alphabetically
         for (const auto& subdirectory : subdirectories) {
             std::string subdirectoryIcon = "\u2605"; // Use a folder icon (replace with the actual font icon)
-            auto listItem = new tsl::elm::ListItem(subdirectoryIcon + " " + subdirectory);
+            std::string versionLabel = getVersionFromIni(directoryPath+subdirectory+"/config.ini");
+            auto listItem = new tsl::elm::ListItem(subdirectoryIcon + " " + subdirectory, versionLabel);
 
             listItem->setClickListener([this, subPath = directoryPath + subdirectory](uint64_t keys) {
                 if (keys & KEY_A) {
