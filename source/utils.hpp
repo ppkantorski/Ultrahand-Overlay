@@ -262,44 +262,6 @@ bool isDirectory(const std::string& path) {
     return false;
 }
 
-//bool deleteDirectory(const std::string& path) {
-//    if (!isDirectory(path)) {
-//        // Not a directory
-//        return false;
-//    }
-//
-//    FsFileSystem *fs = fsdevGetDeviceFileSystem("sdmc");
-//    if (fs == nullptr) {
-//        // Error getting file system
-//        return false;
-//    }
-//
-//    Result ret = fsFsDeleteDirectoryRecursively(fs, path.c_str());
-//    if (R_FAILED(ret)) {
-//        // Error deleting directory
-//        return false;
-//    }
-//
-//    return true;
-//}
-//
-//
-//
-//void deleteFile(const std::string& pathToDelete) {
-//    struct stat pathStat;
-//    if (stat(pathToDelete.c_str(), &pathStat) == 0) {
-//        if (S_ISREG(pathStat.st_mode)) {
-//            if (std::remove(pathToDelete.c_str()) == 0) {
-//                // Deletion successful
-//            }
-//        } else if (S_ISDIR(pathStat.st_mode)) {
-//            if (deleteDirectory(pathToDelete)) {
-//                // Deletion successful
-//            }
-//        }
-//    }
-//}
-//
 
 
 void deleteFile(const std::string& pathToDelete) {
@@ -371,7 +333,7 @@ std::string getValueFromLine(const std::string& line) {
 void setIniFile(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredValue, const std::string& desiredNewKey) {
     FILE* configFile = fopen(fileToEdit.c_str(), "r");
     if (!configFile) {
-        printf("Failed to open the INI file.\n");
+        //printf("Failed to open the INI file.\n");
         return;
     }
 
@@ -567,33 +529,58 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
 }
 
 
-std::string getVersionFromIni(const std::string& filePath) {
+struct PackageHeader {
+    std::string version;
+    std::string creator;
+};
+
+PackageHeader getPackageHeaderFromIni(const std::string& filePath) {
+    PackageHeader packageHeader;
+    std::string version = "";
+    std::string creator = "";
+    
     FILE* file = fopen(filePath.c_str(), "r");
     if (file == nullptr) {
-        return ""; // Failed to open file
+        packageHeader.version = version;
+        packageHeader.creator = creator;
+        return packageHeader;
     }
 
-    std::string version = "";
     constexpr size_t BufferSize = 131072; // Choose a larger buffer size for reading lines
     char line[BufferSize];
 
     const std::string versionPrefix = ";version=";
+    const std::string creatorPrefix = ";creator=";
     const size_t versionPrefixLength = versionPrefix.length();
+    const size_t creatorPrefixLength = creatorPrefix.length();
 
     while (fgets(line, sizeof(line), file)) {
         std::string strLine(line);
-        size_t startPos = strLine.find(versionPrefix);
-        if (startPos != std::string::npos) {
-            startPos += versionPrefixLength;
-            size_t endPos = strLine.find_first_of(" \t\r\n", startPos);
-            version = strLine.substr(startPos, endPos - startPos);
-            break;
+        size_t versionPos = strLine.find(versionPrefix);
+        if (versionPos != std::string::npos) {
+            versionPos += versionPrefixLength;
+            size_t endPos = strLine.find_first_of(" \t\r\n", versionPos);
+            version = strLine.substr(versionPos, endPos - versionPos);
+        }
+        size_t creatorPos = strLine.find(creatorPrefix);
+        if (creatorPos != std::string::npos) {
+            creatorPos += creatorPrefixLength;
+            size_t endPos = strLine.find_first_of(" \t\r\n", creatorPos);
+            creator = strLine.substr(creatorPos, endPos - creatorPos);
+        }
+
+        if (!version.empty() && !creator.empty()) {
+            break; // Both version and creator found, exit the loop
         }
     }
 
     fclose(file);
-    return version;
+    
+    packageHeader.version = version;
+    packageHeader.creator = creator;
+    return packageHeader;
 }
+
 
 
 
