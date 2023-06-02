@@ -22,26 +22,6 @@
 //}
 
 
-// Reboot command
-void reboot() {
-    //logMessage("Rebooting...\n");
-    spsmInitialize();
-    spsmShutdown(SpsmShutdownMode_Reboot);
-    //Payload::RebootToHekate();
-    //logMessage("Reboot failed..\n");
-}
-
-
-// Shutdown command
-void shutdown() {
-    //logMessage("Shutting down...\n");
-    spsmInitialize();
-    spsmShutdown(SpsmShutdownMode_Normal);
-    //Payload::RebootToHekate();
-    //logMessage("Shutdown failed..\n");
-}
-
-
 // Function to read the content of a file
 std::string readFileContent(const std::string& filePath) {
     std::string content;
@@ -56,9 +36,6 @@ std::string readFileContent(const std::string& filePath) {
     }
     return content;
 }
-
-
-
 
 
 std::vector<std::string> getSubdirectories(const std::string& directoryPath) {
@@ -582,10 +559,10 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
             }
         } else if (commandName == "reboot") {
             // Reboot command
-            reboot();
+            spsmShutdown(SpsmShutdownMode_Reboot);
         } else if (commandName == "shutdown") {
             // Reboot command
-            shutdown();
+            spsmShutdown(SpsmShutdownMode_Normal);
         }
     }
 }
@@ -603,7 +580,8 @@ std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadO
         configFile = fopen(configIniPath.c_str(), "r");
     }
 
-    char line[256];
+    constexpr size_t BufferSize = 131072; // Choose a larger buffer size for reading lines
+    char line[BufferSize];
     std::string currentOption;
     std::vector<std::vector<std::string>> commands;
 
