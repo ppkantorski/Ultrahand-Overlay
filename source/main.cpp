@@ -11,6 +11,7 @@ bool inSubMenu = false;
 bool inConfigMenu = false;
 
 
+
 // Config overlay 
 class ConfigOverlay : public tsl::Gui {
 private:
@@ -154,8 +155,22 @@ public:
             list->addItem(listItem);
         }
 
-        rootFrame->setContent(list);
+        
+        // Package Info
+        PackageHeader packageHeader = getPackageHeaderFromIni(subConfigIniPath);
+        list->addItem(new tsl::elm::CategoryHeader("Package Info"));
 
+        constexpr int lineHeight = 20;  // Adjust the line height as needed
+        constexpr int xOffset = 120;    // Adjust the horizontal offset as needed
+        constexpr int fontSize = 16;    // Adjust the font size as needed
+        constexpr int numEntries = 1;   // Adjust the number of entries as needed
+
+        list->addItem(new tsl::elm::CustomDrawer([lineHeight, xOffset, fontSize, packageHeader](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
+            renderer->drawString("Creator\nVersion", false, x, y + lineHeight, fontSize, a(tsl::style::color::ColorText));
+            renderer->drawString((packageHeader.creator+"\n"+packageHeader.version).c_str(), false, x + xOffset, y + lineHeight, fontSize, a(tsl::style::color::ColorText));
+        }), fontSize * numEntries + lineHeight);
+        rootFrame->setContent(list);
+        
         return rootFrame;
     }
 
@@ -200,8 +215,9 @@ public:
         std::sort(subdirectories.begin(), subdirectories.end()); // Sort subdirectories alphabetically
         for (const auto& subdirectory : subdirectories) {
             std::string subdirectoryIcon = "";//"\u2605 "; // Use a folder icon (replace with the actual font icon)
-            std::string versionLabel = getVersionFromIni(directoryPath+subdirectory+"/config.ini");
-            auto listItem = new tsl::elm::ListItem(subdirectoryIcon + subdirectory, versionLabel);
+            PackageHeader packageHeader = getPackageHeaderFromIni(directoryPath + subdirectory + "/config.ini");
+            
+            auto listItem = new tsl::elm::ListItem(subdirectoryIcon + subdirectory, packageHeader.version);
 
             listItem->setClickListener([this, subPath = directoryPath + subdirectory](uint64_t keys) {
                 if (keys & KEY_A) {
