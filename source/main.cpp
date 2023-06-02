@@ -14,7 +14,6 @@ bool inConfigMenu = false;
 class ConfigOverlay : public tsl::Gui {
 private:
     std::string filePath;
-    std::string text;
     std::string specificKey;
 
 public:
@@ -40,20 +39,19 @@ public:
                 }
 
                 if (line.front() == '[' && line.back() == ']') {
-                    std::string categoryText = line.substr(1, line.size() - 2);
                     if (!specificKey.empty()) {
-                        if (categoryText == specificKey) {
-                            currentCategory = categoryText;
+                        if (line.substr(1, line.size() - 2) == specificKey) {
+                            currentCategory = line.substr(1, line.size() - 2);
                             isInSection = true;
-                            list->addItem(new tsl::elm::CategoryHeader(categoryText));
+                            list->addItem(new tsl::elm::CategoryHeader(line.substr(1, line.size() - 2)));
                         } else {
                             currentCategory.clear();
                             isInSection = false;
                         }
                     } else {
-                        currentCategory = categoryText;
+                        currentCategory = line.substr(1, line.size() - 2);
                         isInSection = true;
-                        list->addItem(new tsl::elm::CategoryHeader(categoryText));
+                        list->addItem(new tsl::elm::CategoryHeader(line.substr(1, line.size() - 2)));
                     }
                 } else {
                     if (isInSection) {
@@ -70,17 +68,17 @@ public:
                                             std::istringstream argIss(part);
                                             std::string arg;
                                             while (argIss >> arg) {
-                                                commandParts.push_back(arg);
+                                                commandParts.emplace_back(arg);
                                             }
                                         } else {
-                                            commandParts.push_back(part);
+                                            commandParts.emplace_back(part);
                                         }
                                     }
                                     inQuotes = !inQuotes;
                                 }
                                 std::string commandName = commandParts[0];
                                 std::vector<std::vector<std::string>> commandVec;
-                                commandVec.push_back(commandParts);
+                                commandVec.emplace_back(commandParts);
                                 interpretAndExecuteCommand(commandVec);
                                 return true;
                             }
