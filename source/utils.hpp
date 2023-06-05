@@ -20,6 +20,56 @@
 //    }
 //}
 
+bool isDirectory(const std::string& path) {
+    struct stat pathStat;
+    if (stat(path.c_str(), &pathStat) == 0) {
+        return S_ISDIR(pathStat.st_mode);
+    }
+    return false;
+}
+
+
+
+void deleteFileOrDirectory(const std::string& pathToDelete) {
+    struct stat pathStat;
+    if (stat(pathToDelete.c_str(), &pathStat) == 0) {
+        if (S_ISREG(pathStat.st_mode)) {
+            if (std::remove(pathToDelete.c_str()) == 0) {
+                // Deletion successful
+            }
+        } else if (S_ISDIR(pathStat.st_mode)) {
+            // Delete all files in the directory
+            DIR* directory = opendir(pathToDelete.c_str());
+            if (directory != nullptr) {
+                dirent* entry;
+                while ((entry = readdir(directory)) != nullptr) {
+                    std::string fileName = entry->d_name;
+                    if (fileName != "." && fileName != "..") {
+                        std::string filePath = pathToDelete + "/" + fileName;
+                        deleteFileOrDirectory(filePath);
+                    }
+                }
+                closedir(directory);
+            }
+
+            // Remove the directory itself
+            if (rmdir(pathToDelete.c_str()) == 0) {
+                // Deletion successful
+            }
+        }
+    }
+}
+
+
+// Function to create a directory if it doesn't exist
+void createDirectory(const std::string& directoryPath) {
+    struct stat st;
+    if (stat(directoryPath.c_str(), &st) != 0) {
+        mkdir(directoryPath.c_str(), 0777);
+    }
+}
+
+
 
 // Function to read the content of a file
 std::string readFileContent(const std::string& filePath) {
@@ -63,65 +113,61 @@ std::vector<std::string> getSubdirectories(const std::string& directoryPath) {
     return subdirectories;
 }
 
-// Function to create a directory if it doesn't exist
-void createDirectory(const std::string& directoryPath) {
-    struct stat st;
-    if (stat(directoryPath.c_str(), &st) != 0) {
-        mkdir(directoryPath.c_str(), 0777);
-    }
-}
-
 
 
 
 bool moveFileOrDirectory(const std::string& sourcePath, const std::string& destinationPath) {
     struct stat sourceInfo;
     struct stat destinationInfo;
-    
+
     if (stat(sourcePath.c_str(), &sourceInfo) == 0) {
         // Source file or directory exists
-        
+
         // Check if the destination path exists
         bool destinationExists = (stat(destinationPath.c_str(), &destinationInfo) == 0);
-        
-        if (S_ISREG(sourceInfo.st_mode)) {
-            // Source path is a regular file
-            
-            if (destinationExists && S_ISDIR(destinationInfo.st_mode)) {
-                // Destination path is a directory, move the file into the directory
-                
-                // Extract the source file name from the path
-                size_t lastSlashPos = sourcePath.find_last_of('/');
-                std::string fileName = (lastSlashPos != std::string::npos)
-                                           ? sourcePath.substr(lastSlashPos + 1)
-                                           : sourcePath;
-                                           
-                // Create the destination file path
-                std::string destinationFile = destinationPath + "/" + fileName;
-                
-                if (std::rename(sourcePath.c_str(), destinationFile.c_str()) == 0) {
-                    // Rename successful
-                    return true;
-                }
-            } else if (!destinationExists && std::rename(sourcePath.c_str(), destinationPath.c_str()) == 0) {
-                // Destination path doesn't exist, rename the source file accordingly
-                return true;
-            }
-        } else if (S_ISDIR(sourceInfo.st_mode)) {
+
+        if (S_ISDIR(sourceInfo.st_mode)) {
             // Source path is a directory
-            
-            if (destinationExists && S_ISDIR(destinationInfo.st_mode)) {
-                // Destination path is a directory, rename the source directory to the destination directory
-                
-                if (std::rename(sourcePath.c_str(), destinationPath.c_str()) == 0) {
-                    // Rename successful
-                    return true;
+
+            if (!destinationExists) {
+                // Create the destination directory
+                createDirectory(destinationPath);
+            }
+
+            DIR* dir = opendir(sourcePath.c_str());
+            if (!dir) {
+                printf("Failed to open source directory: %s\n", sourcePath.c_str());
+                return false;
+            }
+
+            struct dirent* entry;
+            while ((entry = readdir(dir)) != NULL) {
+                const std::string fileName = entry->d_name;
+
+                // Ignore current and parent directory entries
+                if (fileName == "." || fileName == "..")
+                    continue;
+
+                std::string sourceFilePath = sourcePath + "/" + fileName;
+                std::string destinationFilePath = destinationPath + "/" + fileName;
+
+                if (rename(sourceFilePath.c_str(), destinationFilePath.c_str()) == -1) {
+                    printf("Failed to move file: %s\n", sourceFilePath.c_str());
+                    closedir(dir);
+                    return false;
                 }
             }
+
+            closedir(dir);
+
+            // Delete the source directory
+            deleteFileOrDirectory(sourcePath);
+
+            return true;
         }
     }
-    
-    return false;  // Rename unsuccessful or source file/directory doesn't exist
+
+    return false;  // Move unsuccessful or source file/directory doesn't exist
 }
 
 
@@ -254,45 +300,7 @@ void copyFile(const std::string& fromFile, const std::string& toFileOrDirectory)
 
 
 
-bool isDirectory(const std::string& path) {
-    struct stat pathStat;
-    if (stat(path.c_str(), &pathStat) == 0) {
-        return S_ISDIR(pathStat.st_mode);
-    }
-    return false;
-}
 
-
-
-void deleteFile(const std::string& pathToDelete) {
-    struct stat pathStat;
-    if (stat(pathToDelete.c_str(), &pathStat) == 0) {
-        if (S_ISREG(pathStat.st_mode)) {
-            if (std::remove(pathToDelete.c_str()) == 0) {
-                // Deletion successful
-            }
-        } else if (S_ISDIR(pathStat.st_mode)) {
-            // Delete all files in the directory
-            DIR* directory = opendir(pathToDelete.c_str());
-            if (directory != nullptr) {
-                dirent* entry;
-                while ((entry = readdir(directory)) != nullptr) {
-                    std::string fileName = entry->d_name;
-                    if (fileName != "." && fileName != "..") {
-                        std::string filePath = pathToDelete + "/" + fileName;
-                        deleteFile(filePath);
-                    }
-                }
-                closedir(directory);
-            }
-
-            // Remove the directory itself
-            if (rmdir(pathToDelete.c_str()) == 0) {
-                // Deletion successful
-            }
-        }
-    }
-}
 
 
 // Check if a string starts with a given prefix
@@ -464,7 +472,7 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
             // Delete command
             if (command.size() >= 2) {
                 std::string fileToDelete = "sdmc:" + removeQuotes(command[1]);
-                deleteFile(fileToDelete);
+                deleteFileOrDirectory(fileToDelete);
             }
         } else if (commandName == "rename" || commandName == "move" || commandName == "mv") {
             // Rename command
@@ -622,35 +630,39 @@ PackageHeader getPackageHeaderFromIni(const std::string& filePath) {
 
 
 
-std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadOptionsFromIni(const std::string& configIniPath) {
+std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadOptionsFromIni(const std::string& configIniPath, bool makeConfig = false) {
     std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> options;
 
     FILE* configFile = fopen(configIniPath.c_str(), "r");
-    if (!configFile) {
+    if (!configFile ) {
         // Write the default INI file
         FILE* configFileOut = fopen(configIniPath.c_str(), "w");
-        std::string commands = "[make directories]\n"
-                               "mkdir /config/ultrahand/example1/\n"
-                               "mkdir /config/ultrahand/example2/\n"
-                               "[copy files]\n"
-                               "copy /config/ultrahand/config.ini /config/ultrahand/example1/\n"
-                               "copy /config/ultrahand/config.ini /config/ultrahand/example2/\n"
-                               "[rename files]\n"
-                               "move /config/ultrahand/example1/config.ini /config/ultrahand/example1/configRenamed.ini\n"
-                               "move /config/ultrahand/example2/config.ini /config/ultrahand/example2/configRenamed.ini\n"
-                               "[move directories]\n"
-                               "move /config/ultrahand/example1/ /config/ultrahand/example3/\n"
-                               "move /config/ultrahand/example2/ /config/ultrahand/example4/\n"
-                               "[delete files]\n"
-                               "delete /config/ultrahand/example1/config.ini\n"
-                               "delete /config/ultrahand/example2/config.ini\n"
-                               "[delete directories]\n"
-                               "delete /config/ultrahand/example*/\n"
-                               "[modify ini file]\n"
-                               "copy /bootloader/hekate_ipl.ini /config/ultrahand/\n"
-                               "set-ini-val /config/ultrahand/hekate_ipl.ini 'Atmosphere' fss0 gonnawritesomethingelse\n"
-                               "new-ini-entry /config/ultrahand/hekate_ipl.ini 'Atmosphere' booty true\n";
-                               
+        std::string commands;
+        if (makeConfig) {
+            commands = "[make directories]\n"
+                       "mkdir /config/ultrahand/example1/\n"
+                       "mkdir /config/ultrahand/example2/\n"
+                       "[copy files]\n"
+                       "copy /config/ultrahand/config.ini /config/ultrahand/example1/\n"
+                       "copy /config/ultrahand/config.ini /config/ultrahand/example2/\n"
+                       "[rename files]\n"
+                       "move /config/ultrahand/example1/config.ini /config/ultrahand/example1/configRenamed.ini\n"
+                       "move /config/ultrahand/example2/config.ini /config/ultrahand/example2/configRenamed.ini\n"
+                       "[move directories]\n"
+                       "move /config/ultrahand/example1/ /config/ultrahand/example3/\n"
+                       "move /config/ultrahand/example2/ /config/ultrahand/example4/\n"
+                       "[delete files]\n"
+                       "delete /config/ultrahand/example1/config.ini\n"
+                       "delete /config/ultrahand/example2/config.ini\n"
+                       "[delete directories]\n"
+                       "delete /config/ultrahand/example*/\n"
+                       "[modify ini file]\n"
+                       "copy /bootloader/hekate_ipl.ini /config/ultrahand/\n"
+                       "set-ini-val /config/ultrahand/hekate_ipl.ini 'Atmosphere' fss0 gonnawritesomethingelse\n"
+                       "new-ini-entry /config/ultrahand/hekate_ipl.ini 'Atmosphere' booty true\n";
+        } else {
+            commands = "";
+        }
         fprintf(configFileOut, "%s", commands.c_str());
         
         
