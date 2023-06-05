@@ -6,15 +6,16 @@ Ultrahand Overlay is a C++ program that provides a user-friendly main menu overl
 ## Features
 
 
+
 Ultrahand is a command-line tool that provides powerful functionality for managing files and directories on an SD card. It offers the following features:
 
 - Create Directories: Ultrahand allows you to effortlessly create directories on your SD card. Simply specify the directory path, and Ultrahand will create it for you.
 
-- Copy Files: With Ultrahand, you can easily copy files from one location to another on your SD card. Just provide the source file path and the destination file path, and Ultrahand will handle the file copying process seamlessly.
+- Copy Files or Directories: With Ultrahand, you can easily copy files or directories from one location to another on your SD card. Just provide the source file or directory path and the destination file or directory path, and Ultrahand will handle the copying process seamlessly.
 
-- Delete Files: Ultrahand simplifies file deletion on your SD card. By specifying the file path, Ultrahand will promptly remove the file for you, making the deletion process hassle-free.
+- Delete Files or Directories: Ultrahand simplifies file and directory deletion on your SD card. By specifying the file or directory path, Ultrahand will promptly remove it for you, making the deletion process hassle-free.
 
-- Move Files: Ultrahand enables you to move files between directories on your SD card effortlessly. Provide the file path and the destination directory path, and Ultrahand will take care of moving the file, ensuring its seamless relocation.
+- Move Files or Directories: Ultrahand enables you to move files or directories between locations on your SD card effortlessly. Provide the source file or directory path and the destination directory path, and Ultrahand will take care of moving them, ensuring their seamless relocation.
 
 - Modify INI Files: Ultrahand empowers you to edit INI files on your SD card. You can update existing key-value pairs, add new entries, or even create new sections within the INI file. Ultrahand makes it easy to customize and tailor the configurations of your INI files.
 
