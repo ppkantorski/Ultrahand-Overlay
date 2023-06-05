@@ -13,7 +13,7 @@ Join a vibrant community of like-minded creators as you share your crafted packa
 
 
 
-Ultrahand is a command-line tool that provides powerful functionality for managing files and directories on an SD card. It offers the following features:
+Ultrahand is a Tesla overlay that provides powerful functionality for managing files and directories on an SD card. It offers the following features:
 
 - Create Directories: Ultrahand allows you to effortlessly create directories on your SD card. Simply specify the directory path, and Ultrahand will create it for you.
 
