@@ -85,12 +85,34 @@ Note: The paths specified in the commands should be relative to the SD card root
 
 Ultrahand supports the following commands:
 
-- make or mkdir: Creates a directory. Usage: make <directory_path>
-- copy or cp: Copies a file. Usage: copy <source_file_path> <destination_file_path>
-- delete or del: Deletes a file. Usage: delete <file_path>
-- move: Moves a file to a directory. Usage: move <file_path> <destination_directory_path>
-- rename or mv: Renames a file. Usage: rename <file_path> <new_file_name>
-- parse-ini: Parses an INI file and updates a section with a desired key-value pair. Usage: parse-ini <file_to_parse> <desired_section> <desired_key> <desired_value>
+- make or mkdir: Creates a directory.
+  - Usage: `make <directory_path>`
+
+- copy or cp: Copies a file.
+  - Usage: `copy <source_file_path> <destination_file_path>`
+
+- delete or del: Deletes a file.
+  - Usage: `delete <file_path>`
+
+- move: Moves a file to a directory.
+  - Usage: `move <file_path> <destination_directory_path>`
+
+- rename or mv: Renames a file.
+  - Usage: `rename <file_path> <new_file_name>`
+
+- set-ini-val or set-ini-value: Edits an INI file by updating a section with a desired key-value pair.
+  - Usage: `set-ini-val <file_to_edit> <desired_section> <desired_key> <desired_value>`
+
+- set-ini-key: Edits an INI file by updating a section with a new key.
+  - Usage: `set-ini-key <file_to_edit> <desired_section> <desired_key> <desired_new_key>`
+
+- new-ini-entry: Edits an INI file by adding a new entry to a section.
+  - Usage: `new-ini-entry <file_to_edit> <desired_section> <desired_key> <desired_value>`
+
+Please note that `<directory_path>`, `<source_file_path>`, `<destination_file_path>`, `<file_path>`, `<destination_directory_path>`, `<new_file_name>`, `<file_to_edit>`, `<desired_section>`, `<desired_key>`, and `<desired_value>` should be replaced with the actual paths, names, sections, and values relevant to your use case.
+
+Make sure to follow the correct syntax and provide the required arguments for each command.
+
 
 You can configure these commands in the `config.ini` file by specifying them under the corresponding options. Make sure to provide the necessary arguments as described for each command.
 
