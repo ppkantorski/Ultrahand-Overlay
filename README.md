@@ -88,10 +88,10 @@ Ultrahand supports the following commands:
 - make or mkdir: Creates a directory.
   - Usage: `mkdir <directory_path>`
 
-- copy or cp: Copies a file.
+- copy or cp: Copies a file or diectory.
   - Usage: `copy <source_file_path> <destination_file_path>`
 
-- delete or del: Deletes a file.
+- delete or del: Deletes a file or directory.
   - Usage: `delete <file_path>`
 
 - move or mv: Moves/renames a file/directory to a new location/label.
