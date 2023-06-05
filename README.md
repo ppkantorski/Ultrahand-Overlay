@@ -5,7 +5,7 @@ Unleash Your Creative Potential with Ultrahand: Craft, Share, and Customize Your
 
 Ultrahand empowers you to craft and share your own packages, revolutionizing the way you interact with files and directories on your SD card. Inspired by the new Zelda feature, Ultrahand lets you unleash your creativity and shape your digital experiences like never before.
 
-Create directories, merge files, and customize configurations effortlessly using simple config.ini files. Whether you're a gamer, a creative enthusiast, or a tech-savvy individual, Ultrahand invites you to embark on a journey of file crafting.
+Create directories, merge files, and customize configurations effortlessly using simple config.ini files. Whether you're a gamer, a creative enthusiast, or a tech-savvy individual, Ultrahand invites you to take advantage of premade packages as well as create your own.
 
 Join a vibrant community of like-minded creators as you share your crafted packages, collaborate, and explore new possibilities. Ready to step into the realm of automation crafting and discover the endless potential of Ultrahand? Start crafting, sharing, and customizing today!
 
