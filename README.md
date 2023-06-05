@@ -39,7 +39,7 @@ To use Ultrahand, follow these steps:
 
 1. Create a directory named ultrahand in the config root folder on your SD card.
 2. Place the config.ini package file in the ultrahand directory (or sub-directory). This package file contains the configuration options for Ultrahand.
-3. Your commands will show up on the Tesla menu within the Ultrahand overlay.  You can click A to execute any command as well as click X to view the indivicual command lines.
+3. Your commands will show up on the Tesla menu within the Ultrahand overlay.  You can click A to execute any command as well as click X to view the indivicual command lines for execution.
 
 ## Configuration Options
 
