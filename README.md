@@ -86,7 +86,7 @@ Note: The paths specified in the commands should be relative to the SD card root
 Ultrahand supports the following commands:
 
 - make or mkdir: Creates a directory.
-  - Usage: `make <directory_path>`
+  - Usage: `mkdir <directory_path>`
 
 - copy or cp: Copies a file.
   - Usage: `copy <source_file_path> <destination_file_path>`
@@ -94,11 +94,8 @@ Ultrahand supports the following commands:
 - delete or del: Deletes a file.
   - Usage: `delete <file_path>`
 
-- move: Moves a file to a directory.
+- move or mv: Moves/renames a file/directory to a new location/label.
   - Usage: `move <file_path> <destination_directory_path>`
-
-- rename or mv: Renames a file.
-  - Usage: `rename <file_path> <new_file_name>`
 
 - set-ini-val or set-ini-value: Edits an INI file by updating a section with a desired key-value pair.
   - Usage: `set-ini-val <file_to_edit> <desired_section> <desired_key> <desired_value>`
