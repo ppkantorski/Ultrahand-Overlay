@@ -5,14 +5,20 @@ Ultrahand Overlay is a C++ program that provides a user-friendly main menu overl
 
 ## Features
 
-Ultrahand is a command-line tool that provides functionality for managing files and directories on an SD card. It offers the following features:
 
-- Create directories: You can use Ultrahand to create directories on your SD card. Simply specify the directory path, and Ultrahand will create it for you.
-- Copy files: Ultrahand allows you to copy files from one location to another on your SD card. Just provide the source file path and the destination file path, and Ultrahand will handle the file copying process.
-- Delete files: With Ultrahand, you can easily delete files from your SD card. Just specify the file path, and Ultrahand will remove the file for you.
-- Move files: Ultrahand enables you to move files from one directory to another on your SD card. Provide the file path and the destination directory path, and Ultrahand will handle the file movement for you.
+Ultrahand is a command-line tool that provides powerful functionality for managing files and directories on an SD card. It offers the following features:
 
+- Create Directories: Ultrahand allows you to effortlessly create directories on your SD card. Simply specify the directory path, and Ultrahand will create it for you.
 
+- Copy Files: With Ultrahand, you can easily copy files from one location to another on your SD card. Just provide the source file path and the destination file path, and Ultrahand will handle the file copying process seamlessly.
+
+- Delete Files: Ultrahand simplifies file deletion on your SD card. By specifying the file path, Ultrahand will promptly remove the file for you, making the deletion process hassle-free.
+
+- Move Files: Ultrahand enables you to move files between directories on your SD card effortlessly. Provide the file path and the destination directory path, and Ultrahand will take care of moving the file, ensuring its seamless relocation.
+
+- Modify INI Files: Ultrahand empowers you to edit INI files on your SD card. You can update existing key-value pairs, add new entries, or even create new sections within the INI file. Ultrahand makes it easy to customize and tailor the configurations of your INI files.
+
+Ultrahand provides a convenient command-line interface to perform these operations, allowing you to efficiently manage your files, directories, and INI files on an SD card.
 
 ## Nintendo Switch Compatibility
 The Ultrahand File Management System is compatible with the Nintendo Switch, allowing users to manage files and perform file operations directly on their Switch console.
