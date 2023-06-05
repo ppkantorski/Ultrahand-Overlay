@@ -30,13 +30,12 @@ Ultrahand is a command-line tool that provides powerful functionality for managi
 Ultrahand provides a convenient command-line interface to perform these operations, allowing you to efficiently manage your files, directories, and INI files on an SD card.
 
 
-## Nintendo Switch Compatibility
+## Getting Started
+
+### Nintendo Switch Compatibility
 To run the Ultrahand File Management overlay on the Nintendo Switch, you need to have the necessary homebrew environment set up on your console. Once you have the homebrew environment set up, you can transfer the compiled executable file to your Switch and launch it using the Tesla Overlay.
 
 Please note that running homebrew software on your Nintendo Switch may void your warranty and can carry certain risks. Ensure that you understand the implications and follow the appropriate guidelines and precautions when using homebrew software.
-
-
-## Getting Started
 
 ### Compilation Prerequisites
 
