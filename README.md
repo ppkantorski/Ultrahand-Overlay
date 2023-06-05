@@ -81,7 +81,7 @@ You can add your own sections and commands to customize the actions performed by
 
 Note: The paths specified in the commands should be relative to the SD card root directory and should start with /.
 
-### Command Reference
+## Command Reference
 
 Ultrahand supports the following commands:
 
