@@ -9,7 +9,7 @@ Create directories, merge files, and customize configurations effortlessly using
 
 Join a vibrant community of like-minded creators as you share your crafted packages, collaborate, and explore new possibilities. With Ultrahand, you have the power to personalize your digital environment and unleash your imagination.
 
-Are you ready to step into the realm of file crafting and discover the endless potential of Ultrahand? Start crafting, sharing, and customizing today!
+Are you ready to step into the realm of automation crafting and discover the endless potential of Ultrahand? Start crafting, sharing, and customizing today!
 
 ## Features
 
