@@ -25,7 +25,7 @@ Please note that running homebrew software on your Nintendo Switch may void your
 
 ## Getting Started
 
-### Prerequisites
+### Compilation Prerequisites
 
 To compile and run the program, you need to have the following dependencies installed:
 
