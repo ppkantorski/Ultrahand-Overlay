@@ -408,10 +408,10 @@ void setIniFile(const std::string& fileToEdit, const std::string& desiredSection
 
 
 // ini toolkit
-void setIniFileValue(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredValue) {
+void setIniValue(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredValue) {
     setIniFile(fileToEdit, desiredSection, desiredKey, desiredValue, "");
 }
-void setIniFileKey(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredNewKey) {
+void setIniKey(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredNewKey) {
     setIniFile(fileToEdit, desiredSection, desiredKey, "", desiredNewKey);
 }
 void newIniEntry(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredValue) {
@@ -518,7 +518,7 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                     }
                 }
 
-                setIniFileValue(fileToEdit.c_str(), desiredSection.c_str(), desiredKey.c_str(), desiredValue.c_str());
+                setIniValue(fileToEdit.c_str(), desiredSection.c_str(), desiredKey.c_str(), desiredValue.c_str());
             }
         } else if (commandName == "set-ini-key") {
             // Edit command
@@ -536,7 +536,7 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                     }
                 }
 
-                setIniFileKey(fileToEdit.c_str(), desiredSection.c_str(), desiredKey.c_str(), desiredNewKey.c_str());
+                setIniKey(fileToEdit.c_str(), desiredSection.c_str(), desiredKey.c_str(), desiredNewKey.c_str());
             }
         } else if (commandName == "new-ini-entry") {
             // Edit command
@@ -629,7 +629,31 @@ std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadO
     if (!configFile) {
         // Write the default INI file
         FILE* configFileOut = fopen(configIniPath.c_str(), "w");
-        fprintf(configFileOut, "[make directories]\n");
+        std::string commands = "[make directories]\n"
+                               "mkdir /config/ultrahand/example1/\n"
+                               "mkdir /config/ultrahand/example2/\n"
+                               "[copy files]\n"
+                               "copy /config/ultrahand/config.ini /config/ultrahand/example1/\n"
+                               "copy /config/ultrahand/config.ini /config/ultrahand/example2/\n"
+                               "[rename files]\n"
+                               "move /config/ultrahand/example1/config.ini /config/ultrahand/example1/configRenamed.ini\n"
+                               "move /config/ultrahand/example2/config.ini /config/ultrahand/example2/configRenamed.ini\n"
+                               "[move directories]\n"
+                               "move /config/ultrahand/example1/ /config/ultrahand/example3/\n"
+                               "move /config/ultrahand/example2/ /config/ultrahand/example4/\n"
+                               "[delete files]\n"
+                               "delete /config/ultrahand/example1/config.ini\n"
+                               "delete /config/ultrahand/example2/config.ini\n"
+                               "[delete directories]\n"
+                               "delete /config/ultrahand/example*/\n"
+                               "[modify ini file]\n"
+                               "copy /bootloader/hekate_ipl.ini /config/ultrahand/\n"
+                               "set-ini-val /config/ultrahand/hekate_ipl.ini 'Atmosphere' fss0 gonnawritesomethingelse\n"
+                               "new-ini-entry /config/ultrahand/hekate_ipl.ini 'Atmosphere' booty true\n";
+                               
+        fprintf(configFileOut, "%s", commands.c_str());
+        
+        
         fclose(configFileOut);
         configFile = fopen(configIniPath.c_str(), "r");
     }
