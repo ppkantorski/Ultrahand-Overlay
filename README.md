@@ -106,10 +106,8 @@ Ultrahand supports the following commands:
 - new-ini-entry: Edits an INI file by adding a new entry to a section.
   - Usage: `new-ini-entry <file_to_edit> <desired_section> <desired_key> <desired_value>`
 
-Please note that `<directory_path>`, `<source_file_path>`, `<destination_file_path>`, `<file_path>`, `<destination_directory_path>`, `<new_file_name>`, `<file_to_edit>`, `<desired_section>`, `<desired_key>`, and `<desired_value>` should be replaced with the actual paths, names, sections, and values relevant to your use case.
 
 Make sure to follow the correct syntax and provide the required arguments for each command.
-
 
 You can configure these commands in the `config.ini` file by specifying them under the corresponding options. Make sure to provide the necessary arguments as described for each command.
 
