@@ -56,8 +56,8 @@ copy /config/ultrahand/config.ini /config/ultrahand/example1/
 copy /config/ultrahand/config.ini /config/ultrahand/example2/
 
 [rename files]
-rename /config/ultrahand/example1/config.ini /config/ultrahand/example1/configX.ini
-rename /config/ultrahand/example2/config.ini /config/ultrahand/example2/configX.ini
+move /config/ultrahand/example1/config.ini /config/ultrahand/example1/configX.ini
+move /config/ultrahand/example2/config.ini /config/ultrahand/example2/configX.ini
 
 [move directories]
 move /config/ultrahand/example1/ /config/ultrahand/example3/
@@ -73,9 +73,11 @@ delete /config/ultrahand/example2/
 delete /config/ultrahand/example3/
 delete /config/ultrahand/example4/
 
-[parse ini file]
+[modify ini file]
 copy /bootloader/hekate_ipl.ini /config/ultrahand/
-parse-ini /config/ultrahand/hekate_ipl.ini 'L4T Ubuntu Bionic' r2p_action working
+set-ini-val /config/ultrahand/hekate_ipl.ini 'Atmosphere' fss0 gonnawritesomethingelse
+new-ini-entry /config/ultrahand/hekate_ipl.ini 'Atmosphere' booty true
+
 ```
 You can add your own sections and commands to customize the actions performed by Ultrahand.
 
