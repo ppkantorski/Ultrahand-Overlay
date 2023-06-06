@@ -24,7 +24,7 @@ public:
     virtual tsl::elm::Element* createUI() override {
         inConfigMenu = true;
         
-        auto rootFrame = new tsl::elm::OverlayFrame(getFolderName(filePath), "Ultrahand Config");
+        auto rootFrame = new tsl::elm::OverlayFrame(getFolderNameFromPath(filePath), "Ultrahand Config");
         auto list = new tsl::elm::List();
 
         std::string configFile = filePath + "/config.ini";
@@ -124,7 +124,7 @@ public:
     virtual tsl::elm::Element* createUI() override {
         inSubMenu = true;
         
-        auto rootFrame = new tsl::elm::OverlayFrame(getFolderName(subPath), "Ultrahand Package");
+        auto rootFrame = new tsl::elm::OverlayFrame(getFolderNameFromPath(subPath), "Ultrahand Package");
         auto list = new tsl::elm::List();
 
         // Add a section break with small text to indicate the "Packages" section
@@ -208,7 +208,7 @@ public:
         createDirectory(directoryPath);
 
         // Load options from INI file
-        std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> options = loadOptionsFromIni(configIniPath);
+        std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> options = loadOptionsFromIni(configIniPath, true);
 
         // Load subdirectories
         std::vector<std::string> subdirectories = getSubdirectories(directoryPath);
