@@ -1,2 +1,3 @@
-- WIP, instructions coming soon.
-- DO NOT USE FOR NOW
+- You will need to fill in the relavent folders before using so that there are files to copy.
+- The config.ini is pretty straight forward to read, just place the stuff in the folders and you can easily swap.
+- WARNING: DO NOT RUN COMMANDS WITHOUT FOLDERS WITH FILES.
