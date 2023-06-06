@@ -1,5 +1,5 @@
 # Ultrahand Overlay (HOS 16.0.0+)
-![Alt Text](https://www.pcinvasion.com/wp-content/uploads/2023/05/How-to-Get-and-Use-Ultrahand-Ability-in-Tears-of-the-Kingdom.jpg)
+![Alt Text](https://gbatemp.net/attachments/ultra_hand-png.374023/)
 ![Alt Text](https://gbatemp.net/attachments/img_4417-jpg.376189/)
 ![Alt Text](https://gbatemp.net/attachments/img_4418-jpg.376190/)
 
