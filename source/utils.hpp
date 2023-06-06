@@ -57,7 +57,7 @@ std::string getFolderNameFromPath(const std::string& path) {
         strippedFilePath.pop_back();
         return getFileNameFromPath(strippedFilePath);
     } else {
-        return "";
+        return getFileNameFromPath(path);
     }
 }
 
