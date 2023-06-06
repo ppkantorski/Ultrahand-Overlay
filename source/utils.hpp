@@ -3,31 +3,32 @@
 #include <sys/stat.h>
 #include <dirent.h>
 #include <fnmatch.h>
-#include <ctime>
+
 
 #define SpsmShutdownMode_Normal 0
 #define SpsmShutdownMode_Reboot 1
 
 // For loggging messages and debugging
-void logMessage(const std::string& message) {
-    std::time_t currentTime = std::time(nullptr);
-    std::string logEntry = std::asctime(std::localtime(&currentTime));
-    // Find the last non-newline character
-    std::size_t lastNonNewline = logEntry.find_last_not_of("\r\n");
-
-    // Remove everything after the last non-newline character
-    if (lastNonNewline != std::string::npos) {
-        logEntry.erase(lastNonNewline + 1);
-    }
-    logEntry = "["+logEntry+"] ";
-    logEntry += message+"\n";
-
-    FILE* file = fopen("sdmc:/config/ultrahand/log.txt", "a");
-    if (file != nullptr) {
-        fputs(logEntry.c_str(), file);
-        fclose(file);
-    }
-}
+//#include <ctime>
+//void logMessage(const std::string& message) {
+//    std::time_t currentTime = std::time(nullptr);
+//    std::string logEntry = std::asctime(std::localtime(&currentTime));
+//    // Find the last non-newline character
+//    std::size_t lastNonNewline = logEntry.find_last_not_of("\r\n");
+//
+//    // Remove everything after the last non-newline character
+//    if (lastNonNewline != std::string::npos) {
+//        logEntry.erase(lastNonNewline + 1);
+//    }
+//    logEntry = "["+logEntry+"] ";
+//    logEntry += message+"\n";
+//
+//    FILE* file = fopen("sdmc:/config/ultrahand/log.txt", "a");
+//    if (file != nullptr) {
+//        fputs(logEntry.c_str(), file);
+//        fclose(file);
+//    }
+//}
 
 bool isDirectory(const std::string& path) {
     struct stat pathStat;
@@ -81,8 +82,8 @@ std::vector<std::string> getFilesListByWildcards(const std::string& path) {
         dirPath = path + "/";
     }
 
-    logMessage("dirPath: " + dirPath);
-    logMessage("wildcard: " + wildcard);
+    //logMessage("dirPath: " + dirPath);
+    //logMessage("wildcard: " + wildcard);
 
     std::vector<std::string> fileList;
 
@@ -102,12 +103,12 @@ std::vector<std::string> getFilesListByWildcards(const std::string& path) {
 
             if (isFolderWildcard && isEntryDirectory) {
                 if (fnmatch(wildcard.c_str(), entryName.c_str(), FNM_NOESCAPE) == 0) {
-                    logMessage("Matched entry: " + entryName);
+                    //logMessage("Matched entry: " + entryName);
                     fileList.push_back(entryPath + "/");
                 }
             } else if (!isFolderWildcard && !isEntryDirectory) {
                 if (fnmatch(wildcard.c_str(), entryName.c_str(), FNM_NOESCAPE) == 0) {
-                    logMessage("Matched entry: " + entryName);
+                    //logMessage("Matched entry: " + entryName);
                     fileList.push_back(entryPath);
                 }
             }
@@ -153,11 +154,11 @@ void deleteFileOrDirectory(const std::string& pathToDelete) {
 
 
 void deleteFileOrDirectoryByPattern(const std::string& pathPattern) {
-    logMessage("pathPattern: "+pathPattern);
+    //logMessage("pathPattern: "+pathPattern);
     std::vector<std::string> fileList = getFilesListByWildcards(pathPattern);
 
     for (const auto& path : fileList) {
-        logMessage("path: "+path);
+        //logMessage("path: "+path);
         deleteFileOrDirectory(path);
     }
 }
@@ -306,8 +307,8 @@ bool moveFilesOrDirectoriesByPattern(const std::string& sourcePathPattern, const
             std::string folderName = getFolderNameFromPath(sourceFileOrDirectory);
             std::string fixedDestinationPath = destinationPath + folderName + "/";
         
-            logMessage("sourceFileOrDirectory: "+sourceFileOrDirectory);
-            logMessage("fixedDestinationPath: "+fixedDestinationPath);
+            //logMessage("sourceFileOrDirectory: "+sourceFileOrDirectory);
+            //logMessage("fixedDestinationPath: "+fixedDestinationPath);
         
             success = moveFileOrDirectory(sourceFileOrDirectory.c_str(), fixedDestinationPath.c_str());
         }
@@ -377,7 +378,7 @@ void copyFileOrDirectory(const std::string& fromFileOrDirectory, const std::stri
         } else if (S_ISDIR(fromFileOrDirectoryInfo.st_mode)) {
             // Source is a directory
             std::string fromDirectory = fromFileOrDirectory;
-            logMessage("fromDirectory: "+fromDirectory);
+            //logMessage("fromDirectory: "+fromDirectory);
             
             struct stat toFileOrDirectoryInfo;
             if (stat(toFileOrDirectory.c_str(), &toFileOrDirectoryInfo) == 0 && S_ISDIR(toFileOrDirectoryInfo.st_mode)) {
@@ -386,9 +387,9 @@ void copyFileOrDirectory(const std::string& fromFileOrDirectory, const std::stri
                 std::string dirName = getFolderNameFromPath(fromDirectory);
                 if (dirName != "") {
                     std::string toDirPath = toDirectory + dirName +"/";
-                    logMessage("toDirectory: "+toDirectory);
-                    logMessage("dirName: "+dirName);
-                    logMessage("toDirPath: "+toDirPath);
+                    //logMessage("toDirectory: "+toDirectory);
+                    //logMessage("dirName: "+dirName);
+                    //logMessage("toDirPath: "+toDirPath);
 
                     // Create the destination directory
                     mkdir(toDirPath.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
@@ -427,8 +428,8 @@ void copyFileOrDirectoryByPattern(const std::string& sourcePathPattern, const st
     std::vector<std::string> fileList = getFilesListByWildcards(sourcePathPattern);
 
     for (const std::string& sourcePath : fileList) {
-        logMessage("sourcePath: "+sourcePath);
-        logMessage("toDirectory: "+toDirectory);
+        //logMessage("sourcePath: "+sourcePath);
+        //logMessage("toDirectory: "+toDirectory);
         if (sourcePath != toDirectory){
             copyFileOrDirectory(sourcePath, toDirectory);
         }
