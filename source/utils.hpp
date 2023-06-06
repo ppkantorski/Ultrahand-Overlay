@@ -475,36 +475,122 @@ std::string getValueFromLine(const std::string& line) {
 }
 
 
-void setIniFile(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredValue, const std::string& desiredNewKey, bool isNewEntry = false) {
+//void setIniFile(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredValue, const std::string& desiredNewKey, bool isNewEntry = false) {
+//    FILE* configFile = fopen(fileToEdit.c_str(), "r");
+//    if (!configFile) {
+//        // printf("Failed to open the INI file.\n");
+//        return;
+//    }
+//
+//    std::string trimmedLine;
+//    std::string formattedDesiredValue;
+//    std::string tempPath = fileToEdit + ".tmp";
+//    FILE* tempFile = fopen(tempPath.c_str(), "w");
+//
+//    if (tempFile) {
+//        std::string currentSection;
+//        char line[256];
+//        bool inDesiredSection = false; // Flag to track if we are currently inside the desired section
+//        bool keyFound = false; // Flag to track if the desired key is found
+//        bool lastLineInSection = false; // Flag to track if the current line is the last line in the section
+//
+//        while (fgets(line, sizeof(line), configFile)) {
+//            trimmedLine = trim(std::string(line));
+//
+//            // Check if the line represents a section
+//            if (trimmedLine[0] == '[' && trimmedLine[trimmedLine.length() - 1] == ']') {
+//                currentSection = removeQuotes(trim(std::string(trimmedLine.c_str() + 1, trimmedLine.length() - 2)));
+//                inDesiredSection = (trim(currentSection) == trim(desiredSection));
+//            }
+//
+//            // Check if the line is in the desired section
+//            if (inDesiredSection) {
+//                // Tokenize the line based on "=" delimiter
+//                std::string::size_type delimiterPos = trimmedLine.find('=');
+//                if (delimiterPos != std::string::npos) {
+//                    std::string lineKey = trim(trimmedLine.substr(0, delimiterPos));
+//
+//                    // Check if the line key matches the desired key
+//                    if (lineKey == desiredKey) {
+//                        keyFound = true;
+//                        formattedDesiredValue = removeQuotes(desiredValue);
+//                        std::string originalValue = getValueFromLine(trimmedLine); // Extract the original value
+//
+//                        // Write the modified line with the desired key and value
+//                        if (!desiredNewKey.empty()) {
+//                            fprintf(tempFile, "%s = %s\n", desiredNewKey.c_str(), originalValue.c_str());
+//                        } else {
+//                            fprintf(tempFile, "%s = %s\n", desiredKey.c_str(), formattedDesiredValue.c_str());
+//                        }
+//                        continue; // Skip writing the original line
+//                    }
+//                }
+//                lastLineInSection = false;
+//            }
+//
+//            // Check if the current line is the last line in the section
+//            if (!inDesiredSection && trimmedLine.empty()) {
+//                // If the desired key is not found and it's a new entry, add it to the last line of the section
+//                if (!keyFound && isNewEntry) {
+//                    formattedDesiredValue = removeQuotes(desiredValue);
+//                    fprintf(tempFile, "%s = %s\n", desiredKey.c_str(), formattedDesiredValue.c_str());
+//                }
+//            }
+//            
+//            //fprintf(tempFile, "%s\n", line);
+//        }
+//
+//        fclose(configFile);
+//        fclose(tempFile);
+//        remove(fileToEdit.c_str()); // Delete the old configuration file
+//        rename(tempPath.c_str(), fileToEdit.c_str()); // Rename the temp file to the original name
+//
+//        // printf("INI file updated successfully.\n");
+//    } else {
+//        // printf("Failed to create temporary file.\n");
+//    }
+//}
+//
+//
+//// ini toolkit
+//void setIniValue(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredValue) {
+//    setIniFile(fileToEdit, desiredSection, desiredKey, desiredValue, "");
+//}
+//void setIniKey(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredNewKey) {
+//    setIniFile(fileToEdit, desiredSection, desiredKey, "", desiredNewKey);
+//}
+//void newIniEntry(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredValue) {
+//    setIniFile(fileToEdit, desiredSection, desiredKey, desiredValue, "", true);
+//}
+
+
+
+
+
+void setIniFile(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredValue, const std::string& desiredNewKey) {
     FILE* configFile = fopen(fileToEdit.c_str(), "r");
     if (!configFile) {
-        // printf("Failed to open the INI file.\n");
+        //printf("Failed to open the INI file.\n");
         return;
     }
 
     std::string trimmedLine;
-    std::string formattedDesiredValue;
     std::string tempPath = fileToEdit + ".tmp";
     FILE* tempFile = fopen(tempPath.c_str(), "w");
 
     if (tempFile) {
         std::string currentSection;
         char line[256];
-        bool inDesiredSection = false; // Flag to track if we are currently inside the desired section
-        bool keyFound = false; // Flag to track if the desired key is found
-        bool lastLineInSection = false; // Flag to track if the current line is the last line in the section
-
         while (fgets(line, sizeof(line), configFile)) {
             trimmedLine = trim(std::string(line));
 
             // Check if the line represents a section
             if (trimmedLine[0] == '[' && trimmedLine[trimmedLine.length() - 1] == ']') {
                 currentSection = removeQuotes(trim(std::string(trimmedLine.c_str() + 1, trimmedLine.length() - 2)));
-                inDesiredSection = (trim(currentSection) == trim(desiredSection));
             }
 
             // Check if the line is in the desired section
-            if (inDesiredSection) {
+            if (trim(currentSection) == trim(desiredSection)) {
                 // Tokenize the line based on "=" delimiter
                 std::string::size_type delimiterPos = trimmedLine.find('=');
                 if (delimiterPos != std::string::npos) {
@@ -512,8 +598,7 @@ void setIniFile(const std::string& fileToEdit, const std::string& desiredSection
 
                     // Check if the line key matches the desired key
                     if (lineKey == desiredKey) {
-                        keyFound = true;
-                        formattedDesiredValue = removeQuotes(desiredValue);
+                        std::string formattedDesiredValue = removeQuotes(desiredValue);
                         std::string originalValue = getValueFromLine(trimmedLine); // Extract the original value
 
                         // Write the modified line with the desired key and value
@@ -525,19 +610,9 @@ void setIniFile(const std::string& fileToEdit, const std::string& desiredSection
                         continue; // Skip writing the original line
                     }
                 }
-                lastLineInSection = false;
             }
 
-            // Check if the current line is the last line in the section
-            if (!inDesiredSection && trimmedLine.empty()) {
-                // If the desired key is not found and it's a new entry, add it to the last line of the section
-                if (!keyFound && isNewEntry) {
-                    formattedDesiredValue = removeQuotes(desiredValue);
-                    fprintf(tempFile, "%s = %s\n", desiredKey.c_str(), formattedDesiredValue.c_str());
-                }
-            }
-            
-            fprintf(tempFile, "%s\n", line);
+            fprintf(tempFile, "%s", line);
         }
 
         fclose(configFile);
@@ -552,16 +627,20 @@ void setIniFile(const std::string& fileToEdit, const std::string& desiredSection
 }
 
 
-// ini toolkit
-void setIniValue(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredValue) {
+void setIniFileValue(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredValue) {
     setIniFile(fileToEdit, desiredSection, desiredKey, desiredValue, "");
 }
-void setIniKey(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredNewKey) {
+void setIniFileKey(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredNewKey) {
     setIniFile(fileToEdit, desiredSection, desiredKey, "", desiredNewKey);
 }
-void newIniEntry(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredValue) {
-    setIniFile(fileToEdit, desiredSection, desiredKey, desiredValue, "", true);
-}
+void newIniEntry(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredValue) {}
+
+
+
+
+
+
+
 
 
 void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& commands) {
@@ -677,7 +756,7 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                     }
                 }
 
-                setIniValue(fileToEdit.c_str(), desiredSection.c_str(), desiredKey.c_str(), desiredValue.c_str());
+                setIniFileValue(fileToEdit.c_str(), desiredSection.c_str(), desiredKey.c_str(), desiredValue.c_str());
             }
         } else if (commandName == "set-ini-key") {
             // Edit command
@@ -695,7 +774,7 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                     }
                 }
 
-                setIniKey(fileToEdit.c_str(), desiredSection.c_str(), desiredKey.c_str(), desiredNewKey.c_str());
+                setIniFileKey(fileToEdit.c_str(), desiredSection.c_str(), desiredKey.c_str(), desiredNewKey.c_str());
             }
         } else if (commandName == "new-ini-entry") {
             // Edit command
