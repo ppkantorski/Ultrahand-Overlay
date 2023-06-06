@@ -3,22 +3,31 @@
 #include <sys/stat.h>
 #include <dirent.h>
 #include <fnmatch.h>
+#include <ctime>
 
 #define SpsmShutdownMode_Normal 0
 #define SpsmShutdownMode_Reboot 1
 
 // For loggging messages and debugging
-//void logMessage(const std::string& message) {
-//    std::time_t currentTime = std::time(nullptr);
-//    std::string logEntry = std::asctime(std::localtime(&currentTime));
-//    logEntry += message+"\n";
-//
-//    FILE* file = fopen("sdmc:/config/ultrahand/log.txt", "a");
-//    if (file != nullptr) {
-//        fputs(logEntry.c_str(), file);
-//        fclose(file);
-//    }
-//}
+void logMessage(const std::string& message) {
+    std::time_t currentTime = std::time(nullptr);
+    std::string logEntry = std::asctime(std::localtime(&currentTime));
+    // Find the last non-newline character
+    std::size_t lastNonNewline = logEntry.find_last_not_of("\r\n");
+
+    // Remove everything after the last non-newline character
+    if (lastNonNewline != std::string::npos) {
+        logEntry.erase(lastNonNewline + 1);
+    }
+    logEntry = "["+logEntry+"] ";
+    logEntry += message+"\n";
+
+    FILE* file = fopen("sdmc:/config/ultrahand/log.txt", "a");
+    if (file != nullptr) {
+        fputs(logEntry.c_str(), file);
+        fclose(file);
+    }
+}
 
 bool isDirectory(const std::string& path) {
     struct stat pathStat;
@@ -26,6 +35,87 @@ bool isDirectory(const std::string& path) {
         return S_ISDIR(pathStat.st_mode);
     }
     return false;
+}
+
+
+
+
+
+std::string getFileNameFromPath(const std::string& filePath) {
+    size_t lastSlash = filePath.find_last_of('/');
+    if (lastSlash != std::string::npos) {
+        return filePath.substr(lastSlash + 1);
+    }
+    return filePath;
+}
+
+
+std::string getFolderNameFromPath(const std::string& path) {
+    std::string strippedFilePath = path;
+    if (!strippedFilePath.empty() && strippedFilePath.back() == '/') {
+        strippedFilePath.pop_back();
+        return getFileNameFromPath(strippedFilePath);
+    } else {
+        return "";
+    }
+}
+
+
+// Function to retrieve a list of files/folders based on wildcard pattern
+std::vector<std::string> getFilesListByWildcards(const std::string& path) {
+    std::string dirPath = "";
+    std::string wildcard = "";
+
+    std::size_t wildcardPos = path.find('*');
+    if (wildcardPos != std::string::npos) {
+        std::size_t slashPos = path.rfind('/', wildcardPos);
+
+        if (slashPos != std::string::npos) {
+            dirPath = path.substr(0, slashPos + 1);
+            wildcard = path.substr(slashPos + 1);
+        } else {
+            dirPath = "";
+            wildcard = path;
+        }
+    } else {
+        dirPath = path + "/";
+    }
+
+    logMessage("dirPath: " + dirPath);
+    logMessage("wildcard: " + wildcard);
+
+    std::vector<std::string> fileList;
+
+    bool isFolderWildcard = wildcard.back() == '/';
+    if (isFolderWildcard) {
+        wildcard = wildcard.substr(0, wildcard.size() - 1);  // Remove the trailing slash
+    }
+
+    DIR* dir = opendir(dirPath.c_str());
+    if (dir != nullptr) {
+        dirent* entry;
+        while ((entry = readdir(dir)) != nullptr) {
+            std::string entryName = entry->d_name;
+            std::string entryPath = dirPath + entryName;
+
+            bool isEntryDirectory = isDirectory(entryPath);
+
+            if (isFolderWildcard && isEntryDirectory) {
+                if (fnmatch(wildcard.c_str(), entryName.c_str(), FNM_NOESCAPE) == 0) {
+                    logMessage("Matched entry: " + entryName);
+                    fileList.push_back(entryPath + "/");
+                }
+            } else if (!isFolderWildcard && !isEntryDirectory) {
+                if (fnmatch(wildcard.c_str(), entryName.c_str(), FNM_NOESCAPE) == 0) {
+                    logMessage("Matched entry: " + entryName);
+                    fileList.push_back(entryPath);
+                }
+            }
+        }
+        closedir(dir);
+    }
+
+    return fileList;
 }
 
 
@@ -59,6 +149,20 @@ void deleteFileOrDirectory(const std::string& pathToDelete) {
         }
     }
 }
+
+
+
+void deleteFileOrDirectoryByPattern(const std::string& pathPattern) {
+    logMessage("pathPattern: "+pathPattern);
+    std::vector<std::string> fileList = getFilesListByWildcards(pathPattern);
+
+    for (const auto& path : fileList) {
+        logMessage("path: "+path);
+        deleteFileOrDirectory(path);
+    }
+}
+
+
 
 
 // Function to create a directory if it doesn't exist
@@ -116,6 +220,10 @@ std::vector<std::string> getSubdirectories(const std::string& directoryPath) {
 
 
 
+
+
+
+
 bool moveFileOrDirectory(const std::string& sourcePath, const std::string& destinationPath) {
     struct stat sourceInfo;
     struct stat destinationInfo;
@@ -136,25 +244,28 @@ bool moveFileOrDirectory(const std::string& sourcePath, const std::string& desti
 
             DIR* dir = opendir(sourcePath.c_str());
             if (!dir) {
-                printf("Failed to open source directory: %s\n", sourcePath.c_str());
+                //printf("Failed to open source directory: %s\n", sourcePath.c_str());
                 return false;
             }
 
             struct dirent* entry;
             while ((entry = readdir(dir)) != NULL) {
-                const std::string fileName = entry->d_name;
+                const std::string fileOrFolderName = entry->d_name;
 
-                // Ignore current and parent directory entries
-                if (fileName == "." || fileName == "..")
-                    continue;
+                if (fileOrFolderName != "." && fileOrFolderName != "..") {
+                    std::string sourceFilePath = sourcePath + fileOrFolderName;
+                    std::string destinationFilePath = destinationPath + fileOrFolderName;
 
-                std::string sourceFilePath = sourcePath + "/" + fileName;
-                std::string destinationFilePath = destinationPath + "/" + fileName;
+                    if (entry->d_type == DT_DIR) {
+                        // Append trailing slash to destination path for folders
+                        destinationFilePath += "/";
+                        sourceFilePath += "/";
+                    }
 
-                if (rename(sourceFilePath.c_str(), destinationFilePath.c_str()) == -1) {
-                    printf("Failed to move file: %s\n", sourceFilePath.c_str());
-                    closedir(dir);
-                    return false;
+                    if (!moveFileOrDirectory(sourceFilePath, destinationFilePath)) {
+                        closedir(dir);
+                        return false;
+                    }
                 }
             }
 
@@ -164,6 +275,15 @@ bool moveFileOrDirectory(const std::string& sourcePath, const std::string& desti
             deleteFileOrDirectory(sourcePath);
 
             return true;
+        } else {
+            // Source path is a regular file
+
+            if (rename(sourcePath.c_str(), destinationPath.c_str()) == -1) {
+                //printf("Failed to move file: %s\n", sourcePath.c_str());
+                return false;
+            }
+
+            return true;
         }
     }
 
@@ -171,55 +291,37 @@ bool moveFileOrDirectory(const std::string& sourcePath, const std::string& desti
 }
 
 
-bool moveFilesByPattern(const std::string& sourcePathPattern, const std::string& destinationPath) {
-    std::string sourceDirectory;
-    std::string pattern;
 
-    // Separate the directory path and pattern
-    size_t lastSlashPos = sourcePathPattern.find_last_of('/');
-    if (lastSlashPos != std::string::npos) {
-        sourceDirectory = sourcePathPattern.substr(0, lastSlashPos);
-        pattern = sourcePathPattern.substr(lastSlashPos + 1);
-    } else {
-        sourceDirectory = ".";
-        pattern = sourcePathPattern;
-    }
 
-    // Open the source directory
-    DIR* dir = opendir(sourceDirectory.c_str());
-    if (dir == nullptr) {
-        return false;  // Failed to open source directory
-    }
-
-    // Iterate through the directory entries
-    dirent* entry;
-    while ((entry = readdir(dir)) != nullptr) {
-        std::string filename = entry->d_name;
-        if (filename != "." && filename != "..") {
-            // Check if the filename matches the pattern
-            if (fnmatch(pattern.c_str(), filename.c_str(), 0) == 0) {
-                std::string sourceFile = sourceDirectory + "/" + filename;
-                std::string destinationFile = destinationPath + "/" + filename;
-
-                if (std::rename(sourceFile.c_str(), destinationFile.c_str()) != 0) {
-                    closedir(dir);
-                    return false;  // Failed to move file
-                }
-            }
+bool moveFilesOrDirectoriesByPattern(const std::string& sourcePathPattern, const std::string& destinationPath) {
+    std::vector<std::string> fileList = getFilesListByWildcards(sourcePathPattern);
+    bool success = false;
+    // Iterate through the file list
+    for (const std::string& sourceFileOrDirectory : fileList) {
+        // if sourceFile is a file (Needs condition handling)
+        if (!isDirectory(sourceFileOrDirectory)) {
+            success = moveFileOrDirectory(sourceFileOrDirectory.c_str(), destinationPath.c_str());
+        } else if (isDirectory(sourceFileOrDirectory)) {
+            // if sourceFile is a directory (needs conditoin handling)
+            std::string folderName = getFolderNameFromPath(sourceFileOrDirectory);
+            std::string fixedDestinationPath = destinationPath + folderName + "/";
+        
+            logMessage("sourceFileOrDirectory: "+sourceFileOrDirectory);
+            logMessage("fixedDestinationPath: "+fixedDestinationPath);
+        
+            success = moveFileOrDirectory(sourceFileOrDirectory.c_str(), fixedDestinationPath.c_str());
         }
+
     }
 
-    closedir(dir);
-    return true;  // All files matching the pattern moved successfully
+    return success;  // All files matching the pattern moved successfully
 }
 
 
 
 
 
-
- // Perform copy action from "fromFile" to file or directory
-void copyFile(const std::string& fromFile, const std::string& toFileOrDirectory);
+ // Perform copy action from "fromFileOrDirectory" to "toFileOrDirectory"
 
 void copySingleFile(const std::string& fromFile, const std::string& toFile) {
     FILE* srcFile = fopen(fromFile.c_str(), "rb");
@@ -241,56 +343,79 @@ void copySingleFile(const std::string& fromFile, const std::string& toFile) {
     }
 }
 
-void copyFile(const std::string& fromFile, const std::string& toFileOrDirectory) {
-    struct stat fromFileInfo;
-    if (stat(fromFile.c_str(), &fromFileInfo) == 0) {
-        if (S_ISREG(fromFileInfo.st_mode)) {
+void copyFileOrDirectory(const std::string& fromFileOrDirectory, const std::string& toFileOrDirectory) {
+    struct stat fromFileOrDirectoryInfo;
+    if (stat(fromFileOrDirectory.c_str(), &fromFileOrDirectoryInfo) == 0) {
+        if (S_ISREG(fromFileOrDirectoryInfo.st_mode)) {
             // Source is a regular file
-            struct stat toFileInfo;
-            if (stat(toFileOrDirectory.c_str(), &toFileInfo) == 0 && S_ISDIR(toFileInfo.st_mode)) {
+            std::string fromFile = fromFileOrDirectory;
+            
+            struct stat toFileOrDirectoryInfo;
+            
+            if (stat(toFileOrDirectory.c_str(), &toFileOrDirectoryInfo) == 0 && S_ISDIR(toFileOrDirectoryInfo.st_mode)) {
                 // Destination is a directory
+                std::string toDirectory = toFileOrDirectory;
                 std::string fileName = fromFile.substr(fromFile.find_last_of('/') + 1);
-                std::string toFilePath = toFileOrDirectory + "/" + fileName;
+                std::string toFilePath = toDirectory + fileName;
 
                 // Check if the destination file exists and remove it
-                if (stat(toFilePath.c_str(), &toFileInfo) == 0 && S_ISREG(toFileInfo.st_mode)) {
+                if (stat(toFilePath.c_str(), &toFileOrDirectoryInfo) == 0 && S_ISREG(toFileOrDirectoryInfo.st_mode)) {
                     std::remove(toFilePath.c_str());
                 }
 
                 copySingleFile(fromFile, toFilePath);
             } else {
+                std::string toFile = toFileOrDirectory;
                 // Destination is a file or doesn't exist
                 // Check if the destination file exists and remove it
-                if (stat(toFileOrDirectory.c_str(), &toFileInfo) == 0 && S_ISREG(toFileInfo.st_mode)) {
-                    std::remove(toFileOrDirectory.c_str());
+                if (stat(toFile.c_str(), &toFileOrDirectoryInfo) == 0 && S_ISREG(toFileOrDirectoryInfo.st_mode)) {
+                    std::remove(toFile.c_str());
                 }
 
-                copySingleFile(fromFile, toFileOrDirectory);
+                copySingleFile(fromFile, toFile);
             }
-        } else if (S_ISDIR(fromFileInfo.st_mode)) {
+        } else if (S_ISDIR(fromFileOrDirectoryInfo.st_mode)) {
             // Source is a directory
-            struct stat toFileInfo;
-            if (stat(toFileOrDirectory.c_str(), &toFileInfo) == 0 && S_ISDIR(toFileInfo.st_mode)) {
+            std::string fromDirectory = fromFileOrDirectory;
+            logMessage("fromDirectory: "+fromDirectory);
+            
+            struct stat toFileOrDirectoryInfo;
+            if (stat(toFileOrDirectory.c_str(), &toFileOrDirectoryInfo) == 0 && S_ISDIR(toFileOrDirectoryInfo.st_mode)) {
                 // Destination is a directory
-                std::string dirName = fromFile.substr(fromFile.find_last_of('/') + 1);
-                std::string toDirPath = toFileOrDirectory + "/" + dirName;
+                std::string toDirectory = toFileOrDirectory;
+                std::string dirName = getFolderNameFromPath(fromDirectory);
+                if (dirName != "") {
+                    std::string toDirPath = toDirectory + dirName +"/";
+                    logMessage("toDirectory: "+toDirectory);
+                    logMessage("dirName: "+dirName);
+                    logMessage("toDirPath: "+toDirPath);
 
-                // Create the destination directory
-                mkdir(toDirPath.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+                    // Create the destination directory
+                    mkdir(toDirPath.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
 
-                // Open the source directory
-                DIR* dir = opendir(fromFile.c_str());
-                if (dir != nullptr) {
-                    dirent* entry;
-                    while ((entry = readdir(dir)) != nullptr) {
-                        std::string fileName = entry->d_name;
-                        if (fileName != "." && fileName != "..") {
-                            std::string fromFilePath = fromFile + "/" + fileName;
-                            std::string toFilePath = toDirPath;
-                            copyFile(fromFilePath, toFilePath);
+                    // Open the source directory
+                    DIR* dir = opendir(fromDirectory.c_str());
+                    if (dir != nullptr) {
+                        dirent* entry;
+                        while ((entry = readdir(dir)) != nullptr) {
+                            std::string fileOrFolderName = entry->d_name;
+                            
+                            // handle cade for files
+                            if (fileOrFolderName != "." && fileOrFolderName != "..") {
+                                std::string fromFilePath = fromDirectory + fileOrFolderName;
+                                copyFileOrDirectory(fromFilePath, toDirPath);
+                            }
+                            // handle case for subfolders within the from file path
+                            if (entry->d_type == DT_DIR && fileOrFolderName != "." && fileOrFolderName != "..") {
+                                std::string subFolderPath = fromDirectory + fileOrFolderName + "/";
+                                
+                                
+                                copyFileOrDirectory(subFolderPath, toDirPath);
+                            }
+                            
                         }
+                        closedir(dir);
                     }
-                    closedir(dir);
                 }
             }
         }
@@ -298,7 +423,18 @@ void copyFile(const std::string& fromFile, const std::string& toFileOrDirectory)
 }
 
 
+void copyFileOrDirectoryByPattern(const std::string& sourcePathPattern, const std::string& toDirectory) {
+    std::vector<std::string> fileList = getFilesListByWildcards(sourcePathPattern);
 
+    for (const std::string& sourcePath : fileList) {
+        logMessage("sourcePath: "+sourcePath);
+        logMessage("toDirectory: "+toDirectory);
+        if (sourcePath != toDirectory){
+            copyFileOrDirectory(sourcePath, toDirectory);
+        }
+        
+    }
+}
 
 
 
@@ -466,13 +602,27 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
             if (command.size() >= 3) {
                 std::string fromPath = "sdmc:" + removeQuotes(command[1]);
                 std::string toPath = "sdmc:" + removeQuotes(command[2]);
-                copyFile(fromPath, toPath);
+                
+                
+                if (fromPath.find('*') != std::string::npos) {
+                    // Delete files or directories by pattern
+                    copyFileOrDirectoryByPattern(fromPath, toPath);
+                } else {
+                    copyFileOrDirectory(fromPath, toPath);
+                }
+                
             }
         } else if (commandName == "delete" || commandName == "del") {
             // Delete command
             if (command.size() >= 2) {
-                std::string fileToDelete = "sdmc:" + removeQuotes(command[1]);
-                deleteFileOrDirectory(fileToDelete);
+                std::string fileOrPathToDelete = "sdmc:" + removeQuotes(command[1]);
+                
+                if (fileOrPathToDelete.find('*') != std::string::npos) {
+                    // Delete files or directories by pattern
+                    deleteFileOrDirectoryByPattern(fileOrPathToDelete);
+                } else {
+                    deleteFileOrDirectory(fileOrPathToDelete);
+                }
             }
         } else if (commandName == "rename" || commandName == "move" || commandName == "mv") {
             // Rename command
@@ -481,19 +631,19 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                 std::string sourcePath = "sdmc:" + removeQuotes(command[1]);
                 std::string destinationPath = "sdmc:" + removeQuotes(command[2]);
 
-                if (command[1].back() == '/') {
-                    // Remove trailing '/' from source path
-                    sourcePath.pop_back();
-                }
+                //if (command[1].back() == '/') {
+                //    // Remove trailing '/' from source path
+                //    sourcePath.pop_back();
+                //}
 
-                if (command[2].back() == '/') {
-                    // Remove trailing '/' from destination path
-                    destinationPath.pop_back();
-                }
+                //if (command[2].back() == '/') {
+                //    // Remove trailing '/' from destination path
+                //    destinationPath.pop_back();
+                //}
 
                 if (sourcePath.find('*') != std::string::npos) {
                     // Move files by pattern
-                    if (moveFilesByPattern(sourcePath, destinationPath)) {
+                    if (moveFilesOrDirectoriesByPattern(sourcePath, destinationPath)) {
                         //std::cout << "Files moved successfully." << std::endl;
                     } else {
                         //std::cout << "Failed to move files." << std::endl;
@@ -725,11 +875,3 @@ std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadO
     return options;
 }
 
-
-std::string getFolderName(const std::string& path) {
-    size_t lastSlash = path.find_last_of('/');
-    if (lastSlash != std::string::npos && lastSlash + 1 < path.length()) {
-        return path.substr(lastSlash + 1);
-    }
-    return path;
-}
