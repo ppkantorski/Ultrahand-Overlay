@@ -117,6 +117,12 @@ Ultrahand supports the following commands:
 - new-ini-entry: Edits an INI file by adding a new entry to a section.
   - Usage: `new-ini-entry <file_to_edit> <desired_section> <desired_key> <desired_value>`
 
+- reboot: Restarts the system.
+  - Usage: `reboot`
+
+- shutdown: Shuts down the system.
+  - Usage: `shutdown`
+
 
 Make sure to follow the correct syntax and provide the required arguments for each command.
 
