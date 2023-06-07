@@ -30,6 +30,83 @@
 //    }
 //}
 
+// List of protected folders
+const std::vector<std::string> protectedFolders = {
+    "sdmc:/Nintendo/",
+    "sdmc:/emuMMC/",
+    "sdmc:/atmosphere/",
+    "sdmc:/bootloader/",
+    "sdmc:/switch/",
+    "sdmc:/config/",
+    "sdmc:/"
+};
+
+bool isProtectedFolder(const std::string& folderPath) {
+    // Check if the provided folder path is considered protected
+    for (const std::string& protectedFolder : protectedFolders) {
+        if (folderPath == protectedFolder) {
+            return true; // Folder path is considered protected
+        }
+    }
+    return false; // Folder path is not considered protected
+}
+
+bool isDangerousCombination(const std::string& patternPath) {
+
+    // List of obviously dangerous patterns
+    const std::vector<std::string> dangerousCombinationPatterns = {
+        "*",         // Deletes all files/directories in the current directory
+        "*/"         // Deletes all files/directories in the current directory
+    };
+
+    // List of obviously dangerous patterns
+    const std::vector<std::string> dangerousPatterns = {
+        "..",     // Attempts to traverse to parent directories
+        "~"       // Represents user's home directory, can be dangerous if misused
+    };
+
+    // Check if the patternPath is a protected folder
+    for (const std::string& protectedFolder : protectedFolders) {
+        if (patternPath == protectedFolder) {
+            return true; // Pattern path is a protected folder
+        }
+
+        // Check if the patternPath is a protected folder combined with a dangerous pattern
+        for (const std::string& dangerousPattern : dangerousCombinationPatterns) {
+            if (patternPath == protectedFolder + dangerousPattern) {
+                return true; // Pattern path is a protected folder combined with a dangerous pattern
+            }
+        }
+    }
+
+    // Check if the patternPath is a dangerous pattern
+    for (const std::string& dangerousPattern : dangerousCombinationPatterns) {
+        if (patternPath == "sdmc:/" + dangerousPattern) {
+            return true; // Pattern path is a dangerous pattern
+        }
+    }
+
+    // Check if the patternPath includes a wildcard at the root level
+    if (patternPath.find(":/") != std::string::npos) {
+        std::string rootPath = patternPath.substr(0, patternPath.find(":/") + 2);
+        if (rootPath.find('*') != std::string::npos) {
+            return true; // Pattern path includes a wildcard at the root level
+        }
+    }
+
+    // Check if the provided path matches any dangerous patterns
+    for (const std::string& pattern : dangerousPatterns) {
+        if (patternPath.find(pattern) != std::string::npos) {
+            return true; // Path contains a dangerous pattern
+        }
+    }
+
+    return false; // Pattern path is not a protected folder, a dangerous pattern, or includes a wildcard at the root level
+}
+
+
+
+
 bool isDirectory(const std::string& path) {
     struct stat pathStat;
     if (stat(path.c_str(), &pathStat) == 0) {
@@ -37,8 +114,6 @@ bool isDirectory(const std::string& path) {
     }
     return false;
 }
-
-
 
 
 
@@ -639,8 +714,24 @@ void newIniEntry(const std::string& fileToEdit, const std::string& desiredSectio
 
 
 
+std::string replaceMultipleSlashes(const std::string& input) {
+    std::string output;
+    bool previousSlash = false;
 
+    for (char c : input) {
+        if (c == '/') {
+            if (!previousSlash) {
+                output.push_back(c);
+            }
+            previousSlash = true;
+        } else {
+            output.push_back(c);
+            previousSlash = false;
+        }
+    }
 
+    return output;
+}
 
 
 void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& commands) {
@@ -653,35 +744,21 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
         }
 
 
-        //std::vector<std::string> arguments;
-        //for (std::size_t i = 1; i < command.size(); ++i) {
-        //    std::string arg = command[i];
-        //
-        //    // Check if the argument is enclosed within quotes
-        //    if (!arg.empty() && arg.front() == '"' && arg.back() == '"') {
-        //        // Remove the quotes and add the argument
-        //        arg = arg.substr(1, arg.size() - 2);
-        //    }
-        //
-        //    arguments.push_back(arg);
-        //}
-
-
         // Get the command name (first part of the command)
         std::string commandName = command[0];
         //logMessage(commandName);
         //logMessage(command[1]);
 
         if (commandName == "make" || commandName == "mkdir") {
-            std::string toDirectory = "sdmc:" + removeQuotes(command[1]);
+            std::string toDirectory = "sdmc:" + replaceMultipleSlashes(removeQuotes(command[1]));
             createDirectory(toDirectory);
 
             // Perform actions based on the command name
         } else if (commandName == "copy" || commandName == "cp") {
             // Copy command
             if (command.size() >= 3) {
-                std::string fromPath = "sdmc:" + removeQuotes(command[1]);
-                std::string toPath = "sdmc:" + removeQuotes(command[2]);
+                std::string fromPath = "sdmc:" + replaceMultipleSlashes(removeQuotes(command[1]));
+                std::string toPath = "sdmc:" + replaceMultipleSlashes(removeQuotes(command[2]));
                 
                 
                 if (fromPath.find('*') != std::string::npos) {
@@ -695,45 +772,39 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
         } else if (commandName == "delete" || commandName == "del") {
             // Delete command
             if (command.size() >= 2) {
-                std::string fileOrPathToDelete = "sdmc:" + removeQuotes(command[1]);
+                std::string fileOrPathToDelete = "sdmc:" + replaceMultipleSlashes(removeQuotes(command[1]));
                 
-                if (fileOrPathToDelete.find('*') != std::string::npos) {
-                    // Delete files or directories by pattern
-                    deleteFileOrDirectoryByPattern(fileOrPathToDelete);
-                } else {
-                    deleteFileOrDirectory(fileOrPathToDelete);
+                if (!isDangerousCombination(fileOrPathToDelete)) {
+                    if (fileOrPathToDelete.find('*') != std::string::npos) {
+                        // Delete files or directories by pattern
+                        deleteFileOrDirectoryByPattern(fileOrPathToDelete);
+                    } else {
+                        deleteFileOrDirectory(fileOrPathToDelete);
+                    }
                 }
             }
         } else if (commandName == "rename" || commandName == "move" || commandName == "mv") {
             // Rename command
             if (command.size() >= 3) {
 
-                std::string sourcePath = "sdmc:" + removeQuotes(command[1]);
-                std::string destinationPath = "sdmc:" + removeQuotes(command[2]);
-
-                //if (command[1].back() == '/') {
-                //    // Remove trailing '/' from source path
-                //    sourcePath.pop_back();
-                //}
-
-                //if (command[2].back() == '/') {
-                //    // Remove trailing '/' from destination path
-                //    destinationPath.pop_back();
-                //}
-
-                if (sourcePath.find('*') != std::string::npos) {
-                    // Move files by pattern
-                    if (moveFilesOrDirectoriesByPattern(sourcePath, destinationPath)) {
-                        //std::cout << "Files moved successfully." << std::endl;
+                std::string sourcePath = "sdmc:" + replaceMultipleSlashes(removeQuotes(command[1]));
+                std::string destinationPath = "sdmc:" + replaceMultipleSlashes(removeQuotes(command[2]));
+                
+                if (!isDangerousCombination(sourcePath)) {
+                    if (sourcePath.find('*') != std::string::npos) {
+                        // Move files by pattern
+                        if (moveFilesOrDirectoriesByPattern(sourcePath, destinationPath)) {
+                            //std::cout << "Files moved successfully." << std::endl;
+                        } else {
+                            //std::cout << "Failed to move files." << std::endl;
+                        }
                     } else {
-                        //std::cout << "Failed to move files." << std::endl;
-                    }
-                } else {
-                    // Move single file or directory
-                    if (moveFileOrDirectory(sourcePath, destinationPath)) {
-                        //std::cout << "File or directory moved successfully." << std::endl;
-                    } else {
-                        //std::cout << "Failed to move file or directory." << std::endl;
+                        // Move single file or directory
+                        if (moveFileOrDirectory(sourcePath, destinationPath)) {
+                            //std::cout << "File or directory moved successfully." << std::endl;
+                        } else {
+                            //std::cout << "Failed to move file or directory." << std::endl;
+                        }
                     }
                 }
             } else {
@@ -743,7 +814,7 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
         } else if (commandName == "set-ini-val" || commandName == "set-ini-value") {
             // Edit command
             if (command.size() >= 5) {
-                std::string fileToEdit = "sdmc:" + removeQuotes(command[1]);
+                std::string fileToEdit = "sdmc:" + replaceMultipleSlashes(removeQuotes(command[1]));
 
                 std::string desiredSection = removeQuotes(command[2]);
                 std::string desiredKey = removeQuotes(command[3]);
@@ -761,7 +832,7 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
         } else if (commandName == "set-ini-key") {
             // Edit command
             if (command.size() >= 5) {
-                std::string fileToEdit = "sdmc:" + removeQuotes(command[1]);
+                std::string fileToEdit = "sdmc:" + replaceMultipleSlashes(removeQuotes(command[1]));
 
                 std::string desiredSection = removeQuotes(command[2]);
                 std::string desiredKey = removeQuotes(command[3]);
@@ -779,7 +850,7 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
         } else if (commandName == "new-ini-entry") {
             // Edit command
             if (command.size() >= 5) {
-                std::string fileToEdit = "sdmc:" + removeQuotes(command[1]);
+                std::string fileToEdit = "sdmc:" + replaceMultipleSlashes(removeQuotes(command[1]));
 
                 std::string desiredSection = removeQuotes(command[2]);
                 std::string desiredKey = removeQuotes(command[3]);
