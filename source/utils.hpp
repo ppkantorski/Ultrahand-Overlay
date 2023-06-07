@@ -52,7 +52,6 @@ bool isProtectedFolder(const std::string& folderPath) {
 }
 
 bool isDangerousCombination(const std::string& patternPath) {
-
     // List of obviously dangerous patterns
     const std::vector<std::string> dangerousCombinationPatterns = {
         "*",         // Deletes all files/directories in the current directory
@@ -65,22 +64,30 @@ bool isDangerousCombination(const std::string& patternPath) {
         "~"       // Represents user's home directory, can be dangerous if misused
     };
 
-    // Check if the patternPath is a protected folder
+    // Check if the patternPath is a protected folder or a combination of protected folder and dangerous pattern
     for (const std::string& protectedFolder : protectedFolders) {
         if (patternPath == protectedFolder) {
             return true; // Pattern path is a protected folder
         }
 
-        // Check if the patternPath is a protected folder combined with a dangerous pattern
         for (const std::string& dangerousPattern : dangerousCombinationPatterns) {
             if (patternPath == protectedFolder + dangerousPattern) {
                 return true; // Pattern path is a protected folder combined with a dangerous pattern
             }
         }
+
+        // Check if the patternPath includes a dangerous pattern at the root of the protected folder
+        if (patternPath.find(protectedFolder + '/') != std::string::npos) {
+            for (const std::string& dangerousPattern : dangerousPatterns) {
+                if (patternPath.find(protectedFolder + '/' + dangerousPattern) != std::string::npos) {
+                    return true; // Pattern path includes a dangerous pattern at the root of the protected folder
+                }
+            }
+        }
     }
 
     // Check if the patternPath is a dangerous pattern
-    for (const std::string& dangerousPattern : dangerousCombinationPatterns) {
+    for (const std::string& dangerousPattern : dangerousPatterns) {
         if (patternPath == "sdmc:/" + dangerousPattern) {
             return true; // Pattern path is a dangerous pattern
         }
@@ -103,6 +110,7 @@ bool isDangerousCombination(const std::string& patternPath) {
 
     return false; // Pattern path is not a protected folder, a dangerous pattern, or includes a wildcard at the root level
 }
+
 
 
 
