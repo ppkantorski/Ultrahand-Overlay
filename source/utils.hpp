@@ -40,16 +40,11 @@ const std::vector<std::string> protectedFolders = {
     "sdmc:/config/",
     "sdmc:/"
 };
+const std::vector<std::string> ultraProtectedFolders = {
+    "sdmc:/Nintendo/",
+    "sdmc:/emuMMC/"
+};
 
-bool isProtectedFolder(const std::string& folderPath) {
-    // Check if the provided folder path is considered protected
-    for (const std::string& protectedFolder : protectedFolders) {
-        if (folderPath == protectedFolder) {
-            return true; // Folder path is considered protected
-        }
-    }
-    return false; // Folder path is not considered protected
-}
 
 bool isDangerousCombination(const std::string& patternPath) {
     // List of obviously dangerous patterns
@@ -64,32 +59,44 @@ bool isDangerousCombination(const std::string& patternPath) {
         "~"       // Represents user's home directory, can be dangerous if misused
     };
 
-    // Check if the patternPath is a protected folder or a combination of protected folder and dangerous pattern
+    // Check if the patternPath is an ultra protected folder
+    for (const std::string& ultraProtectedFolder : ultraProtectedFolders) {
+        if (patternPath.find(ultraProtectedFolder) == 0) {
+            return true; // Pattern path is an ultra protected folder
+        }
+    }
+
+    // Check if the patternPath is a protected folder
     for (const std::string& protectedFolder : protectedFolders) {
         if (patternPath == protectedFolder) {
             return true; // Pattern path is a protected folder
         }
 
+        // Check if the patternPath starts with a protected folder and includes a dangerous pattern
+        if (patternPath.find(protectedFolder) == 0) {
+            std::string relativePath = patternPath.substr(protectedFolder.size());
+            for (const std::string& dangerousPattern : dangerousPatterns) {
+                if (relativePath.find(dangerousPattern) != std::string::npos) {
+                    return true; // Pattern path includes a dangerous pattern
+                }
+            }
+        }
+
+        // Check if the patternPath is a combination of a protected folder and a dangerous pattern
         for (const std::string& dangerousPattern : dangerousCombinationPatterns) {
             if (patternPath == protectedFolder + dangerousPattern) {
                 return true; // Pattern path is a protected folder combined with a dangerous pattern
             }
         }
-
-        // Check if the patternPath includes a dangerous pattern at the root of the protected folder
-        if (patternPath.find(protectedFolder + '/') != std::string::npos) {
-            for (const std::string& dangerousPattern : dangerousPatterns) {
-                if (patternPath.find(protectedFolder + '/' + dangerousPattern) != std::string::npos) {
-                    return true; // Pattern path includes a dangerous pattern at the root of the protected folder
-                }
-            }
-        }
     }
 
     // Check if the patternPath is a dangerous pattern
-    for (const std::string& dangerousPattern : dangerousPatterns) {
-        if (patternPath == "sdmc:/" + dangerousPattern) {
-            return true; // Pattern path is a dangerous pattern
+    if (patternPath.find("sdmc:/") == 0) {
+        std::string relativePath = patternPath.substr(6); // Remove "sdmc:/"
+        for (const std::string& dangerousPattern : dangerousPatterns) {
+            if (relativePath == dangerousPattern) {
+                return true; // Pattern path is a dangerous pattern
+            }
         }
     }
 
