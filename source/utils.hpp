@@ -109,7 +109,6 @@ void createDirectory(const std::string& directoryPath) {
 }
 
 
-
 // Get functions
 struct PackageHeader {
     std::string version;
@@ -162,6 +161,15 @@ PackageHeader getPackageHeaderFromIni(const std::string& filePath) {
     return packageHeader;
 }
 
+std::string getValueFromLine(const std::string& line) {
+    std::size_t equalsPos = line.find('=');
+    if (equalsPos != std::string::npos) {
+        std::string value = line.substr(equalsPos + 1);
+        return trim(value);
+    }
+    return "";
+}
+
 std::string getFileNameFromPath(const std::string& filePath) {
     size_t lastSlash = filePath.find_last_of('/');
     if (lastSlash != std::string::npos) {
@@ -206,15 +214,6 @@ std::vector<std::string> getSubdirectories(const std::string& directoryPath) {
     return subdirectories;
 }
 
-std::string getValueFromLine(const std::string& line) {
-    std::size_t equalsPos = line.find('=');
-    if (equalsPos != std::string::npos) {
-        std::string value = line.substr(equalsPos + 1);
-        return trim(value);
-    }
-    return "";
-}
-
 std::vector<std::string> getFilesListByWildcards(const std::string& path) {
     std::string dirPath = "";
     std::string wildcard = "";
@@ -234,9 +233,6 @@ std::vector<std::string> getFilesListByWildcards(const std::string& path) {
         dirPath = path + "/";
     }
 
-    //logMessage("dirPath: " + dirPath);
-    //logMessage("wildcard: " + wildcard);
-
     std::vector<std::string> fileList;
 
     bool isFolderWildcard = wildcard.back() == '/';
@@ -255,12 +251,13 @@ std::vector<std::string> getFilesListByWildcards(const std::string& path) {
 
             if (isFolderWildcard && isEntryDirectory) {
                 if (fnmatch(wildcard.c_str(), entryName.c_str(), FNM_NOESCAPE) == 0) {
-                    //logMessage("Matched entry: " + entryName);
-                    fileList.push_back(entryPath + "/");
+                    if (entryName != "." && entryName != "..") {
+                        std::vector<std::string> subFiles = getFilesListByWildcards(entryPath + "/" + wildcard);
+                        fileList.insert(fileList.end(), subFiles.begin(), subFiles.end());
+                    }
                 }
             } else if (!isFolderWildcard && !isEntryDirectory) {
                 if (fnmatch(wildcard.c_str(), entryName.c_str(), FNM_NOESCAPE) == 0) {
-                    //logMessage("Matched entry: " + entryName);
                     fileList.push_back(entryPath);
                 }
             }
