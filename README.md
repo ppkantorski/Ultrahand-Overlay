@@ -9,11 +9,7 @@ Ultrahand empowers you to craft and share your own packages, revolutionizing the
 
 Create directories, merge files, and customize configurations effortlessly using simple config.ini files. Whether you're a gamer, a creative enthusiast, or a tech-savvy individual, Ultrahand invites you to take advantage of premade packages as well as create your own.
 
-Join a vibrant community of like-minded creators as you share your crafted packages, collaborate, and explore new possibilities. Ready to step into the realm of automation crafting and discover the endless potential of Ultrahand? Start crafting, sharing, and customizing today!
-
 ## Features
-
-
 
 Ultrahand is a Tesla overlay that provides powerful functionality for managing files and directories on an SD card. It offers the following features:
 
