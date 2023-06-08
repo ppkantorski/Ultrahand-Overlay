@@ -951,9 +951,13 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
             }
         } else if (commandName == "reboot") {
             // Reboot command
+            splExit();
+            fsdevUnmountAll();
             spsmShutdown(SpsmShutdownMode_Reboot);
         } else if (commandName == "shutdown") {
             // Reboot command
+            splExit();
+            fsdevUnmountAll();
             spsmShutdown(SpsmShutdownMode_Normal);
         }
     }
