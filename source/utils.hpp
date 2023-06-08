@@ -4,7 +4,6 @@
 #include <dirent.h>
 #include <fnmatch.h>
 
-
 #define SpsmShutdownMode_Normal 0
 #define SpsmShutdownMode_Reboot 1
 
@@ -699,7 +698,6 @@ const std::vector<std::string> ultraProtectedFolders = {
     "sdmc:/emuMMC/"
 };
 bool isDangerousCombination(const std::string& patternPath) {
-    
     // List of obviously dangerous patterns
     const std::vector<std::string> dangerousCombinationPatterns = {
         "*",         // Deletes all files/directories in the current directory
@@ -730,8 +728,23 @@ bool isDangerousCombination(const std::string& patternPath) {
             std::string relativePath = patternPath.substr(protectedFolder.size());
 
             // Split the relativePath by '/' to handle multiple levels of wildcards
-            std::istringstream iss(relativePath);
-            std::vector<std::string> pathSegments(std::istream_iterator<std::string>{iss}, std::istream_iterator<std::string>());
+            std::vector<std::string> pathSegments;
+            std::string pathSegment;
+
+            for (char c : relativePath) {
+                if (c == '/') {
+                    if (!pathSegment.empty()) {
+                        pathSegments.push_back(pathSegment);
+                        pathSegment.clear();
+                    }
+                } else {
+                    pathSegment += c;
+                }
+            }
+
+            if (!pathSegment.empty()) {
+                pathSegments.push_back(pathSegment);
+            }
 
             for (const std::string& pathSegment : pathSegments) {
                 // Check if the pathSegment includes a dangerous pattern
@@ -756,8 +769,23 @@ bool isDangerousCombination(const std::string& patternPath) {
         std::string relativePath = patternPath.substr(6); // Remove "sdmc:/"
 
         // Split the relativePath by '/' to handle multiple levels of wildcards
-        std::istringstream iss(relativePath);
-        std::vector<std::string> pathSegments(std::istream_iterator<std::string>{iss}, std::istream_iterator<std::string>());
+        std::vector<std::string> pathSegments;
+        std::string pathSegment;
+
+        for (char c : relativePath) {
+            if (c == '/') {
+                if (!pathSegment.empty()) {
+                    pathSegments.push_back(pathSegment);
+                    pathSegment.clear();
+                }
+            } else {
+                pathSegment += c;
+            }
+        }
+
+        if (!pathSegment.empty()) {
+            pathSegments.push_back(pathSegment);
+        }
 
         for (const std::string& pathSegment : pathSegments) {
             // Check if the pathSegment includes a dangerous pattern
