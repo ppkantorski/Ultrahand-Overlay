@@ -21,7 +21,7 @@ Ultrahand is a Tesla overlay that provides powerful functionality for managing f
 
 - Move Files or Directories: Ultrahand enables you to move files or directories between locations on your SD card effortlessly. Provide the source file or directory path and the destination directory path, and Ultrahand will take care of moving them, ensuring their seamless relocation.
 
-- Modify INI Files: Ultrahand empowers you to edit INI files on your SD card. You can update existing key-value pairs, add new entries, or even create new sections within the INI file. Ultrahand makes it easy to customize and tailor the configurations of your INI files.
+- Modify INI Files: Ultrahand allows you to edit INI files on your SD card, giving you full control over your configurations. You can easily update existing key-value pairs, add new entries, or create new sections within the INI file using Ultrahand. Customize and tailor your INI files effortlessly with Ultrahand's intuitive interface.
 
 Ultrahand provides a convenient command-line interface to perform these operations, allowing you to efficiently manage your files, directories, and INI files on an SD card.
 
