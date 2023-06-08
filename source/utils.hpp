@@ -699,6 +699,7 @@ const std::vector<std::string> ultraProtectedFolders = {
     "sdmc:/emuMMC/"
 };
 bool isDangerousCombination(const std::string& patternPath) {
+    
     // List of obviously dangerous patterns
     const std::vector<std::string> dangerousCombinationPatterns = {
         "*",         // Deletes all files/directories in the current directory
@@ -727,9 +728,17 @@ bool isDangerousCombination(const std::string& patternPath) {
         // Check if the patternPath starts with a protected folder and includes a dangerous pattern
         if (patternPath.find(protectedFolder) == 0) {
             std::string relativePath = patternPath.substr(protectedFolder.size());
-            for (const std::string& dangerousPattern : dangerousPatterns) {
-                if (relativePath.find(dangerousPattern) != std::string::npos) {
-                    return true; // Pattern path includes a dangerous pattern
+
+            // Split the relativePath by '/' to handle multiple levels of wildcards
+            std::istringstream iss(relativePath);
+            std::vector<std::string> pathSegments(std::istream_iterator<std::string>{iss}, std::istream_iterator<std::string>());
+
+            for (const std::string& pathSegment : pathSegments) {
+                // Check if the pathSegment includes a dangerous pattern
+                for (const std::string& dangerousPattern : dangerousPatterns) {
+                    if (pathSegment.find(dangerousPattern) != std::string::npos) {
+                        return true; // Pattern path includes a dangerous pattern
+                    }
                 }
             }
         }
@@ -745,9 +754,17 @@ bool isDangerousCombination(const std::string& patternPath) {
     // Check if the patternPath is a dangerous pattern
     if (patternPath.find("sdmc:/") == 0) {
         std::string relativePath = patternPath.substr(6); // Remove "sdmc:/"
-        for (const std::string& dangerousPattern : dangerousPatterns) {
-            if (relativePath == dangerousPattern) {
-                return true; // Pattern path is a dangerous pattern
+
+        // Split the relativePath by '/' to handle multiple levels of wildcards
+        std::istringstream iss(relativePath);
+        std::vector<std::string> pathSegments(std::istream_iterator<std::string>{iss}, std::istream_iterator<std::string>());
+
+        for (const std::string& pathSegment : pathSegments) {
+            // Check if the pathSegment includes a dangerous pattern
+            for (const std::string& dangerousPattern : dangerousPatterns) {
+                if (pathSegment == dangerousPattern) {
+                    return true; // Pattern path is a dangerous pattern
+                }
             }
         }
     }
@@ -769,6 +786,7 @@ bool isDangerousCombination(const std::string& patternPath) {
 
     return false; // Pattern path is not a protected folder, a dangerous pattern, or includes a wildcard at the root level
 }
+
 
 
 // Main interpreter
