@@ -3,7 +3,7 @@
 ![Alt Text](https://gbatemp.net/attachments/img_4417-jpg.376189/)
 ![Alt Text](https://gbatemp.net/attachments/img_4418-jpg.376190/)
 
-Unleash Your Creative Potential with Ultrahand: Craft, Share, and Customize Your Commands!
+Craft, Share, and Customize Your Commands!
 
 Ultrahand empowers you to craft and share your own packages, revolutionizing the way you interact with files and directories on your SD card. Inspired by the new Zelda feature, Ultrahand lets you unleash your creativity and shape your digital experiences like never before.
 
