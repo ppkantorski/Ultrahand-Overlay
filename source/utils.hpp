@@ -30,98 +30,67 @@
 //    }
 //}
 
-// List of protected folders
-const std::vector<std::string> protectedFolders = {
-    "sdmc:/Nintendo/",
-    "sdmc:/emuMMC/",
-    "sdmc:/atmosphere/",
-    "sdmc:/bootloader/",
-    "sdmc:/switch/",
-    "sdmc:/config/",
-    "sdmc:/"
-};
-const std::vector<std::string> ultraProtectedFolders = {
-    "sdmc:/Nintendo/",
-    "sdmc:/emuMMC/"
-};
 
+// String functions
+// Trim leading and trailing whitespaces from a string
+std::string trim(const std::string& str) {
+    size_t first = str.find_first_not_of(" \t\n\r\f\v");
+    size_t last = str.find_last_not_of(" \t\n\r\f\v");
+    if (first == std::string::npos || last == std::string::npos)
+        return "";
+    return str.substr(first, last - first + 1);
+}
 
-bool isDangerousCombination(const std::string& patternPath) {
-    // List of obviously dangerous patterns
-    const std::vector<std::string> dangerousCombinationPatterns = {
-        "*",         // Deletes all files/directories in the current directory
-        "*/"         // Deletes all files/directories in the current directory
-    };
-
-    // List of obviously dangerous patterns
-    const std::vector<std::string> dangerousPatterns = {
-        "..",     // Attempts to traverse to parent directories
-        "~"       // Represents user's home directory, can be dangerous if misused
-    };
-
-    // Check if the patternPath is an ultra protected folder
-    for (const std::string& ultraProtectedFolder : ultraProtectedFolders) {
-        if (patternPath.find(ultraProtectedFolder) == 0) {
-            return true; // Pattern path is an ultra protected folder
-        }
+std::string removeQuotes(const std::string& str) {
+    std::size_t firstQuote = str.find_first_of('\'');
+    std::size_t lastQuote = str.find_last_of('\'');
+    if (firstQuote != std::string::npos && lastQuote != std::string::npos && firstQuote < lastQuote) {
+        return str.substr(firstQuote + 1, lastQuote - firstQuote - 1);
     }
+    return str;
+}
 
-    // Check if the patternPath is a protected folder
-    for (const std::string& protectedFolder : protectedFolders) {
-        if (patternPath == protectedFolder) {
-            return true; // Pattern path is a protected folder
-        }
+std::string replaceMultipleSlashes(const std::string& input) {
+    std::string output;
+    bool previousSlash = false;
 
-        // Check if the patternPath starts with a protected folder and includes a dangerous pattern
-        if (patternPath.find(protectedFolder) == 0) {
-            std::string relativePath = patternPath.substr(protectedFolder.size());
-            for (const std::string& dangerousPattern : dangerousPatterns) {
-                if (relativePath.find(dangerousPattern) != std::string::npos) {
-                    return true; // Pattern path includes a dangerous pattern
-                }
+    for (char c : input) {
+        if (c == '/') {
+            if (!previousSlash) {
+                output.push_back(c);
             }
-        }
-
-        // Check if the patternPath is a combination of a protected folder and a dangerous pattern
-        for (const std::string& dangerousPattern : dangerousCombinationPatterns) {
-            if (patternPath == protectedFolder + dangerousPattern) {
-                return true; // Pattern path is a protected folder combined with a dangerous pattern
-            }
+            previousSlash = true;
+        } else {
+            output.push_back(c);
+            previousSlash = false;
         }
     }
 
-    // Check if the patternPath is a dangerous pattern
-    if (patternPath.find("sdmc:/") == 0) {
-        std::string relativePath = patternPath.substr(6); // Remove "sdmc:/"
-        for (const std::string& dangerousPattern : dangerousPatterns) {
-            if (relativePath == dangerousPattern) {
-                return true; // Pattern path is a dangerous pattern
-            }
-        }
-    }
+    return output;
+}
 
-    // Check if the patternPath includes a wildcard at the root level
-    if (patternPath.find(":/") != std::string::npos) {
-        std::string rootPath = patternPath.substr(0, patternPath.find(":/") + 2);
-        if (rootPath.find('*') != std::string::npos) {
-            return true; // Pattern path includes a wildcard at the root level
-        }
-    }
-
-    // Check if the provided path matches any dangerous patterns
-    for (const std::string& pattern : dangerousPatterns) {
-        if (patternPath.find(pattern) != std::string::npos) {
-            return true; // Path contains a dangerous pattern
-        }
-    }
-
-    return false; // Pattern path is not a protected folder, a dangerous pattern, or includes a wildcard at the root level
+bool startsWith(const std::string& str, const std::string& prefix) {
+    return str.compare(0, prefix.length(), prefix) == 0;
 }
 
 
+// Function to read the content of a file
+std::string readFileContent(const std::string& filePath) {
+    std::string content;
+    FILE* file = fopen(filePath.c_str(), "rb");
+    if (file) {
+        struct stat fileInfo;
+        if (stat(filePath.c_str(), &fileInfo) == 0 && fileInfo.st_size > 0) {
+            content.resize(fileInfo.st_size);
+            fread(&content[0], 1, fileInfo.st_size, file);
+        }
+        fclose(file);
+    }
+    return content;
+}
 
 
-
+// Directory functions
 bool isDirectory(const std::string& path) {
     struct stat pathStat;
     if (stat(path.c_str(), &pathStat) == 0) {
@@ -131,6 +100,67 @@ bool isDirectory(const std::string& path) {
 }
 
 
+// Function to create a directory if it doesn't exist
+void createDirectory(const std::string& directoryPath) {
+    struct stat st;
+    if (stat(directoryPath.c_str(), &st) != 0) {
+        mkdir(directoryPath.c_str(), 0777);
+    }
+}
+
+
+
+// Get functions
+struct PackageHeader {
+    std::string version;
+    std::string creator;
+};
+PackageHeader getPackageHeaderFromIni(const std::string& filePath) {
+    PackageHeader packageHeader;
+    std::string version = "";
+    std::string creator = "";
+    
+    FILE* file = fopen(filePath.c_str(), "r");
+    if (file == nullptr) {
+        packageHeader.version = version;
+        packageHeader.creator = creator;
+        return packageHeader;
+    }
+
+    constexpr size_t BufferSize = 131072; // Choose a larger buffer size for reading lines
+    char line[BufferSize];
+
+    const std::string versionPrefix = ";version=";
+    const std::string creatorPrefix = ";creator=";
+    const size_t versionPrefixLength = versionPrefix.length();
+    const size_t creatorPrefixLength = creatorPrefix.length();
+
+    while (fgets(line, sizeof(line), file)) {
+        std::string strLine(line);
+        size_t versionPos = strLine.find(versionPrefix);
+        if (versionPos != std::string::npos) {
+            versionPos += versionPrefixLength;
+            size_t endPos = strLine.find_first_of(" \t\r\n", versionPos);
+            version = strLine.substr(versionPos, endPos - versionPos);
+        }
+        size_t creatorPos = strLine.find(creatorPrefix);
+        if (creatorPos != std::string::npos) {
+            creatorPos += creatorPrefixLength;
+            size_t endPos = strLine.find_first_of(" \t\r\n", creatorPos);
+            creator = strLine.substr(creatorPos, endPos - creatorPos);
+        }
+
+        if (!version.empty() && !creator.empty()) {
+            break; // Both version and creator found, exit the loop
+        }
+    }
+
+    fclose(file);
+    
+    packageHeader.version = version;
+    packageHeader.creator = creator;
+    return packageHeader;
+}
 
 std::string getFileNameFromPath(const std::string& filePath) {
     size_t lastSlash = filePath.find_last_of('/');
@@ -139,7 +169,6 @@ std::string getFileNameFromPath(const std::string& filePath) {
     }
     return filePath;
 }
-
 
 std::string getFolderNameFromPath(const std::string& path) {
     std::string strippedFilePath = path;
@@ -151,8 +180,41 @@ std::string getFolderNameFromPath(const std::string& path) {
     }
 }
 
+std::vector<std::string> getSubdirectories(const std::string& directoryPath) {
+    std::vector<std::string> subdirectories;
 
-// Function to retrieve a list of files/folders based on wildcard pattern
+    DIR* dir = opendir(directoryPath.c_str());
+    if (dir != nullptr) {
+        struct dirent* entry;
+        while ((entry = readdir(dir)) != nullptr) {
+            std::string entryName = entry->d_name;
+
+            // Exclude current directory (.) and parent directory (..)
+            if (entryName != "." && entryName != "..") {
+                struct stat entryStat;
+                std::string fullPath = directoryPath + "/" + entryName;
+
+                if (stat(fullPath.c_str(), &entryStat) == 0 && S_ISDIR(entryStat.st_mode)) {
+                    subdirectories.push_back(entryName);
+                }
+            }
+        }
+
+        closedir(dir);
+    }
+
+    return subdirectories;
+}
+
+std::string getValueFromLine(const std::string& line) {
+    std::size_t equalsPos = line.find('=');
+    if (equalsPos != std::string::npos) {
+        std::string value = line.substr(equalsPos + 1);
+        return trim(value);
+    }
+    return "";
+}
+
 std::vector<std::string> getFilesListByWildcards(const std::string& path) {
     std::string dirPath = "";
     std::string wildcard = "";
@@ -210,7 +272,7 @@ std::vector<std::string> getFilesListByWildcards(const std::string& path) {
 }
 
 
-
+// Delete functions
 void deleteFileOrDirectory(const std::string& pathToDelete) {
     struct stat pathStat;
     if (stat(pathToDelete.c_str(), &pathStat) == 0) {
@@ -241,8 +303,6 @@ void deleteFileOrDirectory(const std::string& pathToDelete) {
     }
 }
 
-
-
 void deleteFileOrDirectoryByPattern(const std::string& pathPattern) {
     //logMessage("pathPattern: "+pathPattern);
     std::vector<std::string> fileList = getFilesListByWildcards(pathPattern);
@@ -254,67 +314,7 @@ void deleteFileOrDirectoryByPattern(const std::string& pathPattern) {
 }
 
 
-
-
-// Function to create a directory if it doesn't exist
-void createDirectory(const std::string& directoryPath) {
-    struct stat st;
-    if (stat(directoryPath.c_str(), &st) != 0) {
-        mkdir(directoryPath.c_str(), 0777);
-    }
-}
-
-
-
-// Function to read the content of a file
-std::string readFileContent(const std::string& filePath) {
-    std::string content;
-    FILE* file = fopen(filePath.c_str(), "rb");
-    if (file) {
-        struct stat fileInfo;
-        if (stat(filePath.c_str(), &fileInfo) == 0 && fileInfo.st_size > 0) {
-            content.resize(fileInfo.st_size);
-            fread(&content[0], 1, fileInfo.st_size, file);
-        }
-        fclose(file);
-    }
-    return content;
-}
-
-
-std::vector<std::string> getSubdirectories(const std::string& directoryPath) {
-    std::vector<std::string> subdirectories;
-
-    DIR* dir = opendir(directoryPath.c_str());
-    if (dir != nullptr) {
-        struct dirent* entry;
-        while ((entry = readdir(dir)) != nullptr) {
-            std::string entryName = entry->d_name;
-
-            // Exclude current directory (.) and parent directory (..)
-            if (entryName != "." && entryName != "..") {
-                struct stat entryStat;
-                std::string fullPath = directoryPath + "/" + entryName;
-
-                if (stat(fullPath.c_str(), &entryStat) == 0 && S_ISDIR(entryStat.st_mode)) {
-                    subdirectories.push_back(entryName);
-                }
-            }
-        }
-
-        closedir(dir);
-    }
-
-    return subdirectories;
-}
-
-
-
-
-
-
-
-
+// Move functions
 bool moveFileOrDirectory(const std::string& sourcePath, const std::string& destinationPath) {
     struct stat sourceInfo;
     struct stat destinationInfo;
@@ -381,9 +381,6 @@ bool moveFileOrDirectory(const std::string& sourcePath, const std::string& desti
     return false;  // Move unsuccessful or source file/directory doesn't exist
 }
 
-
-
-
 bool moveFilesOrDirectoriesByPattern(const std::string& sourcePathPattern, const std::string& destinationPath) {
     std::vector<std::string> fileList = getFilesListByWildcards(sourcePathPattern);
     bool success = false;
@@ -409,11 +406,7 @@ bool moveFilesOrDirectoriesByPattern(const std::string& sourcePathPattern, const
 }
 
 
-
-
-
- // Perform copy action from "fromFileOrDirectory" to "toFileOrDirectory"
-
+// Copy functions
 void copySingleFile(const std::string& fromFile, const std::string& toFile) {
     FILE* srcFile = fopen(fromFile.c_str(), "rb");
     FILE* destFile = fopen(toFile.c_str(), "wb");
@@ -513,7 +506,6 @@ void copyFileOrDirectory(const std::string& fromFileOrDirectory, const std::stri
     }
 }
 
-
 void copyFileOrDirectoryByPattern(const std::string& sourcePathPattern, const std::string& toDirectory) {
     std::vector<std::string> fileList = getFilesListByWildcards(sourcePathPattern);
 
@@ -528,134 +520,101 @@ void copyFileOrDirectoryByPattern(const std::string& sourcePathPattern, const st
 }
 
 
+// Ini Functions
+std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadOptionsFromIni(const std::string& configIniPath, bool makeConfig = false) {
+    std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> options;
 
-
-// Check if a string starts with a given prefix
-bool startsWith(const std::string& str, const std::string& prefix) {
-    return str.compare(0, prefix.length(), prefix) == 0;
-}
-
-
-// Trim leading and trailing whitespaces from a string
-std::string trim(const std::string& str) {
-    size_t first = str.find_first_not_of(" \t\n\r\f\v");
-    size_t last = str.find_last_not_of(" \t\n\r\f\v");
-    if (first == std::string::npos || last == std::string::npos)
-        return "";
-    return str.substr(first, last - first + 1);
-}
-
-
-std::string removeQuotes(const std::string& str) {
-    std::size_t firstQuote = str.find_first_of('\'');
-    std::size_t lastQuote = str.find_last_of('\'');
-    if (firstQuote != std::string::npos && lastQuote != std::string::npos && firstQuote < lastQuote) {
-        return str.substr(firstQuote + 1, lastQuote - firstQuote - 1);
+    FILE* configFile = fopen(configIniPath.c_str(), "r");
+    if (!configFile ) {
+        // Write the default INI file
+        FILE* configFileOut = fopen(configIniPath.c_str(), "w");
+        std::string commands;
+        if (makeConfig) {
+            commands = "[make directories]\n"
+                       "mkdir /config/ultrahand/example1/\n"
+                       "mkdir /config/ultrahand/example2/\n"
+                       "[copy files]\n"
+                       "copy /config/ultrahand/config.ini /config/ultrahand/example1/\n"
+                       "copy /config/ultrahand/config.ini /config/ultrahand/example2/\n"
+                       "[rename files]\n"
+                       "move /config/ultrahand/example1/config.ini /config/ultrahand/example1/configRenamed.ini\n"
+                       "move /config/ultrahand/example2/config.ini /config/ultrahand/example2/configRenamed.ini\n"
+                       "[move directories]\n"
+                       "move /config/ultrahand/example1/ /config/ultrahand/example3/\n"
+                       "move /config/ultrahand/example2/ /config/ultrahand/example4/\n"
+                       "[delete files]\n"
+                       "delete /config/ultrahand/example1/config.ini\n"
+                       "delete /config/ultrahand/example2/config.ini\n"
+                       "[delete directories]\n"
+                       "delete /config/ultrahand/example*/\n"
+                       "[modify ini file]\n"
+                       "copy /bootloader/hekate_ipl.ini /config/ultrahand/\n"
+                       "set-ini-val /config/ultrahand/hekate_ipl.ini 'Atmosphere' fss0 gonnawritesomethingelse\n"
+                       "new-ini-entry /config/ultrahand/hekate_ipl.ini 'Atmosphere' booty true\n";
+        } else {
+            commands = "";
+        }
+        fprintf(configFileOut, "%s", commands.c_str());
+        
+        
+        fclose(configFileOut);
+        configFile = fopen(configIniPath.c_str(), "r");
     }
-    return str;
-}
 
-std::string getValueFromLine(const std::string& line) {
-    std::size_t equalsPos = line.find('=');
-    if (equalsPos != std::string::npos) {
-        std::string value = line.substr(equalsPos + 1);
-        return trim(value);
+    constexpr size_t BufferSize = 131072; // Choose a larger buffer size for reading lines
+    char line[BufferSize];
+    std::string currentOption;
+    std::vector<std::vector<std::string>> commands;
+
+    while (fgets(line, sizeof(line), configFile)) {
+        std::string trimmedLine = line;
+        trimmedLine.erase(trimmedLine.find_last_not_of("\r\n") + 1);  // Remove trailing newline character
+
+        if (trimmedLine.empty() || trimmedLine[0] == '#') {
+            // Skip empty lines and comment lines
+            continue;
+        } else if (trimmedLine[0] == '[' && trimmedLine.back() == ']') {
+            // New option section
+            if (!currentOption.empty()) {
+                // Store previous option and its commands
+                options.emplace_back(std::move(currentOption), std::move(commands));
+                commands.clear();
+            }
+            currentOption = trimmedLine.substr(1, trimmedLine.size() - 2);  // Extract option name
+        } else {
+            // Command line
+            std::istringstream iss(trimmedLine);
+            std::vector<std::string> commandParts;
+            std::string part;
+            bool inQuotes = false;
+            while (std::getline(iss, part, '\'')) {
+                if (!part.empty()) {
+                    if (!inQuotes) {
+                        // Outside quotes, split on spaces
+                        std::istringstream argIss(part);
+                        std::string arg;
+                        while (argIss >> arg) {
+                            commandParts.push_back(arg);
+                        }
+                    } else {
+                        // Inside quotes, treat as a whole argument
+                        commandParts.push_back(part);
+                    }
+                }
+                inQuotes = !inQuotes;
+            }
+            commands.push_back(std::move(commandParts));
+        }
     }
-    return "";
+
+    // Store the last option and its commands
+    if (!currentOption.empty()) {
+        options.emplace_back(std::move(currentOption), std::move(commands));
+    }
+
+    fclose(configFile);
+    return options;
 }
-
-
-//void setIniFile(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredValue, const std::string& desiredNewKey, bool isNewEntry = false) {
-//    FILE* configFile = fopen(fileToEdit.c_str(), "r");
-//    if (!configFile) {
-//        // printf("Failed to open the INI file.\n");
-//        return;
-//    }
-//
-//    std::string trimmedLine;
-//    std::string formattedDesiredValue;
-//    std::string tempPath = fileToEdit + ".tmp";
-//    FILE* tempFile = fopen(tempPath.c_str(), "w");
-//
-//    if (tempFile) {
-//        std::string currentSection;
-//        char line[256];
-//        bool inDesiredSection = false; // Flag to track if we are currently inside the desired section
-//        bool keyFound = false; // Flag to track if the desired key is found
-//        bool lastLineInSection = false; // Flag to track if the current line is the last line in the section
-//
-//        while (fgets(line, sizeof(line), configFile)) {
-//            trimmedLine = trim(std::string(line));
-//
-//            // Check if the line represents a section
-//            if (trimmedLine[0] == '[' && trimmedLine[trimmedLine.length() - 1] == ']') {
-//                currentSection = removeQuotes(trim(std::string(trimmedLine.c_str() + 1, trimmedLine.length() - 2)));
-//                inDesiredSection = (trim(currentSection) == trim(desiredSection));
-//            }
-//
-//            // Check if the line is in the desired section
-//            if (inDesiredSection) {
-//                // Tokenize the line based on "=" delimiter
-//                std::string::size_type delimiterPos = trimmedLine.find('=');
-//                if (delimiterPos != std::string::npos) {
-//                    std::string lineKey = trim(trimmedLine.substr(0, delimiterPos));
-//
-//                    // Check if the line key matches the desired key
-//                    if (lineKey == desiredKey) {
-//                        keyFound = true;
-//                        formattedDesiredValue = removeQuotes(desiredValue);
-//                        std::string originalValue = getValueFromLine(trimmedLine); // Extract the original value
-//
-//                        // Write the modified line with the desired key and value
-//                        if (!desiredNewKey.empty()) {
-//                            fprintf(tempFile, "%s = %s\n", desiredNewKey.c_str(), originalValue.c_str());
-//                        } else {
-//                            fprintf(tempFile, "%s = %s\n", desiredKey.c_str(), formattedDesiredValue.c_str());
-//                        }
-//                        continue; // Skip writing the original line
-//                    }
-//                }
-//                lastLineInSection = false;
-//            }
-//
-//            // Check if the current line is the last line in the section
-//            if (!inDesiredSection && trimmedLine.empty()) {
-//                // If the desired key is not found and it's a new entry, add it to the last line of the section
-//                if (!keyFound && isNewEntry) {
-//                    formattedDesiredValue = removeQuotes(desiredValue);
-//                    fprintf(tempFile, "%s = %s\n", desiredKey.c_str(), formattedDesiredValue.c_str());
-//                }
-//            }
-//            
-//            //fprintf(tempFile, "%s\n", line);
-//        }
-//
-//        fclose(configFile);
-//        fclose(tempFile);
-//        remove(fileToEdit.c_str()); // Delete the old configuration file
-//        rename(tempPath.c_str(), fileToEdit.c_str()); // Rename the temp file to the original name
-//
-//        // printf("INI file updated successfully.\n");
-//    } else {
-//        // printf("Failed to create temporary file.\n");
-//    }
-//}
-//
-//
-//// ini toolkit
-//void setIniValue(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredValue) {
-//    setIniFile(fileToEdit, desiredSection, desiredKey, desiredValue, "");
-//}
-//void setIniKey(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredNewKey) {
-//    setIniFile(fileToEdit, desiredSection, desiredKey, "", desiredNewKey);
-//}
-//void newIniEntry(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredValue) {
-//    setIniFile(fileToEdit, desiredSection, desiredKey, desiredValue, "", true);
-//}
-
-
-
-
 
 void setIniFile(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredValue, const std::string& desiredNewKey) {
     FILE* configFile = fopen(fileToEdit.c_str(), "r");
@@ -716,39 +675,106 @@ void setIniFile(const std::string& fileToEdit, const std::string& desiredSection
     }
 }
 
-
 void setIniFileValue(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredValue) {
     setIniFile(fileToEdit, desiredSection, desiredKey, desiredValue, "");
 }
+
 void setIniFileKey(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredNewKey) {
     setIniFile(fileToEdit, desiredSection, desiredKey, "", desiredNewKey);
 }
+
 void newIniEntry(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredValue) {}
 
 
+// Safety conditions
+// List of protected folders
+const std::vector<std::string> protectedFolders = {
+    "sdmc:/Nintendo/",
+    "sdmc:/emuMMC/",
+    "sdmc:/atmosphere/",
+    "sdmc:/bootloader/",
+    "sdmc:/switch/",
+    "sdmc:/config/",
+    "sdmc:/"
+};
+const std::vector<std::string> ultraProtectedFolders = {
+    "sdmc:/Nintendo/",
+    "sdmc:/emuMMC/"
+};
+bool isDangerousCombination(const std::string& patternPath) {
+    // List of obviously dangerous patterns
+    const std::vector<std::string> dangerousCombinationPatterns = {
+        "*",         // Deletes all files/directories in the current directory
+        "*/"         // Deletes all files/directories in the current directory
+    };
 
+    // List of obviously dangerous patterns
+    const std::vector<std::string> dangerousPatterns = {
+        "..",     // Attempts to traverse to parent directories
+        "~"       // Represents user's home directory, can be dangerous if misused
+    };
 
-
-std::string replaceMultipleSlashes(const std::string& input) {
-    std::string output;
-    bool previousSlash = false;
-
-    for (char c : input) {
-        if (c == '/') {
-            if (!previousSlash) {
-                output.push_back(c);
-            }
-            previousSlash = true;
-        } else {
-            output.push_back(c);
-            previousSlash = false;
+    // Check if the patternPath is an ultra protected folder
+    for (const std::string& ultraProtectedFolder : ultraProtectedFolders) {
+        if (patternPath.find(ultraProtectedFolder) == 0) {
+            return true; // Pattern path is an ultra protected folder
         }
     }
 
-    return output;
+    // Check if the patternPath is a protected folder
+    for (const std::string& protectedFolder : protectedFolders) {
+        if (patternPath == protectedFolder) {
+            return true; // Pattern path is a protected folder
+        }
+
+        // Check if the patternPath starts with a protected folder and includes a dangerous pattern
+        if (patternPath.find(protectedFolder) == 0) {
+            std::string relativePath = patternPath.substr(protectedFolder.size());
+            for (const std::string& dangerousPattern : dangerousPatterns) {
+                if (relativePath.find(dangerousPattern) != std::string::npos) {
+                    return true; // Pattern path includes a dangerous pattern
+                }
+            }
+        }
+
+        // Check if the patternPath is a combination of a protected folder and a dangerous pattern
+        for (const std::string& dangerousPattern : dangerousCombinationPatterns) {
+            if (patternPath == protectedFolder + dangerousPattern) {
+                return true; // Pattern path is a protected folder combined with a dangerous pattern
+            }
+        }
+    }
+
+    // Check if the patternPath is a dangerous pattern
+    if (patternPath.find("sdmc:/") == 0) {
+        std::string relativePath = patternPath.substr(6); // Remove "sdmc:/"
+        for (const std::string& dangerousPattern : dangerousPatterns) {
+            if (relativePath == dangerousPattern) {
+                return true; // Pattern path is a dangerous pattern
+            }
+        }
+    }
+
+    // Check if the patternPath includes a wildcard at the root level
+    if (patternPath.find(":/") != std::string::npos) {
+        std::string rootPath = patternPath.substr(0, patternPath.find(":/") + 2);
+        if (rootPath.find('*') != std::string::npos) {
+            return true; // Pattern path includes a wildcard at the root level
+        }
+    }
+
+    // Check if the provided path matches any dangerous patterns
+    for (const std::string& pattern : dangerousPatterns) {
+        if (patternPath.find(pattern) != std::string::npos) {
+            return true; // Path contains a dangerous pattern
+        }
+    }
+
+    return false; // Pattern path is not a protected folder, a dangerous pattern, or includes a wildcard at the root level
 }
 
 
+// Main interpreter
 void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& commands) {
     for (const auto& command : commands) {
         
@@ -888,156 +914,5 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
             spsmShutdown(SpsmShutdownMode_Normal);
         }
     }
-}
-
-
-struct PackageHeader {
-    std::string version;
-    std::string creator;
-};
-
-PackageHeader getPackageHeaderFromIni(const std::string& filePath) {
-    PackageHeader packageHeader;
-    std::string version = "";
-    std::string creator = "";
-    
-    FILE* file = fopen(filePath.c_str(), "r");
-    if (file == nullptr) {
-        packageHeader.version = version;
-        packageHeader.creator = creator;
-        return packageHeader;
-    }
-
-    constexpr size_t BufferSize = 131072; // Choose a larger buffer size for reading lines
-    char line[BufferSize];
-
-    const std::string versionPrefix = ";version=";
-    const std::string creatorPrefix = ";creator=";
-    const size_t versionPrefixLength = versionPrefix.length();
-    const size_t creatorPrefixLength = creatorPrefix.length();
-
-    while (fgets(line, sizeof(line), file)) {
-        std::string strLine(line);
-        size_t versionPos = strLine.find(versionPrefix);
-        if (versionPos != std::string::npos) {
-            versionPos += versionPrefixLength;
-            size_t endPos = strLine.find_first_of(" \t\r\n", versionPos);
-            version = strLine.substr(versionPos, endPos - versionPos);
-        }
-        size_t creatorPos = strLine.find(creatorPrefix);
-        if (creatorPos != std::string::npos) {
-            creatorPos += creatorPrefixLength;
-            size_t endPos = strLine.find_first_of(" \t\r\n", creatorPos);
-            creator = strLine.substr(creatorPos, endPos - creatorPos);
-        }
-
-        if (!version.empty() && !creator.empty()) {
-            break; // Both version and creator found, exit the loop
-        }
-    }
-
-    fclose(file);
-    
-    packageHeader.version = version;
-    packageHeader.creator = creator;
-    return packageHeader;
-}
-
-
-
-
-std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadOptionsFromIni(const std::string& configIniPath, bool makeConfig = false) {
-    std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> options;
-
-    FILE* configFile = fopen(configIniPath.c_str(), "r");
-    if (!configFile ) {
-        // Write the default INI file
-        FILE* configFileOut = fopen(configIniPath.c_str(), "w");
-        std::string commands;
-        if (makeConfig) {
-            commands = "[make directories]\n"
-                       "mkdir /config/ultrahand/example1/\n"
-                       "mkdir /config/ultrahand/example2/\n"
-                       "[copy files]\n"
-                       "copy /config/ultrahand/config.ini /config/ultrahand/example1/\n"
-                       "copy /config/ultrahand/config.ini /config/ultrahand/example2/\n"
-                       "[rename files]\n"
-                       "move /config/ultrahand/example1/config.ini /config/ultrahand/example1/configRenamed.ini\n"
-                       "move /config/ultrahand/example2/config.ini /config/ultrahand/example2/configRenamed.ini\n"
-                       "[move directories]\n"
-                       "move /config/ultrahand/example1/ /config/ultrahand/example3/\n"
-                       "move /config/ultrahand/example2/ /config/ultrahand/example4/\n"
-                       "[delete files]\n"
-                       "delete /config/ultrahand/example1/config.ini\n"
-                       "delete /config/ultrahand/example2/config.ini\n"
-                       "[delete directories]\n"
-                       "delete /config/ultrahand/example*/\n"
-                       "[modify ini file]\n"
-                       "copy /bootloader/hekate_ipl.ini /config/ultrahand/\n"
-                       "set-ini-val /config/ultrahand/hekate_ipl.ini 'Atmosphere' fss0 gonnawritesomethingelse\n"
-                       "new-ini-entry /config/ultrahand/hekate_ipl.ini 'Atmosphere' booty true\n";
-        } else {
-            commands = "";
-        }
-        fprintf(configFileOut, "%s", commands.c_str());
-        
-        
-        fclose(configFileOut);
-        configFile = fopen(configIniPath.c_str(), "r");
-    }
-
-    constexpr size_t BufferSize = 131072; // Choose a larger buffer size for reading lines
-    char line[BufferSize];
-    std::string currentOption;
-    std::vector<std::vector<std::string>> commands;
-
-    while (fgets(line, sizeof(line), configFile)) {
-        std::string trimmedLine = line;
-        trimmedLine.erase(trimmedLine.find_last_not_of("\r\n") + 1);  // Remove trailing newline character
-
-        if (trimmedLine.empty() || trimmedLine[0] == '#') {
-            // Skip empty lines and comment lines
-            continue;
-        } else if (trimmedLine[0] == '[' && trimmedLine.back() == ']') {
-            // New option section
-            if (!currentOption.empty()) {
-                // Store previous option and its commands
-                options.emplace_back(std::move(currentOption), std::move(commands));
-                commands.clear();
-            }
-            currentOption = trimmedLine.substr(1, trimmedLine.size() - 2);  // Extract option name
-        } else {
-            // Command line
-            std::istringstream iss(trimmedLine);
-            std::vector<std::string> commandParts;
-            std::string part;
-            bool inQuotes = false;
-            while (std::getline(iss, part, '\'')) {
-                if (!part.empty()) {
-                    if (!inQuotes) {
-                        // Outside quotes, split on spaces
-                        std::istringstream argIss(part);
-                        std::string arg;
-                        while (argIss >> arg) {
-                            commandParts.push_back(arg);
-                        }
-                    } else {
-                        // Inside quotes, treat as a whole argument
-                        commandParts.push_back(part);
-                    }
-                }
-                inQuotes = !inQuotes;
-            }
-            commands.push_back(std::move(commandParts));
-        }
-    }
-
-    // Store the last option and its commands
-    if (!currentOption.empty()) {
-        options.emplace_back(std::move(currentOption), std::move(commands));
-    }
-
-    fclose(configFile);
-    return options;
 }
 
