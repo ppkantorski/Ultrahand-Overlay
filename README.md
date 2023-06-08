@@ -13,15 +13,16 @@ Create directories, merge files, and customize configurations effortlessly using
 
 Ultrahand is a Tesla overlay that provides powerful functionality for managing files and directories on an SD card. It offers the following features:
 
-- Create Directories: Ultrahand allows you to effortlessly create directories on your SD card. Simply specify the directory path, and Ultrahand will create it for you.
+- Create Directories: Effortlessly create directories on your SD card by specifying the directory path. Ultrahand will handle the creation process for you.
 
-- Copy Files or Directories: With Ultrahand, you can easily copy files or directories from one location to another on your SD card. Just provide the source file or directory path and the destination file or directory path, and Ultrahand will handle the copying process seamlessly.
+- Copy Files or Directories: Easily copy files or directories from one location to another on your SD card. Just provide the source and destination paths, and Ultrahand will seamlessly handle the copying process.
 
-- Delete Files or Directories: Ultrahand simplifies file and directory deletion on your SD card. By specifying the file or directory path, Ultrahand will promptly remove it for you, making the deletion process hassle-free.
+- Delete Files or Directories: Simplify file and directory deletion on your SD card. By specifying the path of the file or directory you want to delete, Ultrahand promptly removes it, making the deletion process hassle-free.
 
-- Move Files or Directories: Ultrahand enables you to move files or directories between locations on your SD card effortlessly. Provide the source file or directory path and the destination directory path, and Ultrahand will take care of moving them, ensuring their seamless relocation.
+- Move Files or Directories: Seamlessly move files or directories between locations on your SD card. Provide the source path and the destination directory path, and Ultrahand takes care of the moving process, ensuring smooth relocation.
 
-- Modify INI Files: Ultrahand allows you to edit INI files on your SD card, giving you full control over your configurations. You can easily update existing key-value pairs, add new entries, or create new sections within the INI file using Ultrahand. Customize and tailor your INI files effortlessly with Ultrahand's intuitive interface.
+- Modify INI Files: Edit INI files on your SD card with ease. Take full control over your configurations by updating existing key-value pairs, adding new entries, or creating new sections within the INI file using Ultrahand. Customize and tailor your INI files effortlessly through its intuitive interface.
+
 
 Ultrahand provides a convenient command-line interface to perform these operations, allowing you to efficiently manage your files, directories, and INI files on an SD card.
 
