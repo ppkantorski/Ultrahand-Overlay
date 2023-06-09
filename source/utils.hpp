@@ -625,7 +625,11 @@ void setIniFile(const std::string& fileToEdit, const std::string& desiredSection
 
     if (tempFile) {
         std::string currentSection;
-        char line[256];
+        std::string formattedDesiredValue;
+        constexpr size_t BufferSize = 4096;
+        char line[BufferSize];
+        bool sectionFound = false;
+        bool keyFound = false;
         while (fgets(line, sizeof(line), configFile)) {
             trimmedLine = trim(std::string(line));
 
@@ -634,8 +638,17 @@ void setIniFile(const std::string& fileToEdit, const std::string& desiredSection
                 currentSection = removeQuotes(trim(std::string(trimmedLine.c_str() + 1, trimmedLine.length() - 2)));
             }
 
+            if (sectionFound && !keyFound && desiredNewKey.empty()) {
+                if (trim(currentSection) != trim(desiredSection)) {
+                    formattedDesiredValue = removeQuotes(desiredValue);
+                    fprintf(tempFile, "%s = %s\n", desiredKey.c_str(), formattedDesiredValue.c_str());
+                    keyFound = true;
+                }
+            }
+
             // Check if the line is in the desired section
             if (trim(currentSection) == trim(desiredSection)) {
+                sectionFound = true;
                 // Tokenize the line based on "=" delimiter
                 std::string::size_type delimiterPos = trimmedLine.find('=');
                 if (delimiterPos != std::string::npos) {
@@ -643,8 +656,9 @@ void setIniFile(const std::string& fileToEdit, const std::string& desiredSection
 
                     // Check if the line key matches the desired key
                     if (lineKey == desiredKey) {
-                        std::string formattedDesiredValue = removeQuotes(desiredValue);
+                        keyFound = true;
                         std::string originalValue = getValueFromLine(trimmedLine); // Extract the original value
+                        formattedDesiredValue = removeQuotes(desiredValue);
 
                         // Write the modified line with the desired key and value
                         if (!desiredNewKey.empty()) {
@@ -659,7 +673,12 @@ void setIniFile(const std::string& fileToEdit, const std::string& desiredSection
 
             fprintf(tempFile, "%s", line);
         }
-
+        
+        if (!sectionFound && !keyFound && desiredNewKey.empty()) {
+            // The desired section doesn't exist, so create it and add the key-value pair
+            fprintf(tempFile, "\n[%s]\n", desiredSection.c_str());
+            fprintf(tempFile, "%s = %s\n", desiredKey.c_str(), desiredValue.c_str());
+        }
         fclose(configFile);
         fclose(tempFile);
         remove(fileToEdit.c_str()); // Delete the old configuration file
@@ -679,7 +698,6 @@ void setIniFileKey(const std::string& fileToEdit, const std::string& desiredSect
     setIniFile(fileToEdit, desiredSection, desiredKey, "", desiredNewKey);
 }
 
-void newIniEntry(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredValue) {}
 
 
 // Safety conditions
@@ -930,24 +948,6 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                 }
 
                 setIniFileKey(fileToEdit.c_str(), desiredSection.c_str(), desiredKey.c_str(), desiredNewKey.c_str());
-            }
-        } else if (commandName == "new-ini-entry") {
-            // Edit command
-            if (command.size() >= 5) {
-                std::string fileToEdit = "sdmc:" + replaceMultipleSlashes(removeQuotes(command[1]));
-
-                std::string desiredSection = removeQuotes(command[2]);
-                std::string desiredKey = removeQuotes(command[3]);
-
-                std::string desiredValue;
-                for (size_t i = 4; i < command.size(); ++i) {
-                    desiredValue += command[i];
-                    if (i < command.size() - 1) {
-                        desiredValue += " ";
-                    }
-                }
-
-                newIniEntry(fileToEdit.c_str(), desiredSection.c_str(), desiredKey.c_str(), desiredValue.c_str());
             }
         } else if (commandName == "reboot") {
             // Reboot command
