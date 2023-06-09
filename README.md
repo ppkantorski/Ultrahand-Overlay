@@ -112,14 +112,11 @@ Ultrahand supports the following commands:
 - move or mv: Moves/renames a file/directory to a new location/label.
   - Usage: `move <file_path> <destination_directory_path>`
 
-- set-ini-val or set-ini-value: Edits an INI file by updating a section with a desired key-value pair.
+- set-ini-val or set-ini-value: Edits an INI file by updating (or adding) a section with a desired key-value pair.
   - Usage: `set-ini-val <file_to_edit> <desired_section> <desired_key> <desired_value>`
 
 - set-ini-key: Edits an INI file by updating a section with a new key.
   - Usage: `set-ini-key <file_to_edit> <desired_section> <desired_key> <desired_new_key>`
-
-- new-ini-entry: Edits an INI file by adding a new entry to a section.
-  - Usage: `new-ini-entry <file_to_edit> <desired_section> <desired_key> <desired_value>`
 
 - reboot: Restarts the system.
   - Usage: `reboot`
