@@ -90,7 +90,7 @@ delete /config/ultrahand/example4/
 [modify ini file]
 copy /bootloader/hekate_ipl.ini /config/ultrahand/
 set-ini-val /config/ultrahand/hekate_ipl.ini 'Atmosphere' fss0 gonnawritesomethingelse
-new-ini-entry /config/ultrahand/hekate_ipl.ini 'Atmosphere' booty true
+set-ini-val ​/config/ultrahand/hekate_ipl.ini 'Atmosphere' booty true
 ```
 You can add your own sections and commands to customize the actions performed by Ultrahand.
 
