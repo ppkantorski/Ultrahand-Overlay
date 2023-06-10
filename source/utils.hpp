@@ -700,6 +700,165 @@ void setIniFileKey(const std::string& fileToEdit, const std::string& desiredSect
 
 
 
+// Hex-editing commands
+std::string decimalToReversedHex(const std::string& decimalStr) {
+    // Convert decimal string to integer
+    int decimal = std::stoi(decimalStr);
+
+    // Convert decimal to hexadecimal
+    std::string hexadecimal;
+    while (decimal > 0) {
+        int remainder = decimal % 16;
+        char hexChar = (remainder < 10) ? ('0' + remainder) : ('A' + remainder - 10);
+        hexadecimal += hexChar;
+        decimal /= 16;
+    }
+
+    // Reverse the hexadecimal string
+    std::reverse(hexadecimal.begin(), hexadecimal.end());
+
+    // If the length is odd, add a leading '0'
+    if (hexadecimal.length() % 2 != 0) {
+        hexadecimal = '0' + hexadecimal;
+    }
+
+    // Add spaces between each pair of digits
+    std::string reversedHex;
+    for (size_t i = 0; i < hexadecimal.length(); i += 2) {
+        reversedHex += hexadecimal.substr(i, 2);
+    }
+
+    return reversedHex;
+}
+
+
+std::vector<std::string> findHexDataOffsets(const std::string& filePath, const std::string& hexData) {
+    std::vector<std::string> offsets;
+
+    // Open the file for reading in binary mode
+    FILE* file = fopen(filePath.c_str(), "rb");
+    if (!file) {
+        //std::cerr << "Failed to open the file." << std::endl;
+        return offsets;
+    }
+
+    // Check the file size
+    struct stat fileStatus;
+    if (stat(filePath.c_str(), &fileStatus) != 0) {
+        //std::cerr << "Failed to retrieve file size." << std::endl;
+        fclose(file);
+        return offsets;
+    }
+    std::size_t fileSize = fileStatus.st_size;
+
+    // Convert the hex data string to binary data
+    std::vector<char> binaryData;
+    for (std::size_t i = 0; i < hexData.length(); i += 2) {
+        std::string byteString = hexData.substr(i, 2);
+        char byte = static_cast<char>(std::stoi(byteString, nullptr, 16));
+        binaryData.push_back(byte);
+    }
+
+    // Read the file in chunks to find the offsets where the hex data is located
+    const std::size_t bufferSize = 1024;
+    std::vector<char> buffer(bufferSize);
+    std::streampos offset = 0;
+    std::streampos bytesRead = 0;
+    while ((bytesRead = fread(buffer.data(), sizeof(char), bufferSize, file)) > 0) {
+        for (std::size_t i = 0; i < bytesRead; i++) {
+            if (std::memcmp(buffer.data() + i, binaryData.data(), binaryData.size()) == 0) {
+                std::streampos currentOffset = offset + i;
+                offsets.push_back(std::to_string(currentOffset));
+            }
+        }
+        offset += bytesRead;
+    }
+
+    fclose(file);
+    return offsets;
+}
+
+void hexEditByOffset(const std::string& filePath, const std::string& offsetStr, const std::string& hexData) {
+    // Convert the offset string to std::streampos
+    std::streampos offset = std::stoll(offsetStr);
+
+    // Rest of the code remains the same
+    // Open the file for reading and writing in binary mode
+    FILE* file = fopen(filePath.c_str(), "rb+");
+    if (!file) {
+        //std::cerr << "Failed to open the file." << std::endl;
+        return;
+    }
+
+    // Check the file size
+    struct stat fileStatus;
+    if (stat(filePath.c_str(), &fileStatus) != 0) {
+        //std::cerr << "Failed to retrieve file size." << std::endl;
+        fclose(file);
+        return;
+    }
+    std::size_t fileSize = fileStatus.st_size;
+
+    // Check if the offset is within the file size
+    if (offset >= fileSize) {
+        //std::cerr << "Invalid offset specified." << std::endl;
+        fclose(file);
+        return;
+    }
+
+    // Convert the hex data string to binary data
+    std::vector<char> binaryData;
+    for (std::size_t i = 0; i < hexData.length(); i += 2) {
+        std::string byteString = hexData.substr(i, 2);
+        char byte = static_cast<char>(std::stoi(byteString, nullptr, 16));
+        binaryData.push_back(byte);
+    }
+
+    // Move the file pointer to the specified offset
+    if (fseek(file, offset, SEEK_SET) != 0) {
+        //std::cerr << "Failed to move the file pointer." << std::endl;
+        fclose(file);
+        return;
+    }
+
+    // Write the binary data to the file
+    if (fwrite(binaryData.data(), sizeof(char), binaryData.size(), file) != binaryData.size()) {
+        //std::cerr << "Failed to write data to the file." << std::endl;
+        fclose(file);
+        return;
+    }
+
+    fclose(file);
+    //std::cout << "Hex editing completed." << std::endl;
+}
+
+void hexEditFindReplace(const std::string& filePath, const std::string& hexDataToReplace, const std::string& hexDataReplacement, const std::string& occurrence="0") {
+    std::vector<std::string> offsetStrs = findHexDataOffsets(filePath, hexDataToReplace);
+    if (!offsetStrs.empty()) {
+        if (occurrence == "0") {
+            // Replace all occurrences
+            for (const std::string& offsetStr : offsetStrs) {
+                hexEditByOffset(filePath, offsetStr, hexDataReplacement);
+            }
+        } else {
+            // Convert the occurrence string to an integer
+            int index = std::stoi(occurrence);
+            if (index > 0 && index <= offsetStrs.size()) {
+                // Replace the specified occurrence/index
+                std::string offsetStr = offsetStrs[index - 1];
+                hexEditByOffset(filePath, offsetStr, hexDataReplacement);
+            } else {
+                // Invalid occurrence/index specified
+                //std::cout << "Invalid occurrence/index specified." << std::endl;
+            }
+        }
+        //std::cout << "Hex data replaced successfully." << std::endl;
+    } else {
+        //std::cout << "Hex data to replace not found." << std::endl;
+    }
+}
+
+
 // Safety conditions
 // List of protected folders
 const std::vector<std::string> protectedFolders = {
@@ -948,6 +1107,46 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                 }
 
                 setIniFileKey(fileToEdit.c_str(), desiredSection.c_str(), desiredKey.c_str(), desiredNewKey.c_str());
+            }
+        } else if (commandName == "hex-by-offset") {
+            // Edit command
+            if (command.size() >= 4) {
+                std::string fileToEdit = "sdmc:" + replaceMultipleSlashes(removeQuotes(command[1]));
+
+                std::string offset = removeQuotes(command[2]);
+                std::string hexDataReplacement = removeQuotes(command[3]);
+
+                hexEditByOffset(fileToEdit.c_str(), offset.c_str(), hexDataReplacement.c_str());
+            }
+        } else if (commandName == "hex-by-swap") {
+            // Edit command - Hex data replacement with occurrence
+            if (command.size() >= 4) {
+                std::string fileToEdit = "sdmc:" + replaceMultipleSlashes(removeQuotes(command[1]));
+
+                std::string hexDataToReplace = removeQuotes(command[2]);
+                std::string hexDataReplacement = removeQuotes(command[3]);
+
+                if (command.size() >= 5) {
+                    std::string occurrence = removeQuotes(command[4]);
+                    hexEditFindReplace(fileToEdit, hexDataToReplace, hexDataReplacement, occurrence);
+                } else {
+                    hexEditFindReplace(fileToEdit, hexDataToReplace, hexDataReplacement);
+                }
+            }
+        } else if (commandName == "hex-by-decimal") {
+            // Edit command - Hex data replacement with occurrence
+            if (command.size() >= 4) {
+                std::string fileToEdit = "sdmc:" + replaceMultipleSlashes(removeQuotes(command[1]));
+
+                std::string hexDataToReplace = decimalToReversedHex(removeQuotes(command[2]));
+                std::string hexDataReplacement = decimalToReversedHex(removeQuotes(command[3]));
+
+                if (command.size() >= 5) {
+                    std::string occurrence = removeQuotes(command[4]);
+                    hexEditFindReplace(fileToEdit, hexDataToReplace, hexDataReplacement, occurrence);
+                } else {
+                    hexEditFindReplace(fileToEdit, hexDataToReplace, hexDataReplacement);
+                }
             }
         } else if (commandName == "reboot") {
             // Reboot command
