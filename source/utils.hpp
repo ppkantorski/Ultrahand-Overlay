@@ -791,26 +791,38 @@ void hexEditByOffset(const std::string& filePath, const std::string& offsetStr, 
     // Convert the offset string to std::streampos
     std::streampos offset = std::stoll(offsetStr);
 
-    // Rest of the code remains the same
     // Open the file for reading and writing in binary mode
     FILE* file = fopen(filePath.c_str(), "rb+");
     if (!file) {
-        //std::cerr << "Failed to open the file." << std::endl;
+        logMessage("Failed to open the file.");
         return;
     }
 
-    // Check the file size
-    struct stat fileStatus;
-    if (stat(filePath.c_str(), &fileStatus) != 0) {
-        //std::cerr << "Failed to retrieve file size." << std::endl;
+    // Seek to the end of the file to get the file size
+    if (fseek(file, 0, SEEK_END) != 0) {
+        logMessage("Failed to seek to the end of the file.");
         fclose(file);
         return;
     }
-    std::size_t fileSize = fileStatus.st_size;
+
+    // Get the file size by getting the current position indicator
+    long fileSize = ftell(file);
+    if (fileSize == -1L) {
+        logMessage("Failed to retrieve file size.");
+        fclose(file);
+        return;
+    }
 
     // Check if the offset is within the file size
     if (offset >= fileSize) {
-        //std::cerr << "Invalid offset specified." << std::endl;
+        fclose(file);
+        logMessage("Invalid offset specified.");
+        return;
+    }
+
+    // Move the file pointer to the specified offset
+    if (fseek(file, offset, SEEK_SET) != 0) {
+        logMessage("Failed to move the file pointer.");
         fclose(file);
         return;
     }
@@ -823,23 +835,17 @@ void hexEditByOffset(const std::string& filePath, const std::string& offsetStr, 
         binaryData.push_back(byte);
     }
 
-    // Move the file pointer to the specified offset
-    if (fseek(file, offset, SEEK_SET) != 0) {
-        //std::cerr << "Failed to move the file pointer." << std::endl;
-        fclose(file);
-        return;
-    }
-
     // Write the binary data to the file
     if (fwrite(binaryData.data(), sizeof(char), binaryData.size(), file) != binaryData.size()) {
-        //std::cerr << "Failed to write data to the file." << std::endl;
+        logMessage("Failed to write data to the file.");
         fclose(file);
         return;
     }
 
     fclose(file);
-    //std::cout << "Hex editing completed." << std::endl;
+    logMessage("Hex editing completed.");
 }
+
 
 void hexEditFindReplace(const std::string& filePath, const std::string& hexDataToReplace, const std::string& hexDataReplacement, const std::string& occurrence="0") {
     std::vector<std::string> offsetStrs = findHexDataOffsets(filePath, hexDataToReplace);
