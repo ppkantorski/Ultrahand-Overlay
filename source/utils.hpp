@@ -8,26 +8,26 @@
 #define SpsmShutdownMode_Reboot 1
 
 // For loggging messages and debugging
-//#include <ctime>
-//void logMessage(const std::string& message) {
-//    std::time_t currentTime = std::time(nullptr);
-//    std::string logEntry = std::asctime(std::localtime(&currentTime));
-//    // Find the last non-newline character
-//    std::size_t lastNonNewline = logEntry.find_last_not_of("\r\n");
-//
-//    // Remove everything after the last non-newline character
-//    if (lastNonNewline != std::string::npos) {
-//        logEntry.erase(lastNonNewline + 1);
-//    }
-//    logEntry = "["+logEntry+"] ";
-//    logEntry += message+"\n";
-//
-//    FILE* file = fopen("sdmc:/config/ultrahand/log.txt", "a");
-//    if (file != nullptr) {
-//        fputs(logEntry.c_str(), file);
-//        fclose(file);
-//    }
-//}
+#include <ctime>
+void logMessage(const std::string& message) {
+    std::time_t currentTime = std::time(nullptr);
+    std::string logEntry = std::asctime(std::localtime(&currentTime));
+    // Find the last non-newline character
+    std::size_t lastNonNewline = logEntry.find_last_not_of("\r\n");
+
+    // Remove everything after the last non-newline character
+    if (lastNonNewline != std::string::npos) {
+        logEntry.erase(lastNonNewline + 1);
+    }
+    logEntry = "["+logEntry+"] ";
+    logEntry += message+"\n";
+
+    FILE* file = fopen("sdmc:/config/ultrahand/log.txt", "a");
+    if (file != nullptr) {
+        fputs(logEntry.c_str(), file);
+        fclose(file);
+    }
+}
 
 
 // String functions
@@ -699,9 +699,8 @@ void setIniFileKey(const std::string& fileToEdit, const std::string& desiredSect
 }
 
 
-
 // Hex-editing commands
-std::string decimalToReversedHex(const std::string& decimalStr) {
+std::string decimalToHex(const std::string& decimalStr) {
     // Convert decimal string to integer
     int decimal = std::stoi(decimalStr);
 
@@ -714,13 +713,21 @@ std::string decimalToReversedHex(const std::string& decimalStr) {
         decimal /= 16;
     }
 
-    // Reverse the hexadecimal string
-    std::reverse(hexadecimal.begin(), hexadecimal.end());
+
+
+    return hexadecimal;
+}
+
+std::string decimalToReversedHex(const std::string& decimalStr) {
+    std::string hexadecimal = decimalToHex(decimalStr);
 
     // If the length is odd, add a leading '0'
     if (hexadecimal.length() % 2 != 0) {
         hexadecimal = '0' + hexadecimal;
     }
+
+    // Reverse the hexadecimal string
+    std::reverse(hexadecimal.begin(), hexadecimal.end());
 
     // Add spaces between each pair of digits
     std::string reversedHex;
@@ -838,6 +845,8 @@ void hexEditFindReplace(const std::string& filePath, const std::string& hexDataT
         if (occurrence == "0") {
             // Replace all occurrences
             for (const std::string& offsetStr : offsetStrs) {
+                logMessage("offsetStr: "+offsetStr);
+                logMessage("hexDataReplacement: "+hexDataReplacement);
                 hexEditByOffset(filePath, offsetStr, hexDataReplacement);
             }
         } else {
@@ -846,6 +855,8 @@ void hexEditFindReplace(const std::string& filePath, const std::string& hexDataT
             if (index > 0 && index <= offsetStrs.size()) {
                 // Replace the specified occurrence/index
                 std::string offsetStr = offsetStrs[index - 1];
+                logMessage("offsetStr: "+offsetStr);
+                logMessage("hexDataReplacement: "+hexDataReplacement);
                 hexEditByOffset(filePath, offsetStr, hexDataReplacement);
             } else {
                 // Invalid occurrence/index specified
@@ -1138,8 +1149,27 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
             if (command.size() >= 4) {
                 std::string fileToEdit = "sdmc:" + replaceMultipleSlashes(removeQuotes(command[1]));
 
+                std::string hexDataToReplace = decimalToHex(removeQuotes(command[2]));
+                std::string hexDataReplacement = decimalToHex(removeQuotes(command[3]));
+                logMessage("hexDataToReplace: "+hexDataToReplace);
+                logMessage("hexDataReplacement: "+hexDataReplacement);
+
+                if (command.size() >= 5) {
+                    std::string occurrence = removeQuotes(command[4]);
+                    hexEditFindReplace(fileToEdit, hexDataToReplace, hexDataReplacement, occurrence);
+                } else {
+                    hexEditFindReplace(fileToEdit, hexDataToReplace, hexDataReplacement);
+                }
+            }
+        } else if (commandName == "hex-by-rdecimal") {
+            // Edit command - Hex data replacement with occurrence
+            if (command.size() >= 4) {
+                std::string fileToEdit = "sdmc:" + replaceMultipleSlashes(removeQuotes(command[1]));
+
                 std::string hexDataToReplace = decimalToReversedHex(removeQuotes(command[2]));
                 std::string hexDataReplacement = decimalToReversedHex(removeQuotes(command[3]));
+                logMessage("hexDataToReplace: "+hexDataToReplace);
+                logMessage("hexDataReplacement: "+hexDataReplacement);
 
                 if (command.size() >= 5) {
                     std::string occurrence = removeQuotes(command[4]);
