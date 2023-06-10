@@ -716,10 +716,6 @@ std::string decimalToHex(const std::string& decimalStr) {
     // Reverse the hexadecimal string
     std::reverse(hexadecimal.begin(), hexadecimal.end());
     
-    // If the length is odd, add a leading '0'
-    if (hexadecimal.length() % 2 != 0) {
-        hexadecimal = '0' + hexadecimal;
-    }
 
     return hexadecimal;
 }
@@ -727,17 +723,23 @@ std::string decimalToHex(const std::string& decimalStr) {
 std::string decimalToReversedHex(const std::string& decimalStr) {
     std::string hexadecimal = decimalToHex(decimalStr);
 
+    // Reverse the hexadecimal string
+    std::reverse(hexadecimal.begin(), hexadecimal.end());
 
-
+    // If the length is odd, add a trailing '0'
+    if (hexadecimal.length() % 2 != 0) {
+        hexadecimal += '0';
+    }
 
     // Add spaces between each pair of digits
     std::string reversedHex;
     for (size_t i = 0; i < hexadecimal.length(); i += 2) {
-        reversedHex += hexadecimal.substr(i, 2);
+        reversedHex = hexadecimal.substr(i, 2) + reversedHex;
     }
 
     return reversedHex;
 }
+
 
 
 std::vector<std::string> findHexDataOffsets(const std::string& filePath, const std::string& hexData) {
