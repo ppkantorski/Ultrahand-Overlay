@@ -8,26 +8,26 @@
 #define SpsmShutdownMode_Reboot 1
 
 // For loggging messages and debugging
-#include <ctime>
-void logMessage(const std::string& message) {
-    std::time_t currentTime = std::time(nullptr);
-    std::string logEntry = std::asctime(std::localtime(&currentTime));
-    // Find the last non-newline character
-    std::size_t lastNonNewline = logEntry.find_last_not_of("\r\n");
-
-    // Remove everything after the last non-newline character
-    if (lastNonNewline != std::string::npos) {
-        logEntry.erase(lastNonNewline + 1);
-    }
-    logEntry = "["+logEntry+"] ";
-    logEntry += message+"\n";
-
-    FILE* file = fopen("sdmc:/config/ultrahand/log.txt", "a");
-    if (file != nullptr) {
-        fputs(logEntry.c_str(), file);
-        fclose(file);
-    }
-}
+//#include <ctime>
+//void logMessage(const std::string& message) {
+//    std::time_t currentTime = std::time(nullptr);
+//    std::string logEntry = std::asctime(std::localtime(&currentTime));
+//    // Find the last non-newline character
+//    std::size_t lastNonNewline = logEntry.find_last_not_of("\r\n");
+//
+//    // Remove everything after the last non-newline character
+//    if (lastNonNewline != std::string::npos) {
+//        logEntry.erase(lastNonNewline + 1);
+//    }
+//    logEntry = "["+logEntry+"] ";
+//    logEntry += message+"\n";
+//
+//    FILE* file = fopen("sdmc:/config/ultrahand/log.txt", "a");
+//    if (file != nullptr) {
+//        fputs(logEntry.c_str(), file);
+//        fclose(file);
+//    }
+//}
 
 
 // String functions
@@ -794,13 +794,13 @@ void hexEditByOffset(const std::string& filePath, const std::string& offsetStr, 
     // Open the file for reading and writing in binary mode
     FILE* file = fopen(filePath.c_str(), "rb+");
     if (!file) {
-        logMessage("Failed to open the file.");
+        //logMessage("Failed to open the file.");
         return;
     }
 
     // Seek to the end of the file to get the file size
     if (fseek(file, 0, SEEK_END) != 0) {
-        logMessage("Failed to seek to the end of the file.");
+        //logMessage("Failed to seek to the end of the file.");
         fclose(file);
         return;
     }
@@ -808,7 +808,7 @@ void hexEditByOffset(const std::string& filePath, const std::string& offsetStr, 
     // Get the file size by getting the current position indicator
     long fileSize = ftell(file);
     if (fileSize == -1L) {
-        logMessage("Failed to retrieve file size.");
+        //logMessage("Failed to retrieve file size.");
         fclose(file);
         return;
     }
@@ -816,13 +816,13 @@ void hexEditByOffset(const std::string& filePath, const std::string& offsetStr, 
     // Check if the offset is within the file size
     if (offset >= fileSize) {
         fclose(file);
-        logMessage("Invalid offset specified.");
+        //logMessage("Invalid offset specified.");
         return;
     }
 
     // Move the file pointer to the specified offset
     if (fseek(file, offset, SEEK_SET) != 0) {
-        logMessage("Failed to move the file pointer.");
+        //logMessage("Failed to move the file pointer.");
         fclose(file);
         return;
     }
@@ -837,13 +837,13 @@ void hexEditByOffset(const std::string& filePath, const std::string& offsetStr, 
 
     // Write the binary data to the file
     if (fwrite(binaryData.data(), sizeof(char), binaryData.size(), file) != binaryData.size()) {
-        logMessage("Failed to write data to the file.");
+        //logMessage("Failed to write data to the file.");
         fclose(file);
         return;
     }
 
     fclose(file);
-    logMessage("Hex editing completed.");
+    //logMessage("Hex editing completed.");
 }
 
 
@@ -853,8 +853,8 @@ void hexEditFindReplace(const std::string& filePath, const std::string& hexDataT
         if (occurrence == "0") {
             // Replace all occurrences
             for (const std::string& offsetStr : offsetStrs) {
-                logMessage("offsetStr: "+offsetStr);
-                logMessage("hexDataReplacement: "+hexDataReplacement);
+                //logMessage("offsetStr: "+offsetStr);
+                //logMessage("hexDataReplacement: "+hexDataReplacement);
                 hexEditByOffset(filePath, offsetStr, hexDataReplacement);
             }
         } else {
@@ -863,8 +863,8 @@ void hexEditFindReplace(const std::string& filePath, const std::string& hexDataT
             if (index > 0 && index <= offsetStrs.size()) {
                 // Replace the specified occurrence/index
                 std::string offsetStr = offsetStrs[index - 1];
-                logMessage("offsetStr: "+offsetStr);
-                logMessage("hexDataReplacement: "+hexDataReplacement);
+                //logMessage("offsetStr: "+offsetStr);
+                //logMessage("hexDataReplacement: "+hexDataReplacement);
                 hexEditByOffset(filePath, offsetStr, hexDataReplacement);
             } else {
                 // Invalid occurrence/index specified
@@ -1159,8 +1159,8 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
 
                 std::string hexDataToReplace = decimalToHex(removeQuotes(command[2]));
                 std::string hexDataReplacement = decimalToHex(removeQuotes(command[3]));
-                logMessage("hexDataToReplace: "+hexDataToReplace);
-                logMessage("hexDataReplacement: "+hexDataReplacement);
+                //logMessage("hexDataToReplace: "+hexDataToReplace);
+                //logMessage("hexDataReplacement: "+hexDataReplacement);
 
                 if (command.size() >= 5) {
                     std::string occurrence = removeQuotes(command[4]);
@@ -1176,8 +1176,8 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
 
                 std::string hexDataToReplace = decimalToReversedHex(removeQuotes(command[2]));
                 std::string hexDataReplacement = decimalToReversedHex(removeQuotes(command[3]));
-                logMessage("hexDataToReplace: "+hexDataToReplace);
-                logMessage("hexDataReplacement: "+hexDataReplacement);
+                //logMessage("hexDataToReplace: "+hexDataToReplace);
+                //logMessage("hexDataReplacement: "+hexDataReplacement);
 
                 if (command.size() >= 5) {
                     std::string occurrence = removeQuotes(command[4]);
