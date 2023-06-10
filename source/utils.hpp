@@ -713,7 +713,13 @@ std::string decimalToHex(const std::string& decimalStr) {
         decimal /= 16;
     }
 
-
+    // Reverse the hexadecimal string
+    std::reverse(hexadecimal.begin(), hexadecimal.end());
+    
+    // If the length is odd, add a leading '0'
+    if (hexadecimal.length() % 2 != 0) {
+        hexadecimal = '0' + hexadecimal;
+    }
 
     return hexadecimal;
 }
@@ -721,13 +727,8 @@ std::string decimalToHex(const std::string& decimalStr) {
 std::string decimalToReversedHex(const std::string& decimalStr) {
     std::string hexadecimal = decimalToHex(decimalStr);
 
-    // If the length is odd, add a leading '0'
-    if (hexadecimal.length() % 2 != 0) {
-        hexadecimal = '0' + hexadecimal;
-    }
 
-    // Reverse the hexadecimal string
-    std::reverse(hexadecimal.begin(), hexadecimal.end());
+
 
     // Add spaces between each pair of digits
     std::string reversedHex;
