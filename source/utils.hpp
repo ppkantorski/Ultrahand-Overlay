@@ -720,24 +720,20 @@ std::string decimalToHex(const std::string& decimalStr) {
     return hexadecimal;
 }
 
-std::string decimalToReversedHex(const std::string& decimalStr, int base = 16) {
+std::string decimalToReversedHex(const std::string& decimalStr, int order=2) {
     std::string hexadecimal = decimalToHex(decimalStr);
-
+    
     // If the length is odd, add a trailing '0'
     if (hexadecimal.length() % 2 != 0) {
         hexadecimal = '0' + hexadecimal;
     }
 
-    // Reverse the hexadecimal string in groups of 2
+    // Reverse the hexadecimal string in groups of order
     std::string reversedHex;
-    for (int i = hexadecimal.length() - 2; i >= 0; i -= 2) {
-        reversedHex += hexadecimal.substr(i, 2);
+    for (int i = hexadecimal.length() - order; i >= 0; i -= order) {
+        reversedHex += hexadecimal.substr(i, order);
     }
 
-    // Convert the base if specified
-    if (base != 16) {
-        reversedHex = decimalToHex(reversedHex);
-    }
 
     return reversedHex;
 }
