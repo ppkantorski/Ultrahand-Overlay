@@ -314,7 +314,10 @@ void deleteFileOrDirectoryByPattern(const std::string& pathPattern) {
 bool moveFileOrDirectory(const std::string& sourcePath, const std::string& destinationPath) {
     struct stat sourceInfo;
     struct stat destinationInfo;
-
+    
+    logMessage("sourcePath: "+sourcePath);
+    logMessage("destinationPath: "+destinationPath);
+    
     if (stat(sourcePath.c_str(), &sourceInfo) == 0) {
         // Source file or directory exists
 
@@ -331,6 +334,7 @@ bool moveFileOrDirectory(const std::string& sourcePath, const std::string& desti
 
             DIR* dir = opendir(sourcePath.c_str());
             if (!dir) {
+                logMessage("Failed to open source directory: "+sourcePath);
                 //printf("Failed to open source directory: %s\n", sourcePath.c_str());
                 return false;
             }
@@ -364,9 +368,19 @@ bool moveFileOrDirectory(const std::string& sourcePath, const std::string& desti
             return true;
         } else {
             // Source path is a regular file
+            std::string filename = getFileNameFromPath(sourcePath.c_str());
 
-            if (rename(sourcePath.c_str(), destinationPath.c_str()) == -1) {
+            std::string destinationFilePath = destinationPath;
+
+            if (destinationPath[destinationPath.length() - 1] != '/') {
+                destinationFilePath += "/";
+            }
+
+            destinationFilePath += filename;
+            
+            if (rename(sourcePath.c_str(), destinationFilePath.c_str()) == -1) {
                 //printf("Failed to move file: %s\n", sourcePath.c_str());
+                logMessage("Failed to move file: "+sourcePath);
                 return false;
             }
 
@@ -1082,24 +1096,30 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                 std::string sourcePath = "sdmc:" + replaceMultipleSlashes(removeQuotes(command[1]));
                 std::string destinationPath = "sdmc:" + replaceMultipleSlashes(removeQuotes(command[2]));
                 
+                
                 if (!isDangerousCombination(sourcePath)) {
                     if (sourcePath.find('*') != std::string::npos) {
                         // Move files by pattern
                         if (moveFilesOrDirectoriesByPattern(sourcePath, destinationPath)) {
                             //std::cout << "Files moved successfully." << std::endl;
+                            logMessage( "Files moved successfully.");
                         } else {
+                            logMessage( "Failed to move files.");
                             //std::cout << "Failed to move files." << std::endl;
                         }
                     } else {
                         // Move single file or directory
                         if (moveFileOrDirectory(sourcePath, destinationPath)) {
+                             logMessage( "File or directory moved successfully.");
                             //std::cout << "File or directory moved successfully." << std::endl;
                         } else {
+                             logMessage( "Failed to move file or directory.");
                             //std::cout << "Failed to move file or directory." << std::endl;
                         }
                     }
                 }
             } else {
+                logMessage( "Invalid move command.");
                 //std::cout << "Invalid move command. Usage: move <source_path> <destination_path>" << std::endl;
             }
 
