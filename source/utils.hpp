@@ -756,8 +756,8 @@ std::string decimalToReversedHex(const std::string& decimalStr, int order=2) {
     return reversedHex;
 }
 
-std::vector<std::pair<std::string, std::string>> findHexDataOffsets(const std::string& filePath, const std::string& hexData) {
-    std::vector<std::pair<std::string, std::string>> offsets;
+std::vector<std::string> findHexDataOffsets(const std::string& filePath, const std::string& hexData) {
+    std::vector<std::string> offsets;
 
     // Open the file for reading in binary mode
     FILE* file = fopen(filePath.c_str(), "rb");
@@ -786,28 +786,25 @@ std::vector<std::pair<std::string, std::string>> findHexDataOffsets(const std::s
     // Read the file in chunks to find the offsets where the hex data is located
     const std::size_t bufferSize = 1024;
     std::vector<char> buffer(bufferSize);
-    std::string offsetStart;
-    std::string offsetEnd;
-    std::size_t bytesRead = 0;
+    std::streampos offset = 0;
+    std::streampos bytesRead = 0;
     while ((bytesRead = fread(buffer.data(), sizeof(char), bufferSize, file)) > 0) {
         for (std::size_t i = 0; i < bytesRead; i++) {
             if (std::memcmp(buffer.data() + i, binaryData.data(), binaryData.size()) == 0) {
-                offsetStart = std::to_string(i);
-                offsetEnd = std::to_string(i + binaryData.size() - 1);
-                offsets.emplace_back(offsetStart, offsetEnd);
+                std::streampos currentOffset = offset + i;
+                offsets.push_back(std::to_string(currentOffset));
             }
         }
+        offset += bytesRead;
     }
 
     fclose(file);
     return offsets;
 }
 
-
-void hexEditByOffset(const std::string& filePath, const std::string& offsetStartStr, const std::string& offsetEndStr, const std::string& hexData) {
-    // Convert the offset strings to std::streampos
-    std::streampos offsetStart = std::stoll(offsetStartStr);
-    std::streampos offsetEnd = std::stoll(offsetEndStr);
+void hexEditByOffset(const std::string& filePath, const std::string& offsetStr, const std::string& hexData) {
+    // Convert the offset string to std::streampos
+    std::streampos offset = std::stoll(offsetStr);
 
     // Open the file for reading and writing in binary mode
     FILE* file = fopen(filePath.c_str(), "rb+");
@@ -816,8 +813,8 @@ void hexEditByOffset(const std::string& filePath, const std::string& offsetStart
         return;
     }
 
-    // Move the file pointer to the start offset
-    if (fseek(file, offsetStart, SEEK_SET) != 0) {
+    // Move the file pointer to the specified offset
+    if (fseek(file, offset, SEEK_SET) != 0) {
         //logMessage("Failed to move the file pointer.");
         fclose(file);
         return;
@@ -834,38 +831,26 @@ void hexEditByOffset(const std::string& filePath, const std::string& offsetStart
     // Calculate the number of bytes to be replaced
     std::size_t bytesToReplace = binaryData.size();
 
-    // Calculate the number of bytes within the specified range
-    std::size_t rangeBytes = offsetEnd - offsetStart + 1;
-
-    // Read the existing data from the file within the specified range
-    std::vector<char> existingData(rangeBytes);
-    if (fread(existingData.data(), sizeof(char), rangeBytes, file) != rangeBytes) {
+    // Read the existing data from the file
+    std::vector<char> existingData(bytesToReplace);
+    if (fread(existingData.data(), sizeof(char), bytesToReplace, file) != bytesToReplace) {
         //logMessage("Failed to read existing data from the file.");
         fclose(file);
         return;
     }
 
-    // Move the file pointer back to the start offset
-    if (fseek(file, offsetStart, SEEK_SET) != 0) {
+    // Move the file pointer back to the offset
+    if (fseek(file, offset, SEEK_SET) != 0) {
         //logMessage("Failed to move the file pointer.");
         fclose(file);
         return;
     }
 
-    // Write the replacement binary data to the file within the specified range
+    // Write the replacement binary data to the file
     if (fwrite(binaryData.data(), sizeof(char), bytesToReplace, file) != bytesToReplace) {
         //logMessage("Failed to write data to the file.");
         fclose(file);
         return;
-    }
-
-    // If the replacement data is smaller than the range, write back the remaining existing data
-    if (bytesToReplace < rangeBytes) {
-        if (fwrite(existingData.data() + bytesToReplace, sizeof(char), rangeBytes - bytesToReplace, file) != rangeBytes - bytesToReplace) {
-            //logMessage("Failed to write remaining data to the file.");
-            fclose(file);
-            return;
-        }
     }
 
     fclose(file);
@@ -874,24 +859,25 @@ void hexEditByOffset(const std::string& filePath, const std::string& offsetStart
 
 
 
-void hexEditFindReplace(const std::string& filePath, const std::string& hexDataToReplace, const std::string& hexDataReplacement, const std::string& occurrence = "0") {
-    std::vector<std::pair<std::string, std::string>> offsetPairs = findHexDataOffsets(filePath, hexDataToReplace);
-    if (!offsetPairs.empty()) {
+void hexEditFindReplace(const std::string& filePath, const std::string& hexDataToReplace, const std::string& hexDataReplacement, const std::string& occurrence="0") {
+    std::vector<std::string> offsetStrs = findHexDataOffsets(filePath, hexDataToReplace);
+    if (!offsetStrs.empty()) {
         if (occurrence == "0") {
             // Replace all occurrences
-            for (const auto& offsetPair : offsetPairs) {
-                const std::string& offsetStart = offsetPair.first;
-                const std::string& offsetEnd = offsetPair.second;
-                hexEditByOffset(filePath, offsetStart, offsetEnd, hexDataReplacement);
+            for (const std::string& offsetStr : offsetStrs) {
+                //logMessage("offsetStr: "+offsetStr);
+                //logMessage("hexDataReplacement: "+hexDataReplacement);
+                hexEditByOffset(filePath, offsetStr, hexDataReplacement);
             }
         } else {
             // Convert the occurrence string to an integer
             int index = std::stoi(occurrence);
-            if (index > 0 && index <= offsetPairs.size()) {
+            if (index > 0 && index <= offsetStrs.size()) {
                 // Replace the specified occurrence/index
-                const std::string& offsetStart = offsetPairs[index - 1].first;
-                const std::string& offsetEnd = offsetPairs[index - 1].second;
-                hexEditByOffset(filePath, offsetStart, offsetEnd, hexDataReplacement);
+                std::string offsetStr = offsetStrs[index - 1];
+                //logMessage("offsetStr: "+offsetStr);
+                //logMessage("hexDataReplacement: "+hexDataReplacement);
+                hexEditByOffset(filePath, offsetStr, hexDataReplacement);
             } else {
                 // Invalid occurrence/index specified
                 //std::cout << "Invalid occurrence/index specified." << std::endl;
@@ -902,7 +888,6 @@ void hexEditFindReplace(const std::string& filePath, const std::string& hexDataT
         //std::cout << "Hex data to replace not found." << std::endl;
     }
 }
-
 
 
 // Safety conditions
@@ -1156,14 +1141,13 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
             }
         } else if (commandName == "hex-by-offset") {
             // Edit command
-            if (command.size() >= 5) {
+            if (command.size() >= 4) {
                 std::string fileToEdit = "sdmc:" + replaceMultipleSlashes(removeQuotes(command[1]));
 
-                std::string offsetStart = removeQuotes(command[2]);
-                std::string offsetEnd = removeQuotes(command[3]);
-                std::string hexDataReplacement = removeQuotes(command[4]);
+                std::string offset = removeQuotes(command[2]);
+                std::string hexDataReplacement = removeQuotes(command[3]);
 
-                hexEditByOffset(fileToEdit.c_str(), offsetStart.c_str(), offsetEnd.c_str(), hexDataReplacement.c_str());
+                hexEditByOffset(fileToEdit.c_str(), offset.c_str(), hexDataReplacement.c_str());
             }
         } else if (commandName == "hex-by-swap") {
             // Edit command - Hex data replacement with occurrence
