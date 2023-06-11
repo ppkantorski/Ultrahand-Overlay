@@ -1,2 +1,2 @@
-See https://github.com/hanai3Bi/Switch-OC-Suite/blob/master/Source/Atmosphere/stratosphere/loader/source/oc/customize.cpp for help with OC Suite kip values.
-For v1.1.0+ only.
+- See https://github.com/hanai3Bi/Switch-OC-Suite/blob/master/Source/Atmosphere/stratosphere/loader/source/oc/customize.cpp for help with OC Suite kip values.
+- For v1.1.0+ only.
