@@ -5,7 +5,7 @@
 
 Craft, Share, and Customize Your Commands!
 
-Ultrahand is a powerful package creation and sharing utility, transforming interactions with files and directory on the SD card. Drawing inspiration from a new feature in Zelda, it provides enhanced control over your digital environment. With Ultrahand, you can harness your creativity to shape and customize your file management system, offering unprecedented command over your SD card's organization and configuration.
+Ultrahand represents a robust utility for creating and sharing packages, revolutionizing the way you interact with files and directories on your SD card. Taking cues from the latest Zelda feature, it empowers you with unparalleled control over manipulating data within your system environment. Unlocking your creative potential, Ultrahand allows you to shape and personalize your own file management system, granting you unprecedented control over your configurations.
 
 Create directories, merge files, and customize configurations effortlessly using simple config.ini files. Whether you're a gamer, a creative enthusiast, or a tech-savvy individual, Ultrahand invites you to take advantage of premade packages as well as create your own.
 
