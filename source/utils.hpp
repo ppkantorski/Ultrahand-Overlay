@@ -700,6 +700,22 @@ void setIniFileKey(const std::string& fileToEdit, const std::string& desiredSect
 
 
 // Hex-editing commands
+std::string asciiToHex(const std::string& asciiStr) {
+    std::string hexStr;
+    hexStr.reserve(asciiStr.length() * 2); // Reserve space for the hexadecimal string
+
+    for (char c : asciiStr) {
+        unsigned char uc = static_cast<unsigned char>(c); // Convert char to unsigned char
+        char hexChar[3]; // Buffer to store the hexadecimal representation (2 characters + null terminator)
+
+        // Format the unsigned char as a hexadecimal string and append it to the result
+        std::snprintf(hexChar, sizeof(hexChar), "%02X", uc);
+        hexStr += hexChar;
+    }
+
+    return hexStr;
+}
+
 std::string decimalToHex(const std::string& decimalStr) {
     // Convert decimal string to integer
     int decimalValue = std::stoi(decimalStr);
@@ -1139,6 +1155,23 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
 
                 std::string hexDataToReplace = removeQuotes(command[2]);
                 std::string hexDataReplacement = removeQuotes(command[3]);
+
+                if (command.size() >= 5) {
+                    std::string occurrence = removeQuotes(command[4]);
+                    hexEditFindReplace(fileToEdit, hexDataToReplace, hexDataReplacement, occurrence);
+                } else {
+                    hexEditFindReplace(fileToEdit, hexDataToReplace, hexDataReplacement);
+                }
+            }
+        } else if (commandName == "hex-by-string") {
+            // Edit command - Hex data replacement with occurrence
+            if (command.size() >= 4) {
+                std::string fileToEdit = "sdmc:" + replaceMultipleSlashes(removeQuotes(command[1]));
+
+                std::string hexDataToReplace = asciiToHex(removeQuotes(command[2]));
+                std::string hexDataReplacement = asciiToHex(removeQuotes(command[3]));
+                //logMessage("hexDataToReplace: "+hexDataToReplace);
+                //logMessage("hexDataReplacement: "+hexDataReplacement);
 
                 if (command.size() >= 5) {
                     std::string occurrence = removeQuotes(command[4]);
