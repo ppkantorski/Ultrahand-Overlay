@@ -702,20 +702,24 @@ void setIniFileKey(const std::string& fileToEdit, const std::string& desiredSect
 // Hex-editing commands
 std::string decimalToHex(const std::string& decimalStr) {
     // Convert decimal string to integer
-    int decimal = std::stoi(decimalStr);
+    int decimalValue = std::stoi(decimalStr);
 
     // Convert decimal to hexadecimal
     std::string hexadecimal;
-    while (decimal > 0) {
-        int remainder = decimal % 16;
+    while (decimalValue > 0) {
+        int remainder = decimalValue % 16;
         char hexChar = (remainder < 10) ? ('0' + remainder) : ('A' + remainder - 10);
         hexadecimal += hexChar;
-        decimal /= 16;
+        decimalValue /= 16;
     }
 
     // Reverse the hexadecimal string
     std::reverse(hexadecimal.begin(), hexadecimal.end());
     
+    // If the length is odd, add a trailing '0'
+    if (hexadecimal.length() % 2 != 0) {
+        hexadecimal = '0' + hexadecimal;
+    }
 
     return hexadecimal;
 }
@@ -723,23 +727,14 @@ std::string decimalToHex(const std::string& decimalStr) {
 std::string decimalToReversedHex(const std::string& decimalStr, int order=2) {
     std::string hexadecimal = decimalToHex(decimalStr);
     
-    // If the length is odd, add a trailing '0'
-    if (hexadecimal.length() % 2 != 0) {
-        hexadecimal = '0' + hexadecimal;
-    }
-
     // Reverse the hexadecimal string in groups of order
     std::string reversedHex;
     for (int i = hexadecimal.length() - order; i >= 0; i -= order) {
         reversedHex += hexadecimal.substr(i, order);
     }
 
-
     return reversedHex;
 }
-
-
-
 
 std::vector<std::string> findHexDataOffsets(const std::string& filePath, const std::string& hexData) {
     std::vector<std::string> offsets;
