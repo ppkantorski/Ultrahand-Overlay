@@ -24,7 +24,7 @@ To swap between different overclock packages using 4IFIR Explorer:
 1. Launch the Tesla Menu on your device.
 2. Navigate to `Ultrahand` and then select `4IFIR Explorer`.
 3. Use the commands specified in the `config.ini` file to swap between different 4IFIR and OC configurations.
-4. After running a command, you will be required to reboot for changes to apply.
+4. After running a command, you will be required to reboot for changes to be properly applied.
 
 ## Additional Information
 
