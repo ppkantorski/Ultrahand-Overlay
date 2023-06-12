@@ -14,7 +14,7 @@ Ultrahand Overlay is a powerful tool that allows you to customize and enhance yo
 
 - [Mod Master](Mod%20Master/README.md): Dive into the Mod Master example to learn how to leverage Ultrahand-Overlay to manage and optimize your favorite game modifications.
 
-- [Overclock Buster](Overclock%20Buster/README.md): Discover the Overclock Buster example, which demonstrates how to push your device's performance to the limit by applying custom overclocking settings to kip files.
+- [Overclock Buster](Overclock%20Buster/README.md): Discover the Overclock Buster example, which demonstrates how to push your device's performance to the limit by applying custom overclocking settings to OC Suite / 4IFIR kip files.
 
 - [Overlay Detacher](Overlay%20Detacher/README.md): The Overlay Detacher example provides a convenient way to offload and restore specific overlays, allowing you to free up system resources and improve performance.
 
