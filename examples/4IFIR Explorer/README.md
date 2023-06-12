@@ -1,6 +1,6 @@
 # 4IFIR Explorer
 
-The 4IFIR overclock package includes the ability to swap OC settings for Stock, OC Suite, Base 1.5, Base 1.6, Stage 7/8, and Stage 7+/8+. You can choose the desired overclock configuration based on your preference or device requirements.
+The 4IFIR overclock package includes the ability to swap OC settings for Stock, OC Suite, Base 1.5/1.6, Stage 7/8, and Stage 7+/8+. You can choose the desired overclock configuration based on your preference or device requirements.
 
 ## Installation
 
