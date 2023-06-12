@@ -32,4 +32,4 @@ Contributions to l4t_reboot are welcome! If you have any improvements, bug fixes
 
 ## License
 
-This utility is open source and licensed under the [MIT License](LICENSE). You are free to use, modify, and distribute this software in accordance with the terms of the license.
+This utility is open source and licensed under the [MIT License](https://github.com/ppkantorski/Ultrahand-Overlay/blob/main/LICENSE). You are free to use, modify, and distribute this software in accordance with the terms of the license.
