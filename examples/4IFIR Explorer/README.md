@@ -1,6 +1,6 @@
 # 4IFIR-Explorer
 
-The 4IFIR overclock package includes the ability to swap OC settings for Stock, OC Suite, Base 1.5, Base 1.6, Stage 7, Stage 8, and Stage 7+. You can choose the desired overclock configuration based on your preference or device requirements.
+The 4IFIR overclock package includes the ability to swap OC settings for Stock, OC Suite, Base 1.5, Base 1.6, Stage 7/8, and Stage 7+/8+. You can choose the desired overclock configuration based on your preference or device requirements.
 
 ## Installation
 
@@ -15,21 +15,16 @@ To install and use the 4IFIR overclock package, follow these steps:
    - Stock Files: The stock files can be acquired from the [sys-clk GitHub repository](https://github.com/retronx-team/sys-clk). Consult the repository's documentation to obtain the stock files and follow the provided instructions to install them on your device.
 
    Make sure to review the documentation and guidelines provided in each repository to ensure the correct installation and usage of the respective packages.
+3. After files are within the designated subdirectories in the `4IFIR Explorer`, you should be ready for testing.
 
 ## Usage
-
-1. Open the `config.ini` file located in the `examples/4IFIR Explorer` directory.
-2. Edit the configuration based on your requirements. You can enable or disable specific overclock packages by commenting or uncommenting the relevant sections in the file.
-3. Save the `config.ini` file after making the necessary changes.
-4. Add the `4IFIR Explorer` directory to your switch under `/config/ultrahand/` by copying it to that location.
-
-## Swapping Overclock Packages
 
 To swap between different overclock packages using 4IFIR Explorer:
 
 1. Launch the Tesla Menu on your device.
 2. Navigate to `Ultrahand` and then select `4IFIR Explorer`.
 3. Use the commands specified in the `config.ini` file to swap between different 4IFIR and OC configurations.
+4. After running a command, you will be required to reboot for changes to apply.
 
 ## Additional Information
 
