@@ -1,4 +1,4 @@
-# Ultrahand Overlay Examples
+# Ultrahand Overlay - Examples
 
 This repository contains a collection of useful examples that demonstrate the capabilities and usage of Ultrahand Overlay.
 
