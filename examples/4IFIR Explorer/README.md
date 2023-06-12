@@ -28,4 +28,4 @@ To swap between different overclock packages using 4IFIR Explorer:
 
 ## Additional Information
 
-For more details on the Ultrahand-Overlay project and its features, please refer to the [official GitHub repository](https://github.com/ppkantorski/Ultrahand-Overlay).
+For more details on the Ultrahand Overlay project and its features, please refer to the [official GitHub repository](https://github.com/ppkantorski/Ultrahand-Overlay).
