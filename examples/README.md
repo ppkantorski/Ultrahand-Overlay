@@ -1,6 +1,6 @@
 # Ultrahand-Overlay Examples
 
-Welcome to the Ultrahand-Overlay Examples! This repository contains a collection of useful examples that demonstrate the capabilities and usage of Ultrahand-Overlay.
+This repository contains a collection of useful examples that demonstrate the capabilities and usage of Ultrahand-Overlay.
 
 Ultrahand-Overlay is a powerful tool that allows you to customize and enhance your device's overlays in order to optimize performance, improve functionality, and personalize your experience.
 
