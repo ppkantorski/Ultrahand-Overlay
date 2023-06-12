@@ -37,7 +37,3 @@ We welcome contributions from the community! If you have any improvements, bug f
 ## License
 
 The Ultrahand Overlay Examples repository is open source and available under the [MIT License](LICENSE).
-
-## About
-
-Ultrahand Overlay Examples is maintained by [ppkantorski](https://github.com/ppkantorski).
