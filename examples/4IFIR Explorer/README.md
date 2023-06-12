@@ -17,7 +17,7 @@ To install and use the 4IFIR overclock package, follow these steps:
    Make sure to review the documentation and guidelines provided in each repository to ensure the correct packages are downloaded.
 3. After files are within the designated subdirectories in the `4IFIR Explorer` folder, you should be ready for testing.  For additional assistance, please review the `config.ini` command list.
 
-## Risks of Using 4IFIR Explorer
+## User Disclamer
 
 When using 4IFIR Explorer, it's important to consider the potential risks involved. While 4IFIR Explorer is an open-source project, it relies on other components and packages that may have different levels of openness. Here are some risks associated with using the various components:
 
