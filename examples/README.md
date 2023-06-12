@@ -10,7 +10,7 @@ Ultrahand Overlay is a powerful tool that allows you to customize and enhance yo
 
 - [Cool Curves](Cool%20Curves/README.md): Explore the Cool Curves example to discover how to modify and enhance the overlay settings for a visually appealing interface.
 
-- [Host Guard](Host%20Guard/README.md): The Host Guard example demonstrates the utilization of overlay customization to enhance security and protect your device from servers you may not want to access.
+- [Host Guard](Host%20Guard/README.md): The Host Guard example demonstrates the utilization of overlay customization to enhance security and protect your device from servers you may not want your device to access.
 
 - [Mod Master](Mod%20Master/README.md): Dive into the Mod Master example to learn how to leverage Ultrahand-Overlay to manage and optimize your favorite game modifications.
 
