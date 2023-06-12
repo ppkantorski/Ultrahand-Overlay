@@ -20,6 +20,8 @@ Ultrahand Overlay is a powerful tool that allows you to customize and enhance yo
 
 - [l4t_reboot](l4t_reboot/README.md): Use the l4t_reboot utility on Linux to perform system reboots into Ubuntu with ease.
 
+- config.ini: Basic system commands for your device.
+
 ## Getting Started
 
 To use these examples, follow these steps:
