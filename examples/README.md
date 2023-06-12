@@ -12,7 +12,7 @@ Ultrahand Overlay is a powerful tool that allows you to customize and enhance yo
 
 - [Host Guard](Host%20Guard/README.md): The Host Guard example demonstrates the utilization of overlay customization to enhance security and protect your device from servers you may not want your device to access.
 
-- [Mod Master](Mod%20Master/README.md): Dive into the Mod Master example to learn how to leverage Ultrahand-Overlay to manage and optimize your favorite game modifications.
+- [Mod Master](Mod%20Master/README.md): Dive into the Mod Master example to learn how to leverage Ultrahand Overlay to manage and optimize your favorite game modifications.
 
 - [Overclock Buster](Overclock%20Buster/README.md): Discover the Overclock Buster example, which demonstrates how to push your device's performance to the limit by applying custom overclocking settings to OC Suite / 4IFIR kip files.
 
