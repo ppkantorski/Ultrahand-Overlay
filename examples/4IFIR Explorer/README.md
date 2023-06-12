@@ -18,26 +18,16 @@ Note: It's important to review the documentation and guidelines provided in each
 1. Open the `config.ini` file located in the `examples/4IFIR Explorer` directory.
 2. Edit the configuration based on your requirements. You can enable or disable specific overclock packages by commenting or uncommenting the relevant sections in the file.
 3. Save the `config.ini` file after making the necessary changes.
+4. Add to your switch under `/config/ultrahand/4IFIR Explorer/config.ini`.
 
 ## Swapping Overclock Packages
 
 To swap between different overclock packages:
 
-1. Make sure your device is powered off.
-2. Boot your device into the desired custom firmware or bootloader.
-3. Locate the `atmosphere` directory and backup the existing `loader.kip` file if necessary.
-4. Copy the appropriate `loader.kip` file from the desired overclock package directory (`4IFIR 1.5`, `Stage 7`, `Stage 8+`, or `Stage 7+`) to the `atmosphere/kips/` directory on your device.
-5. Delete the existing `sys-clk` and `sys-clk-oc` directories in the `config` directory (if present).
-6. Copy the contents of the corresponding `sys-clk` directory from the desired overclock package directory to the `config` directory on your device.
-7. Delete any existing overlay files in the `/switch/.overlays/` directory.
-8. Copy the overlay files (`ReverseNX-RT-ovl.ovl` and other required overlays) from the desired overclock package directory to the `/switch/.overlays/` directory on your device.
-9. Save all changes and safely eject your device from the computer.
-10. Power on your device and enjoy the selected overclock package.
 
 ## Additional Information
 
-For more details on the Ultrahand-Overlay project and its features, please refer to the [official GitHub repository](https://github.com/ppkantorski/Ultrahand-Overlay).
 
 ## Credits
 
-This project was created by [ppkantorski](https://github.com/ppkantorski) and contributors. Thank you for your hard work and dedication!
+
