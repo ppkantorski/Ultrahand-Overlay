@@ -17,6 +17,18 @@ To install and use the 4IFIR overclock package, follow these steps:
    Make sure to review the documentation and guidelines provided in each repository to ensure the correct packages are downloaded.
 3. After files are within the designated subdirectories in the `4IFIR Explorer` folder, you should be ready for testing.  For additional assistance, please review the `config.ini` command list.
 
+## Risks of Using 4IFIR Explorer
+
+When using 4IFIR Explorer, it's important to consider the potential risks involved. While 4IFIR Explorer is an open-source project, it relies on other components and packages that may have different levels of openness. Here are some risks associated with using the various components:
+
+- 4IFIR Overclock Package: The 4IFIR overclock package is not openly available and requires downloading from the 4IFIR GitHub repository. Since it is not open source, it may be difficult to assess its safety, reliability, or any potential risks it may pose.
+
+- OC Suite: The OC Suite package is available on GitHub and is open source. However, it's important to note that overclocking can introduce instability and potential risks to your device, such as system crashes or hardware damage if not used properly.
+
+- Atmosphere: Atmosphere is an open-source software package for the Nintendo Switch. While it has a large community and is actively maintained, modifying system files or using custom firmware carries inherent risks, including the possibility of bricking your device or violating Nintendo's terms of service.
+
+- Stock Files (sys-clk): The stock files, obtained from the sys-clk GitHub repository, are open source and designed to modify clock speeds on the Nintendo Switch.
+
 ## Usage
 
 To swap between different overclock packages using 4IFIR Explorer:
