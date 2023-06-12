@@ -9,7 +9,7 @@ To install and use the 4IFIR overclock package, follow these steps:
 1. Copy the `4IFIR Explorer` directory into the `/config/ultrahand/` directory on your device.
 2. Obtain the necessary files from the following repositories:
 
-   - 4IFIR Overclock Package: Go to the [4IFIR GitHub repository](https://github.com/rashevskyv/4IFIR/blob/main/README_ENG.md) and join the Telegram channel to download the 4IFIR overclock packages. Follow the instructions provided in the repository's README to acquire the desired version of the 4IFIR overclock package.
+   - 4IFIR Overclock Package: Go to the [4IFIR GitHub repository](https://github.com/rashevskyv/4IFIR/blob/main/README_ENG.md) and join the Telegram channel to download the 4IFIR overclock packages. Mirrors are posted under "4ifir-checker".
    - OC Suite: Visit the [OC Suite GitHub repository](https://github.com/hanai3Bi/Switch-OC-Suite) to obtain the OC Suite package. Refer to the repository's documentation for instructions on downloading and installing the OC Suite on your device.
    - Atmosphere: Obtain the Atmosphere files from the [Atmosphere GitHub repository](https://github.com/Atmosphere-NX/Atmosphere). Follow the repository's guidelines to download and set up Atmosphere according to your device's requirements.
    - Stock Files: The stock files can be acquired from the [sys-clk GitHub repository](https://github.com/retronx-team/sys-clk). Consult the repository's documentation to obtain the stock files and follow the provided instructions to install them on your device.
