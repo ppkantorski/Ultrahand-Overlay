@@ -25,7 +25,7 @@ When using 4IFIR Explorer, it's important to consider the potential risks involv
 
 - OC Suite: The OC Suite package is available on GitHub and is open source. However, it's important to note that overclocking (especially when unoptimized) can introduce instability and potential risks to your device, such as system crashes or hardware damage if not used properly.
 
-- Atmosphere: Atmosphere is an open-source software package for the Nintendo Switch. While it has a large community and is actively maintained, modifying system files or using custom firmware carries inherent risks, including the possibility of bricking your device or violating Nintendo's terms of service.
+- Atmosphere: Atmosphere is an open-source software package for the Nintendo Switch. While it has a large community and is actively maintained, modifying system files or using custom firmware carries inherent risks (generally), including the possibility of bricking your device or violating Nintendo's terms of service.
 
 - Stock Files (sys-clk): The stock files, obtained from the sys-clk GitHub repository, are open source and designed to modify clock speeds on the Nintendo Switch.
 
