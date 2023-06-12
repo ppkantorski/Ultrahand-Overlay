@@ -1,9 +1,5 @@
 # 4IFIR-Explorer
 
-Ultrahand-Overlay is a customizable overlay executor that allows you to easily swap between different overclock packages on your device. This README provides instructions on how to use the 4IFIR overclock package and its variations.
-
-## Description
-
 The 4IFIR overclock package includes the base version as well as versions for Stage 7, Stage 8, and Stage 7+. You can choose the desired overclock level based on your preference and device requirements.
 
 ## Installation
