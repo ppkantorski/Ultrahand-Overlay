@@ -18,7 +18,7 @@ Ultrahand-Overlay is a powerful tool that allows you to customize and enhance yo
 
 - [Overlay Detacher](Overlay%20Detacher/README.md): The Overlay Detacher example provides a convenient way to offload and restore specific overlays, allowing you to free up system resources and improve performance.
 
-- [l4t_reboot](l4t_reboot/README.md): Explore the l4t_reboot example to discover how to customize the reboot overlay, enabling you to perform system reboots into Ubuntu with ease.
+- [l4t_reboot](l4t_reboot/README.md): Use the l4t_reboot utility on Linux to perform system reboots into Ubuntu with ease.
 
 ## Getting Started
 
