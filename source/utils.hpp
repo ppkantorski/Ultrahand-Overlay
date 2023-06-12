@@ -8,26 +8,26 @@
 #define SpsmShutdownMode_Reboot 1
 
 // For loggging messages and debugging
-#include <ctime>
-void logMessage(const std::string& message) {
-    std::time_t currentTime = std::time(nullptr);
-    std::string logEntry = std::asctime(std::localtime(&currentTime));
-    // Find the last non-newline character
-    std::size_t lastNonNewline = logEntry.find_last_not_of("\r\n");
-
-    // Remove everything after the last non-newline character
-    if (lastNonNewline != std::string::npos) {
-        logEntry.erase(lastNonNewline + 1);
-    }
-    logEntry = "["+logEntry+"] ";
-    logEntry += message+"\n";
-
-    FILE* file = fopen("sdmc:/config/ultrahand/log.txt", "a");
-    if (file != nullptr) {
-        fputs(logEntry.c_str(), file);
-        fclose(file);
-    }
-}
+//#include <ctime>
+//void logMessage(const std::string& message) {
+//    std::time_t currentTime = std::time(nullptr);
+//    std::string logEntry = std::asctime(std::localtime(&currentTime));
+//    // Find the last non-newline character
+//    std::size_t lastNonNewline = logEntry.find_last_not_of("\r\n");
+//
+//    // Remove everything after the last non-newline character
+//    if (lastNonNewline != std::string::npos) {
+//        logEntry.erase(lastNonNewline + 1);
+//    }
+//    logEntry = "["+logEntry+"] ";
+//    logEntry += message+"\n";
+//
+//    FILE* file = fopen("sdmc:/config/ultrahand/log.txt", "a");
+//    if (file != nullptr) {
+//        fputs(logEntry.c_str(), file);
+//        fclose(file);
+//    }
+//}
 
 
 // String functions
@@ -315,8 +315,8 @@ bool moveFileOrDirectory(const std::string& sourcePath, const std::string& desti
     struct stat sourceInfo;
     struct stat destinationInfo;
     
-    logMessage("sourcePath: "+sourcePath);
-    logMessage("destinationPath: "+destinationPath);
+    //logMessage("sourcePath: "+sourcePath);
+    //logMessage("destinationPath: "+destinationPath);
     
     if (stat(sourcePath.c_str(), &sourceInfo) == 0) {
         // Source file or directory exists
@@ -334,7 +334,7 @@ bool moveFileOrDirectory(const std::string& sourcePath, const std::string& desti
 
             DIR* dir = opendir(sourcePath.c_str());
             if (!dir) {
-                logMessage("Failed to open source directory: "+sourcePath);
+                //logMessage("Failed to open source directory: "+sourcePath);
                 //printf("Failed to open source directory: %s\n", sourcePath.c_str());
                 return false;
             }
@@ -380,7 +380,7 @@ bool moveFileOrDirectory(const std::string& sourcePath, const std::string& desti
             
             if (rename(sourcePath.c_str(), destinationFilePath.c_str()) == -1) {
                 //printf("Failed to move file: %s\n", sourcePath.c_str());
-                logMessage("Failed to move file: "+sourcePath);
+                //logMessage("Failed to move file: "+sourcePath);
                 return false;
             }
 
@@ -1102,24 +1102,24 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                         // Move files by pattern
                         if (moveFilesOrDirectoriesByPattern(sourcePath, destinationPath)) {
                             //std::cout << "Files moved successfully." << std::endl;
-                            logMessage( "Files moved successfully.");
+                            //logMessage( "Files moved successfully.");
                         } else {
-                            logMessage( "Failed to move files.");
+                            //logMessage( "Failed to move files.");
                             //std::cout << "Failed to move files." << std::endl;
                         }
                     } else {
                         // Move single file or directory
                         if (moveFileOrDirectory(sourcePath, destinationPath)) {
-                             logMessage( "File or directory moved successfully.");
+                             //logMessage( "File or directory moved successfully.");
                             //std::cout << "File or directory moved successfully." << std::endl;
                         } else {
-                             logMessage( "Failed to move file or directory.");
+                             //logMessage( "Failed to move file or directory.");
                             //std::cout << "Failed to move file or directory." << std::endl;
                         }
                     }
                 }
             } else {
-                logMessage( "Invalid move command.");
+                //logMessage( "Invalid move command.");
                 //std::cout << "Invalid move command. Usage: move <source_path> <destination_path>" << std::endl;
             }
 
@@ -1191,9 +1191,18 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
 
                 std::string hexDataToReplace = asciiToHex(removeQuotes(command[2]));
                 std::string hexDataReplacement = asciiToHex(removeQuotes(command[3]));
-                logMessage("hexDataToReplace: "+hexDataToReplace);
-                logMessage("hexDataReplacement: "+hexDataReplacement);
-
+                //logMessage("hexDataToReplace: "+hexDataToReplace);
+                //logMessage("hexDataReplacement: "+hexDataReplacement);
+                
+                // Fix miss-matched string sizes
+                if (hexDataReplacement.length() < hexDataToReplace.length()) {
+                    // Pad with spaces at the end
+                    hexDataReplacement += std::string(hexDataToReplace.length() - hexDataReplacement.length(), '20');
+                } else if (hexDataReplacement.length() > hexDataToReplace.length()) {
+                    // Add spaces to hexDataToReplace at the far right end
+                    hexDataToReplace += std::string(hexDataReplacement.length() - hexDataToReplace.length(), '20');
+                }
+                
                 if (command.size() >= 5) {
                     std::string occurrence = removeQuotes(command[4]);
                     hexEditFindReplace(fileToEdit, hexDataToReplace, hexDataReplacement, occurrence);
