@@ -1,8 +1,8 @@
-# Ultrahand-Overlay Examples
+# Ultrahand Overlay Examples
 
-This repository contains a collection of useful examples that demonstrate the capabilities and usage of Ultrahand-Overlay.
+This repository contains a collection of useful examples that demonstrate the capabilities and usage of Ultrahand Overlay.
 
-Ultrahand-Overlay is a powerful tool that allows you to customize and enhance your device's overlays in order to optimize performance, improve functionality, and personalize your experience.
+Ultrahand Overlay is a powerful tool that allows you to customize and enhance your device's overlays in order to optimize performance, improve functionality, and personalize your experience.
 
 ## Examples
 
@@ -36,10 +36,8 @@ We welcome contributions from the community! If you have any improvements, bug f
 
 ## License
 
-The Ultrahand-Overlay Examples repository is open source and available under the [MIT License](LICENSE).
+The Ultrahand Overlay Examples repository is open source and available under the [MIT License](LICENSE).
 
 ## About
 
-Ultrahand-Overlay Examples is maintained by [ppkantorski](https://github.com/ppkantorski).
-
-Copied to clipboard
+Ultrahand Overlay Examples is maintained by [ppkantorski](https://github.com/ppkantorski).
