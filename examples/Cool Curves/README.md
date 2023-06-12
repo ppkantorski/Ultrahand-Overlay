@@ -49,7 +49,7 @@ The `config.ini` file contains temperature settings for different temperature ra
 
 ## License
 
-The Ultrahand-Overlay project is released under the MIT License. Please refer to the [LICENSE](https://github.com/ppkantorski/Ultrahand-Overlay/blob/main/LICENSE) file for more information.
+The Ultrahand Overlay project is released under the MIT License. Please refer to the [LICENSE](https://github.com/ppkantorski/Ultrahand-Overlay/blob/main/LICENSE) file for more information.
 
 ## Acknowledgments
 
