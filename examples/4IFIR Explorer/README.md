@@ -14,8 +14,8 @@ To install and use the 4IFIR overclock package, follow these steps:
    - Atmosphere: Obtain the Atmosphere files from the [Atmosphere GitHub repository](https://github.com/Atmosphere-NX/Atmosphere). Follow the repository's guidelines to download and set up Atmosphere according to your device's requirements.
    - Stock Files: The stock files can be acquired from the [sys-clk GitHub repository](https://github.com/retronx-team/sys-clk). Consult the repository's documentation to obtain the stock files and follow the provided instructions to install them on your device.
 
-   Make sure to review the documentation and guidelines provided in each repository to ensure the correct installation and usage of the respective packages.
-3. After files are within the designated subdirectories in the `4IFIR Explorer` folder, you should be ready for testing.
+   Make sure to review the documentation and guidelines provided in each repository to ensure the correct packages are downloaded.
+3. After files are within the designated subdirectories in the `4IFIR Explorer` folder, you should be ready for testing.  For additional assistance, please review the `config.ini` command list.
 
 ## Usage
 
