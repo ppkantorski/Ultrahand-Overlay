@@ -8,12 +8,6 @@ The `config.ini` file contains the following configurations:
 
 - `[1996 to 2400 (RAM)]`: Adjusts the clock speed range from 1996MHz to 2400MHz for RAM.
 - `[2400 to 1996 (RAM)]`: Adjusts the clock speed range from 2400MHz to 1996MHz for RAM.
-- `[HiOPT 998 GPU Undervolt]`: Configures the GPU to run at a lower voltage using HiOPT 998 configuration.
-- `[HiOPT 998 GPU Undervolt+]`: Configures the GPU to run at a lower voltage with additional optimizations using HiOPT 998 configuration.
-- `[HiOPT 998 GPU Regular]`: Restores the GPU to its regular voltage using HiOPT 998 configuration.
-- `[HiOPT 1228 GPU Undervolt]`: Configures the GPU to run at a lower voltage using HiOPT 1228 configuration.
-- `[HiOPT 1228 GPU Undervolt+]`: Configures the GPU to run at a lower voltage with additional optimizations using HiOPT 1228 configuration.
-- `[HiOPT 1228 GPU Regular]`: Restores the GPU to its regular voltage using HiOPT 1228 configuration.
 
 Each configuration has a set of commands that modify the clock speeds, voltages, and other settings of your device.
 
