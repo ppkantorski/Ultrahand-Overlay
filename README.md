@@ -1,5 +1,4 @@
 # Ultrahand Overlay (HOS 16.0.0+)
-![Alt Text](https://gbatemp.net/attachments/ultra_hand-png.374023/)
 ![Alt Text](https://gbatemp.net/attachments/img_4440-jpg.377312/)
 ![Alt Text](https://gbatemp.net/attachments/img_4439-jpg.377313/)
 
