@@ -7,10 +7,10 @@
 
 
 // Overlay booleans
+bool inMainMenu = false;
 bool inSubMenu = false;
 bool inConfigMenu = false;
-
-
+bool inSelectionMenu = false;
 
 // Config overlay 
 class ConfigOverlay : public tsl::Gui {
@@ -24,7 +24,7 @@ public:
     virtual tsl::elm::Element* createUI() override {
         inConfigMenu = true;
         
-        auto rootFrame = new tsl::elm::OverlayFrame(getFolderNameFromPath(filePath), "Ultrahand Config");
+        auto rootFrame = new tsl::elm::OverlayFrame(getNameFromPath(filePath), "Ultrahand Config");
         auto list = new tsl::elm::List();
 
         std::string configFile = filePath + "/config.ini";
@@ -99,8 +99,9 @@ public:
     }
 
     virtual bool handleInput(u64 keysDown, u64 keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
-        if (keysHeld & KEY_B) {
+        if (inConfigMenu & (keysHeld & KEY_B)) {
             svcSleepThread(300'000'000);
+            inConfigMenu = false;
             tsl::goBack();
             return true;
         }
@@ -109,6 +110,75 @@ public:
 };
 
 
+
+// Selection overlay
+class SelectionOverlay : public tsl::Gui {
+private:
+    std::string filePath;
+    std::string specificKey;
+    std::vector<std::vector<std::string>> commands;
+
+public:
+    SelectionOverlay(const std::string& file, const std::string& key = "", const std::vector<std::vector<std::string>>& cmds = {}) 
+        : filePath(file), specificKey(key), commands(cmds) {}
+
+    virtual tsl::elm::Element* createUI() override {
+        inSelectionMenu = true;
+
+        auto rootFrame = new tsl::elm::OverlayFrame(getNameFromPath(filePath), "Ultrahand Package");
+        auto list = new tsl::elm::List();
+
+        list->addItem(new tsl::elm::CategoryHeader(specificKey.substr(1)));
+
+        // Extract the path pattern from commands
+        std::string pathPattern;
+        for (const auto& cmd : commands) {
+            if (cmd.size() > 1 && cmd[0] == "source") {
+                pathPattern = cmd[1];
+                break;
+            }
+        }
+
+        // Get the list of files matching the pattern
+        std::vector<std::string> filesList = getFilesListByWildcards(pathPattern);
+
+        // Add each file as a menu item
+        for (const std::string& file : filesList) {
+            auto listItem = new tsl::elm::ListItem(getNameFromPath(file));
+            listItem->setClickListener([file, this](uint64_t keys) { // Add 'command' to the capture list
+                if (keys & KEY_A) {
+                    // Replace "{source}" with file in commands, then execute
+                    std::vector<std::vector<std::string>> modifiedCommands;
+                    for (const auto& cmd : commands) {
+                        std::vector<std::string> modifiedCmd = cmd;
+                        for (auto& arg : modifiedCmd) {
+                            if (arg == "{source}")
+                                arg = file;
+                        }
+                        modifiedCommands.emplace_back(modifiedCmd);
+                    }
+                    interpretAndExecuteCommand(modifiedCommands);
+                    return true;
+                }
+                return false;
+            });
+            list->addItem(listItem);
+        }
+
+        rootFrame->setContent(list);
+        return rootFrame;
+    }
+
+    virtual bool handleInput(u64 keysDown, u64 keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
+        if (inSelectionMenu && (keysHeld & KEY_B)) {
+            svcSleepThread(300'000'000);
+            inSelectionMenu = false;
+            tsl::goBack();
+            return true;
+        }
+        return false;
+    }
+};
 
 
 
@@ -124,28 +194,41 @@ public:
     virtual tsl::elm::Element* createUI() override {
         inSubMenu = true;
         
-        auto rootFrame = new tsl::elm::OverlayFrame(getFolderNameFromPath(subPath), "Ultrahand Package");
+        auto rootFrame = new tsl::elm::OverlayFrame(getNameFromPath(subPath), "Ultrahand Package");
         auto list = new tsl::elm::List();
 
-        // Add a section break with small text to indicate the "Packages" section
+        // Add a section break with small text to indicate the "Commands" section
         list->addItem(new tsl::elm::CategoryHeader("Commands"));
 
         // Load options from INI file in the subdirectory
         std::string subConfigIniPath = subPath + "/config.ini";
         std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> options = loadOptionsFromIni(subConfigIniPath);
-
+        
         // Populate the sub menu with options
         for (const auto& option : options) {
-            auto listItem = new tsl::elm::ListItem(option.first);
-
-            listItem->setClickListener([command = option.second, keyName = option.first, subPath = this->subPath](uint64_t keys) {
+            std::string optionName = option.first;
+            std::string footer; 
+            bool usePattern = false;
+            if (optionName[0] == '*') { 
+                usePattern = true;
+                optionName = optionName.substr(1); // Strip the "*" character on the left
+                footer = ">";
+            }
+            
+            auto listItem = new tsl::elm::ListItem(optionName, footer);
+            
+            listItem->setClickListener([command = option.second, keyName = option.first, subPath = this->subPath, usePattern](uint64_t keys) {
                 if (keys & KEY_A) {
-                    // Interpret and execute the command
-                    interpretAndExecuteCommand(command);
+                    if (usePattern) {
+                        inSubMenu = false;
+                        tsl::changeTo<SelectionOverlay>(subPath, keyName, command);
+                    } else {
+                        // Interpret and execute the command
+                        interpretAndExecuteCommand(command);
+                    }
                     return true;
                 } else if (keys & KEY_X) {
-                    //inSubMenu = true; // Set boolean to true when entering a submenu
-                    inSubMenu = true;
+                    inSubMenu = false; // Set boolean to true when entering a submenu
                     tsl::changeTo<ConfigOverlay>(subPath, keyName);
                     return true;
                 }
@@ -155,7 +238,6 @@ public:
             list->addItem(listItem);
         }
 
-        
         // Package Info
         PackageHeader packageHeader = getPackageHeaderFromIni(subConfigIniPath);
         list->addItem(new tsl::elm::CategoryHeader("Package Info"));
@@ -169,14 +251,16 @@ public:
             renderer->drawString("Creator\nVersion", false, x, y + lineHeight, fontSize, a(tsl::style::color::ColorText));
             renderer->drawString((packageHeader.creator+"\n"+packageHeader.version).c_str(), false, x + xOffset, y + lineHeight, fontSize, a(tsl::style::color::ColorText));
         }), fontSize * numEntries + lineHeight);
+        
         rootFrame->setContent(list);
         
         return rootFrame;
     }
 
     virtual bool handleInput(uint64_t keysDown, uint64_t keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
-        if (!inConfigMenu & (keysHeld & KEY_B)) {
+        if (inSubMenu & (keysHeld & KEY_B)) {
             svcSleepThread(300'000'000);
+            inSubMenu = false;
             tsl::goBack();
             return true;
         }
@@ -184,6 +268,7 @@ public:
         return false;
     }
 };
+
 
 
 // Main menu
@@ -198,6 +283,8 @@ public:
     MainMenu() {}
 
     virtual tsl::elm::Element* createUI() override {
+        inMainMenu = true;
+        
         auto rootFrame = new tsl::elm::OverlayFrame("Ultrahand", APP_VERSION);
         auto list = new tsl::elm::List();
 
@@ -222,6 +309,7 @@ public:
             listItem->setClickListener([this, subPath = directoryPath + subdirectory](uint64_t keys) {
                 if (keys & KEY_A) {
                     //inSubMenu = true; // Set boolean to true when entering a submenu
+                    inMainMenu = false;
                     tsl::changeTo<SubMenu>(subPath);
                     
                     
@@ -230,6 +318,7 @@ public:
                 else if (keys & KEY_X) {
                     //inSubMenu = true; // Set boolean to true when entering a submenu
                     //inTextMenu = true; // Set boolean to true when entering a submenu
+                    inMainMenu = false;
                     tsl::changeTo<ConfigOverlay>(subPath);
                     
                     
@@ -268,6 +357,7 @@ public:
                     struct stat entryStat;
                     std::string newPath = directoryPath + subPath;
                     if (stat(fullPath.c_str(), &entryStat) == 0 && S_ISDIR(entryStat.st_mode)) {
+                        inMainMenu = false;
                         tsl::changeTo<SubMenu>(newPath);
                     } else {
                         // Interpret and execute the command
@@ -289,30 +379,14 @@ public:
     }
 
     virtual bool handleInput(uint64_t keysDown, uint64_t keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
-        if (!inSubMenu & (!inConfigMenu & (keysHeld & KEY_B))) {
+        if (inMainMenu & (keysHeld & KEY_B)) {
             // Only go back if not in a submenu and B button is held
-
-            //svcSleepThread(300'000'000);
             tsl::goBack();
             return true;
         }
-
-        if (inSubMenu & !inConfigMenu & (keysHeld & KEY_B)) {
-            // Reset the submenu boolean if in a submenu and A button is released
-            svcSleepThread(300'000'000);
-            inSubMenu = false;
-        }
-        
-        if (inConfigMenu & (keysHeld & KEY_B)) {
-            // Reset the submenu boolean if in a submenu and A button is released
-            svcSleepThread(300'000'000);
-            inConfigMenu = false;
-        }
-        
         return false;
     }
 };
-
 
 
 // Overlay
