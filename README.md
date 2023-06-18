@@ -122,16 +122,16 @@ Ultrahand supports the following commands:
 - hex-by-offset: Edits the contents of a file at a specified offset with the provided hexadecimal data.
   - Usage: `hex-by-offset <file_path> <offset> <hex_data>`
 
-- hex-by-swap: Edits the contents of a file by replacing a specified hexadecimal data with another hexadecimal data.
+- hex-by-swap: Edits the contents of a file by replacing a specified hexadecimal data with another.
   - Usage: `hex-by-swap <file_path> <hex_data_to_replace> <hex_data_replacement>`
   
-- hex-by-decimal: Edits the contents of a file by replacing a specified decimal data with another decimal data.
+- hex-by-decimal: Edits the contents of a file by replacing a specified decimal data with another.
   - Usage: `hex-by-decimal <file_path> <decimal_data_to_replace> <decimal_data_replacement>`
   
-- hex-by-rdecimal: Edits the contents of a file by replacing a specified reverse decimal data with another reverse decimal data.
+- hex-by-rdecimal: Edits the contents of a file by replacing a specified reverse decimal data with another.
   - Usage: `hex-by-rdecimal <file_path> <decimal_data_to_replace> <decimal_data_replacement>`
 
-- hex-by-string: Edits the contents of a file by replacing a specified string data with another string data.
+- hex-by-string: Edits the contents of a file by replacing a specified string data with another.
   - Usage: `hex-by-string <file_path> <string_data_to_replace> <string_data_replacement>`
 
 - reboot: Restarts the system.
