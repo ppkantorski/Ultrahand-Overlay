@@ -122,17 +122,17 @@ Ultrahand supports the following commands:
 - hex-by-offset: Edits the contents of a file at a specified offset with the provided hexadecimal data.
   - Usage: `hex-by-offset <file_path> <offset> <hex_data>`
 
-- hex-by-swap: Swaps the bytes at a specified offset in a file with the provided hexadecimal data.
-  - Usage: `hex-by-swap <file_path> <offset> <hex_data>`
+- hex-by-swap: Edits the contents of a file by replacing a specified hexadecimal data with another hexadecimal data.
+  - Usage: `hex-by-swap <file_path> <hex_data_to_replace> <hex_data_replacement>`
   
-- hex-by-decimal: Converts a decimal string to hexadecimal and replaces the bytes at a specified offset in a file with the converted data.
-  - Usage: `hex-by-decimal <file_path> <offset> <decimal_data>`
+- hex-by-decimal: Edits the contents of a file by replacing a specified decimal data with another decimal data.
+  - Usage: `hex-by-decimal <file_path> <decimal_data_to_replace> <decimal_data_replacement>`
   
-- hex-by-rdecimal: Converts a decimal string to hexadecimal, reverses the byte order, and replaces the bytes at a specified offset in a file with the converted data.
-  - Usage: `hex-by-rdecimal <file_path> <offset> <decimal_data>`
+- hex-by-rdecimal: Edits the contents of a file by replacing a specified reverse decimal data with another reverse decimal data.
+  - Usage: `hex-by-rdecimal <file_path> <decimal_data_to_replace> <decimal_data_replacement>`
 
-- hex-by-string: Converts a string to hexadecimal and replaces the bytes at a specified offset in a file with the converted data.
-  - Usage: `hex-by-string <file_path> <offset> <string_data>`
+- hex-by-string: Edits the contents of a file by replacing a specified string data with another string data.
+  - Usage: `hex-by-string <file_path> <string_data_to_replace> <string_data_replacement>`
 
 - reboot: Restarts the system.
   - Usage: `reboot`
