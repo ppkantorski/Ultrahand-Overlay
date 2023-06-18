@@ -120,19 +120,19 @@ Ultrahand supports the following commands:
   - Usage: `set-ini-key <file_to_edit> <desired_section> <desired_key> <desired_new_key>`
 
 - hex-by-offset: Edits the contents of a file at a specified offset with the provided hexadecimal data.
-  - Usage: hex-by-offset <file_path> <offset> <hex_data>
+  - Usage: `hex-by-offset <file_path> <offset> <hex_data>`
 
 - hex-by-swap: Swaps the bytes at a specified offset in a file with the provided hexadecimal data.
-  - Usage: hex-by-swap <file_path> <offset> <hex_data>
+  - Usage: `hex-by-swap <file_path> <offset> <hex_data>`
   
 - hex-by-decimal: Converts a decimal string to hexadecimal and replaces the bytes at a specified offset in a file with the converted data.
-  - Usage: hex-by-decimal <file_path> <offset> <decimal_data>
+  - Usage: `hex-by-decimal <file_path> <offset> <decimal_data>`
   
 - hex-by-rdecimal: Converts a decimal string to hexadecimal, reverses the byte order, and replaces the bytes at a specified offset in a file with the converted data.
-  - Usage: hex-by-rdecimal <file_path> <offset> <decimal_data>
+  - Usage: `hex-by-rdecimal <file_path> <offset> <decimal_data>`
 
 - hex-by-string: Converts a string to hexadecimal and replaces the bytes at a specified offset in a file with the converted data.
-  - Usage: hex-by-string <file_path> <offset> <string_data>
+  - Usage: `hex-by-string <file_path> <offset> <string_data>`
 
 - reboot: Restarts the system.
   - Usage: `reboot`
