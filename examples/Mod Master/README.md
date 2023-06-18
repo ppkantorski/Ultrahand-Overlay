@@ -8,10 +8,6 @@ The `config.ini` file contains the following configurations:
 
 - `[Enable 21:9 Mods]`: Enables 21:9 aspect ratio modifications.
 - `[Disable 21:9 Mods]`: Disables 21:9 aspect ratio modifications.
-- `[Enable TOTK BlackScreenFix]`: Enables TOTK BlackScreenFix modification.
-- `[Disable TOTK BlackScreenFix]`: Disables TOTK BlackScreenFix modification.
-- `[Enable TOTK DynFPS++]`: Enables TOTK DynFPS++ modification.
-- `[Disable TOTK DynFPS++]`: Disables TOTK DynFPS++ modification.
 
 Each configuration has a set of commands that perform the corresponding actions. The commands include moving, deleting, creating directories, and copying files to specific locations on your device.
 
