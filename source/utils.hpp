@@ -169,23 +169,24 @@ std::string getValueFromLine(const std::string& line) {
     return "";
 }
 
-std::string getFileNameFromPath(const std::string& filePath) {
-    size_t lastSlash = filePath.find_last_of('/');
+
+std::string getNameFromPath(const std::string& path) {
+    size_t lastSlash = path.find_last_of('/');
     if (lastSlash != std::string::npos) {
-        return filePath.substr(lastSlash + 1);
+        std::string name = path.substr(lastSlash + 1);
+        if (name.empty()) {
+            // The path ends with a slash, indicating a directory
+            std::string strippedPath = path.substr(0, lastSlash);
+            lastSlash = strippedPath.find_last_of('/');
+            if (lastSlash != std::string::npos) {
+                name = strippedPath.substr(lastSlash + 1);
+            }
+        }
+        return name;
     }
-    return filePath;
+    return path;
 }
 
-std::string getFolderNameFromPath(const std::string& path) {
-    std::string strippedFilePath = path;
-    if (!strippedFilePath.empty() && strippedFilePath.back() == '/') {
-        strippedFilePath.pop_back();
-        return getFileNameFromPath(strippedFilePath);
-    } else {
-        return getFileNameFromPath(path);
-    }
-}
 
 std::vector<std::string> getSubdirectories(const std::string& directoryPath) {
     std::vector<std::string> subdirectories;
@@ -391,15 +392,14 @@ bool moveFileOrDirectory(const std::string& sourcePath, const std::string& desti
             return true;
         } else {
             // Source path is a regular file
-            std::string filename = getFileNameFromPath(sourcePath.c_str());
+            std::string filename = getNameFromPath(sourcePath.c_str());
 
             std::string destinationFilePath = destinationPath;
 
-            //if (destinationPath[destinationPath.length() - 1] != '/') {
-            //    destinationFilePath += "/";
-            //}
-            //
-            //destinationFilePath += filename;
+            if (destinationPath[destinationPath.length() - 1] == '/') {
+                destinationFilePath += filename;
+            }
+            
             
             //logMessage("sourcePath: "+sourcePath);
             //logMessage("destinationFilePath: "+destinationFilePath);
@@ -438,7 +438,7 @@ bool moveFilesOrDirectoriesByPattern(const std::string& sourcePathPattern, const
             success = moveFileOrDirectory(sourceFileOrDirectory.c_str(), destinationPath.c_str());
         } else if (isDirectory(sourceFileOrDirectory)) {
             // if sourceFile is a directory (needs conditoin handling)
-            std::string folderName = getFolderNameFromPath(sourceFileOrDirectory);
+            std::string folderName = getNameFromPath(sourceFileOrDirectory);
             std::string fixedDestinationPath = destinationPath + folderName + "/";
         
             //logMessage("fixedDestinationPath: "+fixedDestinationPath);
@@ -513,7 +513,7 @@ void copyFileOrDirectory(const std::string& fromFileOrDirectory, const std::stri
             if (stat(toFileOrDirectory.c_str(), &toFileOrDirectoryInfo) == 0 && S_ISDIR(toFileOrDirectoryInfo.st_mode)) {
                 // Destination is a directory
                 std::string toDirectory = toFileOrDirectory;
-                std::string dirName = getFolderNameFromPath(fromDirectory);
+                std::string dirName = getNameFromPath(fromDirectory);
                 if (dirName != "") {
                     std::string toDirPath = toDirectory + dirName +"/";
                     //logMessage("toDirectory: "+toDirectory);
@@ -1297,4 +1297,3 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
         }
     }
 }
-
