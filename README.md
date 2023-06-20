@@ -95,7 +95,7 @@ set-ini-val ​/config/ultrahand/hekate_ipl.ini 'Atmosphere' booty true
 ```
 You can add your own sections and commands to customize the actions performed by Ultrahand.
 
-Note: The paths specified in the commands should be relative to the SD card root directory and should start with /.
+Note: The paths specified in the commands should be relative to the SD card root directory and should end with /.
 
 ## Command Reference
 
