@@ -152,5 +152,5 @@ Contributions are welcome! If you have any ideas, suggestions, or bug reports, p
 
 ## License
 
-This project is licensed under the [GNU License](LICENSE).
+This project is licensed under the [CC-BY-NC-4.0 License](LICENSE).
 
