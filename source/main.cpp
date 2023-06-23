@@ -12,6 +12,50 @@ bool inSubMenu = false;
 bool inConfigMenu = false;
 bool inSelectionMenu = false;
 
+// Helper function to handle overlay menu input
+bool handleOverlayMenuInput(bool& inMenu, u64 keysHeld, u64 backKey, uint64_t sleepTime = 300'000'000) {
+    if (inMenu && (keysHeld & backKey)) {
+        svcSleepThread(sleepTime);
+        inMenu = false;
+        tsl::goBack();
+        return true;
+    }
+    return false;
+}
+
+// Selection overlay helper function (for toggles too)
+std::vector<std::vector<std::string>> getModifyCommands(const std::vector<std::vector<std::string>>& commands, const std::string& file, bool toggle=false, bool on=true) {
+    std::vector<std::vector<std::string>> modifiedCommands;
+    bool addCommands = false;
+    for (const auto& cmd : commands) {
+        if (toggle) {
+            if (cmd.size() > 1 && cmd[0] == "source_on") {
+                addCommands = true;
+                if (!on) {
+                    addCommands = !addCommands;
+                }
+            } else if (cmd.size() > 1 && cmd[0] == "source_off") {
+                addCommands = false;
+                if (!on) {
+                    addCommands = !addCommands;
+                }
+            }
+        }
+        
+        if (!toggle or addCommands) {
+            std::vector<std::string> modifiedCmd = cmd;
+            for (auto& arg : modifiedCmd) {
+                if ((!toggle && arg == "{source}") || (on && arg == "{source_on}") || (!on && arg == "{source_off}")) {
+                    arg = file;
+                }
+            }
+            modifiedCommands.emplace_back(modifiedCmd);
+        }
+    }
+    return modifiedCommands;
+}
+
+
 // Config overlay 
 class ConfigOverlay : public tsl::Gui {
 private:
@@ -99,13 +143,7 @@ public:
     }
 
     virtual bool handleInput(u64 keysDown, u64 keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
-        if (inConfigMenu & (keysHeld & KEY_B)) {
-            svcSleepThread(300'000'000);
-            inConfigMenu = false;
-            tsl::goBack();
-            return true;
-        }
-        return false;
+        return handleOverlayMenuInput(inConfigMenu, keysHeld, KEY_B);
     }
 };
 
@@ -175,15 +213,7 @@ public:
                 listItem->setClickListener([file, this](uint64_t keys) { // Add 'command' to the capture list
                     if (keys & KEY_A) {
                         // Replace "{source}" with file in commands, then execute
-                        std::vector<std::vector<std::string>> modifiedCommands;
-                        for (const auto& cmd : commands) {
-                            std::vector<std::string> modifiedCmd = cmd;
-                            for (auto& arg : modifiedCmd) {
-                                if (arg == "{source}")
-                                    arg = file;
-                            }
-                            modifiedCommands.emplace_back(modifiedCmd);
-                        }
+                        std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(commands, file);
                         interpretAndExecuteCommand(modifiedCommands);
                         return true;
                     }
@@ -201,23 +231,7 @@ public:
                     if (!state) {
                         // Toggle switched to On
                         if (toggleStateOn) {
-                            std::vector<std::vector<std::string>> modifiedCommands;
-                            bool addCommands = false;
-                            for (const auto& cmd : commands) {
-                                if (cmd.size() > 1 && cmd[0] == "source_on") {
-                                    addCommands = true;
-                                } else if (cmd.size() > 1 && cmd[0] == "source_off") {
-                                    addCommands = false;
-                                }
-                                if (addCommands) {
-                                    std::vector<std::string> modifiedCmd = cmd;
-                                    for (auto& arg : modifiedCmd) {
-                                        if (arg == "{source_on}")
-                                            arg = file;
-                                    }
-                                    modifiedCommands.emplace_back(modifiedCmd);
-                                }
-                            }
+                            std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(commands, file, true);
                             interpretAndExecuteCommand(modifiedCommands);
                         } else {
                             // Handle the case where the command should only run in the source_on section
@@ -226,23 +240,7 @@ public:
                     } else {
                         // Toggle switched to Off
                         if (!toggleStateOn) {
-                            std::vector<std::vector<std::string>> modifiedCommands;
-                            bool addCommands = false;
-                            for (const auto& cmd : commands) {
-                                if (cmd.size() > 1 && cmd[0] == "source_off") {
-                                    addCommands = true;
-                                } else if (cmd.size() > 1 && cmd[0] == "source_on") {
-                                    addCommands = false;
-                                }
-                                if (addCommands) {
-                                    std::vector<std::string> modifiedCmd = cmd;
-                                    for (auto& arg : modifiedCmd) {
-                                        if (arg == "{source_off}")
-                                            arg = file;
-                                    }
-                                    modifiedCommands.emplace_back(modifiedCmd);
-                                }
-                            }
+                            std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(commands, file, true, false);
                             interpretAndExecuteCommand(modifiedCommands);
                         } else {
                             // Handle the case where the command should only run in the source_off section
@@ -260,13 +258,7 @@ public:
     }
 
     virtual bool handleInput(u64 keysDown, u64 keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
-        if (inSelectionMenu && (keysHeld & KEY_B)) {
-            svcSleepThread(300'000'000);
-            inSelectionMenu = false;
-            tsl::goBack();
-            return true;
-        }
-        return false;
+        return handleOverlayMenuInput(inSelectionMenu, keysHeld, KEY_B);
     }
 };
 
@@ -347,14 +339,7 @@ public:
     }
 
     virtual bool handleInput(uint64_t keysDown, uint64_t keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
-        if (inSubMenu & (keysHeld & KEY_B)) {
-            svcSleepThread(300'000'000);
-            inSubMenu = false;
-            tsl::goBack();
-            return true;
-        }
-        
-        return false;
+        return handleOverlayMenuInput(inSubMenu, keysHeld, KEY_B);
     }
 };
 
@@ -460,18 +445,14 @@ public:
             list->addItem(listItem);
         }
 
+
         rootFrame->setContent(list);
 
         return rootFrame;
     }
 
     virtual bool handleInput(uint64_t keysDown, uint64_t keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
-        if (inMainMenu & (keysHeld & KEY_B)) {
-            // Only go back if not in a submenu and B button is held
-            tsl::goBack();
-            return true;
-        }
-        return false;
+        return handleOverlayMenuInput(inMainMenu, keysHeld, KEY_B, 000'000'000);
     }
 };
 
