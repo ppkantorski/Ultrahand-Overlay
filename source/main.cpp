@@ -117,6 +117,7 @@ private:
     std::string filePath;
     std::string specificKey;
     std::vector<std::vector<std::string>> commands;
+    bool toggleState = false;
 
 public:
     SelectionOverlay(const std::string& file, const std::string& key = "", const std::vector<std::vector<std::string>>& cmds = {}) 
@@ -131,38 +132,127 @@ public:
         list->addItem(new tsl::elm::CategoryHeader(specificKey.substr(1)));
 
         // Extract the path pattern from commands
+        bool useToggle = false;
         std::string pathPattern;
+        std::string pathPatternOn;
+        std::string pathPatternOff;
         for (const auto& cmd : commands) {
             if (cmd.size() > 1 && cmd[0] == "source") {
                 pathPattern = cmd[1];
+                break;
+            } else if (cmd.size() > 1 && cmd[0] == "source_on") {
+                pathPatternOn = cmd[1];
+                useToggle = true;
+            } else if (cmd.size() > 1 && cmd[0] == "source_off") {
+                pathPatternOff = cmd[1];
                 break;
             }
         }
 
         // Get the list of files matching the pattern
-        std::vector<std::string> filesList = getFilesListByWildcards(pathPattern);
+        std::vector<std::string> filesList;
+        std::vector<std::string> filesListOn;
+        std::vector<std::string> filesListOff;
+        if (!useToggle) {
+            filesList = getFilesListByWildcards(pathPattern);
+        } else {
+            filesListOn = getFilesListByWildcards(pathPatternOn);
+            filesListOff = getFilesListByWildcards(pathPatternOff);
+            
+            filesList.reserve(filesListOn.size() + filesListOff.size());
+            filesList.insert(filesList.end(), filesListOn.begin(), filesListOn.end());
+            filesList.insert(filesList.end(), filesListOff.begin(), filesListOff.end());
+
+            std::sort(filesList.begin(), filesList.end(), [](const std::string& a, const std::string& b) {
+                return getNameFromPath(a) < getNameFromPath(b);
+            });
+        }
 
         // Add each file as a menu item
         for (const std::string& file : filesList) {
-            auto listItem = new tsl::elm::ListItem(getNameFromPath(file));
-            listItem->setClickListener([file, this](uint64_t keys) { // Add 'command' to the capture list
-                if (keys & KEY_A) {
-                    // Replace "{source}" with file in commands, then execute
-                    std::vector<std::vector<std::string>> modifiedCommands;
-                    for (const auto& cmd : commands) {
-                        std::vector<std::string> modifiedCmd = cmd;
-                        for (auto& arg : modifiedCmd) {
-                            if (arg == "{source}")
-                                arg = file;
+            if (!useToggle) {
+                auto listItem = new tsl::elm::ListItem(dropExtension(getNameFromPath(file)));
+                listItem->setClickListener([file, this](uint64_t keys) { // Add 'command' to the capture list
+                    if (keys & KEY_A) {
+                        // Replace "{source}" with file in commands, then execute
+                        std::vector<std::vector<std::string>> modifiedCommands;
+                        for (const auto& cmd : commands) {
+                            std::vector<std::string> modifiedCmd = cmd;
+                            for (auto& arg : modifiedCmd) {
+                                if (arg == "{source}")
+                                    arg = file;
+                            }
+                            modifiedCommands.emplace_back(modifiedCmd);
                         }
-                        modifiedCommands.emplace_back(modifiedCmd);
+                        interpretAndExecuteCommand(modifiedCommands);
+                        return true;
                     }
-                    interpretAndExecuteCommand(modifiedCommands);
-                    return true;
-                }
-                return false;
-            });
-            list->addItem(listItem);
+                    return false;
+                });
+                list->addItem(listItem);
+            } else {
+                auto toggleListItem = new tsl::elm::ToggleListItem(dropExtension(getNameFromPath(file)), false, "On", "Off");
+
+                // Set the initial state of the toggle item
+                bool toggleStateOn = std::find(filesListOn.begin(), filesListOn.end(), file) != filesListOn.end();
+                toggleListItem->setState(toggleStateOn);
+
+                toggleListItem->setStateChangedListener([toggleListItem, file, toggleStateOn, this](bool state) {
+                    if (!state) {
+                        // Toggle switched to On
+                        if (toggleStateOn) {
+                            std::vector<std::vector<std::string>> modifiedCommands;
+                            bool addCommands = false;
+                            for (const auto& cmd : commands) {
+                                if (cmd.size() > 1 && cmd[0] == "source_on") {
+                                    addCommands = true;
+                                } else if (cmd.size() > 1 && cmd[0] == "source_off") {
+                                    addCommands = false;
+                                }
+                                if (addCommands) {
+                                    std::vector<std::string> modifiedCmd = cmd;
+                                    for (auto& arg : modifiedCmd) {
+                                        if (arg == "{source_on}")
+                                            arg = file;
+                                    }
+                                    modifiedCommands.emplace_back(modifiedCmd);
+                                }
+                            }
+                            interpretAndExecuteCommand(modifiedCommands);
+                        } else {
+                            // Handle the case where the command should only run in the source_on section
+                            // Add your specific code here
+                        }
+                    } else {
+                        // Toggle switched to Off
+                        if (!toggleStateOn) {
+                            std::vector<std::vector<std::string>> modifiedCommands;
+                            bool addCommands = false;
+                            for (const auto& cmd : commands) {
+                                if (cmd.size() > 1 && cmd[0] == "source_off") {
+                                    addCommands = true;
+                                } else if (cmd.size() > 1 && cmd[0] == "source_on") {
+                                    addCommands = false;
+                                }
+                                if (addCommands) {
+                                    std::vector<std::string> modifiedCmd = cmd;
+                                    for (auto& arg : modifiedCmd) {
+                                        if (arg == "{source_off}")
+                                            arg = file;
+                                    }
+                                    modifiedCommands.emplace_back(modifiedCmd);
+                                }
+                            }
+                            interpretAndExecuteCommand(modifiedCommands);
+                        } else {
+                            // Handle the case where the command should only run in the source_off section
+                            // Add your specific code here
+                        }
+                    }
+                });
+
+                list->addItem(toggleListItem);
+            }
         }
 
         rootFrame->setContent(list);
@@ -179,7 +269,6 @@ public:
         return false;
     }
 };
-
 
 
 
@@ -305,7 +394,7 @@ public:
             PackageHeader packageHeader = getPackageHeaderFromIni(directoryPath + subdirectory + "/config.ini");
             
             auto listItem = new tsl::elm::ListItem(subdirectoryIcon + subdirectory, packageHeader.version);
-
+            
             listItem->setClickListener([this, subPath = directoryPath + subdirectory](uint64_t keys) {
                 if (keys & KEY_A) {
                     //inSubMenu = true; // Set boolean to true when entering a submenu
@@ -329,7 +418,6 @@ public:
 
             list->addItem(listItem);
         }
-        
 
         // Add a section break with small text to indicate the "Packages" section
         list->addItem(new tsl::elm::CategoryHeader("Commands"));
@@ -371,7 +459,6 @@ public:
 
             list->addItem(listItem);
         }
-
 
         rootFrame->setContent(list);
 
