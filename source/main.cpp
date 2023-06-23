@@ -155,7 +155,6 @@ private:
     std::string filePath;
     std::string specificKey;
     std::vector<std::vector<std::string>> commands;
-    bool toggleState = false;
     std::string filterPath;
     std::string pathPattern;
     std::string pathPatternOn;
@@ -163,6 +162,7 @@ private:
     std::vector<std::string> filesList;
     std::vector<std::string> filesListOn;
     std::vector<std::string> filesListOff;
+    bool toggleState = false;
 
 public:
     SelectionOverlay(const std::string& file, const std::string& key = "", const std::vector<std::vector<std::string>>& cmds = {}) 
@@ -281,6 +281,9 @@ public:
 class SubMenu : public tsl::Gui {
 private:
     std::string subPath;
+    std::string pathReplace;
+    std::string pathReplaceOn;
+    std::string pathReplaceOff;
 
 public:
     SubMenu(const std::string& path) : subPath(path) {}
@@ -309,27 +312,77 @@ public:
                 footer = ">";
             }
             
-            auto listItem = new tsl::elm::ListItem(optionName, footer);
-            
-            listItem->setClickListener([command = option.second, keyName = option.first, subPath = this->subPath, usePattern](uint64_t keys) {
-                if (keys & KEY_A) {
-                    if (usePattern) {
-                        inSubMenu = false;
-                        tsl::changeTo<SelectionOverlay>(subPath, keyName, command);
-                    } else {
-                        // Interpret and execute the command
-                        interpretAndExecuteCommand(command);
+            // Extract the path pattern from commands
+            bool useToggle = false;
+            for (const auto& cmd : option.second) {
+                if (cmd.size() > 1) {
+                    if (cmd[0] == "source") {
+                        pathReplace = cmd[1];
+                        break;
+                    } else if (cmd[0] == "source_on") {
+                        pathReplaceOn = cmd[1];
+                        useToggle = true;
+                    } else if (cmd[0] == "source_off") {
+                        pathReplaceOff = cmd[1];
+                        break;
                     }
-                    return true;
-                } else if (keys & KEY_X) {
-                    inSubMenu = false; // Set boolean to true when entering a submenu
-                    tsl::changeTo<ConfigOverlay>(subPath, keyName);
-                    return true;
-                }
-                return false;
-            });
+                } 
+            }
+            
+            if (!useToggle){
+                auto listItem = new tsl::elm::ListItem(optionName, footer);
+            
+                listItem->setClickListener([command = option.second, keyName = option.first, subPath = this->subPath, usePattern](uint64_t keys) {
+                    if (keys & KEY_A) {
+                        if (usePattern) {
+                            inSubMenu = false;
+                            tsl::changeTo<SelectionOverlay>(subPath, keyName, command);
+                        } else {
+                            // Interpret and execute the command
+                            interpretAndExecuteCommand(command);
+                        }
+                        return true;
+                    } else if (keys & KEY_X) {
+                        inSubMenu = false; // Set boolean to true when entering a submenu
+                        tsl::changeTo<ConfigOverlay>(subPath, keyName);
+                        return true;
+                    }
+                    return false;
+                });
 
-            list->addItem(listItem);
+                list->addItem(listItem);
+            } else {
+                auto toggleListItem = new tsl::elm::ToggleListItem(optionName, false, "On", "Off");
+                // Set the initial state of the toggle item
+                bool toggleStateOn = isFileOrDirectory(preprocessPath(pathReplaceOn));
+                
+                toggleListItem->setState(toggleStateOn);
+
+                toggleListItem->setStateChangedListener([toggleStateOn, command = option.second, this](bool state) {
+                    if (!state) {
+                        // Toggle switched to On
+                        if (toggleStateOn) {
+                            std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(command, pathReplaceOn, true);
+                            interpretAndExecuteCommand(modifiedCommands);
+                        } else {
+                            // Handle the case where the command should only run in the source_on section
+                            // Add your specific code here
+                        }
+                    } else {
+                        // Toggle switched to Off
+                        if (!toggleStateOn) {
+                            std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(command, pathReplaceOff, true, false);
+                            interpretAndExecuteCommand(modifiedCommands);
+                        } else {
+                            // Handle the case where the command should only run in the source_off section
+                            // Add your specific code here
+                        }
+                    }
+                });
+
+                list->addItem(toggleListItem);
+            }
+
         }
 
         // Package Info
