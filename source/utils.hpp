@@ -68,9 +68,20 @@ std::string replaceMultipleSlashes(const std::string& input) {
     return output;
 }
 
+
+std::string dropExtension(const std::string& filename) {
+    size_t lastDotPos = filename.find_last_of(".");
+    if (lastDotPos != std::string::npos) {
+        return filename.substr(0, lastDotPos);
+    }
+    return filename;
+}
+
 bool startsWith(const std::string& str, const std::string& prefix) {
     return str.compare(0, prefix.length(), prefix) == 0;
 }
+
+
 
 
 // Function to read the content of a file
@@ -1297,3 +1308,4 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
         }
     }
 }
+
