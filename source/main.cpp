@@ -329,7 +329,7 @@ public:
                 } 
             }
             
-            if (!useToggle){
+            if (usePattern || !useToggle){
                 auto listItem = new tsl::elm::ListItem(optionName, footer);
             
                 listItem->setClickListener([command = option.second, keyName = option.first, subPath = this->subPath, usePattern](uint64_t keys) {
