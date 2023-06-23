@@ -68,6 +68,10 @@ std::string replaceMultipleSlashes(const std::string& input) {
     return output;
 }
 
+std::string preprocessPath(const std::string& path) {
+    std::string processedPath = "sdmc:" + replaceMultipleSlashes(removeQuotes(path));
+    return processedPath;
+}
 
 std::string dropExtension(const std::string& filename) {
     size_t lastDotPos = filename.find_last_of(".");
@@ -80,7 +84,6 @@ std::string dropExtension(const std::string& filename) {
 bool startsWith(const std::string& str, const std::string& prefix) {
     return str.compare(0, prefix.length(), prefix) == 0;
 }
-
 
 
 
@@ -1103,36 +1106,39 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
         //logMessage(command[1]);
 
         if (commandName == "make" || commandName == "mkdir") {
-            std::string toDirectory = "sdmc:" + replaceMultipleSlashes(removeQuotes(command[1]));
-            createDirectory(toDirectory);
+            // Delete command
+            if (command.size() >= 2) {
+                std::string sourcePath = preprocessPath(command[1]);
+                createDirectory(sourcePath);
+            }
 
             // Perform actions based on the command name
         } else if (commandName == "copy" || commandName == "cp") {
             // Copy command
             if (command.size() >= 3) {
-                std::string fromPath = "sdmc:" + replaceMultipleSlashes(removeQuotes(command[1]));
-                std::string toPath = "sdmc:" + replaceMultipleSlashes(removeQuotes(command[2]));
+                std::string sourcePath = preprocessPath(command[1]);
+                std::string destinationPath = preprocessPath(command[2]);
                 
                 
-                if (fromPath.find('*') != std::string::npos) {
+                if (sourcePath.find('*') != std::string::npos) {
                     // Delete files or directories by pattern
-                    copyFileOrDirectoryByPattern(fromPath, toPath);
+                    copyFileOrDirectoryByPattern(sourcePath, destinationPath);
                 } else {
-                    copyFileOrDirectory(fromPath, toPath);
+                    copyFileOrDirectory(sourcePath, destinationPath);
                 }
                 
             }
         } else if (commandName == "delete" || commandName == "del") {
             // Delete command
             if (command.size() >= 2) {
-                std::string fileOrPathToDelete = "sdmc:" + replaceMultipleSlashes(removeQuotes(command[1]));
+                std::string sourcePath = preprocessPath(command[1]);
                 
-                if (!isDangerousCombination(fileOrPathToDelete)) {
-                    if (fileOrPathToDelete.find('*') != std::string::npos) {
+                if (!isDangerousCombination(sourcePath)) {
+                    if (sourcePath.find('*') != std::string::npos) {
                         // Delete files or directories by pattern
-                        deleteFileOrDirectoryByPattern(fileOrPathToDelete);
+                        deleteFileOrDirectoryByPattern(sourcePath);
                     } else {
-                        deleteFileOrDirectory(fileOrPathToDelete);
+                        deleteFileOrDirectory(sourcePath);
                     }
                 }
             }
@@ -1140,8 +1146,8 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
             // Rename command
             if (command.size() >= 3) {
 
-                std::string sourcePath = "sdmc:" + replaceMultipleSlashes(removeQuotes(command[1]));
-                std::string destinationPath = "sdmc:" + replaceMultipleSlashes(removeQuotes(command[2]));
+                std::string sourcePath = preprocessPath(command[1]);
+                std::string destinationPath = preprocessPath(command[2]);
                 //logMessage("sourcePath: "+sourcePath);
                 //logMessage("destinationPath: "+destinationPath);
                 
@@ -1177,7 +1183,7 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
         } else if (commandName == "set-ini-val" || commandName == "set-ini-value") {
             // Edit command
             if (command.size() >= 5) {
-                std::string fileToEdit = "sdmc:" + replaceMultipleSlashes(removeQuotes(command[1]));
+                std::string sourcePath = preprocessPath(command[1]);
 
                 std::string desiredSection = removeQuotes(command[2]);
                 std::string desiredKey = removeQuotes(command[3]);
@@ -1190,12 +1196,12 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                     }
                 }
 
-                setIniFileValue(fileToEdit.c_str(), desiredSection.c_str(), desiredKey.c_str(), desiredValue.c_str());
+                setIniFileValue(sourcePath.c_str(), desiredSection.c_str(), desiredKey.c_str(), desiredValue.c_str());
             }
         } else if (commandName == "set-ini-key") {
             // Edit command
             if (command.size() >= 5) {
-                std::string fileToEdit = "sdmc:" + replaceMultipleSlashes(removeQuotes(command[1]));
+                std::string sourcePath = preprocessPath(command[1]);
 
                 std::string desiredSection = removeQuotes(command[2]);
                 std::string desiredKey = removeQuotes(command[3]);
@@ -1208,37 +1214,37 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                     }
                 }
 
-                setIniFileKey(fileToEdit.c_str(), desiredSection.c_str(), desiredKey.c_str(), desiredNewKey.c_str());
+                setIniFileKey(sourcePath.c_str(), desiredSection.c_str(), desiredKey.c_str(), desiredNewKey.c_str());
             }
         } else if (commandName == "hex-by-offset") {
             // Edit command
             if (command.size() >= 4) {
-                std::string fileToEdit = "sdmc:" + replaceMultipleSlashes(removeQuotes(command[1]));
+                std::string sourcePath = preprocessPath(command[1]);
 
                 std::string offset = removeQuotes(command[2]);
                 std::string hexDataReplacement = removeQuotes(command[3]);
 
-                hexEditByOffset(fileToEdit.c_str(), offset.c_str(), hexDataReplacement.c_str());
+                hexEditByOffset(sourcePath.c_str(), offset.c_str(), hexDataReplacement.c_str());
             }
         } else if (commandName == "hex-by-swap") {
             // Edit command - Hex data replacement with occurrence
             if (command.size() >= 4) {
-                std::string fileToEdit = "sdmc:" + replaceMultipleSlashes(removeQuotes(command[1]));
+                std::string sourcePath = preprocessPath(command[1]);
 
                 std::string hexDataToReplace = removeQuotes(command[2]);
                 std::string hexDataReplacement = removeQuotes(command[3]);
 
                 if (command.size() >= 5) {
                     std::string occurrence = removeQuotes(command[4]);
-                    hexEditFindReplace(fileToEdit, hexDataToReplace, hexDataReplacement, occurrence);
+                    hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, occurrence);
                 } else {
-                    hexEditFindReplace(fileToEdit, hexDataToReplace, hexDataReplacement);
+                    hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
                 }
             }
         } else if (commandName == "hex-by-string") {
             // Edit command - Hex data replacement with occurrence
             if (command.size() >= 4) {
-                std::string fileToEdit = "sdmc:" + replaceMultipleSlashes(removeQuotes(command[1]));
+                std::string sourcePath = preprocessPath(command[1]);
 
                 std::string hexDataToReplace = asciiToHex(removeQuotes(command[2]));
                 std::string hexDataReplacement = asciiToHex(removeQuotes(command[3]));
@@ -1256,15 +1262,15 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                 
                 if (command.size() >= 5) {
                     std::string occurrence = removeQuotes(command[4]);
-                    hexEditFindReplace(fileToEdit, hexDataToReplace, hexDataReplacement, occurrence);
+                    hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, occurrence);
                 } else {
-                    hexEditFindReplace(fileToEdit, hexDataToReplace, hexDataReplacement);
+                    hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
                 }
             }
         } else if (commandName == "hex-by-decimal") {
             // Edit command - Hex data replacement with occurrence
             if (command.size() >= 4) {
-                std::string fileToEdit = "sdmc:" + replaceMultipleSlashes(removeQuotes(command[1]));
+                std::string sourcePath = preprocessPath(command[1]);
 
                 std::string hexDataToReplace = decimalToHex(removeQuotes(command[2]));
                 std::string hexDataReplacement = decimalToHex(removeQuotes(command[3]));
@@ -1273,15 +1279,15 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
 
                 if (command.size() >= 5) {
                     std::string occurrence = removeQuotes(command[4]);
-                    hexEditFindReplace(fileToEdit, hexDataToReplace, hexDataReplacement, occurrence);
+                    hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, occurrence);
                 } else {
-                    hexEditFindReplace(fileToEdit, hexDataToReplace, hexDataReplacement);
+                    hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
                 }
             }
         } else if (commandName == "hex-by-rdecimal") {
             // Edit command - Hex data replacement with occurrence
             if (command.size() >= 4) {
-                std::string fileToEdit = "sdmc:" + replaceMultipleSlashes(removeQuotes(command[1]));
+                std::string sourcePath = preprocessPath(command[1]);
 
                 std::string hexDataToReplace = decimalToReversedHex(removeQuotes(command[2]));
                 std::string hexDataReplacement = decimalToReversedHex(removeQuotes(command[3]));
@@ -1290,9 +1296,9 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
 
                 if (command.size() >= 5) {
                     std::string occurrence = removeQuotes(command[4]);
-                    hexEditFindReplace(fileToEdit, hexDataToReplace, hexDataReplacement, occurrence);
+                    hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, occurrence);
                 } else {
-                    hexEditFindReplace(fileToEdit, hexDataToReplace, hexDataReplacement);
+                    hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
                 }
             }
         } else if (commandName == "reboot") {
