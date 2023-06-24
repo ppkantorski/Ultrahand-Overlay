@@ -232,7 +232,7 @@ std::vector<std::string> getSubdirectories(const std::string& directoryPath) {
 }
 
 // get files list for file patterns and folders list for folder patterns
-std::vector<std::string> getFilesListByWildcards(const std::string& pathPattern) {
+std::vector<std::string> getFilesListByWildcard(const std::string& pathPattern) {
     std::string dirPath = "";
     std::string wildcard = "";
 
@@ -299,11 +299,48 @@ std::vector<std::string> getFilesListByWildcards(const std::string& pathPattern)
         closedir(dir);
     }
 
-    std::string fileListAsString;
-    for (const std::string& filePath : fileList) {
-        fileListAsString += filePath + "\n";
-    }
+    //std::string fileListAsString;
+    //for (const std::string& filePath : fileList) {
+    //    fileListAsString += filePath + "\n";
+    //}
     //logMessage("File List:\n" + fileListAsString);
+
+    return fileList;
+}
+
+
+std::vector<std::string> getFilesListByWildcards(const std::string& pathPattern) {
+    std::vector<std::string> fileList;
+
+    // Check if the pattern contains multiple wildcards
+    std::size_t wildcardPos = pathPattern.find('*');
+    if (wildcardPos != std::string::npos && pathPattern.find('*', wildcardPos + 1) != std::string::npos) {
+        std::string dirPath = "";
+        std::string wildcard = "";
+
+        // Extract the directory path and the first wildcard
+        std::size_t slashPos = pathPattern.rfind('/', wildcardPos);
+        if (slashPos != std::string::npos) {
+            dirPath = pathPattern.substr(0, slashPos + 1);
+            wildcard = pathPattern.substr(slashPos + 1, wildcardPos - slashPos - 1);
+        } else {
+            dirPath = "";
+            wildcard = pathPattern.substr(0, wildcardPos);
+        }
+
+        // Get the list of directories matching the first wildcard
+        std::vector<std::string> subDirs = getFilesListByWildcard(dirPath + wildcard + "*/");
+
+        // Process each subdirectory recursively
+        for (const std::string& subDir : subDirs) {
+            std::string subPattern = subDir + pathPattern.substr(wildcardPos + 1);
+            std::vector<std::string> subFileList = getFilesListByWildcards(subPattern);
+            fileList.insert(fileList.end(), subFileList.begin(), subFileList.end());
+        }
+    } else {
+        // Only one wildcard present, use getFilesListByWildcard directly
+        fileList = getFilesListByWildcard(pathPattern);
+    }
 
     return fileList;
 }
