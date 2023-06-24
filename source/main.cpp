@@ -124,10 +124,11 @@ public:
 // Selection overlay
 class SelectionOverlay : public tsl::Gui {
 private:
-    std::string filePath, specificKey, filterPath, pathPattern, pathPatternOn, pathPatternOff, itemName;
+    std::string filePath, specificKey, filterPath, pathPattern, pathPatternOn, pathPatternOff, itemName, parentDirName, lastParentDirName;
     std::vector<std::string> filesList, filesListOn, filesListOff;
     std::vector<std::vector<std::string>> commands;
     bool toggleState = false;
+
 
 public:
     SelectionOverlay(const std::string& file, const std::string& key = "", const std::vector<std::vector<std::string>>& cmds = {}) 
@@ -139,14 +140,15 @@ public:
         auto rootFrame = new tsl::elm::OverlayFrame(getNameFromPath(filePath), "Ultrahand Package");
         auto list = new tsl::elm::List();
 
-        list->addItem(new tsl::elm::CategoryHeader(specificKey.substr(1)));
-
         // Extract the path pattern from commands
         bool useToggle = false;
-
+        bool useSplitHeader = false;
+        
         for (const auto& cmd : commands) {
             if (cmd.size() > 1) {
-                if (cmd[0] == "filter") {
+                if (cmd[0] == "split") {
+                    useSplitHeader = true;
+                } else if (cmd[0] == "filter") {
                     filterPath = cmd[1];
                 } else if (cmd[0] == "source") {
                     pathPattern = cmd[1];
@@ -176,7 +178,11 @@ public:
                 return getNameFromPath(a) < getNameFromPath(b);
             });
         }
-
+        
+        if (!useSplitHeader){
+            list->addItem(new tsl::elm::CategoryHeader(specificKey.substr(1)));
+        }
+        
         // Add each file as a menu item
         for (const std::string& file : filesList) {
             if (file != filterPath){
@@ -184,6 +190,12 @@ public:
                 if (!isDirectory(preprocessPath(file))) {
                     itemName = dropExtension(itemName);
                 }
+                parentDirName = getParentDirNameFromPath(file);
+                if (useSplitHeader && (lastParentDirName.empty() || (lastParentDirName != parentDirName))){
+                    list->addItem(new tsl::elm::CategoryHeader(parentDirName));
+                    lastParentDirName = parentDirName.c_str();
+                }
+                
                 if (!useToggle) {
                     auto listItem = new tsl::elm::ListItem(itemName);
                     listItem->setClickListener([file, this](uint64_t keys) { // Add 'command' to the capture list
