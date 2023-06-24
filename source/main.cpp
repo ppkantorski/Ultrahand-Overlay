@@ -59,8 +59,7 @@ std::vector<std::vector<std::string>> getModifyCommands(const std::vector<std::v
 // Config overlay 
 class ConfigOverlay : public tsl::Gui {
 private:
-    std::string filePath;
-    std::string specificKey;
+    std::string filePath, specificKey;
 
 public:
     ConfigOverlay(const std::string& file, const std::string& key = "") : filePath(file), specificKey(key) {}
@@ -152,16 +151,9 @@ public:
 // Selection overlay
 class SelectionOverlay : public tsl::Gui {
 private:
-    std::string filePath;
-    std::string specificKey;
+    std::string filePath, specificKey, filterPath, pathPattern, pathPatternOn, pathPatternOff;
+    std::vector<std::string> filesList, filesListOn, filesListOff;
     std::vector<std::vector<std::string>> commands;
-    std::string filterPath;
-    std::string pathPattern;
-    std::string pathPatternOn;
-    std::string pathPatternOff;
-    std::vector<std::string> filesList;
-    std::vector<std::string> filesListOn;
-    std::vector<std::string> filesListOff;
     bool toggleState = false;
 
 public:
@@ -280,10 +272,7 @@ public:
 // Sub menu
 class SubMenu : public tsl::Gui {
 private:
-    std::string subPath;
-    std::string pathReplace;
-    std::string pathReplaceOn;
-    std::string pathReplaceOff;
+    std::string subPath, pathReplace, pathReplaceOn, pathReplaceOff;
 
 public:
     SubMenu(const std::string& path) : subPath(path) {}
