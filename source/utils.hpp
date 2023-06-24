@@ -111,7 +111,10 @@ bool isDirectory(const std::string& path) {
     }
     return false;
 }
-
+bool isFileOrDirectory(const std::string& path) {
+    struct stat buffer;
+    return (stat(path.c_str(), &buffer) == 0);
+}
 
 // Function to create a directory if it doesn't exist
 void createDirectory(const std::string& directoryPath) {
@@ -305,6 +308,37 @@ std::vector<std::string> getFilesListByWildcards(const std::string& pathPattern)
     return fileList;
 }
 
+
+// Selection overlay helper function (for toggles too)
+std::vector<std::vector<std::string>> getModifyCommands(const std::vector<std::vector<std::string>>& commands, const std::string& file, bool toggle=false, bool on=true) {
+    std::vector<std::vector<std::string>> modifiedCommands;
+    bool addCommands = false;
+    for (const auto& cmd : commands) {
+        if (toggle && cmd.size() > 1) {
+            if (cmd[0] == "source_on") {
+                addCommands = true;
+                if (!on) {
+                    addCommands = !addCommands;
+                }
+            } else if (cmd[0] == "source_off") {
+                addCommands = false;
+                if (!on) {
+                    addCommands = !addCommands;
+                }
+            }
+        }
+        if (!toggle or addCommands) {
+            std::vector<std::string> modifiedCmd = cmd;
+            for (auto& arg : modifiedCmd) {
+                if ((!toggle && arg == "{source}") || (on && arg == "{source_on}") || (!on && arg == "{source_off}")) {
+                    arg = file;
+                }
+            }
+            modifiedCommands.emplace_back(modifiedCmd);
+        }
+    }
+    return modifiedCommands;
+}
 
 // Delete functions
 void deleteFileOrDirectory(const std::string& pathToDelete) {
@@ -578,6 +612,8 @@ void copyFileOrDirectoryByPattern(const std::string& sourcePathPattern, const st
         
     }
 }
+
+
 
 
 // Ini Functions
