@@ -8,26 +8,26 @@
 #define SpsmShutdownMode_Reboot 1
 
 // For loggging messages and debugging
-//#include <ctime>
-//void logMessage(const std::string& message) {
-//    std::time_t currentTime = std::time(nullptr);
-//    std::string logEntry = std::asctime(std::localtime(&currentTime));
-//    // Find the last non-newline character
-//    std::size_t lastNonNewline = logEntry.find_last_not_of("\r\n");
-//
-//    // Remove everything after the last non-newline character
-//    if (lastNonNewline != std::string::npos) {
-//        logEntry.erase(lastNonNewline + 1);
-//    }
-//    logEntry = "["+logEntry+"] ";
-//    logEntry += message+"\n";
-//
-//    FILE* file = fopen("sdmc:/config/ultrahand/log.txt", "a");
-//    if (file != nullptr) {
-//        fputs(logEntry.c_str(), file);
-//        fclose(file);
-//    }
-//}
+#include <ctime>
+void logMessage(const std::string& message) {
+    std::time_t currentTime = std::time(nullptr);
+    std::string logEntry = std::asctime(std::localtime(&currentTime));
+    // Find the last non-newline character
+    std::size_t lastNonNewline = logEntry.find_last_not_of("\r\n");
+
+    // Remove everything after the last non-newline character
+    if (lastNonNewline != std::string::npos) {
+        logEntry.erase(lastNonNewline + 1);
+    }
+    logEntry = "["+logEntry+"] ";
+    logEntry += message+"\n";
+
+    FILE* file = fopen("sdmc:/config/ultrahand/log.txt", "a");
+    if (file != nullptr) {
+        fputs(logEntry.c_str(), file);
+        fclose(file);
+    }
+}
 
 
 // String functions
@@ -67,6 +67,21 @@ std::string replaceMultipleSlashes(const std::string& input) {
 
     return output;
 }
+
+std::string removeLeadingSlash(const std::string& pathPattern) {
+    if (!pathPattern.empty() && pathPattern[0] == '/') {
+        return pathPattern.substr(1);
+    }
+    return pathPattern;
+}
+
+std::string removeEndingSlash(const std::string& pathPattern) {
+    if (!pathPattern.empty() && pathPattern.back() == '/') {
+        return pathPattern.substr(0, pathPattern.length() - 1);
+    }
+    return pathPattern;
+}
+
 
 std::string preprocessPath(const std::string& path) {
     std::string processedPath = "sdmc:" + replaceMultipleSlashes(removeQuotes(path));
@@ -204,6 +219,36 @@ std::string getNameFromPath(const std::string& path) {
     return path;
 }
 
+std::string getParentDirNameFromPath(const std::string& path) {
+    // Find the position of the last occurrence of the directory separator '/'
+    std::size_t lastSlashPos = removeEndingSlash(path).rfind('/');
+
+    // Check if the slash is found and not at the beginning of the path
+    if (lastSlashPos != std::string::npos && lastSlashPos != 0) {
+        // Find the position of the second last occurrence of the directory separator '/'
+        std::size_t secondLastSlashPos = path.rfind('/', lastSlashPos - 1);
+
+        // Check if the second last slash is found
+        if (secondLastSlashPos != std::string::npos) {
+            // Extract the substring between the second last and last slashes
+            std::string subPath = path.substr(secondLastSlashPos + 1, lastSlashPos - secondLastSlashPos - 1);
+
+            // Check if the substring contains spaces or special characters
+            if (subPath.find_first_of(" \t\n\r\f\v") != std::string::npos) {
+                // If it does, return the substring within quotes
+                return "\"" + subPath + "\"";
+            }
+
+            // If it doesn't, return the substring as is
+            return subPath;
+        }
+    }
+
+    // If the path format is not as expected or the parent directory is not found, return an empty string or handle the case accordingly
+    return "";
+}
+
+
 
 std::vector<std::string> getSubdirectories(const std::string& directoryPath) {
     std::vector<std::string> subdirectories;
@@ -333,7 +378,7 @@ std::vector<std::string> getFilesListByWildcards(const std::string& pathPattern)
 
         // Process each subdirectory recursively
         for (const std::string& subDir : subDirs) {
-            std::string subPattern = subDir + pathPattern.substr(wildcardPos + 1);
+            std::string subPattern = subDir + removeLeadingSlash(pathPattern.substr(wildcardPos + 1));
             std::vector<std::string> subFileList = getFilesListByWildcards(subPattern);
             fileList.insert(fileList.end(), subFileList.begin(), subFileList.end());
         }
