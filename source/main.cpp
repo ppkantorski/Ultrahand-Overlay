@@ -12,6 +12,9 @@ bool inSubMenu = false;
 bool inConfigMenu = false;
 bool inSelectionMenu = false;
 
+const std::string configFileName = "config.ini";
+
+
 // Helper function to handle overlay menu input
 bool handleOverlayMenuInput(bool& inMenu, u64 keysHeld, u64 backKey, uint64_t sleepTime = 300'000'000) {
     if (inMenu && (keysHeld & backKey)) {
@@ -23,43 +26,12 @@ bool handleOverlayMenuInput(bool& inMenu, u64 keysHeld, u64 backKey, uint64_t sl
     return false;
 }
 
-// Selection overlay helper function (for toggles too)
-std::vector<std::vector<std::string>> getModifyCommands(const std::vector<std::vector<std::string>>& commands, const std::string& file, bool toggle=false, bool on=true) {
-    std::vector<std::vector<std::string>> modifiedCommands;
-    bool addCommands = false;
-    for (const auto& cmd : commands) {
-        if (toggle) {
-            if (cmd.size() > 1 && cmd[0] == "source_on") {
-                addCommands = true;
-                if (!on) {
-                    addCommands = !addCommands;
-                }
-            } else if (cmd.size() > 1 && cmd[0] == "source_off") {
-                addCommands = false;
-                if (!on) {
-                    addCommands = !addCommands;
-                }
-            }
-        }
-        
-        if (!toggle or addCommands) {
-            std::vector<std::string> modifiedCmd = cmd;
-            for (auto& arg : modifiedCmd) {
-                if ((!toggle && arg == "{source}") || (on && arg == "{source_on}") || (!on && arg == "{source_off}")) {
-                    arg = file;
-                }
-            }
-            modifiedCommands.emplace_back(modifiedCmd);
-        }
-    }
-    return modifiedCommands;
-}
-
 
 // Config overlay 
 class ConfigOverlay : public tsl::Gui {
 private:
     std::string filePath, specificKey;
+    bool isInSection, inQuotes;
 
 public:
     ConfigOverlay(const std::string& file, const std::string& key = "") : filePath(file), specificKey(key) {}
@@ -70,14 +42,14 @@ public:
         auto rootFrame = new tsl::elm::OverlayFrame(getNameFromPath(filePath), "Ultrahand Config");
         auto list = new tsl::elm::List();
 
-        std::string configFile = filePath + "/config.ini";
+        std::string configFile = filePath + "/" + configFileName;
 
         std::string fileContent = readFileContent(configFile);
         if (!fileContent.empty()) {
             std::string line;
             std::istringstream iss(fileContent);
             std::string currentCategory;
-            bool isInSection = false;
+            isInSection = false;
             while (std::getline(iss, line)) {
                 if (line.empty() || line.find_first_not_of('\n') == std::string::npos) {
                     continue;
@@ -104,9 +76,11 @@ public:
                         listItem->setClickListener([line, this](uint64_t keys) {
                             if (keys & KEY_A) {
                                 std::istringstream iss(line);
-                                std::vector<std::string> commandParts;
                                 std::string part;
-                                bool inQuotes = false;
+                                std::vector<std::vector<std::string>> commandVec;
+                                std::vector<std::string> commandParts;
+                                inQuotes = false;
+
                                 while (std::getline(iss, part, '\'')) {
                                     if (!part.empty()) {
                                         if (!inQuotes) {
@@ -121,9 +95,8 @@ public:
                                     }
                                     inQuotes = !inQuotes;
                                 }
-                                std::string commandName = commandParts[0];
-                                std::vector<std::vector<std::string>> commandVec;
-                                commandVec.emplace_back(commandParts);
+
+                                commandVec.emplace_back(std::move(commandParts));
                                 interpretAndExecuteCommand(commandVec);
                                 return true;
                             }
@@ -151,7 +124,7 @@ public:
 // Selection overlay
 class SelectionOverlay : public tsl::Gui {
 private:
-    std::string filePath, specificKey, filterPath, pathPattern, pathPatternOn, pathPatternOff;
+    std::string filePath, specificKey, filterPath, pathPattern, pathPatternOn, pathPatternOff, itemName;
     std::vector<std::string> filesList, filesListOn, filesListOff;
     std::vector<std::vector<std::string>> commands;
     bool toggleState = false;
@@ -189,10 +162,6 @@ public:
         }
 
         // Get the list of files matching the pattern
-        //std::vector<std::string> filesList;
-        //std::vector<std::string> filesListOn;
-        //std::vector<std::string> filesListOff;
-        
         if (!useToggle) {
             filesList = getFilesListByWildcards(pathPattern);
         } else {
@@ -211,8 +180,12 @@ public:
         // Add each file as a menu item
         for (const std::string& file : filesList) {
             if (file != filterPath){
+                itemName = getNameFromPath(file);
+                if (!isDirectory(preprocessPath(file))) {
+                    itemName = dropExtension(itemName);
+                }
                 if (!useToggle) {
-                    auto listItem = new tsl::elm::ListItem(dropExtension(getNameFromPath(file)));
+                    auto listItem = new tsl::elm::ListItem(itemName);
                     listItem->setClickListener([file, this](uint64_t keys) { // Add 'command' to the capture list
                         if (keys & KEY_A) {
                             // Replace "{source}" with file in commands, then execute
@@ -224,7 +197,7 @@ public:
                     });
                     list->addItem(listItem);
                 } else { // for handiling toggles
-                    auto toggleListItem = new tsl::elm::ToggleListItem(dropExtension(getNameFromPath(file)), false, "On", "Off");
+                    auto toggleListItem = new tsl::elm::ToggleListItem(itemName, false, "On", "Off");
 
                     // Set the initial state of the toggle item
                     bool toggleStateOn = std::find(filesListOn.begin(), filesListOn.end(), file) != filesListOn.end();
@@ -287,7 +260,7 @@ public:
         list->addItem(new tsl::elm::CategoryHeader("Commands"));
 
         // Load options from INI file in the subdirectory
-        std::string subConfigIniPath = subPath + "/config.ini";
+        std::string subConfigIniPath = subPath + "/" + configFileName;
         std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> options = loadOptionsFromIni(subConfigIniPath);
         
         // Populate the sub menu with options
@@ -404,8 +377,8 @@ public:
 class MainMenu : public tsl::Gui {
 private:
     std::string directoryPath = "sdmc:/config/ultrahand/";
-    std::string configIniPath = directoryPath + "config.ini";
-    std::string fullPath;
+    std::string configIniPath = directoryPath + configFileName;
+    std::string fullPath, optionName;
     //bool inSubMenu = false; // Added boolean to track submenu state
     //bool inTextMenu = false;
 public:
@@ -431,7 +404,7 @@ public:
         std::sort(subdirectories.begin(), subdirectories.end()); // Sort subdirectories alphabetically
         for (const auto& subdirectory : subdirectories) {
             std::string subdirectoryIcon = "";//"\u2605 "; // Use a folder icon (replace with the actual font icon)
-            PackageHeader packageHeader = getPackageHeaderFromIni(directoryPath + subdirectory + "/config.ini");
+            PackageHeader packageHeader = getPackageHeaderFromIni(directoryPath + subdirectory + "/"+ configFileName);
             
             auto listItem = new tsl::elm::ListItem(subdirectoryIcon + subdirectory, packageHeader.version);
             
@@ -441,15 +414,12 @@ public:
                     inMainMenu = false;
                     tsl::changeTo<SubMenu>(subPath);
                     
-                    
                     return true;
-                }
-                else if (keys & KEY_X) {
+                } else if (keys & KEY_X) {
                     //inSubMenu = true; // Set boolean to true when entering a submenu
                     //inTextMenu = true; // Set boolean to true when entering a submenu
                     inMainMenu = false;
                     tsl::changeTo<ConfigOverlay>(subPath);
-                    
                     
                     return true;
                 }
@@ -461,11 +431,12 @@ public:
 
         // Add a section break with small text to indicate the "Packages" section
         list->addItem(new tsl::elm::CategoryHeader("Commands"));
-
+        
+        //std::string optionName;
         // Populate the menu with options
         for (const auto& option : options) {
-            std::string optionName = option.first;
-            std::string optionIcon;
+            optionName = option.first;
+            //std::string optionIcon;
 
             // Check if it's a subdirectory
             //struct stat entryStat;
@@ -476,8 +447,9 @@ public:
             //    optionIcon = "";
             //    //optionIcon = "\uE001"; // Use a command icon (replace with the actual font icon)
             //}
-            optionIcon = "";
-            auto listItem = new tsl::elm::ListItem(optionIcon + " " + optionName);
+            //optionIcon = "";
+            //auto listItem = new tsl::elm::ListItem(optionIcon + " " + optionName);
+            auto listItem = new tsl::elm::ListItem(optionName);
 
             listItem->setClickListener([this, command = option.second, subPath = optionName](uint64_t keys) {
                 if (keys & KEY_A) {
@@ -516,17 +488,11 @@ public:
 class Overlay : public tsl::Overlay {
 public:
     virtual void initServices() override {
-        // Initialize services
-        //tsl::hlp::doWithSmSession([this]{});
         fsdevMountSdmc();
         splInitialize();
         spsmInitialize();
     }
 
-    //virtual void closeThreads() override {
-    //    // CloseThreads();
-    //}
-    
     virtual void exitServices() override {
         spsmExit();
         splExit();
