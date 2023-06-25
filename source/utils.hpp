@@ -8,26 +8,26 @@
 #define SpsmShutdownMode_Reboot 1
 
 // For loggging messages and debugging
-#include <ctime>
-void logMessage(const std::string& message) {
-    std::time_t currentTime = std::time(nullptr);
-    std::string logEntry = std::asctime(std::localtime(&currentTime));
-    // Find the last non-newline character
-    std::size_t lastNonNewline = logEntry.find_last_not_of("\r\n");
-
-    // Remove everything after the last non-newline character
-    if (lastNonNewline != std::string::npos) {
-        logEntry.erase(lastNonNewline + 1);
-    }
-    logEntry = "["+logEntry+"] ";
-    logEntry += message+"\n";
-
-    FILE* file = fopen("sdmc:/config/ultrahand/log.txt", "a");
-    if (file != nullptr) {
-        fputs(logEntry.c_str(), file);
-        fclose(file);
-    }
-}
+//#include <ctime>
+//void logMessage(const std::string& message) {
+//    std::time_t currentTime = std::time(nullptr);
+//    std::string logEntry = std::asctime(std::localtime(&currentTime));
+//    // Find the last non-newline character
+//    std::size_t lastNonNewline = logEntry.find_last_not_of("\r\n");
+//
+//    // Remove everything after the last non-newline character
+//    if (lastNonNewline != std::string::npos) {
+//        logEntry.erase(lastNonNewline + 1);
+//    }
+//    logEntry = "["+logEntry+"] ";
+//    logEntry += message+"\n";
+//
+//    FILE* file = fopen("sdmc:/config/ultrahand/log.txt", "a");
+//    if (file != nullptr) {
+//        fputs(logEntry.c_str(), file);
+//        fclose(file);
+//    }
+//}
 
 
 // String functions
@@ -431,16 +431,13 @@ std::vector<std::string> getFilesListByWildcards(const std::string& pathPattern)
 }
 
 
-std::string replacePlaceholder(const std::string& input, const std::string& placeholder, const std::string& replacement) {
-    std::string result = input;
-    std::size_t pos = result.find(placeholder);
+std::string replacePlaceholder(std::string& input, const std::string& placeholder, const std::string& replacement) {
+    std::size_t pos = input.find(placeholder);
     if (pos != std::string::npos) {
-        result.replace(pos, placeholder.length(), replacement);
+        input.replace(pos, placeholder.length(), replacement);
     }
-    return result;
 }
 
-// Selection overlay helper function (for toggles too)
 std::vector<std::vector<std::string>> getModifyCommands(const std::vector<std::vector<std::string>>& commands, const std::string& file, bool toggle=false, bool on=true) {
     std::vector<std::vector<std::string>> modifiedCommands;
     bool addCommands = false;
@@ -461,30 +458,17 @@ std::vector<std::vector<std::string>> getModifyCommands(const std::vector<std::v
         if (!toggle or addCommands) {
             std::vector<std::string> modifiedCmd = cmd;
             for (auto& arg : modifiedCmd) {
-                //if ((!toggle && (arg.find("{source}") != std::string::npos)) || (on && arg == "{source_on}") || (!on && arg == "{source_off}")) {
-                //    arg = file;
-                //}
-                if (!toggle && (arg.find("{source}") != std::string::npos)) {
-                    arg = replacePlaceholder(arg, "{source}", file);
-                }
-                if (on && (arg.find("{source_on}") != std::string::npos)) {
-                    arg = replacePlaceholder(arg, "{source_on}", file);
-                } else if (!on && (arg.find("{source_off}") != std::string::npos)) {
-                    arg = replacePlaceholder(arg, "{source_off}", file);
-                }
-                if (arg.find("{name1}") != std::string::npos) {
-                    arg = replacePlaceholder(arg, "{name1}", getNameFromPath(file));
-                }
-                if (arg.find("{name2}") != std::string::npos) {
-                    arg = replacePlaceholder(arg, "{name2}", getParentDirNameFromPath(file));
-                }
+                replacePlaceholder(arg, "{source}", file);
+                replacePlaceholder(arg, "{source_on}", file);
+                replacePlaceholder(arg, "{source_off}", file);
+                replacePlaceholder(arg, "{name1}", getNameFromPath(file));
+                replacePlaceholder(arg, "{name2}", getParentDirNameFromPath(file));
             }
             modifiedCommands.emplace_back(modifiedCmd);
         }
     }
     return modifiedCommands;
 }
-
 
 
 
@@ -535,7 +519,7 @@ void mirrorDeleteFiles(const std::string& sourcePath, const std::string& targetP
     for (const auto& path : fileList) {
         // Generate the corresponding path in the target directory by replacing the source path
         std::string updatedPath = targetPath + path.substr(sourcePath.size());
-        logMessage("mirror-delete: "+path+" "+updatedPath);
+        //logMessage("mirror-delete: "+path+" "+updatedPath);
         deleteFileOrDirectory(updatedPath);
     }
 }
@@ -789,7 +773,7 @@ void mirrorCopyFiles(const std::string& sourcePath, const std::string& targetPat
         // Generate the corresponding path in the target directory by replacing the source path
         std::string updatedPath = targetPath + path.substr(sourcePath.size());
         if (path != updatedPath){
-            logMessage("mirror-copy: "+path+" "+updatedPath);
+            //logMessage("mirror-copy: "+path+" "+updatedPath);
             copyFileOrDirectory(path, updatedPath);
         }
     }
