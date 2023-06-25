@@ -1333,7 +1333,7 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                 }
                 
             }
-        } else if (commandName == "mirror-copy" || commandName == "mirror-cp") {
+        } else if (commandName == "mirror_copy" || commandName == "mirror_cp") {
             // Copy command
             if (command.size() >= 2) {
                 std::string sourcePath = preprocessPath(command[1]);
@@ -1357,7 +1357,7 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                     }
                 }
             }
-        } else if (commandName == "mirror-delete" || commandName == "mirror-del") {
+        } else if (commandName == "mirror_delete" || commandName == "mirror_del") {
             if (command.size() >= 2) {
                 std::string sourcePath = preprocessPath(command[1]);
                 if (command.size() >= 3) {
