@@ -82,6 +82,12 @@ std::string removeEndingSlash(const std::string& pathPattern) {
     return pathPattern;
 }
 
+void removeEntryFromList(const std::string& entry, std::vector<std::string>& fileList) {
+    fileList.erase(std::remove_if(fileList.begin(), fileList.end(), [&](const std::string& filePath) {
+        return filePath.compare(0, entry.length(), entry) == 0;
+    }), fileList.end());
+}
+
 
 std::string preprocessPath(const std::string& path) {
     std::string processedPath = "sdmc:" + replaceMultipleSlashes(removeQuotes(path));
@@ -99,6 +105,8 @@ std::string dropExtension(const std::string& filename) {
 bool startsWith(const std::string& str, const std::string& prefix) {
     return str.compare(0, prefix.length(), prefix) == 0;
 }
+
+
 
 
 
@@ -276,6 +284,37 @@ std::vector<std::string> getSubdirectories(const std::string& directoryPath) {
     return subdirectories;
 }
 
+std::vector<std::string> getFilesListFromDirectory(const std::string& directoryPath) {
+    std::vector<std::string> fileList;
+
+    DIR* dir = opendir(directoryPath.c_str());
+    if (dir != nullptr) {
+        dirent* entry;
+        while ((entry = readdir(dir)) != nullptr) {
+            std::string entryName = entry->d_name;
+            std::string entryPath = directoryPath;
+            if (entryPath.back() != '/')
+                entryPath += '/';
+            entryPath += entryName;
+
+            // Skip directories "." and ".."
+            if (entryName != "." && entryName != "..") {
+                if (isDirectory(entryPath)) {
+                    // Recursively retrieve files from subdirectories
+                    std::vector<std::string> subDirFiles = getFilesListFromDirectory(entryPath);
+                    fileList.insert(fileList.end(), subDirFiles.begin(), subDirFiles.end());
+                } else {
+                    fileList.push_back(entryPath);
+                }
+            }
+        }
+        closedir(dir);
+    }
+
+    return fileList;
+}
+
+
 // get files list for file patterns and folders list for folder patterns
 std::vector<std::string> getFilesListByWildcard(const std::string& pathPattern) {
     std::string dirPath = "";
@@ -391,6 +430,15 @@ std::vector<std::string> getFilesListByWildcards(const std::string& pathPattern)
 }
 
 
+std::string replacePlaceholder(const std::string& input, const std::string& placeholder, const std::string& replacement) {
+    std::string result = input;
+    std::size_t pos = result.find(placeholder);
+    if (pos != std::string::npos) {
+        result.replace(pos, placeholder.length(), replacement);
+    }
+    return result;
+}
+
 // Selection overlay helper function (for toggles too)
 std::vector<std::vector<std::string>> getModifyCommands(const std::vector<std::vector<std::string>>& commands, const std::string& file, bool toggle=false, bool on=true) {
     std::vector<std::vector<std::string>> modifiedCommands;
@@ -412,8 +460,22 @@ std::vector<std::vector<std::string>> getModifyCommands(const std::vector<std::v
         if (!toggle or addCommands) {
             std::vector<std::string> modifiedCmd = cmd;
             for (auto& arg : modifiedCmd) {
-                if ((!toggle && arg == "{source}") || (on && arg == "{source_on}") || (!on && arg == "{source_off}")) {
-                    arg = file;
+                //if ((!toggle && (arg.find("{source}") != std::string::npos)) || (on && arg == "{source_on}") || (!on && arg == "{source_off}")) {
+                //    arg = file;
+                //}
+                if (!toggle && (arg.find("{source}") != std::string::npos)) {
+                    arg = replacePlaceholder(arg, "{source}", file);
+                }
+                if (on && (arg.find("{source_on}") != std::string::npos)) {
+                    arg = replacePlaceholder(arg, "{source_on}", file);
+                } else if (!on && (arg.find("{source_off}") != std::string::npos)) {
+                    arg = replacePlaceholder(arg, "{source_off}", file);
+                }
+                if (arg.find("{name1}") != std::string::npos) {
+                    arg = replacePlaceholder(arg, "{name1}", getNameFromPath(file));
+                }
+                if (arg.find("{name2}") != std::string::npos) {
+                    arg = replacePlaceholder(arg, "{name2}", getParentDirNameFromPath(file));
                 }
             }
             modifiedCommands.emplace_back(modifiedCmd);
@@ -421,6 +483,9 @@ std::vector<std::vector<std::string>> getModifyCommands(const std::vector<std::v
     }
     return modifiedCommands;
 }
+
+
+
 
 // Delete functions
 void deleteFileOrDirectory(const std::string& pathToDelete) {
@@ -460,6 +525,17 @@ void deleteFileOrDirectoryByPattern(const std::string& pathPattern) {
     for (const auto& path : fileList) {
         //logMessage("path: "+path);
         deleteFileOrDirectory(path);
+    }
+}
+
+void mirrorDeleteFiles(const std::string& sourcePath, const std::string& targetPath="sdmc:/") {
+    std::vector<std::string> fileList = getFilesListFromDirectory(sourcePath);
+
+    for (const auto& path : fileList) {
+        // Generate the corresponding path in the target directory by replacing the source path
+        std::string updatedPath = targetPath + path.substr(sourcePath.size());
+        logMessage("mirror-delete: "+path+" "+updatedPath);
+        deleteFileOrDirectory(updatedPath);
     }
 }
 
@@ -695,7 +771,18 @@ void copyFileOrDirectoryByPattern(const std::string& sourcePathPattern, const st
     }
 }
 
+void mirrorCopyFiles(const std::string& sourcePath, const std::string& targetPath="sdmc:/") {
+    std::vector<std::string> fileList = getFilesListFromDirectory(sourcePath);
 
+    for (const auto& path : fileList) {
+        // Generate the corresponding path in the target directory by replacing the source path
+        std::string updatedPath = targetPath + path.substr(sourcePath.size());
+        if (path != updatedPath){
+            logMessage("mirror-copy: "+path+" "+updatedPath);
+            copyFileOrDirectory(path, updatedPath);
+        }
+    }
+}
 
 
 // Ini Functions
@@ -1222,7 +1309,7 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
         std::string commandName = command[0];
         //logMessage(commandName);
         //logMessage(command[1]);
-
+        
         if (commandName == "make" || commandName == "mkdir") {
             // Delete command
             if (command.size() >= 2) {
@@ -1246,11 +1333,21 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                 }
                 
             }
+        } else if (commandName == "mirror-copy" || commandName == "mirror-cp") {
+            // Copy command
+            if (command.size() >= 2) {
+                std::string sourcePath = preprocessPath(command[1]);
+                if (command.size() >= 3) {
+                    std::string destinationPath = preprocessPath(command[2]);
+                    mirrorCopyFiles(sourcePath, destinationPath);
+                } else {
+                    mirrorCopyFiles(sourcePath);
+                }
+            }
         } else if (commandName == "delete" || commandName == "del") {
             // Delete command
             if (command.size() >= 2) {
                 std::string sourcePath = preprocessPath(command[1]);
-                
                 if (!isDangerousCombination(sourcePath)) {
                     if (sourcePath.find('*') != std::string::npos) {
                         // Delete files or directories by pattern
@@ -1258,6 +1355,16 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                     } else {
                         deleteFileOrDirectory(sourcePath);
                     }
+                }
+            }
+        } else if (commandName == "mirror-delete" || commandName == "mirror-del") {
+            if (command.size() >= 2) {
+                std::string sourcePath = preprocessPath(command[1]);
+                if (command.size() >= 3) {
+                    std::string destinationPath = preprocessPath(command[2]);
+                    mirrorDeleteFiles(sourcePath, destinationPath);
+                } else {
+                    mirrorDeleteFiles(sourcePath);
                 }
             }
         } else if (commandName == "rename" || commandName == "move" || commandName == "mv") {
