@@ -149,6 +149,8 @@ void createDirectory(const std::string& directoryPath) {
 }
 
 
+
+
 // Get functions
 struct PackageHeader {
     std::string version;
@@ -228,6 +230,14 @@ std::string getNameFromPath(const std::string& path) {
     return path;
 }
 
+std::string getPathWithoutFilename(const std::string& path) {
+    size_t lastSlashPos = path.find_last_of('/');
+    if (lastSlashPos != std::string::npos && lastSlashPos != path.length() - 1) {
+        return path.substr(0, lastSlashPos + 1);
+    }
+    return path;
+}
+
 std::string getParentDirNameFromPath(const std::string& path) {
     // Find the position of the last occurrence of the directory separator '/'
     std::size_t lastSlashPos = removeEndingSlash(path).rfind('/');
@@ -256,7 +266,6 @@ std::string getParentDirNameFromPath(const std::string& path) {
     // If the path format is not as expected or the parent directory is not found, return an empty string or handle the case accordingly
     return "";
 }
-
 
 
 std::vector<std::string> getSubdirectories(const std::string& directoryPath) {
@@ -537,15 +546,16 @@ bool moveFileOrDirectory(const std::string& sourcePath, const std::string& desti
         // Source file or directory exists
 
         // Check if the destination path exists
-        bool destinationExists = (stat(destinationPath.c_str(), &destinationInfo) == 0);
+        std::string destinationDirectory = getPathWithoutFilename(destinationPath);
+        
+        bool destinationExists = (stat(destinationDirectory.c_str(), &destinationInfo) == 0);
+        if (!destinationExists) {
+            // Create the destination directory
+            createDirectory(destinationDirectory);
+        }
 
         if (S_ISDIR(sourceInfo.st_mode)) {
             // Source path is a directory
-
-            if (!destinationExists) {
-                // Create the destination directory
-                createDirectory(destinationPath);
-            }
 
             DIR* dir = opendir(sourcePath.c_str());
             if (!dir) {
@@ -586,7 +596,13 @@ bool moveFileOrDirectory(const std::string& sourcePath, const std::string& desti
             std::string filename = getNameFromPath(sourcePath.c_str());
 
             std::string destinationFilePath = destinationPath;
-
+            
+            
+            if (!destinationExists) {
+                // Create the destination directory
+                createDirectory(destinationPath);
+            }
+            
             if (destinationPath[destinationPath.length() - 1] == '/') {
                 destinationFilePath += filename;
             }
@@ -594,6 +610,7 @@ bool moveFileOrDirectory(const std::string& sourcePath, const std::string& desti
             
             //logMessage("sourcePath: "+sourcePath);
             //logMessage("destinationFilePath: "+destinationFilePath);
+            
             
             if (rename(sourcePath.c_str(), destinationFilePath.c_str()) == -1) {
                 //printf("Failed to move file: %s\n", sourcePath.c_str());
