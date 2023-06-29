@@ -9,6 +9,7 @@
 // Overlay booleans
 bool shouldCloseMenu = false;
 bool returningToMain = false;
+bool returningToSub = false;
 bool inMainMenu = false;
 bool inOverlay = false;
 bool inSubMenu = false;
@@ -17,120 +18,20 @@ bool inSelectionMenu = false;
 
 const std::string configFileName = "config.ini";
 
-static tsl::elm::HeaderOverlayFrame *rootFrame = nullptr;
-
-// Overlay Module settings
-constexpr int Module_OverlayLoader  = 348;
-constexpr Result ResultSuccess      = MAKERESULT(0, 0);
-constexpr Result ResultParseError   = MAKERESULT(Module_OverlayLoader, 1);
-
-std::tuple<Result, std::string, std::string> getOverlayInfo(std::string filePath) {
-    FILE *file = fopen(filePath.c_str(), "r");
-
-    NroHeader header;
-    NroAssetHeader assetHeader;
-    NacpStruct nacp;
-
-    fseek(file, sizeof(NroStart), SEEK_SET);
-    if (fread(&header, sizeof(NroHeader), 1, file) != 1) {
-        fclose(file);
-        return { ResultParseError, "", "" };
-    }
-
-    fseek(file, header.size, SEEK_SET);
-    if (fread(&assetHeader, sizeof(NroAssetHeader), 1, file) != 1) {
-        fclose(file);
-        return { ResultParseError, "", "" };
-    }
-
-    fseek(file, header.size + assetHeader.nacp.offset, SEEK_SET);
-    if (fread(&nacp, sizeof(NacpStruct), 1, file) != 1) {
-        fclose(file);
-        return { ResultParseError, "", "" };
-    }
-    
-    fclose(file);
-
-    return { ResultSuccess, std::string(nacp.lang[0].name, std::strlen(nacp.lang[0].name)), std::string(nacp.display_version, std::strlen(nacp.display_version)) };
-}
-
-//void loadOverlayFiles(tsl::elm::List* list)
-//{
-//    int count = 0;
-//    DIR* dir;
-//    struct dirent* entry;
-//
-//    // Modify the path to your desired overlay directory
-//    const char* overlayDirectory = "sdmc:/switch/.overlays";
-//
-//    // Open the overlay directory
-//    dir = opendir(overlayDirectory);
-//    if (dir == nullptr)
-//        return;
-//
-//    // Iterate over the files in the overlay directory
-//    while ((entry = readdir(dir)) != nullptr)
-//    {
-//        // Skip if the file is not an overlay file or if it is ovlmenu.ovl
-//        if (fnmatch("*.ovl", entry->d_name, 0) != 0 || strcmp(entry->d_name, "ovlmenu.ovl") == 0)
-//            continue;
-//
-//        // Get the path of the overlay file
-//        char overlayPath[PATH_MAX];
-//        snprintf(overlayPath, sizeof(overlayPath), "%s/%s", overlayDirectory, entry->d_name);
-//
-//        // Get the name and version of the overlay file
-//        auto [result, overlayName, overlayVersion] = getOverlayInfo(overlayPath);
-//        if (result != ResultSuccess)
-//            continue;
-//
-//        // Create a new list item with the overlay name and version
-//        auto* listItem = new tsl::elm::ListItem(overlayName);
-//        listItem->setValue(overlayVersion, true);
-//
-//        // Add a click listener to load the overlay when clicked upon
-//        listItem->setClickListener([overlayPath](s64 key) {
-//            if (key & KEY_A) {
-//                // Load the overlay here
-//                //inMainMenu = false;
-//                inOverlay = true;
-//                tsl::setNextOverlay(overlayPath, "--overlay");
-//                tsl::Overlay::get()->close();
-//                //inMainMenu = true;
-//                return true;
-//            }
-//            return false;
-//        });
-//
-//        // Add the list item to the list
-//        if (count == 0){
-//            list->addItem(new tsl::elm::CategoryHeader("Overlays"));
-//        }
-//        
-//        list->addItem(listItem);
-//        count++;
-//    }
-//
-//    // Close the directory
-//    closedir(dir);
-//}
-
-
-
 
 
 // Helper function to handle overlay menu input
-bool handleOverlayMenuInput(bool& inMenu, u64 keysHeld, u64 backKey, uint64_t sleepTime = 300'000'000) {
-    if (inMenu && (keysHeld & backKey)) {
-        svcSleepThread(sleepTime);
-        //tsl::Overlay::get()->close();
-        tsl::goBack();
-        
-        inMenu = false;
-        return true;
-    }
-    return false;
-}
+//bool handleOverlayMenuInput(bool& inMenu, u64 keysHeld, u64 backKey, uint64_t sleepTime = 300'000'000) {
+//    if (inMenu && (keysHeld & backKey)) {
+//        svcSleepThread(sleepTime);
+//        //tsl::Overlay::get()->close();
+//        tsl::goBack();
+//        
+//        inMenu = false;
+//        return true;
+//    }
+//    return false;
+//}
 
 
 // Config overlay 
@@ -176,40 +77,38 @@ public:
                         isInSection = true;
                         list->addItem(new tsl::elm::CategoryHeader(line.substr(1, line.size() - 2)));
                     }
-                } else {
-                    if (isInSection) {
-                        auto listItem = new tsl::elm::ListItem(line);
-                        listItem->setClickListener([line, this](uint64_t keys) {
-                            if (keys & KEY_A) {
-                                std::istringstream iss(line);
-                                std::string part;
-                                std::vector<std::vector<std::string>> commandVec;
-                                std::vector<std::string> commandParts;
-                                inQuotes = false;
+                } else if (isInSection) {
+                    auto listItem = new tsl::elm::ListItem(line);
+                    listItem->setClickListener([line, this](uint64_t keys) {
+                        if (keys & KEY_A) {
+                            std::istringstream iss(line);
+                            std::string part;
+                            std::vector<std::vector<std::string>> commandVec;
+                            std::vector<std::string> commandParts;
+                            inQuotes = false;
 
-                                while (std::getline(iss, part, '\'')) {
-                                    if (!part.empty()) {
-                                        if (!inQuotes) {
-                                            std::istringstream argIss(part);
-                                            std::string arg;
-                                            while (argIss >> arg) {
-                                                commandParts.emplace_back(arg);
-                                            }
-                                        } else {
-                                            commandParts.emplace_back(part);
+                            while (std::getline(iss, part, '\'')) {
+                                if (!part.empty()) {
+                                    if (!inQuotes) {
+                                        std::istringstream argIss(part);
+                                        std::string arg;
+                                        while (argIss >> arg) {
+                                            commandParts.emplace_back(arg);
                                         }
+                                    } else {
+                                        commandParts.emplace_back(part);
                                     }
-                                    inQuotes = !inQuotes;
                                 }
-
-                                commandVec.emplace_back(std::move(commandParts));
-                                interpretAndExecuteCommand(commandVec);
-                                return true;
+                                inQuotes = !inQuotes;
                             }
-                            return false;
-                        });
-                        list->addItem(listItem);
-                    }
+
+                            commandVec.emplace_back(std::move(commandParts));
+                            interpretAndExecuteCommand(commandVec);
+                            return true;
+                        }
+                        return false;
+                    });
+                    list->addItem(listItem);
                 }
             }
         } else {
@@ -221,7 +120,17 @@ public:
     }
 
     virtual bool handleInput(u64 keysDown, u64 keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
-        return handleOverlayMenuInput(inConfigMenu, keysHeld, KEY_B);
+        if (inConfigMenu && (keysHeld & KEY_B)) {
+            //tsl::Overlay::get()->close();
+            svcSleepThread(300'000'000);
+            tsl::goBack();
+            inConfigMenu = false;
+            returningToSub = true;
+            //tsl::Overlay::get()->close();
+            return true;
+        }
+        return false;
+        //return handleOverlayMenuInput(inConfigMenu, keysHeld, KEY_B);
     }
 };
 
@@ -392,7 +301,18 @@ public:
     }
 
     virtual bool handleInput(u64 keysDown, u64 keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
-        return handleOverlayMenuInput(inSelectionMenu, keysHeld, KEY_B);
+        if (inSelectionMenu && (keysHeld & KEY_B)) {
+            //tsl::Overlay::get()->close();
+            svcSleepThread(300'000'000);
+            tsl::goBack();
+            inSelectionMenu = false;
+            returningToSub = true;
+            //tsl::Overlay::get()->close();
+            return true;
+        }
+        return false;
+        
+        //return handleOverlayMenuInput(inSelectionMenu, keysHeld, KEY_B);
     }
 };
 
@@ -532,6 +452,12 @@ public:
             //tsl::Overlay::get()->close();
             return true;
         }
+        
+        if (returningToSub){
+            returningToSub = false;
+            inSubMenu = true;
+        }
+        
         return false;
         
         //return handleOverlayMenuInput(inSubMenu, keysHeld, KEY_B);
@@ -544,6 +470,7 @@ public:
 class MainMenu : public tsl::Gui {
 private:
     std::string directoryPath = "sdmc:/config/ultrahand/";
+    std::string overlayDirectory = "sdmc:/switch/.overlays/";
     std::string configIniPath = directoryPath + configFileName;
     std::string fullPath, optionName;
     //bool inSubMenu = false; // Added boolean to track submenu state
@@ -559,30 +486,30 @@ public:
 
         //loadOverlayFiles(list);
         
-        // load overlay files
         int count = 0;
-        DIR* dir;
-        struct dirent* entry;
 
-        // Modify the path to your desired overlay directory
-        const char* overlayDirectory = "sdmc:/switch/.overlays";
+        // Load overlay files
+        std::vector<std::string> overlayFiles;
+        std::vector<std::string> files = getFilesListByWildcard(overlayDirectory+"*.ovl");
+        for (const auto& file : files) {
+            // Check if the file is an overlay file (*.ovl)
+            if (file.substr(file.length() - 4) == ".ovl" && getNameFromPath(file) != "ovlmenu.ovl") {
+                overlayFiles.push_back(file);
+            }
+        }
+        std::sort(overlayFiles.begin(), overlayFiles.end()); // Sort overlay files alphabetically
 
-        // Open the overlay directory
-        dir = opendir(overlayDirectory);
-        if (dir != nullptr) {
-            // Iterate over the files in the overlay directory
-            while ((entry = readdir(dir)) != nullptr)
-            {
-                // Skip if the file is not an overlay file or if it is ovlmenu.ovl
-                if (fnmatch("*.ovl", entry->d_name, 0) != 0 || strcmp(entry->d_name, "ovlmenu.ovl") == 0)
+        if (!overlayFiles.empty()) {
+            
+            for (const auto& overlayFile : overlayFiles) {
+                if (getNameFromPath(overlayFile) == "ovlmenu.ovl")
                     continue;
 
                 // Get the path of the overlay file
-                char overlayPath[PATH_MAX];
-                snprintf(overlayPath, sizeof(overlayPath), "%s/%s", overlayDirectory, entry->d_name);
+                //std::string overlayPath = overlayDirectory + "/" + overlayFile;
 
                 // Get the name and version of the overlay file
-                auto [result, overlayName, overlayVersion] = getOverlayInfo(overlayPath);
+                auto [result, overlayName, overlayVersion] = getOverlayInfo(overlayFile);
                 if (result != ResultSuccess)
                     continue;
 
@@ -591,12 +518,12 @@ public:
                 listItem->setValue(overlayVersion, true);
 
                 // Add a click listener to load the overlay when clicked upon
-                listItem->setClickListener([overlayPath](s64 key) {
+                listItem->setClickListener([overlayFile](s64 key) {
                     if (key & KEY_A) {
                         // Load the overlay here
                         inMainMenu = false;
                         inOverlay = true;
-                        tsl::setNextOverlay(overlayPath);
+                        tsl::setNextOverlay(overlayFile);
                         //envSetNextLoad(overlayPath, "");
                         tsl::Overlay::get()->close();
                         //inMainMenu = true;
@@ -605,18 +532,13 @@ public:
                     return false;
                 });
 
-                // Add the list item to the list
-                if (count == 0){
+                if (count == 0) {
                     list->addItem(new tsl::elm::CategoryHeader("Overlays"));
                 }
-        
                 list->addItem(listItem);
                 count++;
             }
         }
-        // Close the directory
-        closedir(dir);
-        
         
         
         // Create the directory if it doesn't exist
@@ -643,16 +565,8 @@ public:
             
             listItem->setClickListener([this, subPath = directoryPath + subdirectory](uint64_t keys) {
                 if (keys & KEY_A) {
-                    //inSubMenu = true; // Set boolean to true when entering a submenu
                     inMainMenu = false;
                     tsl::changeTo<SubMenu>(subPath);
-                    
-                    return true;
-                } else if (keys & KEY_X) {
-                    //inSubMenu = true; // Set boolean to true when entering a submenu
-                    //inTextMenu = true; // Set boolean to true when entering a submenu
-                    inMainMenu = false;
-                    tsl::changeTo<ConfigOverlay>(subPath);
                     
                     return true;
                 }
@@ -710,37 +624,14 @@ public:
     virtual bool handleInput(uint64_t keysDown, uint64_t keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
         
         if (inMainMenu && (keysHeld & KEY_B)) {
-            //inMainMenu = false;
+            inMainMenu = false;
             tsl::Overlay::get()->close();
-            //if (inOverlay) {
-            //    tsl::goBack();
-            //    inOverlay = false;
-            //} else {
-            //    tsl::Overlay::get()->close();
-            //}
-            
-            //tsl::Overlay::get()->close();
             return true;
         }
         if (returningToMain){
             returningToMain = false;
             inMainMenu = true;
         }
-        //else if (inMainMenu && (keysHeld & KEY_B)) {
-        //    //inMainMenu = false;
-        //    tsl::Overlay::get()->hide();
-        //    tsl::Overlay::get()->close();
-        //    //if (inOverlay) {
-        //    //    tsl::goBack();
-        //    //    inOverlay = false;
-        //    //} else {
-        //    //    tsl::Overlay::get()->close();
-        //    //}
-        //    
-        //    //tsl::Overlay::get()->close();
-        //    return true;
-        //}
-        
         return false;
     }
 };
@@ -762,20 +653,8 @@ public:
         fsdevUnmountAll();
     }
 
-    virtual void onShow() override {}
-    //    tsl::Overlay::get()->getCurrentGui()->removeFocus();
-    //    if (rootFrame != nullptr) {
-    //        rootFrame->invalidate();
-    //        tsl::Overlay::get()->getCurrentGui()->requestFocus(rootFrame, tsl::FocusDirection::None);
-    //    }
-    //}    // Called before overlay wants to change from invisible to visible state
-    virtual void onHide() override {
-        //tsl::Overlay::get()->close();
-        //if (shouldCloseMenu) {
-        //    Overlay::get()->close();  // Close the menu
-        //    shouldCloseMenu = false;  // Reset the flag
-        //}
-    }   // Called before overlay wants to change from visible to invisible state
+    virtual void onShow() override {}   // Called before overlay wants to change from invisible to visible state
+    virtual void onHide() override {}   // Called before overlay wants to change from visible to invisible state
 
     virtual std::unique_ptr<tsl::Gui> loadInitialGui() override {
         return initially<MainMenu>();  // Initial Gui to load. It's possible to pass arguments to its constructor like this
@@ -783,11 +662,5 @@ public:
 };
 
 int main(int argc, char* argv[]) {
-    for (u8 arg = 0; arg < argc; arg++) {
-        if (strcasecmp(argv[arg], "--overlay") == 0) {
-            //tsl::Overlay::get()->getCurrentGui()->removeFocus();
-        }
-    }
     return tsl::loop<Overlay, tsl::impl::LaunchFlags::None>(argc, argv);
 }
-
