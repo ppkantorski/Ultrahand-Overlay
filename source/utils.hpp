@@ -149,9 +149,43 @@ void createDirectory(const std::string& directoryPath) {
 }
 
 
-
-
 // Get functions
+
+// Overlay Module settings
+constexpr int Module_OverlayLoader  = 348;
+constexpr Result ResultSuccess      = MAKERESULT(0, 0);
+constexpr Result ResultParseError   = MAKERESULT(Module_OverlayLoader, 1);
+
+std::tuple<Result, std::string, std::string> getOverlayInfo(std::string filePath) {
+    FILE *file = fopen(filePath.c_str(), "r");
+
+    NroHeader header;
+    NroAssetHeader assetHeader;
+    NacpStruct nacp;
+
+    fseek(file, sizeof(NroStart), SEEK_SET);
+    if (fread(&header, sizeof(NroHeader), 1, file) != 1) {
+        fclose(file);
+        return { ResultParseError, "", "" };
+    }
+
+    fseek(file, header.size, SEEK_SET);
+    if (fread(&assetHeader, sizeof(NroAssetHeader), 1, file) != 1) {
+        fclose(file);
+        return { ResultParseError, "", "" };
+    }
+
+    fseek(file, header.size + assetHeader.nacp.offset, SEEK_SET);
+    if (fread(&nacp, sizeof(NacpStruct), 1, file) != 1) {
+        fclose(file);
+        return { ResultParseError, "", "" };
+    }
+    
+    fclose(file);
+
+    return { ResultSuccess, std::string(nacp.lang[0].name, std::strlen(nacp.lang[0].name)), std::string(nacp.display_version, std::strlen(nacp.display_version)) };
+}
+
 struct PackageHeader {
     std::string version;
     std::string creator;
@@ -230,14 +264,6 @@ std::string getNameFromPath(const std::string& path) {
     return path;
 }
 
-std::string getPathWithoutFilename(const std::string& path) {
-    size_t lastSlashPos = path.find_last_of('/');
-    if (lastSlashPos != std::string::npos && lastSlashPos != path.length() - 1) {
-        return path.substr(0, lastSlashPos + 1);
-    }
-    return path;
-}
-
 std::string getParentDirNameFromPath(const std::string& path) {
     // Find the position of the last occurrence of the directory separator '/'
     std::size_t lastSlashPos = removeEndingSlash(path).rfind('/');
@@ -266,6 +292,7 @@ std::string getParentDirNameFromPath(const std::string& path) {
     // If the path format is not as expected or the parent directory is not found, return an empty string or handle the case accordingly
     return "";
 }
+
 
 
 std::vector<std::string> getSubdirectories(const std::string& directoryPath) {
@@ -440,13 +467,16 @@ std::vector<std::string> getFilesListByWildcards(const std::string& pathPattern)
 }
 
 
-std::string replacePlaceholder(std::string& input, const std::string& placeholder, const std::string& replacement) {
-    std::size_t pos = input.find(placeholder);
+std::string replacePlaceholder(const std::string& input, const std::string& placeholder, const std::string& replacement) {
+    std::string result = input;
+    std::size_t pos = result.find(placeholder);
     if (pos != std::string::npos) {
-        input.replace(pos, placeholder.length(), replacement);
+        result.replace(pos, placeholder.length(), replacement);
     }
+    return result;
 }
 
+// Selection overlay helper function (for toggles too)
 std::vector<std::vector<std::string>> getModifyCommands(const std::vector<std::vector<std::string>>& commands, const std::string& file, bool toggle=false, bool on=true) {
     std::vector<std::vector<std::string>> modifiedCommands;
     bool addCommands = false;
@@ -467,17 +497,30 @@ std::vector<std::vector<std::string>> getModifyCommands(const std::vector<std::v
         if (!toggle or addCommands) {
             std::vector<std::string> modifiedCmd = cmd;
             for (auto& arg : modifiedCmd) {
-                replacePlaceholder(arg, "{source}", file);
-                replacePlaceholder(arg, "{source_on}", file);
-                replacePlaceholder(arg, "{source_off}", file);
-                replacePlaceholder(arg, "{name1}", getNameFromPath(file));
-                replacePlaceholder(arg, "{name2}", getParentDirNameFromPath(file));
+                //if ((!toggle && (arg.find("{source}") != std::string::npos)) || (on && arg == "{source_on}") || (!on && arg == "{source_off}")) {
+                //    arg = file;
+                //}
+                if (!toggle && (arg.find("{source}") != std::string::npos)) {
+                    arg = replacePlaceholder(arg, "{source}", file);
+                }
+                if (on && (arg.find("{source_on}") != std::string::npos)) {
+                    arg = replacePlaceholder(arg, "{source_on}", file);
+                } else if (!on && (arg.find("{source_off}") != std::string::npos)) {
+                    arg = replacePlaceholder(arg, "{source_off}", file);
+                }
+                if (arg.find("{name1}") != std::string::npos) {
+                    arg = replacePlaceholder(arg, "{name1}", getNameFromPath(file));
+                }
+                if (arg.find("{name2}") != std::string::npos) {
+                    arg = replacePlaceholder(arg, "{name2}", getParentDirNameFromPath(file));
+                }
             }
             modifiedCommands.emplace_back(modifiedCmd);
         }
     }
     return modifiedCommands;
 }
+
 
 
 
@@ -546,16 +589,15 @@ bool moveFileOrDirectory(const std::string& sourcePath, const std::string& desti
         // Source file or directory exists
 
         // Check if the destination path exists
-        std::string destinationDirectory = getPathWithoutFilename(destinationPath);
-        
-        bool destinationExists = (stat(destinationDirectory.c_str(), &destinationInfo) == 0);
-        if (!destinationExists) {
-            // Create the destination directory
-            createDirectory(destinationDirectory);
-        }
+        bool destinationExists = (stat(destinationPath.c_str(), &destinationInfo) == 0);
 
         if (S_ISDIR(sourceInfo.st_mode)) {
             // Source path is a directory
+
+            if (!destinationExists) {
+                // Create the destination directory
+                createDirectory(destinationPath);
+            }
 
             DIR* dir = opendir(sourcePath.c_str());
             if (!dir) {
@@ -596,13 +638,7 @@ bool moveFileOrDirectory(const std::string& sourcePath, const std::string& desti
             std::string filename = getNameFromPath(sourcePath.c_str());
 
             std::string destinationFilePath = destinationPath;
-            
-            
-            if (!destinationExists) {
-                // Create the destination directory
-                createDirectory(destinationPath);
-            }
-            
+
             if (destinationPath[destinationPath.length() - 1] == '/') {
                 destinationFilePath += filename;
             }
@@ -610,7 +646,6 @@ bool moveFileOrDirectory(const std::string& sourcePath, const std::string& desti
             
             //logMessage("sourcePath: "+sourcePath);
             //logMessage("destinationFilePath: "+destinationFilePath);
-            
             
             if (rename(sourcePath.c_str(), destinationFilePath.c_str()) == -1) {
                 //printf("Failed to move file: %s\n", sourcePath.c_str());
@@ -805,14 +840,32 @@ std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadO
     if (!configFile ) {
         // Write the default INI file
         FILE* configFileOut = fopen(configIniPath.c_str(), "w");
-        std::string commands = "";
+        std::string commands;
         if (makeConfig) {
-            commands = "[Safe Reboot]\n"
-                       "reboot\n"
-                       "[Shutdown]\n"
-                       "shutdown\n";
+            commands = "[make directories]\n"
+                       "mkdir /config/ultrahand/example1/\n"
+                       "mkdir /config/ultrahand/example2/\n"
+                       "[copy files]\n"
+                       "copy /config/ultrahand/config.ini /config/ultrahand/example1/\n"
+                       "copy /config/ultrahand/config.ini /config/ultrahand/example2/\n"
+                       "[rename files]\n"
+                       "move /config/ultrahand/example1/config.ini /config/ultrahand/example1/configRenamed.ini\n"
+                       "move /config/ultrahand/example2/config.ini /config/ultrahand/example2/configRenamed.ini\n"
+                       "[move directories]\n"
+                       "move /config/ultrahand/example1/ /config/ultrahand/example3/\n"
+                       "move /config/ultrahand/example2/ /config/ultrahand/example4/\n"
+                       "[delete files]\n"
+                       "delete /config/ultrahand/example1/config.ini\n"
+                       "delete /config/ultrahand/example2/config.ini\n"
+                       "[delete directories]\n"
+                       "delete /config/ultrahand/example*/\n"
+                       "[modify ini file]\n"
+                       "copy /bootloader/hekate_ipl.ini /config/ultrahand/\n"
+                       "set-ini-val /config/ultrahand/hekate_ipl.ini 'Atmosphere' fss0 gonnawritesomethingelse\n"
+                       "new-ini-entry /config/ultrahand/hekate_ipl.ini 'Atmosphere' booty true\n";
+        } else {
+            commands = "";
         }
-        
         fprintf(configFileOut, "%s", commands.c_str());
         
         
@@ -1532,4 +1585,3 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
         }
     }
 }
-
