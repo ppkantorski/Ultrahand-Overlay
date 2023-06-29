@@ -468,7 +468,8 @@ public:
 // Main menu
 class MainMenu : public tsl::Gui {
 private:
-    std::string settingsConfigIniPath = "sdmc:/config/ultrahand/config.ini";
+    std::string settingsPath = "sdmc:/config/ultrahand/";
+    std::string settingsConfigIniPath = settingsPath +"config.ini";
     tsl::hlp::ini::IniData settingsData;
     std::string directoryPath = "sdmc:/switch/.packages/";
     std::string overlayDirectory = "sdmc:/switch/.overlays/";
@@ -483,6 +484,9 @@ public:
         inMainMenu = true;
         menuMode = "overlay";
         
+        createDirectory(directoryPath);
+        createDirectory(settingsPath);
+        
         bool settingsLoaded = false;
         if (isFileOrDirectory(settingsConfigIniPath)) {
             settingsData = getParsedDataFromIniFile(settingsConfigIniPath);
@@ -490,7 +494,9 @@ public:
                 auto& ultrahandSection = settingsData["ultrahand"];
                 if (ultrahandSection.count("last_menu") > 0) {
                     menuMode = ultrahandSection["last_menu"];
-                    settingsLoaded = true;
+                    if (ultrahandSection.count("in_overlay") > 0) {
+                        settingsLoaded = true;
+                    }
                 }
                 //if (ultrahandSection.count("in_overlay") > 0) {
                 //    inOverlayString = ultrahandSection["in_overlay"];
