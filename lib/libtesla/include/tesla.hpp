@@ -69,6 +69,7 @@
 #include <map>
 
 
+
 // For loggging messages and debugging
 //#include <ctime>
 //void logMessage(const std::string& message) {
@@ -3646,10 +3647,31 @@ namespace tsl {
     static void goBack() {
         Overlay::get()->goBack();
     }
+    
+    // from utils (needs to be moved)
+    std::string getNameFromPath(const std::string& path) {
+        size_t lastSlash = path.find_last_of('/');
+        if (lastSlash != std::string::npos) {
+            std::string name = path.substr(lastSlash + 1);
+            if (name.empty()) {
+                // The path ends with a slash, indicating a directory
+                std::string strippedPath = path.substr(0, lastSlash);
+                lastSlash = strippedPath.find_last_of('/');
+                if (lastSlash != std::string::npos) {
+                    name = strippedPath.substr(lastSlash + 1);
+                }
+            }
+            return name;
+        }
+        return path;
+    }
 
-    static void setNextOverlay(const std::string& ovlPath, std::string args) {
+    static void setNextOverlay(const std::string& ovlPath, std::string origArgs) {
 
-        args += " --skipCombo";
+        //std::string args = std::filesystem::path(ovlPath).filename();
+        std::string args = getNameFromPath(ovlPath);
+        
+        args += " " + origArgs + " --skipCombo";
 
         envSetNextLoad(ovlPath.c_str(), args.c_str());
     }
