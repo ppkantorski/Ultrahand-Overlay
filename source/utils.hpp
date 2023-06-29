@@ -842,27 +842,10 @@ std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadO
         FILE* configFileOut = fopen(configIniPath.c_str(), "w");
         std::string commands;
         if (makeConfig) {
-            commands = "[make directories]\n"
-                       "mkdir /config/ultrahand/example1/\n"
-                       "mkdir /config/ultrahand/example2/\n"
-                       "[copy files]\n"
-                       "copy /config/ultrahand/config.ini /config/ultrahand/example1/\n"
-                       "copy /config/ultrahand/config.ini /config/ultrahand/example2/\n"
-                       "[rename files]\n"
-                       "move /config/ultrahand/example1/config.ini /config/ultrahand/example1/configRenamed.ini\n"
-                       "move /config/ultrahand/example2/config.ini /config/ultrahand/example2/configRenamed.ini\n"
-                       "[move directories]\n"
-                       "move /config/ultrahand/example1/ /config/ultrahand/example3/\n"
-                       "move /config/ultrahand/example2/ /config/ultrahand/example4/\n"
-                       "[delete files]\n"
-                       "delete /config/ultrahand/example1/config.ini\n"
-                       "delete /config/ultrahand/example2/config.ini\n"
-                       "[delete directories]\n"
-                       "delete /config/ultrahand/example*/\n"
-                       "[modify ini file]\n"
-                       "copy /bootloader/hekate_ipl.ini /config/ultrahand/\n"
-                       "set-ini-val /config/ultrahand/hekate_ipl.ini 'Atmosphere' fss0 gonnawritesomethingelse\n"
-                       "new-ini-entry /config/ultrahand/hekate_ipl.ini 'Atmosphere' booty true\n";
+            commands = "[Safe Reboot]\n"
+                       "reboot\n"
+                       "[Shutdown]\n"
+                       "shutdown\n";
         } else {
             commands = "";
         }
