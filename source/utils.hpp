@@ -953,7 +953,7 @@ void setIniFile(const std::string& fileToEdit, const std::string& desiredSection
             // Handle the error accordingly
             return;
         }
-        fprintf(configFile, "\n[%s]\n", desiredSection.c_str());
+        fprintf(configFile, "[%s]\n", desiredSection.c_str());
         fprintf(configFile, "%s = %s\n", desiredKey.c_str(), desiredValue.c_str());
         fclose(configFile);
         // printf("INI file created successfully.\n");
@@ -966,10 +966,11 @@ void setIniFile(const std::string& fileToEdit, const std::string& desiredSection
 
     if (tempFile) {
         std::string currentSection;
-        std::string formattedDesiredValue;
+        std::string formattedDesiredValue = removeQuotes(desiredValue);
         constexpr size_t BufferSize = 4096;
         char line[BufferSize];
         bool sectionFound = false;
+        bool sectionOutOfBounds = false;
         bool keyFound = false;
         while (fgets(line, sizeof(line), configFile)) {
             trimmedLine = trim(std::string(line));
@@ -977,11 +978,18 @@ void setIniFile(const std::string& fileToEdit, const std::string& desiredSection
             // Check if the line represents a section
             if (trimmedLine[0] == '[' && trimmedLine[trimmedLine.length() - 1] == ']') {
                 currentSection = removeQuotes(trim(std::string(trimmedLine.c_str() + 1, trimmedLine.length() - 2)));
+                
+                if (sectionFound && (desiredNewKey.empty())) {
+                    // Write the modified line with the desired key and value
+                    formattedDesiredValue = removeQuotes(desiredValue);
+                    fprintf(tempFile, "%s = %s\n", desiredKey.c_str(), formattedDesiredValue.c_str());
+                    keyFound = true;
+                }
+                
             }
 
             if (sectionFound && !keyFound && desiredNewKey.empty()) {
                 if (trim(currentSection) != trim(desiredSection)) {
-                    formattedDesiredValue = removeQuotes(desiredValue);
                     fprintf(tempFile, "%s = %s\n", desiredKey.c_str(), formattedDesiredValue.c_str());
                     keyFound = true;
                 }
@@ -999,7 +1007,6 @@ void setIniFile(const std::string& fileToEdit, const std::string& desiredSection
                     if (lineKey == desiredKey) {
                         keyFound = true;
                         std::string originalValue = getValueFromLine(trimmedLine); // Extract the original value
-                        formattedDesiredValue = removeQuotes(desiredValue);
 
                         // Write the modified line with the desired key and value
                         if (!desiredNewKey.empty()) {
@@ -1010,15 +1017,21 @@ void setIniFile(const std::string& fileToEdit, const std::string& desiredSection
                         continue; // Skip writing the original line
                     }
                 }
-            }
+            } 
+            
 
             fprintf(tempFile, "%s", line);
         }
         
+        if (sectionFound && !keyFound && (desiredNewKey.empty())) {
+            // Write the modified line with the desired key and value
+            fprintf(tempFile, "%s = %s\n", desiredKey.c_str(), formattedDesiredValue.c_str());
+        }
+        
         if (!sectionFound && !keyFound && desiredNewKey.empty()) {
             // The desired section doesn't exist, so create it and add the key-value pair
-            fprintf(tempFile, "\n[%s]\n", desiredSection.c_str());
-            fprintf(tempFile, "%s = %s\n", desiredKey.c_str(), desiredValue.c_str());
+            fprintf(tempFile, "[%s]\n", desiredSection.c_str());
+            fprintf(tempFile, "%s = %s\n", desiredKey.c_str(), formattedDesiredValue.c_str());
         }
         fclose(configFile);
         fclose(tempFile);
