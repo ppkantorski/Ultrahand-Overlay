@@ -3879,14 +3879,14 @@ namespace tsl {
 
 
         // Argument parsing
-        //for (u8 arg = 0; arg < argc; arg++) {
-        //    logMessage(std::string("argv[arg]: ") +argv[arg]);
-        //    if (strcasecmp(argv[arg], "--skipCombo") == 0) {
-        //        eventFire(&shData.comboEvent);
-        //        overlay->disableNextAnimation();
-        //        //remove "--skipCombo" from argv
-        //    }
-        //}
+        bool skipCombo = false;
+        for (u8 arg = 0; arg < argc; arg++) {
+            if (strcasecmp(argv[arg], "--skipCombo") == 0) {
+                //eventFire(&shData.comboEvent);
+                //overlay->disableNextAnimation();
+                skipCombo = true;
+            }
+        }
         
         tsl::hlp::ini::IniData settingsData = getParsedDataFromIniFile( "sdmc:/config/ultrahand/config.ini");
         bool inOverlay = false;
@@ -3900,7 +3900,7 @@ namespace tsl {
         
         
         
-        if (inOverlay) {
+        if (inOverlay && skipCombo) {
             eventFire(&shData.comboEvent);
             overlay->disableNextAnimation();
         }
