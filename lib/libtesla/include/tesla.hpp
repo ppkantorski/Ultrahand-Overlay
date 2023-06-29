@@ -3666,12 +3666,12 @@ namespace tsl {
 
 
         // Argument parsing
-        for (u8 arg = 0; arg < argc; arg++) {
-            if (strcasecmp(argv[arg], "--skipCombo") == 0) {
-                eventFire(&shData.comboEvent);
-                overlay->disableNextAnimation();
-            }
-        }
+        //for (u8 arg = 0; arg < argc; arg++) {
+        //    if (strcasecmp(argv[arg], "--skipCombo") == 0) {
+        //        eventFire(&shData.comboEvent);
+        //        overlay->disableNextAnimation();
+        //    }
+        //}
 
 
         while (shData.running) {
