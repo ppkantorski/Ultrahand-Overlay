@@ -70,26 +70,26 @@
 
 
 // For loggging messages and debugging
-#include <ctime>
-void logMessage(const std::string& message) {
-    std::time_t currentTime = std::time(nullptr);
-    std::string logEntry = std::asctime(std::localtime(&currentTime));
-    // Find the last non-newline character
-    std::size_t lastNonNewline = logEntry.find_last_not_of("\r\n");
-
-    // Remove everything after the last non-newline character
-    if (lastNonNewline != std::string::npos) {
-        logEntry.erase(lastNonNewline + 1);
-    }
-    logEntry = "["+logEntry+"] ";
-    logEntry += message+"\n";
-
-    FILE* file = fopen("sdmc:/config/ultrahand/log.txt", "a");
-    if (file != nullptr) {
-        fputs(logEntry.c_str(), file);
-        fclose(file);
-    }
-}
+//#include <ctime>
+//void logMessage(const std::string& message) {
+//    std::time_t currentTime = std::time(nullptr);
+//    std::string logEntry = std::asctime(std::localtime(&currentTime));
+//    // Find the last non-newline character
+//    std::size_t lastNonNewline = logEntry.find_last_not_of("\r\n");
+//
+//    // Remove everything after the last non-newline character
+//    if (lastNonNewline != std::string::npos) {
+//        logEntry.erase(lastNonNewline + 1);
+//    }
+//    logEntry = "["+logEntry+"] ";
+//    logEntry += message+"\n";
+//
+//    FILE* file = fopen("sdmc:/config/ultrahand/log.txt", "a");
+//    if (file != nullptr) {
+//        fputs(logEntry.c_str(), file);
+//        fclose(file);
+//    }
+//}
 
 //bool isFileOrDirectory(const std::string& path) {
 //    struct stat buffer;
@@ -3868,9 +3868,9 @@ namespace tsl {
         
         tsl::hlp::ini::IniData settingsData = getParsedDataFromIniFile( "sdmc:/config/ultrahand/config.ini");
         bool inOverlay = false;
-        logMessage("test");
+        //logMessage("test");
         std::string inOverlayString = settingsData["ultrahand"]["in_overlay"];
-        logMessage(inOverlayString);
+        //logMessage(inOverlayString);
         if (inOverlayString == "true") {
             inOverlay = true;
             setIniFileValue( "sdmc:/config/ultrahand/config.ini", "ultrahand", "in_overlay", "false");
