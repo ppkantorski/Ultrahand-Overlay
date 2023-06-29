@@ -473,7 +473,7 @@ private:
     std::string directoryPath = "sdmc:/switch/.packages/";
     std::string overlayDirectory = "sdmc:/switch/.overlays/";
     std::string configIniPath = directoryPath + configFileName;
-    std::string menuMode, fullPath, optionName;
+    std::string menuMode, inOverlayString, fullPath, optionName;
     //bool inSubMenu = false; // Added boolean to track submenu state
     //bool inTextMenu = false;
 public:
@@ -492,11 +492,20 @@ public:
                     menuMode = ultrahandSection["last_menu"];
                     settingsLoaded = true;
                 }
+                //if (ultrahandSection.count("in_overlay") > 0) {
+                //    inOverlayString = ultrahandSection["in_overlay"];
+                //    if (inOverlayString == "true") {
+                //        setIniFileValue(settingsConfigIniPath, "ultrahand", "in_overlay", "false");
+                //    }
+                //    settingsLoaded = true;
+                //}
             }
         }
         if (!settingsLoaded) { // write data if settings are not loaded
             setIniFileValue(settingsConfigIniPath, "ultrahand", "last_menu", menuMode);
+            setIniFileValue(settingsConfigIniPath, "ultrahand", "in_overlay", "false");
         }
+        //setIniFileValue(settingsConfigIniPath, "ultrahand", "in_overlay", "false");
         
         auto rootFrame = new tsl::elm::OverlayFrame("Ultrahand", APP_VERSION);
         auto list = new tsl::elm::List();
@@ -541,7 +550,8 @@ public:
                             // Load the overlay here
                             inMainMenu = false;
                             inOverlay = true;
-                            tsl::setNextOverlay(overlayFile);
+                            setIniFileValue( "sdmc:/config/ultrahand/config.ini", "ultrahand", "in_overlay", "true");
+                            tsl::setNextOverlay(overlayFile,  "--overlay");
                             //envSetNextLoad(overlayPath, "");
                             tsl::Overlay::get()->close();
                             //inMainMenu = true;
@@ -696,6 +706,22 @@ public:
     }
 };
 
+
+
 int main(int argc, char* argv[]) {
+    //for (u8 arg = 0; arg < argc; arg++) {
+    //    if (strcasecmp(argv[arg], "--overlay") == 0) {
+    //         return tsl::loop<Overlay, tsl::impl::LaunchFlags::None>(argc, argv, true);
+    //    }
+    //}
+    
+    //if (inOverlay) {
+    //    inOverlay = false;
+    //    return tsl::loop<Overlay, tsl::impl::LaunchFlags::None>(argc, argv);
+    //}
+    //
+    //return tsl::loop<Overlay>(argc, argv);
+    
+    
     return tsl::loop<Overlay, tsl::impl::LaunchFlags::None>(argc, argv);
 }
