@@ -186,56 +186,6 @@ std::tuple<Result, std::string, std::string> getOverlayInfo(std::string filePath
     return { ResultSuccess, std::string(nacp.lang[0].name, std::strlen(nacp.lang[0].name)), std::string(nacp.display_version, std::strlen(nacp.display_version)) };
 }
 
-struct PackageHeader {
-    std::string version;
-    std::string creator;
-};
-PackageHeader getPackageHeaderFromIni(const std::string& filePath) {
-    PackageHeader packageHeader;
-    std::string version = "";
-    std::string creator = "";
-    
-    FILE* file = fopen(filePath.c_str(), "r");
-    if (file == nullptr) {
-        packageHeader.version = version;
-        packageHeader.creator = creator;
-        return packageHeader;
-    }
-
-    constexpr size_t BufferSize = 131072; // Choose a larger buffer size for reading lines
-    char line[BufferSize];
-
-    const std::string versionPrefix = ";version=";
-    const std::string creatorPrefix = ";creator=";
-    const size_t versionPrefixLength = versionPrefix.length();
-    const size_t creatorPrefixLength = creatorPrefix.length();
-
-    while (fgets(line, sizeof(line), file)) {
-        std::string strLine(line);
-        size_t versionPos = strLine.find(versionPrefix);
-        if (versionPos != std::string::npos) {
-            versionPos += versionPrefixLength;
-            size_t endPos = strLine.find_first_of(" \t\r\n", versionPos);
-            version = strLine.substr(versionPos, endPos - versionPos);
-        }
-        size_t creatorPos = strLine.find(creatorPrefix);
-        if (creatorPos != std::string::npos) {
-            creatorPos += creatorPrefixLength;
-            size_t endPos = strLine.find_first_of(" \t\r\n", creatorPos);
-            creator = strLine.substr(creatorPos, endPos - creatorPos);
-        }
-
-        if (!version.empty() && !creator.empty()) {
-            break; // Both version and creator found, exit the loop
-        }
-    }
-
-    fclose(file);
-    
-    packageHeader.version = version;
-    packageHeader.creator = creator;
-    return packageHeader;
-}
 
 std::string getValueFromLine(const std::string& line) {
     std::size_t equalsPos = line.find('=');
@@ -833,6 +783,88 @@ void mirrorCopyFiles(const std::string& sourcePath, const std::string& targetPat
 
 
 // Ini Functions
+
+struct PackageHeader {
+    std::string version;
+    std::string creator;
+};
+PackageHeader getPackageHeaderFromIni(const std::string& filePath) {
+    PackageHeader packageHeader;
+    std::string version = "";
+    std::string creator = "";
+    
+    FILE* file = fopen(filePath.c_str(), "r");
+    if (file == nullptr) {
+        packageHeader.version = version;
+        packageHeader.creator = creator;
+        return packageHeader;
+    }
+
+    constexpr size_t BufferSize = 131072; // Choose a larger buffer size for reading lines
+    char line[BufferSize];
+
+    const std::string versionPrefix = ";version=";
+    const std::string creatorPrefix = ";creator=";
+    const size_t versionPrefixLength = versionPrefix.length();
+    const size_t creatorPrefixLength = creatorPrefix.length();
+
+    while (fgets(line, sizeof(line), file)) {
+        std::string strLine(line);
+        size_t versionPos = strLine.find(versionPrefix);
+        if (versionPos != std::string::npos) {
+            versionPos += versionPrefixLength;
+            size_t endPos = strLine.find_first_of(" \t\r\n", versionPos);
+            version = strLine.substr(versionPos, endPos - versionPos);
+        }
+        size_t creatorPos = strLine.find(creatorPrefix);
+        if (creatorPos != std::string::npos) {
+            creatorPos += creatorPrefixLength;
+            size_t endPos = strLine.find_first_of(" \t\r\n", creatorPos);
+            creator = strLine.substr(creatorPos, endPos - creatorPos);
+        }
+
+        if (!version.empty() && !creator.empty()) {
+            break; // Both version and creator found, exit the loop
+        }
+    }
+
+    fclose(file);
+    
+    packageHeader.version = version;
+    packageHeader.creator = creator;
+    return packageHeader;
+}
+
+// Custom utility function for parsing an ini file
+tsl::hlp::ini::IniData getParsedDataFromIniFile(const std::string& configIniPath) {
+    tsl::hlp::ini::IniData parsedData;
+    
+    // Open the INI file
+    FILE* configFileIn = fopen(configIniPath.c_str(), "r");
+    if (!configFileIn) {
+        return parsedData;
+    }
+
+    // Determine the size of the INI file
+    fseek(configFileIn, 0, SEEK_END);
+    long fileSize = ftell(configFileIn);
+    rewind(configFileIn);
+
+    // Read the contents of the INI file
+    char* fileData = new char[fileSize + 1];
+    fread(fileData, sizeof(char), fileSize, configFileIn);
+    fileData[fileSize] = '\0';  // Add null-terminator to create a C-string
+    fclose(configFileIn);
+
+    // Parse the INI data
+    std::string fileDataString(fileData, fileSize);
+    parsedData = tsl::hlp::ini::parseIni(fileDataString);
+    
+    delete[] fileData;
+    
+    return parsedData;
+}
+
 std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadOptionsFromIni(const std::string& configIniPath, bool makeConfig = false) {
     std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> options;
 
@@ -914,7 +946,17 @@ std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadO
 void setIniFile(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredValue, const std::string& desiredNewKey) {
     FILE* configFile = fopen(fileToEdit.c_str(), "r");
     if (!configFile) {
-        //printf("Failed to open the INI file.\n");
+        // The INI file doesn't exist, create a new file and add the section and key-value pair
+        configFile = fopen(fileToEdit.c_str(), "w");
+        if (!configFile) {
+            // Failed to create the file
+            // Handle the error accordingly
+            return;
+        }
+        fprintf(configFile, "\n[%s]\n", desiredSection.c_str());
+        fprintf(configFile, "%s = %s\n", desiredKey.c_str(), desiredValue.c_str());
+        fclose(configFile);
+        // printf("INI file created successfully.\n");
         return;
     }
 
@@ -996,6 +1038,7 @@ void setIniFileValue(const std::string& fileToEdit, const std::string& desiredSe
 void setIniFileKey(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredNewKey) {
     setIniFile(fileToEdit, desiredSection, desiredKey, "", desiredNewKey);
 }
+
 
 
 // Hex-editing commands
