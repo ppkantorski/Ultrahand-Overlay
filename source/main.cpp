@@ -465,18 +465,17 @@ public:
 };
 
 
-
 // Main menu
 class MainMenu : public tsl::Gui {
 private:
     std::string directoryPath = "sdmc:/config/ultrahand/";
     std::string overlayDirectory = "sdmc:/switch/.overlays/";
     std::string configIniPath = directoryPath + configFileName;
-    std::string fullPath, optionName;
+    std::string menuMode, fullPath, optionName;
     //bool inSubMenu = false; // Added boolean to track submenu state
     //bool inTextMenu = false;
 public:
-    MainMenu() {}
+    MainMenu(const std::string& menuMode) : menuMode(menuMode) {}
 
     virtual tsl::elm::Element* createUI() override {
         inMainMenu = true;
@@ -487,134 +486,136 @@ public:
         //loadOverlayFiles(list);
         
         int count = 0;
+        
+        if (menuMode == "overlays") {
+            // Load overlay files
+            std::vector<std::string> overlayFiles;
+            std::vector<std::string> files = getFilesListByWildcard(overlayDirectory+"*.ovl");
+            for (const auto& file : files) {
+                // Check if the file is an overlay file (*.ovl)
+                if (file.substr(file.length() - 4) == ".ovl" && getNameFromPath(file) != "ovlmenu.ovl") {
+                    overlayFiles.push_back(file);
+                }
+            }
+            std::sort(overlayFiles.begin(), overlayFiles.end()); // Sort overlay files alphabetically
 
-        // Load overlay files
-        std::vector<std::string> overlayFiles;
-        std::vector<std::string> files = getFilesListByWildcard(overlayDirectory+"*.ovl");
-        for (const auto& file : files) {
-            // Check if the file is an overlay file (*.ovl)
-            if (file.substr(file.length() - 4) == ".ovl" && getNameFromPath(file) != "ovlmenu.ovl") {
-                overlayFiles.push_back(file);
+            if (!overlayFiles.empty()) {
+            
+                for (const auto& overlayFile : overlayFiles) {
+                    if (getNameFromPath(overlayFile) == "ovlmenu.ovl")
+                        continue;
+
+                    // Get the path of the overlay file
+                    //std::string overlayPath = overlayDirectory + "/" + overlayFile;
+
+                    // Get the name and version of the overlay file
+                    auto [result, overlayName, overlayVersion] = getOverlayInfo(overlayFile);
+                    if (result != ResultSuccess)
+                        continue;
+
+                    // Create a new list item with the overlay name and version
+                    auto* listItem = new tsl::elm::ListItem(overlayName);
+                    listItem->setValue(overlayVersion, true);
+
+                    // Add a click listener to load the overlay when clicked upon
+                    listItem->setClickListener([overlayFile](s64 key) {
+                        if (key & KEY_A) {
+                            // Load the overlay here
+                            inMainMenu = false;
+                            inOverlay = true;
+                            tsl::setNextOverlay(overlayFile);
+                            //envSetNextLoad(overlayPath, "");
+                            tsl::Overlay::get()->close();
+                            //inMainMenu = true;
+                            return true;
+                        }
+                        return false;
+                    });
+
+                    if (count == 0) {
+                        list->addItem(new tsl::elm::CategoryHeader("Overlays"));
+                    }
+                    list->addItem(listItem);
+                    count++;
+                }
             }
         }
-        std::sort(overlayFiles.begin(), overlayFiles.end()); // Sort overlay files alphabetically
+        
+        if (menuMode == "packages") {
+            // Create the directory if it doesn't exist
+            createDirectory(directoryPath);
 
-        if (!overlayFiles.empty()) {
+            // Load options from INI file
+            std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> options = loadOptionsFromIni(configIniPath, true);
+        
+            count = 0;
+            // Load subdirectories
+            std::vector<std::string> subdirectories = getSubdirectories(directoryPath);
+            std::sort(subdirectories.begin(), subdirectories.end()); // Sort subdirectories alphabetically
+            for (const auto& subdirectory : subdirectories) {
+                std::string subdirectoryIcon = "";//"\u2605 "; // Use a folder icon (replace with the actual font icon)
+                PackageHeader packageHeader = getPackageHeaderFromIni(directoryPath + subdirectory + "/"+ configFileName);
             
-            for (const auto& overlayFile : overlayFiles) {
-                if (getNameFromPath(overlayFile) == "ovlmenu.ovl")
-                    continue;
-
-                // Get the path of the overlay file
-                //std::string overlayPath = overlayDirectory + "/" + overlayFile;
-
-                // Get the name and version of the overlay file
-                auto [result, overlayName, overlayVersion] = getOverlayInfo(overlayFile);
-                if (result != ResultSuccess)
-                    continue;
-
-                // Create a new list item with the overlay name and version
-                auto* listItem = new tsl::elm::ListItem(overlayName);
-                listItem->setValue(overlayVersion, true);
-
-                // Add a click listener to load the overlay when clicked upon
-                listItem->setClickListener([overlayFile](s64 key) {
-                    if (key & KEY_A) {
-                        // Load the overlay here
+                if (count == 0) {
+                    // Add a section break with small text to indicate the "Packages" section
+                    list->addItem(new tsl::elm::CategoryHeader("Packages"));
+                }
+            
+                auto listItem = new tsl::elm::ListItem(subdirectoryIcon + subdirectory);
+                listItem->setValue(packageHeader.version, true);
+            
+                listItem->setClickListener([this, subPath = directoryPath + subdirectory](uint64_t keys) {
+                    if (keys & KEY_A) {
                         inMainMenu = false;
-                        inOverlay = true;
-                        tsl::setNextOverlay(overlayFile);
-                        //envSetNextLoad(overlayPath, "");
-                        tsl::Overlay::get()->close();
-                        //inMainMenu = true;
+                        tsl::changeTo<SubMenu>(subPath);
+                    
                         return true;
                     }
                     return false;
                 });
 
+                list->addItem(listItem);
+                count++;
+            }
+
+        
+            count = 0;
+            //std::string optionName;
+            // Populate the menu with options
+            for (const auto& option : options) {
+                optionName = option.first;
+            
+                // Check if it's a subdirectory
+                fullPath = directoryPath + optionName;
                 if (count == 0) {
-                    list->addItem(new tsl::elm::CategoryHeader("Overlays"));
+                    // Add a section break with small text to indicate the "Packages" section
+                    list->addItem(new tsl::elm::CategoryHeader("Commands"));
                 }
+            
+                auto listItem = new tsl::elm::ListItem(optionName);
+
+                listItem->setClickListener([this, command = option.second, subPath = optionName](uint64_t keys) {
+                    if (keys & KEY_A) {
+                        // Check if it's a subdirectory
+                        struct stat entryStat;
+                        std::string newPath = directoryPath + subPath;
+                        if (stat(fullPath.c_str(), &entryStat) == 0 && S_ISDIR(entryStat.st_mode)) {
+                            inMainMenu = false;
+                            tsl::changeTo<SubMenu>(newPath);
+                        } else {
+                            // Interpret and execute the command
+                            interpretAndExecuteCommand(command);
+                        }
+
+                        return true;
+                    }
+                    return false;
+                });
+
                 list->addItem(listItem);
                 count++;
             }
         }
-        
-        
-        // Create the directory if it doesn't exist
-        createDirectory(directoryPath);
-
-        // Load options from INI file
-        std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> options = loadOptionsFromIni(configIniPath, true);
-        
-        count = 0;
-        // Load subdirectories
-        std::vector<std::string> subdirectories = getSubdirectories(directoryPath);
-        std::sort(subdirectories.begin(), subdirectories.end()); // Sort subdirectories alphabetically
-        for (const auto& subdirectory : subdirectories) {
-            std::string subdirectoryIcon = "";//"\u2605 "; // Use a folder icon (replace with the actual font icon)
-            PackageHeader packageHeader = getPackageHeaderFromIni(directoryPath + subdirectory + "/"+ configFileName);
-            
-            if (count == 0) {
-                // Add a section break with small text to indicate the "Packages" section
-                list->addItem(new tsl::elm::CategoryHeader("Packages"));
-            }
-            
-            auto listItem = new tsl::elm::ListItem(subdirectoryIcon + subdirectory);
-            listItem->setValue(packageHeader.version, true);
-            
-            listItem->setClickListener([this, subPath = directoryPath + subdirectory](uint64_t keys) {
-                if (keys & KEY_A) {
-                    inMainMenu = false;
-                    tsl::changeTo<SubMenu>(subPath);
-                    
-                    return true;
-                }
-                return false;
-            });
-
-            list->addItem(listItem);
-            count++;
-        }
-
-        
-        count = 0;
-        //std::string optionName;
-        // Populate the menu with options
-        for (const auto& option : options) {
-            optionName = option.first;
-            
-            // Check if it's a subdirectory
-            fullPath = directoryPath + optionName;
-            if (count == 0) {
-                // Add a section break with small text to indicate the "Packages" section
-                list->addItem(new tsl::elm::CategoryHeader("Commands"));
-            }
-            
-            auto listItem = new tsl::elm::ListItem(optionName);
-
-            listItem->setClickListener([this, command = option.second, subPath = optionName](uint64_t keys) {
-                if (keys & KEY_A) {
-                    // Check if it's a subdirectory
-                    struct stat entryStat;
-                    std::string newPath = directoryPath + subPath;
-                    if (stat(fullPath.c_str(), &entryStat) == 0 && S_ISDIR(entryStat.st_mode)) {
-                        inMainMenu = false;
-                        tsl::changeTo<SubMenu>(newPath);
-                    } else {
-                        // Interpret and execute the command
-                        interpretAndExecuteCommand(command);
-                    }
-
-                    return true;
-                }
-                return false;
-            });
-
-            list->addItem(listItem);
-            count++;
-        }
-
 
         rootFrame->setContent(list);
 
@@ -623,6 +624,18 @@ public:
 
     virtual bool handleInput(uint64_t keysDown, uint64_t keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
         
+        if (inMainMenu && (keysHeld & KEY_RIGHT)) {
+            if (menuMode != "packages") {
+                tsl::changeTo<MainMenu>("packages");
+            }
+            return true;
+        }
+        if (inMainMenu && (keysHeld & KEY_LEFT)) {
+            if (menuMode != "overlays") {
+                tsl::changeTo<MainMenu>("overlays");
+            }
+            return true;
+        }
         if (inMainMenu && (keysHeld & KEY_B)) {
             inMainMenu = false;
             tsl::Overlay::get()->close();
@@ -657,7 +670,7 @@ public:
     virtual void onHide() override {}   // Called before overlay wants to change from visible to invisible state
 
     virtual std::unique_ptr<tsl::Gui> loadInitialGui() override {
-        return initially<MainMenu>();  // Initial Gui to load. It's possible to pass arguments to its constructor like this
+        return initially<MainMenu>("overlays");  // Initial Gui to load. It's possible to pass arguments to its constructor like this
     }
 };
 
