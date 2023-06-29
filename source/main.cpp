@@ -468,17 +468,35 @@ public:
 // Main menu
 class MainMenu : public tsl::Gui {
 private:
-    std::string directoryPath = "sdmc:/config/ultrahand/";
+    std::string settingsConfigIniPath = "sdmc:/config/ultrahand/config.ini";
+    tsl::hlp::ini::IniData settingsData;
+    std::string directoryPath = "sdmc:/switch/.packages/";
     std::string overlayDirectory = "sdmc:/switch/.overlays/";
     std::string configIniPath = directoryPath + configFileName;
     std::string menuMode, fullPath, optionName;
     //bool inSubMenu = false; // Added boolean to track submenu state
     //bool inTextMenu = false;
 public:
-    MainMenu(const std::string& menuMode) : menuMode(menuMode) {}
+    MainMenu() {}
 
     virtual tsl::elm::Element* createUI() override {
         inMainMenu = true;
+        menuMode = "overlay";
+        
+        bool settingsLoaded = false;
+        if (isFileOrDirectory(settingsConfigIniPath)) {
+            settingsData = getParsedDataFromIniFile(settingsConfigIniPath);
+            if (settingsData.count("ultrahand") > 0) {
+                auto& ultrahandSection = settingsData["ultrahand"];
+                if (ultrahandSection.count("last_menu") > 0) {
+                    menuMode = ultrahandSection["last_menu"];
+                    settingsLoaded = true;
+                }
+            }
+        }
+        if (!settingsLoaded) { // write data if settings are not loaded
+            setIniFileValue(settingsConfigIniPath, "ultrahand", "last_menu", menuMode);
+        }
         
         auto rootFrame = new tsl::elm::OverlayFrame("Ultrahand", APP_VERSION);
         auto list = new tsl::elm::List();
@@ -487,7 +505,7 @@ public:
         
         int count = 0;
         
-        if (menuMode == "overlays") {
+        if (menuMode == "overlay") {
             // Load overlay files
             std::vector<std::string> overlayFiles;
             std::vector<std::string> files = getFilesListByWildcard(overlayDirectory+"*.ovl");
@@ -541,7 +559,7 @@ public:
             }
         }
         
-        if (menuMode == "packages") {
+        if (menuMode == "package") {
             // Create the directory if it doesn't exist
             createDirectory(directoryPath);
 
@@ -624,22 +642,26 @@ public:
 
     virtual bool handleInput(uint64_t keysDown, uint64_t keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
         
-        if (inMainMenu && (keysHeld & KEY_RIGHT)) {
-            if (menuMode != "packages") {
-                tsl::changeTo<MainMenu>("packages");
+        if (inMainMenu){
+            if (keysHeld & KEY_RIGHT) {
+                if (menuMode != "package") {
+                    setIniFileValue(settingsConfigIniPath, "ultrahand", "last_menu", "package");
+                    tsl::changeTo<MainMenu>();
+                    return true;
+                }
             }
-            return true;
-        }
-        if (inMainMenu && (keysHeld & KEY_LEFT)) {
-            if (menuMode != "overlays") {
-                tsl::changeTo<MainMenu>("overlays");
+            if (keysHeld & KEY_LEFT) {
+                if (menuMode != "overlay") {
+                    setIniFileValue(settingsConfigIniPath, "ultrahand", "last_menu", "overlay");
+                    tsl::changeTo<MainMenu>();
+                    return true;
+                }
             }
-            return true;
-        }
-        if (inMainMenu && (keysHeld & KEY_B)) {
-            inMainMenu = false;
-            tsl::Overlay::get()->close();
-            return true;
+            if (keysHeld & KEY_B) {
+                inMainMenu = false;
+                tsl::Overlay::get()->close();
+                return true;
+            }
         }
         if (returningToMain){
             returningToMain = false;
@@ -670,7 +692,7 @@ public:
     virtual void onHide() override {}   // Called before overlay wants to change from visible to invisible state
 
     virtual std::unique_ptr<tsl::Gui> loadInitialGui() override {
-        return initially<MainMenu>("overlays");  // Initial Gui to load. It's possible to pass arguments to its constructor like this
+        return initially<MainMenu>();  // Initial Gui to load. It's possible to pass arguments to its constructor like this
     }
 };
 
