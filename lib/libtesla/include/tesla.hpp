@@ -69,6 +69,36 @@
 #include <map>
 
 
+// For loggging messages and debugging
+#include <ctime>
+void logMessage(const std::string& message) {
+    std::time_t currentTime = std::time(nullptr);
+    std::string logEntry = std::asctime(std::localtime(&currentTime));
+    // Find the last non-newline character
+    std::size_t lastNonNewline = logEntry.find_last_not_of("\r\n");
+
+    // Remove everything after the last non-newline character
+    if (lastNonNewline != std::string::npos) {
+        logEntry.erase(lastNonNewline + 1);
+    }
+    logEntry = "["+logEntry+"] ";
+    logEntry += message+"\n";
+
+    FILE* file = fopen("sdmc:/config/ultrahand/log.txt", "a");
+    if (file != nullptr) {
+        fputs(logEntry.c_str(), file);
+        fclose(file);
+    }
+}
+
+//bool isFileOrDirectory(const std::string& path) {
+//    struct stat buffer;
+//    return (stat(path.c_str(), &buffer) == 0);
+//}
+
+
+
+
 // Define this makro before including tesla.hpp in your main file. If you intend
 // to use the tesla.hpp header in more than one source file, only define it once!
 // #define TESLA_INIT_IMPL
@@ -3636,10 +3666,171 @@ namespace tsl {
      * @param argv argv
      * @return int result
      */
+    std::string trim(const std::string& str) {
+        size_t first = str.find_first_not_of(" \t\n\r\f\v");
+        size_t last = str.find_last_not_of(" \t\n\r\f\v");
+        if (first == std::string::npos || last == std::string::npos)
+            return "";
+        return str.substr(first, last - first + 1);
+    }
+    
+    std::string removeQuotes(const std::string& str) {
+        std::size_t firstQuote = str.find_first_of("'\"");
+        std::size_t lastQuote = str.find_last_of("'\"");
+        if (firstQuote != std::string::npos && lastQuote != std::string::npos && firstQuote < lastQuote) {
+            return str.substr(firstQuote + 1, lastQuote - firstQuote - 1);
+        }
+        return str;
+    }
+    std::string getValueFromLine(const std::string& line) {
+        std::size_t equalsPos = line.find('=');
+        if (equalsPos != std::string::npos) {
+            std::string value = line.substr(equalsPos + 1);
+            return trim(value);
+        }
+        return "";
+    }
+    
+    
+    // Custom utility function for parsing an ini file
+    tsl::hlp::ini::IniData getParsedDataFromIniFile(const std::string& configIniPath) {
+        tsl::hlp::ini::IniData parsedData;
+    
+        // Open the INI file
+        FILE* configFileIn = fopen(configIniPath.c_str(), "r");
+        if (!configFileIn) {
+            return parsedData;
+        }
+
+        // Determine the size of the INI file
+        fseek(configFileIn, 0, SEEK_END);
+        long fileSize = ftell(configFileIn);
+        rewind(configFileIn);
+
+        // Read the contents of the INI file
+        char* fileData = new char[fileSize + 1];
+        fread(fileData, sizeof(char), fileSize, configFileIn);
+        fileData[fileSize] = '\0';  // Add null-terminator to create a C-string
+        fclose(configFileIn);
+
+        // Parse the INI data
+        std::string fileDataString(fileData, fileSize);
+        parsedData = tsl::hlp::ini::parseIni(fileDataString);
+    
+        delete[] fileData;
+    
+        return parsedData;
+    }
+    
+    void setIniFile(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredValue, const std::string& desiredNewKey) {
+        FILE* configFile = fopen(fileToEdit.c_str(), "r");
+        if (!configFile) {
+            // The INI file doesn't exist, create a new file and add the section and key-value pair
+            configFile = fopen(fileToEdit.c_str(), "w");
+            if (!configFile) {
+                // Failed to create the file
+                // Handle the error accordingly
+                return;
+            }
+            fprintf(configFile, "[%s]\n", desiredSection.c_str());
+            fprintf(configFile, "%s = %s\n", desiredKey.c_str(), desiredValue.c_str());
+            fclose(configFile);
+            // printf("INI file created successfully.\n");
+            return;
+        }
+
+        std::string trimmedLine;
+        std::string tempPath = fileToEdit + ".tmp";
+        FILE* tempFile = fopen(tempPath.c_str(), "w");
+
+        if (tempFile) {
+            std::string currentSection;
+            std::string formattedDesiredValue = removeQuotes(desiredValue);
+            constexpr size_t BufferSize = 4096;
+            char line[BufferSize];
+            bool sectionFound = false;
+            bool sectionOutOfBounds = false;
+            bool keyFound = false;
+            while (fgets(line, sizeof(line), configFile)) {
+                trimmedLine = trim(std::string(line));
+
+                // Check if the line represents a section
+                if (trimmedLine[0] == '[' && trimmedLine[trimmedLine.length() - 1] == ']') {
+                    currentSection = removeQuotes(trim(std::string(trimmedLine.c_str() + 1, trimmedLine.length() - 2)));
+                
+                    if (sectionFound && (desiredNewKey.empty())) {
+                        // Write the modified line with the desired key and value
+                        formattedDesiredValue = removeQuotes(desiredValue);
+                        fprintf(tempFile, "%s = %s\n", desiredKey.c_str(), formattedDesiredValue.c_str());
+                        keyFound = true;
+                    }
+                
+                }
+
+                if (sectionFound && !keyFound && desiredNewKey.empty()) {
+                    if (trim(currentSection) != trim(desiredSection)) {
+                        fprintf(tempFile, "%s = %s\n", desiredKey.c_str(), formattedDesiredValue.c_str());
+                        keyFound = true;
+                    }
+                }
+
+                // Check if the line is in the desired section
+                if (trim(currentSection) == trim(desiredSection)) {
+                    sectionFound = true;
+                    // Tokenize the line based on "=" delimiter
+                    std::string::size_type delimiterPos = trimmedLine.find('=');
+                    if (delimiterPos != std::string::npos) {
+                        std::string lineKey = trim(trimmedLine.substr(0, delimiterPos));
+
+                        // Check if the line key matches the desired key
+                        if (lineKey == desiredKey) {
+                            keyFound = true;
+                            std::string originalValue = getValueFromLine(trimmedLine); // Extract the original value
+
+                            // Write the modified line with the desired key and value
+                            if (!desiredNewKey.empty()) {
+                                fprintf(tempFile, "%s = %s\n", desiredNewKey.c_str(), originalValue.c_str());
+                            } else {
+                                fprintf(tempFile, "%s = %s\n", desiredKey.c_str(), formattedDesiredValue.c_str());
+                            }
+                            continue; // Skip writing the original line
+                        }
+                    }
+                } 
+            
+
+                fprintf(tempFile, "%s", line);
+            }
+        
+            if (sectionFound && !keyFound && (desiredNewKey.empty())) {
+                // Write the modified line with the desired key and value
+                fprintf(tempFile, "%s = %s\n", desiredKey.c_str(), formattedDesiredValue.c_str());
+            }
+        
+            if (!sectionFound && !keyFound && desiredNewKey.empty()) {
+                // The desired section doesn't exist, so create it and add the key-value pair
+                fprintf(tempFile, "[%s]\n", desiredSection.c_str());
+                fprintf(tempFile, "%s = %s\n", desiredKey.c_str(), formattedDesiredValue.c_str());
+            }
+            fclose(configFile);
+            fclose(tempFile);
+            remove(fileToEdit.c_str()); // Delete the old configuration file
+            rename(tempPath.c_str(), fileToEdit.c_str()); // Rename the temp file to the original name
+
+            // printf("INI file updated successfully.\n");
+        } else {
+            // printf("Failed to create temporary file.\n");
+        }
+    }
+
+    void setIniFileValue(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredValue) {
+        setIniFile(fileToEdit, desiredSection, desiredKey, desiredValue, "");
+    }
+    
     template<typename TOverlay, impl::LaunchFlags launchFlags>
     static inline int loop(int argc, char** argv) {
         static_assert(std::is_base_of_v<tsl::Overlay, TOverlay>, "tsl::loop expects a type derived from tsl::Overlay");
-
+        
         impl::SharedThreadData shData;
 
         shData.running = true;
@@ -3667,11 +3858,30 @@ namespace tsl {
 
         // Argument parsing
         //for (u8 arg = 0; arg < argc; arg++) {
+        //    logMessage(std::string("argv[arg]: ") +argv[arg]);
         //    if (strcasecmp(argv[arg], "--skipCombo") == 0) {
         //        eventFire(&shData.comboEvent);
         //        overlay->disableNextAnimation();
+        //        //remove "--skipCombo" from argv
         //    }
         //}
+        
+        tsl::hlp::ini::IniData settingsData = getParsedDataFromIniFile( "sdmc:/config/ultrahand/config.ini");
+        bool inOverlay = false;
+        logMessage("test");
+        std::string inOverlayString = settingsData["ultrahand"]["in_overlay"];
+        logMessage(inOverlayString);
+        if (inOverlayString == "true") {
+            inOverlay = true;
+            setIniFileValue( "sdmc:/config/ultrahand/config.ini", "ultrahand", "in_overlay", "false");
+        }
+        
+        
+        
+        if (inOverlay) {
+            eventFire(&shData.comboEvent);
+            overlay->disableNextAnimation();
+        }
 
 
         while (shData.running) {
