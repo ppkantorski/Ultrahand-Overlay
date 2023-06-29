@@ -653,14 +653,14 @@ public:
     virtual bool handleInput(uint64_t keysDown, uint64_t keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
         
         if (inMainMenu){
-            if (keysHeld & KEY_RIGHT) {
+            if (keysHeld & KEY_DRIGHT) {
                 if (menuMode != "package") {
                     setIniFileValue(settingsConfigIniPath, "ultrahand", "last_menu", "package");
                     tsl::changeTo<MainMenu>();
                     return true;
                 }
             }
-            if (keysHeld & KEY_LEFT) {
+            if (keysHeld & KEY_DLEFT) {
                 if (menuMode != "overlay") {
                     setIniFileValue(settingsConfigIniPath, "ultrahand", "last_menu", "overlay");
                     tsl::changeTo<MainMenu>();
