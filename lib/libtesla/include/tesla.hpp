@@ -1694,9 +1694,9 @@ namespace tsl {
                 renderer->drawRect(15, tsl::cfg::FramebufferHeight - 73, tsl::cfg::FramebufferWidth - 30, 1, a(tsl::style::color::ColorText));
                 std::string menuBottomLine = "\uE0E1  Back     \uE0E0  OK     ";
                 if (this->m_menuMode == "package") {
-                    menuBottomLine += "\uE0ED Overlays";
+                    menuBottomLine += "\uE0ED  Overlays";
                 } else if (this->m_menuMode == "overlay") {
-                    menuBottomLine += "\uE0EE Packages";
+                    menuBottomLine += "\uE0EE  Packages";
                 }
                 
                 renderer->drawString(menuBottomLine.c_str(), false, 30, 693, 23, a(tsl::style::color::ColorText));
