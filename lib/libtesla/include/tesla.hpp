@@ -1647,7 +1647,8 @@ namespace tsl {
              * @param title Name of the Overlay drawn bolt at the top
              * @param subtitle Subtitle drawn bellow the title e.g version number
              */
-            OverlayFrame(const std::string& title, const std::string& subtitle) : Element(), m_title(title), m_subtitle(subtitle) {}
+            std::string m_menuMode; // Add m_menuMode member variable
+            OverlayFrame(const std::string& title, const std::string& subtitle, const std::string& menuMode="") : Element(), m_title(title), m_subtitle(subtitle), m_menuMode(menuMode) {}
             virtual ~OverlayFrame() {
                 if (this->m_contentElement != nullptr)
                     delete this->m_contentElement;
@@ -1657,7 +1658,7 @@ namespace tsl {
                 renderer->fillScreen(a(tsl::style::color::ColorFrameBackground));
                 renderer->drawRect(tsl::cfg::FramebufferWidth - 1, 0, 1, tsl::cfg::FramebufferHeight, a(0xF222));
                 
-                // Custom additions
+                // CUSTOM SECTION START
                 // Check if m_title is "Ultrahand"
                 if (this->m_title == "Ultrahand") {
                     std::string firstHalf = "Ultra";
@@ -1685,12 +1686,20 @@ namespace tsl {
                         renderer->drawString(this->m_title.c_str(), false, 20, 50, 30, a(tsl::style::color::ColorText));
                     }
                 }
+                // CUSTOM SECTION END
+                
                 
                 renderer->drawString(this->m_subtitle.c_str(), false, 20, 70, 15, a(tsl::style::color::ColorDescription));
 
                 renderer->drawRect(15, tsl::cfg::FramebufferHeight - 73, tsl::cfg::FramebufferWidth - 30, 1, a(tsl::style::color::ColorText));
-
-                renderer->drawString("\uE0E1  Back     \uE0E0  OK", false, 30, 693, 23, a(tsl::style::color::ColorText));
+                std::string menuBottomLine = "\uE0E1  Back     \uE0E0  OK     ";
+                if (this->m_menuMode == "package") {
+                    menuBottomLine += "\uE0ED Overlays";
+                } else if (this->m_menuMode == "overlay") {
+                    menuBottomLine += "\uE0EE Packages";
+                }
+                
+                renderer->drawString(menuBottomLine.c_str(), false, 30, 693, 23, a(tsl::style::color::ColorText));
 
                 if (this->m_contentElement != nullptr)
                     this->m_contentElement->frame(renderer);
@@ -3648,7 +3657,7 @@ namespace tsl {
         Overlay::get()->goBack();
     }
     
-    // from utils (needs to be moved)
+    // CUSTOM SECTION START
     std::string getNameFromPath(const std::string& path) {
         size_t lastSlash = path.find_last_of('/');
         if (lastSlash != std::string::npos) {
@@ -3665,11 +3674,12 @@ namespace tsl {
         }
         return path;
     }
-
+    // CUSTOM SECTION END
+    
     static void setNextOverlay(const std::string& ovlPath, std::string origArgs) {
 
         //std::string args = std::filesystem::path(ovlPath).filename();
-        std::string args = getNameFromPath(ovlPath);
+        std::string args = getNameFromPath(ovlPath); // CUSTOM MODIFICATION
         
         args += " " + origArgs + " --skipCombo";
 
@@ -3688,6 +3698,8 @@ namespace tsl {
      * @param argv argv
      * @return int result
      */
+    
+    // CUSTOM SECTION START
     std::string trim(const std::string& str) {
         size_t first = str.find_first_not_of(" \t\n\r\f\v");
         size_t last = str.find_last_not_of(" \t\n\r\f\v");
@@ -3849,6 +3861,8 @@ namespace tsl {
         setIniFile(fileToEdit, desiredSection, desiredKey, desiredValue, "");
     }
     
+    // CUSTOM SECTION END
+    
     template<typename TOverlay, impl::LaunchFlags launchFlags>
     static inline int loop(int argc, char** argv) {
         static_assert(std::is_base_of_v<tsl::Overlay, TOverlay>, "tsl::loop expects a type derived from tsl::Overlay");
@@ -3877,7 +3891,7 @@ namespace tsl {
         overlay->initScreen();
         overlay->changeTo(overlay->loadInitialGui());
 
-
+        // CUSTOM SECTION START
         // Argument parsing
         bool skipCombo = false;
         for (u8 arg = 0; arg < argc; arg++) {
@@ -3889,22 +3903,20 @@ namespace tsl {
         }
         
         tsl::hlp::ini::IniData settingsData = getParsedDataFromIniFile( "sdmc:/config/ultrahand/config.ini");
-        bool inOverlay = false;
-        //logMessage("test");
         std::string inOverlayString = settingsData["ultrahand"]["in_overlay"];
-        //logMessage(inOverlayString);
+        
+        bool inOverlay = false;
         if (inOverlayString == "true") {
             inOverlay = true;
             setIniFileValue( "sdmc:/config/ultrahand/config.ini", "ultrahand", "in_overlay", "false");
         }
         
         
-        
         if (inOverlay && skipCombo) {
             eventFire(&shData.comboEvent);
             overlay->disableNextAnimation();
         }
-
+        // CUSTOM SECTION END
 
         while (shData.running) {
 
