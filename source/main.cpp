@@ -347,7 +347,7 @@ public:
             if (optionName[0] == '*') { 
                 usePattern = true;
                 optionName = optionName.substr(1); // Strip the "*" character on the left
-                footer = ">";
+                footer = "\u25B6";
             }
             
             // Extract the path pattern from commands
@@ -513,7 +513,7 @@ public:
         }
         //setIniFileValue(settingsConfigIniPath, "ultrahand", "in_overlay", "false");
         
-        auto rootFrame = new tsl::elm::OverlayFrame("Ultrahand", APP_VERSION);
+        auto rootFrame = new tsl::elm::OverlayFrame("Ultrahand", APP_VERSION, menuMode);
         auto list = new tsl::elm::List();
 
         //loadOverlayFiles(list);
@@ -625,7 +625,15 @@ public:
                     // Add a section break with small text to indicate the "Packages" section
                     list->addItem(new tsl::elm::CategoryHeader("Commands"));
                 }
-            
+                
+                //std::string header;
+                //if ((optionName == "Shutdown")) {
+                //    header = "\uE0F3  ";
+                //}
+                //else if ((optionName == "Safe Reboot") || (optionName == "L4T Reboot")) {
+                //    header = "\u2194  ";
+                //}
+                //auto listItem = new tsl::elm::ListItem(header+optionName);
                 auto listItem = new tsl::elm::ListItem(optionName);
 
                 listItem->setClickListener([this, command = option.second, subPath = optionName](uint64_t keys) {
