@@ -7,6 +7,33 @@
 #define SpsmShutdownMode_Normal 0
 #define SpsmShutdownMode_Reboot 1
 
+#define KEY_A HidNpadButton_A
+#define KEY_B HidNpadButton_B
+#define KEY_X HidNpadButton_X
+#define KEY_Y HidNpadButton_Y
+#define KEY_L HidNpadButton_L
+#define KEY_R HidNpadButton_R
+#define KEY_ZL HidNpadButton_ZL
+#define KEY_ZR HidNpadButton_ZR
+#define KEY_PLUS HidNpadButton_Plus
+#define KEY_MINUS HidNpadButton_Minus
+#define KEY_DUP HidNpadButton_Up
+#define KEY_DDOWN HidNpadButton_Down
+#define KEY_DLEFT HidNpadButton_Left
+#define KEY_DRIGHT HidNpadButton_Right
+#define KEY_SL HidNpadButton_AnySL
+#define KEY_SR HidNpadButton_AnySR
+#define KEY_LSTICK HidNpadButton_StickL
+#define KEY_RSTICK HidNpadButton_StickR
+#define KEY_UP (HidNpadButton_Up | HidNpadButton_StickLUp | HidNpadButton_StickRUp)
+#define KEY_DOWN (HidNpadButton_Down | HidNpadButton_StickLDown | HidNpadButton_StickRDown)
+#define KEY_LEFT (HidNpadButton_Left | HidNpadButton_StickLLeft | HidNpadButton_StickRLeft)
+#define KEY_RIGHT (HidNpadButton_Right | HidNpadButton_StickLRight | HidNpadButton_StickRRight)
+#define touchPosition const HidTouchState
+#define touchInput &touchPos
+#define JoystickPosition HidAnalogStickState
+
+
 // For loggging messages and debugging
 //#include <ctime>
 //void logMessage(const std::string& message) {
@@ -210,6 +237,15 @@ std::string getNameFromPath(const std::string& path) {
             }
         }
         return name;
+    }
+    return path;
+}
+
+std::string getParentDirFromPath(const std::string& path) {
+    size_t lastSlash = path.find_last_of('/');
+    if (lastSlash != std::string::npos) {
+        std::string parentDir = path.substr(0, lastSlash + 1);
+        return parentDir;
     }
     return path;
 }
@@ -528,7 +564,7 @@ void mirrorDeleteFiles(const std::string& sourcePath, const std::string& targetP
 
 
 // Move functions
-bool moveFileOrDirectory(const std::string& sourcePath, const std::string& destinationPath) {
+void moveFileOrDirectory(const std::string& sourcePath, const std::string& destinationPath) {
     struct stat sourceInfo;
     struct stat destinationInfo;
     
@@ -553,7 +589,7 @@ bool moveFileOrDirectory(const std::string& sourcePath, const std::string& desti
             if (!dir) {
                 //logMessage("Failed to open source directory: "+sourcePath);
                 //printf("Failed to open source directory: %s\n", sourcePath.c_str());
-                return false;
+                return;
             }
 
             struct dirent* entry;
@@ -570,10 +606,7 @@ bool moveFileOrDirectory(const std::string& sourcePath, const std::string& desti
                         sourceFilePath += "/";
                     }
 
-                    if (!moveFileOrDirectory(sourceFilePath, destinationFilePath)) {
-                        closedir(dir);
-                        return false;
-                    }
+                    moveFileOrDirectory(sourceFilePath, destinationFilePath);
                 }
             }
 
@@ -582,7 +615,7 @@ bool moveFileOrDirectory(const std::string& sourcePath, const std::string& desti
             // Delete the source directory
             deleteFileOrDirectory(sourcePath);
 
-            return true;
+            return;
         } else {
             // Source path is a regular file
             std::string filename = getNameFromPath(sourcePath.c_str());
@@ -597,20 +630,22 @@ bool moveFileOrDirectory(const std::string& sourcePath, const std::string& desti
             //logMessage("sourcePath: "+sourcePath);
             //logMessage("destinationFilePath: "+destinationFilePath);
             
+            deleteFileOrDirectory(destinationFilePath); // delete destiantion file for overwriting
             if (rename(sourcePath.c_str(), destinationFilePath.c_str()) == -1) {
                 //printf("Failed to move file: %s\n", sourcePath.c_str());
                 //logMessage("Failed to move file: "+sourcePath);
-                return false;
+                return;
             }
 
-            return true;
+            return;
         }
     }
 
-    return false;  // Move unsuccessful or source file/directory doesn't exist
+    // Move unsuccessful or source file/directory doesn't exist
+    return;
 }
 
-bool moveFilesOrDirectoriesByPattern(const std::string& sourcePathPattern, const std::string& destinationPath) {
+void moveFilesOrDirectoriesByPattern(const std::string& sourcePathPattern, const std::string& destinationPath) {
     std::vector<std::string> fileList = getFilesListByWildcards(sourcePathPattern);
     
     std::string fileListAsString;
@@ -619,8 +654,6 @@ bool moveFilesOrDirectoriesByPattern(const std::string& sourcePathPattern, const
     }
     //logMessage("File List:\n" + fileListAsString);
     
-    
-    bool success = false;
     //logMessage("pre loop");
     // Iterate through the file list
     for (const std::string& sourceFileOrDirectory : fileList) {
@@ -628,7 +661,7 @@ bool moveFilesOrDirectoriesByPattern(const std::string& sourcePathPattern, const
         // if sourceFile is a file (Needs condition handling)
         if (!isDirectory(sourceFileOrDirectory)) {
             //logMessage("destinationPath: "+destinationPath);
-            success = moveFileOrDirectory(sourceFileOrDirectory.c_str(), destinationPath.c_str());
+            moveFileOrDirectory(sourceFileOrDirectory.c_str(), destinationPath.c_str());
         } else if (isDirectory(sourceFileOrDirectory)) {
             // if sourceFile is a directory (needs conditoin handling)
             std::string folderName = getNameFromPath(sourceFileOrDirectory);
@@ -636,12 +669,11 @@ bool moveFilesOrDirectoriesByPattern(const std::string& sourcePathPattern, const
         
             //logMessage("fixedDestinationPath: "+fixedDestinationPath);
         
-            success = moveFileOrDirectory(sourceFileOrDirectory.c_str(), fixedDestinationPath.c_str());
+            moveFileOrDirectory(sourceFileOrDirectory.c_str(), fixedDestinationPath.c_str());
         }
 
     }
     //logMessage("post loop");
-    return success;  // All files matching the pattern moved successfully
 }
 
 
@@ -778,6 +810,15 @@ void mirrorCopyFiles(const std::string& sourcePath, const std::string& targetPat
             //logMessage("mirror-copy: "+path+" "+updatedPath);
             copyFileOrDirectory(path, updatedPath);
         }
+    }
+}
+
+// Function to create a text file with the specified content
+void createTextFile(const std::string& filePath, const std::string& content) {
+    FILE* file = std::fopen(filePath.c_str(), "w");
+    if (file != nullptr) {
+        std::fwrite(content.c_str(), 1, content.length(), file);
+        std::fclose(file);
     }
 }
 
@@ -1466,25 +1507,12 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                 if (!isDangerousCombination(sourcePath)) {
                     if (sourcePath.find('*') != std::string::npos) {
                         // Move files by pattern
-                        if (moveFilesOrDirectoriesByPattern(sourcePath, destinationPath)) {
-                            //std::cout << "Files moved successfully." << std::endl;
-                            //logMessage( "Files moved successfully.");
-                        } else {
-                            //logMessage( "Failed to move files.");
-                            //std::cout << "Failed to move files." << std::endl;
-                        }
+                        moveFilesOrDirectoriesByPattern(sourcePath, destinationPath);
                     } else {
                         // Move single file or directory
-                        if (moveFileOrDirectory(sourcePath, destinationPath)) {
-                            //logMessage( "File or directory moved successfully.");
-                            //std::cout << "File or directory moved successfully." << std::endl;
-                        } else {
-                            //logMessage( "Failed to move file or directory.");
-                            //std::cout << "Failed to move file or directory." << std::endl;
-                        }
+                        moveFileOrDirectory(sourcePath, destinationPath);
                     }
-                }
-                else {
+                } else {
                     //logMessage( "Dangerous combo.");
                 }
             } else {
