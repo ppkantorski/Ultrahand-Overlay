@@ -624,10 +624,31 @@ public:
             count = 0;
             // Load subdirectories
             std::vector<std::string> subdirectories = getSubdirectories(packageDirectory);
+            
+            for (size_t i = 0; i < subdirectories.size(); ++i) {
+                std::string& subdirectory = subdirectories[i];
+                std::string subPath = packageDirectory + subdirectory + "/";
+                std::string starFilePath = subPath + ".star";
+            
+                if (isFileOrDirectory(starFilePath)) {
+                    // Add "0_" to subdirectory within subdirectories
+                    subdirectory = "0_" + subdirectory;
+                }
+            }
+            
             std::sort(subdirectories.begin(), subdirectories.end()); // Sort subdirectories alphabetically
-            for (const auto& subdirectory : subdirectories) {
-                std::string subdirectoryIcon = "";//"\u2605 "; // Use a folder icon (replace with the actual font icon)
-                PackageHeader packageHeader = getPackageHeaderFromIni(packageDirectory + subdirectory + "/"+ configFileName);
+            
+            
+            for (const auto& taintedSubdirectory : subdirectories) {
+                bool usingStar = false;
+                std::string subdirectory = taintedSubdirectory;
+                std::string subdirectoryIcon = "";
+                if (subdirectory.find("0_") == 0) {
+                    subdirectory = subdirectory.substr(2); // Remove "0_" from the beginning
+                    subdirectoryIcon = "\u2605 ";
+                }
+                std::string subPath = packageDirectory + subdirectory + "/";
+                PackageHeader packageHeader = getPackageHeaderFromIni(subPath + configFileName);
             
                 if (count == 0) {
                     // Add a section break with small text to indicate the "Packages" section
@@ -637,11 +658,20 @@ public:
                 auto listItem = new tsl::elm::ListItem(subdirectoryIcon + subdirectory);
                 listItem->setValue(packageHeader.version, true);
             
-                listItem->setClickListener([this, subPath = packageDirectory + subdirectory](uint64_t keys) {
+                listItem->setClickListener([this, subPath = packageDirectory + subdirectory + "/"](uint64_t keys) {
                     if (keys & KEY_A) {
                         inMainMenu = false;
                         tsl::changeTo<SubMenu>(subPath);
                     
+                        return true;
+                    } else if (keys & KEY_PLUS) {
+                        std::string starFilePath = subPath + ".star";
+                        if (isFileOrDirectory(starFilePath)) {
+                            deleteFileOrDirectory(starFilePath);
+                        } else {
+                            createTextFile(starFilePath, "");
+                        }
+                        tsl::changeTo<MainMenu>();
                         return true;
                     }
                     return false;
