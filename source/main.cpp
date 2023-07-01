@@ -525,6 +525,9 @@ public:
                 menuMode = defaultMenuMode.c_str();
                 freshSpawn = false;
             }
+        } else {
+            defaultMenuMode = "last_menu";
+            setIniFileValue(settingsConfigIniPath, "ultrahand", "default_menu", defaultMenuMode);
         }
         
         auto rootFrame = new tsl::elm::OverlayFrame("Ultrahand", APP_VERSION, menuMode);
