@@ -1664,9 +1664,9 @@ namespace tsl {
 
                 renderer->drawRect(15, tsl::cfg::FramebufferHeight - 73, tsl::cfg::FramebufferWidth - 30, 1, a(tsl::style::color::ColorText));
                 std::string menuBottomLine = "\uE0E1  Back     \uE0E0  OK     ";
-                if (this->m_menuMode == "package") {
+                if (this->m_menuMode == "packages") {
                     menuBottomLine += "\uE0ED  Overlays";
-                } else if (this->m_menuMode == "overlay") {
+                } else if (this->m_menuMode == "overlays") {
                     menuBottomLine += "\uE0EE  Packages";
                 }
                 
