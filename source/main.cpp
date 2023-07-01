@@ -582,6 +582,8 @@ public:
                                     moveFileOrDirectory(overlayFile, newFilePath);
                                 }
                             }
+                            tsl::changeTo<MainMenu>();
+                            return true;
                         }
                         return false;
                     });
