@@ -547,6 +547,14 @@ public:
                         continue;
 
                     // Create a new list item with the overlay name and version
+                    
+                    std::string fileName = getNameFromPath(overlayFile);
+                    if (!fileName.empty()) {
+                        if (fileName.substr(0, 2) == "0_") {
+                            overlayName = "\u2605 "+overlayName;
+                        }
+                    }
+                    
                     auto* listItem = new tsl::elm::ListItem(overlayName);
                     listItem->setValue(overlayVersion, true);
 
@@ -562,6 +570,18 @@ public:
                             tsl::Overlay::get()->close();
                             //inMainMenu = true;
                             return true;
+                        } else if (key & KEY_PLUS) {
+                            std::string fileName = getNameFromPath(overlayFile);
+                            if (!fileName.empty()) {
+                                if (fileName.substr(0, 2) != "0_") {
+                                    std::string newFilePath = getParentDirFromPath(overlayFile) + "0_" + fileName;
+                                    moveFileOrDirectory(overlayFile, newFilePath);
+                                } else {
+                                    fileName = fileName.substr(2); // Remove "0_" from fileName
+                                    std::string newFilePath = getParentDirFromPath(overlayFile) + fileName;
+                                    moveFileOrDirectory(overlayFile, newFilePath);
+                                }
+                            }
                         }
                         return false;
                     });
