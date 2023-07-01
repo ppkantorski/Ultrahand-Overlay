@@ -15,10 +15,14 @@ bool inOverlay = false;
 bool inSubMenu = false;
 bool inConfigMenu = false;
 bool inSelectionMenu = false;
+bool freshSpawn = true;
 
 const std::string configFileName = "config.ini";
 
-
+std::string settingsPath = "sdmc:/config/ultrahand/";
+std::string settingsConfigIniPath = settingsPath + "config.ini";
+std::string packageDirectory = "sdmc:/switch/.packages/";
+std::string overlayDirectory = "sdmc:/switch/.overlays/";
 
 // Helper function to handle overlay menu input
 //bool handleOverlayMenuInput(bool& inMenu, u64 keysHeld, u64 backKey, uint64_t sleepTime = 300'000'000) {
@@ -468,13 +472,10 @@ public:
 // Main menu
 class MainMenu : public tsl::Gui {
 private:
-    std::string settingsPath = "sdmc:/config/ultrahand/";
-    std::string settingsConfigIniPath = settingsPath +"config.ini";
     tsl::hlp::ini::IniData settingsData;
-    std::string directoryPath = "sdmc:/switch/.packages/";
-    std::string overlayDirectory = "sdmc:/switch/.overlays/";
-    std::string configIniPath = directoryPath + configFileName;
-    std::string menuMode, inOverlayString, fullPath, optionName;
+    std::string configIniPath = packageDirectory + configFileName;
+    std::string menuMode, defaultMenuMode, inOverlayString, fullPath, optionName;
+    bool useDefaultMenu = false;
     //bool inSubMenu = false; // Added boolean to track submenu state
     //bool inTextMenu = false;
 public:
@@ -482,9 +483,10 @@ public:
 
     virtual tsl::elm::Element* createUI() override {
         inMainMenu = true;
-        menuMode = "overlay";
+        defaultMenuMode = "last_menu";
+        menuMode = defaultMenuMode.c_str();
         
-        createDirectory(directoryPath);
+        createDirectory(packageDirectory);
         createDirectory(settingsPath);
         
         bool settingsLoaded = false;
@@ -494,8 +496,11 @@ public:
                 auto& ultrahandSection = settingsData["ultrahand"];
                 if (ultrahandSection.count("last_menu") > 0) {
                     menuMode = ultrahandSection["last_menu"];
-                    if (ultrahandSection.count("in_overlay") > 0) {
-                        settingsLoaded = true;
+                    if (ultrahandSection.count("default_menu") > 0) {
+                        defaultMenuMode = ultrahandSection["default_menu"];
+                        if (ultrahandSection.count("in_overlay") > 0) {
+                            settingsLoaded = true;
+                        }
                     }
                 }
                 //if (ultrahandSection.count("in_overlay") > 0) {
@@ -508,10 +513,19 @@ public:
             }
         }
         if (!settingsLoaded) { // write data if settings are not loaded
+            setIniFileValue(settingsConfigIniPath, "ultrahand", "default_menu", defaultMenuMode);
             setIniFileValue(settingsConfigIniPath, "ultrahand", "last_menu", menuMode);
             setIniFileValue(settingsConfigIniPath, "ultrahand", "in_overlay", "false");
         }
         //setIniFileValue(settingsConfigIniPath, "ultrahand", "in_overlay", "false");
+        
+        
+        if ((defaultMenuMode == "overlays") || (defaultMenuMode == "packages")) {
+            if (freshSpawn) {
+                menuMode = defaultMenuMode.c_str();
+                freshSpawn = false;
+            }
+        }
         
         auto rootFrame = new tsl::elm::OverlayFrame("Ultrahand", APP_VERSION, menuMode);
         auto list = new tsl::elm::List();
@@ -520,7 +534,7 @@ public:
         
         int count = 0;
         
-        if (menuMode == "overlay") {
+        if (menuMode == "overlays") {
             // Load overlay files
             std::vector<std::string> overlayFiles;
             std::vector<std::string> files = getFilesListByWildcard(overlayDirectory+"*.ovl");
@@ -564,8 +578,8 @@ public:
                             // Load the overlay here
                             inMainMenu = false;
                             inOverlay = true;
-                            setIniFileValue( "sdmc:/config/ultrahand/config.ini", "ultrahand", "in_overlay", "true");
-                            tsl::setNextOverlay(overlayFile,  "--overlay");
+                            setIniFileValue(settingsConfigIniPath, "ultrahand", "in_overlay", "true");
+                            tsl::setNextOverlay(overlayFile);
                             //envSetNextLoad(overlayPath, "");
                             tsl::Overlay::get()->close();
                             //inMainMenu = true;
@@ -597,20 +611,20 @@ public:
             }
         }
         
-        if (menuMode == "package") {
+        if (menuMode == "packages") {
             // Create the directory if it doesn't exist
-            createDirectory(directoryPath);
+            createDirectory(packageDirectory);
 
             // Load options from INI file
             std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> options = loadOptionsFromIni(configIniPath, true);
         
             count = 0;
             // Load subdirectories
-            std::vector<std::string> subdirectories = getSubdirectories(directoryPath);
+            std::vector<std::string> subdirectories = getSubdirectories(packageDirectory);
             std::sort(subdirectories.begin(), subdirectories.end()); // Sort subdirectories alphabetically
             for (const auto& subdirectory : subdirectories) {
                 std::string subdirectoryIcon = "";//"\u2605 "; // Use a folder icon (replace with the actual font icon)
-                PackageHeader packageHeader = getPackageHeaderFromIni(directoryPath + subdirectory + "/"+ configFileName);
+                PackageHeader packageHeader = getPackageHeaderFromIni(packageDirectory + subdirectory + "/"+ configFileName);
             
                 if (count == 0) {
                     // Add a section break with small text to indicate the "Packages" section
@@ -620,7 +634,7 @@ public:
                 auto listItem = new tsl::elm::ListItem(subdirectoryIcon + subdirectory);
                 listItem->setValue(packageHeader.version, true);
             
-                listItem->setClickListener([this, subPath = directoryPath + subdirectory](uint64_t keys) {
+                listItem->setClickListener([this, subPath = packageDirectory + subdirectory](uint64_t keys) {
                     if (keys & KEY_A) {
                         inMainMenu = false;
                         tsl::changeTo<SubMenu>(subPath);
@@ -642,7 +656,7 @@ public:
                 optionName = option.first;
             
                 // Check if it's a subdirectory
-                fullPath = directoryPath + optionName;
+                fullPath = packageDirectory + optionName;
                 if (count == 0) {
                     // Add a section break with small text to indicate the "Packages" section
                     list->addItem(new tsl::elm::CategoryHeader("Commands"));
@@ -662,7 +676,7 @@ public:
                     if (keys & KEY_A) {
                         // Check if it's a subdirectory
                         struct stat entryStat;
-                        std::string newPath = directoryPath + subPath;
+                        std::string newPath = packageDirectory + subPath;
                         if (stat(fullPath.c_str(), &entryStat) == 0 && S_ISDIR(entryStat.st_mode)) {
                             inMainMenu = false;
                             tsl::changeTo<SubMenu>(newPath);
@@ -690,15 +704,15 @@ public:
         
         if (inMainMenu){
             if (keysHeld & KEY_DRIGHT) {
-                if (menuMode != "package") {
-                    setIniFileValue(settingsConfigIniPath, "ultrahand", "last_menu", "package");
+                if (menuMode != "packages") {
+                    setIniFileValue(settingsConfigIniPath, "ultrahand", "last_menu", "packages");
                     tsl::changeTo<MainMenu>();
                     return true;
                 }
             }
             if (keysHeld & KEY_DLEFT) {
-                if (menuMode != "overlay") {
-                    setIniFileValue(settingsConfigIniPath, "ultrahand", "last_menu", "overlay");
+                if (menuMode != "overlays") {
+                    setIniFileValue(settingsConfigIniPath, "ultrahand", "last_menu", "overlays");
                     tsl::changeTo<MainMenu>();
                     return true;
                 }
