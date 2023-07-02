@@ -19,7 +19,6 @@
 
 #pragma once
 
-
 #include <switch.h>
 
 #include <stdlib.h>
@@ -38,41 +37,7 @@
 #include <list>
 #include <stack>
 #include <map>
-
-#include "../../../source/get_funcs.hpp"
-#include "../../../source/string_funcs.hpp"
-#include "../../../source/ini_funcs.hpp"
-
-
-// For loggging messages and debugging
-//#include <ctime>
-//void logMessage(const std::string& message) {
-//    std::time_t currentTime = std::time(nullptr);
-//    std::string logEntry = std::asctime(std::localtime(&currentTime));
-//    // Find the last non-newline character
-//    std::size_t lastNonNewline = logEntry.find_last_not_of("\r\n");
-//
-//    // Remove everything after the last non-newline character
-//    if (lastNonNewline != std::string::npos) {
-//        logEntry.erase(lastNonNewline + 1);
-//    }
-//    logEntry = "["+logEntry+"] ";
-//    logEntry += message+"\n";
-//
-//    FILE* file = fopen("sdmc:/config/ultrahand/log.txt", "a");
-//    if (file != nullptr) {
-//        fputs(logEntry.c_str(), file);
-//        fclose(file);
-//    }
-//}
-
-//bool isFileOrDirectory(const std::string& path) {
-//    struct stat buffer;
-//    return (stat(path.c_str(), &buffer) == 0);
-//}
-
-
-
+#include <filesystem>
 
 // Define this makro before including tesla.hpp in your main file. If you intend
 // to use the tesla.hpp header in more than one source file, only define it once!
@@ -187,10 +152,6 @@ namespace tsl {
     };
 
     class Overlay;
-    
-    
-    
-    
     namespace elm { class Element; }
 
     namespace impl {
@@ -249,7 +210,8 @@ namespace tsl {
          *
          * @param f wrapped function
          */
-        static inline void doWithSmSession(std::function<void()> f) {
+        template<typename F>
+        static inline void doWithSmSession(F f) {
             smInitialize();
             f();
             smExit();
@@ -261,7 +223,8 @@ namespace tsl {
          *
          * @param f wrapped function
          */
-        static inline void doWithSDCardHandle(std::function<void()> f) {
+        template<typename F>
+        static inline void doWithSDCardHandle(F f) {
             fsdevMountSdmc();
             f();
             fsdevUnmountDevice("sdmc");
@@ -272,15 +235,17 @@ namespace tsl {
          *
          * @param f wrapped function
          */
+        template<typename F>
         class ScopeGuard {
             ScopeGuard(const ScopeGuard&) = delete;
             ScopeGuard& operator=(const ScopeGuard&) = delete;
             private:
-                std::function<void()> f;
+                F f;
+                bool canceled = false;
             public:
-                ALWAYS_INLINE ScopeGuard(std::function<void()> f) : f(std::move(f)) { }
-                ALWAYS_INLINE ~ScopeGuard() { if (f) { f(); } }
-                void dismiss() { f = nullptr; }
+                ALWAYS_INLINE ScopeGuard(F f) : f(std::move(f)) { }
+                ALWAYS_INLINE ~ScopeGuard() { if (!canceled) { f(); } }
+                void dismiss() { canceled = true; }
         };
 
         /**
@@ -569,26 +534,14 @@ namespace tsl {
              * @param h Height
              */
             inline void enableScissoring(s32 x, s32 y, s32 w, s32 h) {
-                if (this->m_scissoring)
-                    this->m_scissoringStack.push_back(this->m_currScissorConfig);
-                else
-                    this->m_scissoring = true;
-
-                this->m_currScissorConfig = { x, y, w, h };
+                this->m_scissoringStack.emplace(x, y, w, h);
             }
 
             /**
              * @brief Disables scissoring
              */
             inline void disableScissoring() {
-                if (this->m_scissoringStack.size() > 0) {
-                    this->m_currScissorConfig = this->m_scissoringStack.back();
-                    this->m_scissoringStack.pop_back();
-                }
-                else {
-                    this->m_scissoring = false;
-                    this->m_currScissorConfig = { 0 };
-                }
+                this->m_scissoringStack.pop();
             }
 
 
@@ -836,7 +789,7 @@ namespace tsl {
                         continue;
                     }
 
-                    u64 key = (static_cast<u64>(currCharacter) << 32) | static_cast<u64>(std::bit_cast<u32>(fontSize));
+                    u64 key = (static_cast<u64>(currCharacter) << 32) | static_cast<u64>(monospace) << 31 | static_cast<u64>(std::bit_cast<u32>(fontSize));
 
                     Glyph *glyph = nullptr;
 
@@ -975,9 +928,7 @@ namespace tsl {
             Framebuffer m_framebuffer;
             void *m_currentFramebuffer = nullptr;
 
-            bool m_scissoring = false;
-            ScissoringConfig m_currScissorConfig;
-            std::vector<ScissoringConfig> m_scissoringStack;
+            std::stack<ScissoringConfig> m_scissoringStack;
 
             stbtt_fontinfo m_stdFont, m_localFont, m_extFont;
             bool m_hasLocalFont = false;
@@ -1054,11 +1005,12 @@ namespace tsl {
              * @return Offset
              */
             u32 getPixelOffset(s32 x, s32 y) {
-                if (this->m_scissoring) {
-                    if (x < this->m_currScissorConfig.x ||
-                        y < this->m_currScissorConfig.y ||
-                        x > this->m_currScissorConfig.x + this->m_currScissorConfig.w ||
-                        y > this->m_currScissorConfig.y + this->m_currScissorConfig.h)
+                if (!this->m_scissoringStack.empty()) {
+                    auto currScissorConfig = this->m_scissoringStack.top();
+                    if (x < currScissorConfig.x ||
+                        y < currScissorConfig.y ||
+                        x > currScissorConfig.x + currScissorConfig.w ||
+                        y > currScissorConfig.y + currScissorConfig.h)
                             return UINT32_MAX;
                 }
 
@@ -1154,7 +1106,7 @@ namespace tsl {
                     // Check if need localization font
                     SetLanguage setLanguage;
                     TSL_R_TRY(setMakeLanguage(languageCode, &setLanguage));
-                    this->m_hasLocalFont = true; 
+                    this->m_hasLocalFont = true;
                     switch (setLanguage) {
                     case SetLanguage_ZHCN:
                     case SetLanguage_ZHHANS:
@@ -1168,7 +1120,7 @@ namespace tsl {
                         TSL_R_TRY(plGetSharedFontByType(&localFontData, PlSharedFontType_ChineseTraditional));
                         break;
                     default:
-                        this->m_hasLocalFont = false; 
+                        this->m_hasLocalFont = false;
                         break;
                     }
 
@@ -1176,7 +1128,7 @@ namespace tsl {
                         fontBuffer = reinterpret_cast<u8*>(localFontData.address);
                         stbtt_InitFont(&this->m_localFont, fontBuffer, stbtt_GetFontOffsetForIndex(fontBuffer, 0));
                     }
-                }                
+                }
 
                 // Nintendo's extended font containing a bunch of icons
                 TSL_R_TRY(plGetSharedFontByType(&extFontData, PlSharedFontType_NintendoExt));
@@ -1307,7 +1259,7 @@ namespace tsl {
              *
              * @param renderer
              */
-            virtual void frame(gfx::Renderer *renderer) final {
+            void frame(gfx::Renderer *renderer) {
                 renderer->enableScissoring(0, 0, tsl::cfg::FramebufferWidth, tsl::cfg::FramebufferHeight);
 
                 if (this->m_focused)
@@ -1329,7 +1281,7 @@ namespace tsl {
              * @brief Forces a layout recreation of a element
              *
              */
-            virtual void invalidate() final {
+            void invalidate() {
                 const auto& parent = this->getParent();
 
                 if (parent == nullptr)
@@ -1343,7 +1295,7 @@ namespace tsl {
              *
              * @param direction Direction to shake highlight in
              */
-            virtual void shakeHighlight(FocusDirection direction) final {
+            void shakeHighlight(FocusDirection direction) {
                 this->m_highlightShaking = true;
                 this->m_highlightShakingDirection = direction;
                 this->m_highlightShakingStartTime = std::chrono::system_clock::now();
@@ -1353,14 +1305,14 @@ namespace tsl {
              * @brief Triggers the blue click animation to signal a element has been clicked on
              *
              */
-            virtual void triggerClickAnimation() final {
+            void triggerClickAnimation() {
                 this->m_clickAnimationProgress = tsl::style::ListItemHighlightLength;
             }
 
             /**
              * @brief Resets the click animation progress, canceling the animation
              */
-            virtual void resetClickAnimation() final {
+            void resetClickAnimation() {
                 this->m_clickAnimationProgress = 0;
             }
 
@@ -1621,8 +1573,7 @@ namespace tsl {
              * @param title Name of the Overlay drawn bolt at the top
              * @param subtitle Subtitle drawn bellow the title e.g version number
              */
-            std::string m_menuMode; // Add m_menuMode member variable
-            OverlayFrame(const std::string& title, const std::string& subtitle, const std::string& menuMode="") : Element(), m_title(title), m_subtitle(subtitle), m_menuMode(menuMode) {}
+            OverlayFrame(const std::string& title, const std::string& subtitle) : Element(), m_title(title), m_subtitle(subtitle) {}
             virtual ~OverlayFrame() {
                 if (this->m_contentElement != nullptr)
                     delete this->m_contentElement;
@@ -1631,53 +1582,17 @@ namespace tsl {
             virtual void draw(gfx::Renderer *renderer) override {
                 renderer->fillScreen(a(tsl::style::color::ColorFrameBackground));
                 renderer->drawRect(tsl::cfg::FramebufferWidth - 1, 0, 1, tsl::cfg::FramebufferHeight, a(0xF222));
-                
-                // CUSTOM SECTION START
-                // Check if m_title is "Ultrahand"
-                if (this->m_title == "Ultrahand") {
-                    std::string firstHalf = "Ultra";
-                    std::string secondHalf = "hand";
 
-                    int x1 = 20;
-                    int y = 50;
-                    int fontSize = 30;
-
-                    // Draw the first half of the string in white color
-                    renderer->drawString(firstHalf.c_str(), false, x1, y, fontSize, tsl::Color(0xFF, 0xFF, 0xFF, 0xFF));
-
-                    // Calculate the position for the second half based on the width of the first half
-                    int x2 = x1 + (firstHalf.length() * fontSize)/2 -2;
-
-                    // Draw the second half of the string in red color
-                    renderer->drawString(secondHalf.c_str(), false, x2, y, fontSize, tsl::Color(0xFF, 0x00, 0x00, 0xFF));
-                }
-                else {
-                    if (this->m_subtitle == "Ultrahand Package") {
-                        renderer->drawString(this->m_title.c_str(), false, 20, 50, 30, a(Color(0x00, 0xFF, 0x00, 0xFF)));
-                    } else if (this->m_subtitle == "Ultrahand Config") {
-                        renderer->drawString(this->m_title.c_str(), false, 20, 50, 30, a(Color(0xFF, 0x33, 0x3F, 0xFF)));
-                    } else {
-                        renderer->drawString(this->m_title.c_str(), false, 20, 50, 30, a(tsl::style::color::ColorText));
-                    }
-                }
-                
-                
+                renderer->drawString(this->m_title.c_str(), false, 20, 50, 30, a(tsl::style::color::ColorText));
                 renderer->drawString(this->m_subtitle.c_str(), false, 20, 70, 15, a(tsl::style::color::ColorDescription));
 
                 renderer->drawRect(15, tsl::cfg::FramebufferHeight - 73, tsl::cfg::FramebufferWidth - 30, 1, a(tsl::style::color::ColorText));
-                std::string menuBottomLine = "\uE0E1  Back     \uE0E0  OK     ";
-                if (this->m_menuMode == "packages") {
-                    menuBottomLine += "\uE0ED  Overlays";
-                } else if (this->m_menuMode == "overlays") {
-                    menuBottomLine += "\uE0EE  Packages";
-                }
-                
-                renderer->drawString(menuBottomLine.c_str(), false, 30, 693, 23, a(tsl::style::color::ColorText));
+
+                renderer->drawString("\uE0E1  Back     \uE0E0  OK", false, 30, 693, 23, a(tsl::style::color::ColorText));
 
                 if (this->m_contentElement != nullptr)
                     this->m_contentElement->frame(renderer);
             }
-            // CUSTOM SECTION END
 
             virtual void layout(u16 parentX, u16 parentY, u16 parentWidth, u16 parentHeight) override {
                 this->setBoundaries(parentX, parentY, parentWidth, parentHeight);
@@ -1710,7 +1625,7 @@ namespace tsl {
              *
              * @param content Element
              */
-            virtual void setContent(Element *content) final {
+            void setContent(Element *content) {
                 if (this->m_contentElement != nullptr)
                     delete this->m_contentElement;
 
@@ -1727,7 +1642,7 @@ namespace tsl {
              *
              * @param title Title to change to
              */
-            virtual void setTitle(const std::string &title) final {
+            void setTitle(const std::string &title) {
                 this->m_title = title;
             }
 
@@ -1736,7 +1651,7 @@ namespace tsl {
              *
              * @param title Subtitle to change to
              */
-            virtual void setSubtitle(const std::string &subtitle) final {
+            void setSubtitle(const std::string &subtitle) {
                 this->m_subtitle = subtitle;
             }
 
@@ -1812,7 +1727,7 @@ namespace tsl {
              *
              * @param content Element
              */
-            virtual void setContent(Element *content) final {
+            void setContent(Element *content) {
                 if (this->m_contentElement != nullptr)
                     delete this->m_contentElement;
 
@@ -1829,7 +1744,7 @@ namespace tsl {
              *
              * @param header Header custom drawer
              */
-            virtual void setHeader(CustomDrawer *header) final {
+            void setHeader(CustomDrawer *header) {
                 if (this->m_header != nullptr)
                     delete this->m_header;
 
@@ -2013,7 +1928,7 @@ namespace tsl {
              * @param index Index in the list where the item should be inserted. -1 or greater list size will insert it at the end
              * @param height Height of the element. Don't set this parameter for libtesla to try and figure out the size based on the type
              */
-            virtual void addItem(Element *element, u16 height = 0, ssize_t index = -1) final {
+            void addItem(Element *element, u16 height = 0, ssize_t index = -1) {
                 if (element != nullptr) {
                     if (height != 0)
                         element->setBoundaries(this->getX(), this->getY(), this->getWidth(), height);
@@ -2050,7 +1965,7 @@ namespace tsl {
              * @brief Removes all children from the list later on
              * @warning When clearing a list, make sure none of the its children are focused. Call \ref Gui::removeFocus before.
              */
-            virtual void clear() final {
+            void clear() {
                 this->m_clearList = true;
             }
 
@@ -2261,14 +2176,8 @@ namespace tsl {
                 } else {
                     renderer->drawString(this->m_text.c_str(), false, this->getX() + 20, this->getY() + 45, 23, a(tsl::style::color::ColorText));
                 }
-                
-                // Custom modification for submenu footer color
-                if (this->m_value == "\u25B6") {
-                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45, this->getY() + 45, 20, this->m_faint ? a(tsl::style::color::ColorDescription) : a(tsl::Color(0xFF, 0xFF, 0xFF, 0xFF)));
-                } else {
-                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45, this->getY() + 45, 20, this->m_faint ? a(tsl::style::color::ColorDescription) : a(tsl::style::color::ColorHighlight));
-                }
-                
+
+                renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45, this->getY() + 45, 20, this->m_faint ? a(tsl::style::color::ColorDescription) : a(tsl::style::color::ColorHighlight));
             }
 
             virtual void layout(u16 parentX, u16 parentY, u16 parentWidth, u16 parentHeight) override {
@@ -2450,40 +2359,6 @@ namespace tsl {
 
             std::function<void(bool)> m_stateChangedListener = [](bool){};
         };
-
-        class ListText : public Element {
-        public:
-            ListText(const std::string& text) : m_text(text) {}
-
-            virtual void draw(gfx::Renderer* renderer) override {
-                renderer->drawString(m_text.c_str(), false, getX(), getY(), 15, a(tsl::style::color::ColorText));
-            }
-
-            virtual void layout(u16 parentX, u16 parentY, u16 parentWidth, u16 parentHeight) override {
-                setBoundaries(getX(), getY(), getWidth(), tsl::style::ListItemDefaultHeight);
-            }
-
-            virtual bool onClick(u64 keys) override {
-                return false;
-            }
-
-            virtual Element* requestFocus(Element* oldFocus, FocusDirection direction) override {
-                return nullptr;
-            }
-
-            inline void setText(const std::string& text) {
-                m_text = text;
-            }
-
-            inline const std::string& getText() const {
-                return m_text;
-            }
-
-        private:
-            std::string m_text;
-        };
-
-        
 
         class CategoryHeader : public Element {
         public:
@@ -2896,7 +2771,7 @@ namespace tsl {
          *
          * @return Top level element
          */
-        virtual elm::Element* getTopElement() final {
+        elm::Element* getTopElement() {
             return this->m_topElement;
         }
 
@@ -2905,7 +2780,7 @@ namespace tsl {
          *
          * @return Focused element
          */
-        virtual elm::Element* getFocusedElement() final {
+        elm::Element* getFocusedElement() {
             return this->m_focusedElement;
         }
 
@@ -2916,7 +2791,7 @@ namespace tsl {
          * @param element Element to focus
          * @param direction Focus direction
          */
-        virtual void requestFocus(elm::Element *element, FocusDirection direction, bool shake = true) final {
+        void requestFocus(elm::Element *element, FocusDirection direction, bool shake = true) {
             elm::Element *oldFocus = this->m_focusedElement;
 
             if (element != nullptr) {
@@ -2939,7 +2814,7 @@ namespace tsl {
          *
          * @param element Element to remove focus from. Pass nullptr to remove the focus unconditionally
          */
-        virtual void removeFocus(elm::Element* element = nullptr) final {
+        void removeFocus(elm::Element* element = nullptr) {
             if (element == nullptr || element == this->m_focusedElement) {
                 if (this->m_focusedElement != nullptr) {
                     this->m_focusedElement->setFocused(false);
@@ -2948,7 +2823,7 @@ namespace tsl {
             }
         }
 
-        virtual void restoreFocus() final {
+        void restoreFocus() {
             this->m_initialFocusSet = false;
         }
 
@@ -2969,16 +2844,16 @@ namespace tsl {
          *
          * @param renderer
          */
-        virtual void draw(gfx::Renderer *renderer) final {
+        void draw(gfx::Renderer *renderer) {
             if (this->m_topElement != nullptr)
                 this->m_topElement->draw(renderer);
         }
 
-        virtual bool initialFocusSet() final {
+        bool initialFocusSet() {
             return this->m_initialFocusSet;
         }
 
-        virtual void markInitialFocusSet() final {
+        void markInitialFocusSet() {
             this->m_initialFocusSet = true;
         }
 
@@ -3044,7 +2919,7 @@ namespace tsl {
          *
          * @return Current Gui reference
          */
-        virtual std::unique_ptr<tsl::Gui>& getCurrentGui() final {
+        std::unique_ptr<tsl::Gui>& getCurrentGui() {
             return this->m_guiStack.top();
         }
 
@@ -3052,7 +2927,7 @@ namespace tsl {
          * @brief Shows the Gui
          *
          */
-        virtual void show() final {
+        void show() {
             if (this->m_disableNextAnimation) {
                 this->m_animationCounter = 5;
                 this->m_disableNextAnimation = false;
@@ -3072,7 +2947,7 @@ namespace tsl {
          * @brief Hides the Gui
          *
          */
-        virtual void hide() final {
+        void hide() {
             if (this->m_disableNextAnimation) {
                 this->m_animationCounter = 0;
                 this->m_disableNextAnimation = false;
@@ -3090,7 +2965,7 @@ namespace tsl {
          *
          * @return whether fade animation is playing
          */
-        virtual bool fadeAnimationPlaying() final {
+        bool fadeAnimationPlaying() {
             return this->m_fadeInAnimationPlaying || this->m_fadeOutAnimationPlaying;
         }
 
@@ -3099,7 +2974,7 @@ namespace tsl {
          * @note This makes the Tesla overlay exit and return back to the Tesla-Menu
          *
          */
-        virtual void close() final {
+        void close() {
             this->m_shouldClose = true;
         }
 
@@ -3122,7 +2997,7 @@ namespace tsl {
          */
         template<typename T, typename ... Args>
         constexpr inline std::unique_ptr<T> initially(Args&&... args) {
-            return std::move(std::make_unique<T>(args...));
+            return std::make_unique<T>(args...);
         }
 
     private:
@@ -3144,7 +3019,7 @@ namespace tsl {
          * @brief Initializes the Renderer
          *
          */
-        virtual void initScreen() final {
+        void initScreen() {
             gfx::Renderer::get().init();
         }
 
@@ -3152,7 +3027,7 @@ namespace tsl {
          * @brief Exits the Renderer
          *
          */
-        virtual void exitScreen() final {
+        void exitScreen() {
             gfx::Renderer::get().exit();
         }
 
@@ -3161,7 +3036,7 @@ namespace tsl {
          *
          * @return should hide
          */
-        virtual bool shouldHide() final {
+        bool shouldHide() {
             return this->m_shouldHide;
         }
 
@@ -3170,7 +3045,7 @@ namespace tsl {
          *
          * @return should close
          */
-        virtual bool shouldClose() final {
+        bool shouldClose() {
             return this->m_shouldClose;
         }
 
@@ -3178,7 +3053,7 @@ namespace tsl {
          * @brief Handles fade in and fade out animations of the Overlay
          *
          */
-        virtual void animationLoop() final {
+        void animationLoop() {
             if (this->m_fadeInAnimationPlaying) {
                 this->m_animationCounter++;
 
@@ -3202,7 +3077,7 @@ namespace tsl {
          * @brief Main loop
          *
          */
-        virtual void loop() final {
+        void loop() {
             auto& renderer = gfx::Renderer::get();
 
             renderer.startFrame();
@@ -3224,7 +3099,7 @@ namespace tsl {
          * @param rightJoyStick Right joystick position
          * @return Weather or not the input has been consumed
          */
-        virtual void handleInput(u64 keysDown, u64 keysHeld, bool touchDetected, const HidTouchState &touchPos, HidAnalogStickState joyStickPosLeft, HidAnalogStickState joyStickPosRight) final {
+        void handleInput(u64 keysDown, u64 keysHeld, bool touchDetected, const HidTouchState &touchPos, HidAnalogStickState joyStickPosLeft, HidAnalogStickState joyStickPosRight) {
             static HidTouchState initialTouchPos = { 0 };
             static HidTouchState oldTouchPos = { 0 };
             static bool oldTouchDetected = false;
@@ -3363,7 +3238,7 @@ namespace tsl {
          * @brief Clears the screen
          *
          */
-        virtual void clearScreen() final {
+        void clearScreen() {
             auto& renderer = gfx::Renderer::get();
 
             renderer.startFrame();
@@ -3375,7 +3250,7 @@ namespace tsl {
          * @brief Reset hide and close flags that were previously set by \ref Overlay::close() or \ref Overlay::hide()
          *
          */
-        virtual void resetFlags() final {
+        void resetFlags() {
             this->m_shouldHide = false;
             this->m_shouldClose = false;
         }
@@ -3384,7 +3259,7 @@ namespace tsl {
          * @brief Disables the next animation that would play
          *
          */
-        virtual void disableNextAnimation() final {
+        void disableNextAnimation() {
             this->m_disableNextAnimation = true;
         }
 
@@ -3423,15 +3298,9 @@ namespace tsl {
          * @note The Overlay gets closes once there are no more Guis on the stack
          */
         void goBack() {
-            if (this->m_guiStack.size() == 1) {
-                if (!this->m_closeOnExit) {
-                    this->hide();
-                    return;
-                } else {
-                    // Add code here to handle stopping on the main menu
-                    // For example, you can display a confirmation dialog before closing the program
-                    // or perform any other necessary actions.
-                }
+            if (!this->m_closeOnExit && this->m_guiStack.size() == 1) {
+                this->hide();
+                return;
             }
 
             if (!this->m_guiStack.empty())
@@ -3462,7 +3331,7 @@ namespace tsl {
         struct SharedThreadData {
             bool running = false;
 
-            Event comboEvent = { 0 }, homeButtonPressEvent = { 0 }, powerButtonPressEvent = { 0 };
+            Event comboEvent = { 0 };
 
             bool overlayOpen = false;
 
@@ -3502,14 +3371,24 @@ namespace tsl {
         }
 
         /**
-         * @brief Input polling loop thread
+         * @brief Background event polling loop thread
          *
-         * @tparam launchFlags Launch flags
          * @param args Used to pass in a pointer to a \ref SharedThreadData struct
          */
-        template<impl::LaunchFlags launchFlags>
-        static void hidInputPoller(void *args) {
+        static void backgroundEventPoller(void *args) {
             SharedThreadData *shData = static_cast<SharedThreadData*>(args);
+
+            // To prevent focus glitchout, close the overlay immediately when the home button gets pressed
+            Event homeButtonPressEvent = {};
+            hidsysAcquireHomeButtonEventHandle(&homeButtonPressEvent, false);
+            eventClear(&homeButtonPressEvent);
+            hlp::ScopeGuard homeButtonEventGuard([&] { eventClose(&homeButtonPressEvent); });
+
+            // To prevent focus glitchout, close the overlay immediately when the power button gets pressed
+            Event powerButtonPressEvent = {};
+            hidsysAcquireSleepButtonEventHandle(&powerButtonPressEvent, false);
+            eventClear(&powerButtonPressEvent);
+            hlp::ScopeGuard powerButtonEventGuard([&] { eventClose(&powerButtonPressEvent); });
 
             // Parse Tesla settings
             impl::parseOverlaySettings();
@@ -3520,15 +3399,27 @@ namespace tsl {
             // Initialize pad
             PadState pad;
             padInitializeAny(&pad);
-            
+
             // Initialize touch screen
             hidInitializeTouchScreen();
 
             // Drop all inputs from the previous overlay
             padUpdate(&pad);
 
-            while (shData->running) {
+            enum WaiterObject {
+                WaiterObject_HomeButton,
+                WaiterObject_PowerButton,
 
+                WaiterObject_Count
+            };
+
+            // Construct waiter
+            Waiter objects[2] = {
+                [WaiterObject_HomeButton] = waiterForEvent(&homeButtonPressEvent),
+                [WaiterObject_PowerButton] = waiterForEvent(&powerButtonPressEvent),
+            };
+
+            while (shData->running) {
                 // Scan for input changes
                 padUpdate(&pad);
 
@@ -3558,60 +3449,26 @@ namespace tsl {
                 }
 
                 //20 ms
-                svcSleepThread(20'000'000ul);
-            }
-        }
-
-        /**
-         * @brief Home button detection loop thread
-         * @note This makes sure that focus cannot glitch out when pressing the home button
-         *
-         * @param args Used to pass in a pointer to a \ref SharedThreadData struct
-         */
-        static void homeButtonDetector(void *args) {
-            SharedThreadData *shData = static_cast<SharedThreadData*>(args);
-
-            // To prevent focus glitchout, close the overlay immediately when the home button gets pressed
-            hidsysAcquireHomeButtonEventHandle(&shData->homeButtonPressEvent, false);
-            eventClear(&shData->homeButtonPressEvent);
-
-            while (shData->running) {
-                if (R_SUCCEEDED(eventWait(&shData->homeButtonPressEvent, 100'000'000))) {
-                    eventClear(&shData->homeButtonPressEvent);
-
+                s32 idx = 0;
+                Result rc = waitObjects(&idx, objects, WaiterObject_Count, 20'000'000ul);
+                if (R_SUCCEEDED(rc)) {
                     if (shData->overlayOpen) {
                         tsl::Overlay::get()->hide();
                         shData->overlayOpen = false;
                     }
-                }
-            }
 
-        }
-
-        /**
-         * @brief Power button detection loop thread
-         * @note This makes sure that focus cannot glitch out when pressing the power button
-         *
-         * @param args Used to pass in a pointer to a \ref SharedThreadData struct
-         */
-        static void powerButtonDetector(void *args) {
-            SharedThreadData *shData = static_cast<SharedThreadData*>(args);
-
-            // To prevent focus glitchout, close the overlay immediately when the power button gets pressed
-            hidsysAcquireSleepButtonEventHandle(&shData->powerButtonPressEvent, false);
-            eventClear(&shData->powerButtonPressEvent);
-
-            while (shData->running) {
-                if (R_SUCCEEDED(eventWait(&shData->powerButtonPressEvent, 100'000'000))) {
-                    eventClear(&shData->powerButtonPressEvent);
-
-                    if (shData->overlayOpen) {
-                        tsl::Overlay::get()->hide();
-                        shData->overlayOpen = false;
+                    switch (idx) {
+                        case WaiterObject_HomeButton:
+                            eventClear(&homeButtonPressEvent);
+                            break;
+                        case WaiterObject_PowerButton:
+                            eventClear(&powerButtonPressEvent);
+                            break;
                     }
+                } else if (rc != KERNELRESULT(TimedOut)) {
+                    ASSERT_FATAL(rc);
                 }
             }
-
         }
 
     }
@@ -3636,13 +3493,10 @@ namespace tsl {
     static void goBack() {
         Overlay::get()->goBack();
     }
-    
-    
+
     static void setNextOverlay(const std::string& ovlPath, std::string origArgs) {
 
-        //std::string args = std::filesystem::path(ovlPath).filename();
-        std::string args = getNameFromPath(ovlPath); // CUSTOM MODIFICATION
-        
+        std::string args = std::filesystem::path(ovlPath).filename();
         args += " " + origArgs + " --skipCombo";
 
         envSetNextLoad(ovlPath.c_str(), args.c_str());
@@ -3660,27 +3514,19 @@ namespace tsl {
      * @param argv argv
      * @return int result
      */
-    
-    
     template<typename TOverlay, impl::LaunchFlags launchFlags>
     static inline int loop(int argc, char** argv) {
         static_assert(std::is_base_of_v<tsl::Overlay, TOverlay>, "tsl::loop expects a type derived from tsl::Overlay");
-        
+
         impl::SharedThreadData shData;
 
         shData.running = true;
 
-        Thread hidPollerThread, homeButtonDetectorThread, powerButtonDetectorThread;
-        threadCreate(&hidPollerThread, impl::hidInputPoller<launchFlags>, &shData, nullptr, 0x1000, 0x10, -2);
-        threadCreate(&homeButtonDetectorThread, impl::homeButtonDetector, &shData, nullptr, 0x1000, 0x2C, -2);
-        threadCreate(&powerButtonDetectorThread, impl::powerButtonDetector, &shData, nullptr, 0x1000, 0x2C, -2);
-        threadStart(&hidPollerThread);
-        threadStart(&homeButtonDetectorThread);
-        threadStart(&powerButtonDetectorThread);
+        Thread backgroundThread;
+        threadCreate(&backgroundThread, impl::backgroundEventPoller, &shData, nullptr, 0x1000, 0x2c, -2);
+        threadStart(&backgroundThread);
 
         eventCreate(&shData.comboEvent, false);
-
-
 
         auto& overlay = tsl::Overlay::s_overlayInstance;
         overlay = new TOverlay();
@@ -3690,32 +3536,15 @@ namespace tsl {
         overlay->initScreen();
         overlay->changeTo(overlay->loadInitialGui());
 
-        // CUSTOM SECTION START
+
         // Argument parsing
-        bool skipCombo = false;
         for (u8 arg = 0; arg < argc; arg++) {
             if (strcasecmp(argv[arg], "--skipCombo") == 0) {
-                //eventFire(&shData.comboEvent);
-                //overlay->disableNextAnimation();
-                skipCombo = true;
+                eventFire(&shData.comboEvent);
+                overlay->disableNextAnimation();
             }
         }
-        
-        std::map<std::string, std::map<std::string, std::string>> settingsData = getParsedDataFromIniFile( "sdmc:/config/ultrahand/config.ini");
-        std::string inOverlayString = settingsData["ultrahand"]["in_overlay"];
-        
-        bool inOverlay = false;
-        if (inOverlayString == "true") {
-            inOverlay = true;
-            setIniFileValue( "sdmc:/config/ultrahand/config.ini", "ultrahand", "in_overlay", "false");
-        }
-        
-        
-        if (inOverlay && skipCombo) {
-            eventFire(&shData.comboEvent);
-            overlay->disableNextAnimation();
-        }
-        // CUSTOM SECTION END
+
 
         while (shData.running) {
 
@@ -3757,16 +3586,10 @@ namespace tsl {
             eventClear(&shData.comboEvent);
         }
 
-        eventClose(&shData.homeButtonPressEvent);
-        eventClose(&shData.powerButtonPressEvent);
         eventClose(&shData.comboEvent);
 
-        threadWaitForExit(&hidPollerThread);
-        threadClose(&hidPollerThread);
-        threadWaitForExit(&homeButtonDetectorThread);
-        threadClose(&homeButtonDetectorThread);
-        threadWaitForExit(&powerButtonDetectorThread);
-        threadClose(&powerButtonDetectorThread);
+        threadWaitForExit(&backgroundThread);
+        threadClose(&backgroundThread);
 
         overlay->exitScreen();
         overlay->exitServices();
@@ -3810,7 +3633,7 @@ extern "C" {
             if (hosversionAtLeast(16,0,0)) {
                 ASSERT_FATAL(plInitialize(PlServiceType_User));     // Font data. Use pl:u for 16.0.0+
             } else {
-                ASSERT_FATAL(plInitialize(PlServiceType_System));   // Use pl:s for 15.0.1 and below to prevent qlaunch/overlaydisp session exhaustion 
+                ASSERT_FATAL(plInitialize(PlServiceType_System));   // Use pl:s for 15.0.1 and below to prevent qlaunch/overlaydisp session exhaustion
             }
             ASSERT_FATAL(pmdmntInitialize());                       // PID querying
             ASSERT_FATAL(hidsysInitialize());                       // Focus control
