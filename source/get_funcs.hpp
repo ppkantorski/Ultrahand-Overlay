@@ -2,7 +2,7 @@
 #include <sys/stat.h>
 #include <dirent.h>
 #include <fnmatch.h>
-#include <string_functions.hpp>
+#include <string_funcs.hpp>
 
 // Get functions
 
