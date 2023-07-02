@@ -429,7 +429,6 @@ public:
 
         // Package Info
         PackageHeader packageHeader = getPackageHeaderFromIni(subConfigIniPath);
-        list->addItem(new tsl::elm::CategoryHeader("Package Info"));
 
         constexpr int lineHeight = 20;  // Adjust the line height as needed
         constexpr int xOffset = 120;    // Adjust the horizontal offset as needed
@@ -457,6 +456,7 @@ public:
         
         
         if ((packageSectionString != "") && (packageInfoString != "")) {
+            list->addItem(new tsl::elm::CategoryHeader("Package Info"));
             list->addItem(new tsl::elm::CustomDrawer([lineHeight, xOffset, fontSize, packageSectionString, packageInfoString](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
                 renderer->drawString(packageSectionString.c_str(), false, x, y + lineHeight, fontSize, a(tsl::style::color::ColorText));
                 renderer->drawString(packageInfoString.c_str(), false, x + xOffset, y + lineHeight, fontSize, a(tsl::style::color::ColorText));
