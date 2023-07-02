@@ -113,7 +113,7 @@ public:
     virtual bool handleInput(u64 keysDown, u64 keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
         if (inConfigMenu && (keysHeld & KEY_B)) {
             //tsl::Overlay::get()->close();
-            svcSleepThread(300'000'000);
+            //svcSleepThread(300'000'000);
             tsl::goBack();
             inConfigMenu = false;
             returningToSub = true;
@@ -294,7 +294,7 @@ public:
     virtual bool handleInput(u64 keysDown, u64 keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
         if (inSelectionMenu && (keysHeld & KEY_B)) {
             //tsl::Overlay::get()->close();
-            svcSleepThread(300'000'000);
+            //svcSleepThread(300'000'000);
             tsl::goBack();
             inSelectionMenu = false;
             returningToSub = true;
@@ -498,7 +498,7 @@ public:
     virtual bool handleInput(uint64_t keysDown, uint64_t keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
         if (inSubMenu && (keysHeld & KEY_B)) {
             //tsl::Overlay::get()->close();
-            svcSleepThread(300'000'000);
+            //svcSleepThread(300'000'000);
             tsl::goBack();
             inSubMenu = false;
             returningToMain = true;
@@ -506,7 +506,7 @@ public:
             return true;
         }
         
-        if (returningToSub){
+        if (returningToSub && !(keysHeld & KEY_B)){
             returningToSub = false;
             inSubMenu = true;
         }
@@ -572,7 +572,7 @@ public:
         if ((defaultMenuMode == "overlays") || (defaultMenuMode == "packages")) {
             if (freshSpawn) {
                 menuMode = defaultMenuMode.c_str();
-                freshSpawn = false;
+                //freshSpawn = false;
             }
         } else {
             defaultMenuMode = "last_menu";
@@ -805,12 +805,12 @@ public:
                 return true;
             }
         }
-        if (returningToMain){
-            returningToMain = false;
-            inMainMenu = true;
-        }
         if (freshSpawn){
             freshSpawn = false;
+        }
+        if (returningToMain && !(keysHeld & KEY_B)){
+            returningToMain = false;
+            inMainMenu = true;
         }
         return false;
     }
