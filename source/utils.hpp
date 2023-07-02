@@ -3,10 +3,10 @@
 #include <sys/stat.h>
 #include <dirent.h>
 #include <fnmatch.h>
-#include <get_functions.hpp>
-#include <path_functions.hpp>
-#include <ini_functions.hpp>
-#include <hex_functions.hpp>
+#include <get_funcs.hpp>
+#include <path_funcs.hpp>
+#include <ini_funcs.hpp>
+#include <hex_funcs.hpp>
 
 #define SpsmShutdownMode_Normal 0
 #define SpsmShutdownMode_Reboot 1
