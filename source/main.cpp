@@ -507,7 +507,7 @@ public:
     virtual tsl::elm::Element* createUI() override {
         inMainMenu = true;
         defaultMenuMode = "last_menu";
-        menuMode = defaultMenuMode.c_str();
+        menuMode = "overlays";
         
         createDirectory(packageDirectory);
         createDirectory(settingsPath);
