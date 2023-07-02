@@ -3,7 +3,6 @@
 #define TESLA_INIT_IMPL
 #include <tesla.hpp>
 #include <utils.hpp>
-#include <sys/stat.h>
 
 
 // Overlay booleans
@@ -17,25 +16,13 @@ bool inConfigMenu = false;
 bool inSelectionMenu = false;
 bool freshSpawn = true;
 
+// String path variables
 const std::string configFileName = "config.ini";
+const std::string settingsPath = "sdmc:/config/ultrahand/";
+const std::string settingsConfigIniPath = settingsPath + configFileName;
+const std::string packageDirectory = "sdmc:/switch/.packages/";
+const std::string overlayDirectory = "sdmc:/switch/.overlays/";
 
-std::string settingsPath = "sdmc:/config/ultrahand/";
-std::string settingsConfigIniPath = settingsPath + "config.ini";
-std::string packageDirectory = "sdmc:/switch/.packages/";
-std::string overlayDirectory = "sdmc:/switch/.overlays/";
-
-// Helper function to handle overlay menu input
-//bool handleOverlayMenuInput(bool& inMenu, u64 keysHeld, u64 backKey, uint64_t sleepTime = 300'000'000) {
-//    if (inMenu && (keysHeld & backKey)) {
-//        svcSleepThread(sleepTime);
-//        //tsl::Overlay::get()->close();
-//        tsl::goBack();
-//        
-//        inMenu = false;
-//        return true;
-//    }
-//    return false;
-//}
 
 
 // Config overlay 
@@ -55,7 +42,7 @@ public:
 
         std::string configFile = filePath + "/" + configFileName;
 
-        std::string fileContent = readFileContent(configFile);
+        std::string fileContent = getFileContents(configFile);
         if (!fileContent.empty()) {
             std::string line;
             std::istringstream iss(fileContent);
@@ -433,22 +420,57 @@ public:
         constexpr int lineHeight = 20;  // Adjust the line height as needed
         constexpr int xOffset = 120;    // Adjust the horizontal offset as needed
         constexpr int fontSize = 16;    // Adjust the font size as needed
-        constexpr int numEntries = 1;   // Adjust the number of entries as needed
+        int numEntries = 0;   // Adjust the number of entries as needed
         
         std::string packageSectionString = "";
         std::string packageInfoString = "";
         if (packageHeader.creator != "") {
-            packageSectionString += "Creator\n";
+            packageSectionString += "Creator(s)\n";
             packageInfoString += (packageHeader.creator+"\n").c_str();
+            numEntries++;
         }
         if (packageHeader.version != "") {
             packageSectionString += "Version\n";
             packageInfoString += (packageHeader.version+"\n").c_str();
+            numEntries++;
         }
         if (packageHeader.about != "") {
-            packageSectionString += "About\n";
-            packageInfoString += (packageHeader.about+"\n").c_str();
+            std::string aboutHeaderText = "About\n";
+            std::string::size_type aboutHeaderLength = aboutHeaderText.length();
+            std::string aboutText = packageHeader.about;
+    
+            packageSectionString += aboutHeaderText;
+            
+            // Split the about text into multiple lines with proper word wrapping
+            constexpr int maxLineLength = 28;  // Adjust the maximum line length as needed
+            std::string::size_type startPos = 0;
+            std::string::size_type spacePos = 0;
+    
+            while (startPos < aboutText.length()) {
+                std::string::size_type endPos = std::min(startPos + maxLineLength, aboutText.length());
+                std::string line = aboutText.substr(startPos, endPos - startPos);
+        
+                // Check if the current line ends with a space; if not, find the last space in the line
+                if (endPos < aboutText.length() && aboutText[endPos] != ' ') {
+                    spacePos = line.find_last_of(' ');
+                    if (spacePos != std::string::npos) {
+                        endPos = startPos + spacePos;
+                        line = aboutText.substr(startPos, endPos - startPos);
+                    }
+                }
+        
+                packageInfoString += line + '\n';
+                startPos = endPos + 1;
+                numEntries++;
+        
+                // Add corresponding newline to the packageSectionString
+                if (startPos < aboutText.length()) {
+                    packageSectionString += std::string(aboutHeaderLength, ' ') + '\n';
+                }
+            }
+    
         }
+
         
         // Remove trailing newline character
         if ((packageSectionString != "") && (packageSectionString.back() == '\n')) {
@@ -819,19 +841,5 @@ public:
 
 
 int main(int argc, char* argv[]) {
-    //for (u8 arg = 0; arg < argc; arg++) {
-    //    if (strcasecmp(argv[arg], "--overlay") == 0) {
-    //         return tsl::loop<Overlay, tsl::impl::LaunchFlags::None>(argc, argv, true);
-    //    }
-    //}
-    
-    //if (inOverlay) {
-    //    inOverlay = false;
-    //    return tsl::loop<Overlay, tsl::impl::LaunchFlags::None>(argc, argv);
-    //}
-    //
-    //return tsl::loop<Overlay>(argc, argv);
-    
-    
     return tsl::loop<Overlay, tsl::impl::LaunchFlags::None>(argc, argv);
 }
