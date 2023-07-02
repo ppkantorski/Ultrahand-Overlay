@@ -435,11 +435,34 @@ public:
         constexpr int xOffset = 120;    // Adjust the horizontal offset as needed
         constexpr int fontSize = 16;    // Adjust the font size as needed
         constexpr int numEntries = 1;   // Adjust the number of entries as needed
-
-        list->addItem(new tsl::elm::CustomDrawer([lineHeight, xOffset, fontSize, packageHeader](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
-            renderer->drawString("Creator\nVersion", false, x, y + lineHeight, fontSize, a(tsl::style::color::ColorText));
-            renderer->drawString((packageHeader.creator+"\n"+packageHeader.version).c_str(), false, x + xOffset, y + lineHeight, fontSize, a(tsl::style::color::ColorText));
-        }), fontSize * numEntries + lineHeight);
+        
+        std::string packageSectionString = "";
+        std::string packageInfoString = "";
+        if (packageHeader.creator != "") {
+            packageSectionString += "Creator\n";
+            packageInfoString += (packageHeader.creator+"\n").c_str();
+        }
+        if (packageHeader.version != "") {
+            packageSectionString += "Version\n";
+            packageInfoString += (packageHeader.version+"\n").c_str();
+        }
+        
+        // Remove trailing newline character
+        if ((packageSectionString != "") && (packageSectionString.back() == '\n')) {
+            packageSectionString = packageSectionString.substr(0, packageSectionString.size() - 1);
+        }
+        if ((packageInfoString != "") && (packageInfoString.back() == '\n')) {
+            packageInfoString = packageInfoString.substr(0, packageInfoString.size() - 1);
+        }
+        
+        
+        if ((packageSectionString != "") && (packageInfoString != "")) {
+            list->addItem(new tsl::elm::CustomDrawer([lineHeight, xOffset, fontSize, packageSectionString, packageInfoString](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
+                renderer->drawString(packageSectionString.c_str(), false, x, y + lineHeight, fontSize, a(tsl::style::color::ColorText));
+                renderer->drawString(packageInfoString.c_str(), false, x + xOffset, y + lineHeight, fontSize, a(tsl::style::color::ColorText));
+            }), fontSize * numEntries + lineHeight);
+        }
+        
         
         rootFrame->setContent(list);
         
@@ -614,14 +637,14 @@ public:
             }
         }
         
-        if (menuMode == "packages") {
+        if (menuMode == "packages" ) {
             // Create the directory if it doesn't exist
             createDirectory(packageDirectory);
 
             // Load options from INI file
             std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> options = loadOptionsFromIni(configIniPath, true);
         
-            count = 0;
+
             // Load subdirectories
             std::vector<std::string> subdirectories = getSubdirectories(packageDirectory);
             
@@ -638,7 +661,7 @@ public:
             
             std::sort(subdirectories.begin(), subdirectories.end()); // Sort subdirectories alphabetically
             
-            
+            count = 0;
             for (const auto& taintedSubdirectory : subdirectories) {
                 bool usingStar = false;
                 std::string subdirectory = taintedSubdirectory;
