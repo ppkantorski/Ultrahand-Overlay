@@ -1,6 +1,13 @@
 #pragma once
 #include <sys/stat.h>
-#include <tesla.hpp>
+#include <cstdio>   // For FILE*, fopen(), fclose(), fprintf(), etc.
+#include <cstring>  // For std::string, strlen(), etc.
+#include <string>   // For std::string
+#include <vector>   // For std::vector
+#include <map>      // For std::map
+#include <sstream>  // For std::istringstream
+#include <algorithm> // For std::remove_if
+#include <cctype>   // For ::isspace
 
 // Ini Functions
 
@@ -95,9 +102,45 @@ PackageHeader getPackageHeaderFromIni(const std::string& filePath) {
     return packageHeader;
 }
 
+static std::vector<std::string> split(const std::string& str, char delim = ' ') {
+    std::vector<std::string> out;
+
+    std::size_t current, previous = 0;
+    current = str.find(delim);
+    while (current != std::string::npos) {
+        out.push_back(str.substr(previous, current - previous));
+        previous = current + 1;
+        current = str.find(delim, previous);
+    }
+    out.push_back(str.substr(previous, current - previous));
+
+    return out;
+}
+
+static std::map<std::string, std::map<std::string, std::string>> parseIni(const std::string &str) {
+    std::map<std::string, std::map<std::string, std::string>> iniData;
+
+    auto lines = split(str, '\n');
+
+    std::string lastHeader = "";
+    for (auto& line : lines) {
+        line.erase(std::remove_if(line.begin(), line.end(), ::isspace), line.end());
+
+        if (line[0] == '[' && line[line.size() - 1] == ']') {
+            lastHeader = line.substr(1, line.size() - 2);
+            iniData.emplace(lastHeader, std::map<std::string, std::string>{});
+        }
+        else if (auto keyValuePair = split(line, '='); keyValuePair.size() == 2) {
+            iniData[lastHeader].emplace(keyValuePair[0], keyValuePair[1]);
+        }
+    }
+
+    return iniData;
+}
+
 // Custom utility function for parsing an ini file
-tsl::hlp::ini::IniData getParsedDataFromIniFile(const std::string& configIniPath) {
-    tsl::hlp::ini::IniData parsedData;
+std::map<std::string, std::map<std::string, std::string>> getParsedDataFromIniFile(const std::string& configIniPath) {
+    std::map<std::string, std::map<std::string, std::string>> parsedData;
     
     // Open the INI file
     FILE* configFileIn = fopen(configIniPath.c_str(), "r");
@@ -118,7 +161,7 @@ tsl::hlp::ini::IniData getParsedDataFromIniFile(const std::string& configIniPath
 
     // Parse the INI data
     std::string fileDataString(fileData, fileSize);
-    parsedData = tsl::hlp::ini::parseIni(fileDataString);
+    parsedData = parseIni(fileDataString);
     
     delete[] fileData;
     
