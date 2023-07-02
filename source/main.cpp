@@ -445,6 +445,10 @@ public:
             packageSectionString += "Version\n";
             packageInfoString += (packageHeader.version+"\n").c_str();
         }
+        if (packageHeader.about != "") {
+            packageSectionString += "About\n";
+            packageInfoString += (packageHeader.about+"\n").c_str();
+        }
         
         // Remove trailing newline character
         if ((packageSectionString != "") && (packageSectionString.back() == '\n')) {
