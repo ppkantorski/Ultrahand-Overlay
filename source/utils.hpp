@@ -828,16 +828,19 @@ void createTextFile(const std::string& filePath, const std::string& content) {
 struct PackageHeader {
     std::string version;
     std::string creator;
+    std::string about;
 };
 PackageHeader getPackageHeaderFromIni(const std::string& filePath) {
     PackageHeader packageHeader;
     std::string version = "";
     std::string creator = "";
+    std::string about = "";
     
     FILE* file = fopen(filePath.c_str(), "r");
     if (file == nullptr) {
         packageHeader.version = version;
         packageHeader.creator = creator;
+        packageHeader.about = about;
         return packageHeader;
     }
 
@@ -846,22 +849,27 @@ PackageHeader getPackageHeaderFromIni(const std::string& filePath) {
 
     const std::string versionPrefix = ";version=";
     const std::string creatorPrefix = ";creator=";
-    const size_t versionPrefixLength = versionPrefix.length();
-    const size_t creatorPrefixLength = creatorPrefix.length();
+    const std::string aboutPrefix = ";about=";
 
     while (fgets(line, sizeof(line), file)) {
         std::string strLine(line);
         size_t versionPos = strLine.find(versionPrefix);
         if (versionPos != std::string::npos) {
-            versionPos += versionPrefixLength;
+            versionPos += versionPrefix.length();
             size_t endPos = strLine.find_first_of(" \t\r\n", versionPos);
             version = strLine.substr(versionPos, endPos - versionPos);
         }
         size_t creatorPos = strLine.find(creatorPrefix);
         if (creatorPos != std::string::npos) {
-            creatorPos += creatorPrefixLength;
+            creatorPos += creatorPrefix.length();
             size_t endPos = strLine.find_first_of(" \t\r\n", creatorPos);
             creator = strLine.substr(creatorPos, endPos - creatorPos);
+        }
+        size_t aboutPos = strLine.find(aboutPrefix);
+        if (aboutPos != std::string::npos) {
+            aboutPos += aboutPrefix.length();
+            size_t endPos = strLine.find_first_of(" \t\r\n", aboutPos);
+            about = strLine.substr(aboutPos, endPos - aboutPos);
         }
 
         if (!version.empty() && !creator.empty()) {
@@ -873,6 +881,7 @@ PackageHeader getPackageHeaderFromIni(const std::string& filePath) {
     
     packageHeader.version = version;
     packageHeader.creator = creator;
+    packageHeader.about = about;
     return packageHeader;
 }
 
