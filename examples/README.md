@@ -27,7 +27,7 @@ Ultrahand Overlay is a powerful tool that allows you to customize and enhance yo
 To use these examples, follow these steps:
 
 1. Clone or download this repository to your local machine.
-2. Copy the contents of the desired example folder to `/config/ultrahand/` on your device.
+2. Copy the contents of the desired example folder to `/switch/.packages/` on your device.
 3. Follow the specific instructions provided in each example's README file to configure and apply the overlays.
 
 Note: Before applying any overlays or modifications, make sure you understand the potential impact on your device and follow the instructions carefully.
