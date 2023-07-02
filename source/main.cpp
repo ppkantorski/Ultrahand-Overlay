@@ -522,7 +522,7 @@ public:
 class MainMenu : public tsl::Gui {
 private:
     tsl::hlp::ini::IniData settingsData;
-    std::string configIniPath = packageDirectory + configFileName;
+    std::string packageConfigIniPath = packageDirectory + configFileName;
     std::string menuMode, defaultMenuMode, inOverlayString, fullPath, optionName;
     bool useDefaultMenu = false;
     //bool inSubMenu = false; // Added boolean to track submenu state
@@ -668,7 +668,7 @@ public:
             createDirectory(packageDirectory);
 
             // Load options from INI file
-            std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> options = loadOptionsFromIni(configIniPath, true);
+            std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> options = loadOptionsFromIni(packageConfigIniPath, true);
         
 
             // Load subdirectories
@@ -799,7 +799,7 @@ public:
                     return true;
                 }
             }
-            if (keysHeld & KEY_B) {
+            if (!freshSpawn && (keysHeld & KEY_B)) {
                 inMainMenu = false;
                 tsl::Overlay::get()->close();
                 return true;
@@ -808,6 +808,9 @@ public:
         if (returningToMain){
             returningToMain = false;
             inMainMenu = true;
+        }
+        if (freshSpawn){
+            freshSpawn = false;
         }
         return false;
     }
