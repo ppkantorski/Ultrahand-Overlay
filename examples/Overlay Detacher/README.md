@@ -1,6 +1,6 @@
-# Overlay Detacher
+# Broomstick
 
-The Overlay Detacher package allows you to offload and restore specific overlays on your device.
+The Broomstick package allows you to offload and restore specific overlays on your device.
 
 ## Configuration
 
@@ -13,12 +13,12 @@ Each configuration has a set of commands that perform the offloading or restorat
 
 ## Usage
 
-To use Overlay Detacher:
+To use Broomstick:
 
-1. Open the `config.ini` file located in the `examples/Overlay Detacher` directory.
+1. Open the `config.ini` file located in the `examples/Broomstick` directory.
 2. Uncomment the desired configuration and its corresponding commands by removing the semicolon (`;`) at the beginning of each line.
 3. Save the `config.ini` file after making the necessary changes.
-4. Copy the `Overlay Detacher` directory to your device under the appropriate location.
+4. Copy the `Broomstick` directory to your device under the appropriate location.
 
 Note: Offloading overlays can help improve performance and free up system resources, but it may also affect the functionality of certain features or applications that rely on those overlays. Use this feature with caution and ensure that you understand the potential implications.
 
