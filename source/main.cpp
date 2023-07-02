@@ -805,7 +805,7 @@ public:
                 return true;
             }
         }
-        if (freshSpawn){
+        if (freshSpawn && !(keysHeld & KEY_B)){
             freshSpawn = false;
         }
         if (returningToMain && !(keysHeld & KEY_B)){
