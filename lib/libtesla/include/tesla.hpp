@@ -334,7 +334,7 @@ namespace tsl {
             /**
              * @brief Tesla config file
              */
-            static const char* CONFIG_FILE = "/config/tesla/config.ini";
+            static const char* CONFIG_FILE = "/config/ultrahand/config.ini"; // CUSTOM MODIFICATION
 
             /**
              * @brief Parses a ini string
@@ -3403,7 +3403,7 @@ namespace tsl {
         static void parseOverlaySettings() {
             hlp::ini::IniData parsedConfig = hlp::ini::readOverlaySettings();
 
-            u64 decodedKeys = hlp::comboStringToKeys(parsedConfig["tesla"]["key_combo"]);
+            u64 decodedKeys = hlp::comboStringToKeys(parsedConfig["ultrahand"]["key_combo"]); // CUSTOM MODIFICATION
             if (decodedKeys)
                 tsl::cfg::launchCombo = decodedKeys;
         }
