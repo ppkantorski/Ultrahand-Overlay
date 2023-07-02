@@ -37,7 +37,15 @@
 #include <list>
 #include <stack>
 #include <map>
-#include <filesystem>
+//#include <filesystem> // Comment out filesystem
+
+// CUSTOM SECTION START
+
+#include "../../../source/get_funcs.hpp"
+#include "../../../source/string_funcs.hpp"
+#include "../../../source/ini_funcs.hpp"
+
+// CUSTOM SECTION END
 
 // Define this makro before including tesla.hpp in your main file. If you intend
 // to use the tesla.hpp header in more than one source file, only define it once!
@@ -1573,26 +1581,64 @@ namespace tsl {
              * @param title Name of the Overlay drawn bolt at the top
              * @param subtitle Subtitle drawn bellow the title e.g version number
              */
-            OverlayFrame(const std::string& title, const std::string& subtitle) : Element(), m_title(title), m_subtitle(subtitle) {}
+            std::string m_menuMode; // CUSTOM MODIFICATION
+            OverlayFrame(const std::string& title, const std::string& subtitle, const std::string& menuMode="") : Element(), m_title(title), m_subtitle(subtitle), m_menuMode(menuMode) {} // CUSTOM MODIFICATION
             virtual ~OverlayFrame() {
                 if (this->m_contentElement != nullptr)
                     delete this->m_contentElement;
             }
 
+            // CUSTOM SECTION START
             virtual void draw(gfx::Renderer *renderer) override {
                 renderer->fillScreen(a(tsl::style::color::ColorFrameBackground));
                 renderer->drawRect(tsl::cfg::FramebufferWidth - 1, 0, 1, tsl::cfg::FramebufferHeight, a(0xF222));
+                
+                
+                // Check if m_title is "Ultrahand"
+                if (this->m_title == "Ultrahand") {
+                    std::string firstHalf = "Ultra";
+                    std::string secondHalf = "hand";
 
-                renderer->drawString(this->m_title.c_str(), false, 20, 50, 30, a(tsl::style::color::ColorText));
+                    int x1 = 20;
+                    int y = 50;
+                    int fontSize = 30;
+
+                    // Draw the first half of the string in white color
+                    renderer->drawString(firstHalf.c_str(), false, x1, y, fontSize, tsl::Color(0xFF, 0xFF, 0xFF, 0xFF));
+
+                    // Calculate the position for the second half based on the width of the first half
+                    int x2 = x1 + (firstHalf.length() * fontSize)/2 -2;
+
+                    // Draw the second half of the string in red color
+                    renderer->drawString(secondHalf.c_str(), false, x2, y, fontSize, tsl::Color(0xFF, 0x00, 0x00, 0xFF));
+                }
+                else {
+                    if (this->m_subtitle == "Ultrahand Package") {
+                        renderer->drawString(this->m_title.c_str(), false, 20, 50, 30, a(Color(0x00, 0xFF, 0x00, 0xFF)));
+                    } else if (this->m_subtitle == "Ultrahand Config") {
+                        renderer->drawString(this->m_title.c_str(), false, 20, 50, 30, a(Color(0xFF, 0x33, 0x3F, 0xFF)));
+                    } else {
+                        renderer->drawString(this->m_title.c_str(), false, 20, 50, 30, a(tsl::style::color::ColorText));
+                    }
+                }
+                
+                
                 renderer->drawString(this->m_subtitle.c_str(), false, 20, 70, 15, a(tsl::style::color::ColorDescription));
 
                 renderer->drawRect(15, tsl::cfg::FramebufferHeight - 73, tsl::cfg::FramebufferWidth - 30, 1, a(tsl::style::color::ColorText));
-
-                renderer->drawString("\uE0E1  Back     \uE0E0  OK", false, 30, 693, 23, a(tsl::style::color::ColorText));
+                std::string menuBottomLine = "\uE0E1  Back     \uE0E0  OK     ";
+                if (this->m_menuMode == "packages") {
+                    menuBottomLine += "\uE0ED  Overlays";
+                } else if (this->m_menuMode == "overlays") {
+                    menuBottomLine += "\uE0EE  Packages";
+                }
+                
+                renderer->drawString(menuBottomLine.c_str(), false, 30, 693, 23, a(tsl::style::color::ColorText));
 
                 if (this->m_contentElement != nullptr)
                     this->m_contentElement->frame(renderer);
             }
+            // CUSTOM SECTION END
 
             virtual void layout(u16 parentX, u16 parentY, u16 parentWidth, u16 parentHeight) override {
                 this->setBoundaries(parentX, parentY, parentWidth, parentHeight);
@@ -3496,7 +3542,8 @@ namespace tsl {
 
     static void setNextOverlay(const std::string& ovlPath, std::string origArgs) {
 
-        std::string args = std::filesystem::path(ovlPath).filename();
+        //std::string args = std::filesystem::path(ovlPath).filename();
+        std::string args = getNameFromPath(ovlPath); // CUSTOM MODIFICATION
         args += " " + origArgs + " --skipCombo";
 
         envSetNextLoad(ovlPath.c_str(), args.c_str());
@@ -3537,13 +3584,32 @@ namespace tsl {
         overlay->changeTo(overlay->loadInitialGui());
 
 
+        // CUSTOM SECTION START
         // Argument parsing
+        bool skipCombo = false;
         for (u8 arg = 0; arg < argc; arg++) {
             if (strcasecmp(argv[arg], "--skipCombo") == 0) {
-                eventFire(&shData.comboEvent);
-                overlay->disableNextAnimation();
+                //eventFire(&shData.comboEvent);
+                //overlay->disableNextAnimation();
+                skipCombo = true;
             }
         }
+        
+        std::map<std::string, std::map<std::string, std::string>> settingsData = getParsedDataFromIniFile( "sdmc:/config/ultrahand/config.ini");
+        std::string inOverlayString = settingsData["ultrahand"]["in_overlay"];
+        
+        bool inOverlay = false;
+        if (inOverlayString == "true") {
+            inOverlay = true;
+            setIniFileValue( "sdmc:/config/ultrahand/config.ini", "ultrahand", "in_overlay", "false");
+        }
+        
+        
+        if (inOverlay && skipCombo) {
+            eventFire(&shData.comboEvent);
+            overlay->disableNextAnimation();
+        }
+        // CUSTOM SECTION END
 
 
         while (shData.running) {
