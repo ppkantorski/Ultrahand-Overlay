@@ -7,6 +7,7 @@
 #include <path_funcs.hpp>
 #include <ini_funcs.hpp>
 #include <hex_funcs.hpp>
+//#include <download_funcs.hpp>
 
 #define SpsmShutdownMode_Normal 0
 #define SpsmShutdownMode_Reboot 1
@@ -199,7 +200,7 @@ bool isDangerousCombination(const std::string& patternPath) {
 
 // Main interpreter
 void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& commands) {
-    std::string commandName, sourcePath, destinationPath, desiredSection, desiredKey, desiredNewKey, desiredValue, offset, hexDataToReplace, hexDataReplacement, occurrence;
+    std::string commandName, sourcePath, destinationPath, desiredSection, desiredKey, desiredNewKey, desiredValue, offset, hexDataToReplace, hexDataReplacement, fileUrl, occurrence;
     
     for (const auto& command : commands) {
         
@@ -415,6 +416,13 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                     hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
                 }
             }
+        //} else if (commandName == "download") {
+        //    // Edit command - Hex data replacement with occurrence
+        //    if (command.size() >= 3) {
+        //        fileUrl = preprocessUrl(command[1]);
+        //        destinationPath = preprocessPath(command[2]);
+        //        downloadFile(fileUrl, destinationPath);
+        //    }
         } else if (commandName == "reboot") {
             // Reboot command
             splExit();
