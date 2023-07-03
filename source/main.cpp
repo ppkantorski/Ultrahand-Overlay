@@ -580,7 +580,8 @@ public:
             setIniFileValue(settingsConfigIniPath, "ultrahand", "default_menu", defaultMenuMode);
         }
         
-        auto rootFrame = new tsl::elm::OverlayFrame("Ultrahand", APP_VERSION, menuMode);
+        std::string versionLabel = APP_VERSION+std::string("   (")+envGetLoaderInfo()+std::string(")");
+        auto rootFrame = new tsl::elm::OverlayFrame("Ultrahand", versionLabel, menuMode);
         auto list = new tsl::elm::List();
 
         //loadOverlayFiles(list);
