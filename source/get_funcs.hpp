@@ -7,38 +7,46 @@
 // Get functions
 
 // Overlay Module settings
-constexpr int Module_OverlayLoader  = 348;
-constexpr Result ResultSuccess      = MAKERESULT(0, 0);
-constexpr Result ResultParseError   = MAKERESULT(Module_OverlayLoader, 1);
+constexpr int OverlayLoaderModuleId = 348;
+constexpr Result ResultSuccess = MAKERESULT(0, 0);
+constexpr Result ResultParseError = MAKERESULT(OverlayLoaderModuleId, 1);
 
 std::tuple<Result, std::string, std::string> getOverlayInfo(std::string filePath) {
-    FILE *file = fopen(filePath.c_str(), "r");
+    FILE* file = fopen(filePath.c_str(), "r");
 
-    NroHeader header;
+    NroHeader nroHeader;
     NroAssetHeader assetHeader;
     NacpStruct nacp;
 
+    // Read NRO header
     fseek(file, sizeof(NroStart), SEEK_SET);
-    if (fread(&header, sizeof(NroHeader), 1, file) != 1) {
+    if (fread(&nroHeader, sizeof(NroHeader), 1, file) != 1) {
         fclose(file);
         return { ResultParseError, "", "" };
     }
 
-    fseek(file, header.size, SEEK_SET);
+    // Read asset header
+    fseek(file, nroHeader.size, SEEK_SET);
     if (fread(&assetHeader, sizeof(NroAssetHeader), 1, file) != 1) {
         fclose(file);
         return { ResultParseError, "", "" };
     }
 
-    fseek(file, header.size + assetHeader.nacp.offset, SEEK_SET);
+    // Read NACP struct
+    fseek(file, nroHeader.size + assetHeader.nacp.offset, SEEK_SET);
     if (fread(&nacp, sizeof(NacpStruct), 1, file) != 1) {
         fclose(file);
-        return { ResultParseError, "", "" };
+        return { ResultParseErrorf, "", "" };
     }
     
     fclose(file);
 
-    return { ResultSuccess, std::string(nacp.lang[0].name, std::strlen(nacp.lang[0].name)), std::string(nacp.display_version, std::strlen(nacp.display_version)) };
+    // Return overlay information
+    return {
+        ResultSuccess,
+        std::string(nacp.lang[0].name, std::strlen(nacp.lang[0].name)),
+        std::string(nacp.display_version, std::strlen(nacp.display_version))
+    };
 }
 
 
