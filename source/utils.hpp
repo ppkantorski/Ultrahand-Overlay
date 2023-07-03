@@ -39,6 +39,14 @@
 #define JoystickPosition HidAnalogStickState
 
 
+// String path variables
+const std::string configFileName = "config.ini";
+const std::string settingsPath = "sdmc:/config/ultrahand/";
+const std::string settingsConfigIniPath = settingsPath + configFileName;
+const std::string packageDirectory = "sdmc:/switch/.packages/";
+const std::string overlayDirectory = "sdmc:/switch/.overlays/";
+const std::string teslaSettingsConfigIniPath = "sdmc:/config/tesla/"+configFileName;
+
 // For loggging messages and debugging
 //#include <ctime>
 //void logMessage(const std::string& message) {
@@ -60,6 +68,36 @@
 //        fclose(file);
 //    }
 //}
+
+
+void copyTeslaKeyComboToUltraHand() {
+    std::string keyCombo;
+    std::map<std::string, std::map<std::string, std::string>> parsedData;
+    
+    if (isFileOrDirectory(teslaSettingsConfigIniPath)) {
+        parsedData = getParsedDataFromIniFile(teslaSettingsConfigIniPath);
+        if (parsedData.count("tesla") > 0) {
+            auto& teslaSection = parsedData["tesla"];
+            if (teslaSection.count("key_combo") > 0) {
+                keyCombo = teslaSection["key_combo"];
+            }
+        }
+    }
+    
+    if (!keyCombo.empty()){
+        if (isFileOrDirectory(settingsConfigIniPath)) {
+            parsedData = getParsedDataFromIniFile(settingsConfigIniPath);
+            if (parsedData.count("ultrahand") > 0) {
+                auto& ultrahandSection = parsedData["ultrahand"];
+                if (ultrahandSection.count("key_combo") == 0) {
+                    // Write the key combo to the destination file
+                    setIniFileValue(settingsConfigIniPath, "ultrahand", "key_combo", keyCombo);
+                }
+            }
+        }
+    }
+    tsl::impl::parseOverlaySettings();
+}
 
 
 
