@@ -39,7 +39,7 @@ include $(DEVKITPRO)/libnx/switch_rules
 #---------------------------------------------------------------------------------
 APP_TITLE	:= Ultrahand
 APP_AUTHOR	:= b0rd2dEAth
-APP_VERSION	:= 1.1.4
+APP_VERSION	:= 1.1.5
 TARGET	    := $(notdir $(CURDIR))
 BUILD	    := build
 SOURCES	    := source common 
@@ -61,7 +61,7 @@ CXXFLAGS := $(CFLAGS) -fexceptions -std=c++20 -Wno-dangling-else
 ASFLAGS := -g $(ARCH)
 LDFLAGS = -specs=$(DEVKITPRO)/libnx/switch.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
 
-LIBS := -lnx
+LIBS := -lcurl -lz -lnx
 
 
 #---------------------------------------------------------------------------------
