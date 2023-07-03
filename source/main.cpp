@@ -17,12 +17,6 @@ bool inSelectionMenu = false;
 bool defaultMenuLoaded = true;
 bool freshSpawn = true;
 
-// String path variables
-const std::string configFileName = "config.ini";
-const std::string settingsPath = "sdmc:/config/ultrahand/";
-const std::string settingsConfigIniPath = settingsPath + configFileName;
-const std::string packageDirectory = "sdmc:/switch/.packages/";
-const std::string overlayDirectory = "sdmc:/switch/.overlays/";
 
 
 
@@ -539,6 +533,7 @@ public:
         createDirectory(packageDirectory);
         createDirectory(settingsPath);
         
+        
         bool settingsLoaded = false;
         if (isFileOrDirectory(settingsConfigIniPath)) {
             settingsData = getParsedDataFromIniFile(settingsConfigIniPath);
@@ -567,6 +562,7 @@ public:
             setIniFileValue(settingsConfigIniPath, "ultrahand", "last_menu", menuMode);
             setIniFileValue(settingsConfigIniPath, "ultrahand", "in_overlay", "false");
         }
+        copyTeslaKeyComboToUltraHand();
         //setIniFileValue(settingsConfigIniPath, "ultrahand", "in_overlay", "false");
         
         
@@ -808,6 +804,7 @@ public:
             }
         }
         if (freshSpawn && !(keysHeld & KEY_B)){
+            
             freshSpawn = false;
         }
         if (returningToMain && !(keysHeld & KEY_B)){
