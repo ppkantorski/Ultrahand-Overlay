@@ -425,14 +425,14 @@ public:
         
         std::string packageSectionString = "";
         std::string packageInfoString = "";
-        if (packageHeader.creator != "") {
-            packageSectionString += "Creator(s)\n";
-            packageInfoString += (packageHeader.creator+"\n").c_str();
-            numEntries++;
-        }
         if (packageHeader.version != "") {
             packageSectionString += "Version\n";
             packageInfoString += (packageHeader.version+"\n").c_str();
+            numEntries++;
+        }
+        if (packageHeader.creator != "") {
+            packageSectionString += "Creator(s)\n";
+            packageInfoString += (packageHeader.creator+"\n").c_str();
             numEntries++;
         }
         if (packageHeader.about != "") {
