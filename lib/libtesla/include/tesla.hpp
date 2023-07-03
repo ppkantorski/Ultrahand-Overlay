@@ -1601,7 +1601,7 @@ namespace tsl {
 
                     int x1 = 20;
                     int y = 50;
-                    int fontSize = 30;
+                    int fontSize = 42;
 
                     // Draw the first half of the string in white color
                     renderer->drawString(firstHalf.c_str(), false, x1, y, fontSize, tsl::Color(0xFF, 0xFF, 0xFF, 0xFF));
@@ -1614,9 +1614,9 @@ namespace tsl {
                 }
                 else {
                     if (this->m_subtitle == "Ultrahand Package") {
-                        renderer->drawString(this->m_title.c_str(), false, 20, 50, 30, a(Color(0x00, 0xFF, 0x00, 0xFF)));
+                        renderer->drawString(this->m_title.c_str(), false, 20, 50, 32, a(Color(0x00, 0xFF, 0x00, 0xFF)));
                     } else if (this->m_subtitle == "Ultrahand Config") {
-                        renderer->drawString(this->m_title.c_str(), false, 20, 50, 30, a(Color(0xFF, 0x33, 0x3F, 0xFF)));
+                        renderer->drawString(this->m_title.c_str(), false, 20, 50, 32, a(Color(0xFF, 0x33, 0x3F, 0xFF)));
                     } else {
                         renderer->drawString(this->m_title.c_str(), false, 20, 50, 30, a(tsl::style::color::ColorText));
                     }
