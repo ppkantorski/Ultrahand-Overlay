@@ -69,7 +69,6 @@ void downloadFile(const std::string& fileUrl, const std::string& toDestination) 
         if (res != CURLE_OK)
         {
             logMessage(std::string("Failed to download file: ") + curl_easy_strerror(res));
-            //std::cerr << "Failed to download file: " << curl_easy_strerror(res) << std::endl;
             fclose(outputFile);
             return;
         }
@@ -85,5 +84,4 @@ void downloadFile(const std::string& fileUrl, const std::string& toDestination) 
         return;
     }
     logMessage("Failed to initialize curl");
-        //std::cerr << "Failed to initialize curl" << std::endl;
 }
