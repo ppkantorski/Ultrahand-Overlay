@@ -14,6 +14,7 @@ bool inOverlay = false;
 bool inSubMenu = false;
 bool inConfigMenu = false;
 bool inSelectionMenu = false;
+bool defaultMenuLoaded = true;
 bool freshSpawn = true;
 
 // String path variables
@@ -570,9 +571,9 @@ public:
         
         
         if ((defaultMenuMode == "overlays") || (defaultMenuMode == "packages")) {
-            if (freshSpawn) {
+            if (defaultMenuLoaded) {
                 menuMode = defaultMenuMode.c_str();
-                //freshSpawn = false;
+                defaultMenuLoaded = false;
             }
         } else {
             defaultMenuMode = "last_menu";
