@@ -1438,39 +1438,6 @@ namespace tsl {
                 return (totalWidth * fontSize) / 10;
             }
 
-            virtual void drawHighlightText(gfx::Renderer *renderer) {
-                static float counter = 0;
-                s32 x = 20, y = 50;     // Starting position
-                int offset = 7;
-                std::string firstHalf = "Ultra";
-                int fontSize = 41;
-
-                for (char letter : firstHalf) {
-                    // Calculate the progress for each letter based on the counter
-                    const float progress = (std::sin((-counter + x * 0.001F) * (180.0 / 3.1415927)) + 1) / 2;
-
-                    // Calculate the corresponding highlight color for each letter
-                    Color highlightColor = {
-                        static_cast<u8>((0xA - 0xF) * (3 - 1.5*progress) + 0xF),
-                        static_cast<u8>((0xA - 0xF) * 1.5*progress + 0xF),
-                        static_cast<u8>((0xA - 0xF) * (1.25 - progress) + 0xF),
-                        0xF
-                    };
-
-                    // Draw each character with its corresponding highlight color
-                    renderer->drawString(std::string(1, letter).c_str(), false, x, y + offset, fontSize, a(highlightColor));
-
-                    // Manually calculate the width of the current letter
-                    int letterWidth = calculateStringWidth(std::string(1, letter), fontSize);
-
-                    // Adjust the x-coordinate for the next character's position
-                    x += letterWidth;
-
-                    // Update the counter for the next character
-                    counter += 0.0002F;
-                }
-            }
-
             // CUSTOM SECTION END
             
             /**
@@ -1661,22 +1628,50 @@ namespace tsl {
                 int offset = 0;
                 // Check if m_title is "Ultrahand"
                 if (this->m_title == "Ultrahand") {
+                    static float counter = 0;
                     std::string firstHalf = "Ultra";
                     std::string secondHalf = "hand";
                     
-                    int x1 = 20;
+                    int x = 20;
                     //int y = 50;
                     int fontSize = 41;
                     offset = 6;
 
                     // Draw the first half of the string in white color
                     //renderer->drawString(firstHalf.c_str(), false, x1, y+offset, fontSize, tsl::Color(0xFF, 0xFF, 0xFF, 0xFF));
-                    drawHighlightText(renderer);
+                    //drawHighlightText(renderer);
+                    
+                    for (char letter : firstHalf) {
+                        // Calculate the progress for each letter based on the counter
+                        const float progress = (std::sin((-counter + x * 0.001F) * (180.0 / 3.1415927)) + 1) / 2;
+
+                        // Calculate the corresponding highlight color for each letter
+                        Color highlightColor = {
+                            static_cast<u8>((0xA - 0xF) * (3 - 1.5*progress) + 0xF),
+                            static_cast<u8>((0xA - 0xF) * 1.5*progress + 0xF),
+                            static_cast<u8>((0xA - 0xF) * (1.25 - progress) + 0xF),
+                            0xF
+                        };
+
+                        // Draw each character with its corresponding highlight color
+                        renderer->drawString(std::string(1, letter).c_str(), false, x, y + offset, fontSize, a(highlightColor));
+
+                        // Manually calculate the width of the current letter
+                        int letterWidth = calculateStringWidth(std::string(1, letter), fontSize);
+
+                        // Adjust the x-coordinate for the next character's position
+                        x += letterWidth;
+
+                        // Update the counter for the next character
+                        counter += 0.0002F;
+                    }
+                    
+                    
                     // Calculate the position for the second half based on the width of the first half
-                    int x2 = x1 + (firstHalf.length() * fontSize)/2 -2;
+                    //int x2 = x1 + (firstHalf.length() * fontSize)/2 -2;
 
                     // Draw the second half of the string in red color
-                    renderer->drawString(secondHalf.c_str(), false, x2, y+offset, fontSize, tsl::Color(0xFF, 0x00, 0x00, 0xFF));
+                    renderer->drawString(secondHalf.c_str(), false, x, y+offset, fontSize, tsl::Color(0xFF, 0x00, 0x00, 0xFF));
                 }
                 else {
                     if (this->m_subtitle == "Ultrahand Package") {
