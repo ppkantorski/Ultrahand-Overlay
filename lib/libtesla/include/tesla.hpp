@@ -1410,35 +1410,7 @@ namespace tsl {
             }
             
             
-            // CUSTOM SECTION START
-
             
-            int calculateStringWidth(const std::string& str, int fontSize) {
-                // Map of character widths
-                std::unordered_map<char, int> characterWidths = {
-                    {'U', 8},
-                    {'l', 3},
-                    {'t', 4},
-                    {'r', 4},
-                    {'a', 6}
-                    // Add more character width mappings as needed
-                };
-
-                int totalWidth = 0;
-
-                for (char letter : str) {
-                    // Lookup the width of the current character
-                    int letterWidth = characterWidths[letter];
-
-                    // Accumulate the width
-                    totalWidth += letterWidth;
-                }
-
-                // Adjust the total width based on the font size
-                return (totalWidth * fontSize) / 10;
-            }
-
-            // CUSTOM SECTION END
             
             /**
              * @brief Sets the boundaries of this view
@@ -1599,7 +1571,52 @@ namespace tsl {
             std::function<void(gfx::Renderer*, s32 x, s32 y, s32 w, s32 h)> m_renderFunc;
         };
 
+        // CUSTOM SECTION START
 
+        
+        int calculateStringWidth(const std::string& str, int fontSize) {
+            // Map of character widths
+            std::unordered_map<char, int> characterWidths = {
+                {'U', 8},
+                {'l', 3},
+                {'t', 4},
+                {'r', 4},
+                {'a', 6}
+                // Add more character width mappings as needed
+            };
+
+            int totalWidth = 0;
+
+            for (char letter : str) {
+                // Lookup the width of the current character
+                int letterWidth = characterWidths[letter];
+
+                // Accumulate the width
+                totalWidth += letterWidth;
+            }
+
+            // Adjust the total width based on the font size
+            return (totalWidth * fontSize) / 10;
+        }
+        
+        float calculateAmplitude(float x) {
+            //const float phasePeriod = 360;  // One full phase period
+
+            // Calculate the phase within the full period
+            //int phase = static_cast<int>((x) * (180.0 / 3.1415927)) % static_cast<int>(phasePeriod);
+
+            // Check if the phase is odd
+            //if (phase % 2 == 1) {
+            //    return 1.0f;  // Flat amplitude (maximum positive)
+            //} else {
+            //    // Calculate the sinusoidal amplitude for the remaining period
+            //    return (std::cos((-x) * (180.0 / 3.1415927)) + 1) / 2;
+            //}
+            return (std::cos((-x) * (180.0 / 3.1415927)) + 1) / 2;
+        }
+        
+        // CUSTOM SECTION END
+        
         /**
          * @brief The base frame which can contain another view
          *
@@ -1634,7 +1651,7 @@ namespace tsl {
                     
                     int x = 20;
                     //int y = 50;
-                    int fontSize = 41;
+                    int fontSize = 42;
                     offset = 6;
 
                     // Draw the first half of the string in white color
@@ -1643,7 +1660,7 @@ namespace tsl {
                     
                     for (char letter : firstHalf) {
                         // Calculate the progress for each letter based on the counter
-                        const float progress = (std::sin((-counter + x * 0.001F) * (180.0 / 3.1415927)) + 1) / 2;
+                        const float progress = calculateAmplitude(counter - x * 0.001F);
 
                         // Calculate the corresponding highlight color for each letter
                         Color highlightColor = {
