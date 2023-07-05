@@ -36,7 +36,7 @@ std::tuple<Result, std::string, std::string> getOverlayInfo(std::string filePath
     fseek(file, nroHeader.size + assetHeader.nacp.offset, SEEK_SET);
     if (fread(&nacp, sizeof(NacpStruct), 1, file) != 1) {
         fclose(file);
-        return { ResultParseErrorf, "", "" };
+        return { ResultParseError, "", "" };
     }
     
     fclose(file);
