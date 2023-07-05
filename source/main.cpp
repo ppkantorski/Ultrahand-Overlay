@@ -303,6 +303,7 @@ public:
 };
 
 
+class MainMenu;
 
 // Sub menu
 class SubMenu : public tsl::Gui {
@@ -494,9 +495,10 @@ public:
         if (inSubMenu && (keysHeld & KEY_B)) {
             //tsl::Overlay::get()->close();
             //svcSleepThread(300'000'000);
-            tsl::goBack();
+            //tsl::goBack();
             inSubMenu = false;
             returningToMain = true;
+            tsl::changeTo<MainMenu>();
             //tsl::Overlay::get()->close();
             return true;
         }
@@ -695,37 +697,41 @@ public:
                     subdirectoryIcon = "\u2605 ";
                 }
                 std::string subPath = packageDirectory + subdirectory + "/";
-                PackageHeader packageHeader = getPackageHeaderFromIni(subPath + configFileName);
+                std::string configFilePath = subPath + "config.ini";
             
-                if (count == 0) {
-                    // Add a section break with small text to indicate the "Packages" section
-                    list->addItem(new tsl::elm::CategoryHeader("Packages"));
-                }
-            
-                auto listItem = new tsl::elm::ListItem(subdirectoryIcon + subdirectory);
-                listItem->setValue(packageHeader.version, true);
-            
-                listItem->setClickListener([this, subPath = packageDirectory + subdirectory + "/"](uint64_t keys) {
-                    if (keys & KEY_A) {
-                        inMainMenu = false;
-                        tsl::changeTo<SubMenu>(subPath);
-                    
-                        return true;
-                    } else if (keys & KEY_PLUS) {
-                        std::string starFilePath = subPath + ".star";
-                        if (isFileOrDirectory(starFilePath)) {
-                            deleteFileOrDirectory(starFilePath);
-                        } else {
-                            createTextFile(starFilePath, "");
-                        }
-                        tsl::changeTo<MainMenu>();
-                        return true;
+                if (isFileOrDirectory(configFilePath)) {
+                    PackageHeader packageHeader = getPackageHeaderFromIni(subPath + configFileName);
+                    if (count == 0) {
+                        // Add a section break with small text to indicate the "Packages" section
+                        list->addItem(new tsl::elm::CategoryHeader("Packages"));
                     }
-                    return false;
-                });
+                    
+                    auto listItem = new tsl::elm::ListItem(subdirectoryIcon + subdirectory);
+                    listItem->setValue(packageHeader.version, true);
+            
+                    listItem->setClickListener([this, subPath = packageDirectory + subdirectory + "/"](uint64_t keys) {
+                        if (keys & KEY_A) {
+                            inMainMenu = false;
+                            tsl::changeTo<SubMenu>(subPath);
+                    
+                            return true;
+                        } else if (keys & KEY_PLUS) {
+                            std::string starFilePath = subPath + ".star";
+                            if (isFileOrDirectory(starFilePath)) {
+                                deleteFileOrDirectory(starFilePath);
+                            } else {
+                                createTextFile(starFilePath, "");
+                            }
+                            tsl::changeTo<MainMenu>();
+                            return true;
+                        }
+                        return false;
+                    });
 
-                list->addItem(listItem);
-                count++;
+                    list->addItem(listItem);
+                    count++;
+                }
+
             }
 
         
@@ -797,14 +803,13 @@ public:
                     return true;
                 }
             }
-            if (!freshSpawn && (keysHeld & KEY_B)) {
+            if (!freshSpawn && !returningToMain && (keysHeld & KEY_B)) {
                 inMainMenu = false;
                 tsl::Overlay::get()->close();
                 return true;
             }
         }
         if (freshSpawn && !(keysHeld & KEY_B)){
-            
             freshSpawn = false;
         }
         if (returningToMain && !(keysHeld & KEY_B)){
