@@ -454,8 +454,7 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                     hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
                 }
             }
-        //} else if (commandName == "download") {
-        //    // Edit command - Hex data replacement with occurrence
+        //} else if (commandName == "download") { // currently not working right.
         //    if (command.size() >= 3) {
         //        fileUrl = preprocessUrl(command[1]);
         //        destinationPath = preprocessPath(command[2]);
