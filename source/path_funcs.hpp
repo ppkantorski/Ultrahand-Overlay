@@ -92,16 +92,14 @@ void moveFileOrDirectory(const std::string& sourcePath, const std::string& desti
         // Source file or directory exists
 
         // Check if the destination path exists
-        bool destinationExists = (stat(destinationPath.c_str(), &destinationInfo) == 0);
+        bool destinationExists = (stat(getParentDirFromPath(destinationPath).c_str(), &destinationInfo) == 0);
+        if (!destinationExists) {
+            // Create the destination directory
+            createDirectory(getParentDirFromPath(destinationPath).c_str());
+        }
 
         if (S_ISDIR(sourceInfo.st_mode)) {
             // Source path is a directory
-
-            if (!destinationExists) {
-                // Create the destination directory
-                createDirectory(destinationPath);
-            }
-
             DIR* dir = opendir(sourcePath.c_str());
             if (!dir) {
                 //logMessage("Failed to open source directory: "+sourcePath);
