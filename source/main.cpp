@@ -10,7 +10,7 @@ bool shouldCloseMenu = false;
 bool returningToMain = false;
 bool returningToSub = false;
 bool inMainMenu = false;
-bool inOverlay = false;
+//bool inOverlay = false;
 bool inSubMenu = false;
 bool inConfigMenu = false;
 bool inSelectionMenu = false;
@@ -492,13 +492,13 @@ public:
     }
 
     virtual bool handleInput(uint64_t keysDown, uint64_t keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
-        if (inSubMenu && (keysHeld & KEY_B)) {
+        if (!returningToSub && inSubMenu && (keysHeld & KEY_B)) {
             //tsl::Overlay::get()->close();
             //svcSleepThread(300'000'000);
             //tsl::goBack();
+            tsl::changeTo<MainMenu>();
             inSubMenu = false;
             returningToMain = true;
-            tsl::changeTo<MainMenu>();
             //tsl::Overlay::get()->close();
             return true;
         }
@@ -628,8 +628,8 @@ public:
                     listItem->setClickListener([overlayFile](s64 key) {
                         if (key & KEY_A) {
                             // Load the overlay here
-                            inMainMenu = false;
-                            inOverlay = true;
+                            //inMainMenu = false;
+                            //inOverlay = true;
                             setIniFileValue(settingsConfigIniPath, "ultrahand", "in_overlay", "true");
                             tsl::setNextOverlay(overlayFile);
                             //envSetNextLoad(overlayPath, "");
