@@ -168,21 +168,6 @@ public:
 
 // Function to download a file given a URL and destination path
 void downloadFile(const std::string& fileUrl, const std::string& toDestination) {
-    // NTP client code here
-    // ...
-
-    // Create an NTP client instance
-    NTPClient ntpClient;
-
-    // Get the current time using NTP
-    time_t currentTime;
-    try {
-        currentTime = ntpClient.getTime();
-    } catch (const NtpException& e) {
-        logMessage("Failed to retrieve current time from NTP: " + std::string(e.what()));
-        return;
-    }
-
     // Extract the hostname and path from the fileUrl
     std::string hostname;
     std::string path;
@@ -244,19 +229,42 @@ void downloadFile(const std::string& fileUrl, const std::string& toDestination) 
 
     // Receive and save the file data
     std::string savePath = toDestination + path.substr(path.rfind('/') + 1);
-    FILE* file = fopen(savePath.c_str(), "wb");
-    if (file == NULL) {
-        perror("Failed to create file");
+    FILE* outputFile = fopen(savePath.c_str(), "wb");
+    if (outputFile == nullptr) {
+        logMessage("Failed to create file: " + savePath);
         close(sockfd);
         return;
     }
 
-    char buffer[4096];
+    const size_t bufferSize = 131072; // Increase buffer size to 128 KB
+    char buffer[bufferSize];
     ssize_t bytesRead;
+    bool headerReceived = false; // Track whether the header has been received
+
     while ((bytesRead = recv(sockfd, buffer, sizeof(buffer), 0)) > 0) {
-        fwrite(buffer, sizeof(char), static_cast<size_t>(bytesRead), file);
+        // Check if the header has been received
+        if (!headerReceived) {
+            std::string response(buffer, bytesRead);
+            std::size_t headerEnd = response.find("\r\n\r\n");
+            if (headerEnd != std::string::npos) {
+                // Skip the header and write the remaining data to the file
+                bytesRead -= (headerEnd + 4); // Exclude the header length
+                std::memcpy(buffer, buffer + headerEnd + 4, bytesRead);
+                headerReceived = true;
+            } else {
+                continue; // Continue to receive the header
+            }
+        }
+
+        fwrite(buffer, sizeof(char), bytesRead, outputFile);
     }
 
-    fclose(file);
+    if (bytesRead < 0) {
+        perror("Failed to receive data");
+    }
+
+    fclose(outputFile);
     close(sockfd);
 }
+
+
