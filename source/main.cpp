@@ -834,9 +834,17 @@ public:
         fsdevMountSdmc();
         splInitialize();
         spsmInitialize();
+        ASSERT_FATAL(socketInitializeDefault());
+        ASSERT_FATAL(nifmInitialize(NifmServiceType_User));
+        ASSERT_FATAL(timeInitialize());
+        ASSERT_FATAL(smInitialize());
     }
 
     virtual void exitServices() override {
+        socketExit();
+        nifmExit();
+        timeExit();
+        smExit();
         spsmExit();
         splExit();
         fsdevUnmountAll();
