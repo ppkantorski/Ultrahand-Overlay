@@ -39,8 +39,8 @@ include $(DEVKITPRO)/libnx/switch_rules
 #---------------------------------------------------------------------------------
 APP_TITLE	:= Ultrahand
 APP_AUTHOR	:= b0rd2dEAth
-APP_VERSION	:= 1.1.5
-TARGET	    := $(notdir $(CURDIR))
+APP_VERSION	:= 1.1.6
+TARGET	    := ovlmenu
 BUILD	    := build
 SOURCES	    := source common 
 INCLUDES	:= source common include lib/libtesla/include
@@ -61,7 +61,7 @@ CXXFLAGS := $(CFLAGS) -fexceptions -std=c++20 -Wno-dangling-else
 ASFLAGS := -g $(ARCH)
 LDFLAGS = -specs=$(DEVKITPRO)/libnx/switch.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
 
-LIBS := -lcurl -lz -lnx
+LIBS := -lnx -lz -lcurl
 
 
 #---------------------------------------------------------------------------------
