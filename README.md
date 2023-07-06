@@ -64,35 +64,35 @@ The config.ini file contains multiple sections, each defining a set of commands 
 Here's an example of the config.ini file:
 ```
 [make directories]
-mkdir /config/ultrahand/example1/
-mkdir /config/ultrahand/example2/
+mkdir /switch/.packages/example1/
+mkdir /switch/.packages/example2/
 
 [copy files]
-copy /config/ultrahand/config.ini /config/ultrahand/example1/
-copy /config/ultrahand/config.ini /config/ultrahand/example2/
+copy /switch/.packages/config.ini /switch/.packages/example1/
+copy /switch/.packages/config.ini /switch/.packages/example2/
 
 [rename files]
-move /config/ultrahand/example1/config.ini /config/ultrahand/example1/configX.ini
-move /config/ultrahand/example2/config.ini /config/ultrahand/example2/configX.ini
+move /switch/.packages/example1/config.ini /switch/.packages/example1/configX.ini
+move /switch/.packages/example2/config.ini /switch/.packages/example2/configX.ini
 
 [move directories]
-move /config/ultrahand/example1/ /config/ultrahand/example3/
-move /config/ultrahand/example2/ /config/ultrahand/example4/
+move /switch/.packages/example1/ /switch/.packages/example3/
+move /switch/.packages/example2/ /switch/.packages/example4/
 
 [delete files]
-delete /config/ultrahand/example1/config.ini
-delete /config/ultrahand/example2/config.ini
+delete /switch/.packages/example1/config.ini
+delete /switch/.packages/example2/config.ini
 
 [delete directories]
-delete /config/ultrahand/example1/
-delete /config/ultrahand/example2/
-delete /config/ultrahand/example3/
-delete /config/ultrahand/example4/
+delete /switch/.packages/example1/
+delete /switch/.packages/example2/
+delete /switch/.packages/example3/
+delete /switch/.packages/example4/
 
 [modify ini file]
-copy /bootloader/hekate_ipl.ini /config/ultrahand/
-set-ini-val /config/ultrahand/hekate_ipl.ini 'Atmosphere' fss0 gonnawritesomethingelse
-set-ini-val ​/config/ultrahand/hekate_ipl.ini 'Atmosphere' booty true
+copy /bootloader/hekate_ipl.ini /switch/.packages/
+set-ini-val /switch/.packages/hekate_ipl.ini 'Atmosphere' fss0 gonnawritesomethingelse
+set-ini-val ​/switch/.packages/hekate_ipl.ini 'Atmosphere' booty true
 ```
 You can add your own sections and commands to customize the actions performed by Ultrahand.
 
