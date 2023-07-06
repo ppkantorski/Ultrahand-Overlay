@@ -7,7 +7,7 @@
 #include <path_funcs.hpp>
 #include <ini_funcs.hpp>
 #include <hex_funcs.hpp>
-//#include <download_funcs.hpp>
+#include <download_funcs.hpp>
 
 #define SpsmShutdownMode_Normal 0
 #define SpsmShutdownMode_Reboot 1
@@ -454,12 +454,13 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                     hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
                 }
             }
-        //} else if (commandName == "download") { // currently not working right.
-        //    if (command.size() >= 3) {
-        //        fileUrl = preprocessUrl(command[1]);
-        //        destinationPath = preprocessPath(command[2]);
-        //        downloadFile(fileUrl, destinationPath);
-        //    }
+        } else if (commandName == "download") {
+            // Edit command - Hex data replacement with occurrence
+            if (command.size() >= 3) {
+                fileUrl = preprocessUrl(command[1]);
+                destinationPath = preprocessPath(command[2]);
+                downloadFile(fileUrl, destinationPath);
+            }
         } else if (commandName == "reboot") {
             // Reboot command
             splExit();
