@@ -125,8 +125,8 @@ public:
 // Selection overlay
 class SelectionOverlay : public tsl::Gui {
 private:
-    std::string filePath, specificKey, filterPath, filterOnPath, filterOffPath, pathPattern, pathPatternOn, pathPatternOff, itemName, parentDirName, lastParentDirName;
-    std::vector<std::string> filesList, filesListOn, filesListOff;
+    std::string filePath, specificKey, pathPattern, pathPatternOn, pathPatternOff, itemName, parentDirName, lastParentDirName;
+    std::vector<std::string> filesList, filesListOn, filesListOff, filterList, filterOnList, filterOffList;
     std::vector<std::vector<std::string>> commands;
     bool toggleState = false;
 
@@ -150,12 +150,12 @@ public:
                 if (cmd[0] == "split") {
                     useSplitHeader = true;
                 } else if (cmd[0] == "filter") {
-                    filterPath = cmd[1];
+                    filterList.push_back(cmd[1]);
                 } else if (cmd[0] == "filter_on") {
-                    filterOnPath = cmd[1];
+                    filterOnList.push_back(cmd[1]);
                     useToggle = true;
                 } else if (cmd[0] == "filter_off") {
-                    filterOffPath = cmd[1];
+                    filterOffList.push_back(cmd[1]);
                 } else if (cmd[0] == "source") {
                     pathPattern = cmd[1];
                 } else if (cmd[0] == "source_on") {
@@ -174,12 +174,16 @@ public:
             filesListOn = getFilesListByWildcards(pathPatternOn);
             filesListOff = getFilesListByWildcards(pathPatternOff);
             
-            if (!filterOnPath.empty()){
+            // Apply On Filter
+            for (const auto& filterOnPath : filterOnList) {
                 removeEntryFromList(filterOnPath, filesListOn);
             }
-            if (!filterOffPath.empty()){
-                removeEntryFromList(filterOffPath, filesListOff);
+            // Apply Off Filter
+            for (const auto& filterOnPath : filterOffList) {
+                removeEntryFromList(filterOnPath, filesListOff);
             }
+            
+            
             // remove filterOnPath from filesListOn
             // remove filterOffPath from filesListOff
             
@@ -213,8 +217,8 @@ public:
             
         }
         
-        if (!filterPath.empty()){
-            // remove filterPath from filesList
+        // Apply filter
+        for (const auto& filterPath : filterList) {
             removeEntryFromList(filterPath, filesList);
         }
         
@@ -529,7 +533,8 @@ public:
 
     virtual tsl::elm::Element* createUI() override {
         inMainMenu = true;
-        defaultMenuMode = "last_menu";
+        //defaultMenuMode = "last_menu";
+        defaultMenuMode = "overlays";
         menuMode = "overlays";
         
         createDirectory(packageDirectory);
