@@ -804,7 +804,7 @@ public:
                 }
             }
             if (!freshSpawn && !returningToMain && (keysHeld & KEY_B)) {
-                inMainMenu = false;
+                //inMainMenu = false;
                 tsl::Overlay::get()->close();
                 return true;
             }
