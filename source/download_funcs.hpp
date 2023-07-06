@@ -1,9 +1,19 @@
 #pragma once
-#include <curl/curl.h>
+
 #include <sys/stat.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+#include <unistd.h>
 
+#include <cstdio>
+#include <cstring>
+#include <string>
+#include <thread>
+#include <chrono>
 
-// For loggging messages and debugging
+// For logging messages and debugging
 #include <ctime>
 void logMessage(const std::string& message) {
     std::time_t currentTime = std::time(nullptr);
@@ -25,63 +35,82 @@ void logMessage(const std::string& message) {
     }
 }
 
-
-
-// Callback function to write downloaded data into a file
-static size_t WriteCallback(void* contents, size_t size, size_t nmemb, void* userp)
-{
-    FILE* file = static_cast<FILE*>(userp);
-    fwrite(contents, size, nmemb, file);
-    return size * nmemb;
-}
-
 // Function to download a file given a URL and destination path
-void downloadFile(const std::string& fileUrl, const std::string& toDestination) //
-{
-    auto curl = curl_easy_init();
-    if (curl)
-    {
-        logMessage("Initialized curl.");
-        // Open the destination file
-        FILE* outputFile = fopen(toDestination.c_str(), "wb");
-        if (!outputFile)
-        {
-            logMessage(std::string("Failed to open destination file: ") +toDestination);
-            return;
+void downloadFile(const std::string& fileUrl, const std::string& toDestination) {
+    // Extract the hostname and path from the fileUrl
+    std::string hostname;
+    std::string path;
+    std::size_t hostnameStart = fileUrl.find("://");
+    if (hostnameStart != std::string::npos) {
+        hostnameStart += 3;  // Skip the "://"
+        std::size_t pathStart = fileUrl.find('/', hostnameStart);
+        if (pathStart != std::string::npos) {
+            hostname = fileUrl.substr(hostnameStart, pathStart - hostnameStart);
+            path = fileUrl.substr(pathStart);
         }
-        
-        logMessage("Setting url to download from.");
-        // Set the URL to download from
-        curl_easy_setopt(curl, CURLOPT_URL, fileUrl.c_str());
+    }
 
-        // Set the write callback function
-        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
-        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, outputFile);
-        logMessage("Set the write callback complete.");
-    
-    
-        logMessage("Performing the download: "+fileUrl);
-        // Perform the download
-        CURLcode res = curl_easy_perform(curl); // ISSUE IS HERE. IT KEEPS FREEZING...
-        if (res != CURLE_OK)
-        {
-            logMessage(std::string("Failed to download file: ") + curl_easy_strerror(res));
-            fclose(outputFile);
-            return;
-        }
-        logMessage("Download complete.");
-        
-        // Cleanup
-        logMessage("Cleanup.");
-        curl_easy_cleanup(curl);
-        logMessage("Cleanup complete.");
-        fclose(outputFile);
-        
-        logMessage(std::string("File downloaded successfully to: ") + toDestination);
+    struct addrinfo hints{};
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_STREAM;
+
+    struct addrinfo* serverInfo;
+    int result = getaddrinfo(hostname.c_str(), "80", &hints, &serverInfo);
+    int retryCount = 0;
+    const int maxRetryCount = 3;
+    const int retryDelayMs = 1000; // 1 second
+
+    while (result != 0 && retryCount < maxRetryCount) {
+        logMessage("Failed to get address info: " + std::string(gai_strerror(result)) + ". Retrying...");
+        std::this_thread::sleep_for(std::chrono::milliseconds(retryDelayMs));
+        result = getaddrinfo(hostname.c_str(), "80", &hints, &serverInfo);
+        retryCount++;
+    }
+
+    if (result != 0) {
+        logMessage("Failed to get address info after retries: " + std::string(gai_strerror(result)));
         return;
     }
-    logMessage("Failed to initialize curl");
+
+    int sockfd = socket(serverInfo->ai_family, serverInfo->ai_socktype, serverInfo->ai_protocol);
+    if (sockfd < 0) {
+        perror("Failed to create socket");
+        freeaddrinfo(serverInfo);
+        return;
+    }
+
+    if (connect(sockfd, serverInfo->ai_addr, serverInfo->ai_addrlen) < 0) {
+        perror("Failed to connect");
+        close(sockfd);
+        freeaddrinfo(serverInfo);
+        return;
+    }
+
+    freeaddrinfo(serverInfo);
+
+    // Send the HTTP request
+    std::string request = "GET " + path + " HTTP/1.1\r\nHost: " + hostname + "\r\n\r\n";
+    if (send(sockfd, request.c_str(), request.length(), 0) < 0) {
+        perror("Failed to send request");
+        close(sockfd);
+        return;
+    }
+
+    // Receive and save the file data
+    std::string savePath = toDestination + path.substr(path.rfind('/') + 1);
+    FILE* file = fopen(savePath.c_str(), "wb");
+    if (file == NULL) {
+        perror("Failed to create file");
+        close(sockfd);
+        return;
+    }
+
+    char buffer[4096];
+    ssize_t bytesRead;
+    while ((bytesRead = recv(sockfd, buffer, sizeof(buffer), 0)) > 0) {
+        fwrite(buffer, sizeof(char), static_cast<size_t>(bytesRead), file);
+    }
+
+    fclose(file);
+    close(sockfd);
 }
