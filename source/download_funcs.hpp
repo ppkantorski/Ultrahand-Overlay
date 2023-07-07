@@ -1,5 +1,9 @@
+// requires https://curl.se/ca/cacert.pem for SSL handshakes
+
 #include <cstdio>
 #include <curl/curl.h>
+#include <zlib.h>
+#include <zzip/zzip.h>
 #include <sys/stat.h>
 #include <dirent.h>
 #include "string_funcs.hpp"
@@ -81,4 +85,48 @@ bool downloadFile(const std::string& url, const std::string& toDestination) {
 
     fclose(file);
     return true;
+}
+
+bool unzipFile(const std::string& zipFilePath, const std::string& toDestination) {
+    ZZIP_DIR* dir = zzip_dir_open(zipFilePath.c_str(), nullptr);
+    if (!dir) {
+        logMessage(std::string("Error opening zip file: ") + zipFilePath);
+        return false;
+    }
+
+    bool success = true;
+    ZZIP_DIRENT entry;
+    while (zzip_dir_read(dir, &entry)) {
+        if (entry.d_name[0] == '\0') continue;  // Skip empty entries
+
+        std::string fileName = entry.d_name;
+        std::string extractedFilePath = toDestination + fileName;
+
+        ZZIP_FILE* file = zzip_file_open(dir, entry.d_name, 0);
+        if (file) {
+            FILE* outputFile = fopen(extractedFilePath.c_str(), "wb");
+            if (outputFile) {
+                zzip_ssize_t bytesRead;
+                const zzip_ssize_t bufferSize = 8192;
+                char buffer[bufferSize];
+
+                while ((bytesRead = zzip_file_read(file, buffer, bufferSize)) > 0) {
+                    fwrite(buffer, 1, bytesRead, outputFile);
+                }
+
+                fclose(outputFile);
+            } else {
+                logMessage(std::string("Error opening output file: ") + extractedFilePath);
+                success = false;
+            }
+
+            zzip_file_close(file);
+        } else {
+            logMessage(std::string("Error opening file in zip: ") + fileName);
+            success = false;
+        }
+    }
+
+    zzip_dir_close(dir);
+    return success;
 }
