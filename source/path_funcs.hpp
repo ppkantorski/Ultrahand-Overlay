@@ -327,3 +327,19 @@ void mirrorCopyFiles(const std::string& sourcePath, const std::string& targetPat
         }
     }
 }
+
+
+bool ensureDirectoryExists(const std::string& path) {
+    if (isDirectory(path)) {
+        return true;
+    }
+    else {
+        createDirectory(path);
+        if (isDirectory(path)) {
+            return true;
+        }
+    }
+    
+    //logMessage(std::string("Failed to create directory: ") + path);
+    return false;
+}
