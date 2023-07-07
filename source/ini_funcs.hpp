@@ -177,7 +177,7 @@ std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadO
         FILE* configFileOut = fopen(configIniPath.c_str(), "w");
         std::string commands;
         if (makeConfig) {
-            commands = "[Safe Reboot]\n"
+            commands = "[HOS Reboot]\n"
                        "reboot\n"
                        "[Shutdown]\n"
                        "shutdown\n";
@@ -273,7 +273,7 @@ void setIniFile(const std::string& fileToEdit, const std::string& desiredSection
         constexpr size_t BufferSize = 4096;
         char line[BufferSize];
         bool sectionFound = false;
-        bool sectionOutOfBounds = false;
+        //bool sectionOutOfBounds = false;
         bool keyFound = false;
         while (fgets(line, sizeof(line), configFile)) {
             trimmedLine = trim(std::string(line));
