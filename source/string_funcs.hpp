@@ -56,8 +56,22 @@ std::string removeEndingSlash(const std::string& pathPattern) {
 
 
 std::string preprocessPath(const std::string& path) {
-    std::string processedPath = "sdmc:" + replaceMultipleSlashes(removeQuotes(path));
-    return processedPath;
+    std::string formattedPath = replaceMultipleSlashes(removeQuotes(path));
+    if (formattedPath.compare(0, 5, "sdmc:") != 0) {
+        return std::string("sdmc:") + formattedPath;
+    } else {
+        return formattedPath;
+    }
+}
+
+
+std::string preprocessUrl(const std::string& path) {
+    std::string formattedPath = removeQuotes(path);
+    if ((formattedPath.compare(0, 7, "http://") == 0) || (formattedPath.compare(0, 8, "https://") == 0)) {
+        return formattedPath;
+    } else {
+        return std::string("https://") + formattedPath;
+    }
 }
 
 std::string dropExtension(const std::string& filename) {
