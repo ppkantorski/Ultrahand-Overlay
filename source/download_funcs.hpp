@@ -1,4 +1,10 @@
 #pragma once
+#include <cstdio>
+#include <cstring>
+#include <string>
+#include <ctime>
+#include <chrono>
+#include <thread>
 
 #include <sys/stat.h>
 #include <sys/socket.h>
@@ -9,28 +15,14 @@
 #include <sys/select.h>
 #include <errno.h>
 
-
-#include <cstdio>
-#include <cstring>
-#include <string>
-#include <ctime>
-#include <chrono>
-#include <thread>
-
-// For logging messages and debugging
-#include <ctime>
 void logMessage(const std::string& message) {
     std::time_t currentTime = std::time(nullptr);
     std::string logEntry = std::asctime(std::localtime(&currentTime));
-    // Find the last non-newline character
     std::size_t lastNonNewline = logEntry.find_last_not_of("\r\n");
-
-    // Remove everything after the last non-newline character
     if (lastNonNewline != std::string::npos) {
         logEntry.erase(lastNonNewline + 1);
     }
-    logEntry = "["+logEntry+"] ";
-    logEntry += message+"\n";
+    logEntry = "[" + logEntry + "] " + message + "\n";
 
     FILE* file = fopen("sdmc:/config/ultrahand/log.txt", "a");
     if (file != nullptr) {
@@ -39,20 +31,6 @@ void logMessage(const std::string& message) {
     }
 }
 
-
-#include <cmath>
-
-
-// NTP client code
-#include <errno.h>
-#include <exception>
-#include <sys/time.h>
-#include <sys/types.h>
-#include <time.h>
-
-
-
-// Function to download a file given a URL and destination path
 void downloadFile(const std::string& fileUrl, const std::string& toDestination) {
     std::string hostname;
     std::string path;
@@ -67,7 +45,7 @@ void downloadFile(const std::string& fileUrl, const std::string& toDestination) 
     }
 
     struct addrinfo hints{};
-    hints.ai_family = AF_INET;
+    hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
 
     struct addrinfo* serverInfo;
@@ -77,14 +55,14 @@ void downloadFile(const std::string& fileUrl, const std::string& toDestination) 
     const int retryDelayMs = 1000;
 
     while (result != 0 && retryCount < maxRetryCount) {
-        logMessage("Failed to get address info: " + std::string(gai_strerror(result)) + ". Retrying...");
+        logMessage(std::string("Failed to get address info: ")+gai_strerror(result)+std::string(". Retrying..."));
         std::this_thread::sleep_for(std::chrono::milliseconds(retryDelayMs));
         result = getaddrinfo(hostname.c_str(), "80", &hints, &serverInfo);
         retryCount++;
     }
 
     if (result != 0) {
-        logMessage("Failed to get address info after retries: " + std::string(gai_strerror(result)));
+        logMessage(std::string("Failed to get address info after retries: ")+gai_strerror(result));
         return;
     }
 
@@ -114,7 +92,7 @@ void downloadFile(const std::string& fileUrl, const std::string& toDestination) 
     std::string savePath = toDestination + path.substr(path.rfind('/') + 1);
     FILE* outputFile = fopen(savePath.c_str(), "wb");
     if (outputFile == nullptr) {
-        logMessage("Failed to create file: " + savePath);
+        logMessage(std::string("Failed to create file: ") + std::string(savePath));
         close(sockfd);
         return;
     }
@@ -141,21 +119,15 @@ void downloadFile(const std::string& fileUrl, const std::string& toDestination) 
             break;
         } else if (selectResult == 0) {
             // Timeout occurred
-            logMessage("Receive timeout occurred");
+            logMessage("Receive timeout occurred\n");
             break;
         }
 
-        bytesRead = recv(sockfd, buffer, bufferSize, 0);
+        bytesRead = recv(sockfd, buffer, bufferSize - 1, 0);
 
         if (bytesRead < 0) {
-            if (errno == EWOULDBLOCK || errno == EAGAIN) {
-                // No data available, continue waiting
-                continue;
-            } else {
-                // Other receive error occurred
-                perror("Failed to receive data");
-                break;
-            }
+            perror("Failed to receive data");
+            break;
         } else if (bytesRead == 0) {
             // Connection closed
             break;
@@ -180,11 +152,6 @@ void downloadFile(const std::string& fileUrl, const std::string& toDestination) 
         fwrite(buffer, sizeof(char), bytesRead, outputFile);
     }
 
-    if (bytesRead < 0) {
-        perror("Failed to receive data");
-    }
-
     fclose(outputFile);
     close(sockfd);
 }
-
