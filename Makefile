@@ -61,7 +61,7 @@ CXXFLAGS := $(CFLAGS) -fexceptions -std=c++20 -Wno-dangling-else
 ASFLAGS := -g $(ARCH)
 LDFLAGS = -specs=$(DEVKITPRO)/libnx/switch.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
 
-LIBS := -lnx -lz -lcurl
+LIBS := -lcurl -lz  -lmbedtls -lmbedx509 -lmbedcrypto -lnx 
 
 
 #---------------------------------------------------------------------------------
