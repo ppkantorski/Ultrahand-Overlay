@@ -461,6 +461,13 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                 destinationPath = preprocessPath(command[2]);
                 downloadFile(fileUrl, destinationPath);
             }
+        } else if (commandName == "unzip") {
+            // Edit command - Hex data replacement with occurrence
+            if (command.size() >= 3) {
+                sourcePath = preprocessPath(command[1]);
+                destinationPath = preprocessPath(command[2]);
+                unzipFile(sourcePath, destinationPath);
+            }
         } else if (commandName == "reboot") {
             // Reboot command
             splExit();
