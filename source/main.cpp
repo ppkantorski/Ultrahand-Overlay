@@ -694,7 +694,7 @@ public:
             
             count = 0;
             for (const auto& taintedSubdirectory : subdirectories) {
-                bool usingStar = false;
+                //bool usingStar = false;
                 std::string subdirectory = taintedSubdirectory;
                 std::string subdirectoryIcon = "";
                 if (subdirectory.find("0_") == 0) {
