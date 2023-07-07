@@ -168,12 +168,11 @@ public:
 
 // Function to download a file given a URL and destination path
 void downloadFile(const std::string& fileUrl, const std::string& toDestination) {
-    // Extract the hostname and path from the fileUrl
     std::string hostname;
     std::string path;
     std::size_t hostnameStart = fileUrl.find("://");
     if (hostnameStart != std::string::npos) {
-        hostnameStart += 3;  // Skip the "://"
+        hostnameStart += 3;
         std::size_t pathStart = fileUrl.find('/', hostnameStart);
         if (pathStart != std::string::npos) {
             hostname = fileUrl.substr(hostnameStart, pathStart - hostnameStart);
@@ -189,7 +188,7 @@ void downloadFile(const std::string& fileUrl, const std::string& toDestination) 
     int result = getaddrinfo(hostname.c_str(), "80", &hints, &serverInfo);
     int retryCount = 0;
     const int maxRetryCount = 3;
-    const int retryDelayMs = 1000; // 1 second
+    const int retryDelayMs = 1000;
 
     while (result != 0 && retryCount < maxRetryCount) {
         logMessage("Failed to get address info: " + std::string(gai_strerror(result)) + ". Retrying...");
@@ -219,7 +218,6 @@ void downloadFile(const std::string& fileUrl, const std::string& toDestination) 
 
     freeaddrinfo(serverInfo);
 
-    // Send the HTTP request
     std::string request = "GET " + path + " HTTP/1.1\r\nHost: " + hostname + "\r\n\r\n";
     if (send(sockfd, request.c_str(), request.length(), 0) < 0) {
         perror("Failed to send request");
@@ -227,7 +225,6 @@ void downloadFile(const std::string& fileUrl, const std::string& toDestination) 
         return;
     }
 
-    // Receive and save the file data
     std::string savePath = toDestination + path.substr(path.rfind('/') + 1);
     FILE* outputFile = fopen(savePath.c_str(), "wb");
     if (outputFile == nullptr) {
@@ -236,23 +233,32 @@ void downloadFile(const std::string& fileUrl, const std::string& toDestination) 
         return;
     }
 
-    const size_t bufferSize = 131072; // Increase buffer size to 128 KB
+    const size_t bufferSize = 131072;
     char buffer[bufferSize];
     ssize_t bytesRead;
-    bool headerReceived = false; // Track whether the header has been received
+    bool headerReceived = false;
 
-    while ((bytesRead = recv(sockfd, buffer, sizeof(buffer), 0)) > 0) {
-        // Check if the header has been received
+    // Set receive timeout
+    struct timeval timeout;
+    timeout.tv_sec = 5; // Adjust the timeout value as needed
+    timeout.tv_usec = 0;
+    if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&timeout, sizeof(timeout)) < 0) {
+        perror("Failed to set receive timeout");
+        fclose(outputFile);
+        close(sockfd);
+        return;
+    }
+
+    while ((bytesRead = recv(sockfd, buffer, bufferSize, 0)) > 0) {
         if (!headerReceived) {
             std::string response(buffer, bytesRead);
             std::size_t headerEnd = response.find("\r\n\r\n");
             if (headerEnd != std::string::npos) {
-                // Skip the header and write the remaining data to the file
-                bytesRead -= (headerEnd + 4); // Exclude the header length
+                bytesRead -= (headerEnd + 4);
                 std::memcpy(buffer, buffer + headerEnd + 4, bytesRead);
                 headerReceived = true;
             } else {
-                continue; // Continue to receive the header
+                continue;
             }
         }
 
