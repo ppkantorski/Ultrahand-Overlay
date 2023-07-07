@@ -1,5 +1,3 @@
-// requires https://curl.se/ca/cacert.pem for SSL handshakes
-
 #include <cstdio>
 #include <curl/curl.h>
 #include <sys/stat.h>
@@ -50,7 +48,7 @@ bool downloadFile(const std::string& url, const std::string& toDestination) {
 
     FILE* file = fopen(destination.c_str(), "wb");
     if (!file) {
-        logMessage("Error opening file: " + destination);
+        logMessage(std::string("Error opening file: ") + destination);
         return false;
     }
 
@@ -60,8 +58,11 @@ bool downloadFile(const std::string& url, const std::string& toDestination) {
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeCallback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, file);
 
+        // Set a user agent
+        curl_easy_setopt(curl, CURLOPT_USERAGENT, "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36");
+
         // If you have a cacert.pem file, you can set it as a trusted CA
-        curl_easy_setopt(curl, CURLOPT_CAINFO, "sdmc:/config/ultrahand/cacert.pem");
+        //curl_easy_setopt(curl, CURLOPT_CAINFO, "sdmc:/config/ultrahand/cacert.pem");
 
         CURLcode result = curl_easy_perform(curl);
         if (result != CURLE_OK) {
