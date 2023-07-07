@@ -65,7 +65,16 @@ std::string getFileContents(const std::string& filePath) {
     return content;
 }
 
+std::string getFileNameFromURL(const std::string& url) {
+    size_t lastSlash = url.find_last_of('/');
+    if (lastSlash != std::string::npos)
+        return url.substr(lastSlash + 1);
+    return "";
+}
 
+std::string getDestinationPath(const std::string& destinationDir, const std::string& fileName) {
+    return destinationDir + "/" + fileName;
+}
 
 std::string getValueFromLine(const std::string& line) {
     std::size_t equalsPos = line.find('=');
