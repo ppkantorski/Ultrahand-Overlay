@@ -77,7 +77,7 @@ std::vector<std::string> findHexDataOffsets(const std::string& filePath, const s
         fclose(file);
         return offsets;
     }
-    std::size_t fileSize = fileStatus.st_size;
+    //std::size_t fileSize = fileStatus.st_size;
 
     // Convert the hex data string to binary data
     std::vector<char> binaryData;
