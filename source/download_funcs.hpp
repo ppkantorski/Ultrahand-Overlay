@@ -1,19 +1,10 @@
-#pragma once
 #include <cstdio>
-#include <cstring>
-#include <string>
-#include <ctime>
-#include <chrono>
-#include <thread>
-
+#include <curl/curl.h>
 #include <sys/stat.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <netdb.h>
-#include <unistd.h>
-#include <sys/select.h>
-#include <errno.h>
+#include <dirent.h>
+
+
+#include <time.h>
 
 void logMessage(const std::string& message) {
     std::time_t currentTime = std::time(nullptr);
@@ -31,127 +22,118 @@ void logMessage(const std::string& message) {
     }
 }
 
-void downloadFile(const std::string& fileUrl, const std::string& toDestination) {
-    std::string hostname;
-    std::string path;
-    std::size_t hostnameStart = fileUrl.find("://");
-    if (hostnameStart != std::string::npos) {
-        hostnameStart += 3;
-        std::size_t pathStart = fileUrl.find('/', hostnameStart);
-        if (pathStart != std::string::npos) {
-            hostname = fileUrl.substr(hostnameStart, pathStart - hostnameStart);
-            path = fileUrl.substr(pathStart);
-        }
-    }
 
-    struct addrinfo hints{};
-    hints.ai_family = AF_UNSPEC;
-    hints.ai_socktype = SOCK_STREAM;
-
-    struct addrinfo* serverInfo;
-    int result = getaddrinfo(hostname.c_str(), "80", &hints, &serverInfo);
-    int retryCount = 0;
-    const int maxRetryCount = 3;
-    const int retryDelayMs = 1000;
-
-    while (result != 0 && retryCount < maxRetryCount) {
-        logMessage(std::string("Failed to get address info: ")+gai_strerror(result)+std::string(". Retrying..."));
-        std::this_thread::sleep_for(std::chrono::milliseconds(retryDelayMs));
-        result = getaddrinfo(hostname.c_str(), "80", &hints, &serverInfo);
-        retryCount++;
-    }
-
-    if (result != 0) {
-        logMessage(std::string("Failed to get address info after retries: ")+gai_strerror(result));
-        return;
-    }
-
-    int sockfd = socket(serverInfo->ai_family, serverInfo->ai_socktype, serverInfo->ai_protocol);
-    if (sockfd < 0) {
-        perror("Failed to create socket");
-        freeaddrinfo(serverInfo);
-        return;
-    }
-
-    if (connect(sockfd, serverInfo->ai_addr, serverInfo->ai_addrlen) < 0) {
-        perror("Failed to connect");
-        close(sockfd);
-        freeaddrinfo(serverInfo);
-        return;
-    }
-
-    freeaddrinfo(serverInfo);
-
-    std::string request = "GET " + path + " HTTP/1.1\r\nHost: " + hostname + "\r\n\r\n";
-    if (send(sockfd, request.c_str(), request.length(), 0) < 0) {
-        perror("Failed to send request");
-        close(sockfd);
-        return;
-    }
-
-    std::string savePath = toDestination + path.substr(path.rfind('/') + 1);
-    FILE* outputFile = fopen(savePath.c_str(), "wb");
-    if (outputFile == nullptr) {
-        logMessage(std::string("Failed to create file: ") + std::string(savePath));
-        close(sockfd);
-        return;
-    }
-
-    const size_t bufferSize = 131072;
-    char buffer[bufferSize];
-    ssize_t bytesRead;
-    bool headerReceived = false;
-
-    fd_set readSet;
-
-    struct timeval timeout;
-    timeout.tv_sec = 3; // Initial timeout value in seconds
-    timeout.tv_usec = 0;
-
-    while (true) {
-        FD_ZERO(&readSet);
-        FD_SET(sockfd, &readSet);
-
-        int selectResult = select(sockfd + 1, &readSet, nullptr, nullptr, &timeout);
-
-        if (selectResult == -1) {
-            perror("Error in select");
-            break;
-        } else if (selectResult == 0) {
-            // Timeout occurred
-            logMessage("Receive timeout occurred\n");
-            break;
-        }
-
-        bytesRead = recv(sockfd, buffer, bufferSize - 1, 0);
-
-        if (bytesRead < 0) {
-            perror("Failed to receive data");
-            break;
-        } else if (bytesRead == 0) {
-            // Connection closed
-            break;
-        }
-
-        if (!headerReceived) {
-            std::string response(buffer, bytesRead);
-            std::size_t headerEnd = response.find("\r\n\r\n");
-            if (headerEnd != std::string::npos) {
-                bytesRead -= (headerEnd + 4);
-                std::memcpy(buffer, buffer + headerEnd + 4, bytesRead);
-                headerReceived = true;
-
-                // Reset the timeout to its initial value
-                timeout.tv_sec = 3;
-                timeout.tv_usec = 0;
-            } else {
-                continue;
-            }
-        }
-
-        fwrite(buffer, sizeof(char), bytesRead, outputFile);
-    }
-
-    fclose(outputFile);
-    close(sockfd);
+size_t writeCallback(void* contents, size_t size, size_t nmemb, FILE* file) {
+    // Callback function to write received data to a file
+    size_t written = fwrite(contents, size, nmemb, file);
+    return written;
 }
+
+bool downloadFile(const std::string& url, const std::string& toDestination) {
+    std::string destination = toDestination.c_str();
+    // Check if the destination ends with "/"
+    if (destination.back() == '/') {
+        // Extract the filename from the URL
+        size_t lastSlash = url.find_last_of('/');
+        if (lastSlash != std::string::npos) {
+            std::string filename = url.substr(lastSlash + 1);
+            destination += filename;
+        } else {
+            logMessage(std::string("Invalid URL: ")+ url);
+            return false;
+        }
+    }
+    
+    FILE* file = fopen(destination.c_str(), "wb");
+    if (!file) {
+        logMessage(std::string("Error opening file: ")+ destination);
+        return false;
+    }
+
+    CURL* curl = curl_easy_init();
+    if (curl) {
+        curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeCallback);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, file);
+
+        // If you have a cacert.pem file, you can set it as a trusted CA
+        curl_easy_setopt(curl, CURLOPT_CAINFO, "sdmc:/config/ultrahand/cacert.pem");
+
+        CURLcode result = curl_easy_perform(curl);
+        if (result != CURLE_OK) {
+            logMessage(std::string("Error downloading file: ")+ curl_easy_strerror(result));
+            fclose(file);
+            curl_easy_cleanup(curl);
+            return false;
+        }
+
+        curl_easy_cleanup(curl);
+    } else {
+        logMessage("Error initializing curl.");
+        fclose(file);
+        return false;
+    }
+
+    fclose(file);
+    return true;
+}
+
+bool directoryExists(const std::string& path) {
+    struct stat info;
+    return stat(path.c_str(), &info) == 0 && S_ISDIR(info.st_mode);
+}
+
+std::string getFileNameFromURL(const std::string& url) {
+    size_t lastSlash = url.find_last_of('/');
+    if (lastSlash != std::string::npos)
+        return url.substr(lastSlash + 1);
+    return "";
+}
+
+std::string getDestinationPath(const std::string& destinationDir, const std::string& fileName) {
+    return destinationDir + "/" + fileName;
+}
+
+std::string generateUniqueDestination(const std::string& destination) {
+    std::string baseDir = destination.substr(0, destination.find_last_of('/'));
+    std::string fileName = destination.substr(destination.find_last_of('/') + 1);
+    std::string baseName = fileName.substr(0, fileName.find_last_of('.'));
+    std::string extension = fileName.substr(fileName.find_last_of('.'));
+    
+    std::string uniqueDestination = destination;
+    int count = 1;
+
+    while (!directoryExists(baseDir) || fopen(uniqueDestination.c_str(), "rb")) {
+        uniqueDestination = baseDir + "/" + baseName + "_" + std::to_string(count) + extension;
+        count++;
+    }
+
+    return uniqueDestination;
+}
+
+bool createDirectory2(const std::string& path) {
+    return mkdir(path.c_str(), 0777) == 0;
+}
+
+bool ensureDirectoryExists(const std::string& path) {
+    if (directoryExists(path))
+        return true;
+    
+    if (createDirectory2(path))
+        return true;
+    
+    logMessage(std::string("Failed to create directory: ")+ path);
+    return false;
+}
+
+bool downloadFileWithDirectory(const std::string& url, const std::string& destinationDir) {
+    std::string fileName = getFileNameFromURL(url);
+    std::string destinationPath = getDestinationPath(destinationDir, fileName);
+
+    if (!ensureDirectoryExists(destinationDir))
+        return false;
+
+    std::string uniqueDestination = generateUniqueDestination(destinationPath);
+    return downloadFile(url, uniqueDestination);
+}
+
