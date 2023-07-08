@@ -36,6 +36,8 @@ bool downloadFile(const std::string& url, const std::string& toDestination) {
     std::string destination = toDestination.c_str();
     // Check if the destination ends with "/"
     if (destination.back() == '/') {
+        createDirectory(destination);
+        
         // Extract the filename from the URL
         size_t lastSlash = url.find_last_of('/');
         if (lastSlash != std::string::npos) {
@@ -45,7 +47,10 @@ bool downloadFile(const std::string& url, const std::string& toDestination) {
             logMessage(std::string("Invalid URL: ") + url);
             return false;
         }
+    } else {
+        createDirectory(destination.substr(0, destination.find_last_of('/'))+"/");
     }
+    
 
     const int MAX_RETRIES = 3;
     int retryCount = 0;
