@@ -58,7 +58,7 @@ bool downloadFile(const std::string& url, const std::string& toDestination) {
             logMessage(std::string("Error opening file: ") + destination);
             return false;
         }
-        
+
         curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeCallback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, file);
@@ -70,24 +70,32 @@ bool downloadFile(const std::string& url, const std::string& toDestination) {
         curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
 
         // If you have a cacert.pem file, you can set it as a trusted CA
-        //curl_easy_setopt(curl, CURLOPT_CAINFO, "sdmc:/config/ultrahand/cacert.pem");
+        // curl_easy_setopt(curl, CURLOPT_CAINFO, "sdmc:/config/ultrahand/cacert.pem");
 
         CURLcode result = curl_easy_perform(curl);
         if (result != CURLE_OK) {
             logMessage(std::string("Error downloading file: ") + curl_easy_strerror(result));
-            fclose(file);
             curl_easy_cleanup(curl);
+            fclose(file);
+            // Delete the file if nothing was written to it
+            std::remove(destination.c_str());
             return false;
         }
 
         curl_easy_cleanup(curl);
-        fclose(file);
+        fclose(file);;
+        // Check if the file is empty
+        long fileSize = ftell(file);
+        if (fileSize == 0) {
+            logMessage(std::string("Error downloading file: Empty file"));
+            std::remove(destination.c_str());
+            return false;
+        }
     } else {
         logMessage("Error initializing curl.");
         return false;
     }
 
-    
     return true;
 }
 
