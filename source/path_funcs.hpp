@@ -3,12 +3,50 @@
 #include <dirent.h>
 
 // Function to create a directory if it doesn't exist
-void createDirectory(const std::string& directoryPath) {
+void createSingleDirectory(const std::string& directoryPath) {
     struct stat st;
     if (stat(directoryPath.c_str(), &st) != 0) {
         mkdir(directoryPath.c_str(), 0777);
     }
 }
+
+// Function to create a directory (including nested directories) if it doesn't exist
+void createDirectory(const std::string& directoryPath) {
+    std::string path = directoryPath;
+
+    // Remove leading "sdmc:/" if present
+    if (path.substr(0, 6) == "sdmc:/") {
+        path = path.substr(6);
+    }
+
+    size_t pos = 0;
+    std::string token;
+    std::string parentPath = "sdmc:/";
+
+    // Iterate through the path and create each directory level if it doesn't exist
+    while ((pos = path.find('/')) != std::string::npos) {
+        token = path.substr(0, pos);
+        if (token.empty()) {
+            // Skip empty tokens (e.g., consecutive slashes)
+            path.erase(0, pos + 1);
+            continue;
+        }
+
+        parentPath += token + "/";
+        createSingleDirectory(parentPath); // Create the parent directory
+        path.erase(0, pos + 1);
+    }
+
+    // Create the final directory level if it doesn't exist
+    if (!path.empty()) {
+        parentPath += path;
+        createSingleDirectory(parentPath); // Create the final directory
+    }
+}
+
+
+
+
 
 // Function to create a text file with the specified content
 void createTextFile(const std::string& filePath, const std::string& content) {
