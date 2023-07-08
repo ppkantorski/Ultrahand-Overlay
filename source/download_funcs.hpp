@@ -47,49 +47,63 @@ bool downloadFile(const std::string& url, const std::string& toDestination) {
         }
     }
 
+    const int MAX_RETRIES = 3;
+    int retryCount = 0;
+    CURL* curl = nullptr;
 
-    CURL* curl = curl_easy_init();
-    if (curl) {
-        FILE* file = fopen(destination.c_str(), "wb");
-        if (!file) {
-            logMessage(std::string("Error opening file: ") + destination);
-            return false;
+    while (retryCount < MAX_RETRIES) {
+        curl = curl_easy_init();
+        if (curl) {
+            // Successful initialization, break out of the loop
+            break;
+        } else {
+            // Failed initialization, increment retry count and try again
+            retryCount++;
+            logMessage("Error initializing curl. Retrying...");
         }
+    }
+    if (!curl) {
+        // Failed to initialize curl after multiple attempts
+        logMessage("Error initializing curl after multiple retries.");
+        return false;
+    }
+    
+    FILE* file = fopen(destination.c_str(), "wb");
+    if (!file) {
+        logMessage(std::string("Error opening file: ") + destination);
+        return false;
+    }
 
-        curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeCallback);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, file);
+    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeCallback);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, file);
 
-        // Set a user agent
-        curl_easy_setopt(curl, CURLOPT_USERAGENT, "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36");
+    // Set a user agent
+    curl_easy_setopt(curl, CURLOPT_USERAGENT, "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36");
 
-        // Enable following redirects
-        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+    // Enable following redirects
+    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
 
-        // If you have a cacert.pem file, you can set it as a trusted CA
-        // curl_easy_setopt(curl, CURLOPT_CAINFO, "sdmc:/config/ultrahand/cacert.pem");
+    // If you have a cacert.pem file, you can set it as a trusted CA
+    // curl_easy_setopt(curl, CURLOPT_CAINFO, "sdmc:/config/ultrahand/cacert.pem");
 
-        CURLcode result = curl_easy_perform(curl);
-        if (result != CURLE_OK) {
-            logMessage(std::string("Error downloading file: ") + curl_easy_strerror(result));
-            curl_easy_cleanup(curl);
-            fclose(file);
-            // Delete the file if nothing was written to it
-            std::remove(destination.c_str());
-            return false;
-        }
-
+    CURLcode result = curl_easy_perform(curl);
+    if (result != CURLE_OK) {
+        logMessage(std::string("Error downloading file: ") + curl_easy_strerror(result));
         curl_easy_cleanup(curl);
-        fclose(file);;
-        // Check if the file is empty
-        long fileSize = ftell(file);
-        if (fileSize == 0) {
-            logMessage(std::string("Error downloading file: Empty file"));
-            std::remove(destination.c_str());
-            return false;
-        }
-    } else {
-        logMessage("Error initializing curl.");
+        fclose(file);
+        // Delete the file if nothing was written to it
+        std::remove(destination.c_str());
+        return false;
+    }
+
+    curl_easy_cleanup(curl);
+    fclose(file);;
+    // Check if the file is empty
+    long fileSize = ftell(file);
+    if (fileSize == 0) {
+        logMessage(std::string("Error downloading file: Empty file"));
+        std::remove(destination.c_str());
         return false;
     }
 
