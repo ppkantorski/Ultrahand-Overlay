@@ -110,6 +110,7 @@ bool downloadFile(const std::string& url, const std::string& toDestination) {
     return true;
 }
 
+
 bool unzipFile(const std::string& zipFilePath, const std::string& toDestination) {
     ZZIP_DIR* dir = zzip_dir_open(zipFilePath.c_str(), nullptr);
     if (!dir) {
@@ -124,6 +125,24 @@ bool unzipFile(const std::string& zipFilePath, const std::string& toDestination)
 
         std::string fileName = entry.d_name;
         std::string extractedFilePath = toDestination + fileName;
+        
+        // Extract the directory path from the extracted file path
+        std::string directoryPath;
+        if (extractedFilePath.back() != '/') {
+            directoryPath = extractedFilePath.substr(0, extractedFilePath.find_last_of('/'))+"/";
+        } else {
+            directoryPath = extractedFilePath;
+        }
+        
+        createDirectory(directoryPath);
+        
+        if (isDirectory(directoryPath)) {
+            logMessage("directoryPath: success");
+        } else {
+            logMessage("directoryPath: failure");
+        }
+        
+        logMessage(std::string("directoryPath: ") + directoryPath);
 
         ZZIP_FILE* file = zzip_file_open(dir, entry.d_name, 0);
         if (file) {
