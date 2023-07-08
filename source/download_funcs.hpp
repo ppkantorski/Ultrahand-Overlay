@@ -1,11 +1,8 @@
-// requires https://curl.se/ca/cacert.pem for SSL handshakes
-
+#pragma once
 #include <cstdio>
 #include <curl/curl.h>
 #include <zlib.h>
 #include <zzip/zzip.h>
-#include <sys/stat.h>
-#include <dirent.h>
 #include "string_funcs.hpp"
 #include "get_funcs.hpp"
 #include "path_funcs.hpp"
