@@ -124,6 +124,10 @@ public:
                 //tsl::Overlay::get()->close();
                 return true;
             }
+        } else {
+            if (keysHeld & KEY_B) {
+                return false;
+            }
         }
         return false;
         //return handleOverlayMenuInput(inConfigMenu, keysHeld, KEY_B);
@@ -311,7 +315,12 @@ public:
                 //tsl::Overlay::get()->close();
                 return true;
             }
+        } else {
+            if (keysHeld & KEY_B) {
+                return false;
+            }
         }
+        
         return false;
         
         //return handleOverlayMenuInput(inSelectionMenu, keysHeld, KEY_B);
@@ -533,7 +542,11 @@ public:
                 //tsl::Overlay::get()->close();
                 return true;
             }
-        } 
+        } else {
+            if (keysHeld & KEY_B) {
+                return false;
+            }
+        }
         
         if (returningToSub && !(keysHeld & KEY_B)){
             returningToSub = false;
@@ -843,8 +856,12 @@ public:
                     return true;
                 }
             }
-
+        } else {
+            if (keysHeld & KEY_B) {
+                return false;
+            }
         }
+        
         if (freshSpawn && !(keysHeld & KEY_B)){
             freshSpawn = false;
         }
