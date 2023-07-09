@@ -3679,7 +3679,8 @@ namespace tsl {
             }
         }
         
-        std::map<std::string, std::map<std::string, std::string>> settingsData = getParsedDataFromIniFile( "sdmc:/config/ultrahand/config.ini");
+        std::string settingsConfigPath = "sdmc:/config/ultrahand/config.ini";
+        std::map<std::string, std::map<std::string, std::string>> settingsData = getParsedDataFromIniFile(settingsConfigPath);
         std::string inOverlayString;
 
         if (settingsData.count("ultrahand") > 0 && settingsData["ultrahand"].count("in_overlay") > 0) {
@@ -3691,7 +3692,7 @@ namespace tsl {
         bool inOverlay = false;
         if (inOverlayString == "true") {
             inOverlay = true;
-            setIniFileValue("sdmc:/config/ultrahand/config.ini", "ultrahand", "in_overlay", "false");
+            setIniFileValue(settingsConfigPath, "ultrahand", "in_overlay", "false");
         }
         
         
