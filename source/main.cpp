@@ -366,14 +366,16 @@ public:
                 if (cmd.size() > 1) {
                     if (cmd[0] == "source") {
                         pathReplace = cmd[1];
-                        break;
                     } else if (cmd[0] == "source_on") {
                         pathReplaceOn = cmd[1];
                         useToggle = true;
                     } else if (cmd[0] == "source_off") {
                         pathReplaceOff = cmd[1];
-                        break;
+                        useToggle = true;
                     }
+                    //else if (cmd[0] == "json_source") {
+                    //    jsonPath = cmd[1];
+                    //}
                 } 
             }
             
@@ -386,8 +388,8 @@ public:
                     listItem->setValue(footer, true);
                 }
                 
-            
-                listItem->setClickListener([command = option.second, keyName = option.first, subPath = this->subPath, usePattern](uint64_t keys) {
+                std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(option.second, pathReplace);
+                listItem->setClickListener([command = modifiedCommands, keyName = option.first, subPath = this->subPath, usePattern](uint64_t keys) {
                     if (keys & KEY_A) {
                         if (usePattern) {
                             inSubMenu = false;
@@ -668,7 +670,7 @@ public:
                             // Load the overlay here
                             //inMainMenu = false;
                             //inOverlay = true;
-                            setIniFileValue(settingsConfigIniPath, "ultrahand", "in_overlay", "true");
+                            setIniFileValue(settingsConfigIniPath, "ultrahand", "in_overlay", "true"); // this is handled within tesla.hpp
                             tsl::setNextOverlay(overlayFile);
                             //envSetNextLoad(overlayPath, "");
                             tsl::Overlay::get()->close();
@@ -795,8 +797,9 @@ public:
                 //}
                 //auto listItem = new tsl::elm::ListItem(header+optionName);
                 auto listItem = new tsl::elm::ListItem(optionName);
-
-                listItem->setClickListener([this, command = option.second, subPath = optionName](uint64_t keys) {
+                
+                std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(option.second, fullPath);
+                listItem->setClickListener([this, command = modifiedCommands, subPath = optionName](uint64_t keys) {
                     if (keys & KEY_A) {
                         // Check if it's a subdirectory
                         struct stat entryStat;
