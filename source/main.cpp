@@ -52,10 +52,6 @@ public:
                     if (!specificKey.empty()) {
                         if (line.substr(1, line.size() - 2) == specificKey) {
                             currentCategory = line.substr(1, line.size() - 2);
-                            size_t pos = currentCategory.find("&&");
-                            if (pos != std::string::npos) {
-                                currentCategory.replace(pos, 2, " - "); // Replace "&&" with " - " (for handling footer)
-                            }
                             isInSection = true;
                             list->addItem(new tsl::elm::CategoryHeader(currentCategory));
                         } else {
@@ -64,10 +60,6 @@ public:
                         }
                     } else {
                         currentCategory = line.substr(1, line.size() - 2);
-                        size_t pos = currentCategory.find("&&");
-                        if (pos != std::string::npos) {
-                            currentCategory.replace(pos, 2, " - "); // Replace "&&" with " - " (for handling footer)
-                        }
                         isInSection = true;
                         list->addItem(new tsl::elm::CategoryHeader(currentCategory));
                     }
@@ -361,7 +353,7 @@ public:
                 optionName = optionName.substr(1); // Strip the "*" character on the left
                 footer = "\u25B6";
             } else {
-                size_t pos = optionName.find("&&");
+                size_t pos = optionName.find(" - ");
                 if (pos != std::string::npos) {
                     footer = optionName.substr(pos + 2); // Assign the part after "&&" as the footer
                     optionName = optionName.substr(0, pos); // Strip the "&&" and everything after it
