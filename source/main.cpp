@@ -114,14 +114,16 @@ public:
     }
 
     virtual bool handleInput(u64 keysDown, u64 keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
-        if (inConfigMenu && (keysHeld & KEY_B)) {
-            //tsl::Overlay::get()->close();
-            //svcSleepThread(300'000'000);
-            tsl::goBack();
-            inConfigMenu = false;
-            returningToSub = true;
-            //tsl::Overlay::get()->close();
-            return true;
+        if (inConfigMenu) {
+            if (keysHeld & KEY_B) {
+                //tsl::Overlay::get()->close();
+                //svcSleepThread(300'000'000);
+                tsl::goBack();
+                inConfigMenu = false;
+                returningToSub = true;
+                //tsl::Overlay::get()->close();
+                return true;
+            }
         }
         return false;
         //return handleOverlayMenuInput(inConfigMenu, keysHeld, KEY_B);
@@ -299,14 +301,16 @@ public:
     }
 
     virtual bool handleInput(u64 keysDown, u64 keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
-        if (inSelectionMenu && (keysHeld & KEY_B)) {
-            //tsl::Overlay::get()->close();
-            //svcSleepThread(300'000'000);
-            tsl::goBack();
-            inSelectionMenu = false;
-            returningToSub = true;
-            //tsl::Overlay::get()->close();
-            return true;
+        if (inSelectionMenu) {
+            if (keysHeld & KEY_B) {
+                //tsl::Overlay::get()->close();
+                //svcSleepThread(300'000'000);
+                tsl::goBack();
+                inSelectionMenu = false;
+                returningToSub = true;
+                //tsl::Overlay::get()->close();
+                return true;
+            }
         }
         return false;
         
@@ -517,16 +521,19 @@ public:
     }
 
     virtual bool handleInput(uint64_t keysDown, uint64_t keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
-        if (!returningToSub && inSubMenu && (keysHeld & KEY_B)) {
-            //tsl::Overlay::get()->close();
-            //svcSleepThread(300'000'000);
-            //tsl::goBack();
-            tsl::changeTo<MainMenu>();
-            inSubMenu = false;
-            returningToMain = true;
-            //tsl::Overlay::get()->close();
-            return true;
-        }
+
+        if (!returningToSub && inSubMenu) {
+            if ((keysHeld & KEY_B)) {
+                //tsl::Overlay::get()->close();
+                //svcSleepThread(300'000'000);
+                //tsl::goBack();
+                tsl::changeTo<MainMenu>();
+                inSubMenu = false;
+                returningToMain = true;
+                //tsl::Overlay::get()->close();
+                return true;
+            }
+        } 
         
         if (returningToSub && !(keysHeld & KEY_B)){
             returningToSub = false;
@@ -815,25 +822,28 @@ public:
     virtual bool handleInput(uint64_t keysDown, uint64_t keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
         
         if (inMainMenu){
-            if (keysHeld & KEY_DRIGHT) {
-                if (menuMode != "packages") {
-                    setIniFileValue(settingsConfigIniPath, "ultrahand", "last_menu", "packages");
-                    tsl::changeTo<MainMenu>();
+            if (!freshSpawn && !returningToMain) {
+                if ((keysHeld & KEY_DRIGHT) && !(keysHeld & (KEY_DLEFT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR))) {
+                    if (menuMode != "packages") {
+                        setIniFileValue(settingsConfigIniPath, "ultrahand", "last_menu", "packages");
+                        tsl::changeTo<MainMenu>();
+                        return true;
+                    }
+                }
+                if ((keysHeld & KEY_DLEFT) && !(keysHeld & (KEY_DRIGHT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR))) {
+                    if (menuMode != "overlays") {
+                        setIniFileValue(settingsConfigIniPath, "ultrahand", "last_menu", "overlays");
+                        tsl::changeTo<MainMenu>();
+                        return true;
+                    }
+                }
+                if (keysHeld & KEY_B) {
+                    //inMainMenu = false;
+                    tsl::Overlay::get()->close();
                     return true;
                 }
             }
-            if (keysHeld & KEY_DLEFT) {
-                if (menuMode != "overlays") {
-                    setIniFileValue(settingsConfigIniPath, "ultrahand", "last_menu", "overlays");
-                    tsl::changeTo<MainMenu>();
-                    return true;
-                }
-            }
-            if (!freshSpawn && !returningToMain && (keysHeld & KEY_B)) {
-                //inMainMenu = false;
-                tsl::Overlay::get()->close();
-                return true;
-            }
+
         }
         if (freshSpawn && !(keysHeld & KEY_B)){
             freshSpawn = false;
