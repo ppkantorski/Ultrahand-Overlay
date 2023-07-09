@@ -2,6 +2,7 @@
 #include <sys/stat.h>
 #include <dirent.h>
 #include <fnmatch.h>
+#include <jansson.h>
 #include <string_funcs.hpp>
 
 // Get functions
@@ -315,6 +316,24 @@ std::vector<std::string> getFilesListByWildcards(const std::string& pathPattern)
 }
 
 
+#include <time.h>
+void logMessage2(const std::string& message) {
+    std::time_t currentTime = std::time(nullptr);
+    std::string logEntry = std::asctime(std::localtime(&currentTime));
+    std::size_t lastNonNewline = logEntry.find_last_not_of("\r\n");
+    if (lastNonNewline != std::string::npos) {
+        logEntry.erase(lastNonNewline + 1);
+    }
+    logEntry = "[" + logEntry + "] " + message + "\n";
+
+    FILE* file = fopen("sdmc:/config/ultrahand/log.txt", "a");
+    if (file != nullptr) {
+        fputs(logEntry.c_str(), file);
+        fclose(file);
+    }
+}
+
+
 std::string replacePlaceholder(const std::string& input, const std::string& placeholder, const std::string& replacement) {
     std::string result = input;
     std::size_t pos = result.find(placeholder);
@@ -324,43 +343,124 @@ std::string replacePlaceholder(const std::string& input, const std::string& plac
     return result;
 }
 
-// Selection overlay helper function (for toggles too)
-std::vector<std::vector<std::string>> getModifyCommands(const std::vector<std::vector<std::string>>& commands, const std::string& file, bool toggle=false, bool on=true) {
+std::string replaceJsonSourcePlaceholder(const std::string& placeholder, const std::string& jsonPath) {
+    // Load JSON data from the provided file
+    json_t* root;
+    json_error_t error;
+    root = json_load_file(jsonPath.c_str(), 0, &error);
+
+    if (!root) {
+        // Handle JSON parsing error
+        // printf("JSON parsing error: %s\n", error.text);
+        return placeholder;  // Return the original placeholder if JSON parsing fails
+    }
+
+    std::string replacement = placeholder;
+    std::size_t startPos = replacement.find("{json_source(");
+    std::size_t endPos = replacement.find(")}");
+    if (startPos != std::string::npos && endPos != std::string::npos && endPos > startPos) {
+        std::string jsonPathArgs = replacement.substr(startPos + 13, endPos - startPos - 13);
+        std::vector<std::string> keys;
+        std::string key;
+        std::istringstream keyStream(jsonPathArgs);
+        while (std::getline(keyStream, key, ',')) {
+            keys.push_back(trim(key));
+        }
+
+        // Traverse the JSON structure based on the keys
+        json_t* current = root;
+        for (const auto& key : keys) {
+            if (json_is_object(current)) {
+                current = json_object_get(current, key.c_str());
+            } else if (json_is_array(current)) {
+                if (key == "[]") {
+                    size_t index = 0;
+                    while (json_array_size(current) > index) {
+                        json_t* arrayItem = json_array_get(current, index);
+                        if (json_is_object(arrayItem)) {
+                            current = arrayItem;
+                            break;
+                        }
+                        ++index;
+                    }
+                } else {
+                    size_t index = std::stoul(key);
+                    if (index < json_array_size(current)) {
+                        current = json_array_get(current, index);
+                    } else {
+                        // Handle invalid JSON array index
+                        // printf("Invalid JSON array index: %s\n", key.c_str());
+                        json_decref(root);
+                        return placeholder;  // Return the original placeholder if JSON array index is invalid
+                    }
+                }
+            } else {
+                // Handle invalid JSON structure or key
+                // printf("Invalid JSON structure or key: %s\n", key.c_str());
+                json_decref(root);
+                return placeholder;  // Return the original placeholder if JSON structure or key is invalid
+            }
+        }
+
+        if (json_is_string(current)) {
+            std::string url = json_string_value(current);
+            // Replace the entire placeholder with the URL
+            replacement.replace(startPos, endPos - startPos + 2, url);
+        }
+    }
+
+    json_decref(root);
+    return replacement;
+}
+
+
+std::vector<std::vector<std::string>> getModifyCommands(const std::vector<std::vector<std::string>>& commands, const std::string& file, bool toggle = false, bool on = true) {
     std::vector<std::vector<std::string>> modifiedCommands;
+    std::string jsonPath;
+    
     bool addCommands = false;
     for (const auto& cmd : commands) {
-        if (toggle && cmd.size() > 1) {
-            if (cmd[0] == "source_on") {
-                addCommands = true;
-                if (!on) {
-                    addCommands = !addCommands;
-                }
-            } else if (cmd[0] == "source_off") {
-                addCommands = false;
-                if (!on) {
-                    addCommands = !addCommands;
+        if (cmd.size() > 1) {
+            if (toggle) {
+                if (cmd[0] == "source_on") {
+                    addCommands = true;
+                    if (!on) {
+                        addCommands = !addCommands;
+                    }
+                } else if (cmd[0] == "source_off") {
+                    addCommands = false;
+                    if (!on) {
+                        addCommands = !addCommands;
+                    }
                 }
             }
+            if (cmd[0] == "json_source") {
+                jsonPath = preprocessPath(cmd[1]);
+            } 
         }
         if (!toggle or addCommands) {
             std::vector<std::string> modifiedCmd = cmd;
             for (auto& arg : modifiedCmd) {
-                //if ((!toggle && (arg.find("{source}") != std::string::npos)) || (on && arg == "{source_on}") || (!on && arg == "{source_off}")) {
-                //    arg = file;
-                //}
                 if (!toggle && (arg.find("{source}") != std::string::npos)) {
                     arg = replacePlaceholder(arg, "{source}", file);
-                }
-                if (on && (arg.find("{source_on}") != std::string::npos)) {
+                } else if (on && (arg.find("{source_on}") != std::string::npos)) {
                     arg = replacePlaceholder(arg, "{source_on}", file);
                 } else if (!on && (arg.find("{source_off}") != std::string::npos)) {
                     arg = replacePlaceholder(arg, "{source_off}", file);
-                }
-                if (arg.find("{name1}") != std::string::npos) {
-                    arg = replacePlaceholder(arg, "{name1}", getNameFromPath(file));
-                }
-                if (arg.find("{name2}") != std::string::npos) {
-                    arg = replacePlaceholder(arg, "{name2}", getParentDirNameFromPath(file));
+                } else if (arg.find("{name1}") != std::string::npos) {
+                    arg = replacePlaceholder(arg, "{name}", getNameFromPath(file));
+                } else if (arg.find("{name2}") != std::string::npos) {
+                    arg = replacePlaceholder(arg, "{parent_name}", getParentDirNameFromPath(file));
+                } else if (arg.find("{json_source(") != std::string::npos) {
+                    size_t startPos = arg.find("{json_source(");
+                    size_t endPos = arg.find(")}");
+                    if (endPos != std::string::npos && endPos > startPos) {
+                        std::string replacement = replaceJsonSourcePlaceholder(arg.substr(startPos, endPos - startPos + 2), jsonPath);
+                        logMessage2("replacement: "+replacement);
+                        logMessage2("pre-arg: "+arg);
+                        arg.replace(startPos, endPos - startPos + 2, replacement);
+                        logMessage2("post-arg: "+arg);
+                    }
                 }
             }
             modifiedCommands.emplace_back(modifiedCmd);
