@@ -3680,12 +3680,18 @@ namespace tsl {
         }
         
         std::map<std::string, std::map<std::string, std::string>> settingsData = getParsedDataFromIniFile( "sdmc:/config/ultrahand/config.ini");
-        std::string inOverlayString = settingsData["ultrahand"]["in_overlay"];
+        std::string inOverlayString;
+
+        if (settingsData.count("ultrahand") > 0 && settingsData["ultrahand"].count("in_overlay") > 0) {
+            inOverlayString = settingsData["ultrahand"]["in_overlay"];
+        } else {
+            inOverlayString = "false"; // Assign default value if the keys are not present
+        }
         
         bool inOverlay = false;
         if (inOverlayString == "true") {
             inOverlay = true;
-            setIniFileValue( "sdmc:/config/ultrahand/config.ini", "ultrahand", "in_overlay", "false");
+            setIniFileValue("sdmc:/config/ultrahand/config.ini", "ultrahand", "in_overlay", "false");
         }
         
         
