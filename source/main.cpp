@@ -52,16 +52,24 @@ public:
                     if (!specificKey.empty()) {
                         if (line.substr(1, line.size() - 2) == specificKey) {
                             currentCategory = line.substr(1, line.size() - 2);
+                            size_t pos = currentCategory.find("&&");
+                            if (pos != std::string::npos) {
+                                currentCategory.replace(pos, 2, " - "); // Replace "&&" with " - " (for handling footer)
+                            }
                             isInSection = true;
-                            list->addItem(new tsl::elm::CategoryHeader(line.substr(1, line.size() - 2)));
+                            list->addItem(new tsl::elm::CategoryHeader(currentCategory));
                         } else {
                             currentCategory.clear();
                             isInSection = false;
                         }
                     } else {
                         currentCategory = line.substr(1, line.size() - 2);
+                        size_t pos = currentCategory.find("&&");
+                        if (pos != std::string::npos) {
+                            currentCategory.replace(pos, 2, " - "); // Replace "&&" with " - " (for handling footer)
+                        }
                         isInSection = true;
-                        list->addItem(new tsl::elm::CategoryHeader(line.substr(1, line.size() - 2)));
+                        list->addItem(new tsl::elm::CategoryHeader(currentCategory));
                     }
                 } else if (isInSection) {
                     auto listItem = new tsl::elm::ListItem(line);
