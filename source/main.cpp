@@ -339,6 +339,12 @@ public:
                 usePattern = true;
                 optionName = optionName.substr(1); // Strip the "*" character on the left
                 footer = "\u25B6";
+            } else {
+                size_t pos = optionName.find("&&");
+                if (pos != std::string::npos) {
+                    footer = optionName.substr(pos + 2); // Assign the part after "&&" as the footer
+                    optionName = optionName.substr(0, pos); // Strip the "&&" and everything after it
+                }
             }
             
             // Extract the path pattern from commands
@@ -359,7 +365,14 @@ public:
             }
             
             if (usePattern || !useToggle){
-                auto listItem = new tsl::elm::ListItem(optionName, footer);
+                auto listItem = static_cast<tsl::elm::ListItem*>(nullptr);
+                if ((footer == "\u25B6") || (footer.empty())) {
+                    listItem = new tsl::elm::ListItem(optionName, footer);
+                } else {
+                    listItem = new tsl::elm::ListItem(optionName);
+                    listItem->setValue(footer, true);
+                }
+                
             
                 listItem->setClickListener([command = option.second, keyName = option.first, subPath = this->subPath, usePattern](uint64_t keys) {
                     if (keys & KEY_A) {
