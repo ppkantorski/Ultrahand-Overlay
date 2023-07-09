@@ -316,23 +316,6 @@ std::vector<std::string> getFilesListByWildcards(const std::string& pathPattern)
 }
 
 
-#include <time.h>
-void logMessage2(const std::string& message) {
-    std::time_t currentTime = std::time(nullptr);
-    std::string logEntry = std::asctime(std::localtime(&currentTime));
-    std::size_t lastNonNewline = logEntry.find_last_not_of("\r\n");
-    if (lastNonNewline != std::string::npos) {
-        logEntry.erase(lastNonNewline + 1);
-    }
-    logEntry = "[" + logEntry + "] " + message + "\n";
-
-    FILE* file = fopen("sdmc:/config/ultrahand/log.txt", "a");
-    if (file != nullptr) {
-        fputs(logEntry.c_str(), file);
-        fclose(file);
-    }
-}
-
 
 std::string replacePlaceholder(const std::string& input, const std::string& placeholder, const std::string& replacement) {
     std::string result = input;
@@ -456,10 +439,10 @@ std::vector<std::vector<std::string>> getModifyCommands(const std::vector<std::v
                     size_t endPos = arg.find(")}");
                     if (endPos != std::string::npos && endPos > startPos) {
                         std::string replacement = replaceJsonSourcePlaceholder(arg.substr(startPos, endPos - startPos + 2), jsonPath);
-                        logMessage2("replacement: "+replacement);
-                        logMessage2("pre-arg: "+arg);
+                        //logMessage2("replacement: "+replacement);
+                        //logMessage2("pre-arg: "+arg);
                         arg.replace(startPos, endPos - startPos + 2, replacement);
-                        logMessage2("post-arg: "+arg);
+                        //logMessage2("post-arg: "+arg);
                     }
                 }
             }
