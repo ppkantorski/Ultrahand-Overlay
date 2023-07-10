@@ -238,22 +238,50 @@ bool isDangerousCombination(const std::string& patternPath) {
 
 // Main interpreter
 void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& commands) {
-    std::string commandName, sourcePath, destinationPath, desiredSection, desiredKey, desiredNewKey, desiredValue, offset, hexDataToReplace, hexDataReplacement, fileUrl, occurrence;
+    std::string commandName, jsonPath, sourcePath, destinationPath, desiredSection, desiredKey, desiredNewKey, desiredValue, offset, hexDataToReplace, hexDataReplacement, fileUrl, occurrence;
     
-    for (const auto& command : commands) {
+    for (auto& unmodifiedCommand : commands) {
         
         // Check the command and perform the appropriate action
-        if (command.empty()) {
+        if (unmodifiedCommand.empty()) {
             // Empty command, do nothing
             continue;
         }
 
         // Get the command name (first part of the command)
-        commandName = command[0];
+        commandName = unmodifiedCommand[0];
         //logMessage(commandName);
         //logMessage(command[1]);
         
-        if (commandName == "make" || commandName == "mkdir") {
+        
+        std::vector<std::string> command;
+        
+        // Modify the command to replace {json_source} placeholder if jsonPath is available
+        if (!jsonPath.empty()) {
+            std::vector<std::string> modifiedCommand;
+            for (const std::string& commandArg : unmodifiedCommand) {
+                if (commandArg.find("{json_source(") != std::string::npos) {
+                    // Create a copy of the string and modify it
+                    std::string modifiedArg = commandArg;
+                    modifiedArg = replaceJsonSourcePlaceholder(modifiedArg, jsonPath);
+                    // Use modifiedArg as needed
+                    modifiedCommand.push_back(modifiedArg);
+                } else {
+                    modifiedCommand.push_back(commandArg);
+                }
+            }
+            command = modifiedCommand;
+        } else {
+            command = unmodifiedCommand;
+        }
+        
+        
+        
+        if (commandName == "json_source") {
+            if (command.size() >= 2) {
+                jsonPath = preprocessPath(command[1]);
+            }
+        } else if (commandName == "make" || commandName == "mkdir") {
             // Delete command
             if (command.size() >= 2) {
                 sourcePath = preprocessPath(command[1]);
@@ -459,6 +487,7 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
             if (command.size() >= 3) {
                 fileUrl = preprocessUrl(command[1]);
                 destinationPath = preprocessPath(command[2]);
+                logMessage("fileUrl: "+fileUrl);
                 downloadFile(fileUrl, destinationPath);
             }
         } else if (commandName == "unzip") {
