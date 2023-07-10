@@ -4,6 +4,7 @@
 #include <fnmatch.h>
 #include <jansson.h>
 #include <string_funcs.hpp>
+#include "debug_funcs.hpp"
 
 // Get functions
 
@@ -339,13 +340,15 @@ std::string replaceJsonSourcePlaceholder(const std::string& placeholder, const s
     }
 
     std::string replacement = placeholder;
-    std::size_t startPos = replacement.find("{json_data(");
+    std::string searchString = "{json_data(";
     if (source) {
-        startPos = replacement.find("{json_source(");
+        searchString = "{json_source(";
     }
+    
+    std::size_t startPos = replacement.find(searchString);
     std::size_t endPos = replacement.find(")}");
     if (startPos != std::string::npos && endPos != std::string::npos && endPos > startPos) {
-        std::string jsonPathArgs = replacement.substr(startPos + 13, endPos - startPos - 13);
+        std::string jsonPathArgs = replacement.substr(startPos + searchString.length(), endPos - startPos - searchString.length());
         std::vector<std::string> keys;
         std::string key;
         std::istringstream keyStream(jsonPathArgs);
@@ -391,7 +394,7 @@ std::string replaceJsonSourcePlaceholder(const std::string& placeholder, const s
         if (json_is_string(current)) {
             std::string url = json_string_value(current);
             // Replace the entire placeholder with the URL
-            replacement.replace(startPos, endPos - startPos + 2, url);
+            replacement.replace(startPos, endPos - startPos + searchString.length() + 2, url);
         }
     }
 
@@ -400,9 +403,10 @@ std::string replaceJsonSourcePlaceholder(const std::string& placeholder, const s
 }
 
 
-std::vector<std::vector<std::string>> getModifyCommands(const std::vector<std::vector<std::string>>& commands, const std::string& file, bool toggle = false, bool on = true) {
+
+std::vector<std::vector<std::string>> getModifyCommands(const std::vector<std::vector<std::string>>& commands, const std::string& file, bool toggle = false, bool on = true, bool usingJsonSource = false) {
     std::vector<std::vector<std::string>> modifiedCommands;
-    std::string jsonPath;
+    std::string jsonPath, replacement;
     
     bool addCommands = false;
     for (const auto& cmd : commands) {
@@ -420,7 +424,7 @@ std::vector<std::vector<std::string>> getModifyCommands(const std::vector<std::v
                     }
                 }
             }
-            if (cmd[0] == "json_source") {
+            if ((usingJsonSource) && (cmd[0] == "json_source")) {
                 jsonPath = preprocessPath(cmd[1]);
             } 
         }
@@ -437,24 +441,40 @@ std::vector<std::vector<std::string>> getModifyCommands(const std::vector<std::v
                     arg = replacePlaceholder(arg, "{name}", getNameFromPath(file));
                 } else if (arg.find("{parent_name}") != std::string::npos) {
                     arg = replacePlaceholder(arg, "{parent_name}", getParentDirNameFromPath(file));
-                } else if (arg.find("{json_source(") != std::string::npos) {
+                //} else if (arg.find("{json_source(") != std::string::npos) {
+                //    size_t startPos = arg.find("{json_source(");
+                //    size_t endPos = arg.find(")}");
+                //    if (endPos != std::string::npos && endPos > startPos) {
+                //        std::string placeholder = "*";
+                //        std::string replacement = arg.substr(startPos, endPos - startPos + 2);
+                //        size_t placeholderPos = replacement.find(placeholder);
+                //        if (placeholderPos != std::string::npos) {
+                //            replacement.replace(placeholderPos, placeholder.length(), file);
+                //            //arg.replace(startPos, endPos - startPos + 2, replacement);
+                //        }
+                //        
+                //        replacement = replaceJsonSourcePlaceholder(replacement, jsonPath, true);
+                //        //logMessage2("replacement: "+replacement);
+                //        //logMessage2("pre-arg: "+arg);
+                //        arg.replace(startPos, endPos - startPos + 2, replacement);
+                //    }
+                } else if (usingJsonSource && (arg.find("{json_source(") != std::string::npos)) {
+                    std::string countStr = file;
+                    
+                    logMessage(std::string("count: ")+countStr);
+                    logMessage(std::string("pre arg: ") + arg);
+                    arg = replacePlaceholder(arg, "*", file);
+                    logMessage(std::string("post arg: ") + arg);
+
+                    
                     size_t startPos = arg.find("{json_source(");
                     size_t endPos = arg.find(")}");
                     if (endPos != std::string::npos && endPos > startPos) {
-                        std::string jsonSourceParams = arg.substr(startPos + 13, endPos - startPos - 13); // Extract the parameters within the parentheses
-
-                        // Find the asterisk (*) position in the parameters
-                        std::string::size_type asteriskPos = jsonSourceParams.find('*');
-                        while (asteriskPos != std::string::npos) {
-                            // Replace the asterisk (*) with the value of file
-                            jsonSourceParams.replace(asteriskPos, 1, file);
-
-                            // Find the next asterisk (*) position
-                            asteriskPos = jsonSourceParams.find('*', asteriskPos + 1);
-                        }
-
-                        std::string replacement = replaceJsonSourcePlaceholder(arg.substr(startPos, 13) + jsonSourceParams + "})", jsonPath, true);
+                        replacement = replaceJsonSourcePlaceholder(arg.substr(startPos, endPos - startPos + 2), jsonPath, true);
+                        //logMessage2("replacement: "+replacement);
+                        //logMessage2("pre-arg: "+arg);
                         arg.replace(startPos, endPos - startPos + 2, replacement);
+                        //logMessage2("post-arg: "+arg);
                     }
                 }
             }
