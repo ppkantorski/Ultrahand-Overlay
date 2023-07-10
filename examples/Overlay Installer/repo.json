@@ -25,11 +25,6 @@
     "zip-url": "https://api.github.com/repos/masagrator/SaltyNX/releases"
   },
   {
-    "name": "FPSLocker-Warehouse - latest",
-    "type": "custom",
-    "custom-url": "https://api.github.com/repos/masagrator/FPSLocker-Warehouse/releases"
-  },
-  {
     "name": "EdiZon - latest",
     "type": "zip",
     "zip-url": "https://api.github.com/repos/proferabg/EdiZon-Overlay/releases"
@@ -38,11 +33,6 @@
     "name": "EdiZon - v1.0.6",
     "type": "zip",
     "zip-url": "https://api.github.com/repos/proferabg/EdiZon-Overlay/releases/tags/v1.0.6"
-  },
-  {
-    "name": "Switch-OC-Suite (no kip) - latest",
-    "type": "custom",
-    "custom-url": "https://api.github.com/repos/hanai3Bi/Switch-OC-Suite/releases"
   },
   {
     "name": "Switch-OC-Suite - latest",
