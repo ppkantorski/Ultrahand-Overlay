@@ -31,13 +31,13 @@
   },
   {
     "name": "EdiZon - latest",
-    "type": "ovl",
-    "ovl-url": "https://api.github.com/repos/proferabg/EdiZon-Overlay/releases"
+    "type": "zip",
+    "zip-url": "https://api.github.com/repos/proferabg/EdiZon-Overlay/releases"
   },
   {
     "name": "EdiZon - v1.0.6",
-    "type": "ovl",
-    "ovl-url": "https://api.github.com/repos/proferabg/EdiZon-Overlay/releases/tags/v1.0.6"
+    "type": "zip",
+    "zip-url": "https://api.github.com/repos/proferabg/EdiZon-Overlay/releases/tags/v1.0.6"
   },
   {
     "name": "Switch-OC-Suite (no kip) - latest",
