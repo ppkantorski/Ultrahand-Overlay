@@ -276,12 +276,21 @@ public:
             }
             
             if (!useToggle) {
-                if (useJson) {
-                    auto listItem = new tsl::elm::ListItem(file);
+                if (useJson) { // For JSON wildcards
+                    size_t pos = file.find(" - ");
+                    std::string footer = "";
+                    std::string optionName = file;
+                    if (pos != std::string::npos) {
+                        footer = file.substr(pos + 2); // Assign the part after "&&" as the footer
+                        optionName = file.substr(0, pos); // Strip the "&&" and everything after it
+                    }
+                    auto listItem = new tsl::elm::ListItem(optionName);
+                    listItem->setValue(footer, true);
                     listItem->setClickListener([count, this](uint64_t keys) { // Add 'command' to the capture list
                         if (keys & KEY_A) {
                             // Replace "{json_source}" with file in commands, then execute
-                            std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(commands, std::to_string(count));
+                            std::string countString = std::to_string(count);
+                            std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(commands, countString, false, true, true);
                             interpretAndExecuteCommand(modifiedCommands);
                             return true;
                         }
