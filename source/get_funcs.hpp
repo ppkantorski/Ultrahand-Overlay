@@ -326,7 +326,7 @@ std::string replacePlaceholder(const std::string& input, const std::string& plac
     return result;
 }
 
-std::string replaceJsonSourcePlaceholder(const std::string& placeholder, const std::string& jsonPath) {
+std::string replaceJsonSourcePlaceholder(const std::string& placeholder, const std::string& jsonPath, bool source = false) {
     // Load JSON data from the provided file
     json_t* root;
     json_error_t error;
@@ -339,7 +339,10 @@ std::string replaceJsonSourcePlaceholder(const std::string& placeholder, const s
     }
 
     std::string replacement = placeholder;
-    std::size_t startPos = replacement.find("{json_source(");
+    std::size_t startPos = replacement.find("{json_data(");
+    if (source) {
+        startPos = replacement.find("{json_source(");
+    }
     std::size_t endPos = replacement.find(")}");
     if (startPos != std::string::npos && endPos != std::string::npos && endPos > startPos) {
         std::string jsonPathArgs = replacement.substr(startPos + 13, endPos - startPos - 13);
@@ -417,9 +420,9 @@ std::vector<std::vector<std::string>> getModifyCommands(const std::vector<std::v
                     }
                 }
             }
-            //if (cmd[0] == "json_source") {
-            //    jsonPath = preprocessPath(cmd[1]);
-            //} 
+            if (cmd[0] == "json_source") {
+                jsonPath = preprocessPath(cmd[1]);
+            } 
         }
         if (!toggle or addCommands) {
             std::vector<std::string> modifiedCmd = cmd;
@@ -430,20 +433,29 @@ std::vector<std::vector<std::string>> getModifyCommands(const std::vector<std::v
                     arg = replacePlaceholder(arg, "{source_on}", file);
                 } else if (!on && (arg.find("{source_off}") != std::string::npos)) {
                     arg = replacePlaceholder(arg, "{source_off}", file);
-                } else if (arg.find("{name1}") != std::string::npos) {
+                } else if (arg.find("{name}") != std::string::npos) {
                     arg = replacePlaceholder(arg, "{name}", getNameFromPath(file));
-                } else if (arg.find("{name2}") != std::string::npos) {
+                } else if (arg.find("{parent_name}") != std::string::npos) {
                     arg = replacePlaceholder(arg, "{parent_name}", getParentDirNameFromPath(file));
-                //} else if (arg.find("{json_source(") != std::string::npos) {
-                //    size_t startPos = arg.find("{json_source(");
-                //    size_t endPos = arg.find(")}");
-                //    if (endPos != std::string::npos && endPos > startPos) {
-                //        std::string replacement = replaceJsonSourcePlaceholder(arg.substr(startPos, endPos - startPos + 2), jsonPath);
-                //        //logMessage2("replacement: "+replacement);
-                //        //logMessage2("pre-arg: "+arg);
-                //        arg.replace(startPos, endPos - startPos + 2, replacement);
-                //        //logMessage2("post-arg: "+arg);
-                //    }
+                } else if (arg.find("{json_source(") != std::string::npos) {
+                    size_t startPos = arg.find("{json_source(");
+                    size_t endPos = arg.find(")}");
+                    if (endPos != std::string::npos && endPos > startPos) {
+                        std::string jsonSourceParams = arg.substr(startPos + 13, endPos - startPos - 13); // Extract the parameters within the parentheses
+
+                        // Find the asterisk (*) position in the parameters
+                        std::string::size_type asteriskPos = jsonSourceParams.find('*');
+                        while (asteriskPos != std::string::npos) {
+                            // Replace the asterisk (*) with the value of file
+                            jsonSourceParams.replace(asteriskPos, 1, file);
+
+                            // Find the next asterisk (*) position
+                            asteriskPos = jsonSourceParams.find('*', asteriskPos + 1);
+                        }
+
+                        std::string replacement = replaceJsonSourcePlaceholder(arg.substr(startPos, 13) + jsonSourceParams + "})", jsonPath, true);
+                        arg.replace(startPos, endPos - startPos + 2, replacement);
+                    }
                 }
             }
             modifiedCommands.emplace_back(modifiedCmd);
