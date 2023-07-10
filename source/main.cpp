@@ -116,10 +116,9 @@ public:
                 //tsl::Overlay::get()->close();
                 return true;
             }
-        } else {
-            if (keysHeld & KEY_B) {
-                return false;
-            }
+        }
+        if (keysHeld & KEY_B) {
+            return false;
         }
         return false;
         //return handleOverlayMenuInput(inConfigMenu, keysHeld, KEY_B);
@@ -131,11 +130,11 @@ public:
 // Selection overlay
 class SelectionOverlay : public tsl::Gui {
 private:
-    std::string filePath, specificKey, pathPattern, pathPatternOn, pathPatternOff, itemName, parentDirName, lastParentDirName;
+    std::string filePath, specificKey, pathPattern, pathPatternOn, pathPatternOff, jsonPath, jsonKey, itemName, parentDirName, lastParentDirName;
     std::vector<std::string> filesList, filesListOn, filesListOff, filterList, filterOnList, filterOffList;
     std::vector<std::vector<std::string>> commands;
     bool toggleState = false;
-
+    json_t* jsonData;
 
 public:
     SelectionOverlay(const std::string& file, const std::string& key = "", const std::vector<std::vector<std::string>>& cmds = {}) 
@@ -148,6 +147,7 @@ public:
         auto list = new tsl::elm::List();
 
         // Extract the path pattern from commands
+        bool useJson = false;
         bool useToggle = false;
         bool useSplitHeader = false;
         
@@ -162,6 +162,7 @@ public:
                     useToggle = true;
                 } else if (cmd[0] == "filter_off") {
                     filterOffList.push_back(cmd[1]);
+                    useToggle = true;
                 } else if (cmd[0] == "source") {
                     pathPattern = cmd[1];
                 } else if (cmd[0] == "source_on") {
@@ -169,13 +170,40 @@ public:
                     useToggle = true;
                 } else if (cmd[0] == "source_off") {
                     pathPatternOff = cmd[1];
+                    useToggle = true;
+                } else if (cmd[0] == "json_source") {
+                    jsonPath = preprocessPath(cmd[1]);
+                    if (cmd.size() > 2) {
+                        jsonKey = cmd[2]; //json display key
+                    }
+                    useJson = true;
                 }
             } 
         }
 
         // Get the list of files matching the pattern
         if (!useToggle) {
-            filesList = getFilesListByWildcards(pathPattern);
+            if (useJson) {
+                // create list of data in the json 
+                jsonData = readJsonFromFile(jsonPath);
+                
+                if (jsonData && json_is_array(jsonData)) {
+                    size_t arraySize = json_array_size(jsonData);
+                    for (size_t i = 0; i < arraySize; ++i) {
+                        json_t* item = json_array_get(jsonData, i);
+                        if (item && json_is_object(item)) {
+                            json_t* keyValue = json_object_get(item, jsonKey.c_str());
+                            if (keyValue && json_is_string(keyValue)) {
+                                const char* name = json_string_value(keyValue);
+                                filesList.push_back(std::string(name));
+                            }
+                        }
+                    }
+                }
+                
+            } else {
+                filesList = getFilesListByWildcards(pathPattern);
+            }
         } else {
             filesListOn = getFilesListByWildcards(pathPatternOn);
             filesListOff = getFilesListByWildcards(pathPatternOff);
@@ -234,6 +262,7 @@ public:
         }
         
         // Add each file as a menu item
+        int count = 0;
         for (const std::string& file : filesList) {
             //if (file.compare(0, filterPath.length(), filterPath) != 0){
             itemName = getNameFromPath(file);
@@ -247,17 +276,31 @@ public:
             }
             
             if (!useToggle) {
-                auto listItem = new tsl::elm::ListItem(itemName);
-                listItem->setClickListener([file, this](uint64_t keys) { // Add 'command' to the capture list
-                    if (keys & KEY_A) {
-                        // Replace "{source}" with file in commands, then execute
-                        std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(commands, file);
-                        interpretAndExecuteCommand(modifiedCommands);
-                        return true;
-                    }
-                    return false;
-                });
-                list->addItem(listItem);
+                if (useJson) {
+                    auto listItem = new tsl::elm::ListItem(file);
+                    listItem->setClickListener([count, this](uint64_t keys) { // Add 'command' to the capture list
+                        if (keys & KEY_A) {
+                            // Replace "{json_source}" with file in commands, then execute
+                            std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(commands, std::to_string(count));
+                            interpretAndExecuteCommand(modifiedCommands);
+                            return true;
+                        }
+                        return false;
+                    });
+                    list->addItem(listItem);
+                } else {
+                    auto listItem = new tsl::elm::ListItem(itemName);
+                    listItem->setClickListener([file, this](uint64_t keys) { // Add 'command' to the capture list
+                        if (keys & KEY_A) {
+                            // Replace "{source}" with file in commands, then execute
+                            std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(commands, file);
+                            interpretAndExecuteCommand(modifiedCommands);
+                            return true;
+                        }
+                        return false;
+                    });
+                    list->addItem(listItem);
+                }
             } else { // for handiling toggles
                 auto toggleListItem = new tsl::elm::ToggleListItem(itemName, false, "On", "Off");
 
@@ -289,7 +332,7 @@ public:
 
                 list->addItem(toggleListItem);
             } 
-
+            count++;
         }
 
         rootFrame->setContent(list);
@@ -307,10 +350,9 @@ public:
                 //tsl::Overlay::get()->close();
                 return true;
             }
-        } else {
-            if (keysHeld & KEY_B) {
-                return false;
-            }
+        } 
+        if (keysHeld & KEY_B) {
+            return false;
         }
         
         return false;
@@ -373,7 +415,7 @@ public:
                         pathReplaceOff = cmd[1];
                         useToggle = true;
                     }
-                    //else if (cmd[0] == "json_source") {
+                    //else if (cmd[0] == "json_data") {
                     //    jsonPath = cmd[1];
                     //}
                 } 
@@ -536,10 +578,9 @@ public:
                 //tsl::Overlay::get()->close();
                 return true;
             }
-        } else {
-            if (keysHeld & KEY_B) {
-                return false;
-            }
+        }
+        if (keysHeld & KEY_B) {
+            return false;
         }
         
         if (returningToSub && !(keysHeld & KEY_B)){
@@ -851,10 +892,9 @@ public:
                     return true;
                 }
             }
-        } else {
-            if (keysHeld & KEY_B) {
-                return false;
-            }
+        }
+        if (keysHeld & KEY_B) {
+            return false;
         }
         
         if (freshSpawn && !(keysHeld & KEY_B)){
