@@ -417,9 +417,9 @@ std::vector<std::vector<std::string>> getModifyCommands(const std::vector<std::v
                     }
                 }
             }
-            if (cmd[0] == "json_source") {
-                jsonPath = preprocessPath(cmd[1]);
-            } 
+            //if (cmd[0] == "json_source") {
+            //    jsonPath = preprocessPath(cmd[1]);
+            //} 
         }
         if (!toggle or addCommands) {
             std::vector<std::string> modifiedCmd = cmd;
@@ -434,16 +434,16 @@ std::vector<std::vector<std::string>> getModifyCommands(const std::vector<std::v
                     arg = replacePlaceholder(arg, "{name}", getNameFromPath(file));
                 } else if (arg.find("{name2}") != std::string::npos) {
                     arg = replacePlaceholder(arg, "{parent_name}", getParentDirNameFromPath(file));
-                } else if (arg.find("{json_source(") != std::string::npos) {
-                    size_t startPos = arg.find("{json_source(");
-                    size_t endPos = arg.find(")}");
-                    if (endPos != std::string::npos && endPos > startPos) {
-                        std::string replacement = replaceJsonSourcePlaceholder(arg.substr(startPos, endPos - startPos + 2), jsonPath);
-                        //logMessage2("replacement: "+replacement);
-                        //logMessage2("pre-arg: "+arg);
-                        arg.replace(startPos, endPos - startPos + 2, replacement);
-                        //logMessage2("post-arg: "+arg);
-                    }
+                //} else if (arg.find("{json_source(") != std::string::npos) {
+                //    size_t startPos = arg.find("{json_source(");
+                //    size_t endPos = arg.find(")}");
+                //    if (endPos != std::string::npos && endPos > startPos) {
+                //        std::string replacement = replaceJsonSourcePlaceholder(arg.substr(startPos, endPos - startPos + 2), jsonPath);
+                //        //logMessage2("replacement: "+replacement);
+                //        //logMessage2("pre-arg: "+arg);
+                //        arg.replace(startPos, endPos - startPos + 2, replacement);
+                //        //logMessage2("post-arg: "+arg);
+                //    }
                 }
             }
             modifiedCommands.emplace_back(modifiedCmd);
