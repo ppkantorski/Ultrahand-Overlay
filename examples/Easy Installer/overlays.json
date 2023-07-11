@@ -70,6 +70,11 @@
         "download-entry": "0"
     },
     {
+        "name": "TriPlayer - latest",
+        "zip-url": "https://api.github.com/repos/DefenderOfHyrule/TriPlayer/releases",
+        "download-entry": "0"
+    },
+    {
         "name": "Ultrahand - latest",
         "ovl-url": "https://api.github.com/repos/ppkantorski/Ultrahand-Overlay/releases",
         "download-entry": "0"
