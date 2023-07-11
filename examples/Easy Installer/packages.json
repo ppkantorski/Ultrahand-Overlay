@@ -1,31 +1,31 @@
 [
-  {
-    "name": "Broomstick - latest",
-    "label": "Broomstick",
-    "file-1-url": "https://raw.githubusercontent.com/ppkantorski/Ultrahand-Overlay/main/examples/Broomstick/config.ini"
-  },
-  {
-    "name": "Cool Curves - latest",
-    "label": "Cool Curves",
-    "file-1-url": "https://raw.githubusercontent.com/ppkantorski/Ultrahand-Overlay/main/examples/Cool%20Curves/config.ini"
-  },
-  {
-    "name": "Easy Installer - latest",
-    "label": "Easy Installer",
-    "file-1-url": "https://raw.githubusercontent.com/ppkantorski/Ultrahand-Overlay/main/examples/Easy%20Installer/config.ini",
-    "file-2-url": "https://raw.githubusercontent.com/ppkantorski/Ultrahand-Overlay/main/examples/Easy%20Installer/overlays.json",
-    "file-3-url": "https://raw.githubusercontent.com/ppkantorski/Ultrahand-Overlay/main/examples/Easy%20Installer/packages.json"
-  },
-  {
-    "name": "Host Guard - latest",
-    "label": "Host Guard",
-    "file-1-url": "https://raw.githubusercontent.com/ppkantorski/Ultrahand-Overlay/main/examples/Host%20Guard/config.ini",
-    "file-2-url": "https://raw.githubusercontent.com/ppkantorski/Ultrahand-Overlay/main/examples/Host%20Guard/emummc.txt",
-    "file-3-url": "https://raw.githubusercontent.com/ppkantorski/Ultrahand-Overlay/main/examples/Host%20Guard/sysmmc.txt"
-  },
-  {
-    "name": "Mod Master - latest",
-    "label": "Mod Master",
-    "file-1-url": "https://raw.githubusercontent.com/ppkantorski/Ultrahand-Overlay/main/examples/Mod%20Master/config.ini"
-  }
+    {
+        "name": "Broomstick - latest",
+        "label": "Broomstick",
+        "file-1-url": "https://raw.githubusercontent.com/ppkantorski/Ultrahand-Overlay/main/examples/Broomstick/config.ini"
+    },
+    {
+        "name": "Cool Curves - latest",
+        "label": "Cool Curves",
+        "file-1-url": "https://raw.githubusercontent.com/ppkantorski/Ultrahand-Overlay/main/examples/Cool%20Curves/config.ini"
+    },
+    {
+        "name": "Easy Installer - latest",
+        "label": "Easy Installer",
+        "file-1-url": "https://raw.githubusercontent.com/ppkantorski/Ultrahand-Overlay/main/examples/Easy%20Installer/config.ini",
+        "file-2-url": "https://raw.githubusercontent.com/ppkantorski/Ultrahand-Overlay/main/examples/Easy%20Installer/overlays.json",
+        "file-3-url": "https://raw.githubusercontent.com/ppkantorski/Ultrahand-Overlay/main/examples/Easy%20Installer/packages.json"
+    },
+    {
+        "name": "Host Guard - latest",
+        "label": "Host Guard",
+        "file-1-url": "https://raw.githubusercontent.com/ppkantorski/Ultrahand-Overlay/main/examples/Host%20Guard/config.ini",
+        "file-2-url": "https://raw.githubusercontent.com/ppkantorski/Ultrahand-Overlay/main/examples/Host%20Guard/emummc.txt",
+        "file-3-url": "https://raw.githubusercontent.com/ppkantorski/Ultrahand-Overlay/main/examples/Host%20Guard/sysmmc.txt"
+    },
+    {
+        "name": "Mod Master - latest",
+        "label": "Mod Master",
+        "file-1-url": "https://raw.githubusercontent.com/ppkantorski/Ultrahand-Overlay/main/examples/Mod%20Master/config.ini"
+    }
 ]
