@@ -2,76 +2,91 @@
   {
     "name": "Ultrahand - latest",
     "type": "ovl",
-    "ovl-url": "https://api.github.com/repos/ppkantorski/Ultrahand-Overlay/releases"
+    "ovl-url": "https://api.github.com/repos/ppkantorski/Ultrahand-Overlay/releases",
+    "download-entry": "0"
   },
   {
     "name": "Status Monitor (a) - latest",
     "type": "ovl",
-    "ovl-url": "https://api.github.com/repos/ppkantorski/Status-Monitor-Overlay/releases"
+    "ovl-url": "https://api.github.com/repos/ppkantorski/Status-Monitor-Overlay/releases",
+    "download-entry": "0"
   },
   {
     "name": "FPSLocker - latest",
     "type": "ovl",
-    "ovl-url": "https://api.github.com/repos/masagrator/FPSLocker/releases"
+    "ovl-url": "https://api.github.com/repos/masagrator/FPSLocker/releases",
+    "download-entry": "0"
   },
   {
     "name": "NX-FPS - latest",
     "type": "zip",
-    "zip-url": "https://api.github.com/repos/masagrator/NX-FPS/releases"
+    "zip-url": "https://api.github.com/repos/masagrator/NX-FPS/releases",
+    "download-entry": "0"
   },
   {
     "name": "SaltyNX - latest",
     "type": "zip",
-    "zip-url": "https://api.github.com/repos/masagrator/SaltyNX/releases"
+    "zip-url": "https://api.github.com/repos/masagrator/SaltyNX/releases",
+    "download-entry": "0"
   },
   {
     "name": "EdiZon - latest",
     "type": "zip",
-    "zip-url": "https://api.github.com/repos/proferabg/EdiZon-Overlay/releases"
+    "zip-url": "https://api.github.com/repos/proferabg/EdiZon-Overlay/releases",
+    "download-entry": "0"
   },
   {
     "name": "EdiZon - v1.0.6",
     "type": "zip",
-    "zip-url-version": "https://api.github.com/repos/proferabg/EdiZon-Overlay/releases/tags/v1.0.6"
+    "zip-url-version": "https://api.github.com/repos/proferabg/EdiZon-Overlay/releases/tags/v1.0.6",
+    "download-entry": "0"
   },
   {
     "name": "Switch-OC-Suite - latest",
     "type": "zip",
-    "zip-url": "https://api.github.com/repos/hanai3Bi/Switch-OC-Suite/releases"
+    "zip-url": "https://api.github.com/repos/hanai3Bi/Switch-OC-Suite/releases",
+    "download-entry": "1"
   },
   {
     "name": "QuickNTP - latest",
     "type": "ovl",
-    "ovl-url": "https://api.github.com/repos/nedex/QuickNTP/releases"
+    "ovl-url": "https://api.github.com/repos/nedex/QuickNTP/releases",
+    "download-entry": "0"
   },
   {
     "name": "Sysmodules - latest",
     "type": "ovl",
-    "ovl-url": "https://api.github.com/repos/WerWolv/ovl-sysmodules/releases"
+    "ovl-url": "https://api.github.com/repos/WerWolv/ovl-sysmodules/releases",
+    "download-entry": "0"
   },
   {
     "name": "SysDVR - latest",
     "type": "zip",
-    "zip-url": "https://api.github.com/repos/exelix11/SysDVR/releases"
+    "zip-url": "https://api.github.com/repos/exelix11/SysDVR/releases",
+    "download-entry": "0"
   },
   {
     "name": "SysDVR Overlay - latest",
     "type": "zip",
-    "zip-url": "https://api.github.com/repos/Hartie95/sysdvr-overlay/releases"
+    "zip-url": "https://api.github.com/repos/Hartie95/sysdvr-overlay/releases",
+    "download-entry": "0"
   },
   {
     "name": "Fizeau - latest",
     "type": "zip",
-    "zip-url": "https://api.github.com/repos/averne/Fizeau/releases"
+    "zip-url": "https://api.github.com/repos/averne/Fizeau/releases",
+    "download-entry": "0"
   },
   {
     "name": "Sys-patch - latest",
     "type": "zip",
-    "zip-url": "https://api.github.com/repos/ITotalJustice/sys-patch/releases"
+    "zip-url": "https://api.github.com/repos/ITotalJustice/sys-patch/releases",
+    "download-entry": "0"
   },
   {
     "name": "sys-ftpd-light - latest",
     "type": "zip",
-    "zip-url": "https://api.github.com/repos/cathery/sys-ftpd/releases/latest"
+    "zip-url": "https://api.github.com/repos/cathery/sys-ftpd/releases/latest",
+    "download-entry": "0"
   }
 ]
