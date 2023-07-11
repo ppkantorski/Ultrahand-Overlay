@@ -439,8 +439,8 @@ public:
                     listItem->setValue(footer, true);
                 }
                 
-                std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(option.second, pathReplace);
-                listItem->setClickListener([command = modifiedCommands, keyName = option.first, subPath = this->subPath, usePattern](uint64_t keys) {
+                //std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(option.second, pathReplace);
+                listItem->setClickListener([command = option.second, keyName = option.first, subPath = this->subPath, usePattern](uint64_t keys) {
                     if (keys & KEY_A) {
                         if (usePattern) {
                             inSubMenu = false;
