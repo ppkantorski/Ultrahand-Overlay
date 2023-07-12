@@ -25,6 +25,11 @@
         "download-entry": "0"
     },
     {
+        "name": "nx-ovlloader - latest",
+        "zip-url": "https://api.github.com/repos/WerWolv/nx-ovlloader/releases",
+        "download-entry": "0"
+    },
+    {
         "name": "QuickNTP - latest",
         "ovl-url": "https://api.github.com/repos/nedex/QuickNTP/releases",
         "download-entry": "0"
