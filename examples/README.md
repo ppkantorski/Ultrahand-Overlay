@@ -16,7 +16,7 @@ Ultrahand Overlay is a powerful tool that allows you to customize and enhance yo
 
 - [Overclock Buster](Overclock%20Buster/README.md): Discover the Overclock Buster example, which demonstrates how to push your device's performance to the limit by applying custom overclocking settings to OC Suite / 4IFIR kip files.
 
-- [Overlay Detacher](Overlay%20Detacher/README.md): The Overlay Detacher example provides a convenient way to offload and restore specific overlays, allowing you to free up system resources and improve performance.
+- [Broomstick](Broomstick/README.md): The Overlay Detacher example provides a convenient way to offload and restore specific overlays, allowing you to free up system resources and improve performance.
 
 - [l4t_reboot](l4t_reboot/README.md): Use the l4t_reboot utility on Linux to perform system reboots into Ubuntu with ease.
 
