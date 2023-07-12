@@ -6,16 +6,16 @@
 
 
 // Overlay booleans
-bool shouldCloseMenu = false;
-bool returningToMain = false;
-bool returningToSub = false;
-bool inMainMenu = false;
+static bool shouldCloseMenu = false;
+static bool returningToMain = false;
+static bool returningToSub = false;
+static bool inMainMenu = false;
 //bool inOverlay = false;
-bool inSubMenu = false;
-bool inConfigMenu = false;
-bool inSelectionMenu = false;
-bool defaultMenuLoaded = true;
-bool freshSpawn = true;
+static bool inSubMenu = false;
+static bool inConfigMenu = false;
+static bool inSelectionMenu = false;
+static bool defaultMenuLoaded = true;
+static bool freshSpawn = true;
 
 
 
