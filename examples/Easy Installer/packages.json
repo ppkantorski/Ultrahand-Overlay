@@ -14,7 +14,8 @@
         "label": "Easy Installer",
         "file-1-url": "https://raw.githubusercontent.com/ppkantorski/Ultrahand-Overlay/main/examples/Easy%20Installer/config.ini",
         "file-2-url": "https://raw.githubusercontent.com/ppkantorski/Ultrahand-Overlay/main/examples/Easy%20Installer/overlays.json",
-        "file-3-url": "https://raw.githubusercontent.com/ppkantorski/Ultrahand-Overlay/main/examples/Easy%20Installer/packages.json"
+        "file-3-url": "https://raw.githubusercontent.com/ppkantorski/Ultrahand-Overlay/main/examples/Easy%20Installer/packages.json",
+        "file-4-url": "https://raw.githubusercontent.com/ppkantorski/Ultrahand-Overlay/main/examples/Easy%20Installer/music.json"
     },
     {
         "name": "Host Guard - latest",
