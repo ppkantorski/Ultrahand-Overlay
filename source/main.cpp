@@ -943,11 +943,11 @@ public:
     }
 
     virtual void onShow() override {
-        if (rootFrame != nullptr) {
-            //tsl::Overlay::get()->getCurrentGui()->removeFocus();
-            rootFrame->invalidate();
-            //tsl::Overlay::get()->getCurrentGui()->requestFocus(rootFrame, tsl::FocusDirection::None);
-        }
+        //if (rootFrame != nullptr) {
+        //    tsl::Overlay::get()->getCurrentGui()->removeFocus();
+        //    rootFrame->invalidate();
+        //    tsl::Overlay::get()->getCurrentGui()->requestFocus(rootFrame, tsl::FocusDirection::None);
+        //}
     }   // Called before overlay wants to change from invisible to visible state
     virtual void onHide() override {}   // Called before overlay wants to change from visible to invisible state
 
