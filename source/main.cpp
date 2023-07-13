@@ -10,14 +10,14 @@ static bool shouldCloseMenu = false;
 static bool returningToMain = false;
 static bool returningToSub = false;
 static bool inMainMenu = false;
-//bool inOverlay = false;
+//static bool inOverlay = false;
 static bool inSubMenu = false;
 static bool inConfigMenu = false;
 static bool inSelectionMenu = false;
 static bool defaultMenuLoaded = true;
 static bool freshSpawn = true;
 
-
+static tsl::elm::OverlayFrame *rootFrame = nullptr;
 
 
 // Config overlay 
@@ -32,7 +32,7 @@ public:
     virtual tsl::elm::Element* createUI() override {
         inConfigMenu = true;
         
-        auto rootFrame = new tsl::elm::OverlayFrame(getNameFromPath(filePath), "Ultrahand Config");
+        rootFrame = new tsl::elm::OverlayFrame(getNameFromPath(filePath), "Ultrahand Config");
         auto list = new tsl::elm::List();
 
         std::string configFile = filePath + "/" + configFileName;
@@ -143,7 +143,7 @@ public:
     virtual tsl::elm::Element* createUI() override {
         inSelectionMenu = true;
 
-        auto rootFrame = new tsl::elm::OverlayFrame(getNameFromPath(filePath), "Ultrahand Package");
+        rootFrame = new tsl::elm::OverlayFrame(getNameFromPath(filePath), "Ultrahand Package");
         auto list = new tsl::elm::List();
 
         // Extract the path pattern from commands
@@ -384,7 +384,7 @@ public:
     virtual tsl::elm::Element* createUI() override {
         inSubMenu = true;
         
-        auto rootFrame = new tsl::elm::OverlayFrame(getNameFromPath(subPath), "Ultrahand Package");
+        rootFrame = new tsl::elm::OverlayFrame(getNameFromPath(subPath), "Ultrahand Package");
         auto list = new tsl::elm::List();
 
         // Add a section break with small text to indicate the "Commands" section
@@ -669,7 +669,7 @@ public:
         }
         
         std::string versionLabel = APP_VERSION+std::string("   (")+envGetLoaderInfo()+std::string(")");
-        auto rootFrame = new tsl::elm::OverlayFrame("Ultrahand", versionLabel, menuMode);
+        rootFrame = new tsl::elm::OverlayFrame("Ultrahand", versionLabel, menuMode);
         auto list = new tsl::elm::List();
 
         //loadOverlayFiles(list);
@@ -942,7 +942,13 @@ public:
         fsdevUnmountAll();
     }
 
-    virtual void onShow() override {}   // Called before overlay wants to change from invisible to visible state
+    virtual void onShow() override {
+        if (rootFrame != nullptr) {
+            tsl::Overlay::get()->getCurrentGui()->removeFocus();
+            rootFrame->invalidate();
+            tsl::Overlay::get()->getCurrentGui()->requestFocus(rootFrame, tsl::FocusDirection::None);
+        }
+    }   // Called before overlay wants to change from invisible to visible state
     virtual void onHide() override {}   // Called before overlay wants to change from visible to invisible state
 
     virtual std::unique_ptr<tsl::Gui> loadInitialGui() override {
