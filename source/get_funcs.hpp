@@ -63,9 +63,13 @@ std::string getFileContents(const std::string& filePath) {
             fread(&content[0], 1, fileInfo.st_size, file);
         }
         fclose(file);
+
+        // Normalize line endings to '\n'
+        content.erase(std::remove(content.begin(), content.end(), '\r'), content.end());
     }
     return content;
 }
+
 
 std::string getFileNameFromURL(const std::string& url) {
     size_t lastSlash = url.find_last_of('/');
