@@ -3305,20 +3305,20 @@ namespace tsl {
                     shouldShake = true;
                 }
             }
-
+            
             if (!touchDetected && oldTouchDetected) {
                 if (currentGui != nullptr && topElement != nullptr)
                     topElement->onTouch(elm::TouchEvent::Release, oldTouchPos.x, oldTouchPos.y, oldTouchPos.x, oldTouchPos.y, initialTouchPos.x, initialTouchPos.y);
             }
-
+            
             if (touchDetected) {
-
+            
                 u32 xDistance = std::abs(static_cast<s32>(initialTouchPos.x) - static_cast<s32>(touchPos.x));
                 u32 yDistance = std::abs(static_cast<s32>(initialTouchPos.y) - static_cast<s32>(touchPos.y));
-
+            
                 xDistance *= xDistance;
                 yDistance *= yDistance;
-
+            
                 if ((xDistance + yDistance) > 1000) {
                     elm::Element::setInputMode(InputMode::TouchScroll);
                     touchEvent = elm::TouchEvent::Scroll;
@@ -3326,26 +3326,27 @@ namespace tsl {
                     if (touchEvent != elm::TouchEvent::Scroll)
                         touchEvent = elm::TouchEvent::Hold;
                 }
-
-                if (!oldTouchDetected) {
-                    initialTouchPos = touchPos;
-                    elm::Element::setInputMode(InputMode::Touch);
-                    currentGui->removeFocus();
-                    touchEvent = elm::TouchEvent::Touch;
-                }
-
-
+                // CUSTOM MODIFICATION START
+                //if (!oldTouchDetected) {
+                //    initialTouchPos = touchPos;
+                //    elm::Element::setInputMode(InputMode::Touch);
+                //    currentGui->removeFocus();
+                //    touchEvent = elm::TouchEvent::Touch;
+                //}
+                //
+                // CUSTOM MODIFICATION END
+                
                 if (currentGui != nullptr && topElement != nullptr)
                     topElement->onTouch(touchEvent, touchPos.x, touchPos.y, oldTouchPos.x, oldTouchPos.y, initialTouchPos.x, initialTouchPos.y);
-
+            
                 oldTouchPos = touchPos;
-
+            
                 // Hide overlay when touching out of bounds
                 if (touchPos.x >= cfg::FramebufferWidth) {
                     if (tsl::elm::Element::getInputMode() == tsl::InputMode::Touch) {
                         oldTouchPos = { 0 };
                         initialTouchPos = { 0 };
-
+            
                         this->hide();
                     }
                 }
@@ -3354,14 +3355,15 @@ namespace tsl {
                     if (initialTouchPos.x < 150U && initialTouchPos.y > cfg::FramebufferHeight - 73U)
                         if (!currentGui->handleInput(HidNpadButton_B, 0,{},{},{}))
                             this->goBack();
-
+            
                 elm::Element::setInputMode(InputMode::Controller);
-
+            
                 oldTouchPos = { 0 };
                 initialTouchPos = { 0 };
             }
-
+            
             oldTouchDetected = touchDetected;
+            
         }
 
         /**
