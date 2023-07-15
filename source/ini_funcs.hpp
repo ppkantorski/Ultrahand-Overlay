@@ -141,9 +141,8 @@ static std::map<std::string, std::map<std::string, std::string>> parseIni(const 
 // Custom utility function for parsing an ini file
 std::map<std::string, std::map<std::string, std::string>> getParsedDataFromIniFile(const std::string& configIniPath) {
     std::map<std::string, std::map<std::string, std::string>> parsedData;
-    
-    // Open the INI file
-    FILE* configFileIn = fopen(configIniPath.c_str(), "r");
+
+    FILE* configFileIn = fopen(configIniPath.c_str(), "rb");
     if (!configFileIn) {
         return parsedData;
     }
@@ -161,12 +160,17 @@ std::map<std::string, std::map<std::string, std::string>> getParsedDataFromIniFi
 
     // Parse the INI data
     std::string fileDataString(fileData, fileSize);
+
+    // Normalize line endings to \n
+    fileDataString.erase(std::remove(fileDataString.begin(), fileDataString.end(), '\r'), fileDataString.end());
+
     parsedData = parseIni(fileDataString);
-    
+
     delete[] fileData;
-    
+
     return parsedData;
 }
+
 
 std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadOptionsFromIni(const std::string& configIniPath, bool makeConfig = false) {
     std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> options;
