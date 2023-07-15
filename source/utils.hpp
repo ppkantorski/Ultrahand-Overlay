@@ -8,6 +8,7 @@
 #include <ini_funcs.hpp>
 #include <hex_funcs.hpp>
 #include <download_funcs.hpp>
+#include <json_funcs.hpp>
 
 #define SpsmShutdownMode_Normal 0
 #define SpsmShutdownMode_Reboot 1
@@ -47,27 +48,6 @@ const std::string packageDirectory = "sdmc:/switch/.packages/";
 const std::string overlayDirectory = "sdmc:/switch/.overlays/";
 const std::string teslaSettingsConfigIniPath = "sdmc:/config/tesla/"+configFileName;
 
-// For loggging messages and debugging
-//#include <ctime>
-//void logMessage(const std::string& message) {
-//    std::time_t currentTime = std::time(nullptr);
-//    std::string logEntry = std::asctime(std::localtime(&currentTime));
-//    // Find the last non-newline character
-//    std::size_t lastNonNewline = logEntry.find_last_not_of("\r\n");
-//
-//    // Remove everything after the last non-newline character
-//    if (lastNonNewline != std::string::npos) {
-//        logEntry.erase(lastNonNewline + 1);
-//    }
-//    logEntry = "["+logEntry+"] ";
-//    logEntry += message+"\n";
-//
-//    FILE* file = fopen("sdmc:/config/ultrahand/log.txt", "a");
-//    if (file != nullptr) {
-//        fputs(logEntry.c_str(), file);
-//        fclose(file);
-//    }
-//}
 
 
 void copyTeslaKeyComboToUltraHand() {
@@ -256,11 +236,11 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
         
         std::vector<std::string> command;
         
-        // Modify the command to replace {json_source} placeholder if jsonPath is available
+        // Modify the command to replace {json_data} placeholder if jsonPath is available
         if (!jsonPath.empty()) {
             std::vector<std::string> modifiedCommand;
             for (const std::string& commandArg : unmodifiedCommand) {
-                if (commandArg.find("{json_source(") != std::string::npos) {
+                if (commandArg.find("{json_data(") != std::string::npos) {
                     // Create a copy of the string and modify it
                     std::string modifiedArg = commandArg;
                     modifiedArg = replaceJsonSourcePlaceholder(modifiedArg, jsonPath);
@@ -277,7 +257,7 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
         
         
         
-        if (commandName == "json_source") {
+        if (commandName == "json_data") {
             if (command.size() >= 2) {
                 jsonPath = preprocessPath(command[1]);
             }
