@@ -6,7 +6,7 @@
 
 
 // Overlay booleans
-static bool shouldCloseMenu = false;
+//static bool shouldCloseMenu = false;
 static bool returningToMain = false;
 static bool returningToSub = false;
 static bool inMainMenu = false;
