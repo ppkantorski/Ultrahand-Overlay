@@ -415,10 +415,10 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                 // Fix miss-matched string sizes
                 if (hexDataReplacement.length() < hexDataToReplace.length()) {
                     // Pad with spaces at the end
-                    hexDataReplacement += std::string(hexDataToReplace.length() - hexDataReplacement.length(), '00');
+                    hexDataReplacement += std::string(hexDataToReplace.length() - hexDataReplacement.length(), '\0');
                 } else if (hexDataReplacement.length() > hexDataToReplace.length()) {
                     // Add spaces to hexDataToReplace at the far right end
-                    hexDataToReplace += std::string(hexDataReplacement.length() - hexDataToReplace.length(), '00');
+                    hexDataToReplace += std::string(hexDataReplacement.length() - hexDataToReplace.length(), '\0');
                 }
                 
                 if (command.size() >= 5) {
