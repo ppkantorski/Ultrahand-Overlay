@@ -1630,7 +1630,9 @@ namespace tsl {
              * @param subtitle Subtitle drawn bellow the title e.g version number
              */
             std::string m_menuMode; // CUSTOM MODIFICATION
-            OverlayFrame(const std::string& title, const std::string& subtitle, const std::string& menuMode="") : Element(), m_title(title), m_subtitle(subtitle), m_menuMode(menuMode) {} // CUSTOM MODIFICATION
+            OverlayFrame(const std::string& title, const std::string& subtitle, const std::string& menuMode = "")
+                : Element(), m_menuMode(menuMode), m_title(title), m_subtitle(subtitle) {} // CUSTOM MODIFICATION
+
             virtual ~OverlayFrame() {
                 if (this->m_contentElement != nullptr)
                     delete this->m_contentElement;
