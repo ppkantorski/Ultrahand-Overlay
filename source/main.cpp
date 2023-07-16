@@ -28,6 +28,7 @@ private:
 
 public:
     ConfigOverlay(const std::string& file, const std::string& key = "") : filePath(file), specificKey(key) {}
+    ~ConfigOverlay() {}
 
     virtual tsl::elm::Element* createUI() override {
         inConfigMenu = true;
@@ -139,6 +140,7 @@ private:
 public:
     SelectionOverlay(const std::string& file, const std::string& key = "", const std::vector<std::vector<std::string>>& cmds = {}) 
         : filePath(file), specificKey(key), commands(cmds) {}
+    ~SelectionOverlay() {}
 
     virtual tsl::elm::Element* createUI() override {
         inSelectionMenu = true;
@@ -380,6 +382,7 @@ private:
 
 public:
     SubMenu(const std::string& path) : subPath(path) {}
+    ~SubMenu() {}
 
     virtual tsl::elm::Element* createUI() override {
         inSubMenu = true;
@@ -615,6 +618,7 @@ private:
     //bool inTextMenu = false;
 public:
     MainMenu() {}
+    ~MainMenu() {}
 
     virtual tsl::elm::Element* createUI() override {
         inMainMenu = true;
