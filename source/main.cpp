@@ -18,7 +18,7 @@ static bool defaultMenuLoaded = true;
 static bool freshSpawn = true;
 
 static tsl::elm::OverlayFrame *rootFrame = nullptr;
-
+static tsl::elm::List *list = nullptr;
 
 // Config overlay 
 class ConfigOverlay : public tsl::Gui {
@@ -34,7 +34,7 @@ public:
         inConfigMenu = true;
         
         rootFrame = new tsl::elm::OverlayFrame(getNameFromPath(filePath), "Ultrahand Config");
-        auto list = new tsl::elm::List();
+        list = new tsl::elm::List();
 
         std::string configFile = filePath + "/" + configFileName;
 
@@ -66,7 +66,7 @@ public:
                     }
                 } else if (isInSection) {
                     auto listItem = new tsl::elm::ListItem(line);
-                    listItem->setClickListener([line, this](uint64_t keys) {
+                    listItem->setClickListener([line, this, listItem](uint64_t keys) {
                         if (keys & KEY_A) {
                             std::istringstream iss(line);
                             std::string part;
@@ -91,6 +91,7 @@ public:
 
                             commandVec.emplace_back(std::move(commandParts));
                             interpretAndExecuteCommand(commandVec);
+                            listItem->setValue("DONE");
                             return true;
                         }
                         return false;
@@ -146,7 +147,7 @@ public:
         inSelectionMenu = true;
 
         rootFrame = new tsl::elm::OverlayFrame(getNameFromPath(filePath), "Ultrahand Package");
-        auto list = new tsl::elm::List();
+        list = new tsl::elm::List();
 
         // Extract the path pattern from commands
         bool useJson = false;
@@ -288,12 +289,13 @@ public:
                     }
                     auto listItem = new tsl::elm::ListItem(optionName);
                     listItem->setValue(footer, true);
-                    listItem->setClickListener([count, this](uint64_t keys) { // Add 'command' to the capture list
+                    listItem->setClickListener([count, this, listItem](uint64_t keys) { // Add 'command' to the capture list
                         if (keys & KEY_A) {
                             // Replace "{json_source}" with file in commands, then execute
                             std::string countString = std::to_string(count);
                             std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(commands, countString, false, true, true);
                             interpretAndExecuteCommand(modifiedCommands);
+                            listItem->setValue("DONE");
                             return true;
                         }
                         return false;
@@ -301,11 +303,12 @@ public:
                     list->addItem(listItem);
                 } else {
                     auto listItem = new tsl::elm::ListItem(itemName);
-                    listItem->setClickListener([file, this](uint64_t keys) { // Add 'command' to the capture list
+                    listItem->setClickListener([file, this, listItem](uint64_t keys) { // Add 'command' to the capture list
                         if (keys & KEY_A) {
                             // Replace "{source}" with file in commands, then execute
                             std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(commands, file);
                             interpretAndExecuteCommand(modifiedCommands);
+                            listItem->setValue("DONE");
                             return true;
                         }
                         return false;
@@ -388,7 +391,7 @@ public:
         inSubMenu = true;
         
         rootFrame = new tsl::elm::OverlayFrame(getNameFromPath(subPath), "Ultrahand Package");
-        auto list = new tsl::elm::List();
+        list = new tsl::elm::List();
 
         // Add a section break with small text to indicate the "Commands" section
         list->addItem(new tsl::elm::CategoryHeader("Commands"));
@@ -443,7 +446,7 @@ public:
                 }
                 
                 //std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(option.second, pathReplace);
-                listItem->setClickListener([command = option.second, keyName = option.first, subPath = this->subPath, usePattern](uint64_t keys) {
+                listItem->setClickListener([command = option.second, keyName = option.first, subPath = this->subPath, usePattern, listItem](uint64_t keys) {
                     if (keys & KEY_A) {
                         if (usePattern) {
                             inSubMenu = false;
@@ -451,6 +454,7 @@ public:
                         } else {
                             // Interpret and execute the command
                             interpretAndExecuteCommand(command);
+                            listItem->setValue("DONE");
                         }
                         return true;
                     } else if (keys & KEY_X) {
@@ -674,7 +678,7 @@ public:
         
         std::string versionLabel = APP_VERSION+std::string("   (")+envGetLoaderInfo()+std::string(")");
         rootFrame = new tsl::elm::OverlayFrame("Ultrahand", versionLabel, menuMode);
-        auto list = new tsl::elm::List();
+        list = new tsl::elm::List();
 
         //loadOverlayFiles(list);
         
@@ -853,7 +857,7 @@ public:
                 auto listItem = new tsl::elm::ListItem(optionName);
                 
                 std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(option.second, fullPath);
-                listItem->setClickListener([this, command = modifiedCommands, subPath = optionName](uint64_t keys) {
+                listItem->setClickListener([this, command = modifiedCommands, subPath = optionName, listItem](uint64_t keys) {
                     if (keys & KEY_A) {
                         // Check if it's a subdirectory
                         struct stat entryStat;
@@ -864,6 +868,7 @@ public:
                         } else {
                             // Interpret and execute the command
                             interpretAndExecuteCommand(command);
+                            listItem->setValue("DONE");
                         }
 
                         return true;
