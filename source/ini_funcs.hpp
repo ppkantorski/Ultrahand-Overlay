@@ -286,7 +286,7 @@ void setIniFile(const std::string& fileToEdit, const std::string& desiredSection
             if (trimmedLine[0] == '[' && trimmedLine[trimmedLine.length() - 1] == ']') {
                 currentSection = removeQuotes(trim(std::string(trimmedLine.c_str() + 1, trimmedLine.length() - 2)));
                 
-                if (sectionFound && (desiredNewKey.empty())) {
+                if (sectionFound && !keyFound && (desiredNewKey.empty())) {
                     // Write the modified line with the desired key and value
                     formattedDesiredValue = removeQuotes(desiredValue);
                     fprintf(tempFile, "%s = %s\n", desiredKey.c_str(), formattedDesiredValue.c_str());
@@ -326,7 +326,6 @@ void setIniFile(const std::string& fileToEdit, const std::string& desiredSection
                 }
             } 
             
-
             fprintf(tempFile, "%s", line);
         }
         
