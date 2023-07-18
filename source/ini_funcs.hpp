@@ -250,6 +250,53 @@ std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadO
     return options;
 }
 
+
+
+void cleanIniFormatting(const std::string& filePath) {
+    FILE* inputFile = fopen(filePath.c_str(), "r");
+    if (!inputFile) {
+        // Failed to open the input file
+        // Handle the error accordingly
+        return;
+    }
+
+    std::string tempPath = filePath + ".tmp";
+    FILE* outputFile = fopen(tempPath.c_str(), "w");
+    if (!outputFile) {
+        // Failed to create the output file
+        // Handle the error accordingly
+        fclose(inputFile);
+        return;
+    }
+
+    bool isNewSection = false;
+
+    char line[4096];
+    while (fgets(line, sizeof(line), inputFile)) {
+        std::string trimmedLine = trim(std::string(line));
+
+        if (!trimmedLine.empty()) {
+            if (trimmedLine[0] == '[' && trimmedLine[trimmedLine.length() - 1] == ']') {
+                if (isNewSection) {
+                    fprintf(outputFile, "\n");
+                }
+                isNewSection = true;
+            }
+
+            fprintf(outputFile, "%s\n", trimmedLine.c_str());
+        }
+    }
+
+    fclose(inputFile);
+    fclose(outputFile);
+
+    // Remove the original file and rename the temp file
+    remove(filePath.c_str());
+    rename(tempPath.c_str(), filePath.c_str());
+}
+
+
+
 void setIniFile(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredValue, const std::string& desiredNewKey) {
     FILE* configFile = fopen(fileToEdit.c_str(), "r");
     if (!configFile) {
@@ -352,8 +399,10 @@ void setIniFile(const std::string& fileToEdit, const std::string& desiredSection
 
 void setIniFileValue(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredValue) {
     setIniFile(fileToEdit, desiredSection, desiredKey, desiredValue, "");
+    cleanIniFormatting(fileToEdit);
 }
 
 void setIniFileKey(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredNewKey) {
     setIniFile(fileToEdit, desiredSection, desiredKey, "", desiredNewKey);
+    cleanIniFormatting(fileToEdit);
 }
