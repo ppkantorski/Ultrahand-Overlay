@@ -6,8 +6,6 @@ Ultrahand Overlay is a powerful tool that allows you to customize and enhance yo
 
 ## Examples
 
-- [4IFIR Explorer](4IFIR%20Explorer/README.md): This example showcases an advanced overlay configuration for the 4IFIR Explorer application, providing a smoother and more immersive experience.
-
 - [Cool Curves](Cool%20Curves/README.md): Explore the Cool Curves example to discover how to modify and enhance the overlay settings for a visually appealing interface.
 
 - [Host Guard](Host%20Guard/README.md): The Host Guard example demonstrates the utilization of overlay customization to enhance security and protect your device from servers you may not want your device to access.
