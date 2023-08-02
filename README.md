@@ -1,9 +1,15 @@
 # Ultrahand Overlay (HOS 16.0.0+)
 ![Alt Text](https://gbatemp.net/attachments/img_4543-jpg.386203/)
 ![Alt Text](https://gbatemp.net/attachments/img_4547-jpg.386207/)
-![Alt Text](https://gbatemp.net/attachments/img_4544-jpg.386202/){: width="300px"}
-![Alt Text](https://gbatemp.net/attachments/img_4546-jpg.386206/){: width="300px"}
-![Alt Text](https://gbatemp.net/attachments/img_4545-jpg.386208/){: width="300px"}
+<div style="width: 300px;">
+  ![Alt Text](https://gbatemp.net/attachments/img_4544-jpg.386202/)
+</div>
+<div style="width: 300px;">
+  ![Alt Text](https://gbatemp.net/attachments/img_4546-jpg.386206/)
+</div>
+<div style="width: 300px;">
+  ![Alt Text](https://gbatemp.net/attachments/img_4545-jpg.386208/)
+</div>
 
 Craft, Share, and Customize Your Commands!
 
