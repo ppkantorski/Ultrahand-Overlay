@@ -48,7 +48,10 @@ Please note that running homebrew software on your Nintendo Switch may void your
 To compile and run the program, you need to have the following dependencies installed:
 
 - TESLA library
-- Standard C++ libraries
+- switch-jansson
+- switch-curl
+- switch-zziplib
+- switch-mbedtls
 
 
 ### Usage
