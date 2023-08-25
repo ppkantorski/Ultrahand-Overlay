@@ -462,6 +462,14 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                     hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
                 }
             }
+        } else if (commandName == "hex-by-cust-offset") {
+            // Edit command - Hex data replacement with offset from CUST
+            if (command.size() >= 3) {
+                sourcePath = preprocessPath(command[1]);
+                offset = decimalToReversedHex(removeQuotes(command[2]));
+                hexDataReplacement = decimalToReversedHex(removeQuotes(command[3]));
+                hexEditCustOffset(sourcePath, offset, hexDataReplacement);
+            }
         } else if (commandName == "download") {
             // Edit command - Hex data replacement with occurrence
             if (command.size() >= 3) {

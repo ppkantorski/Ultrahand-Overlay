@@ -137,6 +137,9 @@ Ultrahand supports the following commands:
 - hex-by-string: Edits the contents of a file by replacing a specified string data with another.
   - Usage: `hex-by-string <file_path> <string_data_to_replace> <string_data_replacement>`
 
+- hex-by-cust-offset: Changes the value with offset from the word CUST in loader.kip. 
+  - Usage: `hex-by-cust-offset <kip_path> <offset> <string_data_replacement>`
+
 - reboot: Restarts the system.
   - Usage: `reboot`
 
