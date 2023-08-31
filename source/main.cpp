@@ -218,7 +218,7 @@ public:
                                 if (setCurrent && hexValue && currentHex != "") {
                                     const char* hexValueStr = json_string_value(hexValue);
                                     size_t hexLength = strlen(hexValueStr);
-                                    if (hexLength <= 3)
+                                    if (hexLength < 3)
                                     {
                                         currentHex = currentHex.substr(0, hexLength);
                                     }
