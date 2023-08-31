@@ -215,13 +215,22 @@ public:
                             if (keyValue && json_is_string(keyValue)) {
                                 std::string name;
                                 json_t* hexValue = json_object_get(item, "hex");
-                                if (setCurrent && hexValue && currentHex != "" && json_string_value(hexValue) == currentHex) {
-                                    name = std::string(json_string_value(keyValue)) + " - Current";
-                                    // logMessage("new name is set");
+                                if (setCurrent && hexValue && currentHex != "") {
+                                    const char* hexValueStr = json_string_value(hexValue);
+                                    size_t hexLength = strlen(hexValueStr);
+                                    if (hexLength <= 3)
+                                    {
+                                        currentHex = currentHex.substr(0, hexLength);
+                                    }
+                                    if (hexValueStr == currentHex) {
+                                        name = std::string(json_string_value(keyValue)) + " - Current";
+                                        // logMessage("new name is set");
+                                    }
+                                    else {
+                                        name = json_string_value(keyValue);
+                                    }
                                 }
-                                else {
-                                    name = json_string_value(keyValue);
-                                }
+                                
                                 filesList.push_back(name);
                             }
                         }
