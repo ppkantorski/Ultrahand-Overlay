@@ -2,8 +2,6 @@
 #include <string>
 #include <sys/stat.h>
 #include <jansson.h>
-#include <cstdlib>
-#include <ctime>
 
 
 json_t* readJsonFromFile(const std::string& filePath) {

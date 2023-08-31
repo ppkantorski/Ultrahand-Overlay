@@ -5,10 +5,6 @@
 #include <cstdio> // Added for FILE and fopen
 #include <cstring> // Added for std::memcmp
 #include <sys/stat.h> // Added for stat
-#include <iostream>
-#include <iomanip>
-#include <sstream>
-
 
 // Hex-editing commands
 std::string asciiToHex(const std::string& asciiStr) {
