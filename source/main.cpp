@@ -229,8 +229,9 @@ public:
                                     else {
                                         name = json_string_value(keyValue);
                                     }
+                                } else {
+                                        name = json_string_value(keyValue);
                                 }
-                                
                                 filesList.push_back(name);
                             }
                         }
