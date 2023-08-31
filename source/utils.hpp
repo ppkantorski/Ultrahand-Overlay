@@ -256,7 +256,12 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
         }
         
         
-        
+        // if (commandName == "json-set-current") {
+        //     if (command.size() >= 2) {
+        //         jsonPath = preprocessPath(command[1]);
+        //         offset = removeQuotes(command[2]);
+        //         editJSONfile(jsonPath.c_str(), offset);
+        //     }
         if (commandName == "json_data") {
             if (command.size() >= 2) {
                 jsonPath = preprocessPath(command[1]);

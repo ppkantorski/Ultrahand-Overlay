@@ -153,6 +153,8 @@ public:
         bool useJson = false;
         bool useToggle = false;
         bool useSplitHeader = false;
+        bool setCurrent = false;
+        std::string offset = "";
         
         for (const auto& cmd : commands) {
             if (cmd.size() > 1) {
@@ -180,6 +182,17 @@ public:
                         jsonKey = cmd[2]; //json display key
                     }
                     useJson = true;
+                } else if (cmd[0] == "json_set_current") {
+                    jsonPath = preprocessPath(cmd[1]);
+                    if (cmd.size() > 2) {
+                        jsonKey = cmd[2]; //json display key
+                    }
+                    useJson = true;
+                    if (cmd.size() > 3) {
+                        offset = cmd[3];
+                        setCurrent = true;
+                    }
+                   
                 }
             } 
         }
@@ -187,9 +200,12 @@ public:
         // Get the list of files matching the pattern
         if (!useToggle) {
             if (useJson) {
+                std::string currentHex = ""; // Is used to mark current value from the kip
                 // create list of data in the json 
                 jsonData = readJsonFromFile(jsonPath);
-                
+                if (setCurrent) { // Mark the current value  
+                    currentHex = readHexDataAtOffset("/atmosphere/kips/loader.kip", "43555354", offset); // Read the data from kip with offset starting from 'C' in 'CUST'
+                }
                 if (jsonData && json_is_array(jsonData)) {
                     size_t arraySize = json_array_size(jsonData);
                     for (size_t i = 0; i < arraySize; ++i) {
@@ -197,8 +213,16 @@ public:
                         if (item && json_is_object(item)) {
                             json_t* keyValue = json_object_get(item, jsonKey.c_str());
                             if (keyValue && json_is_string(keyValue)) {
-                                const char* name = json_string_value(keyValue);
-                                filesList.push_back(std::string(name));
+                                std::string name;
+                                json_t* hexValue = json_object_get(item, "hex");
+                                if (setCurrent && hexValue && currentHex != "" && json_string_value(hexValue) == currentHex) {
+                                    name = std::string(json_string_value(keyValue)) + " - Current";
+                                    // logMessage("new name is set");
+                                }
+                                else {
+                                    name = json_string_value(keyValue);
+                                }
+                                filesList.push_back(name);
                             }
                         }
                     }
