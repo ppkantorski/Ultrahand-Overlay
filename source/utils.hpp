@@ -217,7 +217,7 @@ bool isDangerousCombination(const std::string& patternPath) {
 
 
 // Main interpreter
-void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& commands) {
+bool interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& commands) {
     std::string commandName, jsonPath, sourcePath, destinationPath, desiredSection, desiredKey, desiredNewKey, desiredValue, offset, hexDataToReplace, hexDataReplacement, fileUrl, occurrence;
     
     for (auto& unmodifiedCommand : commands) {
@@ -484,7 +484,11 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                 fileUrl = preprocessUrl(command[1]);
                 destinationPath = preprocessPath(command[2]);
                 logMessage("fileUrl: "+fileUrl);
-                downloadFile(fileUrl, destinationPath);
+                bool result = downloadFile(fileUrl, destinationPath);
+                if (!result) {
+                    //logMessage("catch");
+                    return false;
+                }
             }
         } else if (commandName == "unzip") {
             // Edit command - Hex data replacement with occurrence
@@ -505,4 +509,5 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
             spsmShutdown(SpsmShutdownMode_Normal);
         }
     }
+    return true;
 }

@@ -81,10 +81,13 @@
 using namespace std::literals::string_literals;
 using namespace std::literals::chrono_literals;
 
+
+
 namespace tsl {
 
     // Constants
-
+    enum PredefinedColors{Red, Gray, Green};
+    
     namespace cfg {
 
         constexpr u32 ScreenWidth = 1920;       ///< Width of the Screen
@@ -126,6 +129,7 @@ namespace tsl {
             constexpr Color ColorFrameBackground  = { 0x0, 0x0, 0x0, 0xD };   ///< Overlay frame background color
             constexpr Color ColorTransparent      = { 0x0, 0x0, 0x0, 0x0 };   ///< Transparent color
             constexpr Color ColorHighlight        = { 0x0, 0xF, 0xD, 0xF };   ///< Greenish highlight color
+            constexpr Color ColorError            = { 0xF, 0x0, 0x2, 0xF };   ///< Red error highlight color
             constexpr Color ColorFrame            = { 0x7, 0x7, 0x7, 0xF };   ///< Outer boarder color
             constexpr Color ColorHandle           = { 0x5, 0x5, 0x5, 0xF };   ///< Track bar handle color
             constexpr Color ColorText             = { 0xF, 0xF, 0xF, 0xF };   ///< Standard text color
@@ -2305,9 +2309,9 @@ namespace tsl {
 
                 // CUSTOM SECTION START (modification for submenu footer color)
                 if (this->m_value == "\u25B6") {
-                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45, this->getY() + 45, 20, this->m_faint ? a(tsl::style::color::ColorDescription) : a(tsl::Color(0xFF, 0xFF, 0xFF, 0xFF)));
+                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45, this->getY() + 45, 20, a(tsl::Color(0xFF, 0xFF, 0xFF, 0xFF)));
                 } else {
-                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45, this->getY() + 45, 20, this->m_faint ? a(tsl::style::color::ColorDescription) : a(tsl::style::color::ColorHighlight));
+                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45, this->getY() + 45, 20, a(this->m_faint));
                 }
                 // CUSTOM SECTION END 
             }
@@ -2375,9 +2379,21 @@ namespace tsl {
              * @param value Text
              * @param faint Should the text be drawn in a glowing green or a faint gray
              */
-            inline void setValue(const std::string& value, bool faint = false) {
+            inline void setValue(const std::string& value, tsl::PredefinedColors col=tsl::PredefinedColors::Gray) {
                 this->m_value = value;
-                this->m_faint = faint;
+                switch (col) 
+                {
+                    case tsl::PredefinedColors::Green:
+                        this->m_faint = tsl::Color(0x0, 0xF, 0xD, 0xF);
+                        break;
+                    case tsl::PredefinedColors::Red:
+                        this->m_faint = tsl::Color(0xF, 0x0, 0x2, 0xF);
+                        break;
+                    case tsl::PredefinedColors::Gray:
+                    default:
+                        this->m_faint = tsl::Color(0xA, 0xA, 0xA, 0xF);
+                        break;
+                }
                 this->m_maxWidth = 0;
             }
 
@@ -2407,7 +2423,7 @@ namespace tsl {
 
             bool m_scroll = false;
             bool m_trunctuated = false;
-            bool m_faint = false;
+            Color m_faint = tsl::Color(0xA, 0xA, 0xA, 0xF);
 
             bool m_touched = false;
 
@@ -2471,9 +2487,9 @@ namespace tsl {
                 this->m_state = state;
 
                 if (state)
-                    this->setValue(this->m_onValue, false);
+                    this->setValue(this->m_onValue);
                 else
-                    this->setValue(this->m_offValue, true);
+                    this->setValue(this->m_offValue);
             }
 
             /**
