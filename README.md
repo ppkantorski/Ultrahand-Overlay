@@ -7,7 +7,7 @@
 
 Craft, Share, and Customize Your Commands!
 
-Uberhand is a rework of Ultrahand Overlay, that provides expanded fuctionality, better user experience and built-in support for various overclocking-related features for your packages. Uberhand enables you to create and share packages, providing enhanced functionality for managing files and directories on your SD card.
+Uberhand is a rework of Ultrahand Overlay, that provides expanded functionality, better user experience and built-in support for various overclocking-related features for your packages. Uberhand enables you to create and share packages, providing enhanced functionality for managing files and directories on your SD card.
 
 Create directories, merge files, and customize configurations effortlessly using simple config.ini files.
 
@@ -60,7 +60,7 @@ To use Uberhand, follow these steps:
 
 1. Create a directory named Uberhand in the config root folder on your SD card.
 2. Place the config.ini package file in the Uberhand directory (or sub-directory). This package file contains the configuration options for Uberhand.
-3. Your commands will show up on the Tesla menu within the Uberhand overlay. You can click A to execute any command as well as click X to view and select the individual command lines written in the ini for execution.
+3. Your commands will show up on the Tesla menu within the Uberhand overlay. You can click A to execute any command, as well as click X to view and select the individual command lines written in the ini for execution.
 
 ## Configuration Options
 
@@ -110,7 +110,7 @@ Uberhand supports the following commands:
 - make or mkdir: Creates a directory.
   - Usage: `mkdir <directory_path>`
 
-- copy or cp: Copies a file or diectory.
+- copy or cp: Copies a file or directory.
   - Usage: `copy <source_file_path> <destination_file_path>`
 
 - delete or del: Deletes a file or directory.
