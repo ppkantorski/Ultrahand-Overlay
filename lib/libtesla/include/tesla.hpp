@@ -81,12 +81,15 @@
 using namespace std::literals::string_literals;
 using namespace std::literals::chrono_literals;
 
-
-
 namespace tsl {
 
     // Constants
-    enum PredefinedColors{Red, Gray, Green};
+    
+    enum PredefinedColors {
+        Red, 
+        Gray, 
+        Green
+    };
     
     namespace cfg {
 
