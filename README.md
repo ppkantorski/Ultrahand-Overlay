@@ -7,13 +7,13 @@
 
 Craft, Share, and Customize Your Commands!
 
-Uberhand is a versatile tool that enables you to create and share packages, providing enhanced functionality for managing files and directories on your SD card. It offers a range of features that allow you to efficiently interact with your system environment. With Uberhand, you have the flexibility to customize and shape your file management system according to your needs, empowering you with greater control over your configurations.
+Uberhand is a rework of Ultrahand Overlay, that provides expanded fuctionality, better user experience and built-in support for various overclocking-related features for your packages. Uberhand enables you to create and share packages, providing enhanced functionality for managing files and directories on your SD card.
 
 Create directories, merge files, and customize configurations effortlessly using simple config.ini files.
 
 ## Features
 
-Uberhand is a Tesla overlay that provides powerful functionality for managing files and directories on an SD card. It offers the following features:
+Uberhand is a Tesla overlay that provides powerful functionality for managing and manipulating files and directories on an SD card. It offers the following features:
 
 - Create Directories:
   - Effortlessly create directories on your SD card by specifying the directory path. Uberhand will handle the creation process for you.
@@ -39,7 +39,7 @@ Uberhand provides a convenient command-line interface to perform these operation
 ## Getting Started
 
 ### Nintendo Switch Compatibility
-To run the Uberhand File Management overlay on the Nintendo Switch, you need to have the necessary homebrew environment set up on your console. Once you have the homebrew environment set up, you can transfer the compiled executable file to your Switch and launch it using the Tesla Overlay.
+To run the Uberhand overlay on the Nintendo Switch, you need to have the necessary homebrew environment set up on your console. Once you have the homebrew environment set up, you can transfer the compiled executable file to your Switch and launch it using the Tesla Overlay.
 
 Please note that running homebrew software on your Nintendo Switch may void your warranty and can carry certain risks. Ensure that you understand the implications and follow the appropriate guidelines and precautions when using homebrew software.
 
@@ -60,7 +60,7 @@ To use Uberhand, follow these steps:
 
 1. Create a directory named Uberhand in the config root folder on your SD card.
 2. Place the config.ini package file in the Uberhand directory (or sub-directory). This package file contains the configuration options for Uberhand.
-3. Your commands will show up on the Tesla menu within the Uberhand overlay.  You can click A to execute any command as well as click X to view the indivicual command lines written in the ini for execution.
+3. Your commands will show up on the Tesla menu within the Uberhand overlay. You can click A to execute any command as well as click X to view and select the individual command lines written in the ini for execution.
 
 ## Configuration Options
 
