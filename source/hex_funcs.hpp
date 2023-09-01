@@ -196,3 +196,14 @@ void hexEditFindReplace(const std::string& filePath, const std::string& hexDataT
         //std::cout << "Hex data to replace not found." << std::endl;
     }
 }
+
+void hexEditCustOffset(const std::string& filePath, const std::string& offsetStr, const std::string& hexDataReplacement) {
+    std::vector<std::string> offsetStrs = findHexDataOffsets(filePath, "43555354"); // 43555354 is a CUST
+    if (!offsetStrs.empty()) {
+        int sum = std::stoi(offsetStr) + std::stoi(offsetStrs[0]); // count from "C" letter
+        hexEditByOffset(filePath, std::to_string(sum), hexDataReplacement);
+    }
+    else {
+        //std::cout << "CUST not found." << std::endl;
+    }
+}

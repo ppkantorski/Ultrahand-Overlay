@@ -217,7 +217,7 @@ bool isDangerousCombination(const std::string& patternPath) {
 
 
 // Main interpreter
-void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& commands) {
+bool interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& commands) {
     std::string commandName, jsonPath, sourcePath, destinationPath, desiredSection, desiredKey, desiredNewKey, desiredValue, offset, hexDataToReplace, hexDataReplacement, fileUrl, occurrence;
     
     for (auto& unmodifiedCommand : commands) {
@@ -462,13 +462,33 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                     hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
                 }
             }
+        } else if (commandName == "hex-by-cust-offset-dec") {
+            // Edit command - Hex data replacement with offset from CUST (decimal)
+            if (command.size() >= 3) {
+                sourcePath = preprocessPath(command[1]);
+                offset = removeQuotes(command[2]);
+                hexDataReplacement = decimalToReversedHex(removeQuotes(command[3]));
+                hexEditCustOffset(sourcePath, offset, hexDataReplacement);
+            }
+        } else if (commandName == "hex-by-cust-offset") {
+            // Edit command - Hex data replacement with offset from CUST ("raw" hex)
+            if (command.size() >= 3) {
+                sourcePath = preprocessPath(command[1]);
+                offset = removeQuotes(command[2]);
+                hexDataReplacement = removeQuotes(command[3]);
+                hexEditCustOffset(sourcePath, offset, hexDataReplacement);
+            }
         } else if (commandName == "download") {
             // Edit command - Hex data replacement with occurrence
             if (command.size() >= 3) {
                 fileUrl = preprocessUrl(command[1]);
                 destinationPath = preprocessPath(command[2]);
                 logMessage("fileUrl: "+fileUrl);
-                downloadFile(fileUrl, destinationPath);
+                bool result = downloadFile(fileUrl, destinationPath);
+                if (!result) {
+                    //logMessage("catch");
+                    return false;
+                }
             }
         } else if (commandName == "unzip") {
             // Edit command - Hex data replacement with occurrence
@@ -489,4 +509,5 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
             spsmShutdown(SpsmShutdownMode_Normal);
         }
     }
+    return true;
 }

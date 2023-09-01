@@ -48,7 +48,10 @@ Please note that running homebrew software on your Nintendo Switch may void your
 To compile and run the program, you need to have the following dependencies installed:
 
 - TESLA library
-- Standard C++ libraries
+- switch-jansson
+- switch-curl
+- switch-zziplib
+- switch-mbedtls
 
 
 ### Usage
@@ -136,6 +139,12 @@ Ultrahand supports the following commands:
 
 - hex-by-string: Edits the contents of a file by replacing a specified string data with another.
   - Usage: `hex-by-string <file_path> <string_data_to_replace> <string_data_replacement>`
+
+- hex-by-cust-offset: Changes the hex value with offset from the word CUST ("C" letter) in loader.kip. (not reversed)
+  - Usage: `hex-by-cust-offset <kip_path> <offset> <hex_data_replacement>`
+
+- hex-by-cust-offset-dec: Changes the value with offset from the word CUST ("C" letter) in loader.kip. (decimal -> hex with reverse)
+  - Usage: `hex-by-cust-offset-dec <kip_path> <offset> <decimal_data_replacement>`
 
 - reboot: Restarts the system.
   - Usage: `reboot`

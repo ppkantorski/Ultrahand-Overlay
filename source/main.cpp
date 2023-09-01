@@ -90,8 +90,12 @@ public:
                             }
 
                             commandVec.emplace_back(std::move(commandParts));
-                            interpretAndExecuteCommand(commandVec);
-                            listItem->setValue("DONE");
+                            bool result = interpretAndExecuteCommand(commandVec);
+                            if (result) {
+                                listItem->setValue("DONE", tsl::PredefinedColors::Green);
+                            } else {
+                                listItem->setValue("FAIL", tsl::PredefinedColors::Red);
+                            }
                             return true;
                         }
                         return false;
@@ -288,14 +292,19 @@ public:
                         optionName = file.substr(0, pos); // Strip the "&&" and everything after it
                     }
                     auto listItem = new tsl::elm::ListItem(optionName);
-                    listItem->setValue(footer, true);
+                    listItem->setValue(footer);
                     listItem->setClickListener([count, this, listItem](uint64_t keys) { // Add 'command' to the capture list
                         if (keys & KEY_A) {
                             // Replace "{json_source}" with file in commands, then execute
                             std::string countString = std::to_string(count);
                             std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(commands, countString, false, true, true);
-                            interpretAndExecuteCommand(modifiedCommands);
-                            listItem->setValue("DONE");
+                            bool result = interpretAndExecuteCommand(modifiedCommands);
+                            if (result) {
+                                listItem->setValue("DONE", tsl::PredefinedColors::Green);
+                            } else {
+                                listItem->setValue("FAIL", tsl::PredefinedColors::Red);
+                            }
+                            logMessage("2");
                             return true;
                         }
                         return false;
@@ -307,8 +316,13 @@ public:
                         if (keys & KEY_A) {
                             // Replace "{source}" with file in commands, then execute
                             std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(commands, file);
-                            interpretAndExecuteCommand(modifiedCommands);
-                            listItem->setValue("DONE");
+                            bool result = interpretAndExecuteCommand(modifiedCommands);
+                            if (result) {
+                                listItem->setValue("DONE", tsl::PredefinedColors::Green);
+                            } else {
+                                listItem->setValue("FAIL", tsl::PredefinedColors::Red);
+                            }
+                            logMessage("3");
                             return true;
                         }
                         return false;
@@ -442,7 +456,7 @@ public:
                     listItem = new tsl::elm::ListItem(optionName, footer);
                 } else {
                     listItem = new tsl::elm::ListItem(optionName);
-                    listItem->setValue(footer, true);
+                    listItem->setValue(footer);
                 }
                 
                 //std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(option.second, pathReplace);
@@ -453,8 +467,12 @@ public:
                             tsl::changeTo<SelectionOverlay>(subPath, keyName, command);
                         } else {
                             // Interpret and execute the command
-                            interpretAndExecuteCommand(command);
-                            listItem->setValue("DONE");
+                            bool result = interpretAndExecuteCommand(command);
+                            if (result) {
+                                listItem->setValue("DONE", tsl::PredefinedColors::Green);
+                            } else {
+                                listItem->setValue("FAIL", tsl::PredefinedColors::Red);
+                            }
                         }
                         return true;
                     } else if (keys & KEY_X) {
@@ -720,7 +738,7 @@ public:
                     }
                     
                     auto* listItem = new tsl::elm::ListItem(overlayName);
-                    listItem->setValue(overlayVersion, true);
+                    listItem->setValue(overlayVersion);
 
                     // Add a click listener to load the overlay when clicked upon
                     listItem->setClickListener([overlayFile](s64 key) {
@@ -805,7 +823,7 @@ public:
                     }
                     
                     auto listItem = new tsl::elm::ListItem(subdirectoryIcon + subdirectory);
-                    listItem->setValue(packageHeader.version, true);
+                    listItem->setValue(packageHeader.version);
             
                     listItem->setClickListener([this, subPath = packageDirectory + subdirectory + "/"](uint64_t keys) {
                         if (keys & KEY_A) {
@@ -867,8 +885,12 @@ public:
                             tsl::changeTo<SubMenu>(newPath);
                         } else {
                             // Interpret and execute the command
-                            interpretAndExecuteCommand(command);
-                            listItem->setValue("DONE");
+                            bool result = interpretAndExecuteCommand(command);
+                            if (result) {
+                                listItem->setValue("DONE", tsl::PredefinedColors::Green);
+                            } else {
+                                listItem->setValue("FAIL", tsl::PredefinedColors::Red);
+                            }
                         }
 
                         return true;
