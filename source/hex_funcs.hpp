@@ -109,6 +109,51 @@ std::vector<std::string> findHexDataOffsets(const std::string& filePath, const s
     return offsets;
 }
 
+std::string readHexDataAtOffset(const std::string& filePath, const std::string& hexData, const std::string& offsetStr) {
+    // logMessage("Entered readHexDataAtOffset");
+
+    std::vector<std::string> offsets = findHexDataOffsets(filePath, hexData);
+    std::stringstream hexStream;
+    char hexBuffer[3];
+    int sum = 0;
+
+    // Open the file for reading in binary mode
+    FILE* file = fopen(filePath.c_str(), "rb");
+    if (!file) {
+        //logMessage("Failed to open the file.");
+        return "";
+    }
+
+    if (!offsets.empty()) {
+        sum = std::stoi(offsetStr) + std::stoi(offsets[0]); // count from "C" letter
+    }
+    else {
+        // logMessage("CUST not found.");
+    }
+
+    if (fseek(file, sum, SEEK_SET) != 0) {
+        // logMessage("Error seeking to offset.");
+        fclose(file);
+        return "";
+    }
+
+    if (fread(hexBuffer, 1, 3, file) == 3) {
+        for (int i = 0; i < 3; ++i) {
+            hexStream << std::setfill('0') << std::setw(2) << std::hex << static_cast<int>(hexBuffer[i]);
+        }
+    } else {
+        if (feof(file)) {
+            logMessage("End of file reached.");
+        } else if (ferror(file)) {
+            logMessage("Error reading data from file: ");
+            logMessage(std::to_string(errno)); // Print the error description
+        }
+    }
+
+    fclose(file);
+    return hexStream.str();
+}
+
 void hexEditByOffset(const std::string& filePath, const std::string& offsetStr, const std::string& hexData) {
     // Convert the offset string to std::streampos
     std::streampos offset = std::stoll(offsetStr);
