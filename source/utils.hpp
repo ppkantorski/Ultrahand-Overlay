@@ -9,6 +9,7 @@
 #include <hex_funcs.hpp>
 #include <download_funcs.hpp>
 #include <json_funcs.hpp>
+#include <text_funcs.hpp>
 
 #define SpsmShutdownMode_Normal 0
 #define SpsmShutdownMode_Reboot 1

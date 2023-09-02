@@ -38,6 +38,8 @@ public:
 
         std::string configFile = filePath + "/" + configFileName;
 
+        // logMessage("Processing ConfigOverlay");
+
         std::string fileContent = getFileContents(configFile);
         if (!fileContent.empty()) {
             std::string line;
@@ -136,7 +138,7 @@ public:
 // Selection overlay
 class SelectionOverlay : public tsl::Gui {
 private:
-    std::string filePath, specificKey, pathPattern, pathPatternOn, pathPatternOff, jsonPath, jsonKey, itemName, parentDirName, lastParentDirName;
+    std::string filePath, specificKey, pathPattern, pathPatternOn, pathPatternOff, jsonPath, jsonKey, itemName, parentDirName, lastParentDirName, textPath;
     std::vector<std::string> filesList, filesListOn, filesListOff, filterList, filterOnList, filterOffList;
     std::vector<std::vector<std::string>> commands;
     bool toggleState = false;
@@ -152,13 +154,17 @@ public:
 
         rootFrame = new tsl::elm::OverlayFrame(getNameFromPath(filePath), "Ultrahand Package");
         list = new tsl::elm::List();
+        
+        // logMessage("Processing SelectionOverlay");
 
         // Extract the path pattern from commands
         bool useJson = false;
+        bool useText = false;
         bool useToggle = false;
         bool useSplitHeader = false;
-        bool setCurrent = false;
+        bool markCurrent = false;
         std::string offset = "";
+        std::pair<std::string, int> textData;
         
         for (const auto& cmd : commands) {
             if (cmd.size() > 1) {
@@ -186,7 +192,7 @@ public:
                         jsonKey = cmd[2]; //json display key
                     }
                     useJson = true;
-                } else if (cmd[0] == "json_set_current") {
+                } else if (cmd[0] == "json_mark_current") {
                     jsonPath = preprocessPath(cmd[1]);
                     if (cmd.size() > 2) {
                         jsonKey = cmd[2]; //json display key
@@ -194,20 +200,46 @@ public:
                     useJson = true;
                     if (cmd.size() > 3) {
                         offset = cmd[3];
-                        setCurrent = true;
+                        markCurrent = true;
                     }
-                   
+                } else if (cmd[0] == "text_source") {
+                        textPath = preprocessPath(cmd[1]);
+                        useText = true;
                 }
             } 
         }
 
         // Get the list of files matching the pattern
         if (!useToggle) {
-            if (useJson) {
+            if (useText) {
+                textData = readTextFromFile(textPath);
+                std::string texttest = textData.first;
+                int textsize = textData.second;
+                constexpr int lineHeight = 20;  // Adjust the line height as needed
+                constexpr int fontSize = 16;    // Adjust the font size as needed
+                if (!texttest.empty()) {
+                    list->addItem(new tsl::elm::CustomDrawer([lineHeight, fontSize, texttest](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
+                    renderer->drawString(texttest.c_str(), false, x, y + lineHeight, fontSize, a(tsl::style::color::ColorText));
+                    }), fontSize * textsize + lineHeight);
+                    auto listItem = new tsl::elm::ListItem("Back");
+                    listItem->setClickListener([](uint64_t keys) { // Add 'command' to the capture list
+                    if (keys & KEY_A) {
+                        tsl::goBack();
+                        inSelectionMenu = false;
+                        returningToSub = true;
+                        return true;
+                    }
+                        return false;
+                    });
+                    list->addItem(listItem);
+                    rootFrame->setContent(list);
+                    return rootFrame;
+                }
+            } else if (useJson) {
                 std::string currentHex = ""; // Is used to mark current value from the kip
                 // create list of data in the json 
                 jsonData = readJsonFromFile(jsonPath);
-                if (setCurrent) { // Mark the current value  
+                if (markCurrent) { // Mark the current value  
                     currentHex = readHexDataAtOffset("/atmosphere/kips/loader.kip", "43555354", offset); // Read the data from kip with offset starting from 'C' in 'CUST'
                 }
                 if (jsonData && json_is_array(jsonData)) {
@@ -219,7 +251,7 @@ public:
                             if (keyValue && json_is_string(keyValue)) {
                                 std::string name;
                                 json_t* hexValue = json_object_get(item, "hex");
-                                if (setCurrent && hexValue && currentHex != "") {
+                                if (markCurrent && hexValue && currentHex != "") {
                                     const char* hexValueStr = json_string_value(hexValue);
                                     size_t hexLength = strlen(hexValueStr);
                                     if (hexLength < 3)
@@ -315,7 +347,7 @@ public:
                 list->addItem(new tsl::elm::CategoryHeader(removeQuotes(parentDirName)));
                 lastParentDirName = parentDirName.c_str();
             }
-            
+
             if (!useToggle) {
                 if (useJson) { // For JSON wildcards
                     size_t pos = file.find(" - ");
@@ -338,7 +370,6 @@ public:
                             } else {
                                 listItem->setValue("FAIL", tsl::PredefinedColors::Red);
                             }
-                            logMessage("2");
                             return true;
                         }
                         return false;
@@ -356,7 +387,6 @@ public:
                             } else {
                                 listItem->setValue("FAIL", tsl::PredefinedColors::Red);
                             }
-                            logMessage("3");
                             return true;
                         }
                         return false;
@@ -448,6 +478,8 @@ public:
         std::string subConfigIniPath = subPath + "/" + configFileName;
         std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> options = loadOptionsFromIni(subConfigIniPath);
         
+        // logMessage("Processing SubMenu");
+
         // Populate the sub menu with options
         for (const auto& option : options) {
             std::string optionName = option.first;
@@ -477,13 +509,13 @@ public:
                     } else if (cmd[0] == "source_off") {
                         pathReplaceOff = cmd[1];
                         useToggle = true;
-                    }
+                    } 
                     //else if (cmd[0] == "json_data") {
                     //    jsonPath = cmd[1];
                     //}
                 } 
             }
-            
+
             if (usePattern || !useToggle){
                 auto listItem = static_cast<tsl::elm::ListItem*>(nullptr);
                 if ((footer == "\u25B6") || (footer.empty())) {
