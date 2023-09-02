@@ -14,6 +14,12 @@ std::pair<std::string, int> readTextFromFile (const std::string& filePath) {
 
     std::string line;
     while (std::getline(file, line)) {
+        if (line == "\r") {
+            lines += "\n"; // Preserve empty lines
+            lineCount++;
+            continue;
+        }
+        
         std::istringstream lineStream(line);
         std::string word;
         std::string currentLine;
