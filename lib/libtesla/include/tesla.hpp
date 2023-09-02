@@ -341,7 +341,7 @@ namespace tsl {
             /**
              * @brief Tesla config file
              */
-            static const char* CONFIG_FILE = "/config/ultrahand/config.ini"; // CUSTOM MODIFICATION
+            static const char* CONFIG_FILE = "/config/uberhand/config.ini"; // CUSTOM MODIFICATION
 
             /**
              * @brief Parses a ini string
@@ -1588,7 +1588,9 @@ namespace tsl {
                 {'l', 3},
                 {'t', 4},
                 {'r', 4},
-                {'a', 6}
+                {'a', 6},
+                {'b', 6},
+                {'e', 6}
                 // Add more character width mappings as needed
             };
 
@@ -1652,10 +1654,10 @@ namespace tsl {
                 
                 int y = 50;
                 int offset = 0;
-                // Check if m_title is "Ultrahand"
-                if (this->m_title == "Ultrahand") {
+                // Check if m_title is "Uberhand"
+                if (this->m_title == "Uberhand") {
                     static float counter = 0;
-                    std::string firstHalf = "Ultra";
+                    std::string firstHalf = "Uber";
                     std::string secondHalf = "hand";
                     
                     int x = 20;
@@ -1700,9 +1702,9 @@ namespace tsl {
                     renderer->drawString(secondHalf.c_str(), false, x, y+offset, fontSize, tsl::Color(0xFF, 0x00, 0x00, 0xFF));
                 }
                 else {
-                    if (this->m_subtitle == "Ultrahand Package") {
+                    if (this->m_subtitle == "Uberhand Package") {
                         renderer->drawString(this->m_title.c_str(), false, 20, 50, 32, a(Color(0x00, 0xFF, 0x00, 0xFF)));
-                    } else if (this->m_subtitle == "Ultrahand Config") {
+                    } else if (this->m_subtitle == "Uberhand Config") {
                         renderer->drawString(this->m_title.c_str(), false, 20, 50, 32, a(Color(0xFF, 0x33, 0x3F, 0xFF)));
                     } else {
                         renderer->drawString(this->m_title.c_str(), false, 20, 50, 30, a(tsl::style::color::ColorText));
@@ -3504,7 +3506,7 @@ namespace tsl {
         static void parseOverlaySettings() {
             hlp::ini::IniData parsedConfig = hlp::ini::readOverlaySettings();
 
-            u64 decodedKeys = hlp::comboStringToKeys(parsedConfig["ultrahand"]["key_combo"]); // CUSTOM MODIFICATION
+            u64 decodedKeys = hlp::comboStringToKeys(parsedConfig["uberhand"]["key_combo"]); // CUSTOM MODIFICATION
             if (decodedKeys)
                 tsl::cfg::launchCombo = decodedKeys;
         }
@@ -3517,7 +3519,7 @@ namespace tsl {
         [[maybe_unused]] static void updateCombo(u64 keys) {
             tsl::cfg::launchCombo = keys;
             hlp::ini::updateOverlaySettings({
-                { "ultrahand", { // CUSTOM MODIFICATION
+                { "uberhand", { // CUSTOM MODIFICATION
                     { "key_combo", tsl::hlp::keysToComboString(keys) }
                 }}
             });
@@ -3702,12 +3704,12 @@ namespace tsl {
             }
         }
         
-        std::string settingsConfigPath = "sdmc:/config/ultrahand/config.ini";
+        std::string settingsConfigPath = "sdmc:/config/uberhand/config.ini";
         std::map<std::string, std::map<std::string, std::string>> settingsData = getParsedDataFromIniFile(settingsConfigPath);
         std::string inOverlayString;
 
-        if (settingsData.count("ultrahand") > 0 && settingsData["ultrahand"].count("in_overlay") > 0) {
-            inOverlayString = settingsData["ultrahand"]["in_overlay"];
+        if (settingsData.count("uberhand") > 0 && settingsData["uberhand"].count("in_overlay") > 0) {
+            inOverlayString = settingsData["uberhand"]["in_overlay"];
         } else {
             inOverlayString = "false"; // Assign default value if the keys are not present
         }
@@ -3715,7 +3717,7 @@ namespace tsl {
         bool inOverlay = false;
         if (inOverlayString == "true") {
             inOverlay = true;
-            setIniFileValue(settingsConfigPath, "ultrahand", "in_overlay", "false");
+            setIniFileValue(settingsConfigPath, "uberhand", "in_overlay", "false");
         }
         
         

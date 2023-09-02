@@ -75,7 +75,7 @@ bool downloadFile(const std::string& url, const std::string& toDestination) {
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
 
     // If you have a cacert.pem file, you can set it as a trusted CA
-    // curl_easy_setopt(curl, CURLOPT_CAINFO, "sdmc:/config/ultrahand/cacert.pem");
+    // curl_easy_setopt(curl, CURLOPT_CAINFO, "sdmc:/config/uberhand/cacert.pem");
 
     CURLcode result = curl_easy_perform(curl);
     if (result != CURLE_OK) {

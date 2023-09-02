@@ -43,7 +43,7 @@
 
 // String path variables
 const std::string configFileName = "config.ini";
-const std::string settingsPath = "sdmc:/config/ultrahand/";
+const std::string settingsPath = "sdmc:/config/uberhand/";
 const std::string settingsConfigIniPath = settingsPath + configFileName;
 const std::string packageDirectory = "sdmc:/switch/.packages/";
 const std::string overlayDirectory = "sdmc:/switch/.overlays/";
@@ -68,11 +68,11 @@ void copyTeslaKeyComboToUltraHand() {
     if (!keyCombo.empty()){
         if (isFileOrDirectory(settingsConfigIniPath)) {
             parsedData = getParsedDataFromIniFile(settingsConfigIniPath);
-            if (parsedData.count("ultrahand") > 0) {
-                auto& ultrahandSection = parsedData["ultrahand"];
+            if (parsedData.count("uberhand") > 0) {
+                auto& ultrahandSection = parsedData["uberhand"];
                 if (ultrahandSection.count("key_combo") == 0) {
                     // Write the key combo to the destination file
-                    setIniFileValue(settingsConfigIniPath, "ultrahand", "key_combo", keyCombo);
+                    setIniFileValue(settingsConfigIniPath, "uberhand", "key_combo", keyCombo);
                 }
             }
         }

@@ -1,8 +1,8 @@
-# Ultrahand Overlay - Examples
+# Uberhand Overlay - Examples
 
-This repository contains a collection of useful examples that demonstrate the capabilities and usage of Ultrahand Overlay.
+This repository contains a collection of useful examples that demonstrate the capabilities and usage of Uberhand Overlay.
 
-Ultrahand Overlay is a powerful tool that allows you to customize and enhance your device's overlays in order to optimize performance, improve functionality, and personalize your experience.
+Uberhand Overlay is a powerful tool that allows you to customize and enhance your device's overlays in order to optimize performance, improve functionality, and personalize your experience.
 
 ## Examples
 
@@ -10,7 +10,7 @@ Ultrahand Overlay is a powerful tool that allows you to customize and enhance yo
 
 - [Host Guard](Host%20Guard/README.md): The Host Guard example demonstrates the utilization of overlay customization to enhance security and protect your device from servers you may not want your device to access.
 
-- [Mod Master](Mod%20Master/README.md): Dive into the Mod Master example to learn how to leverage Ultrahand Overlay to manage and optimize your favorite game modifications.
+- [Mod Master](Mod%20Master/README.md): Dive into the Mod Master example to learn how to leverage Uberhand Overlay to manage and optimize your favorite game modifications.
 
 - [Overclock Buster](Overclock%20Buster/README.md): Discover the Overclock Buster example, which demonstrates how to push your device's performance to the limit by applying custom overclocking settings to OC Suite / 4IFIR kip files.
 
@@ -36,4 +36,4 @@ We welcome contributions from the community! If you have any improvements, bug f
 
 ## License
 
-The Ultrahand Overlay Examples repository is open source and available under the [CC-BY-NC-4.0 License](LICENSE).
+The Uberhand Overlay Examples repository is open source and available under the [CC-BY-NC-4.0 License](LICENSE).

@@ -11,7 +11,7 @@ void logMessage(const std::string& message) {
     }
     logEntry = "[" + logEntry + "] " + message + "\n";
 
-    FILE* file = fopen("sdmc:/config/ultrahand/log.txt", "a");
+    FILE* file = fopen("sdmc:/config/uberhand/log.txt", "a");
     if (file != nullptr) {
         fputs(logEntry.c_str(), file);
         fclose(file);

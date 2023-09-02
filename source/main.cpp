@@ -33,7 +33,7 @@ public:
     virtual tsl::elm::Element* createUI() override {
         inConfigMenu = true;
         
-        rootFrame = new tsl::elm::OverlayFrame(getNameFromPath(filePath), "Ultrahand Config");
+        rootFrame = new tsl::elm::OverlayFrame(getNameFromPath(filePath), "Uberhand Config");
         list = new tsl::elm::List();
 
         std::string configFile = filePath + "/" + configFileName;
@@ -152,7 +152,7 @@ public:
     virtual tsl::elm::Element* createUI() override {
         inSelectionMenu = true;
 
-        rootFrame = new tsl::elm::OverlayFrame(getNameFromPath(filePath), "Ultrahand Package");
+        rootFrame = new tsl::elm::OverlayFrame(getNameFromPath(filePath), "Uberhand Package");
         list = new tsl::elm::List();
         
         // logMessage("Processing SelectionOverlay");
@@ -468,7 +468,7 @@ public:
     virtual tsl::elm::Element* createUI() override {
         inSubMenu = true;
         
-        rootFrame = new tsl::elm::OverlayFrame(getNameFromPath(subPath), "Ultrahand Package");
+        rootFrame = new tsl::elm::OverlayFrame(getNameFromPath(subPath), "Uberhand Package");
         list = new tsl::elm::List();
 
         // Add a section break with small text to indicate the "Commands" section
@@ -721,8 +721,8 @@ public:
         bool settingsLoaded = false;
         if (isFileOrDirectory(settingsConfigIniPath)) {
             settingsData = getParsedDataFromIniFile(settingsConfigIniPath);
-            if (settingsData.count("ultrahand") > 0) {
-                auto& ultrahandSection = settingsData["ultrahand"];
+            if (settingsData.count("uberhand") > 0) {
+                auto& ultrahandSection = settingsData["uberhand"];
                 if (ultrahandSection.count("last_menu") > 0) {
                     menuMode = ultrahandSection["last_menu"];
                     if (ultrahandSection.count("default_menu") > 0) {
@@ -735,19 +735,19 @@ public:
                 //if (ultrahandSection.count("in_overlay") > 0) {
                 //    inOverlayString = ultrahandSection["in_overlay"];
                 //    if (inOverlayString == "true") {
-                //        setIniFileValue(settingsConfigIniPath, "ultrahand", "in_overlay", "false");
+                //        setIniFileValue(settingsConfigIniPath, "uberhand", "in_overlay", "false");
                 //    }
                 //    settingsLoaded = true;
                 //}
             }
         }
         if (!settingsLoaded) { // write data if settings are not loaded
-            setIniFileValue(settingsConfigIniPath, "ultrahand", "default_menu", defaultMenuMode);
-            setIniFileValue(settingsConfigIniPath, "ultrahand", "last_menu", menuMode);
-            setIniFileValue(settingsConfigIniPath, "ultrahand", "in_overlay", "false");
+            setIniFileValue(settingsConfigIniPath, "uberhand", "default_menu", defaultMenuMode);
+            setIniFileValue(settingsConfigIniPath, "uberhand", "last_menu", menuMode);
+            setIniFileValue(settingsConfigIniPath, "uberhand", "in_overlay", "false");
         }
         copyTeslaKeyComboToUltraHand();
-        //setIniFileValue(settingsConfigIniPath, "ultrahand", "in_overlay", "false");
+        //setIniFileValue(settingsConfigIniPath, "uberhand", "in_overlay", "false");
         
         
         if ((defaultMenuMode == "overlays") || (defaultMenuMode == "packages")) {
@@ -757,11 +757,11 @@ public:
             }
         } else {
             defaultMenuMode = "last_menu";
-            setIniFileValue(settingsConfigIniPath, "ultrahand", "default_menu", defaultMenuMode);
+            setIniFileValue(settingsConfigIniPath, "uberhand", "default_menu", defaultMenuMode);
         }
         
         std::string versionLabel = APP_VERSION+std::string("   (")+envGetLoaderInfo()+std::string(")");
-        rootFrame = new tsl::elm::OverlayFrame("Ultrahand", versionLabel, menuMode);
+        rootFrame = new tsl::elm::OverlayFrame("Uberhand", versionLabel, menuMode);
         list = new tsl::elm::List();
 
         //loadOverlayFiles(list);
@@ -812,7 +812,7 @@ public:
                             // Load the overlay here
                             //inMainMenu = false;
                             //inOverlay = true;
-                            setIniFileValue(settingsConfigIniPath, "ultrahand", "in_overlay", "true"); // this is handled within tesla.hpp
+                            setIniFileValue(settingsConfigIniPath, "uberhand", "in_overlay", "true"); // this is handled within tesla.hpp
                             tsl::setNextOverlay(overlayFile);
                             //envSetNextLoad(overlayPath, "");
                             tsl::Overlay::get()->close();
@@ -980,14 +980,14 @@ public:
             if (!freshSpawn && !returningToMain) {
                 if ((keysHeld & KEY_DRIGHT) && !(keysHeld & (KEY_DLEFT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR))) {
                     if (menuMode != "packages") {
-                        setIniFileValue(settingsConfigIniPath, "ultrahand", "last_menu", "packages");
+                        setIniFileValue(settingsConfigIniPath, "uberhand", "last_menu", "packages");
                         tsl::changeTo<MainMenu>();
                         return true;
                     }
                 }
                 if ((keysHeld & KEY_DLEFT) && !(keysHeld & (KEY_DRIGHT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR))) {
                     if (menuMode != "overlays") {
-                        setIniFileValue(settingsConfigIniPath, "ultrahand", "last_menu", "overlays");
+                        setIniFileValue(settingsConfigIniPath, "uberhand", "last_menu", "overlays");
                         tsl::changeTo<MainMenu>();
                         return true;
                     }
