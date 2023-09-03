@@ -43,7 +43,7 @@
 
 // String path variables
 const std::string configFileName = "config.ini";
-const std::string settingsPath = "sdmc:/config/uberhand/";
+const std::string settingsPath = "sdmc:/config/ultrahand/";
 const std::string settingsConfigIniPath = settingsPath + configFileName;
 const std::string packageDirectory = "sdmc:/switch/.packages/";
 const std::string overlayDirectory = "sdmc:/switch/.overlays/";
@@ -218,9 +218,9 @@ bool isDangerousCombination(const std::string& patternPath) {
 
 
 // Main interpreter
-bool interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& commands) {
+int interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& commands) {
     std::string commandName, jsonPath, sourcePath, destinationPath, desiredSection, desiredKey, desiredNewKey, desiredValue, offset, hexDataToReplace, hexDataReplacement, fileUrl, occurrence;
-    
+
     for (auto& unmodifiedCommand : commands) {
         
         // Check the command and perform the appropriate action
@@ -263,6 +263,9 @@ bool interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
         //         offset = removeQuotes(command[2]);
         //         editJSONfile(jsonPath.c_str(), offset);
         //     }
+        if (commandName == "back") {
+            return 1;
+        }
         if (commandName == "json_data") {
             if (command.size() >= 2) {
                 jsonPath = preprocessPath(command[1]);
@@ -493,7 +496,7 @@ bool interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                 bool result = downloadFile(fileUrl, destinationPath);
                 if (!result) {
                     //logMessage("catch");
-                    return false;
+                    return -1;
                 }
             }
         } else if (commandName == "unzip") {
@@ -515,5 +518,5 @@ bool interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
             spsmShutdown(SpsmShutdownMode_Normal);
         }
     }
-    return true;
+    return 0;
 }

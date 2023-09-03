@@ -146,9 +146,9 @@ Uberhand supports the following commands:
 - hex-by-cust-offset-dec: Changes the value with offset from the word CUST ("C" letter) in loader.kip. (decimal -> hex with reverse)
   - Usage: `hex-by-cust-offset-dec <kip_path> <offset> <decimal_data_replacement>`
 
-- json_set_current: Creates a menu from the contents of the JSON file, marking the current value at the offset from CUST from the loader.kip.
-  - Usage: `json_set_current <path_to_json> name <offset>`
-  - Example: `json_set_current '/switch/.packages/Ultra Tuner/Data/Placebo/json/RAM/MHz.json' name 32`
+- json_mark_current: Creates a menu from the contents of the JSON file, marking the current value at the offset from CUST from the loader.kip.
+  - Usage: `json_mark_current <path_to_json> name <offset>`
+  - Example: `json_mark_current '/switch/.packages/Ultra Tuner/Data/Placebo/json/RAM/MHz.json' name 32`
 
 - reboot: Restarts the system.
   - Usage: `reboot`

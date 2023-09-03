@@ -331,7 +331,7 @@ std::string replacePlaceholder(const std::string& input, const std::string& plac
     return result;
 }
 
-std::string replaceJsonSourcePlaceholder(const std::string& placeholder, const std::string& jsonPath, bool source = false) {
+std::string replaceJsonSourcePlaceholder(const std::string& placeholder, const std::string& jsonPath, std::string searchString = "{json_data(") {
     // Load JSON data from the provided file
     json_t* root;
     json_error_t error;
@@ -344,10 +344,6 @@ std::string replaceJsonSourcePlaceholder(const std::string& placeholder, const s
     }
 
     std::string replacement = placeholder;
-    std::string searchString = "{json_data(";
-    if (source) {
-        searchString = "{json_source(";
-    }
     
     std::size_t startPos = replacement.find(searchString);
     std::size_t endPos = replacement.find(")}");
@@ -428,7 +424,7 @@ std::vector<std::vector<std::string>> getModifyCommands(const std::vector<std::v
                     }
                 }
             }
-            if ((usingJsonSource) && (cmd[0] == "json_source")) {
+            if ((usingJsonSource) && (cmd[0] == "json_source" || cmd[0] == "json_mark_current")) {
                 jsonPath = preprocessPath(cmd[1]);
             } 
         }
@@ -474,7 +470,25 @@ std::vector<std::vector<std::string>> getModifyCommands(const std::vector<std::v
                     size_t startPos = arg.find("{json_source(");
                     size_t endPos = arg.find(")}");
                     if (endPos != std::string::npos && endPos > startPos) {
-                        replacement = replaceJsonSourcePlaceholder(arg.substr(startPos, endPos - startPos + 2), jsonPath, true);
+                        replacement = replaceJsonSourcePlaceholder(arg.substr(startPos, endPos - startPos + 2), jsonPath, "{json_source(");
+                        //logMessage2("replacement: "+replacement);
+                        //logMessage2("pre-arg: "+arg);
+                        arg.replace(startPos, endPos - startPos + 2, replacement);
+                        //logMessage2("post-arg: "+arg);
+                    }
+                } else if (usingJsonSource && (arg.find("{json_mark_current(") != std::string::npos)) {
+                    std::string countStr = file;
+                    
+                    logMessage(std::string("count: ")+countStr);
+                    logMessage(std::string("pre arg: ") + arg);
+                    arg = replacePlaceholder(arg, "*", file);
+                    logMessage(std::string("post arg: ") + arg);
+
+                    
+                    size_t startPos = arg.find("{json_mark_current(");
+                    size_t endPos = arg.find(")}");
+                    if (endPos != std::string::npos && endPos > startPos) {
+                        replacement = replaceJsonSourcePlaceholder(arg.substr(startPos, endPos - startPos + 2), jsonPath, "{json_mark_current(");
                         //logMessage2("replacement: "+replacement);
                         //logMessage2("pre-arg: "+arg);
                         arg.replace(startPos, endPos - startPos + 2, replacement);

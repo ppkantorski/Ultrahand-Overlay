@@ -114,6 +114,8 @@ std::string readHexDataAtOffset(const std::string& filePath, const std::string& 
 
     std::vector<std::string> offsets = findHexDataOffsets(filePath, hexData);
     std::stringstream hexStream;
+    char lowerToUpper;
+    std::string result = "";
     char hexBuffer[3];
     int sum = 0;
 
@@ -150,8 +152,12 @@ std::string readHexDataAtOffset(const std::string& filePath, const std::string& 
         }
     }
 
+    while (hexStream.get(lowerToUpper)) {
+        result += std::toupper(lowerToUpper);
+    }
+    
     fclose(file);
-    return hexStream.str();
+    return result;
 }
 
 void hexEditByOffset(const std::string& filePath, const std::string& offsetStr, const std::string& hexData) {

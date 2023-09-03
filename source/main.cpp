@@ -76,9 +76,11 @@ public:
                             }
 
                             commandVec.emplace_back(std::move(commandParts));
-                            bool result = interpretAndExecuteCommand(commandVec);
-                            if (result) {
+                            int result = interpretAndExecuteCommand(commandVec);
+                            if (result == 0) {
                                 listItem->setValue("DONE", tsl::PredefinedColors::Green);
+                            } else if (result == 1) {
+                                tsl::goBack();
                             } else {
                                 listItem->setValue("FAIL", tsl::PredefinedColors::Red);
                             }
@@ -328,9 +330,11 @@ public:
                             // Replace "{json_source}" with file in commands, then execute
                             std::string countString = std::to_string(count);
                             std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(commands, countString, false, true, true);
-                            bool result = interpretAndExecuteCommand(modifiedCommands);
-                            if (result) {
+                            int result = interpretAndExecuteCommand(modifiedCommands);
+                            if (result == 0) {
                                 listItem->setValue("DONE", tsl::PredefinedColors::Green);
+                            } else if (result == 1) {
+                                tsl::goBack();
                             } else {
                                 listItem->setValue("FAIL", tsl::PredefinedColors::Red);
                             }
@@ -345,9 +349,11 @@ public:
                         if (keys & KEY_A) {
                             // Replace "{source}" with file in commands, then execute
                             std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(commands, file);
-                            bool result = interpretAndExecuteCommand(modifiedCommands);
-                            if (result) {
+                            int result = interpretAndExecuteCommand(modifiedCommands);
+                            if (result == 0) {
                                 listItem->setValue("DONE", tsl::PredefinedColors::Green);
+                            } else if (result == 1) {
+                                tsl::goBack();
                             } else {
                                 listItem->setValue("FAIL", tsl::PredefinedColors::Red);
                             }
@@ -492,9 +498,11 @@ public:
                             tsl::changeTo<SelectionOverlay>(subPath, keyName, command);
                         } else {
                             // Interpret and execute the command
-                            bool result = interpretAndExecuteCommand(command);
-                            if (result) {
+                            int result = interpretAndExecuteCommand(command);
+                            if (result == 0) {
                                 listItem->setValue("DONE", tsl::PredefinedColors::Green);
+                            } else if (result == 1) {
+                                tsl::goBack();
                             } else {
                                 listItem->setValue("FAIL", tsl::PredefinedColors::Red);
                             }
@@ -893,9 +901,11 @@ public:
                             tsl::changeTo<SubMenu>(newPath);
                         } else {
                             // Interpret and execute the command
-                            bool result = interpretAndExecuteCommand(command);
-                            if (result) {
+                            int result = interpretAndExecuteCommand(command);
+                            if (result == 0) {
                                 listItem->setValue("DONE", tsl::PredefinedColors::Green);
+                            } else if (result == 1) {
+                                tsl::goBack();
                             } else {
                                 listItem->setValue("FAIL", tsl::PredefinedColors::Red);
                             }
