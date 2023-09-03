@@ -6,21 +6,9 @@
 
 
 // Overlay booleans
-//static bool shouldCloseMenu = false;
-static bool returningToMain = false;
-static bool returningToSub = false;
-static bool inMainMenu = false;
-//static bool inOverlay = false;
-static bool inSubMenu = false;
-static bool inConfigMenu = false;
-static bool inSelectionMenu = false;
 static bool defaultMenuLoaded = true;
-static bool freshSpawn = true;
+static std::string package = "";
 
-static tsl::elm::OverlayFrame *rootFrame = nullptr;
-static tsl::elm::List *list = nullptr;
-
-// Config overlay 
 class ConfigOverlay : public tsl::Gui {
 private:
     std::string filePath, specificKey;
@@ -31,14 +19,10 @@ public:
     ~ConfigOverlay() {}
 
     virtual tsl::elm::Element* createUI() override {
-        inConfigMenu = true;
-        
-        rootFrame = new tsl::elm::OverlayFrame(getNameFromPath(filePath), "Ultrahand Config");
-        list = new tsl::elm::List();
+        auto rootFrame = new tsl::elm::OverlayFrame(getNameFromPath(filePath), "Ultrahand Config");
+        auto list = new tsl::elm::List();
 
         std::string configFile = filePath + "/" + configFileName;
-
-        // logMessage("Processing ConfigOverlay");
 
         std::string fileContent = getFileContents(configFile);
         if (!fileContent.empty()) {
@@ -114,28 +98,14 @@ public:
     }
 
     virtual bool handleInput(u64 keysDown, u64 keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
-        if (inConfigMenu) {
-            if (keysHeld & KEY_B) {
-                //tsl::Overlay::get()->close();
-                //svcSleepThread(300'000'000);
-                tsl::goBack();
-                inConfigMenu = false;
-                returningToSub = true;
-                //tsl::Overlay::get()->close();
-                return true;
-            }
-        }
-        if (keysHeld & KEY_B) {
-            return false;
+        if (keysDown & KEY_B) {
+            tsl::goBack();
+            return true;
         }
         return false;
-        //return handleOverlayMenuInput(inConfigMenu, keysHeld, KEY_B);
     }
 };
 
-
-
-// Selection overlay
 class SelectionOverlay : public tsl::Gui {
 private:
     std::string filePath, specificKey, pathPattern, pathPatternOn, pathPatternOff, jsonPath, jsonKey, itemName, parentDirName, lastParentDirName, textPath;
@@ -150,12 +120,8 @@ public:
     ~SelectionOverlay() {}
 
     virtual tsl::elm::Element* createUI() override {
-        inSelectionMenu = true;
-
-        rootFrame = new tsl::elm::OverlayFrame(getNameFromPath(filePath), "Ultrahand Package");
-        list = new tsl::elm::List();
-        
-        // logMessage("Processing SelectionOverlay");
+        auto rootFrame = new tsl::elm::OverlayFrame(getNameFromPath(filePath), "Ultrahand Package");
+        auto list = new tsl::elm::List();
 
         // Extract the path pattern from commands
         bool useJson = false;
@@ -225,8 +191,6 @@ public:
                     listItem->setClickListener([](uint64_t keys) { // Add 'command' to the capture list
                     if (keys & KEY_A) {
                         tsl::goBack();
-                        inSelectionMenu = false;
-                        returningToSub = true;
                         return true;
                     }
                         return false;
@@ -432,33 +396,16 @@ public:
     }
 
     virtual bool handleInput(u64 keysDown, u64 keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
-        if (inSelectionMenu) {
-            if (keysHeld & KEY_B) {
-                //tsl::Overlay::get()->close();
-                //svcSleepThread(300'000'000);
-                tsl::goBack();
-                inSelectionMenu = false;
-                returningToSub = true;
-                //tsl::Overlay::get()->close();
-                return true;
-            }
-        } 
-        if (keysHeld & KEY_B) {
-            return false;
+        if (keysDown & KEY_B) {
+            tsl::goBack();
+            return true;
         }
-        
         return false;
-        
-        //return handleOverlayMenuInput(inSelectionMenu, keysHeld, KEY_B);
     }
 };
 
-
-class MainMenu;
-
-// Sub menu
 class SubMenu : public tsl::Gui {
-private:
+protected:
     std::string subPath, pathReplace, pathReplaceOn, pathReplaceOff;
 
 public:
@@ -466,13 +413,26 @@ public:
     ~SubMenu() {}
 
     virtual tsl::elm::Element* createUI() override {
-        inSubMenu = true;
-        
-        rootFrame = new tsl::elm::OverlayFrame(getNameFromPath(subPath), "Ultrahand Package");
-        list = new tsl::elm::List();
+        auto rootFrame = new tsl::elm::OverlayFrame(getNameFromPath(subPath), package);
+        auto list = new tsl::elm::List();
+
+        for(const auto& subDirectory : getSubdirectories(subPath)){
+            if(isFileOrDirectory(subPath + subDirectory + '/' + configFileName)){
+                auto item = new tsl::elm::ListItem(subDirectory);
+                item->setValue("\u25B6", tsl::PredefinedColors::White);
+                item->setClickListener([&,subDirectory](u64 keys)->bool{
+                    if(keys & KEY_A){
+                        tsl::changeTo<SubMenu>(subPath + subDirectory + '/');
+                        return true;
+                    }
+                    return false;
+                });
+                list->addItem(item);
+            }
+        }
 
         // Add a section break with small text to indicate the "Commands" section
-        list->addItem(new tsl::elm::CategoryHeader("Commands"));
+        // list->addItem(new tsl::elm::CategoryHeader("Commands"));
 
         // Load options from INI file in the subdirectory
         std::string subConfigIniPath = subPath + "/" + configFileName;
@@ -529,7 +489,6 @@ public:
                 listItem->setClickListener([command = option.second, keyName = option.first, subPath = this->subPath, usePattern, listItem](uint64_t keys) {
                     if (keys & KEY_A) {
                         if (usePattern) {
-                            inSubMenu = false;
                             tsl::changeTo<SelectionOverlay>(subPath, keyName, command);
                         } else {
                             // Interpret and execute the command
@@ -542,7 +501,6 @@ public:
                         }
                         return true;
                     } else if (keys & KEY_X) {
-                        inSubMenu = false; // Set boolean to true when entering a submenu
                         tsl::changeTo<ConfigOverlay>(subPath, keyName);
                         return true;
                     }
@@ -658,59 +616,56 @@ public:
                 renderer->drawString(packageInfoString.c_str(), false, x + xOffset, y + lineHeight, fontSize, a(tsl::style::color::ColorText));
             }), fontSize * numEntries + lineHeight);
         }
-        
-        
+
         rootFrame->setContent(list);
         
         return rootFrame;
     }
 
     virtual bool handleInput(uint64_t keysDown, uint64_t keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
-
-        if (!returningToSub && inSubMenu) {
-            if ((keysHeld & KEY_B)) {
-                //tsl::Overlay::get()->close();
-                //svcSleepThread(300'000'000);
-                //tsl::goBack();
-                tsl::changeTo<MainMenu>();
-                inSubMenu = false;
-                returningToMain = true;
-                //tsl::Overlay::get()->close();
-                return true;
-            }
+        if ((keysDown & KEY_B)) {
+            tsl::goBack();
+            return true;
         }
-        if (keysHeld & KEY_B) {
-            return false;
-        }
-        
-        if (returningToSub && !(keysHeld & KEY_B)){
-            returningToSub = false;
-            inSubMenu = true;
-        }
-        
         return false;
-        
-        //return handleOverlayMenuInput(inSubMenu, keysHeld, KEY_B);
     }
 };
 
+class MainMenu;
 
-// Main menu
+class Package : public SubMenu {
+public:
+    Package(const std::string& path) : SubMenu(path) {}
+
+    tsl::elm::Element* createUI() override {
+        package = getNameFromPath(subPath);
+        logMessage(subPath+' '+package);
+        auto rootFrame = static_cast<tsl::elm::OverlayFrame*>(SubMenu::createUI());
+        rootFrame->setTitle(package);
+        rootFrame->setSubtitle("                             "); // FIXME: former subtitle is not fully erased if new string is shorter
+        return rootFrame;
+    }
+
+    bool handleInput(uint64_t keysDown, uint64_t keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
+        if ((keysDown & KEY_B)) {
+            tsl::changeTo<MainMenu>();
+            return true;
+        }
+        return false;
+    }
+};
+
 class MainMenu : public tsl::Gui {
 private:
     tsl::hlp::ini::IniData settingsData;
     std::string packageConfigIniPath = packageDirectory + configFileName;
     std::string menuMode, defaultMenuMode, inOverlayString, fullPath, optionName;
     bool useDefaultMenu = false;
-    //bool inSubMenu = false; // Added boolean to track submenu state
-    //bool inTextMenu = false;
 public:
     MainMenu() {}
     ~MainMenu() {}
 
     virtual tsl::elm::Element* createUI() override {
-        inMainMenu = true;
-        //defaultMenuMode = "last_menu";
         defaultMenuMode = "overlays";
         menuMode = "overlays";
         
@@ -732,13 +687,6 @@ public:
                         }
                     }
                 }
-                //if (ultrahandSection.count("in_overlay") > 0) {
-                //    inOverlayString = ultrahandSection["in_overlay"];
-                //    if (inOverlayString == "true") {
-                //        setIniFileValue(settingsConfigIniPath, "ultrahand", "in_overlay", "false");
-                //    }
-                //    settingsLoaded = true;
-                //}
             }
         }
         if (!settingsLoaded) { // write data if settings are not loaded
@@ -761,8 +709,8 @@ public:
         }
         
         std::string versionLabel = APP_VERSION+std::string("   (")+envGetLoaderInfo()+std::string(")");
-        rootFrame = new tsl::elm::OverlayFrame("Ultrahand", versionLabel, menuMode);
-        list = new tsl::elm::List();
+        auto rootFrame = new tsl::elm::OverlayFrame("Uberhand", versionLabel, menuMode);
+        auto list = new tsl::elm::List();
 
         //loadOverlayFiles(list);
         
@@ -810,13 +758,10 @@ public:
                     listItem->setClickListener([overlayFile](s64 key) {
                         if (key & KEY_A) {
                             // Load the overlay here
-                            //inMainMenu = false;
-                            //inOverlay = true;
                             setIniFileValue(settingsConfigIniPath, "ultrahand", "in_overlay", "true"); // this is handled within tesla.hpp
                             tsl::setNextOverlay(overlayFile);
                             //envSetNextLoad(overlayPath, "");
                             tsl::Overlay::get()->close();
-                            //inMainMenu = true;
                             return true;
                         } else if (key & KEY_PLUS) {
                             std::string fileName = getNameFromPath(overlayFile);
@@ -893,9 +838,7 @@ public:
             
                     listItem->setClickListener([this, subPath = packageDirectory + subdirectory + "/"](uint64_t keys) {
                         if (keys & KEY_A) {
-                            inMainMenu = false;
-                            tsl::changeTo<SubMenu>(subPath);
-                    
+                            tsl::changeTo<Package>(subPath);
                             return true;
                         } else if (keys & KEY_PLUS) {
                             std::string starFilePath = subPath + ".star";
@@ -947,7 +890,6 @@ public:
                         struct stat entryStat;
                         std::string newPath = packageDirectory + subPath;
                         if (stat(fullPath.c_str(), &entryStat) == 0 && S_ISDIR(entryStat.st_mode)) {
-                            inMainMenu = false;
                             tsl::changeTo<SubMenu>(newPath);
                         } else {
                             // Interpret and execute the command
@@ -975,47 +917,28 @@ public:
     }
 
     virtual bool handleInput(uint64_t keysDown, uint64_t keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
-        
-        if (inMainMenu){
-            if (!freshSpawn && !returningToMain) {
-                if ((keysHeld & KEY_DRIGHT) && !(keysHeld & (KEY_DLEFT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR))) {
-                    if (menuMode != "packages") {
-                        setIniFileValue(settingsConfigIniPath, "ultrahand", "last_menu", "packages");
-                        tsl::changeTo<MainMenu>();
-                        return true;
-                    }
-                }
-                if ((keysHeld & KEY_DLEFT) && !(keysHeld & (KEY_DRIGHT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR))) {
-                    if (menuMode != "overlays") {
-                        setIniFileValue(settingsConfigIniPath, "ultrahand", "last_menu", "overlays");
-                        tsl::changeTo<MainMenu>();
-                        return true;
-                    }
-                }
-                if (keysHeld & KEY_B) {
-                    //inMainMenu = false;
-                    tsl::Overlay::get()->close();
-                    return true;
-                }
+        if ((keysDown & KEY_DRIGHT) && !(keysHeld & ~KEY_DRIGHT)) {
+            if (menuMode != "packages") {
+                setIniFileValue(settingsConfigIniPath, "ultrahand", "last_menu", "packages");
+                tsl::changeTo<MainMenu>();
+                return true;
             }
         }
-        if (keysHeld & KEY_B) {
-            return false;
+        if ((keysDown & KEY_DLEFT) && !(keysHeld & ~KEY_DLEFT)) {
+            if (menuMode != "overlays") {
+                setIniFileValue(settingsConfigIniPath, "ultrahand", "last_menu", "overlays");
+                tsl::changeTo<MainMenu>();
+                return true;
+            }
         }
-        
-        if (freshSpawn && !(keysHeld & KEY_B)){
-            freshSpawn = false;
-        }
-        if (returningToMain && !(keysHeld & KEY_B)){
-            returningToMain = false;
-            inMainMenu = true;
+        if (keysDown & KEY_B) {
+            tsl::Overlay::get()->close();
+            return true;
         }
         return false;
     }
 };
 
-
-// Overlay
 class Overlay : public tsl::Overlay {
 public:
     
