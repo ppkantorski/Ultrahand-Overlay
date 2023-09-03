@@ -68,11 +68,11 @@ void copyTeslaKeyComboToUltraHand() {
     if (!keyCombo.empty()){
         if (isFileOrDirectory(settingsConfigIniPath)) {
             parsedData = getParsedDataFromIniFile(settingsConfigIniPath);
-            if (parsedData.count("uberhand") > 0) {
-                auto& ultrahandSection = parsedData["uberhand"];
+            if (parsedData.count("ultrahand") > 0) {
+                auto& ultrahandSection = parsedData["ultrahand"];
                 if (ultrahandSection.count("key_combo") == 0) {
                     // Write the key combo to the destination file
-                    setIniFileValue(settingsConfigIniPath, "uberhand", "key_combo", keyCombo);
+                    setIniFileValue(settingsConfigIniPath, "ultrahand", "key_combo", keyCombo);
                 }
             }
         }

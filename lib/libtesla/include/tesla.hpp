@@ -341,7 +341,7 @@ namespace tsl {
             /**
              * @brief Tesla config file
              */
-            static const char* CONFIG_FILE = "/config/uberhand/config.ini"; // CUSTOM MODIFICATION
+            static const char* CONFIG_FILE = "/config/ultrahand/config.ini"; // CUSTOM MODIFICATION
 
             /**
              * @brief Parses a ini string
@@ -3519,7 +3519,7 @@ namespace tsl {
         [[maybe_unused]] static void updateCombo(u64 keys) {
             tsl::cfg::launchCombo = keys;
             hlp::ini::updateOverlaySettings({
-                { "uberhand", { // CUSTOM MODIFICATION
+                { "ultrahand", { // CUSTOM MODIFICATION
                     { "key_combo", tsl::hlp::keysToComboString(keys) }
                 }}
             });
@@ -3704,12 +3704,12 @@ namespace tsl {
             }
         }
         
-        std::string settingsConfigPath = "sdmc:/config/uberhand/config.ini";
+        std::string settingsConfigPath = "sdmc:/config/ultrahand/config.ini";
         std::map<std::string, std::map<std::string, std::string>> settingsData = getParsedDataFromIniFile(settingsConfigPath);
         std::string inOverlayString;
 
-        if (settingsData.count("uberhand") > 0 && settingsData["uberhand"].count("in_overlay") > 0) {
-            inOverlayString = settingsData["uberhand"]["in_overlay"];
+        if (settingsData.count("ultrahand") > 0 && settingsData["ultrahand"].count("in_overlay") > 0) {
+            inOverlayString = settingsData["ultrahand"]["in_overlay"];
         } else {
             inOverlayString = "false"; // Assign default value if the keys are not present
         }
@@ -3717,7 +3717,7 @@ namespace tsl {
         bool inOverlay = false;
         if (inOverlayString == "true") {
             inOverlay = true;
-            setIniFileValue(settingsConfigPath, "uberhand", "in_overlay", "false");
+            setIniFileValue(settingsConfigPath, "ultrahand", "in_overlay", "false");
         }
         
         
