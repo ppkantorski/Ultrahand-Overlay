@@ -86,9 +86,10 @@ namespace tsl {
     // Constants
     
     enum PredefinedColors {
-        Red, 
-        Gray, 
-        Green
+        Red,
+        Gray,
+        Green,
+        White
     };
     
     namespace cfg {
@@ -2393,6 +2394,9 @@ namespace tsl {
                         break;
                     case tsl::PredefinedColors::Red:
                         this->m_faint = tsl::Color(0xF, 0x0, 0x2, 0xF);
+                        break;
+                    case tsl::PredefinedColors::White:
+                        this->m_faint = tsl::Color(0xF, 0xF, 0xF, 0xF);
                         break;
                     case tsl::PredefinedColors::Gray:
                     default:
