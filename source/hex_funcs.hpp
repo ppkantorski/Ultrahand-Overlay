@@ -109,14 +109,14 @@ std::vector<std::string> findHexDataOffsets(const std::string& filePath, const s
     return offsets;
 }
 
-std::string readHexDataAtOffset(const std::string& filePath, const std::string& hexData, const std::string& offsetStr) {
+std::string readHexDataAtOffset(const std::string& filePath, const std::string& hexData, const std::string& offsetStr, size_t length) {
     // logMessage("Entered readHexDataAtOffset");
 
     std::vector<std::string> offsets = findHexDataOffsets(filePath, hexData);
     std::stringstream hexStream;
     char lowerToUpper;
     std::string result = "";
-    char hexBuffer[3];
+    char hexBuffer[length];
     int sum = 0;
 
     // Open the file for reading in binary mode
@@ -139,8 +139,8 @@ std::string readHexDataAtOffset(const std::string& filePath, const std::string& 
         return "";
     }
 
-    if (fread(hexBuffer, 1, 3, file) == 3) {
-        for (int i = 0; i < 3; ++i) {
+    if (fread(hexBuffer, 1, length, file) == length) {
+        for (size_t i = 0; i < length; ++i) {
             hexStream << std::setfill('0') << std::setw(2) << std::hex << static_cast<int>(hexBuffer[i]);
         }
     } else {
@@ -155,6 +155,8 @@ std::string readHexDataAtOffset(const std::string& filePath, const std::string& 
     while (hexStream.get(lowerToUpper)) {
         result += std::toupper(lowerToUpper);
     }
+
+    // logMessage("Hex data at offset:" + result);
     
     fclose(file);
     return result;

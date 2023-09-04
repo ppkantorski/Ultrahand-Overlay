@@ -203,11 +203,9 @@ public:
                 }
             } else if (useJson) {
                 std::string currentHex = ""; // Is used to mark current value from the kip
+                bool detectSize = true;
                 // create list of data in the json 
                 jsonData = readJsonFromFile(jsonPath);
-                if (markCurrent) { // Mark the current value  
-                    currentHex = readHexDataAtOffset("/atmosphere/kips/loader.kip", "43555354", offset); // Read the data from kip with offset starting from 'C' in 'CUST'
-                }
                 if (jsonData && json_is_array(jsonData)) {
                     size_t arraySize = json_array_size(jsonData);
                     for (size_t i = 0; i < arraySize; ++i) {
@@ -217,12 +215,13 @@ public:
                             if (keyValue && json_is_string(keyValue)) {
                                 std::string name;
                                 json_t* hexValue = json_object_get(item, "hex");
-                                if (markCurrent && hexValue && currentHex != "") {
-                                    const char* hexValueStr = json_string_value(hexValue);
-                                    size_t hexLength = strlen(hexValueStr);
-                                    if (hexLength < 3)
-                                    {
-                                        currentHex = currentHex.substr(0, hexLength);
+                                if (markCurrent && hexValue) {
+                                    char* hexValueStr = (char*)json_string_value(hexValue);
+                                    if (detectSize) {
+                                        size_t hexLength = strlen(hexValueStr);
+                                        // logMessage("hexLength: " + std::to_string(hexLength));
+                                        currentHex = readHexDataAtOffset("/atmosphere/kips/loader.kip", "43555354", offset, hexLength/2); // Read the data from kip with offset starting from 'C' in 'CUST'
+                                        detectSize = false;
                                     }
                                     if (hexValueStr == currentHex) {
                                         name = std::string(json_string_value(keyValue)) + " - Current";
