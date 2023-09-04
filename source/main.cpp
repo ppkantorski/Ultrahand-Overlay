@@ -132,7 +132,10 @@ public:
         bool useSplitHeader = false;
         bool markCurrent = false;
         std::string offset = "";
-        std::pair<std::string, int> textData;
+        std::pair<std::string, int> textDataPair;
+
+        constexpr int lineHeight = 20;  // Adjust the line height as needed
+        constexpr int fontSize = 16;    // Adjust the font size as needed
         
         for (const auto& cmd : commands) {
             if (cmd.size() > 1) {
@@ -180,65 +183,78 @@ public:
         // Get the list of files matching the pattern
         if (!useToggle) {
             if (useText) {
-                textData = readTextFromFile(textPath);
-                std::string texttest = textData.first;
-                int textsize = textData.second;
-                constexpr int lineHeight = 20;  // Adjust the line height as needed
-                constexpr int fontSize = 16;    // Adjust the font size as needed
-                if (!texttest.empty()) {
-                    list->addItem(new tsl::elm::CustomDrawer([lineHeight, fontSize, texttest](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
-                    renderer->drawString(texttest.c_str(), false, x, y + lineHeight, fontSize, a(tsl::style::color::ColorText));
-                    }), fontSize * textsize + lineHeight);
-                    auto listItem = new tsl::elm::ListItem("Back");
-                    listItem->setClickListener([](uint64_t keys) { // Add 'command' to the capture list
-                    if (keys & KEY_A) {
-                        tsl::goBack();
-                        return true;
-                    }
-                        return false;
-                    });
-                    list->addItem(listItem);
+                if (!isFileOrDirectory(textPath)) {
+                    list->addItem(new tsl::elm::CustomDrawer([lineHeight, fontSize](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
+                    renderer->drawString("Text file not found. Contact the package dev.", false, x, y + lineHeight, fontSize, a(tsl::style::color::ColorText));
+                    }), fontSize + lineHeight);
                     rootFrame->setContent(list);
                     return rootFrame;
+                } else {
+                    textDataPair = readTextFromFile(textPath);
+                    std::string textdata = textDataPair.first;
+                    int textsize = textDataPair.second;
+                    if (!textdata.empty()) {
+                        list->addItem(new tsl::elm::CustomDrawer([lineHeight, fontSize, textdata](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
+                        renderer->drawString(textdata.c_str(), false, x, y + lineHeight, fontSize, a(tsl::style::color::ColorText));
+                        }), fontSize * textsize + lineHeight);
+                        auto listItem = new tsl::elm::ListItem("Back");
+                        listItem->setClickListener([](uint64_t keys) { // Add 'command' to the capture list
+                        if (keys & KEY_A) {
+                            tsl::goBack();
+                            return true;
+                        }
+                            return false;
+                        });
+                        list->addItem(listItem);
+                        rootFrame->setContent(list);
+                        return rootFrame;
+                    }
                 }
             } else if (useJson) {
-                std::string currentHex = ""; // Is used to mark current value from the kip
-                bool detectSize = true;
-                // create list of data in the json 
-                jsonData = readJsonFromFile(jsonPath);
-                if (jsonData && json_is_array(jsonData)) {
-                    size_t arraySize = json_array_size(jsonData);
-                    for (size_t i = 0; i < arraySize; ++i) {
-                        json_t* item = json_array_get(jsonData, i);
-                        if (item && json_is_object(item)) {
-                            json_t* keyValue = json_object_get(item, jsonKey.c_str());
-                            if (keyValue && json_is_string(keyValue)) {
-                                std::string name;
-                                json_t* hexValue = json_object_get(item, "hex");
-                                if (markCurrent && hexValue) {
-                                    char* hexValueStr = (char*)json_string_value(hexValue);
-                                    if (detectSize) {
-                                        size_t hexLength = strlen(hexValueStr);
-                                        // logMessage("hexLength: " + std::to_string(hexLength));
-                                        currentHex = readHexDataAtOffset("/atmosphere/kips/loader.kip", "43555354", offset, hexLength/2); // Read the data from kip with offset starting from 'C' in 'CUST'
-                                        detectSize = false;
+                if (!isFileOrDirectory(jsonPath)) {
+                    list->addItem(new tsl::elm::CustomDrawer([lineHeight, fontSize](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
+                    renderer->drawString("JSON file not found. Contact the package dev.", false, x, y + lineHeight, fontSize, a(tsl::style::color::ColorText));
+                    }), fontSize + lineHeight);
+                    rootFrame->setContent(list);
+                    return rootFrame;
+                } else {
+                    std::string currentHex = ""; // Is used to mark current value from the kip
+                    bool detectSize = true;
+                    // create list of data in the json 
+                    jsonData = readJsonFromFile(jsonPath);
+                    if (jsonData && json_is_array(jsonData)) {
+                        size_t arraySize = json_array_size(jsonData);
+                        for (size_t i = 0; i < arraySize; ++i) {
+                            json_t* item = json_array_get(jsonData, i);
+                            if (item && json_is_object(item)) {
+                                json_t* keyValue = json_object_get(item, jsonKey.c_str());
+                                if (keyValue && json_is_string(keyValue)) {
+                                    std::string name;
+                                    json_t* hexValue = json_object_get(item, "hex");
+                                    if (markCurrent && hexValue) {
+                                        char* hexValueStr = (char*)json_string_value(hexValue);
+                                        if (detectSize) {
+                                            size_t hexLength = strlen(hexValueStr);
+                                            // logMessage("hexLength: " + std::to_string(hexLength));
+                                            currentHex = readHexDataAtOffset("/atmosphere/kips/loader.kip", "43555354", offset, hexLength/2); // Read the data from kip with offset starting from 'C' in 'CUST'
+                                            detectSize = false;
+                                        }
+                                        if (hexValueStr == currentHex) {
+                                            name = std::string(json_string_value(keyValue)) + " - Current";
+                                            // logMessage("new name is set");
+                                        }
+                                        else {
+                                            name = json_string_value(keyValue);
+                                        }
+                                    } else {
+                                            name = json_string_value(keyValue);
                                     }
-                                    if (hexValueStr == currentHex) {
-                                        name = std::string(json_string_value(keyValue)) + " - Current";
-                                        // logMessage("new name is set");
-                                    }
-                                    else {
-                                        name = json_string_value(keyValue);
-                                    }
-                                } else {
-                                        name = json_string_value(keyValue);
+                                    filesList.push_back(name);
                                 }
-                                filesList.push_back(name);
                             }
                         }
                     }
                 }
-                
             } else {
                 filesList = getFilesListByWildcards(pathPattern);
             }
