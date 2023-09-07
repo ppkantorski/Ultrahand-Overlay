@@ -162,7 +162,7 @@ std::string readHexDataAtOffset(const std::string& filePath, const std::string& 
     return result;
 }
 
-void hexEditByOffset(const std::string& filePath, const std::string& offsetStr, const std::string& hexData) {
+bool hexEditByOffset(const std::string& filePath, const std::string& offsetStr, const std::string& hexData) {
     // Convert the offset string to std::streampos
     std::streampos offset = std::stoll(offsetStr);
 
@@ -170,14 +170,14 @@ void hexEditByOffset(const std::string& filePath, const std::string& offsetStr, 
     FILE* file = fopen(filePath.c_str(), "rb+");
     if (!file) {
         //logMessage("Failed to open the file.");
-        return;
+        return false;
     }
 
     // Move the file pointer to the specified offset
     if (fseek(file, offset, SEEK_SET) != 0) {
         //logMessage("Failed to move the file pointer.");
         fclose(file);
-        return;
+        return false;
     }
 
     // Convert the hex data string to binary data
@@ -196,28 +196,29 @@ void hexEditByOffset(const std::string& filePath, const std::string& offsetStr, 
     if (fread(existingData.data(), sizeof(unsigned char), bytesToReplace, file) != bytesToReplace) { // Changed to use unsigned char
         //logMessage("Failed to read existing data from the file.");
         fclose(file);
-        return;
+        return false;
     }
 
     // Move the file pointer back to the offset
     if (fseek(file, offset, SEEK_SET) != 0) {
         //logMessage("Failed to move the file pointer.");
         fclose(file);
-        return;
+        return false;
     }
 
     // Write the replacement binary data to the file
     if (fwrite(binaryData.data(), sizeof(unsigned char), bytesToReplace, file) != bytesToReplace) { // Changed to use unsigned char
         //logMessage("Failed to write data to the file.");
         fclose(file);
-        return;
+        return false;
     }
 
     fclose(file);
+    return true;
     //logMessage("Hex editing completed.");
 }
 
-void hexEditFindReplace(const std::string& filePath, const std::string& hexDataToReplace, const std::string& hexDataReplacement, const std::string& occurrence = "0") {
+bool hexEditFindReplace(const std::string& filePath, const std::string& hexDataToReplace, const std::string& hexDataReplacement, const std::string& occurrence = "0") {
     std::vector<std::string> offsetStrs = findHexDataOffsets(filePath, hexDataToReplace);
     if (!offsetStrs.empty()) {
         if (occurrence == "0") {
@@ -239,24 +240,29 @@ void hexEditFindReplace(const std::string& filePath, const std::string& hexDataT
                 hexEditByOffset(filePath, offsetStr, hexDataReplacement);
             }
             else {
+                return false;
                 // Invalid occurrence/index specified
                 //std::cout << "Invalid occurrence/index specified." << std::endl;
             }
         }
+        return true;
         //std::cout << "Hex data replaced successfully." << std::endl;
     }
     else {
+        return false;
         //std::cout << "Hex data to replace not found." << std::endl;
     }
 }
 
-void hexEditCustOffset(const std::string& filePath, const std::string& offsetStr, const std::string& hexDataReplacement) {
+bool hexEditCustOffset(const std::string& filePath, const std::string& offsetStr, const std::string& hexDataReplacement) {
     std::vector<std::string> offsetStrs = findHexDataOffsets(filePath, "43555354"); // 43555354 is a CUST
     if (!offsetStrs.empty()) {
         int sum = std::stoi(offsetStr) + std::stoi(offsetStrs[0]); // count from "C" letter
         hexEditByOffset(filePath, std::to_string(sum), hexDataReplacement);
     }
     else {
+        return false;
         //std::cout << "CUST not found." << std::endl;
     }
+    return true;
 }
