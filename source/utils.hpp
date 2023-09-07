@@ -263,7 +263,7 @@ int interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& comm
         //         offset = removeQuotes(command[2]);
         //         editJSONfile(jsonPath.c_str(), offset);
         //     }
-        if (commandName == "    ") {
+        if (commandName == "back") {
             return 1;
         }
         if (commandName == "json_data") {
