@@ -392,6 +392,6 @@ bool ensureDirectoryExists(const std::string& path) {
         }
     }
     
-    //logMessage(std::string("Failed to create directory: ") + path);
+    logMessage(std::string("Failed to create directory: ") + path);
     return false;
 }

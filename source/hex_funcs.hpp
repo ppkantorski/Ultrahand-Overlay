@@ -69,14 +69,14 @@ std::vector<std::string> findHexDataOffsets(const std::string& filePath, const s
     // Open the file for reading in binary mode
     FILE* file = fopen(filePath.c_str(), "rb");
     if (!file) {
-        //std::cerr << "Failed to open the file." << std::endl;
+        logMessage("Failed to open the file.");
         return offsets;
     }
 
     // Check the file size
     struct stat fileStatus;
     if (stat(filePath.c_str(), &fileStatus) != 0) {
-        //std::cerr << "Failed to retrieve file size." << std::endl;
+        logMessage("Failed to retrieve file size.");
         fclose(file);
         return offsets;
     }
@@ -122,7 +122,7 @@ std::string readHexDataAtOffset(const std::string& filePath, const std::string& 
     // Open the file for reading in binary mode
     FILE* file = fopen(filePath.c_str(), "rb");
     if (!file) {
-        //logMessage("Failed to open the file.");
+        logMessage("Failed to open the file.");
         return "";
     }
 
@@ -130,11 +130,11 @@ std::string readHexDataAtOffset(const std::string& filePath, const std::string& 
         sum = std::stoi(offsetStr) + std::stoi(offsets[0]); // count from "C" letter
     }
     else {
-        // logMessage("CUST not found.");
+        logMessage("CUST not found.");
     }
 
     if (fseek(file, sum, SEEK_SET) != 0) {
-        // logMessage("Error seeking to offset.");
+        logMessage("Error seeking to offset.");
         fclose(file);
         return "";
     }
@@ -169,13 +169,13 @@ bool hexEditByOffset(const std::string& filePath, const std::string& offsetStr, 
     // Open the file for reading and writing in binary mode
     FILE* file = fopen(filePath.c_str(), "rb+");
     if (!file) {
-        //logMessage("Failed to open the file.");
+        logMessage("Failed to open the file.");
         return false;
     }
 
     // Move the file pointer to the specified offset
     if (fseek(file, offset, SEEK_SET) != 0) {
-        //logMessage("Failed to move the file pointer.");
+        logMessage("Failed to move the file pointer.");
         fclose(file);
         return false;
     }
@@ -194,21 +194,21 @@ bool hexEditByOffset(const std::string& filePath, const std::string& offsetStr, 
     // Read the existing data from the file
     std::vector<unsigned char> existingData(bytesToReplace); // Changed to use unsigned char
     if (fread(existingData.data(), sizeof(unsigned char), bytesToReplace, file) != bytesToReplace) { // Changed to use unsigned char
-        //logMessage("Failed to read existing data from the file.");
+        logMessage("Failed to read existing data from the file.");
         fclose(file);
         return false;
     }
 
     // Move the file pointer back to the offset
     if (fseek(file, offset, SEEK_SET) != 0) {
-        //logMessage("Failed to move the file pointer.");
+        logMessage("Failed to move the file pointer.");
         fclose(file);
         return false;
     }
 
     // Write the replacement binary data to the file
     if (fwrite(binaryData.data(), sizeof(unsigned char), bytesToReplace, file) != bytesToReplace) { // Changed to use unsigned char
-        //logMessage("Failed to write data to the file.");
+        logMessage("Failed to write data to the file.");
         fclose(file);
         return false;
     }
@@ -242,7 +242,7 @@ bool hexEditFindReplace(const std::string& filePath, const std::string& hexDataT
             else {
                 return false;
                 // Invalid occurrence/index specified
-                //std::cout << "Invalid occurrence/index specified." << std::endl;
+                logMessage("Invalid occurrence/index specified.");
             }
         }
         return true;
@@ -250,7 +250,7 @@ bool hexEditFindReplace(const std::string& filePath, const std::string& hexDataT
     }
     else {
         return false;
-        //std::cout << "Hex data to replace not found." << std::endl;
+        logMessage("Hex data to replace not found.");
     }
 }
 
@@ -262,7 +262,7 @@ bool hexEditCustOffset(const std::string& filePath, const std::string& offsetStr
     }
     else {
         return false;
-        //std::cout << "CUST not found." << std::endl;
+        logMessage("CUST not found." );
     }
     return true;
 }

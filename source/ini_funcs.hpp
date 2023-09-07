@@ -303,7 +303,7 @@ bool setIniFile(const std::string& fileToEdit, const std::string& desiredSection
         // The INI file doesn't exist, create a new file and add the section and key-value pair
         configFile = fopen(fileToEdit.c_str(), "w");
         if (!configFile) {
-            // Failed to create the file
+            logMessage("Failed to create the file");
             // Handle the error accordingly
             return false;
         }
@@ -394,8 +394,8 @@ bool setIniFile(const std::string& fileToEdit, const std::string& desiredSection
         // printf("INI file updated successfully.\n");
         return true;
     } else {
+        logMessage("Failed to create temporary file.");
         return false;
-        // printf("Failed to create temporary file.\n");
     }
     return false;
 }
