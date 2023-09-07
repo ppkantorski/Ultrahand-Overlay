@@ -85,6 +85,8 @@ public:
                                 listItem->setValue("FAIL", tsl::PredefinedColors::Red);
                             }
                             return true;
+                        } else if (keys && listItem->getValue() == "DONE" || listItem->getValue() == "FAIL") {
+                            listItem->setValue("");
                         }
                         return false;
                     });
@@ -354,6 +356,8 @@ public:
                                 listItem->setValue("FAIL", tsl::PredefinedColors::Red);
                             }
                             return true;
+                        } else if (keys && listItem->getValue() == "DONE" || listItem->getValue() == "FAIL") {
+                            listItem->setValue("");
                         }
                         return false;
                     });
@@ -373,6 +377,8 @@ public:
                                 listItem->setValue("FAIL", tsl::PredefinedColors::Red);
                             }
                             return true;
+                        } else if (keys && listItem->getValue() == "DONE" || listItem->getValue() == "FAIL") {
+                            listItem->setValue("");
                         }
                         return false;
                     });
@@ -524,8 +530,11 @@ public:
                         }
                         return true;
                     } else if (keys & KEY_X) {
+                        listItem->setValue("");
                         tsl::changeTo<ConfigOverlay>(subPath, keyName);
                         return true;
+                    } else if (keys && listItem->getValue() == "DONE" || listItem->getValue() == "FAIL") {
+                        listItem->setValue("");
                     }
                     return false;
                 });
@@ -927,6 +936,8 @@ public:
                         }
 
                         return true;
+                    } else if (keys && listItem->getValue() == "DONE" || listItem->getValue() == "FAIL") {
+                            listItem->setValue("");
                     }
                     return false;
                 });
