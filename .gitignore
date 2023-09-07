@@ -1,0 +1,4 @@
+/build
+*.nacp
+*.elf
+*.ovl

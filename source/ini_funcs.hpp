@@ -297,21 +297,21 @@ void cleanIniFormatting(const std::string& filePath) {
 
 
 
-void setIniFile(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredValue, const std::string& desiredNewKey) {
+bool setIniFile(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredValue, const std::string& desiredNewKey) {
     FILE* configFile = fopen(fileToEdit.c_str(), "r");
     if (!configFile) {
         // The INI file doesn't exist, create a new file and add the section and key-value pair
         configFile = fopen(fileToEdit.c_str(), "w");
         if (!configFile) {
-            // Failed to create the file
+            logMessage("Failed to create the file");
             // Handle the error accordingly
-            return;
+            return false;
         }
         fprintf(configFile, "[%s]\n", desiredSection.c_str());
         fprintf(configFile, "%s = %s\n", desiredKey.c_str(), desiredValue.c_str());
         fclose(configFile);
         // printf("INI file created successfully.\n");
-        return;
+        return true;
     }
 
     std::string trimmedLine;
@@ -392,17 +392,22 @@ void setIniFile(const std::string& fileToEdit, const std::string& desiredSection
         rename(tempPath.c_str(), fileToEdit.c_str()); // Rename the temp file to the original name
 
         // printf("INI file updated successfully.\n");
+        return true;
     } else {
-        // printf("Failed to create temporary file.\n");
+        logMessage("Failed to create temporary file.");
+        return false;
     }
+    return false;
 }
 
-void setIniFileValue(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredValue) {
-    setIniFile(fileToEdit, desiredSection, desiredKey, desiredValue, "");
+bool setIniFileValue(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredValue) {
+    bool result = setIniFile(fileToEdit, desiredSection, desiredKey, desiredValue, "");
     cleanIniFormatting(fileToEdit);
+    return result;
 }
 
-void setIniFileKey(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredNewKey) {
-    setIniFile(fileToEdit, desiredSection, desiredKey, "", desiredNewKey);
+bool setIniFileKey(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredNewKey) {
+    bool result = setIniFile(fileToEdit, desiredSection, desiredKey, "", desiredNewKey);
     cleanIniFormatting(fileToEdit);
+    return result;
 }

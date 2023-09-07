@@ -283,54 +283,72 @@ int interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& comm
             if (command.size() >= 3) {
                 sourcePath = preprocessPath(command[1]);
                 destinationPath = preprocessPath(command[2]);
-                
-                
+                bool result;
                 if (sourcePath.find('*') != std::string::npos) {
                     // Delete files or directories by pattern
-                    copyFileOrDirectoryByPattern(sourcePath, destinationPath);
+                    result = copyFileOrDirectoryByPattern(sourcePath, destinationPath);
                 } else {
-                    copyFileOrDirectory(sourcePath, destinationPath);
+                    result = copyFileOrDirectory(sourcePath, destinationPath);
+                }
+                if (!result) {
+                    logMessage("Error in " + commandName + " command");
+                    return -1;
                 }
                 
             }
         } else if (commandName == "mirror_copy" || commandName == "mirror_cp") {
             // Copy command
             if (command.size() >= 2) {
+                bool result;
                 sourcePath = preprocessPath(command[1]);
                 if (command.size() >= 3) {
                     destinationPath = preprocessPath(command[2]);
-                    mirrorCopyFiles(sourcePath, destinationPath);
+                    result = mirrorCopyFiles(sourcePath, destinationPath);
                 } else {
-                    mirrorCopyFiles(sourcePath);
+                    result = mirrorCopyFiles(sourcePath);
+                }
+                if (!result) {
+                    logMessage("Error in " + commandName + " command");
+                    return -1;
                 }
             }
         } else if (commandName == "delete" || commandName == "del") {
             // Delete command
             if (command.size() >= 2) {
+                bool result;
                 sourcePath = preprocessPath(command[1]);
                 if (!isDangerousCombination(sourcePath)) {
                     if (sourcePath.find('*') != std::string::npos) {
                         // Delete files or directories by pattern
-                        deleteFileOrDirectoryByPattern(sourcePath);
+                        result = deleteFileOrDirectoryByPattern(sourcePath);
                     } else {
-                        deleteFileOrDirectory(sourcePath);
+                        result = deleteFileOrDirectory(sourcePath);
+                    }
+                    if (!result) {
+                        logMessage("Error in " + commandName + " command");
+                        return -1;
                     }
                 }
             }
         } else if (commandName == "mirror_delete" || commandName == "mirror_del") {
             if (command.size() >= 2) {
+                bool result;
                 sourcePath = preprocessPath(command[1]);
                 if (command.size() >= 3) {
                     destinationPath = preprocessPath(command[2]);
-                    mirrorDeleteFiles(sourcePath, destinationPath);
+                    result = mirrorDeleteFiles(sourcePath, destinationPath);
                 } else {
-                    mirrorDeleteFiles(sourcePath);
+                    result = mirrorDeleteFiles(sourcePath);
+                }
+                if (!result) {
+                    logMessage("Error in " + commandName + " command");
+                    return -1;
                 }
             }
         } else if (commandName == "rename" || commandName == "move" || commandName == "mv") {
             // Rename command
             if (command.size() >= 3) {
-
+                bool result;
                 sourcePath = preprocessPath(command[1]);
                 destinationPath = preprocessPath(command[2]);
                 //logMessage("sourcePath: "+sourcePath);
@@ -339,17 +357,25 @@ int interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& comm
                 if (!isDangerousCombination(sourcePath)) {
                     if (sourcePath.find('*') != std::string::npos) {
                         // Move files by pattern
-                        moveFilesOrDirectoriesByPattern(sourcePath, destinationPath);
+                        result = moveFilesOrDirectoriesByPattern(sourcePath, destinationPath);
                     } else {
                         // Move single file or directory
-                        moveFileOrDirectory(sourcePath, destinationPath);
+                        result = moveFileOrDirectory(sourcePath, destinationPath);
+                    }
+                    if (!result) {
+                        logMessage("Error in " + commandName + " command");
+                        return -1;
                     }
                 } else {
                     //logMessage( "Dangerous combo.");
+                    logMessage("Error in " + commandName + " command");
+                    return -1;
                 }
             } else {
+                logMessage("Error in " + commandName + " command");
+                return -1;
                 //logMessage( "Invalid move command.");
-                //std::cout << "Invalid move command. Usage: move <source_path> <destination_path>" << std::endl;
+                logMessage("Invalid move command. Usage: move <source_path> <destination_path>");
             }
 
         } else if (commandName == "set-ini-val" || commandName == "set-ini-value") {
@@ -367,7 +393,11 @@ int interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& comm
                     }
                 }
 
-                setIniFileValue(sourcePath.c_str(), desiredSection.c_str(), desiredKey.c_str(), desiredValue.c_str());
+                bool result = setIniFileValue(sourcePath.c_str(), desiredSection.c_str(), desiredKey.c_str(), desiredValue.c_str());
+                if (!result) {
+                    logMessage("Error in " + commandName + " command");
+                    return -1;
+                }
             }
         } else if (commandName == "set-ini-key") {
             // Edit command
@@ -384,7 +414,11 @@ int interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& comm
                     }
                 }
 
-                setIniFileKey(sourcePath.c_str(), desiredSection.c_str(), desiredKey.c_str(), desiredNewKey.c_str());
+                bool result  = setIniFileKey(sourcePath.c_str(), desiredSection.c_str(), desiredKey.c_str(), desiredNewKey.c_str());
+                if (!result) {
+                    logMessage("Error in " + commandName + " command");
+                    return -1;
+                }
             }
         } else if (commandName == "hex-by-offset") {
             // Edit command
@@ -394,28 +428,36 @@ int interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& comm
                 offset = removeQuotes(command[2]);
                 hexDataReplacement = removeQuotes(command[3]);
 
-                hexEditByOffset(sourcePath.c_str(), offset.c_str(), hexDataReplacement.c_str());
+                bool result  = hexEditByOffset(sourcePath.c_str(), offset.c_str(), hexDataReplacement.c_str());
+                if (!result) {
+                    logMessage("Error in " + commandName + " command");
+                    return -1;
+                }
             }
         } else if (commandName == "hex-by-swap") {
             // Edit command - Hex data replacement with occurrence
             if (command.size() >= 4) {
                 sourcePath = preprocessPath(command[1]);
-
+                bool result;
                 hexDataToReplace = removeQuotes(command[2]);
                 hexDataReplacement = removeQuotes(command[3]);
 
                 if (command.size() >= 5) {
                     occurrence = removeQuotes(command[4]);
-                    hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, occurrence);
+                    result  = hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, occurrence);
                 } else {
-                    hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
+                    result  = hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
+                }
+                if (!result) {
+                    logMessage("Error in " + commandName + " command");
+                    return -1;
                 }
             }
         } else if (commandName == "hex-by-string") {
             // Edit command - Hex data replacement with occurrence
             if (command.size() >= 4) {
                 sourcePath = preprocessPath(command[1]);
-
+                bool result;
                 hexDataToReplace = asciiToHex(removeQuotes(command[2]));
                 hexDataReplacement = asciiToHex(removeQuotes(command[3]));
                 //logMessage("hexDataToReplace: "+hexDataToReplace);
@@ -432,16 +474,20 @@ int interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& comm
                 
                 if (command.size() >= 5) {
                     occurrence = removeQuotes(command[4]);
-                    hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, occurrence);
+                    result  = hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, occurrence);
                 } else {
-                    hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
+                    result  = hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
+                }
+                if (!result) {
+                    logMessage("Error in " + commandName + " command");
+                    return -1;
                 }
             }
         } else if (commandName == "hex-by-decimal") {
             // Edit command - Hex data replacement with occurrence
             if (command.size() >= 4) {
                 sourcePath = preprocessPath(command[1]);
-
+                bool result;
                 hexDataToReplace = decimalToHex(removeQuotes(command[2]));
                 hexDataReplacement = decimalToHex(removeQuotes(command[3]));
                 //logMessage("hexDataToReplace: "+hexDataToReplace);
@@ -449,16 +495,21 @@ int interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& comm
 
                 if (command.size() >= 5) {
                     occurrence = removeQuotes(command[4]);
-                    hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, occurrence);
+                    result  = hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, occurrence);
                 } else {
-                    hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
+                    result  = hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
+                    
                 }
+                if (!result) {
+                        logMessage("Error in " + commandName + " command");
+                        return -1;
+                    }
             }
         } else if (commandName == "hex-by-rdecimal") {
             // Edit command - Hex data replacement with occurrence
             if (command.size() >= 4) {
                 sourcePath = preprocessPath(command[1]);
-
+                bool result;
                 hexDataToReplace = decimalToReversedHex(removeQuotes(command[2]));
                 hexDataReplacement = decimalToReversedHex(removeQuotes(command[3]));
                 //logMessage("hexDataToReplace: "+hexDataToReplace);
@@ -466,10 +517,15 @@ int interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& comm
 
                 if (command.size() >= 5) {
                     occurrence = removeQuotes(command[4]);
-                    hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, occurrence);
+                    result  = hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, occurrence);
                 } else {
-                    hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
+                    result  = hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
+                    
                 }
+                if (!result) {
+                        logMessage("Error in " + commandName + " command");
+                        return -1;
+                    }
             }
         } else if (commandName == "hex-by-cust-offset-dec") {
             // Edit command - Hex data replacement with offset from CUST (decimal)
@@ -477,7 +533,11 @@ int interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& comm
                 sourcePath = preprocessPath(command[1]);
                 offset = removeQuotes(command[2]);
                 hexDataReplacement = decimalToReversedHex(removeQuotes(command[3]));
-                hexEditCustOffset(sourcePath, offset, hexDataReplacement);
+                bool result  = hexEditCustOffset(sourcePath, offset, hexDataReplacement);
+                if (!result) {
+                    logMessage("Error in " + commandName + " command");
+                    return -1;
+                }
             }
         } else if (commandName == "hex-by-cust-offset") {
             // Edit command - Hex data replacement with offset from CUST ("raw" hex)
@@ -485,7 +545,11 @@ int interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& comm
                 sourcePath = preprocessPath(command[1]);
                 offset = removeQuotes(command[2]);
                 hexDataReplacement = removeQuotes(command[3]);
-                hexEditCustOffset(sourcePath, offset, hexDataReplacement);
+                bool result = hexEditCustOffset(sourcePath, offset, hexDataReplacement);
+                if (!result) {
+                    logMessage("Error in " + commandName + " command");
+                    return -1;
+                }
             }
         } else if (commandName == "download") {
             // Edit command - Hex data replacement with occurrence
@@ -495,7 +559,7 @@ int interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& comm
                 logMessage("fileUrl: "+fileUrl);
                 bool result = downloadFile(fileUrl, destinationPath);
                 if (!result) {
-                    //logMessage("catch");
+                    logMessage("Error in " + commandName + " command");
                     return -1;
                 }
             }
@@ -504,7 +568,11 @@ int interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& comm
             if (command.size() >= 3) {
                 sourcePath = preprocessPath(command[1]);
                 destinationPath = preprocessPath(command[2]);
-                unzipFile(sourcePath, destinationPath);
+                bool result = unzipFile(sourcePath, destinationPath);
+                if (!result) {
+                    logMessage("Error in " + commandName + " command");
+                    return -1;
+                }
             }
         } else if (commandName == "reboot") {
             // Reboot command
