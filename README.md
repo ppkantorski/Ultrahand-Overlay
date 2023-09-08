@@ -1,9 +1,13 @@
 # Uberhand Overlay (HOS 16.0.0+)
-![Overlay Menu](https://gbatemp.net/attachments/img_4543-jpg.386203/)
-![Package Menu](https://gbatemp.net/attachments/img_4547-jpg.386207/)
-![Broomstick Package](https://gbatemp.net/attachments/img_4544-jpg.386202/)
-![Mod Master Package](https://gbatemp.net/attachments/img_4546-jpg.386206/)
-![Easy Installer Package](https://gbatemp.net/attachments/img_4545-jpg.386208/)
+<details>
+<summary>Screenshots</summary>
+
+![Overlay Menu](https://github.com/IrneRacoonovich/Ultrahand-Overlay/assets/143113705/3e62909c-e3f2-4791-9e83-aee36dcc1fb9)
+![Package Menu](https://github.com/IrneRacoonovich/Ultrahand-Overlay/assets/143113705/5d191d16-6879-4f74-8413-92ba538080f3)
+![4IFIR Wizard Package](https://github.com/IrneRacoonovich/Ultrahand-Overlay/assets/143113705/cd8a2baf-4172-4d86-99ac-a04527ccbe1a)
+![Easy Installer Package](https://github.com/IrneRacoonovich/Ultrahand-Overlay/assets/143113705/35b3b703-3737-4798-909d-55a02a07757e)
+
+</details>
 
 Craft, Share, and Customize Your Commands!
 
@@ -61,106 +65,6 @@ To use Uberhand, follow these steps:
 1. Create a directory named Uberhand in the config root folder on your SD card.
 2. Place the config.ini package file in the Uberhand directory (or sub-directory). This package file contains the configuration options for Uberhand.
 3. Your commands will show up on the Tesla menu within the Uberhand overlay. You can click A to execute any command, as well as click X to view and select the individual command lines written in the ini for execution.
-
-## Configuration Options
-
-The config.ini file contains multiple sections, each defining a set of commands that can be executed. The sections are enclosed in square brackets [ ], and the commands are listed below each section.
-
-Here's an example of the config.ini file:
-```
-[make directories]
-mkdir /switch/.packages/example1/
-mkdir /switch/.packages/example2/
-
-[copy files]
-copy /switch/.packages/config.ini /switch/.packages/example1/
-copy /switch/.packages/config.ini /switch/.packages/example2/
-
-[rename files]
-move /switch/.packages/example1/config.ini /switch/.packages/example1/configX.ini
-move /switch/.packages/example2/config.ini /switch/.packages/example2/configX.ini
-
-[move directories]
-move /switch/.packages/example1/ /switch/.packages/example3/
-move /switch/.packages/example2/ /switch/.packages/example4/
-
-[delete files]
-delete /switch/.packages/example1/config.ini
-delete /switch/.packages/example2/config.ini
-
-[delete directories]
-delete /switch/.packages/example1/
-delete /switch/.packages/example2/
-delete /switch/.packages/example3/
-delete /switch/.packages/example4/
-
-[modify ini file]
-copy /bootloader/hekate_ipl.ini /switch/.packages/
-set-ini-val /switch/.packages/hekate_ipl.ini 'Atmosphere' fss0 gonnawritesomethingelse
-set-ini-val ​/switch/.packages/hekate_ipl.ini 'Atmosphere' booty true
-```
-You can add your own sections and commands to customize the actions performed by Uberhand.
-
-Note: The paths specified in the commands should be relative to the SD card root directory and should end with /.
-
-## Command Reference
-
-Uberhand supports the following commands:
-
-- make or mkdir: Creates a directory.
-  - Usage: `mkdir <directory_path>`
-
-- copy or cp: Copies a file or directory.
-  - Usage: `copy <source_file_path> <destination_file_path>`
-
-- delete or del: Deletes a file or directory.
-  - Usage: `delete <file_path>`
-
-- move or mv: Moves/renames a file/directory to a new location/label.
-  - Usage: `move <file_path> <destination_directory_path>`
-
-- set-ini-val or set-ini-value: Edits an INI file by updating (or adding) a section with a desired key-value pair.
-  - Usage: `set-ini-val <file_to_edit> <desired_section> <desired_key> <desired_value>`
-
-- set-ini-key: Edits an INI file by updating a section with a new key.
-  - Usage: `set-ini-key <file_to_edit> <desired_section> <desired_key> <desired_new_key>`
-
-- hex-by-offset: Edits the contents of a file at a specified offset with the provided hexadecimal data.
-  - Usage: `hex-by-offset <file_path> <offset> <hex_data>`
-
-- hex-by-swap: Edits the contents of a file by replacing a specified hexadecimal data with another.
-  - Usage: `hex-by-swap <file_path> <hex_data_to_replace> <hex_data_replacement>`
-  
-- hex-by-decimal: Edits the contents of a file by replacing a specified decimal data with another.
-  - Usage: `hex-by-decimal <file_path> <decimal_data_to_replace> <decimal_data_replacement>`
-  
-- hex-by-rdecimal: Edits the contents of a file by replacing a specified reverse decimal data with another.
-  - Usage: `hex-by-rdecimal <file_path> <decimal_data_to_replace> <decimal_data_replacement>`
-
-- hex-by-string: Edits the contents of a file by replacing a specified string data with another.
-  - Usage: `hex-by-string <file_path> <string_data_to_replace> <string_data_replacement>`
-
-- hex-by-cust-offset: Changes the hex value with offset from the word CUST ("C" letter) in loader.kip. (not reversed)
-  - Usage: `hex-by-cust-offset <kip_path> <offset> <hex_data_replacement>`
-
-- hex-by-cust-offset-dec: Changes the value with offset from the word CUST ("C" letter) in loader.kip. (decimal -> hex with reverse)
-  - Usage: `hex-by-cust-offset-dec <kip_path> <offset> <decimal_data_replacement>`
-
-- json_mark_current: Creates a menu from the contents of the JSON file, marking the current value at the offset from CUST from the loader.kip.
-  - Usage: `json_mark_current <path_to_json> name <offset>`
-  - Example: `json_mark_current '/switch/.packages/4IFIR Wizard/json/RAM/MHz.json' name 32`
-
-- reboot: Restarts the system.
-  - Usage: `reboot`
-
-- shutdown: Shuts down the system.
-  - Usage: `shutdown`
-
-
-Make sure to follow the correct syntax and provide the required arguments for each command.
-
-You can configure these commands in the `config.ini` file by specifying them under the corresponding options. Make sure to provide the necessary arguments as described for each command.
-
 
 ## Contributing
 
