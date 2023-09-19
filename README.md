@@ -67,7 +67,7 @@ To compile and run the program, you need to have the following dependencies inst
 
 ## Contributing
 
-Contributions are welcome! If you have any ideas, suggestions, or bug reports, please create an issue, submit a pull request or reach out on [GBATemp](https://gbatemp.net/threads/ultrahand-overlay-the-fully-craft-able-overlay-executor.633560/).
+Contributions are welcome! If you have any ideas, suggestions, or bug reports, please create an issue, submit a pull request or reach out to me directly on [GBATemp](https://gbatemp.net/threads/ultrahand-overlay-the-fully-craft-able-overlay-executor.633560/).
 
 ## License
 
