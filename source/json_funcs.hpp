@@ -14,6 +14,12 @@
 #include <sys/stat.h>
 #include <jansson.h>
 
+/**
+ * @brief Reads JSON data from a file and returns it as a `json_t` object.
+ *
+ * @param filePath The path to the JSON file.
+ * @return A `json_t` object representing the parsed JSON data. Returns `nullptr` on error.
+ */
 json_t* readJsonFromFile(const std::string& filePath) {
     // Check if the file exists
     struct stat fileStat;
