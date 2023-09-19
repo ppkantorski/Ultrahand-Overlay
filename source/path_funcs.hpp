@@ -4,7 +4,7 @@
  * Description:
  *   This header file contains function declarations and utility functions related
  *   to file and directory path manipulation. These functions are used in the
- *   Ultrahand-Overlay project to handle file operations, such as creating
+ *   Ultrahand Overlay project to handle file operations, such as creating
  *   directories, moving files, and more.
  *
  *   For the latest updates and contributions, visit the project's GitHub repository.
