@@ -59,7 +59,7 @@ Please note that running homebrew software on your Nintendo Switch may void your
 
 To compile and run the software, you need to have the following C/C++ dependencies installed:
 
-- [libtesla](https://github.com/WerWolv/libtesla)
+- [custom libtesla fork](https://github.com/ppkantorski/Ultrahand-Overlay/tree/main/lib/libtesla)
 - switch-curl
 - switch-zziplib
 - switch-mbedtls
