@@ -108,11 +108,23 @@ std::string getFileNameFromURL(const std::string& url) {
     return "";
 }
 
-
+/**
+ * @brief Concatenates the provided directory and file names to form a destination path.
+ *
+ * @param destinationDir The directory where the file should be placed.
+ * @param fileName The name of the file.
+ * @return The destination path as a string.
+ */
 std::string getDestinationPath(const std::string& destinationDir, const std::string& fileName) {
     return destinationDir + "/" + fileName;
 }
 
+/**
+ * @brief Extracts the value part from a string line containing a key-value pair.
+ *
+ * @param line The string line containing a key-value pair (e.g., "key=value").
+ * @return The extracted value as a string. If no value is found, an empty string is returned.
+ */
 std::string getValueFromLine(const std::string& line) {
     std::size_t equalsPos = line.find('=');
     if (equalsPos != std::string::npos) {
@@ -122,7 +134,13 @@ std::string getValueFromLine(const std::string& line) {
     return "";
 }
 
-
+/**
+ * @brief Extracts the name from a file path, including handling directories.
+ *
+ * @param path The file path from which to extract the name.
+ * @return The extracted name as a string. If the path indicates a directory, it extracts the last directory name.
+ * If the path is empty or no name is found, an empty string is returned.
+ */
 std::string getNameFromPath(const std::string& path) {
     size_t lastSlash = path.find_last_of('/');
     if (lastSlash != std::string::npos) {
