@@ -32,7 +32,7 @@ Note: Before applying any overlays or modifications, make sure you understand th
 
 ## Contributing
 
-We welcome contributions from the community! If you have any improvements, bug fixes, or new examples to share, feel free to submit a pull request.
+Contributions from the community are welcome! If you have any improvements, bug fixes, or new examples to share, feel free to submit a pull request.
 
 ## License
 
