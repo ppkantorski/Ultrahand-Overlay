@@ -61,9 +61,11 @@ To compile and run the program, you need to have the following dependencies inst
 
 To use Ultrahand, follow these steps:
 
-1. Create a directory named ultrahand in the config root folder on your SD card.
-2. Place the config.ini package file in the ultrahand directory (or sub-directory). This package file contains the configuration options for Ultrahand.
-3. Your commands will show up on the Tesla menu within the Ultrahand overlay.  You can click A to execute any command as well as click X to view the indivicual command lines written in the ini for execution.
+1. Download `ovlmenu.ovl` and place it within `/switch/.overlays/`. (Tesla Menu will be overwritten.)
+2. After installing Ultrahand Overlay, a new folder named `ultrahand` will be created within the config root folder on your SD card (`/config/ultrahand/`) along with a config.ini file containing various Ultrahand settings.
+3. Launch `Ultrahand` similarly to `Tesla Menu` with your specified hotkey.  A new folder will be made `/switch/.packages/` containing your base commands in the root config.ini file.
+4. Place your custom config.ini package in the ultrahand package directory (`/switch/.packages/YOUR_PACKAGE/`). This package file contains the commands for your Ultrahand package.
+5. Your commands will show up on the packages menu within Ultrahand.  You can click A to execute any command as well as click X to view the indivicual command lines written in the ini for execution.
 
 
 ## Contributing
