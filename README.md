@@ -68,7 +68,7 @@ To compile and run the software, you need to have the following C/C++ dependenci
 
 ## Contributing
 
-Contributions are welcome! If you have any ideas, suggestions, or bug reports, please create an issue, submit a pull request or reach out to me directly on [GBATemp](https://gbatemp.net/threads/ultrahand-overlay-the-fully-craft-able-overlay-executor.633560/).
+Contributions are welcome! If you have any ideas, suggestions, or bug reports, please raise an [issue](https://github.com/ppkantorski/Ultrahand-Overlay/issues/new/choose), submit a pull request or reach out to me directly on [GBATemp](https://gbatemp.net/threads/ultrahand-overlay-the-fully-craft-able-overlay-executor.633560/).
 
 ## License
 
