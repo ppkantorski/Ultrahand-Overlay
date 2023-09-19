@@ -21,14 +21,28 @@
 #include "debug_funcs.hpp"
 //#include "json_funcs.hpp"
 
-
+/**
+ * @brief Callback function to write received data to a file.
+ *
+ * @param contents Pointer to the received data.
+ * @param size Size of each data element.
+ * @param nmemb Number of data elements.
+ * @param file Pointer to the file to write to.
+ * @return Number of elements successfully written.
+ */
 size_t writeCallback(void* contents, size_t size, size_t nmemb, FILE* file) {
     // Callback function to write received data to a file
     size_t written = fwrite(contents, size, nmemb, file);
     return written;
 }
 
-
+/**
+ * @brief Downloads a file from a URL to a specified destination.
+ *
+ * @param url The URL of the file to download.
+ * @param toDestination The destination path where the file should be saved.
+ * @return True if the download was successful, false otherwise.
+ */
 bool downloadFile(const std::string& url, const std::string& toDestination) {
     std::string destination = toDestination.c_str();
     // Check if the destination ends with "/"
@@ -112,7 +126,13 @@ bool downloadFile(const std::string& url, const std::string& toDestination) {
     return true;
 }
 
-
+/**
+ * @brief Extracts files from a ZIP archive to a specified destination.
+ *
+ * @param zipFilePath The path to the ZIP archive file.
+ * @param toDestination The destination directory where files should be extracted.
+ * @return True if the extraction was successful, false otherwise.
+ */
 bool unzipFile(const std::string& zipFilePath, const std::string& toDestination) {
     ZZIP_DIR* dir = zzip_dir_open(zipFilePath.c_str(), nullptr);
     if (!dir) {
