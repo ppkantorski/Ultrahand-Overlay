@@ -1,3 +1,15 @@
+/********************************************************************************
+ * File: hex_funcs.hpp
+ * Author: ppkantorski
+ * Description:
+ *   This header file provides functions for working with hexadecimal data in C++.
+ *   It includes functions for converting between ASCII and hexadecimal strings,
+ *   finding hexadecimal data offsets in a file, and editing hexadecimal data in a file.
+ *
+ *   For the latest updates and contributions, visit the project's GitHub repository.
+ *   (GitHub Repository: https://github.com/ppkantorski/Ultrahand-Overlay)
+ ********************************************************************************/
+
 #pragma once
 #include <string>
 #include <vector>
