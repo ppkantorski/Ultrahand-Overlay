@@ -9,7 +9,7 @@ Ultrahand is a versatile tool that enables you to create and share command-based
 
 ## Features
 
-Ultrahand is a Tesla menu replacement that provides powerful functionality usage of its own custom interpretive programming language with commands similar to Shell/BASH.
+Ultrahand is a Tesla menu replacement that provides powerful command based tools through the usage of its own custom interpretive programming language (similar to Shell/BASH).
 
 It offers the following features:
 
