@@ -50,7 +50,7 @@ To use Ultrahand, follow these steps:
 5. Your commands will show up on the packages menu within Ultrahand.  You can click A to execute any command as well as click X to view the indivicual command lines written in the package ini for execution.
 
 ### Nintendo Switch Compatibility
-To run the Ultrahand File Management overlay on the Nintendo Switch, you need to have the necessary [homebrew environment](https://github.com/Atmosphere-NX/Atmosphere) set up on your console. Once you have the homebrew environment set up, you can transfer the compiled executable file to your Switch and launch it using the Tesla Overlay.
+To run the Ultrahand File Management overlay on the Nintendo Switch, you need to have the necessary [homebrew environment](https://github.com/Atmosphere-NX/Atmosphere) set up on your console. Once you have the homebrew environment set up, you can transfer the compiled executable file to your Switch and launch it using your Tesla Overlay hotkeys.
 
 Please note that running homebrew software on your Nintendo Switch may void your warranty and can carry certain risks. Ensure that you understand the implications and follow the appropriate guidelines and precautions when using homebrew software.
 
