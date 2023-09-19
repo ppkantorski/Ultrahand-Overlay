@@ -4,7 +4,7 @@
 
 Create directories, merge files, and customize configurations effortlessly using simple config.ini files.
 
-Ultrahand is a Tesla menu replacement that provides powerful C/C++ commands through the usage of its own custom interpretive programming language (similar to Shell/BASH).  It is a versatile tool that enables you to create and share custom command-based packages, providing enhanced functionality for managing files and directories on your SD card. It offers a range of features that allow you to efficiently interact with your system environment. With Ultrahand, you have the flexibility to customize and shape your file management system according to your needs, empowering you with greater control over your system configurations.
+Ultrahand is a Tesla menu replacement that provides powerful C/C++ commands through the usage of its own custom interpretive programming language (similar to Shell/BASH).  It is a versatile tool that enables you to create and share custom command-based packages, providing enhanced functionality for managing files and directories on your SD card. With Ultrahand, you have the flexibility to customize and shape your file management system according to your needs, empowering you with greater control over your system configurations.
 
 
 ## Features
