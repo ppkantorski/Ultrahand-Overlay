@@ -24,7 +24,7 @@ Ultrahand Overlay currently offers the following features:
   - Seamlessly move files or directories between locations on your SD card. Provide the source path and the destination directory path, and Ultrahand takes care of the moving process, ensuring smooth relocation.
 
 - Download Files:
-  - Download files to your SD card with ease using. Efficiently retrieve files from repositories or URLS to your desired location. Whether you need to download/update projects or transfer files between locations, this feature simplifies the process, making repository management a breeze.
+  - Download files to your SD card with ease using. Efficiently retrieve files from repositories or URLs to your desired location. Whether you need to download/update homebrew or transfer files between locations, this feature simplifies the process, making repository management a breeze.
 
 - Unzip Files:
   - Extract compressed zip files on your SD card by unzipping archived files, preserving their original structure. Whether you have downloaded zip archives or received compressed files, this command simplifies the process of extracting them, making it effortless to access the contents within.
