@@ -17,6 +17,23 @@
  * along with libtesla.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+
+// -------------------------------------------------------------
+// Custom Fork Information (Ultrahand Overlay)
+// - Project Name: Ultrahand Overlay
+// - Author: ppkantorski
+// - Description: This is a custom fork of libtesla for the Ultrahand Overlay project.
+//   Specific modifications have been made to meet project requirements.
+//   For the original libtesla project and license, please refer to the above header.
+// - Note: Refer to the project documentation and README.md for comprehensive
+//   usage and configuration information regarding the Ultrahand-Overlay.
+//   To stay updated with the latest developments and contributions, visit the
+//   project's GitHub repository: https://github.com/ppkantorski/Ultrahand-Overlay
+//
+// Copyright (c) 2023 ppkantorski
+// All rights reserved.
+// -------------------------------------------------------------
+
 #pragma once
 
 #include <switch.h>
