@@ -49,7 +49,7 @@ To use Ultrahand, follow these steps:
 4. Place your custom `config.ini` package file in the ultrahand package directory (`/switch/.packages/YOUR_PACKAGE/`). This file will contains the commands for your Ultrahand package.
 5. Your commands will show up on the packages menu within Ultrahand.  You can click A to execute any command as well as click X to view the indivicual command lines written in the package ini for execution.
 
-For additional assistance with custom packages, feel free to checkout the [wiki](https://github.com/ppkantorski/Ultrahand-Overlay/wiki).
+For additional assistance with custom packages, feel free to checkout the [Ultrahand Overlay Wiki](https://github.com/ppkantorski/Ultrahand-Overlay/wiki).
 
 ### Nintendo Switch Compatibility
 To run the Ultrahand File Management overlay on the Nintendo Switch, you need to have the necessary [homebrew environment](https://github.com/Atmosphere-NX/Atmosphere) set up on your console. Once you have the homebrew environment set up, you can transfer the compiled executable file to your Switch and launch it using your Tesla Overlay hotkeys.
