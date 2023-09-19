@@ -13,6 +13,11 @@
 #include <cstdio>
 #include <time.h>
 
+/**
+ * @brief Logs a message with a timestamp to a log file.
+ *
+ * @param message The message to be logged.
+ */
 void logMessage(const std::string& message) {
     std::time_t currentTime = std::time(nullptr);
     std::string logEntry = std::asctime(std::localtime(&currentTime));
