@@ -56,7 +56,7 @@ Please note that running homebrew software on your Nintendo Switch may void your
 
 ### Compilation Prerequisites
 
-To compile and run the program, you need to have the following C/C++ dependencies installed:
+To compile and run the software, you need to have the following C/C++ dependencies installed:
 
 - [libtesla](https://github.com/WerWolv/libtesla)
 - switch-curl
