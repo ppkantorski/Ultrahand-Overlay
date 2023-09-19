@@ -766,7 +766,7 @@ class MainMenu : public tsl::Gui {
 private:
     tsl::hlp::ini::IniData settingsData;
     std::string packageConfigIniPath = packageDirectory + configFileName;
-    std::string menuMode, defaultMenuMode, inOverlayString, fullPath, optionName;
+    std::string menuMode, defaultMenuMode, inOverlayString, fullPath, optionName, hideOverlayVersion, hidePackageVersion;
     bool useDefaultMenu = false;
 public:
     /**
@@ -799,7 +799,6 @@ public:
         createDirectory(packageDirectory);
         createDirectory(settingsPath);
         
-        
         bool settingsLoaded = false;
         if (isFileOrDirectory(settingsConfigIniPath)) {
             settingsData = getParsedDataFromIniFile(settingsConfigIniPath);
@@ -814,6 +813,12 @@ public:
                         }
                     }
                 }
+                if (ultrahandSection.count("hide_overlay_versions") > 0) {
+                    hideOverlayVersion = ultrahandSection["hide_overlay_versions"];
+                }
+                if (ultrahandSection.count("hide_package_versions") > 0) {
+                    hidePackageVersion = ultrahandSection["hide_package_versions"];
+                }
                 //if (ultrahandSection.count("in_overlay") > 0) {
                 //    inOverlayString = ultrahandSection["in_overlay"];
                 //    if (inOverlayString == "true") {
@@ -824,6 +829,8 @@ public:
             }
         }
         if (!settingsLoaded) { // write data if settings are not loaded
+            setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_overlay_versions", "false");
+            setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_package_versions", "false");
             setIniFileValue(settingsConfigIniPath, "ultrahand", "default_menu", defaultMenuMode);
             setIniFileValue(settingsConfigIniPath, "ultrahand", "last_menu", menuMode);
             setIniFileValue(settingsConfigIniPath, "ultrahand", "in_overlay", "false");
@@ -886,8 +893,10 @@ public:
                     }
                     
                     auto* listItem = new tsl::elm::ListItem(overlayName);
-                    listItem->setValue(overlayVersion, true);
-
+                    if (hideOverlayVersion != "true") {
+                        listItem->setValue(overlayVersion, true);
+                    }
+                    
                     // Add a click listener to load the overlay when clicked upon
                     listItem->setClickListener([overlayFile](s64 key) {
                         if (key & KEY_A) {
@@ -971,7 +980,10 @@ public:
                     }
                     
                     auto listItem = new tsl::elm::ListItem(subdirectoryIcon + subdirectory);
-                    listItem->setValue(packageHeader.version, true);
+                    if (hidePackageVersion != "true") {
+                       listItem->setValue(packageHeader.version, true);
+                    }
+                    
             
                     listItem->setClickListener([this, subPath = packageDirectory + subdirectory + "/"](uint64_t keys) {
                         if (keys & KEY_A) {
