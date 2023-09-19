@@ -2,7 +2,7 @@
  * File: debug_funcs.hpp
  * Author: ppkantorski
  * Description:
- *   This header file contains debugging functions for the Ultrahand-Overlay project.
+ *   This header file contains debugging functions for the Ultrahand Overlay project.
  *   These functions allow logging messages with timestamps to a log file.
  *
  *   For the latest updates and contributions, visit the project's GitHub repository.
