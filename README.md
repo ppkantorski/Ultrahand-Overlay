@@ -37,7 +37,6 @@ It offers the following features:
 - Unzip Files:
   - Extract compressed zip files on your SD card by unzip archived files, preserving their original structure. Whether you have downloaded zip archives or received compressed files, this command simplifies the process of extracting them, making it effortless to access the contents within.
 
-Ultrahand provides a convenient command-line interface to perform these operations, allowing you to efficiently manage your files, directories, and INI files on an SD card.
 
 
 ## Getting Started
