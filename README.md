@@ -1,5 +1,5 @@
 # Ultrahand Overlay (HOS 16.0.0+)
-Create directories, merge files, and customize configurations effortlessly using simple config.ini files.
+Create directories, manage files, and customize configurations effortlessly using simple config.ini files.
 
 ![Package Menu](https://gbatemp.net/attachments/img_4547-jpg.386207/)
 ![Broomstick Package](https://gbatemp.net/attachments/img_4544-jpg.386202/)
