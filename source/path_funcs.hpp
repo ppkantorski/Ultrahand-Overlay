@@ -11,12 +11,17 @@
  *   (GitHub Repository: https://github.com/ppkantorski/Ultrahand-Overlay)
  ********************************************************************************/
 
-
 #pragma once
 #include <sys/stat.h>
 #include <dirent.h>
 
-// Function to create a directory if it doesn't exist
+/**
+ * @brief Creates a single directory if it doesn't exist.
+ *
+ * This function checks if the specified directory exists, and if not, it creates the directory.
+ *
+ * @param directoryPath The path of the directory to be created.
+ */
 void createSingleDirectory(const std::string& directoryPath) {
     struct stat st;
     if (stat(directoryPath.c_str(), &st) != 0) {
@@ -24,7 +29,14 @@ void createSingleDirectory(const std::string& directoryPath) {
     }
 }
 
-// Function to create a directory (including nested directories) if it doesn't exist
+/**
+ * @brief Creates a directory and its parent directories if they don't exist.
+ *
+ * This function creates a directory specified by `directoryPath` and also creates any parent directories
+ * if they don't exist. It handles nested directory creation.
+ *
+ * @param directoryPath The path of the directory to be created.
+ */
 void createDirectory(const std::string& directoryPath) {
     std::string path = directoryPath;
 
@@ -60,9 +72,14 @@ void createDirectory(const std::string& directoryPath) {
 
 
 
-
-
-// Function to create a text file with the specified content
+/**
+ * @brief Creates a text file with the specified content.
+ *
+ * This function creates a text file specified by `filePath` and writes the given `content` to the file.
+ *
+ * @param filePath The path of the text file to be created.
+ * @param content The content to be written to the text file.
+ */
 void createTextFile(const std::string& filePath, const std::string& content) {
     FILE* file = std::fopen(filePath.c_str(), "w");
     if (file != nullptr) {
@@ -71,7 +88,14 @@ void createTextFile(const std::string& filePath, const std::string& content) {
     }
 }
 
-
+/**
+ * @brief Removes entries from a vector of strings that match a specified entry.
+ *
+ * This function removes entries from the `fileList` vector of strings that match the `entry`.
+ *
+ * @param entry The entry to be compared against the elements in `fileList`.
+ * @param fileList The vector of strings from which matching entries will be removed.
+ */
 void removeEntryFromList(const std::string& entry, std::vector<std::string>& fileList) {
     fileList.erase(std::remove_if(fileList.begin(), fileList.end(), [&](const std::string& filePath) {
         return filePath.compare(0, entry.length(), entry) == 0;
@@ -79,7 +103,13 @@ void removeEntryFromList(const std::string& entry, std::vector<std::string>& fil
 }
 
 
-// Delete functions
+/**
+ * @brief Deletes a file or directory.
+ *
+ * This function deletes the file or directory specified by `path`. It can delete both files and directories.
+ *
+ * @param path The path of the file or directory to be deleted.
+ */
 void deleteFileOrDirectory(const std::string& pathToDelete) {
     struct stat pathStat;
     if (stat(pathToDelete.c_str(), &pathStat) == 0) {
@@ -110,6 +140,14 @@ void deleteFileOrDirectory(const std::string& pathToDelete) {
     }
 }
 
+/**
+ * @brief Deletes files or directories that match a specified pattern.
+ *
+ * This function deletes files or directories specified by `pathPattern` by matching against a pattern.
+ * It identifies files or directories that match the pattern and deletes them.
+ *
+ * @param pathPattern The pattern used to match and delete files or directories.
+ */
 void deleteFileOrDirectoryByPattern(const std::string& pathPattern) {
     //logMessage("pathPattern: "+pathPattern);
     std::vector<std::string> fileList = getFilesListByWildcards(pathPattern);
@@ -120,6 +158,16 @@ void deleteFileOrDirectoryByPattern(const std::string& pathPattern) {
     }
 }
 
+/**
+ * @brief Mirrors the deletion of files from a source directory to a target directory.
+ *
+ * This function mirrors the deletion of files from a `sourcePath` directory to a `targetPath` directory.
+ * It deletes corresponding files in the `targetPath` that match the source directory structure.
+ *
+ * @param sourcePath The path of the source directory.
+ * @param targetPath The path of the target directory where files will be mirrored and deleted.
+ *                   Default is "sdmc:/". You can specify a different target path if needed.
+ */
 void mirrorDeleteFiles(const std::string& sourcePath, const std::string& targetPath="sdmc:/") {
     std::vector<std::string> fileList = getFilesListFromDirectory(sourcePath);
 
@@ -132,7 +180,15 @@ void mirrorDeleteFiles(const std::string& sourcePath, const std::string& targetP
 }
 
 
-// Move functions
+/**
+ * @brief Moves a file or directory to a new destination.
+ *
+ * This function moves a file or directory from the `sourcePath` to the `destinationPath`. It can handle both
+ * files and directories and ensures that the destination directory exists before moving.
+ *
+ * @param sourcePath The path of the source file or directory.
+ * @param destinationPath The path of the destination where the file or directory will be moved.
+ */
 void moveFileOrDirectory(const std::string& sourcePath, const std::string& destinationPath) {
     struct stat sourceInfo;
     struct stat destinationInfo;
@@ -212,6 +268,15 @@ void moveFileOrDirectory(const std::string& sourcePath, const std::string& desti
     return;
 }
 
+/**
+ * @brief Moves files or directories matching a specified pattern to a destination directory.
+ *
+ * This function identifies files or directories that match the `sourcePathPattern` and moves them to the `destinationPath`.
+ * It processes each matching entry in the source directory pattern and moves them to the specified destination.
+ *
+ * @param sourcePathPattern The pattern used to match files or directories to be moved.
+ * @param destinationPath The destination directory where matching files or directories will be moved.
+ */
 void moveFilesOrDirectoriesByPattern(const std::string& sourcePathPattern, const std::string& destinationPath) {
     std::vector<std::string> fileList = getFilesListByWildcards(sourcePathPattern);
     
@@ -244,7 +309,14 @@ void moveFilesOrDirectoriesByPattern(const std::string& sourcePathPattern, const
 }
 
 
-// Copy functions
+/**
+ * @brief Copies a single file from the source path to the destination path.
+ *
+ * This function copies a single file specified by `fromFile` to the location specified by `toFile`.
+ *
+ * @param fromFile The path of the source file to be copied.
+ * @param toFile The path of the destination where the file will be copied.
+ */
 void copySingleFile(const std::string& fromFile, const std::string& toFile) {
     FILE* srcFile = fopen(fromFile.c_str(), "rb");
     FILE* destFile = fopen(toFile.c_str(), "wb");
@@ -265,6 +337,16 @@ void copySingleFile(const std::string& fromFile, const std::string& toFile) {
     }
 }
 
+/**
+ * @brief Copies a file or directory from the source path to the destination path.
+ *
+ * This function copies a file or directory specified by `fromFileOrDirectory` to the location specified by `toFileOrDirectory`.
+ * If the source is a regular file, it copies the file to the destination. If the source is a directory, it recursively copies
+ * the entire directory and its contents to the destination.
+ *
+ * @param fromFileOrDirectory The path of the source file or directory to be copied.
+ * @param toFileOrDirectory The path of the destination where the file or directory will be copied.
+ */
 void copyFileOrDirectory(const std::string& fromFileOrDirectory, const std::string& toFileOrDirectory) {
     struct stat fromFileOrDirectoryInfo;
     if (stat(fromFileOrDirectory.c_str(), &fromFileOrDirectoryInfo) == 0) {
@@ -354,6 +436,15 @@ void copyFileOrDirectory(const std::string& fromFileOrDirectory, const std::stri
     }
 }
 
+/**
+ * @brief Copies files or directories matching a specified pattern to a destination directory.
+ *
+ * This function identifies files or directories that match the `sourcePathPattern` and copies them to the `toDirectory`.
+ * It processes each matching entry in the source directory pattern and copies them to the specified destination.
+ *
+ * @param sourcePathPattern The pattern used to match files or directories to be copied.
+ * @param toDirectory The destination directory where matching files or directories will be copied.
+ */
 void copyFileOrDirectoryByPattern(const std::string& sourcePathPattern, const std::string& toDirectory) {
     std::vector<std::string> fileList = getFilesListByWildcards(sourcePathPattern);
 
@@ -367,6 +458,15 @@ void copyFileOrDirectoryByPattern(const std::string& sourcePathPattern, const st
     }
 }
 
+/**
+ * @brief Recursively copies files and directories from the source directory to a target directory, mirroring the structure.
+ *
+ * This function recursively copies files and directories from the `sourcePath` to the `targetPath`, preserving the directory structure.
+ * It identifies the files and directories in the source directory and creates equivalent paths in the target directory.
+ *
+ * @param sourcePath The source directory from which files and directories will be copied.
+ * @param targetPath The target directory where the mirrored structure will be created (default is "sdmc:/").
+ */
 void mirrorCopyFiles(const std::string& sourcePath, const std::string& targetPath="sdmc:/") {
     std::vector<std::string> fileList = getFilesListFromDirectory(sourcePath);
 
@@ -380,7 +480,14 @@ void mirrorCopyFiles(const std::string& sourcePath, const std::string& targetPat
     }
 }
 
-
+/**
+ * @brief Ensures that a directory exists by creating it if it doesn't.
+ *
+ * This function checks if the specified directory path exists. If the directory does not exist, it creates it.
+ *
+ * @param path The path of the directory to ensure its existence.
+ * @return True if the directory exists or was successfully created, false otherwise.
+ */
 bool ensureDirectoryExists(const std::string& path) {
     if (isDirectory(path)) {
         return true;
