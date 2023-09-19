@@ -33,6 +33,9 @@ Ultrahand is a Tesla overlay that provides powerful functionality for managing f
 - Hex Edit Files:
   - Perform hexadecimal editing of files on your SD card. Edit the binary data directly, allowing for precise control over your data. Ultrahand's Hex Edit Files feature enables you to analyze, modify, and customize files in their raw form.
 
+- Download Files:
+  - Download files to your SD card with ease using. Efficiently retrieve files from repositories or URLS to your desired location. Whether you need to download / update projects or transfer files between locations, this feature simplifies the process, making repository management a breeze.
+
 Ultrahand provides a convenient command-line interface to perform these operations, allowing you to efficiently manage your files, directories, and INI files on an SD card.
 
 
