@@ -9,7 +9,7 @@ Ultrahand is a Tesla menu replacement that provides powerful C/C++ commands thro
 
 ## Features
 
-Ultrahand Overlay offers the following features:
+Ultrahand Overlay currently offers the following features:
 
 - Create Directories:
   - Effortlessly create directories on your SD card by specifying the directory path. Ultrahand will handle the creation process for you.
