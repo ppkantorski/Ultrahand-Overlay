@@ -19,13 +19,17 @@
 #include <string_funcs.hpp>
 #include "debug_funcs.hpp"
 
-// Get functions
-
-// Overlay Module settings
+// Constants for overlay module
 constexpr int OverlayLoaderModuleId = 348;
 constexpr Result ResultSuccess = MAKERESULT(0, 0);
 constexpr Result ResultParseError = MAKERESULT(OverlayLoaderModuleId, 1);
 
+/**
+ * @brief Retrieves overlay module information from a given file.
+ *
+ * @param filePath The path to the overlay module file.
+ * @return A tuple containing the result code, module name, and display version.
+ */
 std::tuple<Result, std::string, std::string> getOverlayInfo(std::string filePath) {
     FILE* file = fopen(filePath.c_str(), "r");
 
@@ -65,7 +69,12 @@ std::tuple<Result, std::string, std::string> getOverlayInfo(std::string filePath
 }
 
 
-// Function to read the content of a file
+/**
+ * @brief Reads the contents of a file and returns it as a string.
+ *
+ * @param filePath The path to the file to be read.
+ * @return The content of the file as a string.
+ */
 std::string getFileContents(const std::string& filePath) {
     std::string content;
     FILE* file = fopen(filePath.c_str(), "rb");
@@ -83,13 +92,19 @@ std::string getFileContents(const std::string& filePath) {
     return content;
 }
 
-
+/**
+ * @brief Extracts the file name from a URL.
+ *
+ * @param url The URL from which to extract the file name.
+ * @return The extracted file name.
+ */
 std::string getFileNameFromURL(const std::string& url) {
     size_t lastSlash = url.find_last_of('/');
     if (lastSlash != std::string::npos)
         return url.substr(lastSlash + 1);
     return "";
 }
+
 
 std::string getDestinationPath(const std::string& destinationDir, const std::string& fileName) {
     return destinationDir + "/" + fileName;
@@ -122,6 +137,25 @@ std::string getNameFromPath(const std::string& path) {
     return path;
 }
 
+/**
+ * @brief Extracts the file name from a URL.
+ *
+ * @param url The URL from which to extract the file name.
+ * @return The extracted file name.
+ */
+std::string getFileNameFromURL(const std::string& url) {
+    size_t lastSlash = url.find_last_of('/');
+    if (lastSlash != std::string::npos)
+        return url.substr(lastSlash + 1);
+    return "";
+}
+
+/**
+ * @brief Extracts the parent directory path from a given file path.
+ *
+ * @param path The file path from which to extract the parent directory path.
+ * @return The parent directory path.
+ */
 std::string getParentDirFromPath(const std::string& path) {
     size_t lastSlash = path.find_last_of('/');
     if (lastSlash != std::string::npos) {
@@ -131,6 +165,63 @@ std::string getParentDirFromPath(const std::string& path) {
     return path;
 }
 
+/**
+ * @brief Extracts the name of the parent directory from a given file path.
+ *
+ * @param path The file path from which to extract the parent directory name.
+ * @return The parent directory name.
+ */
+std::string getParentDirNameFromPath(const std::string& path) {
+    // Find the position of the last occurrence of the directory separator '/'
+    std::size_t lastSlashPos = removeEndingSlash(path).rfind('/');
+
+    // Check if the slash is found and not at the beginning of the path
+    if (lastSlashPos != std::string::npos && lastSlashPos != 0) {
+        // Find the position of the second last occurrence of the directory separator '/'
+        std::size_t secondLastSlashPos = path.rfind('/', lastSlashPos - 1);
+
+        // Check if the second last slash is found
+        if (secondLastSlashPos != std::string::npos) {
+            // Extract the substring between the second last and last slashes
+            std::string subPath = path.substr(secondLastSlashPos + 1, lastSlashPos - secondLastSlashPos - 1);
+
+            // Check if the substring contains spaces or special characters
+            if (subPath.find_first_of(" \t\n\r\f\v") != std::string::npos) {
+                // If it does, return the substring within quotes
+                return "\"" + subPath + "\"";
+            }
+
+            // If it doesn't, return the substring as is
+            return subPath;
+        }
+    }
+
+    // If the path format is not as expected or the parent directory is not found,
+    // return an empty string or handle the case accordingly
+    return "";
+}
+
+/**
+ * @brief Extracts the parent directory path from a given file path.
+ *
+ * @param path The file path from which to extract the parent directory path.
+ * @return The parent directory path.
+ */
+std::string getParentDirFromPath(const std::string& path) {
+    size_t lastSlash = path.find_last_of('/');
+    if (lastSlash != std::string::npos) {
+        std::string parentDir = path.substr(0, lastSlash + 1);
+        return parentDir;
+    }
+    return path;
+}
+
+/**
+ * @brief Extracts the name of the parent directory from a given file path.
+ *
+ * @param path The file path from which to extract the parent directory name.
+ * @return The parent directory name.
+ */
 std::string getParentDirNameFromPath(const std::string& path) {
     // Find the position of the last occurrence of the directory separator '/'
     std::size_t lastSlashPos = removeEndingSlash(path).rfind('/');
@@ -161,7 +252,12 @@ std::string getParentDirNameFromPath(const std::string& path) {
 }
 
 
-
+/**
+ * @brief Gets a list of subdirectories in a directory.
+ *
+ * @param directoryPath The path of the directory to search.
+ * @return A vector of strings containing the names of subdirectories.
+ */
 std::vector<std::string> getSubdirectories(const std::string& directoryPath) {
     std::vector<std::string> subdirectories;
 
@@ -188,6 +284,12 @@ std::vector<std::string> getSubdirectories(const std::string& directoryPath) {
     return subdirectories;
 }
 
+/**
+ * @brief Recursively retrieves a list of files from a directory.
+ *
+ * @param directoryPath The path of the directory to search.
+ * @return A vector of strings containing the paths of the files.
+ */
 std::vector<std::string> getFilesListFromDirectory(const std::string& directoryPath) {
     std::vector<std::string> fileList;
 
@@ -219,7 +321,12 @@ std::vector<std::string> getFilesListFromDirectory(const std::string& directoryP
 }
 
 
-// get files list for file patterns and folders list for folder patterns
+/**
+ * @brief Gets a list of files and folders based on a wildcard pattern.
+ *
+ * @param pathPattern The wildcard pattern to match files and folders.
+ * @return A vector of strings containing the paths of matching files and folders.
+ */
 std::vector<std::string> getFilesListByWildcard(const std::string& pathPattern) {
     std::string dirPath = "";
     std::string wildcard = "";
@@ -296,7 +403,15 @@ std::vector<std::string> getFilesListByWildcard(const std::string& pathPattern) 
     return fileList;
 }
 
-
+/**
+ * @brief Gets a list of files and folders based on a wildcard pattern.
+ *
+ * This function searches for files and folders in a directory that match the
+ * specified wildcard pattern.
+ *
+ * @param pathPattern The wildcard pattern to match files and folders.
+ * @return A vector of strings containing the paths of matching files and folders.
+ */
 std::vector<std::string> getFilesListByWildcards(const std::string& pathPattern) {
     std::vector<std::string> fileList;
 
@@ -334,7 +449,17 @@ std::vector<std::string> getFilesListByWildcards(const std::string& pathPattern)
 }
 
 
-
+/**
+ * @brief Replaces a placeholder with a replacement string in the input.
+ *
+ * This function replaces all occurrences of a specified placeholder with the
+ * provided replacement string in the input string.
+ *
+ * @param input The input string.
+ * @param placeholder The placeholder to replace.
+ * @param replacement The string to replace the placeholder with.
+ * @return The input string with placeholders replaced by the replacement string.
+ */
 std::string replacePlaceholder(const std::string& input, const std::string& placeholder, const std::string& replacement) {
     std::string result = input;
     std::size_t pos = result.find(placeholder);
@@ -344,6 +469,17 @@ std::string replacePlaceholder(const std::string& input, const std::string& plac
     return result;
 }
 
+/**
+ * @brief Replaces a JSON source placeholder with the actual JSON source.
+ *
+ * This function replaces a JSON source placeholder with the actual JSON source
+ * based on the provided JSON path.
+ *
+ * @param placeholder The JSON source placeholder.
+ * @param jsonPath The path to the JSON source.
+ * @param source A boolean flag indicating whether to include the source.
+ * @return The updated JSON source with the placeholder replaced.
+ */
 std::string replaceJsonSourcePlaceholder(const std::string& placeholder, const std::string& jsonPath, bool source = false) {
     // Load JSON data from the provided file
     json_t* root;
@@ -420,7 +556,18 @@ std::string replaceJsonSourcePlaceholder(const std::string& placeholder, const s
 }
 
 
-
+/**
+ * @brief Modifies a list of commands based on specified conditions.
+ *
+ * This function modifies a list of commands according to specified conditions.
+ *
+ * @param commands The list of commands to modify.
+ * @param file The file to apply modifications to.
+ * @param toggle A boolean flag indicating whether totoggle modifications.
+ * @param on A boolean flag indicating whether modifications are turned on.
+ * @param usingJsonSource A boolean flag indicating JSON source usage.
+ * @return The modified list of commands.
+ */
 std::vector<std::vector<std::string>> getModifyCommands(const std::vector<std::vector<std::string>>& commands, const std::string& file, bool toggle = false, bool on = true, bool usingJsonSource = false) {
     std::vector<std::vector<std::string>> modifiedCommands;
     std::string jsonPath, replacement;
