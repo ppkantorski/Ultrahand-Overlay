@@ -1,3 +1,24 @@
+/********************************************************************************
+ * Custom Fork Information
+ * 
+ * File: tesla.hpp
+ * Author: ppkantorski
+ * Description: 
+ *   This file contains the main logic for the Ultrahand-Overlay project's custom
+ *   fork of libtesla, an overlay executor. It includes various functions, menu
+ *   structures, and interaction logic to support the seamless execution and
+ *   customization of overlays within the project.
+ * 
+ *   Note: Refer to the project documentation and README.md for comprehensive
+ *   usage and configuration information regarding the Ultrahand-Overlay.
+ * 
+ *   For the latest updates and contributions, visit the project's GitHub repository.
+ *   (GitHub Repository: https://github.com/ppkantorski/Ultrahand-Overlay)
+ *
+ *  Copyright (c) 2023 ppkantorski
+ *  All rights reserved.
+ ********************************************************************************/
+
 /**
  * Copyright (C) 2020 werwolv
  *
@@ -17,22 +38,6 @@
  * along with libtesla.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-
-// -------------------------------------------------------------
-// Custom Fork Information (Ultrahand Overlay)
-// - Project Name: Ultrahand Overlay
-// - Author: ppkantorski
-// - Description: This is a custom fork of libtesla for the Ultrahand Overlay project.
-//   Specific modifications have been made to meet project requirements.
-//   For the original libtesla project and license, please refer to the above header.
-// - Note: Refer to the project documentation and README.md for comprehensive
-//   usage and configuration information regarding the Ultrahand-Overlay.
-//   To stay updated with the latest developments and contributions, visit the
-//   project's GitHub repository: https://github.com/ppkantorski/Ultrahand-Overlay
-//
-// Copyright (c) 2023 ppkantorski
-// All rights reserved.
-// -------------------------------------------------------------
 
 #pragma once
 
