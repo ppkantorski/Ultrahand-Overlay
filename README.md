@@ -140,6 +140,12 @@ Ultrahand supports the following commands:
 - hex-by-string: Edits the contents of a file by replacing a specified string data with another.
   - Usage: `hex-by-string <file_path> <string_data_to_replace> <string_data_replacement>`
 
+- download: Downloads files from a specified URL to a local destination.
+  - Usage: `download <file_url> <destination_file_path>`
+
+- unzip: Extracts files from a specified ZIP archive to a local destination.
+  - Usage: `unzip <zip_file_path> <destination_file_path>`
+
 - reboot: Restarts the system.
   - Usage: `reboot`
 
