@@ -5,11 +5,6 @@
         "download-entry": "0"
     },
     {
-        "name": "EdiZon - v1.0.6",
-        "zip-url-version": "https://api.github.com/repos/proferabg/EdiZon-Overlay/releases/tags/v1.0.6",
-        "download-entry": "0"
-    },
-    {
         "name": "FPSLocker - latest",
         "ovl-url": "https://api.github.com/repos/masagrator/FPSLocker/releases",
         "download-entry": "0"
