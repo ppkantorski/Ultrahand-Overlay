@@ -1,3 +1,15 @@
+/********************************************************************************
+ * File: utils.hpp
+ * Author: ppkantorski
+ * Description:
+ *   This header file contains utility functions and macros used in the
+ *   Ultrahand-Overlay project. These functions and macros include definitions for
+ *   various button keys, path variables, and command interpretation and execution.
+ *
+ *   For the latest updates and contributions, visit the project's GitHub repository.
+ *   (GitHub Repository: https://github.com/ppkantorski/Ultrahand-Overlay)
+ ********************************************************************************/
+
 #pragma once
 #include <switch.h>
 #include <sys/stat.h>
