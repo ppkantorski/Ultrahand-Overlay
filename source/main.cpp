@@ -482,7 +482,7 @@ public:
     }
 };
 
-
+// Forward declaration of the MainMenu class.
 class MainMenu;
 
 /**
