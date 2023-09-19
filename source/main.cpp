@@ -43,16 +43,44 @@ static bool freshSpawn = true;
 static tsl::elm::OverlayFrame *rootFrame = nullptr;
 static tsl::elm::List *list = nullptr;
 
-// Config overlay 
+
+/**
+ * @brief The `ConfigOverlay` class handles configuration overlay functionality.
+ *
+ * This class manages the configuration overlay, allowing users to modify settings
+ * in the INI file. It provides functions for creating, updating, and cleaning INI files
+ * as well as handling user interactions related to configuration.
+ */
 class ConfigOverlay : public tsl::Gui {
 private:
     std::string filePath, specificKey;
     bool isInSection, inQuotes;
 
 public:
+    /**
+     * @brief Constructs a `ConfigOverlay` instance.
+     *
+     * Initializes a new instance of the `ConfigOverlay` class with the provided parameters.
+     *
+     * @param file The file path associated with the overlay.
+     * @param key The specific key related to the overlay (optional).
+     */
     ConfigOverlay(const std::string& file, const std::string& key = "") : filePath(file), specificKey(key) {}
+    /**
+     * @brief Destroys the `ConfigOverlay` instance.
+     *
+     * Cleans up any resources associated with the `ConfigOverlay` instance.
+     */
     ~ConfigOverlay() {}
 
+    /**
+     * @brief Creates the graphical user interface (GUI) for the configuration overlay.
+     *
+     * This function initializes and sets up the GUI elements for the configuration overlay,
+     * allowing users to modify settings in the INI file.
+     *
+     * @return A pointer to the GUI element representing the configuration overlay.
+     */
     virtual tsl::elm::Element* createUI() override {
         inConfigMenu = true;
         
@@ -130,6 +158,19 @@ public:
         return rootFrame;
     }
 
+    /**
+     * @brief Handles user input for the configuration overlay.
+     *
+     * This function processes user input and responds accordingly within the configuration overlay.
+     * It captures key presses and performs actions based on user interactions.
+     *
+     * @param keysDown   A bitset representing keys that are currently pressed.
+     * @param keysHeld   A bitset representing keys that are held down.
+     * @param touchInput Information about touchscreen input.
+     * @param leftJoyStick Information about the left joystick input.
+     * @param rightJoyStick Information about the right joystick input.
+     * @return `true` if the input was handled within the overlay, `false` otherwise.
+     */
     virtual bool handleInput(u64 keysDown, u64 keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
         if (inConfigMenu) {
             if (keysHeld & KEY_B) {
@@ -152,7 +193,12 @@ public:
 
 
 
-// Selection overlay
+/**
+ * @brief The `SelectionOverlay` class manages the selection overlay functionality.
+ *
+ * This class handles the selection overlay, allowing users to interact with and select various options.
+ * It provides functions for creating the graphical user interface (GUI), handling user input, and executing commands.
+ */
 class SelectionOverlay : public tsl::Gui {
 private:
     std::string filePath, specificKey, pathPattern, pathPatternOn, pathPatternOff, jsonPath, jsonKey, itemName, parentDirName, lastParentDirName;
@@ -162,10 +208,32 @@ private:
     json_t* jsonData;
 
 public:
+    /**
+     * @brief Constructs a `SelectionOverlay` instance.
+     *
+     * Initializes a new instance of the `SelectionOverlay` class with the provided parameters.
+     *
+     * @param file The file path associated with the overlay.
+     * @param key The specific key related to the overlay (optional).
+     * @param cmds A vector of vectors containing commands for the overlay (optional).
+     */
     SelectionOverlay(const std::string& file, const std::string& key = "", const std::vector<std::vector<std::string>>& cmds = {}) 
         : filePath(file), specificKey(key), commands(cmds) {}
+    /**
+     * @brief Destroys the `SelectionOverlay` instance.
+     *
+     * Cleans up any resources associated with the `SelectionOverlay` instance.
+     */
     ~SelectionOverlay() {}
 
+    /**
+     * @brief Creates the graphical user interface (GUI) for the selection overlay.
+     *
+     * Initializes and sets up the GUI elements for the selection overlay, allowing users to interact
+     * with and select various options.
+     *
+     * @return A pointer to the GUI element representing the selection overlay.
+     */
     virtual tsl::elm::Element* createUI() override {
         inSelectionMenu = true;
 
@@ -376,6 +444,19 @@ public:
         return rootFrame;
     }
 
+    /**
+     * @brief Handles user input for the selection overlay.
+     *
+     * Processes user input and responds accordingly within the selection overlay.
+     * Captures key presses and performs actions based on user interactions.
+     *
+     * @param keysDown A bitset representing keys that are currently pressed.
+     * @param keysHeld A bitset representing keys that are held down.
+     * @param touchInput Information about touchscreen input.
+     * @param leftJoyStick Information about the left joystick input.
+     * @param rightJoyStick Information about the right joystick input.
+     * @return `true` if the input was handled within the overlay, `false` otherwise.
+     */
     virtual bool handleInput(u64 keysDown, u64 keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
         if (inSelectionMenu) {
             if (keysHeld & KEY_B) {
@@ -401,15 +482,40 @@ public:
 
 class MainMenu;
 
-// Sub menu
+/**
+ * @brief The `SubMenu` class handles sub-menu overlay functionality.
+ *
+ * This class manages sub-menu overlays, allowing users to interact with specific menu options.
+ * It provides functions for creating, updating, and navigating sub-menus, as well as handling user interactions related to sub-menu items.
+ */
 class SubMenu : public tsl::Gui {
 private:
     std::string subPath, pathReplace, pathReplaceOn, pathReplaceOff;
 
 public:
+    /**
+     * @brief Constructs a `SubMenu` instance for a specific sub-menu path.
+     *
+     * Initializes a new instance of the `SubMenu` class for the given sub-menu path.
+     *
+     * @param path The path to the sub-menu.
+     */
     SubMenu(const std::string& path) : subPath(path) {}
+    /**
+     * @brief Destroys the `SubMenu` instance.
+     *
+     * Cleans up any resources associated with the `SubMenu` instance.
+     */
     ~SubMenu() {}
 
+    /**
+     * @brief Creates the graphical user interface (GUI) for the sub-menu overlay.
+     *
+     * This function initializes and sets up the GUI elements for the sub-menu overlay,
+     * allowing users to interact with specific menu options.
+     *
+     * @return A pointer to the GUI element representing the sub-menu overlay.
+     */
     virtual tsl::elm::Element* createUI() override {
         inSubMenu = true;
         
@@ -604,6 +710,19 @@ public:
         return rootFrame;
     }
 
+    /**
+     * @brief Handles user input for the sub-menu overlay.
+     *
+     * Processes user input and responds accordingly within the sub-menu overlay.
+     * Captures key presses and performs actions based on user interactions.
+     *
+     * @param keysDown A bitset representing keys that are currently pressed.
+     * @param keysHeld A bitset representing keys that are held down.
+     * @param touchInput Information about touchscreen input.
+     * @param leftJoyStick Information about the left joystick input.
+     * @param rightJoyStick Information about the right joystick input.
+     * @return `true` if the input was handled within the overlay, `false` otherwise.
+     */
     virtual bool handleInput(uint64_t keysDown, uint64_t keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
 
         if (!returningToSub && inSubMenu) {
@@ -634,19 +753,40 @@ public:
 };
 
 
-// Main menu
+/**
+ * @brief The `MainMenu` class handles the main menu overlay functionality.
+ *
+ * This class manages the main menu overlay, allowing users to navigate and access various submenus.
+ * It provides functions for creating, updating, and navigating the main menu, as well as handling user interactions related to menu navigation.
+ */
 class MainMenu : public tsl::Gui {
 private:
     tsl::hlp::ini::IniData settingsData;
     std::string packageConfigIniPath = packageDirectory + configFileName;
     std::string menuMode, defaultMenuMode, inOverlayString, fullPath, optionName;
     bool useDefaultMenu = false;
-    //bool inSubMenu = false; // Added boolean to track submenu state
-    //bool inTextMenu = false;
 public:
+    /**
+     * @brief Constructs a `MainMenu` instance.
+     *
+     * Initializes a new instance of the `MainMenu` class with the necessary parameters.
+     */
     MainMenu() {}
+    /**
+     * @brief Destroys the `MainMenu` instance.
+     *
+     * Cleans up any resources associated with the `MainMenu` instance.
+     */
     ~MainMenu() {}
 
+    /**
+     * @brief Creates the graphical user interface (GUI) for the main menu overlay.
+     *
+     * This function initializes and sets up the GUI elements for the main menu overlay,
+     * allowing users to navigate and access various submenus.
+     *
+     * @return A pointer to the GUI element representing the main menu overlay.
+     */
     virtual tsl::elm::Element* createUI() override {
         inMainMenu = true;
         //defaultMenuMode = "last_menu";
@@ -909,6 +1049,19 @@ public:
         return rootFrame;
     }
 
+    /**
+     * @brief Handles user input for the main menu overlay.
+     *
+     * Processes user input and responds accordingly within the main menu overlay.
+     * Captures key presses and performs actions based on user interactions.
+     *
+     * @param keysDown A bitset representing keys that are currently pressed.
+     * @param keysHeld A bitset representing keys that are held down.
+     * @param touchInput Information about touchscreen input.
+     * @param leftJoyStick Information about the left joystick input.
+     * @param rightJoyStick Information about the right joystick input.
+     * @return `true` if the input was handled within the overlay, `false` otherwise.
+     */
     virtual bool handleInput(uint64_t keysDown, uint64_t keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
         
         if (inMainMenu){
@@ -950,10 +1103,20 @@ public:
 };
 
 
-// Overlay
+/**
+ * @brief The `Overlay` class manages the main overlay functionality.
+ *
+ * This class is responsible for handling the main overlay, which provides access to various application features and options.
+ * It initializes necessary services, handles user input, and manages the transition between different menu modes.
+ */
 class Overlay : public tsl::Overlay {
 public:
-    
+    /**
+     * @brief Initializes essential services and resources.
+     *
+     * This function initializes essential services and resources required for the overlay to function properly.
+     * It sets up file system mounts, initializes network services, and performs other necessary tasks.
+     */
     virtual void initServices() override {
         fsdevMountSdmc();
         splInitialize();
@@ -964,6 +1127,13 @@ public:
         ASSERT_FATAL(smInitialize());
     }
 
+    /**
+     * @brief Exits and cleans up services and resources.
+     *
+     * This function is responsible for exiting and cleaning up services and resources
+     * when the overlay is no longer in use. It should release any allocated resources and
+     * properly shut down services to avoid memory leaks.
+     */
     virtual void exitServices() override {
         socketExit();
         nifmExit();
@@ -974,22 +1144,55 @@ public:
         fsdevUnmountAll();
     }
 
+    /**
+     * @brief Performs actions when the overlay becomes visible.
+     *
+     * This function is called when the overlay transitions from an invisible state to a visible state.
+     * It can be used to perform actions or updates specific to the overlay's visibility.
+     */
     virtual void onShow() override {
         //if (rootFrame != nullptr) {
         //    tsl::Overlay::get()->getCurrentGui()->removeFocus();
         //    rootFrame->invalidate();
         //    tsl::Overlay::get()->getCurrentGui()->requestFocus(rootFrame, tsl::FocusDirection::None);
         //}
-    }   // Called before overlay wants to change from invisible to visible state
-    virtual void onHide() override {}   // Called before overlay wants to change from visible to invisible state
+    } 
 
+    /**
+     * @brief Performs actions when the overlay becomes visible.
+     *
+     * This function is called when the overlay transitions from an invisible state to a visible state.
+     * It can be used to perform actions or updates specific to the overlay's visibility.
+     */
+    virtual void onHide() override {} 
+
+    /**
+     * @brief Loads the initial graphical user interface (GUI) for the overlay.
+     *
+     * This function is responsible for loading the initial GUI when the overlay is launched.
+     * It returns a unique pointer to the GUI element that will be displayed as the overlay's starting interface.
+     * You can also pass arguments to the constructor of the GUI element if needed.
+     *
+     * @return A unique pointer to the initial GUI element.
+     */
     virtual std::unique_ptr<tsl::Gui> loadInitialGui() override {
         return initially<MainMenu>();  // Initial Gui to load. It's possible to pass arguments to its constructor like this
     }
 };
 
 
-
+/**
+ * @brief The entry point of the application.
+ *
+ * This function serves as the entry point for the application. It takes command-line arguments,
+ * initializes necessary services, and starts the main loop of the overlay. The `argc` parameter
+ * represents the number of command-line arguments, and `argv` is an array of C-style strings
+ * containing the actual arguments.
+ *
+ * @param argc The number of command-line arguments.
+ * @param argv An array of C-style strings representing command-line arguments.
+ * @return The application's exit code.
+ */
 int main(int argc, char* argv[]) {
     return tsl::loop<Overlay, tsl::impl::LaunchFlags::None>(argc, argv);
 }
