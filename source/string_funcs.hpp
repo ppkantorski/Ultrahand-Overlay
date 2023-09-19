@@ -1,3 +1,16 @@
+/********************************************************************************
+ * File: string_funcs.hpp
+ * Author: ppkantorski
+ * Description:
+ *   This header file contains function declarations and utility functions for string
+ *   manipulation. These functions are used in the Ultrahand-Overlay project to
+ *   perform operations like trimming whitespaces, removing quotes, replacing
+ *   multiple slashes, and more.
+ *
+ *   For the latest updates and contributions, visit the project's GitHub repository.
+ *   (GitHub Repository: https://github.com/ppkantorski/Ultrahand-Overlay)
+ ********************************************************************************/
+
 #pragma once
 #include <string>
 
