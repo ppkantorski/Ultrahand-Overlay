@@ -3,7 +3,7 @@
  * Author: ppkantorski
  * Description:
  *   This header file contains function declarations and utility functions for string
- *   manipulation. These functions are used in the Ultrahand-Overlay project to
+ *   manipulation. These functions are used in the Ultrahand Overlay project to
  *   perform operations like trimming whitespaces, removing quotes, replacing
  *   multiple slashes, and more.
  *
