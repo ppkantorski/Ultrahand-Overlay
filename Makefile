@@ -1,3 +1,17 @@
+################################################################################
+# Makefile for Ultrahand-Overlay
+# Author: ppkantorski
+# Description:
+#   This Makefile is used to build the Ultrahand-Overlay homebrew application for
+#   Nintendo Switch.
+#
+#   For more details and usage instructions, please refer to the project's
+#   documentation and README.md.
+#
+#   GitHub Repository: https://github.com/ppkantorski/Ultrahand-Overlay
+#
+################################################################################
+
 #---------------------------------------------------------------------------------
 .SUFFIXES:
 #---------------------------------------------------------------------------------
