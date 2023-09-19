@@ -766,7 +766,7 @@ class MainMenu : public tsl::Gui {
 private:
     tsl::hlp::ini::IniData settingsData;
     std::string packageConfigIniPath = packageDirectory + configFileName;
-    std::string menuMode, defaultMenuMode, inOverlayString, fullPath, optionName, hideOverlayVersion, hidePackageVersion;
+    std::string menuMode, defaultMenuMode, inOverlayString, fullPath, optionName, hideOverlayVersions, hidePackageVersions;
     bool useDefaultMenu = false;
 public:
     /**
@@ -813,11 +813,18 @@ public:
                         }
                     }
                 }
+                // For hiding the versions of overlays/packages
                 if (ultrahandSection.count("hide_overlay_versions") > 0) {
-                    hideOverlayVersion = ultrahandSection["hide_overlay_versions"];
+                    hideOverlayVersions = ultrahandSection["hide_overlay_versions"];
+                } else {
+                    setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_overlay_versions", "false");
+                    hideOverlayVersions = "false";
                 }
                 if (ultrahandSection.count("hide_package_versions") > 0) {
-                    hidePackageVersion = ultrahandSection["hide_package_versions"];
+                    hidePackageVersions = ultrahandSection["hide_package_versions"];
+                } else {
+                    setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_package_versions", "false");
+                    hidePackageVersions = "false";
                 }
                 //if (ultrahandSection.count("in_overlay") > 0) {
                 //    inOverlayString = ultrahandSection["in_overlay"];
@@ -829,11 +836,13 @@ public:
             }
         }
         if (!settingsLoaded) { // write data if settings are not loaded
-            setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_overlay_versions", "false");
-            setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_package_versions", "false");
             setIniFileValue(settingsConfigIniPath, "ultrahand", "default_menu", defaultMenuMode);
             setIniFileValue(settingsConfigIniPath, "ultrahand", "last_menu", menuMode);
             setIniFileValue(settingsConfigIniPath, "ultrahand", "in_overlay", "false");
+            setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_overlay_versions", "false");
+            hideOverlayVersions = "false";
+            setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_package_versions", "false");
+            hidePackageVersions = "false";
         }
         copyTeslaKeyComboToUltraHand();
         //setIniFileValue(settingsConfigIniPath, "ultrahand", "in_overlay", "false");
@@ -893,7 +902,7 @@ public:
                     }
                     
                     auto* listItem = new tsl::elm::ListItem(overlayName);
-                    if (hideOverlayVersion != "true") {
+                    if (hideOverlayVersions != "true") {
                         listItem->setValue(overlayVersion, true);
                     }
                     
@@ -980,7 +989,7 @@ public:
                     }
                     
                     auto listItem = new tsl::elm::ListItem(subdirectoryIcon + subdirectory);
-                    if (hidePackageVersion != "true") {
+                    if (hidePackageVersions != "true") {
                        listItem->setValue(packageHeader.version, true);
                     }
                     
