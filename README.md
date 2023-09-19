@@ -103,60 +103,6 @@ You can add your own sections and commands to customize the actions performed by
 
 Note: The paths specified in the commands should be relative to the SD card root directory and should end with /.
 
-## Command Reference
-
-Ultrahand supports the following commands:
-
-- make or mkdir: Creates a directory.
-  - Usage: `mkdir <directory_path>`
-
-- copy or cp: Copies a file or diectory.
-  - Usage: `copy <source_file_path> <destination_file_path>`
-
-- delete or del: Deletes a file or directory.
-  - Usage: `delete <file_path>`
-
-- move or mv: Moves/renames a file/directory to a new location/label.
-  - Usage: `move <file_path> <destination_directory_path>`
-
-- set-ini-val or set-ini-value: Edits an INI file by updating (or adding) a section with a desired key-value pair.
-  - Usage: `set-ini-val <file_to_edit> <desired_section> <desired_key> <desired_value>`
-
-- set-ini-key: Edits an INI file by updating a section with a new key.
-  - Usage: `set-ini-key <file_to_edit> <desired_section> <desired_key> <desired_new_key>`
-
-- hex-by-offset: Edits the contents of a file at a specified offset with the provided hexadecimal data.
-  - Usage: `hex-by-offset <file_path> <offset> <hex_data>`
-
-- hex-by-swap: Edits the contents of a file by replacing a specified hexadecimal data with another.
-  - Usage: `hex-by-swap <file_path> <hex_data_to_replace> <hex_data_replacement>`
-  
-- hex-by-decimal: Edits the contents of a file by replacing a specified decimal data with another.
-  - Usage: `hex-by-decimal <file_path> <decimal_data_to_replace> <decimal_data_replacement>`
-  
-- hex-by-rdecimal: Edits the contents of a file by replacing a specified reverse decimal data with another.
-  - Usage: `hex-by-rdecimal <file_path> <decimal_data_to_replace> <decimal_data_replacement>`
-
-- hex-by-string: Edits the contents of a file by replacing a specified string data with another.
-  - Usage: `hex-by-string <file_path> <string_data_to_replace> <string_data_replacement>`
-
-- download: Downloads files from a specified URL to a local destination.
-  - Usage: `download <file_url> <destination_file_path>`
-
-- unzip: Extracts files from a specified ZIP archive to a local destination.
-  - Usage: `unzip <zip_file_path> <destination_file_path>`
-
-- reboot: Restarts the system.
-  - Usage: `reboot`
-
-- shutdown: Shuts down the system.
-  - Usage: `shutdown`
-
-
-Make sure to follow the correct syntax and provide the required arguments for each command.
-
-You can configure these commands in the `config.ini` file by specifying them under the corresponding options. Make sure to provide the necessary arguments as described for each command.
-
 
 ## Contributing
 
