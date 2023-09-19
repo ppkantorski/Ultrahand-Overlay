@@ -22,9 +22,22 @@
 #include <download_funcs.hpp>
 #include <json_funcs.hpp>
 
+/**
+ * @brief Shutdown modes for the Ultrahand-Overlay project.
+ *
+ * These macros define the shutdown modes used in the Ultrahand-Overlay project:
+ * - `SpsmShutdownMode_Normal`: Normal shutdown mode.
+ * - `SpsmShutdownMode_Reboot`: Reboot mode.
+ */
 #define SpsmShutdownMode_Normal 0
 #define SpsmShutdownMode_Reboot 1
 
+/**
+ * @brief Key mapping macros for button keys.
+ *
+ * These macros define button keys for the Ultrahand-Overlay project to simplify key mappings.
+ * For example, `KEY_A` represents the `HidNpadButton_A` key.
+ */
 #define KEY_A HidNpadButton_A
 #define KEY_B HidNpadButton_B
 #define KEY_X HidNpadButton_X
@@ -47,12 +60,44 @@
 #define KEY_DOWN (HidNpadButton_Down | HidNpadButton_StickLDown | HidNpadButton_StickRDown)
 #define KEY_LEFT (HidNpadButton_Left | HidNpadButton_StickLLeft | HidNpadButton_StickRLeft)
 #define KEY_RIGHT (HidNpadButton_Right | HidNpadButton_StickLRight | HidNpadButton_StickRRight)
+
+/**
+ * @brief Ultrahand-Overlay Input Macros
+ *
+ * This block of code defines macros for handling input in the Ultrahand-Overlay project.
+ * These macros simplify the mapping of input events to corresponding button keys and
+ * provide aliases for touch and joystick positions.
+ *
+ * The macros included in this block are:
+ *
+ * - `touchPosition`: An alias for a constant `HidTouchState` pointer.
+ * - `touchInput`: An alias for `&touchPos`, representing touch input.
+ * - `JoystickPosition`: An alias for `HidAnalogStickState`, representing joystick input.
+ *
+ * These macros are utilized within the Ultrahand-Overlay project to manage and interpret
+ * user input, including touch and joystick events.
+ */
 #define touchPosition const HidTouchState
 #define touchInput &touchPos
 #define JoystickPosition HidAnalogStickState
 
 
-// String path variables
+/**
+ * @brief Ultrahand-Overlay Configuration Paths
+ *
+ * This block of code defines string variables for various configuration and directory paths
+ * used in the Ultrahand-Overlay project. These paths include:
+ *
+ * - `configFileName`: The name of the configuration file ("config.ini").
+ * - `settingsPath`: The base path for Ultrahand settings ("sdmc:/config/ultrahand/").
+ * - `settingsConfigIniPath`: The full path to the Ultrahand settings configuration file.
+ * - `packageDirectory`: The base directory for packages ("sdmc:/switch/.packages/").
+ * - `overlayDirectory`: The base directory for overlays ("sdmc:/switch/.overlays/").
+ * - `teslaSettingsConfigIniPath`: The full path to the Tesla settings configuration file.
+ *
+ * These paths are used within the Ultrahand-Overlay project to manage configuration files
+ * and directories.
+ */
 const std::string configFileName = "config.ini";
 const std::string settingsPath = "sdmc:/config/ultrahand/";
 const std::string settingsConfigIniPath = settingsPath + configFileName;
@@ -61,7 +106,11 @@ const std::string overlayDirectory = "sdmc:/switch/.overlays/";
 const std::string teslaSettingsConfigIniPath = "sdmc:/config/tesla/"+configFileName;
 
 
-
+/**
+ * @brief Copy Tesla key combo to UltraHand settings.
+ *
+ * This function retrieves the key combo from Tesla settings and copies it to UltraHand settings.
+ */
 void copyTeslaKeyComboToUltraHand() {
     std::string keyCombo;
     std::map<std::string, std::map<std::string, std::string>> parsedData;
@@ -93,8 +142,22 @@ void copyTeslaKeyComboToUltraHand() {
 
 
 
-// Safety conditions
-// List of protected folders
+/**
+ * @brief Ultrahand-Overlay Protected Folders
+ *
+ * This block of code defines two vectors containing paths to protected folders used in the
+ * Ultrahand-Overlay project. These folders are designated as protected to prevent certain
+ * operations that may pose security risks.
+ *
+ * The two vectors include:
+ *
+ * - `protectedFolders`: Paths to standard protected folders.
+ * - `ultraProtectedFolders`: Paths to ultra protected folders with stricter security.
+ *
+ * These protected folder paths are used within the Ultrahand-Overlay project to enforce
+ * safety conditions and ensure that certain operations are not performed on sensitive
+ * directories.
+ */
 const std::vector<std::string> protectedFolders = {
     "sdmc:/Nintendo/",
     "sdmc:/emuMMC/",
@@ -108,6 +171,15 @@ const std::vector<std::string> ultraProtectedFolders = {
     "sdmc:/Nintendo/",
     "sdmc:/emuMMC/"
 };
+
+/**
+ * @brief Check if a path contains dangerous combinations.
+ *
+ * This function checks if a given path contains patterns that may pose security risks.
+ *
+ * @param patternPath The path to check.
+ * @return True if the path contains dangerous combinations, otherwise false.
+ */
 bool isDangerousCombination(const std::string& patternPath) {
     // List of obviously dangerous patterns
     const std::vector<std::string> dangerousCombinationPatterns = {
@@ -227,8 +299,13 @@ bool isDangerousCombination(const std::string& patternPath) {
 }
 
 
-
-// Main interpreter
+/**
+ * @brief Interpret and execute a list of commands.
+ *
+ * This function interprets and executes a list of commands based on their names and arguments.
+ *
+ * @param commands A list of commands, where each command is represented as a vector of strings.
+ */
 void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& commands) {
     std::string commandName, jsonPath, sourcePath, destinationPath, desiredSection, desiredKey, desiredNewKey, desiredValue, offset, hexDataToReplace, hexDataReplacement, fileUrl, occurrence;
     
