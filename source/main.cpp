@@ -1,3 +1,26 @@
+/********************************************************************************
+ * File: main.cpp
+ * Author: ppkantorski
+ * Description: 
+ *   This file contains the main program logic for the Ultrahand-Overlay project,
+ *   an overlay executor designed for versatile crafting and management of overlays.
+ *   It defines various functions, menu structures, and interaction logic to
+ *   facilitate the seamless execution and customization of overlays within the project.
+ * 
+ *   Key Features:
+ *   - Dynamic overlay loading and execution.
+ *   - Integration with menu systems and submenus.
+ *   - Configuration options through INI files.
+ *   - Toggles for enabling/disabling specific commands.
+ * 
+ *   Note: Please refer to the project documentation and README.md for detailed
+ *   information on how to use and configure the Ultrahand-Overlay.
+ * 
+ *   For the latest updates and contributions, visit the project's GitHub repository.
+ *   (GitHub Repository: https://github.com/ppkantorski/Ultrahand-Overlay)
+ ********************************************************************************/
+
+
 #define NDEBUG
 #define STBTT_STATIC
 #define TESLA_INIT_IMPL
