@@ -2,7 +2,7 @@
  * File: main.cpp
  * Author: ppkantorski
  * Description: 
- *   This file contains the main program logic for the Ultrahand-Overlay project,
+ *   This file contains the main program logic for the Ultrahand Overlay project,
  *   an overlay executor designed for versatile crafting and management of overlays.
  *   It defines various functions, menu structures, and interaction logic to
  *   facilitate the seamless execution and customization of overlays within the project.
