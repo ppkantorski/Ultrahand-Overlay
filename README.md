@@ -27,7 +27,7 @@ Ultrahand Overlay currently offers the following features:
   - Download files to your SD card with ease using. Efficiently retrieve files from repositories or URLS to your desired location. Whether you need to download/update projects or transfer files between locations, this feature simplifies the process, making repository management a breeze.
 
 - Unzip Files:
-  - Extract compressed zip files on your SD card by unzip archived files, preserving their original structure. Whether you have downloaded zip archives or received compressed files, this command simplifies the process of extracting them, making it effortless to access the contents within.
+  - Extract compressed zip files on your SD card by unzipping archived files, preserving their original structure. Whether you have downloaded zip archives or received compressed files, this command simplifies the process of extracting them, making it effortless to access the contents within.
 
 - Modify INI Files:
   - Edit INI files on your SD card with ease. Take full control over your configurations by updating existing key-value pairs, adding new entries, or creating new sections within the INI file using Ultrahand.
