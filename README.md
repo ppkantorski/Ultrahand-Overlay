@@ -9,7 +9,9 @@ Ultrahand is a versatile tool that enables you to create and share command-based
 
 ## Features
 
-Ultrahand is a Tesla overlay that provides powerful functionality through its custom interpretive programming language similar to Shell/BASH. It offers the following features:
+Ultrahand is a Tesla menu replacement that provides powerful functionality usage of its own custom interpretive programming language with commands similar to Shell/BASH.
+
+It offers the following features:
 
 - Create Directories:
   - Effortlessly create directories on your SD card by specifying the directory path. Ultrahand will handle the creation process for you.
