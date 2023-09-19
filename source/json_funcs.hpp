@@ -1,3 +1,14 @@
+/********************************************************************************
+ * File: json_funcs.hpp
+ * Author: ppkantorski
+ * Description:
+ *   This header file provides functions for working with JSON files in C++ using
+ *   the `jansson` library. It includes a function to read JSON data from a file.
+ *
+ *   For the latest updates and contributions, visit the project's GitHub repository.
+ *   (GitHub Repository: https://github.com/ppkantorski/Ultrahand-Overlay)
+ ********************************************************************************/
+
 #include <cstdio>
 #include <string>
 #include <sys/stat.h>
