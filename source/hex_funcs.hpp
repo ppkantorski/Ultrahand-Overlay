@@ -18,7 +18,14 @@
 #include <cstring> // Added for std::memcmp
 #include <sys/stat.h> // Added for stat
 
-// Hex-editing commands
+/**
+ * @brief Converts an ASCII string to a hexadecimal string.
+ *
+ * This function takes an ASCII string as input and converts it into a hexadecimal string.
+ *
+ * @param asciiStr The ASCII string to convert.
+ * @return The corresponding hexadecimal string.
+ */
 std::string asciiToHex(const std::string& asciiStr) {
     std::string hexStr;
     hexStr.reserve(asciiStr.length() * 2); // Reserve space for the hexadecimal string
@@ -39,6 +46,14 @@ std::string asciiToHex(const std::string& asciiStr) {
     return hexStr;
 }
 
+/**
+ * @brief Converts a decimal string to a hexadecimal string.
+ *
+ * This function takes a decimal string as input and converts it into a hexadecimal string.
+ *
+ * @param decimalStr The decimal string to convert.
+ * @return The corresponding hexadecimal string.
+ */
 std::string decimalToHex(const std::string& decimalStr) {
     // Convert decimal string to integer
     int decimalValue = std::stoi(decimalStr);
@@ -63,6 +78,16 @@ std::string decimalToHex(const std::string& decimalStr) {
     return hexadecimal;
 }
 
+/**
+ * @brief Converts a decimal string to a reversed hexadecimal string.
+ *
+ * This function takes a decimal string as input, converts it into a hexadecimal
+ * string, and reverses the resulting hexadecimal string in groups of order.
+ *
+ * @param decimalStr The decimal string to convert.
+ * @param order The grouping order for reversing the hexadecimal string.
+ * @return The reversed hexadecimal string.
+ */
 std::string decimalToReversedHex(const std::string& decimalStr, int order = 2) {
     std::string hexadecimal = decimalToHex(decimalStr);
 
@@ -75,6 +100,16 @@ std::string decimalToReversedHex(const std::string& decimalStr, int order = 2) {
     return reversedHex;
 }
 
+/**
+ * @brief Finds the offsets of hexadecimal data in a file.
+ *
+ * This function searches for occurrences of hexadecimal data in a binary file
+ * and returns the file offsets where the data is found.
+ *
+ * @param filePath The path to the binary file.
+ * @param hexData The hexadecimal data to search for.
+ * @return A vector of strings containing the file offsets where the data is found.
+ */
 std::vector<std::string> findHexDataOffsets(const std::string& filePath, const std::string& hexData) {
     std::vector<std::string> offsets;
 
@@ -121,6 +156,16 @@ std::vector<std::string> findHexDataOffsets(const std::string& filePath, const s
     return offsets;
 }
 
+/**
+ * @brief Edits hexadecimal data in a file at a specified offset.
+ *
+ * This function opens a binary file, seeks to a specified offset, and replaces
+ * the data at that offset with the provided hexadecimal data.
+ *
+ * @param filePath The path to the binary file.
+ * @param offsetStr The offset in the file to performthe edit.
+ * @param hexData The hexadecimal data to replace at the offset.
+ */
 void hexEditByOffset(const std::string& filePath, const std::string& offsetStr, const std::string& hexData) {
     // Convert the offset string to std::streampos
     std::streampos offset = std::stoll(offsetStr);
@@ -176,6 +221,17 @@ void hexEditByOffset(const std::string& filePath, const std::string& offsetStr, 
     //logMessage("Hex editing completed.");
 }
 
+/**
+ * @brief Finds and replaces hexadecimal data in a file.
+ *
+ * This function searches for occurrences of hexadecimal data in a binary file
+ * and replaces them with a specified hexadecimal replacement data.
+ *
+ * @param filePath The path to the binary file.
+ * @param hexDataToReplace The hexadecimal data to search for and replace.
+ * @param hexDataReplacement The hexadecimal data to replace with.
+ * @param occurrence The occurrence/index of the data to replace (default is "0" to replace all occurrences).
+ */
 void hexEditFindReplace(const std::string& filePath, const std::string& hexDataToReplace, const std::string& hexDataReplacement, const std::string& occurrence = "0") {
     std::vector<std::string> offsetStrs = findHexDataOffsets(filePath, hexDataToReplace);
     if (!offsetStrs.empty()) {
