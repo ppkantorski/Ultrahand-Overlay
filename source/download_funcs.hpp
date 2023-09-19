@@ -1,3 +1,15 @@
+/********************************************************************************
+ * File: download_funcs.hpp
+ * Author: ppkantorski
+ * Description:
+ *   This header file contains functions for downloading and extracting files
+ *   using libcurl and zlib. It includes functions for downloading files from URLs,
+ *   writing received data to a file, and extracting files from ZIP archives.
+ *
+ *   For the latest updates and contributions, visit the project's GitHub repository.
+ *   (GitHub Repository: https://github.com/ppkantorski/Ultrahand-Overlay)
+ ********************************************************************************/
+
 #pragma once
 #include <cstdio>
 #include <curl/curl.h>
