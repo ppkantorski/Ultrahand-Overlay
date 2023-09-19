@@ -804,15 +804,7 @@ public:
             settingsData = getParsedDataFromIniFile(settingsConfigIniPath);
             if (settingsData.count("ultrahand") > 0) {
                 auto& ultrahandSection = settingsData["ultrahand"];
-                if (ultrahandSection.count("last_menu") > 0) {
-                    menuMode = ultrahandSection["last_menu"];
-                    if (ultrahandSection.count("default_menu") > 0) {
-                        defaultMenuMode = ultrahandSection["default_menu"];
-                        if (ultrahandSection.count("in_overlay") > 0) {
-                            settingsLoaded = true;
-                        }
-                    }
-                }
+                
                 // For hiding the versions of overlays/packages
                 if (ultrahandSection.count("hide_overlay_versions") > 0) {
                     hideOverlayVersions = ultrahandSection["hide_overlay_versions"];
@@ -825,6 +817,16 @@ public:
                 } else {
                     setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_package_versions", "false");
                     hidePackageVersions = "false";
+                }
+                
+                if (ultrahandSection.count("last_menu") > 0) {
+                    menuMode = ultrahandSection["last_menu"];
+                    if (ultrahandSection.count("default_menu") > 0) {
+                        defaultMenuMode = ultrahandSection["default_menu"];
+                        if (ultrahandSection.count("in_overlay") > 0) {
+                            settingsLoaded = true;
+                        }
+                    }
                 }
                 //if (ultrahandSection.count("in_overlay") > 0) {
                 //    inOverlayString = ultrahandSection["in_overlay"];
@@ -839,10 +841,6 @@ public:
             setIniFileValue(settingsConfigIniPath, "ultrahand", "default_menu", defaultMenuMode);
             setIniFileValue(settingsConfigIniPath, "ultrahand", "last_menu", menuMode);
             setIniFileValue(settingsConfigIniPath, "ultrahand", "in_overlay", "false");
-            setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_overlay_versions", "false");
-            hideOverlayVersions = "false";
-            setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_package_versions", "false");
-            hidePackageVersions = "false";
         }
         copyTeslaKeyComboToUltraHand();
         //setIniFileValue(settingsConfigIniPath, "ultrahand", "in_overlay", "false");
