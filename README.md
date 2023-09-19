@@ -54,7 +54,7 @@ To run the Ultrahand File Management overlay on the Nintendo Switch, you need to
 
 Please note that running homebrew software on your Nintendo Switch may void your warranty and can carry certain risks. Ensure that you understand the implications and follow the appropriate guidelines and precautions when using homebrew software.
 
-### Compilation Prerequisites
+### C/C++ Compilation Prerequisites
 
 To compile and run the program, you need to have the following dependencies installed:
 
