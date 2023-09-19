@@ -4,7 +4,7 @@
  * File: tesla.hpp
  * Author: ppkantorski
  * Description: 
- *   This file serves as the core logic for the Ultrahand-Overlay project's custom fork
+ *   This file serves as the core logic for the Ultrahand Overlay project's custom fork
  *   of libtesla, an overlay executor. Within this file, you will find a collection of
  *   functions, menu structures, and interaction logic designed to facilitate the
  *   smooth execution and flexible customization of overlays within the project.
