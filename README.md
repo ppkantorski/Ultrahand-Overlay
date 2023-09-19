@@ -65,47 +65,6 @@ To use Ultrahand, follow these steps:
 2. Place the config.ini package file in the ultrahand directory (or sub-directory). This package file contains the configuration options for Ultrahand.
 3. Your commands will show up on the Tesla menu within the Ultrahand overlay.  You can click A to execute any command as well as click X to view the indivicual command lines written in the ini for execution.
 
-## Configuration Options
-
-The config.ini file contains multiple sections, each defining a set of commands that can be executed. The sections are enclosed in square brackets [ ], and the commands are listed below each section.
-
-Here's an example of the config.ini file:
-```
-[make directories]
-mkdir /switch/.packages/example1/
-mkdir /switch/.packages/example2/
-
-[copy files]
-copy /switch/.packages/config.ini /switch/.packages/example1/
-copy /switch/.packages/config.ini /switch/.packages/example2/
-
-[rename files]
-move /switch/.packages/example1/config.ini /switch/.packages/example1/configX.ini
-move /switch/.packages/example2/config.ini /switch/.packages/example2/configX.ini
-
-[move directories]
-move /switch/.packages/example1/ /switch/.packages/example3/
-move /switch/.packages/example2/ /switch/.packages/example4/
-
-[delete files]
-delete /switch/.packages/example1/config.ini
-delete /switch/.packages/example2/config.ini
-
-[delete directories]
-delete /switch/.packages/example1/
-delete /switch/.packages/example2/
-delete /switch/.packages/example3/
-delete /switch/.packages/example4/
-
-[modify ini file]
-copy /bootloader/hekate_ipl.ini /switch/.packages/
-set-ini-val /switch/.packages/hekate_ipl.ini 'Atmosphere' fss0 gonnawritesomethingelse
-set-ini-val ​/switch/.packages/hekate_ipl.ini 'Atmosphere' booty true
-```
-You can add your own sections and commands to customize the actions performed by Ultrahand.
-
-Note: The paths specified in the commands should be relative to the SD card root directory and should end with /.
-
 
 ## Contributing
 
