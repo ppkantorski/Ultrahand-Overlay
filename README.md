@@ -46,7 +46,7 @@ To use Ultrahand, follow these steps:
 
 1. Download and install the latest [nxovloader](https://github.com/WerWolv/nx-ovlloader).
 2. Download the latest [ovlmenu.ovl](https://github.com/ppkantorski/Ultrahand-Overlay/releases/latest/download/ovlmenu.ovl) and place it within `/switch/.overlays/`.
-  - WARNING: This will overwrite `Tesla Menu` if already installed.
+    - WARNING: This will overwrite `Tesla Menu` if already installed.
 3. After installing Ultrahand Overlay, a new folder named `ultrahand` will be created within the config root folder on your SD card (`/config/ultrahand/`) along with a `config.ini` file containing various Ultrahand settings.
 4. Launch `Ultrahand` similarly to `Tesla Menu` with your specified hotkey.  A new folder will be made (`/switch/.packages/`) containing your base commands in the root `config.ini` file.
 5. Place your custom `config.ini` package file in the ultrahand package directory (`/switch/.packages/YOUR_PACKAGE/`). This file will contains the commands for your custom Ultrahand package.
