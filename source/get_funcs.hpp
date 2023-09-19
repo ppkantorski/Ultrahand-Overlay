@@ -95,18 +95,7 @@ std::string getFileContents(const std::string& filePath) {
     return content;
 }
 
-/**
- * @brief Extracts the file name from a URL.
- *
- * @param url The URL from which to extract the file name.
- * @return The extracted file name.
- */
-std::string getFileNameFromURL(const std::string& url) {
-    size_t lastSlash = url.find_last_of('/');
-    if (lastSlash != std::string::npos)
-        return url.substr(lastSlash + 1);
-    return "";
-}
+
 
 /**
  * @brief Concatenates the provided directory and file names to form a destination path.
@@ -171,20 +160,7 @@ std::string getFileNameFromURL(const std::string& url) {
     return "";
 }
 
-/**
- * @brief Extracts the parent directory path from a given file path.
- *
- * @param path The file path from which to extract the parent directory path.
- * @return The parent directory path.
- */
-std::string getParentDirFromPath(const std::string& path) {
-    size_t lastSlash = path.find_last_of('/');
-    if (lastSlash != std::string::npos) {
-        std::string parentDir = path.substr(0, lastSlash + 1);
-        return parentDir;
-    }
-    return path;
-}
+
 
 /**
  * @brief Extracts the name of the parent directory from a given file path.
@@ -237,40 +213,6 @@ std::string getParentDirFromPath(const std::string& path) {
     return path;
 }
 
-/**
- * @brief Extracts the name of the parent directory from a given file path.
- *
- * @param path The file path from which to extract the parent directory name.
- * @return The parent directory name.
- */
-std::string getParentDirNameFromPath(const std::string& path) {
-    // Find the position of the last occurrence of the directory separator '/'
-    std::size_t lastSlashPos = removeEndingSlash(path).rfind('/');
-
-    // Check if the slash is found and not at the beginning of the path
-    if (lastSlashPos != std::string::npos && lastSlashPos != 0) {
-        // Find the position of the second last occurrence of the directory separator '/'
-        std::size_t secondLastSlashPos = path.rfind('/', lastSlashPos - 1);
-
-        // Check if the second last slash is found
-        if (secondLastSlashPos != std::string::npos) {
-            // Extract the substring between the second last and last slashes
-            std::string subPath = path.substr(secondLastSlashPos + 1, lastSlashPos - secondLastSlashPos - 1);
-
-            // Check if the substring contains spaces or special characters
-            if (subPath.find_first_of(" \t\n\r\f\v") != std::string::npos) {
-                // If it does, return the substring within quotes
-                return "\"" + subPath + "\"";
-            }
-
-            // If it doesn't, return the substring as is
-            return subPath;
-        }
-    }
-
-    // If the path format is not as expected or the parent directory is not found, return an empty string or handle the case accordingly
-    return "";
-}
 
 
 /**
