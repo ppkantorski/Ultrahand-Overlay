@@ -49,7 +49,7 @@ To use Ultrahand, follow these steps:
 2. After installing Ultrahand Overlay, a new folder named `ultrahand` will be created within the config root folder on your SD card (`/config/ultrahand/`) along with a config.ini file containing various Ultrahand settings.
 3. Launch `Ultrahand` similarly to `Tesla Menu` with your specified hotkey.  A new folder will be made `/switch/.packages/` containing your base commands in the root config.ini file.
 4. Place your custom config.ini package in the ultrahand package directory (`/switch/.packages/YOUR_PACKAGE/`). This package file contains the commands for your Ultrahand package.
-5. Your commands will show up on the packages menu within Ultrahand.  You can click A to execute any command as well as click X to view the indivicual command lines written in the ini for execution.
+5. Your commands will show up on the packages menu within Ultrahand.  You can click A to execute any command as well as click X to view the indivicual command lines written in the package ini for execution.
 
 ### Nintendo Switch Compatibility
 To run the Ultrahand File Management overlay on the Nintendo Switch, you need to have the necessary homebrew environment set up on your console. Once you have the homebrew environment set up, you can transfer the compiled executable file to your Switch and launch it using the Tesla Overlay.
