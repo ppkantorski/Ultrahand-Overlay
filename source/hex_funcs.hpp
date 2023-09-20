@@ -236,7 +236,7 @@ void hexEditByOffset(const std::string& filePath, const std::string& offsetStr, 
  * @param customPattern The custom pattern to search for in the file.
  * @param hexDataReplacement The hexadecimal data to replace at the calculated offset.
  */
-void hexEditCustomOffset(const std::string& filePath, const std::string& customPattern, const std::string& offsetStr, const std::string& hexDataReplacement) {
+void hexEditByCustomOffset(const std::string& filePath, const std::string& customPattern, const std::string& offsetStr, const std::string& hexDataReplacement) {
     std::string customHexPattern = asciiToHex(customPattern);
     std::vector<std::string> offsetStrs = findHexDataOffsets(filePath, customHexPattern);
     if (!offsetStrs.empty()) {
