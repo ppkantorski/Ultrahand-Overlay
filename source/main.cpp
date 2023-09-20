@@ -842,7 +842,7 @@ public:
             setIniFileValue(settingsConfigIniPath, "ultrahand", "last_menu", menuMode);
             setIniFileValue(settingsConfigIniPath, "ultrahand", "in_overlay", "false");
         }
-        copyTeslaKeyComboToUltraHand();
+        copyTeslaKeyComboToUltrahand();
         //setIniFileValue(settingsConfigIniPath, "ultrahand", "in_overlay", "false");
         
         
