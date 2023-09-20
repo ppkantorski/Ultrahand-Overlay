@@ -225,6 +225,29 @@ void hexEditByOffset(const std::string& filePath, const std::string& offsetStr, 
 }
 
 /**
+ * @brief Edits a specific offset in a file with custom hexadecimal data.
+ *
+ * This function searches for a custom pattern ("43555354" in this case) in the file and
+ * calculates a new offset based on user-provided offsetStr and the found pattern.
+ * It then replaces the data at the calculated offset with the provided hexadecimal data.
+ *
+ * @param filePath The path to the binary file.
+ * @param offsetStr The user-provided offset for the edit.
+ * @param hexDataReplacement The hexadecimal data to replace at the calculated offset.
+ */
+void hexEditCustOffset(const std::string& filePath, const std::string& offsetStr, const std::string& hexDataReplacement) {
+    std::vector<std::string> offsetStrs = findHexDataOffsets(filePath, "43555354"); // 43555354 is a CUST
+    if (!offsetStrs.empty()) {
+        int sum = 3 + std::stoi(offsetStr) + std::stoi(offsetStrs[0]);
+        hexEditByOffset(filePath, std::to_string(sum), hexDataReplacement);
+    }
+    else {
+        //logMessage("Failed to find CUST.");
+    }
+}
+
+
+/**
  * @brief Finds and replaces hexadecimal data in a file.
  *
  * This function searches for occurrences of hexadecimal data in a binary file
