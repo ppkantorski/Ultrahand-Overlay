@@ -246,6 +246,8 @@ public:
 
         // Extract the path pattern from commands
         bool useListSource = false;
+        bool useJsonVariable = false;
+        
         //bool useDictSource = false;
         bool useJson = false;
         bool useToggle = false;
@@ -283,6 +285,7 @@ public:
                 } else if (cmd[0] == "json_source") {
                     jsonData = stringToJson(removeQuotes(cmd[1]));
                     useJson = true;
+                    useJsonVariable = true;
                     //useDictSource = true;
                 }
             } 
@@ -292,7 +295,9 @@ public:
         if (!useToggle) {
             if (useJson) {
                 // create list of data in the json 
-                jsonData = readJsonFromFile(jsonPath);
+                if (useJsonVariable == false) {
+                    jsonData = readJsonFromFile(jsonPath);
+                }
                 
                 if (jsonData && json_is_array(jsonData)) {
                     size_t arraySize = json_array_size(jsonData);
