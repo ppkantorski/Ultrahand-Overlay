@@ -207,7 +207,6 @@ private:
     std::string filePath, specificKey, pathPattern, pathPatternOn, pathPatternOff, jsonPath, jsonKey, itemName, parentDirName, lastParentDirName;
     std::vector<std::string> listSource, filesList, filesListOn, filesListOff, filterList, filterOnList, filterOffList;
     std::vector<std::vector<std::string>> commands;
-    std::unordered_map<std::string, std::string> dictSource;
     
     bool toggleState = false;
     json_t* jsonData;
@@ -247,7 +246,7 @@ public:
 
         // Extract the path pattern from commands
         bool useListSource = false;
-        bool useDictSource = false;
+        //bool useDictSource = false;
         bool useJson = false;
         bool useToggle = false;
         bool useSplitHeader = false;
@@ -272,7 +271,7 @@ public:
                 } else if (cmd[0] == "file_source_off") {
                     pathPatternOff = cmd[1];
                     useToggle = true;
-                } else if (cmd[0] == "json_source") {
+                } else if (cmd[0] == "json_file_source") {
                     jsonPath = preprocessPath(cmd[1]);
                     if (cmd.size() > 2) {
                         jsonKey = cmd[2]; //json display key
@@ -281,9 +280,10 @@ public:
                 } else if (cmd[0] == "list_source") {
                     listSource = stringToList(removeQuotes(cmd[1]));
                     useListSource = true;
-                } else if (cmd[0] == "dict_source") {
-                    dictSource = stringToDict(removeQuotes(cmd[1]));
-                    useDictSource = true;
+                } else if (cmd[0] == "json_source") {
+                    jsonData = stringToJson(removeQuotes(cmd[1]));
+                    useJson = true;
+                    //useDictSource = true;
                 }
             } 
         }
@@ -400,7 +400,7 @@ public:
                     listItem->setValue(footer, true);
                     listItem->setClickListener([count, this, listItem](uint64_t keys) { // Add 'command' to the capture list
                         if (keys & KEY_A) {
-                            // Replace "{json_source}" with entry in commands, then execute
+                            // Replace "{json_file_source}" with entry in commands, then execute
                             std::string countString = std::to_string(count);
                             std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(commands, countString, false, true, true);
                             interpretAndExecuteCommand(modifiedCommands);
