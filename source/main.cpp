@@ -14,7 +14,7 @@
  *   - Toggles for enabling/disabling specific commands.
  * 
  *   Note: Please refer to the project documentation and README.md for detailed
- *   information on how to use and configure the Ultrahand-Overlay.
+ *   information on how to use and configure the Ultrahand Overlay.
  * 
  *   For the latest updates and contributions, visit the project's GitHub repository.
  *   (GitHub Repository: https://github.com/ppkantorski/Ultrahand-Overlay)
