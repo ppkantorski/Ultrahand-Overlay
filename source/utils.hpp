@@ -91,6 +91,7 @@
  * This block of code defines string variables for various configuration and directory paths
  * used in the Ultrahand-Overlay project. These paths include:
  *
+ * - `packageFileName`: The name of the package file ("package.ini").
  * - `configFileName`: The name of the configuration file ("config.ini").
  * - `settingsPath`: The base path for Ultrahand settings ("sdmc:/config/ultrahand/").
  * - `settingsConfigIniPath`: The full path to the Ultrahand settings configuration file.
@@ -101,6 +102,7 @@
  * These paths are used within the Ultrahand-Overlay project to manage configuration files
  * and directories.
  */
+const std::string packageFileName = "package.ini";
 const std::string configFileName = "config.ini";
 const std::string settingsPath = "sdmc:/config/ultrahand/";
 const std::string settingsConfigIniPath = settingsPath + configFileName;
