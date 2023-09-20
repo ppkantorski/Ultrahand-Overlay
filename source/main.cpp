@@ -570,12 +570,12 @@ public:
             bool useToggle = false;
             for (const auto& cmd : option.second) {
                 if (cmd.size() > 1) {
-                    if (cmd[0] == "source") {
+                    if (cmd[0] == "file_source") {
                         pathReplace = cmd[1];
-                    } else if (cmd[0] == "source_on") {
+                    } else if (cmd[0] == "file_source_on") {
                         pathReplaceOn = cmd[1];
                         useToggle = true;
-                    } else if (cmd[0] == "source_off") {
+                    } else if (cmd[0] == "file_source_off") {
                         pathReplaceOff = cmd[1];
                         useToggle = true;
                     }
