@@ -551,7 +551,7 @@ std::vector<std::vector<std::string>> getModifyCommands(const std::vector<std::v
                     }
                 }
             }
-            if ((usingJsonSource) && (cmd[0] == "json_file_source")) {
+            if ((usingJsonSource) && (cmd[0] == "json_source")) {
                 jsonPath = preprocessPath(cmd[1]);
             } 
         }
@@ -587,7 +587,7 @@ std::vector<std::vector<std::string>> getModifyCommands(const std::vector<std::v
                 //    }
                 } else if (!toggle && (arg.find("{list_source}") != std::string::npos)) {
                     arg = replacePlaceholder(arg, "{list_source}", file);
-                } else if (usingJsonSource && (arg.find("{json_file_source(") != std::string::npos)) {
+                } else if (usingJsonSource && (arg.find("{json_source(") != std::string::npos)) {
                     std::string countStr = file;
                     
                     //logMessage(std::string("count: ")+countStr);
@@ -596,7 +596,7 @@ std::vector<std::vector<std::string>> getModifyCommands(const std::vector<std::v
                     //logMessage(std::string("post arg: ") + arg);
 
                     
-                    size_t startPos = arg.find("{json_file_source(");
+                    size_t startPos = arg.find("{json_source(");
                     size_t endPos = arg.find(")}");
                     if (endPos != std::string::npos && endPos > startPos) {
                         replacement = replaceJsonSourcePlaceholder(arg.substr(startPos, endPos - startPos + 2), jsonPath, true);
