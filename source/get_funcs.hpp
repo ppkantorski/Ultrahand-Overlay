@@ -585,6 +585,8 @@ std::vector<std::vector<std::string>> getModifyCommands(const std::vector<std::v
                 //        //logMessage2("pre-arg: "+arg);
                 //        arg.replace(startPos, endPos - startPos + 2, replacement);
                 //    }
+                } else if (!toggle && (arg.find("{list_source}") != std::string::npos)) {
+                    arg = replacePlaceholder(arg, "{list_source}", file);
                 } else if (usingJsonSource && (arg.find("{json_source(") != std::string::npos)) {
                     std::string countStr = file;
                     
