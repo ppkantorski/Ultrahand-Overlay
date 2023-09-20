@@ -261,23 +261,23 @@ public:
                 } else if (cmd[0] == "filter_off") {
                     filterOffList.push_back(cmd[1]);
                     useToggle = true;
-                } else if (cmd[0] == "source") {
+                } else if (cmd[0] == "file_source") {
                     pathPattern = cmd[1];
-                } else if (cmd[0] == "source_on") {
+                } else if (cmd[0] == "file_source_on") {
                     pathPatternOn = cmd[1];
                     useToggle = true;
-                } else if (cmd[0] == "source_off") {
+                } else if (cmd[0] == "file_source_off") {
                     pathPatternOff = cmd[1];
                     useToggle = true;
-                } else if (cmd[0] == "list_source") {
-                    listSource = stringToList(removeQuotes(cmd[1]));
-                    useListSource = true;
-                } else if (cmd[0] == "json_source") {
+                } else if (cmd[0] == "json_file_source") {
                     jsonPath = preprocessPath(cmd[1]);
                     if (cmd.size() > 2) {
                         jsonKey = cmd[2]; //json display key
                     }
                     useJson = true;
+                } else if (cmd[0] == "list_source") {
+                    listSource = stringToList(removeQuotes(cmd[1]));
+                    useListSource = true;
                 }
             } 
         }
@@ -546,8 +546,8 @@ public:
         list->addItem(new tsl::elm::CategoryHeader("Commands"));
 
         // Load options from INI file in the subdirectory
-        std::string subConfigIniPath = subPath + "/" + configFileName;
-        std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> options = loadOptionsFromIni(subConfigIniPath);
+        std::string subPackageIniPath = subPath + "/" + packageFileName;
+        std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> options = loadOptionsFromIni(subPackageIniPath);
         
         // Populate the sub menu with options
         for (const auto& option : options) {
@@ -650,7 +650,7 @@ public:
         }
 
         // Package Info
-        PackageHeader packageHeader = getPackageHeaderFromIni(subConfigIniPath);
+        PackageHeader packageHeader = getPackageHeaderFromIni(subPackageIniPath);
 
         constexpr int lineHeight = 20;  // Adjust the line height as needed
         constexpr int xOffset = 120;    // Adjust the horizontal offset as needed
@@ -782,7 +782,7 @@ public:
 class MainMenu : public tsl::Gui {
 private:
     tsl::hlp::ini::IniData settingsData;
-    std::string packageConfigIniPath = packageDirectory + configFileName;
+    std::string packageConfigIniPath = packageDirectory + packageFileName;
     std::string menuMode, defaultMenuMode, inOverlayString, fullPath, optionName, hideOverlayVersions, hidePackageVersions;
     bool useDefaultMenu = false;
 public:
@@ -994,10 +994,10 @@ public:
                     subdirectoryIcon = "\u2605 ";
                 }
                 std::string subPath = packageDirectory + subdirectory + "/";
-                std::string configFilePath = subPath + "config.ini";
+                std::string packageFilePath = subPath + packageFileName;
             
-                if (isFileOrDirectory(configFilePath)) {
-                    PackageHeader packageHeader = getPackageHeaderFromIni(subPath + configFileName);
+                if (isFileOrDirectory(packageFilePath)) {
+                    PackageHeader packageHeader = getPackageHeaderFromIni(packageFilePath);
                     if (count == 0) {
                         // Add a section break with small text to indicate the "Packages" section
                         list->addItem(new tsl::elm::CategoryHeader("Packages"));
