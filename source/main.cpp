@@ -283,7 +283,11 @@ public:
                     listSource = stringToList(removeQuotes(cmd[1]));
                     useListSource = true;
                 } else if (cmd[0] == "json_source") {
-                    jsonData = stringToJson(removeQuotes(cmd[1]));
+                    if (cmd.size() > 2) {
+                        jsonKey = cmd[2]; //json display key
+                    }
+                    jsonPath = "";
+                    jsonData = stringToJson(cmd[1]); // convert string to jsonData
                     useJson = true;
                     useJsonVariable = true;
                     //useDictSource = true;
