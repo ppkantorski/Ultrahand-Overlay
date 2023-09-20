@@ -269,7 +269,7 @@ public:
                 } else if (cmd[0] == "file_source_off") {
                     pathPatternOff = cmd[1];
                     useToggle = true;
-                } else if (cmd[0] == "json_file_source") {
+                } else if (cmd[0] == "json_source") {
                     jsonPath = preprocessPath(cmd[1]);
                     if (cmd.size() > 2) {
                         jsonKey = cmd[2]; //json display key
@@ -277,6 +277,9 @@ public:
                     useJson = true;
                 } else if (cmd[0] == "list_source") {
                     listSource = stringToList(removeQuotes(cmd[1]));
+                    useListSource = true;
+                } else if (cmd[0] == "dict_source") {
+                    jsonSource = stringToList(removeQuotes(cmd[1]));
                     useListSource = true;
                 }
             } 
