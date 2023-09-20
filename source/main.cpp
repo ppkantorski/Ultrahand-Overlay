@@ -207,6 +207,8 @@ private:
     std::string filePath, specificKey, pathPattern, pathPatternOn, pathPatternOff, jsonPath, jsonKey, itemName, parentDirName, lastParentDirName;
     std::vector<std::string> listSource, filesList, filesListOn, filesListOff, filterList, filterOnList, filterOffList;
     std::vector<std::vector<std::string>> commands;
+    std::unordered_map<std::string, std::string> dictSource;
+    
     bool toggleState = false;
     json_t* jsonData;
 
@@ -245,6 +247,7 @@ public:
 
         // Extract the path pattern from commands
         bool useListSource = false;
+        bool useDictSource = false;
         bool useJson = false;
         bool useToggle = false;
         bool useSplitHeader = false;
@@ -279,8 +282,8 @@ public:
                     listSource = stringToList(removeQuotes(cmd[1]));
                     useListSource = true;
                 } else if (cmd[0] == "dict_source") {
-                    jsonSource = stringToList(removeQuotes(cmd[1]));
-                    useListSource = true;
+                    dictSource = stringToDict(removeQuotes(cmd[1]));
+                    useDictSource = true;
                 }
             } 
         }
@@ -372,13 +375,13 @@ public:
         
         // Add each file as a menu item
         int count = 0;
-        for (const std::string& file : filesList) {
+        for (const std::string& entry : filesList) {
             //if (file.compare(0, filterPath.length(), filterPath) != 0){
-            itemName = getNameFromPath(file);
-            if (!isDirectory(preprocessPath(file))) {
+            itemName = getNameFromPath(entry);
+            if (!isDirectory(preprocessPath(entry))) {
                 itemName = dropExtension(itemName);
             }
-            parentDirName = getParentDirNameFromPath(file);
+            parentDirName = getParentDirNameFromPath(entry);
             if (useSplitHeader && (lastParentDirName.empty() || (lastParentDirName != parentDirName))){
                 list->addItem(new tsl::elm::CategoryHeader(removeQuotes(parentDirName)));
                 lastParentDirName = parentDirName.c_str();
@@ -386,18 +389,18 @@ public:
             
             if (!useToggle) {
                 if (useJson) { // For JSON wildcards
-                    size_t pos = file.find(" - ");
+                    size_t pos = entry.find(" - ");
                     std::string footer = "";
-                    std::string optionName = file;
+                    std::string optionName = entry;
                     if (pos != std::string::npos) {
-                        footer = file.substr(pos + 2); // Assign the part after "&&" as the footer
-                        optionName = file.substr(0, pos); // Strip the "&&" and everything after it
+                        footer = entry.substr(pos + 2); // Assign the part after "&&" as the footer
+                        optionName = entry.substr(0, pos); // Strip the "&&" and everything after it
                     }
                     auto listItem = new tsl::elm::ListItem(optionName);
                     listItem->setValue(footer, true);
                     listItem->setClickListener([count, this, listItem](uint64_t keys) { // Add 'command' to the capture list
                         if (keys & KEY_A) {
-                            // Replace "{json_source}" with file in commands, then execute
+                            // Replace "{json_source}" with entry in commands, then execute
                             std::string countString = std::to_string(count);
                             std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(commands, countString, false, true, true);
                             interpretAndExecuteCommand(modifiedCommands);
@@ -408,19 +411,19 @@ public:
                     });
                     list->addItem(listItem);
                 } else {
-                    size_t pos = file.find(" - ");
+                    size_t pos = entry.find(" - ");
                     std::string footer = "";
-                    std::string optionName = file;
+                    std::string optionName = entry;
                     if (pos != std::string::npos) {
-                        footer = file.substr(pos + 2); // Assign the part after "&&" as the footer
-                        optionName = file.substr(0, pos); // Strip the "&&" and everything after it
+                        footer = entry.substr(pos + 2); // Assign the part after "&&" as the footer
+                        optionName = entry.substr(0, pos); // Strip the "&&" and everything after it
                     }
                     auto listItem = new tsl::elm::ListItem(optionName);
                     listItem->setValue(footer, true);
-                    listItem->setClickListener([file, this, listItem](uint64_t keys) { // Add 'command' to the capture list
+                    listItem->setClickListener([entry, this, listItem](uint64_t keys) { // Add 'command' to the capture list
                         if (keys & KEY_A) {
-                            // Replace "{source}" with file in commands, then execute
-                            std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(commands, file);
+                            // Replace "{source}" with entry in commands, then execute
+                            std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(commands, entry);
                             interpretAndExecuteCommand(modifiedCommands);
                             listItem->setValue("DONE");
                             return true;
@@ -433,14 +436,14 @@ public:
                 auto toggleListItem = new tsl::elm::ToggleListItem(itemName, false, "On", "Off");
 
                 // Set the initial state of the toggle item
-                bool toggleStateOn = std::find(filesListOn.begin(), filesListOn.end(), file) != filesListOn.end();
+                bool toggleStateOn = std::find(filesListOn.begin(), filesListOn.end(), entry) != filesListOn.end();
                 toggleListItem->setState(toggleStateOn);
 
-                toggleListItem->setStateChangedListener([toggleListItem, file, toggleStateOn, this](bool state) {
+                toggleListItem->setStateChangedListener([toggleListItem, entry, toggleStateOn, this](bool state) {
                     if (!state) {
                         // Toggle switched to On
                         if (toggleStateOn) {
-                            std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(commands, file, true);
+                            std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(commands, entry, true);
                             interpretAndExecuteCommand(modifiedCommands);
                         } else {
                             // Handle the case where the command should only run in the source_on section
@@ -449,7 +452,7 @@ public:
                     } else {
                         // Toggle switched to Off
                         if (!toggleStateOn) {
-                            std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(commands, file, true, false);
+                            std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(commands, entry, true, false);
                             interpretAndExecuteCommand(modifiedCommands);
                         } else {
                             // Handle the case where the command should only run in the source_off section
