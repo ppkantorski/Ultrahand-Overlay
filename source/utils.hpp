@@ -479,6 +479,16 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
 
                 hexEditByOffset(sourcePath.c_str(), offset.c_str(), hexDataReplacement.c_str());
             }
+        } else if (commandName == "hex-by-custom-offset") {
+            // Edit command
+            if (command.size() >= 5) {
+                sourcePath = preprocessPath(command[1]);
+                customPattern = removeQuotes(command[2]);
+                offset = removeQuotes(command[3]);
+                hexDataReplacement = removeQuotes(command[4]);
+
+                hexEditByCustomOffset(sourcePath.c_str(), customPattern.c_str(), offset.c_str(), hexDataReplacement.c_str());
+            }
         } else if (commandName == "hex-by-swap") {
             // Edit command - Hex data replacement with occurrence
             if (command.size() >= 4) {
