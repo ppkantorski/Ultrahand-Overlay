@@ -205,7 +205,7 @@ public:
 class SelectionOverlay : public tsl::Gui {
 private:
     std::string filePath, specificKey, pathPattern, pathPatternOn, pathPatternOff, jsonPath, jsonKey, itemName, parentDirName, lastParentDirName;
-    std::vector<std::string> filesList, filesListOn, filesListOff, filterList, filterOnList, filterOffList;
+    std::vector<std::string> sourceList, filesList, filesListOn, filesListOff, filterList, filterOnList, filterOffList;
     std::vector<std::vector<std::string>> commands;
     bool toggleState = false;
     json_t* jsonData;
@@ -244,6 +244,7 @@ public:
         list = new tsl::elm::List();
 
         // Extract the path pattern from commands
+        bool useSourceList = false;
         bool useJson = false;
         bool useToggle = false;
         bool useSplitHeader = false;
@@ -268,6 +269,9 @@ public:
                 } else if (cmd[0] == "source_off") {
                     pathPatternOff = cmd[1];
                     useToggle = true;
+                } else if (cmd[0] == "source_list") {
+                    sourceList = stringToList(cmd[1]);
+                    useSourceList = true;
                 } else if (cmd[0] == "json_source") {
                     jsonPath = preprocessPath(cmd[1]);
                     if (cmd.size() > 2) {
@@ -299,7 +303,12 @@ public:
                 }
                 
             } else {
-                filesList = getFilesListByWildcards(pathPattern);
+                if (!useSourceList) {
+                    filesList = getFilesListByWildcards(pathPattern);
+                } else {
+                    filesList = sourceList;
+                }
+                //filesList = getFilesListByWildcards(pathPattern);
             }
         } else {
             filesListOn = getFilesListByWildcards(pathPatternOn);
