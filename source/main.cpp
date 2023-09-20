@@ -270,7 +270,7 @@ public:
                     pathPatternOff = cmd[1];
                     useToggle = true;
                 } else if (cmd[0] == "source_list") {
-                    sourceList = stringToList(cmd[1]);
+                    sourceList = stringToList(removeQuotes(cmd[1]));
                     useSourceList = true;
                 } else if (cmd[0] == "json_source") {
                     jsonPath = preprocessPath(cmd[1]);
@@ -405,7 +405,15 @@ public:
                     });
                     list->addItem(listItem);
                 } else {
-                    auto listItem = new tsl::elm::ListItem(itemName);
+                    size_t pos = file.find(" - ");
+                    std::string footer = "";
+                    std::string optionName = file;
+                    if (pos != std::string::npos) {
+                        footer = file.substr(pos + 2); // Assign the part after "&&" as the footer
+                        optionName = file.substr(0, pos); // Strip the "&&" and everything after it
+                    }
+                    auto listItem = new tsl::elm::ListItem(optionName);
+                    listItem->setValue(footer, true);
                     listItem->setClickListener([file, this, listItem](uint64_t keys) { // Add 'command' to the capture list
                         if (keys & KEY_A) {
                             // Replace "{source}" with file in commands, then execute
