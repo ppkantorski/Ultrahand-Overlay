@@ -16,6 +16,7 @@
 
 #pragma once
 #include <string>
+#include <vector>
 
 /**
  * @brief Trims leading and trailing whitespaces from a string.
@@ -200,4 +201,35 @@ bool isDirectory(const std::string& path) {
 bool isFileOrDirectory(const std::string& path) {
     struct stat buffer;
     return (stat(path.c_str(), &buffer) == 0);
+}
+
+
+/**
+ * @brief Splits a string into a vector of strings using a delimiter.
+ *
+ * This function splits the input string into multiple strings using the specified delimiter.
+ *
+ * @param str The input string to split.
+ * @return A vector of strings containing the split values.
+ */
+std::vector<std::string> stringToList(const std::string& str) {
+    std::string values, token;
+    std::vector<std::string> result;
+    
+    // Check if the input string starts and ends with '(' and ')'
+    if (str.front() == '(' && str.back() == ')') {
+        // Remove the parentheses
+        values = str.substr(1, str.size() - 2);
+        
+        // Create a stringstream to split the string by commas
+        std::istringstream ss(values);
+        
+        while (std::getline(ss, token, ',')) {
+            // Remove any leading or trailing spaces from the token
+            token = token.substr(token.find_first_not_of(" "), token.find_last_not_of(" ") + 1);
+            result.push_back(token);
+        }
+    }
+    
+    return result;
 }
