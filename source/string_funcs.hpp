@@ -17,6 +17,7 @@
 #pragma once
 #include <string>
 #include <vector>
+#include <unordered_map>
 
 /**
  * @brief Trims leading and trailing whitespaces from a string.
@@ -217,7 +218,7 @@ std::vector<std::string> stringToList(const std::string& str) {
     std::vector<std::string> result;
     
     // Check if the input string starts and ends with '(' and ')'
-    if (str.front() == '(' && str.back() == ')') {
+    if ((str.front() == '(' && str.back() == ')') || (str.front() == '[' && str.back() == ']')) {
         // Remove the parentheses
         values = str.substr(1, str.size() - 2);
         
@@ -232,4 +233,59 @@ std::vector<std::string> stringToList(const std::string& str) {
     }
     
     return result;
+}
+
+/**
+ * @brief Converts a string representation of a dictionary into a C++ unordered_map.
+ *
+ * This function takes a string representation of a dictionary in the format
+ * "{key1:value1, key2:value2, key3:value3}" and converts it into a C++ unordered_map,
+ * where keys and values are of type std::string.
+ *
+ * @param input The input string containing the dictionary representation.
+ * @return An unordered_map representing the parsed dictionary.
+ */
+std::unordered_map<std::string, std::string> stringToDict(const std::string& input) {
+    std::unordered_map<std::string, std::string> dictionary;
+
+    // Check if the input starts and ends with '{' and '}'
+    if (input.front() == '{' && input.back() == '}') {
+        // Remove the braces
+        std::string content = input.substr(1, input.size() - 2);
+
+        // Split the content by ',' to separate key-value pairs
+        size_t pos = 0;
+        while ((pos = content.find(',')) != std::string::npos) {
+            // Extract each key-value pair
+            std::string pair = content.substr(0, pos);
+            // Split the pair by ':' to separate key and value
+            size_t colonPos = pair.find(':');
+            if (colonPos != std::string::npos) {
+                std::string key = pair.substr(0, colonPos);
+                std::string value = pair.substr(colonPos + 1);
+                // Remove leading and trailing spaces from key and value
+                key.erase(0, key.find_first_not_of(" "));
+                key.erase(key.find_last_not_of(" ") + 1);
+                value.erase(0, value.find_first_not_of(" "));
+                value.erase(value.find_last_not_of(" ") + 1);
+                // Add the key-value pair to the dictionary
+                dictionary[key] = value;
+            }
+            // Move to the next key-value pair
+            content.erase(0, pos + 1);
+        }
+        // Handle the last key-value pair
+        size_t colonPos = content.find(':');
+        if (colonPos != std::string::npos) {
+            std::string key = content.substr(0, colonPos);
+            std::string value = content.substr(colonPos + 1);
+            key.erase(0, key.find_first_not_of(" "));
+            key.erase(key.find_last_not_of(" ") + 1);
+            value.erase(0, value.find_first_not_of(" "));
+            value.erase(value.find_last_not_of(" ") + 1);
+            dictionary[key] = value;
+        }
+    }
+
+    return dictionary;
 }
