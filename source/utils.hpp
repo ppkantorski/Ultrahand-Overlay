@@ -110,11 +110,11 @@ const std::string teslaSettingsConfigIniPath = "sdmc:/config/tesla/"+configFileN
 
 
 /**
- * @brief Copy Tesla key combo to UltraHand settings.
+ * @brief Copy Tesla key combo to Ultrahand settings.
  *
- * This function retrieves the key combo from Tesla settings and copies it to UltraHand settings.
+ * This function retrieves the key combo from Tesla settings and copies it to Ultrahand settings.
  */
-void copyTeslaKeyComboToUltraHand() {
+void copyTeslaKeyComboToUltrahand() {
     std::string keyCombo;
     std::map<std::string, std::map<std::string, std::string>> parsedData;
     
@@ -310,7 +310,7 @@ bool isDangerousCombination(const std::string& patternPath) {
  * @param commands A list of commands, where each command is represented as a vector of strings.
  */
 void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& commands) {
-    std::string commandName, jsonPath, sourcePath, destinationPath, desiredSection, desiredKey, desiredNewKey, desiredValue, offset, hexDataToReplace, hexDataReplacement, fileUrl, occurrence;
+    std::string commandName, jsonPath, sourcePath, destinationPath, desiredSection, desiredKey, desiredNewKey, desiredValue, offset, customPattern, hexDataToReplace, hexDataReplacement, fileUrl, occurrence;
     
     for (auto& unmodifiedCommand : commands) {
         
