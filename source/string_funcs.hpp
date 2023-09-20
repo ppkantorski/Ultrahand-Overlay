@@ -17,7 +17,8 @@
 #pragma once
 #include <string>
 #include <vector>
-#include <unordered_map>
+#include <jansson.h>
+#include <debug_funcs.hpp>
 
 /**
  * @brief Trims leading and trailing whitespaces from a string.
@@ -235,57 +236,28 @@ std::vector<std::string> stringToList(const std::string& str) {
     return result;
 }
 
+
 /**
- * @brief Converts a string representation of a dictionary into a C++ unordered_map.
+ * @brief Parses a JSON string into a json_t object.
  *
- * This function takes a string representation of a dictionary in the format
- * "{key1:value1, key2:value2, key3:value3}" and converts it into a C++ unordered_map,
- * where keys and values are of type std::string.
+ * This function takes a JSON string as input and parses it into a json_t object using Jansson library's `json_loads` function.
+ * If parsing fails, it returns an empty json_t object.
  *
- * @param input The input string containing the dictionary representation.
- * @return An unordered_map representing the parsed dictionary.
+ * @param input The input JSON string to parse.
+ * @return A json_t object representing the parsed JSON, or an empty json_t object if parsing fails.
  */
-std::unordered_map<std::string, std::string> stringToDict(const std::string& input) {
-    std::unordered_map<std::string, std::string> dictionary;
+json_t* stringToJson(const std::string& input) {
+    json_t* jsonObj = nullptr;
+    json_error_t error;
+    
+    logMessage(input.c_str());
+    jsonObj = json_loads(input.c_str(), 0, &error);
 
-    // Check if the input starts and ends with '{' and '}'
-    if (input.front() == '{' && input.back() == '}') {
-        // Remove the braces
-        std::string content = input.substr(1, input.size() - 2);
-
-        // Split the content by ',' to separate key-value pairs
-        size_t pos = 0;
-        while ((pos = content.find(',')) != std::string::npos) {
-            // Extract each key-value pair
-            std::string pair = content.substr(0, pos);
-            // Split the pair by ':' to separate key and value
-            size_t colonPos = pair.find(':');
-            if (colonPos != std::string::npos) {
-                std::string key = pair.substr(0, colonPos);
-                std::string value = pair.substr(colonPos + 1);
-                // Remove leading and trailing spaces from key and value
-                key.erase(0, key.find_first_not_of(" "));
-                key.erase(key.find_last_not_of(" ") + 1);
-                value.erase(0, value.find_first_not_of(" "));
-                value.erase(value.find_last_not_of(" ") + 1);
-                // Add the key-value pair to the dictionary
-                dictionary[key] = value;
-            }
-            // Move to the next key-value pair
-            content.erase(0, pos + 1);
-        }
-        // Handle the last key-value pair
-        size_t colonPos = content.find(':');
-        if (colonPos != std::string::npos) {
-            std::string key = content.substr(0, colonPos);
-            std::string value = content.substr(colonPos + 1);
-            key.erase(0, key.find_first_not_of(" "));
-            key.erase(key.find_last_not_of(" ") + 1);
-            value.erase(0, value.find_first_not_of(" "));
-            value.erase(value.find_last_not_of(" ") + 1);
-            dictionary[key] = value;
-        }
+    if (!jsonObj) {
+        // Return an empty json_t* (you can also return nullptr)
+        jsonObj = json_object();
+        logMessage("ERROR LOADING JSON FROM STRING!");
     }
 
-    return dictionary;
+    return jsonObj;
 }
