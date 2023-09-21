@@ -4,7 +4,7 @@ The Host Guard package provides blocking and unblocking functionality for specif
 
 ## Configuration
 
-The `config.ini` file contains the following configurations:
+The `package.ini` file contains the following configurations:
 
 - `[Enable Blocking]`: Enables blocking of specific hosts.
 - `[Disable Blocking]`: Disables blocking of specific hosts.
