@@ -4,7 +4,7 @@ The Overclock Buster package provides various options for adjusting the clock sp
 
 ## Configuration
 
-The `config.ini` file contains the following configurations:
+The `package.ini` file contains the following configurations:
 
 - `[1996 to 2400 (RAM)]`: Adjusts the clock speed range from 1996MHz to 2400MHz for RAM.
 - `[2400 to 1996 (RAM)]`: Adjusts the clock speed range from 2400MHz to 1996MHz for RAM.
@@ -15,9 +15,9 @@ Each configuration has a set of commands that modify the clock speeds, voltages,
 
 To use Overclock Buster:
 
-1. Open the `config.ini` file located in the `examples/Overclock Buster` directory.
+1. Open the `package.ini` file located in the `examples/Overclock Buster` directory.
 2. Uncomment the desired configuration and its corresponding commands by removing the semicolon (`;`) at the beginning of each line.
-3. Save the `config.ini` file after making the necessary changes.
+3. Save the `package.ini` file after making the necessary changes.
 4. Copy the `Overclock Buster` directory to your device under the appropriate location.
 
 Note: Modifying clock speeds and voltages can affect the stability and performance of your device. Use these configurations with caution and make sure you understand the potential risks involved. It is recommended to have a backup of your system before applying any changes.
