@@ -18,7 +18,9 @@
 #include <string>
 #include <vector>
 #include <jansson.h>
+#include <regex>
 #include <debug_funcs.hpp>
+
 
 /**
  * @brief Trims leading and trailing whitespaces from a string.
@@ -256,8 +258,35 @@ json_t* stringToJson(const std::string& input) {
     if (!jsonObj) {
         // Return an empty json_t* (you can also return nullptr)
         jsonObj = json_object();
-        logMessage("ERROR LOADING JSON FROM STRING!");
+        //logMessage("ERROR LOADING JSON FROM STRING!");
     }
 
     return jsonObj;
+}
+
+
+/**
+ * @brief Formats a priority string to a desired width.
+ *
+ * This function takes a priority string and formats it to a specified desired width by padding with '0's if it's shorter
+ * or truncating with '9's if it's longer.
+ *
+ * @param priority The input priority string to format.
+ * @param desiredWidth The desired width of the formatted string (default is 4).
+ * @return A formatted priority string.
+ */
+std::string formatPriorityString(const std::string& priority, int desiredWidth=4) {
+    std::string formattedString = priority;
+    
+    if (int(priority.length()) > desiredWidth) {
+        formattedString = "9" + std::string(desiredWidth - 1, '9'); // Set to 9's if too long
+    } else{
+        while (int(formattedString.length()) < desiredWidth) {
+            formattedString = "0"+formattedString;
+        }
+    }
+
+
+    // Convert the stringstream to a string and return it
+    return formattedString;
 }
