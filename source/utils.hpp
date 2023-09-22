@@ -109,6 +109,11 @@ const std::string settingsConfigIniPath = settingsPath + configFileName;
 const std::string packageDirectory = "sdmc:/switch/.packages/";
 const std::string overlayDirectory = "sdmc:/switch/.overlays/";
 const std::string teslaSettingsConfigIniPath = "sdmc:/config/tesla/"+configFileName;
+const std::string overlaysIniFilePath = settingsPath + "overlays.ini";
+const std::string packagesIniFilePath = settingsPath + "packages.ini";
+
+
+
 
 
 /**
