@@ -560,6 +560,9 @@ std::vector<std::vector<std::string>> getModifyCommands(const std::vector<std::v
                     }
                 }
             }
+            if (cmd[0] == "json_file") {
+                jsonSource = preprocessPath(cmd[1]);
+            } 
             if ((usingJsonSource) && (cmd[0] == "json_file_source")) {
                 jsonSource = preprocessPath(cmd[1]);
             } 
