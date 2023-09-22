@@ -6,7 +6,7 @@ Ultrahand Overlay is a powerful tool that allows you to customize and enhance yo
 
 ## Examples
 
-- [Cool Curves](Cool%20Curves/README.md): Explore the Cool Curves example to discover how to modify and enhance the overlay settings for a visually appealing interface.
+- [Cool Curves](Cool%20Curves/README.md): Explore the Cool Curves example to discover how to modify and optimize the fan curve settings through a simple interface.
 
 - [Host Guard](Host%20Guard/README.md): The Host Guard example demonstrates the utilization of overlay customization to enhance security and protect your device from servers you may not want your device to access.
 
