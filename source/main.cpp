@@ -891,10 +891,10 @@ public:
         std::string versionLabel = APP_VERSION+std::string("   (")+envGetLoaderInfo()+std::string(")");
         rootFrame = new tsl::elm::OverlayFrame("Ultrahand", versionLabel, menuMode);
         list = new tsl::elm::List();
-
-        //loadOverlayFiles(list);
         
         
+        
+        // Overlays menu
         if (menuMode == "overlays") {
             list->addItem(new tsl::elm::CategoryHeader("Overlays"));
             
@@ -903,7 +903,6 @@ public:
             //std::sort(overlayFiles.begin(), overlayFiles.end()); // Sort overlay files alphabetically
             
             
-
             FILE* overlaysIniFile = fopen(overlaysIniFilePath.c_str(), "r");
             if (!overlaysIniFile) {
                 // The INI file doesn't exist, so create an empty one.
@@ -955,7 +954,7 @@ public:
                         }
                         
                         if (starred == "true") {
-                            overlayList.push_back("0_"+priority+"_"+overlayFileName);
+                            overlayList.push_back("-1_"+priority+"_"+overlayFileName);
                         } else {
                             overlayList.push_back(priority+"_"+overlayFileName);
                         }
@@ -971,9 +970,9 @@ public:
                     std::string overlayFileName = taintedOverlayFileName;
                     std::string overlayStarred = "false";
                     
-                    if ((overlayFileName.length() >= 2) && (overlayFileName.substr(0, 2) == "0_")) {
+                    if ((overlayFileName.length() >= 2) && (overlayFileName.substr(0, 3) == "-1_")) {
                         // strip first two characters
-                        overlayFileName = overlayFileName.substr(2);
+                        overlayFileName = overlayFileName.substr(3);
                         overlayStarred = "true";
                     }
                     
@@ -1045,6 +1044,7 @@ public:
 
         }
         
+        // Packages menu
         if (menuMode == "packages" ) {
             list->addItem(new tsl::elm::CategoryHeader("Packages"));
             
@@ -1097,7 +1097,7 @@ public:
                     }
                     
                     if (starred == "true") {
-                        packageList.push_back("0_"+priority+"_"+packageName);
+                        packageList.push_back("-1_"+priority+"_"+packageName);
                     } else {
                         packageList.push_back(priority+"_"+packageName);
                     }
@@ -1112,9 +1112,9 @@ public:
                 std::string packageName = taintePackageName.c_str();
                 std::string packageStarred = "false";
                 
-                if ((packageName.length() >= 2) && (packageName.substr(0, 2) == "0_")) {
+                if ((packageName.length() >= 2) && (packageName.substr(0, 3) == "-1_")) {
                     // strip first two characters
-                    packageName = packageName.substr(2);
+                    packageName = packageName.substr(3);
                     packageStarred = "true";
                 }
                 
