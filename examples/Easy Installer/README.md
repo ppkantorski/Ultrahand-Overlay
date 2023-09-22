@@ -14,15 +14,15 @@ This README file provides essential information about the Easy Installer, includ
 
 ## Configuration
 
-The `config.ini` file contains the configuration settings for Easy Installer. You can adjust these settings to tailor the installation process to your needs.
+The `package.ini` file contains the configuration settings for Easy Installer. You can adjust these settings to tailor the installation process to your needs.
 
 ## Installation
 
 To use Easy Installer:
 
-1. Modify `config.ini` along with the json repository files with your desired homebrew/commands. (not necessary)
-2. Save the `config.ini` file after making any changes.
-3. Move the `config.ini` and the json repository files to `/switch/.packages/Easy Installer/`.
+1. Modify `package.ini` along with the json repository files with your desired homebrew/commands. (not necessary)
+2. Save the `package.ini` file after making any changes.
+3. Move the `package.ini` and the json repository files to `/switch/.packages/Easy Installer/`.
 4. Run from the Packages menu on Ultrahand.
 
 ## Additional Information

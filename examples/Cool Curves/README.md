@@ -7,12 +7,12 @@ The "Cool Curves" package is a part of the Ultrahand Overlay project, which prov
 To configure the temperature-related settings yourself, follow these steps:
 
 1. Make sure you have the necessary tools and files for the Ultrahand-Overlay project.
-2. Locate the `config.ini` file in the `examples/Cool Curves` directory.
-3. Open the `config.ini` file in a text editor.
+2. Locate the `package.ini` file in the `examples/Cool Curves` directory.
+3. Open the `package.ini` file in a text editor.
 
 ## Temperature Settings
 
-The `config.ini` file contains temperature settings for different temperature ranges. Each temperature range is associated with specific configurations for the console and handheld devices. Here are the available temperature ranges and their configurations:
+The `package.ini` file contains temperature settings for different temperature ranges. Each temperature range is associated with specific configurations for the console and handheld devices. Here are the available temperature ranges and their configurations:
 
 ### Max Temp 54°C
 

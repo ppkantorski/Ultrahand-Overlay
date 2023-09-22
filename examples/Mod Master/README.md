@@ -4,7 +4,7 @@ The Mod Master package provides various modifications and enhancements for your 
 
 ## Configuration
 
-The `config.ini` file contains the following configurations:
+The `package.ini` file contains the following configurations:
 
 - `[*Toggle exeFS Patches]`: Toggles exeFS patches by selection.
 - `[*Toggle Content Mods]`: Toggles content modifications by selection.
@@ -24,9 +24,9 @@ Please refer to the shared documentation or additional resources to acquire the 
 
 To use Mod Master:
 
-1. Open the `config.ini` file located in the `examples/Mod Master` directory.
+1. Open the `package.ini` file located in the `examples/Mod Master` directory.
 2. Uncomment the desired configuration and its corresponding commands by removing the semicolon (`;`) at the beginning of each line.
-3. Save the `config.ini` file after making the necessary changes.
+3. Save the `package.ini` file after making the necessary changes.
 4. Copy the `Mod Master` directory to your switch under `/config/ultrahand/` by placing it in that location.
 
 Note: Make sure you have organized the mods properly within the subdirectories as mentioned in the "Obtaining Mods" section.

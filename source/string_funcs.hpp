@@ -17,6 +17,10 @@
 #pragma once
 #include <string>
 #include <vector>
+#include <jansson.h>
+#include <regex>
+#include <debug_funcs.hpp>
+
 
 /**
  * @brief Trims leading and trailing whitespaces from a string.
@@ -217,7 +221,7 @@ std::vector<std::string> stringToList(const std::string& str) {
     std::vector<std::string> result;
     
     // Check if the input string starts and ends with '(' and ')'
-    if (str.front() == '(' && str.back() == ')') {
+    if ((str.front() == '(' && str.back() == ')') || (str.front() == '[' && str.back() == ']')) {
         // Remove the parentheses
         values = str.substr(1, str.size() - 2);
         
@@ -232,4 +236,57 @@ std::vector<std::string> stringToList(const std::string& str) {
     }
     
     return result;
+}
+
+
+/**
+ * @brief Parses a JSON string into a json_t object.
+ *
+ * This function takes a JSON string as input and parses it into a json_t object using Jansson library's `json_loads` function.
+ * If parsing fails, it returns an empty json_t object.
+ *
+ * @param input The input JSON string to parse.
+ * @return A json_t object representing the parsed JSON, or an empty json_t object if parsing fails.
+ */
+json_t* stringToJson(const std::string& input) {
+    json_t* jsonObj = nullptr;
+    json_error_t error;
+    
+    logMessage(input.c_str());
+    jsonObj = json_loads(input.c_str(), 0, &error);
+
+    if (!jsonObj) {
+        // Return an empty json_t* (you can also return nullptr)
+        jsonObj = json_object();
+        //logMessage("ERROR LOADING JSON FROM STRING!");
+    }
+
+    return jsonObj;
+}
+
+
+/**
+ * @brief Formats a priority string to a desired width.
+ *
+ * This function takes a priority string and formats it to a specified desired width by padding with '0's if it's shorter
+ * or truncating with '9's if it's longer.
+ *
+ * @param priority The input priority string to format.
+ * @param desiredWidth The desired width of the formatted string (default is 4).
+ * @return A formatted priority string.
+ */
+std::string formatPriorityString(const std::string& priority, int desiredWidth=4) {
+    std::string formattedString = priority;
+    
+    if (int(priority.length()) > desiredWidth) {
+        formattedString = "9" + std::string(desiredWidth - 1, '9'); // Set to 9's if too long
+    } else{
+        while (int(formattedString.length()) < desiredWidth) {
+            formattedString = "0"+formattedString;
+        }
+    }
+
+
+    // Convert the stringstream to a string and return it
+    return formattedString;
 }
