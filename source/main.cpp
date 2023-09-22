@@ -593,7 +593,7 @@ public:
                         pathReplaceOff = cmd[1];
                         useToggle = true;
                     }
-                    //else if (cmd[0] == "json_data") {
+                    //else if (cmd[0] == "json_file") {
                     //    jsonPath = cmd[1];
                     //}
                 } 
