@@ -196,6 +196,7 @@ static std::map<std::string, std::map<std::string, std::string>> parseIni(const 
  */
 std::map<std::string, std::map<std::string, std::string>> getParsedDataFromIniFile(const std::string& configIniPath) {
     std::map<std::string, std::map<std::string, std::string>> parsedData;
+    std::string currentSection = ""; // Initialize the current section as empty
 
     FILE* configFileIn = fopen(configIniPath.c_str(), "rb");
     if (!configFileIn) {
@@ -219,12 +220,68 @@ std::map<std::string, std::map<std::string, std::string>> getParsedDataFromIniFi
     // Normalize line endings to \n
     fileDataString.erase(std::remove(fileDataString.begin(), fileDataString.end(), '\r'), fileDataString.end());
 
-    parsedData = parseIni(fileDataString);
+    // Split lines and parse
+    std::istringstream fileStream(fileDataString);
+    std::string line;
+    while (std::getline(fileStream, line)) {
+        // Remove leading and trailing whitespace
+        line = trim(line);
+
+        // Check if this line is a section
+        if (line.size() > 2 && line.front() == '[' && line.back() == ']') {
+            // Remove the brackets to get the section name
+            currentSection = line.substr(1, line.size() - 2);
+        } else {
+            // If not a section, parse as key-value pair
+            size_t delimiterPos = line.find('=');
+            if (delimiterPos != std::string::npos) {
+                std::string key = trim(line.substr(0, delimiterPos));
+                std::string value = trim(line.substr(delimiterPos + 1));
+
+                // Store in the current section
+                parsedData[currentSection][key] = value;
+            }
+        }
+    }
 
     delete[] fileData;
 
     return parsedData;
 }
+
+
+
+/**
+ * @brief Parses sections from an INI file and returns them as a list of strings.
+ *
+ * This function reads an INI file and extracts the section names from it.
+ *
+ * @param filePath The path to the INI file.
+ * @return A vector of section names.
+ */
+std::vector<std::string> parseSectionsFromIni(const std::string& filePath) {
+    std::vector<std::string> sections;
+
+    FILE* file = fopen(filePath.c_str(), "r");
+    if (file == nullptr) {
+        return sections; // Return an empty list if the file cannot be opened
+    }
+
+    char line[4096];
+    while (fgets(line, sizeof(line), file)) {
+        std::string trimmedLine = trim(std::string(line));
+
+        if (!trimmedLine.empty() && trimmedLine[0] == '[' && trimmedLine.back() == ']') {
+            // Extract section name and add it to the list
+            std::string sectionName = trimmedLine.substr(1, trimmedLine.size() - 2);
+            sections.push_back(sectionName);
+        }
+    }
+
+    fclose(file);
+    return sections;
+}
+
 
 /**
  * @brief Loads and parses options from an INI file.
