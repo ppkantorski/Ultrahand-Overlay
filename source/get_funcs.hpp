@@ -450,7 +450,7 @@ std::string replaceJsonSourcePlaceholder(const std::string& placeholder, const s
     
 
     std::string replacement = placeholder;
-    std::string searchString = "{json_data(";
+    std::string searchString = "{json_file(";
     if (type == "file") {
         searchString = "{json_file_source(";
         root = json_load_file(jsonSource.c_str(), 0, &error);
@@ -565,7 +565,7 @@ std::vector<std::vector<std::string>> getModifyCommands(const std::vector<std::v
             } 
             if ((usingJsonSource) && (cmd[0] == "json_source")) {
                 jsonSource = removeQuotes(cmd[1]);
-            } 
+            }
         }
         if (!toggle or addCommands) {
             std::vector<std::string> modifiedCmd = cmd;
@@ -582,6 +582,8 @@ std::vector<std::vector<std::string>> getModifyCommands(const std::vector<std::v
                     arg = replacePlaceholder(arg, "{file_name}", getNameFromPath(entry));
                 } else if (arg.find("{folder_name}") != std::string::npos) {
                     arg = replacePlaceholder(arg, "{folder_name}", getParentDirNameFromPath(entry));
+                } else if (arg.find("{json_file(") != std::string::npos) {
+                    arg = replaceJsonSourcePlaceholder(arg, jsonSource);
                 } else if (usingJsonSource && (arg.find("{json_source(") != std::string::npos)) {
                     std::string countStr = entry;
                     
@@ -591,7 +593,7 @@ std::vector<std::vector<std::string>> getModifyCommands(const std::vector<std::v
                     //logMessage(std::string("post arg: ") + arg);
 
                     
-                    size_t startPos = arg.find("{json_file_source(");
+                    size_t startPos = arg.find("{json_source(");
                     size_t endPos = arg.find(")}");
                     if (endPos != std::string::npos && endPos > startPos) {
                         replacement = replaceJsonSourcePlaceholder(arg.substr(startPos, endPos - startPos + 2), jsonSource, "variable");
