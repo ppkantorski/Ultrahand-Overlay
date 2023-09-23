@@ -209,6 +209,27 @@ bool isFileOrDirectory(const std::string& path) {
 
 
 /**
+ * @brief Converts a string to an integer.
+ *
+ * This function attempts to convert the specified string to an integer.
+ * If the conversion fails due to invalid input or out-of-range values,
+ * it returns 0.
+ *
+ * @param input_string The string to convert to an integer.
+ * @return The converted integer value or 0 on conversion failure.
+ */
+int stringToNumber(const std::string& input_string) {
+    try {
+        return std::stoi(input_string);
+    } catch (const std::invalid_argument& e) {
+        return 0;
+    } catch (const std::out_of_range& e) {
+        return 0;
+    }
+}
+
+
+/**
  * @brief Splits a string into a vector of strings using a delimiter.
  *
  * This function splits the input string into multiple strings using the specified delimiter.
