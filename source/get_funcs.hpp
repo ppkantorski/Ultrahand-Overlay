@@ -521,7 +521,10 @@ std::string replaceJsonPlaceholder(const std::string& arg, const std::string& co
  */
 std::vector<std::vector<std::string>> getModifyCommands(const std::vector<std::vector<std::string>>& commands, const std::string& entry, bool toggle = false, bool on = true) {
     std::vector<std::vector<std::string>> modifiedCommands;
-    std::string jsonPath, jsonSourcePath, jsonString, replacement;
+    std::string listString, jsonPath, jsonSourcePath, jsonString, replacement;
+    std::vector<std::string> listData;
+    int listIndex;
+    
     json_t* jsonDict = nullptr;
     json_error_t error;
     
@@ -542,6 +545,11 @@ std::vector<std::vector<std::string>> getModifyCommands(const std::vector<std::v
                 }
             }
             
+            if ((cmd[0] == "list") || (cmd[0] == "list_source")) {
+                listString = removeQuotes(cmd[1]);
+                listData = stringToList(listString);
+            }
+            
             if ((cmd[0] == "json_file_source") || (cmd[0] == "json_file")) {
                 jsonPath = preprocessPath(cmd[1]);
                 
@@ -553,7 +561,7 @@ std::vector<std::vector<std::string>> getModifyCommands(const std::vector<std::v
             } else if ((cmd[0] == "json_source") || (cmd[0] == "json")) {
                 jsonString = removeQuotes(cmd[1]);
                 
-                jsonDict = stringToJson(removeQuotes(jsonString.c_str()));
+                jsonDict = stringToJson(jsonString.c_str());
                 if (!jsonDict) {
                     //jsonDict = nullptr;
                     return modifiedCommands;
@@ -563,9 +571,7 @@ std::vector<std::vector<std::string>> getModifyCommands(const std::vector<std::v
         if (!toggle or addCommands) {
             std::vector<std::string> modifiedCmd = cmd;
             for (auto& arg : modifiedCmd) {
-                if (!toggle && (arg.find("{list_source}") != std::string::npos)) {
-                    arg = replacePlaceholder(arg, "{list_source}", entry);
-                } else if (!toggle && (arg.find("{file_source}") != std::string::npos)) {
+                if (!toggle && (arg.find("{file_source}") != std::string::npos)) {
                     arg = replacePlaceholder(arg, "{file_source}", entry);
                 } else if (on && (arg.find("{file_source_on}") != std::string::npos)) {
                     arg = replacePlaceholder(arg, "{file_source_on}", entry);
@@ -575,9 +581,27 @@ std::vector<std::vector<std::string>> getModifyCommands(const std::vector<std::v
                     arg = replacePlaceholder(arg, "{file_name}", getNameFromPath(entry));
                 } else if (arg.find("{folder_name}") != std::string::npos) {
                     arg = replacePlaceholder(arg, "{folder_name}", getParentDirNameFromPath(entry));
-                } else if (arg.find("{json(") != std::string::npos) {
-                    std::string countStr = entry;
+                } else if (!toggle && (arg.find("{list(") != std::string::npos)) {
+                    size_t startPos = arg.find("{list(");
+                    size_t endPos = arg.find(")}");
+                    if (endPos != std::string::npos && endPos > startPos) {
+                        listIndex = stringToNumber(arg.substr(startPos, endPos - startPos + 2));
+                        replacement = listData[listIndex];
+                        arg.replace(startPos, endPos - startPos + 2, replacement);
+                    }
+                } else if (!toggle && (arg.find("{list_source(") != std::string::npos)) {
+                    //arg = replacePlaceholder(arg, "{list_source}", entry);
                     arg = replacePlaceholder(arg, "*", entry);
+                    size_t startPos = arg.find("{list_source(");
+                    size_t endPos = arg.find(")}");
+                    if (endPos != std::string::npos && endPos > startPos) {
+                        listIndex = stringToNumber(arg.substr(startPos, endPos - startPos + 2));
+                        replacement = listData[listIndex];
+                        arg.replace(startPos, endPos - startPos + 2, replacement);
+                    }
+                } else if (arg.find("{json(") != std::string::npos) {
+                    //std::string countStr = entry;
+                    //arg = replacePlaceholder(arg, "*", entry);
                     size_t startPos = arg.find("{json(");
                     size_t endPos = arg.find(")}");
                     if (endPos != std::string::npos && endPos > startPos) {
@@ -585,7 +609,7 @@ std::vector<std::vector<std::string>> getModifyCommands(const std::vector<std::v
                         arg.replace(startPos, endPos - startPos + 2, replacement);
                     }
                 } else if (arg.find("{json_file(") != std::string::npos) {
-                    std::string countStr = entry;
+                    //std::string countStr = entry;
                     arg = replacePlaceholder(arg, "*", entry);
                     size_t startPos = arg.find("{json_file(");
                     size_t endPos = arg.find(")}");
@@ -594,7 +618,7 @@ std::vector<std::vector<std::string>> getModifyCommands(const std::vector<std::v
                         arg.replace(startPos, endPos - startPos + 2, replacement);
                     }
                 } else if (arg.find("{json_source(") != std::string::npos) {
-                    std::string countStr = entry;
+                    //std::string countStr = entry;
                     arg = replacePlaceholder(arg, "*", entry);
                     size_t startPos = arg.find("{json_source(");
                     size_t endPos = arg.find(")}");
@@ -603,7 +627,7 @@ std::vector<std::vector<std::string>> getModifyCommands(const std::vector<std::v
                         arg.replace(startPos, endPos - startPos + 2, replacement);
                     }
                 } else if (arg.find("{json_file_source(") != std::string::npos) {
-                    std::string countStr = entry;
+                    //std::string countStr = entry;
                     arg = replacePlaceholder(arg, "*", entry);
                     size_t startPos = arg.find("{json_file_source(");
                     size_t endPos = arg.find(")}");
