@@ -319,48 +319,48 @@ bool isDangerousCombination(const std::string& patternPath) {
 void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& commands) {
     std::string commandName, jsonPath, sourcePath, destinationPath, desiredSection, desiredKey, desiredNewKey, desiredValue, offset, customPattern, hexDataToReplace, hexDataReplacement, fileUrl, occurrence;
     
-    for (auto& command : commands) {
+    for (auto& unmodifiedCommand : commands) {
         
         // Check the command and perform the appropriate action
-        if (command.empty()) {
+        if (unmodifiedCommand.empty()) {
             // Empty command, do nothing
             continue;
         }
 
         // Get the command name (first part of the command)
-        commandName = command[0];
+        commandName = unmodifiedCommand[0];
         //logMessage(commandName);
         //logMessage(command[1]);
         
         
-        //std::vector<std::string> command;
+        std::vector<std::string> command;
         
-        // Modify the command to replace {json_file} placeholder if jsonPath is available
-        //if (!jsonPath.empty()) {
-        //    std::vector<std::string> modifiedCommand;
-        //    for (const std::string& commandArg : unmodifiedCommand) {
-        //        if (commandArg.find("{json_file(") != std::string::npos) {
-        //            // Create a copy of the string and modify it
-        //            std::string modifiedArg = commandArg;
-        //            modifiedArg = replaceJsonSourcePlaceholder(modifiedArg, jsonPath);
-        //            // Use modifiedArg as needed
-        //            modifiedCommand.push_back(modifiedArg);
-        //        } else {
-        //            modifiedCommand.push_back(commandArg);
-        //        }
-        //    }
-        //    command = modifiedCommand;
-        //} else {
-        //    command = unmodifiedCommand;
-        //}
+        // Modify the command to replace {json_data} placeholder if jsonPath is available
+        if (!jsonPath.empty()) {
+            std::vector<std::string> modifiedCommand;
+            for (const std::string& commandArg : unmodifiedCommand) {
+                if (commandArg.find("{json_data(") != std::string::npos) {
+                    // Create a copy of the string and modify it
+                    std::string modifiedArg = commandArg;
+                    modifiedArg = replaceJsonSourcePlaceholder(modifiedArg, jsonPath);
+                    // Use modifiedArg as needed
+                    modifiedCommand.push_back(modifiedArg);
+                } else {
+                    modifiedCommand.push_back(commandArg);
+                }
+            }
+            command = modifiedCommand;
+        } else {
+            command = unmodifiedCommand;
+        }
         
         
         
-        //if (commandName == "json_file") {
-        //    if (command.size() >= 2) {
-        //        jsonPath = preprocessPath(command[1]);
-        //    }
-        if (commandName == "make" || commandName == "mkdir") {
+        if (commandName == "json_data") {
+            if (command.size() >= 2) {
+                jsonPath = preprocessPath(command[1]);
+            }
+        } else if (commandName == "make" || commandName == "mkdir") {
             // Delete command
             if (command.size() >= 2) {
                 sourcePath = preprocessPath(command[1]);

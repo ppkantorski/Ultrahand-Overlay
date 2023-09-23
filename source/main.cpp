@@ -410,7 +410,7 @@ public:
                         if (keys & KEY_A) {
                             // Replace "{json_file_source}" with entry in commands, then execute
                             std::string countString = std::to_string(count);
-                            std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(commands, countString, false, true);
+                            std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(commands, countString, false, true, true);
                             interpretAndExecuteCommand(modifiedCommands);
                             listItem->setValue("DONE");
                             return true;
@@ -593,7 +593,7 @@ public:
                         pathReplaceOff = cmd[1];
                         useToggle = true;
                     }
-                    //else if (cmd[0] == "json_file") {
+                    //else if (cmd[0] == "json_data") {
                     //    jsonPath = cmd[1];
                     //}
                 } 
