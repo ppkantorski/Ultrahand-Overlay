@@ -432,43 +432,22 @@ std::string replacePlaceholder(const std::string& input, const std::string& plac
     return result;
 }
 
+
 /**
  * @brief Replaces a JSON source placeholder with the actual JSON source.
  *
- * This function replaces a JSON source placeholder with the actual JSON source
- * based on the provided JSON path.
- *
- * @param placeholder The JSON source placeholder.
- * @param jsonSourcePath The JSON information source. (will differ depending on source param)
- * @param source A boolean flag indicating whether to include the source.
- * @return The updated JSON source with the placeholder replaced.
+ * @param arg The input string containing the placeholder.
+ * @param commandName The name of the JSON command (e.g., "json", "json_file").
+ * @param jsonDict A pointer to the JSON object from which to extract the source.
+ *                If not provided (default nullptr), no JSON replacement will occur.
+ * @return std::string The input string with the placeholder replaced by the actual JSON source,
+ *                   or the original input string if replacement failed or jsonDict is nullptr.
  */
-std::string replaceJsonSourcePlaceholder(const std::string& placeholder, const std::string& jsonSourcePath, const std::string type = "") {
-    // Load JSON data from the provided file
-    json_t* root = nullptr; // Initialize root to nullptr
-    json_error_t error;
+std::string replaceJsonPlaceholder(const std::string& arg, const std::string& commandName, json_t* jsonDict = nullptr) {
     
-
-    std::string replacement = placeholder;
-    std::string searchString = "{json_file(";
-    if (type == "file") {
-        searchString = "{json_file_source(";
-        root = json_load_file(jsonSourcePath.c_str(), 0, &error);
-        if (!root) {
-            // Handle JSON parsing error
-            // printf("JSON parsing error: %s\n", error.text);
-            return placeholder;  // Return the original placeholder if JSON parsing fails
-        }
-    } else if (type == "variable") {
-        searchString = "{json_source(";
-        
-        root = stringToJson(removeQuotes(jsonSourcePath.c_str()));
-        if (!root) {
-            // Handle JSON parsing error
-            // printf("JSON parsing error: %s\n", error.text);
-            return placeholder;  // Return the original placeholder if JSON parsing fails
-        }
-    }
+    std::string replacement = arg;
+    std::string searchString = "{"+commandName+"(";
+    
     
     std::size_t startPos = replacement.find(searchString);
     std::size_t endPos = replacement.find(")}");
@@ -482,7 +461,7 @@ std::string replaceJsonSourcePlaceholder(const std::string& placeholder, const s
         }
 
         // Traverse the JSON structure based on the keys
-        json_t* current = root;
+        json_t* current = jsonDict;
         for (const auto& key : keys) {
             if (json_is_object(current)) {
                 current = json_object_get(current, key.c_str());
@@ -504,15 +483,15 @@ std::string replaceJsonSourcePlaceholder(const std::string& placeholder, const s
                     } else {
                         // Handle invalid JSON array index
                         // printf("Invalid JSON array index: %s\n", key.c_str());
-                        json_decref(root);
-                        return placeholder;  // Return the original placeholder if JSON array index is invalid
+                        json_decref(jsonDict);
+                        return arg;  // Return the original placeholder if JSON array index is invalid
                     }
                 }
             } else {
                 // Handle invalid JSON structure or key
                 // printf("Invalid JSON structure or key: %s\n", key.c_str());
-                json_decref(root);
-                return placeholder;  // Return the original placeholder if JSON structure or key is invalid
+                json_decref(jsonDict);
+                return arg;  // Return the original placeholder if JSON structure or key is invalid
             }
         }
 
@@ -523,9 +502,10 @@ std::string replaceJsonSourcePlaceholder(const std::string& placeholder, const s
         }
     }
 
-    json_decref(root);
+    json_decref(jsonDict);
     return replacement;
 }
+
 
 
 /**
@@ -537,12 +517,13 @@ std::string replaceJsonSourcePlaceholder(const std::string& placeholder, const s
  * @param entry The entry to apply modifications to.
  * @param toggle A boolean flag indicating whether totoggle modifications.
  * @param on A boolean flag indicating whether modifications are turned on.
- * @param usingJsonSource A boolean flag indicating JSON source usage.
  * @return The modified list of commands.
  */
-std::vector<std::vector<std::string>> getModifyCommands(const std::vector<std::vector<std::string>>& commands, const std::string& entry, bool toggle = false, bool on = true, bool usingJsonSource = false) {
+std::vector<std::vector<std::string>> getModifyCommands(const std::vector<std::vector<std::string>>& commands, const std::string& entry, bool toggle = false, bool on = true) {
     std::vector<std::vector<std::string>> modifiedCommands;
-    std::string jsonPath, jsonSourcePath, replacement;
+    std::string jsonPath, jsonSourcePath, jsonString, replacement;
+    json_t* jsonDict = nullptr;
+    json_error_t error;
     
     bool addCommands = false;
     for (const auto& cmd : commands) {
@@ -560,14 +541,23 @@ std::vector<std::vector<std::string>> getModifyCommands(const std::vector<std::v
                     }
                 }
             }
-            if (cmd[0] == "json_file") {
+            
+            if ((cmd[0] == "json_file_source") || (cmd[0] == "json_file")) {
                 jsonPath = preprocessPath(cmd[1]);
-            } 
-            if ((usingJsonSource) && (cmd[0] == "json_file_source")) {
-                jsonSourcePath = preprocessPath(cmd[1]);
-            } 
-            if ((usingJsonSource) && (cmd[0] == "json_source")) {
-                jsonSourcePath = removeQuotes(cmd[1]);
+                
+                jsonDict = json_load_file(jsonPath.c_str(), 0, &error);
+                if (!jsonDict) {
+                    //jsonDict = nullptr;
+                    return modifiedCommands;
+                }
+            } else if ((cmd[0] == "json_source") || (cmd[0] == "json")) {
+                jsonString = removeQuotes(cmd[1]);
+                
+                jsonDict = stringToJson(removeQuotes(jsonString.c_str()));
+                if (!jsonDict) {
+                    //jsonDict = nullptr;
+                    return modifiedCommands;
+                }
             }
         }
         if (!toggle or addCommands) {
@@ -585,43 +575,41 @@ std::vector<std::vector<std::string>> getModifyCommands(const std::vector<std::v
                     arg = replacePlaceholder(arg, "{file_name}", getNameFromPath(entry));
                 } else if (arg.find("{folder_name}") != std::string::npos) {
                     arg = replacePlaceholder(arg, "{folder_name}", getParentDirNameFromPath(entry));
-                } else if (arg.find("{json_file(") != std::string::npos) {
-                    arg = replaceJsonSourcePlaceholder(arg, jsonPath);
-                } else if (usingJsonSource && (arg.find("{json_source(") != std::string::npos)) {
+                } else if (arg.find("{json(") != std::string::npos) {
                     std::string countStr = entry;
-                    
-                    //logMessage(std::string("count: ")+countStr);
-                    //logMessage(std::string("pre arg: ") + arg);
                     arg = replacePlaceholder(arg, "*", entry);
-                    //logMessage(std::string("post arg: ") + arg);
-
-                    
+                    size_t startPos = arg.find("{json(");
+                    size_t endPos = arg.find(")}");
+                    if (endPos != std::string::npos && endPos > startPos) {
+                        replacement = replaceJsonPlaceholder(arg.substr(startPos, endPos - startPos + 2), "json", jsonDict);
+                        arg.replace(startPos, endPos - startPos + 2, replacement);
+                    }
+                } else if (arg.find("{json_file(") != std::string::npos) {
+                    std::string countStr = entry;
+                    arg = replacePlaceholder(arg, "*", entry);
+                    size_t startPos = arg.find("{json_file(");
+                    size_t endPos = arg.find(")}");
+                    if (endPos != std::string::npos && endPos > startPos) {
+                        replacement = replaceJsonPlaceholder(arg.substr(startPos, endPos - startPos + 2), "json_file", jsonDict);
+                        arg.replace(startPos, endPos - startPos + 2, replacement);
+                    }
+                } else if (arg.find("{json_source(") != std::string::npos) {
+                    std::string countStr = entry;
+                    arg = replacePlaceholder(arg, "*", entry);
                     size_t startPos = arg.find("{json_source(");
                     size_t endPos = arg.find(")}");
                     if (endPos != std::string::npos && endPos > startPos) {
-                        replacement = replaceJsonSourcePlaceholder(arg.substr(startPos, endPos - startPos + 2), jsonSourcePath, "variable");
-                        //logMessage2("replacement: "+replacement);
-                        //logMessage2("pre-arg: "+arg);
+                        replacement = replaceJsonPlaceholder(arg.substr(startPos, endPos - startPos + 2), "json_source", jsonDict);
                         arg.replace(startPos, endPos - startPos + 2, replacement);
-                        //logMessage2("post-arg: "+arg);
                     }
-                } else if (usingJsonSource && (arg.find("{json_file_source(") != std::string::npos)) {
+                } else if (arg.find("{json_file_source(") != std::string::npos) {
                     std::string countStr = entry;
-                    
-                    //logMessage(std::string("count: ")+countStr);
-                    //logMessage(std::string("pre arg: ") + arg);
                     arg = replacePlaceholder(arg, "*", entry);
-                    //logMessage(std::string("post arg: ") + arg);
-
-                    
                     size_t startPos = arg.find("{json_file_source(");
                     size_t endPos = arg.find(")}");
                     if (endPos != std::string::npos && endPos > startPos) {
-                        replacement = replaceJsonSourcePlaceholder(arg.substr(startPos, endPos - startPos + 2), jsonSourcePath, "file");
-                        //logMessage2("replacement: "+replacement);
-                        //logMessage2("pre-arg: "+arg);
+                        replacement = replaceJsonPlaceholder(arg.substr(startPos, endPos - startPos + 2), "json_file_source", jsonDict);
                         arg.replace(startPos, endPos - startPos + 2, replacement);
-                        //logMessage2("post-arg: "+arg);
                     }
                 }
             }
