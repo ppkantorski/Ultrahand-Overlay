@@ -317,69 +317,85 @@ bool isDangerousCombination(const std::string& patternPath) {
  *
  * @param commands A list of commands, where each command is represented as a vector of strings.
  */
-void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& commands) {
+void interpretAndExecuteCommand(const std::vector<std::vector<std::string>> commands) {
     std::string commandName, jsonPath, sourcePath, destinationPath, desiredSection, desiredKey, desiredNewKey, desiredValue, offset, customPattern, hexDataToReplace, hexDataReplacement, fileUrl, occurrence;
     
     
-    for (auto& command : commands) {
-        // Log the command using logMessage
-        std::string message = "Executing command: ";
-        for (const std::string& token : command) {
-            message += token + " ";
-        }
-        message += "\n";
-        
-        // Assuming logMessage is a function that logs the message
-        // Replace this with the actual code to log the message
-        logMessage(message);
-        
-        // Now you can process the command as needed
-        // ...
-    }
     
+    // inidialize data variables
+    std::vector<std::string> listData;
+    json_t* jsonData1 = nullptr;
+    json_t* jsonData2 = nullptr;
+    json_error_t error;
     
-    for (auto& command : commands) {
+    std::vector<std::string> command;
+    std::string replacement;
+    
+    for (const auto& cmd : commands) {
         
         // Check the command and perform the appropriate action
-        if (command.empty()) {
+        if (cmd.empty()) {
             // Empty command, do nothing
             continue;
         }
 
         // Get the command name (first part of the command)
-        commandName = command[0];
+        commandName = cmd[0];
         //logMessage(commandName);
         //logMessage(command[1]);
         
         
         //std::vector<std::string> command;
         
-        // Modify the command to replace {json_file} placeholder if jsonPath is available
-        //if (!jsonPath.empty()) {
-        //    std::vector<std::string> modifiedCommand;
-        //    for (const std::string& commandArg : unmodifiedCommand) {
-        //        if (commandArg.find("{json_file(") != std::string::npos) {
-        //            // Create a copy of the string and modify it
-        //            std::string modifiedArg = commandArg;
-        //            modifiedArg = replaceJsonSourcePlaceholder(modifiedArg, jsonPath);
-        //            // Use modifiedArg as needed
-        //            modifiedCommand.push_back(modifiedArg);
-        //        } else {
-        //            modifiedCommand.push_back(commandArg);
-        //        }
-        //    }
-        //    command = modifiedCommand;
-        //} else {
-        //    command = unmodifiedCommand;
-        //}
         
+        // Create a modified command vector to store changes
+        //std::vector<std::string> newCommand;
+        std::vector<std::string> modifiedCmd = cmd;
         
+        for (auto& arg : modifiedCmd) {
+            //logMessage("Before replacement: " + arg);
+            if ((!listData.empty()) && (arg.find("{list(") != std::string::npos)) {
+                size_t startPos = arg.find("{list(");
+                size_t endPos = arg.find(")}");
+                if (endPos != std::string::npos && endPos > startPos) {
+                    int listIndex = stringToNumber(arg.substr(startPos, endPos - startPos + 2));
+                    replacement = listData[listIndex];
+                    arg.replace(startPos, endPos - startPos + 2, replacement);
+                }
+            } else if ((jsonData1) && (arg.find("{json(") != std::string::npos)) {
+                //std::string countStr = entry;
+                //arg = replacePlaceholder(arg, "*", entry);
+                size_t startPos = arg.find("{json(");
+                size_t endPos = arg.find(")}");
+                if (endPos != std::string::npos && endPos > startPos) {
+                    replacement = replaceJsonPlaceholder(arg.substr(startPos, endPos - startPos + 2), "json", jsonData1);
+                    arg.replace(startPos, endPos - startPos + 2, replacement);
+                }
+            } else if ((jsonData2) && (arg.find("{json_file(") != std::string::npos)) {
+                //std::string countStr = entry;
+                //arg = replacePlaceholder(arg, "*", entry);
+                size_t startPos = arg.find("{json_file(");
+                size_t endPos = arg.find(")}");
+                if (endPos != std::string::npos && endPos > startPos) {
+                    replacement = replaceJsonPlaceholder(arg.substr(startPos, endPos - startPos + 2), "json_file", jsonData2);
+                    //logMessage("Mid source replacement: " + replacement);
+                    arg.replace(startPos, endPos - startPos + 2, replacement);
+                }
+            }
+            //newCommand.push_back(arg);
+        }
+        command = modifiedCmd; // update command
         
-        //if (commandName == "json_file") {
-        //    if (command.size() >= 2) {
-        //        jsonPath = preprocessPath(command[1]);
-        //    }
-        if (commandName == "make" || commandName == "mkdir") {
+        // Variable replacement definitions
+        if (commandName == "list") {
+            listData = stringToList(removeQuotes(command[1]));
+        } else if (commandName == "json") {
+            jsonData1 = stringToJson(removeQuotes(command[1]));
+        } else if (commandName == "json_file") {
+            auto jsonPath = preprocessPath(command[1]);
+            jsonData2 = json_load_file(jsonPath.c_str(), 0, &error);
+        
+        } else if (commandName == "make" || commandName == "mkdir") {
             // Delete command
             if (command.size() >= 2) {
                 sourcePath = preprocessPath(command[1]);
@@ -616,5 +632,16 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
             fsdevUnmountAll();
             spsmShutdown(SpsmShutdownMode_Normal);
         }
+        
+        // Log the command using logMessage
+        std::string message = "Executing command: ";
+        for (const std::string& token : command) {
+            message += token + " ";
+        }
+        message += "\n";
+        
+        // Assuming logMessage is a function that logs the message
+        // Replace this with the actual code to log the message
+        logMessage(message);
     }
 }
