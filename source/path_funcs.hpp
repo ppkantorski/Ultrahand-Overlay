@@ -91,19 +91,7 @@ void createTextFile(const std::string& filePath, const std::string& content) {
     }
 }
 
-/**
- * @brief Removes entries from a vector of strings that match a specified entry.
- *
- * This function removes entries from the `fileList` vector of strings that match the `entry`.
- *
- * @param entry The entry to be compared against the elements in `fileList`.
- * @param fileList The vector of strings from which matching entries will be removed.
- */
-void removeEntryFromList(const std::string& entry, std::vector<std::string>& fileList) {
-    fileList.erase(std::remove_if(fileList.begin(), fileList.end(), [&](const std::string& filePath) {
-        return filePath.compare(0, entry.length(), entry) == 0;
-    }), fileList.end());
-}
+
 
 
 /**
