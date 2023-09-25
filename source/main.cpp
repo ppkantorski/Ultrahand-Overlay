@@ -406,7 +406,7 @@ public:
                 selectedItemsList = filesList;
             } else if (sourceType == "list"){
                 selectedItemsList = listData;
-            } else if (sourceType == "json") {
+            } else if ((sourceType == "json") || (sourceType == "json_file")) {
                 // Populate items list based upon jsonKey
                 if ((jsonData) && json_is_array(jsonData)) {
                     size_t arraySize = json_array_size(jsonData);
@@ -427,7 +427,7 @@ public:
                 selectedItemsListOn = filesListOn;
             } else if (sourceTypeOn == "list") {
                 selectedItemsListOn = listDataOn;
-            } else if (sourceTypeOn == "json") {
+            } else if ((sourceTypeOn == "json") || (sourceTypeOn == "json_file")) {
                 // Populate items list based upon jsonKey
                 if ((jsonDataOn) && json_is_array(jsonDataOn)) {
                     size_t arraySize = json_array_size(jsonDataOn);
@@ -448,7 +448,7 @@ public:
                 selectedItemsListOff = filesListOff;
             } else if (sourceTypeOff == "list") {
                 selectedItemsListOff = listDataOff;
-            } else if (sourceTypeOff == "json") {
+            } else if ((sourceTypeOff == "json") || (sourceTypeOff == "json_file")) {
                 // Populate items list based upon jsonKey
                 if ((jsonDataOff) && json_is_array(jsonDataOff)) {
                     size_t arraySize = json_array_size(jsonDataOff);
