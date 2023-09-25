@@ -46,6 +46,12 @@ static bool freshSpawn = true;
 static tsl::elm::OverlayFrame *rootFrame = nullptr;
 static tsl::elm::List *list = nullptr;
 
+// Command mode globals
+static std::vector<std::string> commandModes = {"default", "toggle"};
+static std::vector<std::string> commandGroupings = {"default", "split"};
+static std::string modePattern = ";mode=";
+static std::string groupingPattern = ";grouping=";
+
 
 /**
  * @brief The `ConfigOverlay` class handles configuration overlay functionality.
@@ -90,9 +96,9 @@ public:
         rootFrame = new tsl::elm::OverlayFrame(getNameFromPath(filePath), "Ultrahand Config");
         list = new tsl::elm::List();
 
-        std::string configFile = filePath + "/" + configFileName;
+        std::string packageFile = filePath + packageFileName;
 
-        std::string fileContent = getFileContents(configFile);
+        std::string fileContent = getFileContents(packageFile);
         if (!fileContent.empty()) {
             std::string line;
             std::istringstream iss(fileContent);
@@ -154,7 +160,7 @@ public:
                 }
             }
         } else {
-            list->addItem(new tsl::elm::ListItem("Failed to open file: " + configFile));
+            list->addItem(new tsl::elm::ListItem("Failed to open file: " + packageFile));
         }
 
         rootFrame->setContent(list);
@@ -253,11 +259,6 @@ public:
         //bool useSplitHeader = false;
         
         
-        // commandType variable can be "default" or "toggle" for now
-        std::vector<std::string> commandModes = {"default", "toggle"};
-        std::vector<std::string> commandGroupings = {"default", "split"};
-        std::string modePattern = ";mode=";
-        std::string groupingPattern = ";grouping=";
         std::string commandMode = commandModes[0];
         std::string commandGrouping = commandGroupings[0];
         
