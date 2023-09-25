@@ -24,6 +24,7 @@
 #include <hex_funcs.hpp>
 #include <download_funcs.hpp>
 #include <json_funcs.hpp>
+#include <list_funcs.hpp>
 
 /**
  * @brief Shutdown modes for the Ultrahand-Overlay project.
@@ -318,6 +319,24 @@ bool isDangerousCombination(const std::string& patternPath) {
  */
 void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& commands) {
     std::string commandName, jsonPath, sourcePath, destinationPath, desiredSection, desiredKey, desiredNewKey, desiredValue, offset, customPattern, hexDataToReplace, hexDataReplacement, fileUrl, occurrence;
+    
+    
+    for (auto& command : commands) {
+        // Log the command using logMessage
+        std::string message = "Executing command: ";
+        for (const std::string& token : command) {
+            message += token + " ";
+        }
+        message += "\n";
+        
+        // Assuming logMessage is a function that logs the message
+        // Replace this with the actual code to log the message
+        logMessage(message);
+        
+        // Now you can process the command as needed
+        // ...
+    }
+    
     
     for (auto& command : commands) {
         
