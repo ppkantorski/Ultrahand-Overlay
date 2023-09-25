@@ -550,7 +550,7 @@ public:
                     listItem->setClickListener([this, cmds=commands, selectedItem, i, listItem](uint64_t keys) { // Add 'command' to the capture list
                         if (keys & KEY_A) {
                             std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, selectedItem, i); // replace source
-                            modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
+                            //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
                             interpretAndExecuteCommand(modifiedCmds); // Execute modified 
                             
                             listItem->setValue("DONE");
@@ -572,7 +572,7 @@ public:
                     listItem->setClickListener([this, cmds=commands, selectedItem, i, listItem](uint64_t keys) { // Add 'command' to the capture list
                         if (keys & KEY_A) {
                             std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, selectedItem, i); // replace source
-                            modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
+                            //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
                             interpretAndExecuteCommand(modifiedCmds); // Execute modified 
                             
                             listItem->setValue("DONE");
@@ -594,7 +594,7 @@ public:
                         // Toggle switched to On
                         if (toggleStateOn) {
                             std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmdsOn, selectedItem, i); // replace source
-                            modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
+                            //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
                             interpretAndExecuteCommand(modifiedCmds); // Execute modified 
                         } else {
                             // Handle the case where the command should only run in the source_on section
@@ -604,7 +604,7 @@ public:
                         // Toggle switched to Off
                         if (!toggleStateOn) {
                             std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmdsOff, selectedItem, i); // replace source
-                            modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
+                            //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
                             interpretAndExecuteCommand(modifiedCmds); // Execute modified 
                         } else {
                             // Handle the case where the command should only run in the source_off section
@@ -759,8 +759,8 @@ public:
                             tsl::changeTo<SelectionOverlay>(subPath, keyName, cmds);
                         } else {
                             // Interpret and execute the command
-                            std::vector<std::vector<std::string>> modifiedCmds = getSecondaryReplacement(cmds); // replace list and json
-                            interpretAndExecuteCommand(modifiedCmds); // Execute modified 
+                            //std::vector<std::vector<std::string>> modifiedCmds = getSecondaryReplacement(cmds); // replace list and json
+                            interpretAndExecuteCommand(cmds); // Execute modified 
                             
                             listItem->setValue("DONE");
                         }
@@ -791,8 +791,8 @@ public:
                             //applySecondaryReplacement(cmdsCopy);
                             
                             std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, pathReplaceOn); // replace source
-                            modifiedCmds = getSecondaryReplacement(cmds); // replace list and json
-                            interpretAndExecuteCommand(cmds);
+                            //modifiedCmds = getSecondaryReplacement(cmds); // replace list and json
+                            interpretAndExecuteCommand(modifiedCmds);
                         } else {
                             // Handle the case where the command should only run in the source_on section
                             // Add your specific code here
@@ -807,8 +807,8 @@ public:
                             
                             
                             std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, pathReplaceOff); // replace source
-                            modifiedCmds = getSecondaryReplacement(cmds); // replace list and json
-                            interpretAndExecuteCommand(cmds);
+                            //modifiedCmds = getSecondaryReplacement(cmds); // replace list and json
+                            interpretAndExecuteCommand(modifiedCmds);
                         } else {
                             // Handle the case where the command should only run in the source_off section
                             // Add your specific code here
