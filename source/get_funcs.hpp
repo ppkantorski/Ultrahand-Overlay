@@ -538,13 +538,12 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
         }
         
         
-        std::vector<std::string> newCommand;
         std::vector<std::string> modifiedCmd = cmd;
         std::string line = "";
         for (auto& cmd : modifiedCmd) {
             line = line +" "+cmd;
         }
-        logMessage("source modifiedCmd pre:"+line);
+        //logMessage("source modifiedCmd pre:"+line);
         
         
         for (auto& arg : modifiedCmd) {
@@ -586,93 +585,14 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
                     arg.replace(startPos, endPos - startPos + 2, replacement);
                 }
             }
-            newCommand.push_back(arg);
         }
         //logMessage("After source replacement: " + arg);
         line = "";
-        for (auto& cmd : newCommand) {
-            line = line +" "+cmd;
-        }
-        logMessage("source modifiedCmd post:"+line);
-        modifiedCommands.emplace_back(newCommand);
-    }
-    return modifiedCommands;
-}
-
-
-// this will modify `commands`
-std::vector<std::vector<std::string>> getSecondaryReplacement(const std::vector<std::vector<std::string>>& commands) {
-    std::vector<std::vector<std::string>> modifiedCommands;
-    
-    std::vector<std::string> listData;
-    std::string replacement;
-    
-    json_t* jsonData1 = nullptr;
-    json_t* jsonData2 = nullptr;
-    json_error_t error;
-    
-    //bool addCommands = false;
-    for (const auto& cmd : commands) {
-        if (cmd.size() > 1) {
-            if (cmd[0] == "list") {
-                listData = stringToList(removeQuotes(cmd[1]));
-            } else if (cmd[0] == "json") {
-                jsonData1 = stringToJson(removeQuotes(cmd[1]));
-            } else if (cmd[0] == "json_file") {
-                auto jsonPath = preprocessPath(cmd[1]);
-                jsonData2 = json_load_file(jsonPath.c_str(), 0, &error);
-            }
-        }
-        
-        std::vector<std::string> newCommand;
-        std::vector<std::string> modifiedCmd = cmd;
-        std::string line = "";
         for (auto& cmd : modifiedCmd) {
             line = line +" "+cmd;
         }
-        logMessage("modifiedCmd pre:"+line);
-        
-        
-        for (auto& arg : modifiedCmd) {
-            //logMessage("Before replacement: " + arg);
-            
-            if (arg.find("{list(") != std::string::npos) {
-                size_t startPos = arg.find("{list(");
-                size_t endPos = arg.find(")}");
-                if (endPos != std::string::npos && endPos > startPos) {
-                    int listIndex = stringToNumber(arg.substr(startPos, endPos - startPos + 2));
-                    replacement = listData[listIndex];
-                    arg.replace(startPos, endPos - startPos + 2, replacement);
-                }
-            } else if (arg.find("{json(") != std::string::npos) {
-                //std::string countStr = entry;
-                //arg = replacePlaceholder(arg, "*", entry);
-                size_t startPos = arg.find("{json(");
-                size_t endPos = arg.find(")}");
-                if (endPos != std::string::npos && endPos > startPos) {
-                    replacement = replaceJsonPlaceholder(arg.substr(startPos, endPos - startPos + 2), "json", jsonData1);
-                    arg.replace(startPos, endPos - startPos + 2, replacement);
-                }
-            } else if (arg.find("{json_file(") != std::string::npos) {
-                //std::string countStr = entry;
-                //arg = replacePlaceholder(arg, "*", entry);
-                size_t startPos = arg.find("{json_file(");
-                size_t endPos = arg.find(")}");
-                if (endPos != std::string::npos && endPos > startPos) {
-                    replacement = replaceJsonPlaceholder(arg.substr(startPos, endPos - startPos + 2), "json_file", jsonData2);
-                    logMessage("Mid source replacement: " + replacement);
-                    arg.replace(startPos, endPos - startPos + 2, replacement);
-                }
-            }
-            newCommand.push_back(arg);
-            //logMessage("After replacement: " + arg);
-        }
-        line = "";
-        for (auto& cmd : newCommand) {
-            line = line +" "+cmd;
-        }
-        logMessage("modifiedCmd post:"+line);
-        modifiedCommands.emplace_back(newCommand);
+        //logMessage("source modifiedCmd post:"+line);
+        modifiedCommands.emplace_back(modifiedCmd);
     }
     return modifiedCommands;
 }
