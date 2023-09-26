@@ -719,24 +719,6 @@ public:
                 }
             }
             
-            // Extract the path pattern from commands
-            //bool useToggle = false;
-            //for (const auto& cmd : option.second) {
-            //    if (cmd.size() > 1) {
-            //        if (cmd[0] == "file_source") {
-            //            pathReplace = cmd[1];
-            //        } else if (cmd[0] == "file_source_on") {
-            //            pathReplaceOn = cmd[1];
-            //            useToggle = true;
-            //        } else if (cmd[0] == "file_source_off") {
-            //            pathReplaceOff = cmd[1];
-            //            useToggle = true;
-            //        }
-            //        //else if (cmd[0] == "json_file") {
-            //        //    jsonPath = cmd[1];
-            //        //}
-            //    } 
-            //}
             
             std::string commandMode = commandModes[0];
             std::string commandGrouping = commandGroupings[0];
@@ -751,16 +733,13 @@ public:
             std::vector<std::vector<std::string>> commandsOn;
             std::vector<std::vector<std::string>> commandsOff;
             std::vector<std::string> listData, listDataOn, listDataOff;
-            json_t* jsonData = nullptr;
-            json_t* jsonDataOn = nullptr;
-            json_t* jsonDataOff = nullptr;
             
             // items can be paths, commands, or variables depending on source
-            std::vector<std::string> selectedItemsList, selectedItemsListOn, selectedItemsListOff;
+            //std::vector<std::string> selectedItemsList, selectedItemsListOn, selectedItemsListOff;
             
             // initial processing of commands
             for (const auto& cmd : commands) {
-            
+                
                 if (!cmd.empty()) { // Isolate command settings
                     // Extract the command mode
                     if (cmd[0].find(modePattern) == 0) {
@@ -774,7 +753,7 @@ public:
                             commandGrouping = commandGroupings[0]; // reset to default if commandMode is unknown
                         }
                     }
-                
+                    
                     // Extract the command grouping
                     if (commandMode == "toggle") {
                         if (cmd[0].find("on:") == 0) {
@@ -807,78 +786,22 @@ public:
                     } else if (cmd[0] == "file_source") {
                         if (currentSection == "global") {
                             pathPattern = cmd[1];
-                            filesList = getFilesListByWildcards(pathPattern);
+                            //filesList = getFilesListByWildcards(pathPattern);
                             sourceType = "file";
                         } else if (currentSection == "on") {
                             pathPatternOn = cmd[1];
-                            filesListOn = getFilesListByWildcards(pathPatternOn);
+                            //filesListOn = getFilesListByWildcards(pathPatternOn);
                             sourceTypeOn = "file";
                         } else if (currentSection == "off") {
                             pathPatternOff = cmd[1];
-                            filesListOff = getFilesListByWildcards(pathPatternOff);
+                            //filesListOff = getFilesListByWildcards(pathPatternOff);
                             sourceTypeOff = "file";
                         }
-                    } else if (cmd[0] == "json_file_source") {
-                        if (currentSection == "global") {
-                            jsonPath = preprocessPath(cmd[1]);
-                            jsonData = readJsonFromFile(jsonPath);
-                            sourceType = "json_file";
-                            if (cmd.size() > 2) {
-                                jsonKey = cmd[2]; //json display key
-                            }
-                        } else if (currentSection == "on") {
-                            jsonPathOn = preprocessPath(cmd[1]);
-                            jsonDataOn = readJsonFromFile(jsonPathOn);
-                            sourceTypeOn = "json_file";
-                            if (cmd.size() > 2) {
-                                jsonKeyOn = cmd[2]; //json display key
-                            }
-                        } else if (currentSection == "off") {
-                            jsonPathOff = preprocessPath(cmd[1]);
-                            jsonDataOff = readJsonFromFile(jsonPathOff);
-                            sourceTypeOff = "json_file";
-                            if (cmd.size() > 2) {
-                                jsonKeyOff = cmd[2]; //json display key
-                            }
-                        }
-                    } else if (cmd[0] == "list_source") {
-                        if (currentSection == "global") {
-                            listData = stringToList(removeQuotes(cmd[1]));
-                            sourceType = "list";
-                        } else if (currentSection == "on") {
-                            listDataOn = stringToList(removeQuotes(cmd[1]));
-                            sourceTypeOn = "list";
-                        } else if (currentSection == "off") {
-                            listDataOff = stringToList(removeQuotes(cmd[1]));
-                            sourceTypeOff = "list";
-                        }
-                    } else if (cmd[0] == "json_source") {
-                        if (currentSection == "global") {
-                            jsonData = stringToJson(cmd[1]); // convert string to jsonData
-                            sourceType = "json";
-                            
-                            if (cmd.size() > 2) {
-                                jsonKey = cmd[2]; //json display key
-                            }
-                        } else if (currentSection == "on") {
-                            jsonDataOn = stringToJson(cmd[1]); // convert string to jsonData
-                            sourceTypeOn = "json";
-                            
-                            if (cmd.size() > 2) {
-                                jsonKeyOn = cmd[2]; //json display key
-                            }
-                        
-                        } else if (currentSection == "off") {
-                            jsonDataOff = stringToJson(cmd[1]); // convert string to jsonData
-                            sourceTypeOff = "json";
-                            
-                            if (cmd.size() > 2) {
-                                jsonKeyOff = cmd[2]; //json display key
-                            }
-                        }
                     }
-                } 
+                }
             }
+            
+            
             
             
             if (useSelection) {
@@ -907,10 +830,6 @@ public:
                 list->addItem(listItem);
             } else {
                 
-                
-                
-                
-                
                 const std::string& selectedItem = optionName;
             
                 //std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(commands, selectedItem);
@@ -930,17 +849,17 @@ public:
                 
                 
                 if (commandMode == "default") { // for handiling toggles
+                    size_t pos = selectedItem.find(" - ");
+                    std::string footer = "";
+                    std::string optionName = selectedItem;
+                    if (pos != std::string::npos) {
+                        footer = selectedItem.substr(pos + 2); // Assign the part after "&&" as the footer
+                        optionName = selectedItem.substr(0, pos); // Strip the "&&" and everything after it
+                    }
+                    auto listItem = new tsl::elm::ListItem(optionName);
+                    listItem->setValue(footer, true);
                     
                     if (sourceType == "json") { // For JSON wildcards
-                        size_t pos = selectedItem.find(" - ");
-                        std::string footer = "";
-                        std::string optionName = selectedItem;
-                        if (pos != std::string::npos) {
-                            footer = selectedItem.substr(pos + 2); // Assign the part after "&&" as the footer
-                            optionName = selectedItem.substr(0, pos); // Strip the "&&" and everything after it
-                        }
-                        auto listItem = new tsl::elm::ListItem(optionName);
-                        listItem->setValue(footer, true);
                         listItem->setClickListener([this, cmds=commands, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
                             if (keys & KEY_A) {
                                 std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, selectedItem); // replace source
@@ -954,15 +873,6 @@ public:
                         });
                         list->addItem(listItem);
                     } else {
-                        size_t pos = selectedItem.find(" - ");
-                        std::string footer = "";
-                        std::string optionName = selectedItem;
-                        if (pos != std::string::npos) {
-                            footer = selectedItem.substr(pos + 2); // Assign the part after "&&" as the footer
-                            optionName = selectedItem.substr(0, pos); // Strip the "&&" and everything after it
-                        }
-                        auto listItem = new tsl::elm::ListItem(optionName);
-                        listItem->setValue(footer, true);
                         listItem->setClickListener([this, cmds=commands, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
                             if (keys & KEY_A) {
                                 std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, selectedItem); // replace source
@@ -977,17 +887,19 @@ public:
                         list->addItem(listItem);
                     }
                 } else if (commandMode == "toggle") {
-                    auto toggleListItem = new tsl::elm::ToggleListItem(itemName, false, "On", "Off");
-                
+                    
+                    
+                    auto toggleListItem = new tsl::elm::ToggleListItem(optionName, false, "On", "Off");
                     // Set the initial state of the toggle item
-                    bool toggleStateOn = std::find(selectedItemsListOn.begin(), selectedItemsListOn.end(), selectedItem) != selectedItemsListOn.end();
+                    bool toggleStateOn = isFileOrDirectory(preprocessPath(pathPatternOn));
+                    
                     toggleListItem->setState(toggleStateOn);
-                
-                    toggleListItem->setStateChangedListener([this, cmdsOn=commandsOn, cmdsOff=commandsOff, selectedItem, toggleStateOn](bool state) {
+                    
+                    toggleListItem->setStateChangedListener([this, cmdsOn=commandsOn, cmdsOff=commandsOff, toggleStateOn](bool state) {
                         if (!state) {
                             // Toggle switched to On
                             if (toggleStateOn) {
-                                std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmdsOn, selectedItem); // replace source
+                                std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmdsOn, preprocessPath(pathPatternOn)); // replace source
                                 //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
                                 interpretAndExecuteCommand(modifiedCmds); // Execute modified 
                             } else {
@@ -997,7 +909,7 @@ public:
                         } else {
                             // Toggle switched to Off
                             if (!toggleStateOn) {
-                                std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmdsOff, selectedItem); // replace source
+                                std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmdsOff, preprocessPath(pathPatternOff)); // replace source
                                 //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
                                 interpretAndExecuteCommand(modifiedCmds); // Execute modified 
                             } else {
@@ -1007,87 +919,9 @@ public:
                         }
                     });
                     list->addItem(toggleListItem);
+                    
                 }
                 
-                
-                
-                
-                
-                
-                
-                //if (commandMode == "default")  {
-                //    auto listItem = static_cast<tsl::elm::ListItem*>(nullptr);
-                //    if ((footer == "\u25B6") || (footer.empty())) {
-                //        listItem = new tsl::elm::ListItem(optionName, footer);
-                //    } else {
-                //        listItem = new tsl::elm::ListItem(optionName);
-                //        listItem->setValue(footer, true);
-                //    }
-                //    
-                //    
-                //    //std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(option.second, pathReplace);
-                //    listItem->setClickListener([cmds = commands, keyName = optionName, this, subPath = this->subPath, sourceType, listItem](uint64_t keys) {
-                //        if (keys & KEY_A) {
-                //            // Interpret and execute the command
-                //            //std::vector<std::vector<std::string>> modifiedCmds = getSecondaryReplacement(cmds); // replace list and json
-                //            interpretAndExecuteCommand(cmds); // Execute modified 
-                //            
-                //            listItem->setValue("DONE");
-                //            return true;
-                //        } else if (keys & KEY_X) {
-                //            inSubMenu = false; // Set boolean to true when entering a submenu
-                //            tsl::changeTo<ConfigOverlay>(subPath, keyName);
-                //            return true;
-                //        }
-                //        return false;
-                //    });
-                //
-                //    list->addItem(listItem);
-                //
-                //} else if (commandMode == "toggle") {
-                //    auto toggleListItem = new tsl::elm::ToggleListItem(optionName, false, "On", "Off");
-                //    // Set the initial state of the toggle item
-                //    bool toggleStateOn = isFileOrDirectory(preprocessPath(pathReplaceOn));
-                //    
-                //    toggleListItem->setState(toggleStateOn);
-                //    
-                //    toggleListItem->setStateChangedListener([toggleStateOn, cmdsOn = commandsOn, cmdsOff = commandsOn, this](bool state) {
-                //        if (!state) {
-                //            // Toggle switched to On
-                //            if (toggleStateOn) {
-                //                //std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(command, pathReplaceOn);
-                //                //std::vector<std::vector<std::string>> cmdsCopy = cmds;//needs to be fixed
-                //                //applySourceReplacement(cmdsCopy, pathReplaceOn);
-                //                //applySecondaryReplacement(cmdsCopy);
-                //                
-                //                std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmdsOn, pathReplaceOn); // replace source
-                //                //modifiedCmds = getSecondaryReplacement(cmds); // replace list and json
-                //                interpretAndExecuteCommand(modifiedCmds);
-                //            } else {
-                //                // Handle the case where the command should only run in the source_on section
-                //                // Add your specific code here
-                //            }
-                //        } else {
-                //            // Toggle switched to Off
-                //            if (!toggleStateOn) {
-                //                //std::vector<std::vector<std::string>> cmdsCopy = cmds;//needs to be fixed
-                //                //applySourceReplacement(cmds, pathReplaceOff);
-                //                //applySecondaryReplacement(cmds);
-                //                //interpretAndExecuteCommand(cmds);
-                //                
-                //                
-                //                std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmdsOff, pathReplaceOff); // replace source
-                //                //modifiedCmds = getSecondaryReplacement(cmds); // replace list and json
-                //                interpretAndExecuteCommand(modifiedCmds);
-                //            } else {
-                //                // Handle the case where the command should only run in the source_off section
-                //                // Add your specific code here
-                //            }
-                //        }
-                //    });
-                //    
-                //    list->addItem(toggleListItem);
-                //}
             }
         }
         
