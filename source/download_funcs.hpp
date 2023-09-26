@@ -24,6 +24,8 @@
 #include "debug_funcs.hpp"
 //#include "json_funcs.hpp"
 
+
+
 /**
  * @brief Callback function to write received data to a file.
  *
@@ -55,6 +57,7 @@ bool downloadFile(const std::string& url, const std::string& toDestination) {
     }
     
     std::string destination = toDestination.c_str();
+    
     // Check if the destination ends with "/"
     if (destination.back() == '/') {
         createDirectory(destination);
@@ -74,6 +77,7 @@ bool downloadFile(const std::string& url, const std::string& toDestination) {
     }
     
     
+    //curl_global_init(CURL_GLOBAL_SSL);
     const int MAX_RETRIES = 3;
     int retryCount = 0;
     CURL* curl = nullptr;
@@ -102,9 +106,11 @@ bool downloadFile(const std::string& url, const std::string& toDestination) {
         return false;
     }
     
-    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeCallback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, file);
+    
+    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+    
     //curl_easy_setopt(curl, CURLOPT_BUFFERSIZE, 4096);
     
     // Set a user agent
@@ -117,18 +123,22 @@ bool downloadFile(const std::string& url, const std::string& toDestination) {
     //curl_easy_setopt(curl, CURLOPT_CAINFO, "sdmc:/config/ultrahand/cacert.pem");
     
     
+    logMessage("destination: "+destination);
+    
     CURLcode result = curl_easy_perform(curl);
     if (result != CURLE_OK) {
         logMessage(std::string("Error downloading file: ") + curl_easy_strerror(result));
         curl_easy_cleanup(curl);
+        //curl_global_cleanup();
         fclose(file);
         // Delete the file if nothing was written to it
         std::remove(destination.c_str());
         return false;
     }
     
-    fclose(file);
     curl_easy_cleanup(curl);
+    //curl_global_cleanup();
+    fclose(file);
     
     // Check if the file is empty
     long fileSize = ftell(file);
