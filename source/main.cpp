@@ -775,15 +775,15 @@ public:
                 
                 }
                 if (cmd.size() > 1) { // Pre-process advanced commands
-                    if (cmd[0] == "filter") {
-                        if (currentSection == "global") {
-                            filterList.push_back(cmd[1]);
-                        } else if (currentSection == "on") {
-                            filterListOn.push_back(cmd[1]);
-                        } else if (currentSection == "off") {
-                            filterListOff.push_back(cmd[1]);
-                        }
-                    } else if (cmd[0] == "file_source") {
+                    //if (cmd[0] == "filter") {
+                    //    if (currentSection == "global") {
+                    //        filterList.push_back(cmd[1]);
+                    //    } else if (currentSection == "on") {
+                    //        filterListOn.push_back(cmd[1]);
+                    //    } else if (currentSection == "off") {
+                    //        filterListOff.push_back(cmd[1]);
+                    //    }
+                    if (cmd[0] == "file_source") {
                         if (currentSection == "global") {
                             pathPattern = cmd[1];
                             //filesList = getFilesListByWildcards(pathPattern);
@@ -1416,6 +1416,12 @@ public:
                     //count++;
                 }
             }
+            
+            
+            
+            
+            // ********* THIS PART NEEDS TO BE REVISED NEXT TO BEHAVE MORE LIKE THE SUBMENU *********
+            
             
             int count = 0;
             //std::string optionName;
