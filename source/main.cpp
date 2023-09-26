@@ -802,9 +802,7 @@ public:
             }
             
             
-            
-            
-            if (useSelection) {
+            if (useSelection) { // For wildcard commands (dropdown menus)
                 auto listItem = static_cast<tsl::elm::ListItem*>(nullptr);
                 if ((footer == "\u25B6") || (footer.empty())) {
                     listItem = new tsl::elm::ListItem(optionName, footer);
@@ -828,24 +826,16 @@ public:
                 });
                 
                 list->addItem(listItem);
-            } else {
+            } else { // For everything else
                 
                 const std::string& selectedItem = optionName;
-            
-                //std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(commands, selectedItem);
-                //std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(commands, std::to_string(i));
-            
+                
                 // For entries that are paths
                 itemName = getNameFromPath(selectedItem);
                 if (!isDirectory(preprocessPath(selectedItem))) {
                     itemName = dropExtension(itemName);
                 }
                 parentDirName = getParentDirNameFromPath(selectedItem);
-            
-                //if ((commandGrouping == "split") && (lastParentDirName.empty() || (lastParentDirName != parentDirName))){
-                //    list->addItem(new tsl::elm::CategoryHeader(removeQuotes(parentDirName)));
-                //    lastParentDirName = parentDirName.c_str();
-                //}
                 
                 
                 if (commandMode == "default") { // for handiling toggles
