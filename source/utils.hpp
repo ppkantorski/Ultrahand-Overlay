@@ -320,7 +320,7 @@ bool isDangerousCombination(const std::string& patternPath) {
 void interpretAndExecuteCommand(const std::vector<std::vector<std::string>> commands) {
     std::string commandName, jsonPath, sourcePath, destinationPath, desiredSection, desiredKey, desiredNewKey, desiredValue, offset, customPattern, hexDataToReplace, hexDataReplacement, fileUrl, occurrence;
     
-    bool logging = false;
+    bool logging = true;
     
     // inidialize data variables
     std::vector<std::string> listData;
@@ -616,7 +616,7 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>> comm
             for (const std::string& token : command) {
                 message += token + " ";
             }
-            message += "\n";
+            //message += "\n";
             
             // Assuming logMessage is a function that logs the message
             // Replace this with the actual code to log the message
