@@ -318,9 +318,11 @@ bool isDangerousCombination(const std::string& patternPath) {
  * @param commands A list of commands, where each command is represented as a vector of strings.
  */
 void interpretAndExecuteCommand(const std::vector<std::vector<std::string>> commands) {
-    std::string commandName, jsonPath, sourcePath, destinationPath, desiredSection, desiredKey, desiredNewKey, desiredValue, offset, customPattern, hexDataToReplace, hexDataReplacement, fileUrl, occurrence;
+    std::string commandName, sourcePath, destinationPath, desiredSection, desiredKey, desiredNewKey, desiredValue, offset, customPattern, hexDataToReplace, hexDataReplacement, fileUrl, occurrence;
     
     bool logging = true;
+    
+    std::string listString, jsonString, jsonPath;
     
     // inidialize data variables
     std::vector<std::string> listData;
@@ -338,9 +340,18 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>> comm
             // Empty command, do nothing
             continue;
         }
-
+        
         // Get the command name (first part of the command)
         commandName = cmd[0];
+        
+        
+        if (!listString.empty()) {
+            listData = stringToList(listString);
+        } else if (!jsonString.empty()) {
+            jsonData1 = stringToJson(jsonString);
+        } else if (!jsonPath.empty()) {
+            jsonData2 = json_load_file(jsonPath.c_str(), 0, &error);
+        }
         
         
         // Create a modified command vector to store changes
@@ -381,14 +392,33 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>> comm
         }
         command = modifiedCmd; // update command
         
+        
+        // Release the memory held by listData
+        listData.clear();
+        // Free jsonData1
+        if (jsonData1 != nullptr) {
+            json_decref(jsonData1);
+            jsonData1 = nullptr;
+        }
+        // Free jsonData2
+        if (jsonData2 != nullptr) {
+            json_decref(jsonData2);
+            jsonData2 = nullptr;
+        }
+        
+        
+        
+        
         // Variable replacement definitions
         if (commandName == "list") {
-            listData = stringToList(removeQuotes(command[1]));
+            listString = removeQuotes(command[1]);
+            //listData = stringToList(listString);
         } else if (commandName == "json") {
-            jsonData1 = stringToJson(removeQuotes(command[1]));
+            jsonString = removeQuotes(command[1]);
+            //jsonData1 = stringToJson(jsonString);
         } else if (commandName == "json_file") {
-            auto jsonPath = preprocessPath(command[1]);
-            jsonData2 = json_load_file(jsonPath.c_str(), 0, &error);
+            jsonPath = preprocessPath(command[1]);
+            //jsonData2 = json_load_file(jsonPath.c_str(), 0, &error);
         
         } else if (commandName == "make" || commandName == "mkdir") {
             // Delete command
