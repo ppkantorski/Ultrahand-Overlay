@@ -98,10 +98,7 @@ public:
         list = new tsl::elm::List();
         
         std::string packageFile = filePath + packageFileName;
-        logMessage("**********FILE: "+packageFile);
-        logMessage("**********KEY: "+specificKey);
         std::string fileContent = getFileContents(packageFile);
-        logMessage("**********fileContent: "+fileContent);
         if (!fileContent.empty()) {
             std::string line;
             std::istringstream iss(fileContent);
