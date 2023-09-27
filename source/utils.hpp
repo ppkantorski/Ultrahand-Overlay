@@ -360,6 +360,9 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>> comm
                     listData = stringToList(listString);
                     replacement = listData[listIndex];
                     arg.replace(startPos, endPos - startPos + 2, replacement);
+                    
+                    // Release the memory held by listData
+                    listData.clear();
                 }
             } else if ((!jsonString.empty() && (arg.find("{json(") != std::string::npos))) {
                 //std::string countStr = entry;
@@ -370,6 +373,12 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>> comm
                     jsonData1 = stringToJson(jsonString);
                     replacement = replaceJsonPlaceholder(arg.substr(startPos, endPos - startPos + 2), "json", jsonData1);
                     arg.replace(startPos, endPos - startPos + 2, replacement);
+                    
+                    // Free jsonData1
+                    if (jsonData1 != nullptr) {
+                        json_decref(jsonData1);
+                        jsonData1 = nullptr;
+                    }
                 }
             } else if ((!jsonPath.empty() && (arg.find("{json_file(") != std::string::npos))) {
                 //std::string countStr = entry;
@@ -381,27 +390,17 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>> comm
                     replacement = replaceJsonPlaceholder(arg.substr(startPos, endPos - startPos + 2), "json_file", jsonData2);
                     //logMessage("Mid source replacement: " + replacement);
                     arg.replace(startPos, endPos - startPos + 2, replacement);
+                    
+                    // Free jsonData2
+                    if (jsonData2 != nullptr) {
+                        json_decref(jsonData2);
+                        jsonData2 = nullptr;
+                    }
                 }
             }
             //newCommand.push_back(arg);
         }
         command = modifiedCmd; // update command
-        
-        
-        // Release the memory held by listData
-        listData.clear();
-        // Free jsonData1
-        if (jsonData1 != nullptr) {
-            json_decref(jsonData1);
-            jsonData1 = nullptr;
-        }
-        // Free jsonData2
-        if (jsonData2 != nullptr) {
-            json_decref(jsonData2);
-            jsonData2 = nullptr;
-        }
-        
-        
         
         
         // Variable replacement definitions
