@@ -98,8 +98,10 @@ public:
         list = new tsl::elm::List();
         
         std::string packageFile = filePath + packageFileName;
-        
+        logMessage("**********FILE: "+packageFile);
+        logMessage("**********KEY: "+specificKey);
         std::string fileContent = getFileContents(packageFile);
+        logMessage("**********fileContent: "+fileContent);
         if (!fileContent.empty()) {
             std::string line;
             std::istringstream iss(fileContent);
@@ -819,7 +821,7 @@ public:
                         return true;
                     } else if (keys & KEY_X) {
                         inSubMenu = false; // Set boolean to true when entering a submenu
-                        tsl::changeTo<ConfigOverlay>(subPath, keyName);
+                        tsl::changeTo<ConfigOverlay>(subPath, "*"+keyName);
                         return true;
                     }
                     return false;
@@ -850,26 +852,35 @@ public:
                     listItem->setValue(footer, true);
                     
                     if (sourceType == "json") { // For JSON wildcards
-                        listItem->setClickListener([this, cmds=commands, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
+                        listItem->setClickListener([this, cmds=commands, subPath = this->subPath, keyName = optionName, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
                             if (keys & KEY_A) {
                                 std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, selectedItem); // replace source
                                 //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
                                 interpretAndExecuteCommand(modifiedCmds); // Execute modified 
-                        
+                                
                                 listItem->setValue("DONE");
                                 return true;
+                            }  else if (keys & KEY_X) {
+                                inSubMenu = false; // Set boolean to true when entering a submenu
+                                tsl::changeTo<ConfigOverlay>(subPath, keyName);
+                                return true;
                             }
+                            
                             return false;
                         });
                         list->addItem(listItem);
                     } else {
-                        listItem->setClickListener([this, cmds=commands, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
+                        listItem->setClickListener([this, cmds=commands, subPath = this->subPath, keyName = optionName, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
                             if (keys & KEY_A) {
                                 std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, selectedItem); // replace source
                                 //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
                                 interpretAndExecuteCommand(modifiedCmds); // Execute modified 
-                        
+                                
                                 listItem->setValue("DONE");
+                                return true;
+                            }  else if (keys & KEY_X) {
+                                inSubMenu = false; // Set boolean to true when entering a submenu
+                                tsl::changeTo<ConfigOverlay>(subPath, keyName);
                                 return true;
                             }
                             return false;
@@ -1545,34 +1556,34 @@ public:
                         listItem = new tsl::elm::ListItem(optionName);
                         listItem->setValue(footer, true);
                     }
-                
+                    
                     //std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(option.second, pathReplace);
-                    listItem->setClickListener([cmds = commands, keyName = optionName, this, subPath = this->subPath, listItem](uint64_t keys) {
+                    listItem->setClickListener([this, cmds = commands, keyName = optionName, subPath = packageDirectory, listItem](uint64_t keys) {
                         if (keys & KEY_A) {
-                            inSubMenu = false;
+                            inMainMenu = false;
                             tsl::changeTo<SelectionOverlay>(subPath, keyName, cmds);
                             return true;
                         } else if (keys & KEY_X) {
-                            inSubMenu = false; // Set boolean to true when entering a submenu
-                            tsl::changeTo<ConfigOverlay>(subPath, keyName);
+                            inMainMenu = false; // Set boolean to true when entering a submenu
+                            tsl::changeTo<ConfigOverlay>(subPath, "*"+keyName);
                             return true;
                         }
                         return false;
                     });
-                
+                    
                     list->addItem(listItem);
                 } else { // For everything else
-                
+                    
                     const std::string& selectedItem = optionName;
-                
+                    
                     // For entries that are paths
                     itemName = getNameFromPath(selectedItem);
                     if (!isDirectory(preprocessPath(selectedItem))) {
                         itemName = dropExtension(itemName);
                     }
                     parentDirName = getParentDirNameFromPath(selectedItem);
-                
-                
+                    
+                    
                     if (commandMode == "default") { // for handiling toggles
                         size_t pos = selectedItem.find(" - ");
                         std::string footer = "";
@@ -1583,28 +1594,37 @@ public:
                         }
                         auto listItem = new tsl::elm::ListItem(optionName);
                         listItem->setValue(footer, true);
-                    
+                        
                         if (sourceType == "json") { // For JSON wildcards
-                            listItem->setClickListener([this, cmds=commands, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
+                            listItem->setClickListener([this, cmds=commands, subPath = packageDirectory, keyName = optionName, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
                                 if (keys & KEY_A) {
                                     std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, selectedItem); // replace source
                                     //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
                                     interpretAndExecuteCommand(modifiedCmds); // Execute modified 
-                        
+                                    
                                     listItem->setValue("DONE");
                                     return true;
+                                }  else if (keys & KEY_X) {
+                                    inMainMenu = false; // Set boolean to true when entering a submenu
+                                    tsl::changeTo<ConfigOverlay>(subPath, keyName);
+                                    return true;
                                 }
+                                
                                 return false;
                             });
                             list->addItem(listItem);
                         } else {
-                            listItem->setClickListener([this, cmds=commands, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
+                            listItem->setClickListener([this, cmds=commands, subPath = packageDirectory, keyName = optionName, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
                                 if (keys & KEY_A) {
                                     std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, selectedItem); // replace source
                                     //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
                                     interpretAndExecuteCommand(modifiedCmds); // Execute modified 
-                        
+                                    
                                     listItem->setValue("DONE");
+                                    return true;
+                                }  else if (keys & KEY_X) {
+                                    inMainMenu = false; // Set boolean to true when entering a submenu
+                                    tsl::changeTo<ConfigOverlay>(subPath, keyName);
                                     return true;
                                 }
                                 return false;
@@ -1612,14 +1632,14 @@ public:
                             list->addItem(listItem);
                         }
                     } else if (commandMode == "toggle") {
-                    
-                    
+                        
+                        
                         auto toggleListItem = new tsl::elm::ToggleListItem(optionName, false, "On", "Off");
                         // Set the initial state of the toggle item
                         bool toggleStateOn = isFileOrDirectory(preprocessPath(pathPatternOn));
-                    
+                        
                         toggleListItem->setState(toggleStateOn);
-                    
+                        
                         toggleListItem->setStateChangedListener([this, cmdsOn=commandsOn, cmdsOff=commandsOff, toggleStateOn](bool state) {
                             if (!state) {
                                 // Toggle switched to On
