@@ -95,7 +95,7 @@ public:
         inConfigMenu = true;
         std::string packageName = getNameFromPath(filePath);
         if (packageName == ".packages") {
-            packageName = "Base Package";
+            packageName = "Root Package";
         }
         rootFrame = new tsl::elm::OverlayFrame(packageName, "Ultrahand Config");
         list = new tsl::elm::List();
