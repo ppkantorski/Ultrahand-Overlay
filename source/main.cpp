@@ -504,7 +504,7 @@ public:
         
         
         if (commandGrouping == "default") {
-            list->addItem(new tsl::elm::CategoryHeader(specificKey)); // remove * from key
+            list->addItem(new tsl::elm::CategoryHeader(specificKey.substr(1))); // remove * from key
         }
         
         
