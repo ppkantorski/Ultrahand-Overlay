@@ -345,14 +345,6 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>> comm
         commandName = cmd[0];
         
         
-        if (!listString.empty()) {
-            listData = stringToList(listString);
-        } else if (!jsonString.empty()) {
-            jsonData1 = stringToJson(jsonString);
-        } else if (!jsonPath.empty()) {
-            jsonData2 = json_load_file(jsonPath.c_str(), 0, &error);
-        }
-        
         
         // Create a modified command vector to store changes
         //std::vector<std::string> newCommand;
@@ -360,53 +352,55 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>> comm
         
         for (auto& arg : modifiedCmd) {
             //logMessage("Before replacement: " + arg);
-            if ((!listData.empty()) && (arg.find("{list(") != std::string::npos)) {
+            if ((!listString.empty() && (arg.find("{list(") != std::string::npos))) {
                 size_t startPos = arg.find("{list(");
                 size_t endPos = arg.find(")}");
                 if (endPos != std::string::npos && endPos > startPos) {
                     int listIndex = stringToNumber(arg.substr(startPos, endPos - startPos + 2));
+                    listData = stringToList(listString);
                     replacement = listData[listIndex];
                     arg.replace(startPos, endPos - startPos + 2, replacement);
+                    
+                    // Release the memory held by listData
+                    listData.clear();
                 }
-            } else if ((jsonData1) && (arg.find("{json(") != std::string::npos)) {
+            } else if ((!jsonString.empty() && (arg.find("{json(") != std::string::npos))) {
                 //std::string countStr = entry;
                 //arg = replacePlaceholder(arg, "*", entry);
                 size_t startPos = arg.find("{json(");
                 size_t endPos = arg.find(")}");
                 if (endPos != std::string::npos && endPos > startPos) {
+                    jsonData1 = stringToJson(jsonString);
                     replacement = replaceJsonPlaceholder(arg.substr(startPos, endPos - startPos + 2), "json", jsonData1);
                     arg.replace(startPos, endPos - startPos + 2, replacement);
+                    
+                    // Free jsonData1
+                    if (jsonData1 != nullptr) {
+                        json_decref(jsonData1);
+                        jsonData1 = nullptr;
+                    }
                 }
-            } else if ((jsonData2) && (arg.find("{json_file(") != std::string::npos)) {
+            } else if ((!jsonPath.empty() && (arg.find("{json_file(") != std::string::npos))) {
                 //std::string countStr = entry;
                 //arg = replacePlaceholder(arg, "*", entry);
                 size_t startPos = arg.find("{json_file(");
                 size_t endPos = arg.find(")}");
                 if (endPos != std::string::npos && endPos > startPos) {
+                    jsonData2 = json_load_file(jsonPath.c_str(), 0, &error);
                     replacement = replaceJsonPlaceholder(arg.substr(startPos, endPos - startPos + 2), "json_file", jsonData2);
                     //logMessage("Mid source replacement: " + replacement);
                     arg.replace(startPos, endPos - startPos + 2, replacement);
+                    
+                    // Free jsonData2
+                    if (jsonData2 != nullptr) {
+                        json_decref(jsonData2);
+                        jsonData2 = nullptr;
+                    }
                 }
             }
             //newCommand.push_back(arg);
         }
         command = modifiedCmd; // update command
-        
-        
-        // Release the memory held by listData
-        listData.clear();
-        // Free jsonData1
-        if (jsonData1 != nullptr) {
-            json_decref(jsonData1);
-            jsonData1 = nullptr;
-        }
-        // Free jsonData2
-        if (jsonData2 != nullptr) {
-            json_decref(jsonData2);
-            jsonData2 = nullptr;
-        }
-        
-        
         
         
         // Variable replacement definitions
