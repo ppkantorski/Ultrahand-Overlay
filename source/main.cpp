@@ -93,12 +93,16 @@ public:
      */
     virtual tsl::elm::Element* createUI() override {
         inConfigMenu = true;
-        
-        rootFrame = new tsl::elm::OverlayFrame(getNameFromPath(filePath), "Ultrahand Config");
+        std::string packageName = getNameFromPath(filePath);
+        if (packageName == ".packages") {
+            packageName = "Base Package";
+        }
+        rootFrame = new tsl::elm::OverlayFrame(packageName, "Ultrahand Config");
         list = new tsl::elm::List();
         
         std::string packageFile = filePath + packageFileName;
         std::string fileContent = getFileContents(packageFile);
+        
         if (!fileContent.empty()) {
             std::string line;
             std::istringstream iss(fileContent);
@@ -527,17 +531,17 @@ public:
             
             
             if (commandMode == "default") { // for handiling toggles
+                size_t pos = selectedItem.find(" - ");
+                std::string footer = "";
+                std::string optionName = selectedItem;
+                if (pos != std::string::npos) {
+                    footer = selectedItem.substr(pos + 2); // Assign the part after "&&" as the footer
+                    optionName = selectedItem.substr(0, pos); // Strip the "&&" and everything after it
+                }
+                auto listItem = new tsl::elm::ListItem(optionName);
+                listItem->setValue(footer, true);
                 
                 if (sourceType == "json") { // For JSON wildcards
-                    size_t pos = selectedItem.find(" - ");
-                    std::string footer = "";
-                    std::string optionName = selectedItem;
-                    if (pos != std::string::npos) {
-                        footer = selectedItem.substr(pos + 2); // Assign the part after "&&" as the footer
-                        optionName = selectedItem.substr(0, pos); // Strip the "&&" and everything after it
-                    }
-                    auto listItem = new tsl::elm::ListItem(optionName);
-                    listItem->setValue(footer, true);
                     listItem->setClickListener([this, cmds=commands, selectedItem, i, listItem](uint64_t keys) { // Add 'command' to the capture list
                         if (keys & KEY_A) {
                             std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, selectedItem, i); // replace source
@@ -551,15 +555,6 @@ public:
                     });
                     list->addItem(listItem);
                 } else {
-                    size_t pos = selectedItem.find(" - ");
-                    std::string footer = "";
-                    std::string optionName = selectedItem;
-                    if (pos != std::string::npos) {
-                        footer = selectedItem.substr(pos + 2); // Assign the part after "&&" as the footer
-                        optionName = selectedItem.substr(0, pos); // Strip the "&&" and everything after it
-                    }
-                    auto listItem = new tsl::elm::ListItem(optionName);
-                    listItem->setValue(footer, true);
                     listItem->setClickListener([this, cmds=commands, selectedItem, i, listItem](uint64_t keys) { // Add 'command' to the capture list
                         if (keys & KEY_A) {
                             std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, selectedItem, i); // replace source
@@ -811,14 +806,14 @@ public:
                 }
                 
                 //std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(option.second, pathReplace);
-                listItem->setClickListener([cmds = commands, keyName = optionName, this, subPath = this->subPath, listItem](uint64_t keys) {
+                listItem->setClickListener([cmds = commands, keyName = option.first, this, subPath = this->subPath, listItem](uint64_t keys) {
                     if (keys & KEY_A) {
                         inSubMenu = false;
                         tsl::changeTo<SelectionOverlay>(subPath, keyName, cmds);
                         return true;
                     } else if (keys & KEY_X) {
                         inSubMenu = false; // Set boolean to true when entering a submenu
-                        tsl::changeTo<ConfigOverlay>(subPath, "*"+keyName);
+                        tsl::changeTo<ConfigOverlay>(subPath, keyName);
                         return true;
                     }
                     return false;
@@ -838,18 +833,11 @@ public:
                 
                 
                 if (commandMode == "default") { // for handiling toggles
-                    size_t pos = selectedItem.find(" - ");
-                    std::string footer = "";
-                    std::string optionName = selectedItem;
-                    if (pos != std::string::npos) {
-                        footer = selectedItem.substr(pos + 2); // Assign the part after "&&" as the footer
-                        optionName = selectedItem.substr(0, pos); // Strip the "&&" and everything after it
-                    }
                     auto listItem = new tsl::elm::ListItem(optionName);
                     listItem->setValue(footer, true);
                     
                     if (sourceType == "json") { // For JSON wildcards
-                        listItem->setClickListener([this, cmds=commands, subPath = this->subPath, keyName = optionName, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
+                        listItem->setClickListener([this, cmds=commands, subPath = this->subPath, keyName = option.first, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
                             if (keys & KEY_A) {
                                 std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, selectedItem); // replace source
                                 //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
@@ -867,7 +855,7 @@ public:
                         });
                         list->addItem(listItem);
                     } else {
-                        listItem->setClickListener([this, cmds=commands, subPath = this->subPath, keyName = optionName, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
+                        listItem->setClickListener([this, cmds=commands, subPath = this->subPath, keyName = option.first, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
                             if (keys & KEY_A) {
                                 std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, selectedItem); // replace source
                                 //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
@@ -1582,18 +1570,11 @@ public:
                     
                     
                     if (commandMode == "default") { // for handiling toggles
-                        size_t pos = selectedItem.find(" - ");
-                        std::string footer = "";
-                        std::string optionName = selectedItem;
-                        if (pos != std::string::npos) {
-                            footer = selectedItem.substr(pos + 2); // Assign the part after "&&" as the footer
-                            optionName = selectedItem.substr(0, pos); // Strip the "&&" and everything after it
-                        }
                         auto listItem = new tsl::elm::ListItem(optionName);
                         listItem->setValue(footer, true);
                         
                         if (sourceType == "json") { // For JSON wildcards
-                            listItem->setClickListener([this, cmds=commands, subPath = packageDirectory, keyName = optionName, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
+                            listItem->setClickListener([this, cmds=commands, subPath = packageDirectory, keyName = option.first, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
                                 if (keys & KEY_A) {
                                     std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, selectedItem); // replace source
                                     //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
@@ -1611,7 +1592,7 @@ public:
                             });
                             list->addItem(listItem);
                         } else {
-                            listItem->setClickListener([this, cmds=commands, subPath = packageDirectory, keyName = optionName, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
+                            listItem->setClickListener([this, cmds=commands, subPath = packageDirectory, keyName = option.first, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
                                 if (keys & KEY_A) {
                                     std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, selectedItem); // replace source
                                     //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
