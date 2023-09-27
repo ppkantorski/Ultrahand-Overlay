@@ -63,7 +63,7 @@ static std::string groupingPattern = ";grouping=";
 class ConfigOverlay : public tsl::Gui {
 private:
     std::string filePath, specificKey;
-    bool isInSection, inQuotes;
+    bool isInSection, inQuotes, isFromMainMenu;
 
 public:
     /**
@@ -74,7 +74,7 @@ public:
      * @param file The file path associated with the overlay.
      * @param key The specific key related to the overlay (optional).
      */
-    ConfigOverlay(const std::string& file, const std::string& key = "") : filePath(file), specificKey(key) {}
+    ConfigOverlay(const std::string& file, const std::string& key = "", const bool& fromMainMenu=false) : filePath(file), specificKey(key), isFromMainMenu(fromMainMenu) {}
     
     /**
      * @brief Destroys the `ConfigOverlay` instance.
@@ -189,9 +189,14 @@ public:
             if (keysHeld & KEY_B) {
                 //tsl::Overlay::get()->close();
                 //svcSleepThread(300'000'000);
-                tsl::goBack();
+                //tsl::goBack();
                 inConfigMenu = false;
-                returningToSub = true;
+                if (isFromMainMenu == false){
+                    returningToSub = true;
+                } else {
+                    returningToMain = true;
+                }
+                tsl::goBack();
                 //tsl::Overlay::get()->close();
                 return true;
             }
@@ -625,9 +630,10 @@ public:
             if (keysHeld & KEY_B) {
                 //tsl::Overlay::get()->close();
                 //svcSleepThread(300'000'000);
-                tsl::goBack();
+                //tsl::goBack();
                 inSelectionMenu = false;
                 returningToSub = true;
+                tsl::goBack();
                 //tsl::Overlay::get()->close();
                 return true;
             }
@@ -1012,9 +1018,9 @@ public:
                 //tsl::Overlay::get()->close();
                 //svcSleepThread(300'000'000);
                 //tsl::goBack();
-                tsl::changeTo<MainMenu>();
                 inSubMenu = false;
                 returningToMain = true;
+                tsl::changeTo<MainMenu>();
                 //tsl::Overlay::get()->close();
                 return true;
             }
@@ -1543,14 +1549,14 @@ public:
                     }
                     
                     //std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(option.second, pathReplace);
-                    listItem->setClickListener([this, cmds = commands, keyName = optionName, subPath = packageDirectory, listItem](uint64_t keys) {
+                    listItem->setClickListener([this, cmds = commands, keyName = option.first, subPath = packageDirectory, listItem](uint64_t keys) {
                         if (keys & KEY_A) {
                             inMainMenu = false;
                             tsl::changeTo<SelectionOverlay>(subPath, keyName, cmds);
                             return true;
                         } else if (keys & KEY_X) {
                             inMainMenu = false; // Set boolean to true when entering a submenu
-                            tsl::changeTo<ConfigOverlay>(subPath, "*"+keyName);
+                            tsl::changeTo<ConfigOverlay>(subPath, keyName, true);
                             return true;
                         }
                         return false;
@@ -1584,7 +1590,7 @@ public:
                                     return true;
                                 }  else if (keys & KEY_X) {
                                     inMainMenu = false; // Set boolean to true when entering a submenu
-                                    tsl::changeTo<ConfigOverlay>(subPath, keyName);
+                                    tsl::changeTo<ConfigOverlay>(subPath, keyName, true);
                                     return true;
                                 }
                                 
@@ -1602,7 +1608,7 @@ public:
                                     return true;
                                 }  else if (keys & KEY_X) {
                                     inMainMenu = false; // Set boolean to true when entering a submenu
-                                    tsl::changeTo<ConfigOverlay>(subPath, keyName);
+                                    tsl::changeTo<ConfigOverlay>(subPath, keyName, true);
                                     return true;
                                 }
                                 return false;
