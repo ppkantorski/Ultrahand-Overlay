@@ -587,10 +587,10 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
             }
         }
         //logMessage("After source replacement: " + arg);
-        line = "";
-        for (auto& cmd : modifiedCmd) {
-            line = line +" "+cmd;
-        }
+        //line = "";
+        //for (auto& cmd : modifiedCmd) {
+        //    line = line +" "+cmd;
+        //}
         //logMessage("source modifiedCmd post:"+line);
         modifiedCommands.emplace_back(modifiedCmd);
     }
