@@ -318,7 +318,8 @@ bool isDangerousCombination(const std::string& patternPath) {
  * @param commands A list of commands, where each command is represented as a vector of strings.
  */
 void interpretAndExecuteCommand(const std::vector<std::vector<std::string>> commands) {
-    std::string commandName, sourcePath, destinationPath, desiredSection, desiredKey, desiredNewKey, desiredValue, offset, customPattern, hexDataToReplace, hexDataReplacement, fileUrl, occurrence;
+    std::string commandName, sourcePath, destinationPath, desiredSection, desiredNewSection, desiredKey, desiredNewKey, desiredValue, \
+        offset, customPattern, hexDataToReplace, hexDataReplacement, fileUrl, occurrence;
     
     bool logging = true;
     
@@ -492,7 +493,23 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>> comm
                 //logMessage( "Invalid move command.");
                 //std::cout << "Invalid move command. Usage: move <source_path> <destination_path>" << std::endl;
             }
-
+        } else if (commandName == "add-ini-section") {
+            // Edit command
+            if (command.size() >= 2) {
+                sourcePath = preprocessPath(command[1]);
+                desiredSection = removeQuotes(command[2]);
+                
+                addIniSection(sourcePath.c_str(), desiredSection.c_str());
+            }
+        } else if (commandName == "rename-ini-section") {
+            // Edit command
+            if (command.size() >= 3) {
+                sourcePath = preprocessPath(command[1]);
+                desiredSection = removeQuotes(command[2]);
+                desiredNewSection = removeQuotes(command[3]);
+                
+                renameIniSection(sourcePath.c_str(), desiredSection.c_str(), desiredNewSection.c_str());
+            }
         } else if (commandName == "set-ini-val" || commandName == "set-ini-value") {
             // Edit command
             if (command.size() >= 5) {
