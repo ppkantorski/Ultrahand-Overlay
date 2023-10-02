@@ -301,7 +301,7 @@ std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadO
         FILE* configFileOut = fopen(configIniPath.c_str(), "w");
         std::string commands;
         if (makeConfig) {
-            commands = "[HOS Reboot]\n"
+            commands = "[Reboot]\n"
                        "reboot\n"
                        "[Shutdown]\n"
                        "shutdown\n";
@@ -570,4 +570,143 @@ void setIniFileValue(const std::string& fileToEdit, const std::string& desiredSe
 void setIniFileKey(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredNewKey) {
     setIniFile(fileToEdit, desiredSection, desiredKey, "", desiredNewKey);
     cleanIniFormatting(fileToEdit);
+}
+
+
+
+/**
+ * @brief Adds a new section to an INI file.
+ *
+ * This function adds a new section with the specified name to the INI file located at the
+ * specified path. If the section already exists, it does nothing.
+ *
+ * @param filePath The path to the INI file.
+ * @param sectionName The name of the section to add.
+ */
+void addIniSection(const char* filePath, const char* sectionName) {
+    if (!isFileOrDirectory(filePath)) {
+        // INI file doesn't exist, handle the error accordingly
+        //std::cerr << "Error: INI file not found." << std::endl;
+        return;
+    }
+    
+    // Read the existing contents of the INI file
+    FILE* inputFile = fopen(filePath, "r");
+    if (!inputFile) {
+        //std::cerr << "Error: Failed to open INI file for reading." << std::endl;
+        return;
+    }
+    
+    FILE* tempFile = fopen("temp.ini", "w");
+    if (!tempFile) {
+        //std::cerr << "Error: Failed to create a temporary file." << std::endl;
+        fclose(inputFile);
+        return;
+    }
+    
+    constexpr size_t BufferSize = 4096;
+    char line[BufferSize];
+    bool sectionExists = false;
+    while (fgets(line, sizeof(line), inputFile)) {
+        // Check if the line contains the section
+        if (line[0] == '[' && strncmp(&line[1], sectionName, strlen(sectionName)) == 0) {
+            sectionExists = true;
+            break;  // Section already exists, no need to continue
+        }
+        fputs(line, tempFile);
+    }
+    
+    if (!sectionExists) {
+        // Section doesn't exist, add it
+        fprintf(tempFile, "[%s]\n", sectionName);
+    }
+    
+    // Copy the rest of the input file to the temp file
+    while (fgets(line, sizeof(line), inputFile)) {
+        fputs(line, tempFile);
+    }
+    
+    fclose(inputFile);
+    fclose(tempFile);
+    
+    // Replace the original file with the temp file
+    remove(filePath);  // Delete the old configuration file
+    rename("temp.ini", filePath);  // Rename the temp file to the original name
+    
+    //std::cout << "Section '" << sectionName << "' added to the INI file." << std::endl;
+}
+
+
+
+
+
+/**
+ * @brief Renames a section in an INI file.
+ *
+ * This function renames the section with the specified current name to the specified new name
+ * in the INI file located at the specified path. If the current section does not exist, or if the
+ * new section name already exists, it does nothing.
+ *
+ * @param filePath The path to the INI file.
+ * @param currentSectionName The name of the section to rename.
+ * @param newSectionName The new name for the section.
+ */
+void renameIniSection(const std::string& filePath, const std::string& currentSectionName, const std::string& newSectionName) {
+    FILE* configFile = fopen(filePath.c_str(), "r");
+    if (!configFile) {
+        // The INI file doesn't exist, handle the error accordingly
+        return;
+    }
+
+    std::string tempPath = filePath + ".tmp";
+    FILE* tempFile = fopen(tempPath.c_str(), "w");
+    if (!tempFile) {
+        // Failed to create a temporary file, handle the error accordingly
+        fclose(configFile);
+        return;
+    }
+
+    std::string currentSection;
+    bool renaming = false;
+    constexpr size_t BufferSize = 4096;
+    char line[BufferSize];
+
+    while (fgets(line, sizeof(line), configFile)) {
+        std::string currentLine(line);
+
+        // Check if the line represents a section
+        if (currentLine.length() > 2 && currentLine.front() == '[' && currentLine.back() == ']') {
+            std::string sectionName = currentLine.substr(1, currentLine.size() - 2);
+
+            if (sectionName == currentSectionName) {
+                // We found the section to rename
+                fprintf(tempFile, "[%s]\n", newSectionName.c_str());
+                renaming = true;
+            } else {
+                // Copy the line as is
+                fprintf(tempFile, "%s", currentLine.c_str());
+                renaming = false;
+            }
+        } else if (renaming) {
+            // Rename the section in the following lines
+            fprintf(tempFile, "[%s]\n", newSectionName.c_str());
+            renaming = false;
+        } else {
+            // Copy the line as is
+            fprintf(tempFile, "%s", currentLine.c_str());
+        }
+    }
+
+    fclose(configFile);
+    fclose(tempFile);
+
+    // Replace the original file with the temp file
+    if (remove(filePath.c_str()) != 0) {
+        // Failed to delete the original file, handle the error accordingly
+        return;
+    }
+
+    if (rename(tempPath.c_str(), filePath.c_str()) != 0) {
+        // Failed to rename the temp file, handle the error accordingly
+    }
 }

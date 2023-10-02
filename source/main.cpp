@@ -47,11 +47,15 @@ static tsl::elm::OverlayFrame *rootFrame = nullptr;
 static tsl::elm::List *list = nullptr;
 
 // Command mode globals
-static std::vector<std::string> commandModes = {"default", "toggle"};
+static std::vector<std::string> commandModes = {"default", "toggle", "option"};
 static std::vector<std::string> commandGroupings = {"default", "split"};
 static std::string modePattern = ";mode=";
 static std::string groupingPattern = ";grouping=";
 
+static std::string lastKeyName = "";
+static std::unordered_map<std::string, std::string> selectedFooterDict;
+static auto selectedListItem = new tsl::elm::ListItem("");
+static auto lastSelectedListItem = new tsl::elm::ListItem("");
 
 /**
  * @brief The `ConfigOverlay` class handles configuration overlay functionality.
@@ -155,7 +159,7 @@ public:
                             
                             commandVec.emplace_back(std::move(commandParts));
                             interpretAndExecuteCommand(commandVec);
-                            listItem->setValue("DONE");
+                            listItem->setValue("\uE14B");
                             return true;
                         }
                         return false;
@@ -166,6 +170,10 @@ public:
         } else {
             list->addItem(new tsl::elm::ListItem("Failed to open file: " + packageFile));
         }
+        
+        
+        
+        
         
         rootFrame->setContent(list);
         return rootFrame;
@@ -222,9 +230,9 @@ private:
     std::string filePath, specificKey, pathPattern, pathPatternOn, pathPatternOff, itemName, parentDirName, lastParentDirName;
     std::vector<std::string> filesList, filesListOn, filesListOff, filterList, filterListOn, filterListOff;
     std::vector<std::vector<std::string>> commands;
-    
     bool toggleState = false;
-
+    std::string packageConfigIniPath;
+    std::string commandMode, commandGrouping;
 public:
     /**
      * @brief Constructs a `SelectionOverlay` instance.
@@ -235,8 +243,10 @@ public:
      * @param key The specific key related to the overlay (optional).
      * @param cmds A vector of vectors containing commands for the overlay (optional).
      */
-    SelectionOverlay(const std::string& file, const std::string& key = "", const std::vector<std::vector<std::string>>& cmds = {})
-        : filePath(file), specificKey(key), commands(cmds) {}
+    SelectionOverlay(const std::string& path, const std::string& key = "", const std::vector<std::vector<std::string>>& cmds = {})
+        : filePath(path), specificKey(key), commands(cmds) {
+            lastSelectedListItem = new tsl::elm::ListItem("");
+        }
     /**
      * @brief Destroys the `SelectionOverlay` instance.
      *
@@ -258,8 +268,10 @@ public:
         rootFrame = new tsl::elm::OverlayFrame(getNameFromPath(filePath), "Ultrahand Package");
         list = new tsl::elm::List();
         
-        std::string commandMode = commandModes[0];
-        std::string commandGrouping = commandGroupings[0];
+        packageConfigIniPath = filePath + configFileName;
+        
+        commandMode = commandModes[0];
+        commandGrouping = commandGroupings[0];
         
         std::string currentSection = "global";
         std::string sourceType = "default", sourceTypeOn = "default", sourceTypeOff = "default"; 
@@ -309,6 +321,9 @@ public:
                     } else if (currentSection == "off") {
                         commandsOff.push_back(cmd);
                     }
+                } else if (commandMode == "option") {
+                    // 
+                    
                 }
                 
             }
@@ -401,7 +416,7 @@ public:
         std::vector<std::string> selectedItemsList, selectedItemsListOn, selectedItemsListOff;
         
         // Get the list of files matching the pattern
-        if (commandMode == "default") {
+        if (commandMode == "default" || commandMode == "option") {
             if (sourceType == "file"){
                 selectedItemsList = filesList;
             } else if (sourceType == "list"){
@@ -535,7 +550,7 @@ public:
             }
             
             
-            if (commandMode == "default") { // for handiling toggles
+            if (commandMode == "default" || commandMode == "option") { // for handiling toggles
                 size_t pos = selectedItem.find(" - ");
                 std::string footer = "";
                 std::string optionName = selectedItem;
@@ -544,29 +559,58 @@ public:
                     optionName = selectedItem.substr(0, pos); // Strip the "&&" and everything after it
                 }
                 auto listItem = new tsl::elm::ListItem(optionName);
-                listItem->setValue(footer, true);
+                
+                
+                if (selectedFooterDict[specificKey] == selectedItem) {
+                    lastSelectedListItem = listItem;
+                    listItem->setValue("\uE14B");
+                } else {
+                    listItem->setValue(footer, true);
+                }
+                
+                //listItem->setValue(footer, true);
+                
                 
                 if (sourceType == "json") { // For JSON wildcards
-                    listItem->setClickListener([this, cmds=commands, selectedItem, i, listItem](uint64_t keys) { // Add 'command' to the capture list
+                    listItem->setClickListener([this, optionName, cmds=commands, footer, selectedItem, i, listItem](uint64_t keys) { // Add 'command' to the capture list
                         if (keys & KEY_A) {
+                            if (commandMode == "option") {
+                                selectedFooterDict[specificKey] = selectedItem;
+                                lastSelectedListItem->setValue(footer, true);
+                            }
                             std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, selectedItem, i); // replace source
                             //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
                             interpretAndExecuteCommand(modifiedCmds); // Execute modified 
                             
-                            listItem->setValue("DONE");
+                            listItem->setValue("\uE14B");
+                            
+                            if (commandMode == "option") {
+                                lastSelectedListItem = listItem;
+                            }
+                            
                             return true;
                         }
                         return false;
                     });
                     list->addItem(listItem);
                 } else {
-                    listItem->setClickListener([this, cmds=commands, selectedItem, i, listItem](uint64_t keys) { // Add 'command' to the capture list
+                    listItem->setClickListener([this, optionName, cmds=commands, footer, selectedItem, i, listItem](uint64_t keys) { // Add 'command' to the capture list
                         if (keys & KEY_A) {
+                            if (commandMode == "option") {
+                                selectedFooterDict[specificKey] = selectedItem;
+                                lastSelectedListItem->setValue(footer, true);
+                            }
+                            
                             std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, selectedItem, i); // replace source
                             //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
                             interpretAndExecuteCommand(modifiedCmds); // Execute modified 
                             
-                            listItem->setValue("DONE");
+                            listItem->setValue("\uE14B");
+                            
+                            if (commandMode == "option") {
+                                lastSelectedListItem = listItem;
+                            }
+                            
                             return true;
                         }
                         return false;
@@ -580,26 +624,22 @@ public:
                 bool toggleStateOn = std::find(selectedItemsListOn.begin(), selectedItemsListOn.end(), selectedItem) != selectedItemsListOn.end();
                 toggleListItem->setState(toggleStateOn);
                 
-                toggleListItem->setStateChangedListener([this, cmdsOn=commandsOn, cmdsOff=commandsOff, selectedItem, i, toggleStateOn](bool state) {
+                toggleListItem->setStateChangedListener([this, cmdsOn=commandsOn, cmdsOff=commandsOff, selectedItem, i, selectedItemsListOn, selectedItemsListOff, toggleListItem](bool state) {
                     if (!state) {
-                        // Toggle switched to On
-                        if (toggleStateOn) {
+                        if (std::find(selectedItemsListOn.begin(), selectedItemsListOn.end(), selectedItem) != selectedItemsListOn.end()) {
+                            // Toggle switched to On
                             std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmdsOn, selectedItem, i); // replace source
-                            //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
                             interpretAndExecuteCommand(modifiedCmds); // Execute modified 
                         } else {
-                            // Handle the case where the command should only run in the source_on section
-                            // Add your specific code here
+                            toggleListItem->setState(!state);
                         }
                     } else {
-                        // Toggle switched to Off
-                        if (!toggleStateOn) {
+                        if (std::find(selectedItemsListOff.begin(), selectedItemsListOff.end(), selectedItem) != selectedItemsListOff.end()) {
+                            // Toggle switched to Off
                             std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmdsOff, selectedItem, i); // replace source
-                            //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
                             interpretAndExecuteCommand(modifiedCmds); // Execute modified 
                         } else {
-                            // Handle the case where the command should only run in the source_off section
-                            // Add your specific code here
+                            toggleListItem->setState(!state);
                         }
                     }
                 });
@@ -633,6 +673,23 @@ public:
                 //tsl::goBack();
                 inSelectionMenu = false;
                 returningToSub = true;
+                
+                if (commandMode == "option") {
+                    if (isFileOrDirectory(packageConfigIniPath)) {
+                        auto packageConfigData = getParsedDataFromIniFile(packageConfigIniPath);
+                        if (packageConfigData.count(specificKey) > 0) {
+                            auto& optionSection = packageConfigData[specificKey];
+                            if (optionSection.count("footer") > 0) {
+                                auto& commandFooter = optionSection["footer"];
+                                if (commandFooter != "null") {
+                                    selectedListItem->setValue(commandFooter, true);
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                //lastSelectedListItem = new tsl::elm::ListItem("");
                 tsl::goBack();
                 //tsl::Overlay::get()->close();
                 return true;
@@ -659,6 +716,7 @@ class MainMenu;
  */
 class SubMenu : public tsl::Gui {
 private:
+    tsl::hlp::ini::IniData packageConfigData;
     std::string subPath, pathReplace, pathReplaceOn, pathReplaceOff;
     std::string filePath, specificKey, pathPattern, pathPatternOn, pathPatternOff, itemName, parentDirName, lastParentDirName;
     std::vector<std::string> filesList, filesListOn, filesListOff, filterList, filterListOn, filterListOff;
@@ -676,7 +734,9 @@ public:
      *
      * Cleans up any resources associated with the `SubMenu` instance.
      */
-    ~SubMenu() {}
+    ~SubMenu() {
+        selectedFooterDict.clear(); // Clears all data from the map, making it empty again
+    }
 
     /**
      * @brief Creates the graphical user interface (GUI) for the sub-menu overlay.
@@ -696,8 +756,9 @@ public:
         list->addItem(new tsl::elm::CategoryHeader("Commands"));
         
         // Load options from INI file in the subdirectory
-        std::string subPackageIniPath = subPath + "/" + packageFileName;
-        std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> options = loadOptionsFromIni(subPackageIniPath);
+        std::string packageIniPath = subPath + packageFileName;
+        std::string packageConfigIniPath = subPath + configFileName;
+        std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> options = loadOptionsFromIni(packageIniPath);
         
         // Populate the sub menu with options
         for (const auto& option : options) {
@@ -707,21 +768,10 @@ public:
             std::string footer; 
             bool useSelection = false;
             
-            if (optionName[0] == '*') { 
-                useSelection = true;
-                optionName = optionName.substr(1); // Strip the "*" character on the left
-                footer = "\u25B6";
-            } else {
-                size_t pos = optionName.find(" - ");
-                if (pos != std::string::npos) {
-                    footer = optionName.substr(pos + 2); // Assign the part after "&&" as the footer
-                    optionName = optionName.substr(0, pos); // Strip the "&&" and everything after it
-                }
-            }
             
-            
-            std::string commandMode = commandModes[0];
-            std::string commandGrouping = commandGroupings[0];
+            std::string commandFooter = "null";
+            std::string commandMode = "default";
+            std::string commandGrouping = "default";
             
             std::string currentSection = "global";
             std::string sourceType = "default", sourceTypeOn = "default", sourceTypeOff = "default"; 
@@ -801,6 +851,61 @@ public:
                 }
             }
             
+            if (isFileOrDirectory(packageConfigIniPath)) {
+                packageConfigData = getParsedDataFromIniFile(packageConfigIniPath);
+                
+                
+                if (packageConfigData.count(optionName) > 0) {
+                    auto& optionSection = packageConfigData[optionName];
+                    
+                    // For hiding the versions of overlays/packages
+                    if (optionSection.count("mode") > 0) {
+                        commandMode = optionSection["mode"];
+                    } else {
+                        setIniFileValue(packageConfigIniPath, optionName, "mode", commandMode);
+                    }
+                    if (optionSection.count("grouping") > 0) {
+                        commandGrouping = optionSection["grouping"];
+                    } else {
+                        setIniFileValue(packageConfigIniPath, optionName, "grouping", commandGrouping);
+                    }
+                    
+                    if (optionSection.count("footer") > 0) {
+                        commandFooter = optionSection["footer"];
+                    } else {
+                        setIniFileValue(packageConfigIniPath, optionName, "footer", commandFooter);
+                    }
+                }
+            } else { // write data if settings are not loaded
+                setIniFileValue(packageConfigIniPath, optionName, "mode", commandMode);
+                setIniFileValue(packageConfigIniPath, optionName, "grouping", commandGrouping);
+                setIniFileValue(packageConfigIniPath, optionName, "footer", "null");
+            }
+            
+            
+            
+            // Get Option name and footer
+            if (optionName[0] == '*') { 
+                useSelection = true;
+                optionName = optionName.substr(1); // Strip the "*" character on the left
+                footer = "\u25B6";
+            } else {
+                size_t pos = optionName.find(" - ");
+                if (pos != std::string::npos) {
+                    footer = optionName.substr(pos + 2); // Assign the part after "&&" as the footer
+                    optionName = optionName.substr(0, pos); // Strip the "&&" and everything after it
+                }
+            }
+            
+            if (commandMode == "option") {
+                // override loading of the command footer
+                if (commandFooter != "null") {
+                    footer = commandFooter;
+                } else {
+                    footer = "\u22EF";
+                }
+            }
+            
             
             if (useSelection) { // For wildcard commands (dropdown menus)
                 auto listItem = static_cast<tsl::elm::ListItem*>(nullptr);
@@ -812,10 +917,16 @@ public:
                 }
                 
                 //std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(option.second, pathReplace);
-                listItem->setClickListener([cmds = commands, keyName = option.first, this, subPath = this->subPath, listItem](uint64_t keys) {
+                listItem->setClickListener([cmds = commands, keyName = option.first, this, subPath = this->subPath, footer, listItem](uint64_t keys) {
                     if (keys & KEY_A) {
                         inSubMenu = false;
+                        selectedListItem = listItem;
+                        if (selectedFooterDict.find(keyName) == selectedFooterDict.end()) {
+                            selectedFooterDict[keyName] = footer;
+                        }
                         tsl::changeTo<SelectionOverlay>(subPath, keyName, cmds);
+                        lastKeyName = keyName;
+                        
                         return true;
                     } else if (keys & KEY_X) {
                         inSubMenu = false; // Set boolean to true when entering a submenu
@@ -838,7 +949,7 @@ public:
                 parentDirName = getParentDirNameFromPath(selectedItem);
                 
                 
-                if (commandMode == "default") { // for handiling toggles
+                if (commandMode == "default" || commandMode == "option") { // for handiling toggles
                     auto listItem = new tsl::elm::ListItem(optionName);
                     listItem->setValue(footer, true);
                     
@@ -849,7 +960,7 @@ public:
                                 //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
                                 interpretAndExecuteCommand(modifiedCmds); // Execute modified 
                                 
-                                listItem->setValue("DONE");
+                                listItem->setValue("\uE14B");
                                 return true;
                             }  else if (keys & KEY_X) {
                                 inSubMenu = false; // Set boolean to true when entering a submenu
@@ -867,7 +978,7 @@ public:
                                 //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
                                 interpretAndExecuteCommand(modifiedCmds); // Execute modified 
                                 
-                                listItem->setValue("DONE");
+                                listItem->setValue("\uE14B");
                                 return true;
                             }  else if (keys & KEY_X) {
                                 inSubMenu = false; // Set boolean to true when entering a submenu
@@ -918,7 +1029,7 @@ public:
         }
         
         // Package Info
-        PackageHeader packageHeader = getPackageHeaderFromIni(subPackageIniPath);
+        PackageHeader packageHeader = getPackageHeaderFromIni(packageIniPath);
         
         constexpr int lineHeight = 20;  // Adjust the line height as needed
         constexpr int xOffset = 120;    // Adjust the horizontal offset as needed
@@ -1050,8 +1161,9 @@ public:
  */
 class MainMenu : public tsl::Gui {
 private:
-    tsl::hlp::ini::IniData settingsData;
+    tsl::hlp::ini::IniData settingsData, packageConfigData;
     std::string packageIniPath = packageDirectory + packageFileName;
+    std::string packageConfigIniPath = packageDirectory + configFileName;
     std::string menuMode, defaultMenuMode, inOverlayString, fullPath, optionName, hideOverlayVersions, hidePackageVersions, priority, starred;
     std::string STAR_HEADER = "\u2605 ";
     bool useDefaultMenu = false;
@@ -1432,6 +1544,12 @@ public:
             
             // ********* THIS PART ALWAYS NEEDS TO MIRROR WHAT IS WITHIN SUBMENU (perhaps create a new method?)*********
             
+           
+            
+            
+            
+            // initialize packageConfigIniPath text file
+            
             for (size_t i = 0; i < options.size(); ++i) {
                 auto option = options[i];
                 if (i == 0) {
@@ -1444,21 +1562,10 @@ public:
                 std::string footer; 
                 bool useSelection = false;
                 
-                if (optionName[0] == '*') { 
-                    useSelection = true;
-                    optionName = optionName.substr(1); // Strip the "*" character on the left
-                    footer = "\u25B6";
-                } else {
-                    size_t pos = optionName.find(" - ");
-                    if (pos != std::string::npos) {
-                        footer = optionName.substr(pos + 2); // Assign the part after "&&" as the footer
-                        optionName = optionName.substr(0, pos); // Strip the "&&" and everything after it
-                    }
-                }
                 
-                
-                std::string commandMode = commandModes[0];
-                std::string commandGrouping = commandGroupings[0];
+                std::string commandFooter = "null";
+                std::string commandMode = "default";
+                std::string commandGrouping = "default";
                 
                 std::string currentSection = "global";
                 std::string sourceType = "default", sourceTypeOn = "default", sourceTypeOff = "default"; 
@@ -1471,12 +1578,20 @@ public:
                 std::vector<std::vector<std::string>> commandsOff;
                 std::vector<std::string> listData, listDataOn, listDataOff;
                 
+                
+                //write a copy of optionName to packageConfigIniPath if it does not exist between []
+                //initialize default values for keys mode
+                
+                
+                
+                
                 // items can be paths, commands, or variables depending on source
                 //std::vector<std::string> selectedItemsList, selectedItemsListOn, selectedItemsListOff;
                 
                 // initial processing of commands
                 for (const auto& cmd : commands) {
-                
+                    
+                    
                     if (!cmd.empty()) { // Isolate command settings
                         // Extract the command mode
                         if (cmd[0].find(modePattern) == 0) {
@@ -1498,7 +1613,7 @@ public:
                             } else if (cmd[0].find("off:") == 0) {
                                 currentSection = "off";
                             }
-                        
+                            
                             // Seperation of command chuncks
                             if (currentSection == "global") {
                                 commandsOn.push_back(cmd);
@@ -1509,7 +1624,7 @@ public:
                                 commandsOff.push_back(cmd);
                             }
                         }
-                
+                    
                     }
                     if (cmd.size() > 1) { // Pre-process advanced commands
                         //if (cmd[0] == "filter") {
@@ -1536,6 +1651,60 @@ public:
                             }
                         }
                     }
+                }
+                
+                
+                
+                
+                if (isFileOrDirectory(packageConfigIniPath)) {
+                    packageConfigData = getParsedDataFromIniFile(packageConfigIniPath);
+                    
+                    
+                    if (packageConfigData.count(optionName) > 0) {
+                        auto& optionSection = packageConfigData[optionName];
+                        
+                        // For hiding the versions of overlays/packages
+                        if (optionSection.count("mode") > 0) {
+                            commandMode = optionSection["mode"];
+                        } else {
+                            setIniFileValue(packageConfigIniPath, optionName, "mode", commandMode);
+                        }
+                        if (optionSection.count("grouping") > 0) {
+                            commandGrouping = optionSection["grouping"];
+                        } else {
+                            setIniFileValue(packageConfigIniPath, optionName, "grouping", commandGrouping);
+                        }
+                        
+                        if (optionSection.count("footer") > 0) {
+                            commandFooter = optionSection["footer"];
+                        } else {
+                            setIniFileValue(packageConfigIniPath, optionName, "footer", commandFooter);
+                        }
+                    }
+                } else { // write data if settings are not loaded
+                    setIniFileValue(packageConfigIniPath, optionName, "mode", commandMode);
+                    setIniFileValue(packageConfigIniPath, optionName, "grouping", commandGrouping);
+                    setIniFileValue(packageConfigIniPath, optionName, "footer", commandFooter);
+                }
+                
+                
+                
+                // get Option Name and footer
+                if (optionName[0] == '*') { 
+                    useSelection = true;
+                    optionName = optionName.substr(1); // Strip the "*" character on the left
+                    footer = "\u25B6";
+                } else {
+                    size_t pos = optionName.find(" - ");
+                    if (pos != std::string::npos) {
+                        footer = optionName.substr(pos + 2); // Assign the part after "&&" as the footer
+                        optionName = optionName.substr(0, pos); // Strip the "&&" and everything after it
+                    }
+                }
+                
+                // override loading of the command footer
+                if (commandFooter != "null") {
+                    footer = commandFooter;
                 }
                 
                 
@@ -1575,7 +1744,7 @@ public:
                     parentDirName = getParentDirNameFromPath(selectedItem);
                     
                     
-                    if (commandMode == "default") { // for handiling toggles
+                    if (commandMode == "default" || commandMode == "option") { // for handiling toggles
                         auto listItem = new tsl::elm::ListItem(optionName);
                         listItem->setValue(footer, true);
                         
@@ -1586,7 +1755,7 @@ public:
                                     //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
                                     interpretAndExecuteCommand(modifiedCmds); // Execute modified 
                                     
-                                    listItem->setValue("DONE");
+                                    listItem->setValue("\uE14B");
                                     return true;
                                 }  else if (keys & KEY_X) {
                                     inMainMenu = false; // Set boolean to true when entering a submenu
@@ -1604,7 +1773,7 @@ public:
                                     //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
                                     interpretAndExecuteCommand(modifiedCmds); // Execute modified 
                                     
-                                    listItem->setValue("DONE");
+                                    listItem->setValue("\uE14B");
                                     return true;
                                 }  else if (keys & KEY_X) {
                                     inMainMenu = false; // Set boolean to true when entering a submenu
