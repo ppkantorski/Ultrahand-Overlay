@@ -751,6 +751,7 @@ private:
     std::string subPath, dropdownSection, pathReplace, pathReplaceOn, pathReplaceOff;
     std::string filePath, specificKey, pathPattern, pathPatternOn, pathPatternOff, itemName, parentDirName, lastParentDirName;
     std::vector<std::string> filesList, filesListOn, filesListOff, filterList, filterListOn, filterListOff;
+    std::string lastSection = "";
 public:
     /**
      * @brief Constructs a `SubMenu` instance for a specific sub-menu path.
@@ -766,7 +767,9 @@ public:
      * Cleans up any resources associated with the `SubMenu` instance.
      */
     ~SubMenu() {
-        selectedFooterDict.clear(); // Clears all data from the map, making it empty again
+        if (inSubMenu) {
+            selectedFooterDict.clear(); // Clears all data from the map, making it empty again
+        }
     }
     
     /**
@@ -800,7 +803,6 @@ public:
         bool skipSection = false;
         // Populate the sub menu with options
         //for (const auto& option : options) {
-        std::string lastSection = "";
         
         for (size_t i = 0; i < options.size(); ++i) {
             auto& option = options[i];
@@ -1038,8 +1040,15 @@ public:
                             }
                             
                             selectedListItem = listItem;
-                            if (selectedFooterDict.find(keyName) == selectedFooterDict.end()) {
-                                selectedFooterDict[keyName] = footer;
+                            
+                            if (inSubMenu) {
+                                if (selectedFooterDict.find(lastSection+keyName) == selectedFooterDict.end()) {
+                                    selectedFooterDict[lastSection+keyName] = footer;
+                                }
+                            } else {
+                                if (selectedFooterDict.find("sub_"+lastSection+keyName) == selectedFooterDict.end()) {
+                                    selectedFooterDict["sub_"+lastSection+keyName] = footer;
+                                }
                             }
                             tsl::changeTo<SelectionOverlay>(subPath, keyName, cmds);
                             lastKeyName = keyName;
