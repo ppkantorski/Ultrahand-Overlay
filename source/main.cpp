@@ -57,6 +57,12 @@ static std::unordered_map<std::string, std::string> selectedFooterDict;
 static auto selectedListItem = new tsl::elm::ListItem("");
 static auto lastSelectedListItem = new tsl::elm::ListItem("");
 
+// Pre-defined symbols
+static std::string OPTION_SYMBOL = "\u22EF";
+static std::string DROPDOWN_SYMBOL = "\u25B6";
+static std::string CHECKMARK_SYMBOL = "\uE14B";
+static std::string STAR_SYMBOL = "\u2605";
+
 /**
  * @brief The `ConfigOverlay` class handles configuration overlay functionality.
  *
@@ -159,7 +165,7 @@ public:
                             
                             commandVec.emplace_back(std::move(commandParts));
                             interpretAndExecuteCommand(commandVec);
-                            listItem->setValue("\uE14B");
+                            listItem->setValue(CHECKMARK_SYMBOL);
                             return true;
                         }
                         return false;
@@ -563,7 +569,7 @@ public:
                 
                 if (selectedFooterDict[specificKey] == selectedItem) {
                     lastSelectedListItem = listItem;
-                    listItem->setValue("\uE14B");
+                    listItem->setValue(CHECKMARK_SYMBOL);
                 } else {
                     listItem->setValue(footer, true);
                 }
@@ -582,7 +588,7 @@ public:
                             //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
                             interpretAndExecuteCommand(modifiedCmds); // Execute modified 
                             
-                            listItem->setValue("\uE14B");
+                            listItem->setValue(CHECKMARK_SYMBOL);
                             
                             if (commandMode == "option") {
                                 lastSelectedListItem = listItem;
@@ -605,7 +611,7 @@ public:
                             //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
                             interpretAndExecuteCommand(modifiedCmds); // Execute modified 
                             
-                            listItem->setValue("\uE14B");
+                            listItem->setValue(CHECKMARK_SYMBOL);
                             
                             if (commandMode == "option") {
                                 lastSelectedListItem = listItem;
@@ -752,8 +758,6 @@ public:
         rootFrame = new tsl::elm::OverlayFrame(getNameFromPath(subPath), "Ultrahand Package");
         list = new tsl::elm::List();
         
-        // Add a section break with small text to indicate the "Commands" section
-        list->addItem(new tsl::elm::CategoryHeader("Commands"));
         
         // Load options from INI file in the subdirectory
         std::string packageIniPath = subPath + packageFileName;
@@ -761,7 +765,11 @@ public:
         std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> options = loadOptionsFromIni(packageIniPath);
         
         // Populate the sub menu with options
-        for (const auto& option : options) {
+        //for (const auto& option : options) {
+        size_t section_count = 0;
+        for (size_t i = 0; i < options.size(); ++i) {
+            auto& option = options[i];
+            
             std::string optionName = option.first;
             auto commands = option.second;
             
@@ -774,7 +782,7 @@ public:
             std::string commandGrouping = "default";
             
             std::string currentSection = "global";
-            std::string sourceType = "default", sourceTypeOn = "default", sourceTypeOff = "default"; 
+            std::string sourceType = "default", sourceTypeOn = "default", sourceTypeOff = "default"; //"file", "json_file", "json", "list"
             //std::string sourceType, sourceTypeOn, sourceTypeOff; //"file", "json_file", "json", "list"
             std::string jsonPath, jsonPathOn, jsonPathOff;
             std::string jsonKey, jsonKeyOn, jsonKeyOff;
@@ -786,6 +794,22 @@ public:
             
             // items can be paths, commands, or variables depending on source
             //std::vector<std::string> selectedItemsList, selectedItemsListOn, selectedItemsListOff;
+            
+            if (commands.size() == 0) {
+                // Add a section break with small text to indicate the "Commands" section
+                list->addItem(new tsl::elm::CategoryHeader(optionName));
+                continue;
+            } else if (i == 0) {
+                // Add a section break with small text to indicate the "Commands" section
+                list->addItem(new tsl::elm::CategoryHeader("Commands"));
+            }
+            //if (optionName == "Section 1") {
+            //    for (const auto& cmd : commands) {
+            //        for (const auto& x : cmd) {
+            //            logMessage("Commands: "+x);
+            //        }
+            //    }
+            //}
             
             // initial processing of commands
             for (const auto& cmd : commands) {
@@ -888,7 +912,7 @@ public:
             if (optionName[0] == '*') { 
                 useSelection = true;
                 optionName = optionName.substr(1); // Strip the "*" character on the left
-                footer = "\u25B6";
+                footer = DROPDOWN_SYMBOL;
             } else {
                 size_t pos = optionName.find(" - ");
                 if (pos != std::string::npos) {
@@ -902,14 +926,14 @@ public:
                 if (commandFooter != "null") {
                     footer = commandFooter;
                 } else {
-                    footer = "\u22EF";
+                    footer = OPTION_SYMBOL;
                 }
             }
             
             
             if (useSelection) { // For wildcard commands (dropdown menus)
                 auto listItem = static_cast<tsl::elm::ListItem*>(nullptr);
-                if ((footer == "\u25B6") || (footer.empty())) {
+                if ((footer == DROPDOWN_SYMBOL) || (footer.empty())) {
                     listItem = new tsl::elm::ListItem(optionName, footer);
                 } else {
                     listItem = new tsl::elm::ListItem(optionName);
@@ -960,7 +984,7 @@ public:
                                 //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
                                 interpretAndExecuteCommand(modifiedCmds); // Execute modified 
                                 
-                                listItem->setValue("\uE14B");
+                                listItem->setValue(CHECKMARK_SYMBOL);
                                 return true;
                             }  else if (keys & KEY_X) {
                                 inSubMenu = false; // Set boolean to true when entering a submenu
@@ -978,7 +1002,7 @@ public:
                                 //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
                                 interpretAndExecuteCommand(modifiedCmds); // Execute modified 
                                 
-                                listItem->setValue("\uE14B");
+                                listItem->setValue(CHECKMARK_SYMBOL);
                                 return true;
                             }  else if (keys & KEY_X) {
                                 inSubMenu = false; // Set boolean to true when entering a submenu
@@ -1165,7 +1189,6 @@ private:
     std::string packageIniPath = packageDirectory + packageFileName;
     std::string packageConfigIniPath = packageDirectory + configFileName;
     std::string menuMode, defaultMenuMode, inOverlayString, fullPath, optionName, hideOverlayVersions, hidePackageVersions, priority, starred;
-    std::string STAR_HEADER = "\u2605 ";
     bool useDefaultMenu = false;
     
     
@@ -1365,7 +1388,7 @@ public:
                     
                     std::string newOverlayName = overlayName.c_str();
                     if (overlayStarred == "true") {
-                        newOverlayName = STAR_HEADER+newOverlayName;
+                        newOverlayName = STAR_SYMBOL+" "+newOverlayName;
                     }
                     
                     
@@ -1494,7 +1517,7 @@ public:
                 
                 std::string newPackageName = packageName.c_str();
                 if (packageStarred == "true") {
-                    newPackageName = STAR_HEADER+newPackageName;
+                    newPackageName = STAR_SYMBOL+" "+newPackageName;
                 }
                 
                 std::string packageFilePath = packageDirectory + packageName+ "/";
@@ -1552,9 +1575,6 @@ public:
             
             for (size_t i = 0; i < options.size(); ++i) {
                 auto option = options[i];
-                if (i == 0) {
-                    list->addItem(new tsl::elm::CategoryHeader("Commands"));
-                }
                 
                 std::string optionName = option.first;
                 auto commands = option.second;
@@ -1579,8 +1599,14 @@ public:
                 std::vector<std::string> listData, listDataOn, listDataOff;
                 
                 
-                //write a copy of optionName to packageConfigIniPath if it does not exist between []
-                //initialize default values for keys mode
+                if (commands.size() == 0) {
+                    // Add a section break with small text to indicate the "Commands" section
+                    list->addItem(new tsl::elm::CategoryHeader(optionName));
+                    continue;
+                } else if (i == 0) {
+                    // Add a section break with small text to indicate the "Commands" section
+                    list->addItem(new tsl::elm::CategoryHeader("Commands"));
+                }
                 
                 
                 
@@ -1693,7 +1719,7 @@ public:
                 if (optionName[0] == '*') { 
                     useSelection = true;
                     optionName = optionName.substr(1); // Strip the "*" character on the left
-                    footer = "\u25B6";
+                    footer = DROPDOWN_SYMBOL;
                 } else {
                     size_t pos = optionName.find(" - ");
                     if (pos != std::string::npos) {
@@ -1710,7 +1736,7 @@ public:
                 
                 if (useSelection) { // For wildcard commands (dropdown menus)
                     auto listItem = static_cast<tsl::elm::ListItem*>(nullptr);
-                    if ((footer == "\u25B6") || (footer.empty())) {
+                    if ((footer == DROPDOWN_SYMBOL) || (footer.empty())) {
                         listItem = new tsl::elm::ListItem(optionName, footer);
                     } else {
                         listItem = new tsl::elm::ListItem(optionName);
@@ -1755,7 +1781,7 @@ public:
                                     //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
                                     interpretAndExecuteCommand(modifiedCmds); // Execute modified 
                                     
-                                    listItem->setValue("\uE14B");
+                                    listItem->setValue(CHECKMARK_SYMBOL);
                                     return true;
                                 }  else if (keys & KEY_X) {
                                     inMainMenu = false; // Set boolean to true when entering a submenu
@@ -1773,7 +1799,7 @@ public:
                                     //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
                                     interpretAndExecuteCommand(modifiedCmds); // Execute modified 
                                     
-                                    listItem->setValue("\uE14B");
+                                    listItem->setValue(CHECKMARK_SYMBOL);
                                     return true;
                                 }  else if (keys & KEY_X) {
                                     inMainMenu = false; // Set boolean to true when entering a submenu
