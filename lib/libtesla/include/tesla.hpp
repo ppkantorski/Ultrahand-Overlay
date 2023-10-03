@@ -67,6 +67,13 @@
 #include "../../../source/string_funcs.hpp"
 #include "../../../source/ini_funcs.hpp"
 
+// Pre-defined symbols
+static std::string OPTION_SYMBOL = "\u22EF";
+static std::string DROPDOWN_SYMBOL = "\u25B6";
+static std::string CHECKMARK_SYMBOL = "\uE14B";
+static std::string STAR_SYMBOL = "\u2605";
+
+
 // CUSTOM SECTION END
 
 // Define this makro before including tesla.hpp in your main file. If you intend
@@ -2326,7 +2333,7 @@ namespace tsl {
                 }
 
                 // CUSTOM SECTION START (modification for submenu footer color)
-                if (this->m_value == "\u25B6") {
+                if (this->m_value == DROPDOWN_SYMBOL || this->m_value == OPTION_SYMBOL) {
                     renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45, this->getY() + 45, 20, this->m_faint ? a(tsl::style::color::ColorDescription) : a(tsl::Color(0xFF, 0xFF, 0xFF, 0xFF)));
                 } else {
                     renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45, this->getY() + 45, 20, this->m_faint ? a(tsl::style::color::ColorDescription) : a(tsl::style::color::ColorHighlight));
