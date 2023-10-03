@@ -751,7 +751,6 @@ private:
     std::string subPath, dropdownSection, pathReplace, pathReplaceOn, pathReplaceOff;
     std::string filePath, specificKey, pathPattern, pathPatternOn, pathPatternOff, itemName, parentDirName, lastParentDirName;
     std::vector<std::string> filesList, filesListOn, filesListOff, filterList, filterListOn, filterListOff;
-    std::string lastSection = "";
 public:
     /**
      * @brief Constructs a `SubMenu` instance for a specific sub-menu path.
@@ -803,6 +802,7 @@ public:
         bool skipSection = false;
         // Populate the sub menu with options
         //for (const auto& option : options) {
+        std::string lastSection = "";
         
         for (size_t i = 0; i < options.size(); ++i) {
             auto& option = options[i];
@@ -1030,7 +1030,7 @@ public:
                     }
                     
                     //std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(option.second, pathReplace);
-                    listItem->setClickListener([cmds = commands, keyName = option.first, this, subPath = this->subPath, footer, listItem](uint64_t keys) {
+                    listItem->setClickListener([cmds = commands, keyName = option.first, this, subPath = this->subPath, footer, lastSection, listItem](uint64_t keys) {
                         if (keys & KEY_A) {
                             if (inSubMenu) {
                                 inSubMenu = false;
