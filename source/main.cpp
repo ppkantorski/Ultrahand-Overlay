@@ -57,11 +57,11 @@ static std::unordered_map<std::string, std::string> selectedFooterDict;
 static auto selectedListItem = new tsl::elm::ListItem("");
 static auto lastSelectedListItem = new tsl::elm::ListItem("");
 
-// Pre-defined symbols
-static std::string OPTION_SYMBOL = "\u22EF";
-static std::string DROPDOWN_SYMBOL = "\u25B6";
-static std::string CHECKMARK_SYMBOL = "\uE14B";
-static std::string STAR_SYMBOL = "\u2605";
+// Pre-defined symbols (moved to libTesla)
+//static std::string OPTION_SYMBOL = "\u22EF";
+//static std::string DROPDOWN_SYMBOL = "\u25B6";
+//static std::string CHECKMARK_SYMBOL = "\uE14B";
+//static std::string STAR_SYMBOL = "\u2605";
 
 /**
  * @brief The `ConfigOverlay` class handles configuration overlay functionality.
@@ -566,13 +566,28 @@ public:
                 }
                 auto listItem = new tsl::elm::ListItem(optionName);
                 
-                
-                if (selectedFooterDict[specificKey] == selectedItem) {
-                    lastSelectedListItem = listItem;
-                    listItem->setValue(CHECKMARK_SYMBOL);
+                if (commandMode == "option") {
+                    if (selectedFooterDict[specificKey] == selectedItem) {
+                        lastSelectedListItem = listItem;
+                        listItem->setValue(CHECKMARK_SYMBOL);
+                    } else {
+                        listItem->setValue(footer);
+                    }
                 } else {
                     listItem->setValue(footer, true);
                 }
+                
+                //if ((commandMode == "option") && selectedFooterDict[specificKey] == selectedItem) {
+                //    lastSelectedListItem = listItem;
+                //    listItem->setValue(CHECKMARK_SYMBOL);
+                //} else {
+                //    if (commandMode == "option") {
+                //        listItem->setValue(footer);
+                //    } else {
+                //        listItem->setValue(footer, true);
+                //    }
+                //    
+                //}
                 
                 //listItem->setValue(footer, true);
                 
@@ -688,7 +703,7 @@ public:
                             if (optionSection.count("footer") > 0) {
                                 auto& commandFooter = optionSection["footer"];
                                 if (commandFooter != "null") {
-                                    selectedListItem->setValue(commandFooter, true);
+                                    selectedListItem->setValue(commandFooter);
                                 }
                             }
                         }
@@ -766,7 +781,7 @@ public:
         
         // Populate the sub menu with options
         //for (const auto& option : options) {
-        size_t section_count = 0;
+        
         for (size_t i = 0; i < options.size(); ++i) {
             auto& option = options[i];
             
@@ -937,7 +952,12 @@ public:
                     listItem = new tsl::elm::ListItem(optionName, footer);
                 } else {
                     listItem = new tsl::elm::ListItem(optionName);
-                    listItem->setValue(footer, true);
+                    if (commandMode == "option") {
+                        listItem->setValue(footer);
+                    } else {
+                        listItem->setValue(footer, true);
+                    }
+                    
                 }
                 
                 //std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(option.second, pathReplace);
@@ -975,7 +995,12 @@ public:
                 
                 if (commandMode == "default" || commandMode == "option") { // for handiling toggles
                     auto listItem = new tsl::elm::ListItem(optionName);
-                    listItem->setValue(footer, true);
+                    if (commandMode == "default") {
+                        listItem->setValue(footer, true);
+                    } else {
+                        listItem->setValue(footer);
+                    }
+                    
                     
                     if (sourceType == "json") { // For JSON wildcards
                         listItem->setClickListener([this, cmds=commands, subPath = this->subPath, keyName = option.first, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
