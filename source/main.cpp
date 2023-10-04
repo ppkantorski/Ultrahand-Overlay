@@ -1295,6 +1295,7 @@ public:
             if ((keysHeld & KEY_B)) {
                 inSubSubMenu = false;
                 returningToSub = true;
+                lastMenu = "subMenu";
                 tsl::goBack();
                 
                 //tsl::Overlay::get()->close();
