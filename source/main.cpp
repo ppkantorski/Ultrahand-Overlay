@@ -61,6 +61,11 @@ static std::unordered_map<std::string, std::string> selectedFooterDict;
 static auto selectedListItem = new tsl::elm::ListItem("");
 static auto lastSelectedListItem = new tsl::elm::ListItem("");
 
+// Pre-defined symbols (moved to libTesla)
+//static std::string OPTION_SYMBOL = "\u22EF";
+//static std::string DROPDOWN_SYMBOL = "\u25B6";
+//static std::string CHECKMARK_SYMBOL = "\uE14B";
+//static std::string STAR_SYMBOL = "\u2605";
 
 
 // Define external functions and variables
@@ -226,7 +231,11 @@ public:
                 //tsl::goBack();
                 inConfigMenu = false;
                 if (isFromMainMenu == false){
-                    returningToSub = true;
+                    if (lastMenu == "subMenu") {
+                        returningToSub = true;
+                    } else if (lastMenu == "subSubMenu") {
+                        returningToSubSub = true;
+                    }
                 } else {
                     returningToMain = true;
                 }
