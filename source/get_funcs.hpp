@@ -516,7 +516,7 @@ std::string replaceJsonPlaceholder(const std::string& arg, const std::string& co
 
 
 // this will modify `commands`
-std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std::vector<std::string>> commands, const std::string& entry, const int entryIndex=-1) {
+std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std::vector<std::string>> commands, const std::string& entry, size_t entryIndex) {
     std::vector<std::vector<std::string>> modifiedCommands;
     std::vector<std::string> listData;
     std::string replacement;
