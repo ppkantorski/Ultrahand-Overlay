@@ -543,9 +543,9 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>> comm
             // Edit command
             if (command.size() >= 2) {
                 desiredValue = removeQuotes(command[1]);
-                logMessage("path:" +(packageFolder+configFileName));
-                logMessage("selectedCommand:" +selectedCommand);
-                logMessage("desiredValue:" +desiredValue);
+                //logMessage("path:" +(packageFolder+configFileName));
+                //logMessage("selectedCommand:" +selectedCommand);
+                //logMessage("desiredValue:" +desiredValue);
                 setIniFileValue((packageFolder+configFileName).c_str(), selectedCommand.c_str(), "footer", desiredValue.c_str());
             }
         } else if (commandName == "hex-by-offset") {
