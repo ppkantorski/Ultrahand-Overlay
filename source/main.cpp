@@ -240,6 +240,7 @@ private:
     std::string filePath, specificKey, pathPattern, pathPatternOn, pathPatternOff, itemName, parentDirName, lastParentDirName;
     std::vector<std::string> filesList, filesListOn, filesListOff, filterList, filterListOn, filterListOff;
     std::vector<std::vector<std::string>> commands;
+    std::string specifiedFooterKey;
     bool toggleState = false;
     std::string packageConfigIniPath;
     std::string commandMode, commandGrouping;
@@ -253,8 +254,8 @@ public:
      * @param key The specific key related to the overlay (optional).
      * @param cmds A vector of vectors containing commands for the overlay (optional).
      */
-    SelectionOverlay(const std::string& path, const std::string& key = "", const std::vector<std::vector<std::string>>& cmds = {})
-        : filePath(path), specificKey(key), commands(cmds) {
+    SelectionOverlay(const std::string& path, const std::string& key = "", const std::vector<std::vector<std::string>>& cmds = {}, const std::string& footerKey = "")
+        : filePath(path), specificKey(key), commands(cmds), specifiedFooterKey(footerKey) {
             lastSelectedListItem = new tsl::elm::ListItem("");
         }
     /**
@@ -571,7 +572,7 @@ public:
                 auto listItem = new tsl::elm::ListItem(optionName);
                 
                 if (commandMode == "option") {
-                    if (selectedFooterDict[specificKey] == selectedItem) {
+                    if (selectedFooterDict[specifiedFooterKey] == selectedItem) { // needs to be fixed
                         lastSelectedListItem = listItem;
                         listItem->setValue(CHECKMARK_SYMBOL);
                     } else {
@@ -600,7 +601,7 @@ public:
                     listItem->setClickListener([this, optionName, cmds=commands, footer, selectedItem, i, listItem](uint64_t keys) { // Add 'command' to the capture list
                         if (keys & KEY_A) {
                             if (commandMode == "option") {
-                                selectedFooterDict[specificKey] = selectedItem;
+                                selectedFooterDict[specifiedFooterKey] = selectedItem;
                                 lastSelectedListItem->setValue(footer, true);
                             }
                             std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, selectedItem, i); // replace source
@@ -622,7 +623,7 @@ public:
                     listItem->setClickListener([this, optionName, cmds=commands, footer, selectedItem, i, listItem](uint64_t keys) { // Add 'command' to the capture list
                         if (keys & KEY_A) {
                             if (commandMode == "option") {
-                                selectedFooterDict[specificKey] = selectedItem;
+                                selectedFooterDict[specifiedFooterKey] = selectedItem;
                                 lastSelectedListItem->setValue(footer, true);
                             }
                             
@@ -1041,16 +1042,19 @@ public:
                             
                             selectedListItem = listItem;
                             
+                            std::string newKey = "";
                             if (inSubMenu) {
-                                if (selectedFooterDict.find(lastSection+keyName) == selectedFooterDict.end()) {
-                                    selectedFooterDict[lastSection+keyName] = footer;
+                                newKey = lastSection + keyName;
+                                if (selectedFooterDict.find(newKey) == selectedFooterDict.end()) {
+                                    selectedFooterDict[newKey] = footer;
                                 }
                             } else {
-                                if (selectedFooterDict.find("sub_"+lastSection+keyName) == selectedFooterDict.end()) {
-                                    selectedFooterDict["sub_"+lastSection+keyName] = footer;
+                                newKey = "sub_" + lastSection + keyName;
+                                if (selectedFooterDict.find(newKey) == selectedFooterDict.end()) {
+                                    selectedFooterDict[newKey] = footer;
                                 }
                             }
-                            tsl::changeTo<SelectionOverlay>(subPath, keyName, cmds);
+                            tsl::changeTo<SelectionOverlay>(subPath, keyName, cmds, newKey);
                             lastKeyName = keyName;
                             
                             return true;
