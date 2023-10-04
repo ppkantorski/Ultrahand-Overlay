@@ -168,7 +168,7 @@ public:
                             }
                             
                             commandVec.emplace_back(std::move(commandParts));
-                            interpretAndExecuteCommand(commandVec);
+                            interpretAndExecuteCommand(commandVec, filePath, specificKey);
                             listItem->setValue(CHECKMARK_SYMBOL);
                             return true;
                         }
@@ -605,7 +605,7 @@ public:
                             }
                             std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, selectedItem, i); // replace source
                             //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
-                            interpretAndExecuteCommand(modifiedCmds); // Execute modified 
+                            interpretAndExecuteCommand(modifiedCmds, filePath, specificKey); // Execute modified 
                             
                             listItem->setValue(CHECKMARK_SYMBOL);
                             
@@ -628,7 +628,7 @@ public:
                             
                             std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, selectedItem, i); // replace source
                             //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
-                            interpretAndExecuteCommand(modifiedCmds); // Execute modified 
+                            interpretAndExecuteCommand(modifiedCmds, filePath, specificKey); // Execute modified 
                             
                             listItem->setValue(CHECKMARK_SYMBOL);
                             
@@ -654,7 +654,7 @@ public:
                         if (std::find(selectedItemsListOn.begin(), selectedItemsListOn.end(), selectedItem) != selectedItemsListOn.end()) {
                             // Toggle switched to On
                             std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmdsOn, selectedItem, i); // replace source
-                            interpretAndExecuteCommand(modifiedCmds); // Execute modified 
+                            interpretAndExecuteCommand(modifiedCmds, filePath, specificKey); // Execute modified 
                         } else {
                             toggleListItem->setState(!state);
                         }
@@ -662,7 +662,7 @@ public:
                         if (std::find(selectedItemsListOff.begin(), selectedItemsListOff.end(), selectedItem) != selectedItemsListOff.end()) {
                             // Toggle switched to Off
                             std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmdsOff, selectedItem, i); // replace source
-                            interpretAndExecuteCommand(modifiedCmds); // Execute modified 
+                            interpretAndExecuteCommand(modifiedCmds, filePath, specificKey); // Execute modified 
                         } else {
                             toggleListItem->setState(!state);
                         }
@@ -1090,12 +1090,12 @@ public:
                         
                         
                         if (sourceType == "json") { // For JSON wildcards
-                            listItem->setClickListener([this, cmds=commands, subPath = this->subPath, keyName = option.first, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
+                            listItem->setClickListener([this, cmds=commands, keyName = option.first, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
                                 if (keys & KEY_A) {
-                                    std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, selectedItem); // replace source
+                                    std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, keyName); // replace source
                                     //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
-                                    interpretAndExecuteCommand(modifiedCmds); // Execute modified 
-                                
+                                    interpretAndExecuteCommand(modifiedCmds, subPath, keyName); // Execute modified 
+                                    
                                     listItem->setValue(CHECKMARK_SYMBOL);
                                     return true;
                                 }  else if (keys & KEY_X) {
@@ -1108,17 +1108,17 @@ public:
                                     tsl::changeTo<ConfigOverlay>(subPath, keyName);
                                     return true;
                                 }
-                            
+                                
                                 return false;
                             });
                             list->addItem(listItem);
                         } else {
-                            listItem->setClickListener([this, cmds=commands, subPath = this->subPath, keyName = option.first, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
+                            listItem->setClickListener([this, cmds=commands, keyName = option.first, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
                                 if (keys & KEY_A) {
-                                    std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, selectedItem); // replace source
+                                    std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, keyName); // replace source
                                     //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
-                                    interpretAndExecuteCommand(modifiedCmds); // Execute modified 
-                                
+                                    interpretAndExecuteCommand(modifiedCmds, subPath, keyName); // Execute modified 
+                                    
                                     listItem->setValue(CHECKMARK_SYMBOL);
                                     return true;
                                 }  else if (keys & KEY_X) {
@@ -1136,21 +1136,21 @@ public:
                             list->addItem(listItem);
                         }
                     } else if (commandMode == "toggle") {
-                    
-                    
+                        
+                        
                         auto toggleListItem = new tsl::elm::ToggleListItem(optionName, false, "On", "Off");
                         // Set the initial state of the toggle item
                         bool toggleStateOn = isFileOrDirectory(preprocessPath(pathPatternOn));
-                    
+                        
                         toggleListItem->setState(toggleStateOn);
-                    
-                        toggleListItem->setStateChangedListener([this, cmdsOn=commandsOn, cmdsOff=commandsOff, toggleStateOn](bool state) {
+                        
+                        toggleListItem->setStateChangedListener([this, cmdsOn=commandsOn, cmdsOff=commandsOff, toggleStateOn, keyName = option.first](bool state) {
                             if (!state) {
                                 // Toggle switched to On
                                 if (toggleStateOn) {
                                     std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmdsOn, preprocessPath(pathPatternOn)); // replace source
                                     //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
-                                    interpretAndExecuteCommand(modifiedCmds); // Execute modified 
+                                    interpretAndExecuteCommand(modifiedCmds, subPath, keyName); // Execute modified 
                                 } else {
                                     // Handle the case where the command should only run in the source_on section
                                     // Add your specific code here
@@ -1160,7 +1160,7 @@ public:
                                 if (!toggleStateOn) {
                                     std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmdsOff, preprocessPath(pathPatternOff)); // replace source
                                     //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
-                                    interpretAndExecuteCommand(modifiedCmds); // Execute modified 
+                                    interpretAndExecuteCommand(modifiedCmds, subPath, keyName); // Execute modified 
                                 } else {
                                     // Handle the case where the command should only run in the source_off section
                                     // Add your specific code here
@@ -1923,7 +1923,7 @@ public:
                                 if (keys & KEY_A) {
                                     std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, selectedItem); // replace source
                                     //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
-                                    interpretAndExecuteCommand(modifiedCmds); // Execute modified 
+                                    interpretAndExecuteCommand(modifiedCmds, subPath, keyName); // Execute modified 
                                     
                                     listItem->setValue(CHECKMARK_SYMBOL);
                                     return true;
@@ -1941,7 +1941,7 @@ public:
                                 if (keys & KEY_A) {
                                     std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, selectedItem); // replace source
                                     //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
-                                    interpretAndExecuteCommand(modifiedCmds); // Execute modified 
+                                    interpretAndExecuteCommand(modifiedCmds, subPath, keyName); // Execute modified 
                                     
                                     listItem->setValue(CHECKMARK_SYMBOL);
                                     return true;
@@ -1963,13 +1963,13 @@ public:
                         
                         toggleListItem->setState(toggleStateOn);
                         
-                        toggleListItem->setStateChangedListener([this, cmdsOn=commandsOn, cmdsOff=commandsOff, toggleStateOn](bool state) {
+                        toggleListItem->setStateChangedListener([this, cmdsOn=commandsOn, cmdsOff=commandsOff, toggleStateOn, subPath = packageDirectory, keyName = option.first](bool state) {
                             if (!state) {
                                 // Toggle switched to On
                                 if (toggleStateOn) {
                                     std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmdsOn, preprocessPath(pathPatternOn)); // replace source
                                     //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
-                                    interpretAndExecuteCommand(modifiedCmds); // Execute modified 
+                                    interpretAndExecuteCommand(modifiedCmds, subPath, keyName); // Execute modified 
                                 } else {
                                     // Handle the case where the command should only run in the source_on section
                                     // Add your specific code here
@@ -1979,7 +1979,7 @@ public:
                                 if (!toggleStateOn) {
                                     std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmdsOff, preprocessPath(pathPatternOff)); // replace source
                                     //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
-                                    interpretAndExecuteCommand(modifiedCmds); // Execute modified 
+                                    interpretAndExecuteCommand(modifiedCmds, subPath, keyName); // Execute modified 
                                 } else {
                                     // Handle the case where the command should only run in the source_off section
                                     // Add your specific code here

@@ -197,34 +197,34 @@ bool isDangerousCombination(const std::string& patternPath) {
         "*",         // Deletes all files/directories in the current directory
         "*/"         // Deletes all files/directories in the current directory
     };
-
+    
     // List of obviously dangerous patterns
     const std::vector<std::string> dangerousPatterns = {
         "..",     // Attempts to traverse to parent directories
         "~"       // Represents user's home directory, can be dangerous if misused
     };
-
+    
     // Check if the patternPath is an ultra protected folder
     for (const std::string& ultraProtectedFolder : ultraProtectedFolders) {
         if (patternPath.find(ultraProtectedFolder) == 0) {
             return true; // Pattern path is an ultra protected folder
         }
     }
-
+    
     // Check if the patternPath is a protected folder
     for (const std::string& protectedFolder : protectedFolders) {
         if (patternPath == protectedFolder) {
             return true; // Pattern path is a protected folder
         }
-
+        
         // Check if the patternPath starts with a protected folder and includes a dangerous pattern
         if (patternPath.find(protectedFolder) == 0) {
             std::string relativePath = patternPath.substr(protectedFolder.size());
-
+            
             // Split the relativePath by '/' to handle multiple levels of wildcards
             std::vector<std::string> pathSegments;
             std::string pathSegment;
-
+            
             for (char c : relativePath) {
                 if (c == '/') {
                     if (!pathSegment.empty()) {
@@ -235,11 +235,11 @@ bool isDangerousCombination(const std::string& patternPath) {
                     pathSegment += c;
                 }
             }
-
+            
             if (!pathSegment.empty()) {
                 pathSegments.push_back(pathSegment);
             }
-
+            
             for (const std::string& pathSegment : pathSegments) {
                 // Check if the pathSegment includes a dangerous pattern
                 for (const std::string& dangerousPattern : dangerousPatterns) {
@@ -249,7 +249,7 @@ bool isDangerousCombination(const std::string& patternPath) {
                 }
             }
         }
-
+        
         // Check if the patternPath is a combination of a protected folder and a dangerous pattern
         for (const std::string& dangerousPattern : dangerousCombinationPatterns) {
             if (patternPath == protectedFolder + dangerousPattern) {
@@ -257,15 +257,15 @@ bool isDangerousCombination(const std::string& patternPath) {
             }
         }
     }
-
+    
     // Check if the patternPath is a dangerous pattern
     if (patternPath.find("sdmc:/") == 0) {
         std::string relativePath = patternPath.substr(6); // Remove "sdmc:/"
-
+        
         // Split the relativePath by '/' to handle multiple levels of wildcards
         std::vector<std::string> pathSegments;
         std::string pathSegment;
-
+        
         for (char c : relativePath) {
             if (c == '/') {
                 if (!pathSegment.empty()) {
@@ -276,11 +276,11 @@ bool isDangerousCombination(const std::string& patternPath) {
                 pathSegment += c;
             }
         }
-
+        
         if (!pathSegment.empty()) {
             pathSegments.push_back(pathSegment);
         }
-
+        
         for (const std::string& pathSegment : pathSegments) {
             // Check if the pathSegment includes a dangerous pattern
             for (const std::string& dangerousPattern : dangerousPatterns) {
@@ -290,7 +290,7 @@ bool isDangerousCombination(const std::string& patternPath) {
             }
         }
     }
-
+    
     // Check if the patternPath includes a wildcard at the root level
     if (patternPath.find(":/") != std::string::npos) {
         std::string rootPath = patternPath.substr(0, patternPath.find(":/") + 2);
@@ -298,14 +298,14 @@ bool isDangerousCombination(const std::string& patternPath) {
             return true; // Pattern path includes a wildcard at the root level
         }
     }
-
+    
     // Check if the provided path matches any dangerous patterns
     for (const std::string& pattern : dangerousPatterns) {
         if (patternPath.find(pattern) != std::string::npos) {
             return true; // Path contains a dangerous pattern
         }
     }
-
+    
     return false; // Pattern path is not a protected folder, a dangerous pattern, or includes a wildcard at the root level
 }
 
@@ -317,7 +317,7 @@ bool isDangerousCombination(const std::string& patternPath) {
  *
  * @param commands A list of commands, where each command is represented as a vector of strings.
  */
-void interpretAndExecuteCommand(const std::vector<std::vector<std::string>> commands) {
+void interpretAndExecuteCommand(const std::vector<std::vector<std::string>> commands, const std::string packageFolder="", const std::string selectedCommand="") {
     std::string commandName, sourcePath, destinationPath, desiredSection, desiredNewSection, desiredKey, desiredNewKey, desiredValue, \
         offset, customPattern, hexDataToReplace, hexDataReplacement, fileUrl, occurrence;
     
@@ -536,8 +536,17 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>> comm
                         desiredNewKey += " ";
                     }
                 }
-
+                
                 setIniFileKey(sourcePath.c_str(), desiredSection.c_str(), desiredKey.c_str(), desiredNewKey.c_str());
+            }
+        } else if (commandName == "set-footer") {
+            // Edit command
+            if (command.size() >= 2) {
+                desiredValue = removeQuotes(command[1]);
+                logMessage("path:" +(packageFolder+configFileName));
+                logMessage("selectedCommand:" +selectedCommand);
+                logMessage("desiredValue:" +desiredValue);
+                setIniFileValue((packageFolder+configFileName).c_str(), selectedCommand.c_str(), "footer", desiredValue.c_str());
             }
         } else if (commandName == "hex-by-offset") {
             // Edit command
