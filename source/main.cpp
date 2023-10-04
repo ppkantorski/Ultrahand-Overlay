@@ -61,11 +61,27 @@ static std::unordered_map<std::string, std::string> selectedFooterDict;
 static auto selectedListItem = new tsl::elm::ListItem("");
 static auto lastSelectedListItem = new tsl::elm::ListItem("");
 
-// Pre-defined symbols (moved to libTesla)
-//static std::string OPTION_SYMBOL = "\u22EF";
-//static std::string DROPDOWN_SYMBOL = "\u25B6";
-//static std::string CHECKMARK_SYMBOL = "\uE14B";
-//static std::string STAR_SYMBOL = "\u2605";
+
+
+// Define external functions and variables
+extern void logMessage(const std::string& message);
+extern bool isFileOrDirectory(const std::string& path);
+extern void createDirectory(const std::string& path);
+extern std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadOptionsFromIni(const std::string& iniPath, bool ignoreComments);
+extern std::map<std::string, std::map<std::string, std::string>> getParsedDataFromIniFile(const std::string& iniFilePath);
+extern std::vector<std::string> getSubdirectories(const std::string& directoryPath);
+extern std::string formatPriorityString(const std::string& priority, const int& desiredWidth);
+extern void setIniFileValue(const std::string& iniFilePath, const std::string& section, const std::string& key, const std::string& value);
+extern std::string getNameFromPath(const std::string& path);
+extern std::string getParentDirNameFromPath(const std::string& path);
+extern std::string dropExtension(const std::string& fileName);
+extern std::string preprocessPath(const std::string& path);
+extern std::vector<std::string> getFilesListByWildcards(const std::string& pathPattern);
+extern std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std::vector<std::string>> commands, const std::string& entry, size_t entryIndex);
+extern void interpretAndExecuteCommand(const std::vector<std::vector<std::string>> commands, const std::string subPath, const std::string keyName);
+
+
+
 
 /**
  * @brief The `ConfigOverlay` class handles configuration overlay functionality.
@@ -598,7 +614,7 @@ public:
                 
                 
                 if (sourceType == "json") { // For JSON wildcards
-                    listItem->setClickListener([this, optionName, cmds=commands, footer, selectedItem, i, listItem](uint64_t keys) { // Add 'command' to the capture list
+                    listItem->setClickListener([this, i, optionName, cmds=commands, footer, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
                         if (keys & KEY_A) {
                             if (commandMode == "option") {
                                 selectedFooterDict[specifiedFooterKey] = selectedItem;
@@ -620,7 +636,7 @@ public:
                     });
                     list->addItem(listItem);
                 } else {
-                    listItem->setClickListener([this, optionName, cmds=commands, footer, selectedItem, i, listItem](uint64_t keys) { // Add 'command' to the capture list
+                    listItem->setClickListener([this, i, optionName, cmds=commands, footer, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
                         if (keys & KEY_A) {
                             if (commandMode == "option") {
                                 selectedFooterDict[specifiedFooterKey] = selectedItem;
@@ -650,7 +666,7 @@ public:
                 bool toggleStateOn = std::find(selectedItemsListOn.begin(), selectedItemsListOn.end(), selectedItem) != selectedItemsListOn.end();
                 toggleListItem->setState(toggleStateOn);
                 
-                toggleListItem->setStateChangedListener([this, cmdsOn=commandsOn, cmdsOff=commandsOff, selectedItem, i, selectedItemsListOn, selectedItemsListOff, toggleListItem](bool state) {
+                toggleListItem->setStateChangedListener([this, i, cmdsOn=commandsOn, cmdsOff=commandsOff, selectedItem, selectedItemsListOn, selectedItemsListOff, toggleListItem](bool state) {
                     if (!state) {
                         if (std::find(selectedItemsListOn.begin(), selectedItemsListOn.end(), selectedItem) != selectedItemsListOn.end()) {
                             // Toggle switched to On
@@ -1094,9 +1110,9 @@ public:
                         
                         
                         if (sourceType == "json") { // For JSON wildcards
-                            listItem->setClickListener([this, cmds=commands, keyName = option.first, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
+                            listItem->setClickListener([this, i, cmds=commands, keyName = option.first, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
                                 if (keys & KEY_A) {
-                                    std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, keyName); // replace source
+                                    std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, keyName, i); // replace source
                                     //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
                                     interpretAndExecuteCommand(modifiedCmds, subPath, keyName); // Execute modified 
                                     
@@ -1117,9 +1133,9 @@ public:
                             });
                             list->addItem(listItem);
                         } else {
-                            listItem->setClickListener([this, cmds=commands, keyName = option.first, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
+                            listItem->setClickListener([this, i, cmds=commands, keyName = option.first, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
                                 if (keys & KEY_A) {
-                                    std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, keyName); // replace source
+                                    std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, keyName, i); // replace source
                                     //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
                                     interpretAndExecuteCommand(modifiedCmds, subPath, keyName); // Execute modified 
                                     
@@ -1148,11 +1164,11 @@ public:
                         
                         toggleListItem->setState(toggleStateOn);
                         
-                        toggleListItem->setStateChangedListener([this, cmdsOn=commandsOn, cmdsOff=commandsOff, toggleStateOn, keyName = option.first](bool state) {
+                        toggleListItem->setStateChangedListener([this, i, cmdsOn=commandsOn, cmdsOff=commandsOff, toggleStateOn, keyName = option.first](bool state) {
                             if (!state) {
                                 // Toggle switched to On
                                 if (toggleStateOn) {
-                                    std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmdsOn, preprocessPath(pathPatternOn)); // replace source
+                                    std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmdsOn, preprocessPath(pathPatternOn), i); // replace source
                                     //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
                                     interpretAndExecuteCommand(modifiedCmds, subPath, keyName); // Execute modified 
                                 } else {
@@ -1162,7 +1178,7 @@ public:
                             } else {
                                 // Toggle switched to Off
                                 if (!toggleStateOn) {
-                                    std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmdsOff, preprocessPath(pathPatternOff)); // replace source
+                                    std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmdsOff, preprocessPath(pathPatternOff), i); // replace source
                                     //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
                                     interpretAndExecuteCommand(modifiedCmds, subPath, keyName); // Execute modified 
                                 } else {
@@ -1924,9 +1940,9 @@ public:
                         listItem->setValue(footer, true);
                         
                         if (sourceType == "json") { // For JSON wildcards
-                            listItem->setClickListener([this, cmds=commands, subPath = packageDirectory, keyName = option.first, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
+                            listItem->setClickListener([this, i, cmds=commands, subPath = packageDirectory, keyName = option.first, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
                                 if (keys & KEY_A) {
-                                    std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, selectedItem); // replace source
+                                    std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, selectedItem, i); // replace source
                                     //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
                                     interpretAndExecuteCommand(modifiedCmds, subPath, keyName); // Execute modified 
                                     
@@ -1942,9 +1958,9 @@ public:
                             });
                             list->addItem(listItem);
                         } else {
-                            listItem->setClickListener([this, cmds=commands, subPath = packageDirectory, keyName = option.first, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
+                            listItem->setClickListener([this, i, cmds=commands, subPath = packageDirectory, keyName = option.first, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
                                 if (keys & KEY_A) {
-                                    std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, selectedItem); // replace source
+                                    std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, selectedItem, i); // replace source
                                     //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
                                     interpretAndExecuteCommand(modifiedCmds, subPath, keyName); // Execute modified 
                                     
@@ -1968,11 +1984,11 @@ public:
                         
                         toggleListItem->setState(toggleStateOn);
                         
-                        toggleListItem->setStateChangedListener([this, cmdsOn=commandsOn, cmdsOff=commandsOff, toggleStateOn, subPath = packageDirectory, keyName = option.first](bool state) {
+                        toggleListItem->setStateChangedListener([this, i, cmdsOn=commandsOn, cmdsOff=commandsOff, toggleStateOn, subPath = packageDirectory, keyName = option.first](bool state) {
                             if (!state) {
                                 // Toggle switched to On
                                 if (toggleStateOn) {
-                                    std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmdsOn, preprocessPath(pathPatternOn)); // replace source
+                                    std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmdsOn, preprocessPath(pathPatternOn), i); // replace source
                                     //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
                                     interpretAndExecuteCommand(modifiedCmds, subPath, keyName); // Execute modified 
                                 } else {
@@ -1982,7 +1998,7 @@ public:
                             } else {
                                 // Toggle switched to Off
                                 if (!toggleStateOn) {
-                                    std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmdsOff, preprocessPath(pathPatternOff)); // replace source
+                                    std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmdsOff, preprocessPath(pathPatternOff),  i); // replace source
                                     //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
                                     interpretAndExecuteCommand(modifiedCmds, subPath, keyName); // Execute modified 
                                 } else {
