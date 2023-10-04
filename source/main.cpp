@@ -766,7 +766,9 @@ public:
      * Cleans up any resources associated with the `SubMenu` instance.
      */
     ~SubMenu() {
-        selectedFooterDict.clear(); // Clears all data from the map, making it empty again
+        if (inSubMenu) {
+            selectedFooterDict.clear(); // Clears all data from the map, making it empty again
+        }
     }
     
     /**
@@ -1028,7 +1030,7 @@ public:
                     }
                     
                     //std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(option.second, pathReplace);
-                    listItem->setClickListener([cmds = commands, keyName = option.first, this, subPath = this->subPath, footer, listItem](uint64_t keys) {
+                    listItem->setClickListener([cmds = commands, keyName = option.first, this, subPath = this->subPath, footer, lastSection, listItem](uint64_t keys) {
                         if (keys & KEY_A) {
                             if (inSubMenu) {
                                 inSubMenu = false;
@@ -1038,8 +1040,15 @@ public:
                             }
                             
                             selectedListItem = listItem;
-                            if (selectedFooterDict.find(keyName) == selectedFooterDict.end()) {
-                                selectedFooterDict[keyName] = footer;
+                            
+                            if (inSubMenu) {
+                                if (selectedFooterDict.find(lastSection+keyName) == selectedFooterDict.end()) {
+                                    selectedFooterDict[lastSection+keyName] = footer;
+                                }
+                            } else {
+                                if (selectedFooterDict.find("sub_"+lastSection+keyName) == selectedFooterDict.end()) {
+                                    selectedFooterDict["sub_"+lastSection+keyName] = footer;
+                                }
                             }
                             tsl::changeTo<SelectionOverlay>(subPath, keyName, cmds);
                             lastKeyName = keyName;
