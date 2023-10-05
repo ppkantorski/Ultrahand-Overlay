@@ -333,6 +333,7 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>> comm
     json_t* jsonData1 = nullptr;
     json_t* jsonData2 = nullptr;
     json_error_t error;
+    FILE* hexFile = nullptr;
     
     std::vector<std::string> command;
     std::string replacement;
@@ -360,6 +361,7 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>> comm
                 size_t endPos = arg.find(")}");
                 if (endPos != std::string::npos && endPos > startPos) {
                     replacement = replaceHexPlaceholder(arg.substr(startPos, endPos - startPos + 2), hexPath);
+                    //replacement = replaceHexPlaceholderFile(arg.substr(startPos, endPos - startPos + 2), hexFile);
                     arg.replace(startPos, endPos - startPos + 2, replacement);
                 }
             }
@@ -427,7 +429,13 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>> comm
             //jsonData2 = json_load_file(jsonPath.c_str(), 0, &error);
         } else if (commandName == "hex_file") {
             hexPath = preprocessPath(command[1]);
-        
+            // Open the file for reading in binary mode
+            //FILE* hexFile = fopen(hexPath.c_str(), "rb");
+            //if (!hexFile) {
+            //    logMessage("Failed to open the file.");
+            //}
+        //} else if (commandName == "close_hex_file") {
+        //    fclose(hexFile);
         // Perform actions based on the command name
         } else if (commandName == "make" || commandName == "mkdir") {
             // Delete command
