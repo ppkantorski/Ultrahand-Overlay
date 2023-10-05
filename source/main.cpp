@@ -153,7 +153,7 @@ public:
                         if (line.substr(1, line.size() - 2) == specificKey) {
                             currentCategory = line.substr(1, line.size() - 2);
                             isInSection = true;
-                            list->addItem(new tsl::elm::CategoryHeader(currentCategory));
+                            list->addItem(new tsl::elm::CategoryHeader(removeTag(currentCategory)));
                         } else {
                             currentCategory.clear();
                             isInSection = false;
@@ -161,7 +161,7 @@ public:
                     } else {
                         currentCategory = line.substr(1, line.size() - 2);
                         isInSection = true;
-                        list->addItem(new tsl::elm::CategoryHeader(currentCategory));
+                        list->addItem(new tsl::elm::CategoryHeader(removeTag(currentCategory)));
                     }
                 } else if (isInSection) {
                     auto listItem = new tsl::elm::ListItem(line);
@@ -560,7 +560,7 @@ public:
         
         
         if (commandGrouping == "default") {
-            list->addItem(new tsl::elm::CategoryHeader(specificKey.substr(1))); // remove * from key
+            list->addItem(new tsl::elm::CategoryHeader(removeTag(specificKey.substr(1)))); // remove * from key
         }
         
         
@@ -865,7 +865,7 @@ public:
                     //if (dropdownSection[0] == '*') {
                     //    dropdownSection = dropdownSection.substr(1);
                     //}
-                    list->addItem(new tsl::elm::CategoryHeader(dropdownSection.substr(1)));
+                    list->addItem(new tsl::elm::CategoryHeader(removeTag(dropdownSection.substr(1))));
                     skipSection = true;
                     lastSection = dropdownSection;
                 }
@@ -882,13 +882,13 @@ public:
                     if (optionName[0] != '*') {
                         if (optionName != lastSection) {
                             // Add a section break with small text to indicate the "Commands" section
-                            list->addItem(new tsl::elm::CategoryHeader(optionName));
+                            list->addItem(new tsl::elm::CategoryHeader(removeTag(optionName)));
                             lastSection = optionName;
                         }
                         skipSection = false;
                     } else {
                         // Create reference to SubMenu with dropdownSection set to optionName
-                        listItem = new tsl::elm::ListItem(optionName.substr(1), DROPDOWN_SYMBOL);
+                        listItem = new tsl::elm::ListItem(removeTag(optionName.substr(1)), DROPDOWN_SYMBOL);
                         
                         listItem->setClickListener([this, optionName](s64 key) {
                             if (key & KEY_A) {
@@ -1044,9 +1044,9 @@ public:
                 if (useSelection) { // For wildcard commands (dropdown menus)
                     
                     if ((footer == DROPDOWN_SYMBOL) || (footer.empty())) {
-                        listItem = new tsl::elm::ListItem(optionName, footer);
+                        listItem = new tsl::elm::ListItem(removeTag(optionName), footer);
                     } else {
-                        listItem = new tsl::elm::ListItem(optionName);
+                        listItem = new tsl::elm::ListItem(removeTag(optionName));
                         if (commandMode == "option") {
                             listItem->setValue(footer);
                         } else {
@@ -1110,7 +1110,7 @@ public:
                     
                     
                     if (commandMode == "default" || commandMode == "option") { // for handiling toggles
-                        auto listItem = new tsl::elm::ListItem(optionName);
+                        auto listItem = new tsl::elm::ListItem(removeTag(optionName));
                         if (commandMode == "default") {
                             listItem->setValue(footer, true);
                         } else {
@@ -1167,7 +1167,7 @@ public:
                     } else if (commandMode == "toggle") {
                         
                         
-                        auto toggleListItem = new tsl::elm::ToggleListItem(optionName, false, "On", "Off");
+                        auto toggleListItem = new tsl::elm::ToggleListItem(removeTag(optionName), false, "On", "Off");
                         // Set the initial state of the toggle item
                         bool toggleStateOn = isFileOrDirectory(preprocessPath(pathPatternOn));
                         
@@ -1789,7 +1789,7 @@ public:
                 
                 if (commands.size() == 0) {
                     // Add a section break with small text to indicate the "Commands" section
-                    list->addItem(new tsl::elm::CategoryHeader(optionName));
+                    list->addItem(new tsl::elm::CategoryHeader(removeTag(optionName)));
                     continue;
                 } else if (i == 0) {
                     // Add a section break with small text to indicate the "Commands" section
@@ -1925,9 +1925,9 @@ public:
                 if (useSelection) { // For wildcard commands (dropdown menus)
                     auto listItem = static_cast<tsl::elm::ListItem*>(nullptr);
                     if ((footer == DROPDOWN_SYMBOL) || (footer.empty())) {
-                        listItem = new tsl::elm::ListItem(optionName, footer);
+                        listItem = new tsl::elm::ListItem(removeTag(optionName), footer);
                     } else {
-                        listItem = new tsl::elm::ListItem(optionName);
+                        listItem = new tsl::elm::ListItem(removeTag(optionName));
                         listItem->setValue(footer, true);
                     }
                     
@@ -1959,7 +1959,7 @@ public:
                     
                     
                     if (commandMode == "default" || commandMode == "option") { // for handiling toggles
-                        auto listItem = new tsl::elm::ListItem(optionName);
+                        auto listItem = new tsl::elm::ListItem(removeTag(optionName));
                         listItem->setValue(footer, true);
                         
                         if (sourceType == "json") { // For JSON wildcards
@@ -2001,7 +2001,7 @@ public:
                     } else if (commandMode == "toggle") {
                         
                         
-                        auto toggleListItem = new tsl::elm::ToggleListItem(optionName, false, "On", "Off");
+                        auto toggleListItem = new tsl::elm::ToggleListItem(removeTag(optionName), false, "On", "Off");
                         // Set the initial state of the toggle item
                         bool toggleStateOn = isFileOrDirectory(preprocessPath(pathPatternOn));
                         
