@@ -279,7 +279,7 @@ json_t* stringToJson(const std::string& input) {
     if (!jsonObj) {
         // Return an empty json_t* (you can also return nullptr)
         jsonObj = json_object();
-        //logMessage("ERROR LOADING JSON FROM STRING!");
+        logMessage("ERROR LOADING JSON FROM STRING!");
     }
 
     return jsonObj;
@@ -310,4 +310,23 @@ std::string formatPriorityString(const std::string& priority, int desiredWidth=4
 
     // Convert the stringstream to a string and return it
     return formattedString;
+}
+
+
+/**
+ * @brief Removes the part of the string after the first occurrence of '?' character.
+ *
+ * This function takes a string and removes the portion of the string that appears after
+ * the first '?' character, if found. If no '?' character is present, the original string
+ * is returned unchanged.
+ *
+ * @param input The input string from which to remove the tag.
+ * @return The input string with everything after the first '?' character removed.
+ */
+std::string removeTag(const std::string &input) {
+    size_t pos = input.find('?');
+    if (pos != std::string::npos) {
+        return input.substr(0, pos);
+    }
+    return input; // Return the original string if no '?' is found.
 }
