@@ -1,4 +1,4 @@
-# OC Optimizer (experimental)
+# OC Optimizer (WIP)
 
 The OC Optimizer package provides various options for adjusting the clock speeds and voltages of your device.
 
