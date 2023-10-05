@@ -1,6 +1,6 @@
-# Overclock Buster (experimental)
+# OC Optimizer (experimental)
 
-The Overclock Buster package provides various options for adjusting the clock speeds and voltages of your device.
+The OC Optimizer package provides various options for adjusting the clock speeds and voltages of your device.
 
 ## Configuration
 
@@ -14,7 +14,7 @@ Each configuration has a set of commands that modify the clock speeds, voltages,
 
 To use Overclock Buster:
 
-1. Open the `package.ini` file located in the `examples/Overclock Buster` directory.
+1. Open the `package.ini` file located in the `examples/OC Optimizer` directory.
 2. Uncomment the desired configuration and its corresponding commands by removing the semicolon (`;`) at the beginning of each line.
 3. Save the `package.ini` file after making the necessary changes.
 4. Copy the `Overclock Buster` directory to your device under the appropriate location.
