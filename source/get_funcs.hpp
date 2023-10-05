@@ -21,6 +21,7 @@
 #include <jansson.h>
 #include <string_funcs.hpp>
 #include <list_funcs.hpp>
+#include <hex_funcs.hpp>
 #include "debug_funcs.hpp"
 
 // Constants for overlay module
@@ -463,7 +464,7 @@ std::string replaceJsonPlaceholder(const std::string& arg, const std::string& co
         while (std::getline(keyStream, key, ',')) {
             keys.push_back(trim(key));
         }
-
+        
         // Traverse the JSON structure based on the keys
         auto current = jsonDict;
         for (const auto& key : keys) {
@@ -500,15 +501,97 @@ std::string replaceJsonPlaceholder(const std::string& arg, const std::string& co
                 return arg;  // Return the original placeholder if JSON structure or key is invalid
             }
         }
-
+        
         if (json_is_string(current)) {
             std::string url = json_string_value(current);
             // Replace the entire placeholder with the URL
             replacement.replace(startPos, endPos - startPos + searchString.length() + 2, url);
         }
     }
-
+    
     //json_decref(jsonDict);
+    return replacement;
+}
+
+
+
+// `{hex_file(customAsciiPattern, offsetStr, length)}`
+std::string replaceHexPlaceholder(const std::string& arg, const std::string& hexPath) {
+    std::string replacement = arg;
+    std::string searchString = "{hex_file(";
+    
+    std::size_t startPos = replacement.find(searchString);
+    std::size_t endPos = replacement.find(")}");
+    
+    if (startPos != std::string::npos && endPos != std::string::npos && endPos > startPos) {
+        std::string placeholderContent = replacement.substr(startPos + searchString.length(), endPos - startPos - searchString.length());
+        
+        // Split the placeholder content into its components (customAsciiPattern, offsetStr, length)
+        std::vector<std::string> components;
+        std::istringstream componentStream(placeholderContent);
+        std::string component;
+        
+        while (std::getline(componentStream, component, ',')) {
+            components.push_back(trim(component));
+        }
+        
+        if (components.size() == 3) {
+            // Extract individual components
+            std::string customAsciiPattern = components[0];
+            std::string offsetStr = components[1];
+            size_t length = std::stoul(components[2]);
+            
+            // Call the parsing function and replace the placeholder
+            std::string parsedResult = parseHexDataAtCustomOffset(hexPath, customAsciiPattern, offsetStr, length);
+            
+            //std::string parsedResult = customAsciiPattern+offsetStr;
+            
+            // Replace the entire placeholder with the parsed result
+            replacement.replace(startPos, endPos - startPos + searchString.length() + 2, parsedResult);
+        }
+    }
+    
+    return replacement;
+}
+
+
+
+// `{hex_file(customAsciiPattern, offsetStr, length)}`
+std::string replaceHexPlaceholderFile(const std::string& arg, FILE* file) {
+    std::string replacement = arg;
+    std::string searchString = "{hex_file(";
+    
+    std::size_t startPos = replacement.find(searchString);
+    std::size_t endPos = replacement.find(")}");
+    
+    if (startPos != std::string::npos && endPos != std::string::npos && endPos > startPos) {
+        std::string placeholderContent = replacement.substr(startPos + searchString.length(), endPos - startPos - searchString.length());
+        
+        // Split the placeholder content into its components (customAsciiPattern, offsetStr, length)
+        std::vector<std::string> components;
+        std::istringstream componentStream(placeholderContent);
+        std::string component;
+        
+        while (std::getline(componentStream, component, ',')) {
+            components.push_back(trim(component));
+        }
+        
+        if (components.size() == 3) {
+            // Extract individual components
+            std::string customAsciiPattern = components[0];
+            std::string offsetStr = components[1];
+            size_t length = std::stoul(components[2]);
+            
+            // Call the parsing function and replace the placeholder
+            std::string parsedResult = parseHexDataAtCustomOffsetFile(file, customAsciiPattern, offsetStr, length);
+            
+            //std::string parsedResult = customAsciiPattern+offsetStr;
+            
+            // Replace the entire placeholder with the parsed result
+            replacement.replace(startPos, endPos - startPos + searchString.length() + 2, parsedResult);
+        }
+    }
+    
     return replacement;
 }
 
