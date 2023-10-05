@@ -42,16 +42,16 @@ void createSingleDirectory(const std::string& directoryPath) {
  */
 void createDirectory(const std::string& directoryPath) {
     std::string path = directoryPath;
-
+    
     // Remove leading "sdmc:/" if present
     if (path.substr(0, 6) == "sdmc:/") {
         path = path.substr(6);
     }
-
+    
     size_t pos = 0;
     std::string token;
     std::string parentPath = "sdmc:/";
-
+    
     // Iterate through the path and create each directory level if it doesn't exist
     while ((pos = path.find('/')) != std::string::npos) {
         token = path.substr(0, pos);
@@ -60,12 +60,12 @@ void createDirectory(const std::string& directoryPath) {
             path.erase(0, pos + 1);
             continue;
         }
-
+        
         parentPath += token + "/";
         createSingleDirectory(parentPath); // Create the parent directory
         path.erase(0, pos + 1);
     }
-
+    
     // Create the final directory level if it doesn't exist
     if (!path.empty()) {
         parentPath += path;
@@ -122,7 +122,7 @@ void deleteFileOrDirectory(const std::string& pathToDelete) {
                 }
                 closedir(directory);
             }
-
+            
             // Remove the directory itself
             if (rmdir(pathToDelete.c_str()) == 0) {
                 // Deletion successful
@@ -142,7 +142,7 @@ void deleteFileOrDirectory(const std::string& pathToDelete) {
 void deleteFileOrDirectoryByPattern(const std::string& pathPattern) {
     //logMessage("pathPattern: "+pathPattern);
     std::vector<std::string> fileList = getFilesListByWildcards(pathPattern);
-
+    
     for (const auto& path : fileList) {
         //logMessage("path: "+path);
         deleteFileOrDirectory(path);
@@ -161,7 +161,7 @@ void deleteFileOrDirectoryByPattern(const std::string& pathPattern) {
  */
 void mirrorDeleteFiles(const std::string& sourcePath, const std::string& targetPath="sdmc:/") {
     std::vector<std::string> fileList = getFilesListFromDirectory(sourcePath);
-
+    
     for (const auto& path : fileList) {
         // Generate the corresponding path in the target directory by replacing the source path
         std::string updatedPath = targetPath + path.substr(sourcePath.size());
@@ -189,14 +189,14 @@ void moveFileOrDirectory(const std::string& sourcePath, const std::string& desti
     
     if (stat(sourcePath.c_str(), &sourceInfo) == 0) {
         // Source file or directory exists
-
+        
         // Check if the destination path exists
         bool destinationExists = (stat(getParentDirFromPath(destinationPath).c_str(), &destinationInfo) == 0);
         if (!destinationExists) {
             // Create the destination directory
             createDirectory(getParentDirFromPath(destinationPath).c_str());
         }
-
+        
         if (S_ISDIR(sourceInfo.st_mode)) {
             // Source path is a directory
             DIR* dir = opendir(sourcePath.c_str());
@@ -205,37 +205,37 @@ void moveFileOrDirectory(const std::string& sourcePath, const std::string& desti
                 //printf("Failed to open source directory: %s\n", sourcePath.c_str());
                 return;
             }
-
+            
             struct dirent* entry;
             while ((entry = readdir(dir)) != NULL) {
                 const std::string fileOrFolderName = entry->d_name;
-
+                
                 if (fileOrFolderName != "." && fileOrFolderName != "..") {
                     std::string sourceFilePath = sourcePath + fileOrFolderName;
                     std::string destinationFilePath = destinationPath + fileOrFolderName;
-
+                    
                     if (entry->d_type == DT_DIR) {
                         // Append trailing slash to destination path for folders
                         destinationFilePath += "/";
                         sourceFilePath += "/";
                     }
-
+                    
                     moveFileOrDirectory(sourceFilePath, destinationFilePath);
                 }
             }
-
+            
             closedir(dir);
-
+            
             // Delete the source directory
             deleteFileOrDirectory(sourcePath);
-
+            
             return;
         } else {
             // Source path is a regular file
             std::string filename = getNameFromPath(sourcePath.c_str());
-
+            
             std::string destinationFilePath = destinationPath;
-
+            
             if (destinationPath[destinationPath.length() - 1] == '/') {
                 destinationFilePath += filename;
             }
@@ -250,11 +250,11 @@ void moveFileOrDirectory(const std::string& sourcePath, const std::string& desti
                 //logMessage("Failed to move file: "+sourcePath);
                 return;
             }
-
+            
             return;
         }
     }
-
+    
     // Move unsuccessful or source file/directory doesn't exist
     return;
 }
@@ -352,21 +352,21 @@ void copyFileOrDirectory(const std::string& fromFileOrDirectory, const std::stri
                 std::string toDirectory = toFileOrDirectory;
                 std::string fileName = fromFile.substr(fromFile.find_last_of('/') + 1);
                 std::string toFilePath = toDirectory + fileName;
-
+                
                 // Create the destination directory if it doesn't exist
                 createDirectory(toDirectory);
-
+                
                 // Check if the destination file exists and remove it
                 if (stat(toFilePath.c_str(), &toFileOrDirectoryInfo) == 0 && S_ISREG(toFileOrDirectoryInfo.st_mode)) {
                     std::remove(toFilePath.c_str());
                 }
-
+                
                 copySingleFile(fromFile, toFilePath);
             } else {
                 std::string toFile = toFileOrDirectory;
                 // Destination is a file or doesn't exist
                 std::string toDirectory = toFile.substr(0, toFile.find_last_of('/'));
-
+                
                 // Create the destination directory if it doesn't exist
                 createDirectory(toDirectory);
                 
@@ -375,7 +375,7 @@ void copyFileOrDirectory(const std::string& fromFileOrDirectory, const std::stri
                 if (stat(toFile.c_str(), &toFileOrDirectoryInfo) == 0 && S_ISREG(toFileOrDirectoryInfo.st_mode)) {
                     std::remove(toFile.c_str());
                 }
-
+                
                 copySingleFile(fromFile, toFile);
             }
         } else if (S_ISDIR(fromFileOrDirectoryInfo.st_mode)) {
@@ -393,11 +393,11 @@ void copyFileOrDirectory(const std::string& fromFileOrDirectory, const std::stri
                     //logMessage("toDirectory: "+toDirectory);
                     //logMessage("dirName: "+dirName);
                     //logMessage("toDirPath: "+toDirPath);
-
+                    
                     // Create the destination directory
                     createDirectory(toDirPath);
                     //mkdir(toDirPath.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
-
+                    
                     // Open the source directory
                     DIR* dir = opendir(fromDirectory.c_str());
                     if (dir != nullptr) {
@@ -438,7 +438,7 @@ void copyFileOrDirectory(const std::string& fromFileOrDirectory, const std::stri
  */
 void copyFileOrDirectoryByPattern(const std::string& sourcePathPattern, const std::string& toDirectory) {
     std::vector<std::string> fileList = getFilesListByWildcards(sourcePathPattern);
-
+    
     for (const std::string& sourcePath : fileList) {
         //logMessage("sourcePath: "+sourcePath);
         //logMessage("toDirectory: "+toDirectory);
@@ -460,7 +460,7 @@ void copyFileOrDirectoryByPattern(const std::string& sourcePathPattern, const st
  */
 void mirrorCopyFiles(const std::string& sourcePath, const std::string& targetPath="sdmc:/") {
     std::vector<std::string> fileList = getFilesListFromDirectory(sourcePath);
-
+    
     for (const auto& path : fileList) {
         // Generate the corresponding path in the target directory by replacing the source path
         std::string updatedPath = targetPath + path.substr(sourcePath.size());
