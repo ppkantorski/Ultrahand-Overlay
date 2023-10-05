@@ -12,12 +12,10 @@ Each configuration has a set of commands that modify the clock speeds, voltages,
 
 ## Usage
 
-To use Overclock Buster:
+To use `OC Optimize`:
 
-1. Open the `package.ini` file located in the `examples/OC Optimizer` directory.
-2. Uncomment the desired configuration and its corresponding commands by removing the semicolon (`;`) at the beginning of each line.
-3. Save the `package.ini` file after making the necessary changes.
-4. Copy the `Overclock Buster` directory to your device under the appropriate location.
+1. Install OC Suite.
+2. Copy the `OC Optimize` directory to your device under the appropriate location.
 
 Note: Modifying clock speeds and voltages can affect the stability and performance of your device. Use these configurations with caution and make sure you understand the potential risks involved. It is recommended to have a backup of your system before applying any changes.
 
