@@ -32,20 +32,20 @@
 std::string asciiToHex(const std::string& asciiStr) {
     std::string hexStr;
     hexStr.reserve(asciiStr.length() * 2); // Reserve space for the hexadecimal string
-
+    
     for (char c : asciiStr) {
         unsigned char uc = static_cast<unsigned char>(c); // Convert char to unsigned char
         char hexChar[3]; // Buffer to store the hexadecimal representation (2 characters + null terminator)
-
+        
         // Format the unsigned char as a hexadecimal string and append it to the result
         std::snprintf(hexChar, sizeof(hexChar), "%02X", uc);
         hexStr += hexChar;
     }
-
+    
     if (hexStr.length() % 2 != 0) {
         hexStr = '0' + hexStr;
     }
-
+    
     return hexStr;
 }
 
@@ -60,7 +60,7 @@ std::string asciiToHex(const std::string& asciiStr) {
 std::string decimalToHex(const std::string& decimalStr) {
     // Convert decimal string to integer
     int decimalValue = std::stoi(decimalStr);
-
+    
     // Convert decimal to hexadecimal
     std::string hexadecimal;
     while (decimalValue > 0) {
@@ -69,15 +69,15 @@ std::string decimalToHex(const std::string& decimalStr) {
         hexadecimal += hexChar;
         decimalValue /= 16;
     }
-
+    
     // Reverse the hexadecimal string
     std::reverse(hexadecimal.begin(), hexadecimal.end());
-
+    
     // If the length is odd, add a trailing '0'
     if (hexadecimal.length() % 2 != 0) {
         hexadecimal = '0' + hexadecimal;
     }
-
+    
     return hexadecimal;
 }
 
@@ -93,13 +93,13 @@ std::string decimalToHex(const std::string& decimalStr) {
  */
 std::string decimalToReversedHex(const std::string& decimalStr, int order = 2) {
     std::string hexadecimal = decimalToHex(decimalStr);
-
+    
     // Reverse the hexadecimal string in groups of order
     std::string reversedHex;
     for (int i = hexadecimal.length() - order; i >= 0; i -= order) {
         reversedHex += hexadecimal.substr(i, order);
     }
-
+    
     return reversedHex;
 }
 
@@ -115,14 +115,14 @@ std::string decimalToReversedHex(const std::string& decimalStr, int order = 2) {
  */
 std::vector<std::string> findHexDataOffsets(const std::string& filePath, const std::string& hexData) {
     std::vector<std::string> offsets;
-
+    
     // Open the file for reading in binary mode
     FILE* file = fopen(filePath.c_str(), "rb");
     if (!file) {
         //std::cerr << "Failed to open the file." << std::endl;
         return offsets;
     }
-
+    
     // Check the file size
     struct stat fileStatus;
     if (stat(filePath.c_str(), &fileStatus) != 0) {
@@ -131,7 +131,7 @@ std::vector<std::string> findHexDataOffsets(const std::string& filePath, const s
         return offsets;
     }
     //std::size_t fileSize = fileStatus.st_size;
-
+    
     // Convert the hex data string to binary data
     std::vector<unsigned char> binaryData; // Changed to use unsigned char
     for (std::size_t i = 0; i < hexData.length(); i += 2) {
@@ -139,7 +139,7 @@ std::vector<std::string> findHexDataOffsets(const std::string& filePath, const s
         unsigned char byte = static_cast<unsigned char>(std::stoi(byteString, nullptr, 16)); // Changed to use unsigned char
         binaryData.push_back(byte);
     }
-
+    
     // Read the file in chunks to find the offsets where the hex data is located
     const std::size_t bufferSize = 1024;
     std::vector<unsigned char> buffer(bufferSize); // Changed to use unsigned char
@@ -154,7 +154,7 @@ std::vector<std::string> findHexDataOffsets(const std::string& filePath, const s
         }
         offset += bytesRead;
     }
-
+    
     fclose(file);
     return offsets;
 }
@@ -172,21 +172,21 @@ std::vector<std::string> findHexDataOffsets(const std::string& filePath, const s
 void hexEditByOffset(const std::string& filePath, const std::string& offsetStr, const std::string& hexData) {
     // Convert the offset string to std::streampos
     std::streampos offset = std::stoll(offsetStr);
-
+    
     // Open the file for reading and writing in binary mode
     FILE* file = fopen(filePath.c_str(), "rb+");
     if (!file) {
         //logMessage("Failed to open the file.");
         return;
     }
-
+    
     // Move the file pointer to the specified offset
     if (fseek(file, offset, SEEK_SET) != 0) {
         //logMessage("Failed to move the file pointer.");
         fclose(file);
         return;
     }
-
+    
     // Convert the hex data string to binary data
     std::vector<unsigned char> binaryData; // Changed to use unsigned char
     for (std::size_t i = 0; i < hexData.length(); i += 2) {
@@ -194,10 +194,10 @@ void hexEditByOffset(const std::string& filePath, const std::string& offsetStr, 
         unsigned char byte = static_cast<unsigned char>(std::stoi(byteString, nullptr, 16)); // Changed to use unsigned char
         binaryData.push_back(byte);
     }
-
+    
     // Calculate the number of bytes to be replaced
     std::size_t bytesToReplace = binaryData.size();
-
+    
     // Read the existing data from the file
     std::vector<unsigned char> existingData(bytesToReplace); // Changed to use unsigned char
     if (fread(existingData.data(), sizeof(unsigned char), bytesToReplace, file) != bytesToReplace) { // Changed to use unsigned char
@@ -205,21 +205,21 @@ void hexEditByOffset(const std::string& filePath, const std::string& offsetStr, 
         fclose(file);
         return;
     }
-
+    
     // Move the file pointer back to the offset
     if (fseek(file, offset, SEEK_SET) != 0) {
         //logMessage("Failed to move the file pointer.");
         fclose(file);
         return;
     }
-
+    
     // Write the replacement binary data to the file
     if (fwrite(binaryData.data(), sizeof(unsigned char), bytesToReplace, file) != bytesToReplace) { // Changed to use unsigned char
         //logMessage("Failed to write data to the file.");
         fclose(file);
         return;
     }
-
+    
     fclose(file);
     //logMessage("Hex editing completed.");
 }
@@ -240,7 +240,7 @@ void hexEditByCustomOffset(const std::string& filePath, const std::string& custo
     std::string customHexPattern = asciiToHex(customPattern);
     std::vector<std::string> offsetStrs = findHexDataOffsets(filePath, customHexPattern);
     if (!offsetStrs.empty()) {
-        int sum = 3 + std::stoi(offsetStr) + std::stoi(offsetStrs[0]);
+        int sum = std::stoi(offsetStr) + std::stoi(offsetStrs[0]);
         hexEditByOffset(filePath, std::to_string(sum), hexDataReplacement);
     }
     else {
