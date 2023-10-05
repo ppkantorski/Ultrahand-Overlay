@@ -30,6 +30,24 @@
 #include <tesla.hpp>
 #include <utils.hpp>
 
+// Define external functions and variables
+extern void logMessage(const std::string& message);
+extern bool isFileOrDirectory(const std::string& path);
+extern void createDirectory(const std::string& path);
+extern std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadOptionsFromIni(const std::string& iniPath, bool ignoreComments);
+extern std::map<std::string, std::map<std::string, std::string>> getParsedDataFromIniFile(const std::string& iniFilePath);
+extern std::vector<std::string> getSubdirectories(const std::string& directoryPath);
+extern std::string formatPriorityString(const std::string& priority, const int& desiredWidth);
+extern void setIniFileValue(const std::string& iniFilePath, const std::string& section, const std::string& key, const std::string& value);
+extern std::string getNameFromPath(const std::string& path);
+extern std::string getParentDirNameFromPath(const std::string& path);
+extern std::string dropExtension(const std::string& fileName);
+extern std::string preprocessPath(const std::string& path);
+extern std::vector<std::string> getFilesListByWildcards(const std::string& pathPattern);
+extern std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std::vector<std::string>> commands, const std::string& entry, size_t entryIndex);
+extern void interpretAndExecuteCommand(const std::vector<std::vector<std::string>> commands, const std::string subPath, const std::string keyName);
+
+
 
 // Overlay booleans
 //static bool shouldCloseMenu = false;
@@ -61,30 +79,12 @@ static std::unordered_map<std::string, std::string> selectedFooterDict;
 static auto selectedListItem = new tsl::elm::ListItem("");
 static auto lastSelectedListItem = new tsl::elm::ListItem("");
 
+
 // Pre-defined symbols (moved to libTesla)
 //static std::string OPTION_SYMBOL = "\u22EF";
 //static std::string DROPDOWN_SYMBOL = "\u25B6";
 //static std::string CHECKMARK_SYMBOL = "\uE14B";
 //static std::string STAR_SYMBOL = "\u2605";
-
-
-// Define external functions and variables
-extern void logMessage(const std::string& message);
-extern bool isFileOrDirectory(const std::string& path);
-extern void createDirectory(const std::string& path);
-extern std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadOptionsFromIni(const std::string& iniPath, bool ignoreComments);
-extern std::map<std::string, std::map<std::string, std::string>> getParsedDataFromIniFile(const std::string& iniFilePath);
-extern std::vector<std::string> getSubdirectories(const std::string& directoryPath);
-extern std::string formatPriorityString(const std::string& priority, const int& desiredWidth);
-extern void setIniFileValue(const std::string& iniFilePath, const std::string& section, const std::string& key, const std::string& value);
-extern std::string getNameFromPath(const std::string& path);
-extern std::string getParentDirNameFromPath(const std::string& path);
-extern std::string dropExtension(const std::string& fileName);
-extern std::string preprocessPath(const std::string& path);
-extern std::vector<std::string> getFilesListByWildcards(const std::string& pathPattern);
-extern std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std::vector<std::string>> commands, const std::string& entry, size_t entryIndex);
-extern void interpretAndExecuteCommand(const std::vector<std::vector<std::string>> commands, const std::string subPath, const std::string keyName);
-
 
 
 
@@ -792,9 +792,9 @@ public:
      * Cleans up any resources associated with the `SubMenu` instance.
      */
     ~SubMenu() {
-        if (inSubMenu) {
-            selectedFooterDict.clear(); // Clears all data from the map, making it empty again
-        }
+        //if (inSubMenu) {
+        //    selectedFooterDict.clear(); // Clears all data from the map, making it empty again
+        //}
     }
     
     /**
@@ -1577,7 +1577,7 @@ public:
                         if (hideOverlayVersions != "true") {
                             listItem->setValue(overlayVersion, true);
                         }
-                   
+                        
                         // Add a click listener to load the overlay when clicked upon
                         listItem->setClickListener([overlayFile, newStarred, overlayFileName](s64 key) {
                             if (key & KEY_A) {
@@ -1615,9 +1615,6 @@ public:
             
             // Create the directory if it doesn't exist
             createDirectory(packageDirectory);
-            
-            // Load options from INI file
-            std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> options = loadOptionsFromIni(packageIniPath, true);
             
             
             FILE* packagesIniFile = fopen(packagesIniFilePath.c_str(), "r");
@@ -1695,7 +1692,7 @@ public:
                 }
                 
                 std::string packageFilePath = packageDirectory + packageName+ "/";
-            
+                
                 // Toggle the starred status
                 std::string newStarred = (packageStarred == "true") ? "false" : "true";
                 
@@ -1717,6 +1714,22 @@ public:
                     listItem->setClickListener([packageFilePath, newStarred, packageName](s64 key) {
                         if (key & KEY_A) {
                             inMainMenu = false;
+                            
+                            // read commands from package's boot_package.ini
+                            
+                            if (isFileOrDirectory(packageFilePath+bootPackageFileName)) {
+                                std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> bootOptions = loadOptionsFromIni(packageFilePath+bootPackageFileName, true);
+                                if (bootOptions.size() > 0) {
+                                    auto bootOption = bootOptions[0];
+                                    std::string bootOptionName = bootOption.first;
+                                    auto bootCommands = bootOption.second;
+                                    if (bootOptionName == "boot") {
+                                        interpretAndExecuteCommand(bootCommands, packageFilePath+bootPackageFileName, bootOptionName); // Execute modified 
+                                    }
+                                }
+                            }
+                            
+                            
                             tsl::changeTo<SubMenu>(packageFilePath);
                             
                             return true;
@@ -1743,7 +1756,8 @@ public:
             
            
             
-            
+            // Load options from INI file
+            std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> options = loadOptionsFromIni(packageIniPath, true);
             
             // initialize packageConfigIniPath text file
             
@@ -2076,6 +2090,7 @@ public:
         if (returningToMain && !(keysHeld & KEY_B)){
             returningToMain = false;
             inMainMenu = true;
+            selectedFooterDict.clear();
         }
         return false;
     }
