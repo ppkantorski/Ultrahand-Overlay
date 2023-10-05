@@ -103,6 +103,7 @@
  * These paths are used within the Ultrahand-Overlay project to manage configuration files
  * and directories.
  */
+const std::string bootPackageFileName = "boot_package.ini";
 const std::string packageFileName = "package.ini";
 const std::string configFileName = "config.ini";
 const std::string settingsPath = "sdmc:/config/ultrahand/";
