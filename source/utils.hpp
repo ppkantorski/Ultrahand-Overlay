@@ -471,7 +471,7 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
  * @param commands A list of commands, where each command is represented as a vector of strings.
  */
 void interpretAndExecuteCommand(const std::vector<std::vector<std::string>> commands, const std::string packageFolder="", const std::string selectedCommand="") {
-    std::string commandName, sourcePath, destinationPath, desiredSection, desiredNewSection, desiredKey, desiredNewKey, desiredValue, \
+    std::string commandName, bootCommandName, sourcePath, destinationPath, desiredSection, desiredNewSection, desiredKey, desiredNewKey, desiredValue, \
         offset, customPattern, hexDataToReplace, hexDataReplacement, fileUrl;
     
     std::size_t occurrence;
@@ -832,6 +832,30 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>> comm
                 sourcePath = preprocessPath(command[1]);
                 destinationPath = preprocessPath(command[2]);
                 unzipFile(sourcePath, destinationPath);
+            }
+        } else if (commandName == "exec") {
+            // Edit command
+            if (command.size() >= 2) {
+                bootCommandName = removeQuotes(command[1]);
+                if (isFileOrDirectory(packageFolder+bootPackageFileName)) {
+                    std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> bootOptions = loadOptionsFromIni(packageFolder+bootPackageFileName, true);
+                    for (const auto& bootOption:bootOptions) {
+                        std::string bootOptionName = bootOption.first;
+                        auto bootCommands = bootOption.second;
+                        if (bootOptionName == bootCommandName) {
+                            interpretAndExecuteCommand(bootCommands, packageFolder+bootPackageFileName, bootOptionName); // Execute modified 
+                            bootCommands.clear();
+                            break;
+                        }
+                        bootCommands.clear();
+                    }
+                    if (bootOptions.size() > 0) {
+                        auto bootOption = bootOptions[0];
+                        
+                    }
+                    // Unload bootOptions by clearing it
+                    bootOptions.clear();
+                }
             }
         } else if (commandName == "reboot") {
             // Reboot command
