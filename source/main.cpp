@@ -632,7 +632,7 @@ public:
                             }
                             std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, selectedItem, i); // replace source
                             //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
-                            interpretAndExecuteCommand(modifiedCmds, filePath, specificKey); // Execute modified 
+                            refreshGui = interpretAndExecuteCommand(modifiedCmds, filePath, specificKey); // Execute modified 
                             
                             listItem->setValue(CHECKMARK_SYMBOL);
                             
@@ -655,7 +655,7 @@ public:
                             
                             std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, selectedItem, i); // replace source
                             //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
-                            interpretAndExecuteCommand(modifiedCmds, filePath, specificKey); // Execute modified 
+                            refreshGui = interpretAndExecuteCommand(modifiedCmds, filePath, specificKey); // Execute modified 
                             
                             listItem->setValue(CHECKMARK_SYMBOL);
                             
@@ -681,7 +681,7 @@ public:
                         if (std::find(selectedItemsListOn.begin(), selectedItemsListOn.end(), selectedItem) != selectedItemsListOn.end()) {
                             // Toggle switched to On
                             std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmdsOn, selectedItem, i); // replace source
-                            interpretAndExecuteCommand(modifiedCmds, filePath, specificKey); // Execute modified 
+                            refreshGui = interpretAndExecuteCommand(modifiedCmds, filePath, specificKey); // Execute modified 
                         } else {
                             toggleListItem->setState(!state);
                         }
@@ -689,7 +689,7 @@ public:
                         if (std::find(selectedItemsListOff.begin(), selectedItemsListOff.end(), selectedItem) != selectedItemsListOff.end()) {
                             // Toggle switched to Off
                             std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmdsOff, selectedItem, i); // replace source
-                            interpretAndExecuteCommand(modifiedCmds, filePath, specificKey); // Execute modified 
+                            refreshGui = interpretAndExecuteCommand(modifiedCmds, filePath, specificKey); // Execute modified 
                         } else {
                             toggleListItem->setState(!state);
                         }
@@ -718,6 +718,11 @@ public:
      * @return `true` if the input was handled within the overlay, `false` otherwise.
      */
     virtual bool handleInput(u64 keysDown, u64 keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
+        if (refreshGui) {
+            tsl::changeTo<SelectionOverlay>(filePath, specificKey, commands, specifiedFooterKey);
+            refreshGui = false;
+        }
+        
         if (inSelectionMenu) {
             if (keysHeld & KEY_B) {
                 //tsl::Overlay::get()->close();
@@ -1728,7 +1733,7 @@ public:
                                         std::string bootOptionName = bootOption.first;
                                         auto bootCommands = bootOption.second;
                                         if (bootOptionName == "boot") {
-                                            interpretAndExecuteCommand(bootCommands, packageFilePath+bootPackageFileName, bootOptionName); // Execute modified 
+                                            refreshGui = interpretAndExecuteCommand(bootCommands, packageFilePath+bootPackageFileName, bootOptionName); // Execute modified 
                                             break;
                                         }
                                     }
@@ -1973,7 +1978,7 @@ public:
                                 if (keys & KEY_A) {
                                     std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, selectedItem, i); // replace source
                                     //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
-                                    interpretAndExecuteCommand(modifiedCmds, subPath, keyName); // Execute modified 
+                                    refreshGui = interpretAndExecuteCommand(modifiedCmds, subPath, keyName); // Execute modified 
                                     
                                     listItem->setValue(CHECKMARK_SYMBOL);
                                     return true;
@@ -1991,7 +1996,7 @@ public:
                                 if (keys & KEY_A) {
                                     std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, selectedItem, i); // replace source
                                     //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
-                                    interpretAndExecuteCommand(modifiedCmds, subPath, keyName); // Execute modified 
+                                    refreshGui = interpretAndExecuteCommand(modifiedCmds, subPath, keyName); // Execute modified 
                                     
                                     listItem->setValue(CHECKMARK_SYMBOL);
                                     return true;
@@ -2019,7 +2024,7 @@ public:
                                 if (toggleStateOn) {
                                     std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmdsOn, preprocessPath(pathPatternOn), i); // replace source
                                     //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
-                                    interpretAndExecuteCommand(modifiedCmds, subPath, keyName); // Execute modified 
+                                    refreshGui = interpretAndExecuteCommand(modifiedCmds, subPath, keyName); // Execute modified 
                                 } else {
                                     // Handle the case where the command should only run in the source_on section
                                     // Add your specific code here
@@ -2029,7 +2034,7 @@ public:
                                 if (!toggleStateOn) {
                                     std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmdsOff, preprocessPath(pathPatternOff),  i); // replace source
                                     //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
-                                    interpretAndExecuteCommand(modifiedCmds, subPath, keyName); // Execute modified 
+                                    refreshGui = interpretAndExecuteCommand(modifiedCmds, subPath, keyName); // Execute modified 
                                 } else {
                                     // Handle the case where the command should only run in the source_off section
                                     // Add your specific code here
@@ -2062,6 +2067,10 @@ public:
      * @return `true` if the input was handled within the overlay, `false` otherwise.
      */
     virtual bool handleInput(uint64_t keysDown, uint64_t keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
+        if (refreshGui) {
+            tsl::changeTo<MainMenu>();
+            refreshGui = false;
+        }
         
         if (inMainMenu){
             if (!freshSpawn && !returningToMain) {
