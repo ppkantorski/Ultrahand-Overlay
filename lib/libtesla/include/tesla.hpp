@@ -71,6 +71,83 @@ static std::string CHECKMARK_SYMBOL = "\uE14B";
 static std::string STAR_SYMBOL = "\u2605";
 
 
+// Map of character widths
+static std::unordered_map<char, float> characterWidths = {
+    {' ', 0.3},
+    {'+', 0.75},
+    {'-', 0.36},
+    {'_', 0.47},
+    {'&', 0.74},
+    {'(', 0.36},
+    {')', 0.36},
+    {'[', 0.3635},
+    {']', 0.3635},
+    {'A', 0.78},
+    {'B', 0.64},
+    {'C', 0.76},
+    {'D', 0.8},
+    {'E', 0.6},
+    {'F', 0.6},
+    {'G', 0.8},
+    {'H', 0.72},
+    {'I', 0.26},
+    {'J', 0.48},
+    {'K', 0.68},
+    {'L', 0.46}, // Modified 'L' to have a width of 3
+    {'M', 0.98}, // modified
+    {'N', 0.82},
+    {'O', 0.92},
+    {'P', 0.6},
+    {'Q', 0.9},
+    {'R', 0.6}, // Modified 'R' to have a width of 4
+    {'S', 0.56},
+    {'T', 0.64}, // Modified 'T' to have a width of 4
+    {'U', 0.80}, // Specified 'U' with a width of 8
+    {'V', 0.76},
+    {'W', 1.14},
+    {'X', 0.66},
+    {'Y', 0.66},
+    {'Z', 0.74},
+    {'a', 0.6},
+    {'b', 0.66},
+    {'c', 0.56},
+    {'d', 0.66}, // modified
+    {'e', 0.6},
+    {'f', 0.28},
+    {'g', 0.6},
+    {'h', 0.6},
+    {'i', 0.25},
+    {'j', 0.36},
+    {'k', 0.56},
+    {'l', 0.28}, // Specified 'l' with a width of 3
+    {'m', 0.94},
+    {'n', 0.582},
+    {'o', 0.662},
+    {'p', 0.66},
+    {'q', 0.68},
+    {'r', 0.36}, // Specified 'r' with a width of 4
+    {'s', 0.5}, // modified
+    {'t', 0.37}, // Specified 't' with a width of 4
+    {'u', 0.6},
+    {'v', 0.50},
+    {'w', 0.87},
+    {'x', 0.54},
+    {'y', 0.53},
+    {'z', 0.5},
+    {'0', 0.66},
+    {'1', 0.66},
+    {'2', 0.66},
+    {'3', 0.66},
+    {'4', 0.66},
+    {'5', 0.66},
+    {'6', 0.66},
+    {'7', 0.66},
+    {'8', 0.64},
+    {'9', 0.66}
+    // Add more character width mappings as needed
+};
+
+
 // CUSTOM SECTION END
 
 // Define this makro before including tesla.hpp in your main file. If you intend
@@ -1601,74 +1678,6 @@ namespace tsl {
         
         
         float calculateStringWidth(const std::string& str, int fontSize) {
-            // Map of character widths
-            std::unordered_map<char, float> characterWidths = {
-                {' ', 0.3},
-                {'A', 0.78},
-                {'B', 0.64},
-                {'C', 0.76},
-                {'D', 0.8},
-                {'E', 0.6},
-                {'F', 0.6},
-                {'G', 0.8},
-                {'H', 0.72},
-                {'I', 0.26},
-                {'J', 0.48},
-                {'K', 0.68},
-                {'L', 0.46}, // Modified 'L' to have a width of 3
-                {'M', 0.98}, // modified
-                {'N', 0.82},
-                {'O', 0.92},
-                {'P', 0.6},
-                {'Q', 0.9},
-                {'R', 0.6}, // Modified 'R' to have a width of 4
-                {'S', 0.56},
-                {'T', 0.64}, // Modified 'T' to have a width of 4
-                {'U', 0.80}, // Specified 'U' with a width of 8
-                {'V', 0.76},
-                {'W', 1.14},
-                {'X', 0.66},
-                {'Y', 0.66},
-                {'Z', 0.74},
-                {'a', 0.6},
-                {'b', 0.66},
-                {'c', 0.56},
-                {'d', 0.66}, // modified
-                {'e', 0.6},
-                {'f', 0.28},
-                {'g', 0.6},
-                {'h', 0.6},
-                {'i', 0.25},
-                {'j', 0.36},
-                {'k', 0.56},
-                {'l', 0.28}, // Specified 'l' with a width of 3
-                {'m', 0.94},
-                {'n', 0.582},
-                {'o', 0.662},
-                {'p', 0.66},
-                {'q', 0.68},
-                {'r', 0.36}, // Specified 'r' with a width of 4
-                {'s', 0.5}, // modified
-                {'t', 0.37}, // Specified 't' with a width of 4
-                {'u', 0.6},
-                {'v', 0.50},
-                {'w', 0.87},
-                {'x', 0.54},
-                {'y', 0.53},
-                {'z', 0.5},
-                {'0', 0.66},
-                {'1', 0.66},
-                {'2', 0.66},
-                {'3', 0.66},
-                {'4', 0.66},
-                {'5', 0.66},
-                {'6', 0.66},
-                {'7', 0.66},
-                {'8', 0.64},
-                {'9', 0.66}
-                // Add more character width mappings as needed
-            };
-            
             
             float totalWidth = 0;
             
@@ -1807,6 +1816,7 @@ namespace tsl {
                         //    // Update the counter for the next character
                         //    counter += 0.0002F;
                         //}
+                        
                         renderer->drawString(this->m_title.c_str(), false, x, y, fontSize, a(Color(0x00, 0xFF, 0x00, 0xFF)));
                     } else if (this->m_subtitle == "Ultrahand Config") {
                         renderer->drawString(this->m_title.c_str(), false, 20, 50, 32, a(Color(0xFF, 0x33, 0x3F, 0xFF)));
