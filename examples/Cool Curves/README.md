@@ -47,9 +47,6 @@ The `package.ini` file contains temperature settings for different temperature r
 - Before modifying any settings, it is recommended to create a backup of the original `system_settings.ini` file.
 - Ensure that you understand the consequences of changing the temperature settings and their impact on your system's performance and stability.
 
-## License
-
-The Ultrahand Overlay project is released under the MIT License. Please refer to the [LICENSE](https://github.com/ppkantorski/Ultrahand-Overlay/blob/main/LICENSE) file for more information.
 
 ## Acknowledgments
 
