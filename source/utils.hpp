@@ -360,8 +360,8 @@ std::string replaceIniPlaceholder(const std::string& arg, const std::string& ini
         
         if (components.size() == 2) {
             // Extract individual components
-            std::string iniSection = components[0];
-            std::string iniKey = components[1];
+            std::string iniSection = removeQuotes(components[0]);
+            std::string iniKey = removeQuotes(components[1]);
             
             // Call the parsing function and replace the placeholder
             std::string parsedResult = parseValueFromIniSection(iniPath, iniSection, iniKey);
@@ -375,8 +375,6 @@ std::string replaceIniPlaceholder(const std::string& arg, const std::string& ini
     
     return replacement;
 }
-
-
 
 
 
@@ -519,7 +517,7 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>> comm
                     arg.replace(startPos, endPos - startPos + 2, replacement);
                 }
             }
-            if ((!hexPath.empty() && (arg.find("{ini_file(") != std::string::npos))) {
+            if ((!iniPath.empty() && (arg.find("{ini_file(") != std::string::npos))) {
                 size_t startPos = arg.find("{ini_file(");
                 size_t endPos = arg.find(")}");
                 if (endPos != std::string::npos && endPos > startPos) {
