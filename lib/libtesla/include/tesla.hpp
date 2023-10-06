@@ -83,7 +83,7 @@ static std::unordered_map<char, float> characterWidths = {
     {'[', 0.3635},
     {']', 0.3635},
     {'A', 0.78},
-    {'B', 0.64},
+    {'B', 0.644},
     {'C', 0.76},
     {'D', 0.8},
     {'E', 0.6},
@@ -93,16 +93,16 @@ static std::unordered_map<char, float> characterWidths = {
     {'I', 0.26},
     {'J', 0.48},
     {'K', 0.68},
-    {'L', 0.46}, // Modified 'L' to have a width of 3
-    {'M', 0.98}, // modified
+    {'L', 0.46},
+    {'M', 0.98},
     {'N', 0.82},
     {'O', 0.92},
     {'P', 0.6},
     {'Q', 0.9},
-    {'R', 0.6}, // Modified 'R' to have a width of 4
+    {'R', 0.6},
     {'S', 0.56},
-    {'T', 0.64}, // Modified 'T' to have a width of 4
-    {'U', 0.80}, // Specified 'U' with a width of 8
+    {'T', 0.64},
+    {'U', 0.80},
     {'V', 0.76},
     {'W', 1.14},
     {'X', 0.66},
@@ -111,7 +111,7 @@ static std::unordered_map<char, float> characterWidths = {
     {'a', 0.6},
     {'b', 0.66},
     {'c', 0.56},
-    {'d', 0.66}, // modified
+    {'d', 0.66},
     {'e', 0.6},
     {'f', 0.28},
     {'g', 0.6},
@@ -119,15 +119,15 @@ static std::unordered_map<char, float> characterWidths = {
     {'i', 0.25},
     {'j', 0.36},
     {'k', 0.56},
-    {'l', 0.28}, // Specified 'l' with a width of 3
+    {'l', 0.28},
     {'m', 0.94},
     {'n', 0.582},
     {'o', 0.662},
     {'p', 0.66},
     {'q', 0.68},
-    {'r', 0.36}, // Specified 'r' with a width of 4
-    {'s', 0.5}, // modified
-    {'t', 0.37}, // Specified 't' with a width of 4
+    {'r', 0.36},
+    {'s', 0.5},
+    {'t', 0.37},
     {'u', 0.6},
     {'v', 0.50},
     {'w', 0.87},
@@ -144,7 +144,6 @@ static std::unordered_map<char, float> characterWidths = {
     {'7', 0.66},
     {'8', 0.64},
     {'9', 0.66}
-    // Add more character width mappings as needed
 };
 
 
