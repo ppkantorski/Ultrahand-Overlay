@@ -23,6 +23,8 @@
 #include <sstream>  // For std::istringstream
 #include <algorithm> // For std::remove_if
 #include <cctype>   // For ::isspace
+#include <get_funcs.hpp>
+
 
 /**
  * @brief Represents a package header structure.
@@ -280,6 +282,45 @@ std::vector<std::string> parseSectionsFromIni(const std::string& filePath) {
     
     fclose(file);
     return sections;
+}
+
+
+
+std::string parseValueFromIniSection(const std::string& filePath, const std::string& sectionName, const std::string& keyName) {
+    std::string value = "";
+    
+    FILE* file = fopen(filePath.c_str(), "r");
+    if (file == nullptr) {
+        return value; // Return an empty string if the file cannot be opened
+    }
+    
+    std::string currentSection = "";
+    char line[4096];
+    
+    while (fgets(line, sizeof(line), file)) {
+        std::string trimmedLine = trim(std::string(line));
+        
+        if (!trimmedLine.empty()) {
+            if (trimmedLine[0] == '[' && trimmedLine.back() == ']') {
+                // This line is a section header
+                currentSection = trimmedLine.substr(1, trimmedLine.size() - 2);
+            } else if (currentSection == sectionName) {
+                // Check if the line is within the desired section and contains the desired key
+                size_t delimiterPos = trimmedLine.find('=');
+                if (delimiterPos != std::string::npos) {
+                    std::string currentKey = trim(trimmedLine.substr(0, delimiterPos));
+                    if (currentKey == keyName) {
+                        value = trim(trimmedLine.substr(delimiterPos + 1));
+                        break; // Found the key, exit the loop
+                    }
+                }
+            }
+        }
+    }
+    
+    fclose(file);
+    
+    return value;
 }
 
 
