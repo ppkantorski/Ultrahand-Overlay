@@ -14,9 +14,6 @@
  * 
  *   For the latest updates and contributions, visit the project's GitHub repository.
  *   (GitHub Repository: https://github.com/ppkantorski/Ultrahand-Overlay)
- *
- *  Copyright (c) 2023 ppkantorski
- *  All rights reserved.
  ********************************************************************************/
 
 /**
@@ -1601,31 +1598,90 @@ namespace tsl {
         };
 
         // CUSTOM SECTION START
-
         
-        int calculateStringWidth(const std::string& str, int fontSize) {
+        
+        float calculateStringWidth(const std::string& str, int fontSize) {
             // Map of character widths
-            std::unordered_map<char, int> characterWidths = {
-                {'U', 8},
-                {'l', 3},
-                {'t', 4},
-                {'r', 4},
-                {'a', 6}
+            std::unordered_map<char, float> characterWidths = {
+                {' ', 0.3},
+                {'A', 0.78},
+                {'B', 0.64},
+                {'C', 0.76},
+                {'D', 0.8},
+                {'E', 0.6},
+                {'F', 0.6},
+                {'G', 0.8},
+                {'H', 0.72},
+                {'I', 0.26},
+                {'J', 0.48},
+                {'K', 0.68},
+                {'L', 0.46}, // Modified 'L' to have a width of 3
+                {'M', 0.98}, // modified
+                {'N', 0.82},
+                {'O', 0.92},
+                {'P', 0.6},
+                {'Q', 0.9},
+                {'R', 0.6}, // Modified 'R' to have a width of 4
+                {'S', 0.56},
+                {'T', 0.64}, // Modified 'T' to have a width of 4
+                {'U', 0.80}, // Specified 'U' with a width of 8
+                {'V', 0.76},
+                {'W', 1.14},
+                {'X', 0.66},
+                {'Y', 0.66},
+                {'Z', 0.74},
+                {'a', 0.6},
+                {'b', 0.66},
+                {'c', 0.56},
+                {'d', 0.66}, // modified
+                {'e', 0.6},
+                {'f', 0.28},
+                {'g', 0.6},
+                {'h', 0.6},
+                {'i', 0.25},
+                {'j', 0.36},
+                {'k', 0.56},
+                {'l', 0.28}, // Specified 'l' with a width of 3
+                {'m', 0.94},
+                {'n', 0.582},
+                {'o', 0.662},
+                {'p', 0.66},
+                {'q', 0.68},
+                {'r', 0.36}, // Specified 'r' with a width of 4
+                {'s', 0.5}, // modified
+                {'t', 0.37}, // Specified 't' with a width of 4
+                {'u', 0.6},
+                {'v', 0.50},
+                {'w', 0.87},
+                {'x', 0.54},
+                {'y', 0.53},
+                {'z', 0.5},
+                {'0', 0.66},
+                {'1', 0.66},
+                {'2', 0.66},
+                {'3', 0.66},
+                {'4', 0.66},
+                {'5', 0.66},
+                {'6', 0.66},
+                {'7', 0.66},
+                {'8', 0.64},
+                {'9', 0.66}
                 // Add more character width mappings as needed
             };
-
-            int totalWidth = 0;
-
+            
+            
+            float totalWidth = 0;
+            
             for (char letter : str) {
                 // Lookup the width of the current character
-                int letterWidth = characterWidths[letter];
-
+                float letterWidth = characterWidths[letter];
+                
                 // Accumulate the width
                 totalWidth += letterWidth;
             }
-
+            
             // Adjust the total width based on the font size
-            return (totalWidth * fontSize) / 10;
+            return (totalWidth * fontSize);
         }
         
         float calculateAmplitude(float x) {
@@ -1675,12 +1731,12 @@ namespace tsl {
                 int y = 50;
                 int offset = 0;
                 // Check if m_title is "Ultrahand"
-                if (this->m_title == "Ultrahand") {
+                if (this->m_title == "Ultrahand" && this->m_subtitle != "Ultrahand Package" && this->m_subtitle != "Ultrahand Config") {
                     static float counter = 0;
                     std::string firstHalf = "Ultra";
                     std::string secondHalf = "hand";
                     
-                    int x = 20;
+                    float x = 20;
                     //int y = 50;
                     int fontSize = 42;
                     offset = 6;
@@ -1700,16 +1756,16 @@ namespace tsl {
                             static_cast<u8>((0xA - 0xF) * (1.25 - progress) + 0xF),
                             0xF
                         };
-
+                        
                         // Draw each character with its corresponding highlight color
                         renderer->drawString(std::string(1, letter).c_str(), false, x, y + offset, fontSize, a(highlightColor));
-
+                        
                         // Manually calculate the width of the current letter
-                        int letterWidth = calculateStringWidth(std::string(1, letter), fontSize);
-
+                        float letterWidth = calculateStringWidth(std::string(1, letter), fontSize);
+                        
                         // Adjust the x-coordinate for the next character's position
                         x += letterWidth;
-
+                        
                         // Update the counter for the next character
                         counter += 0.0002F;
                     }
@@ -1717,13 +1773,41 @@ namespace tsl {
                     
                     // Calculate the position for the second half based on the width of the first half
                     //int x2 = x1 + (firstHalf.length() * fontSize)/2 -2;
-
+                    
                     // Draw the second half of the string in red color
                     renderer->drawString(secondHalf.c_str(), false, x, y+offset, fontSize, tsl::Color(0xFF, 0x00, 0x00, 0xFF));
-                }
-                else {
+                } else {
+                    static float counter = 0;
+                    float x = 20;
+                    int y = 50;
+                    int fontSize = 32;
                     if (this->m_subtitle == "Ultrahand Package") {
-                        renderer->drawString(this->m_title.c_str(), false, 20, 50, 32, a(Color(0x00, 0xFF, 0x00, 0xFF)));
+                        //std::string title = std::string(this->m_title);
+                        //for (char letter : title) {
+                        //    // Calculate the progress for each letter based on the counter
+                        //    const float progress = calculateAmplitude(counter - x * 0.001F);
+                        //    
+                        //    // Calculate the corresponding highlight color for each letter
+                        //    Color highlightColor = {
+                        //        static_cast<u8>((0xA - 0xF) * (3 - 1.5*progress) + 0xF),
+                        //        static_cast<u8>((0xA - 0xF) * 1.5*progress + 0xF),
+                        //        static_cast<u8>((0xA - 0xF) * (1.25 - progress) + 0xF),
+                        //        0xF
+                        //    };
+                        //    
+                        //    // Draw each character with its corresponding highlight color
+                        //    renderer->drawString(std::string(1, letter).c_str(), false, x, y, fontSize, a(highlightColor));
+                        //    
+                        //    // Manually calculate the width of the current letter
+                        //    float letterWidth = calculateStringWidth(std::string(1, letter), fontSize);
+                        //    
+                        //    // Adjust the x-coordinate for the next character's position
+                        //    x += letterWidth;
+                        //    
+                        //    // Update the counter for the next character
+                        //    counter += 0.0002F;
+                        //}
+                        renderer->drawString(this->m_title.c_str(), false, x, y, fontSize, a(Color(0x00, 0xFF, 0x00, 0xFF)));
                     } else if (this->m_subtitle == "Ultrahand Config") {
                         renderer->drawString(this->m_title.c_str(), false, 20, 50, 32, a(Color(0xFF, 0x33, 0x3F, 0xFF)));
                     } else {
@@ -1733,7 +1817,7 @@ namespace tsl {
                 
                 
                 renderer->drawString(this->m_subtitle.c_str(), false, 20, y+20+offset, 15, a(tsl::style::color::ColorDescription));
-
+                
                 renderer->drawRect(15, tsl::cfg::FramebufferHeight - 73, tsl::cfg::FramebufferWidth - 30, 1, a(tsl::style::color::ColorText));
                 std::string menuBottomLine = "\uE0E1  Back     \uE0E0  OK     ";
                 if (this->m_menuMode == "packages") {
