@@ -470,13 +470,14 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
  *
  * @param commands A list of commands, where each command is represented as a vector of strings.
  */
-void interpretAndExecuteCommand(const std::vector<std::vector<std::string>> commands, const std::string packageFolder="", const std::string selectedCommand="") {
+bool interpretAndExecuteCommand(const std::vector<std::vector<std::string>> commands, const std::string packageFolder="", const std::string selectedCommand="") {
     std::string commandName, bootCommandName, sourcePath, destinationPath, desiredSection, desiredNewSection, desiredKey, desiredNewKey, desiredValue, \
         offset, customPattern, hexDataToReplace, hexDataReplacement, fileUrl;
     
     std::size_t occurrence;
     
     bool logging = true;
+    bool refreshGui = false;
     
     std::string listString, jsonString, jsonPath, hexPath, iniPath;
     
@@ -867,8 +868,9 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>> comm
             splExit();
             fsdevUnmountAll();
             spsmShutdown(SpsmShutdownMode_Normal);
+        } else if (commandName == "refresh") {
+            refreshGui = true;
         }
-        
         // Log the command using logMessage
         if (logging) {
             std::string message = "Executing command: ";
@@ -882,6 +884,7 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>> comm
             logMessage(message);
         }
     }
+    return refreshGui;
 }
 
 
