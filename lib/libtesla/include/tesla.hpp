@@ -1708,6 +1708,20 @@ namespace tsl {
             //}
             return (std::cos((-x) * (180.0 / 3.1415927)) + 1) / 2;
         }
+        float calculateAmplitude2(float x, float peakDurationFactor = 0.25) {
+            const float phasePeriod = 360*peakDurationFactor;  // One full phase period
+            
+            // Calculate the phase within the full period
+            int phase = static_cast<int>((x) * (180.0 / 3.1415927)) % static_cast<int>(phasePeriod);
+            
+            // Check if the phase is odd
+            if (phase % 2 == 1) {
+                return 1.0f;  // Flat amplitude (maximum positive)
+            } else {
+                // Calculate the sinusoidal amplitude for the remaining period
+                return (std::cos((-x) * (180.0 / 3.1415927)) + 1) / 2;
+            }
+        }
         
         // CUSTOM SECTION END
         
@@ -1794,7 +1808,7 @@ namespace tsl {
                         //std::string title = std::string(this->m_title);
                         //for (char letter : title) {
                         //    // Calculate the progress for each letter based on the counter
-                        //    const float progress = calculateAmplitude(counter - x * 0.001F);
+                        //    const float progress = calculateAmplitude2(counter - x * 0.0001F);
                         //    
                         //    // Calculate the corresponding highlight color for each letter
                         //    Color highlightColor = {
@@ -1814,9 +1828,8 @@ namespace tsl {
                         //    x += letterWidth;
                         //    
                         //    // Update the counter for the next character
-                        //    counter += 0.0002F;
+                        //    counter -= 0.00004F;
                         //}
-                        
                         renderer->drawString(this->m_title.c_str(), false, x, y, fontSize, a(Color(0x00, 0xFF, 0x00, 0xFF)));
                     } else if (this->m_subtitle == "Ultrahand Config") {
                         renderer->drawString(this->m_title.c_str(), false, 20, 50, 32, a(Color(0xFF, 0x33, 0x3F, 0xFF)));
