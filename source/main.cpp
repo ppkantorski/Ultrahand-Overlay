@@ -1720,11 +1720,13 @@ public:
                             if (isFileOrDirectory(packageFilePath+bootPackageFileName)) {
                                 std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> bootOptions = loadOptionsFromIni(packageFilePath+bootPackageFileName, true);
                                 if (bootOptions.size() > 0) {
-                                    auto bootOption = bootOptions[0];
-                                    std::string bootOptionName = bootOption.first;
-                                    auto bootCommands = bootOption.second;
-                                    if (bootOptionName == "boot") {
-                                        interpretAndExecuteCommand(bootCommands, packageFilePath+bootPackageFileName, bootOptionName); // Execute modified 
+                                    for (const auto& bootOption:bootOptions) {
+                                        std::string bootOptionName = bootOption.first;
+                                        auto bootCommands = bootOption.second;
+                                        if (bootOptionName == "boot") {
+                                            interpretAndExecuteCommand(bootCommands, packageFilePath+bootPackageFileName, bootOptionName); // Execute modified 
+                                            break;
+                                        }
                                     }
                                 }
                             }
