@@ -89,9 +89,9 @@ std::string replaceJsonPlaceholder(const std::string& arg, const std::string& co
     json_error_t error;
     //FILE* hexFile = nullptr;
     
-    if (commandName == "json") {
+    if (commandName == "json" || commandName == "json_source") {
         jsonDict = stringToJson(jsonPathOrString);
-    } else if (commandName == "json_file") {
+    } else if (commandName == "json_file" || commandName == "json_file_source") {
         jsonDict = json_load_file(jsonPathOrString.c_str(), 0, &error);
     }
     
