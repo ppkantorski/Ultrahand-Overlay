@@ -21,6 +21,10 @@
 #include <cstring> // Added for std::memcmp
 #include <sys/stat.h> // Added for stat
 
+
+// For improving the speed of hexing consecutively with the same file and asciiPattern.
+static std::unordered_map<std::string, std::string> hexSumCache;
+
 /**
  * @brief Converts an ASCII string to a hexadecimal string.
  *
@@ -362,21 +366,38 @@ std::string parseHexDataAtCustomOffset(const std::string& filePath, const std::s
         return "";
     }
     
-    // Convert custom ASCII pattern to a custom hex pattern
-    std::string customHexPattern = asciiToHex(customAsciiPattern);
+    // Create a cache key based on filePath and customAsciiPattern
+    std::string cacheKey = filePath + '?' + customAsciiPattern + '?' + std::to_string(occurrence);
     
-    // Find hex data offsets in the file
-    std::vector<std::string> offsets = findHexDataOffsets(filePath, customHexPattern);
+    int hexSum = -1;
     
-    // Calculate the total offset to seek in the file
-    int sum = 0;
-    if (!offsets.empty()) {
-        sum = std::stoi(offsetStr) + std::stoi(offsets[occurrence]);
-    } else {
-        logMessage("Offset not found.");
-        return "";
+    // Check if the result is already cached
+    auto cachedResultIt = hexSumCache.find(cacheKey);
+    if (cachedResultIt != hexSumCache.end()) {
+        hexSum = std::stoi(cachedResultIt->second); // load sum from cache
     }
     
+    if (hexSum == -1) {
+        // Convert custom ASCII pattern to a custom hex pattern
+        std::string customHexPattern = asciiToHex(customAsciiPattern);
+        
+        // Find hex data offsets in the file
+        std::vector<std::string> offsets = findHexDataOffsets(filePath, customHexPattern);
+        
+        if (!offsets.empty()) {
+            hexSum = std::stoi(offsets[occurrence]);
+            
+            // Convert 'hexSum' to a string and add it to the cache
+            hexSumCache[cacheKey] = std::to_string(hexSum);
+        } else {
+            logMessage("Offset not found.");
+            fclose(file);
+            return "";
+        }
+    }
+    
+    // Calculate the total offset to seek in the file
+    int sum = std::stoi(offsetStr) + hexSum;
     
     // Seek to the specified offset
     if (fseek(file, sum, SEEK_SET) != 0) {
