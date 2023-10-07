@@ -16,7 +16,7 @@ Each configuration has a set of commands that modify the clock speeds, voltages,
 To use `OC Toolkit`:
 
 1. Install `OC Suite`.
-2. Copy the `OC Optimize` directory to your device under the appropriate location.
+2. Copy the `OC Toolkit` directory to your device under the appropriate location.
 
 Note: Modifying clock speeds and voltages can affect the stability and performance of your device. Use these configurations with caution and make sure you understand the potential risks involved. It is recommended to have a backup of your system before applying any changes.
 
