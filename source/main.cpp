@@ -1106,7 +1106,7 @@ public:
                     
                     }
                     
-                    if (footer != UNAVAILABLE_SELECTION) {
+                    if (footer == UNAVAILABLE_SELECTION) {
                         listItem->setValue(footer, true);
                     }
                     
