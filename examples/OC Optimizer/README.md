@@ -12,7 +12,7 @@ Each configuration has a set of commands that modify the clock speeds, voltages,
 
 ## Usage
 
-To use `OC Optimize`:
+To use `OC Optimizer`:
 
 1. Install `OC Suite`.
 2. Copy the `OC Optimize` directory to your device under the appropriate location.
