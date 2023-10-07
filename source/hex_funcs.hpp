@@ -397,7 +397,7 @@ std::string parseHexDataAtCustomOffset(const std::string& filePath, const std::s
     }
     
     // Calculate the total offset to seek in the file
-    int sum = std::stoi(offsetStr) + hexSum;
+    int sum = hexSum + std::stoi(offsetStr);
     
     // Seek to the specified offset
     if (fseek(file, sum, SEEK_SET) != 0) {
