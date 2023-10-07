@@ -14,7 +14,14 @@
 
 #pragma once
 #include <cstdio>
-#include <time.h>
+#include <ctime>
+#include <iostream>
+#include <deque>
+
+const std::string logFilePath = "sdmc:/config/ultrahand/log.txt";
+const int maxLines = 3000;
+
+std::deque<std::string> logQueue;
 
 /**
  * @brief Logs a message with a timestamp to a log file.
@@ -24,15 +31,17 @@
 void logMessage(const std::string& message) {
     std::time_t currentTime = std::time(nullptr);
     std::string logEntry = std::asctime(std::localtime(&currentTime));
-    std::size_t lastNonNewline = logEntry.find_last_not_of("\r\n");
-    if (lastNonNewline != std::string::npos) {
-        logEntry.erase(lastNonNewline + 1);
+    logEntry = "[" + logEntry.substr(0, logEntry.length() - 1) + "] " + message;
+    
+    logQueue.push_back(logEntry);
+    
+    if (logQueue.size() > maxLines) {
+        logQueue.pop_front();
     }
-    logEntry = "[" + logEntry + "] " + message + "\n";
-
-    FILE* file = fopen("sdmc:/config/ultrahand/log.txt", "a");
+    
+    FILE* file = fopen(logFilePath.c_str(), "a");
     if (file != nullptr) {
-        fputs(logEntry.c_str(), file);
+        fprintf(file, "%s\n", logEntry.c_str());
         fclose(file);
     }
 }
