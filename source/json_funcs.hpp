@@ -83,7 +83,17 @@ json_t* readJsonFromFile(const std::string& filePath) {
  * @return std::string The input string with the placeholder replaced by the actual JSON source,
  *                   or the original input string if replacement failed or jsonDict is nullptr.
  */
-std::string replaceJsonPlaceholder(const std::string& arg, const std::string& commandName, const json_t* jsonDict) {
+//std::string replaceJsonPlaceholder(const std::string& arg, const std::string& commandName, const json_t* jsonDict) {
+std::string replaceJsonPlaceholder(const std::string& arg, const std::string& commandName, const std::string& jsonPathOrString) {
+    json_t* jsonDict = nullptr;
+    json_error_t error;
+    //FILE* hexFile = nullptr;
+    
+    if (commandName == "json") {
+        jsonDict = stringToJson(jsonPathOrString);
+    } else if (commandName == "json_file") {
+        jsonDict = json_load_file(jsonPathOrString.c_str(), 0, &error);
+    }
     
     //logMessage("arg: "+arg);
     //logMessage("commandName: "+commandName);
@@ -145,6 +155,12 @@ std::string replaceJsonPlaceholder(const std::string& arg, const std::string& co
             // Replace the entire placeholder with the URL
             replacement.replace(startPos, endPos - startPos + searchString.length() + 2, url);
         }
+    }
+    
+    // Free jsonData1
+    if (jsonDict != nullptr) {
+        json_decref(jsonDict);
+        jsonDict = nullptr;
     }
     
     //json_decref(jsonDict);
