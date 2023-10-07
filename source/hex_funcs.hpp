@@ -476,8 +476,11 @@ std::string replaceHexPlaceholder(const std::string& arg, const std::string& hex
             
             //std::string parsedResult = customAsciiPattern+offsetStr;
             
-            // Replace the entire placeholder with the parsed result
-            replacement.replace(startPos, endPos - startPos + searchString.length() + 2, parsedResult);
+            // Only replace if parsedResult returns a non-empty string
+            if (parsedResult != "") {
+                // Replace the entire placeholder with the parsed result
+                replacement.replace(startPos, endPos - startPos + searchString.length() + 2, parsedResult);
+            }
         }
     }
     
