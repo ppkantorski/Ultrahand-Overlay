@@ -872,7 +872,7 @@ bool interpretAndExecuteCommand(const std::vector<std::vector<std::string>> comm
         } else if (commandName == "refresh") {
             refreshGui = true;
         } else if (commandName == "logging") {
-            logging = true;
+            logging = !logging;
         } else if (commandName == "clear") {
             if (command.size() >= 2) {
                 clearOption = removeQuotes(command[1]);
