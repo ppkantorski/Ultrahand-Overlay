@@ -1,7 +1,7 @@
-# OC Optimizer (WIP)
+# OC Toolbox (WIP)
 **WARNING: DO NOT USE YET IF YOU DO NOT KNOW WHAT YOU ARE DOING**
 
-The OC Optimizer package provides various options for adjusting the clock speeds and voltages of your device.
+The OC Toolbox package provides various options for adjusting the clock speeds and voltages of your device.
 
 ## Configuration
 
@@ -13,7 +13,7 @@ Each configuration has a set of commands that modify the clock speeds, voltages,
 
 ## Usage
 
-To use `OC Optimizer`:
+To use `OC Toolbox`:
 
 1. Install `OC Suite`.
 2. Copy the `OC Optimize` directory to your device under the appropriate location.
