@@ -318,7 +318,9 @@ public:
         
         std::vector<std::vector<std::string>> commandsOn;
         std::vector<std::vector<std::string>> commandsOff;
+        std::string listString, listStringOn, listStringOff;
         std::vector<std::string> listData, listDataOn, listDataOff;
+        std::string jsonString, jsonStringOn, jsonStringOff;
         json_t* jsonData = nullptr;
         json_t* jsonDataOn = nullptr;
         json_t* jsonDataOff = nullptr;
@@ -390,21 +392,21 @@ public:
                 } else if (cmd[0] == "json_file_source") {
                     if (currentSection == "global") {
                         jsonPath = preprocessPath(cmd[1]);
-                        jsonData = readJsonFromFile(jsonPath);
+                        //jsonData = readJsonFromFile(jsonPath);
                         sourceType = "json_file";
                         if (cmd.size() > 2) {
                             jsonKey = cmd[2]; //json display key
                         }
                     } else if (currentSection == "on") {
                         jsonPathOn = preprocessPath(cmd[1]);
-                        jsonDataOn = readJsonFromFile(jsonPathOn);
+                        //jsonDataOn = readJsonFromFile(jsonPathOn);
                         sourceTypeOn = "json_file";
                         if (cmd.size() > 2) {
                             jsonKeyOn = cmd[2]; //json display key
                         }
                     } else if (currentSection == "off") {
                         jsonPathOff = preprocessPath(cmd[1]);
-                        jsonDataOff = readJsonFromFile(jsonPathOff);
+                        //jsonDataOff = readJsonFromFile(jsonPathOff);
                         sourceTypeOff = "json_file";
                         if (cmd.size() > 2) {
                             jsonKeyOff = cmd[2]; //json display key
@@ -412,25 +414,30 @@ public:
                     }
                 } else if (cmd[0] == "list_source") {
                     if (currentSection == "global") {
-                        listData = stringToList(removeQuotes(cmd[1]));
+                        listString = removeQuotes(cmd[1]);
+                        //listData = stringToList(removeQuotes(cmd[1]));
                         sourceType = "list";
                     } else if (currentSection == "on") {
-                        listDataOn = stringToList(removeQuotes(cmd[1]));
+                        listStringOn = removeQuotes(cmd[1]);
+                        //listDataOn = stringToList(removeQuotes(cmd[1]));
                         sourceTypeOn = "list";
                     } else if (currentSection == "off") {
-                        listDataOff = stringToList(removeQuotes(cmd[1]));
+                        listStringOff = removeQuotes(cmd[1]);
+                        //listDataOff = stringToList(removeQuotes(cmd[1]));
                         sourceTypeOff = "list";
                     }
                 } else if (cmd[0] == "json_source") {
                     if (currentSection == "global") {
-                        jsonData = stringToJson(cmd[1]); // convert string to jsonData
+                        jsonString = removeQuotes(cmd[1]); // convert string to jsonData
+                        //jsonData = stringToJson(cmd[1]); // convert string to jsonData
                         sourceType = "json";
                         
                         if (cmd.size() > 2) {
                             jsonKey = cmd[2]; //json display key
                         }
                     } else if (currentSection == "on") {
-                        jsonDataOn = stringToJson(cmd[1]); // convert string to jsonData
+                        jsonStringOn = removeQuotes(cmd[1]); // convert string to jsonData
+                        //jsonDataOn = stringToJson(cmd[1]); // convert string to jsonData
                         sourceTypeOn = "json";
                         
                         if (cmd.size() > 2) {
@@ -438,7 +445,8 @@ public:
                         }
                         
                     } else if (currentSection == "off") {
-                        jsonDataOff = stringToJson(cmd[1]); // convert string to jsonData
+                        jsonStringOff = removeQuotes(cmd[1]); // convert string to jsonData
+                        //jsonDataOff = stringToJson(cmd[1]); // convert string to jsonData
                         sourceTypeOff = "json";
                         
                         if (cmd.size() > 2) {
@@ -457,8 +465,15 @@ public:
             if (sourceType == "file"){
                 selectedItemsList = filesList;
             } else if (sourceType == "list"){
-                selectedItemsList = listData;
+                selectedItemsList = stringToList(listString);
+                //selectedItemsList = listData;
             } else if ((sourceType == "json") || (sourceType == "json_file")) {
+                if (sourceType == "json") {
+                    jsonData = stringToJson(jsonString);
+                }else if (sourceType == "json_file") {
+                    jsonData = readJsonFromFile(jsonPath);
+                }
+                
                 // Populate items list based upon jsonKey
                 if ((jsonData) && json_is_array(jsonData)) {
                     size_t arraySize = json_array_size(jsonData);
@@ -473,13 +488,25 @@ public:
                         }
                     }
                 }
+                // Free jsonDataOn
+                if (jsonData != nullptr) {
+                    json_decref(jsonData);
+                    jsonData = nullptr;
+                }
             }
         } else if (commandMode == "toggle") {
             if (sourceTypeOn == "file") {
                 selectedItemsListOn = filesListOn;
             } else if (sourceTypeOn == "list") {
-                selectedItemsListOn = listDataOn;
+                selectedItemsListOn = stringToList(listStringOn);
             } else if ((sourceTypeOn == "json") || (sourceTypeOn == "json_file")) {
+                if (sourceTypeOn == "json") {
+                    jsonDataOn = stringToJson(jsonStringOn);
+                } else if (sourceTypeOn == "json_file") {
+                    jsonDataOn = readJsonFromFile(jsonPathOn);
+                }
+                
+                
                 // Populate items list based upon jsonKey
                 if ((jsonDataOn) && json_is_array(jsonDataOn)) {
                     size_t arraySize = json_array_size(jsonDataOn);
@@ -494,13 +521,25 @@ public:
                         }
                     }
                 }
+                // Free jsonDataOn
+                if (jsonDataOn != nullptr) {
+                    json_decref(jsonDataOn);
+                    jsonDataOn = nullptr;
+                }
             }
             
             if (sourceTypeOff == "file") {
                 selectedItemsListOff = filesListOff;
             } else if (sourceTypeOff == "list") {
-                selectedItemsListOff = listDataOff;
+                selectedItemsListOff = stringToList(listStringOff);
             } else if ((sourceTypeOff == "json") || (sourceTypeOff == "json_file")) {
+                if (sourceTypeOff == "json") {
+                    jsonDataOff = stringToJson(jsonStringOff);
+                } else if (sourceTypeOff == "json_file") {
+                    jsonDataOff = readJsonFromFile(jsonPathOff);
+                }
+                
+                
                 // Populate items list based upon jsonKey
                 if ((jsonDataOff) && json_is_array(jsonDataOff)) {
                     size_t arraySize = json_array_size(jsonDataOff);
@@ -514,6 +553,11 @@ public:
                             }
                         }
                     }
+                }
+                // Free jsonDataOff
+                if (jsonDataOff != nullptr) {
+                    json_decref(jsonDataOff);
+                    jsonDataOff = nullptr;
                 }
             }
             
@@ -701,6 +745,10 @@ public:
         }
         
         rootFrame->setContent(list);
+        selectedItemsList.clear();
+        selectedItemsListOn.clear();
+        selectedItemsListOff.clear();
+        
         return rootFrame;
     }
 
