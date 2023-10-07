@@ -72,7 +72,7 @@ static std::vector<std::string> commandModes = {"default", "toggle", "option"};
 static std::vector<std::string> commandGroupings = {"default", "split"};
 static std::string modePattern = ";mode=";
 static std::string groupingPattern = ";grouping=";
-
+static std::string UNAVAILABLE_SELECTION = "Not available";
 
 static std::string lastMenu = "";
 static std::string lastKeyName = "";
@@ -1106,9 +1106,13 @@ public:
                     
                     }
                     
+                    if (footer != UNAVAILABLE_SELECTION) {
+                        listItem->setValue(footer, true);
+                    }
+                    
                     //std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(option.second, pathReplace);
                     listItem->setClickListener([cmds = commands, keyName = option.first, this, subPath = this->subPath, footer, lastSection, listItem](uint64_t keys) {
-                        if (keys & KEY_A) {
+                        if ((keys & KEY_A) && (footer != UNAVAILABLE_SELECTION)) {
                             if (inSubMenu) {
                                 inSubMenu = false;
                             }
