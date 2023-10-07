@@ -477,7 +477,7 @@ bool interpretAndExecuteCommand(const std::vector<std::vector<std::string>> comm
     
     std::size_t occurrence;
     
-    bool logging = true;
+    bool logging = false;
     bool refreshGui = false;
     
     std::string listString, jsonString, jsonPath, hexPath, iniPath;
@@ -871,6 +871,8 @@ bool interpretAndExecuteCommand(const std::vector<std::vector<std::string>> comm
             spsmShutdown(SpsmShutdownMode_Normal);
         } else if (commandName == "refresh") {
             refreshGui = true;
+        } else if (commandName == "logging") {
+            logging = true;
         }
         // Log the command using logMessage
         if (logging) {
