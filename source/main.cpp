@@ -1420,7 +1420,7 @@ private:
     tsl::hlp::ini::IniData settingsData, packageConfigData;
     std::string packageIniPath = packageDirectory + packageFileName;
     std::string packageConfigIniPath = packageDirectory + configFileName;
-    std::string menuMode, defaultMenuMode, inOverlayString, fullPath, optionName, hideOverlayVersions, hidePackageVersions, priority, starred;
+    std::string menuMode, defaultMenuMode, inOverlayString, fullPath, optionName, hideOverlayVersions, hidePackageVersions, priority, starred, hide;
     bool useDefaultMenu = false;
     
     
@@ -1563,11 +1563,13 @@ public:
                         overlayList.push_back("1000_"+overlayFileName);
                         setIniFileValue(overlaysIniFilePath, overlayFileName, "priority", "1000");
                         setIniFileValue(overlaysIniFilePath, overlayFileName, "star", "false");
+                        setIniFileValue(overlaysIniFilePath, overlayFileName, "hide", "false");
                         
                     } else {
                         // Read priority and starred status from ini
                         priority = "1000";
                         starred = "false";
+                        hide = "false";
                         
                         // Check if the "priority" key exists in overlaysIniData for overlayFileName
                         if (overlaysIniData.find(overlayFileName) != overlaysIniData.end() &&
@@ -1579,11 +1581,18 @@ public:
                             overlaysIniData[overlayFileName].find("star") != overlaysIniData[overlayFileName].end()) {
                             starred = overlaysIniData[overlayFileName]["star"];
                         }
+                        // Check if the "hide" key exists in overlaysIniData for overlayFileName
+                        if (overlaysIniData.find(overlayFileName) != overlaysIniData.end() &&
+                            overlaysIniData[overlayFileName].find("hide") != overlaysIniData[overlayFileName].end()) {
+                            hide = overlaysIniData[overlayFileName]["hide"];
+                        }
                         
-                        if (starred == "true") {
-                            overlayList.push_back("-1_"+priority+"_"+overlayFileName);
-                        } else {
-                            overlayList.push_back(priority+"_"+overlayFileName);
+                        if (hide == "false") {
+                            if (starred == "true") {
+                                overlayList.push_back("-1_"+priority+"_"+overlayFileName);
+                            } else {
+                                overlayList.push_back(priority+"_"+overlayFileName);
+                            }
                         }
                     }
                 }
@@ -1700,10 +1709,12 @@ public:
                     packageList.push_back("1000_"+packageName);
                     setIniFileValue(packagesIniFilePath, packageName, "priority", "1000");
                     setIniFileValue(packagesIniFilePath, packageName, "star", "false");
+                    setIniFileValue(packagesIniFilePath, packageName, "hide", "false");
                 } else {
                     // Read priority and starred status from ini
                     priority = "1000";
                     starred = "false";
+                    hide = "false";
                     
                     // Check if the "priority" key exists in overlaysIniData for overlayFileName
                     if (packagesIniData.find(packageName) != packagesIniData.end() &&
@@ -1715,11 +1726,18 @@ public:
                         packagesIniData[packageName].find("star") != packagesIniData[packageName].end()) {
                         starred = packagesIniData[packageName]["star"];
                     }
+                    // Check if the "star" key exists in overlaysIniData for overlayFileName
+                    if (packagesIniData.find(packageName) != packagesIniData.end() &&
+                        packagesIniData[packageName].find("hide") != packagesIniData[packageName].end()) {
+                        hide = packagesIniData[packageName]["hide"];
+                    }
                     
-                    if (starred == "true") {
-                        packageList.push_back("-1_"+priority+"_"+packageName);
-                    } else {
-                        packageList.push_back(priority+"_"+packageName);
+                    if (hide == "false") {
+                        if (starred == "true") {
+                            packageList.push_back("-1_"+priority+"_"+packageName);
+                        } else {
+                            packageList.push_back(priority+"_"+packageName);
+                        }
                     }
                 }
             }
