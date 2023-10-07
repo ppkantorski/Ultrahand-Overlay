@@ -745,9 +745,6 @@ public:
         }
         
         rootFrame->setContent(list);
-        selectedItemsList.clear();
-        selectedItemsListOn.clear();
-        selectedItemsListOff.clear();
         
         return rootFrame;
     }
