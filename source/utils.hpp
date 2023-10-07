@@ -473,7 +473,7 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
  */
 bool interpretAndExecuteCommand(const std::vector<std::vector<std::string>> commands, const std::string packageFolder="", const std::string selectedCommand="") {
     std::string commandName, bootCommandName, sourcePath, destinationPath, desiredSection, desiredNewSection, desiredKey, desiredNewKey, desiredValue, \
-        offset, customPattern, hexDataToReplace, hexDataReplacement, fileUrl;
+        offset, customPattern, hexDataToReplace, hexDataReplacement, fileUrl, clearOption;
     
     std::size_t occurrence;
     
@@ -873,7 +873,15 @@ bool interpretAndExecuteCommand(const std::vector<std::vector<std::string>> comm
             refreshGui = true;
         } else if (commandName == "logging") {
             logging = true;
+        } else if (commandName == "clear") {
+            if (command.size() >= 2) {
+                clearOption = removeQuotes(command[1]);
+                if (clearOption == "log") {
+                    deleteFileOrDirectory(logFilePath);
+                }
+            }
         }
+        
         // Log the command using logMessage
         if (logging) {
             std::string message = "Executing command: ";
