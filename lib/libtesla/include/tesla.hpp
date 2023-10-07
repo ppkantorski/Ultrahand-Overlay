@@ -1753,7 +1753,7 @@ namespace tsl {
                 int y = 50;
                 int offset = 0;
                 // Check if m_title is "Ultrahand"
-                if (this->m_title == "Ultrahand" && this->m_subtitle != "Ultrahand Package" && this->m_subtitle != "Ultrahand Config") {
+                if (this->m_title == "Ultrahand" && this->m_subtitle != "Ultrahand Package" && this->m_subtitle != "Ultrahand Script") {
                     static float counter = 0;
                     std::string firstHalf = "Ultra";
                     std::string secondHalf = "hand";
@@ -1830,7 +1830,7 @@ namespace tsl {
                         //    counter -= 0.00004F;
                         //}
                         renderer->drawString(this->m_title.c_str(), false, x, y, fontSize, a(Color(0x00, 0xFF, 0x00, 0xFF)));
-                    } else if (this->m_subtitle == "Ultrahand Config") {
+                    } else if (this->m_subtitle == "Ultrahand Script") {
                         renderer->drawString(this->m_title.c_str(), false, 20, 50, 32, a(Color(0xFF, 0x33, 0x3F, 0xFF)));
                     } else {
                         renderer->drawString(this->m_title.c_str(), false, 20, 50, 30, a(tsl::style::color::ColorText));

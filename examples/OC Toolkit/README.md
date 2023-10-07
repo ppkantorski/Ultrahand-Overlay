@@ -1,6 +1,7 @@
-# OC Optimizer (WIP)
+# OC Toolkit (WIP)
+**WARNING: DO NOT USE YET IF YOU DO NOT KNOW WHAT YOU ARE DOING**
 
-The OC Optimizer package provides various options for adjusting the clock speeds and voltages of your device.
+The OC Toolkit package provides various options for adjusting the clock speeds and voltages of your device.
 
 ## Configuration
 
@@ -12,10 +13,10 @@ Each configuration has a set of commands that modify the clock speeds, voltages,
 
 ## Usage
 
-To use `OC Optimize`:
+To use `OC Toolkit`:
 
 1. Install `OC Suite`.
-2. Copy the `OC Optimize` directory to your device under the appropriate location.
+2. Copy the `OC Toolkit` directory to your device under the appropriate location.
 
 Note: Modifying clock speeds and voltages can affect the stability and performance of your device. Use these configurations with caution and make sure you understand the potential risks involved. It is recommended to have a backup of your system before applying any changes.
 
@@ -25,4 +26,4 @@ For more details on the Ultrahand Overlay project and its features, please refer
 
 For additional help with OC Suite kip values, you can visit [this link](https://github.com/hanai3Bi/Switch-OC-Suite/blob/master/Source/Atmosphere/stratosphere/loader/source/oc/customize.cpp). This resource provides helpful information specifically for OC Suite kip values.
 
-This package is compatible with v1.3.5 or later versions.
+This package is compatible with v1.3.6 or later versions.

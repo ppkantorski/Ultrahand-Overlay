@@ -72,7 +72,7 @@ static std::vector<std::string> commandModes = {"default", "toggle", "option"};
 static std::vector<std::string> commandGroupings = {"default", "split"};
 static std::string modePattern = ";mode=";
 static std::string groupingPattern = ";grouping=";
-
+static std::string UNAVAILABLE_SELECTION = "Not available";
 
 static std::string lastMenu = "";
 static std::string lastKeyName = "";
@@ -133,7 +133,7 @@ public:
         if (packageName == ".packages") {
             packageName = "Root Package";
         }
-        rootFrame = new tsl::elm::OverlayFrame(packageName, "Ultrahand Config");
+        rootFrame = new tsl::elm::OverlayFrame(packageName, "Ultrahand Script");
         list = new tsl::elm::List();
         
         std::string packageFile = filePath + packageFileName;
@@ -318,7 +318,9 @@ public:
         
         std::vector<std::vector<std::string>> commandsOn;
         std::vector<std::vector<std::string>> commandsOff;
+        std::string listString, listStringOn, listStringOff;
         std::vector<std::string> listData, listDataOn, listDataOff;
+        std::string jsonString, jsonStringOn, jsonStringOff;
         json_t* jsonData = nullptr;
         json_t* jsonDataOn = nullptr;
         json_t* jsonDataOff = nullptr;
@@ -390,21 +392,21 @@ public:
                 } else if (cmd[0] == "json_file_source") {
                     if (currentSection == "global") {
                         jsonPath = preprocessPath(cmd[1]);
-                        jsonData = readJsonFromFile(jsonPath);
+                        //jsonData = readJsonFromFile(jsonPath);
                         sourceType = "json_file";
                         if (cmd.size() > 2) {
                             jsonKey = cmd[2]; //json display key
                         }
                     } else if (currentSection == "on") {
                         jsonPathOn = preprocessPath(cmd[1]);
-                        jsonDataOn = readJsonFromFile(jsonPathOn);
+                        //jsonDataOn = readJsonFromFile(jsonPathOn);
                         sourceTypeOn = "json_file";
                         if (cmd.size() > 2) {
                             jsonKeyOn = cmd[2]; //json display key
                         }
                     } else if (currentSection == "off") {
                         jsonPathOff = preprocessPath(cmd[1]);
-                        jsonDataOff = readJsonFromFile(jsonPathOff);
+                        //jsonDataOff = readJsonFromFile(jsonPathOff);
                         sourceTypeOff = "json_file";
                         if (cmd.size() > 2) {
                             jsonKeyOff = cmd[2]; //json display key
@@ -412,25 +414,30 @@ public:
                     }
                 } else if (cmd[0] == "list_source") {
                     if (currentSection == "global") {
-                        listData = stringToList(removeQuotes(cmd[1]));
+                        listString = removeQuotes(cmd[1]);
+                        //listData = stringToList(removeQuotes(cmd[1]));
                         sourceType = "list";
                     } else if (currentSection == "on") {
-                        listDataOn = stringToList(removeQuotes(cmd[1]));
+                        listStringOn = removeQuotes(cmd[1]);
+                        //listDataOn = stringToList(removeQuotes(cmd[1]));
                         sourceTypeOn = "list";
                     } else if (currentSection == "off") {
-                        listDataOff = stringToList(removeQuotes(cmd[1]));
+                        listStringOff = removeQuotes(cmd[1]);
+                        //listDataOff = stringToList(removeQuotes(cmd[1]));
                         sourceTypeOff = "list";
                     }
                 } else if (cmd[0] == "json_source") {
                     if (currentSection == "global") {
-                        jsonData = stringToJson(cmd[1]); // convert string to jsonData
+                        jsonString = removeQuotes(cmd[1]); // convert string to jsonData
+                        //jsonData = stringToJson(cmd[1]); // convert string to jsonData
                         sourceType = "json";
                         
                         if (cmd.size() > 2) {
                             jsonKey = cmd[2]; //json display key
                         }
                     } else if (currentSection == "on") {
-                        jsonDataOn = stringToJson(cmd[1]); // convert string to jsonData
+                        jsonStringOn = removeQuotes(cmd[1]); // convert string to jsonData
+                        //jsonDataOn = stringToJson(cmd[1]); // convert string to jsonData
                         sourceTypeOn = "json";
                         
                         if (cmd.size() > 2) {
@@ -438,7 +445,8 @@ public:
                         }
                         
                     } else if (currentSection == "off") {
-                        jsonDataOff = stringToJson(cmd[1]); // convert string to jsonData
+                        jsonStringOff = removeQuotes(cmd[1]); // convert string to jsonData
+                        //jsonDataOff = stringToJson(cmd[1]); // convert string to jsonData
                         sourceTypeOff = "json";
                         
                         if (cmd.size() > 2) {
@@ -457,8 +465,15 @@ public:
             if (sourceType == "file"){
                 selectedItemsList = filesList;
             } else if (sourceType == "list"){
-                selectedItemsList = listData;
+                selectedItemsList = stringToList(listString);
+                //selectedItemsList = listData;
             } else if ((sourceType == "json") || (sourceType == "json_file")) {
+                if (sourceType == "json") {
+                    jsonData = stringToJson(jsonString);
+                }else if (sourceType == "json_file") {
+                    jsonData = readJsonFromFile(jsonPath);
+                }
+                
                 // Populate items list based upon jsonKey
                 if ((jsonData) && json_is_array(jsonData)) {
                     size_t arraySize = json_array_size(jsonData);
@@ -473,13 +488,25 @@ public:
                         }
                     }
                 }
+                // Free jsonDataOn
+                if (jsonData != nullptr) {
+                    json_decref(jsonData);
+                    jsonData = nullptr;
+                }
             }
         } else if (commandMode == "toggle") {
             if (sourceTypeOn == "file") {
                 selectedItemsListOn = filesListOn;
             } else if (sourceTypeOn == "list") {
-                selectedItemsListOn = listDataOn;
+                selectedItemsListOn = stringToList(listStringOn);
             } else if ((sourceTypeOn == "json") || (sourceTypeOn == "json_file")) {
+                if (sourceTypeOn == "json") {
+                    jsonDataOn = stringToJson(jsonStringOn);
+                } else if (sourceTypeOn == "json_file") {
+                    jsonDataOn = readJsonFromFile(jsonPathOn);
+                }
+                
+                
                 // Populate items list based upon jsonKey
                 if ((jsonDataOn) && json_is_array(jsonDataOn)) {
                     size_t arraySize = json_array_size(jsonDataOn);
@@ -494,13 +521,25 @@ public:
                         }
                     }
                 }
+                // Free jsonDataOn
+                if (jsonDataOn != nullptr) {
+                    json_decref(jsonDataOn);
+                    jsonDataOn = nullptr;
+                }
             }
             
             if (sourceTypeOff == "file") {
                 selectedItemsListOff = filesListOff;
             } else if (sourceTypeOff == "list") {
-                selectedItemsListOff = listDataOff;
+                selectedItemsListOff = stringToList(listStringOff);
             } else if ((sourceTypeOff == "json") || (sourceTypeOff == "json_file")) {
+                if (sourceTypeOff == "json") {
+                    jsonDataOff = stringToJson(jsonStringOff);
+                } else if (sourceTypeOff == "json_file") {
+                    jsonDataOff = readJsonFromFile(jsonPathOff);
+                }
+                
+                
                 // Populate items list based upon jsonKey
                 if ((jsonDataOff) && json_is_array(jsonDataOff)) {
                     size_t arraySize = json_array_size(jsonDataOff);
@@ -514,6 +553,11 @@ public:
                             }
                         }
                     }
+                }
+                // Free jsonDataOff
+                if (jsonDataOff != nullptr) {
+                    json_decref(jsonDataOff);
+                    jsonDataOff = nullptr;
                 }
             }
             
@@ -701,6 +745,7 @@ public:
         }
         
         rootFrame->setContent(list);
+        
         return rootFrame;
     }
 
@@ -1061,9 +1106,13 @@ public:
                     
                     }
                     
+                    if (footer == UNAVAILABLE_SELECTION) {
+                        listItem->setValue(footer, true);
+                    }
+                    
                     //std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(option.second, pathReplace);
                     listItem->setClickListener([cmds = commands, keyName = option.first, this, subPath = this->subPath, footer, lastSection, listItem](uint64_t keys) {
-                        if (keys & KEY_A) {
+                        if ((keys & KEY_A) && (footer != UNAVAILABLE_SELECTION)) {
                             if (inSubMenu) {
                                 inSubMenu = false;
                             }
@@ -1371,7 +1420,7 @@ private:
     tsl::hlp::ini::IniData settingsData, packageConfigData;
     std::string packageIniPath = packageDirectory + packageFileName;
     std::string packageConfigIniPath = packageDirectory + configFileName;
-    std::string menuMode, defaultMenuMode, inOverlayString, fullPath, optionName, hideOverlayVersions, hidePackageVersions, priority, starred;
+    std::string menuMode, defaultMenuMode, inOverlayString, fullPath, optionName, hideOverlayVersions, hidePackageVersions, priority, starred, hide;
     bool useDefaultMenu = false;
     
     
@@ -1514,11 +1563,13 @@ public:
                         overlayList.push_back("1000_"+overlayFileName);
                         setIniFileValue(overlaysIniFilePath, overlayFileName, "priority", "1000");
                         setIniFileValue(overlaysIniFilePath, overlayFileName, "star", "false");
+                        setIniFileValue(overlaysIniFilePath, overlayFileName, "hide", "false");
                         
                     } else {
                         // Read priority and starred status from ini
                         priority = "1000";
                         starred = "false";
+                        hide = "false";
                         
                         // Check if the "priority" key exists in overlaysIniData for overlayFileName
                         if (overlaysIniData.find(overlayFileName) != overlaysIniData.end() &&
@@ -1530,11 +1581,18 @@ public:
                             overlaysIniData[overlayFileName].find("star") != overlaysIniData[overlayFileName].end()) {
                             starred = overlaysIniData[overlayFileName]["star"];
                         }
+                        // Check if the "hide" key exists in overlaysIniData for overlayFileName
+                        if (overlaysIniData.find(overlayFileName) != overlaysIniData.end() &&
+                            overlaysIniData[overlayFileName].find("hide") != overlaysIniData[overlayFileName].end()) {
+                            hide = overlaysIniData[overlayFileName]["hide"];
+                        }
                         
-                        if (starred == "true") {
-                            overlayList.push_back("-1_"+priority+"_"+overlayFileName);
-                        } else {
-                            overlayList.push_back(priority+"_"+overlayFileName);
+                        if (hide == "false") {
+                            if (starred == "true") {
+                                overlayList.push_back("-1_"+priority+"_"+overlayFileName);
+                            } else {
+                                overlayList.push_back(priority+"_"+overlayFileName);
+                            }
                         }
                     }
                 }
@@ -1651,10 +1709,12 @@ public:
                     packageList.push_back("1000_"+packageName);
                     setIniFileValue(packagesIniFilePath, packageName, "priority", "1000");
                     setIniFileValue(packagesIniFilePath, packageName, "star", "false");
+                    setIniFileValue(packagesIniFilePath, packageName, "hide", "false");
                 } else {
                     // Read priority and starred status from ini
                     priority = "1000";
                     starred = "false";
+                    hide = "false";
                     
                     // Check if the "priority" key exists in overlaysIniData for overlayFileName
                     if (packagesIniData.find(packageName) != packagesIniData.end() &&
@@ -1666,11 +1726,18 @@ public:
                         packagesIniData[packageName].find("star") != packagesIniData[packageName].end()) {
                         starred = packagesIniData[packageName]["star"];
                     }
+                    // Check if the "star" key exists in overlaysIniData for overlayFileName
+                    if (packagesIniData.find(packageName) != packagesIniData.end() &&
+                        packagesIniData[packageName].find("hide") != packagesIniData[packageName].end()) {
+                        hide = packagesIniData[packageName]["hide"];
+                    }
                     
-                    if (starred == "true") {
-                        packageList.push_back("-1_"+priority+"_"+packageName);
-                    } else {
-                        packageList.push_back(priority+"_"+packageName);
+                    if (hide == "false") {
+                        if (starred == "true") {
+                            packageList.push_back("-1_"+priority+"_"+packageName);
+                        } else {
+                            packageList.push_back(priority+"_"+packageName);
+                        }
                     }
                 }
             }
