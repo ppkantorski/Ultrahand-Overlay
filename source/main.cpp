@@ -133,7 +133,7 @@ public:
         if (packageName == ".packages") {
             packageName = "Root Package";
         }
-        rootFrame = new tsl::elm::OverlayFrame(packageName, "Ultrahand Config");
+        rootFrame = new tsl::elm::OverlayFrame(packageName, "Ultrahand Script");
         list = new tsl::elm::List();
         
         std::string packageFile = filePath + packageFileName;
