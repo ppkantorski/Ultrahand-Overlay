@@ -372,9 +372,9 @@ std::string parseHexDataAtCustomOffset(const std::string& filePath, const std::s
     int hexSum = -1;
     
     // Check if the result is already cached
-    auto cachedResultIt = hexSumCache.find(cacheKey);
-    if (cachedResultIt != hexSumCache.end()) {
-        hexSum = std::stoi(cachedResultIt->second); // load sum from cache
+    auto cachedResult = hexSumCache.find(cacheKey);
+    if (cachedResult != hexSumCache.end()) {
+        hexSum = std::stoi(cachedResult->second); // load sum from cache
     }
     
     if (hexSum == -1) {
