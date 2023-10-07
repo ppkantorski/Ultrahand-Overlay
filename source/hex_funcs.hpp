@@ -500,7 +500,18 @@ std::string parseHexDataAtCustomOffsetFile(FILE* file, const std::string& custom
 
 
 
-// `{hex_file(customAsciiPattern, offsetStr, length)}`
+/**
+ * @brief Finds and replaces hexadecimal data in a file.
+ *
+ * This function searches for occurrences of hexadecimal data in a binary file
+ * and replaces them with a specified hexadecimal replacement data.
+ *
+ * @param filePath The path to the binary file.
+ * @param hexDataToReplace The hexadecimal data to search for and replace.
+ * @param hexDataReplacement The hexadecimal data to replace with.
+ * @param occurrence The occurrence/index of the data to replace (default is "0" to replace all occurrences).
+ */
+
 std::string replaceHexPlaceholder(const std::string& arg, const std::string& hexPath) {
     std::string replacement = arg;
     std::string searchString = "{hex_file(";
@@ -538,45 +549,3 @@ std::string replaceHexPlaceholder(const std::string& arg, const std::string& hex
     
     return replacement;
 }
-
-
-
-// `{hex_file(customAsciiPattern, offsetStr, length)}`
-std::string replaceHexPlaceholderFile(const std::string& arg, FILE* file) {
-    std::string replacement = arg;
-    std::string searchString = "{hex_file(";
-    
-    std::size_t startPos = replacement.find(searchString);
-    std::size_t endPos = replacement.find(")}");
-    
-    if (startPos != std::string::npos && endPos != std::string::npos && endPos > startPos) {
-        std::string placeholderContent = replacement.substr(startPos + searchString.length(), endPos - startPos - searchString.length());
-        
-        // Split the placeholder content into its components (customAsciiPattern, offsetStr, length)
-        std::vector<std::string> components;
-        std::istringstream componentStream(placeholderContent);
-        std::string component;
-        
-        while (std::getline(componentStream, component, ',')) {
-            components.push_back(trim(component));
-        }
-        
-        if (components.size() == 3) {
-            // Extract individual components
-            std::string customAsciiPattern = components[0];
-            std::string offsetStr = components[1];
-            size_t length = std::stoul(components[2]);
-            
-            // Call the parsing function and replace the placeholder
-            std::string parsedResult = parseHexDataAtCustomOffsetFile(file, customAsciiPattern, offsetStr, length);
-            
-            //std::string parsedResult = customAsciiPattern+offsetStr;
-            
-            // Replace the entire placeholder with the parsed result
-            replacement.replace(startPos, endPos - startPos + searchString.length() + 2, parsedResult);
-        }
-    }
-    
-    return replacement;
-}
-
