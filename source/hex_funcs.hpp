@@ -430,15 +430,15 @@ std::string parseHexDataAtCustomOffset(const std::string& filePath, const std::s
         return "";
     }
     
-    std::stringstream hexStream;
     char hexBuffer[length];
     char hexDigits[] = "0123456789ABCDEF";
+    char* hexStream = new char[length * 2];  // Allocate memory for the result
     
-    // Read data from the file and convert to hex
     size_t bytesRead = fread(hexBuffer, 1, length, file);
     if (bytesRead == length) {
         for (size_t i = 0; i < length; ++i) {
-            hexStream << hexDigits[(hexBuffer[i] >> 4) & 0xF] << hexDigits[hexBuffer[i] & 0xF];
+            hexStream[i * 2] = hexDigits[(hexBuffer[i] >> 4) & 0xF];
+            hexStream[i * 2 + 1] = hexDigits[hexBuffer[i] & 0xF];
         }
     } else if (feof(file)) {
         logMessage("End of file reached.");
@@ -451,8 +451,10 @@ std::string parseHexDataAtCustomOffset(const std::string& filePath, const std::s
     fclose(file);
     
     // Convert lowercase hex to uppercase and return the result
-    std::string result = hexStream.str();
+    std::string result(hexStream, length * 2);
     std::transform(result.begin(), result.end(), result.begin(), ::toupper);
+    
+    delete[] hexStream;
     
     return result;
 }
