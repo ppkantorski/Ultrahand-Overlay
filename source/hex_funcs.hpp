@@ -499,7 +499,7 @@ std::string replaceHexPlaceholder(const std::string& arg, const std::string& hex
             //std::string parsedResult = customAsciiPattern+offsetStr;
             
             // Only replace if parsedResult returns a non-empty string
-            if (parsedResult != "") {
+            if (!parsedResult.empty()) {
                 // Replace the entire placeholder with the parsed result
                 replacement.replace(startPos, endPos - startPos + searchString.length() + 2, parsedResult);
             }
