@@ -338,7 +338,16 @@ std::string replacePlaceholder(const std::string& input, const std::string& plac
 
 
 
-// `{hex_file(customAsciiPattern, offsetStr, length)}`
+/**
+ * @brief Replace placeholders in a string with values from an INI file.
+ *
+ * This function searches for placeholders in the input string and replaces them with
+ * corresponding values from an INI file.
+ *
+ * @param arg The input string containing placeholders.
+ * @param iniPath The path to the INI file to extract values from.
+ * @return The input string with placeholders replaced by INI values.
+ */
 std::string replaceIniPlaceholder(const std::string& arg, const std::string& iniPath) {
     std::string replacement = arg;
     std::string searchString = "{ini_file(";
@@ -378,8 +387,17 @@ std::string replaceIniPlaceholder(const std::string& arg, const std::string& ini
 
 
 
-
-// this will modify `commands`
+/**
+ * @brief Get source replacement data based on specified entry and index.
+ *
+ * This function retrieves source replacement data from a list of commands based on
+ * the specified entry and its index.
+ *
+ * @param commands A list of commands, where each command is represented as a vector of strings.
+ * @param entry The entry to search for in the commands.
+ * @param entryIndex The index of the entry to retrieve.
+ * @return A vector of vectors of strings containing the modified source replacement commands.
+ */
 std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std::vector<std::string>> commands, const std::string& entry, size_t entryIndex) {
     std::vector<std::vector<std::string>> modifiedCommands;
     std::vector<std::string> listData;
