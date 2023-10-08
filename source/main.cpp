@@ -301,8 +301,9 @@ public:
      */
     virtual tsl::elm::Element* createUI() override {
         inSelectionMenu = true;
+        PackageHeader packageHeader = getPackageHeaderFromIni(filePath+packageFileName);
         
-        rootFrame = new tsl::elm::OverlayFrame(getNameFromPath(filePath), "Ultrahand Package");
+        rootFrame = new tsl::elm::OverlayFrame(getNameFromPath(filePath), "Ultrahand Package", "", packageHeader.color);
         list = new tsl::elm::List();
         
         packageConfigIniPath = filePath + configFileName;
@@ -866,14 +867,15 @@ public:
         }
         
         
-        rootFrame = new tsl::elm::OverlayFrame(getNameFromPath(subPath), "Ultrahand Package");
-        list = new tsl::elm::List();
-        
-        auto listItem = static_cast<tsl::elm::ListItem*>(nullptr);
-        
         // Load options from INI file in the subdirectory
         std::string packageIniPath = subPath + packageFileName;
         std::string packageConfigIniPath = subPath + configFileName;
+        PackageHeader packageHeader = getPackageHeaderFromIni(packageIniPath);
+        
+        rootFrame = new tsl::elm::OverlayFrame(getNameFromPath(subPath), "Ultrahand Package", "", packageHeader.color);
+        list = new tsl::elm::List();
+        auto listItem = static_cast<tsl::elm::ListItem*>(nullptr);
+        
         std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> options = loadOptionsFromIni(packageIniPath);
         
         bool skipSection = false;
@@ -1259,8 +1261,6 @@ public:
         }
         
         if (dropdownSection.empty()) {
-            // Package Info
-            PackageHeader packageHeader = getPackageHeaderFromIni(packageIniPath);
             
             constexpr int lineHeight = 20;  // Adjust the line height as needed
             constexpr int xOffset = 120;    // Adjust the horizontal offset as needed
@@ -1808,7 +1808,7 @@ public:
                             }
                             
                             
-                            tsl::changeTo<SubMenu>(packageFilePath);
+                            tsl::changeTo<SubMenu>(packageFilePath, "");
                             
                             return true;
                         } else if (key & KEY_PLUS) {
