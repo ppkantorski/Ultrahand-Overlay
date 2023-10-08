@@ -432,19 +432,20 @@ std::string parseHexDataAtCustomOffset(const std::string& filePath, const std::s
     
     std::stringstream hexStream;
     char hexBuffer[length];
+    char hexDigits[] = "0123456789ABCDEF";
     
     // Read data from the file and convert to hex
-    if (fread(hexBuffer, 1, length, file) == length) {
+    size_t bytesRead = fread(hexBuffer, 1, length, file);
+    if (bytesRead == length) {
         for (size_t i = 0; i < length; ++i) {
-            hexStream << std::setfill('0') << std::setw(2) << std::hex << static_cast<int>(hexBuffer[i]);
+            hexStream << hexDigits[(hexBuffer[i] >> 4) & 0xF] << hexDigits[hexBuffer[i] & 0xF];
         }
-    } else {
-        if (feof(file)) {
-            logMessage("End of file reached.");
-        } else if (ferror(file)) {
-            logMessage("Error reading data from file: " + std::to_string(errno));
-        }
+    } else if (feof(file)) {
+        logMessage("End of file reached.");
+    } else if (ferror(file)) {
+        logMessage("Error reading data from file: " + std::to_string(errno));
     }
+    
     
     // Close the file
     fclose(file);
