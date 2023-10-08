@@ -1828,6 +1828,9 @@ namespace tsl {
                         } else if (this->m_colorSelection == "purple") {
                             titleColor = a(Color(0x80, 0x00, 0x80, 0xFF));
                             renderer->drawString(title.c_str(), false, x, y, fontSize, titleColor);
+                        } else if (this->m_colorSelection == "white") {
+                            titleColor = a(Color(0xFF, 0xFF, 0xFF, 0xFF));
+                            renderer->drawString(title.c_str(), false, x, y, fontSize, titleColor);
                         } else if (this->m_colorSelection == "ultra") {
                             for (char letter : title) {
                                 // Calculate the progress for each letter based on the counter
