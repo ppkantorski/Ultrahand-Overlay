@@ -382,12 +382,6 @@ void hexEditFindReplace(const std::string& filePath, const std::string& hexDataT
  * @param occurrence The occurrence/index of the data to replace (default is "0" to replace all occurrences).
  */
 std::string parseHexDataAtCustomOffset(const std::string& filePath, const std::string& customAsciiPattern, const std::string& offsetStr, size_t length, size_t occurrence = 0) {
-    // Open the file for reading in binary mode
-    FILE* file = fopen(filePath.c_str(), "rb");
-    if (!file) {
-        logMessage("Failed to open the file.");
-        return "";
-    }
     
     // Create a cache key based on filePath and customAsciiPattern
     std::string cacheKey = filePath + '?' + customAsciiPattern + '?' + std::to_string(occurrence);
@@ -414,13 +408,20 @@ std::string parseHexDataAtCustomOffset(const std::string& filePath, const std::s
             hexSumCache[cacheKey] = std::to_string(hexSum);
         } else {
             logMessage("Offset not found.");
-            fclose(file);
             return "";
         }
     }
     
     // Calculate the total offset to seek in the file
     int sum = hexSum + std::stoi(offsetStr);
+    
+    
+    // Open the file for reading in binary mode
+    FILE* file = fopen(filePath.c_str(), "rb");
+    if (!file) {
+        logMessage("Failed to open the file.");
+        return "";
+    }
     
     // Seek to the specified offset
     if (fseek(file, sum, SEEK_SET) != 0) {
