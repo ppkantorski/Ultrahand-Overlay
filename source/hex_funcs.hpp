@@ -145,7 +145,7 @@ std::vector<std::string> findHexDataOffsets(const std::string& filePath, const s
     }
     
     // Read the file in chunks to find the offsets where the hex data is located
-    const std::size_t bufferSize = 1024;
+    const std::size_t bufferSize = 131072;
     std::vector<unsigned char> buffer(bufferSize); // Changed to use unsigned char
     std::streampos offset = 0;
     std::size_t bytesRead = 0; // Changed to std::size_t
@@ -193,7 +193,7 @@ std::vector<std::string> findHexDataOffsetsFile(FILE* file, const std::string& h
     }
     
     // Read the file in chunks to find the offsets where the hex data is located
-    const std::size_t bufferSize = 1024;
+    const std::size_t bufferSize = 131072;
     std::vector<unsigned char> buffer(bufferSize); // Changed to use unsigned char
     std::streampos offset = 0;
     std::size_t bytesRead = 0; // Changed to std::size_t
@@ -286,6 +286,7 @@ void hexEditByOffset(const std::string& filePath, const std::string& offsetStr, 
  * @param offsetStr The user-provided offset for the edit.
  * @param customPattern The custom pattern to search for in the file.
  * @param hexDataReplacement The hexadecimal data to replace at the calculated offset.
+ * @param occurrence The occurrence/index of the data to replace (default is "0" to replace all occurrences).
  */
 void hexEditByCustomOffset(const std::string& filePath, const std::string& customAsciiPattern, const std::string& offsetStr, const std::string& hexDataReplacement, size_t occurrence = 0) {
     
