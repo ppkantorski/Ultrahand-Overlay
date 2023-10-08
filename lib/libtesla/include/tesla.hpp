@@ -1856,6 +1856,8 @@ namespace tsl {
                                 // Update the counter for the next character
                                 counter -= 0.00004F;
                             }
+                        } else { // for unknown colors
+                            renderer->drawString(title.c_str(), false, x, y, fontSize, titleColor);
                         }
                     } else if (this->m_subtitle == "Ultrahand Script") {
                         renderer->drawString(this->m_title.c_str(), false, 20, 50, 32, a(Color(0xFF, 0x33, 0x3F, 0xFF)));
