@@ -163,7 +163,6 @@ std::vector<std::string> findHexDataOffsets(const std::string& filePath, const s
     return offsets;
 }
 
-
 /**
  * @brief Finds the offsets of hexadecimal data in a file.
  *
@@ -210,7 +209,6 @@ std::vector<std::string> findHexDataOffsetsFile(FILE* file, const std::string& h
     
     return offsets;
 }
-
 
 /**
  * @brief Edits hexadecimal data in a file at a specified offset.
@@ -289,18 +287,46 @@ void hexEditByOffset(const std::string& filePath, const std::string& offsetStr, 
  * @param customPattern The custom pattern to search for in the file.
  * @param hexDataReplacement The hexadecimal data to replace at the calculated offset.
  */
-void hexEditByCustomOffset(const std::string& filePath, const std::string& customAsciiPattern, const std::string& offsetStr, const std::string& hexDataReplacement) {
-    std::string customHexPattern = asciiToHex(customAsciiPattern);
-    std::vector<std::string> offsetStrs = findHexDataOffsets(filePath, customHexPattern);
-    if (!offsetStrs.empty()) {
-        int sum = std::stoi(offsetStr) + std::stoi(offsetStrs[0]);
-        hexEditByOffset(filePath, std::to_string(sum), hexDataReplacement);
+void hexEditByCustomOffset(const std::string& filePath, const std::string& customAsciiPattern, const std::string& offsetStr, const std::string& hexDataReplacement, size_t occurrence = 0) {
+    
+    // Create a cache key based on filePath and customAsciiPattern
+    std::string cacheKey = filePath + '?' + customAsciiPattern + '?' + std::to_string(occurrence);
+    
+    int hexSum = -1;
+    
+    // Check if the result is already cached
+    auto cachedResult = hexSumCache.find(cacheKey);
+    if (cachedResult != hexSumCache.end()) {
+        hexSum = std::stoi(cachedResult->second); // load sum from cache
     }
-    else {
+    
+    if (hexSum == -1) {
+        // Convert custom ASCII pattern to a custom hex pattern
+        std::string customHexPattern = asciiToHex(customAsciiPattern);
+        
+        // Find hex data offsets in the file
+        std::vector<std::string> offsets = findHexDataOffsets(filePath, customHexPattern);
+        
+        if (!offsets.empty()) {
+            hexSum = std::stoi(offsets[occurrence]);
+            
+            // Convert 'hexSum' to a string and add it to the cache
+            hexSumCache[cacheKey] = std::to_string(hexSum);
+        } else {
+            logMessage("Offset not found.");
+            return;
+        }
+    }
+    
+    
+    if (hexSum != -1) {
+        // Calculate the total offset to seek in the file
+        int sum = hexSum + std::stoi(offsetStr);
+        hexEditByOffset(filePath, std::to_string(sum), hexDataReplacement);
+    } else {
         logMessage("Failed to find " + customAsciiPattern + ".");
     }
 }
-
 
 /**
  * @brief Finds and replaces hexadecimal data in a file.
@@ -323,8 +349,7 @@ void hexEditFindReplace(const std::string& filePath, const std::string& hexDataT
                 //logMessage("hexDataReplacement: "+hexDataReplacement);
                 hexEditByOffset(filePath, offsetStr, hexDataReplacement);
             }
-        }
-        else {
+        } else {
             // Convert the occurrence string to an integer
             if (occurrence > 0 && occurrence <= offsetStrs.size()) {
                 // Replace the specified occurrence/index
@@ -332,8 +357,7 @@ void hexEditFindReplace(const std::string& filePath, const std::string& hexDataT
                 //logMessage("offsetStr: "+offsetStr);
                 //logMessage("hexDataReplacement: "+hexDataReplacement);
                 hexEditByOffset(filePath, offsetStr, hexDataReplacement);
-            }
-            else {
+            } else {
                 // Invalid occurrence/index specified
                 //std::cout << "Invalid occurrence/index specified." << std::endl;
             }
@@ -344,8 +368,6 @@ void hexEditFindReplace(const std::string& filePath, const std::string& hexDataT
         //std::cout << "Hex data to replace not found." << std::endl;
     }
 }
-
-
 
 /**
  * @brief Finds and replaces hexadecimal data in a file.
@@ -431,8 +453,6 @@ std::string parseHexDataAtCustomOffset(const std::string& filePath, const std::s
     
     return result;
 }
-
-
 
 /**
  * @brief Finds and replaces hexadecimal data in a file.
