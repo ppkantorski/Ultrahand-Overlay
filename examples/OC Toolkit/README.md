@@ -1,4 +1,4 @@
-# OC Toolkit
+# OC Toolkit (currently for mariko only)
 
 The OC Toolkit package provides various options for adjusting the clock speeds and voltages of your device.
 
