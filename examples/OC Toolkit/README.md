@@ -3,10 +3,9 @@
 
 The OC Toolkit package provides various options for adjusting the clock speeds and voltages of your device.
 
-## Configuration
+## Configurations
 
 The `package.ini` file contains the following configurations:
-# OC Toolkit Configuration
 
 ## CPU
 
