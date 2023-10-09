@@ -76,7 +76,7 @@ The `package.ini` file contains the following configurations:
 To use `OC Toolkit`:
 
 1. Install [OC Suite](https://github.com/hanai3Bi/Switch-OC-Suite) and clone this directory.
-2. Copy the `OC Toolkit` directory to `/switch/.packages/`.
+2. Copy the `OC Toolkit` directory into `/switch/.packages/`.
 3. Use your menu hotkeys, go to the "Packages" section, then launch `OC Toolkit`.
   - A reboot will be requred for modifications to be applied.
   - **NOTICE:** Wrong values can lead to crashes or potential damage to your console.  Use and modify with caution and assistance from others if possible.
