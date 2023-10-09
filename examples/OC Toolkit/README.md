@@ -1,7 +1,8 @@
 # OC Toolkit
-**WARNING: DO NOT USE YET IF YOU DO NOT KNOW WHAT YOU ARE DOING**
 
 The OC Toolkit package provides various options for adjusting the clock speeds and voltages of your device.
+
+**WARNING: DO NOT USE YET IF YOU DO NOT KNOW WHAT YOU ARE DOING**
 
 ## Configurations
 
