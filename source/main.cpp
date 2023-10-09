@@ -1385,17 +1385,18 @@ public:
         }
         
         if (usingPages) {
-            if (currentPage == "right") {
-                if ((keysHeld & KEY_DLEFT) && !(keysHeld & (KEY_DRIGHT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR))) {
-                    tsl::changeTo<SubMenu>(subPath, dropdownSection, "left");
-                    return true;
-                }
-            } else if (currentPage == "left") {
+            if (currentPage == "left") {
                 if ((keysHeld & KEY_DRIGHT) && !(keysHeld & (KEY_DLEFT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR))) {
                     tsl::changeTo<SubMenu>(subPath, dropdownSection, "right");
                     return true;
                 }
-            }
+            } else if (currentPage == "right") {
+                if ((keysHeld & KEY_DLEFT) && !(keysHeld & (KEY_DRIGHT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR))) {
+                    //tsl::changeTo<SubMenu>(subPath, dropdownSection, "left");
+                    tsl::goBack();
+                    return true;
+                }
+            } 
         }
         
         if (!returningToSub && inSubMenu) {
