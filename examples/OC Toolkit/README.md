@@ -50,8 +50,7 @@ The `package.ini` file contains the following configurations:
 ### Core 1 Configuration
 - Configuration: `[*Core 1]`
 - Options: `(0, 1, 2, 3, 4, 5, 6)`
-- JSON File Source: `/switch/.packages/OC Toolkit/mariko/ram_tras.json`
-- KIP File Modification: `/atmosphere/kips/loader.kip mariko 404 {json_file_source(*,hex)}`
+- KIP File Modification: `/atmosphere/kips/loader.kip CUST 52 0{list_source(*)}`
 
 ## Commands
 
