@@ -2190,6 +2190,8 @@ public:
                 if ((keysHeld & KEY_DLEFT) && !(keysHeld & (KEY_DRIGHT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR))) {
                     if (menuMode != "overlays") {
                         setIniFileValue(settingsConfigIniPath, "ultrahand", "last_menu", "overlays");
+                        //tsl::changeTo<MainMenu>();
+                        tsl::goBack();
                         tsl::changeTo<MainMenu>();
                         return true;
                     }
