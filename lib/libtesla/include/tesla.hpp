@@ -1738,8 +1738,10 @@ namespace tsl {
              */
             std::string m_menuMode; // CUSTOM MODIFICATION
             std::string m_colorSelection; // CUSTOM MODIFICATION
-            OverlayFrame(const std::string& title, const std::string& subtitle, const std::string& menuMode = "", const std::string& colorSelection = "")
-                : Element(), m_menuMode(menuMode), m_title(title), m_subtitle(subtitle), m_colorSelection(colorSelection) {} // CUSTOM MODIFICATION
+            std::string m_pageLeftName; // CUSTOM MODIFICATION
+            std::string m_pageRightName; // CUSTOM MODIFICATION
+            OverlayFrame(const std::string& title, const std::string& subtitle, const std::string& menuMode = "", const std::string& colorSelection = "", const std::string& pageLeftName = "", const std::string& pageRightName = "")
+                : Element(), m_menuMode(menuMode), m_title(title), m_subtitle(subtitle), m_colorSelection(colorSelection), m_pageLeftName(pageLeftName), m_pageRightName(pageRightName) {} // CUSTOM MODIFICATION
             
             virtual ~OverlayFrame() {
                 if (this->m_contentElement != nullptr)
@@ -1875,6 +1877,12 @@ namespace tsl {
                     menuBottomLine += "\uE0ED  Overlays";
                 } else if (this->m_menuMode == "overlays") {
                     menuBottomLine += "\uE0EE  Packages";
+                }
+                
+                if (!(this->m_pageLeftName).empty()) {
+                    menuBottomLine += "\uE0ED  " + this->m_pageLeftName;
+                } else if (!(this->m_pageRightName).empty()) {
+                    menuBottomLine += "\uE0EE  " + this->m_pageRightName;
                 }
                 
                 renderer->drawString(menuBottomLine.c_str(), false, 30, 693, 23, a(tsl::style::color::ColorText));
