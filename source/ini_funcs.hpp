@@ -36,6 +36,7 @@ struct PackageHeader {
     std::string version;
     std::string creator;
     std::string about;
+    std::string color;
 };
 
 /**
@@ -54,6 +55,7 @@ PackageHeader getPackageHeaderFromIni(const std::string& filePath) {
         packageHeader.version = "";
         packageHeader.creator = "";
         packageHeader.about = "";
+        packageHeader.color = "";
         return packageHeader;
     }
     
@@ -63,6 +65,7 @@ PackageHeader getPackageHeaderFromIni(const std::string& filePath) {
     const std::string versionPrefix = ";version=";
     const std::string creatorPrefix = ";creator=";
     const std::string aboutPrefix = ";about=";
+    const std::string colorPrefix = ";color=";
     
     while (fgets(line, sizeof(line), file)) {
         std::string strLine(line);
@@ -120,7 +123,26 @@ PackageHeader getPackageHeaderFromIni(const std::string& filePath) {
             packageHeader.about.erase(packageHeader.about.find_last_not_of(" \t\r\n") + 1);
         }
         
-        if (!packageHeader.version.empty() && !packageHeader.creator.empty() && !packageHeader.about.empty()) {
+        size_t colorPos = strLine.find(colorPrefix);
+        if (colorPos != std::string::npos) {
+            colorPos += colorPrefix.length();
+            size_t startPos = strLine.find("'", colorPos);
+            size_t endPos = strLine.find("'", startPos + 1);
+            
+            if (startPos != std::string::npos && endPos != std::string::npos) {
+                // Value enclosed in single quotes
+                packageHeader.color = strLine.substr(startPos + 1, endPos - startPos - 1);
+            } else {
+                // Value not enclosed in quotes
+                packageHeader.color = strLine.substr(colorPos, endPos - colorPos);
+            }
+            
+            // Remove trailing whitespace or newline characters
+            packageHeader.color.erase(packageHeader.color.find_last_not_of(" \t\r\n") + 1);
+        }
+        
+        
+        if (!packageHeader.version.empty() && !packageHeader.creator.empty() && !packageHeader.about.empty() && !packageHeader.color.empty()) {
             break; // Both version and creator found, exit the loop
         }
     }

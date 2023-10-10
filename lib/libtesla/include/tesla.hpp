@@ -122,7 +122,7 @@ static std::unordered_map<char, float> characterWidths = {
     {'l', 0.28},
     {'m', 0.94},
     {'n', 0.582},
-    {'o', 0.662},
+    {'o', 0.656},
     {'p', 0.66},
     {'q', 0.68},
     {'r', 0.36},
@@ -1737,9 +1737,12 @@ namespace tsl {
              * @param subtitle Subtitle drawn bellow the title e.g version number
              */
             std::string m_menuMode; // CUSTOM MODIFICATION
-            OverlayFrame(const std::string& title, const std::string& subtitle, const std::string& menuMode = "")
-                : Element(), m_menuMode(menuMode), m_title(title), m_subtitle(subtitle) {} // CUSTOM MODIFICATION
-
+            std::string m_colorSelection; // CUSTOM MODIFICATION
+            std::string m_pageLeftName; // CUSTOM MODIFICATION
+            std::string m_pageRightName; // CUSTOM MODIFICATION
+            OverlayFrame(const std::string& title, const std::string& subtitle, const std::string& menuMode = "", const std::string& colorSelection = "", const std::string& pageLeftName = "", const std::string& pageRightName = "")
+                : Element(), m_menuMode(menuMode), m_title(title), m_subtitle(subtitle), m_colorSelection(colorSelection), m_pageLeftName(pageLeftName), m_pageRightName(pageRightName) {} // CUSTOM MODIFICATION
+            
             virtual ~OverlayFrame() {
                 if (this->m_contentElement != nullptr)
                     delete this->m_contentElement;
@@ -1762,7 +1765,7 @@ namespace tsl {
                     //int y = 50;
                     int fontSize = 42;
                     offset = 6;
-
+                    
                     // Draw the first half of the string in white color
                     //renderer->drawString(firstHalf.c_str(), false, x1, y+offset, fontSize, tsl::Color(0xFF, 0xFF, 0xFF, 0xFF));
                     //drawHighlightText(renderer);
@@ -1770,7 +1773,7 @@ namespace tsl {
                     for (char letter : firstHalf) {
                         // Calculate the progress for each letter based on the counter
                         const float progress = calculateAmplitude(counter - x * 0.001F);
-
+                        
                         // Calculate the corresponding highlight color for each letter
                         Color highlightColor = {
                             static_cast<u8>((0xA - 0xF) * (3 - 1.5*progress) + 0xF),
@@ -1804,32 +1807,60 @@ namespace tsl {
                     int y = 50;
                     int fontSize = 32;
                     if (this->m_subtitle == "Ultrahand Package") {
-                        //std::string title = std::string(this->m_title);
-                        //for (char letter : title) {
-                        //    // Calculate the progress for each letter based on the counter
-                        //    const float progress = calculateAmplitude2(counter - x * 0.0001F);
-                        //    
-                        //    // Calculate the corresponding highlight color for each letter
-                        //    Color highlightColor = {
-                        //        static_cast<u8>((0xA - 0xF) * (3 - 1.5*progress) + 0xF),
-                        //        static_cast<u8>((0xA - 0xF) * 1.5*progress + 0xF),
-                        //        static_cast<u8>((0xA - 0xF) * (1.25 - progress) + 0xF),
-                        //        0xF
-                        //    };
-                        //    
-                        //    // Draw each character with its corresponding highlight color
-                        //    renderer->drawString(std::string(1, letter).c_str(), false, x, y, fontSize, a(highlightColor));
-                        //    
-                        //    // Manually calculate the width of the current letter
-                        //    float letterWidth = calculateStringWidth(std::string(1, letter), fontSize);
-                        //    
-                        //    // Adjust the x-coordinate for the next character's position
-                        //    x += letterWidth;
-                        //    
-                        //    // Update the counter for the next character
-                        //    counter -= 0.00004F;
-                        //}
-                        renderer->drawString(this->m_title.c_str(), false, x, y, fontSize, a(Color(0x00, 0xFF, 0x00, 0xFF)));
+                        std::string title = std::string(this->m_title);
+                        auto titleColor = a(Color(0x00, 0xFF, 0x00, 0xFF));
+                        if (this->m_colorSelection == "" || this->m_colorSelection == "green") {
+                            titleColor = a(Color(0x00, 0xFF, 0x00, 0xFF));
+                            renderer->drawString(title.c_str(), false, x, y, fontSize, titleColor);
+                        } else if (this->m_colorSelection == "red") {
+                            titleColor = a(Color(0xFF, 0x00, 0x00, 0xFF));
+                            renderer->drawString(title.c_str(), false, x, y, fontSize, titleColor);
+                        } else if (this->m_colorSelection == "blue") {
+                            titleColor = a(Color(0x00, 0x00, 0xFF, 0xFF));
+                            renderer->drawString(title.c_str(), false, x, y, fontSize, titleColor);
+                        } else if (this->m_colorSelection == "yellow") {
+                            titleColor = a(Color(0xFF, 0xFF, 0x00, 0xFF));
+                            renderer->drawString(title.c_str(), false, x, y, fontSize, titleColor);
+                        } else if (this->m_colorSelection == "orange") {
+                            titleColor = a(Color(0xFF, 0xA5, 0x00, 0xFF));
+                            renderer->drawString(title.c_str(), false, x, y, fontSize, titleColor);
+                        } else if (this->m_colorSelection == "pink") {
+                            titleColor = a(Color(0xFF, 0x69, 0xB4, 0xFF));
+                            renderer->drawString(title.c_str(), false, x, y, fontSize, titleColor);
+                        } else if (this->m_colorSelection == "purple") {
+                            titleColor = a(Color(0x80, 0x00, 0x80, 0xFF));
+                            renderer->drawString(title.c_str(), false, x, y, fontSize, titleColor);
+                        } else if (this->m_colorSelection == "white") {
+                            titleColor = a(Color(0xFF, 0xFF, 0xFF, 0xFF));
+                            renderer->drawString(title.c_str(), false, x, y, fontSize, titleColor);
+                        } else if (this->m_colorSelection == "ultra") {
+                            for (char letter : title) {
+                                // Calculate the progress for each letter based on the counter
+                                const float progress = calculateAmplitude2(counter - x * 0.0001F);
+                                
+                                // Calculate the corresponding highlight color for each letter
+                                Color highlightColor = {
+                                    static_cast<u8>((0xA - 0xF) * (3 - 1.5*progress) + 0xF),
+                                    static_cast<u8>((0xA - 0xF) * 1.5*progress + 0xF),
+                                    static_cast<u8>((0xA - 0xF) * (1.25 - progress) + 0xF),
+                                    0xF
+                                };
+                                
+                                // Draw each character with its corresponding highlight color
+                                renderer->drawString(std::string(1, letter).c_str(), false, x, y, fontSize, a(highlightColor));
+                                
+                                // Manually calculate the width of the current letter
+                                float letterWidth = calculateStringWidth(std::string(1, letter), fontSize);
+                                
+                                // Adjust the x-coordinate for the next character's position
+                                x += letterWidth;
+                                
+                                // Update the counter for the next character
+                                counter -= 0.00004F;
+                            }
+                        } else { // for unknown colors
+                            renderer->drawString(title.c_str(), false, x, y, fontSize, titleColor);
+                        }
                     } else if (this->m_subtitle == "Ultrahand Script") {
                         renderer->drawString(this->m_title.c_str(), false, 20, 50, 32, a(Color(0xFF, 0x33, 0x3F, 0xFF)));
                     } else {
@@ -1846,6 +1877,12 @@ namespace tsl {
                     menuBottomLine += "\uE0ED  Overlays";
                 } else if (this->m_menuMode == "overlays") {
                     menuBottomLine += "\uE0EE  Packages";
+                }
+                
+                if (!(this->m_pageLeftName).empty()) {
+                    menuBottomLine += "\uE0ED  " + this->m_pageLeftName;
+                } else if (!(this->m_pageRightName).empty()) {
+                    menuBottomLine += "\uE0EE  " + this->m_pageRightName;
                 }
                 
                 renderer->drawString(menuBottomLine.c_str(), false, 30, 693, 23, a(tsl::style::color::ColorText));
