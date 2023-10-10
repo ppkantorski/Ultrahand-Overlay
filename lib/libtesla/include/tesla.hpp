@@ -146,6 +146,22 @@ static std::unordered_map<char, float> characterWidths = {
     {'9', 0.66}
 };
 
+bool isValidHexColor(const std::string& hexColor) {
+    // Check if the string is a valid hexadecimal color of the format "#RRGGBB"
+    if (hexColor.size() != 6) {
+        return false; // Must be exactly 6 characters long
+    }
+    
+    for (char c : hexColor) {
+        if (!isxdigit(c)) {
+            return false; // Must contain only hexadecimal digits (0-9, A-F, a-f)
+        }
+    }
+    
+    return true;
+}
+
+
 
 // CUSTOM SECTION END
 
@@ -1857,6 +1873,22 @@ namespace tsl {
                                 
                                 // Update the counter for the next character
                                 counter -= 0.00004F;
+                            }
+                        } else if (this->m_colorSelection.size() == 7 && this->m_colorSelection[0] == '#') {
+                            // Check if m_colorSelection is a valid hexadecimal color
+                            std::string hexColor = this->m_colorSelection.substr(1);
+                            if (isValidHexColor(hexColor)) {
+                                // Parse the hexadecimal color and convert it to RGB values
+                                int r, g, b;
+                                sscanf(hexColor.c_str(), "%02x%02x%02x", &r, &g, &b);
+                                
+                                // Create a Color with the extracted RGB values
+                                titleColor = a(Color(static_cast<u8>(r), static_cast<u8>(g), static_cast<u8>(b), 0xFF));
+                                renderer->drawString(title.c_str(), false, x, y, fontSize, titleColor);
+                            } else {
+                                // Invalid hexadecimal color, handle the error accordingly
+                                // You can log an error message or use a default color
+                                renderer->drawString(title.c_str(), false, x, y, fontSize, titleColor);
                             }
                         } else { // for unknown colors
                             renderer->drawString(title.c_str(), false, x, y, fontSize, titleColor);

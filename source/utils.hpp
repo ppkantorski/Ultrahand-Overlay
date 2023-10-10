@@ -338,16 +338,7 @@ std::string replacePlaceholder(const std::string& input, const std::string& plac
 
 
 
-/**
- * @brief Replace placeholders in a string with values from an INI file.
- *
- * This function searches for placeholders in the input string and replaces them with
- * corresponding values from an INI file.
- *
- * @param arg The input string containing placeholders.
- * @param iniPath The path to the INI file to extract values from.
- * @return The input string with placeholders replaced by INI values.
- */
+// `{hex_file(customAsciiPattern, offsetStr, length)}`
 std::string replaceIniPlaceholder(const std::string& arg, const std::string& iniPath) {
     std::string replacement = arg;
     std::string searchString = "{ini_file(";
@@ -387,17 +378,8 @@ std::string replaceIniPlaceholder(const std::string& arg, const std::string& ini
 
 
 
-/**
- * @brief Get source replacement data based on specified entry and index.
- *
- * This function retrieves source replacement data from a list of commands based on
- * the specified entry and its index.
- *
- * @param commands A list of commands, where each command is represented as a vector of strings.
- * @param entry The entry to search for in the commands.
- * @param entryIndex The index of the entry to retrieve.
- * @return A vector of vectors of strings containing the modified source replacement commands.
- */
+
+// this will modify `commands`
 std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std::vector<std::string>> commands, const std::string& entry, size_t entryIndex) {
     std::vector<std::vector<std::string>> modifiedCommands;
     std::vector<std::string> listData;
@@ -495,7 +477,7 @@ bool interpretAndExecuteCommand(const std::vector<std::vector<std::string>> comm
     
     std::size_t occurrence;
     
-    bool logging = false;
+    bool logging = true;
     bool refreshGui = false;
     
     std::string listString, jsonString, jsonPath, hexPath, iniPath;
@@ -713,6 +695,14 @@ bool interpretAndExecuteCommand(const std::vector<std::vector<std::string>> comm
                 desiredNewSection = removeQuotes(command[3]);
                 
                 renameIniSection(sourcePath.c_str(), desiredSection.c_str(), desiredNewSection.c_str());
+            }
+        } else if (commandName == "remove-ini-section") {
+            // Edit command
+            if (command.size() >= 2) {
+                sourcePath = preprocessPath(command[1]);
+                desiredSection = removeQuotes(command[2]);
+                
+                removeIniSection(sourcePath.c_str(), desiredSection.c_str());
             }
         } else if (commandName == "set-ini-val" || commandName == "set-ini-value") {
             // Edit command

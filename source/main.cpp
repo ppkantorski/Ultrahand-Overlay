@@ -204,9 +204,6 @@ public:
         }
         
         
-        
-        
-        
         rootFrame->setContent(list);
         return rootFrame;
     }
@@ -610,8 +607,6 @@ public:
         }
         
         
-        
-        
         // Add each file as a menu item
         for (size_t i = 0; i < selectedItemsList.size(); ++i) {
             const std::string& selectedItem = selectedItemsList[i];
@@ -749,7 +744,7 @@ public:
         
         return rootFrame;
     }
-
+    
     /**
      * @brief Handles user input for the selection overlay.
      *
@@ -771,9 +766,6 @@ public:
         
         if (inSelectionMenu) {
             if (keysHeld & KEY_B) {
-                //tsl::Overlay::get()->close();
-                //svcSleepThread(300'000'000);
-                //tsl::goBack();
                 inSelectionMenu = false;
                 
                 if (lastMenu == "subMenu") {
@@ -781,7 +773,6 @@ public:
                 } else if (lastMenu == "subSubMenu") {
                     returningToSubSub = true;
                 }
-                
                 
                 if (commandMode == "option") {
                     if (isFileOrDirectory(packageConfigIniPath)) {
@@ -798,9 +789,7 @@ public:
                     }
                 }
                 
-                //lastSelectedListItem = new tsl::elm::ListItem("");
                 tsl::goBack();
-                //tsl::Overlay::get()->close();
                 return true;
             }
         } 
@@ -809,8 +798,6 @@ public:
         }
         
         return false;
-        
-        //return handleOverlayMenuInput(inSelectionMenu, keysHeld, KEY_B);
     }
 };
 
@@ -970,9 +957,84 @@ public:
                                 // Add a section break with small text to indicate the "Commands" section
                                 list->addItem(new tsl::elm::CategoryHeader(removeTag(optionName)));
                                 lastSection = optionName;
+                                
+                                
+                                if (optionName == "Package Info") {
+                                    
+                                    constexpr int lineHeight = 20;  // Adjust the line height as needed
+                                    constexpr int xOffset = 120;    // Adjust the horizontal offset as needed
+                                    constexpr int fontSize = 16;    // Adjust the font size as needed
+                                    int numEntries = 0;   // Adjust the number of entries as needed
+                                    
+                                    std::string packageSectionString = "";
+                                    std::string packageInfoString = "";
+                                    if (packageHeader.version != "") {
+                                        packageSectionString += "Version\n";
+                                        packageInfoString += (packageHeader.version+"\n").c_str();
+                                        numEntries++;
+                                    }
+                                    if (packageHeader.creator != "") {
+                                        packageSectionString += "Creator(s)\n";
+                                        packageInfoString += (packageHeader.creator+"\n").c_str();
+                                        numEntries++;
+                                    }
+                                    if (packageHeader.about != "") {
+                                        std::string aboutHeaderText = "About\n";
+                                        std::string::size_type aboutHeaderLength = aboutHeaderText.length();
+                                        std::string aboutText = packageHeader.about;
+                                        
+                                        packageSectionString += aboutHeaderText;
+                                        
+                                        // Split the about text into multiple lines with proper word wrapping
+                                        constexpr int maxLineLength = 28;  // Adjust the maximum line length as needed
+                                        std::string::size_type startPos = 0;
+                                        std::string::size_type spacePos = 0;
+                                        
+                                        while (startPos < aboutText.length()) {
+                                            std::string::size_type endPos = std::min(startPos + maxLineLength, aboutText.length());
+                                            std::string line = aboutText.substr(startPos, endPos - startPos);
+                                            
+                                            // Check if the current line ends with a space; if not, find the last space in the line
+                                            if (endPos < aboutText.length() && aboutText[endPos] != ' ') {
+                                                spacePos = line.find_last_of(' ');
+                                                if (spacePos != std::string::npos) {
+                                                    endPos = startPos + spacePos;
+                                                    line = aboutText.substr(startPos, endPos - startPos);
+                                                }
+                                            }
+                                            
+                                            packageInfoString += line + '\n';
+                                            startPos = endPos + 1;
+                                            numEntries++;
+                                            
+                                            // Add corresponding newline to the packageSectionString
+                                            if (startPos < aboutText.length()) {
+                                                packageSectionString += std::string(aboutHeaderLength, ' ') + '\n';
+                                            }
+                                        }
+                                    }
+                                    
+                                    
+                                    // Remove trailing newline character
+                                    if ((packageSectionString != "") && (packageSectionString.back() == '\n')) {
+                                        packageSectionString = packageSectionString.substr(0, packageSectionString.size() - 1);
+                                    }
+                                    if ((packageInfoString != "") && (packageInfoString.back() == '\n')) {
+                                        packageInfoString = packageInfoString.substr(0, packageInfoString.size() - 1);
+                                    }
+                                    
+                                    
+                                    if ((packageSectionString != "") && (packageInfoString != "")) {
+                                        list->addItem(new tsl::elm::CustomDrawer([lineHeight, xOffset, fontSize, packageSectionString, packageInfoString](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
+                                            renderer->drawString(packageSectionString.c_str(), false, x, y + lineHeight, fontSize, a(tsl::style::color::ColorText));
+                                            renderer->drawString(packageInfoString.c_str(), false, x + xOffset, y + lineHeight, fontSize, a(tsl::style::color::ColorText));
+                                        }), fontSize * numEntries + lineHeight);
+                                    }
+                                }
                             }
                             skipSection = false;
                         }
+                        
                         
                         continue;
                     } else if (i == 0) {
@@ -1273,84 +1335,11 @@ public:
                         }
                     }
                 }
+
             }
         }
         
-        if ((usingPages && currentPage == "right") || !usingPages) {
-            if (dropdownSection.empty()) {
-                
-                constexpr int lineHeight = 20;  // Adjust the line height as needed
-                constexpr int xOffset = 120;    // Adjust the horizontal offset as needed
-                constexpr int fontSize = 16;    // Adjust the font size as needed
-                int numEntries = 0;   // Adjust the number of entries as needed
-                
-                std::string packageSectionString = "";
-                std::string packageInfoString = "";
-                if (packageHeader.version != "") {
-                    packageSectionString += "Version\n";
-                    packageInfoString += (packageHeader.version+"\n").c_str();
-                    numEntries++;
-                }
-                if (packageHeader.creator != "") {
-                    packageSectionString += "Creator(s)\n";
-                    packageInfoString += (packageHeader.creator+"\n").c_str();
-                    numEntries++;
-                }
-                if (packageHeader.about != "") {
-                    std::string aboutHeaderText = "About\n";
-                    std::string::size_type aboutHeaderLength = aboutHeaderText.length();
-                    std::string aboutText = packageHeader.about;
-                    
-                    packageSectionString += aboutHeaderText;
-                    
-                    // Split the about text into multiple lines with proper word wrapping
-                    constexpr int maxLineLength = 28;  // Adjust the maximum line length as needed
-                    std::string::size_type startPos = 0;
-                    std::string::size_type spacePos = 0;
-                    
-                    while (startPos < aboutText.length()) {
-                        std::string::size_type endPos = std::min(startPos + maxLineLength, aboutText.length());
-                        std::string line = aboutText.substr(startPos, endPos - startPos);
-                        
-                        // Check if the current line ends with a space; if not, find the last space in the line
-                        if (endPos < aboutText.length() && aboutText[endPos] != ' ') {
-                            spacePos = line.find_last_of(' ');
-                            if (spacePos != std::string::npos) {
-                                endPos = startPos + spacePos;
-                                line = aboutText.substr(startPos, endPos - startPos);
-                            }
-                        }
-                        
-                        packageInfoString += line + '\n';
-                        startPos = endPos + 1;
-                        numEntries++;
-                        
-                        // Add corresponding newline to the packageSectionString
-                        if (startPos < aboutText.length()) {
-                            packageSectionString += std::string(aboutHeaderLength, ' ') + '\n';
-                        }
-                    }
-                }
-                
-                
-                // Remove trailing newline character
-                if ((packageSectionString != "") && (packageSectionString.back() == '\n')) {
-                    packageSectionString = packageSectionString.substr(0, packageSectionString.size() - 1);
-                }
-                if ((packageInfoString != "") && (packageInfoString.back() == '\n')) {
-                    packageInfoString = packageInfoString.substr(0, packageInfoString.size() - 1);
-                }
-                
-                
-                if ((packageSectionString != "") && (packageInfoString != "")) {
-                    list->addItem(new tsl::elm::CategoryHeader("Package Info"));
-                    list->addItem(new tsl::elm::CustomDrawer([lineHeight, xOffset, fontSize, packageSectionString, packageInfoString](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
-                        renderer->drawString(packageSectionString.c_str(), false, x, y + lineHeight, fontSize, a(tsl::style::color::ColorText));
-                        renderer->drawString(packageInfoString.c_str(), false, x + xOffset, y + lineHeight, fontSize, a(tsl::style::color::ColorText));
-                    }), fontSize * numEntries + lineHeight);
-                }
-            }
-        }
+
         if (usingPages) {
             if (currentPage == "left") {
                 rootFrame = new tsl::elm::OverlayFrame(getNameFromPath(subPath), "Ultrahand Package", "", packageHeader.color, "", pageRightName);
@@ -1462,7 +1451,6 @@ private:
     std::string menuMode, defaultMenuMode, inOverlayString, fullPath, optionName, hideOverlayVersions, hidePackageVersions, priority, starred, hide;
     bool useDefaultMenu = false;
     
-    
     std::string subPath, pathReplace, pathReplaceOn, pathReplaceOff;
     std::string filePath, specificKey, pathPattern, pathPatternOn, pathPatternOff, itemName, parentDirName, lastParentDirName;
     std::vector<std::string> filesList, filesListOn, filesListOff, filterList, filterListOn, filterListOff;
@@ -1479,7 +1467,7 @@ public:
      * Cleans up any resources associated with the `MainMenu` instance.
      */
     ~MainMenu() {}
-
+    
     /**
      * @brief Creates the graphical user interface (GUI) for the main menu overlay.
      *
@@ -2190,7 +2178,6 @@ public:
                 if ((keysHeld & KEY_DLEFT) && !(keysHeld & (KEY_DRIGHT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR))) {
                     if (menuMode != "overlays") {
                         setIniFileValue(settingsConfigIniPath, "ultrahand", "last_menu", "overlays");
-                        //tsl::changeTo<MainMenu>();
                         tsl::goBack();
                         tsl::changeTo<MainMenu>();
                         return true;
