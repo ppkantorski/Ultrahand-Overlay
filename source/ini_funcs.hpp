@@ -741,7 +741,7 @@ void renameIniSection(const std::string& filePath, const std::string& currentSec
     char line[BufferSize];
     
     while (fgets(line, sizeof(line), configFile)) {
-        std::string currentLine(line);
+        std::string currentLine(trim(std::string(line)));
         
         // Check if the line represents a section
         if (currentLine.length() > 2 && currentLine.front() == '[' && currentLine.back() == ']') {
@@ -763,6 +763,76 @@ void renameIniSection(const std::string& filePath, const std::string& currentSec
         } else {
             // Copy the line as is
             fprintf(tempFile, "%s", currentLine.c_str());
+        }
+    }
+    
+    fclose(configFile);
+    fclose(tempFile);
+    
+    // Replace the original file with the temp file
+    if (remove(filePath.c_str()) != 0) {
+        // Failed to delete the original file, handle the error accordingly
+        return;
+    }
+    
+    if (rename(tempPath.c_str(), filePath.c_str()) != 0) {
+        // Failed to rename the temp file, handle the error accordingly
+    }
+}
+
+
+
+
+/**
+ * @brief Removes a section from an INI file.
+ *
+ * This function removes the section with the specified name, including all its associated key-value
+ * pairs, from the INI file located at the specified path. If the section does not exist in the file,
+ * it does nothing.
+ *
+ * @param filePath The path to the INI file.
+ * @param sectionName The name of the section to remove.
+ */
+void removeIniSection(const std::string& filePath, const std::string& sectionName) {
+    FILE* configFile = fopen(filePath.c_str(), "r");
+    if (!configFile) {
+        // The INI file doesn't exist, or there was an error opening it.
+        // Handle the error accordingly or return.
+        return;
+    }
+    
+    std::string tempPath = filePath + ".tmp";
+    FILE* tempFile = fopen(tempPath.c_str(), "w");
+    if (!tempFile) {
+        // Failed to create a temporary file, handle the error accordingly
+        fclose(configFile);
+        // Handle the error or return.
+        return;
+    }
+    
+    std::string currentSection;
+    bool removing = false;
+    constexpr size_t BufferSize = 4096;
+    char line[BufferSize];
+    
+    while (fgets(line, sizeof(line), configFile)) {
+        std::string currentLine(trim(std::string(line)));
+        
+        // Check if the line represents a section
+        if (currentLine.length() > 2 && currentLine.front() == '[' && currentLine.back() == ']') {
+            std::string section = currentLine.substr(1, currentLine.size() - 2);
+            
+            if (section == sectionName) {
+                // We found the section to remove, so skip it and associated key-value pairs
+                removing = true;
+            } else {
+                // Keep other sections
+                fprintf(tempFile, "%s\n", currentLine.c_str());
+                removing = false;
+            }
+        } else if (!removing) {
+            // Keep lines outside of the section
+            fprintf(tempFile, "%s\n", currentLine.c_str());
         }
     }
     
