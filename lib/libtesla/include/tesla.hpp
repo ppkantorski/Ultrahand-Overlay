@@ -162,7 +162,6 @@ bool isValidHexColor(const std::string& hexColor) {
 }
 
 
-
 // CUSTOM SECTION END
 
 // Define this makro before including tesla.hpp in your main file. If you intend
@@ -1878,12 +1877,18 @@ namespace tsl {
                             // Check if m_colorSelection is a valid hexadecimal color
                             std::string hexColor = this->m_colorSelection.substr(1);
                             if (isValidHexColor(hexColor)) {
-                                // Parse the hexadecimal color and convert it to RGB values
-                                int r, g, b;
-                                sscanf(hexColor.c_str(), "%02x%02x%02x", &r, &g, &b);
+                                std::string r = hexColor.substr(0, 2); // Extract the first two characters (red component)
+                                std::string g = hexColor.substr(2, 2); // Extract the next two characters (green component)
+                                std::string b = hexColor.substr(4, 2); // Extract the last two characters (blue component)
+                                
+                                // Convert the RGBA8888 strings to RGBA4444
+                                uint8_t redValue = std::stoi(r, nullptr, 16) >> 4;   // Right-shift by 4 bits
+                                uint8_t greenValue = std::stoi(g, nullptr, 16) >> 4; // Right-shift by 4 bits
+                                uint8_t blueValue = std::stoi(b, nullptr, 16) >> 4;  // Right-shift by 4 bits
                                 
                                 // Create a Color with the extracted RGB values
-                                titleColor = a(Color(static_cast<u8>(r), static_cast<u8>(g), static_cast<u8>(b), 0xFF));
+                                
+                                titleColor = Color(redValue, greenValue, blueValue, 15);
                                 renderer->drawString(title.c_str(), false, x, y, fontSize, titleColor);
                             } else {
                                 // Invalid hexadecimal color, handle the error accordingly
