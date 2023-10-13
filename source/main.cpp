@@ -134,10 +134,7 @@ public:
         }
         
         
-        
-        
         list = new tsl::elm::List();
-        
         
         
         if (dropdownSelection.empty()) {
@@ -373,8 +370,6 @@ public:
         }
         
         
-        
-        
         list = new tsl::elm::List();
         
         
@@ -396,24 +391,6 @@ public:
             if (hideOption == "true") {
                 hide = true;
             }
-            
-            
-            
-            
-            auto listItem = new tsl::elm::ListItem("Sort Priority");
-            listItem->setValue(priorityValue);
-            
-            // Envolke selectionOverlay in optionMode
-            
-            listItem->setClickListener([this, listItem](uint64_t keys) { // Add 'command' to the capture list
-                if (keys & KEY_A) {
-                    tsl::changeTo<SettingsMenu>(entryName, entryMode, overlayName, "priority");
-                    selectedListItem = listItem;
-                    return true;
-                }
-                return false;
-            });
-            list->addItem(listItem);
             
             
             //// Capitalize entryMode
@@ -447,6 +424,22 @@ public:
             });
             list->addItem(toggleListItem);
             
+            
+            
+            auto listItem = new tsl::elm::ListItem("Sort Priority");
+            listItem->setValue(priorityValue);
+            
+            // Envolke selectionOverlay in optionMode
+            
+            listItem->setClickListener([this, listItem](uint64_t keys) { // Add 'command' to the capture list
+                if (keys & KEY_A) {
+                    tsl::changeTo<SettingsMenu>(entryName, entryMode, overlayName, "priority");
+                    selectedListItem = listItem;
+                    return true;
+                }
+                return false;
+            });
+            list->addItem(listItem);
             
             
         } else if (dropdownSelection == "priority") {
