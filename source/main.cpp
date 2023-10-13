@@ -174,20 +174,20 @@ public:
             //list->addItem(toggleListItem);
             
             
-            auto listItem = new tsl::elm::ListItem("Default Menu");
-            listItem->setValue(defaultMenu);
-            
-            // Envolke selectionOverlay in optionMode
-            
-            listItem->setClickListener([this, listItem](uint64_t keys) { // Add 'command' to the capture list
-                if (keys & KEY_A) {
-                    tsl::changeTo<UltrahandSettingsMenu>("defaultMenu");
-                    selectedListItem = listItem;
-                    return true;
-                }
-                return false;
-            });
-            list->addItem(listItem);
+            //auto listItem = new tsl::elm::ListItem("Default Menu");
+            //listItem->setValue(defaultMenu);
+            //
+            //// Envolke selectionOverlay in optionMode
+            //
+            //listItem->setClickListener([this, listItem](uint64_t keys) { // Add 'command' to the capture list
+            //    if (keys & KEY_A) {
+            //        tsl::changeTo<UltrahandSettingsMenu>("defaultMenu");
+            //        selectedListItem = listItem;
+            //        return true;
+            //    }
+            //    return false;
+            //});
+            //list->addItem(listItem);
             
             
             
