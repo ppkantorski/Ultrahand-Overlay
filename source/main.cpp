@@ -223,7 +223,7 @@ public:
             
             std::string defaultMenu = parseValueFromIniSection(settingsConfigIniPath, "ultrahand", "default_menu");
             
-            std::vector<std::string> defaultMenuModes = {"overlays", "packages", "last"};
+            std::vector<std::string> defaultMenuModes = {"overlays", "packages"};
             
             for (const auto& defaultMenuMode : defaultMenuModes) {
                 
