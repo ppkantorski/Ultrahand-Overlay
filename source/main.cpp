@@ -94,6 +94,238 @@ static std::string versionLabel;
 
 
 
+class UltrahandSettingsMenu : public tsl::Gui {
+private:
+    std::string entryName, entryMode, overlayName, dropdownSelection, settingsIniPath;
+    bool isInSection, inQuotes, isFromMainMenu;
+    int MAX_PRIORITY = 20;
+public:
+    /**
+     * @brief Constructs a `ScriptOverlay` instance.
+     *
+     * Initializes a new instance of the `ScriptOverlay` class with the provided parameters.
+     *
+     * @param file The file path associated with the overlay.
+     * @param key The specific key related to the overlay (optional).
+     */
+    UltrahandSettingsMenu(const std::string& selection = "") : dropdownSelection(selection) {}
+    
+    /**
+     * @brief Destroys the `ScriptOverlay` instance.
+     *
+     * Cleans up any resources associated with the `ScriptOverlay` instance.
+     */
+    ~UltrahandSettingsMenu() {}
+    
+    /**
+     * @brief Creates the graphical user interface (GUI) for the configuration overlay.
+     *
+     * This function initializes and sets up the GUI elements for the configuration overlay,
+     * allowing users to modify settings in the INI file.
+     *
+     * @return A pointer to the GUI element representing the configuration overlay.
+     */
+    virtual tsl::elm::Element* createUI() override {
+        
+        if (dropdownSelection.empty()) {
+            inSettingsMenu = true;
+        } else {
+            inSubSettingsMenu = true;
+        }
+        
+        
+        
+        
+        list = new tsl::elm::List();
+        
+        
+        
+        if (dropdownSelection.empty()) {
+            list->addItem(new tsl::elm::CategoryHeader("Ultrahand Settings"));
+            
+            std::string fileContent = getFileContents(settingsConfigIniPath);
+            
+            std::string defaultMenu = parseValueFromIniSection(settingsConfigIniPath, "ultrahand", "default_menu");
+            std::string keyCombo = parseValueFromIniSection(settingsConfigIniPath, "ultrahand", "key_combo");
+            std::string cleanVersionLabels = parseValueFromIniSection(settingsConfigIniPath, "ultrahand", "clean_version_labels");
+            std::string hideOverlayVersions = parseValueFromIniSection(settingsConfigIniPath, "ultrahand", "hide_overlay_versions");
+            std::string hidePackageVersions = parseValueFromIniSection(settingsConfigIniPath, "ultrahand", "hide_package_versions");
+            
+            
+            if (defaultMenu.empty()) {
+                defaultMenu = "packages";
+            }
+            if (keyCombo.empty()) {
+                keyCombo = "ZL+ZR+DDOWN";
+            }
+            if (cleanVersionLabels.empty()) {
+                cleanVersionLabels = "false";
+            }
+            if (hideOverlayVersions.empty()) {
+                hideOverlayVersions = "false";
+            }
+            if (hidePackageVersions.empty()) {
+                hidePackageVersions = "false";
+            }
+            
+            
+            //auto toggleListItem = new tsl::elm::ToggleListItem("Default Menu", false, "Packages", "Overlays");
+            //toggleListItem->setState((defaultMenu == "packages"));
+            //toggleListItem->setStateChangedListener([this, toggleListItem](bool state) {
+            //    setIniFileValue(settingsConfigIniPath, "ultrahand", "default_menu", state ? "packages" : "overlays");
+            //});
+            //list->addItem(toggleListItem);
+            
+            
+            auto listItem = new tsl::elm::ListItem("Default Menu");
+            listItem->setValue(defaultMenu);
+            
+            // Envolke selectionOverlay in optionMode
+            
+            listItem->setClickListener([this, listItem](uint64_t keys) { // Add 'command' to the capture list
+                if (keys & KEY_A) {
+                    tsl::changeTo<UltrahandSettingsMenu>("defaultMenu");
+                    selectedListItem = listItem;
+                    return true;
+                }
+                return false;
+            });
+            list->addItem(listItem);
+            
+            
+            
+            
+            auto toggleListItem = new tsl::elm::ToggleListItem("Clean Version Labels", false, "On", "Off");
+            toggleListItem->setState((cleanVersionLabels == "true"));
+            toggleListItem->setStateChangedListener([this, toggleListItem](bool state) {
+                setIniFileValue(settingsConfigIniPath, "ultrahand", "clean_version_labels", state ? "true" : "false");
+            });
+            list->addItem(toggleListItem);
+            
+            
+            toggleListItem = new tsl::elm::ToggleListItem("Hide Overlay Versions", false, "On", "Off");
+            toggleListItem->setState((hideOverlayVersions == "true"));
+            toggleListItem->setStateChangedListener([this, toggleListItem](bool state) {
+                setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_overlay_versions", state ? "true" : "false");
+            });
+            list->addItem(toggleListItem);
+            
+            toggleListItem = new tsl::elm::ToggleListItem("Hide Package Versions", false, "On", "Off");
+            toggleListItem->setState((hidePackageVersions == "true"));
+            toggleListItem->setStateChangedListener([this, toggleListItem](bool state) {
+                setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_package_versions", state ? "true" : "false");
+            });
+            list->addItem(toggleListItem);
+            
+            
+            
+            
+        } else if (dropdownSelection == "defaultMenu") {
+            
+            list->addItem(new tsl::elm::CategoryHeader("Default Menu"));
+            
+            std::string defaultMenu = parseValueFromIniSection(settingsConfigIniPath, "ultrahand", "default_menu");
+            
+            std::vector<std::string> defaultMenuModes = {"overlays", "packages", "last"};
+            
+            for (const auto& defaultMenuMode : defaultMenuModes) {
+                
+                tsl::elm::ListItem* listItem = new tsl::elm::ListItem(defaultMenuMode);
+                
+                if (defaultMenuMode == defaultMenu) {
+                    listItem->setValue(CHECKMARK_SYMBOL);
+                    lastSelectedListItem = listItem;
+                }
+                
+                listItem->setClickListener([this, defaultMenuMode, listItem](uint64_t keys) { // Add 'this', 'i', and 'listItem' to the capture list
+                    if (keys & KEY_A) {
+                        setIniFileValue(settingsConfigIniPath, "ultrahand", "default_menu", defaultMenuMode);
+                        lastSelectedListItem->setValue("");
+                        selectedListItem->setValue(defaultMenuMode);
+                        listItem->setValue(CHECKMARK_SYMBOL);
+                        lastSelectedListItem = listItem;
+                        return true;
+                    }
+                    return false;
+                });
+                
+                list->addItem(listItem);
+            }
+            
+        } else {
+            list->addItem(new tsl::elm::ListItem("Failed to open file: " + settingsIniPath));
+        }
+        
+        rootFrame = new tsl::elm::OverlayFrame("Ultrahand", versionLabel);
+        //rootFrame = new tsl::elm::OverlayFrame(entryName, "Ultrahand Settings");
+        rootFrame->setContent(list);
+        return rootFrame;
+    }
+    
+    /**
+     * @brief Handles user input for the configuration overlay.
+     *
+     * This function processes user input and responds accordingly within the configuration overlay.
+     * It captures key presses and performs actions based on user interactions.
+     *
+     * @param keysDown   A bitset representing keys that are currently pressed.
+     * @param keysHeld   A bitset representing keys that are held down.
+     * @param touchInput Information about touchscreen input.
+     * @param leftJoyStick Information about the left joystick input.
+     * @param rightJoyStick Information about the right joystick input.
+     * @return `true` if the input was handled within the overlay, `false` otherwise.
+     */
+    virtual bool handleInput(u64 keysDown, u64 keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
+        if (inSettingsMenu && !inSubSettingsMenu) {
+            if (!returningToSettings) {
+                if (keysHeld & KEY_B) {
+                    //tsl::Overlay::get()->close();
+                    //svcSleepThread(300'000'000);
+                    //tsl::goBack();
+                    inSettingsMenu = false;
+                    if (lastMenu != "hiddenMenuMode") {
+                        returningToMain = true;
+                    } else {
+                        returningToHiddenMain = true;
+                    }
+                    lastMenu = "settingsMenu";
+                    
+                    tsl::goBack();
+                    //tsl::Overlay::get()->close();
+                    return true;
+                }
+            }
+        } else if (inSubSettingsMenu) {
+            if (keysHeld & KEY_B) {
+                //tsl::Overlay::get()->close();
+                //svcSleepThread(300'000'000);
+                //tsl::goBack();
+                inSubSettingsMenu = false;
+                returningToSettings = true;
+                tsl::goBack();
+                //tsl::Overlay::get()->close();
+                return true;
+            }
+        }
+        
+        
+        if (returningToSettings && !(keysHeld & KEY_B)){
+            returningToSettings = false;
+            inSettingsMenu = true;
+        }
+        
+        
+        if (keysHeld & KEY_B) {
+            return false;
+        }
+        
+        return false;
+        //return handleOverlayMenuInput(inScriptMenu, keysHeld, KEY_B);
+    }
+};
+
+
+
 class SettingsMenu : public tsl::Gui {
 private:
     std::string entryName, entryMode, overlayName, dropdownSelection, settingsIniPath;
@@ -169,7 +401,7 @@ public:
             
             
             auto listItem = new tsl::elm::ListItem("Sort Priority");
-            listItem->setValue(priorityValue, true);
+            listItem->setValue(priorityValue);
             
             // Envolke selectionOverlay in optionMode
             
@@ -1678,7 +1910,7 @@ private:
     tsl::hlp::ini::IniData settingsData, packageConfigData;
     std::string packageIniPath = packageDirectory + packageFileName;
     std::string packageConfigIniPath = packageDirectory + configFileName;
-    std::string menuMode, defaultMenuMode, inOverlayString, fullPath, optionName, hideOverlayVersions, hidePackageVersions, priority, starred, hide;
+    std::string menuMode, defaultMenuMode, inOverlayString, fullPath, optionName, hideOverlayVersions, hidePackageVersions, cleanVersionLabels, priority, starred, hide;
     bool useDefaultMenu = false;
     std::string hiddenMenuMode;
     
@@ -1738,6 +1970,12 @@ public:
                     setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_package_versions", "false");
                     hidePackageVersions = "false";
                 }
+                if (ultrahandSection.count("clean_version_labels") > 0) {
+                    cleanVersionLabels = ultrahandSection["clean_version_labels"];
+                } else {
+                    setIniFileValue(settingsConfigIniPath, "ultrahand", "clean_version_labels", "false");
+                    cleanVersionLabels = "false";
+                }
                 
                 if (ultrahandSection.count("last_menu") > 0) {
                     menuMode = ultrahandSection["last_menu"];
@@ -1776,7 +2014,11 @@ public:
             setIniFileValue(settingsConfigIniPath, "ultrahand", "default_menu", defaultMenuMode);
         }
         
-        versionLabel = APP_VERSION+std::string("   (")+envGetLoaderInfo()+std::string(")");
+        if (cleanVersionLabels == "true") {
+            versionLabel = APP_VERSION+std::string("   (nx-ovlloader ")+cleanUpVersionLabel(envGetLoaderInfo())+std::string(")");
+        } else {
+            versionLabel = APP_VERSION+std::string("   (")+envGetLoaderInfo()+std::string(")");
+        }
         
         list = new tsl::elm::List();
         
@@ -1924,6 +2166,7 @@ public:
                     }
                     
                     
+                    
                     // Toggle the starred status
                     std::string newStarred = (overlayStarred == "true") ? "false" : "true";
                     
@@ -1932,6 +2175,9 @@ public:
                     //logMessage(overlayFile);
                     if (isFileOrDirectory(overlayFile)) {
                         listItem = new tsl::elm::ListItem(newOverlayName);
+                        if (cleanVersionLabels == "true") {
+                            overlayVersion = cleanUpVersionLabel(overlayVersion);
+                        }
                         if (hideOverlayVersions != "true") {
                             listItem->setValue(overlayVersion, true);
                         }
@@ -1948,7 +2194,7 @@ public:
                                 tsl::Overlay::get()->close();
                                 //inMainMenu = true;
                                 return true;
-                            } else if (key & KEY_PLUS) {
+                            } else if (key & KEY_X) {
                                 std::string tmpMode(hiddenMenuMode);
                                 if (!overlayFile.empty()) {
                                     // Update the INI file with the new value
@@ -1962,7 +2208,7 @@ public:
                                 }
                                 tsl::changeTo<MainMenu>(tmpMode);
                                 return true;
-                            } else if (key & KEY_X) {
+                            } else if (key & KEY_Y) {
                                 if (!inHiddenMode) {
                                     lastMenu = "";
                                     inMainMenu = false;
@@ -2127,6 +2373,9 @@ public:
                     //}
                     
                     listItem = new tsl::elm::ListItem(newPackageName);
+                    if (cleanVersionLabels == "true") {
+                        packageHeader.version = cleanUpVersionLabel(packageHeader.version);
+                    }
                     if (hidePackageVersions != "true") {
                        listItem->setValue(packageHeader.version, true);
                     }
@@ -2157,7 +2406,7 @@ public:
                             tsl::changeTo<PackageMenu>(packageFilePath, "");
                             
                             return true;
-                        } else if (key & KEY_PLUS) {
+                        } else if (key & KEY_X) {
                             std::string tmpMode(hiddenMenuMode);
                             if (!packageName.empty()) {
                             
@@ -2172,7 +2421,7 @@ public:
                             tsl::changeTo<MainMenu>(tmpMode);
                             
                             return true;
-                        } else if (key & KEY_X) {
+                        } else if (key & KEY_Y) {
                             
                             if (!inHiddenMode) {
                                 lastMenu = "";
@@ -2552,6 +2801,12 @@ public:
                 }
             }
         }
+        
+        
+        if (keysHeld & KEY_PLUS) {
+            tsl::changeTo<UltrahandSettingsMenu>();
+        }
+        
         
         if (keysHeld & KEY_B) {
             return false;
