@@ -168,7 +168,7 @@ public:
             
             
             
-            auto listItem = new tsl::elm::ListItem("Priority");
+            auto listItem = new tsl::elm::ListItem("Sort Priority");
             listItem->setValue(priorityValue, true);
             
             // Envolke selectionOverlay in optionMode
@@ -218,7 +218,7 @@ public:
             
             
         } else if (dropdownSelection == "priority") {
-            list->addItem(new tsl::elm::CategoryHeader("Priority"));
+            list->addItem(new tsl::elm::CategoryHeader("Sort Priority"));
             
             std::string priorityValue = parseValueFromIniSection(settingsIniPath, entryName, "priority");
             
@@ -237,6 +237,7 @@ public:
                         lastSelectedListItem->setValue("");
                         selectedListItem->setValue(iStr);
                         listItem->setValue(CHECKMARK_SYMBOL);
+                        lastSelectedListItem = listItem;
                         return true;
                     }
                     return false;
@@ -281,7 +282,7 @@ public:
                     } else {
                         returningToHiddenMain = true;
                     }
-                    lastMenu = "";
+                    lastMenu = "settingsMenu";
                     
                     tsl::goBack();
                     //tsl::Overlay::get()->close();
