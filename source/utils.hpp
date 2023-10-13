@@ -477,7 +477,7 @@ bool interpretAndExecuteCommand(const std::vector<std::vector<std::string>> comm
     
     std::size_t occurrence;
     
-    bool logging = true;
+    bool logging = false;
     bool refreshGui = false;
     
     std::string listString, jsonString, jsonPath, hexPath, iniPath;
