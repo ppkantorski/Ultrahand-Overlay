@@ -2377,7 +2377,12 @@ public:
                     // Add a click listener to load the overlay when clicked upon
                     listItem->setClickListener([this, packageFilePath, newStarred, packageName](s64 key) {
                         if (key & KEY_A) {
-                            inMainMenu = false;
+                            if (!inHiddenMode) {
+                                inMainMenu = false;
+                            } else {
+                                inHiddenMode = false;
+                            }
+                            
                             
                             // read commands from package's boot_package.ini
                             
