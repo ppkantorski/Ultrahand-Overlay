@@ -471,13 +471,13 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
  *
  * @param commands A list of commands, where each command is represented as a vector of strings.
  */
-bool interpretAndExecuteCommand(const std::vector<std::vector<std::string>> commands, const std::string packageFolder="", const std::string selectedCommand="") {
+bool interpretAndExecuteCommand(const std::vector<std::vector<std::string>> commands, const std::string packagePath="", const std::string selectedCommand="") {
     std::string commandName, bootCommandName, sourcePath, destinationPath, desiredSection, desiredNewSection, desiredKey, desiredNewKey, desiredValue, \
         offset, customPattern, hexDataToReplace, hexDataReplacement, fileUrl, clearOption;
     
     std::size_t occurrence;
     
-    bool logging = true;
+    bool logging = false;
     bool refreshGui = false;
     
     std::string listString, jsonString, jsonPath, hexPath, iniPath;
@@ -738,10 +738,10 @@ bool interpretAndExecuteCommand(const std::vector<std::vector<std::string>> comm
             // Edit command
             if (command.size() >= 2) {
                 desiredValue = removeQuotes(command[1]);
-                //logMessage("path:" +(packageFolder+configFileName));
+                //logMessage("path:" +(packagePath+configFileName));
                 //logMessage("selectedCommand:" +selectedCommand);
                 //logMessage("desiredValue:" +desiredValue);
-                setIniFileValue((packageFolder+configFileName).c_str(), selectedCommand.c_str(), "footer", desiredValue.c_str());
+                setIniFileValue((packagePath+configFileName).c_str(), selectedCommand.c_str(), "footer", desiredValue.c_str());
             }
         } else if (commandName == "hex-by-offset") {
             // Edit command
@@ -847,13 +847,13 @@ bool interpretAndExecuteCommand(const std::vector<std::vector<std::string>> comm
             // Edit command
             if (command.size() >= 2) {
                 bootCommandName = removeQuotes(command[1]);
-                if (isFileOrDirectory(packageFolder+bootPackageFileName)) {
-                    std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> bootOptions = loadOptionsFromIni(packageFolder+bootPackageFileName, true);
+                if (isFileOrDirectory(packagePath+bootPackageFileName)) {
+                    std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> bootOptions = loadOptionsFromIni(packagePath+bootPackageFileName, true);
                     for (const auto& bootOption:bootOptions) {
                         std::string bootOptionName = bootOption.first;
                         auto bootCommands = bootOption.second;
                         if (bootOptionName == bootCommandName) {
-                            interpretAndExecuteCommand(bootCommands, packageFolder+bootPackageFileName, bootOptionName); // Execute modified 
+                            interpretAndExecuteCommand(bootCommands, packagePath+bootPackageFileName, bootOptionName); // Execute modified 
                             bootCommands.clear();
                             break;
                         }

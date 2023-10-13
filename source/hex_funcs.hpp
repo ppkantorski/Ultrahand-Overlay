@@ -302,8 +302,15 @@ void hexEditByCustomOffset(const std::string& filePath, const std::string& custo
     }
     
     if (hexSum == -1) {
-        // Convert custom ASCII pattern to a custom hex pattern
-        std::string customHexPattern = asciiToHex(customAsciiPattern);
+        std::string customHexPattern;
+        if (customAsciiPattern[0] == '#') {
+            // remove #
+            customHexPattern = customAsciiPattern.substr(1);
+        } else {
+            // Convert custom ASCII pattern to a custom hex pattern
+            customHexPattern = asciiToHex(customAsciiPattern);
+        }
+        
         
         // Find hex data offsets in the file
         std::vector<std::string> offsets = findHexDataOffsets(filePath, customHexPattern);
