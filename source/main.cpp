@@ -52,10 +52,12 @@ extern bool interpretAndExecuteCommand(const std::vector<std::vector<std::string
 // Overlay booleans
 //static bool shouldCloseMenu = false;
 static bool returningToMain = false;
+static bool returningToHiddenMain = false;
 static bool returningToSettings = false;
 static bool returningToPackage = false;
 static bool returningToSubPackage = false;
 static bool inMainMenu = false;
+static bool inHiddenMode = false;
 static bool inSettingsMenu = false;
 static bool inSubSettingsMenu = false;
 static bool inPackageMenu = false;
@@ -274,7 +276,13 @@ public:
                     //svcSleepThread(300'000'000);
                     //tsl::goBack();
                     inSettingsMenu = false;
-                    returningToMain = true;
+                    if (lastMenu != "hiddenMenuMode") {
+                        returningToMain = true;
+                    } else {
+                        returningToHiddenMain = true;
+                    }
+                    lastMenu = "";
+                    
                     tsl::goBack();
                     //tsl::Overlay::get()->close();
                     return true;
@@ -1671,7 +1679,6 @@ private:
     std::string packageConfigIniPath = packageDirectory + configFileName;
     std::string menuMode, defaultMenuMode, inOverlayString, fullPath, optionName, hideOverlayVersions, hidePackageVersions, priority, starred, hide;
     bool useDefaultMenu = false;
-    bool inHiddenMode;
     std::string hiddenMenuMode;
     
     std::string packagePath, pathReplace, pathReplaceOn, pathReplaceOff;
@@ -1683,7 +1690,7 @@ public:
      *
      * Initializes a new instance of the `MainMenu` class with the necessary parameters.
      */
-    MainMenu(const bool inHiddenMode = false, const std::string& hiddenMenuMode = "") : inHiddenMode(inHiddenMode), hiddenMenuMode(hiddenMenuMode) {}
+    MainMenu(const std::string& hiddenMenuMode = "") : hiddenMenuMode(hiddenMenuMode) {}
     /**
      * @brief Destroys the `MainMenu` instance.
      *
@@ -1929,7 +1936,7 @@ public:
                         }
                         
                         // Add a click listener to load the overlay when clicked upon
-                        listItem->setClickListener([overlayFile, newStarred, overlayFileName, overlayName](s64 key) {
+                        listItem->setClickListener([this, overlayFile, newStarred, overlayFileName, overlayName](s64 key) {
                             if (key & KEY_A) {
                                 // Load the overlay here
                                 //inMainMenu = false;
@@ -1941,15 +1948,27 @@ public:
                                 //inMainMenu = true;
                                 return true;
                             } else if (key & KEY_PLUS) {
+                                std::string tmpMode(hiddenMenuMode);
                                 if (!overlayFile.empty()) {
-                                
                                     // Update the INI file with the new value
                                     setIniFileValue(overlaysIniFilePath, overlayFileName, "star", newStarred);
                                     // Now, you can use the newStarred value for further processing if needed
                                 }
-                                tsl::changeTo<MainMenu>();
+                                if (inHiddenMode) {
+                                    tsl::goBack();
+                                    inMainMenu = false;
+                                    inHiddenMode = true;
+                                }
+                                tsl::changeTo<MainMenu>(tmpMode);
                                 return true;
                             } else if (key & KEY_X) {
+                                if (!inHiddenMode) {
+                                    lastMenu = "";
+                                    inMainMenu = false;
+                                } else {
+                                    lastMenu = "hiddenMenuMode";
+                                    inHiddenMode = false;
+                                }
                                 
                                 tsl::changeTo<SettingsMenu>(overlayFileName, "overlay", overlayName);
                                 return true;
@@ -1969,7 +1988,8 @@ public:
                     listItem->setClickListener([this](uint64_t keys) {
                         if (keys & KEY_A) {
                             inMainMenu = false;
-                            tsl::changeTo<MainMenu>(true, "overlays");
+                            inHiddenMode = true;
+                            tsl::changeTo<MainMenu>("overlays");
                             return true;
                         }
                         return false;
@@ -2112,7 +2132,7 @@ public:
                     
                     
                     // Add a click listener to load the overlay when clicked upon
-                    listItem->setClickListener([packageFilePath, newStarred, packageName](s64 key) {
+                    listItem->setClickListener([this, packageFilePath, newStarred, packageName](s64 key) {
                         if (key & KEY_A) {
                             inMainMenu = false;
                             
@@ -2137,14 +2157,29 @@ public:
                             
                             return true;
                         } else if (key & KEY_PLUS) {
+                            std::string tmpMode(hiddenMenuMode);
                             if (!packageName.empty()) {
                             
                                 // Update the INI file with the new value
                                 setIniFileValue(packagesIniFilePath, packageName, "star", newStarred);
                             }
-                            tsl::changeTo<MainMenu>();
+                            if (inHiddenMode) {
+                                tsl::goBack();
+                                inMainMenu = false;
+                                inHiddenMode = true;
+                            }
+                            tsl::changeTo<MainMenu>(tmpMode);
+                            
                             return true;
                         } else if (key & KEY_X) {
+                            
+                            if (!inHiddenMode) {
+                                lastMenu = "";
+                                inMainMenu = false;
+                            } else {
+                                lastMenu = "hiddenMenuMode";
+                                inHiddenMode = false;
+                            }
                             
                             tsl::changeTo<SettingsMenu>(packageName, "package");
                             return true;
@@ -2163,7 +2198,8 @@ public:
                 listItem->setClickListener([this](uint64_t keys) {
                     if (keys & KEY_A) {
                         inMainMenu = false;
-                        tsl::changeTo<MainMenu>(true, "packages");
+                        inHiddenMode = true;
+                        tsl::changeTo<MainMenu>("packages");
                         return true;
                     }
                     return false;
@@ -2457,7 +2493,7 @@ public:
             }
         }
         
-        rootFrame = new tsl::elm::OverlayFrame("Ultrahand", versionLabel, menuMode);
+        rootFrame = new tsl::elm::OverlayFrame("Ultrahand", versionLabel, menuMode+hiddenMenuMode);
         rootFrame->setContent(list);
         return rootFrame;
     }
@@ -2482,7 +2518,7 @@ public:
         }
         
         if (inMainMenu && !inHiddenMode){
-            if (!freshSpawn && !returningToMain) {
+            if (!freshSpawn && !returningToMain && !returningToHiddenMain) {
                 if ((keysHeld & KEY_DRIGHT) && !(keysHeld & (KEY_DLEFT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR))) {
                     if (menuMode != "packages") {
                         setIniFileValue(settingsConfigIniPath, "ultrahand", "last_menu", "packages");
@@ -2505,11 +2541,14 @@ public:
                 }
             }
         }
-        if (inHiddenMode) {
-            if (keysHeld & KEY_B) {
-                returningToMain = true;
-                tsl::goBack();
-                return true;
+        if (!inMainMenu && inHiddenMode) {
+            if (!returningToHiddenMain && !returningToMain) {
+                if (keysHeld & KEY_B) {
+                    returningToMain = true;
+                    inHiddenMode = false;
+                    tsl::goBack();
+                    return true;
+                }
             }
         }
         
@@ -2525,6 +2564,12 @@ public:
             inMainMenu = true;
             selectedFooterDict.clear();
         }
+        if (returningToHiddenMain && !(keysHeld & KEY_B)){
+            returningToHiddenMain = false;
+            inHiddenMode = true;
+            selectedFooterDict.clear();
+        }
+        
         return false;
     }
 };
