@@ -2782,6 +2782,9 @@ public:
                     tsl::Overlay::get()->close();
                     return true;
                 }
+                if (keysHeld & KEY_PLUS) {
+                    tsl::changeTo<UltrahandSettingsMenu>();
+                }
             }
         }
         if (!inMainMenu && inHiddenMode) {
@@ -2793,11 +2796,6 @@ public:
                     return true;
                 }
             }
-        }
-        
-        
-        if (keysHeld & KEY_PLUS) {
-            tsl::changeTo<UltrahandSettingsMenu>();
         }
         
         
