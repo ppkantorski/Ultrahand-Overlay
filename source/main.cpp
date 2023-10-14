@@ -2871,8 +2871,9 @@ public:
      * @return `true` if the input was handled within the overlay, `false` otherwise.
      */
     virtual bool handleInput(uint64_t keysDown, uint64_t keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
+        
         if (refreshGui) {
-            tsl::changeTo<MainMenu>();
+            tsl::changeTo<MainMenu>(lastMenuMode);
             refreshGui = false;
         }
         
@@ -2903,23 +2904,25 @@ public:
                     tsl::changeTo<UltrahandSettingsMenu>();
                 }
             }
-            if (reloadMenu2) {
-                tsl::changeTo<MainMenu>(lastMenuMode);
-                reloadMenu2 = false;
-                return true;
-            }
         }
         if (!inMainMenu && inHiddenMode) {
             if (!returningToHiddenMain && !returningToMain) {
                 if (keysHeld & KEY_B) {
                     returningToMain = true;
                     inHiddenMode = false;
+                    
+                    if (reloadMenu2) {
+                        tsl::goBack();
+                        tsl::changeTo<MainMenu>();
+                        reloadMenu2 = false;
+                        return true;
+                    }
+                    
                     tsl::goBack();
                     return true;
                 }
             }
         }
-        
         
         
         if (keysHeld & KEY_B) {
