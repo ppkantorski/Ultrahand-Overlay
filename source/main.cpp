@@ -198,23 +198,32 @@ public:
             
             auto toggleListItem = new tsl::elm::ToggleListItem("Clean Versions", false, "On", "Off");
             toggleListItem->setState((cleanVersionLabels == "true"));
-            toggleListItem->setStateChangedListener([this, toggleListItem](bool state) {
+            toggleListItem->setStateChangedListener([this, cleanVersionLabels, toggleListItem](bool state) {
                 setIniFileValue(settingsConfigIniPath, "ultrahand", "clean_version_labels", state ? "true" : "false");
+                if ((cleanVersionLabels == "true") != state) {
+                    reloadMenu = true;
+                }
             });
             list->addItem(toggleListItem);
             
             
             toggleListItem = new tsl::elm::ToggleListItem("Overlay Versions", false, "On", "Off");
             toggleListItem->setState((hideOverlayVersions == "false"));
-            toggleListItem->setStateChangedListener([this, toggleListItem](bool state) {
+            toggleListItem->setStateChangedListener([this, hideOverlayVersions, toggleListItem](bool state) {
                 setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_overlay_versions", state ? "false" : "true");
+                if ((hideOverlayVersions == "false") != state) {
+                    reloadMenu = true;
+                }
             });
             list->addItem(toggleListItem);
             
             toggleListItem = new tsl::elm::ToggleListItem("Package Versions", false, "On", "Off");
             toggleListItem->setState((hidePackageVersions == "false"));
-            toggleListItem->setStateChangedListener([this, toggleListItem](bool state) {
+            toggleListItem->setStateChangedListener([this, hidePackageVersions, toggleListItem](bool state) {
                 setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_package_versions", state ? "false" : "true");
+                if ((hidePackageVersions == "false") != state) {
+                    reloadMenu = true;
+                }
             });
             list->addItem(toggleListItem);
             
@@ -363,6 +372,11 @@ public:
                     lastMenu = "settingsMenu";
                     
                     tsl::goBack();
+                    
+                    if (reloadMenu) {
+                        tsl::changeTo<MainMenu>(lastMenuMode);
+                    }
+                    
                     //tsl::Overlay::get()->close();
                     return true;
                 }
