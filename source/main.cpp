@@ -67,6 +67,7 @@ static bool inSelectionMenu = false;
 static bool defaultMenuLoaded = true;
 static bool freshSpawn = true;
 static bool refreshGui = false;
+static bool reloadMenu = false;
 
 static tsl::elm::OverlayFrame *rootFrame = nullptr;
 static tsl::elm::List *list = nullptr;
@@ -79,6 +80,7 @@ static std::string groupingPattern = ";grouping=";
 static std::string UNAVAILABLE_SELECTION = "Not available";
 
 static std::string lastMenu = "";
+static std::string lastMenuMode = "";
 static std::string lastKeyName = "";
 static std::unordered_map<std::string, std::string> selectedFooterDict;
 static auto selectedListItem = new tsl::elm::ListItem("");
@@ -93,6 +95,8 @@ static std::string versionLabel;
 //static std::string STAR_SYMBOL = "\u2605";
 
 
+// Forward declaration of the MainMenu class.
+class MainMenu;
 
 class UltrahandSettingsMenu : public tsl::Gui {
 private:
@@ -138,7 +142,7 @@ public:
         
         
         if (dropdownSelection.empty()) {
-            list->addItem(new tsl::elm::CategoryHeader("Ultrahand Settings"));
+            list->addItem(new tsl::elm::CategoryHeader("Settings"));
             
             std::string fileContent = getFileContents(settingsConfigIniPath);
             
@@ -215,6 +219,77 @@ public:
             list->addItem(toggleListItem);
             
             
+            
+            
+            list->addItem(new tsl::elm::CategoryHeader("Help"));
+            
+            
+            constexpr int lineHeight = 20;  // Adjust the line height as needed
+            constexpr int xOffset = 120;    // Adjust the horizontal offset as needed
+            constexpr int fontSize = 16;    // Adjust the font size as needed
+            int numEntries = 0;   // Adjust the number of entries as needed
+            
+            std::string packageSectionString = "";
+            std::string packageInfoString = "";
+            
+            packageSectionString += "Version\n";
+            packageInfoString += "1.3.9\n";
+            numEntries++;
+            
+            packageSectionString += "Creator(s)\n";
+            packageInfoString += "b0rd2dEAth\n";
+            numEntries++;
+            
+            std::string aboutHeaderText = "About\n";
+            std::string::size_type aboutHeaderLength = aboutHeaderText.length();
+            std::string aboutText = "Test";
+            
+            packageSectionString += aboutHeaderText;
+            
+            // Split the about text into multiple lines with proper word wrapping
+            constexpr int maxLineLength = 28;  // Adjust the maximum line length as needed
+            std::string::size_type startPos = 0;
+            std::string::size_type spacePos = 0;
+            
+            while (startPos < aboutText.length()) {
+                std::string::size_type endPos = std::min(startPos + maxLineLength, aboutText.length());
+                std::string line = aboutText.substr(startPos, endPos - startPos);
+                
+                // Check if the current line ends with a space; if not, find the last space in the line
+                if (endPos < aboutText.length() && aboutText[endPos] != ' ') {
+                    spacePos = line.find_last_of(' ');
+                    if (spacePos != std::string::npos) {
+                        endPos = startPos + spacePos;
+                        line = aboutText.substr(startPos, endPos - startPos);
+                    }
+                }
+                
+                packageInfoString += line + '\n';
+                startPos = endPos + 1;
+                numEntries++;
+                
+                // Add corresponding newline to the packageSectionString
+                if (startPos < aboutText.length()) {
+                    packageSectionString += std::string(aboutHeaderLength, ' ') + '\n';
+                }
+            }
+            
+            
+            // Remove trailing newline character
+            if ((packageSectionString != "") && (packageSectionString.back() == '\n')) {
+                packageSectionString = packageSectionString.substr(0, packageSectionString.size() - 1);
+            }
+            if ((packageInfoString != "") && (packageInfoString.back() == '\n')) {
+                packageInfoString = packageInfoString.substr(0, packageInfoString.size() - 1);
+            }
+            
+            
+            if ((packageSectionString != "") && (packageInfoString != "")) {
+                list->addItem(new tsl::elm::CustomDrawer([lineHeight, xOffset, fontSize, packageSectionString, packageInfoString](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
+                    renderer->drawString(packageSectionString.c_str(), false, x, y + lineHeight, fontSize, a(tsl::style::color::ColorText));
+                    renderer->drawString(packageInfoString.c_str(), false, x + xOffset, y + lineHeight, fontSize, a(tsl::style::color::ColorText));
+                }), fontSize * numEntries + lineHeight);
+            }
             
             
         } else if (dropdownSelection == "defaultMenu") {
@@ -419,8 +494,11 @@ public:
             // Envoke toggling
             auto toggleListItem = new tsl::elm::ToggleListItem("Hide " + hideLabel, false, "On", "Off");
             toggleListItem->setState(hide);
-            toggleListItem->setStateChangedListener([this, toggleListItem](bool state) {
+            toggleListItem->setStateChangedListener([this, hide, toggleListItem](bool state) {
                 setIniFileValue(settingsIniPath, entryName, "hide", state ? "true" : "false");
+                if (hide != state) {
+                    reloadMenu = true;
+                }
             });
             list->addItem(toggleListItem);
             
@@ -456,8 +534,11 @@ public:
                     lastSelectedListItem = listItem;
                 }
                 
-                listItem->setClickListener([this, iStr, listItem](uint64_t keys) { // Add 'this', 'i', and 'listItem' to the capture list
+                listItem->setClickListener([this, iStr, priorityValue, listItem](uint64_t keys) { // Add 'this', 'i', and 'listItem' to the capture list
                     if (keys & KEY_A) {
+                        if (iStr != priorityValue) {
+                            reloadMenu = true;
+                        }
                         setIniFileValue(settingsIniPath, entryName, "priority", iStr);
                         lastSelectedListItem->setValue("");
                         selectedListItem->setValue(iStr);
@@ -507,9 +588,19 @@ public:
                     } else {
                         returningToHiddenMain = true;
                     }
-                    lastMenu = "settingsMenu";
                     
                     tsl::goBack();
+                    
+                    if (reloadMenu) {
+                        if (lastMenu == "hiddenMenuMode") {
+                            tsl::goBack();
+                            inMainMenu = false;
+                            inHiddenMode = true;
+                        }
+                        tsl::changeTo<MainMenu>(lastMenuMode);
+                    }
+                    
+                    lastMenu = "settingsMenu";
                     //tsl::Overlay::get()->close();
                     return true;
                 }
@@ -1256,8 +1347,6 @@ public:
     }
 };
 
-// Forward declaration of the MainMenu class.
-class MainMenu;
 
 /**
  * @brief The `PackageMenu` class handles sub-menu overlay functionality.
@@ -1937,6 +2026,8 @@ public:
             inMainMenu = true;
         }
         
+        lastMenuMode = hiddenMenuMode;
+        
         //defaultMenuMode = "last_menu";
         defaultMenuMode = "overlays";
         menuMode = "overlays";
@@ -2200,6 +2291,7 @@ public:
                                     inHiddenMode = true;
                                 }
                                 tsl::changeTo<MainMenu>(tmpMode);
+                                //lastMenuMode = tmpMode;
                                 return true;
                             } else if (key & KEY_Y) {
                                 if (!inHiddenMode) {
@@ -2417,7 +2509,7 @@ public:
                                 inHiddenMode = true;
                             }
                             tsl::changeTo<MainMenu>(tmpMode);
-                            
+                            //lastMenuMode = tmpMode;
                             return true;
                         } else if (key & KEY_Y) {
                             
