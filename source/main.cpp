@@ -68,6 +68,7 @@ static bool defaultMenuLoaded = true;
 static bool freshSpawn = true;
 static bool refreshGui = false;
 static bool reloadMenu = false;
+static bool reloadMenu2 = false;
 
 static tsl::elm::OverlayFrame *rootFrame = nullptr;
 static tsl::elm::List *list = nullptr;
@@ -375,6 +376,7 @@ public:
                     
                     if (reloadMenu) {
                         tsl::changeTo<MainMenu>(lastMenuMode);
+                        reloadMenu = false;
                     }
                     
                     //tsl::Overlay::get()->close();
@@ -511,7 +513,8 @@ public:
             toggleListItem->setStateChangedListener([this, hide, toggleListItem](bool state) {
                 setIniFileValue(settingsIniPath, entryName, "hide", state ? "true" : "false");
                 if (hide != state) {
-                    reloadMenu = true;
+                    reloadMenu = true; // this reloads before main menu
+                    reloadMenu2 = true; // this reloads at main menu
                 }
             });
             list->addItem(toggleListItem);
@@ -610,6 +613,8 @@ public:
                             tsl::goBack();
                             inMainMenu = false;
                             inHiddenMode = true;
+                        } else {
+                            reloadMenu = false;
                         }
                         tsl::changeTo<MainMenu>(lastMenuMode);
                     }
@@ -2898,6 +2903,11 @@ public:
                     tsl::changeTo<UltrahandSettingsMenu>();
                 }
             }
+            if (reloadMenu2) {
+                tsl::changeTo<MainMenu>(lastMenuMode);
+                reloadMenu2 = false;
+                return true;
+            }
         }
         if (!inMainMenu && inHiddenMode) {
             if (!returningToHiddenMain && !returningToMain) {
@@ -2909,6 +2919,7 @@ public:
                 }
             }
         }
+        
         
         
         if (keysHeld & KEY_B) {
