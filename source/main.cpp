@@ -200,17 +200,17 @@ public:
             list->addItem(toggleListItem);
             
             
-            toggleListItem = new tsl::elm::ToggleListItem("Hide Overlay Versions", false, "On", "Off");
-            toggleListItem->setState((hideOverlayVersions == "true"));
+            toggleListItem = new tsl::elm::ToggleListItem("Overlay Versions", false, "On", "Off");
+            toggleListItem->setState((hideOverlayVersions == "false"));
             toggleListItem->setStateChangedListener([this, toggleListItem](bool state) {
-                setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_overlay_versions", state ? "true" : "false");
+                setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_overlay_versions", state ? "false" : "true");
             });
             list->addItem(toggleListItem);
             
-            toggleListItem = new tsl::elm::ToggleListItem("Hide Package Versions", false, "On", "Off");
-            toggleListItem->setState((hidePackageVersions == "true"));
+            toggleListItem = new tsl::elm::ToggleListItem("Package Versions", false, "On", "Off");
+            toggleListItem->setState((hidePackageVersions == "false"));
             toggleListItem->setStateChangedListener([this, toggleListItem](bool state) {
-                setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_package_versions", state ? "true" : "false");
+                setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_package_versions", state ? "false" : "true");
             });
             list->addItem(toggleListItem);
             
