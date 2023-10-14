@@ -510,10 +510,12 @@ public:
             // Envoke toggling
             auto toggleListItem = new tsl::elm::ToggleListItem("Hide " + hideLabel, false, "On", "Off");
             toggleListItem->setState(hide);
-            toggleListItem->setStateChangedListener([this, toggleListItem](bool state) {
+            toggleListItem->setStateChangedListener([this, hide, toggleListItem](bool state) {
                 setIniFileValue(settingsIniPath, entryName, "hide", state ? "true" : "false");
-                if (!state) {
+                if (hide != state) {
                     reloadMenu = true; // this reloads before main menu
+                }
+                if (!state) {
                     reloadMenu2 = true; // this reloads at main menu
                 }
             });
