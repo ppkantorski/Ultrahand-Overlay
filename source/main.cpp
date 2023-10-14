@@ -2784,6 +2784,7 @@ public:
                 }
                 if (keysHeld & KEY_B) {
                     //inMainMenu = false;
+                    setIniFileValue(settingsConfigIniPath, "ultrahand", "last_menu", "overlays");
                     tsl::Overlay::get()->close();
                     return true;
                 }
