@@ -67,6 +67,8 @@ static bool inSelectionMenu = false;
 static bool defaultMenuLoaded = true;
 static bool freshSpawn = true;
 static bool refreshGui = false;
+static bool reloadMenu = false;
+static bool reloadMenu2 = false;
 
 static tsl::elm::OverlayFrame *rootFrame = nullptr;
 static tsl::elm::List *list = nullptr;
@@ -79,6 +81,7 @@ static std::string groupingPattern = ";grouping=";
 static std::string UNAVAILABLE_SELECTION = "Not available";
 
 static std::string lastMenu = "";
+static std::string lastMenuMode = "";
 static std::string lastKeyName = "";
 static std::unordered_map<std::string, std::string> selectedFooterDict;
 static auto selectedListItem = new tsl::elm::ListItem("");
@@ -93,6 +96,8 @@ static std::string versionLabel;
 //static std::string STAR_SYMBOL = "\u2605";
 
 
+// Forward declaration of the MainMenu class.
+class MainMenu;
 
 class UltrahandSettingsMenu : public tsl::Gui {
 private:
@@ -138,7 +143,7 @@ public:
         
         
         if (dropdownSelection.empty()) {
-            list->addItem(new tsl::elm::CategoryHeader("Ultrahand Settings"));
+            list->addItem(new tsl::elm::CategoryHeader("Settings"));
             
             std::string fileContent = getFileContents(settingsConfigIniPath);
             
@@ -174,47 +179,127 @@ public:
             //list->addItem(toggleListItem);
             
             
-            auto listItem = new tsl::elm::ListItem("Default Menu");
-            listItem->setValue(defaultMenu);
-            
-            // Envolke selectionOverlay in optionMode
-            
-            listItem->setClickListener([this, listItem](uint64_t keys) { // Add 'command' to the capture list
-                if (keys & KEY_A) {
-                    tsl::changeTo<UltrahandSettingsMenu>("defaultMenu");
-                    selectedListItem = listItem;
-                    return true;
-                }
-                return false;
-            });
-            list->addItem(listItem);
-            
-            
+            //auto listItem = new tsl::elm::ListItem("Default Menu");
+            //listItem->setValue(defaultMenu);
+            //
+            //// Envolke selectionOverlay in optionMode
+            //
+            //listItem->setClickListener([this, listItem](uint64_t keys) { // Add 'command' to the capture list
+            //    if (keys & KEY_A) {
+            //        tsl::changeTo<UltrahandSettingsMenu>("defaultMenu");
+            //        selectedListItem = listItem;
+            //        return true;
+            //    }
+            //    return false;
+            //});
+            //list->addItem(listItem);
             
             
-            auto toggleListItem = new tsl::elm::ToggleListItem("Clean Version Labels", false, "On", "Off");
+            
+            
+            auto toggleListItem = new tsl::elm::ToggleListItem("Clean Versions", false, "On", "Off");
             toggleListItem->setState((cleanVersionLabels == "true"));
-            toggleListItem->setStateChangedListener([this, toggleListItem](bool state) {
+            toggleListItem->setStateChangedListener([this, cleanVersionLabels, toggleListItem](bool state) {
                 setIniFileValue(settingsConfigIniPath, "ultrahand", "clean_version_labels", state ? "true" : "false");
+                if ((cleanVersionLabels == "true") != state) {
+                    reloadMenu = true;
+                }
             });
             list->addItem(toggleListItem);
             
             
-            toggleListItem = new tsl::elm::ToggleListItem("Hide Overlay Versions", false, "On", "Off");
-            toggleListItem->setState((hideOverlayVersions == "true"));
-            toggleListItem->setStateChangedListener([this, toggleListItem](bool state) {
-                setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_overlay_versions", state ? "true" : "false");
+            toggleListItem = new tsl::elm::ToggleListItem("Overlay Versions", false, "On", "Off");
+            toggleListItem->setState((hideOverlayVersions == "false"));
+            toggleListItem->setStateChangedListener([this, hideOverlayVersions, toggleListItem](bool state) {
+                setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_overlay_versions", state ? "false" : "true");
+                if ((hideOverlayVersions == "false") != state) {
+                    reloadMenu = true;
+                }
             });
             list->addItem(toggleListItem);
             
-            toggleListItem = new tsl::elm::ToggleListItem("Hide Package Versions", false, "On", "Off");
-            toggleListItem->setState((hidePackageVersions == "true"));
-            toggleListItem->setStateChangedListener([this, toggleListItem](bool state) {
-                setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_package_versions", state ? "true" : "false");
+            toggleListItem = new tsl::elm::ToggleListItem("Package Versions", false, "On", "Off");
+            toggleListItem->setState((hidePackageVersions == "false"));
+            toggleListItem->setStateChangedListener([this, hidePackageVersions, toggleListItem](bool state) {
+                setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_package_versions", state ? "false" : "true");
+                if ((hidePackageVersions == "false") != state) {
+                    reloadMenu = true;
+                }
             });
             list->addItem(toggleListItem);
             
             
+            
+            
+            //list->addItem(new tsl::elm::CategoryHeader("Help"));
+            //
+            //
+            //constexpr int lineHeight = 20;  // Adjust the line height as needed
+            //constexpr int xOffset = 120;    // Adjust the horizontal offset as needed
+            //constexpr int fontSize = 16;    // Adjust the font size as needed
+            //int numEntries = 0;   // Adjust the number of entries as needed
+            //
+            //std::string packageSectionString = "";
+            //std::string packageInfoString = "";
+            //
+            //packageSectionString += "Version\n";
+            //packageInfoString += "1.3.9\n";
+            //numEntries++;
+            //
+            //packageSectionString += "Creator(s)\n";
+            //packageInfoString += "b0rd2dEAth\n";
+            //numEntries++;
+            //
+            //std::string aboutHeaderText = "About\n";
+            //std::string::size_type aboutHeaderLength = aboutHeaderText.length();
+            //std::string aboutText = "Test";
+            //
+            //packageSectionString += aboutHeaderText;
+            //
+            //// Split the about text into multiple lines with proper word wrapping
+            //constexpr int maxLineLength = 28;  // Adjust the maximum line length as needed
+            //std::string::size_type startPos = 0;
+            //std::string::size_type spacePos = 0;
+            //
+            //while (startPos < aboutText.length()) {
+            //    std::string::size_type endPos = std::min(startPos + maxLineLength, aboutText.length());
+            //    std::string line = aboutText.substr(startPos, endPos - startPos);
+            //    
+            //    // Check if the current line ends with a space; if not, find the last space in the line
+            //    if (endPos < aboutText.length() && aboutText[endPos] != ' ') {
+            //        spacePos = line.find_last_of(' ');
+            //        if (spacePos != std::string::npos) {
+            //            endPos = startPos + spacePos;
+            //            line = aboutText.substr(startPos, endPos - startPos);
+            //        }
+            //    }
+            //    
+            //    packageInfoString += line + '\n';
+            //    startPos = endPos + 1;
+            //    numEntries++;
+            //    
+            //    // Add corresponding newline to the packageSectionString
+            //    if (startPos < aboutText.length()) {
+            //        packageSectionString += std::string(aboutHeaderLength, ' ') + '\n';
+            //    }
+            //}
+            //
+            //
+            //// Remove trailing newline character
+            //if ((packageSectionString != "") && (packageSectionString.back() == '\n')) {
+            //    packageSectionString = packageSectionString.substr(0, packageSectionString.size() - 1);
+            //}
+            //if ((packageInfoString != "") && (packageInfoString.back() == '\n')) {
+            //    packageInfoString = packageInfoString.substr(0, packageInfoString.size() - 1);
+            //}
+            //
+            //
+            //if ((packageSectionString != "") && (packageInfoString != "")) {
+            //    list->addItem(new tsl::elm::CustomDrawer([lineHeight, xOffset, fontSize, packageSectionString, packageInfoString](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
+            //        renderer->drawString(packageSectionString.c_str(), false, x, y + lineHeight, fontSize, a(tsl::style::color::ColorText));
+            //        renderer->drawString(packageInfoString.c_str(), false, x + xOffset, y + lineHeight, fontSize, a(tsl::style::color::ColorText));
+            //    }), fontSize * numEntries + lineHeight);
+            //}
             
             
         } else if (dropdownSelection == "defaultMenu") {
@@ -223,7 +308,7 @@ public:
             
             std::string defaultMenu = parseValueFromIniSection(settingsConfigIniPath, "ultrahand", "default_menu");
             
-            std::vector<std::string> defaultMenuModes = {"overlays", "packages", "last"};
+            std::vector<std::string> defaultMenuModes = {"overlays", "packages"};
             
             for (const auto& defaultMenuMode : defaultMenuModes) {
                 
@@ -288,6 +373,12 @@ public:
                     lastMenu = "settingsMenu";
                     
                     tsl::goBack();
+                    
+                    if (reloadMenu) {
+                        tsl::changeTo<MainMenu>(lastMenuMode);
+                        reloadMenu = false;
+                    }
+                    
                     //tsl::Overlay::get()->close();
                     return true;
                 }
@@ -419,8 +510,14 @@ public:
             // Envoke toggling
             auto toggleListItem = new tsl::elm::ToggleListItem("Hide " + hideLabel, false, "On", "Off");
             toggleListItem->setState(hide);
-            toggleListItem->setStateChangedListener([this, toggleListItem](bool state) {
+            toggleListItem->setStateChangedListener([this, hide, toggleListItem](bool state) {
                 setIniFileValue(settingsIniPath, entryName, "hide", state ? "true" : "false");
+                if (hide != state) {
+                    reloadMenu = true; // this reloads before main menu
+                }
+                if (!state) {
+                    reloadMenu2 = true; // this reloads at main menu
+                }
             });
             list->addItem(toggleListItem);
             
@@ -456,8 +553,11 @@ public:
                     lastSelectedListItem = listItem;
                 }
                 
-                listItem->setClickListener([this, iStr, listItem](uint64_t keys) { // Add 'this', 'i', and 'listItem' to the capture list
+                listItem->setClickListener([this, iStr, priorityValue, listItem](uint64_t keys) { // Add 'this', 'i', and 'listItem' to the capture list
                     if (keys & KEY_A) {
+                        if (iStr != priorityValue) {
+                            reloadMenu = true;
+                        }
                         setIniFileValue(settingsIniPath, entryName, "priority", iStr);
                         lastSelectedListItem->setValue("");
                         selectedListItem->setValue(iStr);
@@ -507,9 +607,21 @@ public:
                     } else {
                         returningToHiddenMain = true;
                     }
-                    lastMenu = "settingsMenu";
                     
                     tsl::goBack();
+                    
+                    if (reloadMenu) {
+                        if (lastMenu == "hiddenMenuMode") {
+                            tsl::goBack();
+                            inMainMenu = false;
+                            inHiddenMode = true;
+                        } else {
+                            reloadMenu = false;
+                        }
+                        tsl::changeTo<MainMenu>(lastMenuMode);
+                    }
+                    
+                    lastMenu = "settingsMenu";
                     //tsl::Overlay::get()->close();
                     return true;
                 }
@@ -1256,8 +1368,6 @@ public:
     }
 };
 
-// Forward declaration of the MainMenu class.
-class MainMenu;
 
 /**
  * @brief The `PackageMenu` class handles sub-menu overlay functionality.
@@ -1937,6 +2047,8 @@ public:
             inMainMenu = true;
         }
         
+        lastMenuMode = hiddenMenuMode;
+        
         //defaultMenuMode = "last_menu";
         defaultMenuMode = "overlays";
         menuMode = "overlays";
@@ -2200,6 +2312,7 @@ public:
                                     inHiddenMode = true;
                                 }
                                 tsl::changeTo<MainMenu>(tmpMode);
+                                //lastMenuMode = tmpMode;
                                 return true;
                             } else if (key & KEY_Y) {
                                 if (!inHiddenMode) {
@@ -2377,7 +2490,12 @@ public:
                     // Add a click listener to load the overlay when clicked upon
                     listItem->setClickListener([this, packageFilePath, newStarred, packageName](s64 key) {
                         if (key & KEY_A) {
-                            inMainMenu = false;
+                            if (!inHiddenMode) {
+                                inMainMenu = false;
+                            } else {
+                                inHiddenMode = false;
+                            }
+                            
                             
                             // read commands from package's boot_package.ini
                             
@@ -2412,7 +2530,7 @@ public:
                                 inHiddenMode = true;
                             }
                             tsl::changeTo<MainMenu>(tmpMode);
-                            
+                            //lastMenuMode = tmpMode;
                             return true;
                         } else if (key & KEY_Y) {
                             
@@ -2755,8 +2873,9 @@ public:
      * @return `true` if the input was handled within the overlay, `false` otherwise.
      */
     virtual bool handleInput(uint64_t keysDown, uint64_t keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
+        
         if (refreshGui) {
-            tsl::changeTo<MainMenu>();
+            tsl::changeTo<MainMenu>(lastMenuMode);
             refreshGui = false;
         }
         
@@ -2779,8 +2898,12 @@ public:
                 }
                 if (keysHeld & KEY_B) {
                     //inMainMenu = false;
+                    setIniFileValue(settingsConfigIniPath, "ultrahand", "last_menu", defaultMenuMode);
                     tsl::Overlay::get()->close();
                     return true;
+                }
+                if (keysHeld & KEY_PLUS) {
+                    tsl::changeTo<UltrahandSettingsMenu>();
                 }
             }
         }
@@ -2789,15 +2912,18 @@ public:
                 if (keysHeld & KEY_B) {
                     returningToMain = true;
                     inHiddenMode = false;
+                    
+                    if (reloadMenu2) {
+                        tsl::goBack();
+                        tsl::changeTo<MainMenu>();
+                        reloadMenu2 = false;
+                        return true;
+                    }
+                    
                     tsl::goBack();
                     return true;
                 }
             }
-        }
-        
-        
-        if (keysHeld & KEY_PLUS) {
-            tsl::changeTo<UltrahandSettingsMenu>();
         }
         
         

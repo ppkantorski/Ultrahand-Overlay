@@ -1,4 +1,4 @@
-# Broomstick
+# Broomstick (now deprecated on v1.3.9+)
 
 The Broomstick package allows you to offload and restore specific overlays on your device.
 
