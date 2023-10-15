@@ -2212,17 +2212,22 @@ public:
                             setIniFileValue(overlaysIniFilePath, overlayFileName, "hide", "false");
                         }
                         
+                        // Get the name and version of the overlay file
+                        auto [result, overlayName, overlayVersion] = getOverlayInfo(overlayDirectory+overlayFileName);
+                        if (result != ResultSuccess)
+                            continue;
+                        
                         if (hide == "false") {
                             if (starred == "true") {
-                                overlayList.push_back("-1_"+priority+"_"+overlayFileName);
+                                overlayList.push_back("-1_"+priority+"_"+overlayName+"_"+overlayVersion+"_"+overlayFileName);
                             } else {
-                                overlayList.push_back(priority+"_"+overlayFileName);
+                                overlayList.push_back(priority+"_"+overlayName+"_"+overlayVersion+"_"+overlayFileName);
                             }
                         } else {
                             if (starred == "true") {
-                                hiddenOverlayList.push_back("-1_"+priority+"_"+overlayFileName);
+                                hiddenOverlayList.push_back("-1_"+priority+"_"+overlayName+"_"+overlayVersion+"_"+overlayFileName);
                             } else {
-                                hiddenOverlayList.push_back(priority+"_"+overlayFileName);
+                                hiddenOverlayList.push_back(priority+"_"+overlayName+"_"+overlayVersion+"_"+overlayFileName);
                             }
                         }
                     }
@@ -2241,16 +2246,37 @@ public:
                     
                     //logMessage(taintedOverlayFileName);
                     
-                    std::string overlayFileName = taintedOverlayFileName;
+                    std::string overlayFileName;
                     std::string overlayStarred = "false";
                     
-                    if ((overlayFileName.length() >= 2) && (overlayFileName.substr(0, 3) == "-1_")) {
+                    std::string overlayVersion, overlayName;
+                    
+                    // Detect if starred
+                    if ((taintedOverlayFileName.substr(0, 3) == "-1_")) {
                         // strip first two characters
-                        overlayFileName = overlayFileName.substr(3);
                         overlayStarred = "true";
                     }
                     
-                    overlayFileName = overlayFileName.substr(5);
+                    // Find the position of the last underscore
+                    size_t lastUnderscorePos = taintedOverlayFileName.rfind('_');
+                    // Check if an underscore was found
+                    if (lastUnderscorePos != std::string::npos) {
+                        // Extract overlayFileName starting from the character after the last underscore
+                        overlayFileName = taintedOverlayFileName.substr(lastUnderscorePos + 1);
+                        
+                        // Now, find the position of the second-to-last underscore
+                        size_t secondLastUnderscorePos = taintedOverlayFileName.rfind('_', lastUnderscorePos - 1);
+                        
+                        if (secondLastUnderscorePos != std::string::npos) {
+                            // Extract overlayName between the two underscores
+                            overlayVersion = taintedOverlayFileName.substr(secondLastUnderscorePos + 1, lastUnderscorePos - secondLastUnderscorePos - 1);
+                            // Now, find the position of the second-to-last underscore
+                            size_t thirdLastUnderscorePos = taintedOverlayFileName.rfind('_', secondLastUnderscorePos - 1);
+                            if (secondLastUnderscorePos != std::string::npos) {
+                                overlayName = taintedOverlayFileName.substr(thirdLastUnderscorePos + 1, secondLastUnderscorePos - thirdLastUnderscorePos - 1);
+                            }
+                        }
+                    }
                     
                     
                     //logMessage(overlayFileName);
@@ -2258,10 +2284,10 @@ public:
                     std::string overlayFile = overlayDirectory+overlayFileName;
                     //logMessage(overlayFile);
                     
-                    // Get the name and version of the overlay file
-                    auto [result, overlayName, overlayVersion] = getOverlayInfo(overlayFile);
-                    if (result != ResultSuccess)
-                        continue;
+                    //// Get the name and version of the overlay file
+                    //auto [result, overlayName, overlayVersion] = getOverlayInfo(overlayFile);
+                    //if (result != ResultSuccess)
+                    //    continue;
                     
                     //logMessage(overlayName);
                     
