@@ -89,6 +89,13 @@ static auto lastSelectedListItem = new tsl::elm::ListItem("");
 
 static std::string versionLabel;
 
+// Command key defintitions
+const static auto SCRIPT_KEY = KEY_MINUS;
+const static auto SYSTEM_SETTINGS_KEY = KEY_PLUS;
+const static auto SETTINGS_KEY = KEY_Y;
+const static auto STAR_KEY = KEY_X;
+
+
 // Pre-defined symbols (moved to libTesla)
 //static std::string OPTION_SYMBOL = "\u22EF";
 //static std::string DROPDOWN_SYMBOL = "\u25B6";
@@ -1785,7 +1792,7 @@ public:
                                 lastKeyName = keyName;
                                 
                                 return true;
-                            } else if (keys & KEY_X) {
+                            } else if (keys & SCRIPT_KEY) {
                                 if (inPackageMenu) {
                                     inPackageMenu = false;
                                 }
@@ -1828,7 +1835,7 @@ public:
                                         refreshGui = interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified 
                                         listItem->setValue(CHECKMARK_SYMBOL);
                                         return true;
-                                    }  else if (keys & KEY_X) {
+                                    }  else if (keys & SCRIPT_KEY) {
                                         if (inPackageMenu) {
                                             inPackageMenu = false;
                                         }
@@ -1851,7 +1858,7 @@ public:
                                         
                                         listItem->setValue(CHECKMARK_SYMBOL);
                                         return true;
-                                    }  else if (keys & KEY_X) {
+                                    }  else if (keys & SCRIPT_KEY) {
                                         if (inPackageMenu) {
                                             inPackageMenu = false;
                                         }
@@ -2325,7 +2332,7 @@ public:
                                 tsl::Overlay::get()->close();
                                 //inMainMenu = true;
                                 return true;
-                            } else if (key & KEY_X) {
+                            } else if (key & STAR_KEY) {
                                 std::string tmpMode(hiddenMenuMode);
                                 if (!overlayFile.empty()) {
                                     // Update the INI file with the new value
@@ -2340,7 +2347,7 @@ public:
                                 tsl::changeTo<MainMenu>(tmpMode);
                                 //lastMenuMode = tmpMode;
                                 return true;
-                            } else if (key & KEY_Y) {
+                            } else if (key & SETTINGS_KEY) {
                                 if (!inHiddenMode) {
                                     lastMenu = "";
                                     inMainMenu = false;
@@ -2543,7 +2550,7 @@ public:
                             tsl::changeTo<PackageMenu>(packageFilePath, "");
                             
                             return true;
-                        } else if (key & KEY_X) {
+                        } else if (key & STAR_KEY) {
                             std::string tmpMode(hiddenMenuMode);
                             if (!packageName.empty()) {
                             
@@ -2558,7 +2565,7 @@ public:
                             tsl::changeTo<MainMenu>(tmpMode);
                             //lastMenuMode = tmpMode;
                             return true;
-                        } else if (key & KEY_Y) {
+                        } else if (key & SETTINGS_KEY) {
                             
                             if (!inHiddenMode) {
                                 lastMenu = "";
@@ -2780,7 +2787,7 @@ public:
                                 inMainMenu = false;
                                 tsl::changeTo<SelectionOverlay>(packagePath, keyName, cmds);
                                 return true;
-                            } else if (keys & KEY_X) {
+                            } else if (keys & SCRIPT_KEY) {
                                 inMainMenu = false; // Set boolean to true when entering a submenu
                                 tsl::changeTo<ScriptOverlay>(packagePath, keyName, true);
                                 return true;
@@ -2814,7 +2821,7 @@ public:
                                         
                                         listItem->setValue(CHECKMARK_SYMBOL);
                                         return true;
-                                    }  else if (keys & KEY_X) {
+                                    }  else if (keys & SCRIPT_KEY) {
                                         inMainMenu = false; // Set boolean to true when entering a submenu
                                         tsl::changeTo<ScriptOverlay>(packagePath, keyName, true);
                                         return true;
@@ -2832,7 +2839,7 @@ public:
                                         
                                         listItem->setValue(CHECKMARK_SYMBOL);
                                         return true;
-                                    }  else if (keys & KEY_X) {
+                                    }  else if (keys & SCRIPT_KEY) {
                                         inMainMenu = false; // Set boolean to true when entering a submenu
                                         tsl::changeTo<ScriptOverlay>(packagePath, keyName, true);
                                         return true;
@@ -2928,7 +2935,7 @@ public:
                     tsl::Overlay::get()->close();
                     return true;
                 }
-                if (keysHeld & KEY_PLUS) {
+                if (keysHeld & SYSTEM_SETTINGS_KEY) {
                     tsl::changeTo<UltrahandSettingsMenu>();
                 }
             }
