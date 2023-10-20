@@ -138,6 +138,18 @@ private:
     std::string entryName, entryMode, overlayName, dropdownSelection, settingsIniPath;
     bool isInSection, inQuotes, isFromMainMenu;
     int MAX_PRIORITY = 20;
+    
+    std::unordered_map<std::string, std::string> comboMap = {
+        {"ZL+ZR+DDOWN", "\uE0E6+\uE0E7+\uE0EC"},
+        {"ZL+ZR+DRIGHT", "\uE0E6+\uE0E7+\uE0EE"},
+        {"ZL+ZR+DUP", "\uE0E6+\uE0E7+\uE0EB"},
+        {"ZL+ZR+DLEFT", "\uE0E6+\uE0E7+\uE0ED"},
+        {"L+R+DDOWN", "\uE0E4+\uE0E5+\uE0EC"},
+        {"L+R+DRIGHT", "\uE0E4+\uE0E5+\uE0EE"},
+        {"L+R+DUP", "\uE0E4+\uE0E5+\uE0EB"},
+        {"L+R+DLEFT", "\uE0E4+\uE0E5+\uE0ED"},
+        {"L+DDOWN+RS", "\uE0E4+\uE0EC+\uE0C5"}
+    };
 public:
     /**
      * @brief Constructs a `ScriptOverlay` instance.
@@ -183,7 +195,7 @@ public:
             
             std::string defaultLang = parseValueFromIniSection(settingsConfigIniPath, "ultrahand", "default_lang");
             std::string defaultMenu = parseValueFromIniSection(settingsConfigIniPath, "ultrahand", "default_menu");
-            std::string keyCombo = parseValueFromIniSection(settingsConfigIniPath, "ultrahand", "key_combo");
+            std::string keyCombo = trim(parseValueFromIniSection(settingsConfigIniPath, "ultrahand", "key_combo"));
             std::string cleanVersionLabels = parseValueFromIniSection(settingsConfigIniPath, "ultrahand", "clean_version_labels");
             std::string hideOverlayVersions = parseValueFromIniSection(settingsConfigIniPath, "ultrahand", "hide_overlay_versions");
             std::string hidePackageVersions = parseValueFromIniSection(settingsConfigIniPath, "ultrahand", "hide_package_versions");
@@ -232,8 +244,23 @@ public:
             //});
             //list->addItem(listItem);
             
+            auto listItem = new tsl::elm::ListItem("Key Combo");
+            listItem->setValue(comboMap[keyCombo]);
             
-            auto listItem = new tsl::elm::ListItem(LANGUAGE);
+            // Envolke selectionOverlay in optionMode
+            
+            listItem->setClickListener([this, listItem](uint64_t keys) { // Add 'command' to the capture list
+                if (keys & KEY_A) {
+                    tsl::changeTo<UltrahandSettingsMenu>("keyComboMenu");
+                    selectedListItem = listItem;
+                    return true;
+                }
+                return false;
+            });
+            list->addItem(listItem);
+            
+            
+            listItem = new tsl::elm::ListItem(LANGUAGE);
             listItem->setValue(defaultLang);
             
             // Envolke selectionOverlay in optionMode
@@ -388,6 +415,47 @@ public:
                 
                 list->addItem(listItem);
             }
+        
+        
+        
+        } else if (dropdownSelection == "keyComboMenu") {
+            
+            list->addItem(new tsl::elm::CategoryHeader("Key Combo"));
+            
+            std::string defaultCombo = trim(parseValueFromIniSection(settingsConfigIniPath, "ultrahand", "key_combo"));
+            
+            std::vector<std::string> defaultCombos = {"ZL+ZR+DDOWN", "ZL+ZR+DRIGHT", "ZL+ZR+DUP", "ZL+ZR+DLEFT", "L+R+DDOWN", "L+R+DRIGHT", "L+R+DUP", "L+R+DLEFT", "L+DDOWN+RS"};
+            
+            
+            for (const auto& combo : defaultCombos) {
+                
+                tsl::elm::ListItem* listItem = new tsl::elm::ListItem(comboMap[combo]);
+                
+                if (combo == defaultCombo) {
+                    listItem->setValue(CHECKMARK_SYMBOL);
+                    lastSelectedListItem = listItem;
+                }
+                
+                listItem->setClickListener([this, combo, defaultCombo, listItem](uint64_t keys) { // Add 'this', 'i', and 'listItem' to the capture list
+                    if (keys & KEY_A) {
+                        if (combo != defaultCombo) {
+                            setIniFileValue(settingsConfigIniPath, "ultrahand", "key_combo", combo);
+                            reloadMenu = true;
+                        }
+                        
+                        lastSelectedListItem->setValue("");
+                        selectedListItem->setValue(combo);
+                        listItem->setValue(CHECKMARK_SYMBOL);
+                        lastSelectedListItem = listItem;
+                        
+                        return true;
+                    }
+                    return false;
+                });
+                
+                list->addItem(listItem);
+            }
+        
         } else if (dropdownSelection == "languageMenu") {
             
             list->addItem(new tsl::elm::CategoryHeader(LANGUAGE));
