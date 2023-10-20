@@ -410,3 +410,15 @@ std::vector<std::string> getFilesListByWildcards(const std::string& pathPattern)
 
     return fileList;
 }
+
+
+
+const char* getStringFromJson(json_t* root, const char* key) {
+    json_t* value = json_object_get(root, key);
+
+    if (value && json_is_string(value)) {
+        return json_string_value(value);
+    } else {
+        return ""; // Key not found or not a string, return empty string/char*
+    }
+}
