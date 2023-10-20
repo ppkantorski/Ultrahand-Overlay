@@ -2283,7 +2283,7 @@ namespace tsl {
                 // Lookup the width of the current character
                 float letterWidth = characterWidths[letter];
                 if (letterWidth == 0) {
-                    letterWidth = 0.3;
+                    letterWidth = 0.33;
                 }
                 
                 // Accumulate the width
