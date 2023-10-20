@@ -2282,6 +2282,9 @@ namespace tsl {
             for (char letter : str) {
                 // Lookup the width of the current character
                 float letterWidth = characterWidths[letter];
+                if (letterWidth == 0) {
+                    letterWidth = 0.3;
+                }
                 
                 // Accumulate the width
                 totalWidth += letterWidth;
