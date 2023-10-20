@@ -11,6 +11,7 @@
   "COMMANDS": "系統控制",
   "SETTINGS": "其他設置",
   "MAIN_SETTINGS": "主要設置",
+  "VERSION_SETTINGS": "Version Settings",
   "LANGUAGE": "語言",
   "ROOT_PACKAGE": "插件包初始頁",
   "SORT_PRIORITY": "優先級順序",
