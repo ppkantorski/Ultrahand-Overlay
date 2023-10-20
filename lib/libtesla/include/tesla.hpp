@@ -14,6 +14,9 @@
  * 
  *   For the latest updates and contributions, visit the project's GitHub repository.
  *   (GitHub Repository: https://github.com/ppkantorski/Ultrahand-Overlay)
+ *
+ *  Copyright (c) 2023 ppkantorski
+ *  All rights reserved.
  ********************************************************************************/
 
 /**
@@ -59,20 +62,161 @@
 //#include <filesystem> // Comment out filesystem
 
 // CUSTOM SECTION START
-
+#include <jansson.h>
 #include "../../../source/get_funcs.hpp"
 #include "../../../source/string_funcs.hpp"
 #include "../../../source/ini_funcs.hpp"
 
+
+
+
 // Pre-defined symbols
-static std::string OPTION_SYMBOL = "\u22EF";
-static std::string DROPDOWN_SYMBOL = "\u25B6";
-static std::string CHECKMARK_SYMBOL = "\uE14B";
-static std::string STAR_SYMBOL = "\u2605";
+static const std::string OPTION_SYMBOL = "\u22EF";
+static const std::string DROPDOWN_SYMBOL = "\u25B6";
+static const std::string CHECKMARK_SYMBOL = "\uE14B";
+static const std::string STAR_SYMBOL = "\u2605";
+
+// English string definitions
+
+/**
+ * @brief Reads JSON data from a file and returns it as a `json_t` object.
+ *
+ * @param filePath The path to the JSON file.
+ * @return A `json_t` object representing the parsed JSON data. Returns `nullptr` on error.
+ */
+json_t* readJsonFromFile2(const std::string& filePath) {
+    // Check if the file exists
+    struct stat fileStat;
+    if (stat(filePath.c_str(), &fileStat) != 0) {
+        //fprintf(stderr, "Error opening file: %s\n", filePath.c_str());
+        return nullptr;
+    }
+
+    // Open the file
+    FILE* file = fopen(filePath.c_str(), "r");
+    if (!file) {
+        //fprintf(stderr, "Error opening file: %s\n", filePath.c_str());
+        return nullptr;
+    }
+
+    // Get the file size
+    size_t fileSize = fileStat.st_size;
+
+    // Read the file content into a buffer
+    char* buffer = static_cast<char*>(malloc(fileSize + 1));
+    if (!buffer) {
+        //fprintf(stderr, "Memory allocation error.\n");
+        fclose(file);
+        return nullptr;
+    }
+
+    size_t bytesRead = fread(buffer, 1, fileSize, file);
+    buffer[bytesRead] = '\0';
+
+    // Close the file
+    fclose(file);
+
+    // Parse the JSON data
+    json_error_t error;
+    json_t* root = json_loads(buffer, JSON_DECODE_ANY, &error);
+    if (!root) {
+        //fprintf(stderr, "Error parsing JSON: %s\n", error.text);
+        free(buffer);
+        return nullptr;
+    }
+
+    // Clean up
+    free(buffer);
+
+    return root;
+}
+
+
+
+// Constant string definitions (English)
+static std::string UNAVAILABLE_SELECTION = "Not available";
+static std::string OVERLAYS = "Overlays"; //defined in libTesla now
+static std::string OVERLAY = "Overlay";
+static std::string HIDDEN_OVERLAYS = "Hidden Overlays";
+static std::string PACKAGES = "Packages"; //defined in libTesla now
+static std::string PACKAGE = "Package";
+static std::string HIDDEN_PACKAGES = "Hidden Packages";
+static std::string HIDDEN = "Hidden";
+static std::string HIDE = "Hide";
+static std::string COMMANDS = "Commands";
+static std::string SETTINGS = "Main Settings";
+static std::string MAIN_SETTINGS = "Main Settings";
+static std::string VERSION_SETTINGS = "Version Settings";
+static std::string LANGUAGE = "Language";
+static std::string ROOT_PACKAGE = "Root Package";
+static std::string SORT_PRIORITY = "Sort Priority";
+static std::string FAILED_TO_OPEN = "Failed to open file";
+static std::string CLEAN_LABELS = "Clean Versions";
+static std::string OVERLAY_LABELS = "Overlay Versions";
+static std::string PACKAGE_LABELS = "Package Versions";
+static std::string ON = "On";
+static std::string OFF = "Off";
+static std::string PACKAGE_INFO = "Package Info";
+static std::string VERSION = "Version";
+static std::string CREATOR = "Creator(s)";
+static std::string ABOUT = "About";
+static std::string OK = "OK";
+static std::string BACK = "Back";
+static std::string REBOOT = "Reboot";
+static std::string SHUTDOWN = "Shutdown";
+static std::string GAP_1 = "     ";
+static std::string GAP_2 = "  ";
+
+void parseLanguage(std::string langFile) {
+    json_t* langData = readJsonFromFile2(langFile);
+    
+    UNAVAILABLE_SELECTION = getStringFromJson(langData, "UNAVAILABLE_SELECTION");
+    OVERLAYS = getStringFromJson(langData,"OVERLAYS");
+    OVERLAY = getStringFromJson(langData,"OVERLAY");
+    HIDDEN_OVERLAYS = getStringFromJson(langData,"HIDDEN_OVERLAYS");
+    PACKAGES = getStringFromJson(langData,"PACKAGES");
+    PACKAGE = getStringFromJson(langData,"PACKAGE");
+    HIDDEN_PACKAGES = getStringFromJson(langData,"HIDDEN_PACKAGES");
+    HIDDEN = getStringFromJson(langData,"HIDDEN");
+    HIDE = getStringFromJson(langData,"HIDE");
+    COMMANDS = getStringFromJson(langData,"COMMANDS");
+    SETTINGS = getStringFromJson(langData,"SETTINGS");
+    MAIN_SETTINGS = getStringFromJson(langData,"MAIN_SETTINGS");
+    VERSION_SETTINGS = getStringFromJson(langData,"VERSION_SETTINGS");
+    LANGUAGE = getStringFromJson(langData,"LANGUAGE");
+    ROOT_PACKAGE = getStringFromJson(langData,"ROOT_PACKAGE");
+    SORT_PRIORITY = getStringFromJson(langData,"SORT_PRIORITY");
+    FAILED_TO_OPEN = getStringFromJson(langData,"FAILED_TO_OPEN");
+    CLEAN_LABELS = getStringFromJson(langData,"CLEAN_LABELS");
+    OVERLAY_LABELS = getStringFromJson(langData,"OVERLAY_LABELS");
+    PACKAGE_LABELS = getStringFromJson(langData,"PACKAGE_LABELS");
+    ON = getStringFromJson(langData,"ON");
+    OFF = getStringFromJson(langData,"OFF");
+    PACKAGE_INFO = getStringFromJson(langData,"PACKAGE_INFO");
+    VERSION = getStringFromJson(langData,"VERSION");
+    CREATOR = getStringFromJson(langData,"CREATOR");
+    ABOUT = getStringFromJson(langData,"ABOUT");
+    OK = getStringFromJson(langData,"OK");
+    BACK = getStringFromJson(langData,"BACK");
+    REBOOT = getStringFromJson(langData,"REBOOT");
+    SHUTDOWN = getStringFromJson(langData,"SHUTDOWN");
+    GAP_1 = getStringFromJson(langData,"GAP_1");
+    GAP_2 = getStringFromJson(langData,"GAP_2");
+    
+    // Free langData
+    if (langData != nullptr) {
+        json_decref(langData);
+        langData = nullptr;
+    }
+}
+
 
 
 // Map of character widths
 static std::unordered_map<char, float> characterWidths = {
+    {'°', 0.25},
+    {'%', 0.98}, // not calibrated
+    {':', 0.25}, // not calibrated
     {' ', 0.3},
     {'+', 0.75},
     {'-', 0.36},
@@ -142,7 +286,7 @@ static std::unordered_map<char, float> characterWidths = {
     {'5', 0.66},
     {'6', 0.66},
     {'7', 0.66},
-    {'8', 0.64},
+    {'8', 0.66},
     {'9', 0.66}
 };
 
@@ -160,6 +304,109 @@ bool isValidHexColor(const std::string& hexColor) {
     
     return true;
 }
+
+static bool powerInitialized = false;
+static bool powerCacheInitialized;
+static uint32_t powerCacheCharge;
+static float powerConsumption;
+static bool powerCacheIsCharging;
+static PsmSession powerSession;
+
+// Define variables to store previous battery charge and time
+static uint32_t prevBatteryCharge = 0;
+static uint64_t timeOut = 0;
+static char chargeString[6];  // Need space for the null terminator and the percentage sign
+
+static uint32_t batteryCharge;
+static bool isCharging;
+static bool validPower;
+
+bool powerGetDetails(uint32_t *batteryCharge, bool *isCharging) {
+    PsmChargerType charger = PsmChargerType_Unconnected;
+    bool hwReadsSucceeded = false;
+    bool use_cache = false;
+    Result rc = 0;
+
+    *isCharging = false;
+    *batteryCharge = 0;
+
+    if (powerInitialized) {
+        if (powerCacheInitialized) {
+            rc = psmWaitStateChangeEvent(&powerSession, 0);
+
+            if (R_FAILED(rc)) use_cache = true;
+        }
+
+        rc = psmGetBatteryChargePercentage(batteryCharge);
+        hwReadsSucceeded = R_SUCCEEDED(rc);
+        if (use_cache) {
+            *isCharging = powerCacheIsCharging;
+        }
+        else {
+            rc = psmGetChargerType(&charger);
+            hwReadsSucceeded &= R_SUCCEEDED(rc);
+            *isCharging = (charger != PsmChargerType_Unconnected);
+        }
+
+        powerCacheCharge = *batteryCharge;
+        powerCacheIsCharging = *isCharging;
+        powerCacheInitialized = true;
+    }
+
+    return hwReadsSucceeded;
+}
+
+void powerInit(void) {
+    uint32_t charge = 0;
+    isCharging = 0;
+
+    powerCacheInitialized = false;
+    powerCacheCharge = 0;
+    powerCacheIsCharging = false;
+
+    if (!powerInitialized) {
+        Result rc = psmInitialize();
+        if (R_SUCCEEDED(rc)) {
+            rc = psmBindStateChangeEvent(&powerSession, 1, 1, 1);
+
+            if (R_FAILED(rc)) psmExit();
+            if (R_SUCCEEDED(rc)) {
+                powerInitialized = true;
+                powerGetDetails(&charge, &isCharging);
+                
+                // Initialize prevBatteryCharge here with a non-zero value if needed.
+                prevBatteryCharge = charge;
+            }
+        }
+    }
+}
+
+
+void powerExit(void) {
+    if (powerInitialized) {
+        psmUnbindStateChangeEvent(&powerSession);
+        psmExit();
+        powerInitialized = false;
+        powerCacheInitialized = false;
+    }
+}
+
+s32 temperature;
+bool thermalstatusInit(void) {
+    return R_SUCCEEDED(tsInitialize());
+}
+
+void thermalstatusExit(void) {
+    tsExit();
+}
+
+bool thermalstatusGetDetails(s32 *temperature) {
+    return R_SUCCEEDED(tsGetTemperature(TsLocation_Internal, temperature));
+}
+
+struct timespec currentTime;
+static const std::string DEFAULT_DT_FORMAT = "'%a %T'";
+static std::string datetimeFormat = removeQuotes(DEFAULT_DT_FORMAT);
 
 
 // CUSTOM SECTION END
@@ -231,7 +478,57 @@ namespace tsl {
 
         constexpr inline Color(u16 raw): rgba(raw) {}
         constexpr inline Color(u8 r, u8 g, u8 b, u8 a): r(r), g(g), b(b), a(a) {}
+        
     };
+    
+    Color GradientColor(float temperature) {
+        // Ensure temperature is within the range [0, 100]
+        temperature = std::max(0.0f, std::min(100.0f, temperature)); // Celsius
+
+        // this is where colors are at their full
+        float blueStart = 35.0f;
+        float greenStart = 45.0f;
+        float yellowStart = 55.0f;
+        float redStart = 65.0f;
+
+        // Initialize RGB values
+        uint8_t r, g, b, a = 0xFF;
+
+        if (temperature < blueStart) { // rgb 7, 7, 15 at blueStart
+            r = 7;
+            g = 7;
+            b = 15;
+        } else if (temperature >= blueStart && temperature < greenStart) {
+            // Smooth color blending from (7 7 15) to (0 15 0)
+            float t = (temperature - blueStart) / (greenStart - blueStart);
+            r = static_cast<uint8_t>(7 - 7 * t);
+            g = static_cast<uint8_t>(7 + 8 * t);
+            b = static_cast<uint8_t>(15 - 15 * t);
+        } else if (temperature >= greenStart && temperature < yellowStart) {
+            // Smooth color blending from (0 15 0) to (15 15 0)
+            float t = (temperature - greenStart) / (yellowStart - greenStart);
+            r = static_cast<uint8_t>(15 * t);
+            g = static_cast<uint8_t>(15);
+            b = static_cast<uint8_t>(0);
+        } else if (temperature >= yellowStart && temperature < redStart) {
+            // Smooth color blending from (15 15 0) to (15 0 0)
+            float t = (temperature - yellowStart) / (redStart - yellowStart);
+            r = static_cast<uint8_t>(15);
+            g = static_cast<uint8_t>(15 - 15 * t);
+            b = static_cast<uint8_t>(0);
+        } else {
+            // Full red
+            r = 15;
+            g = 0;
+            b = 0;
+        }
+
+        return Color(r, g, b, a);
+    }
+
+
+
+
 
     namespace style {
         constexpr u32 ListItemDefaultHeight         = 70;       ///< Standard list item height
@@ -243,7 +540,7 @@ namespace tsl {
             constexpr Color ColorFrameBackground  = { 0x0, 0x0, 0x0, 0xD };   ///< Overlay frame background color
             constexpr Color ColorTransparent      = { 0x0, 0x0, 0x0, 0x0 };   ///< Transparent color
             constexpr Color ColorHighlight        = { 0x0, 0xF, 0xD, 0xF };   ///< Greenish highlight color
-            constexpr Color ColorFrame            = { 0x7, 0x7, 0x7, 0xF };   ///< Outer boarder color
+            constexpr Color ColorFrame            = { 0x7, 0x7, 0x7, 0x7 };   ///< Outer boarder color // CUSTOM MODIFICATION
             constexpr Color ColorHandle           = { 0x5, 0x5, 0x5, 0xF };   ///< Track bar handle color
             constexpr Color ColorText             = { 0xF, 0xF, 0xF, 0xF };   ///< Standard text color
             constexpr Color ColorDescription      = { 0xA, 0xA, 0xA, 0xF };   ///< Description text color
@@ -459,26 +756,43 @@ namespace tsl {
              * @param str String to parse
              * @return Parsed data
              */
-            static IniData parseIni(const std::string &str) {
+            static IniData parseIni(const std::string &str) { // CUSTOM MODIFICATION START
                 IniData iniData;
 
                 auto lines = split(str, '\n');
 
                 std::string lastHeader = "";
                 for (auto& line : lines) {
-                    line.erase(std::remove_if(line.begin(), line.end(), ::isspace), line.end());
+                    if (line.empty())
+                        continue;
 
                     if (line[0] == '[' && line[line.size() - 1] == ']') {
                         lastHeader = line.substr(1, line.size() - 2);
                         iniData.emplace(lastHeader, std::map<std::string, std::string>{});
                     }
-                    else if (auto keyValuePair = split(line, '='); keyValuePair.size() == 2) {
-                        iniData[lastHeader].emplace(keyValuePair[0], keyValuePair[1]);
+                    else {
+                        auto keyValuePair = split(line, '=');
+                        if (keyValuePair.size() == 2) {
+                            std::string key = keyValuePair[0];
+                            std::string value = keyValuePair[1];
+
+                            // Remove leading and trailing spaces
+                            key.erase(key.begin(), std::find_if(key.begin(), key.end(), [](unsigned char ch) {
+                                return !std::isspace(ch);
+                            }));
+                            key.erase(std::find_if(key.rbegin(), key.rend(), [](unsigned char ch) {
+                                return !std::isspace(ch);
+                            }).base(), key.end());
+
+                            // Store the value as is without removing internal spaces
+                            iniData[lastHeader].emplace(key, value);
+                        }
                     }
                 }
 
                 return iniData;
-            }
+            }// CUSTOM MODIFICATION END
+
 
             /**
              * @brief Unparses ini data into a string
@@ -1784,13 +2098,15 @@ namespace tsl {
                     // Draw the first half of the string in white color
                     //renderer->drawString(firstHalf.c_str(), false, x1, y+offset, fontSize, tsl::Color(0xFF, 0xFF, 0xFF, 0xFF));
                     //drawHighlightText(renderer);
-                    
+                    Color highlightColor = {0xF, 0xF, 0xF, 0xF};
+                    float progress;
+                    float letterWidth;
                     for (char letter : firstHalf) {
                         // Calculate the progress for each letter based on the counter
-                        const float progress = calculateAmplitude(counter - x * 0.001F);
+                        progress = calculateAmplitude(counter - x * 0.001F);
                         
                         // Calculate the corresponding highlight color for each letter
-                        Color highlightColor = {
+                        highlightColor = {
                             static_cast<u8>((0xA - 0xF) * (3 - 1.5*progress) + 0xF),
                             static_cast<u8>((0xA - 0xF) * 1.5*progress + 0xF),
                             static_cast<u8>((0xA - 0xF) * (1.25 - progress) + 0xF),
@@ -1801,7 +2117,7 @@ namespace tsl {
                         renderer->drawString(std::string(1, letter).c_str(), false, x, y + offset, fontSize, a(highlightColor));
                         
                         // Manually calculate the width of the current letter
-                        float letterWidth = calculateStringWidth(std::string(1, letter), fontSize);
+                        letterWidth = calculateStringWidth(std::string(1, letter), fontSize);
                         
                         // Adjust the x-coordinate for the next character's position
                         x += letterWidth;
@@ -1815,7 +2131,70 @@ namespace tsl {
                     //int x2 = x1 + (firstHalf.length() * fontSize)/2 -2;
                     
                     // Draw the second half of the string in red color
-                    renderer->drawString(secondHalf.c_str(), false, x, y+offset, fontSize, tsl::Color(0xFF, 0x00, 0x00, 0xFF));
+                    renderer->drawString(secondHalf.c_str(), false, x, y+offset, fontSize, tsl::Color(0xF, 0x0, 0x0, 0xF));
+                    
+                    
+                    // Time drawing implementation
+                    //struct timespec currentTime;
+                    clock_gettime(CLOCK_REALTIME, &currentTime);
+                    
+                    
+                    // Convert the current time to a human-readable string
+                    char timeStr[20]; // Allocate a buffer to store the time string
+                    //strftime(timeStr, sizeof(timeStr), "%r", localtime(&currentTime.tv_sec));
+                    strftime(timeStr, sizeof(timeStr), datetimeFormat.c_str(), localtime(&currentTime.tv_sec));
+                    
+                    
+                    
+                    // Use the 'timeStr' to display the time
+                    renderer->drawString(timeStr, false, tsl::cfg::FramebufferWidth - calculateStringWidth(timeStr, 20) - 20, 44, 20, tsl::Color(0xF, 0xF, 0xF, 0xF));
+                    
+                    //char chargeString[6];  // Need space for the null terminator and the percentage sign
+                    //
+                    //uint32_t batteryCharge;
+                    //bool isCharging;
+                    //bool validPower;
+                    
+                    // check in 1s intervals
+                    if ((currentTime.tv_sec - timeOut) >= 1) {
+                        thermalstatusGetDetails(&temperature);
+                        powerGetDetails(&batteryCharge, &isCharging);
+                        timeOut = int(currentTime.tv_sec);
+                    }
+                    
+                    
+                    char temperatureStr[10];
+                    snprintf(temperatureStr, sizeof(temperatureStr)-1, "%d°C", temperature);
+                    
+                    
+                    batteryCharge = (batteryCharge > 100) ? 100 : batteryCharge;
+                    sprintf(chargeString, "%d%%", batteryCharge);
+
+                    // Convert the C-style string to an std::string
+                    std::string chargeStringStd = chargeString;
+                    std::string temperatureStringSTD = temperatureStr;
+                    // Convert the float to std::string
+                    //std::string powerConsumptionStr = std::to_string(powerConsumption);
+
+                    // Use the '+' operator to concatenate the strings
+                    temperatureStringSTD += "  ";
+
+                    // Use the 'timeStr' to display the time
+                    if (powerCacheIsCharging) {
+                        renderer->drawString(chargeStringStd.c_str(), false, tsl::cfg::FramebufferWidth - calculateStringWidth(chargeStringStd, 20) - 20, 44 + 24, 20, tsl::Color(0x0, 0xF, 0x0, 0xF));
+                        //renderer->drawString(temperatureStringSTD.c_str(), false, tsl::cfg::FramebufferWidth - calculateStringWidth(temperatureStringSTD, 20) - calculateStringWidth(chargeStringStd, 20) - 20, 46 + 24, 20, tsl::Color(0xFF, 0xFF, 0xFF, 0xFF));
+                    } else {
+                        if (batteryCharge <= 20) {
+                            renderer->drawString(chargeStringStd.c_str(), false, tsl::cfg::FramebufferWidth - calculateStringWidth(chargeStringStd, 20) - 20, 44 + 24, 20, tsl::Color(0xF, 0x0, 0x0, 0xF));
+                        } else {
+                            renderer->drawString(chargeStringStd.c_str(), false, tsl::cfg::FramebufferWidth - calculateStringWidth(chargeStringStd, 20) - 20, 44 + 24, 20, tsl::Color(0xF, 0xF, 0xF, 0xF));
+                        }
+                    }
+                    
+                    if (temperature > 0) {
+                        renderer->drawString(temperatureStringSTD.c_str(), false, tsl::cfg::FramebufferWidth - calculateStringWidth(temperatureStringSTD, 20) - calculateStringWidth(chargeStringStd, 20) - 20, 44 + 24, 20, tsl::GradientColor(temperature));
+                    }
+                    
                 } else {
                     static float counter = 0;
                     float x = 20;
@@ -1823,18 +2202,18 @@ namespace tsl {
                     int fontSize = 32;
                     if (this->m_subtitle == "Ultrahand Package") {
                         std::string title = std::string(this->m_title);
-                        auto titleColor = a(Color(0x00, 0xFF, 0x00, 0xFF));
+                        auto titleColor = a(Color(0x0, 0xF, 0x0, 0xF));
                         if (this->m_colorSelection == "" || this->m_colorSelection == "green") {
-                            titleColor = a(Color(0x00, 0xFF, 0x00, 0xFF));
+                            titleColor = a(Color(0x0, 0xF, 0x0, 0xF));
                             renderer->drawString(title.c_str(), false, x, y, fontSize, titleColor);
                         } else if (this->m_colorSelection == "red") {
-                            titleColor = a(Color(0xFF, 0x00, 0x00, 0xFF));
+                            titleColor = a(Color(0xF, 0x0, 0x0, 0xF));
                             renderer->drawString(title.c_str(), false, x, y, fontSize, titleColor);
                         } else if (this->m_colorSelection == "blue") {
-                            titleColor = a(Color(0x00, 0x00, 0xFF, 0xFF));
+                            titleColor = a(Color(0x7, 0x7, 0xF, 0xF));
                             renderer->drawString(title.c_str(), false, x, y, fontSize, titleColor);
                         } else if (this->m_colorSelection == "yellow") {
-                            titleColor = a(Color(0xFF, 0xFF, 0x00, 0xFF));
+                            titleColor = a(Color(0xF, 0xF, 0x0, 0xF));
                             renderer->drawString(title.c_str(), false, x, y, fontSize, titleColor);
                         } else if (this->m_colorSelection == "orange") {
                             titleColor = a(Color(0xFF, 0xA5, 0x00, 0xFF));
@@ -1846,7 +2225,7 @@ namespace tsl {
                             titleColor = a(Color(0x80, 0x00, 0x80, 0xFF));
                             renderer->drawString(title.c_str(), false, x, y, fontSize, titleColor);
                         } else if (this->m_colorSelection == "white") {
-                            titleColor = a(Color(0xFF, 0xFF, 0xFF, 0xFF));
+                            titleColor = a(Color(0xF, 0xF, 0xF, 0xF));
                             renderer->drawString(title.c_str(), false, x, y, fontSize, titleColor);
                         } else if (this->m_colorSelection == "ultra") {
                             for (char letter : title) {
@@ -1909,21 +2288,22 @@ namespace tsl {
                 renderer->drawString(this->m_subtitle.c_str(), false, 20, y+20+offset, 15, a(tsl::style::color::ColorDescription));
                 
                 renderer->drawRect(15, tsl::cfg::FramebufferHeight - 73, tsl::cfg::FramebufferWidth - 30, 1, a(tsl::style::color::ColorText));
-                std::string menuBottomLine = "\uE0E1  Back     \uE0E0  OK     ";
+                
+                std::string menuBottomLine = "\uE0E1"+GAP_2+BACK+GAP_1+"\uE0E0"+GAP_2+OK+GAP_1;
                 if (this->m_menuMode == "packages") {
-                    menuBottomLine += "\uE0ED  Overlays";
+                    menuBottomLine += "\uE0ED"+GAP_2+OVERLAYS;
                 } else if (this->m_menuMode == "overlays") {
-                    menuBottomLine += "\uE0EE  Packages";
+                    menuBottomLine += "\uE0EE"+GAP_2+PACKAGES;
                 }
                 
                 if (!(this->m_pageLeftName).empty()) {
-                    menuBottomLine += "\uE0ED  " + this->m_pageLeftName;
+                    menuBottomLine += "\uE0ED"+GAP_2 + this->m_pageLeftName;
                 } else if (!(this->m_pageRightName).empty()) {
-                    menuBottomLine += "\uE0EE  " + this->m_pageRightName;
+                    menuBottomLine += "\uE0EE"+GAP_2 + this->m_pageRightName;
                 }
                 
                 renderer->drawString(menuBottomLine.c_str(), false, 30, 693, 23, a(tsl::style::color::ColorText));
-
+                
                 if (this->m_contentElement != nullptr)
                     this->m_contentElement->frame(renderer);
             }
@@ -1933,7 +2313,7 @@ namespace tsl {
                 this->setBoundaries(parentX, parentY, parentWidth, parentHeight);
 
                 if (this->m_contentElement != nullptr) {
-                    this->m_contentElement->setBoundaries(parentX + 35, parentY + 125, parentWidth - 85, parentHeight - 73 - 125);
+                    this->m_contentElement->setBoundaries(parentX + 35, parentY + 102, parentWidth - 85, parentHeight - 73 - 105); // CUSTOM MODIFICATION (125->105->102)
                     this->m_contentElement->invalidate();
                 }
             }
@@ -2017,7 +2397,7 @@ namespace tsl {
 
                 renderer->drawRect(15, tsl::cfg::FramebufferHeight - 73, tsl::cfg::FramebufferWidth - 30, 1, a(tsl::style::color::ColorText));
 
-                renderer->drawString("\uE0E1  Back     \uE0E0  OK", false, 30, 693, 23, a(tsl::style::color::ColorText));
+                renderer->drawString(("\uE0E1  "+BACK+"     \uE0E0  "+OK).c_str(), false, 30, 693, 23, a(tsl::style::color::ColorText)); // CUSTOM MODIFICATION
 
                 if (this->m_header != nullptr)
                     this->m_header->frame(renderer);
@@ -2710,8 +3090,8 @@ namespace tsl {
                 renderer->drawRect(this->getX() - 2, this->getBottomBound() - 30, 5, 23, a(tsl::style::color::ColorHeaderBar));
                 renderer->drawString(this->m_text.c_str(), false, this->getX() + 13, this->getBottomBound() - 12, 15, a(tsl::style::color::ColorText));
 
-                if (this->m_hasSeparator)
-                    renderer->drawRect(this->getX(), this->getBottomBound(), this->getWidth(), 1, a(tsl::style::color::ColorFrame));
+                //if (this->m_hasSeparator)
+                //    renderer->drawRect(this->getX(), this->getBottomBound(), this->getWidth(), 1, a(tsl::style::color::ColorFrame)); // CUSTOM MODIFICATION
             }
 
             virtual void layout(u16 parentX, u16 parentY, u16 parentWidth, u16 parentHeight) override {
@@ -2722,8 +3102,11 @@ namespace tsl {
                         return;
                     }
                 }
-
-                this->setBoundaries(this->getX(), this->getY(), this->getWidth(), tsl::style::ListItemDefaultHeight);
+                if (!m_hasSeparator) { // CUSTOM MODIFICATION
+                    this->setBoundaries(this->getX(), this->getY(), this->getWidth(), tsl::style::ListItemDefaultHeight *3/4); // CUSTOM MODIFICATION
+                } else {
+                    this->setBoundaries(this->getX(), this->getY(), this->getWidth(), tsl::style::ListItemDefaultHeight / 2); // CUSTOM MODIFICATION
+                }
             }
 
             virtual bool onClick(u64 keys) {
@@ -3697,6 +4080,15 @@ namespace tsl {
             u64 decodedKeys = hlp::comboStringToKeys(parsedConfig["ultrahand"]["key_combo"]); // CUSTOM MODIFICATION
             if (decodedKeys)
                 tsl::cfg::launchCombo = decodedKeys;
+            
+            
+            
+            datetimeFormat = removeQuotes(parsedConfig["ultrahand"]["datetime_format"]);
+            
+            if (datetimeFormat.empty()) {
+                datetimeFormat = removeQuotes(DEFAULT_DT_FORMAT);
+            }
+            
         }
 
         /**
@@ -3984,6 +4376,7 @@ namespace tsl::cfg {
     u16 FramebufferHeight = 0;
     u64 launchCombo = HidNpadButton_L | HidNpadButton_Down | HidNpadButton_StickR;
 }
+extern "C" void __libnx_init_time(void);
 
 extern "C" {
 
@@ -3998,6 +4391,7 @@ extern "C" {
      */
     void __appInit(void) {
         tsl::hlp::doWithSmSession([]{
+            
             ASSERT_FATAL(fsInitialize());
             ASSERT_FATAL(hidInitialize());                          // Controller inputs and Touch
             if (hosversionAtLeast(16,0,0)) {
@@ -4008,6 +4402,12 @@ extern "C" {
             ASSERT_FATAL(pmdmntInitialize());                       // PID querying
             ASSERT_FATAL(hidsysInitialize());                       // Focus control
             ASSERT_FATAL(setsysInitialize());                       // Settings querying
+            
+            ASSERT_FATAL(timeInitialize()); // CUSTOM MODIFICATION
+            __libnx_init_time();            // CUSTOM MODIFICATION
+            timeExit(); // CUSTOM MODIFICATION
+            powerInit();
+            thermalstatusInit();
         });
     }
 
@@ -4016,6 +4416,8 @@ extern "C" {
      *
      */
     void __appExit(void) {
+        thermalstatusExit();
+        powerExit(); // CUSTOM MODIFICATION
         fsExit();
         hidExit();
         plExit();
