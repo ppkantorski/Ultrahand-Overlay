@@ -347,3 +347,16 @@ std::string cleanVersionLabel(const std::string &input) {
     // Return an empty string if no version number is found
     return input;
 }
+
+
+std::string extractTitle(const std::string& input) {
+    size_t spacePos = input.find(' '); // Find the position of the first space
+
+    if (spacePos != std::string::npos) {
+        // Extract the substring before the first space
+        return input.substr(0, spacePos);
+    } else {
+        // If no space is found, return the original string
+        return input;
+    }
+}
