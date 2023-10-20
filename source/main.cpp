@@ -151,6 +151,7 @@ private:
         {"L+R+DLEFT", "\uE0E4+\uE0E5+\uE0ED"},
         {"L+DDOWN+RS", "\uE0E4+\uE0EC+\uE0C5"}
     };
+    std::vector<std::string> defaultLanguages = {"en", "es", "fr", "de", "ja", "kr", "it", "nl", "pt", "ru", "zh-cn"};
 public:
     /**
      * @brief Constructs a `ScriptOverlay` instance.
@@ -469,14 +470,15 @@ public:
             
             std::string defaulLang = parseValueFromIniSection(settingsConfigIniPath, "ultrahand", "default_lang");
             
-            std::vector<std::string> defaultLanguages = {"en", "es", "fr", "de", "ja", "kr", "it", "nl", "pt", "ru", "zh-cn"};
+            
                
             for (const auto& defaultLangMode : defaultLanguages) {
                 std::string langFile = "/config/ultrahand/lang/"+defaultLangMode+".json";
-                if (!isFileOrDirectory(langFile)) {
-                    if (defaultLangMode != "en"){
+                bool skipLang = (!isFileOrDirectory(langFile));
+                if (defaultLangMode != "en") {
+                    if (skipLang) {
                         continue;
-                    } 
+                    }
                 }
                 tsl::elm::ListItem* listItem = new tsl::elm::ListItem(defaultLangMode);
                 
@@ -485,7 +487,7 @@ public:
                     lastSelectedListItem = listItem;
                 }
                 
-                listItem->setClickListener([this, defaultLangMode, defaulLang, langFile, listItem](uint64_t keys) { // Add 'this', 'i', and 'listItem' to the capture list
+                listItem->setClickListener([this, skipLang, defaultLangMode, defaulLang, langFile, listItem](uint64_t keys) { // Add 'this', 'i', and 'listItem' to the capture list
                     if (keys & KEY_A) {
                         if (defaultLangMode != defaulLang) {
                             setIniFileValue(settingsConfigIniPath, "ultrahand", "default_lang", defaultLangMode);
@@ -493,6 +495,10 @@ public:
                             reloadMenu2 = true;
                             
                             parseLanguage(langFile);
+                            
+                            if (skipLang) {
+                                reinitializeLangVars();
+                            }
                         }
                         
                         lastSelectedListItem->setValue("");
