@@ -146,6 +146,7 @@ static std::string COMMANDS = "Commands";
 static std::string SETTINGS = "Main Settings";
 static std::string MAIN_SETTINGS = "Main Settings";
 static std::string VERSION_SETTINGS = "Version Settings";
+static std::string KEY_COMBO = "Key Combo";
 static std::string LANGUAGE = "Language";
 static std::string ROOT_PACKAGE = "Root Package";
 static std::string SORT_PRIORITY = "Sort Priority";
@@ -223,6 +224,7 @@ void reinitializeLangVars() {
     SETTINGS = "Main Settings";
     MAIN_SETTINGS = "Main Settings";
     VERSION_SETTINGS = "Version Settings";
+    KEY_COMBO = "Key Combo";
     LANGUAGE = "Language";
     ROOT_PACKAGE = "Root Package";
     SORT_PRIORITY = "Sort Priority";
