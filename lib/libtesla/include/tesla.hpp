@@ -133,7 +133,6 @@ json_t* readJsonFromFile2(const std::string& filePath) {
 
 
 
-// Constant string definitions (English)
 static std::string UNAVAILABLE_SELECTION = "Not available";
 static std::string OVERLAYS = "Overlays"; //defined in libTesla now
 static std::string OVERLAY = "Overlay";
@@ -166,7 +165,6 @@ static std::string REBOOT = "Reboot";
 static std::string SHUTDOWN = "Shutdown";
 static std::string GAP_1 = "     ";
 static std::string GAP_2 = "  ";
-
 
 static std::string SUNDAY = "Sunday";
 static std::string MONDAY = "Monday";
@@ -209,6 +207,85 @@ static std::string SEP = "Sep";
 static std::string OCT = "Oct";
 static std::string NOV = "Nov";
 static std::string DEC = "Dec";
+
+// Constant string definitions (English)
+void reinitializeLangVars() {
+    UNAVAILABLE_SELECTION = "Not available";
+    OVERLAYS = "Overlays"; //defined in libTesla now
+    OVERLAY = "Overlay";
+    HIDDEN_OVERLAYS = "Hidden Overlays";
+    PACKAGES = "Packages"; //defined in libTesla now
+    PACKAGE = "Package";
+    HIDDEN_PACKAGES = "Hidden Packages";
+    HIDDEN = "Hidden";
+    HIDE = "Hide";
+    COMMANDS = "Commands";
+    SETTINGS = "Main Settings";
+    MAIN_SETTINGS = "Main Settings";
+    VERSION_SETTINGS = "Version Settings";
+    LANGUAGE = "Language";
+    ROOT_PACKAGE = "Root Package";
+    SORT_PRIORITY = "Sort Priority";
+    FAILED_TO_OPEN = "Failed to open file";
+    CLEAN_LABELS = "Clean Versions";
+    OVERLAY_LABELS = "Overlay Versions";
+    PACKAGE_LABELS = "Package Versions";
+    ON = "On";
+    OFF = "Off";
+    PACKAGE_INFO = "Package Info";
+    VERSION = "Version";
+    CREATOR = "Creator(s)";
+    ABOUT = "About";
+    OK = "OK";
+    BACK = "Back";
+    REBOOT = "Reboot";
+    SHUTDOWN = "Shutdown";
+    GAP_1 = "     ";
+    GAP_2 = "  ";
+    
+    SUNDAY = "Sunday";
+    MONDAY = "Monday";
+    TUESDAY = "Tuesday";
+    WEDNESDAY = "Wednesday";
+    THURSDAY = "Thursday";
+    FRIDAY = "Friday";
+    SATURDAY = "Saturday";
+    
+    JANUARY = "January";
+    FEBRUARY = "February";
+    MARCH = "March";
+    APRIL = "April";
+    MAY = "May";
+    JUNE = "June";
+    JULY = "July";
+    AUGUST = "August";
+    SEPTEMBER = "September";
+    OCTOBER = "October";
+    NOVEMBER = "November";
+    DECEMBER = "December";
+    
+    SUN = "Sun";
+    MON = "Mon";
+    TUE = "Tue";
+    WED = "Wed";
+    THU = "Thu";
+    FRI = "Fri";
+    SAT = "Sat";
+    
+    JAN = "Jan";
+    FEB = "Feb";
+    MAR = "Mar";
+    APR = "Apr";
+    MAY_ABBR = "May";
+    JUN = "Jun";
+    JUL = "Jul";
+    AUG = "Aug";
+    SEP = "Sep";
+    OCT = "Oct";
+    NOV = "Nov";
+    DEC = "Dec";
+}
+
 
 
 // Define the updateIfNotEmpty function
