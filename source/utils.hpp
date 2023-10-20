@@ -314,6 +314,100 @@ bool isDangerousCombination(const std::string& patternPath) {
 
 
 
+/**
+ * @brief Loads and parses options from an INI file.
+ *
+ * This function reads and parses options from an INI file, organizing them by section.
+ *
+ * @param configIniPath The path to the INI file.
+ * @param makeConfig A flag indicating whether to create a config if it doesn't exist.
+ * @return A vector containing pairs of section names and their associated key-value pairs.
+ */
+std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadOptionsFromIni(const std::string& configIniPath, bool makeConfig = false) {
+    std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> options;
+    
+    FILE* configFile = fopen(configIniPath.c_str(), "r");
+    if (!configFile ) {
+        // Write the default INI file
+        FILE* configFileOut = fopen(configIniPath.c_str(), "w");
+        std::string commands;
+        if (makeConfig) {
+            commands = "["+REBOOT+"]\n"
+                       "reboot\n"
+                       "["+SHUTDOWN+"]\n"
+                       "shutdown\n";
+        } else {
+            commands = "";
+        }
+        fprintf(configFileOut, "%s", commands.c_str());
+        
+        
+        fclose(configFileOut);
+        configFile = fopen(configIniPath.c_str(), "r");
+    }
+    
+    constexpr size_t BufferSize = 131072; // Choose a larger buffer size for reading lines
+    char line[BufferSize];
+    std::string currentOption;
+    std::vector<std::vector<std::string>> commands;
+    
+    bool isFirstEntry = true;
+    while (fgets(line, sizeof(line), configFile)) {
+        std::string trimmedLine = line;
+        trimmedLine.erase(trimmedLine.find_last_not_of("\r\n") + 1);  // Remove trailing newline character
+        
+        if (trimmedLine.empty() || trimmedLine[0] == '#') {
+            // Skip empty lines and comment lines
+            continue;
+        } else if (trimmedLine[0] == '[' && trimmedLine.back() == ']') {
+            if (isFirstEntry) { // for preventing header comments from being loaded within the first command section
+                commands.clear();
+                isFirstEntry = false;
+            }
+            
+            // New option section
+            if (!currentOption.empty()) {
+                // Store previous option and its commands
+                options.emplace_back(std::move(currentOption), std::move(commands));
+                commands.clear();
+            }
+            currentOption = trimmedLine.substr(1, trimmedLine.size() - 2);  // Extract option name
+        } else {
+            // Command line
+            std::istringstream iss(trimmedLine);
+            std::vector<std::string> commandParts;
+            std::string part;
+            bool inQuotes = false;
+            while (std::getline(iss, part, '\'')) {
+                if (!part.empty()) {
+                    if (!inQuotes) {
+                        // Outside quotes, split on spaces
+                        std::istringstream argIss(part);
+                        std::string arg;
+                        while (argIss >> arg) {
+                            commandParts.push_back(arg);
+                        }
+                    } else {
+                        // Inside quotes, treat as a whole argument
+                        commandParts.push_back(part);
+                    }
+                }
+                inQuotes = !inQuotes;
+            }
+            commands.push_back(std::move(commandParts));
+        }
+    }
+    
+    // Store the last option and its commands
+    if (!currentOption.empty()) {
+        options.emplace_back(std::move(currentOption), std::move(commands));
+    }
+    
+    fclose(configFile);
+    return options;
+}
+
+
 
 
 /**
@@ -905,5 +999,3 @@ bool interpretAndExecuteCommand(const std::vector<std::vector<std::string>> comm
     }
     return refreshGui;
 }
-
-
