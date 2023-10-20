@@ -2340,7 +2340,7 @@ public:
                 }
                 
                 if (themedSection.count("clock_color") == 0) {
-                    setIniFileValue(themeConfigIniPath, "theme", "clock_color", "#94b0ff");
+                    setIniFileValue(themeConfigIniPath, "theme", "clock_color", "#FFFFFF");
                 }
                 
                 if (themedSection.count("battery_color") == 0) {
@@ -2348,12 +2348,12 @@ public:
                 }
             } else {
                 setIniFileValue(themeConfigIniPath, "theme", "text_color", "#FFFFFF");
-                setIniFileValue(themeConfigIniPath, "theme", "clock_color", "#94b0ff");
+                setIniFileValue(themeConfigIniPath, "theme", "clock_color", "#FFFFFF");
                 setIniFileValue(themeConfigIniPath, "theme", "battery_color", "#FFFFFF");
             }
         } else {
             setIniFileValue(themeConfigIniPath, "theme", "text_color", "#FFFFFF");
-            setIniFileValue(themeConfigIniPath, "theme", "clock_color", "#94b0ff");
+            setIniFileValue(themeConfigIniPath, "theme", "clock_color", "#FFFFFF");
             setIniFileValue(themeConfigIniPath, "theme", "battery_color", "#FFFFFF");
         }
         
