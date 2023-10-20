@@ -2251,7 +2251,8 @@ public:
         }
         
         if (cleanVersionLabels == "true") {
-            versionLabel = APP_VERSION+std::string("   (nx-ovlloader ")+cleanVersionLabel(envGetLoaderInfo())+std::string(")"); // Still needs to parse nx-ovlloader instead of hard coding it
+            auto loaderInfo = envGetLoaderInfo();
+            versionLabel = APP_VERSION+std::string("   (")+ extractTitle(loaderInfo)+" "+cleanVersionLabel(loaderInfo)+std::string(")"); // Still needs to parse nx-ovlloader instead of hard coding it
         } else {
             versionLabel = APP_VERSION+std::string("   (")+envGetLoaderInfo()+std::string(")");
         }
