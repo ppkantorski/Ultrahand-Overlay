@@ -2339,10 +2339,12 @@ namespace tsl {
             std::string m_pageLeftName; // CUSTOM MODIFICATION
             std::string m_pageRightName; // CUSTOM MODIFICATION
             
-            std::string defaultTextColorStr = parseValueFromIniSection("/config/ultrahand/config.ini", "ultrahand", "text_color");
+            std::string defaultTextColorStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "text_color");
             tsl::Color defaultTextColor = RGB888(defaultTextColorStr);
-            std::string clockColorStr = parseValueFromIniSection("/config/ultrahand/config.ini", "ultrahand", "clock_color");
+            std::string clockColorStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "clock_color");
             tsl::Color clockColor = RGB888(clockColorStr);
+            std::string batteryColorStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "battery_color");
+            tsl::Color batteryColor = RGB888(batteryColorStr);
             
             
             OverlayFrame(const std::string& title, const std::string& subtitle, const std::string& menuMode = "", const std::string& colorSelection = "", const std::string& pageLeftName = "", const std::string& pageRightName = "")
@@ -2463,7 +2465,7 @@ namespace tsl {
                         if (batteryCharge <= 20) {
                             renderer->drawString(chargeStringStd.c_str(), false, tsl::cfg::FramebufferWidth - calculateStringWidth(chargeStringStd, 20) - 20, 44 + 24, 20, tsl::Color(0xF, 0x0, 0x0, 0xF));
                         } else {
-                            renderer->drawString(chargeStringStd.c_str(), false, tsl::cfg::FramebufferWidth - calculateStringWidth(chargeStringStd, 20) - 20, 44 + 24, 20, tsl::Color(0xF, 0xF, 0xF, 0xF));
+                            renderer->drawString(chargeStringStd.c_str(), false, tsl::cfg::FramebufferWidth - calculateStringWidth(chargeStringStd, 20) - 20, 44 + 24, 20, batteryColor);
                         }
                     }
                     
@@ -2647,7 +2649,7 @@ namespace tsl {
          */
         class HeaderOverlayFrame : public Element {
         public:
-            std::string defaultTextColorStr = parseValueFromIniSection("/config/ultrahand/config.ini", "ultrahand", "text_color");
+            std::string defaultTextColorStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "text_color");
             tsl::Color defaultTextColor = RGB888(defaultTextColorStr);
             
             HeaderOverlayFrame(u16 headerHeight = 175) : Element(), m_headerHeight(headerHeight) {}
@@ -3098,7 +3100,7 @@ namespace tsl {
          */
         class ListItem : public Element {
         public:
-            std::string defaultTextColorStr = parseValueFromIniSection("/config/ultrahand/config.ini", "ultrahand", "text_color");
+            std::string defaultTextColorStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "text_color");
             tsl::Color defaultTextColor = RGB888(defaultTextColorStr);
             /**
              * @brief Constructor
@@ -3353,7 +3355,7 @@ namespace tsl {
 
         class CategoryHeader : public Element {
         public:
-            std::string defaultTextColorStr = parseValueFromIniSection("/config/ultrahand/config.ini", "ultrahand", "text_color");
+            std::string defaultTextColorStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "text_color");
             tsl::Color defaultTextColor = RGB888(defaultTextColorStr);
             CategoryHeader(const std::string &title, bool hasSeparator = false) : m_text(title), m_hasSeparator(hasSeparator) {}
             virtual ~CategoryHeader() {}
@@ -3408,7 +3410,7 @@ namespace tsl {
          */
         class TrackBar : public Element {
         public:
-            std::string defaultTextColorStr = parseValueFromIniSection("/config/ultrahand/config.ini", "ultrahand", "text_color");
+            std::string defaultTextColorStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "text_color");
             tsl::Color defaultTextColor = RGB888(defaultTextColorStr);
             /**
              * @brief Constructor
