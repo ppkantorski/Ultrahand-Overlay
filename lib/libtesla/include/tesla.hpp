@@ -315,6 +315,7 @@ void parseLanguage(std::string langFile) {
     updateIfNotEmpty(SETTINGS, "SETTINGS", langData);
     updateIfNotEmpty(MAIN_SETTINGS, "MAIN_SETTINGS", langData);
     updateIfNotEmpty(VERSION_SETTINGS, "VERSION_SETTINGS", langData);
+    updateIfNotEmpty(KEY_COMBO, "KEY_COMBO", langData);
     updateIfNotEmpty(LANGUAGE, "LANGUAGE", langData);
     updateIfNotEmpty(ROOT_PACKAGE, "ROOT_PACKAGE", langData);
     updateIfNotEmpty(SORT_PRIORITY, "SORT_PRIORITY", langData);
