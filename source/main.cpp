@@ -2251,7 +2251,7 @@ public:
         }
         
         if (cleanVersionLabels == "true") {
-            versionLabel = APP_VERSION+std::string("   (nx-ovlloader ")+cleanUpVersionLabel(envGetLoaderInfo())+std::string(")"); // Still needs to parse nx-ovlloader instead of hard coding it
+            versionLabel = APP_VERSION+std::string("   (nx-ovlloader ")+cleanVersionLabel(envGetLoaderInfo())+std::string(")"); // Still needs to parse nx-ovlloader instead of hard coding it
         } else {
             versionLabel = APP_VERSION+std::string("   (")+envGetLoaderInfo()+std::string(")");
         }
@@ -2438,7 +2438,7 @@ public:
                     if (isFileOrDirectory(overlayFile)) {
                         listItem = new tsl::elm::ListItem(newOverlayName);
                         if (cleanVersionLabels == "true") {
-                            overlayVersion = cleanUpVersionLabel(overlayVersion);
+                            overlayVersion = cleanVersionLabel(overlayVersion);
                         }
                         if (hideOverlayVersions != "true") {
                             listItem->setValue(overlayVersion, true);
@@ -2638,7 +2638,7 @@ public:
                     
                     listItem = new tsl::elm::ListItem(newPackageName);
                     if (cleanVersionLabels == "true") {
-                        packageHeader.version = cleanUpVersionLabel(packageHeader.version);
+                        packageHeader.version = cleanVersionLabel(packageHeader.version);
                     }
                     if (hidePackageVersions != "true") {
                        listItem->setValue(packageHeader.version, true);
