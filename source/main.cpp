@@ -246,7 +246,7 @@ public:
             //});
             //list->addItem(listItem);
             
-            auto listItem = new tsl::elm::ListItem("Key Combo");
+            auto listItem = new tsl::elm::ListItem(KEY_COMBO);
             listItem->setValue(comboMap[keyCombo]);
             
             // Envolke selectionOverlay in optionMode
