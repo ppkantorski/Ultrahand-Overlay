@@ -430,7 +430,7 @@ public:
         
         } else if (dropdownSelection == "keyComboMenu") {
             
-            list->addItem(new tsl::elm::CategoryHeader("Key Combo"));
+            list->addItem(new tsl::elm::CategoryHeader(KEY_COMBO));
             
             std::string defaultCombo = trim(parseValueFromIniSection(settingsConfigIniPath, "ultrahand", "key_combo"));
             
