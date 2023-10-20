@@ -773,6 +773,28 @@ namespace tsl {
         return Color(r, g, b, a);
     }
 
+    Color RGB888(std::string hexColor) {
+        // Remove the '#' character if it's present
+        if (!hexColor.empty() && hexColor[0] == '#') {
+            hexColor = hexColor.substr(1);
+        }
+        
+        if (isValidHexColor(hexColor)) {
+            std::string r = hexColor.substr(0, 2); // Extract the first two characters (red component)
+            std::string g = hexColor.substr(2, 2); // Extract the next two characters (green component)
+            std::string b = hexColor.substr(4, 2); // Extract the last two characters (blue component)
+            
+            // Convert the RGBA8888 strings to RGBA4444
+            uint8_t redValue = std::stoi(r, nullptr, 16) >> 4;   // Right-shift by 4 bits
+            uint8_t greenValue = std::stoi(g, nullptr, 16) >> 4; // Right-shift by 4 bits
+            uint8_t blueValue = std::stoi(b, nullptr, 16) >> 4;  // Right-shift by 4 bits
+            
+            // Create a Color with the extracted RGB values
+            
+            return Color(redValue, greenValue, blueValue, 15);
+        }
+        return Color(15,15,15,15);
+    }
 
 
 
@@ -2316,6 +2338,13 @@ namespace tsl {
             std::string m_colorSelection; // CUSTOM MODIFICATION
             std::string m_pageLeftName; // CUSTOM MODIFICATION
             std::string m_pageRightName; // CUSTOM MODIFICATION
+            
+            std::string defaultTextColorStr = parseValueFromIniSection("/config/ultrahand/config.ini", "ultrahand", "text_color");
+            tsl::Color defaultTextColor = RGB888(defaultTextColorStr);
+            std::string clockColorStr = parseValueFromIniSection("/config/ultrahand/config.ini", "ultrahand", "clock_color");
+            tsl::Color clockColor = RGB888(clockColorStr);
+            
+            
             OverlayFrame(const std::string& title, const std::string& subtitle, const std::string& menuMode = "", const std::string& colorSelection = "", const std::string& pageLeftName = "", const std::string& pageRightName = "")
                 : Element(), m_menuMode(menuMode), m_title(title), m_subtitle(subtitle), m_colorSelection(colorSelection), m_pageLeftName(pageLeftName), m_pageRightName(pageRightName) {} // CUSTOM MODIFICATION
             
@@ -2394,7 +2423,7 @@ namespace tsl {
                     localizeTimeStr(timeStr); // for language localizations
                     
                     // Use the 'timeStr' to display the time
-                    renderer->drawString(timeStr, false, tsl::cfg::FramebufferWidth - calculateStringWidth(timeStr, 20) - 20, 44, 20, tsl::Color(0xF, 0xF, 0xF, 0xF));
+                    renderer->drawString(timeStr, false, tsl::cfg::FramebufferWidth - calculateStringWidth(timeStr, 20) - 20, 44, 20, clockColor);
                     
                     //char chargeString[6];  // Need space for the null terminator and the percentage sign
                     //
@@ -2503,18 +2532,7 @@ namespace tsl {
                             // Check if m_colorSelection is a valid hexadecimal color
                             std::string hexColor = this->m_colorSelection.substr(1);
                             if (isValidHexColor(hexColor)) {
-                                std::string r = hexColor.substr(0, 2); // Extract the first two characters (red component)
-                                std::string g = hexColor.substr(2, 2); // Extract the next two characters (green component)
-                                std::string b = hexColor.substr(4, 2); // Extract the last two characters (blue component)
-                                
-                                // Convert the RGBA8888 strings to RGBA4444
-                                uint8_t redValue = std::stoi(r, nullptr, 16) >> 4;   // Right-shift by 4 bits
-                                uint8_t greenValue = std::stoi(g, nullptr, 16) >> 4; // Right-shift by 4 bits
-                                uint8_t blueValue = std::stoi(b, nullptr, 16) >> 4;  // Right-shift by 4 bits
-                                
-                                // Create a Color with the extracted RGB values
-                                
-                                titleColor = Color(redValue, greenValue, blueValue, 15);
+                                titleColor = RGB888(hexColor);
                                 renderer->drawString(title.c_str(), false, x, y, fontSize, titleColor);
                             } else {
                                 // Invalid hexadecimal color, handle the error accordingly
@@ -2527,14 +2545,14 @@ namespace tsl {
                     } else if (this->m_subtitle == "Ultrahand Script") {
                         renderer->drawString(this->m_title.c_str(), false, 20, 50, 32, a(Color(0xFF, 0x33, 0x3F, 0xFF)));
                     } else {
-                        renderer->drawString(this->m_title.c_str(), false, 20, 50, 30, a(tsl::style::color::ColorText));
+                        renderer->drawString(this->m_title.c_str(), false, 20, 50, 30, a(defaultTextColor));
                     }
                 }
                 
                 
                 renderer->drawString(this->m_subtitle.c_str(), false, 20, y+20+offset, 15, a(tsl::style::color::ColorDescription));
                 
-                renderer->drawRect(15, tsl::cfg::FramebufferHeight - 73, tsl::cfg::FramebufferWidth - 30, 1, a(tsl::style::color::ColorText));
+                renderer->drawRect(15, tsl::cfg::FramebufferHeight - 73, tsl::cfg::FramebufferWidth - 30, 1, a(defaultTextColor));
                 
                 std::string menuBottomLine = "\uE0E1"+GAP_2+BACK+GAP_1+"\uE0E0"+GAP_2+OK+GAP_1;
                 if (this->m_menuMode == "packages") {
@@ -2549,7 +2567,7 @@ namespace tsl {
                     menuBottomLine += "\uE0EE"+GAP_2 + this->m_pageRightName;
                 }
                 
-                renderer->drawString(menuBottomLine.c_str(), false, 30, 693, 23, a(tsl::style::color::ColorText));
+                renderer->drawString(menuBottomLine.c_str(), false, 30, 693, 23, a(defaultTextColor));
                 
                 if (this->m_contentElement != nullptr)
                     this->m_contentElement->frame(renderer);
@@ -2629,6 +2647,9 @@ namespace tsl {
          */
         class HeaderOverlayFrame : public Element {
         public:
+            std::string defaultTextColorStr = parseValueFromIniSection("/config/ultrahand/config.ini", "ultrahand", "text_color");
+            tsl::Color defaultTextColor = RGB888(defaultTextColorStr);
+            
             HeaderOverlayFrame(u16 headerHeight = 175) : Element(), m_headerHeight(headerHeight) {}
             virtual ~HeaderOverlayFrame() {
                 if (this->m_contentElement != nullptr)
@@ -2642,9 +2663,9 @@ namespace tsl {
                 renderer->fillScreen(a(tsl::style::color::ColorFrameBackground));
                 renderer->drawRect(tsl::cfg::FramebufferWidth - 1, 0, 1, tsl::cfg::FramebufferHeight, a(0xF222));
 
-                renderer->drawRect(15, tsl::cfg::FramebufferHeight - 73, tsl::cfg::FramebufferWidth - 30, 1, a(tsl::style::color::ColorText));
+                renderer->drawRect(15, tsl::cfg::FramebufferHeight - 73, tsl::cfg::FramebufferWidth - 30, 1, a(defaultTextColor));
 
-                renderer->drawString(("\uE0E1  "+BACK+"     \uE0E0  "+OK).c_str(), false, 30, 693, 23, a(tsl::style::color::ColorText)); // CUSTOM MODIFICATION
+                renderer->drawString(("\uE0E1  "+BACK+"     \uE0E0  "+OK).c_str(), false, 30, 693, 23, a(defaultTextColor)); // CUSTOM MODIFICATION
 
                 if (this->m_header != nullptr)
                     this->m_header->frame(renderer);
@@ -3077,6 +3098,8 @@ namespace tsl {
          */
         class ListItem : public Element {
         public:
+            std::string defaultTextColorStr = parseValueFromIniSection("/config/ultrahand/config.ini", "ultrahand", "text_color");
+            tsl::Color defaultTextColor = RGB888(defaultTextColorStr);
             /**
              * @brief Constructor
              *
@@ -3120,7 +3143,7 @@ namespace tsl {
                 if (this->m_trunctuated) {
                     if (this->m_focused) {
                         renderer->enableScissoring(this->getX(), this->getY(), this->m_maxWidth + 40, this->getHeight());
-                        renderer->drawString(this->m_scrollText.c_str(), false, this->getX() + 20 - this->m_scrollOffset, this->getY() + 45, 23, tsl::style::color::ColorText);
+                        renderer->drawString(this->m_scrollText.c_str(), false, this->getX() + 20 - this->m_scrollOffset, this->getY() + 45, 23, defaultTextColor);
                         renderer->disableScissoring();
                         if (this->m_scrollAnimationCounter == 90) {
                             if (this->m_scrollOffset == this->m_textWidth) {
@@ -3133,15 +3156,15 @@ namespace tsl {
                             this->m_scrollAnimationCounter++;
                         }
                     } else {
-                        renderer->drawString(this->m_ellipsisText.c_str(), false, this->getX() + 20, this->getY() + 45, 23, a(tsl::style::color::ColorText));
+                        renderer->drawString(this->m_ellipsisText.c_str(), false, this->getX() + 20, this->getY() + 45, 23, a(defaultTextColor));
                     }
                 } else {
-                    renderer->drawString(this->m_text.c_str(), false, this->getX() + 20, this->getY() + 45, 23, a(tsl::style::color::ColorText));
+                    renderer->drawString(this->m_text.c_str(), false, this->getX() + 20, this->getY() + 45, 23, a(defaultTextColor));
                 }
 
                 // CUSTOM SECTION START (modification for submenu footer color)
                 if (this->m_value == DROPDOWN_SYMBOL || this->m_value == OPTION_SYMBOL) {
-                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45, this->getY() + 45, 20, this->m_faint ? a(tsl::style::color::ColorDescription) : a(tsl::Color(0xFF, 0xFF, 0xFF, 0xFF)));
+                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45, this->getY() + 45, 20, this->m_faint ? a(tsl::style::color::ColorDescription) : a(defaultTextColor));
                 } else {
                     renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45, this->getY() + 45, 20, this->m_faint ? a(tsl::style::color::ColorDescription) : a(tsl::style::color::ColorHighlight));
                 }
@@ -3330,12 +3353,14 @@ namespace tsl {
 
         class CategoryHeader : public Element {
         public:
+            std::string defaultTextColorStr = parseValueFromIniSection("/config/ultrahand/config.ini", "ultrahand", "text_color");
+            tsl::Color defaultTextColor = RGB888(defaultTextColorStr);
             CategoryHeader(const std::string &title, bool hasSeparator = false) : m_text(title), m_hasSeparator(hasSeparator) {}
             virtual ~CategoryHeader() {}
 
             virtual void draw(gfx::Renderer *renderer) override {
-                renderer->drawRect(this->getX() - 2, this->getBottomBound() - 30, 5, 23, a(tsl::style::color::ColorHeaderBar));
-                renderer->drawString(this->m_text.c_str(), false, this->getX() + 13, this->getBottomBound() - 12, 15, a(tsl::style::color::ColorText));
+                renderer->drawRect(this->getX() - 2, this->getBottomBound() - 30, 5, 23, a(defaultTextColor));
+                renderer->drawString(this->m_text.c_str(), false, this->getX() + 13, this->getBottomBound() - 12, 15, a(defaultTextColor));
 
                 //if (this->m_hasSeparator)
                 //    renderer->drawRect(this->getX(), this->getBottomBound(), this->getWidth(), 1, a(tsl::style::color::ColorFrame)); // CUSTOM MODIFICATION
@@ -3383,6 +3408,8 @@ namespace tsl {
          */
         class TrackBar : public Element {
         public:
+            std::string defaultTextColorStr = parseValueFromIniSection("/config/ultrahand/config.ini", "ultrahand", "text_color");
+            tsl::Color defaultTextColor = RGB888(defaultTextColorStr);
             /**
              * @brief Constructor
              *
@@ -3454,7 +3481,7 @@ namespace tsl {
                 renderer->drawRect(this->getX(), this->getY(), this->getWidth(), 1, a(tsl::style::color::ColorFrame));
                 renderer->drawRect(this->getX(), this->getBottomBound(), this->getWidth(), 1, a(tsl::style::color::ColorFrame));
 
-                renderer->drawString(this->m_icon, false, this->getX() + 15, this->getY() + 50, 23, a(tsl::style::color::ColorText));
+                renderer->drawString(this->m_icon, false, this->getX() + 15, this->getY() + 50, 23, a(defaultTextColor));
 
                 u16 handlePos = (this->getWidth() - 95) * static_cast<float>(this->m_value) / 100;
                 renderer->drawCircle(this->getX() + 60, this->getY() + 42, 2, true, a(tsl::style::color::ColorHighlight));
@@ -4329,13 +4356,17 @@ namespace tsl {
                 tsl::cfg::launchCombo = decodedKeys;
             
             
-            
+            // read datetime_format
             datetimeFormat = removeQuotes(parsedConfig["ultrahand"]["datetime_format"]);
             
             if (datetimeFormat.empty()) {
                 datetimeFormat = removeQuotes(DEFAULT_DT_FORMAT);
             }
             
+            //defaultTextColorStr = removeQuotes(parsedConfig["ultrahand"]["text_color"]);
+            //if (defaultTextColorStr.empty()) {
+            //    defaultTextColorStr =  "#FFFFFF";
+            //}
         }
 
         /**
