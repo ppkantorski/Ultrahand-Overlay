@@ -2335,15 +2335,15 @@ public:
             themesData = getParsedDataFromIniFile(themeConfigIniPath);
             if (themesData.count("theme") > 0) {
                 auto& themedSection = themesData["theme"];
-                if (themesData.count("text_color") == 0) {
+                if (themedSection.count("text_color") == 0) {
                     setIniFileValue(themeConfigIniPath, "theme", "text_color", "#FFFFFF");
                 }
                 
-                if (themesData.count("clock_color") == 0) {
+                if (themedSection.count("clock_color") == 0) {
                     setIniFileValue(themeConfigIniPath, "theme", "clock_color", "#94b0ff");
                 }
                 
-                if (themesData.count("battery_color") == 0) {
+                if (themedSection.count("battery_color") == 0) {
                     setIniFileValue(themeConfigIniPath, "theme", "battery_color", "#FFFFFF");
                 }
             } else {
