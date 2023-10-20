@@ -167,41 +167,137 @@ static std::string SHUTDOWN = "Shutdown";
 static std::string GAP_1 = "     ";
 static std::string GAP_2 = "  ";
 
+
+static std::string SUNDAY = "Sunday";
+static std::string MONDAY = "Monday";
+static std::string TUESDAY = "Tuesday";
+static std::string WEDNESDAY = "Wednesday";
+static std::string THURSDAY = "Thursday";
+static std::string FRIDAY = "Friday";
+static std::string SATURDAY = "Saturday";
+
+static std::string JANUARY = "January";
+static std::string FEBRUARY = "February";
+static std::string MARCH = "March";
+static std::string APRIL = "April";
+static std::string MAY = "May";
+static std::string JUNE = "June";
+static std::string JULY = "July";
+static std::string AUGUST = "August";
+static std::string SEPTEMBER = "September";
+static std::string OCTOBER = "October";
+static std::string NOVEMBER = "November";
+static std::string DECEMBER = "December";
+
+static std::string SUN = "Sun";
+static std::string MON = "Mon";
+static std::string TUE = "Tue";
+static std::string WED = "Wed";
+static std::string THU = "Thu";
+static std::string FRI = "Fri";
+static std::string SAT = "Sat";
+
+static std::string JAN = "Jan";
+static std::string FEB = "Feb";
+static std::string MAR = "Mar";
+static std::string APR = "Apr";
+static std::string MAY_ABBR = "May";
+static std::string JUN = "Jun";
+static std::string JUL = "Jul";
+static std::string AUG = "Aug";
+static std::string SEP = "Sep";
+static std::string OCT = "Oct";
+static std::string NOV = "Nov";
+static std::string DEC = "Dec";
+
+
+// Define the updateIfNotEmpty function
+void updateIfNotEmpty(std::string& constant, const char* jsonKey, json_t* jsonData) {
+    std::string newValue = getStringFromJson(jsonData, jsonKey);
+    if (!newValue.empty()) {
+        constant = newValue;
+    }
+}
+
 void parseLanguage(std::string langFile) {
     json_t* langData = readJsonFromFile2(langFile);
     
-    UNAVAILABLE_SELECTION = getStringFromJson(langData, "UNAVAILABLE_SELECTION");
-    OVERLAYS = getStringFromJson(langData,"OVERLAYS");
-    OVERLAY = getStringFromJson(langData,"OVERLAY");
-    HIDDEN_OVERLAYS = getStringFromJson(langData,"HIDDEN_OVERLAYS");
-    PACKAGES = getStringFromJson(langData,"PACKAGES");
-    PACKAGE = getStringFromJson(langData,"PACKAGE");
-    HIDDEN_PACKAGES = getStringFromJson(langData,"HIDDEN_PACKAGES");
-    HIDDEN = getStringFromJson(langData,"HIDDEN");
-    HIDE = getStringFromJson(langData,"HIDE");
-    COMMANDS = getStringFromJson(langData,"COMMANDS");
-    SETTINGS = getStringFromJson(langData,"SETTINGS");
-    MAIN_SETTINGS = getStringFromJson(langData,"MAIN_SETTINGS");
-    VERSION_SETTINGS = getStringFromJson(langData,"VERSION_SETTINGS");
-    LANGUAGE = getStringFromJson(langData,"LANGUAGE");
-    ROOT_PACKAGE = getStringFromJson(langData,"ROOT_PACKAGE");
-    SORT_PRIORITY = getStringFromJson(langData,"SORT_PRIORITY");
-    FAILED_TO_OPEN = getStringFromJson(langData,"FAILED_TO_OPEN");
-    CLEAN_LABELS = getStringFromJson(langData,"CLEAN_LABELS");
-    OVERLAY_LABELS = getStringFromJson(langData,"OVERLAY_LABELS");
-    PACKAGE_LABELS = getStringFromJson(langData,"PACKAGE_LABELS");
-    ON = getStringFromJson(langData,"ON");
-    OFF = getStringFromJson(langData,"OFF");
-    PACKAGE_INFO = getStringFromJson(langData,"PACKAGE_INFO");
-    VERSION = getStringFromJson(langData,"VERSION");
-    CREATOR = getStringFromJson(langData,"CREATOR");
-    ABOUT = getStringFromJson(langData,"ABOUT");
-    OK = getStringFromJson(langData,"OK");
-    BACK = getStringFromJson(langData,"BACK");
-    REBOOT = getStringFromJson(langData,"REBOOT");
-    SHUTDOWN = getStringFromJson(langData,"SHUTDOWN");
-    GAP_1 = getStringFromJson(langData,"GAP_1");
-    GAP_2 = getStringFromJson(langData,"GAP_2");
+    // Use the updateIfNotEmpty function to update global variables
+    updateIfNotEmpty(UNAVAILABLE_SELECTION, "UNAVAILABLE_SELECTION", langData);
+    updateIfNotEmpty(OVERLAYS, "OVERLAYS", langData);
+    updateIfNotEmpty(OVERLAY, "OVERLAY", langData);
+    updateIfNotEmpty(HIDDEN_OVERLAYS, "HIDDEN_OVERLAYS", langData);
+    updateIfNotEmpty(PACKAGES, "PACKAGES", langData);
+    updateIfNotEmpty(PACKAGE, "PACKAGE", langData);
+    updateIfNotEmpty(HIDDEN_PACKAGES, "HIDDEN_PACKAGES", langData);
+    updateIfNotEmpty(HIDDEN, "HIDDEN", langData);
+    updateIfNotEmpty(HIDE, "HIDE", langData);
+    updateIfNotEmpty(COMMANDS, "COMMANDS", langData);
+    updateIfNotEmpty(SETTINGS, "SETTINGS", langData);
+    updateIfNotEmpty(MAIN_SETTINGS, "MAIN_SETTINGS", langData);
+    updateIfNotEmpty(VERSION_SETTINGS, "VERSION_SETTINGS", langData);
+    updateIfNotEmpty(LANGUAGE, "LANGUAGE", langData);
+    updateIfNotEmpty(ROOT_PACKAGE, "ROOT_PACKAGE", langData);
+    updateIfNotEmpty(SORT_PRIORITY, "SORT_PRIORITY", langData);
+    updateIfNotEmpty(FAILED_TO_OPEN, "FAILED_TO_OPEN", langData);
+    updateIfNotEmpty(CLEAN_LABELS, "CLEAN_LABELS", langData);
+    updateIfNotEmpty(OVERLAY_LABELS, "OVERLAY_LABELS", langData);
+    updateIfNotEmpty(PACKAGE_LABELS, "PACKAGE_LABELS", langData);
+    updateIfNotEmpty(ON, "ON", langData);
+    updateIfNotEmpty(OFF, "OFF", langData);
+    updateIfNotEmpty(PACKAGE_INFO, "PACKAGE_INFO", langData);
+    updateIfNotEmpty(VERSION, "VERSION", langData);
+    updateIfNotEmpty(CREATOR, "CREATOR", langData);
+    updateIfNotEmpty(ABOUT, "ABOUT", langData);
+    updateIfNotEmpty(OK, "OK", langData);
+    updateIfNotEmpty(BACK, "BACK", langData);
+    updateIfNotEmpty(REBOOT, "REBOOT", langData);
+    updateIfNotEmpty(SHUTDOWN, "SHUTDOWN", langData);
+    updateIfNotEmpty(GAP_1, "GAP_1", langData);
+    updateIfNotEmpty(GAP_2, "GAP_2", langData);
+    
+    // Day and Month names
+    updateIfNotEmpty(SUNDAY, "SUNDAY", langData);
+    updateIfNotEmpty(MONDAY, "MONDAY", langData);
+    updateIfNotEmpty(TUESDAY, "TUESDAY", langData);
+    updateIfNotEmpty(WEDNESDAY, "WEDNESDAY", langData);
+    updateIfNotEmpty(THURSDAY, "THURSDAY", langData);
+    updateIfNotEmpty(FRIDAY, "FRIDAY", langData);
+    updateIfNotEmpty(SATURDAY, "SATURDAY", langData);
+
+    updateIfNotEmpty(JANUARY, "JANUARY", langData);
+    updateIfNotEmpty(FEBRUARY, "FEBRUARY", langData);
+    updateIfNotEmpty(MARCH, "MARCH", langData);
+    updateIfNotEmpty(APRIL, "APRIL", langData);
+    updateIfNotEmpty(MAY, "MAY", langData);
+    updateIfNotEmpty(JUNE, "JUNE", langData);
+    updateIfNotEmpty(JULY, "JULY", langData);
+    updateIfNotEmpty(AUGUST, "AUGUST", langData);
+    updateIfNotEmpty(SEPTEMBER, "SEPTEMBER", langData);
+    updateIfNotEmpty(OCTOBER, "OCTOBER", langData);
+    updateIfNotEmpty(NOVEMBER, "NOVEMBER", langData);
+    updateIfNotEmpty(DECEMBER, "DECEMBER", langData);
+
+    updateIfNotEmpty(SUN, "SUN", langData);
+    updateIfNotEmpty(MON, "MON", langData);
+    updateIfNotEmpty(TUE, "TUE", langData);
+    updateIfNotEmpty(WED, "WED", langData);
+    updateIfNotEmpty(THU, "THU", langData);
+    updateIfNotEmpty(FRI, "FRI", langData);
+    updateIfNotEmpty(SAT, "SAT", langData);
+
+    updateIfNotEmpty(JAN, "JAN", langData);
+    updateIfNotEmpty(FEB, "FEB", langData);
+    updateIfNotEmpty(MAR, "MAR", langData);
+    updateIfNotEmpty(APR, "APR", langData);
+    updateIfNotEmpty(MAY_ABBR, "MAY_ABBR", langData);
+    updateIfNotEmpty(JUN, "JUN", langData);
+    updateIfNotEmpty(JUL, "JUL", langData);
+    updateIfNotEmpty(AUG, "AUG", langData);
+    updateIfNotEmpty(SEP, "SEP", langData);
+    updateIfNotEmpty(OCT, "OCT", langData);
+    updateIfNotEmpty(NOV, "NOV", langData);
+    updateIfNotEmpty(DEC, "DEC", langData);
     
     // Free langData
     if (langData != nullptr) {
@@ -209,6 +305,78 @@ void parseLanguage(std::string langFile) {
         langData = nullptr;
     }
 }
+
+
+void localizeTimeStr(char* timeStr) {
+    // Define mappings for day and month names
+    std::vector<std::pair<std::string, std::string>> dayMappings = {
+        {"Sun", SUN},
+        {"Mon", MON},
+        {"Tue", TUE},
+        {"Wed", WED},
+        {"Thu", THU},
+        {"Fri", FRI},
+        {"Sat", SAT},
+        {"Sunday", SUNDAY},
+        {"Monday", MONDAY},
+        {"Tuesday", TUESDAY},
+        {"Wednesday", WEDNESDAY},
+        {"Thursday", THURSDAY},
+        {"Friday", FRIDAY},
+        {"Saturday", SATURDAY}
+    };
+
+    std::vector<std::pair<std::string, std::string>> monthMappings = {
+        {"Jan", JAN},
+        {"Feb", FEB},
+        {"Mar", MAR},
+        {"Apr", APR},
+        {"May", MAY_ABBR},
+        {"Jun", JUN},
+        {"Jul", JUL},
+        {"Aug", AUG},
+        {"Sep", SEP},
+        {"Oct", OCT},
+        {"Nov", NOV},
+        {"Dec", DEC},
+        {"January", JANUARY},
+        {"February", FEBRUARY},
+        {"March", MARCH},
+        {"April", APRIL},
+        {"May", MAY},
+        {"June", JUNE},
+        {"July", JULY},
+        {"August", AUGUST},
+        {"September", SEPTEMBER},
+        {"October", OCTOBER},
+        {"November", NOVEMBER},
+        {"December", DECEMBER}
+    };
+
+    std::string timeStrCopy = timeStr; // Convert the char array to a string for processing
+
+    // Replace abbreviated day names with their all-capital versions
+    for (const auto &dayMapping : dayMappings) {
+        size_t pos = timeStrCopy.find(dayMapping.first);
+        while (pos != std::string::npos) {
+            timeStrCopy.replace(pos, dayMapping.first.length(), dayMapping.second);
+            pos = timeStrCopy.find(dayMapping.first, pos + dayMapping.second.length());
+        }
+    }
+
+    // Replace abbreviated month names with their all-capital versions
+    for (const auto &monthMapping : monthMappings) {
+        size_t pos = timeStrCopy.find(monthMapping.first);
+        while (pos != std::string::npos) {
+            timeStrCopy.replace(pos, monthMapping.first.length(), monthMapping.second);
+            pos = timeStrCopy.find(monthMapping.first, pos + monthMapping.second.length());
+        }
+    }
+
+    // Copy the modified string back to the character array
+    strcpy(timeStr, timeStrCopy.c_str());
+}
+
 
 
 
@@ -2144,7 +2312,7 @@ namespace tsl {
                     //strftime(timeStr, sizeof(timeStr), "%r", localtime(&currentTime.tv_sec));
                     strftime(timeStr, sizeof(timeStr), datetimeFormat.c_str(), localtime(&currentTime.tv_sec));
                     
-                    
+                    localizeTimeStr(timeStr); // for language localizations
                     
                     // Use the 'timeStr' to display the time
                     renderer->drawString(timeStr, false, tsl::cfg::FramebufferWidth - calculateStringWidth(timeStr, 20) - 20, 44, 20, tsl::Color(0xF, 0xF, 0xF, 0xF));
