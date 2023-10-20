@@ -69,7 +69,7 @@ static bool freshSpawn = true;
 static bool refreshGui = false;
 static bool reloadMenu = false;
 static bool reloadMenu2 = false;
-
+static bool reloadMenu3 = false;
 
 static tsl::elm::OverlayFrame *rootFrame = nullptr;
 static tsl::elm::List *list = nullptr;
@@ -139,6 +139,7 @@ private:
     bool isInSection, inQuotes, isFromMainMenu;
     int MAX_PRIORITY = 20;
     
+    std::vector<std::string> defaultCombos = {"ZL+ZR+DDOWN", "ZL+ZR+DRIGHT", "ZL+ZR+DUP", "ZL+ZR+DLEFT", "L+R+DDOWN", "L+R+DRIGHT", "L+R+DUP", "L+R+DLEFT", "L+DDOWN+RS"};
     std::unordered_map<std::string, std::string> comboMap = {
         {"ZL+ZR+DDOWN", "\uE0E6+\uE0E7+\uE0EC"},
         {"ZL+ZR+DRIGHT", "\uE0E6+\uE0E7+\uE0EE"},
@@ -284,8 +285,16 @@ public:
             toggleListItem->setStateChangedListener([this, cleanVersionLabels, toggleListItem](bool state) {
                 setIniFileValue(settingsConfigIniPath, "ultrahand", "clean_version_labels", state ? "true" : "false");
                 if ((cleanVersionLabels == "true") != state) {
+                    reloadMenu3 = true;
                     reloadMenu = true;
+                    if (cleanVersionLabels == "false") {
+                        auto loaderInfo = envGetLoaderInfo();
+                        versionLabel = APP_VERSION+std::string("   (")+ extractTitle(loaderInfo)+" "+cleanVersionLabel(loaderInfo)+std::string(")"); // Still needs to parse nx-ovlloader instead of hard coding it
+                    } else {
+                        versionLabel = APP_VERSION+std::string("   (")+envGetLoaderInfo()+std::string(")");
+                    }
                 }
+                
             });
             list->addItem(toggleListItem);
             
@@ -424,8 +433,6 @@ public:
             
             std::string defaultCombo = trim(parseValueFromIniSection(settingsConfigIniPath, "ultrahand", "key_combo"));
             
-            std::vector<std::string> defaultCombos = {"ZL+ZR+DDOWN", "ZL+ZR+DRIGHT", "ZL+ZR+DUP", "ZL+ZR+DLEFT", "L+R+DDOWN", "L+R+DRIGHT", "L+R+DUP", "L+R+DLEFT", "L+DDOWN+RS"};
-            
             
             for (const auto& combo : defaultCombos) {
                 
@@ -463,9 +470,14 @@ public:
             std::string defaulLang = parseValueFromIniSection(settingsConfigIniPath, "ultrahand", "default_lang");
             
             std::vector<std::string> defaultLanguages = {"en", "es", "fr", "de", "ja", "kr", "it", "nl", "pt", "ru", "zh-cn"};
-            
+               
             for (const auto& defaultLangMode : defaultLanguages) {
-                
+                std::string langFile = "/config/ultrahand/lang/"+defaultLangMode+".json";
+                if (!isFileOrDirectory(langFile)) {
+                    if (defaultLangMode != "en"){
+                        continue;
+                    } 
+                }
                 tsl::elm::ListItem* listItem = new tsl::elm::ListItem(defaultLangMode);
                 
                 if (defaultLangMode == defaulLang) {
@@ -473,13 +485,13 @@ public:
                     lastSelectedListItem = listItem;
                 }
                 
-                listItem->setClickListener([this, defaultLangMode, defaulLang, listItem](uint64_t keys) { // Add 'this', 'i', and 'listItem' to the capture list
+                listItem->setClickListener([this, defaultLangMode, defaulLang, langFile, listItem](uint64_t keys) { // Add 'this', 'i', and 'listItem' to the capture list
                     if (keys & KEY_A) {
                         if (defaultLangMode != defaulLang) {
                             setIniFileValue(settingsConfigIniPath, "ultrahand", "default_lang", defaultLangMode);
                             reloadMenu = true;
                             reloadMenu2 = true;
-                            std::string langFile = "/config/ultrahand/lang/"+defaultLangMode+".json";
+                            
                             parseLanguage(langFile);
                         }
                         
@@ -522,6 +534,12 @@ public:
     virtual bool handleInput(u64 keysDown, u64 keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
         if (inSettingsMenu && !inSubSettingsMenu) {
             if (!returningToSettings) {
+                if (reloadMenu3) {
+                    tsl::goBack();
+                    tsl::changeTo<UltrahandSettingsMenu>();
+                    reloadMenu3 = false;
+                }
+                
                 if (keysHeld & KEY_B) {
                     //tsl::Overlay::get()->close();
                     //svcSleepThread(300'000'000);
