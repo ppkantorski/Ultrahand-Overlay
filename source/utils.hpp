@@ -110,6 +110,7 @@ const std::string packageFileName = "package.ini";
 const std::string configFileName = "config.ini";
 const std::string settingsPath = "sdmc:/config/ultrahand/";
 const std::string settingsConfigIniPath = settingsPath + configFileName;
+const std::string themeConfigIniPath = settingsPath + "theme.ini";
 const std::string packageDirectory = "sdmc:/switch/.packages/";
 const std::string overlayDirectory = "sdmc:/switch/.overlays/";
 const std::string teslaSettingsConfigIniPath = "sdmc:/config/tesla/"+configFileName;
