@@ -14,7 +14,7 @@
 
 #pragma once
 #include <cstdio>
-#include <time.h>
+#include <switch.h>
 
 // Specify the log file path
 const std::string logFilePath = "sdmc:/config/ultrahand/log.txt";
