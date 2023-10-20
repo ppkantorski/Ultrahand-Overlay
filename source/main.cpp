@@ -2213,7 +2213,7 @@ public:
  */
 class MainMenu : public tsl::Gui {
 private:
-    tsl::hlp::ini::IniData settingsData, packageConfigData;
+    tsl::hlp::ini::IniData settingsData, themesData, packageConfigData;
     std::string packageIniPath = packageDirectory + packageFileName;
     std::string packageConfigIniPath = packageDirectory + configFileName;
     std::string menuMode, defaultMenuMode, inOverlayString, fullPath, optionName, hideOverlayVersions, hidePackageVersions, cleanVersionLabels, priority, starred, hide;
@@ -2307,13 +2307,6 @@ public:
                     setIniFileValue(settingsConfigIniPath, "ultrahand", "datetime_format", DEFAULT_DT_FORMAT);
                 }
                 
-                if (ultrahandSection.count("text_color") == 0) {
-                    setIniFileValue(settingsConfigIniPath, "ultrahand", "text_color", "#FFFFFF");
-                }
-                
-                if (ultrahandSection.count("clock_color") == 0) {
-                    setIniFileValue(settingsConfigIniPath, "ultrahand", "clock_color", "#FFFFFF");
-                }
                 
                 //if (ultrahandSection.count("in_overlay") > 0) {
                 //    inOverlayString = ultrahandSection["in_overlay"];
@@ -2336,6 +2329,34 @@ public:
         if (isFileOrDirectory(langFile)) {
             parseLanguage(langFile);
         }
+        
+        // write default theme
+        if (isFileOrDirectory(themeConfigIniPath)) {
+            themesData = getParsedDataFromIniFile(themeConfigIniPath);
+            if (themesData.count("theme") > 0) {
+                auto& themedSection = themesData["theme"];
+                if (themesData.count("text_color") == 0) {
+                    setIniFileValue(themeConfigIniPath, "theme", "text_color", "#FFFFFF");
+                }
+                
+                if (themesData.count("clock_color") == 0) {
+                    setIniFileValue(themeConfigIniPath, "theme", "clock_color", "#94b0ff");
+                }
+                
+                if (themesData.count("battery_color") == 0) {
+                    setIniFileValue(themeConfigIniPath, "theme", "battery_color", "#FFFFFF");
+                }
+            } else {
+                setIniFileValue(themeConfigIniPath, "theme", "text_color", "#FFFFFF");
+                setIniFileValue(themeConfigIniPath, "theme", "clock_color", "#94b0ff");
+                setIniFileValue(themeConfigIniPath, "theme", "battery_color", "#FFFFFF");
+            }
+        } else {
+            setIniFileValue(themeConfigIniPath, "theme", "text_color", "#FFFFFF");
+            setIniFileValue(themeConfigIniPath, "theme", "clock_color", "#94b0ff");
+            setIniFileValue(themeConfigIniPath, "theme", "battery_color", "#FFFFFF");
+        }
+        
         
         //setIniFileValue(settingsConfigIniPath, "ultrahand", "in_overlay", "false");
         
