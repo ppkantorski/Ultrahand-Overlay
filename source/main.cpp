@@ -2307,6 +2307,14 @@ public:
                     setIniFileValue(settingsConfigIniPath, "ultrahand", "datetime_format", DEFAULT_DT_FORMAT);
                 }
                 
+                if (ultrahandSection.count("text_color") == 0) {
+                    setIniFileValue(settingsConfigIniPath, "ultrahand", "text_color", "#FFFFFF");
+                }
+                
+                if (ultrahandSection.count("clock_color") == 0) {
+                    setIniFileValue(settingsConfigIniPath, "ultrahand", "clock_color", "#FFFFFF");
+                }
+                
                 //if (ultrahandSection.count("in_overlay") > 0) {
                 //    inOverlayString = ultrahandSection["in_overlay"];
                 //    if (inOverlayString == "true") {
