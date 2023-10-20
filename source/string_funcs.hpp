@@ -334,7 +334,7 @@ std::string removeTag(const std::string &input) {
 
 
 // This will take a string like "v1.3.5-abasdfasdfa" and output "1.3.5". string could also look like "test-1.3.5-1" or "v1.3.5" and we will only want "1.3.5"
-std::string cleanUpVersionLabel(const std::string &input) {
+std::string cleanVersionLabel(const std::string &input) {
     std::regex versionRegex(R"([v-]?(\d+\.\d+\.\d+))");
     std::smatch match;
 
