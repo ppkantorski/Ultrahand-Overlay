@@ -67,7 +67,8 @@
 #include "../../../source/string_funcs.hpp"
 #include "../../../source/ini_funcs.hpp"
 
-
+// For improving the speed of hexing consecutively with the same file and asciiPattern.
+//static std::unordered_map<std::string, std::string> hexSumCache;
 
 
 // Pre-defined symbols
@@ -315,6 +316,7 @@ void parseLanguage(std::string langFile) {
     updateIfNotEmpty(SETTINGS, "SETTINGS", langData);
     updateIfNotEmpty(MAIN_SETTINGS, "MAIN_SETTINGS", langData);
     updateIfNotEmpty(VERSION_SETTINGS, "VERSION_SETTINGS", langData);
+    updateIfNotEmpty(KEY_COMBO, "KEY_COMBO", langData);
     updateIfNotEmpty(LANGUAGE, "LANGUAGE", langData);
     updateIfNotEmpty(ROOT_PACKAGE, "ROOT_PACKAGE", langData);
     updateIfNotEmpty(SORT_PRIORITY, "SORT_PRIORITY", langData);
@@ -2281,6 +2283,9 @@ namespace tsl {
             for (char letter : str) {
                 // Lookup the width of the current character
                 float letterWidth = characterWidths[letter];
+                if (letterWidth == 0) {
+                    letterWidth = 0.33;
+                }
                 
                 // Accumulate the width
                 totalWidth += letterWidth;
@@ -2551,7 +2556,7 @@ namespace tsl {
                     }
                 }
                 
-                
+                //if (this->m_title != "Ultrahand")
                 renderer->drawString(this->m_subtitle.c_str(), false, 20, y+20+offset, 15, a(tsl::style::color::ColorDescription));
                 
                 renderer->drawRect(15, tsl::cfg::FramebufferHeight - 73, tsl::cfg::FramebufferWidth - 30, 1, a(defaultTextColor));

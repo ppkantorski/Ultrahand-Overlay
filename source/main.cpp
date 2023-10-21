@@ -246,7 +246,7 @@ public:
             //});
             //list->addItem(listItem);
             
-            auto listItem = new tsl::elm::ListItem("Key Combo");
+            auto listItem = new tsl::elm::ListItem(KEY_COMBO);
             listItem->setValue(comboMap[keyCombo]);
             
             // Envolke selectionOverlay in optionMode
@@ -489,17 +489,17 @@ public:
                 
                 listItem->setClickListener([this, skipLang, defaultLangMode, defaulLang, langFile, listItem](uint64_t keys) { // Add 'this', 'i', and 'listItem' to the capture list
                     if (keys & KEY_A) {
-                        if (defaultLangMode != defaulLang) {
-                            setIniFileValue(settingsConfigIniPath, "ultrahand", "default_lang", defaultLangMode);
-                            reloadMenu = true;
-                            reloadMenu2 = true;
-                            
-                            parseLanguage(langFile);
-                            
-                            if (skipLang) {
-                                reinitializeLangVars();
-                            }
+                        //if (defaultLangMode != defaulLang) {
+                        setIniFileValue(settingsConfigIniPath, "ultrahand", "default_lang", defaultLangMode);
+                        reloadMenu = true;
+                        reloadMenu2 = true;
+                        
+                        parseLanguage(langFile);
+                        
+                        if (skipLang) {
+                            reinitializeLangVars();
                         }
+                        //}
                         
                         lastSelectedListItem->setValue("");
                         selectedListItem->setValue(defaultLangMode);
