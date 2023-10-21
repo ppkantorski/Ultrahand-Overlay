@@ -68,7 +68,7 @@
 #include "../../../source/ini_funcs.hpp"
 
 // For improving the speed of hexing consecutively with the same file and asciiPattern.
-//static std::unordered_map<std::string, std::string> hexSumCache;
+static std::unordered_map<std::string, std::string> hexSumCache;
 
 
 // Pre-defined symbols
