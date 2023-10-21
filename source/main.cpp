@@ -27,8 +27,14 @@
 #define NDEBUG
 #define STBTT_STATIC
 #define TESLA_INIT_IMPL
+
+
+
 #include <tesla.hpp>
 #include <utils.hpp>
+
+
+
 
 // Define external functions and variables
 extern void logMessage(const std::string& message);
@@ -45,7 +51,7 @@ extern std::string dropExtension(const std::string& fileName);
 extern std::string preprocessPath(const std::string& path);
 extern std::vector<std::string> getFilesListByWildcards(const std::string& pathPattern);
 extern std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std::vector<std::string>> commands, const std::string& entry, size_t entryIndex);
-extern bool interpretAndExecuteCommand(const std::vector<std::vector<std::string>> commands, const std::string packagePath, const std::string keyName);
+extern bool interpretAndExecuteCommand(std::vector<std::vector<std::string>>& commands, const std::string packagePath, const std::string keyName);
 
 
 
@@ -2163,6 +2169,8 @@ public:
                 //tsl::goBack();
                 inPackageMenu = false;
                 returningToMain = true;
+                tsl::goBack();
+                tsl::goBack();
                 tsl::changeTo<MainMenu>();
                 
                 //tsl::Overlay::get()->close();
