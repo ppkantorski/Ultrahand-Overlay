@@ -291,7 +291,8 @@ std::vector<std::string> parseSectionsFromIni(const std::string& filePath) {
         return sections; // Return an empty list if the file cannot be opened
     }
     
-    char line[4096];
+    constexpr size_t BufferSize = 131072;
+    char line[BufferSize];
     while (fgets(line, sizeof(line), file)) {
         std::string trimmedLine = trim(std::string(line));
         
@@ -317,7 +318,8 @@ std::string parseValueFromIniSection(const std::string& filePath, const std::str
     }
     
     std::string currentSection = "";
-    char line[4096];
+    constexpr size_t BufferSize = 131072;
+    char line[BufferSize];
     
     while (fgets(line, sizeof(line), file)) {
         std::string trimmedLine = trim(std::string(line));
@@ -341,6 +343,45 @@ std::string parseValueFromIniSection(const std::string& filePath, const std::str
     }
     
     fclose(file);
+    
+    return value;
+}
+
+
+std::string parseValueFromIniSectionF(FILE*& file, const std::string& filePath, const std::string& sectionName, const std::string& keyName) {
+    std::string value = "";
+    
+    //FILE* file = fopen(filePath.c_str(), "r");
+    if (file == nullptr) {
+        return value; // Return an empty string if the file cannot be opened
+    }
+    
+    std::string currentSection = "";
+    constexpr size_t BufferSize = 131072;
+    char line[BufferSize];
+    
+    while (fgets(line, sizeof(line), file)) {
+        std::string trimmedLine = trim(std::string(line));
+        
+        if (!trimmedLine.empty()) {
+            if (trimmedLine[0] == '[' && trimmedLine.back() == ']') {
+                // This line is a section header
+                currentSection = trimmedLine.substr(1, trimmedLine.size() - 2);
+            } else if (currentSection == sectionName) {
+                // Check if the line is within the desired section and contains the desired key
+                size_t delimiterPos = trimmedLine.find('=');
+                if (delimiterPos != std::string::npos) {
+                    std::string currentKey = trim(trimmedLine.substr(0, delimiterPos));
+                    if (currentKey == keyName) {
+                        value = trim(trimmedLine.substr(delimiterPos + 1));
+                        break; // Found the key, exit the loop
+                    }
+                }
+            }
+        }
+    }
+    
+    //fclose(file);
     
     return value;
 }
@@ -437,10 +478,11 @@ void setIniFile(const std::string& fileToEdit, const std::string& desiredSection
     std::string tempPath = fileToEdit + ".tmp";
     FILE* tempFile = fopen(tempPath.c_str(), "w");
     
+    
     if (tempFile) {
         std::string currentSection;
         std::string formattedDesiredValue = desiredValue;
-        constexpr size_t BufferSize = 4096;
+        constexpr size_t BufferSize = 131072;
         char line[BufferSize];
         bool sectionFound = false;
         //bool sectionOutOfBounds = false;
@@ -530,7 +572,7 @@ void setIniFile(const std::string& fileToEdit, const std::string& desiredSection
  */
 void setIniFileValue(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredValue) {
     setIniFile(fileToEdit, desiredSection, desiredKey, desiredValue, "");
-    cleanIniFormatting(fileToEdit);
+    //cleanIniFormatting(fileToEdit);
 }
 
 /**
@@ -547,7 +589,7 @@ void setIniFileValue(const std::string& fileToEdit, const std::string& desiredSe
  */
 void setIniFileKey(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredNewKey) {
     setIniFile(fileToEdit, desiredSection, desiredKey, "", desiredNewKey);
-    cleanIniFormatting(fileToEdit);
+    //cleanIniFormatting(fileToEdit);
 }
 
 
@@ -582,7 +624,7 @@ void addIniSection(const char* filePath, const char* sectionName) {
         return;
     }
     
-    constexpr size_t BufferSize = 4096;
+    constexpr size_t BufferSize = 131072;
     char line[BufferSize];
     bool sectionExists = false;
     while (fgets(line, sizeof(line), inputFile)) {
@@ -646,7 +688,7 @@ void renameIniSection(const std::string& filePath, const std::string& currentSec
     
     std::string currentSection;
     bool renaming = false;
-    constexpr size_t BufferSize = 4096;
+    constexpr size_t BufferSize = 131072;
     char line[BufferSize];
     
     while (fgets(line, sizeof(line), configFile)) {
@@ -721,7 +763,7 @@ void removeIniSection(const std::string& filePath, const std::string& sectionNam
     
     std::string currentSection;
     bool removing = false;
-    constexpr size_t BufferSize = 4096;
+    constexpr size_t BufferSize = 131072;
     char line[BufferSize];
     
     while (fgets(line, sizeof(line), configFile)) {

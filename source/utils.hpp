@@ -471,6 +471,46 @@ std::string replaceIniPlaceholder(const std::string& arg, const std::string& ini
     return replacement;
 }
 
+// `{hex_file(customAsciiPattern, offsetStr, length)}`
+std::string replaceIniPlaceholderF(const std::string& arg, const std::string& iniPath, FILE*& file) {
+    std::string replacement = arg;
+    std::string searchString = "{ini_file(";
+    
+    std::size_t startPos = replacement.find(searchString);
+    std::size_t endPos = replacement.find(")}");
+    
+    if (startPos != std::string::npos && endPos != std::string::npos && endPos > startPos) {
+        std::string placeholderContent = replacement.substr(startPos + searchString.length(), endPos - startPos - searchString.length());
+        
+        // Split the placeholder content into its components (customAsciiPattern, offsetStr, length)
+        std::vector<std::string> components;
+        std::istringstream componentStream(placeholderContent);
+        std::string component;
+        
+        while (std::getline(componentStream, component, ',')) {
+            components.push_back(trim(component));
+        }
+        
+        if (components.size() == 2) {
+            // Extract individual components
+            std::string iniSection = removeQuotes(components[0]);
+            std::string iniKey = removeQuotes(components[1]);
+            
+            // Call the parsing function and replace the placeholder
+            std::string parsedResult = parseValueFromIniSectionF(file, iniPath, iniSection, iniKey);
+            
+            //std::string parsedResult = customAsciiPattern+offsetStr;
+            
+            // Replace the entire placeholder with the parsed result
+            replacement.replace(startPos, endPos - startPos + searchString.length() + 2, parsedResult);
+        }
+    }
+    
+    return replacement;
+}
+
+
+
 
 // this will modify `commands`
 std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std::vector<std::string>> commands, const std::string& entry, size_t entryIndex) {
@@ -590,7 +630,14 @@ bool interpretAndExecuteCommand(std::vector<std::vector<std::string>>& commands,
     //std::vector<std::string> command;
     std::string replacement;
     
+
+    
     FILE* hexFile = nullptr;
+    FILE* iniFile = nullptr;
+    json_t* jsonData1 = nullptr;
+    json_t* jsonData2 = nullptr;
+    json_error_t error;
+    
     for (auto& cmd : commands) {
         if (cmd.empty()) {
             // Empty command, do nothing
@@ -602,11 +649,33 @@ bool interpretAndExecuteCommand(std::vector<std::vector<std::string>>& commands,
         // Process {hex_file(...)} placeholders
         for (auto& arg : cmd) {
             // Check for hex_file command and set hexPath
-            if (commandName == "hex_file") {
+            if (commandName == "ini_file") {
+                iniPath = preprocessPath(cmd[1]);
+                
+                iniFile = fopen(iniPath.c_str(), "rwb");
+            } else if (commandName == "hex_file") { // Check for hex_file command and set hexPath
                 hexPath = preprocessPath(cmd[1]);
                 
                 hexFile = fopen(hexPath.c_str(), "rb");
+                
+            } else if (commandName == "json") {
+                jsonString = cmd[1];
+                jsonData1 = stringToJson(jsonString);
+            } else if (commandName == "json_file") {
+                jsonPath = preprocessPath(cmd[1]);
+                jsonData2 = json_load_file(jsonPath.c_str(), 0, &error);
             }
+            
+            if ((!iniPath.empty() && (arg.find("{ini_file(") != std::string::npos))) {
+                size_t startPos = arg.find("{ini_file(");
+                size_t endPos = arg.find(")}");
+                if (endPos != std::string::npos && endPos > startPos) {
+                    replacement = replaceIniPlaceholderF(arg.substr(startPos, endPos - startPos + 2), iniPath, iniFile);
+                    //replacement = replaceHexPlaceholderFile(arg.substr(startPos, endPos - startPos + 2), hexFile);
+                    arg.replace(startPos, endPos - startPos + 2, replacement);
+                }
+            }
+            
             
             if (!hexPath.empty() && (arg.find("{hex_file(") != std::string::npos)) {
                 size_t startPos = arg.find("{hex_file(");
@@ -618,11 +687,59 @@ bool interpretAndExecuteCommand(std::vector<std::vector<std::string>>& commands,
                     arg.replace(startPos, endPos - startPos + 2, replacement);
                 }
             }
+            
+            if ((!jsonString.empty() && (arg.find("{json(") != std::string::npos))) {
+                //std::string countStr = entry;
+                //arg = replacePlaceholder(arg, "*", entry);
+                size_t startPos = arg.find("{json(");
+                size_t endPos = arg.find(")}");
+                if (endPos != std::string::npos && endPos > startPos) {
+                    //jsonData1 = stringToJson(jsonString);
+                    replacement = replaceJsonPlaceholderF(arg.substr(startPos, endPos - startPos + 2), "json", jsonString, jsonData1);
+                    arg.replace(startPos, endPos - startPos + 2, replacement);
+                    
+                    //// Free jsonData1
+                    //if (jsonData1 != nullptr) {
+                    //    json_decref(jsonData1);
+                    //    jsonData1 = nullptr;
+                    //}
+                }
+            }
+            if ((!jsonPath.empty() && (arg.find("{json_file(") != std::string::npos))) {
+                //std::string countStr = entry;
+                //arg = replacePlaceholder(arg, "*", entry);
+                size_t startPos = arg.find("{json_file(");
+                size_t endPos = arg.find(")}");
+                if (endPos != std::string::npos && endPos > startPos) {
+                    //jsonData2 = json_load_file(jsonPath.c_str(), 0, &error);
+                    replacement = replaceJsonPlaceholderF(arg.substr(startPos, endPos - startPos + 2), "json_file", jsonPath, jsonData2);
+                    //logMessage("Mid source replacement: " + replacement);
+                    arg.replace(startPos, endPos - startPos + 2, replacement);
+                    
+                    //// Free jsonData2
+                    //if (jsonData2 != nullptr) {
+                    //    json_decref(jsonData2);
+                    //    jsonData2 = nullptr;
+                    //}
+                }
+            }
         }
     }
     
     // Close the file
+    fclose(iniFile);
+    // Close the file
     fclose(hexFile);
+    // Free jsonData1
+    if (jsonData1 != nullptr) {
+        json_decref(jsonData1);
+        jsonData1 = nullptr;
+    }
+    // Free jsonData2
+    if (jsonData2 != nullptr) {
+        json_decref(jsonData2);
+        jsonData2 = nullptr;
+    }
     
     
     
@@ -652,16 +769,16 @@ bool interpretAndExecuteCommand(std::vector<std::vector<std::string>>& commands,
             //        arg.replace(startPos, endPos - startPos + 2, replacement);
             //    }
             //}
-            if ((!iniPath.empty() && (arg.find("{ini_file(") != std::string::npos))) {
-                size_t startPos = arg.find("{ini_file(");
-                size_t endPos = arg.find(")}");
-                if (endPos != std::string::npos && endPos > startPos) {
-                    replacement = replaceIniPlaceholder(arg.substr(startPos, endPos - startPos + 2), iniPath);
-                    //replacement = replaceHexPlaceholderFile(arg.substr(startPos, endPos - startPos + 2), hexFile);
-                    arg.replace(startPos, endPos - startPos + 2, replacement);
-                }
-            }
-            else if ((!listString.empty() && (arg.find("{list(") != std::string::npos))) {
+            //if ((!iniPath.empty() && (arg.find("{ini_file(") != std::string::npos))) {
+            //    size_t startPos = arg.find("{ini_file(");
+            //    size_t endPos = arg.find(")}");
+            //    if (endPos != std::string::npos && endPos > startPos) {
+            //        replacement = replaceIniPlaceholder(arg.substr(startPos, endPos - startPos + 2), iniPath);
+            //        //replacement = replaceHexPlaceholderFile(arg.substr(startPos, endPos - startPos + 2), hexFile);
+            //        arg.replace(startPos, endPos - startPos + 2, replacement);
+            //    }
+            //}
+            if ((!listString.empty() && (arg.find("{list(") != std::string::npos))) {
                 size_t startPos = arg.find("{list(");
                 size_t endPos = arg.find(")}");
                 if (endPos != std::string::npos && endPos > startPos) {
@@ -674,41 +791,41 @@ bool interpretAndExecuteCommand(std::vector<std::vector<std::string>>& commands,
                     listData.clear();
                 }
             }
-            else if ((!jsonString.empty() && (arg.find("{json(") != std::string::npos))) {
-                //std::string countStr = entry;
-                //arg = replacePlaceholder(arg, "*", entry);
-                size_t startPos = arg.find("{json(");
-                size_t endPos = arg.find(")}");
-                if (endPos != std::string::npos && endPos > startPos) {
-                    //jsonData1 = stringToJson(jsonString);
-                    replacement = replaceJsonPlaceholder(arg.substr(startPos, endPos - startPos + 2), "json", jsonString);
-                    arg.replace(startPos, endPos - startPos + 2, replacement);
-                    
-                    //// Free jsonData1
-                    //if (jsonData1 != nullptr) {
-                    //    json_decref(jsonData1);
-                    //    jsonData1 = nullptr;
-                    //}
-                }
-            }
-            else if ((!jsonPath.empty() && (arg.find("{json_file(") != std::string::npos))) {
-                //std::string countStr = entry;
-                //arg = replacePlaceholder(arg, "*", entry);
-                size_t startPos = arg.find("{json_file(");
-                size_t endPos = arg.find(")}");
-                if (endPos != std::string::npos && endPos > startPos) {
-                    //jsonData2 = json_load_file(jsonPath.c_str(), 0, &error);
-                    replacement = replaceJsonPlaceholder(arg.substr(startPos, endPos - startPos + 2), "json_file", jsonPath);
-                    //logMessage("Mid source replacement: " + replacement);
-                    arg.replace(startPos, endPos - startPos + 2, replacement);
-                    
-                    //// Free jsonData2
-                    //if (jsonData2 != nullptr) {
-                    //    json_decref(jsonData2);
-                    //    jsonData2 = nullptr;
-                    //}
-                }
-            }
+            //if ((!jsonString.empty() && (arg.find("{json(") != std::string::npos))) {
+            //    //std::string countStr = entry;
+            //    //arg = replacePlaceholder(arg, "*", entry);
+            //    size_t startPos = arg.find("{json(");
+            //    size_t endPos = arg.find(")}");
+            //    if (endPos != std::string::npos && endPos > startPos) {
+            //        //jsonData1 = stringToJson(jsonString);
+            //        replacement = replaceJsonPlaceholder(arg.substr(startPos, endPos - startPos + 2), "json", jsonString);
+            //        arg.replace(startPos, endPos - startPos + 2, replacement);
+            //        
+            //        //// Free jsonData1
+            //        //if (jsonData1 != nullptr) {
+            //        //    json_decref(jsonData1);
+            //        //    jsonData1 = nullptr;
+            //        //}
+            //    }
+            //}
+            //if ((!jsonPath.empty() && (arg.find("{json_file(") != std::string::npos))) {
+            //    //std::string countStr = entry;
+            //    //arg = replacePlaceholder(arg, "*", entry);
+            //    size_t startPos = arg.find("{json_file(");
+            //    size_t endPos = arg.find(")}");
+            //    if (endPos != std::string::npos && endPos > startPos) {
+            //        //jsonData2 = json_load_file(jsonPath.c_str(), 0, &error);
+            //        replacement = replaceJsonPlaceholder(arg.substr(startPos, endPos - startPos + 2), "json_file", jsonPath);
+            //        //logMessage("Mid source replacement: " + replacement);
+            //        arg.replace(startPos, endPos - startPos + 2, replacement);
+            //        
+            //        //// Free jsonData2
+            //        //if (jsonData2 != nullptr) {
+            //        //    json_decref(jsonData2);
+            //        //    jsonData2 = nullptr;
+            //        //}
+            //    }
+            //}
         }
         //command = cmd; // update command
         
@@ -719,14 +836,14 @@ bool interpretAndExecuteCommand(std::vector<std::vector<std::string>>& commands,
         if (commandName == "list") {
             listString = removeQuotes(cmd[1]);
             //listData = stringToList(listString);
-        } else if (commandName == "json") {
-            jsonString = cmd[1];
-            //jsonData1 = stringToJson(jsonString);
-        } else if (commandName == "json_file") {
-            jsonPath = preprocessPath(cmd[1]);
-            //jsonData2 = json_load_file(jsonPath.c_str(), 0, &error);
-        } else if (commandName == "ini_file") {
-            iniPath = preprocessPath(cmd[1]);
+        //} else if (commandName == "json") {
+        //    jsonString = cmd[1];
+        //    //jsonData1 = stringToJson(jsonString);
+        //} else if (commandName == "json_file") {
+        //    jsonPath = preprocessPath(cmd[1]);
+        //    //jsonData2 = json_load_file(jsonPath.c_str(), 0, &error);
+        //} else if (commandName == "ini_file") {
+        //    iniPath = preprocessPath(cmd[1]);
         //} else if (commandName == "hex_file") {
         //    hexPath = preprocessPath(cmd[1]);
             // Open the file for reading in binary mode
