@@ -478,7 +478,7 @@ std::string parseHexDataAtCustomOffset(const std::string& filePath, const std::s
  * @param hexDataReplacement The hexadecimal data to replace with.
  * @param occurrence The occurrence/index of the data to replace (default is "0" to replace all occurrences).
  */
-std::string parseHexDataAtCustomOffsetF(FILE* file, const std::string& filePath, const std::string& customAsciiPattern, const std::string& offsetStr, size_t length, size_t occurrence = 0) {
+std::string parseHexDataAtCustomOffsetF(FILE*& file, const std::string& filePath, const std::string& customAsciiPattern, const std::string& offsetStr, size_t length, size_t occurrence = 0) {
     
     // Create a cache key based on filePath and customAsciiPattern
     std::string cacheKey = filePath + '?' + customAsciiPattern + '?' + std::to_string(occurrence);
@@ -554,3 +554,113 @@ std::string parseHexDataAtCustomOffsetF(FILE* file, const std::string& filePath,
     return result;
 }
 
+
+/**
+ * @brief Finds and replaces hexadecimal data in a file.
+ *
+ * This function searches for occurrences of hexadecimal data in a binary file
+ * and replaces them with a specified hexadecimal replacement data.
+ *
+ * @param filePath The path to the binary file.
+ * @param hexDataToReplace The hexadecimal data to search for and replace.
+ * @param hexDataReplacement The hexadecimal data to replace with.
+ * @param occurrence The occurrence/index of the data to replace (default is "0" to replace all occurrences).
+ */
+
+std::string replaceHexPlaceholder(const std::string& arg, const std::string& hexPath) {
+    std::string replacement = arg;
+    std::string searchString = "{hex_file(";
+    
+    std::size_t startPos = replacement.find(searchString);
+    std::size_t endPos = replacement.find(")}");
+    
+    if (startPos != std::string::npos && endPos != std::string::npos && endPos > startPos) {
+        std::string placeholderContent = replacement.substr(startPos + searchString.length(), endPos - startPos - searchString.length());
+        
+        // Split the placeholder content into its components (customAsciiPattern, offsetStr, length)
+        std::vector<std::string> components;
+        std::istringstream componentStream(placeholderContent);
+        std::string component;
+        
+        while (std::getline(componentStream, component, ',')) {
+            components.push_back(trim(component));
+        }
+        
+        if (components.size() == 3) {
+            // Extract individual components
+            std::string customAsciiPattern = components[0];
+            std::string offsetStr = components[1];
+            size_t length = std::stoul(components[2]);
+            
+            // Call the parsing function and replace the placeholder
+            std::string parsedResult = parseHexDataAtCustomOffset(hexPath, customAsciiPattern, offsetStr, length);
+            
+            
+            //std::string parsedResult = customAsciiPattern+offsetStr;
+            
+            // Only replace if parsedResult returns a non-empty string
+            if (!parsedResult.empty()) {
+                // Replace the entire placeholder with the parsed result
+                replacement.replace(startPos, endPos - startPos + searchString.length() + 2, parsedResult);
+            }
+        }
+    }
+    
+    return replacement;
+}
+
+
+/**
+ * @brief Finds and replaces hexadecimal data in a file.
+ *
+ * This function searches for occurrences of hexadecimal data in a binary file
+ * and replaces them with a specified hexadecimal replacement data.
+ *
+ * @param filePath The path to the binary file.
+ * @param hexDataToReplace The hexadecimal data to search for and replace.
+ * @param hexDataReplacement The hexadecimal data to replace with.
+ * @param occurrence The occurrence/index of the data to replace (default is "0" to replace all occurrences).
+ */
+
+std::string replaceHexPlaceholderF(const std::string& arg, const std::string& hexPath, FILE*& hexFile) {
+    std::string replacement = arg;
+    std::string searchString = "{hex_file(";
+    
+    std::size_t startPos = replacement.find(searchString);
+    std::size_t endPos = replacement.find(")}");
+    
+    if (startPos != std::string::npos && endPos != std::string::npos && endPos > startPos) {
+        std::string placeholderContent = replacement.substr(startPos + searchString.length(), endPos - startPos - searchString.length());
+        
+        // Split the placeholder content into its components (customAsciiPattern, offsetStr, length)
+        std::vector<std::string> components;
+        std::istringstream componentStream(placeholderContent);
+        std::string component;
+        
+        while (std::getline(componentStream, component, ',')) {
+            components.push_back(trim(component));
+        }
+        
+        if (components.size() == 3) {
+            // Extract individual components
+            std::string customAsciiPattern = components[0];
+            std::string offsetStr = components[1];
+            size_t length = std::stoul(components[2]);
+            
+            // Call the parsing function and replace the placeholder
+            std::string parsedResult = parseHexDataAtCustomOffsetF(hexFile, hexPath, customAsciiPattern, offsetStr, length);
+            
+            
+            
+            //std::string parsedResult = customAsciiPattern+offsetStr;
+            
+            // Only replace if parsedResult returns a non-empty string
+            if (!parsedResult.empty()) {
+                // Replace the entire placeholder with the parsed result
+                replacement.replace(startPos, endPos - startPos + searchString.length() + 2, parsedResult);
+            }
+        }
+    }
+    
+    return replacement;
+}
