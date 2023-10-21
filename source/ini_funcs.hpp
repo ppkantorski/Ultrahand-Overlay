@@ -572,7 +572,7 @@ void setIniFile(const std::string& fileToEdit, const std::string& desiredSection
  */
 void setIniFileValue(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredValue) {
     setIniFile(fileToEdit, desiredSection, desiredKey, desiredValue, "");
-    cleanIniFormatting(fileToEdit);
+    //cleanIniFormatting(fileToEdit);
 }
 
 /**
@@ -589,7 +589,7 @@ void setIniFileValue(const std::string& fileToEdit, const std::string& desiredSe
  */
 void setIniFileKey(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredNewKey) {
     setIniFile(fileToEdit, desiredSection, desiredKey, "", desiredNewKey);
-    cleanIniFormatting(fileToEdit);
+    //cleanIniFormatting(fileToEdit);
 }
 
 
