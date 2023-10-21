@@ -291,7 +291,8 @@ std::vector<std::string> parseSectionsFromIni(const std::string& filePath) {
         return sections; // Return an empty list if the file cannot be opened
     }
     
-    char line[4096];
+    constexpr size_t BufferSize = 131072;
+    char line[BufferSize];
     while (fgets(line, sizeof(line), file)) {
         std::string trimmedLine = trim(std::string(line));
         
@@ -317,7 +318,8 @@ std::string parseValueFromIniSection(const std::string& filePath, const std::str
     }
     
     std::string currentSection = "";
-    char line[4096];
+    constexpr size_t BufferSize = 131072;
+    char line[BufferSize];
     
     while (fgets(line, sizeof(line), file)) {
         std::string trimmedLine = trim(std::string(line));
@@ -355,7 +357,8 @@ std::string parseValueFromIniSectionF(FILE*& file, const std::string& filePath, 
     }
     
     std::string currentSection = "";
-    char line[4096];
+    constexpr size_t BufferSize = 131072;
+    char line[BufferSize];
     
     while (fgets(line, sizeof(line), file)) {
         std::string trimmedLine = trim(std::string(line));
@@ -621,7 +624,7 @@ void addIniSection(const char* filePath, const char* sectionName) {
         return;
     }
     
-    constexpr size_t BufferSize = 4096;
+    constexpr size_t BufferSize = 131072;
     char line[BufferSize];
     bool sectionExists = false;
     while (fgets(line, sizeof(line), inputFile)) {
@@ -685,7 +688,7 @@ void renameIniSection(const std::string& filePath, const std::string& currentSec
     
     std::string currentSection;
     bool renaming = false;
-    constexpr size_t BufferSize = 4096;
+    constexpr size_t BufferSize = 131072;
     char line[BufferSize];
     
     while (fgets(line, sizeof(line), configFile)) {
@@ -760,7 +763,7 @@ void removeIniSection(const std::string& filePath, const std::string& sectionNam
     
     std::string currentSection;
     bool removing = false;
-    constexpr size_t BufferSize = 4096;
+    constexpr size_t BufferSize = 131072;
     char line[BufferSize];
     
     while (fgets(line, sizeof(line), configFile)) {
