@@ -23,7 +23,7 @@
 
 
 // For improving the speed of hexing consecutively with the same file and asciiPattern.
-//static std::unordered_map<std::string, std::string> hexSumCache; // MOVED TO main.cpp
+static std::unordered_map<std::string, std::string> hexSumCache; // MOVED TO main.cpp
 
 /**
  * @brief Converts an ASCII string to a hexadecimal string.
