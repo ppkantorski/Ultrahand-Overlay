@@ -135,7 +135,7 @@ json_t* readJsonFromFile2(const std::string& filePath) {
     return root;
 }
 
-
+float M_PI = 3.14159265358979323846;
 
 static std::string UNAVAILABLE_SELECTION = "Not available";
 static std::string OVERLAYS = "Overlays"; //defined in libTesla now
@@ -645,17 +645,50 @@ void powerExit(void) {
     }
 }
 
-s32 temperature;
+s32 PCB_temperature, SOC_temperature;
+
+//static TsSession g_tsInternalSession;
+
 bool thermalstatusInit(void) {
-    return R_SUCCEEDED(tsInitialize());
+    if (R_FAILED(tsInitialize()))
+        return false;
+    //if (hosversionAtLeast(17,0,0) && R_FAILED(tsOpenSession(&g_tsInternalSession, TsDeviceCode_LocationInternal)))
+    //    return false;
+    return true;
 }
 
 void thermalstatusExit(void) {
+    //if (hosversionAtLeast(17,0,0))
+    //    tsSessionClose(&g_tsInternalSession);
     tsExit();
 }
 
-bool thermalstatusGetDetails(s32 *temperature) {
-    return R_SUCCEEDED(tsGetTemperature(TsLocation_Internal, temperature));
+bool thermalstatusGetDetailsPCB(s32 *temperature) {
+    if (hosversionAtLeast(17,0,0)) {
+        //float temp_float;
+        //if (R_SUCCEEDED(tsSessionGetTemperature(&g_tsInternalSession, &temp_float))) {
+        //    *temperature = (int)temp_float;
+        //    return true;
+        //} else
+        //    return false;
+        
+        return false;
+    } else
+        return R_SUCCEEDED(tsGetTemperature(TsLocation_Internal, temperature));
+}
+
+bool thermalstatusGetDetailsSOC(s32 *temperature) {
+    if (hosversionAtLeast(17,0,0)) {
+        //float temp_float;
+        //if (R_SUCCEEDED(tsSessionGetTemperature(&g_tsInternalSession, &temp_float))) {
+        //    *temperature = (int)temp_float;
+        //    return true;
+        //} else
+        //    return false;
+        
+        return false;
+    } else
+        return R_SUCCEEDED(tsGetTemperature(TsLocation_External, temperature));
 }
 
 struct timespec currentTime;
@@ -2083,19 +2116,22 @@ namespace tsl {
                 //highlightColor1Str = "#2288CC";
                 //highlightColor2Str = "#88FFFF";
                 
-                static float counter = 0;
-                const float progress = (std::sin(counter) + 1) / 2;
                 
-                
+                // Get the current time
+                auto currentTime = std::chrono::system_clock::now();
+                auto timeInSeconds = std::chrono::duration<double>(currentTime.time_since_epoch()).count();
+
+                // Calculate the progress for one full sine wave per second
+                const double cycleDuration = 1.0;  // 1 second for one full sine wave
+                double timeCounter = fmod(timeInSeconds, cycleDuration);
+                float progress = (std::sin(2 * M_PI * timeCounter / cycleDuration) + 1) / 2;
+
                 Color highlightColor = {
                     static_cast<u8>((highlightColor1.r - highlightColor2.r) * progress + highlightColor2.r),
                     static_cast<u8>((highlightColor1.g - highlightColor2.g) * progress + highlightColor2.g),
                     static_cast<u8>((highlightColor1.b - highlightColor2.b) * progress + highlightColor2.b),
                     0xF
                 };
-                
-                counter += 0.1058F;  // CUSTOM MODIFICATION end
-
                 s32 x = 0, y = 0;
 
                 if (this->m_highlightShaking) {
@@ -2397,13 +2433,10 @@ namespace tsl {
                     std::string secondHalf = "hand";
                     
                     float x = 20;
-                    //int y = 50;
                     int fontSize = 42;
                     offset = 6;
                     
                     // Draw the first half of the string in white color
-                    //renderer->drawString(firstHalf.c_str(), false, x1, y+offset, fontSize, tsl::Color(0xFF, 0xFF, 0xFF, 0xFF));
-                    //drawHighlightText(renderer);
                     Color highlightColor = {0xF, 0xF, 0xF, 0xF};
                     float progress;
                     float letterWidth;
@@ -2463,27 +2496,33 @@ namespace tsl {
                     
                     // check in 1s intervals
                     if ((currentTime.tv_sec - timeOut) >= 1) {
-                        thermalstatusGetDetails(&temperature);
+                        thermalstatusGetDetailsPCB(&PCB_temperature);
+                        thermalstatusGetDetailsSOC(&SOC_temperature);
                         powerGetDetails(&batteryCharge, &isCharging);
                         timeOut = int(currentTime.tv_sec);
                     }
                     
                     
-                    char temperatureStr[10];
-                    snprintf(temperatureStr, sizeof(temperatureStr)-1, "%d°C", temperature);
+                    char PCB_temperatureStr[10];
+                    snprintf(PCB_temperatureStr, sizeof(PCB_temperatureStr)-1, "%d°C", PCB_temperature);
                     
+                    char SOC_temperatureStr[10];
+                    snprintf(SOC_temperatureStr, sizeof(SOC_temperatureStr)-1, "%d°C", SOC_temperature);
                     
                     batteryCharge = (batteryCharge > 100) ? 100 : batteryCharge;
                     sprintf(chargeString, "%d%%", batteryCharge);
 
                     // Convert the C-style string to an std::string
                     std::string chargeStringStd = chargeString;
-                    std::string temperatureStringSTD = temperatureStr;
+                    std::string PCB_temperatureStringSTD = PCB_temperatureStr;
+                    std::string SOC_temperatureStringSTD = SOC_temperatureStr;
+                    
                     // Convert the float to std::string
                     //std::string powerConsumptionStr = std::to_string(powerConsumption);
 
                     // Use the '+' operator to concatenate the strings
-                    temperatureStringSTD += "  ";
+                    PCB_temperatureStringSTD += " ";
+                    SOC_temperatureStringSTD += " ";
 
                     // Use the 'timeStr' to display the time
                     if (powerCacheIsCharging) {
@@ -2497,8 +2536,14 @@ namespace tsl {
                         }
                     }
                     
-                    if (temperature > 0) {
-                        renderer->drawString(temperatureStringSTD.c_str(), false, tsl::cfg::FramebufferWidth - calculateStringWidth(temperatureStringSTD, 20) - calculateStringWidth(chargeStringStd, 20) - 20, 44 + 24, 20, tsl::GradientColor(temperature));
+                    int offset = 0;
+                    if (PCB_temperature > 0) {
+                        offset += 2;
+                        renderer->drawString(PCB_temperatureStringSTD.c_str(), false, tsl::cfg::FramebufferWidth + offset - calculateStringWidth(PCB_temperatureStringSTD, 20) - calculateStringWidth(chargeStringStd, 20) - 20, 44 + 24, 20, tsl::GradientColor(PCB_temperature));
+                    }
+                    if (SOC_temperature > 0) {
+                        offset += 2;
+                        renderer->drawString(SOC_temperatureStringSTD.c_str(), false, tsl::cfg::FramebufferWidth + offset -  calculateStringWidth(SOC_temperatureStringSTD, 20) - calculateStringWidth(PCB_temperatureStringSTD, 20) - calculateStringWidth(chargeStringStd, 20) - 20, 44 + 24, 20, tsl::GradientColor(SOC_temperature));
                     }
                     
                 } else {
