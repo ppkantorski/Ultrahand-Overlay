@@ -694,7 +694,7 @@ bool thermalstatusGetDetailsSOC(s32 *temperature) {
 struct timespec currentTime;
 static const std::string DEFAULT_DT_FORMAT = "'%a %T'";
 static std::string datetimeFormat = removeQuotes(DEFAULT_DT_FORMAT);
-
+static std::string hideClock, hideBattery, hidePCBTemp, hideSOCTemp;
 
 // CUSTOM SECTION END
 
@@ -1061,21 +1061,21 @@ namespace tsl {
             static const char* CONFIG_FILE = "/config/ultrahand/config.ini"; // CUSTOM MODIFICATION
 
             /**
-             * @brief Parses a ini string
+             * @brief Parses an INI string
              *
              * @param str String to parse
              * @return Parsed data
              */
-            static IniData parseIni(const std::string &str) { // CUSTOM MODIFICATION START
+            static IniData parseIni(const std::string &str) {
                 IniData iniData;
-
+               
                 auto lines = split(str, '\n');
-
+               
                 std::string lastHeader = "";
                 for (auto& line : lines) {
                     if (line.empty())
                         continue;
-
+               
                     if (line[0] == '[' && line[line.size() - 1] == ']') {
                         lastHeader = line.substr(1, line.size() - 2);
                         iniData.emplace(lastHeader, std::map<std::string, std::string>{});
@@ -1083,25 +1083,25 @@ namespace tsl {
                     else {
                         auto keyValuePair = split(line, '=');
                         if (keyValuePair.size() == 2) {
-                            std::string key = keyValuePair[0];
-                            std::string value = keyValuePair[1];
-
-                            // Remove leading and trailing spaces
+                            std::string key = trim(keyValuePair[0]);
+                            std::string value = trim(keyValuePair[1]);
+               
+                            // Remove leading spaces before the equal sign, trailing spaces at the end of the line
                             key.erase(key.begin(), std::find_if(key.begin(), key.end(), [](unsigned char ch) {
                                 return !std::isspace(ch);
                             }));
                             key.erase(std::find_if(key.rbegin(), key.rend(), [](unsigned char ch) {
                                 return !std::isspace(ch);
                             }).base(), key.end());
-
-                            // Store the value as is without removing internal spaces
+               
+                            // No need to remove spaces within the value, so just store it as is
                             iniData[lastHeader].emplace(key, value);
                         }
                     }
                 }
-
+               
                 return iniData;
-            }// CUSTOM MODIFICATION END
+            } // CUSTOM MODIFICATION END
 
 
             /**
@@ -2354,21 +2354,6 @@ namespace tsl {
             return (totalWidth * fontSize);
         }
         
-        float calculateAmplitude(float x) {
-            //const float phasePeriod = 360;  // One full phase period
-
-            // Calculate the phase within the full period
-            //int phase = static_cast<int>((x) * (180.0 / 3.1415927)) % static_cast<int>(phasePeriod);
-
-            // Check if the phase is odd
-            //if (phase % 2 == 1) {
-            //    return 1.0f;  // Flat amplitude (maximum positive)
-            //} else {
-            //    // Calculate the sinusoidal amplitude for the remaining period
-            //    return (std::cos((-x) * (180.0 / 3.1415927)) + 1) / 2;
-            //}
-            return (std::cos((-x) * (180.0 / 3.1415927)) + 1) / 2;
-        }
         float calculateAmplitude2(float x, float peakDurationFactor = 0.25) {
             const float phasePeriod = 360*peakDurationFactor;  // One full phase period
             
@@ -2440,9 +2425,31 @@ namespace tsl {
                     Color highlightColor = {0xF, 0xF, 0xF, 0xF};
                     float progress;
                     float letterWidth;
+                    
+                    
+                    
+                    
+                    // Get the current time
+                    auto currentTime2 = std::chrono::system_clock::now();
+                    auto timeInSeconds = std::chrono::duration<double>(currentTime2.time_since_epoch()).count();
+
+                    // Calculate the progress for one full sine wave per second
+                    const double cycleDuration = 1.5;  // 1 second for one full sine wave
+                    double timeCounter = fmod(timeInSeconds, cycleDuration);
+                    //float progress = calculateAmplitude(2 * M_PI * timeCounter / cycleDuration);
+                    
+                    
+                    float countOffset = 0;
                     for (char letter : firstHalf) {
                         // Calculate the progress for each letter based on the counter
-                        progress = calculateAmplitude(counter - x * 0.001F);
+                        //progress = calculateAmplitude(counter - x * 0.001F);
+                        currentTime2 = std::chrono::system_clock::now();
+                        timeInSeconds = std::chrono::duration<double>(currentTime2.time_since_epoch()).count();
+                        timeCounter = fmod(timeInSeconds, cycleDuration);
+                        counter = (2 * M_PI * (timeCounter + countOffset) / cycleDuration);
+                        //progress = calculateAmplitude(counter);
+                        progress = (std::sin(counter) + 1) / 2;
+                        
                         
                         // Calculate the corresponding highlight color for each letter
                         highlightColor = {
@@ -2462,7 +2469,7 @@ namespace tsl {
                         x += letterWidth;
                         
                         // Update the counter for the next character
-                        counter += 0.0002F;
+                        countOffset -= 0.2F;
                     }
                     
                     
@@ -2485,9 +2492,14 @@ namespace tsl {
                     
                     localizeTimeStr(timeStr); // for language localizations
                     
-                    // Use the 'timeStr' to display the time
-                    renderer->drawString(timeStr, false, tsl::cfg::FramebufferWidth - calculateStringWidth(timeStr, 20) - 20, 44, 20, clockColor);
+                    int y_offset = 44;
+                    if ((hideBattery == "true" && hidePCBTemp == "true" && hideSOCTemp == "true") || (hideClock == "true"))
+                        y_offset += 12;
                     
+                    if (hideClock != "true") {// Use the 'timeStr' to display the time
+                        renderer->drawString(timeStr, false, tsl::cfg::FramebufferWidth - calculateStringWidth(timeStr, 20) - 20, y_offset, 20, clockColor);
+                        y_offset += 24;
+                    }
                     //char chargeString[6];  // Need space for the null terminator and the percentage sign
                     //
                     //uint32_t batteryCharge;
@@ -2521,31 +2533,36 @@ namespace tsl {
                     //std::string powerConsumptionStr = std::to_string(powerConsumption);
 
                     // Use the '+' operator to concatenate the strings
-                    PCB_temperatureStringSTD += " ";
-                    SOC_temperatureStringSTD += " ";
-
-                    // Use the 'timeStr' to display the time
-                    if (powerCacheIsCharging) {
-                        renderer->drawString(chargeStringStd.c_str(), false, tsl::cfg::FramebufferWidth - calculateStringWidth(chargeStringStd, 20) - 20, 44 + 24, 20, tsl::Color(0x0, 0xF, 0x0, 0xF));
-                        //renderer->drawString(temperatureStringSTD.c_str(), false, tsl::cfg::FramebufferWidth - calculateStringWidth(temperatureStringSTD, 20) - calculateStringWidth(chargeStringStd, 20) - 20, 46 + 24, 20, tsl::Color(0xFF, 0xFF, 0xFF, 0xFF));
-                    } else {
-                        if (batteryCharge <= 20) {
-                            renderer->drawString(chargeStringStd.c_str(), false, tsl::cfg::FramebufferWidth - calculateStringWidth(chargeStringStd, 20) - 20, 44 + 24, 20, tsl::Color(0xF, 0x0, 0x0, 0xF));
-                        } else {
-                            renderer->drawString(chargeStringStd.c_str(), false, tsl::cfg::FramebufferWidth - calculateStringWidth(chargeStringStd, 20) - 20, 44 + 24, 20, batteryColor);
+                    
+                    if (hideBattery != "true") {
+                        PCB_temperatureStringSTD += " ";
+                        // Use the 'timeStr' to display the time
+                        if (powerCacheIsCharging)
+                            renderer->drawString(chargeStringStd.c_str(), false, tsl::cfg::FramebufferWidth - calculateStringWidth(chargeStringStd, 20) - 20, y_offset, 20, tsl::Color(0x0, 0xF, 0x0, 0xF));
+                        else {
+                            if (batteryCharge <= 20) {
+                                renderer->drawString(chargeStringStd.c_str(), false, tsl::cfg::FramebufferWidth - calculateStringWidth(chargeStringStd, 20) - 20, y_offset, 20, tsl::Color(0xF, 0x0, 0x0, 0xF));
+                            } else {
+                                renderer->drawString(chargeStringStd.c_str(), false, tsl::cfg::FramebufferWidth - calculateStringWidth(chargeStringStd, 20) - 20, y_offset, 20, batteryColor);
+                            }
                         }
                     }
+                    if (hidePCBTemp != "true" && hideBattery != "true")
+                         SOC_temperatureStringSTD += " ";
                     
                     int offset = 0;
-                    if (PCB_temperature > 0) {
-                        offset += 2;
-                        renderer->drawString(PCB_temperatureStringSTD.c_str(), false, tsl::cfg::FramebufferWidth + offset - calculateStringWidth(PCB_temperatureStringSTD, 20) - calculateStringWidth(chargeStringStd, 20) - 20, 44 + 24, 20, tsl::GradientColor(PCB_temperature));
+                    if (hidePCBTemp != "true") {
+                        if (PCB_temperature > 0) {
+                            offset += 2;
+                            renderer->drawString(PCB_temperatureStringSTD.c_str(), false, tsl::cfg::FramebufferWidth + offset - calculateStringWidth(PCB_temperatureStringSTD, 20) - calculateStringWidth(chargeStringStd, 20) - 20, y_offset, 20, tsl::GradientColor(PCB_temperature));
+                        }
                     }
-                    if (SOC_temperature > 0) {
-                        offset += 2;
-                        renderer->drawString(SOC_temperatureStringSTD.c_str(), false, tsl::cfg::FramebufferWidth + offset -  calculateStringWidth(SOC_temperatureStringSTD, 20) - calculateStringWidth(PCB_temperatureStringSTD, 20) - calculateStringWidth(chargeStringStd, 20) - 20, 44 + 24, 20, tsl::GradientColor(SOC_temperature));
+                    if (hideSOCTemp != "true") {
+                        if (SOC_temperature > 0) {
+                            offset += 2;
+                            renderer->drawString(SOC_temperatureStringSTD.c_str(), false, tsl::cfg::FramebufferWidth + offset -  calculateStringWidth(SOC_temperatureStringSTD, 20) - calculateStringWidth(PCB_temperatureStringSTD, 20) - calculateStringWidth(chargeStringStd, 20) - 20, y_offset, 20, tsl::GradientColor(SOC_temperature));
+                        }
                     }
-                    
                 } else {
                     static float counter = 0;
                     float x = 20;
@@ -4436,24 +4453,44 @@ namespace tsl {
          */
         static void parseOverlaySettings() {
             hlp::ini::IniData parsedConfig = hlp::ini::readOverlaySettings();
-
-            u64 decodedKeys = hlp::comboStringToKeys(parsedConfig["ultrahand"]["key_combo"]); // CUSTOM MODIFICATION
-            if (decodedKeys)
-                tsl::cfg::launchCombo = decodedKeys;
             
+            try {
+                u64 decodedKeys = hlp::comboStringToKeys(parsedConfig["ultrahand"]["key_combo"]); // CUSTOM MODIFICATION
+                if (decodedKeys)
+                    tsl::cfg::launchCombo = decodedKeys;
+            } catch (const std::exception& e) {}
             
-            // read datetime_format
-            datetimeFormat = removeQuotes(parsedConfig["ultrahand"]["datetime_format"]);
-            
+            try {
+                datetimeFormat = removeQuotes(parsedConfig["ultrahand"]["datetime_format"]); // read datetime_format
+            } catch (const std::exception& e) {}
             if (datetimeFormat.empty()) {
                 datetimeFormat = removeQuotes(DEFAULT_DT_FORMAT);
             }
             
-
-            //defaultTextColorStr = removeQuotes(parsedConfig["ultrahand"]["text_color"]);
-            //if (defaultTextColorStr.empty()) {
-            //    defaultTextColorStr =  "#FFFFFF";
-            //}
+            try {
+                hideClock = removeQuotes(parsedConfig["ultrahand"]["hide_clock"]);
+            } catch (const std::exception& e) {}
+            if (hideClock.empty())
+                hideClock = "false";
+            
+            try {
+                hideBattery = removeQuotes(parsedConfig["ultrahand"]["hide_battery"]);
+            } catch (const std::exception& e) {}
+            if (hideBattery.empty())
+                hideBattery = "false";
+            
+            try {
+                hidePCBTemp = removeQuotes(parsedConfig["ultrahand"]["hide_pcb_temp"]);
+            } catch (const std::exception& e) {}
+            if (hidePCBTemp.empty())
+                hidePCBTemp = "false";
+            
+            try {
+                hideSOCTemp = removeQuotes(parsedConfig["ultrahand"]["hide_soc_temp"]);
+            } catch (const std::exception& e) {}
+            if (hideSOCTemp.empty())
+                hideSOCTemp = "false";
+            
         }
 
         /**
