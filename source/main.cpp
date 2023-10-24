@@ -309,7 +309,7 @@ public:
                     if (cleanVersionLabels == "false")
                         versionLabel = APP_VERSION+std::string("   (")+ extractTitle(loaderInfo)+" "+cleanVersionLabel(loaderInfo)+std::string(")"); // Still needs to parse nx-ovlloader instead of hard coding it
                     else
-                        versionLabel = APP_VERSION+std::string("   (")+envGetLoaderInfo()+std::string(")");
+                        versionLabel = APP_VERSION+std::string("   (")+ extractTitle(loaderInfo)+" v"+cleanVersionLabel(loaderInfo)+std::string(")");
                 }
                 
             });
@@ -2242,6 +2242,14 @@ public:
                 if (ultrahandSection.count("datetime_format") == 0)
                     setIniFileValue(settingsConfigIniPath, "ultrahand", "datetime_format", DEFAULT_DT_FORMAT);
                 
+                if (ultrahandSection.count("hide_clock") == 0)
+                    setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_clock", "false");
+                if (ultrahandSection.count("hide_battery") == 0)
+                    setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_battery", "false");
+                if (ultrahandSection.count("hide_pcb_temp") == 0)
+                    setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_pcb_temp", "false");
+                if (ultrahandSection.count("hide_soc_temp") == 0)
+                    setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_soc_temp", "false");
                 
                 //if (ultrahandSection.count("in_overlay") > 0) {
                 //    inOverlayString = ultrahandSection["in_overlay"];
