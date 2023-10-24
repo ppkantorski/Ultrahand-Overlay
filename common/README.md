@@ -1,5 +1,5 @@
 # Ultrahand Commons
-Ultrahand currently uses the following publically available GNU licensed projects.
+Ultrahand is a project that makes use of various publicly available GNU licensed projects to enhance its functionality. This approach not only expands the capabilities of Ultrahand but also pays tribute to the original creators of these projects. Rather than rewriting functions for our own benefit, we believe in giving credit where it is due.
 
 ## [Studious-Pancake](https://github.com/HookedBehemoth/studious-pancake)
 Reboot to hekate configs from tesla menu.
