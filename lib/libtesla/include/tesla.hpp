@@ -70,11 +70,14 @@
 // For improving the speed of hexing consecutively with the same file and asciiPattern.
 static std::unordered_map<std::string, std::string> hexSumCache;
 
+//std::string highlightColor1Str = "#2288CC";;
+//std::string highlightColor2Str = "#88FFFF";;
 
 // Pre-defined symbols
 static const std::string OPTION_SYMBOL = "\u22EF";
 static const std::string DROPDOWN_SYMBOL = "\u25B6";
 static const std::string CHECKMARK_SYMBOL = "\uE14B";
+static const std::string CROSSMARK_SYMBOL = "\uE14C";
 static const std::string STAR_SYMBOL = "\u2605";
 
 // English string definitions
@@ -149,6 +152,7 @@ static std::string MAIN_SETTINGS = "Main Settings";
 static std::string VERSION_SETTINGS = "Version Settings";
 static std::string KEY_COMBO = "Key Combo";
 static std::string LANGUAGE = "Language";
+static std::string SOFTWARE_UPDATE = "Software Update";
 static std::string ROOT_PACKAGE = "Root Package";
 static std::string SORT_PRIORITY = "Sort Priority";
 static std::string FAILED_TO_OPEN = "Failed to open file";
@@ -318,6 +322,7 @@ void parseLanguage(std::string langFile) {
     updateIfNotEmpty(VERSION_SETTINGS, "VERSION_SETTINGS", langData);
     updateIfNotEmpty(KEY_COMBO, "KEY_COMBO", langData);
     updateIfNotEmpty(LANGUAGE, "LANGUAGE", langData);
+    updateIfNotEmpty(SOFTWARE_UPDATE, "SOFTWARE_UPDATE", langData);
     updateIfNotEmpty(ROOT_PACKAGE, "ROOT_PACKAGE", langData);
     updateIfNotEmpty(SORT_PRIORITY, "SORT_PRIORITY", langData);
     updateIfNotEmpty(FAILED_TO_OPEN, "FAILED_TO_OPEN", langData);
@@ -641,16 +646,35 @@ void powerExit(void) {
 }
 
 s32 temperature;
+
+//static TsSession g_tsInternalSession;
+
 bool thermalstatusInit(void) {
-    return R_SUCCEEDED(tsInitialize());
+    if (R_FAILED(tsInitialize()))
+        return false;
+    //if (hosversionAtLeast(17,0,0) && R_FAILED(tsOpenSession(&g_tsInternalSession, TsDeviceCode_LocationInternal)))
+    //    return false;
+    return true;
 }
 
 void thermalstatusExit(void) {
+    //if (hosversionAtLeast(17,0,0))
+    //    tsSessionClose(&g_tsInternalSession);
     tsExit();
 }
 
 bool thermalstatusGetDetails(s32 *temperature) {
-    return R_SUCCEEDED(tsGetTemperature(TsLocation_Internal, temperature));
+    if (hosversionAtLeast(17,0,0)) {
+        //float temp_float;
+        //if (R_SUCCEEDED(tsSessionGetTemperature(&g_tsInternalSession, &temp_float))) {
+        //    *temperature = (int)temp_float;
+        //    return true;
+        //} else
+        //    return false;
+        
+        return false;
+    } else
+        return R_SUCCEEDED(tsGetTemperature(TsLocation_Internal, temperature));
 }
 
 struct timespec currentTime;
@@ -775,7 +799,7 @@ namespace tsl {
         return Color(r, g, b, a);
     }
 
-    Color RGB888(std::string hexColor) {
+    Color RGB888(std::string hexColor, std::string defaultHexColor = "#FFFFFF") {
         // Remove the '#' character if it's present
         if (!hexColor.empty() && hexColor[0] == '#') {
             hexColor = hexColor.substr(1);
@@ -795,10 +819,8 @@ namespace tsl {
             
             return Color(redValue, greenValue, blueValue, 15);
         }
-        return Color(15,15,15,15);
+        return RGB888(defaultHexColor);
     }
-
-
 
 
     namespace style {
@@ -819,7 +841,10 @@ namespace tsl {
             constexpr Color ColorClickAnimation   = { 0x0, 0x2, 0x2, 0xF };   ///< Element click animation color
         }
     }
-
+    
+    //std::string highlightColor1Str = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "highlight_color_1"); // format "X,X,X"
+    //std::string highlightColor2Str = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "highlight_color_2"); // format "X,X,X"
+    
     // Declarations
 
     /**
@@ -1180,7 +1205,7 @@ namespace tsl {
          */
         static u64 comboStringToKeys(const std::string &value) {
             u64 keyCombo = 0x00;
-            for (std::string key : hlp::split(value, '+')) {
+            for (std::string key : hlp::split(removeWhiteSpaces(value), '+')) { // CUSTOM MODIFICATION (bug fix)
                 keyCombo |= hlp::stringToKeyCode(key);
             }
             return keyCombo;
@@ -1872,7 +1897,7 @@ namespace tsl {
     }
 
     // Elements
-
+    
     namespace elm {
 
         enum class TouchEvent {
@@ -1888,9 +1913,16 @@ namespace tsl {
          */
         class Element {
         public:
+            
             Element() {}
             virtual ~Element() { }
-
+            
+            std::string highlightColor1Str = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "highlight_color_1");
+            std::string highlightColor2Str = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "highlight_color_2");
+            
+            Color highlightColor1 = RGB888(highlightColor1Str, "#2288CC");
+            Color highlightColor2 = RGB888(highlightColor2Str, "#88FFFF");
+            
             /**
              * @brief Handles focus requesting
              * @note This function should return the element to focus.
@@ -2063,15 +2095,25 @@ namespace tsl {
              *
              * @param renderer Renderer
              */
-            virtual void drawHighlight(gfx::Renderer *renderer) {
+            virtual void drawHighlight(gfx::Renderer *renderer) { // CUSTOM MODIFICATION start
+                
+                //Color highlightColor1 = {0x2, 0x8, 0xC, 0xF};
+                //Color highlightColor2 = {0x8, 0xF, 0xF, 0xF};
+                //highlightColor1Str = "#2288CC";
+                //highlightColor2Str = "#88FFFF";
+                
                 static float counter = 0;
                 const float progress = (std::sin(counter) + 1) / 2;
-                Color highlightColor = {   static_cast<u8>((0x2 - 0x8) * progress + 0x8),
-                                                static_cast<u8>((0x8 - 0xF) * progress + 0xF),
-                                                static_cast<u8>((0xC - 0xF) * progress + 0xF),
-                                                0xF };
-
-                counter += 0.1F;
+                
+                
+                Color highlightColor = {
+                    static_cast<u8>((highlightColor1.r - highlightColor2.r) * progress + highlightColor2.r),
+                    static_cast<u8>((highlightColor1.g - highlightColor2.g) * progress + highlightColor2.g),
+                    static_cast<u8>((highlightColor1.b - highlightColor2.b) * progress + highlightColor2.b),
+                    0xF
+                };
+                
+                counter += 0.105F;  // CUSTOM MODIFICATION end
 
                 s32 x = 0, y = 0;
 
@@ -2793,8 +2835,13 @@ namespace tsl {
                 for (auto& item : this->m_items)
                     delete item;
             }
+            
+            std::string trackBarColorStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "trackbar_color");
+            Color trackBarColor = RGB888(trackBarColorStr, "#555555");
 
             virtual void draw(gfx::Renderer *renderer) override {
+                
+                
                 if (this->m_clearList) {
                     for (auto& item : this->m_items)
                         delete item;
@@ -2849,9 +2896,9 @@ namespace tsl {
                     float scrollbarHeight = static_cast<float>(this->getHeight() * this->getHeight()) / this->m_listHeight;
                     float scrollbarOffset = (static_cast<double>(this->m_offset)) / static_cast<double>(this->m_listHeight - this->getHeight()) * (this->getHeight() - std::ceil(scrollbarHeight));
 
-                    renderer->drawRect(this->getRightBound() + 10, this->getY() + scrollbarOffset, 5, scrollbarHeight - 50, a(tsl::style::color::ColorHandle));
-                    renderer->drawCircle(this->getRightBound() + 12, this->getY() + scrollbarOffset, 2, true, a(tsl::style::color::ColorHandle));
-                    renderer->drawCircle(this->getRightBound() + 12, this->getY() + scrollbarOffset + scrollbarHeight - 50, 2, true, a(tsl::style::color::ColorHandle));
+                    renderer->drawRect(this->getRightBound() + 10, this->getY() + scrollbarOffset, 5, scrollbarHeight - 50, trackBarColor);
+                    renderer->drawCircle(this->getRightBound() + 12, this->getY() + scrollbarOffset, 2, true, trackBarColor);
+                    renderer->drawCircle(this->getRightBound() + 12, this->getY() + scrollbarOffset + scrollbarHeight - 50, 2, true, trackBarColor);
 
                     float prevOffset = this->m_offset;
 
@@ -3172,6 +3219,8 @@ namespace tsl {
                 // CUSTOM SECTION START (modification for submenu footer color)
                 if (this->m_value == DROPDOWN_SYMBOL || this->m_value == OPTION_SYMBOL) {
                     renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45, this->getY() + 45, 20, this->m_faint ? a(tsl::style::color::ColorDescription) : a(defaultTextColor));
+                } else if (this->m_value == CROSSMARK_SYMBOL) {
+                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45, this->getY() + 45, 20, this->m_faint ? a(tsl::style::color::ColorDescription) : a(Color(0xF, 0x0, 0x0, 0xF)));
                 } else {
                     renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45, this->getY() + 45, 20, this->m_faint ? a(tsl::style::color::ColorDescription) : a(tsl::style::color::ColorHighlight));
                 }
@@ -3362,6 +3411,7 @@ namespace tsl {
         public:
             std::string defaultTextColorStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "text_color");
             tsl::Color defaultTextColor = RGB888(defaultTextColorStr);
+            
             CategoryHeader(const std::string &title, bool hasSeparator = false) : m_text(title), m_hasSeparator(hasSeparator) {}
             virtual ~CategoryHeader() {}
 
@@ -3417,6 +3467,9 @@ namespace tsl {
         public:
             std::string defaultTextColorStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "text_color");
             tsl::Color defaultTextColor = RGB888(defaultTextColorStr);
+            std::string trackBarColorStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "trackbar_color");
+            Color trackBarColor = RGB888(trackBarColorStr, "#555555");
+            
             /**
              * @brief Constructor
              *
@@ -3496,7 +3549,7 @@ namespace tsl {
                 renderer->drawRect(this->getX() + 60 + handlePos, this->getY() + 40, this->getWidth() - 95 - handlePos, 5, a(tsl::style::color::ColorFrame));
                 renderer->drawRect(this->getX() + 60, this->getY() + 40, handlePos, 5, a(tsl::style::color::ColorHighlight));
 
-                renderer->drawCircle(this->getX() + 62 + handlePos, this->getY() + 42, 18, true, a(tsl::style::color::ColorHandle));
+                renderer->drawCircle(this->getX() + 62 + handlePos, this->getY() + 42, 18, true, a(trackBarColor));
                 renderer->drawCircle(this->getX() + 62 + handlePos, this->getY() + 42, 18, false, a(tsl::style::color::ColorFrame));
             }
 
@@ -4370,6 +4423,7 @@ namespace tsl {
                 datetimeFormat = removeQuotes(DEFAULT_DT_FORMAT);
             }
             
+
             //defaultTextColorStr = removeQuotes(parsedConfig["ultrahand"]["text_color"]);
             //if (defaultTextColorStr.empty()) {
             //    defaultTextColorStr =  "#FFFFFF";
