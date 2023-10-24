@@ -26,6 +26,13 @@
 #include <json_funcs.hpp>
 #include <list_funcs.hpp>
 
+#include <payload.hpp> // Studious Pancake
+#include <util.hpp>
+
+
+Payload::HekateConfigList const boot_config_list;
+Payload::HekateConfigList const ini_config_list;
+Payload::PayloadConfigList const payload_config_list;
 
 
 /**
@@ -744,6 +751,13 @@ void variableReplacement(std::vector<std::string>& cmd) {
  * @param commands A list of commands, where each command is represented as a vector of strings.
  */
 bool interpretAndExecuteCommand(const std::vector<std::vector<std::string>> commands, const std::string packagePath="", const std::string selectedCommand="") {
+    
+    //auto boot_config_list(Payload::LoadHekateConfigList());
+    //auto ini_config_list(Payload::LoadIniConfigList());
+    //auto payload_config_list(Payload::LoadPayloadList());
+    
+    
+    
     std::string commandName, bootCommandName, sourcePath, destinationPath, desiredSection, desiredNewSection, desiredKey, desiredNewKey, desiredValue, \
         offset, customPattern, hexDataToReplace, hexDataReplacement, fileUrl, clearOption;
     
@@ -1139,11 +1153,119 @@ bool interpretAndExecuteCommand(const std::vector<std::vector<std::string>> comm
                     bootOptions.clear();
                 }
             }
-        } else if (commandName == "reboot") {
-            // Reboot command
+        } else if (commandName == "reboot") { // credits to Studious Pancake for the Payload and utils methods
+            std::string rebootOption;
+            int rebootIndex = 0;
+            
+            
+            if (util::IsErista() || util::SupportsMarikoRebootToConfig()) {
+                if (command.size() >= 2) {
+                    rebootOption = removeQuotes(command[1]);
+                    
+                    
+                    if (command.size() >= 3) {
+                        
+                        if (rebootOption == "boot") {
+                            std::string option = removeQuotes(command[2]);
+                            Payload::HekateConfigList bootConfigList = Payload::LoadHekateConfigList();
+                            auto bootConfigIterator = bootConfigList.begin();  // Define the iterator here
+                            if (std::all_of(option.begin(), option.end(), ::isdigit)) {
+                                rebootIndex = std::stoi(option);
+                                
+                                std::advance(bootConfigIterator, rebootIndex);
+                                Payload::RebootToHekateConfig(*bootConfigIterator, false);
+                            
+                            } else { 
+                                std::string entryName = option;
+                                int rebootIndex = -1;  // Initialize rebootIndex to -1, indicating no match found
+                                
+                                for (auto it = bootConfigList.begin(); it != bootConfigList.end(); ++it) {
+                                    if (it->name == entryName) {
+                                        // Match found, store the index and break the loop
+                                        rebootIndex = std::distance(bootConfigList.begin(), it);
+                                        bootConfigIterator = it;  // Update the iterator to the matching element
+                                        break;
+                                    }
+                                }
+                                
+                                if (rebootIndex != -1) {
+                                    Payload::RebootToHekateConfig(*bootConfigIterator, false);
+                                }
+                            }
+                            
+                        } else if (rebootOption == "ini") {
+                            std::string option = removeQuotes(command[2]);
+                            Payload::HekateConfigList iniConfigList = Payload::LoadIniConfigList();
+                            auto iniConfigIterator = iniConfigList.begin();
+                            if (std::all_of(option.begin(), option.end(), ::isdigit)) {
+                                rebootIndex = std::stoi(option);
+                                
+                                std::advance(iniConfigIterator, rebootIndex);
+                                Payload::RebootToHekateConfig(*iniConfigIterator, true);
+                            
+                            } else { 
+                                std::string entryName = option;
+                                int rebootIndex = -1;  // Initialize rebootIndex to -1, indicating no match found
+                                
+                                for (auto it = iniConfigList.begin(); it != iniConfigList.end(); ++it) {
+                                    if (it->name == entryName) {
+                                        // Match found, store the index and break the loop
+                                        rebootIndex = std::distance(iniConfigList.begin(), it);
+                                        iniConfigIterator = it;  // Update the iterator to the matching element
+                                        break;
+                                    }
+                                }
+                                
+                                if (rebootIndex != -1) {
+                                    Payload::RebootToHekateConfig(*iniConfigIterator, true);
+                                }
+                            }
+                        }
+                    }
+                    
+                    if (rebootOption == "UMS")
+                        Payload::RebootToHekateUMS(Payload::UmsTarget_Sd);
+                    else if (isFileOrDirectory(rebootOption)) {
+                        std::string fileName = getNameFromPath(rebootOption);
+                        if (util::IsErista()) {
+                            Payload::PayloadConfig reboot_payload = {fileName, rebootOption};
+                            Payload::RebootToPayload(reboot_payload);
+                        } else {
+                            setIniFileValue("/bootloader/ini/" + fileName + ".ini", fileName, "payload", rebootOption); // generate entry
+                            Payload::HekateConfigList iniConfigList = Payload::LoadIniConfigList();
+                            
+                            int rebootIndex = -1;  // Initialize rebootIndex to -1, indicating no match found
+                            auto iniConfigIterator = iniConfigList.begin();  // Define the iterator here
+                            
+                            for (auto it = iniConfigList.begin(); it != iniConfigList.end(); ++it) {
+                                if (it->name == fileName) {
+                                    // Match found, store the index and break the loop
+                                    rebootIndex = std::distance(iniConfigList.begin(), it);
+                                    iniConfigIterator = it;  // Update the iterator to the matching element
+                                    break;
+                                }
+                            }
+                            
+                            if (rebootIndex != -1) {
+                                // A matching entry was found in the iniConfigList
+                                //deleteFileOrDirectory("/bootloader/ini/" + fileName + ".ini");
+                                Payload::RebootToHekateConfig(*iniConfigIterator, true);
+                            }
+                        }
+                    }
+                }
+                
+                if (rebootOption.empty())
+                    Payload::RebootToHekate();
+            }
+            
+            // Fall back reboot command
+            i2cExit();
             splExit();
             fsdevUnmountAll();
             spsmShutdown(SpsmShutdownMode_Reboot);
+            
+            
         } else if (commandName == "shutdown") {
             // Reboot command
             splExit();
