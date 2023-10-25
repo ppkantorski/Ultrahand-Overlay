@@ -123,7 +123,7 @@ bool downloadFile(const std::string& url, const std::string& toDestination) {
     //curl_easy_setopt(curl, CURLOPT_CAINFO, "sdmc:/config/ultrahand/cacert.pem");
     
     
-    logMessage("destination: "+destination);
+    //logMessage("destination: "+destination);
     
     CURLcode result = curl_easy_perform(curl);
     if (result != CURLE_OK) {
