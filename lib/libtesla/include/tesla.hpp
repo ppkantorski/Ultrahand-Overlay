@@ -145,7 +145,9 @@ static std::string PACKAGES = "Packages"; //defined in libTesla now
 static std::string PACKAGE = "Package";
 static std::string HIDDEN_PACKAGES = "Hidden Packages";
 static std::string HIDDEN = "Hidden";
-static std::string HIDE = "Hide";
+static std::string HIDE_OVERLAY = "Hide Overlay";
+static std::string HIDE_PACKAGE = "Hide Package";
+static std::string LAUNCH_ARGUMENTS = "Launch Arguments";
 static std::string COMMANDS = "Commands";
 static std::string SETTINGS = "Main Settings";
 static std::string MAIN_SETTINGS = "Main Settings";
@@ -224,7 +226,9 @@ void reinitializeLangVars() {
     PACKAGE = "Package";
     HIDDEN_PACKAGES = "Hidden Packages";
     HIDDEN = "Hidden";
-    HIDE = "Hide";
+    HIDE_OVERLAY = "Hide Overlay";
+    HIDE_PACKAGE = "Hide Package";
+    LAUNCH_ARGUMENTS = "Launch Arguments";
     COMMANDS = "Commands";
     SETTINGS = "Main Settings";
     MAIN_SETTINGS = "Main Settings";
@@ -315,7 +319,9 @@ void parseLanguage(std::string langFile) {
     updateIfNotEmpty(PACKAGE, "PACKAGE", langData);
     updateIfNotEmpty(HIDDEN_PACKAGES, "HIDDEN_PACKAGES", langData);
     updateIfNotEmpty(HIDDEN, "HIDDEN", langData);
-    updateIfNotEmpty(HIDE, "HIDE", langData);
+    updateIfNotEmpty(HIDE_PACKAGE, "HIDE_PACKAGE", langData);
+    updateIfNotEmpty(HIDE_OVERLAY, "HIDE_PACKAGE", langData);
+    updateIfNotEmpty(LAUNCH_ARGUMENTS, "LAUNCH_ARGUMENTS", langData);
     updateIfNotEmpty(COMMANDS, "COMMANDS", langData);
     updateIfNotEmpty(SETTINGS, "SETTINGS", langData);
     updateIfNotEmpty(MAIN_SETTINGS, "MAIN_SETTINGS", langData);
@@ -2422,29 +2428,26 @@ namespace tsl {
                     offset = 6;
                     
                     // Draw the first half of the string in white color
-                    Color highlightColor = {0xF, 0xF, 0xF, 0xF};
-                    float progress;
+                    static Color highlightColor = {0xF, 0xF, 0xF, 0xF};
+                    static float progress;
                     float letterWidth;
                     
                     
-                    
-                    
                     // Get the current time
-                    auto currentTime2 = std::chrono::system_clock::now();
-                    auto timeInSeconds = std::chrono::duration<double>(currentTime2.time_since_epoch()).count();
-
+                    static double timeInSeconds;
+                    
                     // Calculate the progress for one full sine wave per second
-                    const double cycleDuration = 1.5;  // 1 second for one full sine wave
-                    double timeCounter = fmod(timeInSeconds, cycleDuration);
+                    const double cycleDuration = 1.5;  // for one full sine wave
+                    static double timeCounter;// = fmod(timeInSeconds, cycleDuration);
                     //float progress = calculateAmplitude(2 * M_PI * timeCounter / cycleDuration);
                     
                     
                     float countOffset = 0;
+                    
                     for (char letter : firstHalf) {
                         // Calculate the progress for each letter based on the counter
                         //progress = calculateAmplitude(counter - x * 0.001F);
-                        currentTime2 = std::chrono::system_clock::now();
-                        timeInSeconds = std::chrono::duration<double>(currentTime2.time_since_epoch()).count();
+                        timeInSeconds = std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count();
                         timeCounter = fmod(timeInSeconds, cycleDuration);
                         counter = (2 * M_PI * (timeCounter + countOffset) / cycleDuration);
                         //progress = calculateAmplitude(counter);
