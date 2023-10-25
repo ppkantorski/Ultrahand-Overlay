@@ -2269,7 +2269,7 @@ public:
                 if (ultrahandSection.count("hide_pcb_temp") == 0)
                     setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_pcb_temp", "false");
                 if (ultrahandSection.count("hide_soc_temp") == 0)
-                    setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_soc_temp", "false");
+                    setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_soc_temp", "true");
                 
                 //if (ultrahandSection.count("in_overlay") > 0) {
                 //    inOverlayString = ultrahandSection["in_overlay"];
