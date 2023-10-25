@@ -468,7 +468,7 @@ public:
                         }
                         
                         lastSelectedListItem->setValue("");
-                        selectedListItem->setValue(combo);
+                        selectedListItem->setValue(comboMap[combo]);
                         listItem->setValue(CHECKMARK_SYMBOL);
                         lastSelectedListItem = listItem;
                         
