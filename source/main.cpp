@@ -185,7 +185,7 @@ public:
      */
     virtual tsl::elm::Element* createUI() override {
         
-        rootFrame = new tsl::elm::OverlayFrame("Ultrahand", versionLabel);
+        //rootFrame = new tsl::elm::OverlayFrame("Ultrahand", versionLabel);
         
         if (dropdownSelection.empty())
             inSettingsMenu = true;
@@ -531,8 +531,7 @@ public:
         } else
             list->addItem(new tsl::elm::ListItem(FAILED_TO_OPEN + ": " + settingsIniPath));
         
-        //rootFrame = new tsl::elm::OverlayFrame("Ultrahand", versionLabel);
-        //rootFrame = new tsl::elm::OverlayFrame(entryName, "Ultrahand Settings");
+        rootFrame = new tsl::elm::OverlayFrame("Ultrahand", versionLabel);
         rootFrame->setContent(list);
         return rootFrame;
     }
