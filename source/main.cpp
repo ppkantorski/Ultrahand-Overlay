@@ -308,7 +308,7 @@ public:
                 if ((cleanVersionLabels == "true") != state) {
                     reloadMenu3 = true;
                     reloadMenu = true;
-                    if (cleanVersionLabels == "true")
+                    if (cleanVersionLabels == "false")
                         versionLabel = APP_VERSION+std::string("   (")+ extractTitle(loaderInfo)+" "+cleanVersionLabel(loaderInfo)+std::string(")"); // Still needs to parse nx-ovlloader instead of hard coding it
                     else
                         versionLabel = APP_VERSION+std::string("   (")+ extractTitle(loaderInfo)+" v"+cleanVersionLabel(loaderInfo)+std::string(")");
