@@ -13,11 +13,11 @@
  *   - Configuration options through INI files.
  *   - Toggles for enabling/disabling specific commands.
  * 
- *   Note: Please refer to the project documentation and README.md for detailed
- *   information on how to use and configure the Ultrahand Overlay.
- * 
  *   For the latest updates and contributions, visit the project's GitHub repository.
  *   (GitHub Repository: https://github.com/ppkantorski/Ultrahand-Overlay)
+ * 
+ *   Note: Please be aware that this notice cannot be altered or removed. It is a part
+ *   of the project's documentation and must remain intact.
  *
  *  Copyright (c) 2023 ppkantorski
  *  All rights reserved.
@@ -90,7 +90,7 @@ static auto selectedListItem = new tsl::elm::ListItem("");
 static auto lastSelectedListItem = new tsl::elm::ListItem("");
 
 static auto loaderInfo = envGetLoaderInfo();
-static std::string versionLabel;
+static std::string versionLabel = APP_VERSION+std::string("   (")+ extractTitle(loaderInfo)+" v"+cleanVersionLabel(loaderInfo)+std::string(")");
 
 
 // Command key defintitions
@@ -156,7 +156,7 @@ private:
         {"L+R+DLEFT", "\uE0E4+\uE0E5+\uE0ED"},
         {"L+DDOWN+RS", "\uE0E4+\uE0EC+\uE0C5"}
     };
-    std::vector<std::string> defaultLanguages = {"en", "es", "fr", "de", "ja", "kr", "it", "nl", "pt", "ru", "zh-cn"};
+    std::vector<std::string> defaultLanguages = {"en", "es", "fr", "de", "ja", "kr", "it", "nl", "pt", "ru", "zh-cn", "zh-tw"};
 public:
     /**
      * @brief Constructs a `ScriptOverlay` instance.
@@ -184,6 +184,8 @@ public:
      * @return A pointer to the GUI element representing the configuration overlay.
      */
     virtual tsl::elm::Element* createUI() override {
+        
+        //rootFrame = new tsl::elm::OverlayFrame("Ultrahand", versionLabel);
         
         if (dropdownSelection.empty())
             inSettingsMenu = true;
@@ -530,7 +532,6 @@ public:
             list->addItem(new tsl::elm::ListItem(FAILED_TO_OPEN + ": " + settingsIniPath));
         
         rootFrame = new tsl::elm::OverlayFrame("Ultrahand", versionLabel);
-        //rootFrame = new tsl::elm::OverlayFrame(entryName, "Ultrahand Settings");
         rootFrame->setContent(list);
         return rootFrame;
     }
@@ -2269,7 +2270,7 @@ public:
                 if (ultrahandSection.count("hide_pcb_temp") == 0)
                     setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_pcb_temp", "false");
                 if (ultrahandSection.count("hide_soc_temp") == 0)
-                    setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_soc_temp", "false");
+                    setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_soc_temp", "true");
                 
                 //if (ultrahandSection.count("in_overlay") > 0) {
                 //    inOverlayString = ultrahandSection["in_overlay"];
@@ -2350,7 +2351,7 @@ public:
         if (cleanVersionLabels == "true")
             versionLabel = APP_VERSION+std::string("   (")+ extractTitle(loaderInfo)+" "+cleanVersionLabel(loaderInfo)+std::string(")"); // Still needs to parse nx-ovlloader instead of hard coding it
         else
-            versionLabel = APP_VERSION+std::string("   (")+envGetLoaderInfo()+std::string(")");
+            versionLabel = APP_VERSION+std::string("   (")+ extractTitle(loaderInfo)+" v"+cleanVersionLabel(loaderInfo)+std::string(")");
         
         list = new tsl::elm::List();
         
