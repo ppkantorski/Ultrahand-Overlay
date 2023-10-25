@@ -90,7 +90,7 @@ static auto selectedListItem = new tsl::elm::ListItem("");
 static auto lastSelectedListItem = new tsl::elm::ListItem("");
 
 static auto loaderInfo = envGetLoaderInfo();
-static std::string versionLabel;
+static std::string versionLabel = APP_VERSION+std::string("   (")+ extractTitle(loaderInfo)+" v"+cleanVersionLabel(loaderInfo)+std::string(")");
 
 
 // Command key defintitions
@@ -184,6 +184,8 @@ public:
      * @return A pointer to the GUI element representing the configuration overlay.
      */
     virtual tsl::elm::Element* createUI() override {
+        
+        rootFrame = new tsl::elm::OverlayFrame("Ultrahand", versionLabel);
         
         if (dropdownSelection.empty())
             inSettingsMenu = true;
@@ -306,7 +308,7 @@ public:
                 if ((cleanVersionLabels == "true") != state) {
                     reloadMenu3 = true;
                     reloadMenu = true;
-                    if (cleanVersionLabels == "false")
+                    if (cleanVersionLabels == "true")
                         versionLabel = APP_VERSION+std::string("   (")+ extractTitle(loaderInfo)+" "+cleanVersionLabel(loaderInfo)+std::string(")"); // Still needs to parse nx-ovlloader instead of hard coding it
                     else
                         versionLabel = APP_VERSION+std::string("   (")+ extractTitle(loaderInfo)+" v"+cleanVersionLabel(loaderInfo)+std::string(")");
@@ -529,7 +531,7 @@ public:
         } else
             list->addItem(new tsl::elm::ListItem(FAILED_TO_OPEN + ": " + settingsIniPath));
         
-        rootFrame = new tsl::elm::OverlayFrame("Ultrahand", versionLabel);
+        //rootFrame = new tsl::elm::OverlayFrame("Ultrahand", versionLabel);
         //rootFrame = new tsl::elm::OverlayFrame(entryName, "Ultrahand Settings");
         rootFrame->setContent(list);
         return rootFrame;
@@ -2350,7 +2352,7 @@ public:
         if (cleanVersionLabels == "true")
             versionLabel = APP_VERSION+std::string("   (")+ extractTitle(loaderInfo)+" "+cleanVersionLabel(loaderInfo)+std::string(")"); // Still needs to parse nx-ovlloader instead of hard coding it
         else
-            versionLabel = APP_VERSION+std::string("   (")+envGetLoaderInfo()+std::string(")");
+            versionLabel = APP_VERSION+std::string("   (")+ extractTitle(loaderInfo)+" v"+cleanVersionLabel(loaderInfo)+std::string(")");
         
         list = new tsl::elm::List();
         
