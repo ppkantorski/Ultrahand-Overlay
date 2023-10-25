@@ -9,6 +9,9 @@
  *   For the latest updates and contributions, visit the project's GitHub repository.
  *   (GitHub Repository: https://github.com/ppkantorski/Ultrahand-Overlay)
  *
+ *   Note: Please be aware that this notice cannot be altered or removed. It is a part
+ *   of the project's documentation and must remain intact.
+ * 
  *  Copyright (c) 2023 ppkantorski
  *  All rights reserved.
  ********************************************************************************/
