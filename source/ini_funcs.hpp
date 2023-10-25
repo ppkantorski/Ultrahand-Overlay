@@ -460,103 +460,124 @@ void cleanIniFormatting(const std::string& filePath) {
 void setIniFile(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredValue, const std::string& desiredNewKey) {
     FILE* configFile = fopen(fileToEdit.c_str(), "r");
     if (!configFile) {
-        // The INI file doesn't exist, create a new file and add the section and key-value pair
         configFile = fopen(fileToEdit.c_str(), "w");
         if (!configFile) {
-            // Failed to create the file
             // Handle the error accordingly
             return;
         }
-        fprintf(configFile, "[%s]\n", desiredSection.c_str());
-        fprintf(configFile, "%s = %s\n", desiredKey.c_str(), desiredValue.c_str());
+        fprintf(configFile, "[%s]\n%s = %s\n", desiredSection.c_str(), desiredKey.c_str(), desiredValue.c_str());
         fclose(configFile);
-        // printf("INI file created successfully.\n");
         return;
     }
+
+    // Create a buffer to store the updated content
+    std::string updatedContent;
+    std::string currentSection;
+    std::string formattedDesiredValue = trim(desiredValue);
+    char line[131072];
+
+    bool sectionFound = false;
+    bool keyFound = false;
+    bool addNewLine = false;
     
-    std::string trimmedLine;
-    std::string tempPath = fileToEdit + ".tmp";
-    FILE* tempFile = fopen(tempPath.c_str(), "w");
-    
-    
-    if (tempFile) {
-        std::string currentSection;
-        std::string formattedDesiredValue = desiredValue;
-        constexpr size_t BufferSize = 131072;
-        char line[BufferSize];
-        bool sectionFound = false;
-        //bool sectionOutOfBounds = false;
-        bool keyFound = false;
-        while (fgets(line, sizeof(line), configFile)) {
-            trimmedLine = trim(std::string(line));
-            
-            // Check if the line represents a section
-            if (trimmedLine[0] == '[' && trimmedLine[trimmedLine.length() - 1] == ']') {
-                currentSection = removeQuotes(trim(std::string(trimmedLine.c_str() + 1, trimmedLine.length() - 2)));
-                
-                if (sectionFound && !keyFound && (desiredNewKey.empty())) {
-                    // Write the modified line with the desired key and value
-                    formattedDesiredValue = removeQuotes(desiredValue);
-                    fprintf(tempFile, "%s = %s\n", desiredKey.c_str(), formattedDesiredValue.c_str());
-                    keyFound = true;
-                }
-                
-            }
-            
+    while (fgets(line, sizeof(line), configFile)) {
+        std::string trimmedLine = trim(line);
+
+        if (trimmedLine[0] == '[' && trimmedLine.back() == ']') {
+            currentSection = removeQuotes(trimmedLine.substr(1, trimmedLine.length() - 2));
             if (sectionFound && !keyFound && desiredNewKey.empty()) {
-                if (trim(currentSection) != trim(desiredSection)) {
-                    fprintf(tempFile, "%s = %s\n", desiredKey.c_str(), formattedDesiredValue.c_str());
+                if (!updatedContent.empty() && updatedContent.substr(updatedContent.length() - 2) == "\n\n") {
+                    updatedContent = updatedContent.substr(0, updatedContent.length() - 1);
+                    addNewLine = true;
+                }
+                updatedContent += desiredKey + " = " + formattedDesiredValue + "\n";
+                
+                if (addNewLine) { // if it ended with \n\n, add one more newline
+                    updatedContent += "\n";
+                    addNewLine = false;
+                }
+                keyFound = true;
+            }
+        }
+
+        if (sectionFound && !keyFound && desiredNewKey.empty() && trim(currentSection) != trim(desiredSection)) {
+            if (!updatedContent.empty() && updatedContent.substr(updatedContent.length() - 2) == "\n\n") {
+                updatedContent = updatedContent.substr(0, updatedContent.length() - 1);
+                addNewLine = true;
+            }
+            updatedContent += desiredKey + " = " + formattedDesiredValue + "\n";
+            // Add a newline character if the last part of updatedContent initially had "\n"
+            if (addNewLine) {
+                updatedContent += "\n";
+                addNewLine = false;
+            }
+            keyFound = true;
+        }
+
+        if (trim(currentSection) == trim(desiredSection)) {
+            sectionFound = true;
+            std::string::size_type delimiterPos = trimmedLine.find('=');
+
+            if (delimiterPos != std::string::npos) {
+                std::string lineKey = trim(trimmedLine.substr(0, delimiterPos));
+
+                if (lineKey == desiredKey) {
                     keyFound = true;
+                    std::string originalValue = getValueFromLine(trimmedLine);
+                    if (!updatedContent.empty() && updatedContent.substr(updatedContent.length() - 2) == "\n\n") {
+                        updatedContent = updatedContent.substr(0, updatedContent.length() - 1);
+                        addNewLine = true;
+                    }
+                    
+                    if (!desiredNewKey.empty()) {
+                        updatedContent += desiredNewKey + " = " + originalValue + "\n";
+                    } else {
+                        updatedContent += desiredKey + " = " + formattedDesiredValue + "\n";
+                    }
+                    
+                    // Add a newline character if the last part of updatedContent initially had "\n"
+                    if (addNewLine) {
+                        updatedContent += "\n";
+                        addNewLine = false;
+                    }
+                    continue;
                 }
             }
-            
-            // Check if the line is in the desired section
-            if (trim(currentSection) == trim(desiredSection)) {
-                sectionFound = true;
-                // Tokenize the line based on "=" delimiter
-                std::string::size_type delimiterPos = trimmedLine.find('=');
-                if (delimiterPos != std::string::npos) {
-                    std::string lineKey = trim(trimmedLine.substr(0, delimiterPos));
-                    
-                    // Check if the line key matches the desired key
-                    if (lineKey == desiredKey) {
-                        keyFound = true;
-                        std::string originalValue = getValueFromLine(trimmedLine); // Extract the original value
-                        
-                        // Write the modified line with the desired key and value
-                        if (!desiredNewKey.empty()) {
-                            fprintf(tempFile, "%s = %s\n", desiredNewKey.c_str(), originalValue.c_str());
-                        } else {
-                            fprintf(tempFile, "%s = %s\n", desiredKey.c_str(), formattedDesiredValue.c_str());
-                        }
-                        continue; // Skip writing the original line
-                    }
-                }
-            } 
-            
-            fprintf(tempFile, "%s", line);
         }
-        
-        if (sectionFound && !keyFound && (desiredNewKey.empty())) {
-            // Write the modified line with the desired key and value
-            fprintf(tempFile, "%s = %s\n", desiredKey.c_str(), formattedDesiredValue.c_str());
-        }
-        
-        if (!sectionFound && !keyFound && desiredNewKey.empty()) {
-            // The desired section doesn't exist, so create it and add the key-value pair
-            fprintf(tempFile, "[%s]\n", desiredSection.c_str());
-            fprintf(tempFile, "%s = %s\n", desiredKey.c_str(), formattedDesiredValue.c_str());
-        }
-        fclose(configFile);
-        fclose(tempFile);
-        remove(fileToEdit.c_str()); // Delete the old configuration file
-        rename(tempPath.c_str(), fileToEdit.c_str()); // Rename the temp file to the original name
-        
-        // printf("INI file updated successfully.\n");
-    } else {
-        // printf("Failed to create temporary file.\n");
+
+        updatedContent += line;
     }
+
+    if (sectionFound && !keyFound && desiredNewKey.empty()) {
+        if (!updatedContent.empty() && updatedContent.substr(updatedContent.length() - 2) == "\n\n") {
+            updatedContent = updatedContent.substr(0, updatedContent.length() - 1);
+            addNewLine = true;
+        }
+        updatedContent += desiredKey + " = " + formattedDesiredValue + "\n";
+        // Add a newline character if the last part of updatedContent initially had "\n"
+        if (addNewLine) {
+            updatedContent += "\n";
+            addNewLine = false;
+        }
+    }
+
+    if (!sectionFound && !keyFound && desiredNewKey.empty()) {
+        updatedContent += "\n[" + desiredSection + "]\n" + desiredKey + " = " + formattedDesiredValue + "\n";
+    }
+
+    fclose(configFile);
+
+    // Reopen the original file for writing and overwrite its content
+    configFile = fopen(fileToEdit.c_str(), "w");
+    if (!configFile) {
+        // Handle the error accordingly
+        return;
+    }
+    fprintf(configFile, "%s", updatedContent.c_str());
+    fclose(configFile);
 }
+
+
 
 /**
  * @brief Sets the value of a key in an INI file within the specified section and cleans the formatting.
