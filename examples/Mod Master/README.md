@@ -8,7 +8,7 @@ The `package.ini` file contains the following configurations:
 
 - `[*Toggle exeFS Patches]`: Toggles exeFS patches by selection.
 - `[*Toggle Content Mods]`: Toggles content modifications by selection.
-    -  Mods are sorted accordingly within `/config/ultrahand/Mod Master/<GAME>/<MOD>/<ID>/...`
+    -  Mods are sorted accordingly within `/switch/.packages/Mod Master/<GAME>/<MOD>/<ID>/...`
 - `[Enable 21:9 Mods]`: Enables 21:9 aspect ratio modifications.
 - `[Disable 21:9 Mods]`: Disables 21:9 aspect ratio modifications.
 
