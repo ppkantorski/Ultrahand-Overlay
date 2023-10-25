@@ -674,6 +674,9 @@ public:
             std::string hideOption = parseValueFromIniSection(settingsIniPath, entryName, "hide");
             bool hide = false;
             
+            std::string useOverlayLaunchArgs = parseValueFromIniSection(settingsIniPath, entryName, "use_launch_args");
+            
+            
             if (hideOption.empty())
                 hideOption = "false";
             
@@ -705,12 +708,14 @@ public:
             //hideLabel[0] = std::toupper(hideLabel[0]);
             
             if (hideLabel == "overlay")
-                hideLabel = OVERLAY;
+                hideLabel = HIDE_OVERLAY;
             else if (hideLabel == "package")
-                hideLabel = PACKAGE;
+                hideLabel = HIDE_PACKAGE;
+            
+            
             
             // Envoke toggling
-            auto toggleListItem = new tsl::elm::ToggleListItem(HIDE + " " + hideLabel, false, ON, OFF);
+            auto toggleListItem = new tsl::elm::ToggleListItem(hideLabel, false, ON, OFF);
             toggleListItem->setState(hide);
             toggleListItem->setStateChangedListener([this, hide, toggleListItem](bool state) {
                 setIniFileValue(settingsIniPath, entryName, "hide", state ? "true" : "false");
@@ -737,6 +742,20 @@ public:
                 return false;
             });
             list->addItem(listItem);
+            
+            if (hideLabel == HIDE_OVERLAY) {
+                // Envoke toggling
+                toggleListItem = new tsl::elm::ToggleListItem(LAUNCH_ARGUMENTS, false, ON, OFF);
+                toggleListItem->setState((useOverlayLaunchArgs=="true"));
+                toggleListItem->setStateChangedListener([this, useOverlayLaunchArgs, toggleListItem](bool state) {
+                    setIniFileValue(settingsIniPath, entryName, "use_launch_args", state ? "true" : "false");
+                    if ((useOverlayLaunchArgs=="true") != state)
+                        reloadMenu = true; // this reloads before main menu
+                    if (!state)
+                        reloadMenu2 = true; // this reloads at main menu
+                });
+                list->addItem(toggleListItem);
+            }
             
             
         } else if (dropdownSelection == "priority") {
@@ -2157,6 +2176,7 @@ private:
     std::string packageConfigIniPath = packageDirectory + configFileName;
     std::string menuMode, defaultMenuMode, inOverlayString, fullPath, optionName, hideOverlayVersions, hidePackageVersions, cleanVersionLabels, priority, starred, hide;
     bool useDefaultMenu = false;
+    bool useOverlayLaunchArgs = false;
     std::string hiddenMenuMode;
     
     std::string defaultLang = "en";
@@ -2385,6 +2405,8 @@ public:
                         setIniFileValue(overlaysIniFilePath, overlayFileName, "priority", "20");
                         setIniFileValue(overlaysIniFilePath, overlayFileName, "star", "false");
                         setIniFileValue(overlaysIniFilePath, overlayFileName, "hide", "false");
+                        setIniFileValue(overlaysIniFilePath, overlayFileName, "use_launch_args", "false");
+                        setIniFileValue(overlaysIniFilePath, overlayFileName, "launch_args", "");
                         
                     } else {
                         // Read priority and starred status from ini
@@ -2412,6 +2434,22 @@ public:
                             hide = overlaysIniData[overlayFileName]["hide"];
                         } else
                             setIniFileValue(overlaysIniFilePath, overlayFileName, "hide", "false");
+                        
+                        // Check if the "hide" key exists in overlaysIniData for overlayFileName
+                        if (overlaysIniData.find(overlayFileName) != overlaysIniData.end() &&
+                            overlaysIniData[overlayFileName].find("use_launch_args") != overlaysIniData[overlayFileName].end()) {
+                            //useOverlayLaunchArgs = (overlaysIniData[overlayFileName]["use_launch_args"] == "true");
+                        } else
+                            setIniFileValue(overlaysIniFilePath, overlayFileName, "use_launch_args", "false");
+                        
+                        // Check if the "hide" key exists in overlaysIniData for overlayFileName
+                        if (overlaysIniData.find(overlayFileName) != overlaysIniData.end() &&
+                            overlaysIniData[overlayFileName].find("launch_args") != overlaysIniData[overlayFileName].end()) {
+                            //overlayLaunchArgs = overlaysIniData[overlayFileName]["launch_args"];
+                        } else
+                            setIniFileValue(overlaysIniFilePath, overlayFileName, "launch_args", "");
+                        
+                        
                         
                         
                         // Get the name and version of the overlay file
@@ -2515,8 +2553,20 @@ public:
                                 //inMainMenu = false;
                                 //inOverlay = true;
                                 setIniFileValue(settingsConfigIniPath, "ultrahand", "in_overlay", "true"); // this is handled within tesla.hpp
-                                tsl::setNextOverlay(overlayFile);
-                                //tsl::setNextOverlay(overlayFile, "--microOverlay");
+                                //if (useOverlayLaunchArgs) {
+                                //    logMessage("LaunchArgs: "+overlayLaunchArgs);
+                                //    tsl::setNextOverlay(overlayFile, overlayLaunchArgs);
+                                //} else
+                                //    tsl::setNextOverlay(overlayFile);
+                                //logMessage("LaunchArgs: "+overlayLaunchArgs);
+                                std::string useOverlayLaunchArgs = parseValueFromIniSection(overlaysIniFilePath, overlayFileName, "use_launch_args");
+                                std::string overlayLaunchArgs = parseValueFromIniSection(overlaysIniFilePath, overlayFileName, "launch_args");
+                                
+                                
+                                if (useOverlayLaunchArgs == "true")
+                                    tsl::setNextOverlay(overlayFile, overlayLaunchArgs);
+                                else
+                                    tsl::setNextOverlay(overlayFile);
                                 //envSetNextLoad(overlayPath, "");
                                 tsl::Overlay::get()->close();
                                 //inMainMenu = true;
