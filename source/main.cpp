@@ -13,8 +13,8 @@
  *   - Configuration options through INI files.
  *   - Toggles for enabling/disabling specific commands.
  * 
- *   Note: Please refer to the project documentation and README.md for detailed
- *   information on how to use and configure the Ultrahand Overlay.
+ *   Note: Please be aware that this notice cannot be altered or removed. It is a part
+ *   of the project's documentation and must remain intact.
  * 
  *   For the latest updates and contributions, visit the project's GitHub repository.
  *   (GitHub Repository: https://github.com/ppkantorski/Ultrahand-Overlay)
