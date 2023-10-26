@@ -73,6 +73,9 @@ static bool reloadMenu2 = false;
 static bool reloadMenu3 = false;
 static bool isDownloaded = false;
 
+static bool redrawMenu = true;
+static bool showMenu = false;
+
 static tsl::elm::OverlayFrame *rootFrame = nullptr;
 static tsl::elm::List *list = nullptr;
 
@@ -2289,6 +2292,12 @@ public:
         }
         copyTeslaKeyComboToUltrahand();
         
+        if (!showMenu) {
+            rootFrame = new tsl::elm::OverlayFrame("","");
+            rootFrame->setContent(list);
+            return rootFrame;
+        }
+        
         std::string langFile = "/config/ultrahand/lang/"+defaultLang+".json";
         if (isFileOrDirectory(langFile))
             parseLanguage(langFile);
@@ -3248,11 +3257,17 @@ public:
      * It can be used to perform actions or updates specific to the overlay's visibility.
      */
     virtual void onShow() override {
-        //if (rootFrame != nullptr) {
-        //    tsl::Overlay::get()->getCurrentGui()->removeFocus();
-        //    rootFrame->invalidate();
-        //    tsl::Overlay::get()->getCurrentGui()->requestFocus(rootFrame, tsl::FocusDirection::None);
-        //}
+        if (rootFrame != nullptr) {
+            if (inMainMenu && redrawMenu) {
+                //tsl::Overlay::get()->getCurrentGui()->removeFocus();
+                //rebuildUI();
+                showMenu = true;
+                tsl::changeTo<MainMenu>(lastMenuMode);
+                //rootFrame->invalidate();
+                //tsl::Overlay::get()->getCurrentGui()->requestFocus(rootFrame, tsl::FocusDirection::None);
+            }
+        }
+        redrawMenu = true;
     } 
     
     /**
@@ -3261,7 +3276,11 @@ public:
      * This function is called when the overlay transitions from an invisible state to a visible state.
      * It can be used to perform actions or updates specific to the overlay's visibility.
      */
-    virtual void onHide() override {} 
+    virtual void onHide() override {
+        if (inMainMenu) {
+            redrawMenu = false;
+        }
+    } 
     
     /**
      * @brief Loads the initial graphical user interface (GUI) for the overlay.
