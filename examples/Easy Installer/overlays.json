@@ -1,62 +1,62 @@
 [
     {
         "name": "EdiZon - latest",
-        "zip-url": "https://api.github.com/repos/proferabg/EdiZon-Overlay/releases",
+        "zip-url": "https://api.github.com/repos/proferabg/EdiZon-Overlay/releases?per_page=1&sort=created&order=desc",
         "download-entry": "0"
     },
     {
         "name": "FPSLocker - latest",
-        "ovl-url": "https://api.github.com/repos/masagrator/FPSLocker/releases",
+        "ovl-url": "https://api.github.com/repos/masagrator/FPSLocker/releases?per_page=1&sort=created&order=desc",
         "download-entry": "0"
     },
     {
         "name": "Fizeau - latest",
-        "zip-url": "https://api.github.com/repos/averne/Fizeau/releases",
+        "zip-url": "https://api.github.com/repos/averne/Fizeau/releases?per_page=1&sort=created&order=desc",
         "download-entry": "0"
     },
     {
         "name": "NX-FPS - latest",
-        "zip-url": "https://api.github.com/repos/masagrator/NX-FPS/releases",
+        "zip-url": "https://api.github.com/repos/masagrator/NX-FPS/releases?per_page=1&sort=created&order=desc",
         "download-entry": "0"
     },
     {
         "name": "nx-ovlloader - latest",
-        "zip-url": "https://api.github.com/repos/WerWolv/nx-ovlloader/releases",
+        "zip-url": "https://api.github.com/repos/WerWolv/nx-ovlloader/releases?per_page=1&sort=created&order=desc",
         "download-entry": "0"
     },
     {
         "name": "QuickNTP - latest",
-        "ovl-url": "https://api.github.com/repos/nedex/QuickNTP/releases",
+        "ovl-url": "https://api.github.com/repos/nedex/QuickNTP/releases?per_page=1&sort=created&order=desc",
         "download-entry": "0"
     },
     {
         "name": "SaltyNX - latest",
-        "zip-url": "https://api.github.com/repos/masagrator/SaltyNX/releases",
+        "zip-url": "https://api.github.com/repos/masagrator/SaltyNX/releases?per_page=1&sort=created&order=desc",
         "download-entry": "0"
     },
     {
         "name": "Status Monitor (a) - latest",
-        "ovl-url": "https://api.github.com/repos/ppkantorski/Status-Monitor-Overlay/releases",
+        "ovl-url": "https://api.github.com/repos/ppkantorski/Status-Monitor-Overlay/releases?per_page=1&sort=created&order=desc",
         "download-entry": "0"
     },
     {
         "name": "Switch-OC-Suite - latest",
-        "zip-url": "https://api.github.com/repos/hanai3Bi/Switch-OC-Suite/releases",
+        "zip-url": "https://api.github.com/repos/hanai3Bi/Switch-OC-Suite/releases?per_page=1&sort=created&order=desc",
         "download-entry": "1"
     },
     {
         "name": "SysDVR - latest",
-        "zip-url": "https://api.github.com/repos/exelix11/SysDVR/releases",
+        "zip-url": "https://api.github.com/repos/exelix11/SysDVR/releases?per_page=1&sort=created&order=desc",
         "download-entry": "3"
     },
     {
         "name": "SysDVR Overlay - latest",
-        "zip-url": "https://api.github.com/repos/Hartie95/sysdvr-overlay/releases",
+        "zip-url": "https://api.github.com/repos/Hartie95/sysdvr-overlay/releases?per_page=1&sort=created&order=desc",
         "download-entry": "0"
     },
     {
         "name": "Sys-modules - latest",
-        "ovl-url": "https://api.github.com/repos/WerWolv/ovl-sysmodules/releases",
+        "ovl-url": "https://api.github.com/repos/WerWolv/ovl-sysmodules/releases?per_page=1&sort=created&order=desc",
         "download-entry": "0"
     },
     {
@@ -66,17 +66,17 @@
     },
     {
         "name": "sys-patch - latest",
-        "zip-url": "https://api.github.com/repos/ITotalJustice/sys-patch/releases",
+        "zip-url": "https://api.github.com/repos/ITotalJustice/sys-patch/releases?per_page=1&sort=created&order=desc",
         "download-entry": "0"
     },
     {
         "name": "TriPlayer - latest",
-        "zip-url": "https://api.github.com/repos/DefenderOfHyrule/TriPlayer/releases",
+        "zip-url": "https://api.github.com/repos/DefenderOfHyrule/TriPlayer/releases?per_page=1&sort=created&order=desc",
         "download-entry": "0"
     },
     {
         "name": "Ultrahand - latest",
-        "ovl-url": "https://api.github.com/repos/ppkantorski/Ultrahand-Overlay/releases",
+        "ovl-url": "https://api.github.com/repos/ppkantorski/Ultrahand-Overlay/releases?per_page=1&sort=created&order=desc",
         "download-entry": "0"
     }
 ]
