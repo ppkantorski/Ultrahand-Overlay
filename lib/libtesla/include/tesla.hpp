@@ -655,6 +655,9 @@ void powerExit(void) {
 
 // Temperature Implementation
 s32 PCB_temperature, SOC_temperature;
+Service* g_ITs;
+Result tsCheck = 1;
+Result tcCheck = 1;
 
 extern "C" {
     typedef struct {
@@ -668,7 +671,6 @@ extern "C" {
     } tsDeviceCode;
 }
 
-Service* g_ITs;;
 
 
 Result tsOpenTsSession(Service* serviceSession, tsSession* out, tsDeviceCode device_code) {
@@ -688,51 +690,48 @@ Result tsGetTemperatureWithTsSession(tsSession *ITs, float* temperature) {
 
 
 bool thermalstatusInit(void) {
-    if (R_FAILED(tsInitialize()))
+    
+    tcCheck = tcInitialize();
+    tsCheck = tsInitialize();
+    if (R_SUCCEEDED(tsCheck)) {
+        g_ITs = tsGetServiceSession();
+    } else
         return false;
+    
     return true;
 }
 
 void thermalstatusExit(void) {
     tsExit();
+    tcExit();
 }
 
 bool thermalstatusGetDetailsPCB(s32* temperature) {
-    if (hosversionAtLeast(17, 0, 0)) {
-        tsSession ts_session;
-        Result rc = tsOpenTsSession(g_ITs, &ts_session, TsDeviceCode_Internal);
-        if (R_SUCCEEDED(rc)) {
-            float temp_float;
-            if (R_SUCCEEDED(tsGetTemperatureWithTsSession(&ts_session, &temp_float))) {
-                *temperature = static_cast<s32>(temp_float);
-            }
-            tsCloseTsSession(&ts_session);
-            return true;
+    tsSession ts_session;
+    Result rc = tsOpenTsSession(g_ITs, &ts_session, TsDeviceCode_Internal);
+    if (R_SUCCEEDED(rc)) {
+        float temp_float;
+        if (R_SUCCEEDED(tsGetTemperatureWithTsSession(&ts_session, &temp_float))) {
+            *temperature = static_cast<s32>(temp_float);
         }
-        return false;
-    } else {
-        // Handle the case where hosversion is not at least 17.0.0
-        return R_SUCCEEDED(tsGetTemperature(TsLocation_Internal, temperature));
+        tsCloseTsSession(&ts_session);
+        return true;
     }
+    return false;
 }
 
 bool thermalstatusGetDetailsSOC(s32* temperature) {
-    if (hosversionAtLeast(17, 0, 0)) {
-        tsSession ts_session;
-        Result rc = tsOpenTsSession(g_ITs, &ts_session, TsDeviceCode_External);
-        if (R_SUCCEEDED(rc)) {
-            float temp_float;
-            if (R_SUCCEEDED(tsGetTemperatureWithTsSession(&ts_session, &temp_float))) {
-                *temperature = static_cast<s32>(temp_float);
-            }
-            tsCloseTsSession(&ts_session);
-            return true;
+    tsSession ts_session;
+    Result rc = tsOpenTsSession(g_ITs, &ts_session, TsDeviceCode_External);
+    if (R_SUCCEEDED(rc)) {
+        float temp_float;
+        if (R_SUCCEEDED(tsGetTemperatureWithTsSession(&ts_session, &temp_float))) {
+            *temperature = static_cast<s32>(temp_float);
         }
-        return false;
-    } else {
-        // Handle the case where hosversion is not at least 17.0.0
-        return R_SUCCEEDED(tsGetTemperature(TsLocation_External, temperature));
+        tsCloseTsSession(&ts_session);
+        return true;
     }
+    return false;
 }
 
 
