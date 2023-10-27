@@ -11,7 +11,7 @@
  *
  *   Note: Please be aware that this notice cannot be altered or removed. It is a part
  *   of the project's documentation and must remain intact.
- * 
+ *
  *  Copyright (c) 2023 ppkantorski
  *  All rights reserved.
  ********************************************************************************/
@@ -774,8 +774,8 @@ bool interpretAndExecuteCommand(const std::vector<std::vector<std::string>> comm
     // inidialize data variables
     std::vector<std::string> listData;
     //json_t* jsonData1 = nullptr;
-    //json_t* jsonData2 = nullptr;
-    //json_error_t error;
+    json_t* jsonData2 = nullptr;
+    json_error_t error;
     //FILE* hexFile = nullptr;
     
     std::vector<std::string> command;
@@ -853,8 +853,10 @@ bool interpretAndExecuteCommand(const std::vector<std::vector<std::string>> comm
                 size_t startPos = arg.find("{json_file(");
                 size_t endPos = arg.find(")}");
                 if (endPos != std::string::npos && endPos > startPos) {
-                    //jsonData2 = json_load_file(jsonPath.c_str(), 0, &error);
                     replacement = replaceJsonPlaceholder(arg.substr(startPos, endPos - startPos + 2), "json_file", jsonPath);
+                    
+                    //jsonData2 = json_load_file(jsonPath.c_str(), 0, &error);
+                    //replacement = replaceJsonPlaceholderF2(arg.substr(startPos, endPos - startPos + 2), "json_file", jsonData2);
                     //logMessage("Mid source replacement: " + replacement);
                     arg.replace(startPos, endPos - startPos + 2, replacement);
                     
