@@ -565,6 +565,8 @@ bool isValidHexColor(const std::string& hexColor) {
     return true;
 }
 
+
+// Battery implementation
 static bool powerInitialized = false;
 static bool powerCacheInitialized;
 static uint32_t powerCacheCharge;
@@ -641,7 +643,6 @@ void powerInit(void) {
     }
 }
 
-
 void powerExit(void) {
     if (powerInitialized) {
         psmUnbindStateChangeEvent(&powerSession);
@@ -651,32 +652,64 @@ void powerExit(void) {
     }
 }
 
+
+// Temperature implementation
 s32 PCB_temperature, SOC_temperature;
 
-//static TsSession g_tsInternalSession;
+extern "C" {
+    typedef struct {
+        Service s;
+    } TsSession;
+
+    /// Location
+    typedef enum {
+        TsDeviceCode_LocationInternal = 0x41000001,    ///< TMP451 Internal: PCB
+        TsDeviceCode_LocationExternal = 0x41000002,    ///< TMP451 External: SoC
+    } TsDeviceCode;
+}
+
+static TsSession g_tsInternalSession;
+static TsSession g_tsExternalSession;
+
+Result tsOpenSession(TsSession* out, TsDeviceCode device_code) {
+    return serviceDispatchIn(&out->s, 4, device_code,
+        .out_num_objects = 1,
+        .out_objects = &out->s,
+    );
+}
+
+void tsSessionClose(TsSession* in) {
+    serviceClose(&in->s);
+}
+
+Result tsSessionGetTemperature(TsSession *ITs, float* temperature) {
+    return serviceDispatchOut(&ITs->s, 4, *temperature);
+}
+
 
 bool thermalstatusInit(void) {
     if (R_FAILED(tsInitialize()))
         return false;
-    //if (hosversionAtLeast(17,0,0) && R_FAILED(tsOpenSession(&g_tsInternalSession, TsDeviceCode_LocationInternal)))
-    //    return false;
+    if (hosversionAtLeast(17,0,0) && R_FAILED(tsOpenSession(&g_tsInternalSession, TsDeviceCode_LocationInternal)) && R_FAILED(tsOpenSession(&g_tsExternalSession, TsDeviceCode_LocationExternal)))
+        return false;
     return true;
 }
 
 void thermalstatusExit(void) {
-    //if (hosversionAtLeast(17,0,0))
-    //    tsSessionClose(&g_tsInternalSession);
+    if (hosversionAtLeast(17,0,0))
+        tsSessionClose(&g_tsInternalSession);
     tsExit();
 }
 
+
 bool thermalstatusGetDetailsPCB(s32 *temperature) {
     if (hosversionAtLeast(17,0,0)) {
-        //float temp_float;
-        //if (R_SUCCEEDED(tsSessionGetTemperature(&g_tsInternalSession, &temp_float))) {
-        //    *temperature = (int)temp_float;
-        //    return true;
-        //} else
-        //    return false;
+        float temp_float;
+        if (R_SUCCEEDED(tsSessionGetTemperature(&g_tsInternalSession, &temp_float))) {
+            *temperature = (int)temp_float;
+            return true;
+        } else
+            return false;
         
         return false;
     } else
@@ -685,18 +718,20 @@ bool thermalstatusGetDetailsPCB(s32 *temperature) {
 
 bool thermalstatusGetDetailsSOC(s32 *temperature) {
     if (hosversionAtLeast(17,0,0)) {
-        //float temp_float;
-        //if (R_SUCCEEDED(tsSessionGetTemperature(&g_tsInternalSession, &temp_float))) {
-        //    *temperature = (int)temp_float;
-        //    return true;
-        //} else
-        //    return false;
+        float temp_float;
+        if (R_SUCCEEDED(tsSessionGetTemperature(&g_tsExternalSession, &temp_float))) {
+            *temperature = (int)temp_float;
+            return true;
+        } else
+            return false;
         
         return false;
     } else
         return R_SUCCEEDED(tsGetTemperature(TsLocation_External, temperature));
 }
 
+
+// Time implementation
 struct timespec currentTime;
 static const std::string DEFAULT_DT_FORMAT = "'%a %T'";
 static std::string datetimeFormat = removeQuotes(DEFAULT_DT_FORMAT);
