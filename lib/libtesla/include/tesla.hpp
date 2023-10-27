@@ -653,36 +653,36 @@ void powerExit(void) {
 }
 
 
-// Temperature implementation
+// Temperature Implementation
 s32 PCB_temperature, SOC_temperature;
 
 extern "C" {
     typedef struct {
         Service s;
-    } TsSession;
+    } tsSession;
 
     /// Location
     typedef enum {
-        TsDeviceCode_LocationInternal = 0x41000001,    ///< TMP451 Internal: PCB
-        TsDeviceCode_LocationExternal = 0x41000002,    ///< TMP451 External: SoC
-    } TsDeviceCode;
+        TsDeviceCode_Internal = 0x41000001,    ///< TMP451 Internal: PCB
+        TsDeviceCode_External = 0x41000002,    ///< TMP451 External: SoC
+    } tsDeviceCode;
 }
 
-static TsSession g_tsInternalSession;
-static TsSession g_tsExternalSession;
+Service* g_ITs;;
 
-Result tsOpenSession(TsSession* out, TsDeviceCode device_code) {
-    return serviceDispatchIn(&out->s, 4, device_code,
+
+Result tsOpenTsSession(Service* serviceSession, tsSession* out, tsDeviceCode device_code) {
+    return serviceDispatchIn(serviceSession, 4, device_code,
         .out_num_objects = 1,
         .out_objects = &out->s,
     );
 }
 
-void tsSessionClose(TsSession* in) {
+void tsCloseTsSession(tsSession* in) {
     serviceClose(&in->s);
 }
 
-Result tsSessionGetTemperature(TsSession *ITs, float* temperature) {
+Result tsGetTemperatureWithTsSession(tsSession *ITs, float* temperature) {
     return serviceDispatchOut(&ITs->s, 4, *temperature);
 }
 
@@ -690,45 +690,53 @@ Result tsSessionGetTemperature(TsSession *ITs, float* temperature) {
 bool thermalstatusInit(void) {
     if (R_FAILED(tsInitialize()))
         return false;
-    if (hosversionAtLeast(17,0,0) && R_FAILED(tsOpenSession(&g_tsInternalSession, TsDeviceCode_LocationInternal)) && R_FAILED(tsOpenSession(&g_tsExternalSession, TsDeviceCode_LocationExternal)))
-        return false;
     return true;
 }
 
 void thermalstatusExit(void) {
-    if (hosversionAtLeast(17,0,0))
-        tsSessionClose(&g_tsInternalSession);
     tsExit();
 }
 
-
-bool thermalstatusGetDetailsPCB(s32 *temperature) {
-    if (hosversionAtLeast(17,0,0)) {
-        float temp_float;
-        if (R_SUCCEEDED(tsSessionGetTemperature(&g_tsInternalSession, &temp_float))) {
-            *temperature = (int)temp_float;
+bool thermalstatusGetDetailsPCB(s32* temperature) {
+    if (hosversionAtLeast(17, 0, 0)) {
+        tsSession ts_session;
+        Result rc = tsOpenTsSession(g_ITs, &ts_session, TsDeviceCode_Internal);
+        if (R_SUCCEEDED(rc)) {
+            float temp_float;
+            if (R_SUCCEEDED(tsGetTemperatureWithTsSession(&ts_session, &temp_float))) {
+                *temperature = static_cast<s32>(temp_float);
+            }
+            tsCloseTsSession(&ts_session);
             return true;
-        } else
-            return false;
-        
+        }
         return false;
-    } else
+    } else {
+        // Handle the case where hosversion is not at least 17.0.0
         return R_SUCCEEDED(tsGetTemperature(TsLocation_Internal, temperature));
+    }
 }
 
-bool thermalstatusGetDetailsSOC(s32 *temperature) {
-    if (hosversionAtLeast(17,0,0)) {
-        float temp_float;
-        if (R_SUCCEEDED(tsSessionGetTemperature(&g_tsExternalSession, &temp_float))) {
-            *temperature = (int)temp_float;
+bool thermalstatusGetDetailsSOC(s32* temperature) {
+    if (hosversionAtLeast(17, 0, 0)) {
+        tsSession ts_session;
+        Result rc = tsOpenTsSession(g_ITs, &ts_session, TsDeviceCode_External);
+        if (R_SUCCEEDED(rc)) {
+            float temp_float;
+            if (R_SUCCEEDED(tsGetTemperatureWithTsSession(&ts_session, &temp_float))) {
+                *temperature = static_cast<s32>(temp_float);
+            }
+            tsCloseTsSession(&ts_session);
             return true;
-        } else
-            return false;
-        
+        }
         return false;
-    } else
+    } else {
+        // Handle the case where hosversion is not at least 17.0.0
         return R_SUCCEEDED(tsGetTemperature(TsLocation_External, temperature));
+    }
 }
+
+
+
 
 
 // Time implementation
