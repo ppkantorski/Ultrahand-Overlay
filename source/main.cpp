@@ -2290,13 +2290,13 @@ public:
             setIniFileValue(settingsConfigIniPath, "ultrahand", "last_menu", menuMode);
             setIniFileValue(settingsConfigIniPath, "ultrahand", "in_overlay", "false");
         }
-        copyTeslaKeyComboToUltrahand();
         
-        if (!showMenu) {
-            rootFrame = new tsl::elm::OverlayFrame("","");
-            rootFrame->setContent(list);
-            return rootFrame;
-        }
+        
+        //if (!showMenu) {
+        //    rootFrame = new tsl::elm::OverlayFrame("","");
+        //    rootFrame->setContent(list);
+        //    return rootFrame;
+        //}
         
         std::string langFile = "/config/ultrahand/lang/"+defaultLang+".json";
         if (isFileOrDirectory(langFile))
@@ -2343,6 +2343,7 @@ public:
             setIniFileValue(themeConfigIniPath, "theme", "highlight_color_2", "#88FFFF");
         }
         
+        copyTeslaKeyComboToUltrahand();
         
         //setIniFileValue(settingsConfigIniPath, "ultrahand", "in_overlay", "false");
         
@@ -3257,17 +3258,17 @@ public:
      * It can be used to perform actions or updates specific to the overlay's visibility.
      */
     virtual void onShow() override {
-        if (rootFrame != nullptr) {
-            if (inMainMenu && redrawMenu) {
-                //tsl::Overlay::get()->getCurrentGui()->removeFocus();
-                //rebuildUI();
-                showMenu = true;
-                tsl::changeTo<MainMenu>(lastMenuMode);
-                //rootFrame->invalidate();
-                //tsl::Overlay::get()->getCurrentGui()->requestFocus(rootFrame, tsl::FocusDirection::None);
-            }
-        }
-        redrawMenu = true;
+        //if (rootFrame != nullptr) {
+        //    if (inMainMenu && redrawMenu) {
+        //        //tsl::Overlay::get()->getCurrentGui()->removeFocus();
+        //        //rebuildUI();
+        //        showMenu = true;
+        //        tsl::changeTo<MainMenu>(lastMenuMode);
+        //        //rootFrame->invalidate();
+        //        //tsl::Overlay::get()->getCurrentGui()->requestFocus(rootFrame, tsl::FocusDirection::None);
+        //    }
+        //}
+        //redrawMenu = true;
     } 
     
     /**
@@ -3277,9 +3278,9 @@ public:
      * It can be used to perform actions or updates specific to the overlay's visibility.
      */
     virtual void onHide() override {
-        if (inMainMenu) {
-            redrawMenu = false;
-        }
+        //if (inMainMenu) {
+        //    redrawMenu = false;
+        //}
     } 
     
     /**
