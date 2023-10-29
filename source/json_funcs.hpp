@@ -8,6 +8,9 @@
  *   For the latest updates and contributions, visit the project's GitHub repository.
  *   (GitHub Repository: https://github.com/ppkantorski/Ultrahand-Overlay)
  *
+ *   Note: Please be aware that this notice cannot be altered or removed. It is a part
+ *   of the project's documentation and must remain intact.
+ * 
  *  Copyright (c) 2023 ppkantorski
  *  All rights reserved.
  ********************************************************************************/
@@ -167,3 +170,87 @@ std::string replaceJsonPlaceholder(const std::string& arg, const std::string& co
     return replacement;
 }
 
+
+
+std::string replaceJsonPlaceholderF(const std::string& arg, const std::string& commandName, const std::string& jsonPathOrString, json_t*& jsonDict) {
+    //json_t* jsonDict = nullptr;
+    json_error_t error;
+    //FILE* hexFile = nullptr;
+    
+    //if (commandName == "json" || commandName == "json_source") {
+    //    jsonDict = stringToJson(jsonPathOrString);
+    //} else if (commandName == "json_file" || commandName == "json_file_source") {
+    //    jsonDict = json_load_file(jsonPathOrString.c_str(), 0, &error);
+    //}
+    
+    //logMessage("arg: "+arg);
+    //logMessage("commandName: "+commandName);
+    
+    std::string replacement = arg;
+    std::string searchString = "{"+commandName+"(";
+    
+    
+    std::size_t startPos = replacement.find(searchString);
+    std::size_t endPos = replacement.find(")}");
+    if (startPos != std::string::npos && endPos != std::string::npos && endPos > startPos) {
+        std::string jsonSourcePathArgs = replacement.substr(startPos + searchString.length(), endPos - startPos - searchString.length());
+        std::vector<std::string> keys;
+        std::string key;
+        std::istringstream keyStream(jsonSourcePathArgs);
+        while (std::getline(keyStream, key, ',')) {
+            keys.push_back(trim(key));
+        }
+        
+        // Traverse the JSON structure based on the keys
+        auto current = jsonDict;
+        for (const auto& key : keys) {
+            if (json_is_object(current)) {
+                current = json_object_get(current, key.c_str());
+            } else if (json_is_array(current)) {
+                if (key == "[]") {
+                    size_t index = 0;
+                    while (json_array_size(current) > index) {
+                        json_t* arrayItem = json_array_get(current, index);
+                        if (json_is_object(arrayItem)) {
+                            current = arrayItem;
+                            break;
+                        }
+                        ++index;
+                    }
+                } else {
+                    size_t index = std::stoul(key);
+                    if (index < json_array_size(current)) {
+                        current = json_array_get(current, index);
+                    } else {
+                        // Handle invalid JSON array index
+                        // printf("Invalid JSON array index: %s\n", key.c_str());
+                        logMessage("Invalid JSON array index: "+key);
+                        //json_decref(jsonDict);
+                        return arg;  // Return the original placeholder if JSON array index is invalid
+                    }
+                }
+            } else {
+                // Handle invalid JSON structure or key
+                // printf("Invalid JSON structure or key: %s\n", key.c_str());
+                logMessage("Invalid JSON structure or key: "+key);
+                //json_decref(jsonDict);
+                return arg;  // Return the original placeholder if JSON structure or key is invalid
+            }
+        }
+        
+        if (json_is_string(current)) {
+            std::string url = json_string_value(current);
+            // Replace the entire placeholder with the URL
+            replacement.replace(startPos, endPos - startPos + searchString.length() + 2, url);
+        }
+    }
+    
+    // Free jsonData1
+    //if (jsonDict != nullptr) {
+    //    json_decref(jsonDict);
+    //    jsonDict = nullptr;
+    //}
+    
+    //json_decref(jsonDict);
+    return replacement;
+}

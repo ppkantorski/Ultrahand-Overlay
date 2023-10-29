@@ -14,6 +14,12 @@
  * 
  *   For the latest updates and contributions, visit the project's GitHub repository.
  *   (GitHub Repository: https://github.com/ppkantorski/Ultrahand-Overlay)
+ *
+ *   Note: Please be aware that this notice cannot be altered or removed. It is a part
+ *   of the project's documentation and must remain intact.
+ * 
+ *  Copyright (c) 2023 ppkantorski
+ *  All rights reserved.
  ********************************************************************************/
 
 /**
@@ -59,20 +65,421 @@
 //#include <filesystem> // Comment out filesystem
 
 // CUSTOM SECTION START
-
+#include <jansson.h>
 #include "../../../source/get_funcs.hpp"
 #include "../../../source/string_funcs.hpp"
 #include "../../../source/ini_funcs.hpp"
 
+// For improving the speed of hexing consecutively with the same file and asciiPattern.
+static std::unordered_map<std::string, std::string> hexSumCache;
+
+//std::string highlightColor1Str = "#2288CC";;
+//std::string highlightColor2Str = "#88FFFF";;
+
 // Pre-defined symbols
-static std::string OPTION_SYMBOL = "\u22EF";
-static std::string DROPDOWN_SYMBOL = "\u25B6";
-static std::string CHECKMARK_SYMBOL = "\uE14B";
-static std::string STAR_SYMBOL = "\u2605";
+static const std::string OPTION_SYMBOL = "\u22EF";
+static const std::string DROPDOWN_SYMBOL = "\u25B6";
+static const std::string CHECKMARK_SYMBOL = "\uE14B";
+static const std::string CROSSMARK_SYMBOL = "\uE14C";
+static const std::string STAR_SYMBOL = "\u2605";
+
+// English string definitions
+
+/**
+ * @brief Reads JSON data from a file and returns it as a `json_t` object.
+ *
+ * @param filePath The path to the JSON file.
+ * @return A `json_t` object representing the parsed JSON data. Returns `nullptr` on error.
+ */
+json_t* readJsonFromFile2(const std::string& filePath) {
+    // Check if the file exists
+    struct stat fileStat;
+    if (stat(filePath.c_str(), &fileStat) != 0) {
+        //fprintf(stderr, "Error opening file: %s\n", filePath.c_str());
+        return nullptr;
+    }
+
+    // Open the file
+    FILE* file = fopen(filePath.c_str(), "r");
+    if (!file) {
+        //fprintf(stderr, "Error opening file: %s\n", filePath.c_str());
+        return nullptr;
+    }
+
+    // Get the file size
+    size_t fileSize = fileStat.st_size;
+
+    // Read the file content into a buffer
+    char* buffer = static_cast<char*>(malloc(fileSize + 1));
+    if (!buffer) {
+        //fprintf(stderr, "Memory allocation error.\n");
+        fclose(file);
+        return nullptr;
+    }
+
+    size_t bytesRead = fread(buffer, 1, fileSize, file);
+    buffer[bytesRead] = '\0';
+
+    // Close the file
+    fclose(file);
+
+    // Parse the JSON data
+    json_error_t error;
+    json_t* root = json_loads(buffer, JSON_DECODE_ANY, &error);
+    if (!root) {
+        //fprintf(stderr, "Error parsing JSON: %s\n", error.text);
+        free(buffer);
+        return nullptr;
+    }
+
+    // Clean up
+    free(buffer);
+
+    return root;
+}
+
+float M_PI = 3.14159265358979323846;
+
+static std::string UNAVAILABLE_SELECTION = "Not available";
+static std::string OVERLAYS = "Overlays"; //defined in libTesla now
+static std::string OVERLAY = "Overlay";
+static std::string HIDDEN_OVERLAYS = "Hidden Overlays";
+static std::string PACKAGES = "Packages"; //defined in libTesla now
+static std::string PACKAGE = "Package";
+static std::string HIDDEN_PACKAGES = "Hidden Packages";
+static std::string HIDDEN = "Hidden";
+static std::string HIDE_OVERLAY = "Hide Overlay";
+static std::string HIDE_PACKAGE = "Hide Package";
+static std::string LAUNCH_ARGUMENTS = "Launch Arguments";
+static std::string COMMANDS = "Commands";
+static std::string SETTINGS = "Main Settings";
+static std::string MAIN_SETTINGS = "Main Settings";
+static std::string VERSION_SETTINGS = "Version Settings";
+static std::string KEY_COMBO = "Key Combo";
+static std::string LANGUAGE = "Language";
+static std::string SOFTWARE_UPDATE = "Software Update";
+static std::string ROOT_PACKAGE = "Root Package";
+static std::string SORT_PRIORITY = "Sort Priority";
+static std::string FAILED_TO_OPEN = "Failed to open file";
+static std::string CLEAN_LABELS = "Clean Versions";
+static std::string OVERLAY_LABELS = "Overlay Versions";
+static std::string PACKAGE_LABELS = "Package Versions";
+static std::string ON = "On";
+static std::string OFF = "Off";
+static std::string PACKAGE_INFO = "Package Info";
+static std::string VERSION = "Version";
+static std::string CREATOR = "Creator(s)";
+static std::string ABOUT = "About";
+static std::string OK = "OK";
+static std::string BACK = "Back";
+static std::string REBOOT = "Reboot";
+static std::string SHUTDOWN = "Shutdown";
+static std::string GAP_1 = "     ";
+static std::string GAP_2 = "  ";
+
+static std::string SUNDAY = "Sunday";
+static std::string MONDAY = "Monday";
+static std::string TUESDAY = "Tuesday";
+static std::string WEDNESDAY = "Wednesday";
+static std::string THURSDAY = "Thursday";
+static std::string FRIDAY = "Friday";
+static std::string SATURDAY = "Saturday";
+
+static std::string JANUARY = "January";
+static std::string FEBRUARY = "February";
+static std::string MARCH = "March";
+static std::string APRIL = "April";
+static std::string MAY = "May";
+static std::string JUNE = "June";
+static std::string JULY = "July";
+static std::string AUGUST = "August";
+static std::string SEPTEMBER = "September";
+static std::string OCTOBER = "October";
+static std::string NOVEMBER = "November";
+static std::string DECEMBER = "December";
+
+static std::string SUN = "Sun";
+static std::string MON = "Mon";
+static std::string TUE = "Tue";
+static std::string WED = "Wed";
+static std::string THU = "Thu";
+static std::string FRI = "Fri";
+static std::string SAT = "Sat";
+
+static std::string JAN = "Jan";
+static std::string FEB = "Feb";
+static std::string MAR = "Mar";
+static std::string APR = "Apr";
+static std::string MAY_ABBR = "May";
+static std::string JUN = "Jun";
+static std::string JUL = "Jul";
+static std::string AUG = "Aug";
+static std::string SEP = "Sep";
+static std::string OCT = "Oct";
+static std::string NOV = "Nov";
+static std::string DEC = "Dec";
+
+// Constant string definitions (English)
+void reinitializeLangVars() {
+    UNAVAILABLE_SELECTION = "Not available";
+    OVERLAYS = "Overlays"; //defined in libTesla now
+    OVERLAY = "Overlay";
+    HIDDEN_OVERLAYS = "Hidden Overlays";
+    PACKAGES = "Packages"; //defined in libTesla now
+    PACKAGE = "Package";
+    HIDDEN_PACKAGES = "Hidden Packages";
+    HIDDEN = "Hidden";
+    HIDE_OVERLAY = "Hide Overlay";
+    HIDE_PACKAGE = "Hide Package";
+    LAUNCH_ARGUMENTS = "Launch Arguments";
+    COMMANDS = "Commands";
+    SETTINGS = "Main Settings";
+    MAIN_SETTINGS = "Main Settings";
+    VERSION_SETTINGS = "Version Settings";
+    KEY_COMBO = "Key Combo";
+    LANGUAGE = "Language";
+    ROOT_PACKAGE = "Root Package";
+    SORT_PRIORITY = "Sort Priority";
+    FAILED_TO_OPEN = "Failed to open file";
+    CLEAN_LABELS = "Clean Versions";
+    OVERLAY_LABELS = "Overlay Versions";
+    PACKAGE_LABELS = "Package Versions";
+    ON = "On";
+    OFF = "Off";
+    PACKAGE_INFO = "Package Info";
+    VERSION = "Version";
+    CREATOR = "Creator(s)";
+    ABOUT = "About";
+    OK = "OK";
+    BACK = "Back";
+    REBOOT = "Reboot";
+    SHUTDOWN = "Shutdown";
+    GAP_1 = "     ";
+    GAP_2 = "  ";
+    
+    SUNDAY = "Sunday";
+    MONDAY = "Monday";
+    TUESDAY = "Tuesday";
+    WEDNESDAY = "Wednesday";
+    THURSDAY = "Thursday";
+    FRIDAY = "Friday";
+    SATURDAY = "Saturday";
+    
+    JANUARY = "January";
+    FEBRUARY = "February";
+    MARCH = "March";
+    APRIL = "April";
+    MAY = "May";
+    JUNE = "June";
+    JULY = "July";
+    AUGUST = "August";
+    SEPTEMBER = "September";
+    OCTOBER = "October";
+    NOVEMBER = "November";
+    DECEMBER = "December";
+    
+    SUN = "Sun";
+    MON = "Mon";
+    TUE = "Tue";
+    WED = "Wed";
+    THU = "Thu";
+    FRI = "Fri";
+    SAT = "Sat";
+    
+    JAN = "Jan";
+    FEB = "Feb";
+    MAR = "Mar";
+    APR = "Apr";
+    MAY_ABBR = "May";
+    JUN = "Jun";
+    JUL = "Jul";
+    AUG = "Aug";
+    SEP = "Sep";
+    OCT = "Oct";
+    NOV = "Nov";
+    DEC = "Dec";
+}
+
+
+
+// Define the updateIfNotEmpty function
+void updateIfNotEmpty(std::string& constant, const char* jsonKey, json_t* jsonData) {
+    std::string newValue = getStringFromJson(jsonData, jsonKey);
+    if (!newValue.empty()) {
+        constant = newValue;
+    }
+}
+
+void parseLanguage(std::string langFile) {
+    json_t* langData = readJsonFromFile2(langFile);
+    
+    // Use the updateIfNotEmpty function to update global variables
+    updateIfNotEmpty(UNAVAILABLE_SELECTION, "UNAVAILABLE_SELECTION", langData);
+    updateIfNotEmpty(OVERLAYS, "OVERLAYS", langData);
+    updateIfNotEmpty(OVERLAY, "OVERLAY", langData);
+    updateIfNotEmpty(HIDDEN_OVERLAYS, "HIDDEN_OVERLAYS", langData);
+    updateIfNotEmpty(PACKAGES, "PACKAGES", langData);
+    updateIfNotEmpty(PACKAGE, "PACKAGE", langData);
+    updateIfNotEmpty(HIDDEN_PACKAGES, "HIDDEN_PACKAGES", langData);
+    updateIfNotEmpty(HIDDEN, "HIDDEN", langData);
+    updateIfNotEmpty(HIDE_PACKAGE, "HIDE_PACKAGE", langData);
+    updateIfNotEmpty(HIDE_OVERLAY, "HIDE_PACKAGE", langData);
+    updateIfNotEmpty(LAUNCH_ARGUMENTS, "LAUNCH_ARGUMENTS", langData);
+    updateIfNotEmpty(COMMANDS, "COMMANDS", langData);
+    updateIfNotEmpty(SETTINGS, "SETTINGS", langData);
+    updateIfNotEmpty(MAIN_SETTINGS, "MAIN_SETTINGS", langData);
+    updateIfNotEmpty(VERSION_SETTINGS, "VERSION_SETTINGS", langData);
+    updateIfNotEmpty(KEY_COMBO, "KEY_COMBO", langData);
+    updateIfNotEmpty(LANGUAGE, "LANGUAGE", langData);
+    updateIfNotEmpty(SOFTWARE_UPDATE, "SOFTWARE_UPDATE", langData);
+    updateIfNotEmpty(ROOT_PACKAGE, "ROOT_PACKAGE", langData);
+    updateIfNotEmpty(SORT_PRIORITY, "SORT_PRIORITY", langData);
+    updateIfNotEmpty(FAILED_TO_OPEN, "FAILED_TO_OPEN", langData);
+    updateIfNotEmpty(CLEAN_LABELS, "CLEAN_LABELS", langData);
+    updateIfNotEmpty(OVERLAY_LABELS, "OVERLAY_LABELS", langData);
+    updateIfNotEmpty(PACKAGE_LABELS, "PACKAGE_LABELS", langData);
+    updateIfNotEmpty(ON, "ON", langData);
+    updateIfNotEmpty(OFF, "OFF", langData);
+    updateIfNotEmpty(PACKAGE_INFO, "PACKAGE_INFO", langData);
+    updateIfNotEmpty(VERSION, "VERSION", langData);
+    updateIfNotEmpty(CREATOR, "CREATOR", langData);
+    updateIfNotEmpty(ABOUT, "ABOUT", langData);
+    updateIfNotEmpty(OK, "OK", langData);
+    updateIfNotEmpty(BACK, "BACK", langData);
+    updateIfNotEmpty(REBOOT, "REBOOT", langData);
+    updateIfNotEmpty(SHUTDOWN, "SHUTDOWN", langData);
+    updateIfNotEmpty(GAP_1, "GAP_1", langData);
+    updateIfNotEmpty(GAP_2, "GAP_2", langData);
+    
+    // Day and Month names
+    updateIfNotEmpty(SUNDAY, "SUNDAY", langData);
+    updateIfNotEmpty(MONDAY, "MONDAY", langData);
+    updateIfNotEmpty(TUESDAY, "TUESDAY", langData);
+    updateIfNotEmpty(WEDNESDAY, "WEDNESDAY", langData);
+    updateIfNotEmpty(THURSDAY, "THURSDAY", langData);
+    updateIfNotEmpty(FRIDAY, "FRIDAY", langData);
+    updateIfNotEmpty(SATURDAY, "SATURDAY", langData);
+
+    updateIfNotEmpty(JANUARY, "JANUARY", langData);
+    updateIfNotEmpty(FEBRUARY, "FEBRUARY", langData);
+    updateIfNotEmpty(MARCH, "MARCH", langData);
+    updateIfNotEmpty(APRIL, "APRIL", langData);
+    updateIfNotEmpty(MAY, "MAY", langData);
+    updateIfNotEmpty(JUNE, "JUNE", langData);
+    updateIfNotEmpty(JULY, "JULY", langData);
+    updateIfNotEmpty(AUGUST, "AUGUST", langData);
+    updateIfNotEmpty(SEPTEMBER, "SEPTEMBER", langData);
+    updateIfNotEmpty(OCTOBER, "OCTOBER", langData);
+    updateIfNotEmpty(NOVEMBER, "NOVEMBER", langData);
+    updateIfNotEmpty(DECEMBER, "DECEMBER", langData);
+
+    updateIfNotEmpty(SUN, "SUN", langData);
+    updateIfNotEmpty(MON, "MON", langData);
+    updateIfNotEmpty(TUE, "TUE", langData);
+    updateIfNotEmpty(WED, "WED", langData);
+    updateIfNotEmpty(THU, "THU", langData);
+    updateIfNotEmpty(FRI, "FRI", langData);
+    updateIfNotEmpty(SAT, "SAT", langData);
+
+    updateIfNotEmpty(JAN, "JAN", langData);
+    updateIfNotEmpty(FEB, "FEB", langData);
+    updateIfNotEmpty(MAR, "MAR", langData);
+    updateIfNotEmpty(APR, "APR", langData);
+    updateIfNotEmpty(MAY_ABBR, "MAY_ABBR", langData);
+    updateIfNotEmpty(JUN, "JUN", langData);
+    updateIfNotEmpty(JUL, "JUL", langData);
+    updateIfNotEmpty(AUG, "AUG", langData);
+    updateIfNotEmpty(SEP, "SEP", langData);
+    updateIfNotEmpty(OCT, "OCT", langData);
+    updateIfNotEmpty(NOV, "NOV", langData);
+    updateIfNotEmpty(DEC, "DEC", langData);
+    
+    // Free langData
+    if (langData != nullptr) {
+        json_decref(langData);
+        langData = nullptr;
+    }
+}
+
+
+void localizeTimeStr(char* timeStr) {
+    // Define mappings for day and month names
+    std::vector<std::pair<std::string, std::string>> dayMappings = {
+        {"Sun", SUN},
+        {"Mon", MON},
+        {"Tue", TUE},
+        {"Wed", WED},
+        {"Thu", THU},
+        {"Fri", FRI},
+        {"Sat", SAT},
+        {"Sunday", SUNDAY},
+        {"Monday", MONDAY},
+        {"Tuesday", TUESDAY},
+        {"Wednesday", WEDNESDAY},
+        {"Thursday", THURSDAY},
+        {"Friday", FRIDAY},
+        {"Saturday", SATURDAY}
+    };
+
+    std::vector<std::pair<std::string, std::string>> monthMappings = {
+        {"Jan", JAN},
+        {"Feb", FEB},
+        {"Mar", MAR},
+        {"Apr", APR},
+        {"May", MAY_ABBR},
+        {"Jun", JUN},
+        {"Jul", JUL},
+        {"Aug", AUG},
+        {"Sep", SEP},
+        {"Oct", OCT},
+        {"Nov", NOV},
+        {"Dec", DEC},
+        {"January", JANUARY},
+        {"February", FEBRUARY},
+        {"March", MARCH},
+        {"April", APRIL},
+        {"May", MAY},
+        {"June", JUNE},
+        {"July", JULY},
+        {"August", AUGUST},
+        {"September", SEPTEMBER},
+        {"October", OCTOBER},
+        {"November", NOVEMBER},
+        {"December", DECEMBER}
+    };
+
+    std::string timeStrCopy = timeStr; // Convert the char array to a string for processing
+
+    // Replace abbreviated day names with their all-capital versions
+    for (const auto &dayMapping : dayMappings) {
+        size_t pos = timeStrCopy.find(dayMapping.first);
+        while (pos != std::string::npos) {
+            timeStrCopy.replace(pos, dayMapping.first.length(), dayMapping.second);
+            pos = timeStrCopy.find(dayMapping.first, pos + dayMapping.second.length());
+        }
+    }
+
+    // Replace abbreviated month names with their all-capital versions
+    for (const auto &monthMapping : monthMappings) {
+        size_t pos = timeStrCopy.find(monthMapping.first);
+        while (pos != std::string::npos) {
+            timeStrCopy.replace(pos, monthMapping.first.length(), monthMapping.second);
+            pos = timeStrCopy.find(monthMapping.first, pos + monthMapping.second.length());
+        }
+    }
+
+    // Copy the modified string back to the character array
+    strcpy(timeStr, timeStrCopy.c_str());
+}
+
+
 
 
 // Map of character widths
 static std::unordered_map<char, float> characterWidths = {
+    {'°', 0.25},
+    {'%', 0.98}, // not calibrated
+    {':', 0.25}, // not calibrated
     {' ', 0.3},
     {'+', 0.75},
     {'-', 0.36},
@@ -142,7 +549,7 @@ static std::unordered_map<char, float> characterWidths = {
     {'5', 0.66},
     {'6', 0.66},
     {'7', 0.66},
-    {'8', 0.64},
+    {'8', 0.66},
     {'9', 0.66}
 };
 
@@ -161,6 +568,142 @@ bool isValidHexColor(const std::string& hexColor) {
     return true;
 }
 
+static bool powerInitialized = false;
+static bool powerCacheInitialized;
+static uint32_t powerCacheCharge;
+static float powerConsumption;
+static bool powerCacheIsCharging;
+static PsmSession powerSession;
+
+// Define variables to store previous battery charge and time
+static uint32_t prevBatteryCharge = 0;
+static uint64_t timeOut = 0;
+static char chargeString[6];  // Need space for the null terminator and the percentage sign
+
+static uint32_t batteryCharge;
+static bool isCharging;
+static bool validPower;
+
+bool powerGetDetails(uint32_t *batteryCharge, bool *isCharging) {
+    PsmChargerType charger = PsmChargerType_Unconnected;
+    bool hwReadsSucceeded = false;
+    bool use_cache = false;
+    Result rc = 0;
+
+    *isCharging = false;
+    *batteryCharge = 0;
+
+    if (powerInitialized) {
+        if (powerCacheInitialized) {
+            rc = psmWaitStateChangeEvent(&powerSession, 0);
+
+            if (R_FAILED(rc)) use_cache = true;
+        }
+
+        rc = psmGetBatteryChargePercentage(batteryCharge);
+        hwReadsSucceeded = R_SUCCEEDED(rc);
+        if (use_cache) {
+            *isCharging = powerCacheIsCharging;
+        }
+        else {
+            rc = psmGetChargerType(&charger);
+            hwReadsSucceeded &= R_SUCCEEDED(rc);
+            *isCharging = (charger != PsmChargerType_Unconnected);
+        }
+
+        powerCacheCharge = *batteryCharge;
+        powerCacheIsCharging = *isCharging;
+        powerCacheInitialized = true;
+    }
+
+    return hwReadsSucceeded;
+}
+
+void powerInit(void) {
+    uint32_t charge = 0;
+    isCharging = 0;
+
+    powerCacheInitialized = false;
+    powerCacheCharge = 0;
+    powerCacheIsCharging = false;
+
+    if (!powerInitialized) {
+        Result rc = psmInitialize();
+        if (R_SUCCEEDED(rc)) {
+            rc = psmBindStateChangeEvent(&powerSession, 1, 1, 1);
+
+            if (R_FAILED(rc)) psmExit();
+            if (R_SUCCEEDED(rc)) {
+                powerInitialized = true;
+                powerGetDetails(&charge, &isCharging);
+                
+                // Initialize prevBatteryCharge here with a non-zero value if needed.
+                prevBatteryCharge = charge;
+            }
+        }
+    }
+}
+
+
+void powerExit(void) {
+    if (powerInitialized) {
+        psmUnbindStateChangeEvent(&powerSession);
+        psmExit();
+        powerInitialized = false;
+        powerCacheInitialized = false;
+    }
+}
+
+s32 PCB_temperature, SOC_temperature;
+
+//static TsSession g_tsInternalSession;
+
+bool thermalstatusInit(void) {
+    if (R_FAILED(tsInitialize()))
+        return false;
+    //if (hosversionAtLeast(17,0,0) && R_FAILED(tsOpenSession(&g_tsInternalSession, TsDeviceCode_LocationInternal)))
+    //    return false;
+    return true;
+}
+
+void thermalstatusExit(void) {
+    //if (hosversionAtLeast(17,0,0))
+    //    tsSessionClose(&g_tsInternalSession);
+    tsExit();
+}
+
+bool thermalstatusGetDetailsPCB(s32 *temperature) {
+    if (hosversionAtLeast(17,0,0)) {
+        //float temp_float;
+        //if (R_SUCCEEDED(tsSessionGetTemperature(&g_tsInternalSession, &temp_float))) {
+        //    *temperature = (int)temp_float;
+        //    return true;
+        //} else
+        //    return false;
+        
+        return false;
+    } else
+        return R_SUCCEEDED(tsGetTemperature(TsLocation_Internal, temperature));
+}
+
+bool thermalstatusGetDetailsSOC(s32 *temperature) {
+    if (hosversionAtLeast(17,0,0)) {
+        //float temp_float;
+        //if (R_SUCCEEDED(tsSessionGetTemperature(&g_tsInternalSession, &temp_float))) {
+        //    *temperature = (int)temp_float;
+        //    return true;
+        //} else
+        //    return false;
+        
+        return false;
+    } else
+        return R_SUCCEEDED(tsGetTemperature(TsLocation_External, temperature));
+}
+
+struct timespec currentTime;
+static const std::string DEFAULT_DT_FORMAT = "'%a %T'";
+static std::string datetimeFormat = removeQuotes(DEFAULT_DT_FORMAT);
+static std::string hideClock, hideBattery, hidePCBTemp, hideSOCTemp;
 
 // CUSTOM SECTION END
 
@@ -231,7 +774,77 @@ namespace tsl {
 
         constexpr inline Color(u16 raw): rgba(raw) {}
         constexpr inline Color(u8 r, u8 g, u8 b, u8 a): r(r), g(g), b(b), a(a) {}
+        
     };
+    
+    Color GradientColor(float temperature) {
+        // Ensure temperature is within the range [0, 100]
+        temperature = std::max(0.0f, std::min(100.0f, temperature)); // Celsius
+
+        // this is where colors are at their full
+        float blueStart = 35.0f;
+        float greenStart = 45.0f;
+        float yellowStart = 55.0f;
+        float redStart = 65.0f;
+
+        // Initialize RGB values
+        uint8_t r, g, b, a = 0xFF;
+
+        if (temperature < blueStart) { // rgb 7, 7, 15 at blueStart
+            r = 7;
+            g = 7;
+            b = 15;
+        } else if (temperature >= blueStart && temperature < greenStart) {
+            // Smooth color blending from (7 7 15) to (0 15 0)
+            float t = (temperature - blueStart) / (greenStart - blueStart);
+            r = static_cast<uint8_t>(7 - 7 * t);
+            g = static_cast<uint8_t>(7 + 8 * t);
+            b = static_cast<uint8_t>(15 - 15 * t);
+        } else if (temperature >= greenStart && temperature < yellowStart) {
+            // Smooth color blending from (0 15 0) to (15 15 0)
+            float t = (temperature - greenStart) / (yellowStart - greenStart);
+            r = static_cast<uint8_t>(15 * t);
+            g = static_cast<uint8_t>(15);
+            b = static_cast<uint8_t>(0);
+        } else if (temperature >= yellowStart && temperature < redStart) {
+            // Smooth color blending from (15 15 0) to (15 0 0)
+            float t = (temperature - yellowStart) / (redStart - yellowStart);
+            r = static_cast<uint8_t>(15);
+            g = static_cast<uint8_t>(15 - 15 * t);
+            b = static_cast<uint8_t>(0);
+        } else {
+            // Full red
+            r = 15;
+            g = 0;
+            b = 0;
+        }
+
+        return Color(r, g, b, a);
+    }
+
+    Color RGB888(std::string hexColor, std::string defaultHexColor = "#FFFFFF") {
+        // Remove the '#' character if it's present
+        if (!hexColor.empty() && hexColor[0] == '#') {
+            hexColor = hexColor.substr(1);
+        }
+        
+        if (isValidHexColor(hexColor)) {
+            std::string r = hexColor.substr(0, 2); // Extract the first two characters (red component)
+            std::string g = hexColor.substr(2, 2); // Extract the next two characters (green component)
+            std::string b = hexColor.substr(4, 2); // Extract the last two characters (blue component)
+            
+            // Convert the RGBA8888 strings to RGBA4444
+            uint8_t redValue = std::stoi(r, nullptr, 16) >> 4;   // Right-shift by 4 bits
+            uint8_t greenValue = std::stoi(g, nullptr, 16) >> 4; // Right-shift by 4 bits
+            uint8_t blueValue = std::stoi(b, nullptr, 16) >> 4;  // Right-shift by 4 bits
+            
+            // Create a Color with the extracted RGB values
+            
+            return Color(redValue, greenValue, blueValue, 15);
+        }
+        return RGB888(defaultHexColor);
+    }
+
 
     namespace style {
         constexpr u32 ListItemDefaultHeight         = 70;       ///< Standard list item height
@@ -243,7 +856,7 @@ namespace tsl {
             constexpr Color ColorFrameBackground  = { 0x0, 0x0, 0x0, 0xD };   ///< Overlay frame background color
             constexpr Color ColorTransparent      = { 0x0, 0x0, 0x0, 0x0 };   ///< Transparent color
             constexpr Color ColorHighlight        = { 0x0, 0xF, 0xD, 0xF };   ///< Greenish highlight color
-            constexpr Color ColorFrame            = { 0x7, 0x7, 0x7, 0xF };   ///< Outer boarder color
+            constexpr Color ColorFrame            = { 0x7, 0x7, 0x7, 0x7 };   ///< Outer boarder color // CUSTOM MODIFICATION
             constexpr Color ColorHandle           = { 0x5, 0x5, 0x5, 0xF };   ///< Track bar handle color
             constexpr Color ColorText             = { 0xF, 0xF, 0xF, 0xF };   ///< Standard text color
             constexpr Color ColorDescription      = { 0xA, 0xA, 0xA, 0xF };   ///< Description text color
@@ -251,7 +864,10 @@ namespace tsl {
             constexpr Color ColorClickAnimation   = { 0x0, 0x2, 0x2, 0xF };   ///< Element click animation color
         }
     }
-
+    
+    //std::string highlightColor1Str = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "highlight_color_1"); // format "X,X,X"
+    //std::string highlightColor2Str = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "highlight_color_2"); // format "X,X,X"
+    
     // Declarations
 
     /**
@@ -454,31 +1070,48 @@ namespace tsl {
             static const char* CONFIG_FILE = "/config/ultrahand/config.ini"; // CUSTOM MODIFICATION
 
             /**
-             * @brief Parses a ini string
+             * @brief Parses an INI string
              *
              * @param str String to parse
              * @return Parsed data
              */
             static IniData parseIni(const std::string &str) {
                 IniData iniData;
-
+               
                 auto lines = split(str, '\n');
-
+               
                 std::string lastHeader = "";
                 for (auto& line : lines) {
-                    line.erase(std::remove_if(line.begin(), line.end(), ::isspace), line.end());
-
+                    if (line.empty())
+                        continue;
+               
                     if (line[0] == '[' && line[line.size() - 1] == ']') {
                         lastHeader = line.substr(1, line.size() - 2);
                         iniData.emplace(lastHeader, std::map<std::string, std::string>{});
                     }
-                    else if (auto keyValuePair = split(line, '='); keyValuePair.size() == 2) {
-                        iniData[lastHeader].emplace(keyValuePair[0], keyValuePair[1]);
+                    else {
+                        auto keyValuePair = split(line, '=');
+                        if (keyValuePair.size() == 2) {
+                            std::string key = trim(keyValuePair[0]);
+                            std::string value = trim(keyValuePair[1]);
+               
+                            // Remove leading spaces before the equal sign, trailing spaces at the end of the line
+                            key.erase(key.begin(), std::find_if(key.begin(), key.end(), [](unsigned char ch) {
+                                return !std::isspace(ch);
+                            }));
+                            key.erase(std::find_if(key.rbegin(), key.rend(), [](unsigned char ch) {
+                                return !std::isspace(ch);
+                            }).base(), key.end());
+               
+                            // No need to remove spaces within the value, so just store it as is
+                            iniData[lastHeader].emplace(key, value);
+                        }
                     }
                 }
-
+               
                 return iniData;
-            }
+            } // CUSTOM MODIFICATION END
+
 
             /**
              * @brief Unparses ini data into a string
@@ -595,7 +1228,7 @@ namespace tsl {
          */
         static u64 comboStringToKeys(const std::string &value) {
             u64 keyCombo = 0x00;
-            for (std::string key : hlp::split(value, '+')) {
+            for (std::string key : hlp::split(removeWhiteSpaces(value), '+')) { // CUSTOM MODIFICATION (bug fix)
                 keyCombo |= hlp::stringToKeyCode(key);
             }
             return keyCombo;
@@ -1287,7 +1920,7 @@ namespace tsl {
     }
 
     // Elements
-
+    
     namespace elm {
 
         enum class TouchEvent {
@@ -1303,9 +1936,16 @@ namespace tsl {
          */
         class Element {
         public:
+            
             Element() {}
             virtual ~Element() { }
-
+            
+            std::string highlightColor1Str = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "highlight_color_1");
+            std::string highlightColor2Str = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "highlight_color_2");
+            
+            Color highlightColor1 = RGB888(highlightColor1Str, "#2288CC");
+            Color highlightColor2 = RGB888(highlightColor2Str, "#88FFFF");
+            
             /**
              * @brief Handles focus requesting
              * @note This function should return the element to focus.
@@ -1478,16 +2118,29 @@ namespace tsl {
              *
              * @param renderer Renderer
              */
-            virtual void drawHighlight(gfx::Renderer *renderer) {
-                static float counter = 0;
-                const float progress = (std::sin(counter) + 1) / 2;
-                Color highlightColor = {   static_cast<u8>((0x2 - 0x8) * progress + 0x8),
-                                                static_cast<u8>((0x8 - 0xF) * progress + 0xF),
-                                                static_cast<u8>((0xC - 0xF) * progress + 0xF),
-                                                0xF };
+            virtual void drawHighlight(gfx::Renderer *renderer) { // CUSTOM MODIFICATION start
+                
+                //Color highlightColor1 = {0x2, 0x8, 0xC, 0xF};
+                //Color highlightColor2 = {0x8, 0xF, 0xF, 0xF};
+                //highlightColor1Str = "#2288CC";
+                //highlightColor2Str = "#88FFFF";
+                
+                
+                // Get the current time
+                auto currentTime = std::chrono::system_clock::now();
+                auto timeInSeconds = std::chrono::duration<double>(currentTime.time_since_epoch()).count();
 
-                counter += 0.1F;
+                // Calculate the progress for one full sine wave per second
+                const double cycleDuration = 1.0;  // 1 second for one full sine wave
+                double timeCounter = fmod(timeInSeconds, cycleDuration);
+                float progress = (std::sin(2 * M_PI * timeCounter / cycleDuration) + 1) / 2;
 
+                Color highlightColor = {
+                    static_cast<u8>((highlightColor1.r - highlightColor2.r) * progress + highlightColor2.r),
+                    static_cast<u8>((highlightColor1.g - highlightColor2.g) * progress + highlightColor2.g),
+                    static_cast<u8>((highlightColor1.b - highlightColor2.b) * progress + highlightColor2.b),
+                    0xF
+                };
                 s32 x = 0, y = 0;
 
                 if (this->m_highlightShaking) {
@@ -1698,6 +2351,9 @@ namespace tsl {
             for (char letter : str) {
                 // Lookup the width of the current character
                 float letterWidth = characterWidths[letter];
+                if (letterWidth == 0) {
+                    letterWidth = 0.33;
+                }
                 
                 // Accumulate the width
                 totalWidth += letterWidth;
@@ -1707,21 +2363,6 @@ namespace tsl {
             return (totalWidth * fontSize);
         }
         
-        float calculateAmplitude(float x) {
-            //const float phasePeriod = 360;  // One full phase period
-
-            // Calculate the phase within the full period
-            //int phase = static_cast<int>((x) * (180.0 / 3.1415927)) % static_cast<int>(phasePeriod);
-
-            // Check if the phase is odd
-            //if (phase % 2 == 1) {
-            //    return 1.0f;  // Flat amplitude (maximum positive)
-            //} else {
-            //    // Calculate the sinusoidal amplitude for the remaining period
-            //    return (std::cos((-x) * (180.0 / 3.1415927)) + 1) / 2;
-            //}
-            return (std::cos((-x) * (180.0 / 3.1415927)) + 1) / 2;
-        }
         float calculateAmplitude2(float x, float peakDurationFactor = 0.25) {
             const float phasePeriod = 360*peakDurationFactor;  // One full phase period
             
@@ -1755,6 +2396,15 @@ namespace tsl {
             std::string m_colorSelection; // CUSTOM MODIFICATION
             std::string m_pageLeftName; // CUSTOM MODIFICATION
             std::string m_pageRightName; // CUSTOM MODIFICATION
+            
+            std::string defaultTextColorStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "text_color");
+            tsl::Color defaultTextColor = RGB888(defaultTextColorStr);
+            std::string clockColorStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "clock_color");
+            tsl::Color clockColor = RGB888(clockColorStr);
+            std::string batteryColorStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "battery_color");
+            tsl::Color batteryColor = RGB888(batteryColorStr);
+            
+            
             OverlayFrame(const std::string& title, const std::string& subtitle, const std::string& menuMode = "", const std::string& colorSelection = "", const std::string& pageLeftName = "", const std::string& pageRightName = "")
                 : Element(), m_menuMode(menuMode), m_title(title), m_subtitle(subtitle), m_colorSelection(colorSelection), m_pageLeftName(pageLeftName), m_pageRightName(pageRightName) {} // CUSTOM MODIFICATION
             
@@ -1777,20 +2427,38 @@ namespace tsl {
                     std::string secondHalf = "hand";
                     
                     float x = 20;
-                    //int y = 50;
                     int fontSize = 42;
                     offset = 6;
                     
                     // Draw the first half of the string in white color
-                    //renderer->drawString(firstHalf.c_str(), false, x1, y+offset, fontSize, tsl::Color(0xFF, 0xFF, 0xFF, 0xFF));
-                    //drawHighlightText(renderer);
+                    static Color highlightColor = {0xF, 0xF, 0xF, 0xF};
+                    static float progress;
+                    float letterWidth;
+                    
+                    
+                    // Get the current time
+                    static double timeInSeconds;
+                    
+                    // Calculate the progress for one full sine wave per second
+                    const double cycleDuration = 1.5;  // for one full sine wave
+                    static double timeCounter;// = fmod(timeInSeconds, cycleDuration);
+                    //float progress = calculateAmplitude(2 * M_PI * timeCounter / cycleDuration);
+                    
+                    
+                    float countOffset = 0;
                     
                     for (char letter : firstHalf) {
                         // Calculate the progress for each letter based on the counter
-                        const float progress = calculateAmplitude(counter - x * 0.001F);
+                        //progress = calculateAmplitude(counter - x * 0.001F);
+                        timeInSeconds = std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count();
+                        timeCounter = fmod(timeInSeconds, cycleDuration);
+                        counter = (2 * M_PI * (timeCounter + countOffset) / cycleDuration);
+                        //progress = calculateAmplitude(counter);
+                        progress = (std::sin(counter) + 1) / 2;
+                        
                         
                         // Calculate the corresponding highlight color for each letter
-                        Color highlightColor = {
+                        highlightColor = {
                             static_cast<u8>((0xA - 0xF) * (3 - 1.5*progress) + 0xF),
                             static_cast<u8>((0xA - 0xF) * 1.5*progress + 0xF),
                             static_cast<u8>((0xA - 0xF) * (1.25 - progress) + 0xF),
@@ -1801,13 +2469,13 @@ namespace tsl {
                         renderer->drawString(std::string(1, letter).c_str(), false, x, y + offset, fontSize, a(highlightColor));
                         
                         // Manually calculate the width of the current letter
-                        float letterWidth = calculateStringWidth(std::string(1, letter), fontSize);
+                        letterWidth = calculateStringWidth(std::string(1, letter), fontSize);
                         
                         // Adjust the x-coordinate for the next character's position
                         x += letterWidth;
                         
                         // Update the counter for the next character
-                        counter += 0.0002F;
+                        countOffset -= 0.2F;
                     }
                     
                     
@@ -1815,7 +2483,92 @@ namespace tsl {
                     //int x2 = x1 + (firstHalf.length() * fontSize)/2 -2;
                     
                     // Draw the second half of the string in red color
-                    renderer->drawString(secondHalf.c_str(), false, x, y+offset, fontSize, tsl::Color(0xFF, 0x00, 0x00, 0xFF));
+                    renderer->drawString(secondHalf.c_str(), false, x, y+offset, fontSize, tsl::Color(0xF, 0x0, 0x0, 0xF));
+                    
+                    
+                    // Time drawing implementation
+                    //struct timespec currentTime;
+                    clock_gettime(CLOCK_REALTIME, &currentTime);
+                    
+                    
+                    // Convert the current time to a human-readable string
+                    char timeStr[20]; // Allocate a buffer to store the time string
+                    //strftime(timeStr, sizeof(timeStr), "%r", localtime(&currentTime.tv_sec));
+                    strftime(timeStr, sizeof(timeStr), datetimeFormat.c_str(), localtime(&currentTime.tv_sec));
+                    
+                    localizeTimeStr(timeStr); // for language localizations
+                    
+                    int y_offset = 44;
+                    if ((hideBattery == "true" && hidePCBTemp == "true" && hideSOCTemp == "true") || (hideClock == "true"))
+                        y_offset += 12;
+                    
+                    if (hideClock != "true") {// Use the 'timeStr' to display the time
+                        renderer->drawString(timeStr, false, tsl::cfg::FramebufferWidth - calculateStringWidth(timeStr, 20) - 20, y_offset, 20, clockColor);
+                        y_offset += 24;
+                    }
+                    //char chargeString[6];  // Need space for the null terminator and the percentage sign
+                    //
+                    //uint32_t batteryCharge;
+                    //bool isCharging;
+                    //bool validPower;
+                    
+                    // check in 1s intervals
+                    if ((currentTime.tv_sec - timeOut) >= 1) {
+                        thermalstatusGetDetailsPCB(&PCB_temperature);
+                        thermalstatusGetDetailsSOC(&SOC_temperature);
+                        powerGetDetails(&batteryCharge, &isCharging);
+                        timeOut = int(currentTime.tv_sec);
+                    }
+                    
+                    
+                    char PCB_temperatureStr[10];
+                    snprintf(PCB_temperatureStr, sizeof(PCB_temperatureStr)-1, "%d°C", PCB_temperature);
+                    
+                    char SOC_temperatureStr[10];
+                    snprintf(SOC_temperatureStr, sizeof(SOC_temperatureStr)-1, "%d°C", SOC_temperature);
+                    
+                    batteryCharge = (batteryCharge > 100) ? 100 : batteryCharge;
+                    sprintf(chargeString, "%d%%", batteryCharge);
+
+                    // Convert the C-style string to an std::string
+                    std::string chargeStringStd = chargeString;
+                    std::string PCB_temperatureStringSTD = PCB_temperatureStr;
+                    std::string SOC_temperatureStringSTD = SOC_temperatureStr;
+                    
+                    // Convert the float to std::string
+                    //std::string powerConsumptionStr = std::to_string(powerConsumption);
+
+                    // Use the '+' operator to concatenate the strings
+                    
+                    if (hideBattery != "true") {
+                        PCB_temperatureStringSTD += " ";
+                        // Use the 'timeStr' to display the time
+                        if (powerCacheIsCharging)
+                            renderer->drawString(chargeStringStd.c_str(), false, tsl::cfg::FramebufferWidth - calculateStringWidth(chargeStringStd, 20) - 20, y_offset, 20, tsl::Color(0x0, 0xF, 0x0, 0xF));
+                        else {
+                            if (batteryCharge <= 20) {
+                                renderer->drawString(chargeStringStd.c_str(), false, tsl::cfg::FramebufferWidth - calculateStringWidth(chargeStringStd, 20) - 20, y_offset, 20, tsl::Color(0xF, 0x0, 0x0, 0xF));
+                            } else {
+                                renderer->drawString(chargeStringStd.c_str(), false, tsl::cfg::FramebufferWidth - calculateStringWidth(chargeStringStd, 20) - 20, y_offset, 20, batteryColor);
+                            }
+                        }
+                    }
+                    if (hidePCBTemp != "true" && hideBattery != "true")
+                         SOC_temperatureStringSTD += " ";
+                    
+                    int offset = 0;
+                    if (hidePCBTemp != "true") {
+                        if (PCB_temperature > 0) {
+                            offset += 2;
+                            renderer->drawString(PCB_temperatureStringSTD.c_str(), false, tsl::cfg::FramebufferWidth + offset - calculateStringWidth(PCB_temperatureStringSTD, 20) - calculateStringWidth(chargeStringStd, 20) - 20, y_offset, 20, tsl::GradientColor(PCB_temperature));
+                        }
+                    }
+                    if (hideSOCTemp != "true") {
+                        if (SOC_temperature > 0) {
+                            offset += 2;
+                            renderer->drawString(SOC_temperatureStringSTD.c_str(), false, tsl::cfg::FramebufferWidth + offset -  calculateStringWidth(SOC_temperatureStringSTD, 20) - calculateStringWidth(PCB_temperatureStringSTD, 20) - calculateStringWidth(chargeStringStd, 20) - 20, y_offset, 20, tsl::GradientColor(SOC_temperature));
+                        }
+                    }
                 } else {
                     static float counter = 0;
                     float x = 20;
@@ -1823,18 +2576,18 @@ namespace tsl {
                     int fontSize = 32;
                     if (this->m_subtitle == "Ultrahand Package") {
                         std::string title = std::string(this->m_title);
-                        auto titleColor = a(Color(0x00, 0xFF, 0x00, 0xFF));
+                        auto titleColor = a(Color(0x0, 0xF, 0x0, 0xF));
                         if (this->m_colorSelection == "" || this->m_colorSelection == "green") {
-                            titleColor = a(Color(0x00, 0xFF, 0x00, 0xFF));
+                            titleColor = a(Color(0x0, 0xF, 0x0, 0xF));
                             renderer->drawString(title.c_str(), false, x, y, fontSize, titleColor);
                         } else if (this->m_colorSelection == "red") {
-                            titleColor = a(Color(0xFF, 0x00, 0x00, 0xFF));
+                            titleColor = a(Color(0xF, 0x0, 0x0, 0xF));
                             renderer->drawString(title.c_str(), false, x, y, fontSize, titleColor);
                         } else if (this->m_colorSelection == "blue") {
-                            titleColor = a(Color(0x00, 0x00, 0xFF, 0xFF));
+                            titleColor = a(Color(0x7, 0x7, 0xF, 0xF));
                             renderer->drawString(title.c_str(), false, x, y, fontSize, titleColor);
                         } else if (this->m_colorSelection == "yellow") {
-                            titleColor = a(Color(0xFF, 0xFF, 0x00, 0xFF));
+                            titleColor = a(Color(0xF, 0xF, 0x0, 0xF));
                             renderer->drawString(title.c_str(), false, x, y, fontSize, titleColor);
                         } else if (this->m_colorSelection == "orange") {
                             titleColor = a(Color(0xFF, 0xA5, 0x00, 0xFF));
@@ -1846,7 +2599,7 @@ namespace tsl {
                             titleColor = a(Color(0x80, 0x00, 0x80, 0xFF));
                             renderer->drawString(title.c_str(), false, x, y, fontSize, titleColor);
                         } else if (this->m_colorSelection == "white") {
-                            titleColor = a(Color(0xFF, 0xFF, 0xFF, 0xFF));
+                            titleColor = a(Color(0xF, 0xF, 0xF, 0xF));
                             renderer->drawString(title.c_str(), false, x, y, fontSize, titleColor);
                         } else if (this->m_colorSelection == "ultra") {
                             for (char letter : title) {
@@ -1877,18 +2630,7 @@ namespace tsl {
                             // Check if m_colorSelection is a valid hexadecimal color
                             std::string hexColor = this->m_colorSelection.substr(1);
                             if (isValidHexColor(hexColor)) {
-                                std::string r = hexColor.substr(0, 2); // Extract the first two characters (red component)
-                                std::string g = hexColor.substr(2, 2); // Extract the next two characters (green component)
-                                std::string b = hexColor.substr(4, 2); // Extract the last two characters (blue component)
-                                
-                                // Convert the RGBA8888 strings to RGBA4444
-                                uint8_t redValue = std::stoi(r, nullptr, 16) >> 4;   // Right-shift by 4 bits
-                                uint8_t greenValue = std::stoi(g, nullptr, 16) >> 4; // Right-shift by 4 bits
-                                uint8_t blueValue = std::stoi(b, nullptr, 16) >> 4;  // Right-shift by 4 bits
-                                
-                                // Create a Color with the extracted RGB values
-                                
-                                titleColor = Color(redValue, greenValue, blueValue, 15);
+                                titleColor = RGB888(hexColor);
                                 renderer->drawString(title.c_str(), false, x, y, fontSize, titleColor);
                             } else {
                                 // Invalid hexadecimal color, handle the error accordingly
@@ -1901,29 +2643,30 @@ namespace tsl {
                     } else if (this->m_subtitle == "Ultrahand Script") {
                         renderer->drawString(this->m_title.c_str(), false, 20, 50, 32, a(Color(0xFF, 0x33, 0x3F, 0xFF)));
                     } else {
-                        renderer->drawString(this->m_title.c_str(), false, 20, 50, 30, a(tsl::style::color::ColorText));
+                        renderer->drawString(this->m_title.c_str(), false, 20, 50, 30, a(defaultTextColor));
                     }
                 }
                 
-                
+                //if (this->m_title != "Ultrahand")
                 renderer->drawString(this->m_subtitle.c_str(), false, 20, y+20+offset, 15, a(tsl::style::color::ColorDescription));
                 
-                renderer->drawRect(15, tsl::cfg::FramebufferHeight - 73, tsl::cfg::FramebufferWidth - 30, 1, a(tsl::style::color::ColorText));
-                std::string menuBottomLine = "\uE0E1  Back     \uE0E0  OK     ";
+                renderer->drawRect(15, tsl::cfg::FramebufferHeight - 73, tsl::cfg::FramebufferWidth - 30, 1, a(defaultTextColor));
+                
+                std::string menuBottomLine = "\uE0E1"+GAP_2+BACK+GAP_1+"\uE0E0"+GAP_2+OK+GAP_1;
                 if (this->m_menuMode == "packages") {
-                    menuBottomLine += "\uE0ED  Overlays";
+                    menuBottomLine += "\uE0ED"+GAP_2+OVERLAYS;
                 } else if (this->m_menuMode == "overlays") {
-                    menuBottomLine += "\uE0EE  Packages";
+                    menuBottomLine += "\uE0EE"+GAP_2+PACKAGES;
                 }
                 
                 if (!(this->m_pageLeftName).empty()) {
-                    menuBottomLine += "\uE0ED  " + this->m_pageLeftName;
+                    menuBottomLine += "\uE0ED"+GAP_2 + this->m_pageLeftName;
                 } else if (!(this->m_pageRightName).empty()) {
-                    menuBottomLine += "\uE0EE  " + this->m_pageRightName;
+                    menuBottomLine += "\uE0EE"+GAP_2 + this->m_pageRightName;
                 }
                 
-                renderer->drawString(menuBottomLine.c_str(), false, 30, 693, 23, a(tsl::style::color::ColorText));
-
+                renderer->drawString(menuBottomLine.c_str(), false, 30, 693, 23, a(defaultTextColor));
+                
                 if (this->m_contentElement != nullptr)
                     this->m_contentElement->frame(renderer);
             }
@@ -1933,7 +2676,7 @@ namespace tsl {
                 this->setBoundaries(parentX, parentY, parentWidth, parentHeight);
 
                 if (this->m_contentElement != nullptr) {
-                    this->m_contentElement->setBoundaries(parentX + 35, parentY + 125, parentWidth - 85, parentHeight - 73 - 125);
+                    this->m_contentElement->setBoundaries(parentX + 35, parentY + 102, parentWidth - 85, parentHeight - 73 - 105); // CUSTOM MODIFICATION (125->105->102)
                     this->m_contentElement->invalidate();
                 }
             }
@@ -2002,6 +2745,9 @@ namespace tsl {
          */
         class HeaderOverlayFrame : public Element {
         public:
+            std::string defaultTextColorStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "text_color");
+            tsl::Color defaultTextColor = RGB888(defaultTextColorStr);
+            
             HeaderOverlayFrame(u16 headerHeight = 175) : Element(), m_headerHeight(headerHeight) {}
             virtual ~HeaderOverlayFrame() {
                 if (this->m_contentElement != nullptr)
@@ -2015,9 +2761,9 @@ namespace tsl {
                 renderer->fillScreen(a(tsl::style::color::ColorFrameBackground));
                 renderer->drawRect(tsl::cfg::FramebufferWidth - 1, 0, 1, tsl::cfg::FramebufferHeight, a(0xF222));
 
-                renderer->drawRect(15, tsl::cfg::FramebufferHeight - 73, tsl::cfg::FramebufferWidth - 30, 1, a(tsl::style::color::ColorText));
+                renderer->drawRect(15, tsl::cfg::FramebufferHeight - 73, tsl::cfg::FramebufferWidth - 30, 1, a(defaultTextColor));
 
-                renderer->drawString("\uE0E1  Back     \uE0E0  OK", false, 30, 693, 23, a(tsl::style::color::ColorText));
+                renderer->drawString(("\uE0E1  "+BACK+"     \uE0E0  "+OK).c_str(), false, 30, 693, 23, a(defaultTextColor)); // CUSTOM MODIFICATION
 
                 if (this->m_header != nullptr)
                     this->m_header->frame(renderer);
@@ -2138,8 +2884,13 @@ namespace tsl {
                 for (auto& item : this->m_items)
                     delete item;
             }
+            
+            std::string trackBarColorStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "trackbar_color");
+            Color trackBarColor = RGB888(trackBarColorStr, "#555555");
 
             virtual void draw(gfx::Renderer *renderer) override {
+                
+                
                 if (this->m_clearList) {
                     for (auto& item : this->m_items)
                         delete item;
@@ -2194,9 +2945,9 @@ namespace tsl {
                     float scrollbarHeight = static_cast<float>(this->getHeight() * this->getHeight()) / this->m_listHeight;
                     float scrollbarOffset = (static_cast<double>(this->m_offset)) / static_cast<double>(this->m_listHeight - this->getHeight()) * (this->getHeight() - std::ceil(scrollbarHeight));
 
-                    renderer->drawRect(this->getRightBound() + 10, this->getY() + scrollbarOffset, 5, scrollbarHeight - 50, a(tsl::style::color::ColorHandle));
-                    renderer->drawCircle(this->getRightBound() + 12, this->getY() + scrollbarOffset, 2, true, a(tsl::style::color::ColorHandle));
-                    renderer->drawCircle(this->getRightBound() + 12, this->getY() + scrollbarOffset + scrollbarHeight - 50, 2, true, a(tsl::style::color::ColorHandle));
+                    renderer->drawRect(this->getRightBound() + 10, this->getY() + scrollbarOffset, 5, scrollbarHeight - 50, trackBarColor);
+                    renderer->drawCircle(this->getRightBound() + 12, this->getY() + scrollbarOffset, 2, true, trackBarColor);
+                    renderer->drawCircle(this->getRightBound() + 12, this->getY() + scrollbarOffset + scrollbarHeight - 50, 2, true, trackBarColor);
 
                     float prevOffset = this->m_offset;
 
@@ -2450,6 +3201,8 @@ namespace tsl {
          */
         class ListItem : public Element {
         public:
+            std::string defaultTextColorStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "text_color");
+            tsl::Color defaultTextColor = RGB888(defaultTextColorStr);
             /**
              * @brief Constructor
              *
@@ -2493,7 +3246,7 @@ namespace tsl {
                 if (this->m_trunctuated) {
                     if (this->m_focused) {
                         renderer->enableScissoring(this->getX(), this->getY(), this->m_maxWidth + 40, this->getHeight());
-                        renderer->drawString(this->m_scrollText.c_str(), false, this->getX() + 20 - this->m_scrollOffset, this->getY() + 45, 23, tsl::style::color::ColorText);
+                        renderer->drawString(this->m_scrollText.c_str(), false, this->getX() + 20 - this->m_scrollOffset, this->getY() + 45, 23, defaultTextColor);
                         renderer->disableScissoring();
                         if (this->m_scrollAnimationCounter == 90) {
                             if (this->m_scrollOffset == this->m_textWidth) {
@@ -2506,15 +3259,17 @@ namespace tsl {
                             this->m_scrollAnimationCounter++;
                         }
                     } else {
-                        renderer->drawString(this->m_ellipsisText.c_str(), false, this->getX() + 20, this->getY() + 45, 23, a(tsl::style::color::ColorText));
+                        renderer->drawString(this->m_ellipsisText.c_str(), false, this->getX() + 20, this->getY() + 45, 23, a(defaultTextColor));
                     }
                 } else {
-                    renderer->drawString(this->m_text.c_str(), false, this->getX() + 20, this->getY() + 45, 23, a(tsl::style::color::ColorText));
+                    renderer->drawString(this->m_text.c_str(), false, this->getX() + 20, this->getY() + 45, 23, a(defaultTextColor));
                 }
 
                 // CUSTOM SECTION START (modification for submenu footer color)
                 if (this->m_value == DROPDOWN_SYMBOL || this->m_value == OPTION_SYMBOL) {
-                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45, this->getY() + 45, 20, this->m_faint ? a(tsl::style::color::ColorDescription) : a(tsl::Color(0xFF, 0xFF, 0xFF, 0xFF)));
+                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45, this->getY() + 45, 20, this->m_faint ? a(tsl::style::color::ColorDescription) : a(defaultTextColor));
+                } else if (this->m_value == CROSSMARK_SYMBOL) {
+                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45, this->getY() + 45, 20, this->m_faint ? a(tsl::style::color::ColorDescription) : a(Color(0xF, 0x0, 0x0, 0xF)));
                 } else {
                     renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45, this->getY() + 45, 20, this->m_faint ? a(tsl::style::color::ColorDescription) : a(tsl::style::color::ColorHighlight));
                 }
@@ -2703,15 +3458,18 @@ namespace tsl {
 
         class CategoryHeader : public Element {
         public:
+            std::string defaultTextColorStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "text_color");
+            tsl::Color defaultTextColor = RGB888(defaultTextColorStr);
+            
             CategoryHeader(const std::string &title, bool hasSeparator = false) : m_text(title), m_hasSeparator(hasSeparator) {}
             virtual ~CategoryHeader() {}
 
             virtual void draw(gfx::Renderer *renderer) override {
-                renderer->drawRect(this->getX() - 2, this->getBottomBound() - 30, 5, 23, a(tsl::style::color::ColorHeaderBar));
-                renderer->drawString(this->m_text.c_str(), false, this->getX() + 13, this->getBottomBound() - 12, 15, a(tsl::style::color::ColorText));
+                renderer->drawRect(this->getX() - 2, this->getBottomBound() - 30, 5, 23, a(defaultTextColor));
+                renderer->drawString(this->m_text.c_str(), false, this->getX() + 13, this->getBottomBound() - 12, 15, a(defaultTextColor));
 
-                if (this->m_hasSeparator)
-                    renderer->drawRect(this->getX(), this->getBottomBound(), this->getWidth(), 1, a(tsl::style::color::ColorFrame));
+                //if (this->m_hasSeparator)
+                //    renderer->drawRect(this->getX(), this->getBottomBound(), this->getWidth(), 1, a(tsl::style::color::ColorFrame)); // CUSTOM MODIFICATION
             }
 
             virtual void layout(u16 parentX, u16 parentY, u16 parentWidth, u16 parentHeight) override {
@@ -2722,8 +3480,11 @@ namespace tsl {
                         return;
                     }
                 }
-
-                this->setBoundaries(this->getX(), this->getY(), this->getWidth(), tsl::style::ListItemDefaultHeight);
+                if (!m_hasSeparator) { // CUSTOM MODIFICATION
+                    this->setBoundaries(this->getX(), this->getY(), this->getWidth(), tsl::style::ListItemDefaultHeight *3/4); // CUSTOM MODIFICATION
+                } else {
+                    this->setBoundaries(this->getX(), this->getY(), this->getWidth(), tsl::style::ListItemDefaultHeight / 2); // CUSTOM MODIFICATION
+                }
             }
 
             virtual bool onClick(u64 keys) {
@@ -2753,6 +3514,11 @@ namespace tsl {
          */
         class TrackBar : public Element {
         public:
+            std::string defaultTextColorStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "text_color");
+            tsl::Color defaultTextColor = RGB888(defaultTextColorStr);
+            std::string trackBarColorStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "trackbar_color");
+            Color trackBarColor = RGB888(trackBarColorStr, "#555555");
+            
             /**
              * @brief Constructor
              *
@@ -2824,7 +3590,7 @@ namespace tsl {
                 renderer->drawRect(this->getX(), this->getY(), this->getWidth(), 1, a(tsl::style::color::ColorFrame));
                 renderer->drawRect(this->getX(), this->getBottomBound(), this->getWidth(), 1, a(tsl::style::color::ColorFrame));
 
-                renderer->drawString(this->m_icon, false, this->getX() + 15, this->getY() + 50, 23, a(tsl::style::color::ColorText));
+                renderer->drawString(this->m_icon, false, this->getX() + 15, this->getY() + 50, 23, a(defaultTextColor));
 
                 u16 handlePos = (this->getWidth() - 95) * static_cast<float>(this->m_value) / 100;
                 renderer->drawCircle(this->getX() + 60, this->getY() + 42, 2, true, a(tsl::style::color::ColorHighlight));
@@ -2832,7 +3598,7 @@ namespace tsl {
                 renderer->drawRect(this->getX() + 60 + handlePos, this->getY() + 40, this->getWidth() - 95 - handlePos, 5, a(tsl::style::color::ColorFrame));
                 renderer->drawRect(this->getX() + 60, this->getY() + 40, handlePos, 5, a(tsl::style::color::ColorHighlight));
 
-                renderer->drawCircle(this->getX() + 62 + handlePos, this->getY() + 42, 18, true, a(tsl::style::color::ColorHandle));
+                renderer->drawCircle(this->getX() + 62 + handlePos, this->getY() + 42, 18, true, a(trackBarColor));
                 renderer->drawCircle(this->getX() + 62 + handlePos, this->getY() + 42, 18, false, a(tsl::style::color::ColorFrame));
             }
 
@@ -3693,10 +4459,44 @@ namespace tsl {
          */
         static void parseOverlaySettings() {
             hlp::ini::IniData parsedConfig = hlp::ini::readOverlaySettings();
-
-            u64 decodedKeys = hlp::comboStringToKeys(parsedConfig["ultrahand"]["key_combo"]); // CUSTOM MODIFICATION
-            if (decodedKeys)
-                tsl::cfg::launchCombo = decodedKeys;
+            
+            try {
+                u64 decodedKeys = hlp::comboStringToKeys(parsedConfig["ultrahand"]["key_combo"]); // CUSTOM MODIFICATION
+                if (decodedKeys)
+                    tsl::cfg::launchCombo = decodedKeys;
+            } catch (const std::exception& e) {}
+            
+            try {
+                datetimeFormat = removeQuotes(parsedConfig["ultrahand"]["datetime_format"]); // read datetime_format
+            } catch (const std::exception& e) {}
+            if (datetimeFormat.empty()) {
+                datetimeFormat = removeQuotes(DEFAULT_DT_FORMAT);
+            }
+            
+            try {
+                hideClock = removeQuotes(parsedConfig["ultrahand"]["hide_clock"]);
+            } catch (const std::exception& e) {}
+            if (hideClock.empty())
+                hideClock = "false";
+            
+            try {
+                hideBattery = removeQuotes(parsedConfig["ultrahand"]["hide_battery"]);
+            } catch (const std::exception& e) {}
+            if (hideBattery.empty())
+                hideBattery = "false";
+            
+            try {
+                hidePCBTemp = removeQuotes(parsedConfig["ultrahand"]["hide_pcb_temp"]);
+            } catch (const std::exception& e) {}
+            if (hidePCBTemp.empty())
+                hidePCBTemp = "false";
+            
+            try {
+                hideSOCTemp = removeQuotes(parsedConfig["ultrahand"]["hide_soc_temp"]);
+            } catch (const std::exception& e) {}
+            if (hideSOCTemp.empty())
+                hideSOCTemp = "false";
+            
         }
 
         /**
@@ -3984,6 +4784,7 @@ namespace tsl::cfg {
     u16 FramebufferHeight = 0;
     u64 launchCombo = HidNpadButton_L | HidNpadButton_Down | HidNpadButton_StickR;
 }
+extern "C" void __libnx_init_time(void);
 
 extern "C" {
 
@@ -3998,6 +4799,7 @@ extern "C" {
      */
     void __appInit(void) {
         tsl::hlp::doWithSmSession([]{
+            
             ASSERT_FATAL(fsInitialize());
             ASSERT_FATAL(hidInitialize());                          // Controller inputs and Touch
             if (hosversionAtLeast(16,0,0)) {
@@ -4008,6 +4810,12 @@ extern "C" {
             ASSERT_FATAL(pmdmntInitialize());                       // PID querying
             ASSERT_FATAL(hidsysInitialize());                       // Focus control
             ASSERT_FATAL(setsysInitialize());                       // Settings querying
+            
+            ASSERT_FATAL(timeInitialize()); // CUSTOM MODIFICATION
+            __libnx_init_time();            // CUSTOM MODIFICATION
+            timeExit(); // CUSTOM MODIFICATION
+            powerInit();
+            thermalstatusInit();
         });
     }
 
@@ -4016,6 +4824,8 @@ extern "C" {
      *
      */
     void __appExit(void) {
+        thermalstatusExit();
+        powerExit(); // CUSTOM MODIFICATION
         fsExit();
         hidExit();
         plExit();

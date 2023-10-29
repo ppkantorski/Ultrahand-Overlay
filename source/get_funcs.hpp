@@ -10,6 +10,9 @@
  *   For the latest updates and contributions, visit the project's GitHub repository.
  *   (GitHub Repository: https://github.com/ppkantorski/Ultrahand-Overlay)
  *
+ *   Note: Please be aware that this notice cannot be altered or removed. It is a part
+ *   of the project's documentation and must remain intact.
+ * 
  *  Copyright (c) 2023 ppkantorski
  *  All rights reserved.
  ********************************************************************************/
@@ -409,4 +412,16 @@ std::vector<std::string> getFilesListByWildcards(const std::string& pathPattern)
     }
 
     return fileList;
+}
+
+
+
+const char* getStringFromJson(json_t* root, const char* key) {
+    json_t* value = json_object_get(root, key);
+
+    if (value && json_is_string(value)) {
+        return json_string_value(value);
+    } else {
+        return ""; // Key not found or not a string, return empty string/char*
+    }
 }
