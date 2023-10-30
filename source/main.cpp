@@ -414,7 +414,7 @@ public:
             auto listItem = new tsl::elm::ListItem(UPDATE_ULTRAHAND);
             
             // Envolke selectionOverlay in optionMode
-            std::string languagesVersion = std::string(APP_VERSION);
+            std::string languagesVersion = 'v'+std::string(APP_VERSION);
             
             listItem->setClickListener([this, &languagesVersion, listItem](uint64_t keys) { // Add 'command' to the capture list
                 if (keys & KEY_A) {
@@ -2411,9 +2411,9 @@ public:
                 if (ultrahandSection.count("hide_clock") == 0)
                     setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_clock", "false");
                 if (ultrahandSection.count("hide_battery") == 0)
-                    setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_battery", "false");
+                    setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_battery", "true");
                 if (ultrahandSection.count("hide_pcb_temp") == 0)
-                    setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_pcb_temp", "false");
+                    setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_pcb_temp", "true");
                 if (ultrahandSection.count("hide_soc_temp") == 0)
                     setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_soc_temp", "true");
                 
