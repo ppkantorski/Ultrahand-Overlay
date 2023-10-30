@@ -420,7 +420,7 @@ public:
             listItem->setClickListener([this, listItem](uint64_t keys) { // Add 'command' to the capture list
                 if (keys & KEY_A) {
                     deleteFileOrDirectory("/config/ultrahand/downloads/ovlmenu.ovl");
-                    isDownloaded = downloadFile("https://github.com/ppkantorski/Ultrahand-Overlay/releases/latest/download/ovlmenu.ovl", "/config/ultrahand/downloads/");
+                    isDownloaded = downloadFile(ultrahandRepo+"releases/latest/download/ovlmenu.ovl", "/config/ultrahand/downloads/");
                     if (isDownloaded) {
                         moveFileOrDirectory("/config/ultrahand/downloads/ovlmenu.ovl", "/switch/.overlays/ovlmenu.ovl");
                         listItem->setValue(CHECKMARK_SYMBOL);
@@ -443,9 +443,9 @@ public:
                     deleteFileOrDirectory("/config/ultrahand/downloads/ovlmenu.ovl");
                     bool languageDownloaded = false;
                     if (languagesVersion == "latest")
-                        languageDownloaded = downloadFile("https://github.com/ppkantorski/Ultrahand-Overlay/releases/latest/download/lang.zip", "/config/ultrahand/downloads/");
+                        languageDownloaded = downloadFile(ultrahandRepo+"releases/latest/download/lang.zip", "/config/ultrahand/downloads/");
                     else
-                        languageDownloaded = downloadFile("https://github.com/ppkantorski/Ultrahand-Overlay/releases/download/v"+languagesVersion+"/lang.zip", "/config/ultrahand/downloads/");
+                        languageDownloaded = downloadFile(ultrahandRepo+"releases/download/v"+languagesVersion+"/lang.zip", "/config/ultrahand/downloads/");
                     if (languageDownloaded) {
                         unzipFile("/config/ultrahand/downloads/lang.zip", "/config/ultrahand/downloads/lang/");
                         deleteFileOrDirectory("/config/ultrahand/downloads/lang.zip");
