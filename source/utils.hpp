@@ -68,7 +68,7 @@ const std::string overlayDirectory = "sdmc:/switch/.overlays/";
 const std::string teslaSettingsConfigIniPath = "sdmc:/config/tesla/"+configFileName;
 const std::string overlaysIniFilePath = settingsPath + "overlays.ini";
 const std::string packagesIniFilePath = settingsPath + "packages.ini";
-
+const std::string ultrahandRepo = "https://github.com/ppkantorski/Ultrahand-Overlay/";
 
 
 
