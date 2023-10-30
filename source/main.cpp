@@ -467,6 +467,10 @@ public:
             std::string packageSectionString = "";
             std::string packageInfoString = "";
             
+            packageSectionString += TITLE+'\n';
+            packageInfoString += std::string("Ultrahand Overlay")+'\n';
+            numEntries++;
+            
             packageSectionString += VERSION+'\n';
             packageInfoString += std::string(APP_VERSION)+'\n';
             numEntries++;
@@ -477,7 +481,7 @@ public:
             
             std::string aboutHeaderText = ABOUT+'\n';
             std::string::size_type aboutHeaderLength = aboutHeaderText.length();
-            std::string aboutText = "Special thanks to B3711, ComplexNarrative, Faker_dev, MasaGratoR, meha, WerWolv, HookedBehemoth and many others.";
+            std::string aboutText = "Ultrahand Overlay is a versatile tool that enables you to create and share custom command-based packages.";
             
             packageSectionString += aboutHeaderText;
             
@@ -506,6 +510,41 @@ public:
                 // Add corresponding newline to the packageSectionString
                 if (startPos < aboutText.length()) {
                     packageSectionString += std::string(aboutHeaderLength, ' ') + '\n';
+                }
+            }
+            
+            
+            std::string creditsHeaderText = CREDITS+'\n';
+            std::string::size_type creditsHeaderLength = creditsHeaderText.length();
+            std::string creditsText = "Special thanks to B3711, ComplexNarrative, Faker_dev, MasaGratoR, meha, WerWolv, HookedBehemoth and many others. <3";
+            
+            packageSectionString += creditsHeaderText;
+            
+            // Split the about text into multiple lines with proper word wrapping
+            //constexpr int maxLineLength = 28;  // Adjust the maximum line length as needed
+            startPos = 0;
+            spacePos = 0;
+            
+            while (startPos < creditsText.length()) {
+                std::string::size_type endPos = std::min(startPos + maxLineLength, creditsText.length());
+                std::string line = creditsText.substr(startPos, endPos - startPos);
+                
+                // Check if the current line ends with a space; if not, find the last space in the line
+                if (endPos < creditsText.length() && creditsText[endPos] != ' ') {
+                    spacePos = line.find_last_of(' ');
+                    if (spacePos != std::string::npos) {
+                        endPos = startPos + spacePos;
+                        line = creditsText.substr(startPos, endPos - startPos);
+                    }
+                }
+                
+                packageInfoString += line + '\n';
+                startPos = endPos + 1;
+                numEntries++;
+                
+                // Add corresponding newline to the packageSectionString
+                if (startPos < aboutText.length()) {
+                    packageSectionString += std::string(creditsHeaderLength, ' ') + '\n';
                 }
             }
             
