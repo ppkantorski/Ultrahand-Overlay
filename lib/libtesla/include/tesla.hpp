@@ -224,6 +224,8 @@ static std::string KEY_COMBO = "Key Combo";
 static std::string LANGUAGE = "Language";
 static std::string OVERLAY_INFO = "Overlay Info";
 static std::string SOFTWARE_UPDATE = "Software Update";
+static std::string UPDATE_ULTRAHAND = "Update Ultrahand";
+static std::string UPDATE_LANGUAGES = "Update Languages";
 static std::string ROOT_PACKAGE = "Root Package";
 static std::string SORT_PRIORITY = "Sort Priority";
 static std::string FAILED_TO_OPEN = "Failed to open file";
@@ -314,6 +316,8 @@ void reinitializeLangVars() {
     LANGUAGE = "Language";
     OVERLAY_INFO = "Overlay Info";
     SOFTWARE_UPDATE = "Software Update";
+    UPDATE_ULTRAHAND = "Update Ultrahand";
+    UPDATE_LANGUAGES = "Update Languages";
     ROOT_PACKAGE = "Root Package";
     SORT_PRIORITY = "Sort Priority";
     FAILED_TO_OPEN = "Failed to open file";
@@ -417,6 +421,8 @@ void parseLanguage(std::string langFile) {
     updateIfNotEmpty(LANGUAGE, "LANGUAGE", langData);
     updateIfNotEmpty(OVERLAY_INFO, "OVERLAY_INFO", langData);
     updateIfNotEmpty(SOFTWARE_UPDATE, "SOFTWARE_UPDATE", langData);
+    updateIfNotEmpty(UPDATE_ULTRAHAND, "UPDATE_ULTRAHAND", langData);
+    updateIfNotEmpty(UPDATE_LANGUAGES, "UPDATE_LANGUAGES", langData);
     updateIfNotEmpty(ROOT_PACKAGE, "ROOT_PACKAGE", langData);
     updateIfNotEmpty(SORT_PRIORITY, "SORT_PRIORITY", langData);
     updateIfNotEmpty(FAILED_TO_OPEN, "FAILED_TO_OPEN", langData);
