@@ -411,17 +411,19 @@ public:
         } else if (dropdownSelection == "softwareUpdateMenu") {
             list->addItem(new tsl::elm::CategoryHeader(SOFTWARE_UPDATE));
             
-            auto listItem = new tsl::elm::ListItem("Update Ultrahand");
+            auto listItem = new tsl::elm::ListItem(UPDATE_ULTRAHAND);
             
             // Envolke selectionOverlay in optionMode
+            std::string languagesVersion = std::string(APP_VERSION);
             
-            listItem->setClickListener([this, listItem](uint64_t keys) { // Add 'command' to the capture list
+            listItem->setClickListener([this, &languagesVersion, listItem](uint64_t keys) { // Add 'command' to the capture list
                 if (keys & KEY_A) {
                     deleteFileOrDirectory("/config/ultrahand/downloads/ovlmenu.ovl");
                     isDownloaded = downloadFile("https://github.com/ppkantorski/Ultrahand-Overlay/releases/latest/download/ovlmenu.ovl", "/config/ultrahand/downloads/");
                     if (isDownloaded) {
                         moveFileOrDirectory("/config/ultrahand/downloads/ovlmenu.ovl", "/switch/.overlays/ovlmenu.ovl");
                         listItem->setValue(CHECKMARK_SYMBOL);
+                        languagesVersion = "latest";
                     } else
                         listItem->setValue(CROSSMARK_SYMBOL, false);
                     
@@ -431,8 +433,8 @@ public:
             });
             list->addItem(listItem);
             
-            std::string languagesVersion = "latest";
-            listItem = new tsl::elm::ListItem("Update Languages");
+            
+            listItem = new tsl::elm::ListItem(UPDATE_LANGUAGES);
             
             // Envolke selectionOverlay in optionMode
             
@@ -2321,6 +2323,7 @@ private:
     bool useDefaultMenu = false;
     bool useOverlayLaunchArgs = false;
     std::string hiddenMenuMode;
+    bool initializingSpawn = false;
     
     std::string defaultLang = "en";
     std::string packagePath, pathReplace, pathReplaceOn, pathReplaceOff;
@@ -2524,10 +2527,10 @@ public:
             
             
             FILE* overlaysIniFile = fopen(overlaysIniFilePath.c_str(), "r");
-            if (!overlaysIniFile)
+            if (!overlaysIniFile) {
                 fclose(fopen(overlaysIniFilePath.c_str(), "w")); // The INI file doesn't exist, so create an empty one.
-                
-            else
+                initializingSpawn = true;
+            } else
                 fclose(overlaysIniFile); // The file exists, so close it.
             
             // load overlayList from overlaysIniFilePath.  this will be the overlayFilenames
@@ -2785,9 +2788,10 @@ public:
             
             
             FILE* packagesIniFile = fopen(packagesIniFilePath.c_str(), "r");
-            if (!packagesIniFile)
+            if (!packagesIniFile) {
                 fclose(fopen(packagesIniFilePath.c_str(), "w")); // The INI file doesn't exist, so create an empty one.
-            else
+                initializingSpawn = true;
+            } else
                 fclose(packagesIniFile); // The file exists, so close it.
             
             std::vector<std::string> packageList;
@@ -3251,6 +3255,11 @@ public:
                 }
             }
         }
+        if (initializingSpawn) {
+            initializingSpawn = false;
+            return createUI(); 
+        }
+        
         
         rootFrame = new tsl::elm::OverlayFrame("Ultrahand", versionLabel, menuMode+hiddenMenuMode);
         rootFrame->setContent(list);
