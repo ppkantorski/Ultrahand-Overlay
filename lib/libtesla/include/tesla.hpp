@@ -2682,14 +2682,15 @@ namespace tsl {
                     renderer->drawString(secondHalf.c_str(), false, x, y+offset, fontSize, tsl::Color(0xF, 0x0, 0x0, 0xF));
                     
                     
+                    // Time drawing implementation
+                    //struct timespec currentTime;
+                    clock_gettime(CLOCK_REALTIME, &currentTime);
+                    
                     int y_offset = 44;
                     if ((hideBattery == "true" && hidePCBTemp == "true" && hideSOCTemp == "true") || (hideClock == "true"))
                         y_offset += 12;
                     
                     if (hideClock != "true") {// Use the 'timeStr' to display the time
-                        // Time drawing implementation
-                        //struct timespec currentTime;
-                        clock_gettime(CLOCK_REALTIME, &currentTime);
                         
                         
                         // Convert the current time to a human-readable string
