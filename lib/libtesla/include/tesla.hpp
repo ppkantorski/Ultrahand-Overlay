@@ -237,7 +237,7 @@ static std::string OFF = "Off";
 static std::string PACKAGE_INFO = "Package Info";
 static std::string TITLE = "Title";
 static std::string VERSION = "Version";
-static std::string CREATOR = "Creator";
+static std::string CREATOR = "Creator(s)";
 static std::string ABOUT = "About";
 static std::string CREDITS = "Credits";
 static std::string OK = "OK";
@@ -329,7 +329,7 @@ void reinitializeLangVars() {
     PACKAGE_INFO = "Package Info";
     TITLE = "Title";
     VERSION = "Version";
-    CREATOR = "Creator";
+    CREATOR = "Creator(s)";
     ABOUT = "About";
     CREDITS = "Credits";
     OK = "OK";
