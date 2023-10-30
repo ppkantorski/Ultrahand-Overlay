@@ -211,7 +211,7 @@ static std::string HIDE_OVERLAY = "Hide Overlay";
 static std::string HIDE_PACKAGE = "Hide Package";
 static std::string LAUNCH_ARGUMENTS = "Launch Arguments";
 static std::string COMMANDS = "Commands";
-static std::string SETTINGS = "Main Settings";
+static std::string SETTINGS = "Settings";
 static std::string MAIN_SETTINGS = "Main Settings";
 static std::string UI_SETTINGS = "UI Settings";
 static std::string WIDGET = "Widget";
@@ -303,7 +303,7 @@ void reinitializeLangVars() {
     HIDE_PACKAGE = "Hide Package";
     LAUNCH_ARGUMENTS = "Launch Arguments";
     COMMANDS = "Commands";
-    SETTINGS = "Main Settings";
+    SETTINGS = "Settings";
     MAIN_SETTINGS = "Main Settings";
     UI_SETTINGS = "UI Settings";
     WIDGET = "Widget";
