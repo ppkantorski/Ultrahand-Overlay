@@ -11,7 +11,7 @@
  *
  *   Note: Please be aware that this notice cannot be altered or removed. It is a part
  *   of the project's documentation and must remain intact.
- * 
+ *
  *  Copyright (c) 2023 ppkantorski
  *  All rights reserved.
  ********************************************************************************/
@@ -38,64 +38,6 @@ Payload::HekateConfigList const ini_config_list;
 Payload::PayloadConfigList const payload_config_list;
 
 
-/**
- * @brief Shutdown modes for the Ultrahand-Overlay project.
- *
- * These macros define the shutdown modes used in the Ultrahand-Overlay project:
- * - `SpsmShutdownMode_Normal`: Normal shutdown mode.
- * - `SpsmShutdownMode_Reboot`: Reboot mode.
- */
-#define SpsmShutdownMode_Normal 0
-#define SpsmShutdownMode_Reboot 1
-
-/**
- * @brief Key mapping macros for button keys.
- *
- * These macros define button keys for the Ultrahand-Overlay project to simplify key mappings.
- * For example, `KEY_A` represents the `HidNpadButton_A` key.
- */
-#define KEY_A HidNpadButton_A
-#define KEY_B HidNpadButton_B
-#define KEY_X HidNpadButton_X
-#define KEY_Y HidNpadButton_Y
-#define KEY_L HidNpadButton_L
-#define KEY_R HidNpadButton_R
-#define KEY_ZL HidNpadButton_ZL
-#define KEY_ZR HidNpadButton_ZR
-#define KEY_PLUS HidNpadButton_Plus
-#define KEY_MINUS HidNpadButton_Minus
-#define KEY_DUP HidNpadButton_Up
-#define KEY_DDOWN HidNpadButton_Down
-#define KEY_DLEFT HidNpadButton_Left
-#define KEY_DRIGHT HidNpadButton_Right
-#define KEY_SL HidNpadButton_AnySL
-#define KEY_SR HidNpadButton_AnySR
-#define KEY_LSTICK HidNpadButton_StickL
-#define KEY_RSTICK HidNpadButton_StickR
-#define KEY_UP (HidNpadButton_Up | HidNpadButton_StickLUp | HidNpadButton_StickRUp)
-#define KEY_DOWN (HidNpadButton_Down | HidNpadButton_StickLDown | HidNpadButton_StickRDown)
-#define KEY_LEFT (HidNpadButton_Left | HidNpadButton_StickLLeft | HidNpadButton_StickRLeft)
-#define KEY_RIGHT (HidNpadButton_Right | HidNpadButton_StickLRight | HidNpadButton_StickRRight)
-
-/**
- * @brief Ultrahand-Overlay Input Macros
- *
- * This block of code defines macros for handling input in the Ultrahand-Overlay project.
- * These macros simplify the mapping of input events to corresponding button keys and
- * provide aliases for touch and joystick positions.
- *
- * The macros included in this block are:
- *
- * - `touchPosition`: An alias for a constant `HidTouchState` pointer.
- * - `touchInput`: An alias for `&touchPos`, representing touch input.
- * - `JoystickPosition`: An alias for `HidAnalogStickState`, representing joystick input.
- *
- * These macros are utilized within the Ultrahand-Overlay project to manage and interpret
- * user input, including touch and joystick events.
- */
-#define touchPosition const HidTouchState
-#define touchInput &touchPos
-#define JoystickPosition HidAnalogStickState
 
 
 /**
@@ -774,8 +716,8 @@ bool interpretAndExecuteCommand(const std::vector<std::vector<std::string>> comm
     // inidialize data variables
     std::vector<std::string> listData;
     //json_t* jsonData1 = nullptr;
-    //json_t* jsonData2 = nullptr;
-    //json_error_t error;
+    json_t* jsonData2 = nullptr;
+    json_error_t error;
     //FILE* hexFile = nullptr;
     
     std::vector<std::string> command;
@@ -853,8 +795,10 @@ bool interpretAndExecuteCommand(const std::vector<std::vector<std::string>> comm
                 size_t startPos = arg.find("{json_file(");
                 size_t endPos = arg.find(")}");
                 if (endPos != std::string::npos && endPos > startPos) {
-                    //jsonData2 = json_load_file(jsonPath.c_str(), 0, &error);
                     replacement = replaceJsonPlaceholder(arg.substr(startPos, endPos - startPos + 2), "json_file", jsonPath);
+                    
+                    //jsonData2 = json_load_file(jsonPath.c_str(), 0, &error);
+                    //replacement = replaceJsonPlaceholderF2(arg.substr(startPos, endPos - startPos + 2), "json_file", jsonData2);
                     //logMessage("Mid source replacement: " + replacement);
                     arg.replace(startPos, endPos - startPos + 2, replacement);
                     

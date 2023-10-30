@@ -73,6 +73,9 @@ static bool reloadMenu2 = false;
 static bool reloadMenu3 = false;
 static bool isDownloaded = false;
 
+static bool redrawWidget = false;
+static bool showMenu = false;
+
 static tsl::elm::OverlayFrame *rootFrame = nullptr;
 static tsl::elm::List *list = nullptr;
 
@@ -89,8 +92,7 @@ static std::unordered_map<std::string, std::string> selectedFooterDict;
 static auto selectedListItem = new tsl::elm::ListItem("");
 static auto lastSelectedListItem = new tsl::elm::ListItem("");
 
-static auto loaderInfo = envGetLoaderInfo();
-static std::string versionLabel = APP_VERSION+std::string("   (")+ extractTitle(loaderInfo)+" v"+cleanVersionLabel(loaderInfo)+std::string(")");
+
 
 
 // Command key defintitions
@@ -100,39 +102,7 @@ const static auto SETTINGS_KEY = KEY_Y;
 const static auto STAR_KEY = KEY_X;
 
 
-// Pre-defined symbols (moved to libTesla)
-//static std::string OPTION_SYMBOL = "\u22EF";
-//static std::string DROPDOWN_SYMBOL = "\u25B6";
-//static std::string CHECKMARK_SYMBOL = "\uE14B";
-//static std::string STAR_SYMBOL = "\u2605";
 
-
-// Constant string definitions (English)
-//static const std::string UNAVAILABLE_SELECTION = "Not available";
-//static const std::string OVERLAYS = "Overlays"; //defined in libTesla now
-//static const std::string OVERLAY = "Overlay";
-//static const std::string HIDDEN_OVERLAYS = "Hidden Overlays";
-//static const std::string PACKAGES = "Packages"; //defined in libTesla now
-//static const std::string PACKAGE = "Package";
-//static const std::string HIDDEN_PACKAGES = "Hidden Packages";
-//static const std::string HIDDEN = "Hidden";
-//static const std::string HIDE = "Hide";
-//static const std::string COMMANDS = "Commands";
-//static const std::string SETTINGS = "Settings";
-//static const std::string ROOT_PACKAGE = "Root Package";
-//static const std::string SORT_PRIORITY = "Sort Priority";
-//static const std::string FAILED_TO_OPEN = "Failed to open file";
-//static const std::string CLEAN_LABELS = "Clean Versions";
-//static const std::string OVERLAY_LABELS = "Overlay Versions";
-//static const std::string PACKAGE_LABELS = "Package Versions";
-//static const std::string ON = "On";
-//static const std::string OFF = "Off";
-//static const std::string PACKAGE_INFO = "Package Info";
-//static const std::string VERSION = "Version";
-//static const std::string CREATOR = "Creator(s)";
-//static const std::string ABOUT = "About";
-//static const std::string OK = "OK";
-//static const std::string BACK = "Back";
 
 // Forward declaration of the MainMenu class.
 class MainMenu;
@@ -204,9 +174,6 @@ public:
             std::string defaultLang = parseValueFromIniSection(settingsConfigIniPath, "ultrahand", "default_lang");
             std::string defaultMenu = parseValueFromIniSection(settingsConfigIniPath, "ultrahand", "default_menu");
             std::string keyCombo = trim(parseValueFromIniSection(settingsConfigIniPath, "ultrahand", "key_combo"));
-            std::string cleanVersionLabels = parseValueFromIniSection(settingsConfigIniPath, "ultrahand", "clean_version_labels");
-            std::string hideOverlayVersions = parseValueFromIniSection(settingsConfigIniPath, "ultrahand", "hide_overlay_versions");
-            std::string hidePackageVersions = parseValueFromIniSection(settingsConfigIniPath, "ultrahand", "hide_package_versions");
             
             
             if (defaultLang.empty())
@@ -215,12 +182,6 @@ public:
                 defaultMenu = "packages";
             if (keyCombo.empty())
                 keyCombo = "ZL+ZR+DDOWN";
-            if (cleanVersionLabels.empty())
-                cleanVersionLabels = "false";
-            if (hideOverlayVersions.empty())
-                hideOverlayVersions = "false";
-            if (hidePackageVersions.empty())
-                hidePackageVersions = "false";
             
             
             //auto toggleListItem = new tsl::elm::ToggleListItem("Default Menu", false, "Packages", OVERLAYS);
@@ -278,20 +239,15 @@ public:
             list->addItem(listItem);
             
             
-            listItem = new tsl::elm::ListItem(SOFTWARE_UPDATE);
             
-            // Envolke selectionOverlay in optionMode
+            
+            
+            listItem = new tsl::elm::ListItem(SOFTWARE_UPDATE);
+            listItem->setValue(DROPDOWN_SYMBOL);
             
             listItem->setClickListener([this, listItem](uint64_t keys) { // Add 'command' to the capture list
                 if (keys & KEY_A) {
-                    deleteFileOrDirectory("/config/ultrahand/downloads/ovlmenu.ovl");
-                    isDownloaded = downloadFile("https://github.com/ppkantorski/Ultrahand-Overlay/releases/latest/download/ovlmenu.ovl", "/config/ultrahand/downloads/");
-                    if (isDownloaded) {
-                        moveFileOrDirectory("/config/ultrahand/downloads/ovlmenu.ovl", "/switch/.overlays/ovlmenu.ovl");
-                        listItem->setValue(CHECKMARK_SYMBOL);
-                    } else
-                        listItem->setValue(CROSSMARK_SYMBOL, false);
-                    
+                    tsl::changeTo<UltrahandSettingsMenu>("softwareUpdateMenu");
                     return true;
                 }
                 return false;
@@ -299,115 +255,40 @@ public:
             list->addItem(listItem);
             
             
-            list->addItem(new tsl::elm::CategoryHeader(VERSION_SETTINGS));
             
-            auto toggleListItem = new tsl::elm::ToggleListItem(CLEAN_LABELS, false, ON, OFF);
-            toggleListItem->setState((cleanVersionLabels == "true"));
-            toggleListItem->setStateChangedListener([this, cleanVersionLabels, toggleListItem](bool state) {
-                setIniFileValue(settingsConfigIniPath, "ultrahand", "clean_version_labels", state ? "true" : "false");
-                if ((cleanVersionLabels == "true") != state) {
-                    reloadMenu3 = true;
-                    reloadMenu = true;
-                    if (cleanVersionLabels == "false")
-                        versionLabel = APP_VERSION+std::string("   (")+ extractTitle(loaderInfo)+" "+cleanVersionLabel(loaderInfo)+std::string(")"); // Still needs to parse nx-ovlloader instead of hard coding it
-                    else
-                        versionLabel = APP_VERSION+std::string("   (")+ extractTitle(loaderInfo)+" v"+cleanVersionLabel(loaderInfo)+std::string(")");
+            
+            list->addItem(new tsl::elm::CategoryHeader(UI_SETTINGS));
+            
+            
+            
+            listItem = new tsl::elm::ListItem(WIDGET);
+            listItem->setValue(DROPDOWN_SYMBOL);
+            
+            listItem->setClickListener([this, listItem](uint64_t keys) { // Add 'command' to the capture list
+                if (keys & KEY_A) {
+                    tsl::changeTo<UltrahandSettingsMenu>("widgetMenu");
+                    return true;
                 }
-                
+                return false;
             });
-            list->addItem(toggleListItem);
+            list->addItem(listItem);
             
             
-            toggleListItem = new tsl::elm::ToggleListItem(OVERLAY_LABELS, false, ON, OFF);
-            toggleListItem->setState((hideOverlayVersions == "false"));
-            toggleListItem->setStateChangedListener([this, hideOverlayVersions, toggleListItem](bool state) {
-                setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_overlay_versions", state ? "false" : "true");
-                if ((hideOverlayVersions == "false") != state)
-                    reloadMenu = true;
+            
+            listItem = new tsl::elm::ListItem(VERSION_LABELS);
+            listItem->setValue(DROPDOWN_SYMBOL);
+            
+            listItem->setClickListener([this, listItem](uint64_t keys) { // Add 'command' to the capture list
+                if (keys & KEY_A) {
+                    tsl::changeTo<UltrahandSettingsMenu>("versionLabelMenu");
+                    return true;
+                }
+                return false;
             });
-            list->addItem(toggleListItem);
-            
-            toggleListItem = new tsl::elm::ToggleListItem(PACKAGE_LABELS, false, ON, OFF);
-            toggleListItem->setState((hidePackageVersions == "false"));
-            toggleListItem->setStateChangedListener([this, hidePackageVersions, toggleListItem](bool state) {
-                setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_package_versions", state ? "false" : "true");
-                if ((hidePackageVersions == "false") != state)
-                    reloadMenu = true;
-            });
-            list->addItem(toggleListItem);
+            list->addItem(listItem);
             
             
             
-            
-            //list->addItem(new tsl::elm::CategoryHeader("Help"));
-            //
-            //
-            //constexpr int lineHeight = 20;  // Adjust the line height as needed
-            //constexpr int xOffset = 120;    // Adjust the horizontal offset as needed
-            //constexpr int fontSize = 16;    // Adjust the font size as needed
-            //int numEntries = 0;   // Adjust the number of entries as needed
-            //
-            //std::string packageSectionString = "";
-            //std::string packageInfoString = "";
-            //
-            //packageSectionString += "Version\n";
-            //packageInfoString += "1.3.9\n";
-            //numEntries++;
-            //
-            //packageSectionString += "Creator(s)\n";
-            //packageInfoString += "b0rd2dEAth\n";
-            //numEntries++;
-            //
-            //std::string aboutHeaderText = "About\n";
-            //std::string::size_type aboutHeaderLength = aboutHeaderText.length();
-            //std::string aboutText = "Test";
-            //
-            //packageSectionString += aboutHeaderText;
-            //
-            //// Split the about text into multiple lines with proper word wrapping
-            //constexpr int maxLineLength = 28;  // Adjust the maximum line length as needed
-            //std::string::size_type startPos = 0;
-            //std::string::size_type spacePos = 0;
-            //
-            //while (startPos < aboutText.length()) {
-            //    std::string::size_type endPos = std::min(startPos + maxLineLength, aboutText.length());
-            //    std::string line = aboutText.substr(startPos, endPos - startPos);
-            //    
-            //    // Check if the current line ends with a space; if not, find the last space in the line
-            //    if (endPos < aboutText.length() && aboutText[endPos] != ' ') {
-            //        spacePos = line.find_last_of(' ');
-            //        if (spacePos != std::string::npos) {
-            //            endPos = startPos + spacePos;
-            //            line = aboutText.substr(startPos, endPos - startPos);
-            //        }
-            //    }
-            //    
-            //    packageInfoString += line + '\n';
-            //    startPos = endPos + 1;
-            //    numEntries++;
-            //    
-            //    // Add corresponding newline to the packageSectionString
-            //    if (startPos < aboutText.length()) {
-            //        packageSectionString += std::string(aboutHeaderLength, ' ') + '\n';
-            //    }
-            //}
-            //
-            //
-            //// Remove trailing newline character
-            //if ((packageSectionString != "") && (packageSectionString.back() == '\n')) {
-            //    packageSectionString = packageSectionString.substr(0, packageSectionString.size() - 1);
-            //}
-            //if ((packageInfoString != "") && (packageInfoString.back() == '\n')) {
-            //    packageInfoString = packageInfoString.substr(0, packageInfoString.size() - 1);
-            //}
-            //
-            //
-            //if ((packageSectionString != "") && (packageInfoString != "")) {
-            //    list->addItem(new tsl::elm::CustomDrawer([lineHeight, xOffset, fontSize, packageSectionString, packageInfoString](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
-            //        renderer->drawString(packageSectionString.c_str(), false, x, y + lineHeight, fontSize, a(tsl::style::color::ColorText));
-            //        renderer->drawString(packageInfoString.c_str(), false, x + xOffset, y + lineHeight, fontSize, a(tsl::style::color::ColorText));
-            //    }), fontSize * numEntries + lineHeight);
-            //}
             
             
         } else if (dropdownSelection == "defaultMenu") {
@@ -487,7 +368,7 @@ public:
             std::string defaulLang = parseValueFromIniSection(settingsConfigIniPath, "ultrahand", "default_lang");
             
             
-               
+            
             for (const auto& defaultLangMode : defaultLanguages) {
                 std::string langFile = "/config/ultrahand/lang/"+defaultLangMode+".json";
                 bool skipLang = (!isFileOrDirectory(langFile));
@@ -527,6 +408,265 @@ public:
                 
                 list->addItem(listItem);
             }
+        } else if (dropdownSelection == "softwareUpdateMenu") {
+            list->addItem(new tsl::elm::CategoryHeader(SOFTWARE_UPDATE));
+            
+            auto listItem = new tsl::elm::ListItem(UPDATE_ULTRAHAND);
+            
+            // Envolke selectionOverlay in optionMode
+            std::string languagesVersion = std::string(APP_VERSION);
+            
+            listItem->setClickListener([this, &languagesVersion, listItem](uint64_t keys) { // Add 'command' to the capture list
+                if (keys & KEY_A) {
+                    deleteFileOrDirectory("/config/ultrahand/downloads/ovlmenu.ovl");
+                    isDownloaded = downloadFile("https://github.com/ppkantorski/Ultrahand-Overlay/releases/latest/download/ovlmenu.ovl", "/config/ultrahand/downloads/");
+                    if (isDownloaded) {
+                        moveFileOrDirectory("/config/ultrahand/downloads/ovlmenu.ovl", "/switch/.overlays/ovlmenu.ovl");
+                        listItem->setValue(CHECKMARK_SYMBOL);
+                        languagesVersion = "latest";
+                    } else
+                        listItem->setValue(CROSSMARK_SYMBOL, false);
+                    
+                    return true;
+                }
+                return false;
+            });
+            list->addItem(listItem);
+            
+            
+            listItem = new tsl::elm::ListItem(UPDATE_LANGUAGES);
+            
+            // Envolke selectionOverlay in optionMode
+            
+            listItem->setClickListener([this, languagesVersion, listItem](uint64_t keys) { // Add 'command' to the capture list
+                if (keys & KEY_A) {
+                    deleteFileOrDirectory("/config/ultrahand/downloads/ovlmenu.ovl");
+                    isDownloaded = downloadFile("https://github.com/ppkantorski/Ultrahand-Overlay/releases/"+languagesVersion+"/download/lang.zip", "/config/ultrahand/downloads/");
+                    if (isDownloaded) {
+                        unzipFile("/config/ultrahand/downloads/lang.zip", "/config/ultrahand/downloads/lang/");
+                        deleteFileOrDirectory("/config/ultrahand/downloads/lang.zip");
+                        deleteFileOrDirectory("/config/ultrahand/lang/");
+                        moveFileOrDirectory("/config/ultrahand/downloads/lang/", "/config/ultrahand/lang/");
+                        listItem->setValue(CHECKMARK_SYMBOL);
+                    } else
+                        listItem->setValue(CROSSMARK_SYMBOL, false);
+                    
+                    return true;
+                }
+                return false;
+            });
+            list->addItem(listItem);
+            
+            
+            list->addItem(new tsl::elm::CategoryHeader(OVERLAY_INFO));
+            
+            
+            constexpr int lineHeight = 20;  // Adjust the line height as needed
+            constexpr int xOffset = 120;    // Adjust the horizontal offset as needed
+            constexpr int fontSize = 16;    // Adjust the font size as needed
+            int numEntries = 0;   // Adjust the number of entries as needed
+            
+            std::string packageSectionString = "";
+            std::string packageInfoString = "";
+            
+            packageSectionString += TITLE+'\n';
+            packageInfoString += std::string("Ultrahand Overlay")+'\n';
+            numEntries++;
+            
+            packageSectionString += VERSION+'\n';
+            packageInfoString += std::string(APP_VERSION)+'\n';
+            numEntries++;
+            
+            packageSectionString += CREATOR+'\n';
+            packageInfoString += "b0rd2dEAth\n";
+            numEntries++;
+            
+            std::string aboutHeaderText = ABOUT+'\n';
+            std::string::size_type aboutHeaderLength = aboutHeaderText.length();
+            std::string aboutText = "Ultrahand Overlay is a versatile tool that enables you to create and share custom command-based packages.";
+            
+            packageSectionString += aboutHeaderText;
+            
+            // Split the about text into multiple lines with proper word wrapping
+            constexpr int maxLineLength = 28;  // Adjust the maximum line length as needed
+            std::string::size_type startPos = 0;
+            std::string::size_type spacePos = 0;
+            
+            while (startPos < aboutText.length()) {
+                std::string::size_type endPos = std::min(startPos + maxLineLength, aboutText.length());
+                std::string line = aboutText.substr(startPos, endPos - startPos);
+                
+                // Check if the current line ends with a space; if not, find the last space in the line
+                if (endPos < aboutText.length() && aboutText[endPos] != ' ') {
+                    spacePos = line.find_last_of(' ');
+                    if (spacePos != std::string::npos) {
+                        endPos = startPos + spacePos;
+                        line = aboutText.substr(startPos, endPos - startPos);
+                    }
+                }
+                
+                packageInfoString += line + '\n';
+                startPos = endPos + 1;
+                numEntries++;
+                
+                // Add corresponding newline to the packageSectionString
+                if (startPos < aboutText.length()) {
+                    packageSectionString += std::string(aboutHeaderLength, ' ') + '\n';
+                }
+            }
+            
+            
+            std::string creditsHeaderText = CREDITS+'\n';
+            std::string::size_type creditsHeaderLength = creditsHeaderText.length();
+            std::string creditsText = "Special thanks to B3711, ComplexNarrative, Faker_dev, MasaGratoR, meha, WerWolv, HookedBehemoth and many others. <3";
+            
+            packageSectionString += creditsHeaderText;
+            
+            // Split the about text into multiple lines with proper word wrapping
+            //constexpr int maxLineLength = 28;  // Adjust the maximum line length as needed
+            startPos = 0;
+            spacePos = 0;
+            
+            while (startPos < creditsText.length()) {
+                std::string::size_type endPos = std::min(startPos + maxLineLength, creditsText.length());
+                std::string line = creditsText.substr(startPos, endPos - startPos);
+                
+                // Check if the current line ends with a space; if not, find the last space in the line
+                if (endPos < creditsText.length() && creditsText[endPos] != ' ') {
+                    spacePos = line.find_last_of(' ');
+                    if (spacePos != std::string::npos) {
+                        endPos = startPos + spacePos;
+                        line = creditsText.substr(startPos, endPos - startPos);
+                    }
+                }
+                
+                packageInfoString += line + '\n';
+                startPos = endPos + 1;
+                numEntries++;
+                
+                // Add corresponding newline to the packageSectionString
+                if (startPos < aboutText.length()) {
+                    packageSectionString += std::string(creditsHeaderLength, ' ') + '\n';
+                }
+            }
+            
+            
+            // Remove trailing newline character
+            if ((packageSectionString != "") && (packageSectionString.back() == '\n')) {
+                packageSectionString = packageSectionString.substr(0, packageSectionString.size() - 1);
+            }
+            if ((packageInfoString != "") && (packageInfoString.back() == '\n')) {
+                packageInfoString = packageInfoString.substr(0, packageInfoString.size() - 1);
+            }
+            
+            
+            if ((packageSectionString != "") && (packageInfoString != "")) {
+                list->addItem(new tsl::elm::CustomDrawer([lineHeight, xOffset, fontSize, packageSectionString, packageInfoString](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
+                    renderer->drawString(packageSectionString.c_str(), false, x, y + lineHeight, fontSize, a(tsl::style::color::ColorText));
+                    renderer->drawString(packageInfoString.c_str(), false, x + xOffset, y + lineHeight, fontSize, a(tsl::style::color::ColorText));
+                }), fontSize * numEntries + lineHeight);
+            }
+            
+        } else if (dropdownSelection == "widgetMenu") {
+            
+            //std::string hideClock = parseValueFromIniSection(settingsConfigIniPath, "ultrahand", "hide_clock");
+            //std::string hideBattery = parseValueFromIniSection(settingsConfigIniPath, "ultrahand", "hide_battery");
+            //std::string hideSOCTemp = parseValueFromIniSection(settingsConfigIniPath, "ultrahand", "hide_soc_temp");
+            //std::string hidePCBTemp = parseValueFromIniSection(settingsConfigIniPath, "ultrahand", "hide_soc_temp");
+            
+            
+            list->addItem(new tsl::elm::CategoryHeader(WIDGET));
+            
+            auto toggleListItem = new tsl::elm::ToggleListItem(CLOCK, false, ON, OFF);
+            toggleListItem->setState((hideClock == "false"));
+            toggleListItem->setStateChangedListener([this, toggleListItem](bool state) {
+                setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_clock", state ? "false" : "true");
+                reinitializeWidgetVars();
+                redrawWidget = true;
+            });
+            list->addItem(toggleListItem);
+            
+            
+            toggleListItem = new tsl::elm::ToggleListItem(BATTERY, false, ON, OFF);
+            toggleListItem->setState((hideBattery == "false"));
+            toggleListItem->setStateChangedListener([this, toggleListItem](bool state) {
+                setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_battery", state ? "false" : "true");
+                reinitializeWidgetVars();
+                redrawWidget = true;
+            });
+            list->addItem(toggleListItem);
+            
+            toggleListItem = new tsl::elm::ToggleListItem(SOC_TEMPERATURE, false, ON, OFF);
+            toggleListItem->setState((hideSOCTemp == "false"));
+            toggleListItem->setStateChangedListener([this, toggleListItem](bool state) {
+                setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_soc_temp", state ? "false" : "true");
+                reinitializeWidgetVars();
+                redrawWidget = true;
+            });
+            list->addItem(toggleListItem);
+            
+            toggleListItem = new tsl::elm::ToggleListItem(PCB_TEMPERATURE, false, ON, OFF);
+            toggleListItem->setState((hidePCBTemp == "false"));
+            toggleListItem->setStateChangedListener([this, toggleListItem](bool state) {
+                setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_pcb_temp", state ? "false" : "true");
+                reinitializeWidgetVars();
+                redrawWidget = true;
+            });
+            list->addItem(toggleListItem);
+            
+        } else if (dropdownSelection == "versionLabelMenu") {
+            cleanVersionLabels = parseValueFromIniSection(settingsConfigIniPath, "ultrahand", "clean_version_labels");
+            hideOverlayVersions = parseValueFromIniSection(settingsConfigIniPath, "ultrahand", "hide_overlay_versions");
+            hidePackageVersions = parseValueFromIniSection(settingsConfigIniPath, "ultrahand", "hide_package_versions");
+            
+            if (cleanVersionLabels.empty())
+                cleanVersionLabels = "false";
+            if (hideOverlayVersions.empty())
+                hideOverlayVersions = "false";
+            if (hidePackageVersions.empty())
+                hidePackageVersions = "false";
+            
+            list->addItem(new tsl::elm::CategoryHeader(VERSION_LABELS));
+            
+            std::string defaulLang = parseValueFromIniSection(settingsConfigIniPath, "ultrahand", "default_lang");
+            
+            
+               
+            auto toggleListItem = new tsl::elm::ToggleListItem(CLEAN_LABELS, false, ON, OFF);
+            toggleListItem->setState((cleanVersionLabels == "true"));
+            toggleListItem->setStateChangedListener([this, cleanVersionLabels, toggleListItem](bool state) {
+                setIniFileValue(settingsConfigIniPath, "ultrahand", "clean_version_labels", state ? "true" : "false");
+                if ((cleanVersionLabels == "true") != state) {
+                    if (cleanVersionLabels == "false")
+                        versionLabel = APP_VERSION+std::string("   (")+ extractTitle(loaderInfo)+" "+cleanVersionLabel(loaderInfo)+std::string(")"); // Still needs to parse nx-ovlloader instead of hard coding it
+                    else
+                        versionLabel = APP_VERSION+std::string("   (")+ extractTitle(loaderInfo)+" v"+cleanVersionLabel(loaderInfo)+std::string(")");
+                    //reloadMenu2 = true;
+                    //reloadMenu = true;
+                    reinitializeVersionLabels();
+                }
+                
+            });
+            list->addItem(toggleListItem);
+            
+            
+            toggleListItem = new tsl::elm::ToggleListItem(OVERLAY_LABELS, false, ON, OFF);
+            toggleListItem->setState((hideOverlayVersions == "false"));
+            toggleListItem->setStateChangedListener([this, hideOverlayVersions, toggleListItem](bool state) {
+                setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_overlay_versions", state ? "false" : "true");
+                if ((hideOverlayVersions == "false") != state)
+                    reloadMenu = true;
+            });
+            list->addItem(toggleListItem);
+            
+            toggleListItem = new tsl::elm::ToggleListItem(PACKAGE_LABELS, false, ON, OFF);
+            toggleListItem->setState((hidePackageVersions == "false"));
+            toggleListItem->setStateChangedListener([this, hidePackageVersions, toggleListItem](bool state) {
+                setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_package_versions", state ? "false" : "true");
+                if ((hidePackageVersions == "false") != state)
+                    reloadMenu = true;
+            });
+            list->addItem(toggleListItem);
             
         } else
             list->addItem(new tsl::elm::ListItem(FAILED_TO_OPEN + ": " + settingsIniPath));
@@ -603,6 +743,10 @@ public:
         if (returningToSettings && !(keysHeld & KEY_B)){
             returningToSettings = false;
             inSettingsMenu = true;
+        }
+        
+        if (redrawWidget) {
+            reinitializeWidgetVars();
         }
         
         if (keysHeld & KEY_B)
@@ -744,7 +888,7 @@ public:
             });
             list->addItem(listItem);
             
-            if (hideLabel == HIDE_OVERLAY) {
+            if (entryMode == "overlay") {
                 // Envoke toggling
                 toggleListItem = new tsl::elm::ToggleListItem(LAUNCH_ARGUMENTS, false, ON, OFF);
                 toggleListItem->setState((useOverlayLaunchArgs=="true"));
@@ -2175,10 +2319,11 @@ private:
     tsl::hlp::ini::IniData settingsData, themesData, packageConfigData;
     std::string packageIniPath = packageDirectory + packageFileName;
     std::string packageConfigIniPath = packageDirectory + configFileName;
-    std::string menuMode, defaultMenuMode, inOverlayString, fullPath, optionName, hideOverlayVersions, hidePackageVersions, cleanVersionLabels, priority, starred, hide;
+    std::string menuMode, defaultMenuMode, inOverlayString, fullPath, optionName, priority, starred, hide;
     bool useDefaultMenu = false;
     bool useOverlayLaunchArgs = false;
     std::string hiddenMenuMode;
+    bool initializingSpawn = false;
     
     std::string defaultLang = "en";
     std::string packagePath, pathReplace, pathReplaceOn, pathReplaceOff;
@@ -2287,7 +2432,13 @@ public:
             setIniFileValue(settingsConfigIniPath, "ultrahand", "last_menu", menuMode);
             setIniFileValue(settingsConfigIniPath, "ultrahand", "in_overlay", "false");
         }
-        copyTeslaKeyComboToUltrahand();
+        
+        
+        //if (!showMenu) {
+        //    rootFrame = new tsl::elm::OverlayFrame("","");
+        //    rootFrame->setContent(list);
+        //    return rootFrame;
+        //}
         
         std::string langFile = "/config/ultrahand/lang/"+defaultLang+".json";
         if (isFileOrDirectory(langFile))
@@ -2334,6 +2485,7 @@ public:
             setIniFileValue(themeConfigIniPath, "theme", "highlight_color_2", "#88FFFF");
         }
         
+        copyTeslaKeyComboToUltrahand();
         
         //setIniFileValue(settingsConfigIniPath, "ultrahand", "in_overlay", "false");
         
@@ -2375,9 +2527,10 @@ public:
             
             
             FILE* overlaysIniFile = fopen(overlaysIniFilePath.c_str(), "r");
-            if (!overlaysIniFile)
+            if (!overlaysIniFile) {
                 fclose(fopen(overlaysIniFilePath.c_str(), "w")); // The INI file doesn't exist, so create an empty one.
-            else
+                initializingSpawn = true;
+            } else
                 fclose(overlaysIniFile); // The file exists, so close it.
             
             // load overlayList from overlaysIniFilePath.  this will be the overlayFilenames
@@ -2635,9 +2788,10 @@ public:
             
             
             FILE* packagesIniFile = fopen(packagesIniFilePath.c_str(), "r");
-            if (!packagesIniFile)
+            if (!packagesIniFile) {
                 fclose(fopen(packagesIniFilePath.c_str(), "w")); // The INI file doesn't exist, so create an empty one.
-            else
+                initializingSpawn = true;
+            } else
                 fclose(packagesIniFile); // The file exists, so close it.
             
             std::vector<std::string> packageList;
@@ -3101,6 +3255,11 @@ public:
                 }
             }
         }
+        if (initializingSpawn) {
+            initializingSpawn = false;
+            return createUI(); 
+        }
+        
         
         rootFrame = new tsl::elm::OverlayFrame("Ultrahand", versionLabel, menuMode+hiddenMenuMode);
         rootFrame->setContent(list);
@@ -3195,6 +3354,11 @@ public:
             selectedFooterDict.clear();
         }
         
+        if (redrawWidget) {
+            reinitializeWidgetVars();
+            redrawWidget = false;
+        }
+        
         return false;
     }
 };
@@ -3215,6 +3379,8 @@ public:
      * It sets up file system mounts, initializes network services, and performs other necessary tasks.
      */
     virtual void initServices() override {
+        loaderInfo = envGetLoaderInfo();
+        versionLabel = APP_VERSION+std::string("   (")+ extractTitle(loaderInfo)+" v"+cleanVersionLabel(loaderInfo)+std::string(")");
         fsdevMountSdmc();
         splInitialize();
         spsmInitialize();
@@ -3249,10 +3415,16 @@ public:
      */
     virtual void onShow() override {
         //if (rootFrame != nullptr) {
-        //    tsl::Overlay::get()->getCurrentGui()->removeFocus();
-        //    rootFrame->invalidate();
-        //    tsl::Overlay::get()->getCurrentGui()->requestFocus(rootFrame, tsl::FocusDirection::None);
+        //    if (inMainMenu && redrawMenu) {
+        //        //tsl::Overlay::get()->getCurrentGui()->removeFocus();
+        //        //rebuildUI();
+        //        showMenu = true;
+        //        tsl::changeTo<MainMenu>(lastMenuMode);
+        //        //rootFrame->invalidate();
+        //        //tsl::Overlay::get()->getCurrentGui()->requestFocus(rootFrame, tsl::FocusDirection::None);
+        //    }
         //}
+        //redrawMenu = true;
     } 
     
     /**
@@ -3261,7 +3433,11 @@ public:
      * This function is called when the overlay transitions from an invisible state to a visible state.
      * It can be used to perform actions or updates specific to the overlay's visibility.
      */
-    virtual void onHide() override {} 
+    virtual void onHide() override {
+        //if (inMainMenu) {
+        //    redrawMenu = false;
+        //}
+    } 
     
     /**
      * @brief Loads the initial graphical user interface (GUI) for the overlay.

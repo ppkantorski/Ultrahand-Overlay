@@ -8,16 +8,13 @@
  *   of libtesla, an overlay executor. Within this file, you will find a collection of
  *   functions, menu structures, and interaction logic designed to facilitate the
  *   smooth execution and flexible customization of overlays within the project.
- * 
- *   Note: Refer to the project documentation and README.md for comprehensive
- *   usage and configuration information regarding the Ultrahand-Overlay.
- * 
+ *
  *   For the latest updates and contributions, visit the project's GitHub repository.
  *   (GitHub Repository: https://github.com/ppkantorski/Ultrahand-Overlay)
  *
  *   Note: Please be aware that this notice cannot be altered or removed. It is a part
  *   of the project's documentation and must remain intact.
- * 
+ *
  *  Copyright (c) 2023 ppkantorski
  *  All rights reserved.
  ********************************************************************************/
@@ -69,6 +66,68 @@
 #include "../../../source/get_funcs.hpp"
 #include "../../../source/string_funcs.hpp"
 #include "../../../source/ini_funcs.hpp"
+
+
+/**
+ * @brief Shutdown modes for the Ultrahand-Overlay project.
+ *
+ * These macros define the shutdown modes used in the Ultrahand-Overlay project:
+ * - `SpsmShutdownMode_Normal`: Normal shutdown mode.
+ * - `SpsmShutdownMode_Reboot`: Reboot mode.
+ */
+#define SpsmShutdownMode_Normal 0
+#define SpsmShutdownMode_Reboot 1
+
+/**
+ * @brief Key mapping macros for button keys.
+ *
+ * These macros define button keys for the Ultrahand-Overlay project to simplify key mappings.
+ * For example, `KEY_A` represents the `HidNpadButton_A` key.
+ */
+#define KEY_A HidNpadButton_A
+#define KEY_B HidNpadButton_B
+#define KEY_X HidNpadButton_X
+#define KEY_Y HidNpadButton_Y
+#define KEY_L HidNpadButton_L
+#define KEY_R HidNpadButton_R
+#define KEY_ZL HidNpadButton_ZL
+#define KEY_ZR HidNpadButton_ZR
+#define KEY_PLUS HidNpadButton_Plus
+#define KEY_MINUS HidNpadButton_Minus
+#define KEY_DUP HidNpadButton_Up
+#define KEY_DDOWN HidNpadButton_Down
+#define KEY_DLEFT HidNpadButton_Left
+#define KEY_DRIGHT HidNpadButton_Right
+#define KEY_SL HidNpadButton_AnySL
+#define KEY_SR HidNpadButton_AnySR
+#define KEY_LSTICK HidNpadButton_StickL
+#define KEY_RSTICK HidNpadButton_StickR
+#define KEY_UP (HidNpadButton_Up | HidNpadButton_StickLUp | HidNpadButton_StickRUp)
+#define KEY_DOWN (HidNpadButton_Down | HidNpadButton_StickLDown | HidNpadButton_StickRDown)
+#define KEY_LEFT (HidNpadButton_Left | HidNpadButton_StickLLeft | HidNpadButton_StickRLeft)
+#define KEY_RIGHT (HidNpadButton_Right | HidNpadButton_StickLRight | HidNpadButton_StickRRight)
+
+/**
+ * @brief Ultrahand-Overlay Input Macros
+ *
+ * This block of code defines macros for handling input in the Ultrahand-Overlay project.
+ * These macros simplify the mapping of input events to corresponding button keys and
+ * provide aliases for touch and joystick positions.
+ *
+ * The macros included in this block are:
+ *
+ * - `touchPosition`: An alias for a constant `HidTouchState` pointer.
+ * - `touchInput`: An alias for `&touchPos`, representing touch input.
+ * - `JoystickPosition`: An alias for `HidAnalogStickState`, representing joystick input.
+ *
+ * These macros are utilized within the Ultrahand-Overlay project to manage and interpret
+ * user input, including touch and joystick events.
+ */
+#define touchPosition const HidTouchState
+#define touchInput &touchPos
+#define JoystickPosition HidAnalogStickState
+
+
 
 // For improving the speed of hexing consecutively with the same file and asciiPattern.
 static std::unordered_map<std::string, std::string> hexSumCache;
@@ -154,10 +213,19 @@ static std::string LAUNCH_ARGUMENTS = "Launch Arguments";
 static std::string COMMANDS = "Commands";
 static std::string SETTINGS = "Main Settings";
 static std::string MAIN_SETTINGS = "Main Settings";
-static std::string VERSION_SETTINGS = "Version Settings";
+static std::string UI_SETTINGS = "UI Settings";
+static std::string WIDGET = "Widget";
+static std::string CLOCK = "Clock";
+static std::string BATTERY = "Battery";
+static std::string SOC_TEMPERATURE = "SOC Temperature";
+static std::string PCB_TEMPERATURE = "PCB Temperature";
+static std::string VERSION_LABELS = "Version Labels";
 static std::string KEY_COMBO = "Key Combo";
 static std::string LANGUAGE = "Language";
+static std::string OVERLAY_INFO = "Overlay Info";
 static std::string SOFTWARE_UPDATE = "Software Update";
+static std::string UPDATE_ULTRAHAND = "Update Ultrahand";
+static std::string UPDATE_LANGUAGES = "Update Languages";
 static std::string ROOT_PACKAGE = "Root Package";
 static std::string SORT_PRIORITY = "Sort Priority";
 static std::string FAILED_TO_OPEN = "Failed to open file";
@@ -167,9 +235,11 @@ static std::string PACKAGE_LABELS = "Package Versions";
 static std::string ON = "On";
 static std::string OFF = "Off";
 static std::string PACKAGE_INFO = "Package Info";
+static std::string TITLE = "Title";
 static std::string VERSION = "Version";
-static std::string CREATOR = "Creator(s)";
+static std::string CREATOR = "Creator";
 static std::string ABOUT = "About";
+static std::string CREDITS = "Credits";
 static std::string OK = "OK";
 static std::string BACK = "Back";
 static std::string REBOOT = "Reboot";
@@ -235,9 +305,19 @@ void reinitializeLangVars() {
     COMMANDS = "Commands";
     SETTINGS = "Main Settings";
     MAIN_SETTINGS = "Main Settings";
-    VERSION_SETTINGS = "Version Settings";
+    UI_SETTINGS = "UI Settings";
+    WIDGET = "Widget";
+    CLOCK = "Clock";
+    BATTERY = "Battery";
+    SOC_TEMPERATURE = "SOC Temperature";
+    PCB_TEMPERATURE = "PCB Temperature";
+    VERSION_LABELS = "Version Labels";
     KEY_COMBO = "Key Combo";
     LANGUAGE = "Language";
+    OVERLAY_INFO = "Overlay Info";
+    SOFTWARE_UPDATE = "Software Update";
+    UPDATE_ULTRAHAND = "Update Ultrahand";
+    UPDATE_LANGUAGES = "Update Languages";
     ROOT_PACKAGE = "Root Package";
     SORT_PRIORITY = "Sort Priority";
     FAILED_TO_OPEN = "Failed to open file";
@@ -247,9 +327,11 @@ void reinitializeLangVars() {
     ON = "On";
     OFF = "Off";
     PACKAGE_INFO = "Package Info";
+    TITLE = "Title";
     VERSION = "Version";
-    CREATOR = "Creator(s)";
+    CREATOR = "Creator";
     ABOUT = "About";
+    CREDITS = "Credits";
     OK = "OK";
     BACK = "Back";
     REBOOT = "Reboot";
@@ -328,10 +410,19 @@ void parseLanguage(std::string langFile) {
     updateIfNotEmpty(COMMANDS, "COMMANDS", langData);
     updateIfNotEmpty(SETTINGS, "SETTINGS", langData);
     updateIfNotEmpty(MAIN_SETTINGS, "MAIN_SETTINGS", langData);
-    updateIfNotEmpty(VERSION_SETTINGS, "VERSION_SETTINGS", langData);
+    updateIfNotEmpty(UI_SETTINGS, "UI_SETTINGS", langData);
+    updateIfNotEmpty(WIDGET, "WIDGET", langData);
+    updateIfNotEmpty(CLOCK, "CLOCK", langData);
+    updateIfNotEmpty(BATTERY, "BATTERY", langData);
+    updateIfNotEmpty(SOC_TEMPERATURE, "SOC_TEMPERATURE", langData);
+    updateIfNotEmpty(PCB_TEMPERATURE, "PCB_TEMPERATURE", langData);
+    updateIfNotEmpty(VERSION_LABELS, "VERSION_LABELS", langData);
     updateIfNotEmpty(KEY_COMBO, "KEY_COMBO", langData);
     updateIfNotEmpty(LANGUAGE, "LANGUAGE", langData);
+    updateIfNotEmpty(OVERLAY_INFO, "OVERLAY_INFO", langData);
     updateIfNotEmpty(SOFTWARE_UPDATE, "SOFTWARE_UPDATE", langData);
+    updateIfNotEmpty(UPDATE_ULTRAHAND, "UPDATE_ULTRAHAND", langData);
+    updateIfNotEmpty(UPDATE_LANGUAGES, "UPDATE_LANGUAGES", langData);
     updateIfNotEmpty(ROOT_PACKAGE, "ROOT_PACKAGE", langData);
     updateIfNotEmpty(SORT_PRIORITY, "SORT_PRIORITY", langData);
     updateIfNotEmpty(FAILED_TO_OPEN, "FAILED_TO_OPEN", langData);
@@ -341,9 +432,11 @@ void parseLanguage(std::string langFile) {
     updateIfNotEmpty(ON, "ON", langData);
     updateIfNotEmpty(OFF, "OFF", langData);
     updateIfNotEmpty(PACKAGE_INFO, "PACKAGE_INFO", langData);
+    updateIfNotEmpty(TITLE, "TITLE", langData);
     updateIfNotEmpty(VERSION, "VERSION", langData);
     updateIfNotEmpty(CREATOR, "CREATOR", langData);
     updateIfNotEmpty(ABOUT, "ABOUT", langData);
+    updateIfNotEmpty(CREDITS, "CREDITS", langData);
     updateIfNotEmpty(OK, "OK", langData);
     updateIfNotEmpty(BACK, "BACK", langData);
     updateIfNotEmpty(REBOOT, "REBOOT", langData);
@@ -568,6 +661,8 @@ bool isValidHexColor(const std::string& hexColor) {
     return true;
 }
 
+
+// Battery implementation
 static bool powerInitialized = false;
 static bool powerCacheInitialized;
 static uint32_t powerCacheCharge;
@@ -644,7 +739,6 @@ void powerInit(void) {
     }
 }
 
-
 void powerExit(void) {
     if (powerInitialized) {
         psmUnbindStateChangeEvent(&powerSession);
@@ -654,56 +748,158 @@ void powerExit(void) {
     }
 }
 
-s32 PCB_temperature, SOC_temperature;
 
-//static TsSession g_tsInternalSession;
+// Temperature Implementation
+static s32 PCB_temperature, SOC_temperature;
+static Service* g_tsSrv;
+Result tsCheck = 1;
+Result tcCheck = 1;
+
+Result tsOpenTsSession(Service* &serviceSession, TsSession* out, TsDeviceCode device_code) {
+    return serviceDispatchIn(serviceSession, 4, device_code,
+        .out_num_objects = 1,
+        .out_objects = &out->s,
+    );
+}
+
+void tsCloseTsSession(TsSession* in) {
+    serviceClose(&in->s);
+}
+
+Result tsGetTemperatureWithTsSession(TsSession* ITs, float* temperature) {
+    return serviceDispatchOut(&ITs->s, 4, *temperature);
+}
+
 
 bool thermalstatusInit(void) {
-    if (R_FAILED(tsInitialize()))
+    
+    tcCheck = tcInitialize();
+    tsCheck = tsInitialize();
+    if (R_SUCCEEDED(tsCheck)) {
+        g_tsSrv = tsGetServiceSession();
+    } else
         return false;
-    //if (hosversionAtLeast(17,0,0) && R_FAILED(tsOpenSession(&g_tsInternalSession, TsDeviceCode_LocationInternal)))
-    //    return false;
+    
     return true;
 }
 
 void thermalstatusExit(void) {
-    //if (hosversionAtLeast(17,0,0))
-    //    tsSessionClose(&g_tsInternalSession);
     tsExit();
+    tcExit();
 }
 
-bool thermalstatusGetDetailsPCB(s32 *temperature) {
-    if (hosversionAtLeast(17,0,0)) {
-        //float temp_float;
-        //if (R_SUCCEEDED(tsSessionGetTemperature(&g_tsInternalSession, &temp_float))) {
-        //    *temperature = (int)temp_float;
-        //    return true;
-        //} else
-        //    return false;
-        
-        return false;
-    } else
-        return R_SUCCEEDED(tsGetTemperature(TsLocation_Internal, temperature));
+bool thermalstatusGetDetailsPCB(s32* temperature) {
+    TsSession ts_session;
+    Result rc = tsOpenTsSession(g_tsSrv, &ts_session, TsDeviceCode_LocationInternal);
+    if (R_SUCCEEDED(rc)) {
+        float temp_float;
+        if (R_SUCCEEDED(tsGetTemperatureWithTsSession(&ts_session, &temp_float))) {
+            *temperature = static_cast<s32>(temp_float);
+        }
+        tsSessionClose(&ts_session);
+        return true;
+    }
+    return false;
 }
 
-bool thermalstatusGetDetailsSOC(s32 *temperature) {
-    if (hosversionAtLeast(17,0,0)) {
-        //float temp_float;
-        //if (R_SUCCEEDED(tsSessionGetTemperature(&g_tsInternalSession, &temp_float))) {
-        //    *temperature = (int)temp_float;
-        //    return true;
-        //} else
-        //    return false;
-        
-        return false;
-    } else
-        return R_SUCCEEDED(tsGetTemperature(TsLocation_External, temperature));
+bool thermalstatusGetDetailsSOC(s32* temperature) {
+    TsSession ts_session;
+    Result rc = tsOpenTsSession(g_tsSrv, &ts_session, TsDeviceCode_LocationExternal);
+    if (R_SUCCEEDED(rc)) {
+        float temp_float;
+        if (R_SUCCEEDED(tsGetTemperatureWithTsSession(&ts_session, &temp_float))) {
+            *temperature = static_cast<s32>(temp_float);
+        }
+        tsSessionClose(&ts_session);
+        return true;
+    }
+    return false;
 }
 
+
+
+
+
+
+
+//s32 SOC_temperature, PCB_temperature;
+//static TsSession g_tsInternalSession, g_tsExternalSession;
+//
+//
+//bool thermalstatusInit(void) {
+//    if (R_FAILED(tsInitialize()))
+//        return false;
+//
+//    if (hosversionAtLeast(17,0,0) && R_FAILED(tsOpenSession(&g_tsInternalSession, TsDeviceCode_LocationInternal)) && R_FAILED(tsOpenSession(&g_tsExternalSession, TsDeviceCode_LocationExternal)))
+//        return false;
+//
+//    return true;
+//}
+//
+//void thermalstatusExit(void) {
+//    if (hosversionAtLeast(17,0,0)) {
+//        tsSessionClose(&g_tsInternalSession);
+//        tsSessionClose(&g_tsExternalSession);
+//    }
+//    tsExit();
+//}
+//
+//bool thermalstatusGetDetails(s32 *temperature, std::string location = "internal") {
+//    if (hosversionAtLeast(17,0,0)) {
+//        float temp_float;
+//        if ((location == "internal") && R_SUCCEEDED(tsSessionGetTemperature(&g_tsInternalSession, &temp_float))) {
+//            *temperature = (int)temp_float;
+//            return true;
+//        } else if ((location == "external") && R_SUCCEEDED(tsSessionGetTemperature(&g_tsExternalSession, &temp_float))) {
+//            *temperature = (int)temp_float;
+//            return true;
+//        } else {
+//            return false;
+//        }
+//    } else {
+//        if (location == "internal") {
+//            return R_SUCCEEDED(tsGetTemperature(TsLocation_Internal, temperature));
+//        } else {
+//            return R_SUCCEEDED(tsGetTemperature(TsLocation_External, temperature));
+//        }
+//    }
+//}
+
+
+
+
+// Time implementation
 struct timespec currentTime;
 static const std::string DEFAULT_DT_FORMAT = "'%a %T'";
 static std::string datetimeFormat = removeQuotes(DEFAULT_DT_FORMAT);
+
+
+// Widget settings
 static std::string hideClock, hideBattery, hidePCBTemp, hideSOCTemp;
+
+void reinitializeWidgetVars() {
+    hideClock = parseValueFromIniSection("/config/ultrahand/config.ini", "ultrahand", "hide_clock");
+    hideBattery = parseValueFromIniSection("/config/ultrahand/config.ini", "ultrahand", "hide_battery");
+    hideSOCTemp = parseValueFromIniSection("/config/ultrahand/config.ini", "ultrahand", "hide_soc_temp");
+    hidePCBTemp = parseValueFromIniSection("/config/ultrahand/config.ini", "ultrahand", "hide_pcb_temp");
+}
+
+static std::string cleanVersionLabels, hideOverlayVersions, hidePackageVersions;
+
+static std::string loaderInfo = envGetLoaderInfo();
+static std::string versionLabel;
+
+void reinitializeVersionLabels() {
+    cleanVersionLabels = parseValueFromIniSection("/config/ultrahand/config.ini", "ultrahand", "clean_version_labels");
+    hideOverlayVersions = parseValueFromIniSection("/config/ultrahand/config.ini", "ultrahand", "hide_overlay_versions");
+    hidePackageVersions = parseValueFromIniSection("/config/ultrahand/config.ini", "ultrahand", "hide_package_versions");
+    if (cleanVersionLabels == "true")
+        versionLabel = APP_VERSION+std::string("   (")+ extractTitle(loaderInfo)+" "+cleanVersionLabel(loaderInfo)+std::string(")"); // Still needs to parse nx-ovlloader instead of hard coding it
+    else
+        versionLabel = APP_VERSION+std::string("   (")+ extractTitle(loaderInfo)+" v"+cleanVersionLabel(loaderInfo)+std::string(")");
+}
+
+
 
 // CUSTOM SECTION END
 
@@ -2486,23 +2682,23 @@ namespace tsl {
                     renderer->drawString(secondHalf.c_str(), false, x, y+offset, fontSize, tsl::Color(0xF, 0x0, 0x0, 0xF));
                     
                     
-                    // Time drawing implementation
-                    //struct timespec currentTime;
-                    clock_gettime(CLOCK_REALTIME, &currentTime);
-                    
-                    
-                    // Convert the current time to a human-readable string
-                    char timeStr[20]; // Allocate a buffer to store the time string
-                    //strftime(timeStr, sizeof(timeStr), "%r", localtime(&currentTime.tv_sec));
-                    strftime(timeStr, sizeof(timeStr), datetimeFormat.c_str(), localtime(&currentTime.tv_sec));
-                    
-                    localizeTimeStr(timeStr); // for language localizations
-                    
                     int y_offset = 44;
                     if ((hideBattery == "true" && hidePCBTemp == "true" && hideSOCTemp == "true") || (hideClock == "true"))
                         y_offset += 12;
                     
                     if (hideClock != "true") {// Use the 'timeStr' to display the time
+                        // Time drawing implementation
+                        //struct timespec currentTime;
+                        clock_gettime(CLOCK_REALTIME, &currentTime);
+                        
+                        
+                        // Convert the current time to a human-readable string
+                        char timeStr[20]; // Allocate a buffer to store the time string
+                        //strftime(timeStr, sizeof(timeStr), "%r", localtime(&currentTime.tv_sec));
+                        strftime(timeStr, sizeof(timeStr), datetimeFormat.c_str(), localtime(&currentTime.tv_sec));
+                        
+                        localizeTimeStr(timeStr); // for language localizations
+                        
                         renderer->drawString(timeStr, false, tsl::cfg::FramebufferWidth - calculateStringWidth(timeStr, 20) - 20, y_offset, 20, clockColor);
                         y_offset += 24;
                     }
@@ -2514,9 +2710,15 @@ namespace tsl {
                     
                     // check in 1s intervals
                     if ((currentTime.tv_sec - timeOut) >= 1) {
-                        thermalstatusGetDetailsPCB(&PCB_temperature);
-                        thermalstatusGetDetailsSOC(&SOC_temperature);
-                        powerGetDetails(&batteryCharge, &isCharging);
+                        if (hidePCBTemp != "true")
+                            thermalstatusGetDetailsPCB(&PCB_temperature);
+                        if (hideSOCTemp != "true")
+                            thermalstatusGetDetailsSOC(&SOC_temperature);
+                        if (hideBattery != "true")
+                            powerGetDetails(&batteryCharge, &isCharging);
+                        //thermalstatusGetDetails(&SOC_temperature, "internal");
+                        //thermalstatusGetDetails(&PCB_temperature, "external");
+                        
                         timeOut = int(currentTime.tv_sec);
                     }
                     
@@ -2531,25 +2733,26 @@ namespace tsl {
                     sprintf(chargeString, "%d%%", batteryCharge);
 
                     // Convert the C-style string to an std::string
-                    std::string chargeStringStd = chargeString;
-                    std::string PCB_temperatureStringSTD = PCB_temperatureStr;
-                    std::string SOC_temperatureStringSTD = SOC_temperatureStr;
+                    std::string chargeStringSTD;
+                    std::string PCB_temperatureStringSTD;
+                    std::string SOC_temperatureStringSTD;
                     
                     // Convert the float to std::string
                     //std::string powerConsumptionStr = std::to_string(powerConsumption);
 
                     // Use the '+' operator to concatenate the strings
                     
-                    if (hideBattery != "true") {
+                    if (hideBattery != "true" && batteryCharge > 0) {
+                        chargeStringSTD = chargeString;
                         PCB_temperatureStringSTD += " ";
                         // Use the 'timeStr' to display the time
                         if (powerCacheIsCharging)
-                            renderer->drawString(chargeStringStd.c_str(), false, tsl::cfg::FramebufferWidth - calculateStringWidth(chargeStringStd, 20) - 20, y_offset, 20, tsl::Color(0x0, 0xF, 0x0, 0xF));
+                            renderer->drawString(chargeStringSTD.c_str(), false, tsl::cfg::FramebufferWidth - calculateStringWidth(chargeStringSTD, 20) - 20, y_offset, 20, tsl::Color(0x0, 0xF, 0x0, 0xF));
                         else {
                             if (batteryCharge <= 20) {
-                                renderer->drawString(chargeStringStd.c_str(), false, tsl::cfg::FramebufferWidth - calculateStringWidth(chargeStringStd, 20) - 20, y_offset, 20, tsl::Color(0xF, 0x0, 0x0, 0xF));
+                                renderer->drawString(chargeStringSTD.c_str(), false, tsl::cfg::FramebufferWidth - calculateStringWidth(chargeStringSTD, 20) - 20, y_offset, 20, tsl::Color(0xF, 0x0, 0x0, 0xF));
                             } else {
-                                renderer->drawString(chargeStringStd.c_str(), false, tsl::cfg::FramebufferWidth - calculateStringWidth(chargeStringStd, 20) - 20, y_offset, 20, batteryColor);
+                                renderer->drawString(chargeStringSTD.c_str(), false, tsl::cfg::FramebufferWidth - calculateStringWidth(chargeStringSTD, 20) - 20, y_offset, 20, batteryColor);
                             }
                         }
                     }
@@ -2558,15 +2761,17 @@ namespace tsl {
                     
                     int offset = 0;
                     if (hidePCBTemp != "true") {
+                        PCB_temperatureStringSTD = PCB_temperatureStr;
                         if (PCB_temperature > 0) {
                             offset += 2;
-                            renderer->drawString(PCB_temperatureStringSTD.c_str(), false, tsl::cfg::FramebufferWidth + offset - calculateStringWidth(PCB_temperatureStringSTD, 20) - calculateStringWidth(chargeStringStd, 20) - 20, y_offset, 20, tsl::GradientColor(PCB_temperature));
+                            renderer->drawString(PCB_temperatureStringSTD.c_str(), false, tsl::cfg::FramebufferWidth + offset - calculateStringWidth(PCB_temperatureStringSTD, 20) - calculateStringWidth(chargeStringSTD, 20) - 20, y_offset, 20, tsl::GradientColor(PCB_temperature));
                         }
                     }
                     if (hideSOCTemp != "true") {
+                        SOC_temperatureStringSTD = SOC_temperatureStr;
                         if (SOC_temperature > 0) {
                             offset += 2;
-                            renderer->drawString(SOC_temperatureStringSTD.c_str(), false, tsl::cfg::FramebufferWidth + offset -  calculateStringWidth(SOC_temperatureStringSTD, 20) - calculateStringWidth(PCB_temperatureStringSTD, 20) - calculateStringWidth(chargeStringStd, 20) - 20, y_offset, 20, tsl::GradientColor(SOC_temperature));
+                            renderer->drawString(SOC_temperatureStringSTD.c_str(), false, tsl::cfg::FramebufferWidth + offset -  calculateStringWidth(SOC_temperatureStringSTD, 20) - calculateStringWidth(PCB_temperatureStringSTD, 20) - calculateStringWidth(chargeStringSTD, 20) - 20, y_offset, 20, tsl::GradientColor(SOC_temperature));
                         }
                     }
                 } else {
@@ -2648,8 +2853,10 @@ namespace tsl {
                 }
                 
                 //if (this->m_title != "Ultrahand")
-                renderer->drawString(this->m_subtitle.c_str(), false, 20, y+20+offset, 15, a(tsl::style::color::ColorDescription));
-                
+                if (this->m_title == "Ultrahand")
+                    renderer->drawString(versionLabel.c_str(), false, 20, y+20+offset, 15, a(tsl::style::color::ColorDescription));
+                else
+                    renderer->drawString(this->m_subtitle.c_str(), false, 20, y+20+offset, 15, a(tsl::style::color::ColorDescription));
                 renderer->drawRect(15, tsl::cfg::FramebufferHeight - 73, tsl::cfg::FramebufferWidth - 30, 1, a(defaultTextColor));
                 
                 std::string menuBottomLine = "\uE0E1"+GAP_2+BACK+GAP_1+"\uE0E0"+GAP_2+OK+GAP_1;
@@ -4680,7 +4887,14 @@ namespace tsl {
         overlay->initScreen();
         overlay->changeTo(overlay->loadInitialGui());
 
-
+        // Argument parsing
+        //for (u8 arg = 0; arg < argc; arg++) {
+        //    if (strcasecmp(argv[arg], "--skipCombo") == 0) {
+        //        eventFire(&shData.comboEvent);
+        //        overlay->disableNextAnimation();
+        //    }
+        //}
+        
         // CUSTOM SECTION START
         // Argument parsing
         bool skipCombo = false;
@@ -4695,7 +4909,7 @@ namespace tsl {
         std::string settingsConfigPath = "sdmc:/config/ultrahand/config.ini";
         std::map<std::string, std::map<std::string, std::string>> settingsData = getParsedDataFromIniFile(settingsConfigPath);
         std::string inOverlayString;
-
+        
         if (settingsData.count("ultrahand") > 0 && settingsData["ultrahand"].count("in_overlay") > 0) {
             inOverlayString = settingsData["ultrahand"]["in_overlay"];
         } else {
@@ -4707,7 +4921,6 @@ namespace tsl {
             inOverlay = true;
             setIniFileValue(settingsConfigPath, "ultrahand", "in_overlay", "false");
         }
-        
         
         if (inOverlay && skipCombo) {
             eventFire(&shData.comboEvent);
