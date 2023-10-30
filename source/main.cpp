@@ -111,6 +111,7 @@ class UltrahandSettingsMenu : public tsl::Gui {
 private:
     std::string entryName, entryMode, overlayName, dropdownSelection, settingsIniPath;
     bool isInSection, inQuotes, isFromMainMenu;
+    std::string languagesVersion = std::string(APP_VERSION);
     
     int MAX_PRIORITY = 20;
     
@@ -414,9 +415,9 @@ public:
             auto listItem = new tsl::elm::ListItem(UPDATE_ULTRAHAND);
             
             // Envolke selectionOverlay in optionMode
-            std::string languagesVersion = 'v'+std::string(APP_VERSION);
             
-            listItem->setClickListener([this, &languagesVersion, listItem](uint64_t keys) { // Add 'command' to the capture list
+            
+            listItem->setClickListener([this, listItem](uint64_t keys) { // Add 'command' to the capture list
                 if (keys & KEY_A) {
                     deleteFileOrDirectory("/config/ultrahand/downloads/ovlmenu.ovl");
                     isDownloaded = downloadFile("https://github.com/ppkantorski/Ultrahand-Overlay/releases/latest/download/ovlmenu.ovl", "/config/ultrahand/downloads/");
@@ -433,15 +434,18 @@ public:
             });
             list->addItem(listItem);
             
-            
+            https://github.com/ppkantorski/Ultrahand-Overlay/releases/download/v1.4.2/lang.zip
             listItem = new tsl::elm::ListItem(UPDATE_LANGUAGES);
             
             // Envolke selectionOverlay in optionMode
             
-            listItem->setClickListener([this, languagesVersion, listItem](uint64_t keys) { // Add 'command' to the capture list
+            listItem->setClickListener([this, listItem](uint64_t keys) { // Add 'command' to the capture list
                 if (keys & KEY_A) {
                     deleteFileOrDirectory("/config/ultrahand/downloads/ovlmenu.ovl");
-                    isDownloaded = downloadFile("https://github.com/ppkantorski/Ultrahand-Overlay/releases/"+languagesVersion+"/download/lang.zip", "/config/ultrahand/downloads/");
+                    if (languagesVersion == "latest")
+                        isDownloaded = downloadFile("https://github.com/ppkantorski/Ultrahand-Overlay/releases/latest/download/lang.zip", "/config/ultrahand/downloads/");
+                    else
+                        isDownloaded = downloadFile("https://github.com/ppkantorski/Ultrahand-Overlay/releases/download/v"+languagesVersion+"/lang.zip", "/config/ultrahand/downloads/");
                     if (isDownloaded) {
                         unzipFile("/config/ultrahand/downloads/lang.zip", "/config/ultrahand/downloads/lang/");
                         deleteFileOrDirectory("/config/ultrahand/downloads/lang.zip");
