@@ -434,7 +434,6 @@ public:
             });
             list->addItem(listItem);
             
-            https://github.com/ppkantorski/Ultrahand-Overlay/releases/download/v1.4.2/lang.zip
             listItem = new tsl::elm::ListItem(UPDATE_LANGUAGES);
             
             // Envolke selectionOverlay in optionMode
@@ -442,11 +441,12 @@ public:
             listItem->setClickListener([this, listItem](uint64_t keys) { // Add 'command' to the capture list
                 if (keys & KEY_A) {
                     deleteFileOrDirectory("/config/ultrahand/downloads/ovlmenu.ovl");
+                    bool languageDownloaded = false;
                     if (languagesVersion == "latest")
-                        isDownloaded = downloadFile("https://github.com/ppkantorski/Ultrahand-Overlay/releases/latest/download/lang.zip", "/config/ultrahand/downloads/");
+                        languageDownloaded = downloadFile("https://github.com/ppkantorski/Ultrahand-Overlay/releases/latest/download/lang.zip", "/config/ultrahand/downloads/");
                     else
-                        isDownloaded = downloadFile("https://github.com/ppkantorski/Ultrahand-Overlay/releases/download/v"+languagesVersion+"/lang.zip", "/config/ultrahand/downloads/");
-                    if (isDownloaded) {
+                        languageDownloaded = downloadFile("https://github.com/ppkantorski/Ultrahand-Overlay/releases/download/v"+languagesVersion+"/lang.zip", "/config/ultrahand/downloads/");
+                    if (languageDownloaded) {
                         unzipFile("/config/ultrahand/downloads/lang.zip", "/config/ultrahand/downloads/lang/");
                         deleteFileOrDirectory("/config/ultrahand/downloads/lang.zip");
                         deleteFileOrDirectory("/config/ultrahand/lang/");
