@@ -3458,8 +3458,8 @@ namespace tsl {
                         renderer->enableScissoring(this->getX(), this->getY(), this->m_maxWidth + 40, this->getHeight());
                         renderer->drawString(this->m_scrollText.c_str(), false, this->getX() + 20 - this->m_scrollOffset, this->getY() + 45, 23, defaultTextColor);
                         renderer->disableScissoring();
-                        auto currentTime = std::chrono::system_clock::now(); // CUSTOM MODIFICATION START
-                        auto t = currentTime - this->timeIn;
+                        //auto currentTime = std::chrono::system_clock::now(); 
+                        auto t = std::chrono::system_clock::now() - this->timeIn; // CUSTOM MODIFICATION START
                         if (t > 2000ms) {
                             if (this->m_scrollOffset >= this->m_textWidth) {
                                 this->m_scrollOffset = 0;
@@ -3531,6 +3531,7 @@ namespace tsl {
                 this->m_scroll = false;
                 this->m_scrollOffset = 0;
                 this->m_scrollAnimationCounter = 0;
+                this->timeIn = std::chrono::system_clock::now(); // CUSTOM MODIFICATION
                 Element::setFocused(state);
             }
 
