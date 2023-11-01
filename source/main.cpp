@@ -645,9 +645,9 @@ public:
                         versionLabel = APP_VERSION+std::string("   (")+ extractTitle(loaderInfo)+" "+cleanVersionLabel(loaderInfo)+std::string(")"); // Still needs to parse nx-ovlloader instead of hard coding it
                     else
                         versionLabel = APP_VERSION+std::string("   (")+ extractTitle(loaderInfo)+" v"+cleanVersionLabel(loaderInfo)+std::string(")");
-                    //reloadMenu2 = true;
-                    //reloadMenu = true;
                     reinitializeVersionLabels();
+                    reloadMenu2 = true;
+                    reloadMenu = true;
                 }
                 
             });
