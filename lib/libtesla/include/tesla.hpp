@@ -5006,7 +5006,7 @@ namespace tsl::cfg {
     u16 LayerPosY   = 0;
     u16 FramebufferWidth  = 0;
     u16 FramebufferHeight = 0;
-    u64 launchCombo = HidNpadButton_L | HidNpadButton_Down | HidNpadButton_StickR;
+    u64 launchCombo = KEY_ZL | KEY_ZR | KEY_DDOWN;
 }
 extern "C" void __libnx_init_time(void);
 
