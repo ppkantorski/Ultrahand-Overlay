@@ -111,6 +111,7 @@ class UltrahandSettingsMenu : public tsl::Gui {
 private:
     std::string entryName, entryMode, overlayName, dropdownSelection, settingsIniPath;
     bool isInSection, inQuotes, isFromMainMenu;
+    std::string languagesVersion = std::string(APP_VERSION);
     
     int MAX_PRIORITY = 20;
     
@@ -414,12 +415,12 @@ public:
             auto listItem = new tsl::elm::ListItem(UPDATE_ULTRAHAND);
             
             // Envolke selectionOverlay in optionMode
-            std::string languagesVersion = std::string(APP_VERSION);
             
-            listItem->setClickListener([this, &languagesVersion, listItem](uint64_t keys) { // Add 'command' to the capture list
+            
+            listItem->setClickListener([this, listItem](uint64_t keys) { // Add 'command' to the capture list
                 if (keys & KEY_A) {
                     deleteFileOrDirectory("/config/ultrahand/downloads/ovlmenu.ovl");
-                    isDownloaded = downloadFile("https://github.com/ppkantorski/Ultrahand-Overlay/releases/latest/download/ovlmenu.ovl", "/config/ultrahand/downloads/");
+                    isDownloaded = downloadFile(ultrahandRepo+"releases/latest/download/ovlmenu.ovl", "/config/ultrahand/downloads/");
                     if (isDownloaded) {
                         moveFileOrDirectory("/config/ultrahand/downloads/ovlmenu.ovl", "/switch/.overlays/ovlmenu.ovl");
                         listItem->setValue(CHECKMARK_SYMBOL);
@@ -433,16 +434,19 @@ public:
             });
             list->addItem(listItem);
             
-            
             listItem = new tsl::elm::ListItem(UPDATE_LANGUAGES);
             
             // Envolke selectionOverlay in optionMode
             
-            listItem->setClickListener([this, languagesVersion, listItem](uint64_t keys) { // Add 'command' to the capture list
+            listItem->setClickListener([this, listItem](uint64_t keys) { // Add 'command' to the capture list
                 if (keys & KEY_A) {
                     deleteFileOrDirectory("/config/ultrahand/downloads/ovlmenu.ovl");
-                    isDownloaded = downloadFile("https://github.com/ppkantorski/Ultrahand-Overlay/releases/"+languagesVersion+"/download/lang.zip", "/config/ultrahand/downloads/");
-                    if (isDownloaded) {
+                    bool languageDownloaded = false;
+                    if (languagesVersion == "latest")
+                        languageDownloaded = downloadFile(ultrahandRepo+"releases/latest/download/lang.zip", "/config/ultrahand/downloads/");
+                    else
+                        languageDownloaded = downloadFile(ultrahandRepo+"releases/download/v"+languagesVersion+"/lang.zip", "/config/ultrahand/downloads/");
+                    if (languageDownloaded) {
                         unzipFile("/config/ultrahand/downloads/lang.zip", "/config/ultrahand/downloads/lang/");
                         deleteFileOrDirectory("/config/ultrahand/downloads/lang.zip");
                         deleteFileOrDirectory("/config/ultrahand/lang/");
@@ -641,9 +645,9 @@ public:
                         versionLabel = APP_VERSION+std::string("   (")+ extractTitle(loaderInfo)+" "+cleanVersionLabel(loaderInfo)+std::string(")"); // Still needs to parse nx-ovlloader instead of hard coding it
                     else
                         versionLabel = APP_VERSION+std::string("   (")+ extractTitle(loaderInfo)+" v"+cleanVersionLabel(loaderInfo)+std::string(")");
-                    //reloadMenu2 = true;
-                    //reloadMenu = true;
                     reinitializeVersionLabels();
+                    reloadMenu2 = true;
+                    reloadMenu = true;
                 }
                 
             });
@@ -2411,9 +2415,9 @@ public:
                 if (ultrahandSection.count("hide_clock") == 0)
                     setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_clock", "false");
                 if (ultrahandSection.count("hide_battery") == 0)
-                    setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_battery", "false");
+                    setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_battery", "true");
                 if (ultrahandSection.count("hide_pcb_temp") == 0)
-                    setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_pcb_temp", "false");
+                    setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_pcb_temp", "true");
                 if (ultrahandSection.count("hide_soc_temp") == 0)
                     setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_soc_temp", "true");
                 

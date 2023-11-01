@@ -57,18 +57,18 @@ Payload::PayloadConfigList const payload_config_list;
  * These paths are used within the Ultrahand-Overlay project to manage configuration files
  * and directories.
  */
-const std::string bootPackageFileName = "boot_package.ini";
-const std::string packageFileName = "package.ini";
-const std::string configFileName = "config.ini";
-const std::string settingsPath = "sdmc:/config/ultrahand/";
-const std::string settingsConfigIniPath = settingsPath + configFileName;
-const std::string themeConfigIniPath = settingsPath + "theme.ini";
-const std::string packageDirectory = "sdmc:/switch/.packages/";
-const std::string overlayDirectory = "sdmc:/switch/.overlays/";
-const std::string teslaSettingsConfigIniPath = "sdmc:/config/tesla/"+configFileName;
-const std::string overlaysIniFilePath = settingsPath + "overlays.ini";
-const std::string packagesIniFilePath = settingsPath + "packages.ini";
-
+static const std::string bootPackageFileName = "boot_package.ini";
+static const std::string packageFileName = "package.ini";
+static const std::string configFileName = "config.ini";
+static const std::string settingsPath = "sdmc:/config/ultrahand/";
+static const std::string settingsConfigIniPath = settingsPath + configFileName;
+static const std::string themeConfigIniPath = settingsPath + "theme.ini";
+static const std::string packageDirectory = "sdmc:/switch/.packages/";
+static const std::string overlayDirectory = "sdmc:/switch/.overlays/";
+static const std::string teslaSettingsConfigIniPath = "sdmc:/config/tesla/"+configFileName;
+static const std::string overlaysIniFilePath = settingsPath + "overlays.ini";
+static const std::string packagesIniFilePath = settingsPath + "packages.ini";
+static const std::string ultrahandRepo = "https://github.com/ppkantorski/Ultrahand-Overlay/";
 
 
 

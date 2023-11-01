@@ -211,7 +211,7 @@ static std::string HIDE_OVERLAY = "Hide Overlay";
 static std::string HIDE_PACKAGE = "Hide Package";
 static std::string LAUNCH_ARGUMENTS = "Launch Arguments";
 static std::string COMMANDS = "Commands";
-static std::string SETTINGS = "Main Settings";
+static std::string SETTINGS = "Settings";
 static std::string MAIN_SETTINGS = "Main Settings";
 static std::string UI_SETTINGS = "UI Settings";
 static std::string WIDGET = "Widget";
@@ -237,7 +237,7 @@ static std::string OFF = "Off";
 static std::string PACKAGE_INFO = "Package Info";
 static std::string TITLE = "Title";
 static std::string VERSION = "Version";
-static std::string CREATOR = "Creator";
+static std::string CREATOR = "Creator(s)";
 static std::string ABOUT = "About";
 static std::string CREDITS = "Credits";
 static std::string OK = "OK";
@@ -303,7 +303,7 @@ void reinitializeLangVars() {
     HIDE_PACKAGE = "Hide Package";
     LAUNCH_ARGUMENTS = "Launch Arguments";
     COMMANDS = "Commands";
-    SETTINGS = "Main Settings";
+    SETTINGS = "Settings";
     MAIN_SETTINGS = "Main Settings";
     UI_SETTINGS = "UI Settings";
     WIDGET = "Widget";
@@ -329,7 +329,7 @@ void reinitializeLangVars() {
     PACKAGE_INFO = "Package Info";
     TITLE = "Title";
     VERSION = "Version";
-    CREATOR = "Creator";
+    CREATOR = "Creator(s)";
     ABOUT = "About";
     CREDITS = "Credits";
     OK = "OK";
@@ -2682,14 +2682,15 @@ namespace tsl {
                     renderer->drawString(secondHalf.c_str(), false, x, y+offset, fontSize, tsl::Color(0xF, 0x0, 0x0, 0xF));
                     
                     
+                    // Time drawing implementation
+                    //struct timespec currentTime;
+                    clock_gettime(CLOCK_REALTIME, &currentTime);
+                    
                     int y_offset = 44;
                     if ((hideBattery == "true" && hidePCBTemp == "true" && hideSOCTemp == "true") || (hideClock == "true"))
                         y_offset += 12;
                     
                     if (hideClock != "true") {// Use the 'timeStr' to display the time
-                        // Time drawing implementation
-                        //struct timespec currentTime;
-                        clock_gettime(CLOCK_REALTIME, &currentTime);
                         
                         
                         // Convert the current time to a human-readable string
