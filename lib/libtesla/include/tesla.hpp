@@ -3409,8 +3409,10 @@ namespace tsl {
          */
         class ListItem : public Element {
         public:
-            std::string defaultTextColorStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "text_color");
+            std::string defaultTextColorStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "text_color"); // CUSTOM MODIFICATION
             tsl::Color defaultTextColor = RGB888(defaultTextColorStr);
+            std::chrono::system_clock::time_point timeIn = std::chrono::system_clock::now();
+            
             /**
              * @brief Constructor
              *
@@ -3456,22 +3458,29 @@ namespace tsl {
                         renderer->enableScissoring(this->getX(), this->getY(), this->m_maxWidth + 40, this->getHeight());
                         renderer->drawString(this->m_scrollText.c_str(), false, this->getX() + 20 - this->m_scrollOffset, this->getY() + 45, 23, defaultTextColor);
                         renderer->disableScissoring();
-                        if (this->m_scrollAnimationCounter == 90) {
-                            if (this->m_scrollOffset == this->m_textWidth) {
+                        auto currentTime = std::chrono::system_clock::now(); // CUSTOM MODIFICATION START
+                        auto t = currentTime - this->timeIn;
+                        if (t > 2000ms) {
+                            if (this->m_scrollOffset >= this->m_textWidth) {
                                 this->m_scrollOffset = 0;
                                 this->m_scrollAnimationCounter = 0;
+                                this->timeIn = std::chrono::system_clock::now();
                             } else {
-                                this->m_scrollOffset++;
+                                // Calculate the increment based on the desired scroll rate
+                                // This formula depends on the rate you want (e.g., pixels per second)
+                                float scrollRate = 0.1; // Adjust this value for your desired rate
+                                auto elapsedMilliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(t-2000ms).count();
+                                float scrollIncrement = scrollRate * elapsedMilliseconds;
+                                this->m_scrollOffset = scrollIncrement;
                             }
-                        } else {
-                            this->m_scrollAnimationCounter++;
-                        }
+                        } // CUSTOM MODIFICATION END
                     } else {
                         renderer->drawString(this->m_ellipsisText.c_str(), false, this->getX() + 20, this->getY() + 45, 23, a(defaultTextColor));
                     }
                 } else {
                     renderer->drawString(this->m_text.c_str(), false, this->getX() + 20, this->getY() + 45, 23, a(defaultTextColor));
                 }
+
 
                 // CUSTOM SECTION START (modification for submenu footer color)
                 if (this->m_value == DROPDOWN_SYMBOL || this->m_value == OPTION_SYMBOL) {
@@ -3584,7 +3593,7 @@ namespace tsl {
             bool m_touched = false;
 
             u16 m_maxScroll = 0;
-            u16 m_scrollOffset = 0;
+            float m_scrollOffset = 0;
             u32 m_maxWidth = 0;
             u32 m_textWidth = 0;
             u16 m_scrollAnimationCounter = 0;
