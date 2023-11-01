@@ -79,7 +79,7 @@ static const std::string ultrahandRepo = "https://github.com/ppkantorski/Ultraha
  * This function retrieves the key combo from Tesla settings and copies it to Ultrahand settings.
  */
 void copyTeslaKeyComboToUltrahand() {
-    std::string keyCombo;
+    std::string keyCombo = "ZL+ZR+DDOWN";
     std::map<std::string, std::map<std::string, std::string>> parsedData;
     
     if (isFileOrDirectory(teslaSettingsConfigIniPath)) {
@@ -92,17 +92,18 @@ void copyTeslaKeyComboToUltrahand() {
         }
     }
     
-    if (!keyCombo.empty()){
-        if (isFileOrDirectory(settingsConfigIniPath)) {
-            parsedData = getParsedDataFromIniFile(settingsConfigIniPath);
-            if (parsedData.count("ultrahand") > 0) {
-                auto& ultrahandSection = parsedData["ultrahand"];
-                if (ultrahandSection.count("key_combo") == 0) {
-                    // Write the key combo to the destination file
-                    setIniFileValue(settingsConfigIniPath, "ultrahand", "key_combo", keyCombo);
-                }
+    if (isFileOrDirectory(settingsConfigIniPath)) {
+        parsedData = getParsedDataFromIniFile(settingsConfigIniPath);
+        if (parsedData.count("ultrahand") > 0) {
+            auto& ultrahandSection = parsedData["ultrahand"];
+            if (ultrahandSection.count("key_combo") == 0) { // no entry present
+                // Write the key combo to the destination file
+                setIniFileValue(settingsConfigIniPath, "ultrahand", "key_combo", keyCombo);
             }
         }
+    } else {
+        // Write the key combo to the destination file
+        setIniFileValue(settingsConfigIniPath, "ultrahand", "key_combo", keyCombo);
     }
     tsl::impl::parseOverlaySettings();
 }
