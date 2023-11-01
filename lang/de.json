@@ -19,7 +19,7 @@
     "BATTERY": "Batterie",
     "SOC_TEMPERATURE": "SOC-Temperatur",
     "PCB_TEMPERATURE": "PCB-Temperatur",
-    "VERSION_LABELS": "Versionsbeschriftungen"
+    "VERSION_LABELS": "Versionsbeschriftungen",
     "KEY_COMBO": "Tastenkombination",
     "LANGUAGE": "Sprache",
     "OVERLAY_INFO": "Overlay Info",
