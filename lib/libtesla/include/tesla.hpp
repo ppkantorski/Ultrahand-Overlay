@@ -3411,7 +3411,7 @@ namespace tsl {
         public:
             std::string defaultTextColorStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "text_color"); // CUSTOM MODIFICATION
             tsl::Color defaultTextColor = RGB888(defaultTextColorStr);
-            std::chrono::system_clock::time_point timeIn = std::chrono::system_clock::now();
+            std::chrono::system_clock::time_point timeIn;// = std::chrono::system_clock::now();
             
             /**
              * @brief Constructor
@@ -3458,9 +3458,7 @@ namespace tsl {
                         renderer->enableScissoring(this->getX(), this->getY(), this->m_maxWidth + 40, this->getHeight());
                         renderer->drawString(this->m_scrollText.c_str(), false, this->getX() + 20 - this->m_scrollOffset, this->getY() + 45, 23, defaultTextColor);
                         renderer->disableScissoring();
-                        //auto currentTime = std::chrono::system_clock::now(); 
-                        auto t = std::chrono::system_clock::now() - this->timeIn; // CUSTOM MODIFICATION START
-                        if (t > 2000ms) {
+                        if ((std::chrono::system_clock::now() - this->timeIn) >= 2000ms) {
                             if (this->m_scrollOffset >= this->m_textWidth) {
                                 this->m_scrollOffset = 0;
                                 this->m_scrollAnimationCounter = 0;
@@ -3468,10 +3466,11 @@ namespace tsl {
                             } else {
                                 // Calculate the increment based on the desired scroll rate
                                 // This formula depends on the rate you want (e.g., pixels per second)
-                                float scrollRate = 0.1; // Adjust this value for your desired rate
-                                auto elapsedMilliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(t-2000ms).count();
-                                float scrollIncrement = scrollRate * elapsedMilliseconds;
-                                this->m_scrollOffset = scrollIncrement;
+                                //float scrollRate = 0.1; // Adjust this value for your desired rate
+                                //auto elapsedMilliseconds = std::chrono::duration_cast<std::chrono::milliseconds>((std::chrono::system_clock::now() - this->timeIn)-2000ms).count();
+                                //float scrollIncrement = scrollRate * elapsedMilliseconds;
+                                //this->m_scrollOffset = scrollIncrement;
+                                this->m_scrollOffset = std::round(0.1 * (std::chrono::duration_cast<std::chrono::milliseconds>((std::chrono::system_clock::now() - this->timeIn) - 2000ms).count()) *10000.0)/10000.0;
                             }
                         } // CUSTOM MODIFICATION END
                     } else {
