@@ -3467,7 +3467,8 @@ namespace tsl {
                         renderer->enableScissoring(this->getX(), this->getY(), this->m_maxWidth + 40, this->getHeight());
                         renderer->drawString(this->m_scrollText.c_str(), false, this->getX() + 20 - this->m_scrollOffset, this->getY() + 45, 23, defaultTextColor);
                         renderer->disableScissoring();
-                        if ((std::chrono::system_clock::now() - this->timeIn) >= 2000ms) {
+                        auto t = std::chrono::system_clock::now();
+                        if ((t - this->timeIn) >= 2000ms) {
                             if (this->m_scrollOffset >= this->m_textWidth) {
                                 this->m_scrollOffset = 0;
                                 this->m_scrollAnimationCounter = 0;
@@ -3481,7 +3482,7 @@ namespace tsl {
                                 //this->m_scrollOffset = scrollIncrement;
                                 //double smoothingFactor = 0.6; // Adjust this factor (between 0 and 1) for the desired smoothing effect
                                 // Apply smoothing factor using exponential moving average
-                                this->m_scrollOffset = (1.0 -  0.6) * this->m_scrollOffset +  0.6 * (customRound(0.10 * std::chrono::duration_cast<std::chrono::milliseconds>((std::chrono::system_clock::now() - this->timeIn) - 2000ms).count() * 10000.0) / 10000.0);
+                                this->m_scrollOffset = (customRound(0.10 * std::chrono::duration_cast<std::chrono::milliseconds>((t - this->timeIn) - 2000ms).count() * 10000.0) / 10000.0);
                             }
                         } // CUSTOM MODIFICATION END
                     } else {
