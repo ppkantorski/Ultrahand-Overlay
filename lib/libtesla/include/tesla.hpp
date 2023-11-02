@@ -142,6 +142,15 @@ static const std::string CHECKMARK_SYMBOL = "\uE14B";
 static const std::string CROSSMARK_SYMBOL = "\uE14C";
 static const std::string STAR_SYMBOL = "\u2605";
 
+
+float customRound(double num) {
+    if (num >= 0) {
+        return floor(num + 0.5);
+    } else {
+        return ceil(num - 0.5);
+    }
+}
+
 // English string definitions
 
 /**
@@ -3472,7 +3481,7 @@ namespace tsl {
                                 //this->m_scrollOffset = scrollIncrement;
                                 //double smoothingFactor = 0.6; // Adjust this factor (between 0 and 1) for the desired smoothing effect
                                 // Apply smoothing factor using exponential moving average
-                                this->m_scrollOffset = (1.0 -  0.6) * this->m_scrollOffset +  0.6 * (std::round(0.10 * std::chrono::duration_cast<std::chrono::milliseconds>((std::chrono::system_clock::now() - this->timeIn) - 2000ms).count() * 10000.0) / 10000.0);
+                                this->m_scrollOffset = (1.0 -  0.6) * this->m_scrollOffset +  0.6 * (customRound(0.10 * std::chrono::duration_cast<std::chrono::milliseconds>((std::chrono::system_clock::now() - this->timeIn) - 2000ms).count() * 10000.0) / 10000.0);
                             }
                         } // CUSTOM MODIFICATION END
                     } else {
