@@ -3470,7 +3470,9 @@ namespace tsl {
                                 //auto elapsedMilliseconds = std::chrono::duration_cast<std::chrono::milliseconds>((std::chrono::system_clock::now() - this->timeIn)-2000ms).count();
                                 //float scrollIncrement = scrollRate * elapsedMilliseconds;
                                 //this->m_scrollOffset = scrollIncrement;
-                                this->m_scrollOffset = std::round(0.1 * (std::chrono::duration_cast<std::chrono::milliseconds>((std::chrono::system_clock::now() - this->timeIn) - 2000ms).count()) *10000.0)/10000.0;
+                                //double smoothingFactor = 0.6; // Adjust this factor (between 0 and 1) for the desired smoothing effect
+                                // Apply smoothing factor using exponential moving average
+                                this->m_scrollOffset = (1.0 -  0.6) * this->m_scrollOffset +  0.6 * (std::round(0.10 * std::chrono::duration_cast<std::chrono::milliseconds>((std::chrono::system_clock::now() - this->timeIn) - 2000ms).count() * 10000.0) / 10000.0);
                             }
                         } // CUSTOM MODIFICATION END
                     } else {
