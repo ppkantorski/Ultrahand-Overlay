@@ -115,8 +115,9 @@ private:
     
     int MAX_PRIORITY = 20;
     
-    std::vector<std::string> defaultCombos = {"ZL+ZR+DDOWN", "ZL+ZR+DRIGHT", "ZL+ZR+DUP", "ZL+ZR+DLEFT", "L+R+DDOWN", "L+R+DRIGHT", "L+R+DUP", "L+R+DLEFT", "L+DDOWN+RS"};
+    std::vector<std::string> defaultCombos = {"ZL+ZR+PLUS", "ZL+ZR+DDOWN", "ZL+ZR+DRIGHT", "ZL+ZR+DUP", "ZL+ZR+DLEFT", "L+R+DDOWN", "L+R+DRIGHT", "L+R+DUP", "L+R+DLEFT", "L+DDOWN+RS"};
     std::unordered_map<std::string, std::string> comboMap = {
+        {"ZL+ZR+PLUS", "\uE0E6+\uE0E7+\uE0EC"}, // DON'T KNOW WHAT PLUS BUTTON IS, uE0EC should be changed to PLUS Button
         {"ZL+ZR+DDOWN", "\uE0E6+\uE0E7+\uE0EC"},
         {"ZL+ZR+DRIGHT", "\uE0E6+\uE0E7+\uE0EE"},
         {"ZL+ZR+DUP", "\uE0E6+\uE0E7+\uE0EB"},
