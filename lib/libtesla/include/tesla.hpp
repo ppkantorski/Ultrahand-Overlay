@@ -3470,14 +3470,14 @@ namespace tsl {
                         //renderer->drawString(this->m_scrollText.c_str(), false, this->getX() + 20.0 - std::round(this->m_scrollOffset*10000.0)/10000.0, this->getY() + 45, 23, defaultTextColor);
                         renderer->drawString(this->m_scrollText.c_str(), false, this->getX() + 20.0 - this->m_scrollOffset, this->getY() + 45, 23, defaultTextColor);
                         renderer->disableScissoring();
-                        t = std::chrono::system_clock::now() - this->timeIn - 2000ms;
-                        if (t >= 0ms) {
+                        t = std::chrono::system_clock::now() - this->timeIn;
+                        if (t >= 2000ms) {
                             if (this->m_scrollOffset >= this->m_textWidth) {
                                 this->m_scrollOffset = 0;
                                 this->timeIn = std::chrono::system_clock::now();
                             } else {
                                 // Calculate the increment based on the desired scroll rate
-                                this->m_scrollOffset = (1.0-0.4) * this->m_scrollOffset + 0.4 * (0.1 * std::chrono::duration_cast<std::chrono::milliseconds>(t).count());
+                                this->m_scrollOffset = (1.0-0.6) * this->m_scrollOffset + 0.6 * (0.1 * std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - this->timeIn - 2000ms).count());
                                 //this->m_scrollOffset = (0.1 * std::chrono::duration_cast<std::chrono::milliseconds>(t).count());
                                 //this->m_scrollOffset = (customRound(0.10 * std::chrono::duration_cast<std::chrono::milliseconds>((t) - 2000ms).count() * 10000.0) / 10000.0);
                             }
@@ -3620,7 +3620,7 @@ namespace tsl {
              * @param onValue Value drawn if the toggle is on
              * @param offValue Value drawn if the toggle is off
              */
-            ToggleListItem(const std::string& text, bool initialState, const std::string& onValue = "On", const std::string& offValue = "Off")
+            ToggleListItem(const std::string& text, bool initialState, const std::string& onValue = ON, const std::string& offValue = OFF)
                 : ListItem(text), m_state(initialState), m_onValue(onValue), m_offValue(offValue) {
 
                 this->setState(this->m_state);
