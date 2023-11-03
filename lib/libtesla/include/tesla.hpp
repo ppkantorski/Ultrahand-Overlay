@@ -3477,8 +3477,8 @@ namespace tsl {
                                 this->timeIn = std::chrono::system_clock::now();
                             } else {
                                 // Calculate the increment based on the desired scroll rate
-                                this->m_scrollOffset = (1.0-0.9) * this->m_scrollOffset + 0.9 * (0.1 * std::chrono::duration_cast<std::chrono::milliseconds>(t - 2000ms).count());
-                                //this->m_scrollOffset = (0.1 * std::chrono::duration_cast<std::chrono::milliseconds>(t).count());
+                                //this->m_scrollOffset = (1.0-0.9) * this->m_scrollOffset + 0.9 * (0.1 * std::chrono::duration_cast<std::chrono::milliseconds>(t - 2000ms).count());
+                                this->m_scrollOffset = (half(0.1) * std::chrono::duration_cast<std::chrono::milliseconds>(t - 2000ms).count());
                                 //this->m_scrollOffset = (customRound(0.10 * std::chrono::duration_cast<std::chrono::milliseconds>((t) - 2000ms).count() * 10000.0) / 10000.0);
                             }
                         } // CUSTOM MODIFICATION END
