@@ -66,7 +66,8 @@
 #include "../../../source/get_funcs.hpp"
 #include "../../../source/string_funcs.hpp"
 #include "../../../source/ini_funcs.hpp"
-
+#include "../../../common/half.hpp"
+using half_float::half;
 
 /**
  * @brief Shutdown modes for the Ultrahand-Overlay project.
@@ -141,6 +142,15 @@ static const std::string DROPDOWN_SYMBOL = "\u25B6";
 static const std::string CHECKMARK_SYMBOL = "\uE14B";
 static const std::string CROSSMARK_SYMBOL = "\uE14C";
 static const std::string STAR_SYMBOL = "\u2605";
+
+
+float customRound(float num) {
+    if (num >= 0) {
+        return floor(num + 0.5);
+    } else {
+        return ceil(num - 0.5);
+    }
+}
 
 // English string definitions
 
@@ -1706,10 +1716,10 @@ namespace tsl {
              * @param color Text color. Use transparent color to skip drawing and only get the string's dimensions
              * @return Dimensions of drawn string
              */
-            std::pair<u32, u32> drawString(const char* string, bool monospace, s32 x, s32 y, float fontSize, Color color, ssize_t maxWidth = 0) {
-                s32 maxX = x;
-                s32 currX = x;
-                s32 currY = y;
+            std::pair<u32, u32> drawString(const char* string, bool monospace, float x, float y, float fontSize, Color color, ssize_t maxWidth = 0) {
+                float maxX = x;
+                float currX = x;
+                float currY = y;
 
                 struct Glyph {
                     stbtt_fontinfo *currFont;
@@ -3411,7 +3421,8 @@ namespace tsl {
         public:
             std::string defaultTextColorStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "text_color"); // CUSTOM MODIFICATION
             tsl::Color defaultTextColor = RGB888(defaultTextColorStr);
-            std::chrono::system_clock::time_point timeIn = std::chrono::system_clock::now();
+            std::chrono::system_clock::time_point timeIn;// = std::chrono::system_clock::now();
+            std::chrono::duration<long int, std::ratio<1, 1000000000>> t;
             
             /**
              * @brief Constructor
@@ -3444,7 +3455,7 @@ namespace tsl {
                         auto [width, height] = renderer->drawString(this->m_scrollText.c_str(), false, 0, 0, 23, tsl::style::color::ColorTransparent);
                         this->m_scrollText += this->m_text;
                         this->m_textWidth = width;
-                        this->m_ellipsisText = renderer->limitStringLength(this->m_text, false, 22, this->m_maxWidth);
+                        this->m_ellipsisText = renderer->limitStringLength(this->m_text, false, 24, this->m_maxWidth);
                     } else {
                         this->m_textWidth = width;
                     }
@@ -3456,22 +3467,19 @@ namespace tsl {
                 if (this->m_trunctuated) {
                     if (this->m_focused) {
                         renderer->enableScissoring(this->getX(), this->getY(), this->m_maxWidth + 40, this->getHeight());
-                        renderer->drawString(this->m_scrollText.c_str(), false, this->getX() + 20 - this->m_scrollOffset, this->getY() + 45, 23, defaultTextColor);
+                        //renderer->drawString(this->m_scrollText.c_str(), false, this->getX() + 20.0 - std::round(this->m_scrollOffset*10000.0)/10000.0, this->getY() + 45, 23, defaultTextColor);
+                        renderer->drawString(this->m_scrollText.c_str(), false, this->getX() + 20.0 - this->m_scrollOffset, this->getY() + 45, 23, defaultTextColor);
                         renderer->disableScissoring();
-                        //auto currentTime = std::chrono::system_clock::now(); 
-                        auto t = std::chrono::system_clock::now() - this->timeIn; // CUSTOM MODIFICATION START
-                        if (t > 2000ms) {
+                        t = std::chrono::system_clock::now() - this->timeIn;
+                        if (t >= 2000ms) {
                             if (this->m_scrollOffset >= this->m_textWidth) {
                                 this->m_scrollOffset = 0;
-                                this->m_scrollAnimationCounter = 0;
                                 this->timeIn = std::chrono::system_clock::now();
                             } else {
                                 // Calculate the increment based on the desired scroll rate
-                                // This formula depends on the rate you want (e.g., pixels per second)
-                                float scrollRate = 0.1; // Adjust this value for your desired rate
-                                auto elapsedMilliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(t-2000ms).count();
-                                float scrollIncrement = scrollRate * elapsedMilliseconds;
-                                this->m_scrollOffset = scrollIncrement;
+                                //this->m_scrollOffset = (1.0-0.9) * this->m_scrollOffset + 0.9 * (0.1 * std::chrono::duration_cast<std::chrono::milliseconds>(t - 2000ms).count());
+                                this->m_scrollOffset = (half(0.1) * std::chrono::duration_cast<std::chrono::milliseconds>(t - 2000ms).count());
+                                //this->m_scrollOffset = (customRound(0.10 * std::chrono::duration_cast<std::chrono::milliseconds>((t) - 2000ms).count() * 10000.0) / 10000.0);
                             }
                         } // CUSTOM MODIFICATION END
                     } else {
@@ -3530,7 +3538,6 @@ namespace tsl {
             virtual void setFocused(bool state) override {
                 this->m_scroll = false;
                 this->m_scrollOffset = 0;
-                this->m_scrollAnimationCounter = 0;
                 this->timeIn = std::chrono::system_clock::now(); // CUSTOM MODIFICATION
                 Element::setFocused(state);
             }
@@ -3594,10 +3601,9 @@ namespace tsl {
             bool m_touched = false;
 
             u16 m_maxScroll = 0;
-            float m_scrollOffset = 0;
+            half m_scrollOffset = half(0);
             u32 m_maxWidth = 0;
             u32 m_textWidth = 0;
-            u16 m_scrollAnimationCounter = 0;
         };
 
         /**
@@ -3614,7 +3620,7 @@ namespace tsl {
              * @param onValue Value drawn if the toggle is on
              * @param offValue Value drawn if the toggle is off
              */
-            ToggleListItem(const std::string& text, bool initialState, const std::string& onValue = "On", const std::string& offValue = "Off")
+            ToggleListItem(const std::string& text, bool initialState, const std::string& onValue = ON, const std::string& offValue = OFF)
                 : ListItem(text), m_state(initialState), m_onValue(onValue), m_offValue(offValue) {
 
                 this->setState(this->m_state);

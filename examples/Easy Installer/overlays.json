@@ -15,11 +15,6 @@
         "download-entry": "0"
     },
     {
-        "name": "NX-FPS - latest",
-        "zip-url": "https://api.github.com/repos/masagrator/NX-FPS/releases?per_page=1&sort=created&order=desc",
-        "download-entry": "0"
-    },
-    {
         "name": "nx-ovlloader - latest",
         "zip-url": "https://api.github.com/repos/WerWolv/nx-ovlloader/releases?per_page=1&sort=created&order=desc",
         "download-entry": "0"
