@@ -3455,7 +3455,7 @@ namespace tsl {
                         auto [width, height] = renderer->drawString(this->m_scrollText.c_str(), false, 0, 0, 23, tsl::style::color::ColorTransparent);
                         this->m_scrollText += this->m_text;
                         this->m_textWidth = width;
-                        this->m_ellipsisText = renderer->limitStringLength(this->m_text, false, 22, this->m_maxWidth);
+                        this->m_ellipsisText = renderer->limitStringLength(this->m_text, false, 24, this->m_maxWidth);
                     } else {
                         this->m_textWidth = width;
                     }
