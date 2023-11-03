@@ -3474,11 +3474,11 @@ namespace tsl {
                         if (t >= 0ms) {
                             if (this->m_scrollOffset >= this->m_textWidth) {
                                 this->m_scrollOffset = 0;
-                                this->m_scrollAnimationCounter = 0;
                                 this->timeIn = std::chrono::system_clock::now();
                             } else {
                                 // Calculate the increment based on the desired scroll rate
                                 this->m_scrollOffset = (1.0-0.4) * this->m_scrollOffset + 0.4 * (0.1 * std::chrono::duration_cast<std::chrono::milliseconds>(t).count());
+                                //this->m_scrollOffset = (0.1 * std::chrono::duration_cast<std::chrono::milliseconds>(t).count());
                                 //this->m_scrollOffset = (customRound(0.10 * std::chrono::duration_cast<std::chrono::milliseconds>((t) - 2000ms).count() * 10000.0) / 10000.0);
                             }
                         } // CUSTOM MODIFICATION END
@@ -3538,7 +3538,6 @@ namespace tsl {
             virtual void setFocused(bool state) override {
                 this->m_scroll = false;
                 this->m_scrollOffset = 0;
-                this->m_scrollAnimationCounter = 0;
                 this->timeIn = std::chrono::system_clock::now(); // CUSTOM MODIFICATION
                 Element::setFocused(state);
             }
@@ -3602,10 +3601,9 @@ namespace tsl {
             bool m_touched = false;
 
             u16 m_maxScroll = 0;
-            half m_scrollOffset = half(0.0);
+            half m_scrollOffset = half(0);
             u32 m_maxWidth = 0;
             u32 m_textWidth = 0;
-            u16 m_scrollAnimationCounter = 0;
         };
 
         /**
