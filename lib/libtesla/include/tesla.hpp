@@ -2310,7 +2310,7 @@ namespace tsl {
              * @param renderer Renderer
              */
             virtual void drawFocusBackground(gfx::Renderer *renderer) {
-                renderer->drawRect(ELEMENT_BOUNDS(this), a(0xF000));
+                //renderer->drawRect(ELEMENT_BOUNDS(this), a(0xF000));
 
                 if (this->m_clickAnimationProgress > 0) {
                     this->drawClickAnimation(renderer);
@@ -2622,7 +2622,7 @@ namespace tsl {
             // CUSTOM SECTION START
             virtual void draw(gfx::Renderer *renderer) override {
                 renderer->fillScreen(a(tsl::style::color::ColorFrameBackground));
-                renderer->drawRect(tsl::cfg::FramebufferWidth - 1, 0, 1, tsl::cfg::FramebufferHeight, a(0xF222));
+                //renderer->drawRect(tsl::cfg::FramebufferWidth - 1, 0, 1, tsl::cfg::FramebufferHeight, a(0xF222)); // CUSTOM MODIFICATION, not sure why this call was even necessary after comparisons.
                 
                 int y = 50;
                 int offset = 0;
