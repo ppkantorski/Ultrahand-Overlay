@@ -1715,10 +1715,10 @@ namespace tsl {
              * @param color Text color. Use transparent color to skip drawing and only get the string's dimensions
              * @return Dimensions of drawn string
              */
-            std::pair<u32, u32> drawString(const char* string, bool monospace, s32 x, s32 y, float fontSize, Color color, ssize_t maxWidth = 0) {
-                s32 maxX = x;
-                s32 currX = x;
-                s32 currY = y;
+            std::pair<u32, u32> drawString(const char* string, bool monospace, float x, float y, float fontSize, Color color, ssize_t maxWidth = 0) {
+                float maxX = x;
+                float currX = x;
+                float currY = y;
 
                 struct Glyph {
                     stbtt_fontinfo *currFont;
@@ -3421,6 +3421,7 @@ namespace tsl {
             std::string defaultTextColorStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "text_color"); // CUSTOM MODIFICATION
             tsl::Color defaultTextColor = RGB888(defaultTextColorStr);
             std::chrono::system_clock::time_point timeIn;// = std::chrono::system_clock::now();
+            std::chrono::duration<long int, std::ratio<1, 1000000000>> t;
             
             /**
              * @brief Constructor
@@ -3465,9 +3466,9 @@ namespace tsl {
                 if (this->m_trunctuated) {
                     if (this->m_focused) {
                         renderer->enableScissoring(this->getX(), this->getY(), this->m_maxWidth + 40, this->getHeight());
-                        renderer->drawString(this->m_scrollText.c_str(), false, this->getX() + 20 - this->m_scrollOffset, this->getY() + 45, 23, defaultTextColor);
+                        renderer->drawString(this->m_scrollText.c_str(), false, this->getX() + 20.0 - this->m_scrollOffset, this->getY() + 45, 23, defaultTextColor);
                         renderer->disableScissoring();
-                        auto t = std::chrono::system_clock::now() - this->timeIn;
+                        t = std::chrono::system_clock::now() - this->timeIn;
                         if ((t) >= 2000ms) {
                             if (this->m_scrollOffset >= this->m_textWidth) {
                                 this->m_scrollOffset = 0;
@@ -3482,7 +3483,7 @@ namespace tsl {
                                 //this->m_scrollOffset = scrollIncrement;
                                 //double smoothingFactor = 0.6; // Adjust this factor (between 0 and 1) for the desired smoothing effect
                                 // Apply smoothing factor using exponential moving average
-                                this->m_scrollOffset = this->m_scrollOffset*(1.0-0.6) + 0.6*(customRound(0.10 * std::chrono::duration_cast<std::chrono::milliseconds>((t) - 2000ms).count() * 10000.0) / 10000.0);
+                                this->m_scrollOffset = (1.0-0.2) * this->m_scrollOffset + 0.2 * (0.10 * std::chrono::duration_cast<std::chrono::milliseconds>((std::chrono::system_clock::now() - this->timeIn) - 2000ms).count());
                                 //this->m_scrollOffset = (customRound(0.10 * std::chrono::duration_cast<std::chrono::milliseconds>((t) - 2000ms).count() * 10000.0) / 10000.0);
                             }
                         } // CUSTOM MODIFICATION END
