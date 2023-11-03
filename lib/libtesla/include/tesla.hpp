@@ -143,7 +143,7 @@ static const std::string CROSSMARK_SYMBOL = "\uE14C";
 static const std::string STAR_SYMBOL = "\u2605";
 
 
-float customRound(double num) {
+float customRound(float num) {
     if (num >= 0) {
         return floor(num + 0.5);
     } else {
@@ -3467,8 +3467,8 @@ namespace tsl {
                         renderer->enableScissoring(this->getX(), this->getY(), this->m_maxWidth + 40, this->getHeight());
                         renderer->drawString(this->m_scrollText.c_str(), false, this->getX() + 20 - this->m_scrollOffset, this->getY() + 45, 23, defaultTextColor);
                         renderer->disableScissoring();
-                        auto t = std::chrono::system_clock::now();
-                        if ((t - this->timeIn) >= 2000ms) {
+                        auto t = std::chrono::system_clock::now() - this->timeIn;
+                        if ((t) >= 2000ms) {
                             if (this->m_scrollOffset >= this->m_textWidth) {
                                 this->m_scrollOffset = 0;
                                 this->m_scrollAnimationCounter = 0;
@@ -3482,7 +3482,8 @@ namespace tsl {
                                 //this->m_scrollOffset = scrollIncrement;
                                 //double smoothingFactor = 0.6; // Adjust this factor (between 0 and 1) for the desired smoothing effect
                                 // Apply smoothing factor using exponential moving average
-                                this->m_scrollOffset = (customRound(0.10 * std::chrono::duration_cast<std::chrono::milliseconds>((t - this->timeIn) - 2000ms).count() * 10000.0) / 10000.0);
+                                this->m_scrollOffset = this->m_scrollOffset*(1.0-0.6) + 0.6*(customRound(0.10 * std::chrono::duration_cast<std::chrono::milliseconds>((t) - 2000ms).count() * 10000.0) / 10000.0);
+                                //this->m_scrollOffset = (customRound(0.10 * std::chrono::duration_cast<std::chrono::milliseconds>((t) - 2000ms).count() * 10000.0) / 10000.0);
                             }
                         } // CUSTOM MODIFICATION END
                     } else {
