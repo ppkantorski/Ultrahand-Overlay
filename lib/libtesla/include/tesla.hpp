@@ -66,7 +66,8 @@
 #include "../../../source/get_funcs.hpp"
 #include "../../../source/string_funcs.hpp"
 #include "../../../source/ini_funcs.hpp"
-
+#include "../../../common/half.hpp"
+using half_float::half;
 
 /**
  * @brief Shutdown modes for the Ultrahand-Overlay project.
@@ -3466,24 +3467,18 @@ namespace tsl {
                 if (this->m_trunctuated) {
                     if (this->m_focused) {
                         renderer->enableScissoring(this->getX(), this->getY(), this->m_maxWidth + 40, this->getHeight());
+                        //renderer->drawString(this->m_scrollText.c_str(), false, this->getX() + 20.0 - std::round(this->m_scrollOffset*10000.0)/10000.0, this->getY() + 45, 23, defaultTextColor);
                         renderer->drawString(this->m_scrollText.c_str(), false, this->getX() + 20.0 - this->m_scrollOffset, this->getY() + 45, 23, defaultTextColor);
                         renderer->disableScissoring();
-                        t = std::chrono::system_clock::now() - this->timeIn;
-                        if ((t) >= 2000ms) {
+                        t = std::chrono::system_clock::now() - this->timeIn - 2000ms;
+                        if (t >= 0ms) {
                             if (this->m_scrollOffset >= this->m_textWidth) {
                                 this->m_scrollOffset = 0;
                                 this->m_scrollAnimationCounter = 0;
                                 this->timeIn = std::chrono::system_clock::now();
                             } else {
                                 // Calculate the increment based on the desired scroll rate
-                                // This formula depends on the rate you want (e.g., pixels per second)
-                                //float scrollRate = 0.1; // Adjust this value for your desired rate
-                                //auto elapsedMilliseconds = std::chrono::duration_cast<std::chrono::milliseconds>((std::chrono::system_clock::now() - this->timeIn)-2000ms).count();
-                                //float scrollIncrement = scrollRate * elapsedMilliseconds;
-                                //this->m_scrollOffset = scrollIncrement;
-                                //double smoothingFactor = 0.6; // Adjust this factor (between 0 and 1) for the desired smoothing effect
-                                // Apply smoothing factor using exponential moving average
-                                this->m_scrollOffset = (1.0-0.2) * this->m_scrollOffset + 0.2 * (0.10 * std::chrono::duration_cast<std::chrono::milliseconds>((std::chrono::system_clock::now() - this->timeIn) - 2000ms).count());
+                                this->m_scrollOffset = (1.0-0.4) * this->m_scrollOffset + 0.4 * (0.1 * std::chrono::duration_cast<std::chrono::milliseconds>(t).count());
                                 //this->m_scrollOffset = (customRound(0.10 * std::chrono::duration_cast<std::chrono::milliseconds>((t) - 2000ms).count() * 10000.0) / 10000.0);
                             }
                         } // CUSTOM MODIFICATION END
@@ -3607,7 +3602,7 @@ namespace tsl {
             bool m_touched = false;
 
             u16 m_maxScroll = 0;
-            float m_scrollOffset = 0;
+            half m_scrollOffset = half(0.0);
             u32 m_maxWidth = 0;
             u32 m_textWidth = 0;
             u16 m_scrollAnimationCounter = 0;
