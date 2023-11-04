@@ -2151,6 +2151,9 @@ namespace tsl {
             
             Color highlightColor1 = RGB888(highlightColor1Str, "#2288CC");
             Color highlightColor2 = RGB888(highlightColor2Str, "#88FFFF");
+            Color highlightColor = a({0xf,0xf,0xf,0xf});
+            std::chrono::duration<long int, std::ratio<1, 1000000000>> t;
+            //double timeCounter;
             
             /**
              * @brief Handles focus requesting
@@ -2231,21 +2234,16 @@ namespace tsl {
              * @param renderer
              */
             void frame(gfx::Renderer *renderer) {
-                renderer->enableScissoring(0, 0, tsl::cfg::FramebufferWidth, tsl::cfg::FramebufferHeight);
+                
 
-                if (this->m_focused)
+                if (this->m_focused) {
+                    renderer->enableScissoring(0, 97, tsl::cfg::FramebufferWidth, tsl::cfg::FramebufferHeight-73-97);
                     this->drawFocusBackground(renderer);
-
-                renderer->disableScissoring();
-
-                this->draw(renderer);
-
-                renderer->enableScissoring(0, 0, tsl::cfg::FramebufferWidth, tsl::cfg::FramebufferHeight);
-
-                if (this->m_focused)
                     this->drawHighlight(renderer);
-
-                renderer->disableScissoring();
+                    renderer->disableScissoring();
+                }
+                
+                this->draw(renderer);
             }
 
             /**
@@ -2310,7 +2308,7 @@ namespace tsl {
              * @param renderer Renderer
              */
             virtual void drawFocusBackground(gfx::Renderer *renderer) {
-                //renderer->drawRect(ELEMENT_BOUNDS(this), a(0xF000));
+                //renderer->drawRect(ELEMENT_BOUNDS(this), a(0xF000)); // CUSTOM MODIFICATION 
 
                 if (this->m_clickAnimationProgress > 0) {
                     this->drawClickAnimation(renderer);
@@ -2333,15 +2331,13 @@ namespace tsl {
                 
                 
                 // Get the current time
-                auto currentTime = std::chrono::system_clock::now();
-                auto timeInSeconds = std::chrono::duration<double>(currentTime.time_since_epoch()).count();
-
+                
                 // Calculate the progress for one full sine wave per second
-                const double cycleDuration = 1.0;  // 1 second for one full sine wave
-                double timeCounter = fmod(timeInSeconds, cycleDuration);
-                float progress = (std::sin(2 * M_PI * timeCounter / cycleDuration) + 1) / 2;
+                //const double cycleDuration = 1.0;  // 1 second for one full sine wave
+                //double timeCounter = 
+                half progress = half((std::sin(2.0 * M_PI * fmod(std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count(), 1.0)) + 1.0) / 2.0);
 
-                Color highlightColor = {
+                highlightColor = {
                     static_cast<u8>((highlightColor1.r - highlightColor2.r) * progress + highlightColor2.r),
                     static_cast<u8>((highlightColor1.g - highlightColor2.g) * progress + highlightColor2.g),
                     static_cast<u8>((highlightColor1.b - highlightColor2.b) * progress + highlightColor2.b),
@@ -2350,7 +2346,7 @@ namespace tsl {
                 s32 x = 0, y = 0;
 
                 if (this->m_highlightShaking) {
-                    auto t = (std::chrono::system_clock::now() - this->m_highlightShakingStartTime);
+                    t = (std::chrono::system_clock::now() - this->m_highlightShakingStartTime);
                     if (t >= 100ms)
                         this->m_highlightShaking = false;
                     else {
@@ -2382,7 +2378,8 @@ namespace tsl {
                 renderer->drawRect(this->getX() + x - 4, this->getY() + y + this->getHeight(), this->getWidth() + 8, 4, a(highlightColor));
                 renderer->drawRect(this->getX() + x - 4, this->getY() + y, 4, this->getHeight(), a(highlightColor));
                 renderer->drawRect(this->getX() + x + this->getWidth(), this->getY() + y, 4, this->getHeight(), a(highlightColor));
-
+                
+                //renderer->drawRect(ELEMENT_BOUNDS(this), a(0xF000)); // This has been moved here (needs to be toggleable)
             }
             
             
@@ -2558,7 +2555,7 @@ namespace tsl {
                 // Lookup the width of the current character
                 float letterWidth = characterWidths[letter];
                 if (letterWidth == 0) {
-                    letterWidth = 0.33;
+                    letterWidth = 0.33; // default width
                 }
                 
                 // Accumulate the width
@@ -2609,7 +2606,16 @@ namespace tsl {
             tsl::Color clockColor = RGB888(clockColorStr);
             std::string batteryColorStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "battery_color");
             tsl::Color batteryColor = RGB888(batteryColorStr);
-            
+            tsl::Color highlightColor = {0xF, 0xF, 0xF, 0xF};
+            std::string firstHalf, secondHalf;
+            const double cycleDuration = 1.5;
+            float counter = 0;
+            float countOffset;
+            double timeInSeconds;
+            float progress;
+            float letterWidth;
+            float x, y;
+            int fontSize;
             
             OverlayFrame(const std::string& title, const std::string& subtitle, const std::string& menuMode = "", const std::string& colorSelection = "", const std::string& pageLeftName = "", const std::string& pageRightName = "")
                 : Element(), m_menuMode(menuMode), m_title(title), m_subtitle(subtitle), m_colorSelection(colorSelection), m_pageLeftName(pageLeftName), m_pageRightName(pageRightName) {} // CUSTOM MODIFICATION
@@ -2624,41 +2630,36 @@ namespace tsl {
                 renderer->fillScreen(a(tsl::style::color::ColorFrameBackground));
                 //renderer->drawRect(tsl::cfg::FramebufferWidth - 1, 0, 1, tsl::cfg::FramebufferHeight, a(0xF222)); // CUSTOM MODIFICATION, not sure why this call was even necessary after comparisons.
                 
-                int y = 50;
+                y = 50;
                 int offset = 0;
                 // Check if m_title is "Ultrahand"
                 if (this->m_title == "Ultrahand" && this->m_subtitle != "Ultrahand Package" && this->m_subtitle != "Ultrahand Script") {
-                    static float counter = 0;
-                    std::string firstHalf = "Ultra";
-                    std::string secondHalf = "hand";
+                    firstHalf = "Ultra";
+                    secondHalf = "hand";
                     
-                    float x = 20;
-                    int fontSize = 42;
+                    x = 20;
+                    fontSize = 42;
                     offset = 6;
                     
                     // Draw the first half of the string in white color
-                    static Color highlightColor = {0xF, 0xF, 0xF, 0xF};
-                    static float progress;
-                    float letterWidth;
+                    //static Color highlightColor = {0xF, 0xF, 0xF, 0xF};
                     
                     
                     // Get the current time
-                    static double timeInSeconds;
+                    //static double timeInSeconds;
                     
                     // Calculate the progress for one full sine wave per second
-                    const double cycleDuration = 1.5;  // for one full sine wave
-                    static double timeCounter;// = fmod(timeInSeconds, cycleDuration);
+                    //const double cycleDuration = 1.5;  // for one full sine wave
+                    //static double timeCounter;// = fmod(timeInSeconds, cycleDuration);
                     //float progress = calculateAmplitude(2 * M_PI * timeCounter / cycleDuration);
                     
                     
-                    float countOffset = 0;
+                    countOffset = 0;
                     
                     for (char letter : firstHalf) {
                         // Calculate the progress for each letter based on the counter
                         //progress = calculateAmplitude(counter - x * 0.001F);
-                        timeInSeconds = std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count();
-                        timeCounter = fmod(timeInSeconds, cycleDuration);
-                        counter = (2 * M_PI * (timeCounter + countOffset) / cycleDuration);
+                        counter = (2 * M_PI * (fmod(std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count(), cycleDuration) + countOffset) / 1.5);
                         //progress = calculateAmplitude(counter);
                         progress = (std::sin(counter) + 1) / 2;
                         
@@ -2864,10 +2865,11 @@ namespace tsl {
                 }
                 
                 //if (this->m_title != "Ultrahand")
-                if (this->m_title == "Ultrahand")
+                if (this->m_title == "Ultrahand") {
                     renderer->drawString(versionLabel.c_str(), false, 20, y+20+offset, 15, a(tsl::style::color::ColorDescription));
-                else
+                } else
                     renderer->drawString(this->m_subtitle.c_str(), false, 20, y+20+offset, 15, a(tsl::style::color::ColorDescription));
+                
                 renderer->drawRect(15, tsl::cfg::FramebufferHeight - 73, tsl::cfg::FramebufferWidth - 30, 1, a(defaultTextColor));
                 
                 std::string menuBottomLine = "\uE0E1"+GAP_2+BACK+GAP_1+"\uE0E0"+GAP_2+OK+GAP_1;
@@ -3466,10 +3468,10 @@ namespace tsl {
 
                 if (this->m_trunctuated) {
                     if (this->m_focused) {
-                        renderer->enableScissoring(this->getX(), this->getY(), this->m_maxWidth + 40, this->getHeight());
+                        //renderer->enableScissoring(this->getX(), this->getY(), this->m_maxWidth + 40, this->getHeight());
                         //renderer->drawString(this->m_scrollText.c_str(), false, this->getX() + 20.0 - std::round(this->m_scrollOffset*10000.0)/10000.0, this->getY() + 45, 23, defaultTextColor);
                         renderer->drawString(this->m_scrollText.c_str(), false, this->getX() + 20.0 - this->m_scrollOffset, this->getY() + 45, 23, defaultTextColor);
-                        renderer->disableScissoring();
+                        //renderer->disableScissoring();
                         t = std::chrono::system_clock::now() - this->timeIn;
                         if (t >= 2000ms) {
                             if (this->m_scrollOffset >= this->m_textWidth) {
@@ -3742,6 +3744,9 @@ namespace tsl {
             tsl::Color defaultTextColor = RGB888(defaultTextColorStr);
             std::string trackBarColorStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "trackbar_color");
             Color trackBarColor = RGB888(trackBarColorStr, "#555555");
+            std::chrono::duration<long int, std::ratio<1, 1000000000>> t;
+            Color highlightColor = a({0xf,0xf,0xf,0xf});
+            half progress;
             
             /**
              * @brief Constructor
@@ -3816,7 +3821,7 @@ namespace tsl {
 
                 renderer->drawString(this->m_icon, false, this->getX() + 15, this->getY() + 50, 23, a(defaultTextColor));
 
-                u16 handlePos = (this->getWidth() - 95) * static_cast<float>(this->m_value) / 100;
+                u16 handlePos = (this->getWidth() - 95) * static_cast<half>(this->m_value) / 100;
                 renderer->drawCircle(this->getX() + 60, this->getY() + 42, 2, true, a(tsl::style::color::ColorHighlight));
                 renderer->drawCircle(this->getX() + 60 + this->getWidth() - 95, this->getY() + 42, 2, true, a(tsl::style::color::ColorFrame));
                 renderer->drawRect(this->getX() + 60 + handlePos, this->getY() + 40, this->getWidth() - 95 - handlePos, 5, a(tsl::style::color::ColorFrame));
@@ -3835,22 +3840,22 @@ namespace tsl {
             }
 
             virtual void drawHighlight(gfx::Renderer *renderer) override {
-                static float counter = 0;
-                const float progress = (std::sin(counter) + 1) / 2;
-                Color highlightColor = {   static_cast<u8>((0x2 - 0x8) * progress + 0x8),
-                                                static_cast<u8>((0x8 - 0xF) * progress + 0xF),
-                                                static_cast<u8>((0xC - 0xF) * progress + 0xF),
-                                                static_cast<u8>((0x6 - 0xD) * progress + 0xD) };
+                static half counter = half(0);
+                progress = half((std::sin(counter) + 1.0) / 2.0);
+                highlightColor = {   static_cast<u8>((0x2 - 0x8) * progress + 0x8),
+                                     static_cast<u8>((0x8 - 0xF) * progress + 0xF),
+                                     static_cast<u8>((0xC - 0xF) * progress + 0xF),
+                                     static_cast<u8>((0x6 - 0xD) * progress + 0xD) };
 
-                counter += 0.1F;
+                counter += half(0.1F);
 
-                u16 handlePos = (this->getWidth() - 95) * static_cast<float>(this->m_value) / 100;
+                u16 handlePos = (this->getWidth() - 95) * static_cast<half>(this->m_value) / 100;
 
                 s32 x = 0;
                 s32 y = 0;
 
                 if (Element::m_highlightShaking) {
-                    auto t = (std::chrono::system_clock::now() - Element::m_highlightShakingStartTime);
+                    t = (std::chrono::system_clock::now() - Element::m_highlightShakingStartTime);
                     if (t >= 100ms)
                         Element::m_highlightShaking = false;
                     else {
