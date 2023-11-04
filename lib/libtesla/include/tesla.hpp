@@ -2535,7 +2535,7 @@ namespace tsl {
                 //this->m_renderFunc(renderer, ELEMENT_BOUNDS(this));
                 //renderer->disableScissoring();
                 
-                renderer->enableScissoring(0, 97, tsl::cfg::FramebufferWidth, tsl::cfg::FramebufferHeight-73-97);
+                renderer->enableScissoring(0, 97, tsl::cfg::FramebufferWidth, tsl::cfg::FramebufferHeight-73-97); // CUSTOM MODIFICATION (bug fix with renderer)
                 this->m_renderFunc(renderer, ELEMENT_BOUNDS(this));
                 renderer->disableScissoring();
             }
@@ -3472,10 +3472,11 @@ namespace tsl {
 
                 if (this->m_trunctuated) {
                     if (this->m_focused) {
+                        renderer->enableScissoring(this->getX(), 97, this->m_maxWidth + 40, tsl::cfg::FramebufferHeight-73-97);
                         //renderer->enableScissoring(this->getX(), this->getY(), this->m_maxWidth + 40, this->getHeight());
                         //renderer->drawString(this->m_scrollText.c_str(), false, this->getX() + 20.0 - std::round(this->m_scrollOffset*10000.0)/10000.0, this->getY() + 45, 23, defaultTextColor);
                         renderer->drawString(this->m_scrollText.c_str(), false, this->getX() + 20.0 - this->m_scrollOffset, this->getY() + 45, 23, defaultTextColor);
-                        //renderer->disableScissoring();
+                        renderer->disableScissoring();
                         t = std::chrono::system_clock::now() - this->timeIn;
                         if (t >= 2000ms) {
                             if (this->m_scrollOffset >= this->m_textWidth) {
