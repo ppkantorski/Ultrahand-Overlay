@@ -2537,6 +2537,7 @@ public:
                     hidePackageVersions = "false";
                 }
                 
+                
                 if (ultrahandSection.count("last_menu") > 0) {
                     menuMode = ultrahandSection["last_menu"];
                     if (ultrahandSection.count("default_menu") > 0) {
@@ -2562,6 +2563,13 @@ public:
                     setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_pcb_temp", "true");
                 if (ultrahandSection.count("hide_soc_temp") == 0)
                     setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_soc_temp", "true");
+                
+                if (ultrahandSection.count("disable_selection_bg") == 0)
+                    setIniFileValue(settingsConfigIniPath, "ultrahand", "disable_selection_bg", "true");
+                
+                // For disabling colorful logo
+                if (ultrahandSection.count("disable_colorful_logo") == 0)
+                    setIniFileValue(settingsConfigIniPath, "ultrahand", "disable_colorful_logo", "false");
                 
                 //if (ultrahandSection.count("in_overlay") > 0) {
                 //    inOverlayString = ultrahandSection["in_overlay"];
