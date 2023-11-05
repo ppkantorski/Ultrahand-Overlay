@@ -392,7 +392,7 @@ public:
             
             
             for (const auto& defaultLangMode : defaultLanguages) {
-                std::string langFile = "/config/ultrahand/lang/"+defaultLangMode+".json";
+                std::string langFile = langPath+defaultLangMode+".json";
                 bool skipLang = (!isFileOrDirectory(langFile));
                 if (defaultLangMode != "en") {
                     if (skipLang)
@@ -468,10 +468,10 @@ public:
                     else
                         languageDownloaded = downloadFile(ultrahandRepo+"releases/download/v"+languagesVersion+"/lang.zip", downloadsPath);
                     if (languageDownloaded) {
-                        unzipFile(downloadsPath+"lang.zip", downloadsPath+"lang/");
+                        unzipFile(downloadsPath+"lang.zip", langPath);
                         deleteFileOrDirectory(downloadsPath+"lang.zip");
-                        deleteFileOrDirectory(settingsPath+"lang/");
-                        moveFileOrDirectory(downloadsPath+"lang/", settingsPath+"lang/");
+                        deleteFileOrDirectory(langPath);
+                        moveFileOrDirectory(downloadsPath+"lang/", langPath);
                         listItem->setValue(CHECKMARK_SYMBOL);
                     } else
                         listItem->setValue(CROSSMARK_SYMBOL, false);
