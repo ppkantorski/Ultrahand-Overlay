@@ -468,10 +468,9 @@ public:
                     else
                         languageDownloaded = downloadFile(ultrahandRepo+"releases/download/v"+languagesVersion+"/lang.zip", downloadsPath);
                     if (languageDownloaded) {
-                        unzipFile(downloadsPath+"lang.zip", langPath);
+                        unzipFile(downloadsPath+"lang.zip", downloadsPath+"lang/");
                         deleteFileOrDirectory(downloadsPath+"lang.zip");
                         deleteFileOrDirectory(langPath);
-                        createDirectory(langPath);
                         moveFileOrDirectory(downloadsPath+"lang/", langPath);
                         listItem->setValue(CHECKMARK_SYMBOL);
                     } else
