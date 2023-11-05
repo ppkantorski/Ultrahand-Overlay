@@ -26,6 +26,8 @@
     "SOFTWARE_UPDATE": "Обновление",
     "UPDATE_ULTRAHAND": "Обновить Ultrahand",
     "UPDATE_LANGUAGES": "Обновить локализацию",
+    "THEME": "Theme",
+    "DEFAULT": "default",
     "ROOT_PACKAGE": "Корневой пакет",
     "SORT_PRIORITY": "Приоритет сортировки",
     "FAILED_TO_OPEN": "Не удалось открыть",
