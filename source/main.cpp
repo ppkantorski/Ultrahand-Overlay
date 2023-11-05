@@ -471,6 +471,7 @@ public:
                         unzipFile(downloadsPath+"lang.zip", langPath);
                         deleteFileOrDirectory(downloadsPath+"lang.zip");
                         deleteFileOrDirectory(langPath);
+                        createDirectory(langPath);
                         moveFileOrDirectory(downloadsPath+"lang/", langPath);
                         listItem->setValue(CHECKMARK_SYMBOL);
                     } else
