@@ -26,6 +26,8 @@
     "SOFTWARE_UPDATE": "Software-Aktualisierung",
     "UPDATE_ULTRAHAND": "Update Ultrahand",
     "UPDATE_LANGUAGES": "Update Languages",
+    "THEME": "Theme",
+    "DEFAULT": "default",
     "ROOT_PACKAGE": "Stamm-Paket",
     "SORT_PRIORITY": "Sortierpriorität",
     "FAILED_TO_OPEN": "Konnte Datei nicht öffnen",
