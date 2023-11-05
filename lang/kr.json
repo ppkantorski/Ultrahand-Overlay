@@ -26,6 +26,8 @@
     "SOFTWARE_UPDATE": "소프트웨어 업데이트",
     "UPDATE_ULTRAHAND": "업데이트 Ultrahand",
     "UPDATE_LANGUAGES": "언어 업데이트",
+    "THEME": "Theme",
+    "DEFAULT": "default",
     "ROOT_PACKAGE": "루트 패키지",
     "SORT_PRIORITY": "우선순위 정렬",
     "FAILED_TO_OPEN": "파일 열기 실패",
