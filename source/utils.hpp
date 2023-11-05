@@ -63,12 +63,68 @@ static const std::string configFileName = "config.ini";
 static const std::string settingsPath = "sdmc:/config/ultrahand/";
 static const std::string settingsConfigIniPath = settingsPath + configFileName;
 static const std::string themeConfigIniPath = settingsPath + "theme.ini";
+static const std::string themesPath = "sdmc:/config/ultrahand/themes/";
+static const std::string downloadsPath = "sdmc:/config/ultrahand/downloads/";
 static const std::string packageDirectory = "sdmc:/switch/.packages/";
 static const std::string overlayDirectory = "sdmc:/switch/.overlays/";
 static const std::string teslaSettingsConfigIniPath = "sdmc:/config/tesla/"+configFileName;
 static const std::string overlaysIniFilePath = settingsPath + "overlays.ini";
 static const std::string packagesIniFilePath = settingsPath + "packages.ini";
 static const std::string ultrahandRepo = "https://github.com/ppkantorski/Ultrahand-Overlay/";
+
+
+
+
+
+void initializeTheme(std::string themeIniPath = themeConfigIniPath) {
+    tsl::hlp::ini::IniData themesData;
+    
+    // write default theme
+    if (isFileOrDirectory(themeIniPath)) {
+        themesData = getParsedDataFromIniFile(themeIniPath);
+        if (themesData.count("theme") > 0) {
+            auto& themedSection = themesData["theme"];
+            
+            if (themedSection.count("clock_color") == 0)
+                setIniFileValue(themeIniPath, "theme", "clock_color", "#FFFFFF");
+            
+            if (themedSection.count("battery_color") == 0)
+                setIniFileValue(themeIniPath, "theme", "battery_color", "#FFFFFF");
+            
+            if (themedSection.count("text_color") == 0)
+                setIniFileValue(themeIniPath, "theme", "text_color", "#FFFFFF");
+            
+            if (themedSection.count("selected_text_color") == 0)
+                setIniFileValue(themeIniPath, "theme", "selected_text_color", "#FFFFFF");
+            
+            if (themedSection.count("trackbar_color") == 0)
+                setIniFileValue(themeIniPath, "theme", "trackbar_color", "#555555");
+            
+            if (themedSection.count("highlight_color_1") == 0)
+                setIniFileValue(themeIniPath, "theme", "highlight_color_1", "#2288CC");
+            
+            if (themedSection.count("highlight_color_2") == 0)
+                setIniFileValue(themeIniPath, "theme", "highlight_color_2", "#88FFFF");
+            
+        } else {
+            setIniFileValue(themeIniPath, "theme", "clock_color", "#FFFFFF");
+            setIniFileValue(themeIniPath, "theme", "battery_color", "#FFFFFF");
+            setIniFileValue(themeIniPath, "theme", "text_color", "#FFFFFF");
+            setIniFileValue(themeIniPath, "theme", "selected_text_color", "#FFFFFF");
+            setIniFileValue(themeIniPath, "theme", "trackbar_color", "#555555");
+            setIniFileValue(themeIniPath, "theme", "highlight_color_1", "#2288CC");
+            setIniFileValue(themeIniPath, "theme", "highlight_color_2", "#88FFFF");
+        }
+    } else {
+        setIniFileValue(themeIniPath, "theme", "clock_color", "#FFFFFF");
+        setIniFileValue(themeIniPath, "theme", "battery_color", "#FFFFFF");
+        setIniFileValue(themeIniPath, "theme", "text_color", "#FFFFFF");
+        setIniFileValue(themeIniPath, "theme", "selected_text_color", "#FFFFFF");
+        setIniFileValue(themeIniPath, "theme", "trackbar_color", "#555555");
+        setIniFileValue(themeIniPath, "theme", "highlight_color_1", "#2288CC");
+        setIniFileValue(themeIniPath, "theme", "highlight_color_2", "#88FFFF");
+    }
+}
 
 
 
