@@ -80,6 +80,7 @@ static const std::string ultrahandRepo = "https://github.com/ppkantorski/Ultraha
 
 void initializeTheme(std::string themeIniPath = themeConfigIniPath) {
     tsl::hlp::ini::IniData themesData;
+    bool initialize = false;
     
     // write default theme
     if (isFileOrDirectory(themeIniPath)) {
@@ -96,8 +97,11 @@ void initializeTheme(std::string themeIniPath = themeConfigIniPath) {
             if (themedSection.count("text_color") == 0)
                 setIniFileValue(themeIniPath, "theme", "text_color", "#FFFFFF");
             
-            if (themedSection.count("selected_text_color") == 0)
-                setIniFileValue(themeIniPath, "theme", "selected_text_color", "#FFFFFF");
+            if (themedSection.count("selection_text_color") == 0)
+                setIniFileValue(themeIniPath, "theme", "selection_text_color", "#FFFFFF");
+            
+            if (themedSection.count("selection_bg_color") == 0)
+                setIniFileValue(themeIniPath, "theme", "selection_bg_color", "#000000");
             
             if (themedSection.count("trackbar_color") == 0)
                 setIniFileValue(themeIniPath, "theme", "trackbar_color", "#555555");
@@ -109,19 +113,18 @@ void initializeTheme(std::string themeIniPath = themeConfigIniPath) {
                 setIniFileValue(themeIniPath, "theme", "highlight_color_2", "#88FFFF");
             
         } else {
-            setIniFileValue(themeIniPath, "theme", "clock_color", "#FFFFFF");
-            setIniFileValue(themeIniPath, "theme", "battery_color", "#FFFFFF");
-            setIniFileValue(themeIniPath, "theme", "text_color", "#FFFFFF");
-            setIniFileValue(themeIniPath, "theme", "selected_text_color", "#FFFFFF");
-            setIniFileValue(themeIniPath, "theme", "trackbar_color", "#555555");
-            setIniFileValue(themeIniPath, "theme", "highlight_color_1", "#2288CC");
-            setIniFileValue(themeIniPath, "theme", "highlight_color_2", "#88FFFF");
+            initialize = true;
         }
     } else {
+        initialize = true;
+    }
+    
+    if (initialize) {
         setIniFileValue(themeIniPath, "theme", "clock_color", "#FFFFFF");
         setIniFileValue(themeIniPath, "theme", "battery_color", "#FFFFFF");
         setIniFileValue(themeIniPath, "theme", "text_color", "#FFFFFF");
-        setIniFileValue(themeIniPath, "theme", "selected_text_color", "#FFFFFF");
+        setIniFileValue(themeIniPath, "theme", "selection_text_color", "#FFFFFF");
+        setIniFileValue(themeIniPath, "theme", "selection_bg_color", "#000000");
         setIniFileValue(themeIniPath, "theme", "trackbar_color", "#555555");
         setIniFileValue(themeIniPath, "theme", "highlight_color_1", "#2288CC");
         setIniFileValue(themeIniPath, "theme", "highlight_color_2", "#88FFFF");
