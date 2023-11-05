@@ -26,6 +26,8 @@
     "SOFTWARE_UPDATE": "Software-update",
     "UPDATE_ULTRAHAND": "Bijwerken Ultrahand",
     "UPDATE_LANGUAGES": "Bijwerken Talen",
+    "THEME": "Theme",
+    "DEFAULT": "default",
     "ROOT_PACKAGE": "Hoofdpakket",
     "SORT_PRIORITY": "Sorteer prioriteit",
     "FAILED_TO_OPEN": "Kon bestand niet openen",
