@@ -60,15 +60,86 @@ Payload::PayloadConfigList const payload_config_list;
 static const std::string bootPackageFileName = "boot_package.ini";
 static const std::string packageFileName = "package.ini";
 static const std::string configFileName = "config.ini";
+static const std::string themeFileName = "theme.ini";
 static const std::string settingsPath = "sdmc:/config/ultrahand/";
 static const std::string settingsConfigIniPath = settingsPath + configFileName;
-static const std::string themeConfigIniPath = settingsPath + "theme.ini";
+static const std::string langPath = settingsPath+"lang/";
+static const std::string themeConfigIniPath = settingsPath + themeFileName;
+static const std::string themesPath = settingsPath+"themes/";
+static const std::string downloadsPath = settingsPath+"downloads/";
 static const std::string packageDirectory = "sdmc:/switch/.packages/";
 static const std::string overlayDirectory = "sdmc:/switch/.overlays/";
 static const std::string teslaSettingsConfigIniPath = "sdmc:/config/tesla/"+configFileName;
 static const std::string overlaysIniFilePath = settingsPath + "overlays.ini";
 static const std::string packagesIniFilePath = settingsPath + "packages.ini";
 static const std::string ultrahandRepo = "https://github.com/ppkantorski/Ultrahand-Overlay/";
+
+
+
+
+
+void initializeTheme(std::string themeIniPath = themeConfigIniPath) {
+    tsl::hlp::ini::IniData themesData;
+    bool initialize = false;
+    
+    // write default theme
+    if (isFileOrDirectory(themeIniPath)) {
+        themesData = getParsedDataFromIniFile(themeIniPath);
+        if (themesData.count("theme") > 0) {
+            auto& themedSection = themesData["theme"];
+            
+            if (themedSection.count("clock_color") == 0)
+                setIniFileValue(themeIniPath, "theme", "clock_color", "#FFFFFF");
+            
+            if (themedSection.count("battery_color") == 0)
+                setIniFileValue(themeIniPath, "theme", "battery_color", "#FFFFFF");
+            
+            if (themedSection.count("text_color") == 0)
+                setIniFileValue(themeIniPath, "theme", "text_color", "#FFFFFF");
+            
+            if (themedSection.count("selection_text_color") == 0)
+                setIniFileValue(themeIniPath, "theme", "selection_text_color", "#FFFFFF");
+            
+            if (themedSection.count("selection_bg_color") == 0)
+                setIniFileValue(themeIniPath, "theme", "selection_bg_color", "#000000");
+            
+            if (themedSection.count("trackbar_color") == 0)
+                setIniFileValue(themeIniPath, "theme", "trackbar_color", "#555555");
+            
+            if (themedSection.count("highlight_color_1") == 0)
+                setIniFileValue(themeIniPath, "theme", "highlight_color_1", "#2288CC");
+            
+            if (themedSection.count("highlight_color_2") == 0)
+                setIniFileValue(themeIniPath, "theme", "highlight_color_2", "#88FFFF");
+            
+            if (themedSection.count("disable_selection_bg") == 0)
+                setIniFileValue(themeIniPath, "theme", "disable_selection_bg", "true");
+            
+            // For disabling colorful logo
+            if (themedSection.count("disable_colorful_logo") == 0)
+                setIniFileValue(themeIniPath, "theme", "disable_colorful_logo", "false");
+            
+        } else {
+            initialize = true;
+        }
+    } else {
+        initialize = true;
+    }
+    
+    if (initialize) {
+        setIniFileValue(themeIniPath, "theme", "clock_color", "#FFFFFF");
+        setIniFileValue(themeIniPath, "theme", "battery_color", "#FFFFFF");
+        setIniFileValue(themeIniPath, "theme", "text_color", "#FFFFFF");
+        setIniFileValue(themeIniPath, "theme", "selection_text_color", "#FFFFFF");
+        setIniFileValue(themeIniPath, "theme", "selection_bg_color", "#000000");
+        setIniFileValue(themeIniPath, "theme", "trackbar_color", "#555555");
+        setIniFileValue(themeIniPath, "theme", "highlight_color_1", "#2288CC");
+        setIniFileValue(themeIniPath, "theme", "highlight_color_2", "#88FFFF");
+        setIniFileValue(themeIniPath, "theme", "disable_selection_bg", "true");
+        setIniFileValue(themeIniPath, "theme", "disable_colorful_logo", "false");
+        
+    }
+}
 
 
 

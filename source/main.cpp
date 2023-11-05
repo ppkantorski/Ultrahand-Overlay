@@ -115,17 +115,20 @@ private:
     
     int MAX_PRIORITY = 20;
     
-    std::vector<std::string> defaultCombos = {"ZL+ZR+DDOWN", "ZL+ZR+DRIGHT", "ZL+ZR+DUP", "ZL+ZR+DLEFT", "L+R+DDOWN", "L+R+DRIGHT", "L+R+DUP", "L+R+DLEFT", "L+DDOWN+RS"};
+    std::vector<std::string> defaultCombos = {"ZL+ZR+DDOWN", "ZL+ZR+DRIGHT", "ZL+ZR+DUP", "ZL+ZR+DLEFT", "ZL+ZR+PLUS", "L+R+DDOWN", "L+R+DRIGHT", "L+R+DUP", "L+R+DLEFT", "L+R+PLUS", "L+DDOWN+RS", "PLUS+MINUS"};
     std::unordered_map<std::string, std::string> comboMap = {
         {"ZL+ZR+DDOWN", "\uE0E6+\uE0E7+\uE0EC"},
         {"ZL+ZR+DRIGHT", "\uE0E6+\uE0E7+\uE0EE"},
         {"ZL+ZR+DUP", "\uE0E6+\uE0E7+\uE0EB"},
         {"ZL+ZR+DLEFT", "\uE0E6+\uE0E7+\uE0ED"},
+        {"ZL+ZR+PLUS", "\uE0E6+\uE0E7+\uE0B5"},
         {"L+R+DDOWN", "\uE0E4+\uE0E5+\uE0EC"},
         {"L+R+DRIGHT", "\uE0E4+\uE0E5+\uE0EE"},
         {"L+R+DUP", "\uE0E4+\uE0E5+\uE0EB"},
         {"L+R+DLEFT", "\uE0E4+\uE0E5+\uE0ED"},
-        {"L+DDOWN+RS", "\uE0E4+\uE0EC+\uE0C5"}
+        {"L+R+PLUS", "\uE0E4+\uE0E5+\uE0B5"},
+        {"L+DDOWN+RS", "\uE0E4+\uE0EC+\uE0C5"},
+        {"PLUS+MINUS", "\uE0B5+\uE0B6"}
     };
     std::vector<std::string> defaultLanguages = {"en", "es", "fr", "de", "ja", "kr", "it", "nl", "pt", "ru", "zh-cn", "zh-tw"};
 public:
@@ -172,7 +175,7 @@ public:
             
             std::string fileContent = getFileContents(settingsConfigIniPath);
             
-            std::string defaultLang = parseValueFromIniSection(settingsConfigIniPath, "ultrahand", "default_lang");
+            std::string defaultLang = parseValueFromIniSection(settingsConfigIniPath, "ultrahand", "current_lang");
             std::string defaultMenu = parseValueFromIniSection(settingsConfigIniPath, "ultrahand", "default_menu");
             std::string keyCombo = trim(parseValueFromIniSection(settingsConfigIniPath, "ultrahand", "key_combo"));
             
@@ -260,6 +263,24 @@ public:
             
             list->addItem(new tsl::elm::CategoryHeader(UI_SETTINGS));
             
+            
+            std::string currentTheme = parseValueFromIniSection(settingsConfigIniPath, "ultrahand", "current_theme");
+            if (currentTheme.empty() || currentTheme == "default")
+                currentTheme = DEFAULT;
+            listItem = new tsl::elm::ListItem(THEME);
+            listItem->setValue(currentTheme);
+            
+            // Envolke selectionOverlay in optionMode
+            
+            listItem->setClickListener([this, listItem](uint64_t keys) { // Add 'command' to the capture list
+                if (keys & KEY_A) {
+                    tsl::changeTo<UltrahandSettingsMenu>("themeMenu");
+                    selectedListItem = listItem;
+                    return true;
+                }
+                return false;
+            });
+            list->addItem(listItem);
             
             
             listItem = new tsl::elm::ListItem(WIDGET);
@@ -366,12 +387,12 @@ public:
             
             list->addItem(new tsl::elm::CategoryHeader(LANGUAGE));
             
-            std::string defaulLang = parseValueFromIniSection(settingsConfigIniPath, "ultrahand", "default_lang");
+            std::string defaultLang = parseValueFromIniSection(settingsConfigIniPath, "ultrahand", "current_lang");
             
             
             
             for (const auto& defaultLangMode : defaultLanguages) {
-                std::string langFile = "/config/ultrahand/lang/"+defaultLangMode+".json";
+                std::string langFile = langPath+defaultLangMode+".json";
                 bool skipLang = (!isFileOrDirectory(langFile));
                 if (defaultLangMode != "en") {
                     if (skipLang)
@@ -379,15 +400,15 @@ public:
                 }
                 tsl::elm::ListItem* listItem = new tsl::elm::ListItem(defaultLangMode);
                 
-                if (defaultLangMode == defaulLang) {
+                if (defaultLangMode == defaultLang) {
                     listItem->setValue(CHECKMARK_SYMBOL);
                     lastSelectedListItem = listItem;
                 }
                 
-                listItem->setClickListener([this, skipLang, defaultLangMode, defaulLang, langFile, listItem](uint64_t keys) { // Add 'this', 'i', and 'listItem' to the capture list
+                listItem->setClickListener([this, skipLang, defaultLangMode, defaultLang, langFile, listItem](uint64_t keys) { // Add 'this', 'i', and 'listItem' to the capture list
                     if (keys & KEY_A) {
-                        //if (defaultLangMode != defaulLang) {
-                        setIniFileValue(settingsConfigIniPath, "ultrahand", "default_lang", defaultLangMode);
+                        //if (defaultLangMode != defaultLang) {
+                        setIniFileValue(settingsConfigIniPath, "ultrahand", "current_lang", defaultLangMode);
                         reloadMenu = true;
                         reloadMenu2 = true;
                         
@@ -419,10 +440,10 @@ public:
             
             listItem->setClickListener([this, listItem](uint64_t keys) { // Add 'command' to the capture list
                 if (keys & KEY_A) {
-                    deleteFileOrDirectory("/config/ultrahand/downloads/ovlmenu.ovl");
-                    isDownloaded = downloadFile(ultrahandRepo+"releases/latest/download/ovlmenu.ovl", "/config/ultrahand/downloads/");
+                    deleteFileOrDirectory(downloadsPath+"ovlmenu.ovl");
+                    isDownloaded = downloadFile(ultrahandRepo+"releases/latest/download/ovlmenu.ovl", downloadsPath);
                     if (isDownloaded) {
-                        moveFileOrDirectory("/config/ultrahand/downloads/ovlmenu.ovl", "/switch/.overlays/ovlmenu.ovl");
+                        moveFileOrDirectory(downloadsPath+"ovlmenu.ovl", "/switch/.overlays/ovlmenu.ovl");
                         listItem->setValue(CHECKMARK_SYMBOL);
                         languagesVersion = "latest";
                     } else
@@ -440,17 +461,17 @@ public:
             
             listItem->setClickListener([this, listItem](uint64_t keys) { // Add 'command' to the capture list
                 if (keys & KEY_A) {
-                    deleteFileOrDirectory("/config/ultrahand/downloads/ovlmenu.ovl");
+                    deleteFileOrDirectory(downloadsPath+"ovlmenu.ovl");
                     bool languageDownloaded = false;
                     if (languagesVersion == "latest")
-                        languageDownloaded = downloadFile(ultrahandRepo+"releases/latest/download/lang.zip", "/config/ultrahand/downloads/");
+                        languageDownloaded = downloadFile(ultrahandRepo+"releases/latest/download/lang.zip", downloadsPath);
                     else
-                        languageDownloaded = downloadFile(ultrahandRepo+"releases/download/v"+languagesVersion+"/lang.zip", "/config/ultrahand/downloads/");
+                        languageDownloaded = downloadFile(ultrahandRepo+"releases/download/v"+languagesVersion+"/lang.zip", downloadsPath);
                     if (languageDownloaded) {
-                        unzipFile("/config/ultrahand/downloads/lang.zip", "/config/ultrahand/downloads/lang/");
-                        deleteFileOrDirectory("/config/ultrahand/downloads/lang.zip");
-                        deleteFileOrDirectory("/config/ultrahand/lang/");
-                        moveFileOrDirectory("/config/ultrahand/downloads/lang/", "/config/ultrahand/lang/");
+                        unzipFile(downloadsPath+"lang.zip", langPath);
+                        deleteFileOrDirectory(downloadsPath+"lang.zip");
+                        deleteFileOrDirectory(langPath);
+                        moveFileOrDirectory(downloadsPath+"lang/", langPath);
                         listItem->setValue(CHECKMARK_SYMBOL);
                     } else
                         listItem->setValue(CROSSMARK_SYMBOL, false);
@@ -570,7 +591,93 @@ public:
                     renderer->drawString(packageInfoString.c_str(), false, x + xOffset, y + lineHeight, fontSize, a(tsl::style::color::ColorText));
                 }), fontSize * numEntries + lineHeight);
             }
+        
+        } else if (dropdownSelection == "themeMenu") {
             
+            list->addItem(new tsl::elm::CategoryHeader(THEME));
+            
+            std::string currentTheme = parseValueFromIniSection(settingsConfigIniPath, "ultrahand", "current_theme");
+            
+            if (currentTheme.empty())
+                currentTheme = "default";
+            
+            std::vector<std::string> themeFilesList = getFilesListByWildcard(themesPath+"*.ini");
+            
+            tsl::elm::ListItem* listItem = new tsl::elm::ListItem(DEFAULT);
+            
+            std::string defaultTheme = themesPath+"default.ini";
+            
+            if (currentTheme == "default") {
+                listItem->setValue(CHECKMARK_SYMBOL);
+                lastSelectedListItem = listItem;
+            }
+            
+            listItem->setClickListener([this, defaultTheme, listItem](uint64_t keys) { // Add 'this', 'i', and 'listItem' to the capture list
+                if (keys & KEY_A) {
+                    
+                    //if (defaultLangMode != defaultLang) {
+                    setIniFileValue(settingsConfigIniPath, "ultrahand", "current_theme", "default");
+                    deleteFileOrDirectory(themeConfigIniPath);
+                    
+                    if (isFileOrDirectory(defaultTheme)) {
+                        copyFileOrDirectory(defaultTheme, themeConfigIniPath);
+                    } else {
+                        // write default theme
+                        initializeTheme();
+                    }
+                    
+                    reloadMenu = true;
+                    reloadMenu2 = true;
+                    
+                    lastSelectedListItem->setValue("");
+                    selectedListItem->setValue(DEFAULT);
+                    listItem->setValue(CHECKMARK_SYMBOL);
+                    lastSelectedListItem = listItem;
+                    
+                    return true;
+                }
+                return false;
+            });
+            
+            list->addItem(listItem);
+            
+            
+            for (const auto& themeFile : themeFilesList) {
+                std::string themeName = dropExtension(getNameFromPath(themeFile));
+                
+                if (themeName == "default")
+                    continue;
+                
+                listItem = new tsl::elm::ListItem(themeName);
+                
+                if (themeName == currentTheme) {
+                    listItem->setValue(CHECKMARK_SYMBOL);
+                    lastSelectedListItem = listItem;
+                }
+                
+                listItem->setClickListener([this, themeName, currentTheme, themeFile, listItem](uint64_t keys) { // Add 'this', 'i', and 'listItem' to the capture list
+                    if (keys & KEY_A) {
+                        //if (defaultLangMode != defaultLang) {
+                        setIniFileValue(settingsConfigIniPath, "ultrahand", "current_theme", themeName);
+                        deleteFileOrDirectory("/config/ultrahand/theme.ini");
+                        copyFileOrDirectory(themeFile, "/config/ultrahand/theme.ini");
+                        
+                        reloadMenu = true;
+                        reloadMenu2 = true;
+                        
+                        lastSelectedListItem->setValue("");
+                        selectedListItem->setValue(themeName);
+                        listItem->setValue(CHECKMARK_SYMBOL);
+                        lastSelectedListItem = listItem;
+                        
+                        return true;
+                    }
+                    return false;
+                });
+                
+                list->addItem(listItem);
+            }
+        
         } else if (dropdownSelection == "widgetMenu") {
             
             //std::string hideClock = parseValueFromIniSection(settingsConfigIniPath, "ultrahand", "hide_clock");
@@ -632,7 +739,7 @@ public:
             
             list->addItem(new tsl::elm::CategoryHeader(VERSION_LABELS));
             
-            std::string defaulLang = parseValueFromIniSection(settingsConfigIniPath, "ultrahand", "default_lang");
+            std::string defaultLang = parseValueFromIniSection(settingsConfigIniPath, "ultrahand", "current_lang");
             
             
                
@@ -2355,7 +2462,7 @@ public:
  */
 class MainMenu : public tsl::Gui {
 private:
-    tsl::hlp::ini::IniData settingsData, themesData, packageConfigData;
+    tsl::hlp::ini::IniData settingsData, packageConfigData;
     std::string packageIniPath = packageDirectory + packageFileName;
     std::string packageConfigIniPath = packageDirectory + configFileName;
     std::string menuMode, defaultMenuMode, inOverlayString, fullPath, optionName, priority, starred, hide;
@@ -2430,6 +2537,7 @@ public:
                     hidePackageVersions = "false";
                 }
                 
+                
                 if (ultrahandSection.count("last_menu") > 0) {
                     menuMode = ultrahandSection["last_menu"];
                     if (ultrahandSection.count("default_menu") > 0) {
@@ -2439,10 +2547,10 @@ public:
                     }
                 }
                 
-                if (ultrahandSection.count("default_lang") > 0)
-                    defaultLang = ultrahandSection["default_lang"];
+                if (ultrahandSection.count("current_lang") > 0)
+                    defaultLang = ultrahandSection["current_lang"];
                 else
-                    setIniFileValue(settingsConfigIniPath, "ultrahand", "default_lang", defaultLang);
+                    setIniFileValue(settingsConfigIniPath, "ultrahand", "current_lang", defaultLang);
                 
                 if (ultrahandSection.count("datetime_format") == 0)
                     setIniFileValue(settingsConfigIniPath, "ultrahand", "datetime_format", DEFAULT_DT_FORMAT);
@@ -2456,6 +2564,13 @@ public:
                 if (ultrahandSection.count("hide_soc_temp") == 0)
                     setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_soc_temp", "true");
                 
+                //if (ultrahandSection.count("disable_selection_bg") == 0)
+                //    setIniFileValue(settingsConfigIniPath, "ultrahand", "disable_selection_bg", "true");
+                
+                // For disabling colorful logo
+                //if (ultrahandSection.count("disable_colorful_logo") == 0)
+                //    setIniFileValue(settingsConfigIniPath, "ultrahand", "disable_colorful_logo", "false");
+                
                 //if (ultrahandSection.count("in_overlay") > 0) {
                 //    inOverlayString = ultrahandSection["in_overlay"];
                 //    if (inOverlayString == "true") {
@@ -2466,7 +2581,7 @@ public:
             }
         }
         if (!settingsLoaded) { // write data if settings are not loaded
-            setIniFileValue(settingsConfigIniPath, "ultrahand", "default_lang", defaultLang);
+            setIniFileValue(settingsConfigIniPath, "ultrahand", "current_lang", defaultLang);
             setIniFileValue(settingsConfigIniPath, "ultrahand", "default_menu", defaultMenuMode);
             setIniFileValue(settingsConfigIniPath, "ultrahand", "last_menu", menuMode);
             setIniFileValue(settingsConfigIniPath, "ultrahand", "in_overlay", "false");
@@ -2483,47 +2598,8 @@ public:
         if (isFileOrDirectory(langFile))
             parseLanguage(langFile);
         
-        // write default theme
-        if (isFileOrDirectory(themeConfigIniPath)) {
-            themesData = getParsedDataFromIniFile(themeConfigIniPath);
-            if (themesData.count("theme") > 0) {
-                auto& themedSection = themesData["theme"];
-                
-                if (themedSection.count("clock_color") == 0)
-                    setIniFileValue(themeConfigIniPath, "theme", "clock_color", "#FFFFFF");
-                
-                if (themedSection.count("battery_color") == 0)
-                    setIniFileValue(themeConfigIniPath, "theme", "battery_color", "#FFFFFF");
-                
-                if (themedSection.count("text_color") == 0)
-                    setIniFileValue(themeConfigIniPath, "theme", "text_color", "#FFFFFF");
-                
-                if (themedSection.count("trackbar_color") == 0)
-                    setIniFileValue(themeConfigIniPath, "theme", "trackbar_color", "#555555");
-                
-                if (themedSection.count("highlight_color_1") == 0)
-                    setIniFileValue(themeConfigIniPath, "theme", "highlight_color_1", "#2288CC");
-                
-                if (themedSection.count("highlight_color_2") == 0)
-                    setIniFileValue(themeConfigIniPath, "theme", "highlight_color_2", "#88FFFF");
-                
-            } else {
-                setIniFileValue(themeConfigIniPath, "theme", "clock_color", "#FFFFFF");
-                setIniFileValue(themeConfigIniPath, "theme", "battery_color", "#FFFFFF");
-                setIniFileValue(themeConfigIniPath, "theme", "text_color", "#FFFFFF");
-                setIniFileValue(themeConfigIniPath, "theme", "trackbar_color", "#555555");
-                setIniFileValue(themeConfigIniPath, "theme", "highlight_color_1", "#2288CC");
-                setIniFileValue(themeConfigIniPath, "theme", "highlight_color_2", "#88FFFF");
-            }
-        } else {
-            setIniFileValue(themeConfigIniPath, "theme", "clock_color", "#FFFFFF");
-            setIniFileValue(themeConfigIniPath, "theme", "battery_color", "#FFFFFF");
-            setIniFileValue(themeConfigIniPath, "theme", "text_color", "#FFFFFF");
-            setIniFileValue(themeConfigIniPath, "theme", "trackbar_color", "#555555");
-            setIniFileValue(themeConfigIniPath, "theme", "highlight_color_1", "#2288CC");
-            setIniFileValue(themeConfigIniPath, "theme", "highlight_color_2", "#88FFFF");
-        }
         
+        initializeTheme();
         copyTeslaKeyComboToUltrahand();
         
         //setIniFileValue(settingsConfigIniPath, "ultrahand", "in_overlay", "false");
