@@ -3169,9 +3169,9 @@ namespace tsl {
                     float scrollbarHeight = static_cast<float>(this->getHeight() * this->getHeight()) / this->m_listHeight;
                     float scrollbarOffset = (static_cast<double>(this->m_offset)) / static_cast<double>(this->m_listHeight - this->getHeight()) * (this->getHeight() - std::ceil(scrollbarHeight));
 
-                    renderer->drawRect(this->getRightBound() + 10, this->getY() + scrollbarOffset, 5, scrollbarHeight - 50, trackBarColor);
-                    renderer->drawCircle(this->getRightBound() + 12, this->getY() + scrollbarOffset, 2, true, trackBarColor);
-                    renderer->drawCircle(this->getRightBound() + 12, this->getY() + scrollbarOffset + scrollbarHeight - 50, 2, true, trackBarColor);
+                    renderer->drawRect(this->getRightBound() + 10+2, this->getY() + scrollbarOffset, 5, scrollbarHeight - 50, trackBarColor);
+                    renderer->drawCircle(this->getRightBound() + 12+2, this->getY() + scrollbarOffset, 2, true, trackBarColor);
+                    renderer->drawCircle(this->getRightBound() + 12+2, this->getY() + scrollbarOffset + scrollbarHeight - 50, 2, true, trackBarColor);
 
                     float prevOffset = this->m_offset;
 
@@ -3427,6 +3427,9 @@ namespace tsl {
         public:
             std::string defaultTextColorStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "text_color"); // CUSTOM MODIFICATION
             tsl::Color defaultTextColor = RGB888(defaultTextColorStr);
+            std::string selectedTextColorStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "selected_text_color");
+            tsl::Color selectedTextColor = RGB888(selectedTextColorStr);
+            
             std::chrono::system_clock::time_point timeIn;// = std::chrono::system_clock::now();
             std::chrono::duration<long int, std::ratio<1, 1000000000>> t;
             
@@ -3475,7 +3478,7 @@ namespace tsl {
                         renderer->enableScissoring(this->getX(), 97, this->m_maxWidth + 40, tsl::cfg::FramebufferHeight-73-97);
                         //renderer->enableScissoring(this->getX(), this->getY(), this->m_maxWidth + 40, this->getHeight());
                         //renderer->drawString(this->m_scrollText.c_str(), false, this->getX() + 20.0 - std::round(this->m_scrollOffset*10000.0)/10000.0, this->getY() + 45, 23, defaultTextColor);
-                        renderer->drawString(this->m_scrollText.c_str(), false, this->getX() + 20.0 - this->m_scrollOffset, this->getY() + 45, 23, defaultTextColor);
+                        renderer->drawString(this->m_scrollText.c_str(), false, this->getX() + 20.0 - this->m_scrollOffset, this->getY() + 45, 23, selectedTextColor);
                         renderer->disableScissoring();
                         t = std::chrono::system_clock::now() - this->timeIn;
                         if (t >= 2000ms) {
@@ -3493,7 +3496,10 @@ namespace tsl {
                         renderer->drawString(this->m_ellipsisText.c_str(), false, this->getX() + 20, this->getY() + 45, 23, a(defaultTextColor));
                     }
                 } else {
-                    renderer->drawString(this->m_text.c_str(), false, this->getX() + 20, this->getY() + 45, 23, a(defaultTextColor));
+                    if (this->m_focused)
+                        renderer->drawString(this->m_text.c_str(), false, this->getX() + 20, this->getY() + 45, 23, a(selectedTextColor));
+                    else
+                        renderer->drawString(this->m_text.c_str(), false, this->getX() + 20, this->getY() + 45, 23, a(defaultTextColor));
                 }
 
 
