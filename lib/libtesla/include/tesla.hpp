@@ -2146,7 +2146,7 @@ namespace tsl {
             Element() {}
             virtual ~Element() { }
             
-            std::string disableSelectionBGStr = parseValueFromIniSection("/config/ultrahand/config.ini", "ultrahand", "disable_selection_bg");
+            std::string disableSelectionBGStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "disable_selection_bg");
             bool disableSelectionBG = (!disableSelectionBGStr.empty() && disableSelectionBGStr == "true");
             std::string selectionBGColorStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "selection_bg_color");
             
@@ -2611,7 +2611,7 @@ namespace tsl {
             std::string m_pageLeftName; // CUSTOM MODIFICATION
             std::string m_pageRightName; // CUSTOM MODIFICATION
             
-            std::string disableColorfulLogoStr = parseValueFromIniSection("/config/ultrahand/config.ini", "ultrahand", "disable_colorful_logo");
+            std::string disableColorfulLogoStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "disable_colorful_logo");
             bool disableColorfulLogo = (!disableColorfulLogoStr.empty() && disableColorfulLogoStr == "true");
             
             std::string defaultTextColorStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "text_color");
