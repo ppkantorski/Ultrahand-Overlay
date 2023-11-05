@@ -2149,7 +2149,6 @@ namespace tsl {
             std::string disableSelectionBGStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "disable_selection_bg");
             bool disableSelectionBG = (!disableSelectionBGStr.empty() && disableSelectionBGStr != "false");
             std::string selectionBGColorStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "selection_bg_color");
-            
             Color selectionBGColor = RGB888(selectionBGColorStr, "#000000");
             
             std::string highlightColor1Str = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "highlight_color_1");
