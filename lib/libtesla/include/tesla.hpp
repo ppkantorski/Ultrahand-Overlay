@@ -2676,37 +2676,54 @@ namespace tsl {
                     
                     countOffset = 0;
                     
-                    for (char letter : firstHalf) {
-                        // Calculate the progress for each letter based on the counter
-                        //progress = calculateAmplitude(counter - x * 0.001F);
-                        counter = (2 * M_PI * (fmod(std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count(), cycleDuration) + countOffset) / 1.5);
-                        //progress = calculateAmplitude(counter);
-                        progress = (std::sin(counter) + 1) / 2;
-                        
-                        
-                        // Calculate the corresponding highlight color for each letter
-                        highlightColor = {
-                            static_cast<u8>((0xA - 0xF) * (3 - 1.5*progress) + 0xF),
-                            static_cast<u8>((0xA - 0xF) * 1.5*progress + 0xF),
-                            static_cast<u8>((0xA - 0xF) * (1.25 - progress) + 0xF),
-                            0xF
-                        };
-                        
-                        // Draw each character with its corresponding highlight color
-                        //renderer->drawString(std::string(1, letter).c_str(), false, x, y + offset, fontSize, a(highlightColor));
-
-                        // Call the renderer->drawString function
-                        renderer->drawString(std::string(1, letter).c_str(), false, x, y + offset, fontSize,  (!disableColorfulLogo) ? highlightColor : tsl::Color(0xF,0xF,0xF,0xF));
-                        
-                        // Manually calculate the width of the current letter
-                        letterWidth = calculateStringWidth(std::string(1, letter), fontSize);
-                        
-                        // Adjust the x-coordinate for the next character's position
-                        x += letterWidth;
-                        
-                        // Update the counter for the next character
-                        countOffset -= 0.2F;
+                    if (!disableColorfulLogo) {
+                        for (char letter : firstHalf) {
+                            
+                            // Calculate the progress for each letter based on the counter
+                            //progress = calculateAmplitude(counter - x * 0.001F);
+                            counter = (2 * M_PI * (fmod(std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count(), cycleDuration) + countOffset) / 1.5);
+                            //progress = calculateAmplitude(counter);
+                            progress = (std::sin(counter) + 1) / 2;
+                            
+                            
+                            // Calculate the corresponding highlight color for each letter
+                            highlightColor = {
+                                static_cast<u8>((0xA - 0xF) * (3 - 1.5*progress) + 0xF),
+                                static_cast<u8>((0xA - 0xF) * 1.5*progress + 0xF),
+                                static_cast<u8>((0xA - 0xF) * (1.25 - progress) + 0xF),
+                                0xF
+                            };
+                            
+                            // Draw each character with its corresponding highlight color
+                            //renderer->drawString(std::string(1, letter).c_str(), false, x, y + offset, fontSize, a(highlightColor));
+                            
+                            // Call the renderer->drawString function
+                            renderer->drawString(std::string(1, letter).c_str(), false, x, y + offset, fontSize, highlightColor);
+                            
+                            // Manually calculate the width of the current letter
+                            letterWidth = calculateStringWidth(std::string(1, letter), fontSize);
+                            
+                            // Adjust the x-coordinate for the next character's position
+                            x += letterWidth;
+                            
+                            // Update the counter for the next character
+                            countOffset -= 0.2F;
+                        }
+                    } else {
+                        for (char letter : firstHalf) {
+                            renderer->drawString(std::string(1, letter).c_str(), false, x, y + offset, fontSize, tsl::Color(0xF,0xF,0xF,0xF));
+                            
+                            // Manually calculate the width of the current letter
+                            letterWidth = calculateStringWidth(std::string(1, letter), fontSize);
+                            
+                            // Adjust the x-coordinate for the next character's position
+                            x += letterWidth;
+                            
+                            // Update the counter for the next character
+                            countOffset -= 0.2F;
+                        }
                     }
+                    
                     
                     
                     // Calculate the position for the second half based on the width of the first half
