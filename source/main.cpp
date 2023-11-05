@@ -265,9 +265,9 @@ public:
             
             
             std::string currentTheme = parseValueFromIniSection(settingsConfigIniPath, "ultrahand", "current_theme");
-            if (currentTheme.empty())
-                currentTheme = "default";
-            listItem = new tsl::elm::ListItem("Theme");
+            if (currentTheme.empty() || currentTheme == "default")
+                currentTheme = DEFAULT;
+            listItem = new tsl::elm::ListItem(THEME);
             listItem->setValue(currentTheme);
             
             // Envolke selectionOverlay in optionMode
@@ -594,7 +594,7 @@ public:
         
         } else if (dropdownSelection == "themeMenu") {
             
-            list->addItem(new tsl::elm::CategoryHeader("Theme"));
+            list->addItem(new tsl::elm::CategoryHeader(THEME));
             
             std::string currentTheme = parseValueFromIniSection(settingsConfigIniPath, "ultrahand", "current_theme");
             
@@ -603,7 +603,7 @@ public:
             
             std::vector<std::string> themeFilesList = getFilesListByWildcard(themesPath+"*.ini");
             
-            tsl::elm::ListItem* listItem = new tsl::elm::ListItem("default");
+            tsl::elm::ListItem* listItem = new tsl::elm::ListItem(DEFAULT);
             
             std::string defaultTheme = themesPath+"default.ini";
             
@@ -630,7 +630,7 @@ public:
                     reloadMenu2 = true;
                     
                     lastSelectedListItem->setValue("");
-                    selectedListItem->setValue("default");
+                    selectedListItem->setValue(DEFAULT);
                     listItem->setValue(CHECKMARK_SYMBOL);
                     lastSelectedListItem = listItem;
                     
