@@ -4,7 +4,7 @@
         "hex": "000000"
     },
     {
-        "name": "1100 mV",
+        "name": "1100 mV default",
         "hex": "E0C810"
     },
     {
@@ -32,19 +32,19 @@
         "hex": "D01213"
     },
 	{
-        "name": "1275 mV not offical",
+        "name": "1275 mV ⚠ risky",
         "hex": "787413"
     },
     {
-        "name": "1300 mV not offical",
+        "name": "1300 mV ⚠ risky",
         "hex": "20D613"
     },
     {
-        "name": "1325 mV not offical",
+        "name": "1325 mV ⚠ risky",
         "hex": "C83714"
     },
     {
-        "name": "1350 mV not offical",
+        "name": "1350 mV ⚠ risky",
         "hex": "709914"
     }
 ]
