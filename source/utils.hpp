@@ -31,6 +31,7 @@
 
 #include <payload.hpp> // Studious Pancake
 #include <util.hpp>
+#include <tesla.hpp>
 
 
 Payload::HekateConfigList const boot_config_list;
@@ -179,6 +180,115 @@ void copyTeslaKeyComboToUltrahand() {
     tsl::impl::parseOverlaySettings();
 }
 
+
+
+void addPackageInfo(auto& list, auto& packageHeader) {
+    // Add a section break with small text to indicate the "Commands" section
+    list->addItem(new tsl::elm::CategoryHeader(PACKAGE_INFO));
+    
+    constexpr int maxLineLength = 28;  // Adjust the maximum line length as needed
+    constexpr int lineHeight = 20;  // Adjust the line height as needed
+    constexpr int xOffset = 120;    // Adjust the horizontal offset as needed
+    constexpr int fontSize = 16;    // Adjust the font size as needed
+    int numEntries = 0;   // Adjust the number of entries as needed
+    
+    std::string::size_type startPos;
+    std::string::size_type spacePos;
+    
+    std::string packageSectionString = "";
+    std::string packageInfoString = "";
+    if (packageHeader.version != "") {
+        packageSectionString += VERSION+"\n";
+        packageInfoString += (packageHeader.version+"\n").c_str();
+        numEntries++;
+    }
+    if (packageHeader.creator != "") {
+        packageSectionString += CREATOR+"\n";
+        packageInfoString += (packageHeader.creator+"\n").c_str();
+        numEntries++;
+    }
+    if (packageHeader.about != "") {
+        std::string aboutHeaderText = ABOUT+"\n";
+        std::string::size_type aboutHeaderLength = aboutHeaderText.length();
+        std::string aboutText = packageHeader.about;
+        
+        packageSectionString += aboutHeaderText;
+        
+        // Split the about text into multiple lines with proper word wrapping
+        startPos = 0;
+        spacePos = 0;
+        
+        while (startPos < aboutText.length()) {
+            std::string::size_type endPos = std::min(startPos + maxLineLength, aboutText.length());
+            std::string line = aboutText.substr(startPos, endPos - startPos);
+            
+            // Check if the current line ends with a space; if not, find the last space in the line
+            if (endPos < aboutText.length() && aboutText[endPos] != ' ') {
+                spacePos = line.find_last_of(' ');
+                if (spacePos != std::string::npos) {
+                    endPos = startPos + spacePos;
+                    line = aboutText.substr(startPos, endPos - startPos);
+                }
+            }
+            
+            packageInfoString += line + '\n';
+            startPos = endPos + 1;
+            numEntries++;
+            
+            // Add corresponding newline to the packageSectionString
+            if (startPos < aboutText.length())
+                packageSectionString += std::string(aboutHeaderLength, ' ') + '\n';
+        }
+    }
+    if (packageHeader.credits != "") {
+        std::string creditsHeaderText = CREDITS+"\n";
+        std::string::size_type creditsHeaderLength = creditsHeaderText.length();
+        std::string creditsText = packageHeader.credits;
+        
+        packageSectionString += creditsHeaderText;
+        
+        // Split the credits text into multiple lines with proper word wrapping
+        startPos = 0;
+        spacePos = 0;
+        
+        while (startPos < creditsText.length()) {
+            std::string::size_type endPos = std::min(startPos + maxLineLength, creditsText.length());
+            std::string line = creditsText.substr(startPos, endPos - startPos);
+            
+            // Check if the current line ends with a space; if not, find the last space in the line
+            if (endPos < creditsText.length() && creditsText[endPos] != ' ') {
+                spacePos = line.find_last_of(' ');
+                if (spacePos != std::string::npos) {
+                    endPos = startPos + spacePos;
+                    line = creditsText.substr(startPos, endPos - startPos);
+                }
+            }
+            
+            packageInfoString += line + '\n';
+            startPos = endPos + 1;
+            numEntries++;
+            
+            // Add corresponding newline to the packageSectionString
+            if (startPos < creditsText.length())
+                packageSectionString += std::string(creditsHeaderLength, ' ') + '\n';
+        }
+    }
+    
+    
+    // Remove trailing newline character
+    if ((packageSectionString != "") && (packageSectionString.back() == '\n'))
+        packageSectionString = packageSectionString.substr(0, packageSectionString.size() - 1);
+    if ((packageInfoString != "") && (packageInfoString.back() == '\n'))
+        packageInfoString = packageInfoString.substr(0, packageInfoString.size() - 1);
+    
+    
+    if ((packageSectionString != "") && (packageInfoString != "")) {
+        list->addItem(new tsl::elm::CustomDrawer([lineHeight, xOffset, fontSize, packageSectionString, packageInfoString](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
+            renderer->drawString(packageSectionString.c_str(), false, x, y + lineHeight, fontSize, tsl::style::color::ColorText);
+            renderer->drawString(packageInfoString.c_str(), false, x + xOffset, y + lineHeight, fontSize, tsl::style::color::ColorText);
+        }), fontSize * numEntries + lineHeight);
+    }
+}
 
 
 /**
@@ -554,7 +664,7 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
                 jsonPath = preprocessPath(cmd[1]);
                 //jsonData = json_load_file(jsonPath.c_str(), 0, &error);
             } else if ((cmd[0] == "json_source") && (jsonString.empty())) {
-                jsonString = removeQuotes(cmd[1]);
+                jsonString = cmd[1];
                 //jsonData = stringToJson(removeQuotes(cmd[1]));
             }
         }
@@ -572,16 +682,16 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
             // Add debug log messages to trace the modifications
             //logMessage("Before source replacement: " + arg);
             
-            if (arg.find("{file_source}") != std::string::npos) {
+            while (arg.find("{file_source}") != std::string::npos) {
                 arg = replacePlaceholder(arg, "{file_source}", entry);
             }
-            if (arg.find("{file_name}") != std::string::npos) {
+            while (arg.find("{file_name}") != std::string::npos) {
                 arg = replacePlaceholder(arg, "{file_name}", getNameFromPath(entry));
             }
-            if (arg.find("{folder_name}") != std::string::npos) {
+            while (arg.find("{folder_name}") != std::string::npos) {
                 arg = replacePlaceholder(arg, "{folder_name}", getParentDirNameFromPath(entry));
             }
-            if (arg.find("{list_source(") != std::string::npos) {
+            while (arg.find("{list_source(") != std::string::npos) {
                 //arg = replacePlaceholder(arg, "{list_source}", entry);
                 arg = replacePlaceholder(arg, "*", std::to_string(entryIndex));
                 size_t startPos = arg.find("{list_source(");
@@ -591,17 +701,19 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
                     arg.replace(startPos, endPos - startPos + 2, replacement);
                 }
             }
-            if (arg.find("{json_source(") != std::string::npos) {
+            while (arg.find("{json_source(") != std::string::npos) {
                 //std::string countStr = entry;
                 arg = replacePlaceholder(arg, "*", std::to_string(entryIndex));
                 size_t startPos = arg.find("{json_source(");
                 size_t endPos = arg.find(")}");
+                //logMessage("arg: "+arg);
                 if (endPos != std::string::npos && endPos > startPos) {
+                    //logMessage("jsonString: "+jsonString);
                     replacement = replaceJsonPlaceholder(arg.substr(startPos, endPos - startPos + 2), "json_source", jsonString);
                     arg.replace(startPos, endPos - startPos + 2, replacement);
                 }
             }
-            if (arg.find("{json_file_source(") != std::string::npos) {
+            while (arg.find("{json_file_source(") != std::string::npos) {
                 //std::string countStr = entry;
                 arg = replacePlaceholder(arg, "*", std::to_string(entryIndex));
                 size_t startPos = arg.find("{json_file_source(");
@@ -665,7 +777,7 @@ void variableReplacement(std::vector<std::string>& cmd) {
     // Process {hex_file(...)} placeholders
     for (auto& arg : cmd) {
         
-        if ((!iniPath.empty() && (arg.find("{ini_file(") != std::string::npos))) {
+        while ((!iniPath.empty() && (arg.find("{ini_file(") != std::string::npos))) {
             size_t startPos = arg.find("{ini_file(");
             size_t endPos = arg.find(")}");
             if (endPos != std::string::npos && endPos > startPos) {
@@ -676,7 +788,7 @@ void variableReplacement(std::vector<std::string>& cmd) {
         }
         
         
-        if (!hexPath.empty() && (arg.find("{hex_file(") != std::string::npos)) {
+        while (!hexPath.empty() && (arg.find("{hex_file(") != std::string::npos)) {
             size_t startPos = arg.find("{hex_file(");
             size_t endPos = arg.find(")}");
             if (endPos != std::string::npos && endPos > startPos) {
@@ -687,7 +799,7 @@ void variableReplacement(std::vector<std::string>& cmd) {
             }
         }
         
-        if ((!jsonString.empty() && (arg.find("{json(") != std::string::npos))) {
+        while ((!jsonString.empty() && (arg.find("{json(") != std::string::npos))) {
             //std::string countStr = entry;
             //arg = replacePlaceholder(arg, "*", entry);
             size_t startPos = arg.find("{json(");
@@ -705,7 +817,7 @@ void variableReplacement(std::vector<std::string>& cmd) {
                 //}
             }
         }
-        if ((!jsonPath.empty() && (arg.find("{json_file(") != std::string::npos))) {
+        while ((!jsonPath.empty() && (arg.find("{json_file(") != std::string::npos))) {
             //std::string countStr = entry;
             //arg = replacePlaceholder(arg, "*", entry);
             size_t startPos = arg.find("{json_file(");
@@ -725,7 +837,7 @@ void variableReplacement(std::vector<std::string>& cmd) {
             }
         }
         
-        if ((!listString.empty() && (arg.find("{list(") != std::string::npos))) {
+        while ((!listString.empty() && (arg.find("{list(") != std::string::npos))) {
             size_t startPos = arg.find("{list(");
             size_t endPos = arg.find(")}");
             if (endPos != std::string::npos && endPos > startPos) {
@@ -813,7 +925,7 @@ bool interpretAndExecuteCommand(const std::vector<std::vector<std::string>> comm
         std::vector<std::string> modifiedCmd = cmd;
         
         for (auto& arg : modifiedCmd) {
-            if ((!hexPath.empty() && (arg.find("{hex_file(") != std::string::npos))) {
+            while ((!hexPath.empty() && (arg.find("{hex_file(") != std::string::npos))) {
                 size_t startPos = arg.find("{hex_file(");
                 size_t endPos = arg.find(")}");
                 if (endPos != std::string::npos && endPos > startPos) {
@@ -822,7 +934,7 @@ bool interpretAndExecuteCommand(const std::vector<std::vector<std::string>> comm
                     arg.replace(startPos, endPos - startPos + 2, replacement);
                 }
             }
-            if ((!iniPath.empty() && (arg.find("{ini_file(") != std::string::npos))) {
+            while ((!iniPath.empty() && (arg.find("{ini_file(") != std::string::npos))) {
                 size_t startPos = arg.find("{ini_file(");
                 size_t endPos = arg.find(")}");
                 if (endPos != std::string::npos && endPos > startPos) {
@@ -831,7 +943,7 @@ bool interpretAndExecuteCommand(const std::vector<std::vector<std::string>> comm
                     arg.replace(startPos, endPos - startPos + 2, replacement);
                 }
             }
-            if ((!listString.empty() && (arg.find("{list(") != std::string::npos))) {
+            while ((!listString.empty() && (arg.find("{list(") != std::string::npos))) {
                 size_t startPos = arg.find("{list(");
                 size_t endPos = arg.find(")}");
                 if (endPos != std::string::npos && endPos > startPos) {
@@ -841,10 +953,10 @@ bool interpretAndExecuteCommand(const std::vector<std::vector<std::string>> comm
                     arg.replace(startPos, endPos - startPos + 2, replacement);
                     
                     // Release the memory held by listData
-                    listData.clear();
+                    //listData.clear();
                 }
             }
-            if ((!jsonString.empty() && (arg.find("{json(") != std::string::npos))) {
+            while ((!jsonString.empty() && (arg.find("{json(") != std::string::npos))) {
                 //std::string countStr = entry;
                 //arg = replacePlaceholder(arg, "*", entry);
                 size_t startPos = arg.find("{json(");
@@ -861,7 +973,7 @@ bool interpretAndExecuteCommand(const std::vector<std::vector<std::string>> comm
                     //}
                 }
             }
-            if ((!jsonPath.empty() && (arg.find("{json_file(") != std::string::npos))) {
+            while ((!jsonPath.empty() && (arg.find("{json_file(") != std::string::npos))) {
                 //std::string countStr = entry;
                 //arg = replacePlaceholder(arg, "*", entry);
                 size_t startPos = arg.find("{json_file(");
