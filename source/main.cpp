@@ -1447,14 +1447,14 @@ public:
                     }
                 } else if (cmd[0] == "json_source") {
                     if (currentSection == "global") {
-                        jsonString = removeQuotes(cmd[1]); // convert string to jsonData
+                        jsonString = cmd[1]; // convert string to jsonData
                         //jsonData = stringToJson(cmd[1]); // convert string to jsonData
                         sourceType = "json";
                         
                         if (cmd.size() > 2)
                             jsonKey = cmd[2]; //json display key
                     } else if (currentSection == "on") {
-                        jsonStringOn = removeQuotes(cmd[1]); // convert string to jsonData
+                        jsonStringOn = cmd[1]; // convert string to jsonData
                         //jsonDataOn = stringToJson(cmd[1]); // convert string to jsonData
                         sourceTypeOn = "json";
                         
@@ -1462,7 +1462,7 @@ public:
                             jsonKeyOn = cmd[2]; //json display key
                         
                     } else if (currentSection == "off") {
-                        jsonStringOff = removeQuotes(cmd[1]); // convert string to jsonData
+                        jsonStringOff = cmd[1]; // convert string to jsonData
                         //jsonDataOff = stringToJson(cmd[1]); // convert string to jsonData
                         sourceTypeOff = "json";
                         
