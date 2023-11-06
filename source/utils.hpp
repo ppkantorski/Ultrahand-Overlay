@@ -554,7 +554,7 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
                 jsonPath = preprocessPath(cmd[1]);
                 //jsonData = json_load_file(jsonPath.c_str(), 0, &error);
             } else if ((cmd[0] == "json_source") && (jsonString.empty())) {
-                jsonString = removeQuotes(cmd[1]);
+                jsonString = cmd[1];
                 //jsonData = stringToJson(removeQuotes(cmd[1]));
             }
         }
@@ -572,16 +572,16 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
             // Add debug log messages to trace the modifications
             //logMessage("Before source replacement: " + arg);
             
-            if (arg.find("{file_source}") != std::string::npos) {
+            while (arg.find("{file_source}") != std::string::npos) {
                 arg = replacePlaceholder(arg, "{file_source}", entry);
             }
-            if (arg.find("{file_name}") != std::string::npos) {
+            while (arg.find("{file_name}") != std::string::npos) {
                 arg = replacePlaceholder(arg, "{file_name}", getNameFromPath(entry));
             }
-            if (arg.find("{folder_name}") != std::string::npos) {
+            while (arg.find("{folder_name}") != std::string::npos) {
                 arg = replacePlaceholder(arg, "{folder_name}", getParentDirNameFromPath(entry));
             }
-            if (arg.find("{list_source(") != std::string::npos) {
+            while (arg.find("{list_source(") != std::string::npos) {
                 //arg = replacePlaceholder(arg, "{list_source}", entry);
                 arg = replacePlaceholder(arg, "*", std::to_string(entryIndex));
                 size_t startPos = arg.find("{list_source(");
@@ -591,17 +591,19 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
                     arg.replace(startPos, endPos - startPos + 2, replacement);
                 }
             }
-            if (arg.find("{json_source(") != std::string::npos) {
+            while (arg.find("{json_source(") != std::string::npos) {
                 //std::string countStr = entry;
                 arg = replacePlaceholder(arg, "*", std::to_string(entryIndex));
                 size_t startPos = arg.find("{json_source(");
                 size_t endPos = arg.find(")}");
+                logMessage("arg: "+arg);
                 if (endPos != std::string::npos && endPos > startPos) {
+                    logMessage("jsonString: "+jsonString);
                     replacement = replaceJsonPlaceholder(arg.substr(startPos, endPos - startPos + 2), "json_source", jsonString);
                     arg.replace(startPos, endPos - startPos + 2, replacement);
                 }
             }
-            if (arg.find("{json_file_source(") != std::string::npos) {
+            while (arg.find("{json_file_source(") != std::string::npos) {
                 //std::string countStr = entry;
                 arg = replacePlaceholder(arg, "*", std::to_string(entryIndex));
                 size_t startPos = arg.find("{json_file_source(");
@@ -665,7 +667,7 @@ void variableReplacement(std::vector<std::string>& cmd) {
     // Process {hex_file(...)} placeholders
     for (auto& arg : cmd) {
         
-        if ((!iniPath.empty() && (arg.find("{ini_file(") != std::string::npos))) {
+        while ((!iniPath.empty() && (arg.find("{ini_file(") != std::string::npos))) {
             size_t startPos = arg.find("{ini_file(");
             size_t endPos = arg.find(")}");
             if (endPos != std::string::npos && endPos > startPos) {
@@ -676,7 +678,7 @@ void variableReplacement(std::vector<std::string>& cmd) {
         }
         
         
-        if (!hexPath.empty() && (arg.find("{hex_file(") != std::string::npos)) {
+        while (!hexPath.empty() && (arg.find("{hex_file(") != std::string::npos)) {
             size_t startPos = arg.find("{hex_file(");
             size_t endPos = arg.find(")}");
             if (endPos != std::string::npos && endPos > startPos) {
@@ -687,7 +689,7 @@ void variableReplacement(std::vector<std::string>& cmd) {
             }
         }
         
-        if ((!jsonString.empty() && (arg.find("{json(") != std::string::npos))) {
+        while ((!jsonString.empty() && (arg.find("{json(") != std::string::npos))) {
             //std::string countStr = entry;
             //arg = replacePlaceholder(arg, "*", entry);
             size_t startPos = arg.find("{json(");
@@ -705,7 +707,7 @@ void variableReplacement(std::vector<std::string>& cmd) {
                 //}
             }
         }
-        if ((!jsonPath.empty() && (arg.find("{json_file(") != std::string::npos))) {
+        while ((!jsonPath.empty() && (arg.find("{json_file(") != std::string::npos))) {
             //std::string countStr = entry;
             //arg = replacePlaceholder(arg, "*", entry);
             size_t startPos = arg.find("{json_file(");
@@ -725,7 +727,7 @@ void variableReplacement(std::vector<std::string>& cmd) {
             }
         }
         
-        if ((!listString.empty() && (arg.find("{list(") != std::string::npos))) {
+        while ((!listString.empty() && (arg.find("{list(") != std::string::npos))) {
             size_t startPos = arg.find("{list(");
             size_t endPos = arg.find(")}");
             if (endPos != std::string::npos && endPos > startPos) {
@@ -813,7 +815,7 @@ bool interpretAndExecuteCommand(const std::vector<std::vector<std::string>> comm
         std::vector<std::string> modifiedCmd = cmd;
         
         for (auto& arg : modifiedCmd) {
-            if ((!hexPath.empty() && (arg.find("{hex_file(") != std::string::npos))) {
+            while ((!hexPath.empty() && (arg.find("{hex_file(") != std::string::npos))) {
                 size_t startPos = arg.find("{hex_file(");
                 size_t endPos = arg.find(")}");
                 if (endPos != std::string::npos && endPos > startPos) {
@@ -822,7 +824,7 @@ bool interpretAndExecuteCommand(const std::vector<std::vector<std::string>> comm
                     arg.replace(startPos, endPos - startPos + 2, replacement);
                 }
             }
-            if ((!iniPath.empty() && (arg.find("{ini_file(") != std::string::npos))) {
+            while ((!iniPath.empty() && (arg.find("{ini_file(") != std::string::npos))) {
                 size_t startPos = arg.find("{ini_file(");
                 size_t endPos = arg.find(")}");
                 if (endPos != std::string::npos && endPos > startPos) {
@@ -831,7 +833,7 @@ bool interpretAndExecuteCommand(const std::vector<std::vector<std::string>> comm
                     arg.replace(startPos, endPos - startPos + 2, replacement);
                 }
             }
-            if ((!listString.empty() && (arg.find("{list(") != std::string::npos))) {
+            while ((!listString.empty() && (arg.find("{list(") != std::string::npos))) {
                 size_t startPos = arg.find("{list(");
                 size_t endPos = arg.find(")}");
                 if (endPos != std::string::npos && endPos > startPos) {
@@ -841,10 +843,10 @@ bool interpretAndExecuteCommand(const std::vector<std::vector<std::string>> comm
                     arg.replace(startPos, endPos - startPos + 2, replacement);
                     
                     // Release the memory held by listData
-                    listData.clear();
+                    //listData.clear();
                 }
             }
-            if ((!jsonString.empty() && (arg.find("{json(") != std::string::npos))) {
+            while ((!jsonString.empty() && (arg.find("{json(") != std::string::npos))) {
                 //std::string countStr = entry;
                 //arg = replacePlaceholder(arg, "*", entry);
                 size_t startPos = arg.find("{json(");
@@ -861,7 +863,7 @@ bool interpretAndExecuteCommand(const std::vector<std::vector<std::string>> comm
                     //}
                 }
             }
-            if ((!jsonPath.empty() && (arg.find("{json_file(") != std::string::npos))) {
+            while ((!jsonPath.empty() && (arg.find("{json_file(") != std::string::npos))) {
                 //std::string countStr = entry;
                 //arg = replacePlaceholder(arg, "*", entry);
                 size_t startPos = arg.find("{json_file(");
