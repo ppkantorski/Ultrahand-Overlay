@@ -1921,6 +1921,9 @@ public:
                         skipSection = true;
                         lastSection = dropdownSection;
                     }
+                    if (removeTag(optionName) == PACKAGE_INFO || removeTag(optionName) == "Package Info") {
+                        addPackageInfo(list, packageHeader);
+                    }
                     if (commands.size() == 0) {
                         if (optionName == dropdownSection)
                             skipSection = false;
@@ -1956,115 +1959,11 @@ public:
                             
                             skipSection = true;
                         } else {
-                            if (optionName != lastSection) {
+                            if (optionName != lastSection && !skipSection) {
                                 
                                 if (removeTag(optionName) == PACKAGE_INFO || removeTag(optionName) == "Package Info") {
-                                    // Add a section break with small text to indicate the "Commands" section
-                                    list->addItem(new tsl::elm::CategoryHeader(PACKAGE_INFO));
                                     lastSection = optionName;
-                                    
-                                    constexpr int maxLineLength = 28;  // Adjust the maximum line length as needed
-                                    constexpr int lineHeight = 20;  // Adjust the line height as needed
-                                    constexpr int xOffset = 120;    // Adjust the horizontal offset as needed
-                                    constexpr int fontSize = 16;    // Adjust the font size as needed
-                                    int numEntries = 0;   // Adjust the number of entries as needed
-                                    
-                                    std::string::size_type startPos;
-                                    std::string::size_type spacePos;
-                                    
-                                    std::string packageSectionString = "";
-                                    std::string packageInfoString = "";
-                                    if (packageHeader.version != "") {
-                                        packageSectionString += VERSION+"\n";
-                                        packageInfoString += (packageHeader.version+"\n").c_str();
-                                        numEntries++;
-                                    }
-                                    if (packageHeader.creator != "") {
-                                        packageSectionString += CREATOR+"\n";
-                                        packageInfoString += (packageHeader.creator+"\n").c_str();
-                                        numEntries++;
-                                    }
-                                    if (packageHeader.about != "") {
-                                        std::string aboutHeaderText = ABOUT+"\n";
-                                        std::string::size_type aboutHeaderLength = aboutHeaderText.length();
-                                        std::string aboutText = packageHeader.about;
-                                        
-                                        packageSectionString += aboutHeaderText;
-                                        
-                                        // Split the about text into multiple lines with proper word wrapping
-                                        startPos = 0;
-                                        spacePos = 0;
-                                        
-                                        while (startPos < aboutText.length()) {
-                                            std::string::size_type endPos = std::min(startPos + maxLineLength, aboutText.length());
-                                            std::string line = aboutText.substr(startPos, endPos - startPos);
-                                            
-                                            // Check if the current line ends with a space; if not, find the last space in the line
-                                            if (endPos < aboutText.length() && aboutText[endPos] != ' ') {
-                                                spacePos = line.find_last_of(' ');
-                                                if (spacePos != std::string::npos) {
-                                                    endPos = startPos + spacePos;
-                                                    line = aboutText.substr(startPos, endPos - startPos);
-                                                }
-                                            }
-                                            
-                                            packageInfoString += line + '\n';
-                                            startPos = endPos + 1;
-                                            numEntries++;
-                                            
-                                            // Add corresponding newline to the packageSectionString
-                                            if (startPos < aboutText.length())
-                                                packageSectionString += std::string(aboutHeaderLength, ' ') + '\n';
-                                        }
-                                    }
-                                    if (packageHeader.credits != "") {
-                                        std::string creditsHeaderText = CREDITS+"\n";
-                                        std::string::size_type creditsHeaderLength = creditsHeaderText.length();
-                                        std::string creditsText = packageHeader.credits;
-                                        
-                                        packageSectionString += creditsHeaderText;
-                                        
-                                        // Split the credits text into multiple lines with proper word wrapping
-                                        startPos = 0;
-                                        spacePos = 0;
-                                        
-                                        while (startPos < creditsText.length()) {
-                                            std::string::size_type endPos = std::min(startPos + maxLineLength, creditsText.length());
-                                            std::string line = creditsText.substr(startPos, endPos - startPos);
-                                            
-                                            // Check if the current line ends with a space; if not, find the last space in the line
-                                            if (endPos < creditsText.length() && creditsText[endPos] != ' ') {
-                                                spacePos = line.find_last_of(' ');
-                                                if (spacePos != std::string::npos) {
-                                                    endPos = startPos + spacePos;
-                                                    line = creditsText.substr(startPos, endPos - startPos);
-                                                }
-                                            }
-                                            
-                                            packageInfoString += line + '\n';
-                                            startPos = endPos + 1;
-                                            numEntries++;
-                                            
-                                            // Add corresponding newline to the packageSectionString
-                                            if (startPos < creditsText.length())
-                                                packageSectionString += std::string(creditsHeaderLength, ' ') + '\n';
-                                        }
-                                    }
-                                    
-                                    
-                                    // Remove trailing newline character
-                                    if ((packageSectionString != "") && (packageSectionString.back() == '\n'))
-                                        packageSectionString = packageSectionString.substr(0, packageSectionString.size() - 1);
-                                    if ((packageInfoString != "") && (packageInfoString.back() == '\n'))
-                                        packageInfoString = packageInfoString.substr(0, packageInfoString.size() - 1);
-                                    
-                                    
-                                    if ((packageSectionString != "") && (packageInfoString != "")) {
-                                        list->addItem(new tsl::elm::CustomDrawer([lineHeight, xOffset, fontSize, packageSectionString, packageInfoString](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
-                                            renderer->drawString(packageSectionString.c_str(), false, x, y + lineHeight, fontSize, a(tsl::style::color::ColorText));
-                                            renderer->drawString(packageInfoString.c_str(), false, x + xOffset, y + lineHeight, fontSize, a(tsl::style::color::ColorText));
-                                        }), fontSize * numEntries + lineHeight);
-                                    }
+                                    addPackageInfo(list, packageHeader);
                                 } else {
                                     // Add a section break with small text to indicate the "Commands" section
                                     list->addItem(new tsl::elm::CategoryHeader(removeTag(optionName)));
