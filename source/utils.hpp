@@ -596,9 +596,9 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
                 arg = replacePlaceholder(arg, "*", std::to_string(entryIndex));
                 size_t startPos = arg.find("{json_source(");
                 size_t endPos = arg.find(")}");
-                logMessage("arg: "+arg);
+                //logMessage("arg: "+arg);
                 if (endPos != std::string::npos && endPos > startPos) {
-                    logMessage("jsonString: "+jsonString);
+                    //logMessage("jsonString: "+jsonString);
                     replacement = replaceJsonPlaceholder(arg.substr(startPos, endPos - startPos + 2), "json_source", jsonString);
                     arg.replace(startPos, endPos - startPos + 2, replacement);
                 }
