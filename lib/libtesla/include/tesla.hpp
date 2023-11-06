@@ -8,16 +8,13 @@
  *   of libtesla, an overlay executor. Within this file, you will find a collection of
  *   functions, menu structures, and interaction logic designed to facilitate the
  *   smooth execution and flexible customization of overlays within the project.
- * 
- *   Note: Refer to the project documentation and README.md for comprehensive
- *   usage and configuration information regarding the Ultrahand-Overlay.
- * 
+ *
  *   For the latest updates and contributions, visit the project's GitHub repository.
  *   (GitHub Repository: https://github.com/ppkantorski/Ultrahand-Overlay)
  *
  *   Note: Please be aware that this notice cannot be altered or removed. It is a part
  *   of the project's documentation and must remain intact.
- * 
+ *
  *  Copyright (c) 2023 ppkantorski
  *  All rights reserved.
  ********************************************************************************/
@@ -69,6 +66,69 @@
 #include "../../../source/get_funcs.hpp"
 #include "../../../source/string_funcs.hpp"
 #include "../../../source/ini_funcs.hpp"
+#include "../../../common/half.hpp"
+using half_float::half;
+
+/**
+ * @brief Shutdown modes for the Ultrahand-Overlay project.
+ *
+ * These macros define the shutdown modes used in the Ultrahand-Overlay project:
+ * - `SpsmShutdownMode_Normal`: Normal shutdown mode.
+ * - `SpsmShutdownMode_Reboot`: Reboot mode.
+ */
+#define SpsmShutdownMode_Normal 0
+#define SpsmShutdownMode_Reboot 1
+
+/**
+ * @brief Key mapping macros for button keys.
+ *
+ * These macros define button keys for the Ultrahand-Overlay project to simplify key mappings.
+ * For example, `KEY_A` represents the `HidNpadButton_A` key.
+ */
+#define KEY_A HidNpadButton_A
+#define KEY_B HidNpadButton_B
+#define KEY_X HidNpadButton_X
+#define KEY_Y HidNpadButton_Y
+#define KEY_L HidNpadButton_L
+#define KEY_R HidNpadButton_R
+#define KEY_ZL HidNpadButton_ZL
+#define KEY_ZR HidNpadButton_ZR
+#define KEY_PLUS HidNpadButton_Plus
+#define KEY_MINUS HidNpadButton_Minus
+#define KEY_DUP HidNpadButton_Up
+#define KEY_DDOWN HidNpadButton_Down
+#define KEY_DLEFT HidNpadButton_Left
+#define KEY_DRIGHT HidNpadButton_Right
+#define KEY_SL HidNpadButton_AnySL
+#define KEY_SR HidNpadButton_AnySR
+#define KEY_LSTICK HidNpadButton_StickL
+#define KEY_RSTICK HidNpadButton_StickR
+#define KEY_UP (HidNpadButton_Up | HidNpadButton_StickLUp | HidNpadButton_StickRUp)
+#define KEY_DOWN (HidNpadButton_Down | HidNpadButton_StickLDown | HidNpadButton_StickRDown)
+#define KEY_LEFT (HidNpadButton_Left | HidNpadButton_StickLLeft | HidNpadButton_StickRLeft)
+#define KEY_RIGHT (HidNpadButton_Right | HidNpadButton_StickLRight | HidNpadButton_StickRRight)
+
+/**
+ * @brief Ultrahand-Overlay Input Macros
+ *
+ * This block of code defines macros for handling input in the Ultrahand-Overlay project.
+ * These macros simplify the mapping of input events to corresponding button keys and
+ * provide aliases for touch and joystick positions.
+ *
+ * The macros included in this block are:
+ *
+ * - `touchPosition`: An alias for a constant `HidTouchState` pointer.
+ * - `touchInput`: An alias for `&touchPos`, representing touch input.
+ * - `JoystickPosition`: An alias for `HidAnalogStickState`, representing joystick input.
+ *
+ * These macros are utilized within the Ultrahand-Overlay project to manage and interpret
+ * user input, including touch and joystick events.
+ */
+#define touchPosition const HidTouchState
+#define touchInput &touchPos
+#define JoystickPosition HidAnalogStickState
+
+
 
 // For improving the speed of hexing consecutively with the same file and asciiPattern.
 static std::unordered_map<std::string, std::string> hexSumCache;
@@ -82,6 +142,15 @@ static const std::string DROPDOWN_SYMBOL = "\u25B6";
 static const std::string CHECKMARK_SYMBOL = "\uE14B";
 static const std::string CROSSMARK_SYMBOL = "\uE14C";
 static const std::string STAR_SYMBOL = "\u2605";
+
+
+float customRound(float num) {
+    if (num >= 0) {
+        return floor(num + 0.5);
+    } else {
+        return ceil(num - 0.5);
+    }
+}
 
 // English string definitions
 
@@ -152,12 +221,23 @@ static std::string HIDE_OVERLAY = "Hide Overlay";
 static std::string HIDE_PACKAGE = "Hide Package";
 static std::string LAUNCH_ARGUMENTS = "Launch Arguments";
 static std::string COMMANDS = "Commands";
-static std::string SETTINGS = "Main Settings";
+static std::string SETTINGS = "Settings";
 static std::string MAIN_SETTINGS = "Main Settings";
-static std::string VERSION_SETTINGS = "Version Settings";
+static std::string UI_SETTINGS = "UI Settings";
+static std::string WIDGET = "Widget";
+static std::string CLOCK = "Clock";
+static std::string BATTERY = "Battery";
+static std::string SOC_TEMPERATURE = "SOC Temperature";
+static std::string PCB_TEMPERATURE = "PCB Temperature";
+static std::string VERSION_LABELS = "Version Labels";
 static std::string KEY_COMBO = "Key Combo";
 static std::string LANGUAGE = "Language";
+static std::string OVERLAY_INFO = "Overlay Info";
 static std::string SOFTWARE_UPDATE = "Software Update";
+static std::string UPDATE_ULTRAHAND = "Update Ultrahand";
+static std::string UPDATE_LANGUAGES = "Update Languages";
+static std::string THEME = "Theme";
+static std::string DEFAULT = "default";
 static std::string ROOT_PACKAGE = "Root Package";
 static std::string SORT_PRIORITY = "Sort Priority";
 static std::string FAILED_TO_OPEN = "Failed to open file";
@@ -167,9 +247,11 @@ static std::string PACKAGE_LABELS = "Package Versions";
 static std::string ON = "On";
 static std::string OFF = "Off";
 static std::string PACKAGE_INFO = "Package Info";
+static std::string TITLE = "Title";
 static std::string VERSION = "Version";
 static std::string CREATOR = "Creator(s)";
 static std::string ABOUT = "About";
+static std::string CREDITS = "Credits";
 static std::string OK = "OK";
 static std::string BACK = "Back";
 static std::string REBOOT = "Reboot";
@@ -233,11 +315,23 @@ void reinitializeLangVars() {
     HIDE_PACKAGE = "Hide Package";
     LAUNCH_ARGUMENTS = "Launch Arguments";
     COMMANDS = "Commands";
-    SETTINGS = "Main Settings";
+    SETTINGS = "Settings";
     MAIN_SETTINGS = "Main Settings";
-    VERSION_SETTINGS = "Version Settings";
+    UI_SETTINGS = "UI Settings";
+    WIDGET = "Widget";
+    CLOCK = "Clock";
+    BATTERY = "Battery";
+    SOC_TEMPERATURE = "SOC Temperature";
+    PCB_TEMPERATURE = "PCB Temperature";
+    VERSION_LABELS = "Version Labels";
     KEY_COMBO = "Key Combo";
     LANGUAGE = "Language";
+    OVERLAY_INFO = "Overlay Info";
+    SOFTWARE_UPDATE = "Software Update";
+    UPDATE_ULTRAHAND = "Update Ultrahand";
+    UPDATE_LANGUAGES = "Update Languages";
+    THEME = "Theme";
+    DEFAULT = "default";
     ROOT_PACKAGE = "Root Package";
     SORT_PRIORITY = "Sort Priority";
     FAILED_TO_OPEN = "Failed to open file";
@@ -247,9 +341,11 @@ void reinitializeLangVars() {
     ON = "On";
     OFF = "Off";
     PACKAGE_INFO = "Package Info";
+    TITLE = "Title";
     VERSION = "Version";
     CREATOR = "Creator(s)";
     ABOUT = "About";
+    CREDITS = "Credits";
     OK = "OK";
     BACK = "Back";
     REBOOT = "Reboot";
@@ -328,10 +424,21 @@ void parseLanguage(std::string langFile) {
     updateIfNotEmpty(COMMANDS, "COMMANDS", langData);
     updateIfNotEmpty(SETTINGS, "SETTINGS", langData);
     updateIfNotEmpty(MAIN_SETTINGS, "MAIN_SETTINGS", langData);
-    updateIfNotEmpty(VERSION_SETTINGS, "VERSION_SETTINGS", langData);
+    updateIfNotEmpty(UI_SETTINGS, "UI_SETTINGS", langData);
+    updateIfNotEmpty(WIDGET, "WIDGET", langData);
+    updateIfNotEmpty(CLOCK, "CLOCK", langData);
+    updateIfNotEmpty(BATTERY, "BATTERY", langData);
+    updateIfNotEmpty(SOC_TEMPERATURE, "SOC_TEMPERATURE", langData);
+    updateIfNotEmpty(PCB_TEMPERATURE, "PCB_TEMPERATURE", langData);
+    updateIfNotEmpty(VERSION_LABELS, "VERSION_LABELS", langData);
     updateIfNotEmpty(KEY_COMBO, "KEY_COMBO", langData);
     updateIfNotEmpty(LANGUAGE, "LANGUAGE", langData);
+    updateIfNotEmpty(OVERLAY_INFO, "OVERLAY_INFO", langData);
     updateIfNotEmpty(SOFTWARE_UPDATE, "SOFTWARE_UPDATE", langData);
+    updateIfNotEmpty(UPDATE_ULTRAHAND, "UPDATE_ULTRAHAND", langData);
+    updateIfNotEmpty(UPDATE_LANGUAGES, "UPDATE_LANGUAGES", langData);
+    updateIfNotEmpty(THEME, "THEME", langData);
+    updateIfNotEmpty(DEFAULT, "DEFAULT", langData);
     updateIfNotEmpty(ROOT_PACKAGE, "ROOT_PACKAGE", langData);
     updateIfNotEmpty(SORT_PRIORITY, "SORT_PRIORITY", langData);
     updateIfNotEmpty(FAILED_TO_OPEN, "FAILED_TO_OPEN", langData);
@@ -341,9 +448,11 @@ void parseLanguage(std::string langFile) {
     updateIfNotEmpty(ON, "ON", langData);
     updateIfNotEmpty(OFF, "OFF", langData);
     updateIfNotEmpty(PACKAGE_INFO, "PACKAGE_INFO", langData);
+    updateIfNotEmpty(TITLE, "TITLE", langData);
     updateIfNotEmpty(VERSION, "VERSION", langData);
     updateIfNotEmpty(CREATOR, "CREATOR", langData);
     updateIfNotEmpty(ABOUT, "ABOUT", langData);
+    updateIfNotEmpty(CREDITS, "CREDITS", langData);
     updateIfNotEmpty(OK, "OK", langData);
     updateIfNotEmpty(BACK, "BACK", langData);
     updateIfNotEmpty(REBOOT, "REBOOT", langData);
@@ -568,6 +677,8 @@ bool isValidHexColor(const std::string& hexColor) {
     return true;
 }
 
+
+// Battery implementation
 static bool powerInitialized = false;
 static bool powerCacheInitialized;
 static uint32_t powerCacheCharge;
@@ -644,7 +755,6 @@ void powerInit(void) {
     }
 }
 
-
 void powerExit(void) {
     if (powerInitialized) {
         psmUnbindStateChangeEvent(&powerSession);
@@ -654,56 +764,158 @@ void powerExit(void) {
     }
 }
 
-s32 PCB_temperature, SOC_temperature;
 
-//static TsSession g_tsInternalSession;
+// Temperature Implementation
+static s32 PCB_temperature, SOC_temperature;
+static Service* g_tsSrv;
+Result tsCheck = 1;
+Result tcCheck = 1;
+
+Result tsOpenTsSession(Service* &serviceSession, TsSession* out, TsDeviceCode device_code) {
+    return serviceDispatchIn(serviceSession, 4, device_code,
+        .out_num_objects = 1,
+        .out_objects = &out->s,
+    );
+}
+
+void tsCloseTsSession(TsSession* in) {
+    serviceClose(&in->s);
+}
+
+Result tsGetTemperatureWithTsSession(TsSession* ITs, float* temperature) {
+    return serviceDispatchOut(&ITs->s, 4, *temperature);
+}
+
 
 bool thermalstatusInit(void) {
-    if (R_FAILED(tsInitialize()))
+    
+    tcCheck = tcInitialize();
+    tsCheck = tsInitialize();
+    if (R_SUCCEEDED(tsCheck)) {
+        g_tsSrv = tsGetServiceSession();
+    } else
         return false;
-    //if (hosversionAtLeast(17,0,0) && R_FAILED(tsOpenSession(&g_tsInternalSession, TsDeviceCode_LocationInternal)))
-    //    return false;
+    
     return true;
 }
 
 void thermalstatusExit(void) {
-    //if (hosversionAtLeast(17,0,0))
-    //    tsSessionClose(&g_tsInternalSession);
     tsExit();
+    tcExit();
 }
 
-bool thermalstatusGetDetailsPCB(s32 *temperature) {
-    if (hosversionAtLeast(17,0,0)) {
-        //float temp_float;
-        //if (R_SUCCEEDED(tsSessionGetTemperature(&g_tsInternalSession, &temp_float))) {
-        //    *temperature = (int)temp_float;
-        //    return true;
-        //} else
-        //    return false;
-        
-        return false;
-    } else
-        return R_SUCCEEDED(tsGetTemperature(TsLocation_Internal, temperature));
+bool thermalstatusGetDetailsPCB(s32* temperature) {
+    TsSession ts_session;
+    Result rc = tsOpenTsSession(g_tsSrv, &ts_session, TsDeviceCode_LocationInternal);
+    if (R_SUCCEEDED(rc)) {
+        float temp_float;
+        if (R_SUCCEEDED(tsGetTemperatureWithTsSession(&ts_session, &temp_float))) {
+            *temperature = static_cast<s32>(temp_float);
+        }
+        tsSessionClose(&ts_session);
+        return true;
+    }
+    return false;
 }
 
-bool thermalstatusGetDetailsSOC(s32 *temperature) {
-    if (hosversionAtLeast(17,0,0)) {
-        //float temp_float;
-        //if (R_SUCCEEDED(tsSessionGetTemperature(&g_tsInternalSession, &temp_float))) {
-        //    *temperature = (int)temp_float;
-        //    return true;
-        //} else
-        //    return false;
-        
-        return false;
-    } else
-        return R_SUCCEEDED(tsGetTemperature(TsLocation_External, temperature));
+bool thermalstatusGetDetailsSOC(s32* temperature) {
+    TsSession ts_session;
+    Result rc = tsOpenTsSession(g_tsSrv, &ts_session, TsDeviceCode_LocationExternal);
+    if (R_SUCCEEDED(rc)) {
+        float temp_float;
+        if (R_SUCCEEDED(tsGetTemperatureWithTsSession(&ts_session, &temp_float))) {
+            *temperature = static_cast<s32>(temp_float);
+        }
+        tsSessionClose(&ts_session);
+        return true;
+    }
+    return false;
 }
 
+
+
+
+
+
+
+//s32 SOC_temperature, PCB_temperature;
+//static TsSession g_tsInternalSession, g_tsExternalSession;
+//
+//
+//bool thermalstatusInit(void) {
+//    if (R_FAILED(tsInitialize()))
+//        return false;
+//
+//    if (hosversionAtLeast(17,0,0) && R_FAILED(tsOpenSession(&g_tsInternalSession, TsDeviceCode_LocationInternal)) && R_FAILED(tsOpenSession(&g_tsExternalSession, TsDeviceCode_LocationExternal)))
+//        return false;
+//
+//    return true;
+//}
+//
+//void thermalstatusExit(void) {
+//    if (hosversionAtLeast(17,0,0)) {
+//        tsSessionClose(&g_tsInternalSession);
+//        tsSessionClose(&g_tsExternalSession);
+//    }
+//    tsExit();
+//}
+//
+//bool thermalstatusGetDetails(s32 *temperature, std::string location = "internal") {
+//    if (hosversionAtLeast(17,0,0)) {
+//        float temp_float;
+//        if ((location == "internal") && R_SUCCEEDED(tsSessionGetTemperature(&g_tsInternalSession, &temp_float))) {
+//            *temperature = (int)temp_float;
+//            return true;
+//        } else if ((location == "external") && R_SUCCEEDED(tsSessionGetTemperature(&g_tsExternalSession, &temp_float))) {
+//            *temperature = (int)temp_float;
+//            return true;
+//        } else {
+//            return false;
+//        }
+//    } else {
+//        if (location == "internal") {
+//            return R_SUCCEEDED(tsGetTemperature(TsLocation_Internal, temperature));
+//        } else {
+//            return R_SUCCEEDED(tsGetTemperature(TsLocation_External, temperature));
+//        }
+//    }
+//}
+
+
+
+
+// Time implementation
 struct timespec currentTime;
 static const std::string DEFAULT_DT_FORMAT = "'%a %T'";
 static std::string datetimeFormat = removeQuotes(DEFAULT_DT_FORMAT);
+
+
+// Widget settings
 static std::string hideClock, hideBattery, hidePCBTemp, hideSOCTemp;
+
+void reinitializeWidgetVars() {
+    hideClock = parseValueFromIniSection("/config/ultrahand/config.ini", "ultrahand", "hide_clock");
+    hideBattery = parseValueFromIniSection("/config/ultrahand/config.ini", "ultrahand", "hide_battery");
+    hideSOCTemp = parseValueFromIniSection("/config/ultrahand/config.ini", "ultrahand", "hide_soc_temp");
+    hidePCBTemp = parseValueFromIniSection("/config/ultrahand/config.ini", "ultrahand", "hide_pcb_temp");
+}
+
+static std::string cleanVersionLabels, hideOverlayVersions, hidePackageVersions;
+
+static std::string loaderInfo = envGetLoaderInfo();
+static std::string versionLabel;
+
+void reinitializeVersionLabels() {
+    cleanVersionLabels = parseValueFromIniSection("/config/ultrahand/config.ini", "ultrahand", "clean_version_labels");
+    hideOverlayVersions = parseValueFromIniSection("/config/ultrahand/config.ini", "ultrahand", "hide_overlay_versions");
+    hidePackageVersions = parseValueFromIniSection("/config/ultrahand/config.ini", "ultrahand", "hide_package_versions");
+    if (cleanVersionLabels == "true")
+        versionLabel = APP_VERSION+std::string("   (")+ extractTitle(loaderInfo)+" "+cleanVersionLabel(loaderInfo)+std::string(")"); // Still needs to parse nx-ovlloader instead of hard coding it
+    else
+        versionLabel = APP_VERSION+std::string("   (")+ extractTitle(loaderInfo)+" v"+cleanVersionLabel(loaderInfo)+std::string(")");
+}
+
+
 
 // CUSTOM SECTION END
 
@@ -1510,10 +1722,10 @@ namespace tsl {
              * @param color Text color. Use transparent color to skip drawing and only get the string's dimensions
              * @return Dimensions of drawn string
              */
-            std::pair<u32, u32> drawString(const char* string, bool monospace, s32 x, s32 y, float fontSize, Color color, ssize_t maxWidth = 0) {
-                s32 maxX = x;
-                s32 currX = x;
-                s32 currY = y;
+            std::pair<u32, u32> drawString(const char* string, bool monospace, float x, float y, float fontSize, Color color, ssize_t maxWidth = 0) {
+                float maxX = x;
+                float currX = x;
+                float currY = y;
 
                 struct Glyph {
                     stbtt_fontinfo *currFont;
@@ -1940,11 +2152,20 @@ namespace tsl {
             Element() {}
             virtual ~Element() { }
             
+            std::string disableSelectionBGStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "disable_selection_bg");
+            bool disableSelectionBG = (!disableSelectionBGStr.empty() && disableSelectionBGStr != "false");
+            std::string selectionBGColorStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "selection_bg_color");
+            Color selectionBGColor = RGB888(selectionBGColorStr, "#000000");
+            
             std::string highlightColor1Str = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "highlight_color_1");
             std::string highlightColor2Str = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "highlight_color_2");
             
             Color highlightColor1 = RGB888(highlightColor1Str, "#2288CC");
             Color highlightColor2 = RGB888(highlightColor2Str, "#88FFFF");
+            Color highlightColor = a({0xf,0xf,0xf,0xf});
+            
+            std::chrono::duration<long int, std::ratio<1, 1000000000>> t;
+            //double timeCounter;
             
             /**
              * @brief Handles focus requesting
@@ -2025,21 +2246,15 @@ namespace tsl {
              * @param renderer
              */
             void frame(gfx::Renderer *renderer) {
-                renderer->enableScissoring(0, 0, tsl::cfg::FramebufferWidth, tsl::cfg::FramebufferHeight);
-
-                if (this->m_focused)
+                
+                if (this->m_focused) {
+                    renderer->enableScissoring(0, 97, tsl::cfg::FramebufferWidth, tsl::cfg::FramebufferHeight-73-97);
                     this->drawFocusBackground(renderer);
-
-                renderer->disableScissoring();
-
-                this->draw(renderer);
-
-                renderer->enableScissoring(0, 0, tsl::cfg::FramebufferWidth, tsl::cfg::FramebufferHeight);
-
-                if (this->m_focused)
                     this->drawHighlight(renderer);
-
-                renderer->disableScissoring();
+                    renderer->disableScissoring();
+                }
+                
+                this->draw(renderer);
             }
 
             /**
@@ -2104,7 +2319,8 @@ namespace tsl {
              * @param renderer Renderer
              */
             virtual void drawFocusBackground(gfx::Renderer *renderer) {
-                renderer->drawRect(ELEMENT_BOUNDS(this), a(0xF000));
+                if (!disableSelectionBG)
+                    renderer->drawRect(ELEMENT_BOUNDS(this), selectionBGColor); // CUSTOM MODIFICATION 
 
                 if (this->m_clickAnimationProgress > 0) {
                     this->drawClickAnimation(renderer);
@@ -2127,15 +2343,13 @@ namespace tsl {
                 
                 
                 // Get the current time
-                auto currentTime = std::chrono::system_clock::now();
-                auto timeInSeconds = std::chrono::duration<double>(currentTime.time_since_epoch()).count();
-
+                
                 // Calculate the progress for one full sine wave per second
-                const double cycleDuration = 1.0;  // 1 second for one full sine wave
-                double timeCounter = fmod(timeInSeconds, cycleDuration);
-                float progress = (std::sin(2 * M_PI * timeCounter / cycleDuration) + 1) / 2;
+                //const double cycleDuration = 1.0;  // 1 second for one full sine wave
+                //double timeCounter = 
+                half progress = half((std::sin(2.0 * M_PI * fmod(std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count(), 1.0)) + 1.0) / 2.0);
 
-                Color highlightColor = {
+                highlightColor = {
                     static_cast<u8>((highlightColor1.r - highlightColor2.r) * progress + highlightColor2.r),
                     static_cast<u8>((highlightColor1.g - highlightColor2.g) * progress + highlightColor2.g),
                     static_cast<u8>((highlightColor1.b - highlightColor2.b) * progress + highlightColor2.b),
@@ -2144,7 +2358,7 @@ namespace tsl {
                 s32 x = 0, y = 0;
 
                 if (this->m_highlightShaking) {
-                    auto t = (std::chrono::system_clock::now() - this->m_highlightShakingStartTime);
+                    t = (std::chrono::system_clock::now() - this->m_highlightShakingStartTime);
                     if (t >= 100ms)
                         this->m_highlightShaking = false;
                     else {
@@ -2176,7 +2390,8 @@ namespace tsl {
                 renderer->drawRect(this->getX() + x - 4, this->getY() + y + this->getHeight(), this->getWidth() + 8, 4, a(highlightColor));
                 renderer->drawRect(this->getX() + x - 4, this->getY() + y, 4, this->getHeight(), a(highlightColor));
                 renderer->drawRect(this->getX() + x + this->getWidth(), this->getY() + y, 4, this->getHeight(), a(highlightColor));
-
+                
+                //renderer->drawRect(ELEMENT_BOUNDS(this), a(0xF000)); // This has been moved here (needs to be toggleable)
             }
             
             
@@ -2328,7 +2543,11 @@ namespace tsl {
             virtual ~CustomDrawer() {}
 
             virtual void draw(gfx::Renderer* renderer) override {
-                renderer->enableScissoring(ELEMENT_BOUNDS(this));
+                //renderer->enableScissoring(ELEMENT_BOUNDS(this));
+                //this->m_renderFunc(renderer, ELEMENT_BOUNDS(this));
+                //renderer->disableScissoring();
+                
+                renderer->enableScissoring(0, 97, tsl::cfg::FramebufferWidth, tsl::cfg::FramebufferHeight-73-97); // CUSTOM MODIFICATION (bug fix with renderer)
                 this->m_renderFunc(renderer, ELEMENT_BOUNDS(this));
                 renderer->disableScissoring();
             }
@@ -2352,7 +2571,7 @@ namespace tsl {
                 // Lookup the width of the current character
                 float letterWidth = characterWidths[letter];
                 if (letterWidth == 0) {
-                    letterWidth = 0.33;
+                    letterWidth = 0.33; // default width
                 }
                 
                 // Accumulate the width
@@ -2397,13 +2616,25 @@ namespace tsl {
             std::string m_pageLeftName; // CUSTOM MODIFICATION
             std::string m_pageRightName; // CUSTOM MODIFICATION
             
+            std::string disableColorfulLogoStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "disable_colorful_logo");
+            bool disableColorfulLogo = (!disableColorfulLogoStr.empty() && disableColorfulLogoStr == "true");
+            
             std::string defaultTextColorStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "text_color");
             tsl::Color defaultTextColor = RGB888(defaultTextColorStr);
             std::string clockColorStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "clock_color");
             tsl::Color clockColor = RGB888(clockColorStr);
             std::string batteryColorStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "battery_color");
             tsl::Color batteryColor = RGB888(batteryColorStr);
-            
+            tsl::Color highlightColor = {0xF, 0xF, 0xF, 0xF};
+            std::string firstHalf, secondHalf;
+            const double cycleDuration = 1.5;
+            float counter = 0;
+            float countOffset;
+            double timeInSeconds;
+            float progress;
+            float letterWidth;
+            float x, y;
+            int fontSize;
             
             OverlayFrame(const std::string& title, const std::string& subtitle, const std::string& menuMode = "", const std::string& colorSelection = "", const std::string& pageLeftName = "", const std::string& pageRightName = "")
                 : Element(), m_menuMode(menuMode), m_title(title), m_subtitle(subtitle), m_colorSelection(colorSelection), m_pageLeftName(pageLeftName), m_pageRightName(pageRightName) {} // CUSTOM MODIFICATION
@@ -2416,67 +2647,83 @@ namespace tsl {
             // CUSTOM SECTION START
             virtual void draw(gfx::Renderer *renderer) override {
                 renderer->fillScreen(a(tsl::style::color::ColorFrameBackground));
-                renderer->drawRect(tsl::cfg::FramebufferWidth - 1, 0, 1, tsl::cfg::FramebufferHeight, a(0xF222));
+                //renderer->drawRect(tsl::cfg::FramebufferWidth - 1, 0, 1, tsl::cfg::FramebufferHeight, a(0xF222)); // CUSTOM MODIFICATION, not sure why this call was even necessary after comparisons.
                 
-                int y = 50;
+                y = 50;
                 int offset = 0;
                 // Check if m_title is "Ultrahand"
                 if (this->m_title == "Ultrahand" && this->m_subtitle != "Ultrahand Package" && this->m_subtitle != "Ultrahand Script") {
-                    static float counter = 0;
-                    std::string firstHalf = "Ultra";
-                    std::string secondHalf = "hand";
+                    firstHalf = "Ultra";
+                    secondHalf = "hand";
                     
-                    float x = 20;
-                    int fontSize = 42;
+                    x = 20;
+                    fontSize = 42;
                     offset = 6;
                     
                     // Draw the first half of the string in white color
-                    static Color highlightColor = {0xF, 0xF, 0xF, 0xF};
-                    static float progress;
-                    float letterWidth;
+                    //static Color highlightColor = {0xF, 0xF, 0xF, 0xF};
                     
                     
                     // Get the current time
-                    static double timeInSeconds;
+                    //static double timeInSeconds;
                     
                     // Calculate the progress for one full sine wave per second
-                    const double cycleDuration = 1.5;  // for one full sine wave
-                    static double timeCounter;// = fmod(timeInSeconds, cycleDuration);
+                    //const double cycleDuration = 1.5;  // for one full sine wave
+                    //static double timeCounter;// = fmod(timeInSeconds, cycleDuration);
                     //float progress = calculateAmplitude(2 * M_PI * timeCounter / cycleDuration);
                     
                     
-                    float countOffset = 0;
                     
-                    for (char letter : firstHalf) {
-                        // Calculate the progress for each letter based on the counter
-                        //progress = calculateAmplitude(counter - x * 0.001F);
-                        timeInSeconds = std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count();
-                        timeCounter = fmod(timeInSeconds, cycleDuration);
-                        counter = (2 * M_PI * (timeCounter + countOffset) / cycleDuration);
-                        //progress = calculateAmplitude(counter);
-                        progress = (std::sin(counter) + 1) / 2;
-                        
-                        
-                        // Calculate the corresponding highlight color for each letter
-                        highlightColor = {
-                            static_cast<u8>((0xA - 0xF) * (3 - 1.5*progress) + 0xF),
-                            static_cast<u8>((0xA - 0xF) * 1.5*progress + 0xF),
-                            static_cast<u8>((0xA - 0xF) * (1.25 - progress) + 0xF),
-                            0xF
-                        };
-                        
-                        // Draw each character with its corresponding highlight color
-                        renderer->drawString(std::string(1, letter).c_str(), false, x, y + offset, fontSize, a(highlightColor));
-                        
-                        // Manually calculate the width of the current letter
-                        letterWidth = calculateStringWidth(std::string(1, letter), fontSize);
-                        
-                        // Adjust the x-coordinate for the next character's position
-                        x += letterWidth;
-                        
-                        // Update the counter for the next character
-                        countOffset -= 0.2F;
+                    countOffset = 0;
+                    
+                    if (!disableColorfulLogo) {
+                        for (char letter : firstHalf) {
+                            
+                            // Calculate the progress for each letter based on the counter
+                            //progress = calculateAmplitude(counter - x * 0.001F);
+                            counter = (2 * M_PI * (fmod(std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count(), cycleDuration) + countOffset) / 1.5);
+                            //progress = calculateAmplitude(counter);
+                            progress = (std::sin(counter) + 1) / 2;
+                            
+                            
+                            // Calculate the corresponding highlight color for each letter
+                            highlightColor = {
+                                static_cast<u8>((0xA - 0xF) * (3 - 1.5*progress) + 0xF),
+                                static_cast<u8>((0xA - 0xF) * 1.5*progress + 0xF),
+                                static_cast<u8>((0xA - 0xF) * (1.25 - progress) + 0xF),
+                                0xF
+                            };
+                            
+                            // Draw each character with its corresponding highlight color
+                            //renderer->drawString(std::string(1, letter).c_str(), false, x, y + offset, fontSize, a(highlightColor));
+                            
+                            // Call the renderer->drawString function
+                            renderer->drawString(std::string(1, letter).c_str(), false, x, y + offset, fontSize, highlightColor);
+                            
+                            // Manually calculate the width of the current letter
+                            letterWidth = calculateStringWidth(std::string(1, letter), fontSize);
+                            
+                            // Adjust the x-coordinate for the next character's position
+                            x += letterWidth;
+                            
+                            // Update the counter for the next character
+                            countOffset -= 0.2F;
+                        }
+                    } else {
+                        for (char letter : firstHalf) {
+                            renderer->drawString(std::string(1, letter).c_str(), false, x, y + offset, fontSize, tsl::Color(0xF,0xF,0xF,0xF));
+                            
+                            // Manually calculate the width of the current letter
+                            letterWidth = calculateStringWidth(std::string(1, letter), fontSize);
+                            
+                            // Adjust the x-coordinate for the next character's position
+                            x += letterWidth;
+                            
+                            // Update the counter for the next character
+                            countOffset -= 0.2F;
+                        }
                     }
+                    
                     
                     
                     // Calculate the position for the second half based on the width of the first half
@@ -2490,19 +2737,20 @@ namespace tsl {
                     //struct timespec currentTime;
                     clock_gettime(CLOCK_REALTIME, &currentTime);
                     
-                    
-                    // Convert the current time to a human-readable string
-                    char timeStr[20]; // Allocate a buffer to store the time string
-                    //strftime(timeStr, sizeof(timeStr), "%r", localtime(&currentTime.tv_sec));
-                    strftime(timeStr, sizeof(timeStr), datetimeFormat.c_str(), localtime(&currentTime.tv_sec));
-                    
-                    localizeTimeStr(timeStr); // for language localizations
-                    
                     int y_offset = 44;
                     if ((hideBattery == "true" && hidePCBTemp == "true" && hideSOCTemp == "true") || (hideClock == "true"))
                         y_offset += 12;
                     
                     if (hideClock != "true") {// Use the 'timeStr' to display the time
+                        
+                        
+                        // Convert the current time to a human-readable string
+                        char timeStr[20]; // Allocate a buffer to store the time string
+                        //strftime(timeStr, sizeof(timeStr), "%r", localtime(&currentTime.tv_sec));
+                        strftime(timeStr, sizeof(timeStr), datetimeFormat.c_str(), localtime(&currentTime.tv_sec));
+                        
+                        localizeTimeStr(timeStr); // for language localizations
+                        
                         renderer->drawString(timeStr, false, tsl::cfg::FramebufferWidth - calculateStringWidth(timeStr, 20) - 20, y_offset, 20, clockColor);
                         y_offset += 24;
                     }
@@ -2514,9 +2762,15 @@ namespace tsl {
                     
                     // check in 1s intervals
                     if ((currentTime.tv_sec - timeOut) >= 1) {
-                        thermalstatusGetDetailsPCB(&PCB_temperature);
-                        thermalstatusGetDetailsSOC(&SOC_temperature);
-                        powerGetDetails(&batteryCharge, &isCharging);
+                        if (hidePCBTemp != "true")
+                            thermalstatusGetDetailsPCB(&PCB_temperature);
+                        if (hideSOCTemp != "true")
+                            thermalstatusGetDetailsSOC(&SOC_temperature);
+                        if (hideBattery != "true")
+                            powerGetDetails(&batteryCharge, &isCharging);
+                        //thermalstatusGetDetails(&SOC_temperature, "internal");
+                        //thermalstatusGetDetails(&PCB_temperature, "external");
+                        
                         timeOut = int(currentTime.tv_sec);
                     }
                     
@@ -2531,25 +2785,26 @@ namespace tsl {
                     sprintf(chargeString, "%d%%", batteryCharge);
 
                     // Convert the C-style string to an std::string
-                    std::string chargeStringStd = chargeString;
-                    std::string PCB_temperatureStringSTD = PCB_temperatureStr;
-                    std::string SOC_temperatureStringSTD = SOC_temperatureStr;
+                    std::string chargeStringSTD;
+                    std::string PCB_temperatureStringSTD;
+                    std::string SOC_temperatureStringSTD;
                     
                     // Convert the float to std::string
                     //std::string powerConsumptionStr = std::to_string(powerConsumption);
 
                     // Use the '+' operator to concatenate the strings
                     
-                    if (hideBattery != "true") {
+                    if (hideBattery != "true" && batteryCharge > 0) {
+                        chargeStringSTD = chargeString;
                         PCB_temperatureStringSTD += " ";
                         // Use the 'timeStr' to display the time
                         if (powerCacheIsCharging)
-                            renderer->drawString(chargeStringStd.c_str(), false, tsl::cfg::FramebufferWidth - calculateStringWidth(chargeStringStd, 20) - 20, y_offset, 20, tsl::Color(0x0, 0xF, 0x0, 0xF));
+                            renderer->drawString(chargeStringSTD.c_str(), false, tsl::cfg::FramebufferWidth - calculateStringWidth(chargeStringSTD, 20) - 20, y_offset, 20, tsl::Color(0x0, 0xF, 0x0, 0xF));
                         else {
                             if (batteryCharge <= 20) {
-                                renderer->drawString(chargeStringStd.c_str(), false, tsl::cfg::FramebufferWidth - calculateStringWidth(chargeStringStd, 20) - 20, y_offset, 20, tsl::Color(0xF, 0x0, 0x0, 0xF));
+                                renderer->drawString(chargeStringSTD.c_str(), false, tsl::cfg::FramebufferWidth - calculateStringWidth(chargeStringSTD, 20) - 20, y_offset, 20, tsl::Color(0xF, 0x0, 0x0, 0xF));
                             } else {
-                                renderer->drawString(chargeStringStd.c_str(), false, tsl::cfg::FramebufferWidth - calculateStringWidth(chargeStringStd, 20) - 20, y_offset, 20, batteryColor);
+                                renderer->drawString(chargeStringSTD.c_str(), false, tsl::cfg::FramebufferWidth - calculateStringWidth(chargeStringSTD, 20) - 20, y_offset, 20, batteryColor);
                             }
                         }
                     }
@@ -2558,15 +2813,17 @@ namespace tsl {
                     
                     int offset = 0;
                     if (hidePCBTemp != "true") {
+                        PCB_temperatureStringSTD = PCB_temperatureStr;
                         if (PCB_temperature > 0) {
                             offset += 2;
-                            renderer->drawString(PCB_temperatureStringSTD.c_str(), false, tsl::cfg::FramebufferWidth + offset - calculateStringWidth(PCB_temperatureStringSTD, 20) - calculateStringWidth(chargeStringStd, 20) - 20, y_offset, 20, tsl::GradientColor(PCB_temperature));
+                            renderer->drawString(PCB_temperatureStringSTD.c_str(), false, tsl::cfg::FramebufferWidth + offset - calculateStringWidth(PCB_temperatureStringSTD, 20) - calculateStringWidth(chargeStringSTD, 20) - 20, y_offset, 20, tsl::GradientColor(PCB_temperature));
                         }
                     }
                     if (hideSOCTemp != "true") {
+                        SOC_temperatureStringSTD = SOC_temperatureStr;
                         if (SOC_temperature > 0) {
                             offset += 2;
-                            renderer->drawString(SOC_temperatureStringSTD.c_str(), false, tsl::cfg::FramebufferWidth + offset -  calculateStringWidth(SOC_temperatureStringSTD, 20) - calculateStringWidth(PCB_temperatureStringSTD, 20) - calculateStringWidth(chargeStringStd, 20) - 20, y_offset, 20, tsl::GradientColor(SOC_temperature));
+                            renderer->drawString(SOC_temperatureStringSTD.c_str(), false, tsl::cfg::FramebufferWidth + offset -  calculateStringWidth(SOC_temperatureStringSTD, 20) - calculateStringWidth(PCB_temperatureStringSTD, 20) - calculateStringWidth(chargeStringSTD, 20) - 20, y_offset, 20, tsl::GradientColor(SOC_temperature));
                         }
                     }
                 } else {
@@ -2648,7 +2905,10 @@ namespace tsl {
                 }
                 
                 //if (this->m_title != "Ultrahand")
-                renderer->drawString(this->m_subtitle.c_str(), false, 20, y+20+offset, 15, a(tsl::style::color::ColorDescription));
+                if (this->m_title == "Ultrahand") {
+                    renderer->drawString(versionLabel.c_str(), false, 20, y+20+offset, 15, a(tsl::style::color::ColorDescription));
+                } else
+                    renderer->drawString(this->m_subtitle.c_str(), false, 20, y+20+offset, 15, a(tsl::style::color::ColorDescription));
                 
                 renderer->drawRect(15, tsl::cfg::FramebufferHeight - 73, tsl::cfg::FramebufferWidth - 30, 1, a(defaultTextColor));
                 
@@ -2887,7 +3147,7 @@ namespace tsl {
             
             std::string trackBarColorStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "trackbar_color");
             Color trackBarColor = RGB888(trackBarColorStr, "#555555");
-
+            
             virtual void draw(gfx::Renderer *renderer) override {
                 
                 
@@ -2945,9 +3205,9 @@ namespace tsl {
                     float scrollbarHeight = static_cast<float>(this->getHeight() * this->getHeight()) / this->m_listHeight;
                     float scrollbarOffset = (static_cast<double>(this->m_offset)) / static_cast<double>(this->m_listHeight - this->getHeight()) * (this->getHeight() - std::ceil(scrollbarHeight));
 
-                    renderer->drawRect(this->getRightBound() + 10, this->getY() + scrollbarOffset, 5, scrollbarHeight - 50, trackBarColor);
-                    renderer->drawCircle(this->getRightBound() + 12, this->getY() + scrollbarOffset, 2, true, trackBarColor);
-                    renderer->drawCircle(this->getRightBound() + 12, this->getY() + scrollbarOffset + scrollbarHeight - 50, 2, true, trackBarColor);
+                    renderer->drawRect(this->getRightBound() + 10+2, this->getY() + scrollbarOffset, 5, scrollbarHeight - 50, trackBarColor);
+                    renderer->drawCircle(this->getRightBound() + 12+2, this->getY() + scrollbarOffset, 2, true, trackBarColor);
+                    renderer->drawCircle(this->getRightBound() + 12+2, this->getY() + scrollbarOffset + scrollbarHeight - 50, 2, true, trackBarColor);
 
                     float prevOffset = this->m_offset;
 
@@ -3201,8 +3461,14 @@ namespace tsl {
          */
         class ListItem : public Element {
         public:
-            std::string defaultTextColorStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "text_color");
+            std::string defaultTextColorStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "text_color"); // CUSTOM MODIFICATION
             tsl::Color defaultTextColor = RGB888(defaultTextColorStr);
+            std::string selectedTextColorStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "selection_text_color");
+            tsl::Color selectedTextColor = RGB888(selectedTextColorStr);
+            
+            std::chrono::system_clock::time_point timeIn;// = std::chrono::system_clock::now();
+            std::chrono::duration<long int, std::ratio<1, 1000000000>> t;
+            
             /**
              * @brief Constructor
              *
@@ -3234,7 +3500,7 @@ namespace tsl {
                         auto [width, height] = renderer->drawString(this->m_scrollText.c_str(), false, 0, 0, 23, tsl::style::color::ColorTransparent);
                         this->m_scrollText += this->m_text;
                         this->m_textWidth = width;
-                        this->m_ellipsisText = renderer->limitStringLength(this->m_text, false, 22, this->m_maxWidth);
+                        this->m_ellipsisText = renderer->limitStringLength(this->m_text, false, 24, this->m_maxWidth);
                     } else {
                         this->m_textWidth = width;
                     }
@@ -3245,29 +3511,40 @@ namespace tsl {
 
                 if (this->m_trunctuated) {
                     if (this->m_focused) {
-                        renderer->enableScissoring(this->getX(), this->getY(), this->m_maxWidth + 40, this->getHeight());
-                        renderer->drawString(this->m_scrollText.c_str(), false, this->getX() + 20 - this->m_scrollOffset, this->getY() + 45, 23, defaultTextColor);
+                        renderer->enableScissoring(this->getX(), 97, this->m_maxWidth + 40, tsl::cfg::FramebufferHeight-73-97);
+                        //renderer->enableScissoring(this->getX(), this->getY(), this->m_maxWidth + 40, this->getHeight());
+                        //renderer->drawString(this->m_scrollText.c_str(), false, this->getX() + 20.0 - std::round(this->m_scrollOffset*10000.0)/10000.0, this->getY() + 45, 23, defaultTextColor);
+                        renderer->drawString(this->m_scrollText.c_str(), false, this->getX() + 20.0 - this->m_scrollOffset, this->getY() + 45, 23, selectedTextColor);
                         renderer->disableScissoring();
-                        if (this->m_scrollAnimationCounter == 90) {
-                            if (this->m_scrollOffset == this->m_textWidth) {
+                        t = std::chrono::system_clock::now() - this->timeIn;
+                        if (t >= 2000ms) {
+                            if (this->m_scrollOffset >= this->m_textWidth) {
                                 this->m_scrollOffset = 0;
-                                this->m_scrollAnimationCounter = 0;
+                                this->timeIn = std::chrono::system_clock::now();
                             } else {
-                                this->m_scrollOffset++;
+                                // Calculate the increment based on the desired scroll rate
+                                //this->m_scrollOffset = (1.0-0.9) * this->m_scrollOffset + 0.9 * (0.1 * std::chrono::duration_cast<std::chrono::milliseconds>(t - 2000ms).count());
+                                this->m_scrollOffset = (half(0.1) * std::chrono::duration_cast<std::chrono::milliseconds>(t - 2000ms).count());
+                                //this->m_scrollOffset = (customRound(0.10 * std::chrono::duration_cast<std::chrono::milliseconds>((t) - 2000ms).count() * 10000.0) / 10000.0);
                             }
-                        } else {
-                            this->m_scrollAnimationCounter++;
-                        }
+                        } // CUSTOM MODIFICATION END
                     } else {
                         renderer->drawString(this->m_ellipsisText.c_str(), false, this->getX() + 20, this->getY() + 45, 23, a(defaultTextColor));
                     }
                 } else {
-                    renderer->drawString(this->m_text.c_str(), false, this->getX() + 20, this->getY() + 45, 23, a(defaultTextColor));
+                    if (this->m_focused)
+                        renderer->drawString(this->m_text.c_str(), false, this->getX() + 20, this->getY() + 45, 23, a(selectedTextColor));
+                    else
+                        renderer->drawString(this->m_text.c_str(), false, this->getX() + 20, this->getY() + 45, 23, a(defaultTextColor));
                 }
+
 
                 // CUSTOM SECTION START (modification for submenu footer color)
                 if (this->m_value == DROPDOWN_SYMBOL || this->m_value == OPTION_SYMBOL) {
-                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45, this->getY() + 45, 20, this->m_faint ? a(tsl::style::color::ColorDescription) : a(defaultTextColor));
+                    if (this->m_focused)
+                        renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45, this->getY() + 45, 20, this->m_faint ? a(tsl::style::color::ColorDescription) : a(selectedTextColor));
+                    else
+                        renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45, this->getY() + 45, 20, this->m_faint ? a(tsl::style::color::ColorDescription) : a(defaultTextColor));
                 } else if (this->m_value == CROSSMARK_SYMBOL) {
                     renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45, this->getY() + 45, 20, this->m_faint ? a(tsl::style::color::ColorDescription) : a(Color(0xF, 0x0, 0x0, 0xF)));
                 } else {
@@ -3313,7 +3590,7 @@ namespace tsl {
             virtual void setFocused(bool state) override {
                 this->m_scroll = false;
                 this->m_scrollOffset = 0;
-                this->m_scrollAnimationCounter = 0;
+                this->timeIn = std::chrono::system_clock::now(); // CUSTOM MODIFICATION
                 Element::setFocused(state);
             }
 
@@ -3376,10 +3653,9 @@ namespace tsl {
             bool m_touched = false;
 
             u16 m_maxScroll = 0;
-            u16 m_scrollOffset = 0;
+            half m_scrollOffset = half(0);
             u32 m_maxWidth = 0;
             u32 m_textWidth = 0;
-            u16 m_scrollAnimationCounter = 0;
         };
 
         /**
@@ -3396,7 +3672,7 @@ namespace tsl {
              * @param onValue Value drawn if the toggle is on
              * @param offValue Value drawn if the toggle is off
              */
-            ToggleListItem(const std::string& text, bool initialState, const std::string& onValue = "On", const std::string& offValue = "Off")
+            ToggleListItem(const std::string& text, bool initialState, const std::string& onValue = ON, const std::string& offValue = OFF)
                 : ListItem(text), m_state(initialState), m_onValue(onValue), m_offValue(offValue) {
 
                 this->setState(this->m_state);
@@ -3518,6 +3794,9 @@ namespace tsl {
             tsl::Color defaultTextColor = RGB888(defaultTextColorStr);
             std::string trackBarColorStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "trackbar_color");
             Color trackBarColor = RGB888(trackBarColorStr, "#555555");
+            std::chrono::duration<long int, std::ratio<1, 1000000000>> t;
+            Color highlightColor = a({0xf,0xf,0xf,0xf});
+            half progress;
             
             /**
              * @brief Constructor
@@ -3592,7 +3871,7 @@ namespace tsl {
 
                 renderer->drawString(this->m_icon, false, this->getX() + 15, this->getY() + 50, 23, a(defaultTextColor));
 
-                u16 handlePos = (this->getWidth() - 95) * static_cast<float>(this->m_value) / 100;
+                u16 handlePos = (this->getWidth() - 95) * static_cast<half>(this->m_value) / 100;
                 renderer->drawCircle(this->getX() + 60, this->getY() + 42, 2, true, a(tsl::style::color::ColorHighlight));
                 renderer->drawCircle(this->getX() + 60 + this->getWidth() - 95, this->getY() + 42, 2, true, a(tsl::style::color::ColorFrame));
                 renderer->drawRect(this->getX() + 60 + handlePos, this->getY() + 40, this->getWidth() - 95 - handlePos, 5, a(tsl::style::color::ColorFrame));
@@ -3611,22 +3890,22 @@ namespace tsl {
             }
 
             virtual void drawHighlight(gfx::Renderer *renderer) override {
-                static float counter = 0;
-                const float progress = (std::sin(counter) + 1) / 2;
-                Color highlightColor = {   static_cast<u8>((0x2 - 0x8) * progress + 0x8),
-                                                static_cast<u8>((0x8 - 0xF) * progress + 0xF),
-                                                static_cast<u8>((0xC - 0xF) * progress + 0xF),
-                                                static_cast<u8>((0x6 - 0xD) * progress + 0xD) };
+                static half counter = half(0);
+                progress = half((std::sin(counter) + 1.0) / 2.0);
+                highlightColor = {   static_cast<u8>((0x2 - 0x8) * progress + 0x8),
+                                     static_cast<u8>((0x8 - 0xF) * progress + 0xF),
+                                     static_cast<u8>((0xC - 0xF) * progress + 0xF),
+                                     static_cast<u8>((0x6 - 0xD) * progress + 0xD) };
 
-                counter += 0.1F;
+                counter += half(0.1F);
 
-                u16 handlePos = (this->getWidth() - 95) * static_cast<float>(this->m_value) / 100;
+                u16 handlePos = (this->getWidth() - 95) * static_cast<half>(this->m_value) / 100;
 
                 s32 x = 0;
                 s32 y = 0;
 
                 if (Element::m_highlightShaking) {
-                    auto t = (std::chrono::system_clock::now() - Element::m_highlightShakingStartTime);
+                    t = (std::chrono::system_clock::now() - Element::m_highlightShakingStartTime);
                     if (t >= 100ms)
                         Element::m_highlightShaking = false;
                     else {
@@ -4680,7 +4959,14 @@ namespace tsl {
         overlay->initScreen();
         overlay->changeTo(overlay->loadInitialGui());
 
-
+        // Argument parsing
+        //for (u8 arg = 0; arg < argc; arg++) {
+        //    if (strcasecmp(argv[arg], "--skipCombo") == 0) {
+        //        eventFire(&shData.comboEvent);
+        //        overlay->disableNextAnimation();
+        //    }
+        //}
+        
         // CUSTOM SECTION START
         // Argument parsing
         bool skipCombo = false;
@@ -4695,7 +4981,7 @@ namespace tsl {
         std::string settingsConfigPath = "sdmc:/config/ultrahand/config.ini";
         std::map<std::string, std::map<std::string, std::string>> settingsData = getParsedDataFromIniFile(settingsConfigPath);
         std::string inOverlayString;
-
+        
         if (settingsData.count("ultrahand") > 0 && settingsData["ultrahand"].count("in_overlay") > 0) {
             inOverlayString = settingsData["ultrahand"]["in_overlay"];
         } else {
@@ -4707,7 +4993,6 @@ namespace tsl {
             inOverlay = true;
             setIniFileValue(settingsConfigPath, "ultrahand", "in_overlay", "false");
         }
-        
         
         if (inOverlay && skipCombo) {
             eventFire(&shData.comboEvent);
@@ -4782,7 +5067,7 @@ namespace tsl::cfg {
     u16 LayerPosY   = 0;
     u16 FramebufferWidth  = 0;
     u16 FramebufferHeight = 0;
-    u64 launchCombo = HidNpadButton_L | HidNpadButton_Down | HidNpadButton_StickR;
+    u64 launchCombo = KEY_ZL | KEY_ZR | KEY_DDOWN;
 }
 extern "C" void __libnx_init_time(void);
 

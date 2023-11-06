@@ -11,7 +11,7 @@
  *
  *   Note: Please be aware that this notice cannot be altered or removed. It is a part
  *   of the project's documentation and must remain intact.
- * 
+ *
  *  Copyright (c) 2023 ppkantorski
  *  All rights reserved.
  ********************************************************************************/
@@ -31,6 +31,7 @@
 
 #include <payload.hpp> // Studious Pancake
 #include <util.hpp>
+#include <tesla.hpp>
 
 
 Payload::HekateConfigList const boot_config_list;
@@ -38,64 +39,6 @@ Payload::HekateConfigList const ini_config_list;
 Payload::PayloadConfigList const payload_config_list;
 
 
-/**
- * @brief Shutdown modes for the Ultrahand-Overlay project.
- *
- * These macros define the shutdown modes used in the Ultrahand-Overlay project:
- * - `SpsmShutdownMode_Normal`: Normal shutdown mode.
- * - `SpsmShutdownMode_Reboot`: Reboot mode.
- */
-#define SpsmShutdownMode_Normal 0
-#define SpsmShutdownMode_Reboot 1
-
-/**
- * @brief Key mapping macros for button keys.
- *
- * These macros define button keys for the Ultrahand-Overlay project to simplify key mappings.
- * For example, `KEY_A` represents the `HidNpadButton_A` key.
- */
-#define KEY_A HidNpadButton_A
-#define KEY_B HidNpadButton_B
-#define KEY_X HidNpadButton_X
-#define KEY_Y HidNpadButton_Y
-#define KEY_L HidNpadButton_L
-#define KEY_R HidNpadButton_R
-#define KEY_ZL HidNpadButton_ZL
-#define KEY_ZR HidNpadButton_ZR
-#define KEY_PLUS HidNpadButton_Plus
-#define KEY_MINUS HidNpadButton_Minus
-#define KEY_DUP HidNpadButton_Up
-#define KEY_DDOWN HidNpadButton_Down
-#define KEY_DLEFT HidNpadButton_Left
-#define KEY_DRIGHT HidNpadButton_Right
-#define KEY_SL HidNpadButton_AnySL
-#define KEY_SR HidNpadButton_AnySR
-#define KEY_LSTICK HidNpadButton_StickL
-#define KEY_RSTICK HidNpadButton_StickR
-#define KEY_UP (HidNpadButton_Up | HidNpadButton_StickLUp | HidNpadButton_StickRUp)
-#define KEY_DOWN (HidNpadButton_Down | HidNpadButton_StickLDown | HidNpadButton_StickRDown)
-#define KEY_LEFT (HidNpadButton_Left | HidNpadButton_StickLLeft | HidNpadButton_StickRLeft)
-#define KEY_RIGHT (HidNpadButton_Right | HidNpadButton_StickLRight | HidNpadButton_StickRRight)
-
-/**
- * @brief Ultrahand-Overlay Input Macros
- *
- * This block of code defines macros for handling input in the Ultrahand-Overlay project.
- * These macros simplify the mapping of input events to corresponding button keys and
- * provide aliases for touch and joystick positions.
- *
- * The macros included in this block are:
- *
- * - `touchPosition`: An alias for a constant `HidTouchState` pointer.
- * - `touchInput`: An alias for `&touchPos`, representing touch input.
- * - `JoystickPosition`: An alias for `HidAnalogStickState`, representing joystick input.
- *
- * These macros are utilized within the Ultrahand-Overlay project to manage and interpret
- * user input, including touch and joystick events.
- */
-#define touchPosition const HidTouchState
-#define touchInput &touchPos
-#define JoystickPosition HidAnalogStickState
 
 
 /**
@@ -115,18 +58,89 @@ Payload::PayloadConfigList const payload_config_list;
  * These paths are used within the Ultrahand-Overlay project to manage configuration files
  * and directories.
  */
-const std::string bootPackageFileName = "boot_package.ini";
-const std::string packageFileName = "package.ini";
-const std::string configFileName = "config.ini";
-const std::string settingsPath = "sdmc:/config/ultrahand/";
-const std::string settingsConfigIniPath = settingsPath + configFileName;
-const std::string themeConfigIniPath = settingsPath + "theme.ini";
-const std::string packageDirectory = "sdmc:/switch/.packages/";
-const std::string overlayDirectory = "sdmc:/switch/.overlays/";
-const std::string teslaSettingsConfigIniPath = "sdmc:/config/tesla/"+configFileName;
-const std::string overlaysIniFilePath = settingsPath + "overlays.ini";
-const std::string packagesIniFilePath = settingsPath + "packages.ini";
+static const std::string bootPackageFileName = "boot_package.ini";
+static const std::string packageFileName = "package.ini";
+static const std::string configFileName = "config.ini";
+static const std::string themeFileName = "theme.ini";
+static const std::string settingsPath = "sdmc:/config/ultrahand/";
+static const std::string settingsConfigIniPath = settingsPath + configFileName;
+static const std::string langPath = settingsPath+"lang/";
+static const std::string themeConfigIniPath = settingsPath + themeFileName;
+static const std::string themesPath = settingsPath+"themes/";
+static const std::string downloadsPath = settingsPath+"downloads/";
+static const std::string packageDirectory = "sdmc:/switch/.packages/";
+static const std::string overlayDirectory = "sdmc:/switch/.overlays/";
+static const std::string teslaSettingsConfigIniPath = "sdmc:/config/tesla/"+configFileName;
+static const std::string overlaysIniFilePath = settingsPath + "overlays.ini";
+static const std::string packagesIniFilePath = settingsPath + "packages.ini";
+static const std::string ultrahandRepo = "https://github.com/ppkantorski/Ultrahand-Overlay/";
 
+
+
+
+
+void initializeTheme(std::string themeIniPath = themeConfigIniPath) {
+    tsl::hlp::ini::IniData themesData;
+    bool initialize = false;
+    
+    // write default theme
+    if (isFileOrDirectory(themeIniPath)) {
+        themesData = getParsedDataFromIniFile(themeIniPath);
+        if (themesData.count("theme") > 0) {
+            auto& themedSection = themesData["theme"];
+            
+            if (themedSection.count("clock_color") == 0)
+                setIniFileValue(themeIniPath, "theme", "clock_color", "#FFFFFF");
+            
+            if (themedSection.count("battery_color") == 0)
+                setIniFileValue(themeIniPath, "theme", "battery_color", "#FFFFFF");
+            
+            if (themedSection.count("text_color") == 0)
+                setIniFileValue(themeIniPath, "theme", "text_color", "#FFFFFF");
+            
+            if (themedSection.count("selection_text_color") == 0)
+                setIniFileValue(themeIniPath, "theme", "selection_text_color", "#FFFFFF");
+            
+            if (themedSection.count("selection_bg_color") == 0)
+                setIniFileValue(themeIniPath, "theme", "selection_bg_color", "#000000");
+            
+            if (themedSection.count("trackbar_color") == 0)
+                setIniFileValue(themeIniPath, "theme", "trackbar_color", "#555555");
+            
+            if (themedSection.count("highlight_color_1") == 0)
+                setIniFileValue(themeIniPath, "theme", "highlight_color_1", "#2288CC");
+            
+            if (themedSection.count("highlight_color_2") == 0)
+                setIniFileValue(themeIniPath, "theme", "highlight_color_2", "#88FFFF");
+            
+            if (themedSection.count("disable_selection_bg") == 0)
+                setIniFileValue(themeIniPath, "theme", "disable_selection_bg", "true");
+            
+            // For disabling colorful logo
+            if (themedSection.count("disable_colorful_logo") == 0)
+                setIniFileValue(themeIniPath, "theme", "disable_colorful_logo", "false");
+            
+        } else {
+            initialize = true;
+        }
+    } else {
+        initialize = true;
+    }
+    
+    if (initialize) {
+        setIniFileValue(themeIniPath, "theme", "clock_color", "#FFFFFF");
+        setIniFileValue(themeIniPath, "theme", "battery_color", "#FFFFFF");
+        setIniFileValue(themeIniPath, "theme", "text_color", "#FFFFFF");
+        setIniFileValue(themeIniPath, "theme", "selection_text_color", "#FFFFFF");
+        setIniFileValue(themeIniPath, "theme", "selection_bg_color", "#000000");
+        setIniFileValue(themeIniPath, "theme", "trackbar_color", "#555555");
+        setIniFileValue(themeIniPath, "theme", "highlight_color_1", "#2288CC");
+        setIniFileValue(themeIniPath, "theme", "highlight_color_2", "#88FFFF");
+        setIniFileValue(themeIniPath, "theme", "disable_selection_bg", "true");
+        setIniFileValue(themeIniPath, "theme", "disable_colorful_logo", "false");
+        
+    }
+}
 
 
 
@@ -137,7 +151,7 @@ const std::string packagesIniFilePath = settingsPath + "packages.ini";
  * This function retrieves the key combo from Tesla settings and copies it to Ultrahand settings.
  */
 void copyTeslaKeyComboToUltrahand() {
-    std::string keyCombo;
+    std::string keyCombo = "ZL+ZR+DDOWN";
     std::map<std::string, std::map<std::string, std::string>> parsedData;
     
     if (isFileOrDirectory(teslaSettingsConfigIniPath)) {
@@ -150,21 +164,131 @@ void copyTeslaKeyComboToUltrahand() {
         }
     }
     
-    if (!keyCombo.empty()){
-        if (isFileOrDirectory(settingsConfigIniPath)) {
-            parsedData = getParsedDataFromIniFile(settingsConfigIniPath);
-            if (parsedData.count("ultrahand") > 0) {
-                auto& ultrahandSection = parsedData["ultrahand"];
-                if (ultrahandSection.count("key_combo") == 0) {
-                    // Write the key combo to the destination file
-                    setIniFileValue(settingsConfigIniPath, "ultrahand", "key_combo", keyCombo);
-                }
+    if (isFileOrDirectory(settingsConfigIniPath)) {
+        parsedData = getParsedDataFromIniFile(settingsConfigIniPath);
+        if (parsedData.count("ultrahand") > 0) {
+            auto& ultrahandSection = parsedData["ultrahand"];
+            if (ultrahandSection.count("key_combo") == 0) { // no entry present
+                // Write the key combo to the destination file
+                setIniFileValue(settingsConfigIniPath, "ultrahand", "key_combo", keyCombo);
             }
         }
+    } else {
+        // Write the key combo to the destination file
+        setIniFileValue(settingsConfigIniPath, "ultrahand", "key_combo", keyCombo);
     }
     tsl::impl::parseOverlaySettings();
 }
 
+
+
+void addPackageInfo(auto& list, auto& packageHeader) {
+    // Add a section break with small text to indicate the "Commands" section
+    list->addItem(new tsl::elm::CategoryHeader(PACKAGE_INFO));
+    
+    constexpr int maxLineLength = 28;  // Adjust the maximum line length as needed
+    constexpr int lineHeight = 20;  // Adjust the line height as needed
+    constexpr int xOffset = 120;    // Adjust the horizontal offset as needed
+    constexpr int fontSize = 16;    // Adjust the font size as needed
+    int numEntries = 0;   // Adjust the number of entries as needed
+    
+    std::string::size_type startPos;
+    std::string::size_type spacePos;
+    
+    std::string packageSectionString = "";
+    std::string packageInfoString = "";
+    if (packageHeader.version != "") {
+        packageSectionString += VERSION+"\n";
+        packageInfoString += (packageHeader.version+"\n").c_str();
+        numEntries++;
+    }
+    if (packageHeader.creator != "") {
+        packageSectionString += CREATOR+"\n";
+        packageInfoString += (packageHeader.creator+"\n").c_str();
+        numEntries++;
+    }
+    if (packageHeader.about != "") {
+        std::string aboutHeaderText = ABOUT+"\n";
+        std::string::size_type aboutHeaderLength = aboutHeaderText.length();
+        std::string aboutText = packageHeader.about;
+        
+        packageSectionString += aboutHeaderText;
+        
+        // Split the about text into multiple lines with proper word wrapping
+        startPos = 0;
+        spacePos = 0;
+        
+        while (startPos < aboutText.length()) {
+            std::string::size_type endPos = std::min(startPos + maxLineLength, aboutText.length());
+            std::string line = aboutText.substr(startPos, endPos - startPos);
+            
+            // Check if the current line ends with a space; if not, find the last space in the line
+            if (endPos < aboutText.length() && aboutText[endPos] != ' ') {
+                spacePos = line.find_last_of(' ');
+                if (spacePos != std::string::npos) {
+                    endPos = startPos + spacePos;
+                    line = aboutText.substr(startPos, endPos - startPos);
+                }
+            }
+            
+            packageInfoString += line + '\n';
+            startPos = endPos + 1;
+            numEntries++;
+            
+            // Add corresponding newline to the packageSectionString
+            if (startPos < aboutText.length())
+                packageSectionString += std::string(aboutHeaderLength, ' ') + '\n';
+        }
+    }
+    if (packageHeader.credits != "") {
+        std::string creditsHeaderText = CREDITS+"\n";
+        std::string::size_type creditsHeaderLength = creditsHeaderText.length();
+        std::string creditsText = packageHeader.credits;
+        
+        packageSectionString += creditsHeaderText;
+        
+        // Split the credits text into multiple lines with proper word wrapping
+        startPos = 0;
+        spacePos = 0;
+        
+        while (startPos < creditsText.length()) {
+            std::string::size_type endPos = std::min(startPos + maxLineLength, creditsText.length());
+            std::string line = creditsText.substr(startPos, endPos - startPos);
+            
+            // Check if the current line ends with a space; if not, find the last space in the line
+            if (endPos < creditsText.length() && creditsText[endPos] != ' ') {
+                spacePos = line.find_last_of(' ');
+                if (spacePos != std::string::npos) {
+                    endPos = startPos + spacePos;
+                    line = creditsText.substr(startPos, endPos - startPos);
+                }
+            }
+            
+            packageInfoString += line + '\n';
+            startPos = endPos + 1;
+            numEntries++;
+            
+            // Add corresponding newline to the packageSectionString
+            if (startPos < creditsText.length())
+                packageSectionString += std::string(creditsHeaderLength, ' ') + '\n';
+        }
+    }
+    
+    
+    // Remove trailing newline character
+    if ((packageSectionString != "") && (packageSectionString.back() == '\n'))
+        packageSectionString = packageSectionString.substr(0, packageSectionString.size() - 1);
+    if ((packageInfoString != "") && (packageInfoString.back() == '\n'))
+        packageInfoString = packageInfoString.substr(0, packageInfoString.size() - 1);
+    
+    
+    if ((packageSectionString != "") && (packageInfoString != "")) {
+        list->addItem(new tsl::elm::CustomDrawer([lineHeight, xOffset, fontSize, packageSectionString, packageInfoString](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
+            renderer->drawString(packageSectionString.c_str(), false, x, y + lineHeight, fontSize, tsl::style::color::ColorText);
+            renderer->drawString(packageInfoString.c_str(), false, x + xOffset, y + lineHeight, fontSize, tsl::style::color::ColorText);
+        }), fontSize * numEntries + lineHeight);
+    }
+}
 
 
 /**
@@ -528,6 +652,7 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
     std::vector<std::string> listData;
     std::string replacement;
     std::string jsonPath, jsonString;
+    std::string lastArg;
     //json_t* jsonData = nullptr;
     //json_error_t error;
     
@@ -540,7 +665,7 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
                 jsonPath = preprocessPath(cmd[1]);
                 //jsonData = json_load_file(jsonPath.c_str(), 0, &error);
             } else if ((cmd[0] == "json_source") && (jsonString.empty())) {
-                jsonString = removeQuotes(cmd[1]);
+                jsonString = cmd[1];
                 //jsonData = stringToJson(removeQuotes(cmd[1]));
             }
         }
@@ -557,17 +682,26 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
         for (auto& arg : modifiedCmd) {
             // Add debug log messages to trace the modifications
             //logMessage("Before source replacement: " + arg);
-            
-            if (arg.find("{file_source}") != std::string::npos) {
+            lastArg = "";
+            while (arg.find("{file_source}") != std::string::npos) {
                 arg = replacePlaceholder(arg, "{file_source}", entry);
+                if (arg == lastArg)
+                    break;
+                lastArg = arg;
             }
-            if (arg.find("{file_name}") != std::string::npos) {
+            while (arg.find("{file_name}") != std::string::npos) {
                 arg = replacePlaceholder(arg, "{file_name}", getNameFromPath(entry));
+                if (arg == lastArg)
+                    break;
+                lastArg = arg;
             }
-            if (arg.find("{folder_name}") != std::string::npos) {
+            while (arg.find("{folder_name}") != std::string::npos) {
                 arg = replacePlaceholder(arg, "{folder_name}", getParentDirNameFromPath(entry));
+                if (arg == lastArg)
+                    break;
+                lastArg = arg;
             }
-            if (arg.find("{list_source(") != std::string::npos) {
+            while (arg.find("{list_source(") != std::string::npos) {
                 //arg = replacePlaceholder(arg, "{list_source}", entry);
                 arg = replacePlaceholder(arg, "*", std::to_string(entryIndex));
                 size_t startPos = arg.find("{list_source(");
@@ -576,18 +710,26 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
                     replacement = listData[entryIndex];
                     arg.replace(startPos, endPos - startPos + 2, replacement);
                 }
+                if (arg == lastArg)
+                    break;
+                lastArg = arg;
             }
-            if (arg.find("{json_source(") != std::string::npos) {
+            while (arg.find("{json_source(") != std::string::npos) {
                 //std::string countStr = entry;
                 arg = replacePlaceholder(arg, "*", std::to_string(entryIndex));
                 size_t startPos = arg.find("{json_source(");
                 size_t endPos = arg.find(")}");
+                //logMessage("arg: "+arg);
                 if (endPos != std::string::npos && endPos > startPos) {
+                    //logMessage("jsonString: "+jsonString);
                     replacement = replaceJsonPlaceholder(arg.substr(startPos, endPos - startPos + 2), "json_source", jsonString);
                     arg.replace(startPos, endPos - startPos + 2, replacement);
                 }
+                if (arg == lastArg)
+                    break;
+                lastArg = arg;
             }
-            if (arg.find("{json_file_source(") != std::string::npos) {
+            while (arg.find("{json_file_source(") != std::string::npos) {
                 //std::string countStr = entry;
                 arg = replacePlaceholder(arg, "*", std::to_string(entryIndex));
                 size_t startPos = arg.find("{json_file_source(");
@@ -597,6 +739,9 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
                     //logMessage("Mid source replacement: " + replacement);
                     arg.replace(startPos, endPos - startPos + 2, replacement);
                 }
+                if (arg == lastArg)
+                    break;
+                lastArg = arg;
             }
         }
         //logMessage("After source replacement: " + arg);
@@ -616,6 +761,7 @@ void variableReplacement(std::vector<std::string>& cmd) {
     std::string commandName;
     std::string listString, jsonString, jsonPath, hexPath, iniPath;
     std::string replacement;
+    std::string lastArg;
     
     std::vector<std::string> listData;
     
@@ -650,8 +796,8 @@ void variableReplacement(std::vector<std::string>& cmd) {
     
     // Process {hex_file(...)} placeholders
     for (auto& arg : cmd) {
-        
-        if ((!iniPath.empty() && (arg.find("{ini_file(") != std::string::npos))) {
+        lastArg = "";
+        while ((!iniPath.empty() && (arg.find("{ini_file(") != std::string::npos))) {
             size_t startPos = arg.find("{ini_file(");
             size_t endPos = arg.find(")}");
             if (endPos != std::string::npos && endPos > startPos) {
@@ -659,10 +805,13 @@ void variableReplacement(std::vector<std::string>& cmd) {
                 //replacement = replaceIniPlaceholderF(arg.substr(startPos, endPos - startPos + 2), iniPath, iniFile);
                 arg.replace(startPos, endPos - startPos + 2, replacement);
             }
+            if (arg == lastArg)
+                break;
+            lastArg = arg;
         }
         
         
-        if (!hexPath.empty() && (arg.find("{hex_file(") != std::string::npos)) {
+        while (!hexPath.empty() && (arg.find("{hex_file(") != std::string::npos)) {
             size_t startPos = arg.find("{hex_file(");
             size_t endPos = arg.find(")}");
             if (endPos != std::string::npos && endPos > startPos) {
@@ -671,9 +820,12 @@ void variableReplacement(std::vector<std::string>& cmd) {
                 //replacement = replaceHexPlaceholderF(arg.substr(startPos, endPos - startPos + 2), hexPath, hexFile);
                 arg.replace(startPos, endPos - startPos + 2, replacement);
             }
+            if (arg == lastArg)
+                break;
+            lastArg = arg;
         }
         
-        if ((!jsonString.empty() && (arg.find("{json(") != std::string::npos))) {
+        while ((!jsonString.empty() && (arg.find("{json(") != std::string::npos))) {
             //std::string countStr = entry;
             //arg = replacePlaceholder(arg, "*", entry);
             size_t startPos = arg.find("{json(");
@@ -690,8 +842,11 @@ void variableReplacement(std::vector<std::string>& cmd) {
                 //    jsonData1 = nullptr;
                 //}
             }
+            if (arg == lastArg)
+                break;
+            lastArg = arg;
         }
-        if ((!jsonPath.empty() && (arg.find("{json_file(") != std::string::npos))) {
+        while ((!jsonPath.empty() && (arg.find("{json_file(") != std::string::npos))) {
             //std::string countStr = entry;
             //arg = replacePlaceholder(arg, "*", entry);
             size_t startPos = arg.find("{json_file(");
@@ -709,9 +864,12 @@ void variableReplacement(std::vector<std::string>& cmd) {
                 //    jsonData2 = nullptr;
                 //}
             }
+            if (arg == lastArg)
+                break;
+            lastArg = arg;
         }
         
-        if ((!listString.empty() && (arg.find("{list(") != std::string::npos))) {
+        while ((!listString.empty() && (arg.find("{list(") != std::string::npos))) {
             size_t startPos = arg.find("{list(");
             size_t endPos = arg.find(")}");
             if (endPos != std::string::npos && endPos > startPos) {
@@ -722,6 +880,9 @@ void variableReplacement(std::vector<std::string>& cmd) {
                 // Release the memory held by listData
                 //listData.clear();
             }
+            if (arg == lastArg)
+                break;
+            lastArg = arg;
         }
     }
     
@@ -769,13 +930,13 @@ bool interpretAndExecuteCommand(const std::vector<std::vector<std::string>> comm
     bool logging = false;
     bool refreshGui = false;
     
-    std::string listString, jsonString, jsonPath, hexPath, iniPath;
+    std::string listString, jsonString, jsonPath, hexPath, iniPath, lastArg;
     
     // inidialize data variables
     std::vector<std::string> listData;
     //json_t* jsonData1 = nullptr;
-    //json_t* jsonData2 = nullptr;
-    //json_error_t error;
+    json_t* jsonData2 = nullptr;
+    json_error_t error;
     //FILE* hexFile = nullptr;
     
     std::vector<std::string> command;
@@ -799,7 +960,8 @@ bool interpretAndExecuteCommand(const std::vector<std::vector<std::string>> comm
         std::vector<std::string> modifiedCmd = cmd;
         
         for (auto& arg : modifiedCmd) {
-            if ((!hexPath.empty() && (arg.find("{hex_file(") != std::string::npos))) {
+            lastArg = "";
+            while ((!hexPath.empty() && (arg.find("{hex_file(") != std::string::npos))) {
                 size_t startPos = arg.find("{hex_file(");
                 size_t endPos = arg.find(")}");
                 if (endPos != std::string::npos && endPos > startPos) {
@@ -807,8 +969,11 @@ bool interpretAndExecuteCommand(const std::vector<std::vector<std::string>> comm
                     //replacement = replaceHexPlaceholderFile(arg.substr(startPos, endPos - startPos + 2), hexFile);
                     arg.replace(startPos, endPos - startPos + 2, replacement);
                 }
+                if (arg == lastArg)
+                    break;
+                lastArg = arg;
             }
-            if ((!iniPath.empty() && (arg.find("{ini_file(") != std::string::npos))) {
+            while ((!iniPath.empty() && (arg.find("{ini_file(") != std::string::npos))) {
                 size_t startPos = arg.find("{ini_file(");
                 size_t endPos = arg.find(")}");
                 if (endPos != std::string::npos && endPos > startPos) {
@@ -816,8 +981,11 @@ bool interpretAndExecuteCommand(const std::vector<std::vector<std::string>> comm
                     //replacement = replaceHexPlaceholderFile(arg.substr(startPos, endPos - startPos + 2), hexFile);
                     arg.replace(startPos, endPos - startPos + 2, replacement);
                 }
+                if (arg == lastArg)
+                    break;
+                lastArg = arg;
             }
-            if ((!listString.empty() && (arg.find("{list(") != std::string::npos))) {
+            while ((!listString.empty() && (arg.find("{list(") != std::string::npos))) {
                 size_t startPos = arg.find("{list(");
                 size_t endPos = arg.find(")}");
                 if (endPos != std::string::npos && endPos > startPos) {
@@ -827,10 +995,13 @@ bool interpretAndExecuteCommand(const std::vector<std::vector<std::string>> comm
                     arg.replace(startPos, endPos - startPos + 2, replacement);
                     
                     // Release the memory held by listData
-                    listData.clear();
+                    //listData.clear();
                 }
+                if (arg == lastArg)
+                    break;
+                lastArg = arg;
             }
-            if ((!jsonString.empty() && (arg.find("{json(") != std::string::npos))) {
+            while ((!jsonString.empty() && (arg.find("{json(") != std::string::npos))) {
                 //std::string countStr = entry;
                 //arg = replacePlaceholder(arg, "*", entry);
                 size_t startPos = arg.find("{json(");
@@ -846,15 +1017,20 @@ bool interpretAndExecuteCommand(const std::vector<std::vector<std::string>> comm
                     //    jsonData1 = nullptr;
                     //}
                 }
+                if (arg == lastArg)
+                    break;
+                lastArg = arg;
             }
-            if ((!jsonPath.empty() && (arg.find("{json_file(") != std::string::npos))) {
+            while ((!jsonPath.empty() && (arg.find("{json_file(") != std::string::npos))) {
                 //std::string countStr = entry;
                 //arg = replacePlaceholder(arg, "*", entry);
                 size_t startPos = arg.find("{json_file(");
                 size_t endPos = arg.find(")}");
                 if (endPos != std::string::npos && endPos > startPos) {
-                    //jsonData2 = json_load_file(jsonPath.c_str(), 0, &error);
                     replacement = replaceJsonPlaceholder(arg.substr(startPos, endPos - startPos + 2), "json_file", jsonPath);
+                    
+                    //jsonData2 = json_load_file(jsonPath.c_str(), 0, &error);
+                    //replacement = replaceJsonPlaceholderF2(arg.substr(startPos, endPos - startPos + 2), "json_file", jsonData2);
                     //logMessage("Mid source replacement: " + replacement);
                     arg.replace(startPos, endPos - startPos + 2, replacement);
                     
@@ -864,6 +1040,9 @@ bool interpretAndExecuteCommand(const std::vector<std::vector<std::string>> comm
                     //    jsonData2 = nullptr;
                     //}
                 }
+                if (arg == lastArg)
+                    break;
+                lastArg = arg;
             }
         }
         command = modifiedCmd; // update command
