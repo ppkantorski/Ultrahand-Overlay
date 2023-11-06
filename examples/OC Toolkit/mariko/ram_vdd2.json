@@ -30,5 +30,21 @@
     {
         "name": "1250 mV",
         "hex": "D01213"
+    },
+	{
+        "name": "1275 mV not offical",
+        "hex": "787413"
+    },
+    {
+        "name": "1300 mV not offical",
+        "hex": "20D613"
+    },
+    {
+        "name": "1325 mV not offical",
+        "hex": "C83714"
+    },
+    {
+        "name": "1350 mV not offical",
+        "hex": "709914"
     }
 ]
