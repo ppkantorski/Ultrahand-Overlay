@@ -1922,7 +1922,10 @@ public:
                         lastSection = dropdownSection;
                     }
                     if (removeTag(optionName) == PACKAGE_INFO || removeTag(optionName) == "Package Info") {
-                        addPackageInfo(list, packageHeader);
+                        if (!skipSection) {
+                            lastSection = optionName;
+                            addPackageInfo(list, packageHeader);
+                        }
                     }
                     if (commands.size() == 0) {
                         if (optionName == dropdownSection)
@@ -1959,11 +1962,13 @@ public:
                             
                             skipSection = true;
                         } else {
-                            if (optionName != lastSection && !skipSection) {
+                            if (optionName != lastSection) {
                                 
                                 if (removeTag(optionName) == PACKAGE_INFO || removeTag(optionName) == "Package Info") {
-                                    lastSection = optionName;
-                                    addPackageInfo(list, packageHeader);
+                                    if (!skipSection) {
+                                        lastSection = optionName;
+                                        addPackageInfo(list, packageHeader);
+                                    }
                                 } else {
                                     // Add a section break with small text to indicate the "Commands" section
                                     list->addItem(new tsl::elm::CategoryHeader(removeTag(optionName)));
