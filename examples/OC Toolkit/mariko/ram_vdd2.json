@@ -26,37 +26,37 @@
     },
     {
         "name": "1200 mV",
-        "label": "1200 mV",
+        "label": "1200 mV - unsafe",
         "hex": "804F12"
     },
     {
         "name": "1225 mV",
-        "label": "1225 mV",
+        "label": "1225 mV - unsafe",
         "hex": "28B112"
     },
     {
         "name": "1250 mV",
-        "label": "1250 mV",
+        "label": "1250 mV - unsafe",
         "hex": "D01213"
     },
     {
         "name": "1275 mV",
-        "label": "1275 mV - unsafe",
+        "label": "1275 mV - dangerous",
         "hex": "787413"
     },
     {
         "name": "1300 mV",
-        "label": "1300 mV - unsafe",
+        "label": "1300 mV - dangerous",
         "hex": "20D613"
     },
     {
         "name": "1325 mV",
-        "label": "1325 mV - unsafe",
+        "label": "1325 mV - dangerous",
         "hex": "C83714"
     },
     {
         "name": "1350 mV",
-        "label": "1350 mV - unsafe",
+        "label": "1350 mV - dangerous",
         "hex": "709914"
     }
 ]
