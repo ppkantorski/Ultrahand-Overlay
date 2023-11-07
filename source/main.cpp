@@ -1297,6 +1297,7 @@ private:
     bool toggleState = false;
     std::string packageConfigIniPath;
     std::string commandMode, commandGrouping;
+    std::string lastSelectedListItemFooter = "";
 public:
     /**
      * @brief Constructs a `SelectionOverlay` instance.
@@ -1679,7 +1680,7 @@ public:
                         if (keys & KEY_A) {
                             if (commandMode == "option") {
                                 selectedFooterDict[specifiedFooterKey] = selectedItem;
-                                lastSelectedListItem->setValue(footer, true);
+                                lastSelectedListItem->setValue(lastSelectedListItemFooter, true);
                             }
                             std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, selectedItem, i); // replace source
                             //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
@@ -1688,6 +1689,7 @@ public:
                             listItem->setValue(CHECKMARK_SYMBOL);
                             
                             if (commandMode == "option")
+                                lastSelectedListItemFooter = footer;
                                 lastSelectedListItem = listItem;
                             
                             return true;
@@ -1700,7 +1702,7 @@ public:
                         if (keys & KEY_A) {
                             if (commandMode == "option") {
                                 selectedFooterDict[specifiedFooterKey] = selectedItem;
-                                lastSelectedListItem->setValue(footer, true);
+                                lastSelectedListItem->setValue(lastSelectedListItemFooter, true);
                             }
                             
                             std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, selectedItem, i); // replace source
@@ -1710,6 +1712,7 @@ public:
                             listItem->setValue(CHECKMARK_SYMBOL);
                             
                             if (commandMode == "option")
+                                lastSelectedListItemFooter = footer;
                                 lastSelectedListItem = listItem;
                             
                             return true;
