@@ -1,50 +1,62 @@
 [
     {
         "name": "Do not override",
+        "label": "Do not override",
         "hex": "000000"
     },
     {
         "name": "550 mV",
+        "label": "550 mV",
         "hex": "706408"
     },
     {
         "name": "560 mV",
+        "label": "560 mV",
         "hex": "808B08"
     },
     {
         "name": "570 mV",
+        "label": "570 mV",
         "hex": "90B208"
     },
     {
         "name": "580 mV",
+        "label": "580 mV",
         "hex": "A0D908"
     },
     {
         "name": "590 mV",
+        "label": "590 mV",
         "hex": "B00009"
     },
     {
-        "name": "600 mV default",
+        "name": "600 mV",
+        "label": "600 mV - default",
         "hex": "C02709"
     },
     {
         "name": "610 mV",
+        "label": "610 mV",
         "hex": "D04E09"
     },
     {
         "name": "620 mV",
+        "label": "620 mV",
         "hex": "E07509"
     },
     {
         "name": "630 mV",
+        "label": "630 mV",
         "hex": "F09C09"
     },
     {
         "name": "640 mV",
+        "label": "640 mV",
         "hex": "00C409"
     },
     {
         "name": "650 mV",
+        "label": "650 mV",
         "hex": "10EB09"
     }
 ]
