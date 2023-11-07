@@ -4,7 +4,7 @@
         "hex": "4C0400"
     },
     {
-        "name": "1120 mV",
+        "name": "1120 mV default",
         "hex": "600400"
     },
     {
@@ -46,6 +46,34 @@
     {
         "name": "1235 mV",
         "hex": "D30400"
+    },
+    {
+        "name": "1240 mV ⚠ risky",
+        "hex": "D80400"
+    },
+    {
+        "name": "1250 mV ⚠ risky",
+        "hex": "E20400"
+    },
+    {
+        "name": "1260 mV ⚠ risky",
+        "hex": "EC0400"
+    },
+    {
+        "name": "1270 mV ⚠ risky",
+        "hex": "F60400"
+    },
+    {
+        "name": "1280 mV ⚠ risky",
+        "hex": "000500"
+    },
+    {
+        "name": "1290 mV ⚠ risky",
+        "hex": "0A0500"
+    },
+    {
+        "name": "1300 mV ⚠ risky",
+        "hex": "140500"
     }
 ]
 

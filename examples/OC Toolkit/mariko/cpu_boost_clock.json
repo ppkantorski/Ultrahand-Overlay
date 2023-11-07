@@ -1,6 +1,6 @@
 [
     {
-        "name": "1785 MHz",
+        "name": "1785 MHz default",
         "hex": "A83C1B"
     },
     {
@@ -34,5 +34,9 @@
     {
         "name": "2601 MHz",
         "hex": "28B027"
+    },
+    {
+        "name": "2703 MHz ⚠ risky",
+        "hex": "983E29"
     }
 ]
