@@ -1,42 +1,52 @@
 [
     {
-        "name": "1785 MHz default",
+        "name": "1785 MHz",
+        "label": "1785 MHz - default",
         "hex": "A83C1B"
     },
     {
         "name": "1887 MHz",
+        "label": "1887 MHz",
         "hex": "18CB1C"
     },
     {
         "name": "1963 MHz",
+        "label": "1963 MHz",
         "hex": "F8F31D"
     },
     {
         "name": "2091 MHz",
+        "label": "2091 MHz",
         "hex": "F8E71F"
     },
     {
         "name": "2193 MHz",
+        "label": "2193 MHz",
         "hex": "687621"
     },
     {
         "name": "2295 MHz",
+        "label": "2295 MHz",
         "hex": "D80423"
     },
     {
         "name": "2397 MHz",
+        "label": "2397 MHz",
         "hex": "489324"
     },
     {
         "name": "2499 MHz",
+        "label": "2499 MHz",
         "hex": "B82126"
     },
     {
         "name": "2601 MHz",
+        "label": "2601 MHz",
         "hex": "28B027"
     },
     {
-        "name": "2703 MHz ⚠ risky",
+        "name": "2703 MHz",
+        "label": "2703 MHz - unsafe",
         "hex": "983E29"
     }
 ]
