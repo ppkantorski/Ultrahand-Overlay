@@ -1,196 +1,235 @@
 [
     {
         "name": "1996 MHz",
+        "label": "1996 MHz",
         "hex": "00781E",
         "rhex": "1E7800"
     },
     {
         "name": "2131 MHz",
+        "label": "2131 MHz",
         "hex": "008520",
         "rhex": "208500"
     },
     {
         "name": "2252 MHz",
+        "label": "2252 MHz",
         "hex": "006022",
         "rhex": "226000"
     },
-	{
+    {
         "name": "2323 MHz",
+        "label": "2323 MHz",
         "hex": "007323",
         "rhex": "237300"
     },
     {
         "name": "2342 MHz",
+        "label": "2342 MHz",
         "hex": "00BE23",
         "rhex": "23BE00"
     },
     {
         "name": "2361 MHz",
+        "label": "2361 MHz",
         "hex": "000924",
         "rhex": "240900"
     },
     {
         "name": "2380 MHz",
+        "label": "2380 MHz",
         "hex": "005424",
         "rhex": "245400"
     },
     {
         "name": "2400 MHz",
+        "label": "2400 MHz",
         "hex": "009F24",
         "rhex": "249F00"
     },
     {
         "name": "2419 MHz",
+        "label": "2419 MHz",
         "hex": "00EA24",
         "rhex": "24EA00"
     },
     {
         "name": "2438 MHz",
+        "label": "2438 MHz",
         "hex": "003525",
         "rhex": "253500"
     },
     {
         "name": "2457 MHz",
+        "label": "2457 MHz",
         "hex": "008025",
         "rhex": "258000"
     },
     {
         "name": "2476 MHz",
+        "label": "2476 MHz",
         "hex": "00CB25",
         "rhex": "25CB00"
     },
     {
         "name": "2502 MHz",
+        "label": "2502 MHz",
         "hex": "002F26",
         "rhex": "262F00"
     },
     {
         "name": "2515 MHz",
+        "label": "2515 MHz",
         "hex": "006126",
         "rhex": "266100"
     },
     {
         "name": "2534 MHz",
+        "label": "2534 MHz",
         "hex": "00AC26",
         "rhex": "26AC00"
     },
     {
         "name": "2560 MHz",
+        "label": "2560 MHz - unsafe",
         "hex": "001027",
         "rhex": "271000"
     },
     {
         "name": "2572 MHz",
+        "label": "2572 MHz - unsafe",
         "hex": "004227",
         "rhex": "284200"
     },
     {
         "name": "2592 MHz",
+        "label": "2592 MHz - unsafe",
         "hex": "008D27",
         "rhex": "288D00"
     },
     {
         "name": "2611 MHz",
+        "label": "2611 MHz - unsafe",
         "hex": "00D827",
         "rhex": "28D800"
     },
     {
         "name": "2630 MHz",
+        "label": "2630 MHz - unsafe",
         "hex": "002328",
         "rhex": "292300"
     },
     {
         "name": "2649 MHz",
+        "label": "2649 MHz - unsafe",
         "hex": "006E28",
         "rhex": "296E00"
     },
     {
         "name": "2668 MHz",
+        "label": "2668 MHz - unsafe",
         "hex": "00B928",
         "rhex": "29B900"
     },
     {
         "name": "2688 MHz",
+        "label": "2688 MHz - unsafe",
         "hex": "000429",
         "rhex": "2A0400"
     },
     {
         "name": "2700 MHz",
+        "label": "2700 MHz - unsafe",
         "hex": "004F29",
         "rhex": "2A4F00"
     },
     {
         "name": "2726 MHz",
+        "label": "2726 MHz - unsafe",
         "hex": "009A29",
         "rhex": "2A9A00"
     },
     {
         "name": "2745 MHz",
+        "label": "2745 MHz - unsafe",
         "hex": "00E529",
         "rhex": "2AE500"
     },
     {
         "name": "2764 MHz",
+        "label": "2764 MHz - unsafe",
         "hex": "00302A",
         "rhex": "2A3000"
     },
     {
         "name": "2790 MHz",
+        "label": "2790 MHz - unsafe",
         "hex": "00942A",
         "rhex": "2A9400"
     },
     {
         "name": "2800 MHz",
+        "label": "2800 MHz - unsafe",
         "hex": "00C62A",
         "rhex": "2AC600"
     },
     {
         "name": "2822 MHz",
+        "label": "2822 MHz - unsafe",
         "hex": "00112B",
         "rhex": "2B1100"
     },
     {
         "name": "2841 MHz",
+        "label": "2841 MHz - unsafe",
         "hex": "005C2B",
         "rhex": "2B5C00"
     },
     {
         "name": "2860 MHz",
+        "label": "2860 MHz - unsafe",
         "hex": "00A72B",
         "rhex": "2BA700"
     },
     {
         "name": "2880 MHz",
+        "label": "2880 MHz - unsafe",
         "hex": "00F22B",
         "rhex": "2BF200"
     },
     {
         "name": "2900 MHz",
+        "label": "2900 MHz - unsafe",
         "hex": "003D2C",
         "rhex": "2C3D00"
     },
     {
         "name": "2918 MHz",
+        "label": "2918 MHz - unsafe",
         "hex": "00882C",
         "rhex": "2C8800"
     },
     {
         "name": "2937 MHz",
+        "label": "2937 MHz - unsafe",
         "hex": "00D32C",
         "rhex": "2CD300"
     },
     {
         "name": "2956 MHz",
+        "label": "2956 MHz - unsafe",
         "hex": "001E2D",
         "rhex": "2D1E00"
     },
     {
         "name": "2976 MHz",
+        "label": "2976 MHz - unsafe",
         "hex": "00692D",
         "rhex": "2D6900"
     },
     {
         "name": "3000 MHz",
+        "label": "3000 MHz - unsafe",
         "hex": "00B42D",
         "rhex": "2DB400"
     }

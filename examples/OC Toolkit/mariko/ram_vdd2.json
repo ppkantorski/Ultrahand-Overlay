@@ -1,50 +1,62 @@
 [
     {
         "name": "Do not override",
+        "label": "Do not override",
         "hex": "000000"
     },
     {
-        "name": "1100 mV default",
+        "name": "1100 mV",
+        "label": "1100 mV - default",
         "hex": "E0C810"
     },
     {
         "name": "1125 mV",
+        "label": "1125 mV",
         "hex": "882A11"
     },
     {
         "name": "1150 mV",
+        "label": "1150 mV",
         "hex": "308C11"
     },
     {
         "name": "1175 mV",
+        "label": "1175 mV",
         "hex": "D8ED11"
     },
     {
         "name": "1200 mV",
+        "label": "1200 mV",
         "hex": "804F12"
     },
     {
         "name": "1225 mV",
+        "label": "1225 mV",
         "hex": "28B112"
     },
     {
         "name": "1250 mV",
+        "label": "1250 mV",
         "hex": "D01213"
     },
-	{
-        "name": "1275 mV ⚠ risky",
+    {
+        "name": "1275 mV",
+        "label": "1275 mV - unsafe",
         "hex": "787413"
     },
     {
-        "name": "1300 mV ⚠ risky",
+        "name": "1300 mV",
+        "label": "1300 mV - unsafe",
         "hex": "20D613"
     },
     {
-        "name": "1325 mV ⚠ risky",
+        "name": "1325 mV",
+        "label": "1325 mV - unsafe",
         "hex": "C83714"
     },
     {
-        "name": "1350 mV ⚠ risky",
+        "name": "1350 mV",
+        "label": "1325 mV - unsafe",
         "hex": "709914"
     }
 ]
