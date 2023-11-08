@@ -2685,6 +2685,7 @@ namespace tsl {
             tsl::Color batteryColor = RGB888(batteryColorStr);
             tsl::Color highlightColor = {0xF, 0xF, 0xF, 0xF};
             std::string firstHalf, secondHalf;
+            tsl::Color handColor = RGB888("#F7253E");
             const double cycleDuration = 1.5;
             float counter = 0;
             float countOffset;
@@ -2788,7 +2789,7 @@ namespace tsl {
                     //int x2 = x1 + (firstHalf.length() * fontSize)/2 -2;
                     
                     // Draw the second half of the string in red color
-                    renderer->drawString(secondHalf.c_str(), false, x, y+offset, fontSize, tsl::Color(0xF, 0x0, 0x0, 0xF));
+                    renderer->drawString(secondHalf.c_str(), false, x, y+offset, fontSize, handColor);
                     
                     
                     // Time drawing implementation
@@ -2896,7 +2897,8 @@ namespace tsl {
                             titleColor = a(Color(0x0, 0xF, 0x0, 0xF));
                             renderer->drawString(title.c_str(), false, x, y, fontSize, titleColor);
                         } else if (this->m_colorSelection == "red") {
-                            titleColor = a(Color(0xF, 0x0, 0x0, 0xF));
+                            //titleColor = a(Color(0xF, 0x0, 0x0, 0xF));
+                            titleColor = RGB888("#F7253E");
                             renderer->drawString(title.c_str(), false, x, y, fontSize, titleColor);
                         } else if (this->m_colorSelection == "blue") {
                             titleColor = a(Color(0x7, 0x7, 0xF, 0xF));
