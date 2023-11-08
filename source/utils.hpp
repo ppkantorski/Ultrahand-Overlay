@@ -1365,7 +1365,7 @@ std::tuple<bool, bool> interpretAndExecuteCommand(const std::vector<std::vector<
                 if (command.size() >= 3) {
                     sourcePath = preprocessPath(command[1]);
                     destinationPath = preprocessPath(command[2]);
-                    unzipFile(sourcePath, destinationPath);
+                    commandSuccess = unzipFile(sourcePath, destinationPath) && commandSuccess;
                 }
             } else if (commandName == "exec") {
                 // Edit command
