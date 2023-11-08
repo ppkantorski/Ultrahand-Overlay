@@ -1270,7 +1270,7 @@ std::tuple<bool, bool> interpretAndExecuteCommand(const std::vector<std::vector<
                     sourcePath = preprocessPath(command[1]);
                     offset = removeQuotes(command[2]);
                     hexDataReplacement = removeQuotes(command[3]);
-                    commandSuccess = commandSuccess && hexEditByOffset(sourcePath.c_str(), offset.c_str(), hexDataReplacement.c_str());
+                    commandSuccess = hexEditByOffset(sourcePath.c_str(), offset.c_str(), hexDataReplacement.c_str()) && commandSuccess;
                 }
             } else if (commandName == "hex-by-custom-offset") {
                 // Edit command
@@ -1279,7 +1279,7 @@ std::tuple<bool, bool> interpretAndExecuteCommand(const std::vector<std::vector<
                     customPattern = removeQuotes(command[2]);
                     offset = removeQuotes(command[3]);
                     hexDataReplacement = removeQuotes(command[4]);
-                    commandSuccess = commandSuccess && hexEditByCustomOffset(sourcePath.c_str(), customPattern.c_str(), offset.c_str(), hexDataReplacement.c_str());
+                    commandSuccess = hexEditByCustomOffset(sourcePath.c_str(), customPattern.c_str(), offset.c_str(), hexDataReplacement.c_str())) && commandSuccess;
                 }
             } else if (commandName == "hex-by-swap") {
                 // Edit command - Hex data replacement with occurrence
@@ -1289,9 +1289,9 @@ std::tuple<bool, bool> interpretAndExecuteCommand(const std::vector<std::vector<
                     hexDataReplacement = removeQuotes(command[3]);
                     if (command.size() >= 5) {
                         occurrence = std::stoul(removeQuotes(command[4]));
-                        commandSuccess = commandSuccess && hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, occurrence);
+                        commandSuccess = hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, occurrence) && commandSuccess;
                     } else {
-                        commandSuccess = commandSuccess && hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
+                        commandSuccess = hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement) && commandSuccess;
                     }
                 }
             } else if (commandName == "hex-by-string") {
@@ -1354,7 +1354,7 @@ std::tuple<bool, bool> interpretAndExecuteCommand(const std::vector<std::vector<
                 if (command.size() >= 3) {
                     fileUrl = preprocessUrl(command[1]);
                     destinationPath = preprocessPath(command[2]);
-                    commandSuccess = commandSuccess && downloadFile(fileUrl, destinationPath);
+                    commandSuccess = downloadFile(fileUrl, destinationPath) && commandSuccess;
                 }
             } else if (commandName == "unzip") {
                 // Edit command - Hex data replacement with occurrence
