@@ -1279,7 +1279,7 @@ std::tuple<bool, bool> interpretAndExecuteCommand(const std::vector<std::vector<
                     customPattern = removeQuotes(command[2]);
                     offset = removeQuotes(command[3]);
                     hexDataReplacement = removeQuotes(command[4]);
-                    commandSuccess = hexEditByCustomOffset(sourcePath.c_str(), customPattern.c_str(), offset.c_str(), hexDataReplacement.c_str())) && commandSuccess;
+                    commandSuccess = hexEditByCustomOffset(sourcePath.c_str(), customPattern.c_str(), offset.c_str(), hexDataReplacement.c_str()) && commandSuccess;
                 }
             } else if (commandName == "hex-by-swap") {
                 // Edit command - Hex data replacement with occurrence
