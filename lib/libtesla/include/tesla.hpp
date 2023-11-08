@@ -2164,6 +2164,9 @@ namespace tsl {
             Color highlightColor2 = RGB888(highlightColor2Str, "#88FFFF");
             Color highlightColor = a({0xf,0xf,0xf,0xf});
             
+            std::string clickColorStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "click_color");
+            Color clickColor = RGB888(clickColorStr, "#F7253E");
+            
             std::chrono::duration<long int, std::ratio<1, 1000000000>> t;
             //double timeCounter;
             
@@ -2308,8 +2311,63 @@ namespace tsl {
 
                 animColor.g = saturation;
                 animColor.b = saturation;
-
-                renderer->drawRect(ELEMENT_BOUNDS(this), a(animColor));
+                
+                if (!disableSelectionBG)
+                    renderer->drawRect(ELEMENT_BOUNDS(this), (animColor));
+                else {
+                    Color clickColor1 = highlightColor1;
+                    Color clickColor2 = clickColor;
+                    
+                    half progress = half((std::sin(2.0 * M_PI * fmod(std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count(), 1.0)) + 1.0) / 2.0);
+                    
+                    if (progress >= 0.5) {
+                        clickColor1 = clickColor;
+                        clickColor2 = highlightColor2;
+                    }
+                    
+                    highlightColor = {
+                        static_cast<u8>((clickColor1.r - clickColor2.r) * progress + clickColor2.r),
+                        static_cast<u8>((clickColor1.g - clickColor2.g) * progress + clickColor2.g),
+                        static_cast<u8>((clickColor1.b - clickColor2.b) * progress + clickColor2.b),
+                        0xF
+                    };
+                    
+                    s32 x = 0, y = 0;
+                    if (this->m_highlightShaking) {
+                        t = (std::chrono::system_clock::now() - this->m_highlightShakingStartTime);
+                        if (t >= 100ms)
+                            this->m_highlightShaking = false;
+                        else {
+                            s32 amplitude = std::rand() % 5 + 5;
+                            
+                            switch (this->m_highlightShakingDirection) {
+                                case FocusDirection::Up:
+                                    y -= shakeAnimation(t, amplitude);
+                                    break;
+                                case FocusDirection::Down:
+                                    y += shakeAnimation(t, amplitude);
+                                    break;
+                                case FocusDirection::Left:
+                                    x -= shakeAnimation(t, amplitude);
+                                    break;
+                                case FocusDirection::Right:
+                                    x += shakeAnimation(t, amplitude);
+                                    break;
+                                default:
+                                    break;
+                            }
+                            
+                            x = std::clamp(x, -amplitude, amplitude);
+                            y = std::clamp(y, -amplitude, amplitude);
+                        }
+                    }
+                    
+                    
+                    renderer->drawRect(this->getX() + x - 4, this->getY() + y - 4, this->getWidth() + 8, 4, a(highlightColor));
+                    renderer->drawRect(this->getX() + x - 4, this->getY() + y + this->getHeight(), this->getWidth() + 8, 4, a(highlightColor));
+                    renderer->drawRect(this->getX() + x - 4, this->getY() + y, 4, this->getHeight(), a(highlightColor));
+                    renderer->drawRect(this->getX() + x + this->getWidth(), this->getY() + y, 4, this->getHeight(), a(highlightColor));
+                }
             }
 
             /**
@@ -2385,12 +2443,12 @@ namespace tsl {
                         y = std::clamp(y, -amplitude, amplitude);
                     }
                 }
-
-                renderer->drawRect(this->getX() + x - 4, this->getY() + y - 4, this->getWidth() + 8, 4, a(highlightColor));
-                renderer->drawRect(this->getX() + x - 4, this->getY() + y + this->getHeight(), this->getWidth() + 8, 4, a(highlightColor));
-                renderer->drawRect(this->getX() + x - 4, this->getY() + y, 4, this->getHeight(), a(highlightColor));
-                renderer->drawRect(this->getX() + x + this->getWidth(), this->getY() + y, 4, this->getHeight(), a(highlightColor));
-                
+                if ((disableSelectionBG && this->m_clickAnimationProgress == 0) || !disableSelectionBG) {
+                    renderer->drawRect(this->getX() + x - 4, this->getY() + y - 4, this->getWidth() + 8, 4, a(highlightColor));
+                    renderer->drawRect(this->getX() + x - 4, this->getY() + y + this->getHeight(), this->getWidth() + 8, 4, a(highlightColor));
+                    renderer->drawRect(this->getX() + x - 4, this->getY() + y, 4, this->getHeight(), a(highlightColor));
+                    renderer->drawRect(this->getX() + x + this->getWidth(), this->getY() + y, 4, this->getHeight(), a(highlightColor));
+                }
                 //renderer->drawRect(ELEMENT_BOUNDS(this), a(0xF000)); // This has been moved here (needs to be toggleable)
             }
             
@@ -2627,6 +2685,7 @@ namespace tsl {
             tsl::Color batteryColor = RGB888(batteryColorStr);
             tsl::Color highlightColor = {0xF, 0xF, 0xF, 0xF};
             std::string firstHalf, secondHalf;
+            tsl::Color handColor = RGB888("#F7253E");
             const double cycleDuration = 1.5;
             float counter = 0;
             float countOffset;
@@ -2730,7 +2789,7 @@ namespace tsl {
                     //int x2 = x1 + (firstHalf.length() * fontSize)/2 -2;
                     
                     // Draw the second half of the string in red color
-                    renderer->drawString(secondHalf.c_str(), false, x, y+offset, fontSize, tsl::Color(0xF, 0x0, 0x0, 0xF));
+                    renderer->drawString(secondHalf.c_str(), false, x, y+offset, fontSize, handColor);
                     
                     
                     // Time drawing implementation
@@ -2838,7 +2897,8 @@ namespace tsl {
                             titleColor = a(Color(0x0, 0xF, 0x0, 0xF));
                             renderer->drawString(title.c_str(), false, x, y, fontSize, titleColor);
                         } else if (this->m_colorSelection == "red") {
-                            titleColor = a(Color(0xF, 0x0, 0x0, 0xF));
+                            //titleColor = a(Color(0xF, 0x0, 0x0, 0xF));
+                            titleColor = RGB888("#F7253E");
                             renderer->drawString(title.c_str(), false, x, y, fontSize, titleColor);
                         } else if (this->m_colorSelection == "blue") {
                             titleColor = a(Color(0x7, 0x7, 0xF, 0xF));

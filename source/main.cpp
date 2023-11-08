@@ -67,6 +67,7 @@ static bool inScriptMenu = false;
 static bool inSelectionMenu = false;
 static bool defaultMenuLoaded = true;
 static bool freshSpawn = true;
+static bool commandSuccess = false;
 static bool refreshGui = false;
 static bool reloadMenu = false;
 static bool reloadMenu2 = false;
@@ -1684,9 +1685,12 @@ public:
                             }
                             std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, selectedItem, i); // replace source
                             //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
-                            refreshGui = interpretAndExecuteCommand(modifiedCmds, filePath, specificKey); // Execute modified 
+                            std::tie(commandSuccess, refreshGui) = interpretAndExecuteCommand(modifiedCmds, filePath, specificKey); // Execute modified 
                             
-                            listItem->setValue(CHECKMARK_SYMBOL);
+                            if (commandSuccess)
+                                listItem->setValue(CHECKMARK_SYMBOL);
+                            else
+                                listItem->setValue(CROSSMARK_SYMBOL);
                             
                             if (commandMode == "option")
                                 lastSelectedListItemFooter = footer;
@@ -1707,9 +1711,12 @@ public:
                             
                             std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, selectedItem, i); // replace source
                             //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
-                            refreshGui = interpretAndExecuteCommand(modifiedCmds, filePath, specificKey); // Execute modified 
+                            std::tie(commandSuccess, refreshGui) = interpretAndExecuteCommand(modifiedCmds, filePath, specificKey); // Execute modified 
                             
-                            listItem->setValue(CHECKMARK_SYMBOL);
+                            if (commandSuccess)
+                                listItem->setValue(CHECKMARK_SYMBOL);
+                            else
+                                listItem->setValue(CROSSMARK_SYMBOL);
                             
                             if (commandMode == "option")
                                 lastSelectedListItemFooter = footer;
@@ -1733,14 +1740,14 @@ public:
                         if (std::find(selectedItemsListOn.begin(), selectedItemsListOn.end(), selectedItem) != selectedItemsListOn.end()) {
                             // Toggle switched to On
                             std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmdsOn, selectedItem, i); // replace source
-                            refreshGui = interpretAndExecuteCommand(modifiedCmds, filePath, specificKey); // Execute modified 
+                            std::tie(commandSuccess, refreshGui) = interpretAndExecuteCommand(modifiedCmds, filePath, specificKey); // Execute modified 
                         } else
                             toggleListItem->setState(!state);
                     } else {
                         if (std::find(selectedItemsListOff.begin(), selectedItemsListOff.end(), selectedItem) != selectedItemsListOff.end()) {
                             // Toggle switched to Off
                             std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmdsOff, selectedItem, i); // replace source
-                            refreshGui = interpretAndExecuteCommand(modifiedCmds, filePath, specificKey); // Execute modified 
+                            std::tie(commandSuccess, refreshGui) = interpretAndExecuteCommand(modifiedCmds, filePath, specificKey); // Execute modified 
                         } else
                             toggleListItem->setState(!state);
                     }
@@ -2189,8 +2196,11 @@ public:
                                     if (keys & KEY_A) {
                                         std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, keyName, i); // replace source
                                         //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
-                                        refreshGui = interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified 
-                                        listItem->setValue(CHECKMARK_SYMBOL);
+                                        std::tie(commandSuccess, refreshGui) = interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified 
+                                        if (commandSuccess)
+                                            listItem->setValue(CHECKMARK_SYMBOL);
+                                        else
+                                            listItem->setValue(CROSSMARK_SYMBOL);
                                         return true;
                                     }  else if (keys & SCRIPT_KEY) {
                                         if (inPackageMenu)
@@ -2209,9 +2219,11 @@ public:
                                     if (keys & KEY_A) {
                                         std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, keyName, i); // replace source
                                         //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
-                                        refreshGui = interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified 
-                                        
-                                        listItem->setValue(CHECKMARK_SYMBOL);
+                                        std::tie(commandSuccess, refreshGui) = interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified 
+                                        if (commandSuccess)
+                                            listItem->setValue(CHECKMARK_SYMBOL);
+                                        else
+                                            listItem->setValue(CROSSMARK_SYMBOL);
                                         return true;
                                     }  else if (keys & SCRIPT_KEY) {
                                         if (inPackageMenu)
@@ -2240,7 +2252,7 @@ public:
                                     if (toggleStateOn) {
                                         std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmdsOn, preprocessPath(pathPatternOn), i); // replace source
                                         //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
-                                        refreshGui = interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified 
+                                        std::tie(commandSuccess, refreshGui) = interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified 
                                     } else {
                                         // Handle the case where the command should only run in the source_on section
                                         // Add your specific code here
@@ -2250,7 +2262,7 @@ public:
                                     if (!toggleStateOn) {
                                         std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmdsOff, preprocessPath(pathPatternOff), i); // replace source
                                         //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
-                                        refreshGui = interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified 
+                                        std::tie(commandSuccess, refreshGui) = interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified 
                                     } else {
                                         // Handle the case where the command should only run in the source_off section
                                         // Add your specific code here
@@ -2940,7 +2952,7 @@ public:
                                         std::string bootOptionName = bootOption.first;
                                         auto bootCommands = bootOption.second;
                                         if (bootOptionName == "boot") {
-                                            refreshGui = interpretAndExecuteCommand(bootCommands, packageFilePath+bootPackageFileName, bootOptionName); // Execute modified 
+                                            std::tie(commandSuccess, refreshGui) = interpretAndExecuteCommand(bootCommands, packageFilePath+bootPackageFileName, bootOptionName); // Execute modified 
                                             break;
                                         }
                                     }
@@ -3208,9 +3220,12 @@ public:
                                     if (keys & KEY_A) {
                                         std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, selectedItem, i); // replace source
                                         //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
-                                        refreshGui = interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified 
+                                        std::tie(commandSuccess, refreshGui) = interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified 
                                         
-                                        listItem->setValue(CHECKMARK_SYMBOL);
+                                        if (commandSuccess)
+                                            listItem->setValue(CHECKMARK_SYMBOL);
+                                        else
+                                            listItem->setValue(CROSSMARK_SYMBOL);
                                         return true;
                                     } else if (keys & SCRIPT_KEY) {
                                         inMainMenu = false; // Set boolean to true when entering a submenu
@@ -3226,9 +3241,12 @@ public:
                                     if (keys & KEY_A) {
                                         std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, selectedItem, i); // replace source
                                         //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
-                                        refreshGui = interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified 
+                                        std::tie(commandSuccess, refreshGui) = interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified 
                                         
-                                        listItem->setValue(CHECKMARK_SYMBOL);
+                                        if (commandSuccess)
+                                            listItem->setValue(CHECKMARK_SYMBOL);
+                                        else
+                                            listItem->setValue(CROSSMARK_SYMBOL);
                                         return true;
                                     } else if (keys & SCRIPT_KEY) {
                                         inMainMenu = false; // Set boolean to true when entering a submenu
@@ -3254,7 +3272,7 @@ public:
                                     if (toggleStateOn) {
                                         std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmdsOn, preprocessPath(pathPatternOn), i); // replace source
                                         //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
-                                        refreshGui = interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified 
+                                        std::tie(commandSuccess, refreshGui) = interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified 
                                     } else {
                                         // Handle the case where the command should only run in the source_on section
                                         // Add your specific code here
@@ -3264,7 +3282,7 @@ public:
                                     if (!toggleStateOn) {
                                         std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmdsOff, preprocessPath(pathPatternOff),  i); // replace source
                                         //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
-                                        refreshGui = interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified 
+                                        std::tie(commandSuccess, refreshGui) = interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified 
                                     } else {
                                         // Handle the case where the command should only run in the source_off section
                                         // Add your specific code here
