@@ -757,12 +757,13 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
 
 
 
-void variableReplacement(std::vector<std::string>& cmd) {
+bool variableReplacement(std::vector<std::string>& cmd) {
     std::string commandName;
     std::string listString, jsonString, jsonPath, hexPath, iniPath;
     std::string replacement;
     std::string lastArg;
     
+    bool commandSuccess = true;
     std::vector<std::string> listData;
     
     //FILE* hexFile = nullptr;
@@ -804,10 +805,13 @@ void variableReplacement(std::vector<std::string>& cmd) {
                 replacement = replaceIniPlaceholder(arg.substr(startPos, endPos - startPos + 2), iniPath);
                 //replacement = replaceIniPlaceholderF(arg.substr(startPos, endPos - startPos + 2), iniPath, iniFile);
                 arg.replace(startPos, endPos - startPos + 2, replacement);
-            }
-            if (arg == lastArg)
+                if (arg == lastArg) {
+                    commandSuccess = false;
+                    break;
+                }
+            } else {
                 break;
-            lastArg = arg;
+            }
         }
         
         
@@ -819,10 +823,13 @@ void variableReplacement(std::vector<std::string>& cmd) {
                 
                 //replacement = replaceHexPlaceholderF(arg.substr(startPos, endPos - startPos + 2), hexPath, hexFile);
                 arg.replace(startPos, endPos - startPos + 2, replacement);
-            }
-            if (arg == lastArg)
+                if (arg == lastArg) {
+                    commandSuccess = false;
+                    break;
+                }
+            } else {
                 break;
-            lastArg = arg;
+            }
         }
         
         while ((!jsonString.empty() && (arg.find("{json(") != std::string::npos))) {
@@ -841,9 +848,13 @@ void variableReplacement(std::vector<std::string>& cmd) {
                 //    json_decref(jsonData1);
                 //    jsonData1 = nullptr;
                 //}
-            }
-            if (arg == lastArg)
+                if (arg == lastArg) {
+                    commandSuccess = false;
+                    break;
+                }
+            } else {
                 break;
+            }
             lastArg = arg;
         }
         while ((!jsonPath.empty() && (arg.find("{json_file(") != std::string::npos))) {
@@ -863,9 +874,13 @@ void variableReplacement(std::vector<std::string>& cmd) {
                 //    json_decref(jsonData2);
                 //    jsonData2 = nullptr;
                 //}
-            }
-            if (arg == lastArg)
+                if (arg == lastArg) {
+                    commandSuccess = false;
+                    break;
+                }
+            } else {
                 break;
+            }
             lastArg = arg;
         }
         
@@ -879,9 +894,13 @@ void variableReplacement(std::vector<std::string>& cmd) {
                 
                 // Release the memory held by listData
                 //listData.clear();
-            }
-            if (arg == lastArg)
+                if (arg == lastArg) {
+                    commandSuccess = false;
+                    break;
+                }
+            } else {
                 break;
+            }
             lastArg = arg;
         }
     }
@@ -903,7 +922,7 @@ void variableReplacement(std::vector<std::string>& cmd) {
     
     // Release the memory held by listData
     //listData.clear();
-    
+    return commandSuccess;
 }
 
 
@@ -956,6 +975,15 @@ std::tuple<bool, bool> interpretAndExecuteCommand(const std::vector<std::vector<
         commandName = cmd[0];
         
         
+        // Try implementation
+        if (commandName == "try:") {
+            if (commandSuccess && tryCounter > 0)
+                break;
+            
+            commandSuccess = true;
+            tryCounter++;
+        }
+        
         
         // Create a modified command vector to store changes
         //std::vector<std::string> newCommand;
@@ -970,9 +998,14 @@ std::tuple<bool, bool> interpretAndExecuteCommand(const std::vector<std::vector<
                     replacement = replaceHexPlaceholder(arg.substr(startPos, endPos - startPos + 2), hexPath);
                     //replacement = replaceHexPlaceholderFile(arg.substr(startPos, endPos - startPos + 2), hexFile);
                     arg.replace(startPos, endPos - startPos + 2, replacement);
-                }
-                if (arg == lastArg)
+                    
+                    if (arg == lastArg) {
+                        commandSuccess = false;
+                        break;
+                    }
+                } else {
                     break;
+                }
                 lastArg = arg;
             }
             while ((!iniPath.empty() && (arg.find("{ini_file(") != std::string::npos))) {
@@ -982,9 +1015,14 @@ std::tuple<bool, bool> interpretAndExecuteCommand(const std::vector<std::vector<
                     replacement = replaceIniPlaceholder(arg.substr(startPos, endPos - startPos + 2), iniPath);
                     //replacement = replaceHexPlaceholderFile(arg.substr(startPos, endPos - startPos + 2), hexFile);
                     arg.replace(startPos, endPos - startPos + 2, replacement);
-                }
-                if (arg == lastArg)
+                    
+                    if (arg == lastArg) {
+                        commandSuccess = false;
+                        break;
+                    }
+                } else {
                     break;
+                }
                 lastArg = arg;
             }
             while ((!listString.empty() && (arg.find("{list(") != std::string::npos))) {
@@ -996,11 +1034,15 @@ std::tuple<bool, bool> interpretAndExecuteCommand(const std::vector<std::vector<
                     replacement = listData[listIndex];
                     arg.replace(startPos, endPos - startPos + 2, replacement);
                     
+                    if (arg == lastArg) {
+                        commandSuccess = false;
+                        break;
+                    }
                     // Release the memory held by listData
                     //listData.clear();
-                }
-                if (arg == lastArg)
+                } else {
                     break;
+                }
                 lastArg = arg;
             }
             while ((!jsonString.empty() && (arg.find("{json(") != std::string::npos))) {
@@ -1013,14 +1055,18 @@ std::tuple<bool, bool> interpretAndExecuteCommand(const std::vector<std::vector<
                     replacement = replaceJsonPlaceholder(arg.substr(startPos, endPos - startPos + 2), "json", jsonString);
                     arg.replace(startPos, endPos - startPos + 2, replacement);
                     
+                    if (arg == lastArg) {
+                        commandSuccess = false;
+                        break;
+                    }
                     //// Free jsonData1
                     //if (jsonData1 != nullptr) {
                     //    json_decref(jsonData1);
                     //    jsonData1 = nullptr;
                     //}
-                }
-                if (arg == lastArg)
+                } else {
                     break;
+                }
                 lastArg = arg;
             }
             while ((!jsonPath.empty() && (arg.find("{json_file(") != std::string::npos))) {
@@ -1036,30 +1082,26 @@ std::tuple<bool, bool> interpretAndExecuteCommand(const std::vector<std::vector<
                     //logMessage("Mid source replacement: " + replacement);
                     arg.replace(startPos, endPos - startPos + 2, replacement);
                     
+                    if (arg == lastArg) {
+                        commandSuccess = false;
+                        break;
+                    }
                     //// Free jsonData2
                     //if (jsonData2 != nullptr) {
                     //    json_decref(jsonData2);
                     //    jsonData2 = nullptr;
                     //}
-                }
-                if (arg == lastArg)
+                } else {
                     break;
+                }
                 lastArg = arg;
             }
         }
         command = modifiedCmd; // update command
         
         // Variable replacement definitions
-        if (commandName == "try") {
-            if (commandSuccess && tryCounter > 0)
-                break;
+        if (tryCounter == 0 || (commandSuccess && tryCounter > 0)) {
             
-            commandSuccess = true;
-            tryCounter++;
-        }
-        
-        if (commandSuccess) {
-                
             if (commandName == "list") {
                 listString = removeQuotes(command[1]);
                 //listData = stringToList(listString);
