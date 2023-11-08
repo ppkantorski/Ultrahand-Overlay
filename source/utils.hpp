@@ -113,6 +113,9 @@ void initializeTheme(std::string themeIniPath = themeConfigIniPath) {
             if (themedSection.count("highlight_color_2") == 0)
                 setIniFileValue(themeIniPath, "theme", "highlight_color_2", "#88FFFF");
             
+            if (themedSection.count("click_color") == 0)
+                setIniFileValue(themeIniPath, "theme", "click_color", "#F7253E");
+            
             if (themedSection.count("disable_selection_bg") == 0)
                 setIniFileValue(themeIniPath, "theme", "disable_selection_bg", "true");
             
@@ -136,6 +139,7 @@ void initializeTheme(std::string themeIniPath = themeConfigIniPath) {
         setIniFileValue(themeIniPath, "theme", "trackbar_color", "#555555");
         setIniFileValue(themeIniPath, "theme", "highlight_color_1", "#2288CC");
         setIniFileValue(themeIniPath, "theme", "highlight_color_2", "#88FFFF");
+        setIniFileValue(themeIniPath, "theme", "click_color", "#F7253E");
         setIniFileValue(themeIniPath, "theme", "disable_selection_bg", "true");
         setIniFileValue(themeIniPath, "theme", "disable_colorful_logo", "false");
         
