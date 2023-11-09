@@ -108,6 +108,9 @@ using half_float::half;
 #define KEY_LEFT (HidNpadButton_Left | HidNpadButton_StickLLeft | HidNpadButton_StickRLeft)
 #define KEY_RIGHT (HidNpadButton_Right | HidNpadButton_StickLRight | HidNpadButton_StickRRight)
 
+//static std::string useCombo2 = "";
+static bool useCombo2 = false;
+
 /**
  * @brief Ultrahand-Overlay Input Macros
  *
@@ -969,7 +972,8 @@ namespace tsl {
         extern u16 FramebufferWidth;            ///< Width of the framebuffer
         extern u16 FramebufferHeight;           ///< Height of the framebuffer
         extern u64 launchCombo;                 ///< Overlay activation key combo
-
+        extern u64 launchCombo2;                 ///< Overlay activation key combo
+        
     }
 
     /**
@@ -4922,6 +4926,17 @@ namespace tsl {
                         shData->touchState = { 0 };
 
                     if (((shData->keysHeld & tsl::cfg::launchCombo) == tsl::cfg::launchCombo) && shData->keysDown & tsl::cfg::launchCombo) {
+                        //useCombo2 = "ZL+ZR+DDOWN";
+                        if (shData->overlayOpen) {
+                            tsl::Overlay::get()->hide();
+                            shData->overlayOpen = false;
+                        }
+                        else
+                            eventFire(&shData->comboEvent);
+                    } else if (((shData->keysHeld & tsl::cfg::launchCombo2) == tsl::cfg::launchCombo2) && shData->keysDown & tsl::cfg::launchCombo2 && useCombo2) {
+                        tsl::cfg::launchCombo = hlp::comboStringToKeys("L+DDOWN+RS");
+                        updateCombo(tsl::cfg::launchCombo);
+                        useCombo2 = false;
                         if (shData->overlayOpen) {
                             tsl::Overlay::get()->hide();
                             shData->overlayOpen = false;
@@ -5131,6 +5146,7 @@ namespace tsl::cfg {
     u16 FramebufferWidth  = 0;
     u16 FramebufferHeight = 0;
     u64 launchCombo = KEY_ZL | KEY_ZR | KEY_DDOWN;
+    u64 launchCombo2 = KEY_L | KEY_DDOWN | KEY_RSTICK;
 }
 extern "C" void __libnx_init_time(void);
 
