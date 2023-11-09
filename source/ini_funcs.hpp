@@ -490,7 +490,7 @@ void setIniFile(const std::string& fileToEdit, const std::string& desiredSection
             // Handle the error accordingly
             return;
         }
-        fprintf(configFile, (std::string("[%s]")+comment+std::string("\n%s = %s\n")).c_str(), desiredSection.c_str(), desiredKey.c_str(), desiredValue.c_str());
+        fprintf(configFile, (comment+std::string("[%s]\n%s = %s\n")).c_str(), desiredSection.c_str(), desiredKey.c_str(), desiredValue.c_str());
         fclose(configFile);
         return;
     }
