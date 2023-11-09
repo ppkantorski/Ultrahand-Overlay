@@ -481,7 +481,7 @@ void cleanIniFormatting(const std::string& filePath) {
  * @param desiredValue    The new value for the key-value pair.
  * @param desiredNewKey   (Optional) If provided, the function will rename the key while preserving the original value.
  */
-void setIniFile(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredValue, const std::string& desiredNewKey) {
+void setIniFile(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredValue, const std::string& desiredNewKey, const std::string& comment) {
     FILE* configFile = fopen(fileToEdit.c_str(), "r");
     if (!configFile) {
         createDirectory(removeFilename(fileToEdit));
@@ -490,7 +490,7 @@ void setIniFile(const std::string& fileToEdit, const std::string& desiredSection
             // Handle the error accordingly
             return;
         }
-        fprintf(configFile, "[%s]\n%s = %s\n", desiredSection.c_str(), desiredKey.c_str(), desiredValue.c_str());
+        fprintf(configFile, (std::string("[%s]")+comment+std::string("\n%s = %s\n")).c_str(), desiredSection.c_str(), desiredKey.c_str(), desiredValue.c_str());
         fclose(configFile);
         return;
     }
@@ -616,8 +616,8 @@ void setIniFile(const std::string& fileToEdit, const std::string& desiredSection
  * @param desiredKey      The key for the key-value pair to be added or updated.
  * @param desiredValue    The new value for the key-value pair.
  */
-void setIniFileValue(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredValue) {
-    setIniFile(fileToEdit, desiredSection, desiredKey, desiredValue, "");
+void setIniFileValue(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredValue, const std::string& comment="") {
+    setIniFile(fileToEdit, desiredSection, desiredKey, desiredValue, "", comment);
     //cleanIniFormatting(fileToEdit);
 }
 
@@ -633,8 +633,8 @@ void setIniFileValue(const std::string& fileToEdit, const std::string& desiredSe
  * @param desiredKey      The key name to be changed.
  * @param desiredNewKey   The new key name to replace the original key name.
  */
-void setIniFileKey(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredNewKey) {
-    setIniFile(fileToEdit, desiredSection, desiredKey, "", desiredNewKey);
+void setIniFileKey(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredNewKey, const std::string& comment="") {
+    setIniFile(fileToEdit, desiredSection, desiredKey, "", desiredNewKey, comment);
     //cleanIniFormatting(fileToEdit);
 }
 
