@@ -1466,8 +1466,10 @@ std::tuple<bool, bool> interpretAndExecuteCommand(const std::vector<std::vector<
                             }
                         }
                         
-                        if (rebootOption == "UMS")
+                        if (rebootOption == "UMS" || rebootOption == "ums")
                             Payload::RebootToHekateUMS(Payload::UmsTarget_Sd);
+                        else if (rebootOption == "HEKATE" || rebootOption == "hekate")
+                            Payload::RebootToHekateMenu(Payload::UmsTarget_Sd);
                         else if (isFileOrDirectory(rebootOption)) {
                             std::string fileName = getNameFromPath(rebootOption);
                             if (util::IsErista()) {
