@@ -157,7 +157,6 @@ void initializeTheme(std::string themeIniPath = themeConfigIniPath) {
 void copyTeslaKeyComboToUltrahand(std::string keyCombo = "ZL+ZR+DDOWN") {
     //std::string keyCombo = "ZL+ZR+DDOWN";
     std::map<std::string, std::map<std::string, std::string>> parsedData;
-    bool setTeslaCombo = false;
     
     if (isFileOrDirectory(teslaSettingsConfigIniPath)) {
         parsedData = getParsedDataFromIniFile(teslaSettingsConfigIniPath);
@@ -165,17 +164,8 @@ void copyTeslaKeyComboToUltrahand(std::string keyCombo = "ZL+ZR+DDOWN") {
             auto& teslaSection = parsedData["tesla"];
             if (teslaSection.count("key_combo") > 0) {
                 keyCombo = teslaSection["key_combo"];
-            } else {
-                setTeslaCombo = true;
             }
-        } else {
-            setTeslaCombo = true;
         }
-    } else {
-        setTeslaCombo = true;
-    }
-    if (setTeslaCombo) {
-        setIniFileValue(teslaSettingsConfigIniPath, "tesla", "key_combo", keyCombo);
     }
     
     if (isFileOrDirectory(settingsConfigIniPath)) {
@@ -185,11 +175,13 @@ void copyTeslaKeyComboToUltrahand(std::string keyCombo = "ZL+ZR+DDOWN") {
             if (ultrahandSection.count("key_combo") == 0) { // no entry present
                 // Write the key combo to the destination file
                 setIniFileValue(settingsConfigIniPath, "ultrahand", "key_combo", keyCombo);
+                setIniFileValue(teslaSettingsConfigIniPath, "tesla", "key_combo", keyCombo);
             }
         }
     } else {
         // Write the key combo to the destination file
         setIniFileValue(settingsConfigIniPath, "ultrahand", "key_combo", keyCombo);
+        setIniFileValue(teslaSettingsConfigIniPath, "tesla", "key_combo", keyCombo);
     }
     tsl::impl::parseOverlaySettings();
 }
