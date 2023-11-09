@@ -287,9 +287,8 @@ namespace Payload {
     bool RebootToHekateMenu() { // CUSTOM MODIFICATION
         if (util::IsErista()) {
             return Reboot([&] (BootStorage *storage) {
-                /* Force boot to menu, target UMS and select target. */
+                /* Force boot to menu */
                 storage->boot_cfg  = BootCfg_ForceAutoBoot;
-                storage->extra_cfg = ExtraCfg_NyxUms;
                 storage->autoboot  = 0;
             });
         } else {
