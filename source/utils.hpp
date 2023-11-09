@@ -154,8 +154,8 @@ void initializeTheme(std::string themeIniPath = themeConfigIniPath) {
  *
  * This function retrieves the key combo from Tesla settings and copies it to Ultrahand settings.
  */
-void copyTeslaKeyComboToUltrahand() {
-    std::string keyCombo = "ZL+ZR+DDOWN";
+void copyTeslaKeyComboToUltrahand(std::string keyCombo = "ZL+ZR+DDOWN") {
+    //std::string keyCombo = "ZL+ZR+DDOWN";
     std::map<std::string, std::map<std::string, std::string>> parsedData;
     
     if (isFileOrDirectory(teslaSettingsConfigIniPath)) {
