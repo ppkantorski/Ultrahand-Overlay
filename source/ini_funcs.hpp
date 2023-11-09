@@ -27,7 +27,7 @@
 #include <algorithm> // For std::remove_if
 #include <cctype>   // For ::isspace
 #include <get_funcs.hpp>
-
+#include <path_funcs.hpp>
 
 /**
  * @brief Represents a package header structure.
@@ -484,6 +484,7 @@ void cleanIniFormatting(const std::string& filePath) {
 void setIniFile(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredValue, const std::string& desiredNewKey) {
     FILE* configFile = fopen(fileToEdit.c_str(), "r");
     if (!configFile) {
+        createDirectory(removeFilename(fileToEdit));
         configFile = fopen(fileToEdit.c_str(), "w");
         if (!configFile) {
             // Handle the error accordingly
