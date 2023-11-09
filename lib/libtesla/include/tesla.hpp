@@ -1283,7 +1283,8 @@ namespace tsl {
             /**
              * @brief Tesla config file
              */
-            static const char* CONFIG_FILE = "/config/ultrahand/config.ini"; // CUSTOM MODIFICATION
+            static const char* TESLA_CONFIG_FILE = "/config/tesla/config.ini"; // CUSTOM MODIFICATION
+            static const char* ULTRAHAND_CONFIG_FILE = "/config/ultrahand/config.ini"; // CUSTOM MODIFICATION
 
             /**
              * @brief Parses an INI string
@@ -1354,7 +1355,7 @@ namespace tsl {
              *
              * @return Settings data
              */
-            static IniData readOverlaySettings() {
+            static IniData readOverlaySettings(auto& CONFIG_FILE) {
                 /* Open Sd card filesystem. */
                 FsFileSystem fsSdmc;
                 if (R_FAILED(fsOpenSdCardFileSystem(&fsSdmc)))
@@ -1387,7 +1388,7 @@ namespace tsl {
              *
              * @param iniData new data
              */
-            static void writeOverlaySettings(IniData const &iniData) {
+            static void writeOverlaySettings(IniData const &iniData, auto& CONFIG_FILE) {
                 /* Open Sd card filesystem. */
                 FsFileSystem fsSdmc;
                 if (R_FAILED(fsOpenSdCardFileSystem(&fsSdmc)))
@@ -1410,14 +1411,14 @@ namespace tsl {
              *
              * @param changes setting values to add or update
              */
-            static void updateOverlaySettings(IniData const &changes) {
-                hlp::ini::IniData iniData = hlp::ini::readOverlaySettings();
+            static void updateOverlaySettings(IniData const &changes, auto& CONFIG_FILE) {
+                hlp::ini::IniData iniData = hlp::ini::readOverlaySettings(CONFIG_FILE);
                 for (auto &section : changes) {
                     for (auto &keyValue : section.second) {
                         iniData[section.first][keyValue.first] = keyValue.second;
                     }
                 }
-                writeOverlaySettings(iniData);
+                writeOverlaySettings(iniData, CONFIG_FILE);
             }
 
         }
@@ -4778,7 +4779,9 @@ namespace tsl {
 
 
     namespace impl {
-
+        static const char* TESLA_CONFIG_FILE = "/config/tesla/config.ini"; // CUSTOM MODIFICATION
+        static const char* ULTRAHAND_CONFIG_FILE = "/config/ultrahand/config.ini"; // CUSTOM MODIFICATION
+        
         /**
          * @brief Data shared between the different threads
          *
@@ -4804,7 +4807,7 @@ namespace tsl {
          *
          */
         static void parseOverlaySettings() {
-            hlp::ini::IniData parsedConfig = hlp::ini::readOverlaySettings();
+            hlp::ini::IniData parsedConfig = hlp::ini::readOverlaySettings(ULTRAHAND_CONFIG_FILE);
             
             try {
                 u64 decodedKeys = hlp::comboStringToKeys(parsedConfig["ultrahand"]["key_combo"]); // CUSTOM MODIFICATION
@@ -4853,10 +4856,15 @@ namespace tsl {
         [[maybe_unused]] static void updateCombo(u64 keys) {
             tsl::cfg::launchCombo = keys;
             hlp::ini::updateOverlaySettings({
+                { "tesla", { // CUSTOM MODIFICATION
+                    { "key_combo", tsl::hlp::keysToComboString(keys) }
+                }}
+            }, TESLA_CONFIG_FILE);
+            hlp::ini::updateOverlaySettings({
                 { "ultrahand", { // CUSTOM MODIFICATION
                     { "key_combo", tsl::hlp::keysToComboString(keys) }
                 }}
-            });
+            }, ULTRAHAND_CONFIG_FILE);
         }
 
         /**
