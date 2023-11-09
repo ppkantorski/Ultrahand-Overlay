@@ -284,7 +284,7 @@ namespace Payload {
         }
     }
 
-    bool RebootToHekateMenu(UmsTarget const target) { // CUSTOM MODIFICATION
+    bool RebootToHekateMenu() { // CUSTOM MODIFICATION
         if (util::IsErista()) {
             return Reboot([&] (BootStorage *storage) {
                 /* Force boot to menu, target UMS and select target. */
@@ -295,7 +295,6 @@ namespace Payload {
         } else {
             Max77620Rtc::rtc_reboot_reason_t rr {.dec = {
                 .reason = Max77620Rtc::REBOOT_REASON_MENU,
-                .ums_idx = target,
             }};
             return Max77620Rtc::Reboot(&rr);
         }
