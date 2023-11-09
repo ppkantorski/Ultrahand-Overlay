@@ -368,6 +368,7 @@ public:
                     if (keys & KEY_A) {
                         if (combo != defaultCombo) {
                             setIniFileValue(settingsConfigIniPath, "ultrahand", "key_combo", combo);
+                            setIniFileValue(teslaSettingsConfigIniPath, "tesla", "key_combo", combo);
                             reloadMenu = true;
                         }
                         
