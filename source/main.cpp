@@ -3297,6 +3297,7 @@ public:
         }
         if (initializingSpawn) {
             initializingSpawn = false;
+            useCombo2 = true;
             return createUI(); 
         }
         
