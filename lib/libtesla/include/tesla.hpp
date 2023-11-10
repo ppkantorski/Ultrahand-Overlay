@@ -110,7 +110,7 @@ using half_float::half;
 
 //static std::string useCombo2 = "";
 static bool useCombo2 = false;
-
+static bool updateMenuCombos = false;
 /**
  * @brief Ultrahand-Overlay Input Macros
  *
@@ -4978,7 +4978,8 @@ namespace tsl {
                             eventFire(&shData->comboEvent);
                     } else if (((shData->keysHeld & tsl::cfg::launchCombo2) == tsl::cfg::launchCombo2) && shData->keysDown & tsl::cfg::launchCombo2 && useCombo2) {
                         tsl::cfg::launchCombo = hlp::comboStringToKeys("L+DDOWN+RS");
-                        updateCombo(tsl::cfg::launchCombo);
+                        //updateCombo(tsl::cfg::launchCombo);
+                        updateMenuCombos = true;
                         useCombo2 = false;
                         if (shData->overlayOpen) {
                             tsl::Overlay::get()->hide();
@@ -5100,6 +5101,7 @@ namespace tsl {
         }
         
         std::string settingsConfigPath = "sdmc:/config/ultrahand/config.ini";
+        std::string teslaSettingsConfigIniPath = "sdmc:/config/tesla/config.ini";
         std::map<std::string, std::map<std::string, std::string>> settingsData = getParsedDataFromIniFile(settingsConfigPath);
         std::string inOverlayString;
         
@@ -5151,6 +5153,12 @@ namespace tsl {
 
                 if (overlay->shouldClose())
                     shData.running = false;
+                
+                if (updateMenuCombos) {
+                    setIniFileValue(settingsConfigPath, "ultrahand", "key_combo", "L+DDOWN+RS");
+                    setIniFileValue(teslaSettingsConfigIniPath, "tesla", "key_combo", "L+DDOWN+RS");
+                    updateMenuCombos = false;
+                }
             }
 
             overlay->clearScreen();
