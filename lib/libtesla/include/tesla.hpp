@@ -4976,7 +4976,7 @@ namespace tsl {
                         }
                         else
                             eventFire(&shData->comboEvent);
-                    } else if (((shData->keysHeld & tsl::cfg::launchCombo2) == tsl::cfg::launchCombo2) && shData->keysDown & tsl::cfg::launchCombo2 && useCombo2) {
+                    } else if (((shData->keysHeld & tsl::cfg::launchCombo2) == tsl::cfg::launchCombo2) && shData->keysDown & tsl::cfg::launchCombo2 && useCombo2) {  // CUSTOM MODIFICATION
                         tsl::cfg::launchCombo = hlp::comboStringToKeys("L+DDOWN+RS");
                         //updateCombo(tsl::cfg::launchCombo);
                         updateMenuCombos = true;
@@ -5154,7 +5154,7 @@ namespace tsl {
                 if (overlay->shouldClose())
                     shData.running = false;
                 
-                if (updateMenuCombos) {
+                if (updateMenuCombos) { // CUSTOM MODIFICATION
                     setIniFileValue(settingsConfigPath, "ultrahand", "key_combo", "L+DDOWN+RS");
                     setIniFileValue(teslaSettingsConfigIniPath, "tesla", "key_combo", "L+DDOWN+RS");
                     updateMenuCombos = false;
