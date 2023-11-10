@@ -223,7 +223,7 @@ void addHelpInfo(auto& list) {
     std::string infoString = "";
     
     sectionString += "Settings Menu\n";
-    infoString += "\uE0B5 (on main menu)\n";
+    infoString += "\uE0B5 (on Main Menu)\n";
     
     sectionString += "Script Overlay\n";
     infoString += "\uE0B6 (on a command)\n";
