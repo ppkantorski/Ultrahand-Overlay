@@ -264,6 +264,14 @@ static std::string REBOOT = "Reboot";
 static std::string SHUTDOWN = "Shutdown";
 static std::string GAP_1 = "     ";
 static std::string GAP_2 = "  ";
+static std::string USERGUIDE_OFFSET = "150";
+static std::string SETTINGS_MENU = "Settings Menu";
+static std::string SCRIPT_OVERLAY = "Script Overlay";
+static std::string STAR_FAVORITE = "Star/Favorite";
+static std::string APP_SETTINGS = "App Settings";
+static std::string ON_MAIN_MENU = "on Main Menu";
+static std::string ON_A_COMMAND = "on a command";
+static std::string ON_OVERLAY_PACKAGE = "on overlay/package";
 
 static std::string SUNDAY = "Sunday";
 static std::string MONDAY = "Monday";
@@ -361,6 +369,14 @@ void reinitializeLangVars() {
     SHUTDOWN = "Shutdown";
     GAP_1 = "     ";
     GAP_2 = "  ";
+    USERGUIDE_OFFSET = "150";
+    SETTINGS_MENU = "Settings Menu";
+    SCRIPT_OVERLAY = "Script Overlay";
+    STAR_FAVORITE = "Star/Favorite";
+    APP_SETTINGS = "App Settings";
+    ON_MAIN_MENU = "on Main Menu";
+    ON_A_COMMAND = "on a command";
+    ON_OVERLAY_PACKAGE = "on overlay/package";
     
     SUNDAY = "Sunday";
     MONDAY = "Monday";
@@ -471,6 +487,14 @@ void parseLanguage(std::string langFile) {
     updateIfNotEmpty(SHUTDOWN, "SHUTDOWN", langData);
     updateIfNotEmpty(GAP_1, "GAP_1", langData);
     updateIfNotEmpty(GAP_2, "GAP_2", langData);
+    updateIfNotEmpty(USERGUIDE_OFFSET, "USERGUIDE_OFFSET", langData);
+    updateIfNotEmpty(SETTINGS_MENU, "SETTINGS_MENU", langData);
+    updateIfNotEmpty(SCRIPT_OVERLAY, "SCRIPT_OVERLAY", langData);
+    updateIfNotEmpty(STAR_FAVORITE, "STAR_FAVORITE", langData);
+    updateIfNotEmpty(APP_SETTINGS, "APP_SETTINGS", langData);
+    updateIfNotEmpty(ON_MAIN_MENU, "ON_MAIN_MENU", langData);
+    updateIfNotEmpty(ON_A_COMMAND, "ON_A_COMMAND", langData);
+    updateIfNotEmpty(ON_OVERLAY_PACKAGE, "ON_OVERLAY_PACKAGE", langData);
     
     // Day and Month names
     updateIfNotEmpty(SUNDAY, "SUNDAY", langData);
