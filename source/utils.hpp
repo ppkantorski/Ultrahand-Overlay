@@ -206,6 +206,50 @@ void copyTeslaKeyComboToUltrahand() {
 
 
 
+void addHelpInfo(auto& list) {
+    // Add a section break with small text to indicate the "Commands" section
+    list->addItem(new tsl::elm::CategoryHeader(USER_GUIDE));
+    
+    constexpr int maxLineLength = 28;  // Adjust the maximum line length as needed
+    constexpr int lineHeight = 20;  // Adjust the line height as needed
+    constexpr int xOffset = 150;    // Adjust the horizontal offset as needed
+    constexpr int fontSize = 16;    // Adjust the font size as needed
+    int numEntries = 4;   // Adjust the number of entries as needed
+    
+    std::string::size_type startPos;
+    std::string::size_type spacePos;
+    
+    std::string sectionString = "";
+    std::string infoString = "";
+    
+    sectionString += "Settings Menu\n";
+    infoString += "\uE0B5 (on main menu)\n";
+    
+    sectionString += "Script Overlay\n";
+    infoString += "\uE0B6 (on a command)\n";
+    
+    sectionString += "Star/Favorite\n";
+    infoString += "\uE0E2 (on overlay/package)\n";
+    
+    sectionString += "App Settings\n";
+    infoString += "\uE0E3 (on overlay/package)\n";
+    
+    // Remove trailing newline character
+    if ((sectionString != "") && (sectionString.back() == '\n'))
+        sectionString = sectionString.substr(0, sectionString.size() - 1);
+    if ((infoString != "") && (infoString.back() == '\n'))
+        infoString = infoString.substr(0, infoString.size() - 1);
+    
+    
+    if ((sectionString != "") && (infoString != "")) {
+        list->addItem(new tsl::elm::CustomDrawer([lineHeight, xOffset, fontSize, sectionString, infoString](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
+            renderer->drawString(sectionString.c_str(), false, x + 14, y + lineHeight, fontSize, tsl::style::color::ColorText);
+            renderer->drawString(infoString.c_str(), false, x + xOffset+ 14, y + lineHeight, fontSize, tsl::style::color::ColorHighlight);
+        }), fontSize * numEntries + lineHeight);
+    }
+}
+
+
 void addPackageInfo(auto& list, auto& packageHeader) {
     // Add a section break with small text to indicate the "Commands" section
     list->addItem(new tsl::elm::CategoryHeader(PACKAGE_INFO));
