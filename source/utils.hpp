@@ -212,7 +212,7 @@ void addHelpInfo(auto& list) {
     
     constexpr int maxLineLength = 28;  // Adjust the maximum line length as needed
     constexpr int lineHeight = 20;  // Adjust the line height as needed
-    constexpr int xOffset = 150;    // Adjust the horizontal offset as needed
+    int xOffset = std::stoi(USERGUIDE_OFFSET);    // Adjust the horizontal offset as needed
     constexpr int fontSize = 16;    // Adjust the font size as needed
     int numEntries = 4;   // Adjust the number of entries as needed
     
@@ -222,17 +222,17 @@ void addHelpInfo(auto& list) {
     std::string sectionString = "";
     std::string infoString = "";
     
-    sectionString += "Settings Menu\n";
-    infoString += "\uE0B5 (on Main Menu)\n";
+    sectionString += SETTINGS_MENU+"\n";
+    infoString += "\uE0B5 ("+ON_MAIN_MENU+")\n";
     
-    sectionString += "Script Overlay\n";
-    infoString += "\uE0B6 (on a command)\n";
+    sectionString += SCRIPT_OVERLAY+"\n";
+    infoString += "\uE0B6 ("+ON_A_COMMAND+")\n";
     
-    sectionString += "Star/Favorite\n";
-    infoString += "\uE0E2 (on overlay/package)\n";
+    sectionString += STAR_FAVORITE+"\n";
+    infoString += "\uE0E2 ("+ON_OVERLAY_PACKAGE+")\n";
     
-    sectionString += "App Settings\n";
-    infoString += "\uE0E3 (on overlay/package)\n";
+    sectionString += APP_SETTINGS+"\n";
+    infoString += "\uE0E3 ("+ON_OVERLAY_PACKAGE+")\n";
     
     // Remove trailing newline character
     if ((sectionString != "") && (sectionString.back() == '\n'))
