@@ -385,3 +385,11 @@ std::string extractTitle(const std::string& input) {
         return input;
     }
 }
+
+std::string removeFilename(const std::string& path) {
+    size_t found = path.find_last_of("/\\");
+    if (found != std::string::npos) {
+        return path.substr(0, found + 1);
+    }
+    return path; // If no directory separator is found, return the original path
+}

@@ -108,6 +108,9 @@ using half_float::half;
 #define KEY_LEFT (HidNpadButton_Left | HidNpadButton_StickLLeft | HidNpadButton_StickRLeft)
 #define KEY_RIGHT (HidNpadButton_Right | HidNpadButton_StickLRight | HidNpadButton_StickRRight)
 
+//static std::string useCombo2 = "";
+static bool useCombo2 = false;
+static bool updateMenuCombos = false;
 /**
  * @brief Ultrahand-Overlay Input Macros
  *
@@ -229,6 +232,9 @@ static std::string CLOCK = "Clock";
 static std::string BATTERY = "Battery";
 static std::string SOC_TEMPERATURE = "SOC Temperature";
 static std::string PCB_TEMPERATURE = "PCB Temperature";
+static std::string MISCELLANEOUS = "Miscellaneous";
+static std::string MENU_ITEMS = "Menu Items";
+static std::string USER_GUIDE = "User Guide";
 static std::string VERSION_LABELS = "Version Labels";
 static std::string KEY_COMBO = "Key Combo";
 static std::string LANGUAGE = "Language";
@@ -258,6 +264,14 @@ static std::string REBOOT = "Reboot";
 static std::string SHUTDOWN = "Shutdown";
 static std::string GAP_1 = "     ";
 static std::string GAP_2 = "  ";
+static std::string USERGUIDE_OFFSET = "150";
+static std::string SETTINGS_MENU = "Settings Menu";
+static std::string SCRIPT_OVERLAY = "Script Overlay";
+static std::string STAR_FAVORITE = "Star/Favorite";
+static std::string APP_SETTINGS = "App Settings";
+static std::string ON_MAIN_MENU = "on Main Menu";
+static std::string ON_A_COMMAND = "on a command";
+static std::string ON_OVERLAY_PACKAGE = "on overlay/package";
 
 static std::string SUNDAY = "Sunday";
 static std::string MONDAY = "Monday";
@@ -323,6 +337,9 @@ void reinitializeLangVars() {
     BATTERY = "Battery";
     SOC_TEMPERATURE = "SOC Temperature";
     PCB_TEMPERATURE = "PCB Temperature";
+    MISCELLANEOUS = "Miscellaneous";
+    MENU_ITEMS = "Menu Items";
+    USER_GUIDE = "User Guide";
     VERSION_LABELS = "Version Labels";
     KEY_COMBO = "Key Combo";
     LANGUAGE = "Language";
@@ -352,6 +369,14 @@ void reinitializeLangVars() {
     SHUTDOWN = "Shutdown";
     GAP_1 = "     ";
     GAP_2 = "  ";
+    USERGUIDE_OFFSET = "150";
+    SETTINGS_MENU = "Settings Menu";
+    SCRIPT_OVERLAY = "Script Overlay";
+    STAR_FAVORITE = "Star/Favorite";
+    APP_SETTINGS = "App Settings";
+    ON_MAIN_MENU = "on Main Menu";
+    ON_A_COMMAND = "on a command";
+    ON_OVERLAY_PACKAGE = "on overlay/package";
     
     SUNDAY = "Sunday";
     MONDAY = "Monday";
@@ -430,6 +455,9 @@ void parseLanguage(std::string langFile) {
     updateIfNotEmpty(BATTERY, "BATTERY", langData);
     updateIfNotEmpty(SOC_TEMPERATURE, "SOC_TEMPERATURE", langData);
     updateIfNotEmpty(PCB_TEMPERATURE, "PCB_TEMPERATURE", langData);
+    updateIfNotEmpty(MISCELLANEOUS, "MISCELLANEOUS", langData);
+    updateIfNotEmpty(MENU_ITEMS, "MENU_ITEMS", langData);
+    updateIfNotEmpty(USER_GUIDE, "USER_GUIDE", langData);
     updateIfNotEmpty(VERSION_LABELS, "VERSION_LABELS", langData);
     updateIfNotEmpty(KEY_COMBO, "KEY_COMBO", langData);
     updateIfNotEmpty(LANGUAGE, "LANGUAGE", langData);
@@ -459,6 +487,14 @@ void parseLanguage(std::string langFile) {
     updateIfNotEmpty(SHUTDOWN, "SHUTDOWN", langData);
     updateIfNotEmpty(GAP_1, "GAP_1", langData);
     updateIfNotEmpty(GAP_2, "GAP_2", langData);
+    updateIfNotEmpty(USERGUIDE_OFFSET, "USERGUIDE_OFFSET", langData);
+    updateIfNotEmpty(SETTINGS_MENU, "SETTINGS_MENU", langData);
+    updateIfNotEmpty(SCRIPT_OVERLAY, "SCRIPT_OVERLAY", langData);
+    updateIfNotEmpty(STAR_FAVORITE, "STAR_FAVORITE", langData);
+    updateIfNotEmpty(APP_SETTINGS, "APP_SETTINGS", langData);
+    updateIfNotEmpty(ON_MAIN_MENU, "ON_MAIN_MENU", langData);
+    updateIfNotEmpty(ON_A_COMMAND, "ON_A_COMMAND", langData);
+    updateIfNotEmpty(ON_OVERLAY_PACKAGE, "ON_OVERLAY_PACKAGE", langData);
     
     // Day and Month names
     updateIfNotEmpty(SUNDAY, "SUNDAY", langData);
@@ -969,7 +1005,8 @@ namespace tsl {
         extern u16 FramebufferWidth;            ///< Width of the framebuffer
         extern u16 FramebufferHeight;           ///< Height of the framebuffer
         extern u64 launchCombo;                 ///< Overlay activation key combo
-
+        extern u64 launchCombo2;                 ///< Overlay activation key combo
+        
     }
 
     /**
@@ -1279,7 +1316,8 @@ namespace tsl {
             /**
              * @brief Tesla config file
              */
-            static const char* CONFIG_FILE = "/config/ultrahand/config.ini"; // CUSTOM MODIFICATION
+            static const char* TESLA_CONFIG_FILE = "/config/tesla/config.ini"; // CUSTOM MODIFICATION
+            static const char* ULTRAHAND_CONFIG_FILE = "/config/ultrahand/config.ini"; // CUSTOM MODIFICATION
 
             /**
              * @brief Parses an INI string
@@ -1350,7 +1388,7 @@ namespace tsl {
              *
              * @return Settings data
              */
-            static IniData readOverlaySettings() {
+            static IniData readOverlaySettings(auto& CONFIG_FILE) {
                 /* Open Sd card filesystem. */
                 FsFileSystem fsSdmc;
                 if (R_FAILED(fsOpenSdCardFileSystem(&fsSdmc)))
@@ -1383,7 +1421,7 @@ namespace tsl {
              *
              * @param iniData new data
              */
-            static void writeOverlaySettings(IniData const &iniData) {
+            static void writeOverlaySettings(IniData const &iniData, auto& CONFIG_FILE) {
                 /* Open Sd card filesystem. */
                 FsFileSystem fsSdmc;
                 if (R_FAILED(fsOpenSdCardFileSystem(&fsSdmc)))
@@ -1406,14 +1444,14 @@ namespace tsl {
              *
              * @param changes setting values to add or update
              */
-            static void updateOverlaySettings(IniData const &changes) {
-                hlp::ini::IniData iniData = hlp::ini::readOverlaySettings();
+            static void updateOverlaySettings(IniData const &changes, auto& CONFIG_FILE) {
+                hlp::ini::IniData iniData = hlp::ini::readOverlaySettings(CONFIG_FILE);
                 for (auto &section : changes) {
                     for (auto &keyValue : section.second) {
                         iniData[section.first][keyValue.first] = keyValue.second;
                     }
                 }
-                writeOverlaySettings(iniData);
+                writeOverlaySettings(iniData, CONFIG_FILE);
             }
 
         }
@@ -2974,8 +3012,10 @@ namespace tsl {
                 
                 std::string menuBottomLine = "\uE0E1"+GAP_2+BACK+GAP_1+"\uE0E0"+GAP_2+OK+GAP_1;
                 if (this->m_menuMode == "packages") {
+                    //menuBottomLine = "\uE0E1"+GAP_2+"Close"+GAP_1+"\uE0E0"+GAP_2+OK+GAP_1+"\uE0ED"+GAP_2+OVERLAYS;
                     menuBottomLine += "\uE0ED"+GAP_2+OVERLAYS;
                 } else if (this->m_menuMode == "overlays") {
+                    //menuBottomLine = "\uE0E1"+GAP_2+"Close"+GAP_1+"\uE0E0"+GAP_2+OK+GAP_1+"\uE0ED"+GAP_2+PACKAGES;
                     menuBottomLine += "\uE0EE"+GAP_2+PACKAGES;
                 }
                 
@@ -4774,7 +4814,9 @@ namespace tsl {
 
 
     namespace impl {
-
+        static const char* TESLA_CONFIG_FILE = "/config/tesla/config.ini"; // CUSTOM MODIFICATION
+        static const char* ULTRAHAND_CONFIG_FILE = "/config/ultrahand/config.ini"; // CUSTOM MODIFICATION
+        
         /**
          * @brief Data shared between the different threads
          *
@@ -4800,7 +4842,7 @@ namespace tsl {
          *
          */
         static void parseOverlaySettings() {
-            hlp::ini::IniData parsedConfig = hlp::ini::readOverlaySettings();
+            hlp::ini::IniData parsedConfig = hlp::ini::readOverlaySettings(ULTRAHAND_CONFIG_FILE);
             
             try {
                 u64 decodedKeys = hlp::comboStringToKeys(parsedConfig["ultrahand"]["key_combo"]); // CUSTOM MODIFICATION
@@ -4849,10 +4891,15 @@ namespace tsl {
         [[maybe_unused]] static void updateCombo(u64 keys) {
             tsl::cfg::launchCombo = keys;
             hlp::ini::updateOverlaySettings({
+                { "tesla", { // CUSTOM MODIFICATION
+                    { "key_combo", tsl::hlp::keysToComboString(keys) }
+                }}
+            }, TESLA_CONFIG_FILE);
+            hlp::ini::updateOverlaySettings({
                 { "ultrahand", { // CUSTOM MODIFICATION
                     { "key_combo", tsl::hlp::keysToComboString(keys) }
                 }}
-            });
+            }, ULTRAHAND_CONFIG_FILE);
         }
 
         /**
@@ -4922,6 +4969,18 @@ namespace tsl {
                         shData->touchState = { 0 };
 
                     if (((shData->keysHeld & tsl::cfg::launchCombo) == tsl::cfg::launchCombo) && shData->keysDown & tsl::cfg::launchCombo) {
+                        //useCombo2 = "ZL+ZR+DDOWN";
+                        if (shData->overlayOpen) {
+                            tsl::Overlay::get()->hide();
+                            shData->overlayOpen = false;
+                        }
+                        else
+                            eventFire(&shData->comboEvent);
+                    } else if (((shData->keysHeld & tsl::cfg::launchCombo2) == tsl::cfg::launchCombo2) && shData->keysDown & tsl::cfg::launchCombo2 && useCombo2) {  // CUSTOM MODIFICATION
+                        tsl::cfg::launchCombo = hlp::comboStringToKeys("L+DDOWN+RS");
+                        //updateCombo(tsl::cfg::launchCombo);
+                        updateMenuCombos = true;
+                        useCombo2 = false;
                         if (shData->overlayOpen) {
                             tsl::Overlay::get()->hide();
                             shData->overlayOpen = false;
@@ -5042,6 +5101,7 @@ namespace tsl {
         }
         
         std::string settingsConfigPath = "sdmc:/config/ultrahand/config.ini";
+        std::string teslaSettingsConfigIniPath = "sdmc:/config/tesla/config.ini";
         std::map<std::string, std::map<std::string, std::string>> settingsData = getParsedDataFromIniFile(settingsConfigPath);
         std::string inOverlayString;
         
@@ -5093,6 +5153,12 @@ namespace tsl {
 
                 if (overlay->shouldClose())
                     shData.running = false;
+                
+                if (updateMenuCombos) { // CUSTOM MODIFICATION
+                    setIniFileValue(settingsConfigPath, "ultrahand", "key_combo", "L+DDOWN+RS");
+                    setIniFileValue(teslaSettingsConfigIniPath, "tesla", "key_combo", "L+DDOWN+RS");
+                    updateMenuCombos = false;
+                }
             }
 
             overlay->clearScreen();
@@ -5131,6 +5197,7 @@ namespace tsl::cfg {
     u16 FramebufferWidth  = 0;
     u16 FramebufferHeight = 0;
     u64 launchCombo = KEY_ZL | KEY_ZR | KEY_DDOWN;
+    u64 launchCombo2 = KEY_L | KEY_DDOWN | KEY_RSTICK;
 }
 extern "C" void __libnx_init_time(void);
 

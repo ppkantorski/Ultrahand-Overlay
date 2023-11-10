@@ -284,6 +284,21 @@ namespace Payload {
         }
     }
 
+    bool RebootToHekateMenu() { // CUSTOM MODIFICATION
+        if (util::IsErista()) {
+            return Reboot([&] (BootStorage *storage) {
+                /* Force boot to menu */
+                storage->boot_cfg  = BootCfg_ForceAutoBoot;
+                storage->autoboot  = 0;
+            });
+        } else {
+            Max77620Rtc::rtc_reboot_reason_t rr {.dec = {
+                .reason = Max77620Rtc::REBOOT_REASON_MENU,
+            }};
+            return Max77620Rtc::Reboot(&rr);
+        }
+    }
+
     bool RebootToPayload(PayloadConfig const &config) {
         if (util::IsErista()) {
             /* Load payload. */
