@@ -232,6 +232,9 @@ static std::string CLOCK = "Clock";
 static std::string BATTERY = "Battery";
 static std::string SOC_TEMPERATURE = "SOC Temperature";
 static std::string PCB_TEMPERATURE = "PCB Temperature";
+static std::string MISCELLANEOUS = "Miscellaneous";
+static std::string MENU_ITEMS = "Menu Items";
+static std::string USER_GUIDE = "User Guide";
 static std::string VERSION_LABELS = "Version Labels";
 static std::string KEY_COMBO = "Key Combo";
 static std::string LANGUAGE = "Language";
@@ -326,6 +329,9 @@ void reinitializeLangVars() {
     BATTERY = "Battery";
     SOC_TEMPERATURE = "SOC Temperature";
     PCB_TEMPERATURE = "PCB Temperature";
+    MISCELLANEOUS = "Miscellaneous";
+    MENU_ITEMS = "Menu Items";
+    USER_GUIDE = "User Guide";
     VERSION_LABELS = "Version Labels";
     KEY_COMBO = "Key Combo";
     LANGUAGE = "Language";
@@ -433,6 +439,9 @@ void parseLanguage(std::string langFile) {
     updateIfNotEmpty(BATTERY, "BATTERY", langData);
     updateIfNotEmpty(SOC_TEMPERATURE, "SOC_TEMPERATURE", langData);
     updateIfNotEmpty(PCB_TEMPERATURE, "PCB_TEMPERATURE", langData);
+    updateIfNotEmpty(MISCELLANEOUS, "MISCELLANEOUS", langData);
+    updateIfNotEmpty(MENU_ITEMS, "MENU_ITEMS", langData);
+    updateIfNotEmpty(USER_GUIDE, "USER_GUIDE", langData);
     updateIfNotEmpty(VERSION_LABELS, "VERSION_LABELS", langData);
     updateIfNotEmpty(KEY_COMBO, "KEY_COMBO", langData);
     updateIfNotEmpty(LANGUAGE, "LANGUAGE", langData);
@@ -2979,8 +2988,10 @@ namespace tsl {
                 
                 std::string menuBottomLine = "\uE0E1"+GAP_2+BACK+GAP_1+"\uE0E0"+GAP_2+OK+GAP_1;
                 if (this->m_menuMode == "packages") {
+                    //menuBottomLine = "\uE0E1"+GAP_2+"Close"+GAP_1+"\uE0E0"+GAP_2+OK+GAP_1+"\uE0ED"+GAP_2+OVERLAYS;
                     menuBottomLine += "\uE0ED"+GAP_2+OVERLAYS;
                 } else if (this->m_menuMode == "overlays") {
+                    //menuBottomLine = "\uE0E1"+GAP_2+"Close"+GAP_1+"\uE0E0"+GAP_2+OK+GAP_1+"\uE0ED"+GAP_2+PACKAGES;
                     menuBottomLine += "\uE0EE"+GAP_2+PACKAGES;
                 }
                 
