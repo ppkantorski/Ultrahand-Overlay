@@ -582,7 +582,7 @@ public:
             
             if ((packageSectionString != "") && (packageInfoString != "")) {
                 list->addItem(new tsl::elm::CustomDrawer([lineHeight, xOffset, fontSize, packageSectionString, packageInfoString](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
-                    renderer->drawString(packageSectionString.c_str(), false, x, y + lineHeight, fontSize, a(tsl::style::color::ColorText));
+                    renderer->drawString(packageSectionString.c_str(), false, x + 14, y + lineHeight, fontSize, a(tsl::style::color::ColorText));
                     renderer->drawString(packageInfoString.c_str(), false, x + xOffset, y + lineHeight, fontSize, a(tsl::style::color::ColorText));
                 }), fontSize * numEntries + lineHeight);
             }
