@@ -243,8 +243,8 @@ void addHelpInfo(auto& list) {
     
     if ((sectionString != "") && (infoString != "")) {
         list->addItem(new tsl::elm::CustomDrawer([lineHeight, xOffset, fontSize, sectionString, infoString](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
-            renderer->drawString(sectionString.c_str(), false, x + 14, y + lineHeight, fontSize, tsl::style::color::ColorText);
-            renderer->drawString(infoString.c_str(), false, x + xOffset+ 14, y + lineHeight, fontSize, tsl::style::color::ColorHighlight);
+            renderer->drawString(sectionString.c_str(), false, x + 12, y + lineHeight, fontSize, tsl::style::color::ColorText);
+            renderer->drawString(infoString.c_str(), false, x + xOffset+ 12, y + lineHeight, fontSize, tsl::style::color::ColorHighlight);
         }), fontSize * numEntries + lineHeight);
     }
 }
@@ -352,7 +352,7 @@ void addPackageInfo(auto& list, auto& packageHeader) {
     
     if ((packageSectionString != "") && (packageInfoString != "")) {
         list->addItem(new tsl::elm::CustomDrawer([lineHeight, xOffset, fontSize, packageSectionString, packageInfoString](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
-            renderer->drawString(packageSectionString.c_str(), false, x + 14, y + lineHeight, fontSize, tsl::style::color::ColorText);
+            renderer->drawString(packageSectionString.c_str(), false, x + 12, y + lineHeight, fontSize, tsl::style::color::ColorText);
             renderer->drawString(packageInfoString.c_str(), false, x + xOffset, y + lineHeight, fontSize, tsl::style::color::ColorText);
         }), fontSize * numEntries + lineHeight);
     }
