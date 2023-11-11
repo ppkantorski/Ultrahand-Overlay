@@ -39,7 +39,7 @@ extern std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>
 extern std::map<std::string, std::map<std::string, std::string>> getParsedDataFromIniFile(const std::string& iniFilePath);
 extern std::vector<std::string> getSubdirectories(const std::string& directoryPath);
 extern std::string formatPriorityString(const std::string& priority, const int& desiredWidth);
-extern void setIniFileValue(const std::string& iniFilePath, const std::string& section, const std::string& key, const std::string& value);
+//extern void setIniFileValue(const std::string& iniFilePath, const std::string& section, const std::string& key, const std::string& value);
 extern std::string getNameFromPath(const std::string& path);
 extern std::string getParentDirNameFromPath(const std::string& path);
 extern std::string dropExtension(const std::string& fileName);
@@ -67,6 +67,7 @@ static bool inScriptMenu = false;
 static bool inSelectionMenu = false;
 static bool defaultMenuLoaded = true;
 static bool freshSpawn = true;
+static bool commandSuccess = false;
 static bool refreshGui = false;
 static bool reloadMenu = false;
 static bool reloadMenu2 = false;
@@ -243,9 +244,6 @@ public:
             list->addItem(listItem);
             
             
-            
-            
-            
             listItem = new tsl::elm::ListItem(SOFTWARE_UPDATE);
             listItem->setValue(DROPDOWN_SYMBOL);
             
@@ -257,9 +255,7 @@ public:
                 return false;
             });
             list->addItem(listItem);
-            
-            
-            
+             
             
             list->addItem(new tsl::elm::CategoryHeader(UI_SETTINGS));
             
@@ -297,19 +293,17 @@ public:
             
             
             
-            listItem = new tsl::elm::ListItem(VERSION_LABELS);
+            listItem = new tsl::elm::ListItem(MISCELLANEOUS);
             listItem->setValue(DROPDOWN_SYMBOL);
             
             listItem->setClickListener([this, listItem](uint64_t keys) { // Add 'command' to the capture list
                 if (keys & KEY_A) {
-                    tsl::changeTo<UltrahandSettingsMenu>("versionLabelMenu");
+                    tsl::changeTo<UltrahandSettingsMenu>("miscMenu");
                     return true;
                 }
                 return false;
             });
             list->addItem(listItem);
-            
-            
             
             
             
@@ -367,6 +361,7 @@ public:
                     if (keys & KEY_A) {
                         if (combo != defaultCombo) {
                             setIniFileValue(settingsConfigIniPath, "ultrahand", "key_combo", combo);
+                            setIniFileValue(teslaSettingsConfigIniPath, "tesla", "key_combo", combo);
                             reloadMenu = true;
                         }
                         
@@ -587,7 +582,7 @@ public:
             
             if ((packageSectionString != "") && (packageInfoString != "")) {
                 list->addItem(new tsl::elm::CustomDrawer([lineHeight, xOffset, fontSize, packageSectionString, packageInfoString](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
-                    renderer->drawString(packageSectionString.c_str(), false, x, y + lineHeight, fontSize, a(tsl::style::color::ColorText));
+                    renderer->drawString(packageSectionString.c_str(), false, x + 12, y + lineHeight, fontSize, a(tsl::style::color::ColorText));
                     renderer->drawString(packageInfoString.c_str(), false, x + xOffset, y + lineHeight, fontSize, a(tsl::style::color::ColorText));
                 }), fontSize * numEntries + lineHeight);
             }
@@ -725,7 +720,22 @@ public:
             });
             list->addItem(toggleListItem);
             
-        } else if (dropdownSelection == "versionLabelMenu") {
+        } else if (dropdownSelection == "miscMenu") {
+            list->addItem(new tsl::elm::CategoryHeader(MENU_ITEMS));
+            std::string hideUserGuide = parseValueFromIniSection(settingsConfigIniPath, "ultrahand", "hide_user_guide");
+            
+            auto toggleListItem = new tsl::elm::ToggleListItem(USER_GUIDE, false, ON, OFF);
+            toggleListItem->setState((hideUserGuide == "false"));
+            toggleListItem->setStateChangedListener([this, hideUserGuide, toggleListItem](bool state) {
+                setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_user_guide", state ? "false" : "true");
+                if ((hideUserGuide == "false") != state)
+                    reloadMenu = true;
+            });
+            list->addItem(toggleListItem);
+            
+            
+            list->addItem(new tsl::elm::CategoryHeader(VERSION_LABELS));
+            
             cleanVersionLabels = parseValueFromIniSection(settingsConfigIniPath, "ultrahand", "clean_version_labels");
             hideOverlayVersions = parseValueFromIniSection(settingsConfigIniPath, "ultrahand", "hide_overlay_versions");
             hidePackageVersions = parseValueFromIniSection(settingsConfigIniPath, "ultrahand", "hide_package_versions");
@@ -737,13 +747,12 @@ public:
             if (hidePackageVersions.empty())
                 hidePackageVersions = "false";
             
-            list->addItem(new tsl::elm::CategoryHeader(VERSION_LABELS));
             
             std::string defaultLang = parseValueFromIniSection(settingsConfigIniPath, "ultrahand", "current_lang");
             
             
-               
-            auto toggleListItem = new tsl::elm::ToggleListItem(CLEAN_LABELS, false, ON, OFF);
+            
+            toggleListItem = new tsl::elm::ToggleListItem(CLEAN_LABELS, false, ON, OFF);
             toggleListItem->setState((cleanVersionLabels == "true"));
             toggleListItem->setStateChangedListener([this, cleanVersionLabels, toggleListItem](bool state) {
                 setIniFileValue(settingsConfigIniPath, "ultrahand", "clean_version_labels", state ? "true" : "false");
@@ -778,6 +787,7 @@ public:
                     reloadMenu = true;
             });
             list->addItem(toggleListItem);
+            
             
         } else
             list->addItem(new tsl::elm::ListItem(FAILED_TO_OPEN + ": " + settingsIniPath));
@@ -1684,9 +1694,12 @@ public:
                             }
                             std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, selectedItem, i); // replace source
                             //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
-                            refreshGui = interpretAndExecuteCommand(modifiedCmds, filePath, specificKey); // Execute modified 
+                            std::tie(commandSuccess, refreshGui) = interpretAndExecuteCommand(modifiedCmds, filePath, specificKey); // Execute modified 
                             
-                            listItem->setValue(CHECKMARK_SYMBOL);
+                            if (commandSuccess)
+                                listItem->setValue(CHECKMARK_SYMBOL);
+                            else
+                                listItem->setValue(CROSSMARK_SYMBOL);
                             
                             if (commandMode == "option")
                                 lastSelectedListItemFooter = footer;
@@ -1707,9 +1720,12 @@ public:
                             
                             std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, selectedItem, i); // replace source
                             //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
-                            refreshGui = interpretAndExecuteCommand(modifiedCmds, filePath, specificKey); // Execute modified 
+                            std::tie(commandSuccess, refreshGui) = interpretAndExecuteCommand(modifiedCmds, filePath, specificKey); // Execute modified 
                             
-                            listItem->setValue(CHECKMARK_SYMBOL);
+                            if (commandSuccess)
+                                listItem->setValue(CHECKMARK_SYMBOL);
+                            else
+                                listItem->setValue(CROSSMARK_SYMBOL);
                             
                             if (commandMode == "option")
                                 lastSelectedListItemFooter = footer;
@@ -1733,14 +1749,14 @@ public:
                         if (std::find(selectedItemsListOn.begin(), selectedItemsListOn.end(), selectedItem) != selectedItemsListOn.end()) {
                             // Toggle switched to On
                             std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmdsOn, selectedItem, i); // replace source
-                            refreshGui = interpretAndExecuteCommand(modifiedCmds, filePath, specificKey); // Execute modified 
+                            std::tie(commandSuccess, refreshGui) = interpretAndExecuteCommand(modifiedCmds, filePath, specificKey); // Execute modified 
                         } else
                             toggleListItem->setState(!state);
                     } else {
                         if (std::find(selectedItemsListOff.begin(), selectedItemsListOff.end(), selectedItem) != selectedItemsListOff.end()) {
                             // Toggle switched to Off
                             std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmdsOff, selectedItem, i); // replace source
-                            refreshGui = interpretAndExecuteCommand(modifiedCmds, filePath, specificKey); // Execute modified 
+                            std::tie(commandSuccess, refreshGui) = interpretAndExecuteCommand(modifiedCmds, filePath, specificKey); // Execute modified 
                         } else
                             toggleListItem->setState(!state);
                     }
@@ -2189,8 +2205,11 @@ public:
                                     if (keys & KEY_A) {
                                         std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, keyName, i); // replace source
                                         //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
-                                        refreshGui = interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified 
-                                        listItem->setValue(CHECKMARK_SYMBOL);
+                                        std::tie(commandSuccess, refreshGui) = interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified 
+                                        if (commandSuccess)
+                                            listItem->setValue(CHECKMARK_SYMBOL);
+                                        else
+                                            listItem->setValue(CROSSMARK_SYMBOL);
                                         return true;
                                     }  else if (keys & SCRIPT_KEY) {
                                         if (inPackageMenu)
@@ -2209,9 +2228,11 @@ public:
                                     if (keys & KEY_A) {
                                         std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, keyName, i); // replace source
                                         //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
-                                        refreshGui = interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified 
-                                        
-                                        listItem->setValue(CHECKMARK_SYMBOL);
+                                        std::tie(commandSuccess, refreshGui) = interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified 
+                                        if (commandSuccess)
+                                            listItem->setValue(CHECKMARK_SYMBOL);
+                                        else
+                                            listItem->setValue(CROSSMARK_SYMBOL);
                                         return true;
                                     }  else if (keys & SCRIPT_KEY) {
                                         if (inPackageMenu)
@@ -2240,7 +2261,7 @@ public:
                                     if (toggleStateOn) {
                                         std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmdsOn, preprocessPath(pathPatternOn), i); // replace source
                                         //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
-                                        refreshGui = interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified 
+                                        std::tie(commandSuccess, refreshGui) = interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified 
                                     } else {
                                         // Handle the case where the command should only run in the source_on section
                                         // Add your specific code here
@@ -2250,7 +2271,7 @@ public:
                                     if (!toggleStateOn) {
                                         std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmdsOff, preprocessPath(pathPatternOff), i); // replace source
                                         //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
-                                        refreshGui = interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified 
+                                        std::tie(commandSuccess, refreshGui) = interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified 
                                     } else {
                                         // Handle the case where the command should only run in the source_off section
                                         // Add your specific code here
@@ -2382,6 +2403,8 @@ private:
     std::string packagePath, pathReplace, pathReplaceOn, pathReplaceOff;
     std::string filePath, specificKey, pathPattern, pathPatternOn, pathPatternOff, itemName, parentDirName, lastParentDirName;
     std::vector<std::string> filesList, filesListOn, filesListOff, filterList, filterListOn, filterListOff;
+    
+    std::string hideUserGuide = "false";
 public:
     /**
      * @brief Constructs a `MainMenu` instance.
@@ -2423,11 +2446,17 @@ public:
             if (settingsData.count("ultrahand") > 0) {
                 auto& ultrahandSection = settingsData["ultrahand"];
                 
+                if (ultrahandSection.count("hide_user_guide") > 0)
+                    hideUserGuide = ultrahandSection["hide_user_guide"];
+                else {
+                    setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_user_guide", "false");
+                }
+                
                 if (ultrahandSection.count("clean_version_labels") > 0)
                     cleanVersionLabels = ultrahandSection["clean_version_labels"];
                 else {
                     setIniFileValue(settingsConfigIniPath, "ultrahand", "clean_version_labels", "true");
-                    cleanVersionLabels = "false";
+                    cleanVersionLabels = "true";
                 }
                 
                 // For hiding the versions of overlays/packages
@@ -2940,7 +2969,7 @@ public:
                                         std::string bootOptionName = bootOption.first;
                                         auto bootCommands = bootOption.second;
                                         if (bootOptionName == "boot") {
-                                            refreshGui = interpretAndExecuteCommand(bootCommands, packageFilePath+bootPackageFileName, bootOptionName); // Execute modified 
+                                            std::tie(commandSuccess, refreshGui) = interpretAndExecuteCommand(bootCommands, packageFilePath+bootPackageFileName, bootOptionName); // Execute modified 
                                             break;
                                         }
                                     }
@@ -3208,9 +3237,12 @@ public:
                                     if (keys & KEY_A) {
                                         std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, selectedItem, i); // replace source
                                         //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
-                                        refreshGui = interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified 
+                                        std::tie(commandSuccess, refreshGui) = interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified 
                                         
-                                        listItem->setValue(CHECKMARK_SYMBOL);
+                                        if (commandSuccess)
+                                            listItem->setValue(CHECKMARK_SYMBOL);
+                                        else
+                                            listItem->setValue(CROSSMARK_SYMBOL);
                                         return true;
                                     } else if (keys & SCRIPT_KEY) {
                                         inMainMenu = false; // Set boolean to true when entering a submenu
@@ -3226,9 +3258,12 @@ public:
                                     if (keys & KEY_A) {
                                         std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, selectedItem, i); // replace source
                                         //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
-                                        refreshGui = interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified 
+                                        std::tie(commandSuccess, refreshGui) = interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified 
                                         
-                                        listItem->setValue(CHECKMARK_SYMBOL);
+                                        if (commandSuccess)
+                                            listItem->setValue(CHECKMARK_SYMBOL);
+                                        else
+                                            listItem->setValue(CROSSMARK_SYMBOL);
                                         return true;
                                     } else if (keys & SCRIPT_KEY) {
                                         inMainMenu = false; // Set boolean to true when entering a submenu
@@ -3254,7 +3289,7 @@ public:
                                     if (toggleStateOn) {
                                         std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmdsOn, preprocessPath(pathPatternOn), i); // replace source
                                         //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
-                                        refreshGui = interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified 
+                                        std::tie(commandSuccess, refreshGui) = interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified 
                                     } else {
                                         // Handle the case where the command should only run in the source_on section
                                         // Add your specific code here
@@ -3264,7 +3299,7 @@ public:
                                     if (!toggleStateOn) {
                                         std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmdsOff, preprocessPath(pathPatternOff),  i); // replace source
                                         //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
-                                        refreshGui = interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified 
+                                        std::tie(commandSuccess, refreshGui) = interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified 
                                     } else {
                                         // Handle the case where the command should only run in the source_off section
                                         // Add your specific code here
@@ -3275,10 +3310,14 @@ public:
                         }
                     }
                 }
+                
+                if (hideUserGuide != "true")
+                    addHelpInfo(list);
             }
         }
         if (initializingSpawn) {
             initializingSpawn = false;
+            useCombo2 = true;
             return createUI(); 
         }
         

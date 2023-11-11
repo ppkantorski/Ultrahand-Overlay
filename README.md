@@ -50,7 +50,13 @@ To use Ultrahand, follow these steps:
 4. Launch Ultrahand similarly to `Tesla Menu` with your specified hotkey.  A new folder will be made (`/switch/.packages/`) with a preset `package.ini` file for your base menu commands.
 
 5. Place your custom `package.ini` package file in your Ultrahand package directory (`/switch/.packages/<PACKAGE_NAME>/`). This file will contains the commands for your custom Ultrahand package.
-6. Your commands will now show up on the packages menu within Ultrahand.  You can click A to execute any command as well as click X to view/execute the individual command lines written in the ini for execution.
+6. Your commands will now show up on the packages menu within Ultrahand.
+
+## Additional Features
+- You can click `A` to execute any command as well as click `MINUS` to view/execute the individual command lines written in the ini for execution.
+- You can click `PLUS` on the main menu to enter the settings menu.
+- You can click `X` on top of an overlay/package to star them.
+- You can click `Y` on top of an overlay/package to configure additional settings.
 
 For additional assistance with custom packages, feel free to checkout the [Ultrahand Overlay Wiki](https://github.com/ppkantorski/Ultrahand-Overlay/wiki).
 

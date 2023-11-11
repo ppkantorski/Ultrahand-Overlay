@@ -92,6 +92,7 @@ namespace Payload {
     bool RebootToHekate();
     bool RebootToHekateConfig(HekateConfig const &config, bool const autoboot_list);
     bool RebootToHekateUMS(UmsTarget const target);
+    bool RebootToHekateMenu(); // CUSTOM ADDITION
     bool RebootToPayload(PayloadConfig const &config);
 
 }
