@@ -216,8 +216,23 @@ bool isDirectory(const std::string& path) {
     if (stat(path.c_str(), &pathStat) == 0) {
         return S_ISDIR(pathStat.st_mode);
     }
+
     return false;
 }
+
+
+bool isValidDirectoryFormat(const std::string& path) {
+    if (!path.empty() && path.back() == '/') {
+        // Check for disallowed characters
+        size_t colonPos = path.find(':');
+        if (colonPos == std::string::npos || (colonPos > 2 && path.find('/', colonPos) == std::string::npos)) {
+            // ':' is not present or present only after the volume name (e.g., "sdmc:/test/")
+            return true;
+        }
+    }
+    return false;
+}
+
 
 /**
  * @brief Checks if a path points to a file or directory.
