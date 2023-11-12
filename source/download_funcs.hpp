@@ -176,8 +176,10 @@ bool unzipFile(const std::string& zipFilePath, const std::string& toDestination)
         std::string fileName = entry.d_name;
         std::string extractedFilePath = toDestination + fileName;
         
+        //createDirectory(toDestination);
+        
         // Skip over present directory entries when extracting files from a zip archive
-        if (isDirectory(extractedFilePath)) {
+        if (isValidDirectoryFormat(extractedFilePath)) {
             continue;
         }
         
