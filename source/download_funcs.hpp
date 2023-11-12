@@ -178,7 +178,7 @@ bool unzipFile(const std::string& zipFilePath, const std::string& toDestination)
         
         //createDirectory(toDestination);
         
-        // Skip over present directory entries when extracting files from a zip archive
+        // Skip over directory entries when extracting files from a zip archive
         if (isValidDirectoryFormat(extractedFilePath)) {
             continue;
         }
