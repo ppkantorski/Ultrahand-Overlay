@@ -174,7 +174,7 @@ bool unzipFile(const std::string& zipFilePath, const std::string& toDestination)
         if (entry.d_name[0] == '\0') continue;  // Skip empty entries
 
         std::string fileName = entry.d_name;
-        std::string extractedFilePath = fixPathFormat(toDestination + fileName);
+        std::string extractedFilePath = toDestination + fileName;
         
         //createDirectory(toDestination);
         
