@@ -174,14 +174,14 @@ bool unzipFile(const std::string& zipFilePath, const std::string& toDestination)
         if (entry.d_name[0] == '\0') continue;  // Skip empty entries
 
         std::string fileName = entry.d_name;
-        std::string extractedFilePath = toDestination + fileName;
+        std::string extractedFilePath = fixPathFormat(toDestination + fileName);
         
         //createDirectory(toDestination);
         
-        // Skip over directory entries when extracting files from a zip archive
-        if (isValidDirectoryFormat(extractedFilePath)) {
+        if (!extractedFilePath.empty() && extractedFilePath.back() == '/') {
             continue;
         }
+        
         
         // Extract the directory path from the extracted file path
         std::string directoryPath;
