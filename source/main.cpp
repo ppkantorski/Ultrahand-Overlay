@@ -457,17 +457,21 @@ public:
             listItem->setClickListener([this, listItem](uint64_t keys) { // Add 'command' to the capture list
                 if (keys & KEY_A) {
                     deleteFileOrDirectory(downloadsPath+"ovlmenu.ovl");
-                    bool languageDownloaded = false;
+                    bool success = false;
                     if (languagesVersion == "latest")
-                        languageDownloaded = downloadFile(ultrahandRepo+"releases/latest/download/lang.zip", downloadsPath);
+                        success = downloadFile(ultrahandRepo+"releases/latest/download/lang.zip", downloadsPath);
                     else
-                        languageDownloaded = downloadFile(ultrahandRepo+"releases/download/v"+languagesVersion+"/lang.zip", downloadsPath);
-                    if (languageDownloaded) {
-                        unzipFile(downloadsPath+"lang.zip", downloadsPath+"lang/");
-                        deleteFileOrDirectory(downloadsPath+"lang.zip");
-                        deleteFileOrDirectory(langPath);
-                        moveFileOrDirectory(downloadsPath+"lang/", langPath);
-                        listItem->setValue(CHECKMARK_SYMBOL);
+                        success = downloadFile(ultrahandRepo+"releases/download/v"+languagesVersion+"/lang.zip", downloadsPath);
+                    if (success) {
+                        success = unzipFile(downloadsPath+"lang.zip", downloadsPath+"lang/");
+                        if (success) {
+                            //deleteFileOrDirectory(downloadsPath+"lang.zip");
+                            //deleteFileOrDirectory(langPath);
+                            //moveFileOrDirectory(downloadsPath+"lang/", langPath);
+                            listItem->setValue(CHECKMARK_SYMBOL);
+                        } else {
+                            listItem->setValue(CROSSMARK_SYMBOL, false);
+                        }
                     } else
                         listItem->setValue(CROSSMARK_SYMBOL, false);
                     
