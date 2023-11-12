@@ -465,9 +465,9 @@ public:
                     if (success) {
                         success = unzipFile(downloadsPath+"lang.zip", downloadsPath+"lang/");
                         if (success) {
-                            //deleteFileOrDirectory(downloadsPath+"lang.zip");
-                            //deleteFileOrDirectory(langPath);
-                            //moveFileOrDirectory(downloadsPath+"lang/", langPath);
+                            deleteFileOrDirectory(downloadsPath+"lang.zip");
+                            deleteFileOrDirectory(langPath);
+                            moveFileOrDirectory(downloadsPath+"lang/", langPath);
                             listItem->setValue(CHECKMARK_SYMBOL);
                         } else {
                             listItem->setValue(CROSSMARK_SYMBOL, false);
