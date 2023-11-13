@@ -82,7 +82,7 @@ Contributions are welcome! If you have any ideas, suggestions, or bug reports, p
 
 ## License
 
-This project is licensed under the [CC-BY-NC-4.0 License](LICENSE).
+This project is licensed under the [CC-BY-NC-SA-4.0 License](LICENSE).
 
 Copyright (c) 2023 ppkantorski
 
