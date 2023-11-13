@@ -3304,13 +3304,14 @@ namespace tsl {
                 if (this->m_listHeight > this->getHeight()) {
                     float scrollbarHeight = static_cast<float>(this->getHeight() * this->getHeight()) / this->m_listHeight;
                     float scrollbarOffset = (static_cast<double>(this->m_offset)) / static_cast<double>(this->m_listHeight - this->getHeight()) * (this->getHeight() - std::ceil(scrollbarHeight));
-
-                    renderer->drawRect(this->getRightBound() + 10+2, this->getY() + scrollbarOffset, 5, scrollbarHeight - 50, trackBarColor);
-                    renderer->drawCircle(this->getRightBound() + 12+2, this->getY() + scrollbarOffset, 2, true, trackBarColor);
-                    renderer->drawCircle(this->getRightBound() + 12+2, ( this->getY() + scrollbarOffset + (this->getY() + scrollbarOffset + this->getY() + scrollbarOffset + scrollbarHeight - 50)/2)/2, 2, true, trackBarColor);
-                    renderer->drawCircle(this->getRightBound() + 12+2, (this->getY() + scrollbarOffset + this->getY() + scrollbarOffset + scrollbarHeight - 50)/2, 2, true, trackBarColor);
-                    renderer->drawCircle(this->getRightBound() + 12+2, (this->getY() + scrollbarOffset + scrollbarHeight - 50 + (this->getY() + scrollbarOffset + this->getY() + scrollbarOffset + scrollbarHeight - 50)/2)/2, 2, true, trackBarColor);
-                    renderer->drawCircle(this->getRightBound() + 12+2, this->getY() + scrollbarOffset + scrollbarHeight - 50, 2, true, trackBarColor);
+                    
+                    int offset = 9;
+                    renderer->drawRect(this->getRightBound() + 10+offset, this->getY() + scrollbarOffset, 5, scrollbarHeight - 50, trackBarColor);
+                    renderer->drawCircle(this->getRightBound() + 12+offset, this->getY() + scrollbarOffset, 2, true, trackBarColor);
+                    renderer->drawCircle(this->getRightBound() + 12+offset, ( this->getY() + scrollbarOffset + (this->getY() + scrollbarOffset + this->getY() + scrollbarOffset + scrollbarHeight - 50)/2)/2, 2, true, trackBarColor);
+                    renderer->drawCircle(this->getRightBound() + 12+offset, (this->getY() + scrollbarOffset + this->getY() + scrollbarOffset + scrollbarHeight - 50)/2, 2, true, trackBarColor);
+                    renderer->drawCircle(this->getRightBound() + 12+offset, (this->getY() + scrollbarOffset + scrollbarHeight - 50 + (this->getY() + scrollbarOffset + this->getY() + scrollbarOffset + scrollbarHeight - 50)/2)/2, 2, true, trackBarColor);
+                    renderer->drawCircle(this->getRightBound() + 12+offset, this->getY() + scrollbarOffset + scrollbarHeight - 50, 2, true, trackBarColor);
 
                     float prevOffset = this->m_offset;
 
