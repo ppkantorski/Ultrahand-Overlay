@@ -36,7 +36,7 @@ Contributions from the community are welcome! If you have any improvements, bug 
 
 ## License
 
-This project is licensed under the [CC-BY-NC-4.0 License](LICENSE).
+This project is licensed under the [CC-BY-NC-SA-4.0 License](LICENSE).
 
 Copyright (c) 2023 ppkantorski
 
