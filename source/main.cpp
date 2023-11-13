@@ -457,17 +457,21 @@ public:
             listItem->setClickListener([this, listItem](uint64_t keys) { // Add 'command' to the capture list
                 if (keys & KEY_A) {
                     deleteFileOrDirectory(downloadsPath+"ovlmenu.ovl");
-                    bool languageDownloaded = false;
+                    bool success = false;
                     if (languagesVersion == "latest")
-                        languageDownloaded = downloadFile(ultrahandRepo+"releases/latest/download/lang.zip", downloadsPath);
+                        success = downloadFile(ultrahandRepo+"releases/latest/download/lang.zip", downloadsPath);
                     else
-                        languageDownloaded = downloadFile(ultrahandRepo+"releases/download/v"+languagesVersion+"/lang.zip", downloadsPath);
-                    if (languageDownloaded) {
-                        unzipFile(downloadsPath+"lang.zip", downloadsPath+"lang/");
-                        deleteFileOrDirectory(downloadsPath+"lang.zip");
-                        deleteFileOrDirectory(langPath);
-                        moveFileOrDirectory(downloadsPath+"lang/", langPath);
-                        listItem->setValue(CHECKMARK_SYMBOL);
+                        success = downloadFile(ultrahandRepo+"releases/download/v"+languagesVersion+"/lang.zip", downloadsPath);
+                    if (success) {
+                        success = unzipFile(downloadsPath+"lang.zip", downloadsPath+"lang/");
+                        if (success) {
+                            deleteFileOrDirectory(downloadsPath+"lang.zip");
+                            deleteFileOrDirectory(langPath);
+                            moveFileOrDirectory(downloadsPath+"lang/", langPath);
+                            listItem->setValue(CHECKMARK_SYMBOL);
+                        } else {
+                            listItem->setValue(CROSSMARK_SYMBOL, false);
+                        }
                     } else
                         listItem->setValue(CROSSMARK_SYMBOL, false);
                     
@@ -582,7 +586,7 @@ public:
             
             if ((packageSectionString != "") && (packageInfoString != "")) {
                 list->addItem(new tsl::elm::CustomDrawer([lineHeight, xOffset, fontSize, packageSectionString, packageInfoString](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
-                    renderer->drawString(packageSectionString.c_str(), false, x, y + lineHeight, fontSize, a(tsl::style::color::ColorText));
+                    renderer->drawString(packageSectionString.c_str(), false, x + 12, y + lineHeight, fontSize, a(tsl::style::color::ColorText));
                     renderer->drawString(packageInfoString.c_str(), false, x + xOffset, y + lineHeight, fontSize, a(tsl::style::color::ColorText));
                 }), fontSize * numEntries + lineHeight);
             }

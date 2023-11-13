@@ -176,10 +176,12 @@ bool unzipFile(const std::string& zipFilePath, const std::string& toDestination)
         std::string fileName = entry.d_name;
         std::string extractedFilePath = toDestination + fileName;
         
-        // Skip over present directory entries when extracting files from a zip archive
-        if (isDirectory(extractedFilePath)) {
+        //createDirectory(toDestination);
+        
+        if (!extractedFilePath.empty() && extractedFilePath.back() == '/') {
             continue;
         }
+        
         
         // Extract the directory path from the extracted file path
         std::string directoryPath;
@@ -197,7 +199,7 @@ bool unzipFile(const std::string& zipFilePath, const std::string& toDestination)
             logMessage("directoryPath: failure");
         }
         
-        logMessage(std::string("directoryPath: ") + directoryPath);
+        //logMessage(std::string("directoryPath: ") + directoryPath);
 
         ZZIP_FILE* file = zzip_file_open(dir, entry.d_name, 0);
         if (file) {
