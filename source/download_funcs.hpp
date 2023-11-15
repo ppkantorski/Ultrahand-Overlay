@@ -29,6 +29,7 @@
 
 
 
+
 /**
  * @brief Callback function to write received data to a file.
  *
@@ -43,6 +44,38 @@ size_t writeCallback(void* contents, size_t size, size_t nmemb, FILE* file) {
     size_t written = fwrite(contents, size, nmemb, file);
     return written;
 }
+
+// Declare the CallbackData structure
+struct CallbackData {
+    FILE* file;
+    // Add any additional data you need here
+};
+
+
+// Your progress callback function
+int progressCallback(void* clientp, curl_off_t dltotal, curl_off_t dlnow, curl_off_t ultotal, curl_off_t ulnow) {
+    CallbackData* callbackData = static_cast<CallbackData*>(clientp);
+
+    // Log at the beginning to confirm callback invocation
+    logMessage("Progress callback invoked.");
+
+    // Log the values of dltotal and dlnow
+    logMessage("Total Size: " + std::to_string(dltotal) + " bytes");
+    logMessage("Downloaded: " + std::to_string(dlnow) + " bytes");
+
+    // Update your progress variable here
+    float progress = (dltotal > 0) ? (dlnow * 100.0 / dltotal) : 0.0;
+
+    // Log the download progress
+    logMessage("Download Progress: " + std::to_string(progress) + "%");
+
+    // Log at the end to confirm callback completion
+    logMessage("Progress callback completed.");
+
+    // Return 0 to continue the transfer
+    return 0;
+}
+
 
 
 /**
@@ -109,11 +142,21 @@ bool downloadFile(const std::string& url, const std::string& toDestination) {
         return false;
     }
     
+    
+    // Allocate CallbackData dynamically
+    CallbackData* callbackData = new CallbackData{file};
+    
+    curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
+    curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, progressCallback);
+    curl_easy_setopt(curl, CURLOPT_XFERINFODATA, callbackData);
+    
+    
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeCallback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, file);
     
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
     
+    curl_easy_setopt(curl, CURLOPT_HTTP_CONTENT_DECODING, 1L);
     curl_easy_setopt(curl, CURLOPT_BUFFERSIZE, 2048);
     
     // Set a user agent
@@ -134,6 +177,7 @@ bool downloadFile(const std::string& url, const std::string& toDestination) {
         curl_easy_cleanup(curl);
         //curl_global_cleanup();
         fclose(file);
+        delete callbackData;
         // Delete the file if nothing was written to it
         std::remove(destination.c_str());
         return false;
@@ -142,6 +186,7 @@ bool downloadFile(const std::string& url, const std::string& toDestination) {
     curl_easy_cleanup(curl);
     //curl_global_cleanup();
     fclose(file);
+    delete callbackData;
     
     // Check if the file is empty
     long fileSize = ftell(file);
@@ -153,6 +198,7 @@ bool downloadFile(const std::string& url, const std::string& toDestination) {
 
     return true;
 }
+
 
 /**
  * @brief Extracts files from a ZIP archive to a specified destination.
@@ -193,11 +239,11 @@ bool unzipFile(const std::string& zipFilePath, const std::string& toDestination)
         
         createDirectory(directoryPath);
         
-        if (isDirectory(directoryPath)) {
-            logMessage("directoryPath: success");
-        } else {
-            logMessage("directoryPath: failure");
-        }
+        //if (isDirectory(directoryPath)) {
+        //    logMessage("directoryPath: success");
+        //} else {
+        //    logMessage("directoryPath: failure");
+        //}
         
         //logMessage(std::string("directoryPath: ") + directoryPath);
 
