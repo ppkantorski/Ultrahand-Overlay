@@ -1,7 +1,7 @@
 # Ultrahand Overlay (HOS 16.0.0+)
 [![platform](https://img.shields.io/badge/platform-Switch-898c8c?logo=C++.svg)](https://gbatemp.net/forums/nintendo-switch.283/)
 [![language](https://img.shields.io/badge/language-C++-ba1632?logo=C++.svg)](https://github.com/topics/cpp)
-[![CC-BY-NC-SA-4.0 License](https://img.shields.io/badge/license-CC--BY--NC--SA--4.0-blue.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.en)
+[![CC-BY-NC-SA 4.0 License](https://img.shields.io/badge/license-CC--BY--NC--SA%204.0-blue.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/deed.en)
 [![Downloads](https://img.shields.io/github/downloads/ppkantorski/Ultrahand-Overlay/total?color=189c11)](https://github.com/ppkantorski/Ultrahand-Overlay/releases)
 
 Create directories, manage files, and customize configurations effortlessly using simple ini files.
@@ -87,6 +87,6 @@ Contributions are welcome! If you have any ideas, suggestions, or bug reports, p
 
 ## License
 
-This project is licensed under the [CC-BY-NC-SA-4.0 License](LICENSE).
+This project is licensed under the [CC-BY-NC-SA 4.0 License](LICENSE).
 
 Copyright (c) 2023 ppkantorski
