@@ -1580,6 +1580,12 @@ std::tuple<bool, bool> interpretAndExecuteCommand(const std::vector<std::vector<
                 splExit();
                 fsdevUnmountAll();
                 spsmShutdown(SpsmShutdownMode_Normal);
+            } else if (commandName == "backlight") {
+                lblInitialize();
+                LblBacklightSwitchStatus lblstatus = LblBacklightSwitchStatus_Disabled;
+                lblGetBacklightSwitchStatus(&lblstatus);
+                lblstatus ? lblSwitchBacklightOff(0) : lblSwitchBacklightOn(0);
+                lblExit();
             } else if (commandName == "refresh") {
                 refreshGui = true;
             } else if (commandName == "logging") {
