@@ -34,6 +34,8 @@
 #include <tesla.hpp>
 
 
+
+
 //Payload::HekateConfigList const boot_config_list;
 //Payload::HekateConfigList const ini_config_list;
 //Payload::PayloadConfigList const payload_config_list;
@@ -372,7 +374,31 @@ void addAppInfo(auto& list, auto& packageHeader, std::string type = "package") {
  * directories.
  */
 
+const std::vector<std::string> protectedFolders = {
+    "sdmc:/Nintendo/",
+    "sdmc:/emuMMC/",
+    "sdmc:/atmosphere/",
+    "sdmc:/bootloader/",
+    "sdmc:/switch/",
+    "sdmc:/config/",
+    "sdmc:/"
+};
+const std::vector<std::string> ultraProtectedFolders = {
+    "sdmc:/Nintendo/",
+    "sdmc:/emuMMC/"
+};
 
+// List of obviously dangerous patterns
+const std::vector<std::string> dangerousCombinationPatterns = {
+    "*",         // Deletes all files/directories in the current directory
+    "*/"         // Deletes all files/directories in the current directory
+};
+
+// List of obviously dangerous patterns
+const std::vector<std::string> dangerousPatterns = {
+    "..",     // Attempts to traverse to parent directories
+    "~"       // Represents user's home directory, can be dangerous if misused
+};
 /**
  * @brief Check if a path contains dangerous combinations.
  *
@@ -382,31 +408,6 @@ void addAppInfo(auto& list, auto& packageHeader, std::string type = "package") {
  * @return True if the path contains dangerous combinations, otherwise false.
  */
 bool isDangerousCombination(const std::string& patternPath) {
-    const std::vector<std::string> protectedFolders = {
-        "sdmc:/Nintendo/",
-        "sdmc:/emuMMC/",
-        "sdmc:/atmosphere/",
-        "sdmc:/bootloader/",
-        "sdmc:/switch/",
-        "sdmc:/config/",
-        "sdmc:/"
-    };
-    const std::vector<std::string> ultraProtectedFolders = {
-        "sdmc:/Nintendo/",
-        "sdmc:/emuMMC/"
-    };
-    
-    // List of obviously dangerous patterns
-    const std::vector<std::string> dangerousCombinationPatterns = {
-        "*",         // Deletes all files/directories in the current directory
-        "*/"         // Deletes all files/directories in the current directory
-    };
-    
-    // List of obviously dangerous patterns
-    const std::vector<std::string> dangerousPatterns = {
-        "..",     // Attempts to traverse to parent directories
-        "~"       // Represents user's home directory, can be dangerous if misused
-    };
     
     // Check if the patternPath is an ultra protected folder
     for (const std::string& ultraProtectedFolder : ultraProtectedFolders) {
@@ -658,11 +659,11 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
     //std::vector<std::string> listData;
     std::string listString;
     std::string jsonPath, jsonString;
-
+    
     for (const auto& cmd : commands) {
         std::vector<std::string> modifiedCmd;
         modifiedCmd.reserve(cmd.size()); // Reserve memory for efficiency
-
+        
         if (cmd.size() > 1) {
             if ((cmd[0] == "list_source") && listString.empty())
                 listString = removeQuotes(cmd[1]);
@@ -671,11 +672,11 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
             else if ((cmd[0] == "json_source") && jsonString.empty())
                 jsonString = cmd[1];
         }
-
+        
         for (const auto& arg : cmd) {
             std::string modifiedArg = arg; // Working with a copy for modifications
             std::string lastArg = ""; // Initialize lastArg for each argument
-
+            
             while (modifiedArg.find("{file_source}") != std::string::npos) {
                 modifiedArg = replacePlaceholder(modifiedArg, "{file_source}", entry);
                 if (modifiedArg == lastArg)
@@ -750,7 +751,7 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
  */
 void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& commands, const std::string& packagePath="", const std::string& selectedCommand="") {
     
-    bool logging = false;
+    bool logging = true;
     
     bool usingErista = util::IsErista();
     bool usingMariko = !(usingErista); // mariko is determined by it not being erista
