@@ -48,7 +48,7 @@ void trimLog(FILE* file) {
             // Split the buffer into lines
             char* line = strtok(buffer, "\n");
             bool firstLine = true;
-            size_t lineCount = 0;
+            int lineCount = 0;
             
             while (line != nullptr) {
                 if (!firstLine) {
