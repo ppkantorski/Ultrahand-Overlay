@@ -162,16 +162,16 @@ void deleteFileOrDirectoryByPattern(const std::string& pathPattern) {
  * @param targetPath The path of the target directory where files will be mirrored and deleted.
  *                   Default is "sdmc:/". You can specify a different target path if needed.
  */
-void mirrorDeleteFiles(const std::string& sourcePath, const std::string& targetPath="sdmc:/") {
-    std::vector<std::string> fileList = getFilesListFromDirectory(sourcePath);
-    
-    for (const auto& path : fileList) {
-        // Generate the corresponding path in the target directory by replacing the source path
-        std::string updatedPath = targetPath + path.substr(sourcePath.size());
-        //logMessage("mirror-delete: "+path+" "+updatedPath);
-        deleteFileOrDirectory(updatedPath);
-    }
-}
+//void mirrorDeleteFiles(const std::string& sourcePath, const std::string& targetPath="sdmc:/") {
+//    std::vector<std::string> fileList = getFilesListFromDirectory(sourcePath);
+//    
+//    for (const auto& path : fileList) {
+//        // Generate the corresponding path in the target directory by replacing the source path
+//        std::string updatedPath = targetPath + path.substr(sourcePath.size());
+//        //logMessage("mirror-delete: "+path+" "+updatedPath);
+//        deleteFileOrDirectory(updatedPath);
+//    }
+//}
 
 
 /**
@@ -461,18 +461,18 @@ void copyFileOrDirectoryByPattern(const std::string& sourcePathPattern, const st
  * @param sourcePath The source directory from which files and directories will be copied.
  * @param targetPath The target directory where the mirrored structure will be created (default is "sdmc:/").
  */
-void mirrorCopyFiles(const std::string& sourcePath, const std::string& targetPath="sdmc:/") {
-    std::vector<std::string> fileList = getFilesListFromDirectory(sourcePath);
-    
-    for (const auto& path : fileList) {
-        // Generate the corresponding path in the target directory by replacing the source path
-        std::string updatedPath = targetPath + path.substr(sourcePath.size());
-        if (path != updatedPath){
-            //logMessage("mirror-copy: "+path+" "+updatedPath);
-            copyFileOrDirectory(path, updatedPath);
-        }
-    }
-}
+//void mirrorCopyFiles(const std::string& sourcePath, const std::string& targetPath="sdmc:/") {
+//    std::vector<std::string> fileList = getFilesListFromDirectory(sourcePath);
+//    
+//    for (const auto& path : fileList) {
+//        // Generate the corresponding path in the target directory by replacing the source path
+//        std::string updatedPath = targetPath + path.substr(sourcePath.size());
+//        if (path != updatedPath){
+//            //logMessage("mirror-copy: "+path+" "+updatedPath);
+//            copyFileOrDirectory(path, updatedPath);
+//        }
+//    }
+//}
 
 /**
  * @brief Ensures that a directory exists by creating it if it doesn't.
