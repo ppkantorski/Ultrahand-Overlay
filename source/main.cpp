@@ -75,8 +75,8 @@ static bool isDownloaded = false;
 
 static bool redrawWidget = false;
 
-static tsl::elm::OverlayFrame *rootFrame = nullptr;
-static tsl::elm::List *list = nullptr;
+//static tsl::elm::OverlayFrame *rootFrame = nullptr;
+//static tsl::elm::List *list = nullptr;
 
 // Command mode globals
 static std::vector<std::string> commandModes = {"default", "toggle", "option"};
@@ -163,7 +163,7 @@ public:
             inSubSettingsMenu = true;
         
         
-        list = new tsl::elm::List();
+        tsl::elm::List *list = new tsl::elm::List();
         
         
         if (dropdownSelection.empty()) {
@@ -687,7 +687,8 @@ public:
         } else
             list->addItem(new tsl::elm::ListItem(FAILED_TO_OPEN + ": " + settingsIniPath));
         
-        rootFrame = new tsl::elm::OverlayFrame("Ultrahand", versionLabel);
+        
+        tsl::elm::OverlayFrame *rootFrame = new tsl::elm::OverlayFrame("Ultrahand", versionLabel);
         rootFrame->setContent(list);
         list = nullptr;
         return rootFrame;
@@ -819,7 +820,7 @@ public:
         else
             inSubSettingsMenu = true;
         
-        list = new tsl::elm::List();
+        tsl::elm::List *list = new tsl::elm::List();
         
         
         if (dropdownSelection.empty()) {
@@ -933,7 +934,7 @@ public:
         } else
             list->addItem(new tsl::elm::ListItem(FAILED_TO_OPEN+": " + settingsIniPath));
         
-        rootFrame = new tsl::elm::OverlayFrame("Ultrahand", versionLabel);
+        tsl::elm::OverlayFrame *rootFrame = new tsl::elm::OverlayFrame("Ultrahand", versionLabel);
         //rootFrame = new tsl::elm::OverlayFrame(entryName, "Ultrahand Settings");
         rootFrame->setContent(list);
         list = nullptr;
@@ -1056,7 +1057,7 @@ public:
         if (packageName == ".packages")
             packageName = ROOT_PACKAGE;
         
-        list = new tsl::elm::List();
+        tsl::elm::List *list = new tsl::elm::List();
         
         std::string packageFile = filePath + packageFileName;
         std::string fileContent = getFileContents(packageFile);
@@ -1066,6 +1067,7 @@ public:
             std::istringstream iss(fileContent);
             std::string currentCategory;
             isInSection = false;
+            auto listItem = new tsl::elm::ListItem("");
             while (std::getline(iss, line)) {
                 if (line.empty() || line.find_first_not_of('\n') == std::string::npos)
                     continue;
@@ -1086,7 +1088,7 @@ public:
                         list->addItem(new tsl::elm::CategoryHeader(currentCategory));
                     }
                 } else if (isInSection) {
-                    auto listItem = new tsl::elm::ListItem(line);
+                    listItem = new tsl::elm::ListItem(line);
                     listItem->setClickListener([line, this, listItem](uint64_t keys) {
                         if (keys & KEY_A) {
                             std::istringstream iss(line);
@@ -1128,7 +1130,7 @@ public:
         } else
             list->addItem(new tsl::elm::ListItem(FAILED_TO_OPEN+": " + packageFile));
         
-        rootFrame = new tsl::elm::OverlayFrame(packageName, "Ultrahand Script");
+        tsl::elm::OverlayFrame *rootFrame = new tsl::elm::OverlayFrame(packageName, "Ultrahand Script");
         rootFrame->setContent(list);
         list = nullptr;
         return rootFrame;
@@ -1223,7 +1225,7 @@ public:
         inSelectionMenu = true;
         PackageHeader packageHeader = getPackageHeaderFromIni(filePath+packageFileName);
         
-        list = new tsl::elm::List();
+        tsl::elm::List *list = new tsl::elm::List();
         
         packageConfigIniPath = filePath + configFileName;
         
@@ -1466,10 +1468,11 @@ public:
             
             // Apply On Filter
             filterItemsList(filterListOn, selectedItemsListOn);
+            filterListOn.clear();
             
             // Apply Off Filter
             filterItemsList(filterListOff, selectedItemsListOff);
-            
+            filterListOff.clear();
             
             selectedItemsList.reserve(selectedItemsListOn.size() + selectedItemsListOff.size());
             selectedItemsList.insert(selectedItemsList.end(), selectedItemsListOn.begin(), selectedItemsListOn.end());
@@ -1504,7 +1507,7 @@ public:
         
         // Apply filter to selectedItemsList
         filterItemsList(filterList, selectedItemsList);
-        
+        filterList.clear();
         
         if (commandGrouping == "default")
             list->addItem(new tsl::elm::CategoryHeader(removeTag(specificKey.substr(1)))); // remove * from key
@@ -1628,7 +1631,11 @@ public:
             //count++;
         }
         
-        rootFrame = new tsl::elm::OverlayFrame(getNameFromPath(filePath), "Ultrahand Package", "", packageHeader.color);
+        selectedItemsList.clear();
+        selectedItemsListOn.clear();
+        selectedItemsListOff.clear();
+        
+        tsl::elm::OverlayFrame *rootFrame = new tsl::elm::OverlayFrame(getNameFromPath(filePath), "Ultrahand Package", "", packageHeader.color);
         rootFrame->setContent(list);
         list = nullptr;
         return rootFrame;
@@ -1716,8 +1723,11 @@ public:
      * Cleans up any resources associated with the `PackageMenu` instance.
      */
     ~PackageMenu() {
-        //if (inPackageMenu) {
+        //if (returningToMain) {
+        //    hexSumCache.clear();
         //    selectedFooterDict.clear(); // Clears all data from the map, making it empty again
+        //    selectedListItem = new tsl::elm::ListItem("");
+        //    lastSelectedListItem = new tsl::elm::ListItem("");
         //}
     }
     
@@ -1745,7 +1755,7 @@ public:
         PackageHeader packageHeader = getPackageHeaderFromIni(packageIniPath);
         
         //rootFrame = new tsl::elm::OverlayFrame(getNameFromPath(packagePath), "Ultrahand Package", "", packageHeader.color);
-        list = new tsl::elm::List();
+        tsl::elm::List *list = new tsl::elm::List();
         auto listItem = static_cast<tsl::elm::ListItem*>(nullptr);
         
         std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> options = loadOptionsFromIni(packageIniPath);
@@ -2143,7 +2153,9 @@ public:
             }
         }
         
+        options.clear();
         
+        tsl::elm::OverlayFrame *rootFrame = nullptr;
         if (usingPages) {
             if (currentPage == "left")
                 rootFrame = new tsl::elm::OverlayFrame(getNameFromPath(packagePath), "Ultrahand Package", "", packageHeader.color, "", pageRightName);
@@ -2197,6 +2209,13 @@ public:
                 //tsl::goBack();
                 inPackageMenu = false;
                 returningToMain = true;
+                
+                // Free-up memory
+                hexSumCache.clear();
+                selectedFooterDict.clear(); // Clears all data from the map, making it empty again
+                selectedListItem = new tsl::elm::ListItem("");
+                lastSelectedListItem = new tsl::elm::ListItem("");
+                
                 tsl::goBack();
                 tsl::goBack();
                 tsl::changeTo<MainMenu>();
@@ -2406,9 +2425,8 @@ public:
         else
             versionLabel = APP_VERSION+std::string("   (")+ extractTitle(loaderInfo)+" v"+cleanVersionLabel(loaderInfo)+std::string(")");
         
-        list = new tsl::elm::List();
         
-        
+        tsl::elm::List *list = new tsl::elm::List();
         
         if (!hiddenMenuMode.empty())
             menuMode = hiddenMenuMode;
@@ -2527,6 +2545,8 @@ public:
                         }
                     }
                 }
+                
+                overlaysIniData.clear();
                 
                 std::sort(overlayList.begin(), overlayList.end());
                 std::sort(hiddenOverlayList.begin(), hiddenOverlayList.end());
@@ -2805,10 +2825,10 @@ public:
                     // Add a click listener to load the overlay when clicked upon
                     listItem->setClickListener([this, packageFilePath, newStarred, packageName](s64 key) {
                         if (key & KEY_A) {
-                            if (!inHiddenMode)
-                                inMainMenu = false;
-                            else
-                                inHiddenMode = false;
+                            //if (!inHiddenMode)
+                            inMainMenu = false;
+                            //else
+                            inHiddenMode = false;
                             
                             // read commands from package's boot_package.ini
                             
@@ -3177,7 +3197,7 @@ public:
         }
         
         
-        rootFrame = new tsl::elm::OverlayFrame("Ultrahand", versionLabel, menuMode+hiddenMenuMode);
+        tsl::elm::OverlayFrame *rootFrame = new tsl::elm::OverlayFrame("Ultrahand", versionLabel, menuMode+hiddenMenuMode);
         rootFrame->setContent(list);
         list = nullptr;
         
