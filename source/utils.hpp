@@ -21,21 +21,22 @@
 #include <sys/stat.h>
 #include <dirent.h>
 #include <fnmatch.h>
-#include <get_funcs.hpp>
 #include <path_funcs.hpp>
-#include <ini_funcs.hpp>
 #include <hex_funcs.hpp>
 #include <download_funcs.hpp>
-#include <json_funcs.hpp>
+//#include <get_funcs.hpp>
+//#include <ini_funcs.hpp>
+//#include <json_funcs.hpp>
 #include <list_funcs.hpp>
 
 #include <payload.hpp> // Studious Pancake
 #include <util.hpp>
+#include <tesla.hpp>
 
 
-Payload::HekateConfigList const boot_config_list;
-Payload::HekateConfigList const ini_config_list;
-Payload::PayloadConfigList const payload_config_list;
+//Payload::HekateConfigList const boot_config_list;
+//Payload::HekateConfigList const ini_config_list;
+//Payload::PayloadConfigList const payload_config_list;
 
 
 /**
@@ -758,9 +759,10 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
         desiredSection, desiredNewSection, desiredKey, desiredNewKey, desiredValue, \
         offset, customPattern, hexDataToReplace, hexDataReplacement, fileUrl, clearOption;
     
+    std::size_t cmdSize;
     std::size_t occurrence;
     std::size_t tryCounter = 0;
-    
+    std::size_t startPos, endPos;
     
     // Overwrite globals
     commandSuccess = true;
@@ -770,6 +772,7 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
     
     //std::vector<std::string> command;
     std::string replacement;
+    std::vector<std::string> modifiedCmd;
     
     for (const auto& cmd : commands) {
         
@@ -802,13 +805,13 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
             if (tryCounter == 0 || (commandSuccess && tryCounter != 0)) {
                 // Create a modified command vector to store changes
                 //std::vector<std::string> modifiedCmd = cmd;
-                std::vector<std::string> modifiedCmd = std::move(cmd);
+                modifiedCmd = std::move(cmd);
                 
                 for (auto& arg : modifiedCmd) {
                     lastArg = "";
                     while ((!hexPath.empty() && (arg.find("{hex_file(") != std::string::npos))) {
-                        size_t startPos = arg.find("{hex_file(");
-                        size_t endPos = arg.find(")}");
+                        startPos = arg.find("{hex_file(");
+                        endPos = arg.find(")}");
                         if (endPos != std::string::npos && endPos > startPos) {
                             replacement = replaceHexPlaceholder(arg.substr(startPos, endPos - startPos + 2), hexPath);
                             arg.replace(startPos, endPos - startPos + 2, replacement);
@@ -821,8 +824,8 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                         lastArg = arg;
                     }
                     while ((!iniPath.empty() && (arg.find("{ini_file(") != std::string::npos))) {
-                        size_t startPos = arg.find("{ini_file(");
-                        size_t endPos = arg.find(")}");
+                        startPos = arg.find("{ini_file(");
+                        endPos = arg.find(")}");
                         if (endPos != std::string::npos && endPos > startPos) {
                             replacement = replaceIniPlaceholder(arg.substr(startPos, endPos - startPos + 2), iniPath);
                             arg.replace(startPos, endPos - startPos + 2, replacement);
@@ -835,8 +838,8 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                         lastArg = arg;
                     }
                     while ((!listString.empty() && (arg.find("{list(") != std::string::npos))) {
-                        size_t startPos = arg.find("{list(");
-                        size_t endPos = arg.find(")}");
+                        startPos = arg.find("{list(");
+                        endPos = arg.find(")}");
                         if (endPos != std::string::npos && endPos > startPos) {
                             size_t listIndex = std::stoi(arg.substr(startPos, endPos - startPos + 2));
                             replacement = stringToList(listString)[listIndex];
@@ -850,8 +853,8 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                         lastArg = arg;
                     }
                     while ((!jsonString.empty() && (arg.find("{json(") != std::string::npos))) {
-                        size_t startPos = arg.find("{json(");
-                        size_t endPos = arg.find(")}");
+                        startPos = arg.find("{json(");
+                        endPos = arg.find(")}");
                         if (endPos != std::string::npos && endPos > startPos) {
                             replacement = replaceJsonPlaceholder(arg.substr(startPos, endPos - startPos + 2), "json", jsonString);
                             arg.replace(startPos, endPos - startPos + 2, replacement);
@@ -864,8 +867,8 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                         lastArg = arg;
                     }
                     while ((!jsonPath.empty() && (arg.find("{json_file(") != std::string::npos))) {
-                        size_t startPos = arg.find("{json_file(");
-                        size_t endPos = arg.find(")}");
+                        startPos = arg.find("{json_file(");
+                        endPos = arg.find(")}");
                         if (endPos != std::string::npos && endPos > startPos) {
                             replacement = replaceJsonPlaceholder(arg.substr(startPos, endPos - startPos + 2), "json_file", jsonPath);
                             arg.replace(startPos, endPos - startPos + 2, replacement);
@@ -880,24 +883,36 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                 }
                 //command = std::move(modifiedCmd); // update command
                 
+                cmdSize = modifiedCmd.size();
+                
                 // Variable replacement definitions
-                if (commandName == "list")
-                    listString = removeQuotes(modifiedCmd[1]);
-                else if (commandName == "json")
-                    jsonString = modifiedCmd[1];
-                else if (commandName == "json_file")
-                    jsonPath = preprocessPath(modifiedCmd[1]);
-                else if (commandName == "ini_file")
-                    iniPath = preprocessPath(modifiedCmd[1]);
-                else if (commandName == "hex_file")
-                    hexPath = preprocessPath(modifiedCmd[1]);
-                else if (commandName == "make" || commandName == "mkdir") { // Make command
-                    if (modifiedCmd.size() >= 2) {
+                if (commandName == "list") {
+                    if (cmdSize >= 2) {
+                        listString = removeQuotes(modifiedCmd[1]);
+                    }
+                } else if (commandName == "json") {
+                    if (cmdSize >= 2) {
+                        jsonString = modifiedCmd[1];
+                    }
+                } else if (commandName == "json_file") {
+                    if (cmdSize >= 2) {
+                        jsonPath = preprocessPath(modifiedCmd[1]);
+                    }
+                } else if (commandName == "ini_file") {
+                    if (cmdSize >= 2) {
+                        iniPath = preprocessPath(modifiedCmd[1]);
+                    }
+                } else if (commandName == "hex_file") {
+                    if (cmdSize >= 2) {
+                        hexPath = preprocessPath(modifiedCmd[1]);
+                    }
+                } else if (commandName == "make" || commandName == "mkdir") { // Make command
+                    if (cmdSize >= 2) {
                         sourcePath = preprocessPath(modifiedCmd[1]);
                         createDirectory(sourcePath);
                     }
                 } else if (commandName == "copy" || commandName == "cp") { // Copy command
-                    if (modifiedCmd.size() >= 3) {
+                    if (cmdSize >= 3) {
                         sourcePath = preprocessPath(modifiedCmd[1]);
                         destinationPath = preprocessPath(modifiedCmd[2]);
                         
@@ -907,7 +922,7 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                             copyFileOrDirectory(sourcePath, destinationPath);
                     }
                 } else if (commandName == "delete" || commandName == "del") { // Delete command
-                    if (modifiedCmd.size() >= 2) {
+                    if (cmdSize >= 2) {
                         sourcePath = preprocessPath(modifiedCmd[1]);
                         if (!isDangerousCombination(sourcePath)) {
                             if (sourcePath.find('*') != std::string::npos)
@@ -916,29 +931,22 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                                 deleteFileOrDirectory(sourcePath);
                         }
                     }
-                //} else if (commandName == "mirror_copy" || commandName == "mirror_cp") {
-                //    // Copy command
-                //    if (modifiedCmd.size() >= 2) {
-                //        sourcePath = preprocessPath(modifiedCmd[1]);
-                //        if (modifiedCmd.size() >= 3) {
-                //            destinationPath = preprocessPath(modifiedCmd[2]);
-                //            mirrorCopyFiles(sourcePath, destinationPath);
-                //        } else {
-                //            mirrorCopyFiles(sourcePath);
-                //        }
-                //    }
-                //} else if (commandName == "mirror_delete" || commandName == "mirror_del") {
-                //    if (modifiedCmd.size() >= 2) {
-                //        sourcePath = preprocessPath(modifiedCmd[1]);
-                //        if (modifiedCmd.size() >= 3) {
-                //            destinationPath = preprocessPath(modifiedCmd[2]);
-                //            mirrorDeleteFiles(sourcePath, destinationPath);
-                //        } else {
-                //            mirrorDeleteFiles(sourcePath);
-                //        }
-                //    }
+                } else if (commandName.compare(0, 7, "mirror_") == 0) {
+                    
+                    if (cmdSize >= 2) {
+                        sourcePath = preprocessPath(modifiedCmd[1]);
+                        
+                        if (cmdSize >= 3) {
+                            destinationPath = preprocessPath(modifiedCmd[2]);
+                        } else {
+                            destinationPath = "sdmc:/";
+                        }
+                        
+                        std::string action = (commandName == "mirror_copy" || commandName == "mirror_cp") ? "copy" : "delete";
+                        mirrorFiles(sourcePath, destinationPath, action);
+                    }
                 } else if (commandName == "rename" || commandName == "move" || commandName == "mv") { // Rename command
-                    if (modifiedCmd.size() >= 3) {
+                    if (cmdSize >= 3) {
                         sourcePath = preprocessPath(modifiedCmd[1]);
                         destinationPath = preprocessPath(modifiedCmd[2]);
                         if (!isDangerousCombination(sourcePath)) {
@@ -949,139 +957,126 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                         }
                     }
                 } else if (commandName == "add-ini-section") {
-                    if (modifiedCmd.size() >= 2) {
+                    if (cmdSize >= 2) {
                         sourcePath = preprocessPath(modifiedCmd[1]);
                         desiredSection = removeQuotes(modifiedCmd[2]);
                         addIniSection(sourcePath.c_str(), desiredSection.c_str());
                     }
                 } else if (commandName == "rename-ini-section") {
-                    if (modifiedCmd.size() >= 3) {
+                    if (cmdSize >= 3) {
                         sourcePath = preprocessPath(modifiedCmd[1]);
                         desiredSection = removeQuotes(modifiedCmd[2]);
                         desiredNewSection = removeQuotes(modifiedCmd[3]);
                         renameIniSection(sourcePath.c_str(), desiredSection.c_str(), desiredNewSection.c_str());
                     }
                 } else if (commandName == "remove-ini-section") {
-                    if (modifiedCmd.size() >= 2) {
+                    if (cmdSize >= 2) {
                         sourcePath = preprocessPath(modifiedCmd[1]);
                         desiredSection = removeQuotes(modifiedCmd[2]);
                         removeIniSection(sourcePath.c_str(), desiredSection.c_str());
                     }
                 } else if (commandName == "set-ini-val" || commandName == "set-ini-value") {
-                    if (modifiedCmd.size() >= 5) {
+                    if (cmdSize >= 5) {
                         sourcePath = preprocessPath(modifiedCmd[1]);
                         desiredSection = removeQuotes(modifiedCmd[2]);
                         desiredKey = removeQuotes(modifiedCmd[3]);
                         desiredValue = "";
-                        for (size_t i = 4; i < modifiedCmd.size(); ++i) {
+                        for (size_t i = 4; i < cmdSize; ++i) {
                             desiredValue += modifiedCmd[i];
-                            if (i < modifiedCmd.size() - 1)
+                            if (i < cmdSize - 1)
                                 desiredValue += " ";
                         }
                         setIniFileValue(sourcePath.c_str(), desiredSection.c_str(), desiredKey.c_str(), desiredValue.c_str());
                     }
                 } else if (commandName == "set-ini-key") {
-                    if (modifiedCmd.size() >= 5) {
+                    if (cmdSize >= 5) {
                         sourcePath = preprocessPath(modifiedCmd[1]);
                         desiredSection = removeQuotes(modifiedCmd[2]);
                         desiredKey = removeQuotes(modifiedCmd[3]);
-                        for (size_t i = 4; i < modifiedCmd.size(); ++i) {
+                        for (size_t i = 4; i < cmdSize; ++i) {
                             desiredNewKey += modifiedCmd[i];
-                            if (i < modifiedCmd.size() - 1)
+                            if (i < cmdSize - 1)
                                 desiredNewKey += " ";
                         }
                         setIniFileKey(sourcePath.c_str(), desiredSection.c_str(), desiredKey.c_str(), desiredNewKey.c_str());
                     }
                 } else if (commandName == "set-footer") {
-                    if (modifiedCmd.size() >= 2) {
+                    if (cmdSize >= 2) {
                         desiredValue = removeQuotes(modifiedCmd[1]);
                         setIniFileValue((packagePath+configFileName).c_str(), selectedCommand.c_str(), "footer", desiredValue.c_str());
                     }
-                } else if (commandName == "hex-by-offset") {
-                    if (modifiedCmd.size() >= 4) {
+                } else if (commandName.compare(0, 7, "hex-by-") == 0) {
+                    if (cmdSize >= 4) {
                         sourcePath = preprocessPath(modifiedCmd[1]);
-                        offset = removeQuotes(modifiedCmd[2]);
-                        hexDataReplacement = removeQuotes(modifiedCmd[3]);
-                        hexEditByOffset(sourcePath.c_str(), offset.c_str(), hexDataReplacement.c_str());
-                    }
-                } else if (commandName == "hex-by-custom-offset") {
-                    if (modifiedCmd.size() >= 5) {
-                        sourcePath = preprocessPath(modifiedCmd[1]);
-                        customPattern = removeQuotes(modifiedCmd[2]);
-                        offset = removeQuotes(modifiedCmd[3]);
-                        hexDataReplacement = removeQuotes(modifiedCmd[4]);
-                        hexEditByCustomOffset(sourcePath.c_str(), customPattern.c_str(), offset.c_str(), hexDataReplacement.c_str());
-                    }
-                } else if (commandName == "hex-by-custom-offset-decimal") {
-                    if (modifiedCmd.size() >= 5) {
-                        sourcePath = preprocessPath(modifiedCmd[1]);
-                        customPattern = removeQuotes(modifiedCmd[2]);
-                        offset = removeQuotes(modifiedCmd[3]);
-                        hexDataReplacement = decimalToHex(removeQuotes(modifiedCmd[4]));
-                        hexEditByCustomOffset(sourcePath.c_str(), customPattern.c_str(), offset.c_str(), hexDataReplacement.c_str());
-                    }
-                } else if (commandName == "hex-by-custom-offset-rdecimal") {
-                    if (modifiedCmd.size() >= 5) {
-                        sourcePath = preprocessPath(modifiedCmd[1]);
-                        customPattern = removeQuotes(modifiedCmd[2]);
-                        offset = removeQuotes(modifiedCmd[3]);
-                        hexDataReplacement = decimalToReversedHex(removeQuotes(modifiedCmd[4]));
-                        hexEditByCustomOffset(sourcePath.c_str(), customPattern.c_str(), offset.c_str(), hexDataReplacement.c_str());
-                    }
-                } else if (commandName == "hex-by-swap") {
-                    if (modifiedCmd.size() >= 4) {
-                        sourcePath = preprocessPath(modifiedCmd[1]);
-                        hexDataToReplace = removeQuotes(modifiedCmd[2]);
-                        hexDataReplacement = removeQuotes(modifiedCmd[3]);
-                        if (modifiedCmd.size() >= 5) {
-                            occurrence = std::stoul(removeQuotes(modifiedCmd[4]));
-                            hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, occurrence);
-                        } else
-                            hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
-                    }
-                } else if (commandName == "hex-by-string") {
-                    if (modifiedCmd.size() >= 4) {
-                        sourcePath = preprocessPath(modifiedCmd[1]);
-                        hexDataToReplace = asciiToHex(removeQuotes(modifiedCmd[2]));
-                        hexDataReplacement = asciiToHex(removeQuotes(modifiedCmd[3]));
-                        
-                        // Fix miss-matched string sizes
-                        if (hexDataReplacement.length() < hexDataToReplace.length())
-                            hexDataReplacement += std::string(hexDataToReplace.length() - hexDataReplacement.length(), '\0'); // Pad with spaces at the end
-                        else if (hexDataReplacement.length() > hexDataToReplace.length())
-                            hexDataToReplace += std::string(hexDataReplacement.length() - hexDataToReplace.length(), '\0'); // Add spaces to hexDataToReplace at the far right end
-                        
-                        if (modifiedCmd.size() >= 5) {
-                            occurrence = std::stoul(removeQuotes(modifiedCmd[4]));
-                            hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, occurrence);
-                        } else
-                            hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
-                    }
-                } else if (commandName == "hex-by-decimal") {
-                    if (modifiedCmd.size() >= 4) {
-                        sourcePath = preprocessPath(modifiedCmd[1]);
-                        hexDataToReplace = decimalToHex(removeQuotes(modifiedCmd[2]));
-                        hexDataReplacement = decimalToHex(removeQuotes(modifiedCmd[3]));
-                        
-                        if (modifiedCmd.size() >= 5) {
-                            occurrence = std::stoul(removeQuotes(modifiedCmd[4]));
-                            hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, occurrence);
-                        } else
-                            hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
-                    }
-                } else if (commandName == "hex-by-rdecimal") {
-                    if (modifiedCmd.size() >= 4) {
-                        sourcePath = preprocessPath(modifiedCmd[1]);
-                        hexDataToReplace = decimalToReversedHex(removeQuotes(modifiedCmd[2]));
-                        hexDataReplacement = decimalToReversedHex(removeQuotes(modifiedCmd[3]));
-                        if (modifiedCmd.size() >= 5) {
-                            occurrence = std::stoul(removeQuotes(modifiedCmd[4]));
-                            hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, occurrence);
-                        } else
-                            hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
+                        const std::string& secondArg = removeQuotes(modifiedCmd[2]);
+                        const std::string& thirdArg = removeQuotes(modifiedCmd[3]);
+
+                        if (commandName == "hex-by-offset") {
+                            hexEditByOffset(sourcePath.c_str(), secondArg.c_str(), thirdArg.c_str());
+                        } else if (commandName == "hex-by-swap") {
+                            if (cmdSize >= 5) {
+                                occurrence = std::stoul(removeQuotes(modifiedCmd[4]));
+                                hexEditFindReplace(sourcePath, secondArg, thirdArg, occurrence);
+                            } else {
+                                hexEditFindReplace(sourcePath, secondArg, thirdArg);
+                            }
+                        } else if (commandName == "hex-by-string") {
+                            hexDataToReplace = asciiToHex(secondArg);
+                            hexDataReplacement = asciiToHex(thirdArg);
+
+                            // Fix miss-matched string sizes
+                            if (hexDataReplacement.length() < hexDataToReplace.length()) {
+                                hexDataReplacement += std::string(hexDataToReplace.length() - hexDataReplacement.length(), '\0');
+                            } else if (hexDataReplacement.length() > hexDataToReplace.length()) {
+                                hexDataToReplace += std::string(hexDataReplacement.length() - hexDataToReplace.length(), '\0');
+                            }
+
+                            if (cmdSize >= 5) {
+                                occurrence = std::stoul(removeQuotes(modifiedCmd[4]));
+                                hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, occurrence);
+                            } else {
+                                hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
+                            }
+                        } else if (commandName == "hex-by-decimal") {
+                            hexDataToReplace = decimalToHex(secondArg);
+                            hexDataReplacement = decimalToHex(thirdArg);
+
+                            if (cmdSize >= 5) {
+                                occurrence = std::stoul(removeQuotes(modifiedCmd[4]));
+                                hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, occurrence);
+                            } else {
+                                hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
+                            }
+                        } else if (commandName == "hex-by-rdecimal") {
+                            hexDataToReplace = decimalToReversedHex(secondArg);
+                            hexDataReplacement = decimalToReversedHex(thirdArg);
+
+                            if (cmdSize >= 5) {
+                                occurrence = std::stoul(removeQuotes(modifiedCmd[4]));
+                                hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, occurrence);
+                            } else {
+                                hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
+                            }
+                        } else if (commandName == "hex-by-custom-offset" ||
+                                   commandName == "hex-by-custom-offset-decimal" ||
+                                   commandName == "hex-by-custom-offset-rdecimal") {
+                            if (cmdSize >= 5) {
+                                customPattern = removeQuotes(modifiedCmd[2]);
+                                offset = removeQuotes(modifiedCmd[3]);
+                                hexDataReplacement = removeQuotes(modifiedCmd[4]);
+
+                                if (commandName == "hex-by-custom-offset-decimal") {
+                                    hexDataReplacement = decimalToHex(hexDataReplacement);
+                                } else if (commandName == "hex-by-custom-offset-rdecimal") {
+                                    hexDataReplacement = decimalToReversedHex(hexDataReplacement);
+                                }
+
+                                hexEditByCustomOffset(sourcePath.c_str(), customPattern.c_str(), offset.c_str(), hexDataReplacement.c_str());
+                            }
+                        }
                     }
                 } else if (commandName == "download") {
-                    if (modifiedCmd.size() >= 3) {
+                    if (cmdSize >= 3) {
                         fileUrl = preprocessUrl(modifiedCmd[1]);
                         destinationPath = preprocessPath(modifiedCmd[2]);
                         bool downloadSuccess = false;
@@ -1094,13 +1089,13 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                         commandSuccess = (downloadSuccess && commandSuccess);
                     }
                 } else if (commandName == "unzip") {
-                    if (modifiedCmd.size() >= 3) {
+                    if (cmdSize >= 3) {
                         sourcePath = preprocessPath(modifiedCmd[1]);
                         destinationPath = preprocessPath(modifiedCmd[2]);
                         commandSuccess = unzipFile(sourcePath, destinationPath) && commandSuccess;
                     }
                 } else if (commandName == "exec") {
-                    if (modifiedCmd.size() >= 2) {
+                    if (cmdSize >= 2) {
                         bootCommandName = removeQuotes(modifiedCmd[1]);
                         if (isFileOrDirectory(packagePath+bootPackageFileName)) {
                             auto bootOptions = loadOptionsFromIni(packagePath+bootPackageFileName, true);
@@ -1131,10 +1126,10 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                     int rebootIndex = 0;
                     
                     if (util::IsErista() || util::SupportsMarikoRebootToConfig()) {
-                        if (modifiedCmd.size() >= 2) {
+                        if (cmdSize >= 2) {
                             rebootOption = removeQuotes(modifiedCmd[1]);
                             
-                            if (modifiedCmd.size() >= 3) {
+                            if (cmdSize >= 3) {
                                 
                                 if (rebootOption == "boot") {
                                     std::string option = removeQuotes(modifiedCmd[2]);
@@ -1246,7 +1241,7 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                 } else if (commandName == "logging") {
                     logging = !logging;
                 } else if (commandName == "clear") {
-                    if (modifiedCmd.size() >= 2) {
+                    if (cmdSize >= 2) {
                         clearOption = removeQuotes(modifiedCmd[1]);
                         if (clearOption == "log")
                             deleteFileOrDirectory(logFilePath);
@@ -1260,6 +1255,7 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                         message += token + " ";
                     logMessage(message);
                 }
+                modifiedCmd.clear();
             }
         }
     }
