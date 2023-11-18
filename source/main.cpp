@@ -126,7 +126,7 @@ private:
         {"L+R+DLEFT", "\uE0E4+\uE0E5+\uE0ED"},
         {"L+DDOWN+RS", "\uE0E4+\uE0EC+\uE0C5"}
     };
-    std::vector<std::string> defaultLanguages = {"en", "es", "fr", "de", "ja", "kr", "it", "nl", "pt", "ru", "zh-cn", "zh-tw"};
+    std::vector<std::string> defaultLanguages = {"en", "es", "fr", "de", "ja", "ko", "it", "nl", "pt", "ru", "zh-cn", "zh-tw"};
 public:
     /**
      * @brief Constructs a `ScriptOverlay` instance.
