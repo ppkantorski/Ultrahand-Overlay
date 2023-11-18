@@ -916,6 +916,27 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                                 deleteFileOrDirectory(sourcePath);
                         }
                     }
+                //} else if (commandName == "mirror_copy" || commandName == "mirror_cp") {
+                //    // Copy command
+                //    if (modifiedCmd.size() >= 2) {
+                //        sourcePath = preprocessPath(modifiedCmd[1]);
+                //        if (modifiedCmd.size() >= 3) {
+                //            destinationPath = preprocessPath(modifiedCmd[2]);
+                //            mirrorCopyFiles(sourcePath, destinationPath);
+                //        } else {
+                //            mirrorCopyFiles(sourcePath);
+                //        }
+                //    }
+                //} else if (commandName == "mirror_delete" || commandName == "mirror_del") {
+                //    if (modifiedCmd.size() >= 2) {
+                //        sourcePath = preprocessPath(modifiedCmd[1]);
+                //        if (modifiedCmd.size() >= 3) {
+                //            destinationPath = preprocessPath(modifiedCmd[2]);
+                //            mirrorDeleteFiles(sourcePath, destinationPath);
+                //        } else {
+                //            mirrorDeleteFiles(sourcePath);
+                //        }
+                //    }
                 } else if (commandName == "rename" || commandName == "move" || commandName == "mv") { // Rename command
                     if (modifiedCmd.size() >= 3) {
                         sourcePath = preprocessPath(modifiedCmd[1]);
@@ -1063,7 +1084,14 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                     if (modifiedCmd.size() >= 3) {
                         fileUrl = preprocessUrl(modifiedCmd[1]);
                         destinationPath = preprocessPath(modifiedCmd[2]);
-                        commandSuccess = downloadFile(fileUrl, destinationPath) && commandSuccess;
+                        bool downloadSuccess = false;
+                        
+                        for (size_t i = 0; i < 3; ++i) { // Try 3 times.
+                            downloadSuccess = downloadFile(fileUrl, destinationPath);
+                            if (downloadSuccess)
+                                break;
+                        }
+                        commandSuccess = (downloadSuccess && commandSuccess);
                     }
                 } else if (commandName == "unzip") {
                     if (modifiedCmd.size() >= 3) {
