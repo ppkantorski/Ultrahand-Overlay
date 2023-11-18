@@ -69,6 +69,8 @@
 #include "../../../common/half.hpp"
 using half_float::half;
 
+static std::unordered_map<std::string, std::string> hexSumCache;
+
 /**
  * @brief Shutdown modes for the Ultrahand-Overlay project.
  *
@@ -108,7 +110,7 @@ using half_float::half;
 #define KEY_LEFT (HidNpadButton_Left | HidNpadButton_StickLLeft | HidNpadButton_StickRLeft)
 #define KEY_RIGHT (HidNpadButton_Right | HidNpadButton_StickLRight | HidNpadButton_StickRRight)
 
-//static std::string useCombo2 = "";
+
 static bool useCombo2 = false;
 static bool updateMenuCombos = false;
 /**
