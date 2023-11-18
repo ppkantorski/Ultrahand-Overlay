@@ -96,6 +96,11 @@ std::string replaceJsonPlaceholder(const std::string& arg, const std::string& co
         jsonDict = json_load_file(jsonPathOrString.c_str(), 0, &error);
     }
 
+    if (!jsonDict) {
+        // If JSON parsing failed or jsonDict is nullptr, return the original string
+        return arg;
+    }
+
     std::string replacement = arg;
     std::string searchString = "{" + commandName + "(";
     std::size_t startPos = replacement.find(searchString);
@@ -120,21 +125,20 @@ std::string replaceJsonPlaceholder(const std::string& arg, const std::string& co
         }
 
         json_t* value = jsonDict;
+        bool validValue = true;
         for (const std::string& keyIndex : keysAndIndexes) {
             if (json_is_object(value)) {
                 value = json_object_get(value, keyIndex.c_str());
             } else if (json_is_array(value)) {
                 size_t index = std::stoul(keyIndex);
                 value = json_array_get(value, index);
-            }
-
-            if (value == nullptr) {
-                // Key or index not found, stop further processing
-                break;
+            } else {
+                validValue = false;
+                break; // Invalid JSON structure, exit the loop
             }
         }
 
-        if (value != nullptr && json_is_string(value)) {
+        if (validValue && value != nullptr && json_is_string(value)) {
             // Replace the placeholder with the JSON value
             replacement.replace(startPos, endPos - startPos + 2, json_string_value(value));
         }
@@ -143,12 +147,13 @@ std::string replaceJsonPlaceholder(const std::string& arg, const std::string& co
         startPos = replacement.find(searchString, endPos);
     }
 
-    // Free JSON data
+    // Free JSON data if it's not already freed
     if (jsonDict != nullptr) {
         json_decref(jsonDict);
     }
 
     return replacement;
 }
+
 
 
