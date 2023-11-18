@@ -16,7 +16,6 @@
  *   of the project's documentation and must remain intact.
  *
  *  Copyright (c) 2023 ppkantorski
- *  All rights reserved.
  ********************************************************************************/
 
 /**
