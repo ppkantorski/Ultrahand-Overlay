@@ -73,13 +73,12 @@ std::string removeWhiteSpaces(const std::string& str) {
  * @return The string with quotes removed.
  */
 std::string removeQuotes(const std::string& str) {
-    std::size_t firstQuote = str.find_first_of("'\"");
-    std::size_t lastQuote = str.find_last_of("'\"");
-    if (firstQuote != std::string::npos && lastQuote != std::string::npos && firstQuote < lastQuote) {
-        return str.substr(firstQuote + 1, lastQuote - firstQuote - 1);
+    if (str.size() >= 2 && ((str.front() == '\'' && str.back() == '\'') || (str.front() == '"' && str.back() == '"'))) {
+        return str.substr(1, str.size() - 2);
     }
     return str;
 }
+
 
 /**
  * @brief Replaces multiple consecutive slashes with a single slash in a string.
