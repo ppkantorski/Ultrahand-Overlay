@@ -11,7 +11,7 @@
  *
  *   Note: Please be aware that this notice cannot be altered or removed. It is a part
  *   of the project's documentation and must remain intact.
- *
+ * 
  *  Copyright (c) 2023 ppkantorski
  *  All rights reserved.
  ********************************************************************************/
@@ -29,6 +29,7 @@
 #include <get_funcs.hpp>
 #include <path_funcs.hpp>
 
+
 /**
  * @brief Represents a package header structure.
  *
@@ -36,6 +37,7 @@
  * creator, and description.
  */
 struct PackageHeader {
+    std::string title;
     std::string version;
     std::string creator;
     std::string about;
@@ -56,6 +58,7 @@ PackageHeader getPackageHeaderFromIni(const std::string& filePath) {
     
     FILE* file = fopen(filePath.c_str(), "r");
     if (file == nullptr) {
+        packageHeader.title = "";
         packageHeader.version = "";
         packageHeader.creator = "";
         packageHeader.about = "";
@@ -67,6 +70,7 @@ PackageHeader getPackageHeaderFromIni(const std::string& filePath) {
     constexpr size_t BufferSize = 131072; // Choose a larger buffer size for reading lines
     char line[BufferSize];
     
+    const std::string titlePrefix = ";title=";
     const std::string versionPrefix = ";version=";
     const std::string creatorPrefix = ";creator=";
     const std::string aboutPrefix = ";about=";
@@ -75,6 +79,25 @@ PackageHeader getPackageHeaderFromIni(const std::string& filePath) {
     
     while (fgets(line, sizeof(line), file)) {
         std::string strLine(line);
+        
+        size_t titlePos = strLine.find(titlePrefix);
+        if (titlePos != std::string::npos) {
+            titlePos += titlePrefix.length();
+            size_t startPos = strLine.find("'", titlePos);
+            size_t endPos = strLine.find("'", startPos + 1);
+            
+            if (startPos != std::string::npos && endPos != std::string::npos) {
+                // Value enclosed in single quotes
+                packageHeader.title = strLine.substr(startPos + 1, endPos - startPos - 1);
+            } else {
+                // Value not enclosed in quotes
+                packageHeader.title = strLine.substr(titlePos, endPos - titlePos);
+            }
+            
+            // Remove trailing whitespace or newline characters
+            packageHeader.title.erase(packageHeader.title.find_last_not_of(" \t\r\n") + 1);
+        }
+        
         size_t versionPos = strLine.find(versionPrefix);
         if (versionPos != std::string::npos) {
             versionPos += versionPrefix.length();
@@ -604,6 +627,7 @@ void setIniFile(const std::string& fileToEdit, const std::string& desiredSection
 
 
 
+
 /**
  * @brief Sets the value of a key in an INI file within the specified section and cleans the formatting.
  *
@@ -637,6 +661,7 @@ void setIniFileKey(const std::string& fileToEdit, const std::string& desiredSect
     setIniFile(fileToEdit, desiredSection, desiredKey, "", desiredNewKey, comment);
     //cleanIniFormatting(fileToEdit);
 }
+
 
 
 
