@@ -12,7 +12,7 @@
  *
  *   Note: Please be aware that this notice cannot be altered or removed. It is a part
  *   of the project's documentation and must remain intact.
- *
+ * 
  *  Copyright (c) 2023 ppkantorski
  *  All rights reserved.
  ********************************************************************************/
@@ -212,66 +212,12 @@ bool startsWith(const std::string& str, const std::string& prefix) {
  * @return True if the path is a directory, false otherwise.
  */
 bool isDirectory(const std::string& path) {
-    
     struct stat pathStat;
     if (stat(path.c_str(), &pathStat) == 0) {
         return S_ISDIR(pathStat.st_mode);
     }
-    
     return false;
 }
-
-
-bool isValidPathFormat(const std::string& path) {
-    if (!path.empty()) {
-        // Check for disallowed characters
-        size_t colonPos = path.find(':');
-        if (colonPos == std::string::npos || (colonPos > 2 && path.find('/', colonPos) == std::string::npos)) {
-            // ':' is not present or present only after the volume name (e.g., "sdmc:/test/")
-            return true;
-        }
-    }
-    return false;
-}
-
-// this will fix paths like "sdmc:/path/to/file: 1/" to "sdmc:/path/to/file - 1/" (replacing ":" with " -") or "/path/to/file: 1/filename.txt" to "/path/to/file - 1/filename.txt" or "sdmc:/path/to/file: 1/file2: /filename.txt" to "sdmc:/path/to/file - 1/file2 - /filename.txt"
-std::string fixPathFormat(const std::string& path) {
-    if (!path.empty()) {
-        std::string result;
-        bool previousWasSpace = false;
-
-        for (char c : path) {
-            if (c == ':') {
-                result += ' ';
-                previousWasSpace = true;
-            } else if (c == ' ' && previousWasSpace) {
-                // Skip consecutive spaces
-                continue;
-            } else {
-                result += c;
-                previousWasSpace = false;
-            }
-        }
-
-        // Replace spaces with " - "
-        for (size_t i = 0; i < result.length(); ++i) {
-            if (result[i] == ' ') {
-                result.replace(i, 1, " - ");
-                i += 2; // Skip the inserted " - "
-            }
-        }
-
-        // Remove the trailing " - "
-        if (!result.empty() && result.substr(result.length() - 3) == " - ") {
-            result = result.substr(0, result.length() - 3);
-        }
-
-        return result;
-    }
-
-    return path;
-}
-
 
 /**
  * @brief Checks if a path points to a file or directory.
@@ -354,14 +300,13 @@ json_t* stringToJson(const std::string& input) {
     
     //logMessage(input.c_str());
     jsonObj = json_loads(input.c_str(), 0, &error);
-
-    if (!jsonObj) {
+    if (jsonObj) {
+        return jsonObj;
+    } else {
         // Return an empty json_t* (you can also return nullptr)
-        jsonObj = json_object();
-        //logMessage("ERROR LOADING JSON FROM STRING!");
+        logMessage("ERROR LOADING JSON FROM STRING!");
+        return json_object();
     }
-
-    return jsonObj;
 }
 
 
@@ -440,6 +385,7 @@ std::string extractTitle(const std::string& input) {
     }
 }
 
+
 std::string removeFilename(const std::string& path) {
     size_t found = path.find_last_of("/\\");
     if (found != std::string::npos) {
@@ -447,3 +393,4 @@ std::string removeFilename(const std::string& path) {
     }
     return path; // If no directory separator is found, return the original path
 }
+
