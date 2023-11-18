@@ -513,12 +513,10 @@ public:
                     setIniFileValue(settingsConfigIniPath, "ultrahand", "current_theme", "default");
                     deleteFileOrDirectory(themeConfigIniPath);
                     
-                    if (isFileOrDirectory(defaultTheme)) {
+                    if (isFileOrDirectory(defaultTheme))
                         copyFileOrDirectory(defaultTheme, themeConfigIniPath);
-                    } else {
-                        // write default theme
-                        initializeTheme();
-                    }
+                    else
+                        initializeTheme(); // write default theme
                     
                     reloadMenu = true;
                     reloadMenu2 = true;
@@ -657,7 +655,7 @@ public:
                 setIniFileValue(settingsConfigIniPath, "ultrahand", "clean_version_labels", state ? "true" : "false");
                 if ((cleanVersionLabels == "true") != state) {
                     if (cleanVersionLabels == "false")
-                        versionLabel = APP_VERSION+std::string("   (")+ extractTitle(loaderInfo)+" "+cleanVersionLabel(loaderInfo)+std::string(")"); // Still needs to parse nx-ovlloader instead of hard coding it
+                        versionLabel = APP_VERSION+std::string("   (")+ extractTitle(loaderInfo)+" "+cleanVersionLabel(loaderInfo)+std::string(")");
                     else
                         versionLabel = APP_VERSION+std::string("   (")+ extractTitle(loaderInfo)+" v"+cleanVersionLabel(loaderInfo)+std::string(")");
                     reinitializeVersionLabels();
@@ -764,9 +762,8 @@ public:
             inSettingsMenu = true;
         }
         
-        if (redrawWidget) {
+        if (redrawWidget)
             reinitializeWidgetVars();
-        }
         
         if (keysHeld & KEY_B)
             return false;
@@ -822,9 +819,7 @@ public:
         else
             inSubSettingsMenu = true;
         
-        
         list = new tsl::elm::List();
-        
         
         
         if (dropdownSelection.empty()) {
@@ -846,24 +841,6 @@ public:
             
             if (hideOption == "true")
                 hide = true;
-            
-            
-            //// Capitalize entryMode
-            //std::string starLabel(entryMode);
-            //starLabel[0] = std::toupper(starLabel[0]);
-            //
-            //// Envoke toggling
-            //auto toggleListItem = new tsl::elm::ToggleListItem("Star "+starLabel, hide, ON, OFF);
-            //toggleListItem->setStateChangedListener([this, toggleListItem](bool state) {
-            //    if (!state) {
-            //        setIniFileValue(settingsIniPath, entryName, "star", "true");
-            //        toggleListItem->setState(!state);
-            //    } else {
-            //        setIniFileValue(settingsIniPath, entryName, "star", "false");
-            //        toggleListItem->setState(!state);
-            //    }
-            //});
-            //list->addItem(toggleListItem);
             
             
             
@@ -1263,9 +1240,6 @@ public:
         std::vector<std::string> listData, listDataOn, listDataOff;
         std::string jsonString, jsonStringOn, jsonStringOff;
         json_t* jsonData = nullptr;
-        json_t* jsonDataOn = nullptr;
-        json_t* jsonDataOff = nullptr;
-        
         
         // initial processing of commands
         for (const auto& cmd : commands) {
@@ -1429,16 +1403,16 @@ public:
                 selectedItemsListOn = stringToList(listStringOn);
             else if ((sourceTypeOn == "json") || (sourceTypeOn == "json_file")) {
                 if (sourceTypeOn == "json")
-                    jsonDataOn = stringToJson(jsonStringOn);
+                    jsonData = stringToJson(jsonStringOn);
                 else if (sourceTypeOn == "json_file")
-                    jsonDataOn = readJsonFromFile(jsonPathOn);
+                    jsonData = readJsonFromFile(jsonPathOn);
                 
                 
                 // Populate items list based upon jsonKey
-                if ((jsonDataOn) && json_is_array(jsonDataOn)) {
-                    size_t arraySize = json_array_size(jsonDataOn);
+                if ((jsonData) && json_is_array(jsonData)) {
+                    size_t arraySize = json_array_size(jsonData);
                     for (size_t i = 0; i < arraySize; ++i) {
-                        json_t* item = json_array_get(jsonDataOn, i);
+                        json_t* item = json_array_get(jsonData, i);
                         if (item && json_is_object(item)) {
                             json_t* keyValue = json_object_get(item, jsonKeyOn.c_str());
                             if (keyValue && json_is_string(keyValue)) {
@@ -1448,10 +1422,10 @@ public:
                         }
                     }
                 }
-                // Free jsonDataOn
-                if (jsonDataOn != nullptr) {
-                    json_decref(jsonDataOn);
-                    jsonDataOn = nullptr;
+                // Free jsonData
+                if (jsonData != nullptr) {
+                    json_decref(jsonData);
+                    jsonData = nullptr;
                 }
             }
             
@@ -1461,16 +1435,16 @@ public:
                 selectedItemsListOff = stringToList(listStringOff);
             else if ((sourceTypeOff == "json") || (sourceTypeOff == "json_file")) {
                 if (sourceTypeOff == "json")
-                    jsonDataOff = stringToJson(jsonStringOff);
+                    jsonData = stringToJson(jsonStringOff);
                 else if (sourceTypeOff == "json_file")
-                    jsonDataOff = readJsonFromFile(jsonPathOff);
+                    jsonData = readJsonFromFile(jsonPathOff);
                 
                 
                 // Populate items list based upon jsonKey
-                if ((jsonDataOff) && json_is_array(jsonDataOff)) {
-                    size_t arraySize = json_array_size(jsonDataOff);
+                if ((jsonData) && json_is_array(jsonData)) {
+                    size_t arraySize = json_array_size(jsonData);
                     for (size_t i = 0; i < arraySize; ++i) {
-                        json_t* item = json_array_get(jsonDataOff, i);
+                        json_t* item = json_array_get(jsonData, i);
                         if (item && json_is_object(item)) {
                             json_t* keyValue = json_object_get(item, jsonKeyOff.c_str());
                             if (keyValue && json_is_string(keyValue)) {
@@ -1480,10 +1454,10 @@ public:
                         }
                     }
                 }
-                // Free jsonDataOff
-                if (jsonDataOff != nullptr) {
-                    json_decref(jsonDataOff);
-                    jsonDataOff = nullptr;
+                // Free jsonData
+                if (jsonData != nullptr) {
+                    json_decref(jsonData);
+                    jsonData = nullptr;
                 }
             }
             
@@ -1538,9 +1512,6 @@ public:
         for (size_t i = 0; i < selectedItemsList.size(); ++i) {
             const std::string& selectedItem = selectedItemsList[i];
             
-            //std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(commands, selectedItem);
-            //std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(commands, std::to_string(i));
-            
             // For entries that are paths
             itemName = getNameFromPath(selectedItem);
             if (!isDirectory(preprocessPath(selectedItem)))
@@ -1572,20 +1543,6 @@ public:
                         listItem->setValue(footer);
                 } else
                     listItem->setValue(footer, true);
-                
-                //if ((commandMode == "option") && selectedFooterDict[specificKey] == selectedItem) {
-                //    lastSelectedListItem = listItem;
-                //    listItem->setValue(CHECKMARK_SYMBOL);
-                //} else {
-                //    if (commandMode == "option") {
-                //        listItem->setValue(footer);
-                //    } else {
-                //        listItem->setValue(footer, true);
-                //    }
-                //    
-                //}
-                
-                //listItem->setValue(footer, true);
                 
                 
                 if (sourceType == "json") { // For JSON wildcards
@@ -1804,6 +1761,19 @@ public:
         std::string pageRightName = "";
         std::string drawLocation = "";
         
+        std::string commandFooter;
+        std::string commandMode;
+        std::string commandGrouping;
+        
+        std::string currentSection;
+        std::string sourceType, sourceTypeOn, sourceTypeOff;
+        
+        std::string jsonPath, jsonPathOn, jsonPathOff;
+        std::string jsonKey, jsonKeyOn, jsonKeyOff;
+        
+        std::vector<std::vector<std::string>> commandsOn;
+        std::vector<std::vector<std::string>> commandsOff;
+        std::vector<std::string> listData, listDataOn, listDataOff;
         
         for (size_t i = 0; i < options.size(); ++i) {
             auto& option = options[i];
@@ -1814,21 +1784,21 @@ public:
             std::string footer; 
             bool useSelection = false;
             
+            commandFooter = "null";
+            commandMode = "default";
+            commandGrouping = "default";
             
-            std::string commandFooter = "null";
-            std::string commandMode = "default";
-            std::string commandGrouping = "default";
-            
-            std::string currentSection = "global";
-            std::string sourceType = "default", sourceTypeOn = "default", sourceTypeOff = "default"; //"file", "json_file", "json", "list"
+            currentSection = "global";
+            sourceType = "default";
+            sourceTypeOn = "default";
+            sourceTypeOff = "default"; //"file", "json_file", "json", "list"
             //std::string sourceType, sourceTypeOn, sourceTypeOff; //"file", "json_file", "json", "list"
-            std::string jsonPath, jsonPathOn, jsonPathOff;
-            std::string jsonKey, jsonKeyOn, jsonKeyOff;
             
-            
-            std::vector<std::vector<std::string>> commandsOn;
-            std::vector<std::vector<std::string>> commandsOff;
-            std::vector<std::string> listData, listDataOn, listDataOff;
+            commandsOn.clear();
+            commandsOff.clear();
+            listData.clear();
+            listDataOn.clear();
+            listDataOff.clear();
             
             // items can be paths, commands, or variables depending on source
             //std::vector<std::string> selectedItemsList, selectedItemsListOn, selectedItemsListOff;
@@ -1907,13 +1877,6 @@ public:
                     }
                 }
                 
-                //if (optionName == "Section 1") {
-                //    for (const auto& cmd : commands) {
-                //        for (const auto& x : cmd) {
-                //            logMessage("Commands: "+x);
-                //        }
-                //    }
-                //}
                 
                 // initial processing of commands
                 for (const auto& cmd : commands) {
@@ -1949,26 +1912,15 @@ public:
                         
                     }
                     if (cmd.size() > 1) { // Pre-process advanced commands
-                        //if (cmd[0] == "filter") {
-                        //    if (currentSection == "global") {
-                        //        filterList.push_back(cmd[1]);
-                        //    } else if (currentSection == "on") {
-                        //        filterListOn.push_back(cmd[1]);
-                        //    } else if (currentSection == "off") {
-                        //        filterListOff.push_back(cmd[1]);
-                        //    }
                         if (cmd[0] == "file_source") {
                             if (currentSection == "global") {
                                 pathPattern = cmd[1];
-                                //filesList = getFilesListByWildcards(pathPattern);
                                 sourceType = "file";
                             } else if (currentSection == "on") {
                                 pathPatternOn = cmd[1];
-                                //filesListOn = getFilesListByWildcards(pathPatternOn);
                                 sourceTypeOn = "file";
                             } else if (currentSection == "off") {
                                 pathPatternOff = cmd[1];
-                                //filesListOff = getFilesListByWildcards(pathPatternOff);
                                 sourceTypeOff = "file";
                             }
                         }
