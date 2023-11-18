@@ -20,7 +20,7 @@
  *   of the project's documentation and must remain intact.
  *
  *  Copyright (c) 2023 ppkantorski
- *  All rights reserved.
+ *  Licensed under CC BY-NC-SA 4.0
  ********************************************************************************/
 
 #define NDEBUG
@@ -1134,6 +1134,8 @@ public:
                             commandVec.emplace_back(std::move(commandParts));
                             
                             interpretAndExecuteCommand(commandVec, filePath, specificKey);
+                            commandVec.clear();
+                            
                             if (commandSuccess)
                                 listItem->setValue(CHECKMARK_SYMBOL);
                             else
@@ -1597,6 +1599,7 @@ public:
                             //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
                             
                             interpretAndExecuteCommand(modifiedCmds, filePath, specificKey); // Execute modified 
+                            modifiedCmds.clear();
                             
                             if (commandSuccess)
                                 listItem->setValue(CHECKMARK_SYMBOL);
@@ -1622,6 +1625,7 @@ public:
                             std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, selectedItem, i); // replace source
                             //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
                             interpretAndExecuteCommand(modifiedCmds, filePath, specificKey); // Execute modified 
+                            modifiedCmds.clear();
                             
                             if (commandSuccess)
                                 listItem->setValue(CHECKMARK_SYMBOL);
@@ -1650,6 +1654,7 @@ public:
                             // Toggle switched to On
                             std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmdsOn, selectedItem, i); // replace source
                             interpretAndExecuteCommand(modifiedCmds, filePath, specificKey); // Execute modified 
+                            modifiedCmds.clear();
                         } else
                             toggleListItem->setState(!state);
                     } else {
@@ -1657,6 +1662,7 @@ public:
                             // Toggle switched to Off
                             std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmdsOff, selectedItem, i); // replace source
                             interpretAndExecuteCommand(modifiedCmds, filePath, specificKey); // Execute modified 
+                            modifiedCmds.clear();
                         } else
                             toggleListItem->setState(!state);
                     }
@@ -2099,7 +2105,8 @@ public:
                                     if (keys & KEY_A) {
                                         std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, keyName, i); // replace source
                                         //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
-                                        interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified 
+                                        interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified
+                                        modifiedCmds.clear();
                                         if (commandSuccess)
                                             listItem->setValue(CHECKMARK_SYMBOL);
                                         else
@@ -2122,7 +2129,8 @@ public:
                                     if (keys & KEY_A) {
                                         std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, keyName, i); // replace source
                                         //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
-                                        interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified 
+                                        interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified
+                                        modifiedCmds.clear();
                                         if (commandSuccess)
                                             listItem->setValue(CHECKMARK_SYMBOL);
                                         else
@@ -2155,7 +2163,8 @@ public:
                                     if (toggleStateOn) {
                                         std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmdsOn, preprocessPath(pathPatternOn), i); // replace source
                                         //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
-                                        interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified 
+                                        interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified
+                                        modifiedCmds.clear();
                                     } else {
                                         // Handle the case where the command should only run in the source_on section
                                         // Add your specific code here
@@ -2166,6 +2175,7 @@ public:
                                         std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmdsOff, preprocessPath(pathPatternOff), i); // replace source
                                         //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
                                         interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified 
+                                        modifiedCmds.clear();
                                     } else {
                                         // Handle the case where the command should only run in the source_off section
                                         // Add your specific code here
@@ -2855,10 +2865,12 @@ public:
                                         std::string bootOptionName = bootOption.first;
                                         auto bootCommands = bootOption.second;
                                         if (bootOptionName == "boot") {
-                                            interpretAndExecuteCommand(bootCommands, packageFilePath+bootPackageFileName, bootOptionName); // Execute modified 
+                                            interpretAndExecuteCommand(bootCommands, packageFilePath+bootPackageFileName, bootOptionName); // Execute modified
+                                            bootCommands.clear();
                                             break;
                                         }
                                     }
+                                    bootOptions.clear();
                                 }
                             }
                             
@@ -3124,7 +3136,8 @@ public:
                                         std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, selectedItem, i); // replace source
                                         //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
                                         
-                                        interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified 
+                                        interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified
+                                        modifiedCmds.clear();
                                         if (commandSuccess)
                                             listItem->setValue(CHECKMARK_SYMBOL);
                                         else
@@ -3145,7 +3158,8 @@ public:
                                         std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, selectedItem, i); // replace source
                                         //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
                                         
-                                        interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified 
+                                        interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified
+                                        modifiedCmds.clear();
                                         if (commandSuccess)
                                             listItem->setValue(CHECKMARK_SYMBOL);
                                         else
@@ -3176,6 +3190,7 @@ public:
                                         std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmdsOn, preprocessPath(pathPatternOn), i); // replace source
                                         //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
                                         interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified 
+                                        modifiedCmds.clear();
                                     } else {
                                         // Handle the case where the command should only run in the source_on section
                                         // Add your specific code here
@@ -3185,7 +3200,8 @@ public:
                                     if (!toggleStateOn) {
                                         std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmdsOff, preprocessPath(pathPatternOff),  i); // replace source
                                         //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
-                                        interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified 
+                                        interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified
+                                        modifiedCmds.clear();
                                     } else {
                                         // Handle the case where the command should only run in the source_off section
                                         // Add your specific code here
