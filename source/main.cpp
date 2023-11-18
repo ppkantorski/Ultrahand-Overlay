@@ -19,8 +19,8 @@
  *   Note: Please be aware that this notice cannot be altered or removed. It is a part
  *   of the project's documentation and must remain intact.
  *
- *  Copyright (c) 2023 ppkantorski
  *  Licensed under CC BY-NC-SA 4.0
+ *  Copyright (c) 2023 ppkantorski
  ********************************************************************************/
 
 #define NDEBUG
@@ -689,6 +689,7 @@ public:
         
         rootFrame = new tsl::elm::OverlayFrame("Ultrahand", versionLabel);
         rootFrame->setContent(list);
+        list = nullptr;
         return rootFrame;
     }
     
@@ -935,6 +936,7 @@ public:
         rootFrame = new tsl::elm::OverlayFrame("Ultrahand", versionLabel);
         //rootFrame = new tsl::elm::OverlayFrame(entryName, "Ultrahand Settings");
         rootFrame->setContent(list);
+        list = nullptr;
         return rootFrame;
     }
     
@@ -1128,6 +1130,7 @@ public:
         
         rootFrame = new tsl::elm::OverlayFrame(packageName, "Ultrahand Script");
         rootFrame->setContent(list);
+        list = nullptr;
         return rootFrame;
     }
     
@@ -1627,7 +1630,7 @@ public:
         
         rootFrame = new tsl::elm::OverlayFrame(getNameFromPath(filePath), "Ultrahand Package", "", packageHeader.color);
         rootFrame->setContent(list);
-        
+        list = nullptr;
         return rootFrame;
     }
     
@@ -2149,7 +2152,7 @@ public:
         } else
             rootFrame = new tsl::elm::OverlayFrame(getNameFromPath(packagePath), "Ultrahand Package", "", packageHeader.color);
         rootFrame->setContent(list);
-        
+        list = nullptr;
         return rootFrame;
     }
     
@@ -3176,6 +3179,8 @@ public:
         
         rootFrame = new tsl::elm::OverlayFrame("Ultrahand", versionLabel, menuMode+hiddenMenuMode);
         rootFrame->setContent(list);
+        list = nullptr;
+        
         return rootFrame;
     }
     
