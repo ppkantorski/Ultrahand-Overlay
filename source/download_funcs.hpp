@@ -13,7 +13,7 @@
  *   of the project's documentation and must remain intact.
  * 
  *  Copyright (c) 2023 ppkantorski
- *  All rights reserved.
+ *  Licensed under CC BY-NC-SA 4.0
  ********************************************************************************/
 
 #pragma once
@@ -150,13 +150,12 @@ bool downloadFile(const std::string& url, const std::string& toDestination) {
     //curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, progressCallback);
     //curl_easy_setopt(curl, CURLOPT_XFERINFODATA, callbackData);
     
-    
+    curl_easy_setopt(curl, CURLOPT_BUFFERSIZE, 4096);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeCallback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, file);
     
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
     
-    //curl_easy_setopt(curl, CURLOPT_BUFFERSIZE, 4096);
     
     // Set a user agent
     curl_easy_setopt(curl, CURLOPT_USERAGENT, "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36");
