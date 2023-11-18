@@ -31,14 +31,11 @@
 
 #include <payload.hpp> // Studious Pancake
 #include <util.hpp>
-#include <tesla.hpp>
 
 
 Payload::HekateConfigList const boot_config_list;
 Payload::HekateConfigList const ini_config_list;
 Payload::PayloadConfigList const payload_config_list;
-
-
 
 
 /**
@@ -76,6 +73,8 @@ static const std::string packagesIniFilePath = settingsPath + "packages.ini";
 static const std::string ultrahandRepo = "https://github.com/ppkantorski/Ultrahand-Overlay/";
 
 
+static bool commandSuccess = false;
+static bool refreshGui = false;
 
 
 
@@ -145,7 +144,6 @@ void initializeTheme(std::string themeIniPath = themeConfigIniPath) {
         
     }
 }
-
 
 
 
@@ -250,9 +248,12 @@ void addHelpInfo(auto& list) {
 }
 
 
-void addPackageInfo(auto& list, auto& packageHeader) {
+void addAppInfo(auto& list, auto& packageHeader, std::string type = "package") {
     // Add a section break with small text to indicate the "Commands" section
-    list->addItem(new tsl::elm::CategoryHeader(PACKAGE_INFO));
+    if (type == "package")
+        list->addItem(new tsl::elm::CategoryHeader(PACKAGE_INFO));
+    else
+        list->addItem(new tsl::elm::CategoryHeader(OVERLAY_INFO));
     
     constexpr int maxLineLength = 28;  // Adjust the maximum line length as needed
     constexpr int lineHeight = 20;  // Adjust the line height as needed
@@ -265,6 +266,11 @@ void addPackageInfo(auto& list, auto& packageHeader) {
     
     std::string packageSectionString = "";
     std::string packageInfoString = "";
+    if (packageHeader.title != "") {
+        packageSectionString += TITLE+"\n";
+        packageInfoString += (packageHeader.title+"\n").c_str();
+        numEntries++;
+    }
     if (packageHeader.version != "") {
         packageSectionString += VERSION+"\n";
         packageInfoString += (packageHeader.version+"\n").c_str();
@@ -357,6 +363,8 @@ void addPackageInfo(auto& list, auto& packageHeader) {
         }), fontSize * numEntries + lineHeight);
     }
 }
+
+
 
 
 /**
@@ -715,7 +723,7 @@ std::string replaceIniPlaceholderF(const std::string& arg, const std::string& in
 
 
 // this will modify `commands`
-std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std::vector<std::string>> commands, const std::string& entry, size_t entryIndex) {
+std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std::vector<std::string>>& commands, const std::string& entry, size_t entryIndex) {
     std::vector<std::vector<std::string>> modifiedCommands;
     std::vector<std::string> listData;
     std::string replacement;
@@ -825,13 +833,13 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
 
 
 
-bool variableReplacement(std::vector<std::string>& cmd) {
+void variableReplacement(std::vector<std::string>& cmd) {
     std::string commandName;
     std::string listString, jsonString, jsonPath, hexPath, iniPath;
     std::string replacement;
     std::string lastArg;
     
-    bool commandSuccess = true;
+    //bool commandSuccess = true;
     std::vector<std::string> listData;
     
     //FILE* hexFile = nullptr;
@@ -860,7 +868,7 @@ bool variableReplacement(std::vector<std::string>& cmd) {
         //jsonData2 = json_load_file(jsonPath.c_str(), 0, &error);
     } else if (commandName == "list") {
         listString = removeQuotes(cmd[1]);
-        listData = stringToList(listString);
+        
     }
     
     // Process {hex_file(...)} placeholders
@@ -990,7 +998,6 @@ bool variableReplacement(std::vector<std::string>& cmd) {
     
     // Release the memory held by listData
     //listData.clear();
-    return commandSuccess;
 }
 
 
@@ -1001,13 +1008,17 @@ bool variableReplacement(std::vector<std::string>& cmd) {
  *
  * @param commands A list of commands, where each command is represented as a vector of strings.
  */
-std::tuple<bool, bool> interpretAndExecuteCommand(const std::vector<std::vector<std::string>> commands, const std::string packagePath="", const std::string selectedCommand="") {
+void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& commands, const std::string& packagePath="", const std::string& selectedCommand="") {
     
     //auto boot_config_list(Payload::LoadHekateConfigList());
     //auto ini_config_list(Payload::LoadIniConfigList());
     //auto payload_config_list(Payload::LoadPayloadList());
     
+    bool usingErista = util::IsErista();
+    bool usingMariko = !(util::IsErista());
     
+    bool inEristaSection = false;
+    bool inMarikoSection = false;
     
     std::string commandName, bootCommandName, sourcePath, destinationPath, desiredSection, desiredNewSection, desiredKey, desiredNewKey, desiredValue, \
         offset, customPattern, hexDataToReplace, hexDataReplacement, fileUrl, clearOption;
@@ -1016,19 +1027,19 @@ std::tuple<bool, bool> interpretAndExecuteCommand(const std::vector<std::vector<
     std::size_t tryCounter = 0;
     
     bool logging = false;
-    bool commandSuccess = true;
-    bool refreshGui = false;
+    commandSuccess = true;
+    refreshGui = false;
     
     std::string listString, jsonString, jsonPath, hexPath, iniPath, lastArg;
     
     // inidialize data variables
-    std::vector<std::string> listData;
+    //std::vector<std::string> listData;
     //json_t* jsonData1 = nullptr;
-    json_t* jsonData2 = nullptr;
-    json_error_t error;
+    //json_t* jsonData2 = nullptr;
+    //json_error_t error;
     //FILE* hexFile = nullptr;
     
-    std::vector<std::string> command;
+    std::vector<std::string> command = std::vector<std::string>();
     std::string replacement;
     
     for (const auto& cmd : commands) {
@@ -1042,480 +1053,537 @@ std::tuple<bool, bool> interpretAndExecuteCommand(const std::vector<std::vector<
         // Get the command name (first part of the command)
         commandName = cmd[0];
         
-        
         // Try implementation
         if (commandName == "try:") {
-            if (commandSuccess && tryCounter > 0)
+            tryCounter++;
+            logMessage("Try #"+std::to_string(tryCounter));
+            if (commandSuccess && tryCounter > 1)
                 break;
             
             commandSuccess = true;
-            tryCounter++;
+        } else if (commandName == "erista:" || commandName == "Erista:") {
+            inEristaSection = true && usingErista;
+            inMarikoSection = false;
+        } else if (commandName == "mariko:" || commandName == "Mariko:") {
+            inEristaSection = false;
+            inMarikoSection = true && usingMariko;
         }
         
-        
-        // Create a modified command vector to store changes
-        //std::vector<std::string> newCommand;
-        std::vector<std::string> modifiedCmd = cmd;
-        
-        for (auto& arg : modifiedCmd) {
-            lastArg = "";
-            while ((!hexPath.empty() && (arg.find("{hex_file(") != std::string::npos))) {
-                size_t startPos = arg.find("{hex_file(");
-                size_t endPos = arg.find(")}");
-                if (endPos != std::string::npos && endPos > startPos) {
-                    replacement = replaceHexPlaceholder(arg.substr(startPos, endPos - startPos + 2), hexPath);
-                    //replacement = replaceHexPlaceholderFile(arg.substr(startPos, endPos - startPos + 2), hexFile);
-                    arg.replace(startPos, endPos - startPos + 2, replacement);
-                    
-                    if (arg == lastArg) {
-                        commandSuccess = false;
-                        break;
-                    }
-                } else {
-                    break;
-                }
-                lastArg = arg;
-            }
-            while ((!iniPath.empty() && (arg.find("{ini_file(") != std::string::npos))) {
-                size_t startPos = arg.find("{ini_file(");
-                size_t endPos = arg.find(")}");
-                if (endPos != std::string::npos && endPos > startPos) {
-                    replacement = replaceIniPlaceholder(arg.substr(startPos, endPos - startPos + 2), iniPath);
-                    //replacement = replaceHexPlaceholderFile(arg.substr(startPos, endPos - startPos + 2), hexFile);
-                    arg.replace(startPos, endPos - startPos + 2, replacement);
-                    
-                    if (arg == lastArg) {
-                        commandSuccess = false;
-                        break;
-                    }
-                } else {
-                    break;
-                }
-                lastArg = arg;
-            }
-            while ((!listString.empty() && (arg.find("{list(") != std::string::npos))) {
-                size_t startPos = arg.find("{list(");
-                size_t endPos = arg.find(")}");
-                if (endPos != std::string::npos && endPos > startPos) {
-                    int listIndex = stringToNumber(arg.substr(startPos, endPos - startPos + 2));
-                    listData = stringToList(listString);
-                    replacement = listData[listIndex];
-                    arg.replace(startPos, endPos - startPos + 2, replacement);
-                    
-                    if (arg == lastArg) {
-                        commandSuccess = false;
-                        break;
-                    }
-                    // Release the memory held by listData
-                    //listData.clear();
-                } else {
-                    break;
-                }
-                lastArg = arg;
-            }
-            while ((!jsonString.empty() && (arg.find("{json(") != std::string::npos))) {
-                //std::string countStr = entry;
-                //arg = replacePlaceholder(arg, "*", entry);
-                size_t startPos = arg.find("{json(");
-                size_t endPos = arg.find(")}");
-                if (endPos != std::string::npos && endPos > startPos) {
-                    //jsonData1 = stringToJson(jsonString);
-                    replacement = replaceJsonPlaceholder(arg.substr(startPos, endPos - startPos + 2), "json", jsonString);
-                    arg.replace(startPos, endPos - startPos + 2, replacement);
-                    
-                    if (arg == lastArg) {
-                        commandSuccess = false;
-                        break;
-                    }
-                    //// Free jsonData1
-                    //if (jsonData1 != nullptr) {
-                    //    json_decref(jsonData1);
-                    //    jsonData1 = nullptr;
-                    //}
-                } else {
-                    break;
-                }
-                lastArg = arg;
-            }
-            while ((!jsonPath.empty() && (arg.find("{json_file(") != std::string::npos))) {
-                //std::string countStr = entry;
-                //arg = replacePlaceholder(arg, "*", entry);
-                size_t startPos = arg.find("{json_file(");
-                size_t endPos = arg.find(")}");
-                if (endPos != std::string::npos && endPos > startPos) {
-                    replacement = replaceJsonPlaceholder(arg.substr(startPos, endPos - startPos + 2), "json_file", jsonPath);
-                    
-                    //jsonData2 = json_load_file(jsonPath.c_str(), 0, &error);
-                    //replacement = replaceJsonPlaceholderF2(arg.substr(startPos, endPos - startPos + 2), "json_file", jsonData2);
-                    //logMessage("Mid source replacement: " + replacement);
-                    arg.replace(startPos, endPos - startPos + 2, replacement);
-                    
-                    if (arg == lastArg) {
-                        commandSuccess = false;
-                        break;
-                    }
-                    //// Free jsonData2
-                    //if (jsonData2 != nullptr) {
-                    //    json_decref(jsonData2);
-                    //    jsonData2 = nullptr;
-                    //}
-                } else {
-                    break;
-                }
-                lastArg = arg;
-            }
-        }
-        command = modifiedCmd; // update command
-        
-        // Variable replacement definitions
-        if (tryCounter == 0 || (commandSuccess && tryCounter > 0)) {
-            
-            if (commandName == "list") {
-                listString = removeQuotes(command[1]);
-                //listData = stringToList(listString);
-            } else if (commandName == "json") {
-                jsonString = command[1];
-                //jsonData1 = stringToJson(jsonString);
-            } else if (commandName == "json_file") {
-                jsonPath = preprocessPath(command[1]);
-                //jsonData2 = json_load_file(jsonPath.c_str(), 0, &error);
-            } else if (commandName == "ini_file") {
-                iniPath = preprocessPath(command[1]);
-            } else if (commandName == "hex_file") {
-                hexPath = preprocessPath(command[1]);
-                // Open the file for reading in binary mode
-                //FILE* hexFile = fopen(hexPath.c_str(), "rb");
-                //if (!hexFile) {
-                //    logMessage("Failed to open the file.");
-                //}
-            //} else if (commandName == "close_hex_file") {
-            //    fclose(hexFile);
-            // Perform actions based on the command name
-            } else if (commandName == "make" || commandName == "mkdir") {
-                // Delete command
-                if (command.size() >= 2) {
-                    sourcePath = preprocessPath(command[1]);
-                    createDirectory(sourcePath);
-                }
+        if (inEristaSection || inMarikoSection || !(inEristaSection && inMarikoSection)) {
+            if (tryCounter == 0 || (commandSuccess && tryCounter != 0)) {
+                // Create a modified command vector to store changes
+                //std::vector<std::string> newCommand;
+                std::vector<std::string> modifiedCmd = cmd;
                 
-            } else if (commandName == "copy" || commandName == "cp") {
-                // Copy command
-                if (command.size() >= 3) {
-                    sourcePath = preprocessPath(command[1]);
-                    destinationPath = preprocessPath(command[2]);
-                    
-                    if (sourcePath.find('*') != std::string::npos) {
-                        // Delete files or directories by pattern
-                        copyFileOrDirectoryByPattern(sourcePath, destinationPath);
-                    } else {
-                        copyFileOrDirectory(sourcePath, destinationPath);
-                    }
-                    
-                }
-            } else if (commandName == "mirror_copy" || commandName == "mirror_cp") {
-                // Copy command
-                if (command.size() >= 2) {
-                    sourcePath = preprocessPath(command[1]);
-                    if (command.size() >= 3) {
-                        destinationPath = preprocessPath(command[2]);
-                        mirrorCopyFiles(sourcePath, destinationPath);
-                    } else {
-                        mirrorCopyFiles(sourcePath);
-                    }
-                }
-            } else if (commandName == "delete" || commandName == "del") {
-                // Delete command
-                if (command.size() >= 2) {
-                    sourcePath = preprocessPath(command[1]);
-                    if (!isDangerousCombination(sourcePath)) {
-                        if (sourcePath.find('*') != std::string::npos) {
-                            // Delete files or directories by pattern
-                            deleteFileOrDirectoryByPattern(sourcePath);
-                        } else {
-                            deleteFileOrDirectory(sourcePath);
-                        }
-                    }
-                }
-            } else if (commandName == "mirror_delete" || commandName == "mirror_del") {
-                if (command.size() >= 2) {
-                    sourcePath = preprocessPath(command[1]);
-                    if (command.size() >= 3) {
-                        destinationPath = preprocessPath(command[2]);
-                        mirrorDeleteFiles(sourcePath, destinationPath);
-                    } else {
-                        mirrorDeleteFiles(sourcePath);
-                    }
-                }
-            } else if (commandName == "rename" || commandName == "move" || commandName == "mv") {
-                // Rename command
-                if (command.size() >= 3) {
-                    sourcePath = preprocessPath(command[1]);
-                    destinationPath = preprocessPath(command[2]);
-                    //logMessage("sourcePath: "+sourcePath);
-                    //logMessage("destinationPath: "+destinationPath);
-                    if (!isDangerousCombination(sourcePath)) {
-                        if (sourcePath.find('*') != std::string::npos) {
-                            // Move files by pattern
-                            moveFilesOrDirectoriesByPattern(sourcePath, destinationPath);
-                        } else {
-                            // Move single file or directory
-                            moveFileOrDirectory(sourcePath, destinationPath);
-                        }
-                    } else {
-                        //logMessage( "Dangerous combo.");
-                    }
-                } else {
-                    //logMessage( "Invalid move command.");
-                    //std::cout << "Invalid move command. Usage: move <source_path> <destination_path>" << std::endl;
-                }
-            } else if (commandName == "add-ini-section") {
-                // Edit command
-                if (command.size() >= 2) {
-                    sourcePath = preprocessPath(command[1]);
-                    desiredSection = removeQuotes(command[2]);
-                    
-                    addIniSection(sourcePath.c_str(), desiredSection.c_str());
-                }
-            } else if (commandName == "rename-ini-section") {
-                // Edit command
-                if (command.size() >= 3) {
-                    sourcePath = preprocessPath(command[1]);
-                    desiredSection = removeQuotes(command[2]);
-                    desiredNewSection = removeQuotes(command[3]);
-                    
-                    renameIniSection(sourcePath.c_str(), desiredSection.c_str(), desiredNewSection.c_str());
-                }
-            } else if (commandName == "remove-ini-section") {
-                // Edit command
-                if (command.size() >= 2) {
-                    sourcePath = preprocessPath(command[1]);
-                    desiredSection = removeQuotes(command[2]);
-                    
-                    removeIniSection(sourcePath.c_str(), desiredSection.c_str());
-                }
-            } else if (commandName == "set-ini-val" || commandName == "set-ini-value") {
-                // Edit command
-                if (command.size() >= 5) {
-                    sourcePath = preprocessPath(command[1]);
-                    desiredSection = removeQuotes(command[2]);
-                    desiredKey = removeQuotes(command[3]);
-                    desiredValue = "";
-                    for (size_t i = 4; i < command.size(); ++i) {
-                        desiredValue += command[i];
-                        if (i < command.size() - 1) {
-                            desiredValue += " ";
-                        }
-                    }
-                    setIniFileValue(sourcePath.c_str(), desiredSection.c_str(), desiredKey.c_str(), desiredValue.c_str());
-                }
-            } else if (commandName == "set-ini-key") {
-                // Edit command
-                if (command.size() >= 5) {
-                    sourcePath = preprocessPath(command[1]);
-                    desiredSection = removeQuotes(command[2]);
-                    desiredKey = removeQuotes(command[3]);
-                    for (size_t i = 4; i < command.size(); ++i) {
-                        desiredNewKey += command[i];
-                        if (i < command.size() - 1) {
-                            desiredNewKey += " ";
-                        }
-                    }
-                    
-                    setIniFileKey(sourcePath.c_str(), desiredSection.c_str(), desiredKey.c_str(), desiredNewKey.c_str());
-                }
-            } else if (commandName == "set-footer") {
-                // Edit command
-                if (command.size() >= 2) {
-                    desiredValue = removeQuotes(command[1]);
-                    //logMessage("path:" +(packagePath+configFileName));
-                    //logMessage("selectedCommand:" +selectedCommand);
-                    //logMessage("desiredValue:" +desiredValue);
-                    setIniFileValue((packagePath+configFileName).c_str(), selectedCommand.c_str(), "footer", desiredValue.c_str());
-                }
-            } else if (commandName == "hex-by-offset") {
-                // Edit command
-                if (command.size() >= 4) {
-                    sourcePath = preprocessPath(command[1]);
-                    offset = removeQuotes(command[2]);
-                    hexDataReplacement = removeQuotes(command[3]);
-                    commandSuccess = hexEditByOffset(sourcePath.c_str(), offset.c_str(), hexDataReplacement.c_str()) && commandSuccess;
-                }
-            } else if (commandName == "hex-by-custom-offset") {
-                // Edit command
-                if (command.size() >= 5) {
-                    sourcePath = preprocessPath(command[1]);
-                    customPattern = removeQuotes(command[2]);
-                    offset = removeQuotes(command[3]);
-                    hexDataReplacement = removeQuotes(command[4]);
-                    commandSuccess = hexEditByCustomOffset(sourcePath.c_str(), customPattern.c_str(), offset.c_str(), hexDataReplacement.c_str()) && commandSuccess;
-                }
-            } else if (commandName == "hex-by-swap") {
-                // Edit command - Hex data replacement with occurrence
-                if (command.size() >= 4) {
-                    sourcePath = preprocessPath(command[1]);
-                    hexDataToReplace = removeQuotes(command[2]);
-                    hexDataReplacement = removeQuotes(command[3]);
-                    if (command.size() >= 5) {
-                        occurrence = std::stoul(removeQuotes(command[4]));
-                        commandSuccess = hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, occurrence) && commandSuccess;
-                    } else {
-                        commandSuccess = hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement) && commandSuccess;
-                    }
-                }
-            } else if (commandName == "hex-by-string") {
-                // Edit command - Hex data replacement with occurrence
-                if (command.size() >= 4) {
-                    sourcePath = preprocessPath(command[1]);
-                    hexDataToReplace = asciiToHex(removeQuotes(command[2]));
-                    hexDataReplacement = asciiToHex(removeQuotes(command[3]));
-                    //logMessage("hexDataToReplace: "+hexDataToReplace);
-                    //logMessage("hexDataReplacement: "+hexDataReplacement);
-                    
-                    // Fix miss-matched string sizes
-                    if (hexDataReplacement.length() < hexDataToReplace.length()) {
-                        // Pad with spaces at the end
-                        hexDataReplacement += std::string(hexDataToReplace.length() - hexDataReplacement.length(), '\0');
-                    } else if (hexDataReplacement.length() > hexDataToReplace.length()) {
-                        // Add spaces to hexDataToReplace at the far right end
-                        hexDataToReplace += std::string(hexDataReplacement.length() - hexDataToReplace.length(), '\0');
-                    }
-                    
-                    if (command.size() >= 5) {
-                        occurrence = std::stoul(removeQuotes(command[4]));
-                        hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, occurrence);
-                    } else {
-                        hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
-                    }
-                }
-            } else if (commandName == "hex-by-decimal") {
-                // Edit command - Hex data replacement with occurrence
-                if (command.size() >= 4) {
-                    sourcePath = preprocessPath(command[1]);
-                    hexDataToReplace = decimalToHex(removeQuotes(command[2]));
-                    hexDataReplacement = decimalToHex(removeQuotes(command[3]));
-                    //logMessage("hexDataToReplace: "+hexDataToReplace);
-                    //logMessage("hexDataReplacement: "+hexDataReplacement);
-                    if (command.size() >= 5) {
-                        occurrence = std::stoul(removeQuotes(command[4]));
-                        hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, occurrence);
-                    } else {
-                        hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
-                    }
-                }
-            } else if (commandName == "hex-by-rdecimal") {
-                // Edit command - Hex data replacement with occurrence
-                if (command.size() >= 4) {
-                    sourcePath = preprocessPath(command[1]);
-                    hexDataToReplace = decimalToReversedHex(removeQuotes(command[2]));
-                    hexDataReplacement = decimalToReversedHex(removeQuotes(command[3]));
-                    //logMessage("hexDataToReplace: "+hexDataToReplace);
-                    //logMessage("hexDataReplacement: "+hexDataReplacement);
-                    if (command.size() >= 5) {
-                        occurrence = std::stoul(removeQuotes(command[4]));
-                        hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, occurrence);
-                    } else {
-                        hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
-                    }
-                }
-            } else if (commandName == "download") {
-                // Edit command - Hex data replacement with occurrence
-                if (command.size() >= 3) {
-                    fileUrl = preprocessUrl(command[1]);
-                    destinationPath = preprocessPath(command[2]);
-                    commandSuccess = downloadFile(fileUrl, destinationPath) && commandSuccess;
-                }
-            } else if (commandName == "unzip") {
-                // Edit command - Hex data replacement with occurrence
-                if (command.size() >= 3) {
-                    sourcePath = preprocessPath(command[1]);
-                    destinationPath = preprocessPath(command[2]);
-                    commandSuccess = unzipFile(sourcePath, destinationPath) && commandSuccess;
-                }
-            } else if (commandName == "exec") {
-                // Edit command
-                if (command.size() >= 2) {
-                    bootCommandName = removeQuotes(command[1]);
-                    if (isFileOrDirectory(packagePath+bootPackageFileName)) {
-                        std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> bootOptions = loadOptionsFromIni(packagePath+bootPackageFileName, true);
-                        for (const auto& bootOption:bootOptions) {
-                            std::string bootOptionName = bootOption.first;
-                            auto bootCommands = bootOption.second;
-                            if (bootOptionName == bootCommandName) {
-                                bool resetCommandSuccess = false;
-                                if (!commandSuccess)
-                                    resetCommandSuccess = true;
-                                std::tie(commandSuccess, refreshGui) = interpretAndExecuteCommand(bootCommands, packagePath+bootPackageFileName, bootOptionName); // Execute modified 
-                                if (resetCommandSuccess)
-                                    commandSuccess = false;
-                                bootCommands.clear();
+                for (auto& arg : modifiedCmd) {
+                    lastArg = "";
+                    while ((!hexPath.empty() && (arg.find("{hex_file(") != std::string::npos))) {
+                        size_t startPos = arg.find("{hex_file(");
+                        size_t endPos = arg.find(")}");
+                        if (endPos != std::string::npos && endPos > startPos) {
+                            replacement = replaceHexPlaceholder(arg.substr(startPos, endPos - startPos + 2), hexPath);
+                            //replacement = replaceHexPlaceholderFile(arg.substr(startPos, endPos - startPos + 2), hexFile);
+                            arg.replace(startPos, endPos - startPos + 2, replacement);
+                            
+                            if (arg == lastArg) {
+                                commandSuccess = false;
                                 break;
                             }
-                            bootCommands.clear();
+                        } else {
+                            break;
                         }
-                        if (bootOptions.size() > 0) {
-                            auto bootOption = bootOptions[0];
+                        lastArg = arg;
+                    }
+                    while ((!iniPath.empty() && (arg.find("{ini_file(") != std::string::npos))) {
+                        size_t startPos = arg.find("{ini_file(");
+                        size_t endPos = arg.find(")}");
+                        if (endPos != std::string::npos && endPos > startPos) {
+                            replacement = replaceIniPlaceholder(arg.substr(startPos, endPos - startPos + 2), iniPath);
+                            //replacement = replaceHexPlaceholderFile(arg.substr(startPos, endPos - startPos + 2), hexFile);
+                            arg.replace(startPos, endPos - startPos + 2, replacement);
                             
+                            if (arg == lastArg) {
+                                commandSuccess = false;
+                                break;
+                            }
+                        } else {
+                            break;
                         }
-                        // Unload bootOptions by clearing it
-                        bootOptions.clear();
+                        lastArg = arg;
+                    }
+                    while ((!listString.empty() && (arg.find("{list(") != std::string::npos))) {
+                        size_t startPos = arg.find("{list(");
+                        size_t endPos = arg.find(")}");
+                        if (endPos != std::string::npos && endPos > startPos) {
+                            int listIndex = stringToNumber(arg.substr(startPos, endPos - startPos + 2));
+                            //listData = stringToList(listString);
+                            replacement = stringToList(listString)[listIndex];
+                            arg.replace(startPos, endPos - startPos + 2, replacement);
+                            
+                            if (arg == lastArg) {
+                                commandSuccess = false;
+                                break;
+                            }
+                            // Release the memory held by listData
+                            //listData.clear();
+                        } else {
+                            break;
+                        }
+                        lastArg = arg;
+                    }
+                    while ((!jsonString.empty() && (arg.find("{json(") != std::string::npos))) {
+                        //std::string countStr = entry;
+                        //arg = replacePlaceholder(arg, "*", entry);
+                        size_t startPos = arg.find("{json(");
+                        size_t endPos = arg.find(")}");
+                        if (endPos != std::string::npos && endPos > startPos) {
+                            //jsonData1 = stringToJson(jsonString);
+                            replacement = replaceJsonPlaceholder(arg.substr(startPos, endPos - startPos + 2), "json", jsonString);
+                            arg.replace(startPos, endPos - startPos + 2, replacement);
+                            
+                            if (arg == lastArg) {
+                                commandSuccess = false;
+                                break;
+                            }
+                            //// Free jsonData1
+                            //if (jsonData1 != nullptr) {
+                            //    json_decref(jsonData1);
+                            //    jsonData1 = nullptr;
+                            //}
+                        } else {
+                            break;
+                        }
+                        lastArg = arg;
+                    }
+                    while ((!jsonPath.empty() && (arg.find("{json_file(") != std::string::npos))) {
+                        //std::string countStr = entry;
+                        //arg = replacePlaceholder(arg, "*", entry);
+                        size_t startPos = arg.find("{json_file(");
+                        size_t endPos = arg.find(")}");
+                        if (endPos != std::string::npos && endPos > startPos) {
+                            replacement = replaceJsonPlaceholder(arg.substr(startPos, endPos - startPos + 2), "json_file", jsonPath);
+                            
+                            //jsonData2 = json_load_file(jsonPath.c_str(), 0, &error);
+                            //replacement = replaceJsonPlaceholderF2(arg.substr(startPos, endPos - startPos + 2), "json_file", jsonData2);
+                            //logMessage("Mid source replacement: " + replacement);
+                            arg.replace(startPos, endPos - startPos + 2, replacement);
+                            
+                            if (arg == lastArg) {
+                                commandSuccess = false;
+                                break;
+                            }
+                            //// Free jsonData2
+                            //if (jsonData2 != nullptr) {
+                            //    json_decref(jsonData2);
+                            //    jsonData2 = nullptr;
+                            //}
+                        } else {
+                            break;
+                        }
+                        lastArg = arg;
                     }
                 }
-            } else if (commandName == "reboot") { // credits to Studious Pancake for the Payload and utils methods
-                std::string rebootOption;
-                int rebootIndex = 0;
+                command = modifiedCmd; // update command
                 
-                
-                if (util::IsErista() || util::SupportsMarikoRebootToConfig()) {
+                // Variable replacement definitions
+                if (commandName == "list") {
+                    listString = removeQuotes(command[1]);
+                    //listData = stringToList(listString);
+                } else if (commandName == "json") {
+                    jsonString = command[1];
+                    //jsonData1 = stringToJson(jsonString);
+                } else if (commandName == "json_file") {
+                    jsonPath = preprocessPath(command[1]);
+                    //jsonData2 = json_load_file(jsonPath.c_str(), 0, &error);
+                } else if (commandName == "ini_file") {
+                    iniPath = preprocessPath(command[1]);
+                } else if (commandName == "hex_file") {
+                    hexPath = preprocessPath(command[1]);
+                    // Open the file for reading in binary mode
+                    //FILE* hexFile = fopen(hexPath.c_str(), "rb");
+                    //if (!hexFile) {
+                    //    logMessage("Failed to open the file.");
+                    //}
+                //} else if (commandName == "close_hex_file") {
+                //    fclose(hexFile);
+                // Perform actions based on the command name
+                } else if (commandName == "make" || commandName == "mkdir") {
+                    // Delete command
                     if (command.size() >= 2) {
-                        rebootOption = removeQuotes(command[1]);
+                        sourcePath = preprocessPath(command[1]);
+                        createDirectory(sourcePath);
+                    }
+                    
+                } else if (commandName == "copy" || commandName == "cp") {
+                    // Copy command
+                    if (command.size() >= 3) {
+                        sourcePath = preprocessPath(command[1]);
+                        destinationPath = preprocessPath(command[2]);
                         
+                        if (sourcePath.find('*') != std::string::npos) {
+                            // Delete files or directories by pattern
+                            copyFileOrDirectoryByPattern(sourcePath, destinationPath);
+                        } else {
+                            copyFileOrDirectory(sourcePath, destinationPath);
+                        }
                         
-                        if (command.size() >= 3) {
-                            
-                            if (rebootOption == "boot") {
-                                std::string option = removeQuotes(command[2]);
-                                Payload::HekateConfigList bootConfigList = Payload::LoadHekateConfigList();
-                                auto bootConfigIterator = bootConfigList.begin();  // Define the iterator here
-                                if (std::all_of(option.begin(), option.end(), ::isdigit)) {
-                                    rebootIndex = std::stoi(option);
-                                    
-                                    std::advance(bootConfigIterator, rebootIndex);
-                                    Payload::RebootToHekateConfig(*bootConfigIterator, false);
+                    }
+                //} else if (commandName == "mirror_copy" || commandName == "mirror_cp") {
+                //    // Copy command
+                //    if (command.size() >= 2) {
+                //        sourcePath = preprocessPath(command[1]);
+                //        if (command.size() >= 3) {
+                //            destinationPath = preprocessPath(command[2]);
+                //            mirrorCopyFiles(sourcePath, destinationPath);
+                //        } else {
+                //            mirrorCopyFiles(sourcePath);
+                //        }
+                //    }
+                } else if (commandName == "delete" || commandName == "del") {
+                    // Delete command
+                    if (command.size() >= 2) {
+                        sourcePath = preprocessPath(command[1]);
+                        if (!isDangerousCombination(sourcePath)) {
+                            if (sourcePath.find('*') != std::string::npos) {
+                                // Delete files or directories by pattern
+                                deleteFileOrDirectoryByPattern(sourcePath);
+                            } else {
+                                deleteFileOrDirectory(sourcePath);
+                            }
+                        }
+                    }
+                //} else if (commandName == "mirror_delete" || commandName == "mirror_del") {
+                //    if (command.size() >= 2) {
+                //        sourcePath = preprocessPath(command[1]);
+                //        if (command.size() >= 3) {
+                //            destinationPath = preprocessPath(command[2]);
+                //            mirrorDeleteFiles(sourcePath, destinationPath);
+                //        } else {
+                //            mirrorDeleteFiles(sourcePath);
+                //        }
+                //    }
+                } else if (commandName == "rename" || commandName == "move" || commandName == "mv") {
+                    // Rename command
+                    if (command.size() >= 3) {
+                        sourcePath = preprocessPath(command[1]);
+                        destinationPath = preprocessPath(command[2]);
+                        //logMessage("sourcePath: "+sourcePath);
+                        //logMessage("destinationPath: "+destinationPath);
+                        if (!isDangerousCombination(sourcePath)) {
+                            if (sourcePath.find('*') != std::string::npos) {
+                                // Move files by pattern
+                                moveFilesOrDirectoriesByPattern(sourcePath, destinationPath);
+                            } else {
+                                // Move single file or directory
+                                moveFileOrDirectory(sourcePath, destinationPath);
+                            }
+                        } else {
+                            //logMessage( "Dangerous combo.");
+                        }
+                    } else {
+                        //logMessage( "Invalid move command.");
+                        //std::cout << "Invalid move command. Usage: move <source_path> <destination_path>" << std::endl;
+                    }
+                } else if (commandName == "add-ini-section") {
+                    // Edit command
+                    if (command.size() >= 2) {
+                        sourcePath = preprocessPath(command[1]);
+                        desiredSection = removeQuotes(command[2]);
+                        
+                        addIniSection(sourcePath.c_str(), desiredSection.c_str());
+                    }
+                } else if (commandName == "rename-ini-section") {
+                    // Edit command
+                    if (command.size() >= 3) {
+                        sourcePath = preprocessPath(command[1]);
+                        desiredSection = removeQuotes(command[2]);
+                        desiredNewSection = removeQuotes(command[3]);
+                        
+                        renameIniSection(sourcePath.c_str(), desiredSection.c_str(), desiredNewSection.c_str());
+                    }
+                } else if (commandName == "remove-ini-section") {
+                    // Edit command
+                    if (command.size() >= 2) {
+                        sourcePath = preprocessPath(command[1]);
+                        desiredSection = removeQuotes(command[2]);
+                        
+                        removeIniSection(sourcePath.c_str(), desiredSection.c_str());
+                    }
+                } else if (commandName == "set-ini-val" || commandName == "set-ini-value") {
+                    // Edit command
+                    if (command.size() >= 5) {
+                        sourcePath = preprocessPath(command[1]);
+                        desiredSection = removeQuotes(command[2]);
+                        desiredKey = removeQuotes(command[3]);
+                        desiredValue = "";
+                        for (size_t i = 4; i < command.size(); ++i) {
+                            desiredValue += command[i];
+                            if (i < command.size() - 1) {
+                                desiredValue += " ";
+                            }
+                        }
+                        setIniFileValue(sourcePath.c_str(), desiredSection.c_str(), desiredKey.c_str(), desiredValue.c_str());
+                    }
+                } else if (commandName == "set-ini-key") {
+                    // Edit command
+                    if (command.size() >= 5) {
+                        sourcePath = preprocessPath(command[1]);
+                        desiredSection = removeQuotes(command[2]);
+                        desiredKey = removeQuotes(command[3]);
+                        for (size_t i = 4; i < command.size(); ++i) {
+                            desiredNewKey += command[i];
+                            if (i < command.size() - 1) {
+                                desiredNewKey += " ";
+                            }
+                        }
+                        
+                        setIniFileKey(sourcePath.c_str(), desiredSection.c_str(), desiredKey.c_str(), desiredNewKey.c_str());
+                    }
+                } else if (commandName == "set-footer") {
+                    // Edit command
+                    if (command.size() >= 2) {
+                        desiredValue = removeQuotes(command[1]);
+                        //logMessage("path:" +(packagePath+configFileName));
+                        //logMessage("selectedCommand:" +selectedCommand);
+                        //logMessage("desiredValue:" +desiredValue);
+                        setIniFileValue((packagePath+configFileName).c_str(), selectedCommand.c_str(), "footer", desiredValue.c_str());
+                    }
+                } else if (commandName == "hex-by-offset") {
+                    // Edit command
+                    if (command.size() >= 4) {
+                        sourcePath = preprocessPath(command[1]);
+                        offset = removeQuotes(command[2]);
+                        hexDataReplacement = removeQuotes(command[3]);
+                        hexEditByOffset(sourcePath.c_str(), offset.c_str(), hexDataReplacement.c_str());
+                    }
+                } else if (commandName == "hex-by-custom-offset") {
+                    // Edit command
+                    if (command.size() >= 5) {
+                        sourcePath = preprocessPath(command[1]);
+                        customPattern = removeQuotes(command[2]);
+                        offset = removeQuotes(command[3]);
+                        hexDataReplacement = removeQuotes(command[4]);
+                        hexEditByCustomOffset(sourcePath.c_str(), customPattern.c_str(), offset.c_str(), hexDataReplacement.c_str());
+                    }
+                } else if (commandName == "hex-by-decimal-custom-offset") {
+                    // Edit command - Hex data replacement with offset (decimal)
+                    if (command.size() >= 5) {
+                        sourcePath = preprocessPath(command[1]);
+                        customPattern = removeQuotes(command[2]);
+                        offset = removeQuotes(command[3]);
+                        hexDataReplacement = decimalToHex(removeQuotes(command[4]));
+                        hexEditByCustomOffset(sourcePath.c_str(), customPattern.c_str(), offset.c_str(), hexDataReplacement.c_str());
+                    }
+                } else if (commandName == "hex-by-rdecimal-custom-offset") {
+                    // Edit command - Hex data replacement with offset (rdecimal)
+                    if (command.size() >= 5) {
+                        sourcePath = preprocessPath(command[1]);
+                        customPattern = removeQuotes(command[2]);
+                        offset = removeQuotes(command[3]);
+                        hexDataReplacement = decimalToReversedHex(removeQuotes(command[4]));
+                        hexEditByCustomOffset(sourcePath.c_str(), customPattern.c_str(), offset.c_str(), hexDataReplacement.c_str());
+                    }
+                } else if (commandName == "hex-by-swap") {
+                    // Edit command - Hex data replacement with occurrence
+                    if (command.size() >= 4) {
+                        sourcePath = preprocessPath(command[1]);
+                        hexDataToReplace = removeQuotes(command[2]);
+                        hexDataReplacement = removeQuotes(command[3]);
+                        if (command.size() >= 5) {
+                            occurrence = std::stoul(removeQuotes(command[4]));
+                            hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, occurrence);
+                        } else {
+                            hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
+                        }
+                    }
+                } else if (commandName == "hex-by-string") {
+                    // Edit command - Hex data replacement with occurrence
+                    if (command.size() >= 4) {
+                        sourcePath = preprocessPath(command[1]);
+                        hexDataToReplace = asciiToHex(removeQuotes(command[2]));
+                        hexDataReplacement = asciiToHex(removeQuotes(command[3]));
+                        //logMessage("hexDataToReplace: "+hexDataToReplace);
+                        //logMessage("hexDataReplacement: "+hexDataReplacement);
+                        
+                        // Fix miss-matched string sizes
+                        if (hexDataReplacement.length() < hexDataToReplace.length()) {
+                            // Pad with spaces at the end
+                            hexDataReplacement += std::string(hexDataToReplace.length() - hexDataReplacement.length(), '\0');
+                        } else if (hexDataReplacement.length() > hexDataToReplace.length()) {
+                            // Add spaces to hexDataToReplace at the far right end
+                            hexDataToReplace += std::string(hexDataReplacement.length() - hexDataToReplace.length(), '\0');
+                        }
+                        
+                        if (command.size() >= 5) {
+                            occurrence = std::stoul(removeQuotes(command[4]));
+                            hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, occurrence);
+                        } else {
+                            hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
+                        }
+                    }
+                } else if (commandName == "hex-by-decimal") {
+                    // Edit command - Hex data replacement with occurrence
+                    if (command.size() >= 4) {
+                        sourcePath = preprocessPath(command[1]);
+                        hexDataToReplace = decimalToHex(removeQuotes(command[2]));
+                        hexDataReplacement = decimalToHex(removeQuotes(command[3]));
+                        //logMessage("hexDataToReplace: "+hexDataToReplace);
+                        //logMessage("hexDataReplacement: "+hexDataReplacement);
+                        if (command.size() >= 5) {
+                            occurrence = std::stoul(removeQuotes(command[4]));
+                            hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, occurrence);
+                        } else {
+                            hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
+                        }
+                    }
+                } else if (commandName == "hex-by-rdecimal") {
+                    // Edit command - Hex data replacement with occurrence
+                    if (command.size() >= 4) {
+                        sourcePath = preprocessPath(command[1]);
+                        hexDataToReplace = decimalToReversedHex(removeQuotes(command[2]));
+                        hexDataReplacement = decimalToReversedHex(removeQuotes(command[3]));
+                        //logMessage("hexDataToReplace: "+hexDataToReplace);
+                        //logMessage("hexDataReplacement: "+hexDataReplacement);
+                        if (command.size() >= 5) {
+                            occurrence = std::stoul(removeQuotes(command[4]));
+                            hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, occurrence);
+                        } else {
+                            hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
+                        }
+                    }
+                } else if (commandName == "download") {
+                    // Edit command - Hex data replacement with occurrence
+                    if (command.size() >= 3) {
+                        fileUrl = preprocessUrl(command[1]);
+                        destinationPath = preprocessPath(command[2]);
+                        commandSuccess = downloadFile(fileUrl, destinationPath) && commandSuccess;
+                    }
+                } else if (commandName == "unzip") {
+                    // Edit command - Hex data replacement with occurrence
+                    if (command.size() >= 3) {
+                        sourcePath = preprocessPath(command[1]);
+                        destinationPath = preprocessPath(command[2]);
+                        commandSuccess = unzipFile(sourcePath, destinationPath) && commandSuccess;
+                    }
+                } else if (commandName == "exec") {
+                    // Edit command
+                    if (command.size() >= 2) {
+                        bootCommandName = removeQuotes(command[1]);
+                        if (isFileOrDirectory(packagePath+bootPackageFileName)) {
+                            std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> bootOptions = loadOptionsFromIni(packagePath+bootPackageFileName, true);
+                            for (const auto& bootOption:bootOptions) {
+                                std::string bootOptionName = bootOption.first;
+                                auto bootCommands = bootOption.second;
+                                if (bootOptionName == bootCommandName) {
+                                    bool resetCommandSuccess = false;
+                                    if (!commandSuccess)
+                                        resetCommandSuccess = true;
+                                    interpretAndExecuteCommand(bootCommands, packagePath+bootPackageFileName, bootOptionName); // Execute modified 
+                                    if (resetCommandSuccess) {
+                                        commandSuccess = false;
+                                        resetCommandSuccess = false;
+                                    }
+                                    bootCommands.clear();
+                                    break;
+                                }
+                                bootCommands.clear();
+                            }
+                            if (bootOptions.size() > 0) {
+                                auto bootOption = bootOptions[0];
                                 
-                                } else { 
-                                    std::string entryName = option;
-                                    int rebootIndex = -1;  // Initialize rebootIndex to -1, indicating no match found
+                            }
+                            // Unload bootOptions by clearing it
+                            bootOptions.clear();
+                        }
+                    }
+                } else if (commandName == "reboot") { // credits to Studious Pancake for the Payload and utils methods
+                    std::string rebootOption;
+                    int rebootIndex = 0;
+                    
+                    
+                    if (util::IsErista() || util::SupportsMarikoRebootToConfig()) {
+                        if (command.size() >= 2) {
+                            rebootOption = removeQuotes(command[1]);
+                            
+                            
+                            if (command.size() >= 3) {
+                                
+                                if (rebootOption == "boot") {
+                                    std::string option = removeQuotes(command[2]);
+                                    Payload::HekateConfigList bootConfigList = Payload::LoadHekateConfigList();
+                                    auto bootConfigIterator = bootConfigList.begin();  // Define the iterator here
+                                    if (std::all_of(option.begin(), option.end(), ::isdigit)) {
+                                        rebootIndex = std::stoi(option);
+                                        
+                                        std::advance(bootConfigIterator, rebootIndex);
+                                        Payload::RebootToHekateConfig(*bootConfigIterator, false);
                                     
-                                    for (auto it = bootConfigList.begin(); it != bootConfigList.end(); ++it) {
-                                        if (it->name == entryName) {
-                                            // Match found, store the index and break the loop
-                                            rebootIndex = std::distance(bootConfigList.begin(), it);
-                                            bootConfigIterator = it;  // Update the iterator to the matching element
-                                            break;
+                                    } else { 
+                                        std::string entryName = option;
+                                        int rebootIndex = -1;  // Initialize rebootIndex to -1, indicating no match found
+                                        
+                                        for (auto it = bootConfigList.begin(); it != bootConfigList.end(); ++it) {
+                                            if (it->name == entryName) {
+                                                // Match found, store the index and break the loop
+                                                rebootIndex = std::distance(bootConfigList.begin(), it);
+                                                bootConfigIterator = it;  // Update the iterator to the matching element
+                                                break;
+                                            }
+                                        }
+                                        
+                                        if (rebootIndex != -1) {
+                                            Payload::RebootToHekateConfig(*bootConfigIterator, false);
                                         }
                                     }
                                     
-                                    if (rebootIndex != -1) {
-                                        Payload::RebootToHekateConfig(*bootConfigIterator, false);
+                                } else if (rebootOption == "ini") {
+                                    std::string option = removeQuotes(command[2]);
+                                    Payload::HekateConfigList iniConfigList = Payload::LoadIniConfigList();
+                                    auto iniConfigIterator = iniConfigList.begin();
+                                    if (std::all_of(option.begin(), option.end(), ::isdigit)) {
+                                        rebootIndex = std::stoi(option);
+                                        
+                                        std::advance(iniConfigIterator, rebootIndex);
+                                        Payload::RebootToHekateConfig(*iniConfigIterator, true);
+                                    
+                                    } else { 
+                                        std::string entryName = option;
+                                        int rebootIndex = -1;  // Initialize rebootIndex to -1, indicating no match found
+                                        
+                                        for (auto it = iniConfigList.begin(); it != iniConfigList.end(); ++it) {
+                                            if (it->name == entryName) {
+                                                // Match found, store the index and break the loop
+                                                rebootIndex = std::distance(iniConfigList.begin(), it);
+                                                iniConfigIterator = it;  // Update the iterator to the matching element
+                                                break;
+                                            }
+                                        }
+                                        
+                                        if (rebootIndex != -1) {
+                                            Payload::RebootToHekateConfig(*iniConfigIterator, true);
+                                        }
                                     }
                                 }
-                                
-                            } else if (rebootOption == "ini") {
-                                std::string option = removeQuotes(command[2]);
-                                Payload::HekateConfigList iniConfigList = Payload::LoadIniConfigList();
-                                auto iniConfigIterator = iniConfigList.begin();
-                                if (std::all_of(option.begin(), option.end(), ::isdigit)) {
-                                    rebootIndex = std::stoi(option);
+                            }
+                            
+                            if (rebootOption == "UMS")
+                                Payload::RebootToHekateUMS(Payload::UmsTarget_Sd);
+                            else if (rebootOption == "HEKATE" || rebootOption == "hekate")
+                                Payload::RebootToHekateMenu();
+                            else if (isFileOrDirectory(rebootOption)) {
+                                std::string fileName = getNameFromPath(rebootOption);
+                                if (util::IsErista()) {
+                                    Payload::PayloadConfig reboot_payload = {fileName, rebootOption};
+                                    Payload::RebootToPayload(reboot_payload);
+                                } else {
+                                    setIniFileValue("/bootloader/ini/" + fileName + ".ini", fileName, "payload", rebootOption); // generate entry
+                                    Payload::HekateConfigList iniConfigList = Payload::LoadIniConfigList();
                                     
-                                    std::advance(iniConfigIterator, rebootIndex);
-                                    Payload::RebootToHekateConfig(*iniConfigIterator, true);
-                                
-                                } else { 
-                                    std::string entryName = option;
                                     int rebootIndex = -1;  // Initialize rebootIndex to -1, indicating no match found
+                                    auto iniConfigIterator = iniConfigList.begin();  // Define the iterator here
                                     
                                     for (auto it = iniConfigList.begin(); it != iniConfigList.end(); ++it) {
-                                        if (it->name == entryName) {
+                                        if (it->name == fileName) {
                                             // Match found, store the index and break the loop
                                             rebootIndex = std::distance(iniConfigList.begin(), it);
                                             iniConfigIterator = it;  // Update the iterator to the matching element
@@ -1524,95 +1592,63 @@ std::tuple<bool, bool> interpretAndExecuteCommand(const std::vector<std::vector<
                                     }
                                     
                                     if (rebootIndex != -1) {
+                                        // A matching entry was found in the iniConfigList
+                                        //deleteFileOrDirectory("/bootloader/ini/" + fileName + ".ini");
                                         Payload::RebootToHekateConfig(*iniConfigIterator, true);
                                     }
                                 }
                             }
                         }
                         
-                        if (rebootOption == "UMS" || rebootOption == "ums")
-                            Payload::RebootToHekateUMS(Payload::UmsTarget_Sd);
-                        else if (rebootOption == "HEKATE" || rebootOption == "hekate")
-                            Payload::RebootToHekateMenu();
-                        else if (isFileOrDirectory(rebootOption)) {
-                            std::string fileName = getNameFromPath(rebootOption);
-                            if (util::IsErista()) {
-                                Payload::PayloadConfig reboot_payload = {fileName, rebootOption};
-                                Payload::RebootToPayload(reboot_payload);
-                            } else {
-                                setIniFileValue("/bootloader/ini/" + fileName + ".ini", fileName, "payload", rebootOption); // generate entry
-                                Payload::HekateConfigList iniConfigList = Payload::LoadIniConfigList();
-                                
-                                int rebootIndex = -1;  // Initialize rebootIndex to -1, indicating no match found
-                                auto iniConfigIterator = iniConfigList.begin();  // Define the iterator here
-                                
-                                for (auto it = iniConfigList.begin(); it != iniConfigList.end(); ++it) {
-                                    if (it->name == fileName) {
-                                        // Match found, store the index and break the loop
-                                        rebootIndex = std::distance(iniConfigList.begin(), it);
-                                        iniConfigIterator = it;  // Update the iterator to the matching element
-                                        break;
-                                    }
-                                }
-                                
-                                if (rebootIndex != -1) {
-                                    // A matching entry was found in the iniConfigList
-                                    //deleteFileOrDirectory("/bootloader/ini/" + fileName + ".ini");
-                                    Payload::RebootToHekateConfig(*iniConfigIterator, true);
-                                }
-                            }
-                        }
+                        if (rebootOption.empty())
+                            Payload::RebootToHekate();
                     }
                     
-                    if (rebootOption.empty())
-                        Payload::RebootToHekate();
-                }
-                
-                // Fall back reboot command
-                i2cExit();
-                splExit();
-                fsdevUnmountAll();
-                spsmShutdown(SpsmShutdownMode_Reboot);
-                
-                
-            } else if (commandName == "shutdown") {
-                // Reboot command
-                splExit();
-                fsdevUnmountAll();
-                spsmShutdown(SpsmShutdownMode_Normal);
-            } else if (commandName == "backlight") {
-                lblInitialize();
-                LblBacklightSwitchStatus lblstatus = LblBacklightSwitchStatus_Disabled;
-                lblGetBacklightSwitchStatus(&lblstatus);
-                lblstatus ? lblSwitchBacklightOff(0) : lblSwitchBacklightOn(0);
-                lblExit();
-            } else if (commandName == "refresh") {
-                refreshGui = true;
-            } else if (commandName == "logging") {
-                logging = !logging;
-            } else if (commandName == "clear") {
-                if (command.size() >= 2) {
-                    clearOption = removeQuotes(command[1]);
-                    if (clearOption == "log") {
-                        deleteFileOrDirectory(logFilePath);
+                    // Fall back reboot command
+                    i2cExit();
+                    splExit();
+                    fsdevUnmountAll();
+                    spsmShutdown(SpsmShutdownMode_Reboot);
+                    
+                    
+                } else if (commandName == "shutdown") {
+                    // Reboot command
+                    splExit();
+                    fsdevUnmountAll();
+                    spsmShutdown(SpsmShutdownMode_Normal);
+                } else if (commandName == "backlight") {
+                    lblInitialize();
+                    LblBacklightSwitchStatus lblstatus = LblBacklightSwitchStatus_Disabled;
+                    lblGetBacklightSwitchStatus(&lblstatus);
+                    lblstatus ? lblSwitchBacklightOff(0) : lblSwitchBacklightOn(0);
+                    lblExit();
+                } else if (commandName == "refresh") {
+                    refreshGui = true;
+                } else if (commandName == "logging") {
+                    logging = !logging;
+                } else if (commandName == "clear") {
+                    if (command.size() >= 2) {
+                        clearOption = removeQuotes(command[1]);
+                        if (clearOption == "log") {
+                            deleteFileOrDirectory(logFilePath);
+                        }
                     }
                 }
-            }
-            
-            // Log the command using logMessage
-            if (logging) {
-                std::string message = "Executing command: ";
-                for (const std::string& token : command) {
-                    message += token + " ";
-                }
-                //message += "\n";
                 
-                // Assuming logMessage is a function that logs the message
-                // Replace this with the actual code to log the message
-                logMessage(message);
+                // Log the command using logMessage
+                if (logging) {
+                    std::string message = "Executing command: ";
+                    for (const std::string& token : command) {
+                        message += token + " ";
+                    }
+                    //message += "\n";
+                    
+                    // Assuming logMessage is a function that logs the message
+                    // Replace this with the actual code to log the message
+                    logMessage(message);
+                }
             }
         }
-        
     }
-    return std::make_tuple(commandSuccess, refreshGui);
+    //return std::tie(commandSuccess, refreshGui);
 }
