@@ -1056,17 +1056,19 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
         // Try implementation
         if (commandName == "try:") {
             tryCounter++;
-            logMessage("Try #"+std::to_string(tryCounter));
             if (commandSuccess && tryCounter > 1)
                 break;
-            
             commandSuccess = true;
+            logMessage("Try #"+std::to_string(tryCounter));
+            continue;
         } else if (commandName == "erista:" || commandName == "Erista:") {
             inEristaSection = true && usingErista;
             inMarikoSection = false;
+            continue;
         } else if (commandName == "mariko:" || commandName == "Mariko:") {
             inEristaSection = false;
             inMarikoSection = true && usingMariko;
+            continue;
         }
         
         if (inEristaSection || inMarikoSection || !(inEristaSection && inMarikoSection)) {
