@@ -272,47 +272,47 @@ static std::string ON_MAIN_MENU = "on Main Menu";
 static std::string ON_A_COMMAND = "on a command";
 static std::string ON_OVERLAY_PACKAGE = "on overlay/package";
 
-static std::string SUNDAY = "Sunday";
-static std::string MONDAY = "Monday";
-static std::string TUESDAY = "Tuesday";
-static std::string WEDNESDAY = "Wednesday";
-static std::string THURSDAY = "Thursday";
-static std::string FRIDAY = "Friday";
-static std::string SATURDAY = "Saturday";
+static std::string SUNDAY = "Sunday ";
+static std::string MONDAY = "Monday ";
+static std::string TUESDAY = "Tuesday ";
+static std::string WEDNESDAY = "Wednesday ";
+static std::string THURSDAY = "Thursday ";
+static std::string FRIDAY = "Friday ";
+static std::string SATURDAY = "Saturday ";
 
-static std::string JANUARY = "January";
-static std::string FEBRUARY = "February";
-static std::string MARCH = "March";
-static std::string APRIL = "April";
-static std::string MAY = "May";
-static std::string JUNE = "June";
-static std::string JULY = "July";
-static std::string AUGUST = "August";
-static std::string SEPTEMBER = "September";
-static std::string OCTOBER = "October";
-static std::string NOVEMBER = "November";
-static std::string DECEMBER = "December";
+static std::string JANUARY = "January ";
+static std::string FEBRUARY = "February ";
+static std::string MARCH = "March ";
+static std::string APRIL = "April ";
+static std::string MAY = "May ";
+static std::string JUNE = "June ";
+static std::string JULY = "July ";
+static std::string AUGUST = "August ";
+static std::string SEPTEMBER = "September ";
+static std::string OCTOBER = "October ";
+static std::string NOVEMBER = "November ";
+static std::string DECEMBER = "December ";
 
-static std::string SUN = "Sun";
-static std::string MON = "Mon";
-static std::string TUE = "Tue";
-static std::string WED = "Wed";
-static std::string THU = "Thu";
-static std::string FRI = "Fri";
-static std::string SAT = "Sat";
+static std::string SUN = "Sun ";
+static std::string MON = "Mon ";
+static std::string TUE = "Tue ";
+static std::string WED = "Wed ";
+static std::string THU = "Thu ";
+static std::string FRI = "Fri ";
+static std::string SAT = "Sat ";
 
-static std::string JAN = "Jan";
-static std::string FEB = "Feb";
-static std::string MAR = "Mar";
-static std::string APR = "Apr";
-static std::string MAY_ABBR = "May";
-static std::string JUN = "Jun";
-static std::string JUL = "Jul";
-static std::string AUG = "Aug";
-static std::string SEP = "Sep";
-static std::string OCT = "Oct";
-static std::string NOV = "Nov";
-static std::string DEC = "Dec";
+static std::string JAN = "Jan ";
+static std::string FEB = "Feb ";
+static std::string MAR = "Mar ";
+static std::string APR = "Apr ";
+static std::string MAY_ABBR = "May ";
+static std::string JUN = "Jun ";
+static std::string JUL = "Jul ";
+static std::string AUG = "Aug ";
+static std::string SEP = "Sep ";
+static std::string OCT = "Oct ";
+static std::string NOV = "Nov ";
+static std::string DEC = "Dec ";
 
 // Constant string definitions (English)
 void reinitializeLangVars() {
@@ -377,47 +377,47 @@ void reinitializeLangVars() {
     ON_A_COMMAND = "on a command";
     ON_OVERLAY_PACKAGE = "on overlay/package";
     
-    SUNDAY = "Sunday";
-    MONDAY = "Monday";
-    TUESDAY = "Tuesday";
-    WEDNESDAY = "Wednesday";
-    THURSDAY = "Thursday";
-    FRIDAY = "Friday";
-    SATURDAY = "Saturday";
+    SUNDAY = "Sunday ";
+    MONDAY = "Monday ";
+    TUESDAY = "Tuesday ";
+    WEDNESDAY = "Wednesday ";
+    THURSDAY = "Thursday ";
+    FRIDAY = "Friday ";
+    SATURDAY = "Saturday ";
     
-    JANUARY = "January";
-    FEBRUARY = "February";
-    MARCH = "March";
-    APRIL = "April";
-    MAY = "May";
-    JUNE = "June";
-    JULY = "July";
-    AUGUST = "August";
-    SEPTEMBER = "September";
-    OCTOBER = "October";
-    NOVEMBER = "November";
-    DECEMBER = "December";
+    JANUARY = "January ";
+    FEBRUARY = "February ";
+    MARCH = "March ";
+    APRIL = "April ";
+    MAY = "May ";
+    JUNE = "June ";
+    JULY = "July ";
+    AUGUST = "August ";
+    SEPTEMBER = "September ";
+    OCTOBER = "October ";
+    NOVEMBER = "November ";
+    DECEMBER = "December ";
     
-    SUN = "Sun";
-    MON = "Mon";
-    TUE = "Tue";
-    WED = "Wed";
-    THU = "Thu";
-    FRI = "Fri";
-    SAT = "Sat";
+    SUN = "Sun ";
+    MON = "Mon ";
+    TUE = "Tue ";
+    WED = "Wed ";
+    THU = "Thu ";
+    FRI = "Fri ";
+    SAT = "Sat ";
     
-    JAN = "Jan";
-    FEB = "Feb";
-    MAR = "Mar";
-    APR = "Apr";
-    MAY_ABBR = "May";
-    JUN = "Jun";
-    JUL = "Jul";
-    AUG = "Aug";
-    SEP = "Sep";
-    OCT = "Oct";
-    NOV = "Nov";
-    DEC = "Dec";
+    JAN = "Jan ";
+    FEB = "Feb ";
+    MAR = "Mar ";
+    APR = "Apr ";
+    MAY_ABBR = "May ";
+    JUN = "Jun ";
+    JUL = "Jul ";
+    AUG = "Aug ";
+    SEP = "Sep ";
+    OCT = "Oct ";
+    NOV = "Nov ";
+    DEC = "Dec ";
 }
 
 
@@ -595,8 +595,9 @@ void localizeTimeStr(char* timeStr) {
     std::string timeStrCopy = timeStr; // Convert the char array to a string for processing
 
     // Replace abbreviated day names with their all-capital versions
+    size_t pos;
     for (const auto &dayMapping : dayMappings) {
-        size_t pos = timeStrCopy.find(dayMapping.first);
+        pos = timeStrCopy.find(dayMapping.first);
         while (pos != std::string::npos) {
             timeStrCopy.replace(pos, dayMapping.first.length(), dayMapping.second);
             pos = timeStrCopy.find(dayMapping.first, pos + dayMapping.second.length());
@@ -605,7 +606,7 @@ void localizeTimeStr(char* timeStr) {
 
     // Replace abbreviated month names with their all-capital versions
     for (const auto &monthMapping : monthMappings) {
-        size_t pos = timeStrCopy.find(monthMapping.first);
+        pos = timeStrCopy.find(monthMapping.first);
         while (pos != std::string::npos) {
             timeStrCopy.replace(pos, monthMapping.first.length(), monthMapping.second);
             pos = timeStrCopy.find(monthMapping.first, pos + monthMapping.second.length());
@@ -717,7 +718,7 @@ bool isValidHexColor(const std::string& hexColor) {
 static bool powerInitialized = false;
 static bool powerCacheInitialized;
 static uint32_t powerCacheCharge;
-static float powerConsumption;
+//static float powerConsumption;
 static bool powerCacheIsCharging;
 static PsmSession powerSession;
 
@@ -728,7 +729,7 @@ static char chargeString[6];  // Need space for the null terminator and the perc
 
 static uint32_t batteryCharge;
 static bool isCharging;
-static bool validPower;
+//static bool validPower;
 
 bool powerGetDetails(uint32_t *batteryCharge, bool *isCharging) {
     PsmChargerType charger = PsmChargerType_Unconnected;
@@ -1315,8 +1316,8 @@ namespace tsl {
             /**
              * @brief Tesla config file
              */
-            static const char* TESLA_CONFIG_FILE = "/config/tesla/config.ini"; // CUSTOM MODIFICATION
-            static const char* ULTRAHAND_CONFIG_FILE = "/config/ultrahand/config.ini"; // CUSTOM MODIFICATION
+            //static const char* TESLA_CONFIG_FILE = "/config/tesla/config.ini"; // CUSTOM MODIFICATION
+            //static const char* ULTRAHAND_CONFIG_FILE = "/config/ultrahand/config.ini"; // CUSTOM MODIFICATION
 
             /**
              * @brief Parses an INI string
@@ -1324,42 +1325,42 @@ namespace tsl {
              * @param str String to parse
              * @return Parsed data
              */
-            static IniData parseIni(const std::string &str) {
-                IniData iniData;
-               
-                auto lines = split(str, '\n');
-               
-                std::string lastHeader = "";
-                for (auto& line : lines) {
-                    if (line.empty())
-                        continue;
-               
-                    if (line[0] == '[' && line[line.size() - 1] == ']') {
-                        lastHeader = line.substr(1, line.size() - 2);
-                        iniData.emplace(lastHeader, std::map<std::string, std::string>{});
-                    }
-                    else {
-                        auto keyValuePair = split(line, '=');
-                        if (keyValuePair.size() == 2) {
-                            std::string key = trim(keyValuePair[0]);
-                            std::string value = trim(keyValuePair[1]);
-               
-                            // Remove leading spaces before the equal sign, trailing spaces at the end of the line
-                            key.erase(key.begin(), std::find_if(key.begin(), key.end(), [](unsigned char ch) {
-                                return !std::isspace(ch);
-                            }));
-                            key.erase(std::find_if(key.rbegin(), key.rend(), [](unsigned char ch) {
-                                return !std::isspace(ch);
-                            }).base(), key.end());
-               
-                            // No need to remove spaces within the value, so just store it as is
-                            iniData[lastHeader].emplace(key, value);
-                        }
-                    }
-                }
-               
-                return iniData;
-            } // CUSTOM MODIFICATION END
+            //static IniData parseIni(const std::string &str) {
+            //    IniData iniData;
+            //   
+            //    auto lines = split(str, '\n');
+            //   
+            //    std::string lastHeader = "";
+            //    for (auto& line : lines) {
+            //        if (line.empty())
+            //            continue;
+            //   
+            //        if (line[0] == '[' && line[line.size() - 1] == ']') {
+            //            lastHeader = line.substr(1, line.size() - 2);
+            //            iniData.emplace(lastHeader, std::map<std::string, std::string>{});
+            //        }
+            //        else {
+            //            auto keyValuePair = split(line, '=');
+            //            if (keyValuePair.size() == 2) {
+            //                std::string key = trim(keyValuePair[0]);
+            //                std::string value = trim(keyValuePair[1]);
+            //   
+            //                // Remove leading spaces before the equal sign, trailing spaces at the end of the line
+            //                key.erase(key.begin(), std::find_if(key.begin(), key.end(), [](unsigned char ch) {
+            //                    return !std::isspace(ch);
+            //                }));
+            //                key.erase(std::find_if(key.rbegin(), key.rend(), [](unsigned char ch) {
+            //                    return !std::isspace(ch);
+            //                }).base(), key.end());
+            //   
+            //                // No need to remove spaces within the value, so just store it as is
+            //                iniData[lastHeader].emplace(key, value);
+            //            }
+            //        }
+            //    }
+            //   
+            //    return iniData;
+            //} // CUSTOM MODIFICATION END
 
 
             /**
@@ -2731,6 +2732,7 @@ namespace tsl {
             float letterWidth;
             float x, y;
             int fontSize;
+            char timeStr[20]; // Allocate a buffer to store the time string
             
             OverlayFrame(const std::string& title, const std::string& subtitle, const std::string& menuMode = "", const std::string& colorSelection = "", const std::string& pageLeftName = "", const std::string& pageRightName = "")
                 : Element(), m_menuMode(menuMode), m_title(title), m_subtitle(subtitle), m_colorSelection(colorSelection), m_pageLeftName(pageLeftName), m_pageRightName(pageRightName) {} // CUSTOM MODIFICATION
@@ -2839,9 +2841,8 @@ namespace tsl {
                     
                     if (hideClock != "true") {// Use the 'timeStr' to display the time
                         
-                        
                         // Convert the current time to a human-readable string
-                        char timeStr[20]; // Allocate a buffer to store the time string
+                        
                         //strftime(timeStr, sizeof(timeStr), "%r", localtime(&currentTime.tv_sec));
                         strftime(timeStr, sizeof(timeStr), datetimeFormat.c_str(), localtime(&currentTime.tv_sec));
                         
