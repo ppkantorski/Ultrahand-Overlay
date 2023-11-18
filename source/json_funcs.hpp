@@ -12,7 +12,7 @@
  *   of the project's documentation and must remain intact.
  *
  *  Copyright (c) 2023 ppkantorski
- *  All rights reserved.
+ *  Licensed under CC BY-NC-SA 4.0
  ********************************************************************************/
 
 #include <cstdio>
@@ -98,25 +98,25 @@ std::string replaceJsonPlaceholder(const std::string& arg, const std::string& co
 
     std::string replacement = arg;
     std::string searchString = "{" + commandName + "(";
-
     std::size_t startPos = replacement.find(searchString);
-    std::size_t endPos = replacement.find(")}");
-    if (startPos != std::string::npos && endPos != std::string::npos && endPos > startPos) {
+
+    while (startPos != std::string::npos) {
+        std::size_t endPos = replacement.find(")}", startPos);
+        if (endPos == std::string::npos) {
+            break;  // Missing closing brace, exit the loop
+        }
+
         std::string placeholder = replacement.substr(startPos, endPos - startPos + 2);
-        
-        // Extract the keys and indexes from the placeholder
+
+        // Extract keys and indexes from the placeholder
         std::vector<std::string> keysAndIndexes;
         size_t nextPos = startPos + searchString.length();
 
         while (nextPos < endPos) {
             size_t commaPos = replacement.find(',', nextPos);
-            if (commaPos != std::string::npos) {
-                keysAndIndexes.push_back(replacement.substr(nextPos, commaPos - nextPos));
-                nextPos = commaPos + 1;
-            } else {
-                keysAndIndexes.push_back(replacement.substr(nextPos, endPos - nextPos));
-                break;
-            }
+            size_t len = (commaPos != std::string::npos) ? (commaPos - nextPos) : (endPos - nextPos);
+            keysAndIndexes.push_back(replacement.substr(nextPos, len));
+            nextPos += len + 1;
         }
 
         json_t* value = jsonDict;
@@ -138,6 +138,9 @@ std::string replaceJsonPlaceholder(const std::string& arg, const std::string& co
             // Replace the placeholder with the JSON value
             replacement.replace(startPos, endPos - startPos + 2, json_string_value(value));
         }
+
+        // Move to the next placeholder
+        startPos = replacement.find(searchString, endPos);
     }
 
     // Free JSON data
@@ -149,88 +152,3 @@ std::string replaceJsonPlaceholder(const std::string& arg, const std::string& co
 }
 
 
-
-
-
-std::string replaceJsonPlaceholderF(const std::string& arg, const std::string& commandName, const std::string& jsonPathOrString, json_t*& jsonDict) {
-    //json_t* jsonDict = nullptr;
-    json_error_t error;
-    //FILE* hexFile = nullptr;
-    
-    //if (commandName == "json" || commandName == "json_source") {
-    //    jsonDict = stringToJson(jsonPathOrString);
-    //} else if (commandName == "json_file" || commandName == "json_file_source") {
-    //    jsonDict = json_load_file(jsonPathOrString.c_str(), 0, &error);
-    //}
-    
-    //logMessage("arg: "+arg);
-    //logMessage("commandName: "+commandName);
-    
-    std::string replacement = arg;
-    std::string searchString = "{"+commandName+"(";
-    
-    
-    std::size_t startPos = replacement.find(searchString);
-    std::size_t endPos = replacement.find(")}");
-    if (startPos != std::string::npos && endPos != std::string::npos && endPos > startPos) {
-        std::string jsonSourcePathArgs = replacement.substr(startPos + searchString.length(), endPos - startPos - searchString.length());
-        std::vector<std::string> keys;
-        std::string key;
-        std::istringstream keyStream(jsonSourcePathArgs);
-        while (std::getline(keyStream, key, ',')) {
-            keys.push_back(trim(key));
-        }
-        
-        // Traverse the JSON structure based on the keys
-        auto current = jsonDict;
-        for (const auto& key : keys) {
-            if (json_is_object(current)) {
-                current = json_object_get(current, key.c_str());
-            } else if (json_is_array(current)) {
-                if (key == "[]") {
-                    size_t index = 0;
-                    while (json_array_size(current) > index) {
-                        json_t* arrayItem = json_array_get(current, index);
-                        if (json_is_object(arrayItem)) {
-                            current = arrayItem;
-                            break;
-                        }
-                        ++index;
-                    }
-                } else {
-                    size_t index = std::stoul(key);
-                    if (index < json_array_size(current)) {
-                        current = json_array_get(current, index);
-                    } else {
-                        // Handle invalid JSON array index
-                        // printf("Invalid JSON array index: %s\n", key.c_str());
-                        logMessage("Invalid JSON array index: "+key);
-                        //json_decref(jsonDict);
-                        return arg;  // Return the original placeholder if JSON array index is invalid
-                    }
-                }
-            } else {
-                // Handle invalid JSON structure or key
-                // printf("Invalid JSON structure or key: %s\n", key.c_str());
-                logMessage("Invalid JSON structure or key: "+key);
-                //json_decref(jsonDict);
-                return arg;  // Return the original placeholder if JSON structure or key is invalid
-            }
-        }
-        
-        if (json_is_string(current)) {
-            std::string url = json_string_value(current);
-            // Replace the entire placeholder with the URL
-            replacement.replace(startPos, endPos - startPos + searchString.length() + 2, url);
-        }
-    }
-    
-    // Free jsonData1
-    //if (jsonDict != nullptr) {
-    //    json_decref(jsonDict);
-    //    jsonDict = nullptr;
-    //}
-    
-    //json_decref(jsonDict);
-    return replacement;
-}
