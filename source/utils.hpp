@@ -639,6 +639,7 @@ std::string replaceIniPlaceholder(const std::string& arg, const std::string& ini
             // Extract individual components
             std::string iniSection = removeQuotes(components[0]);
             std::string iniKey = removeQuotes(components[1]);
+            components.clear();
             
             // Call the parsing function and replace the placeholder
             std::string parsedResult = parseValueFromIniSection(iniPath, iniSection, iniKey);
@@ -646,7 +647,6 @@ std::string replaceIniPlaceholder(const std::string& arg, const std::string& ini
             // Replace the entire placeholder with the parsed result
             replacement.replace(startPos, endPos - startPos + searchString.length() + 2, parsedResult);
         }
-        components.clear();
     }
     
     return replacement;
@@ -659,6 +659,7 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
     //std::vector<std::string> listData;
     std::string listString;
     std::string jsonPath, jsonString;
+    size_t startPos, endPos;
     
     for (const auto& cmd : commands) {
         std::vector<std::string> modifiedCmd;
@@ -697,8 +698,8 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
             }
             while (modifiedArg.find("{list_source(") != std::string::npos) {
                 modifiedArg = replacePlaceholder(modifiedArg, "*", std::to_string(entryIndex));
-                size_t startPos = modifiedArg.find("{list_source(");
-                size_t endPos = modifiedArg.find(")}");
+                startPos = modifiedArg.find("{list_source(");
+                endPos = modifiedArg.find(")}");
                 if (endPos != std::string::npos && endPos > startPos) {
                     std::string replacement = stringToList(listString)[entryIndex];
                     modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
@@ -709,8 +710,8 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
             }
             while (modifiedArg.find("{json_source(") != std::string::npos) {
                 modifiedArg = replacePlaceholder(modifiedArg, "*", std::to_string(entryIndex));
-                size_t startPos = modifiedArg.find("{json_source(");
-                size_t endPos = modifiedArg.find(")}");
+                startPos = modifiedArg.find("{json_source(");
+                endPos = modifiedArg.find(")}");
                 if (endPos != std::string::npos && endPos > startPos) {
                     std::string replacement = replaceJsonPlaceholder(modifiedArg.substr(startPos, endPos - startPos + 2), "json_source", jsonString);
                     modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
@@ -721,8 +722,8 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
             }
             while (modifiedArg.find("{json_file_source(") != std::string::npos) {
                 modifiedArg = replacePlaceholder(modifiedArg, "*", std::to_string(entryIndex));
-                size_t startPos = modifiedArg.find("{json_file_source(");
-                size_t endPos = modifiedArg.find(")}");
+                startPos = modifiedArg.find("{json_file_source(");
+                endPos = modifiedArg.find(")}");
                 if (endPos != std::string::npos && endPos > startPos) {
                     std::string replacement = replaceJsonPlaceholder(modifiedArg.substr(startPos, endPos - startPos + 2), "json_file_source", jsonPath);
                     modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
@@ -731,10 +732,10 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
                     break;
                 lastArg = modifiedArg;
             }
-
+            
             modifiedCmd.push_back(std::move(modifiedArg)); // Move modified arg to the modified command vector
         }
-
+        
         modifiedCommands.emplace_back(std::move(modifiedCmd)); // Move modified command to the result vector
     }
     return modifiedCommands;
