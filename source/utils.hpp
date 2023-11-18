@@ -760,7 +760,8 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
     bool inEristaSection = false;
     bool inMarikoSection = false;
     
-    std::string bootCommandName, sourcePath, destinationPath, desiredSection, desiredNewSection, desiredKey, desiredNewKey, desiredValue, \
+    std::string bootCommandName, sourcePath, destinationPath, \
+        desiredSection, desiredNewSection, desiredKey, desiredNewKey, desiredValue, \
         offset, customPattern, hexDataToReplace, hexDataReplacement, fileUrl, clearOption;
     
     std::size_t occurrence;
