@@ -251,8 +251,7 @@ void addAppInfo(auto& list, auto& packageHeader, std::string type = "package") {
     constexpr int fontSize = 16;    // Adjust the font size as needed
     int numEntries = 0;   // Adjust the number of entries as needed
     
-    std::string::size_type startPos;
-    std::string::size_type spacePos;
+    std::string::size_type startPos, spacePos;
     
     std::string packageSectionString = "";
     std::string packageInfoString = "";
@@ -448,6 +447,7 @@ bool isDangerousCombination(const std::string& patternPath) {
                         return true; // Pattern path includes a dangerous pattern
                 }
             }
+            pathSegments.clear();
         }
         
         // Check if the patternPath is a combination of a protected folder and a dangerous pattern
@@ -485,6 +485,7 @@ bool isDangerousCombination(const std::string& patternPath) {
                     return true; // Pattern path is a dangerous pattern
             }
         }
+        pathSegments.clear();
     }
     
     // Check if the patternPath includes a wildcard at the root level
@@ -791,7 +792,8 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
             if (commandSuccess && tryCounter > 1)
                 break;
             commandSuccess = true;
-            logMessage("Try #"+std::to_string(tryCounter));
+            if (logging)
+                logMessage("Try #"+std::to_string(tryCounter));
             continue;
         } else if (commandName == "erista:" || commandName == "Erista:") {
             inEristaSection = true && usingErista;
@@ -1012,7 +1014,7 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                         sourcePath = preprocessPath(modifiedCmd[1]);
                         const std::string& secondArg = removeQuotes(modifiedCmd[2]);
                         const std::string& thirdArg = removeQuotes(modifiedCmd[3]);
-
+                        
                         if (commandName == "hex-by-offset") {
                             hexEditByOffset(sourcePath.c_str(), secondArg.c_str(), thirdArg.c_str());
                         } else if (commandName == "hex-by-swap") {
@@ -1025,14 +1027,14 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                         } else if (commandName == "hex-by-string") {
                             hexDataToReplace = asciiToHex(secondArg);
                             hexDataReplacement = asciiToHex(thirdArg);
-
+                            
                             // Fix miss-matched string sizes
                             if (hexDataReplacement.length() < hexDataToReplace.length()) {
                                 hexDataReplacement += std::string(hexDataToReplace.length() - hexDataReplacement.length(), '\0');
                             } else if (hexDataReplacement.length() > hexDataToReplace.length()) {
                                 hexDataToReplace += std::string(hexDataReplacement.length() - hexDataToReplace.length(), '\0');
                             }
-
+                            
                             if (cmdSize >= 5) {
                                 occurrence = std::stoul(removeQuotes(modifiedCmd[4]));
                                 hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, occurrence);
@@ -1042,7 +1044,7 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                         } else if (commandName == "hex-by-decimal") {
                             hexDataToReplace = decimalToHex(secondArg);
                             hexDataReplacement = decimalToHex(thirdArg);
-
+                            
                             if (cmdSize >= 5) {
                                 occurrence = std::stoul(removeQuotes(modifiedCmd[4]));
                                 hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, occurrence);
@@ -1052,7 +1054,7 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                         } else if (commandName == "hex-by-rdecimal") {
                             hexDataToReplace = decimalToReversedHex(secondArg);
                             hexDataReplacement = decimalToReversedHex(thirdArg);
-
+                            
                             if (cmdSize >= 5) {
                                 occurrence = std::stoul(removeQuotes(modifiedCmd[4]));
                                 hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, occurrence);
@@ -1066,13 +1068,13 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                                 customPattern = removeQuotes(modifiedCmd[2]);
                                 offset = removeQuotes(modifiedCmd[3]);
                                 hexDataReplacement = removeQuotes(modifiedCmd[4]);
-
+                                
                                 if (commandName == "hex-by-custom-offset-decimal") {
                                     hexDataReplacement = decimalToHex(hexDataReplacement);
                                 } else if (commandName == "hex-by-custom-offset-rdecimal") {
                                     hexDataReplacement = decimalToReversedHex(hexDataReplacement);
                                 }
-
+                                
                                 hexEditByCustomOffset(sourcePath.c_str(), customPattern.c_str(), offset.c_str(), hexDataReplacement.c_str());
                             }
                         }
