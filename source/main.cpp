@@ -74,7 +74,6 @@ static bool reloadMenu3 = false;
 static bool isDownloaded = false;
 
 static bool redrawWidget = false;
-static bool showMenu = false;
 
 static tsl::elm::OverlayFrame *rootFrame = nullptr;
 static tsl::elm::List *list = nullptr;
@@ -622,7 +621,7 @@ public:
             
             auto toggleListItem = new tsl::elm::ToggleListItem(USER_GUIDE, false, ON, OFF);
             toggleListItem->setState((hideUserGuide == "false"));
-            toggleListItem->setStateChangedListener([this, hideUserGuide, toggleListItem](bool state) {
+            toggleListItem->setStateChangedListener([this, toggleListItem](bool state) {
                 setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_user_guide", state ? "false" : "true");
                 if ((hideUserGuide == "false") != state)
                     reloadMenu = true;
@@ -651,7 +650,7 @@ public:
                
             toggleListItem = new tsl::elm::ToggleListItem(CLEAN_LABELS, false, ON, OFF);
             toggleListItem->setState((cleanVersionLabels == "true"));
-            toggleListItem->setStateChangedListener([this, cleanVersionLabels, toggleListItem](bool state) {
+            toggleListItem->setStateChangedListener([this, toggleListItem](bool state) {
                 setIniFileValue(settingsConfigIniPath, "ultrahand", "clean_version_labels", state ? "true" : "false");
                 if ((cleanVersionLabels == "true") != state) {
                     if (cleanVersionLabels == "false")
@@ -669,7 +668,7 @@ public:
             
             toggleListItem = new tsl::elm::ToggleListItem(OVERLAY_LABELS, false, ON, OFF);
             toggleListItem->setState((hideOverlayVersions == "false"));
-            toggleListItem->setStateChangedListener([this, hideOverlayVersions, toggleListItem](bool state) {
+            toggleListItem->setStateChangedListener([this, toggleListItem](bool state) {
                 setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_overlay_versions", state ? "false" : "true");
                 if ((hideOverlayVersions == "false") != state)
                     reloadMenu = true;
@@ -678,7 +677,7 @@ public:
             
             toggleListItem = new tsl::elm::ToggleListItem(PACKAGE_LABELS, false, ON, OFF);
             toggleListItem->setState((hidePackageVersions == "false"));
-            toggleListItem->setStateChangedListener([this, hidePackageVersions, toggleListItem](bool state) {
+            toggleListItem->setStateChangedListener([this, toggleListItem](bool state) {
                 setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_package_versions", state ? "false" : "true");
                 if ((hidePackageVersions == "false") != state)
                     reloadMenu = true;
@@ -1553,8 +1552,6 @@ public:
                                 lastSelectedListItem->setValue(footer, true);
                             }
                             std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, selectedItem, i); // replace source
-                            //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
-                            
                             interpretAndExecuteCommand(modifiedCmds, filePath, specificKey); // Execute modified 
                             modifiedCmds.clear();
                             
@@ -1580,7 +1577,6 @@ public:
                             }
                             
                             std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, selectedItem, i); // replace source
-                            //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
                             interpretAndExecuteCommand(modifiedCmds, filePath, specificKey); // Execute modified 
                             modifiedCmds.clear();
                             
@@ -1771,18 +1767,21 @@ public:
         std::string jsonPath, jsonPathOn, jsonPathOff;
         std::string jsonKey, jsonKeyOn, jsonKeyOff;
         
-        std::vector<std::vector<std::string>> commandsOn;
-        std::vector<std::vector<std::string>> commandsOff;
+        std::string optionName;
+        std::vector<std::vector<std::string>> commands, commandsOn, commandsOff;
         std::vector<std::string> listData, listDataOn, listDataOff;
+        
+        std::string footer;
+        bool useSelection;
         
         for (size_t i = 0; i < options.size(); ++i) {
             auto& option = options[i];
             
-            std::string optionName = option.first;
-            auto commands = option.second;
+            optionName = option.first;
+            commands = option.second;
             
-            std::string footer; 
-            bool useSelection = false;
+            footer = "";
+            useSelection = false;
             
             commandFooter = "null";
             commandMode = "default";
