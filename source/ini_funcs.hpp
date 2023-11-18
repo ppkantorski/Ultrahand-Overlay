@@ -30,7 +30,7 @@
 #include <path_funcs.hpp>
 
 
-constexpr size_t BufferSize = 131072/4;
+constexpr size_t BufferSize = 131072;
 
 /**
  * @brief Represents a package header structure.
@@ -872,3 +872,5 @@ void removeIniSection(const std::string& filePath, const std::string& sectionNam
         // Failed to rename the temp file, handle the error accordingly
     }
 }
+
+
