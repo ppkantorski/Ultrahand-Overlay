@@ -372,19 +372,7 @@ void addAppInfo(auto& list, auto& packageHeader, std::string type = "package") {
  * safety conditions and ensure that certain operations are not performed on sensitive
  * directories.
  */
-const std::vector<std::string> protectedFolders = {
-    "sdmc:/Nintendo/",
-    "sdmc:/emuMMC/",
-    "sdmc:/atmosphere/",
-    "sdmc:/bootloader/",
-    "sdmc:/switch/",
-    "sdmc:/config/",
-    "sdmc:/"
-};
-const std::vector<std::string> ultraProtectedFolders = {
-    "sdmc:/Nintendo/",
-    "sdmc:/emuMMC/"
-};
+
 
 /**
  * @brief Check if a path contains dangerous combinations.
@@ -395,6 +383,20 @@ const std::vector<std::string> ultraProtectedFolders = {
  * @return True if the path contains dangerous combinations, otherwise false.
  */
 bool isDangerousCombination(const std::string& patternPath) {
+    const std::vector<std::string> protectedFolders = {
+        "sdmc:/Nintendo/",
+        "sdmc:/emuMMC/",
+        "sdmc:/atmosphere/",
+        "sdmc:/bootloader/",
+        "sdmc:/switch/",
+        "sdmc:/config/",
+        "sdmc:/"
+    };
+    const std::vector<std::string> ultraProtectedFolders = {
+        "sdmc:/Nintendo/",
+        "sdmc:/emuMMC/"
+    };
+    
     // List of obviously dangerous patterns
     const std::vector<std::string> dangerousCombinationPatterns = {
         "*",         // Deletes all files/directories in the current directory
@@ -534,7 +536,7 @@ std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadO
         configFile = fopen(configIniPath.c_str(), "r");
     }
     
-    constexpr size_t BufferSize = 131072; // Choose a larger buffer size for reading lines
+    //constexpr size_t BufferSize = 131072; // Choose a larger buffer size for reading lines
     char line[BufferSize];
     std::string currentOption;
     std::vector<std::vector<std::string>> commands;
