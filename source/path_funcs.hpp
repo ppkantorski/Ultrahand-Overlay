@@ -150,26 +150,7 @@ void deleteFileOrDirectoryByPattern(const std::string& pathPattern) {
     }
 }
 
-/**
- * @brief Mirrors the deletion of files from a source directory to a target directory.
- *
- * This function mirrors the deletion of files from a `sourcePath` directory to a `targetPath` directory.
- * It deletes corresponding files in the `targetPath` that match the source directory structure.
- *
- * @param sourcePath The path of the source directory.
- * @param targetPath The path of the target directory where files will be mirrored and deleted.
- *                   Default is "sdmc:/". You can specify a different target path if needed.
- */
-//void mirrorDeleteFiles(const std::string& sourcePath, const std::string& targetPath="sdmc:/") {
-//    std::vector<std::string> fileList = getFilesListFromDirectory(sourcePath);
-//    
-//    for (const auto& path : fileList) {
-//        // Generate the corresponding path in the target directory by replacing the source path
-//        std::string updatedPath = targetPath + path.substr(sourcePath.size());
-//        //logMessage("mirror-delete: "+path+" "+updatedPath);
-//        deleteFileOrDirectory(updatedPath);
-//    }
-//}
+
 
 
 /**
@@ -437,6 +418,34 @@ void copyFileOrDirectoryByPattern(const std::string& sourcePathPattern, const st
         if (sourcePath != toDirectory)
             copyFileOrDirectory(sourcePath, toDirectory);
     }
+}
+
+
+/**
+ * @brief Mirrors the deletion of files from a source directory to a target directory.
+ *
+ * This function mirrors the deletion of files from a `sourcePath` directory to a `targetPath` directory.
+ * It deletes corresponding files in the `targetPath` that match the source directory structure.
+ *
+ * @param sourcePath The path of the source directory.
+ * @param targetPath The path of the target directory where files will be mirrored and deleted.
+ *                   Default is "sdmc:/". You can specify a different target path if needed.
+ */
+void mirrorFiles(const std::string& sourcePath, const std::string targetPath, const std::string mode) {
+    std::vector<std::string> fileList = getFilesListFromDirectory(sourcePath);
+    std::string updatedPath;
+    for (const auto& path : fileList) {
+        // Generate the corresponding path in the target directory by replacing the source path
+        updatedPath = targetPath + path.substr(sourcePath.size());
+        //logMessage("mirror-delete: "+path+" "+updatedPath);
+        if (mode == "delete")
+            deleteFileOrDirectory(updatedPath);
+        else if (mode == "copy") {
+            if (path != updatedPath)
+                copyFileOrDirectory(path, updatedPath);
+        }
+    }
+    //fileList.clear();
 }
 
 /**
