@@ -26,7 +26,7 @@
 
 
 // For improving the speed of hexing consecutively with the same file and asciiPattern.
-//static std::unordered_map<std::string, std::string> hexSumCache; // MOVED TO main.cpp
+static std::unordered_map<std::string, std::string> hexSumCache; // MOVED TO main.cpp
 
 /**
  * @brief Converts an ASCII string to a hexadecimal string.
@@ -244,8 +244,9 @@ void hexEditByOffset(const std::string& filePath, const std::string& offsetStr, 
     
     // Convert the hex data string to binary data
     std::vector<unsigned char> binaryData; // Changed to use unsigned char
+    std::string byteString;
     for (std::size_t i = 0; i < hexData.length(); i += 2) {
-        std::string byteString = hexData.substr(i, 2);
+        byteString = hexData.substr(i, 2);
         unsigned char byte = static_cast<unsigned char>(std::stoi(byteString, nullptr, 16)); // Changed to use unsigned char
         binaryData.push_back(byte);
     }
