@@ -197,14 +197,14 @@ void addHelpInfo(auto& list) {
     // Add a section break with small text to indicate the "Commands" section
     list->addItem(new tsl::elm::CategoryHeader(USER_GUIDE));
     
-    constexpr int maxLineLength = 28;  // Adjust the maximum line length as needed
+    //constexpr int maxLineLength = 28;  // Adjust the maximum line length as needed
     constexpr int lineHeight = 20;  // Adjust the line height as needed
     int xOffset = std::stoi(USERGUIDE_OFFSET);    // Adjust the horizontal offset as needed
     constexpr int fontSize = 16;    // Adjust the font size as needed
     int numEntries = 4;   // Adjust the number of entries as needed
     
-    std::string::size_type startPos;
-    std::string::size_type spacePos;
+    //std::string::size_type startPos;
+    //std::string::size_type spacePos;
     
     std::string sectionString = "";
     std::string infoString = "";
