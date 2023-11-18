@@ -61,10 +61,11 @@
 //#include <filesystem> // Comment out filesystem
 
 // CUSTOM SECTION START
-#include <jansson.h>
-#include "../../../source/get_funcs.hpp"
-#include "../../../source/string_funcs.hpp"
+//#include <jansson.h>
+//#include "../../../source/get_funcs.hpp"
+//#include "../../../source/string_funcs.hpp"
 #include "../../../source/ini_funcs.hpp"
+#include "../../../source/json_funcs.hpp"
 #include "../../../common/half.hpp"
 using half_float::half;
 
@@ -133,7 +134,7 @@ static bool updateMenuCombos = false;
 
 
 // For improving the speed of hexing consecutively with the same file and asciiPattern.
-static std::unordered_map<std::string, std::string> hexSumCache;
+//static std::unordered_map<std::string, std::string> hexSumCache;
 
 //std::string highlightColor1Str = "#2288CC";;
 //std::string highlightColor2Str = "#88FFFF";;
@@ -156,58 +157,7 @@ float customRound(float num) {
 
 // English string definitions
 
-/**
- * @brief Reads JSON data from a file and returns it as a `json_t` object.
- *
- * @param filePath The path to the JSON file.
- * @return A `json_t` object representing the parsed JSON data. Returns `nullptr` on error.
- */
-json_t* readJsonFromFile2(const std::string& filePath) {
-    // Check if the file exists
-    struct stat fileStat;
-    if (stat(filePath.c_str(), &fileStat) != 0) {
-        //fprintf(stderr, "Error opening file: %s\n", filePath.c_str());
-        return nullptr;
-    }
 
-    // Open the file
-    FILE* file = fopen(filePath.c_str(), "r");
-    if (!file) {
-        //fprintf(stderr, "Error opening file: %s\n", filePath.c_str());
-        return nullptr;
-    }
-
-    // Get the file size
-    size_t fileSize = fileStat.st_size;
-
-    // Read the file content into a buffer
-    char* buffer = static_cast<char*>(malloc(fileSize + 1));
-    if (!buffer) {
-        //fprintf(stderr, "Memory allocation error.\n");
-        fclose(file);
-        return nullptr;
-    }
-
-    size_t bytesRead = fread(buffer, 1, fileSize, file);
-    buffer[bytesRead] = '\0';
-
-    // Close the file
-    fclose(file);
-
-    // Parse the JSON data
-    json_error_t error;
-    json_t* root = json_loads(buffer, JSON_DECODE_ANY, &error);
-    if (!root) {
-        //fprintf(stderr, "Error parsing JSON: %s\n", error.text);
-        free(buffer);
-        return nullptr;
-    }
-
-    // Clean up
-    free(buffer);
-
-    return root;
-}
 
 float M_PI = 3.14159265358979323846;
 
@@ -431,7 +381,7 @@ void updateIfNotEmpty(std::string& constant, const char* jsonKey, json_t* jsonDa
 }
 
 void parseLanguage(std::string langFile) {
-    json_t* langData = readJsonFromFile2(langFile);
+    json_t* langData = readJsonFromFile(langFile);
     
     // Use the updateIfNotEmpty function to update global variables
     updateIfNotEmpty(UNAVAILABLE_SELECTION, "UNAVAILABLE_SELECTION", langData);
