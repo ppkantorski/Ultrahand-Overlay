@@ -34,8 +34,6 @@
 #include <tesla.hpp>
 
 
-
-
 //Payload::HekateConfigList const boot_config_list;
 //Payload::HekateConfigList const ini_config_list;
 //Payload::PayloadConfigList const payload_config_list;
@@ -374,31 +372,7 @@ void addAppInfo(auto& list, auto& packageHeader, std::string type = "package") {
  * directories.
  */
 
-const std::vector<std::string> protectedFolders = {
-    "sdmc:/Nintendo/",
-    "sdmc:/emuMMC/",
-    "sdmc:/atmosphere/",
-    "sdmc:/bootloader/",
-    "sdmc:/switch/",
-    "sdmc:/config/",
-    "sdmc:/"
-};
-const std::vector<std::string> ultraProtectedFolders = {
-    "sdmc:/Nintendo/",
-    "sdmc:/emuMMC/"
-};
 
-// List of obviously dangerous patterns
-const std::vector<std::string> dangerousCombinationPatterns = {
-    "*",         // Deletes all files/directories in the current directory
-    "*/"         // Deletes all files/directories in the current directory
-};
-
-// List of obviously dangerous patterns
-const std::vector<std::string> dangerousPatterns = {
-    "..",     // Attempts to traverse to parent directories
-    "~"       // Represents user's home directory, can be dangerous if misused
-};
 /**
  * @brief Check if a path contains dangerous combinations.
  *
@@ -408,6 +382,31 @@ const std::vector<std::string> dangerousPatterns = {
  * @return True if the path contains dangerous combinations, otherwise false.
  */
 bool isDangerousCombination(const std::string& patternPath) {
+    const std::vector<std::string> protectedFolders = {
+        "sdmc:/Nintendo/",
+        "sdmc:/emuMMC/",
+        "sdmc:/atmosphere/",
+        "sdmc:/bootloader/",
+        "sdmc:/switch/",
+        "sdmc:/config/",
+        "sdmc:/"
+    };
+    const std::vector<std::string> ultraProtectedFolders = {
+        "sdmc:/Nintendo/",
+        "sdmc:/emuMMC/"
+    };
+    
+    // List of obviously dangerous patterns
+    const std::vector<std::string> dangerousCombinationPatterns = {
+        "*",         // Deletes all files/directories in the current directory
+        "*/"         // Deletes all files/directories in the current directory
+    };
+    
+    // List of obviously dangerous patterns
+    const std::vector<std::string> dangerousPatterns = {
+        "..",     // Attempts to traverse to parent directories
+        "~"       // Represents user's home directory, can be dangerous if misused
+    };
     
     // Check if the patternPath is an ultra protected folder
     for (const std::string& ultraProtectedFolder : ultraProtectedFolders) {
@@ -647,6 +646,7 @@ std::string replaceIniPlaceholder(const std::string& arg, const std::string& ini
             // Replace the entire placeholder with the parsed result
             replacement.replace(startPos, endPos - startPos + searchString.length() + 2, parsedResult);
         }
+        components.clear();
     }
     
     return replacement;
@@ -662,7 +662,7 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
     
     for (const auto& cmd : commands) {
         std::vector<std::string> modifiedCmd;
-        modifiedCmd.reserve(cmd.size()); // Reserve memory for efficiency
+        //modifiedCmd.reserve(cmd.size()); // Reserve memory for efficiency
         
         if (cmd.size() > 1) {
             if ((cmd[0] == "list_source") && listString.empty())
@@ -751,7 +751,7 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
  */
 void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& commands, const std::string& packagePath="", const std::string& selectedCommand="") {
     
-    bool logging = true;
+    bool logging = false;
     
     bool usingErista = util::IsErista();
     bool usingMariko = !(usingErista); // mariko is determined by it not being erista
@@ -777,6 +777,7 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
     //std::vector<std::string> command;
     std::string replacement;
     std::vector<std::string> modifiedCmd;
+    
     
     for (const auto& cmd : commands) {
         
