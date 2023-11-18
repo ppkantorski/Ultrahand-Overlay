@@ -170,20 +170,22 @@ bool downloadFile(const std::string& url, const std::string& toDestination) {
     //logMessage("destination: "+destination);
     
     CURLcode result = curl_easy_perform(curl);
+    curl_easy_cleanup(curl);
+    fclose(file);
     //delete callbackData;
     if (result != CURLE_OK) {
         logMessage(std::string("Error downloading file: ") + curl_easy_strerror(result));
-        curl_easy_cleanup(curl);
+        //curl_easy_cleanup(curl);
         //curl_global_cleanup();
-        fclose(file);
+        //fclose(file);
         // Delete the file if nothing was written to it
         std::remove(destination.c_str());
         return false;
     }
     
-    curl_easy_cleanup(curl);
+    //curl_easy_cleanup(curl);
     //curl_global_cleanup();
-    fclose(file);
+    //fclose(file);
     
     // Check if the file is empty
     long fileSize = ftell(file);
