@@ -14,7 +14,7 @@
  *   of the project's documentation and must remain intact.
  * 
  *  Copyright (c) 2023 ppkantorski
- *  All rights reserved.
+ *  Licensed under CC BY-NC-SA 4.0
  ********************************************************************************/
 
 #pragma once
@@ -232,26 +232,6 @@ bool isFileOrDirectory(const std::string& path) {
     return (stat(path.c_str(), &buffer) == 0);
 }
 
-
-/**
- * @brief Converts a string to an integer.
- *
- * This function attempts to convert the specified string to an integer.
- * If the conversion fails due to invalid input or out-of-range values,
- * it returns 0.
- *
- * @param input_string The string to convert to an integer.
- * @return The converted integer value or 0 on conversion failure.
- */
-int stringToNumber(const std::string& input_string) {
-    try {
-        return std::stoi(input_string);
-    } catch (const std::invalid_argument& e) {
-        return 0;
-    } catch (const std::out_of_range& e) {
-        return 0;
-    }
-}
 
 
 /**
