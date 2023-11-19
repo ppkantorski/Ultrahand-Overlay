@@ -2824,10 +2824,10 @@ public:
                                 if (bootOptions.size() > 0) {
                                     for (const auto& bootOption:bootOptions) {
                                         std::string bootOptionName = bootOption.first;
-                                        auto bootCommands = bootOption.second;
+                                        auto& bootCommands = bootOption.second;
                                         if (bootOptionName == "boot") {
                                             interpretAndExecuteCommand(bootCommands, packageFilePath+bootPackageFileName, bootOptionName); // Execute modified
-                                            bootCommands.clear();
+                                            //bootCommands.clear();
                                             break;
                                         }
                                     }
