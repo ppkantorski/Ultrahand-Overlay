@@ -243,7 +243,8 @@ void addAppInfo(auto& list, auto& packageHeader, std::string type = "package") {
     constexpr int fontSize = 16;    // Adjust the font size as needed
     int numEntries = 0;   // Adjust the number of entries as needed
     
-    std::string::size_type startPos, spacePos;
+    size_t startPos, endPos, spacePos;
+    std::string line;
     
     std::string packageSectionString = "";
     std::string packageInfoString = "";
@@ -273,9 +274,10 @@ void addAppInfo(auto& list, auto& packageHeader, std::string type = "package") {
         startPos = 0;
         spacePos = 0;
         
+        
         while (startPos < aboutText.length()) {
-            std::string::size_type endPos = std::min(startPos + maxLineLength, aboutText.length());
-            std::string line = aboutText.substr(startPos, endPos - startPos);
+            endPos = std::min(startPos + maxLineLength, aboutText.length());
+            line = aboutText.substr(startPos, endPos - startPos);
             
             // Check if the current line ends with a space; if not, find the last space in the line
             if (endPos < aboutText.length() && aboutText[endPos] != ' ') {
@@ -307,8 +309,8 @@ void addAppInfo(auto& list, auto& packageHeader, std::string type = "package") {
         spacePos = 0;
         
         while (startPos < creditsText.length()) {
-            std::string::size_type endPos = std::min(startPos + maxLineLength, creditsText.length());
-            std::string line = creditsText.substr(startPos, endPos - startPos);
+            endPos = std::min(startPos + maxLineLength, creditsText.length());
+            line = creditsText.substr(startPos, endPos - startPos);
             
             // Check if the current line ends with a space; if not, find the last space in the line
             if (endPos < creditsText.length() && creditsText[endPos] != ' ') {
@@ -407,17 +409,20 @@ bool isDangerousCombination(const std::string& patternPath) {
     }
     
     // Check if the patternPath is a protected folder
+    std::string relativePath, pathSegment;
+    std::vector<std::string> pathSegments;
+    
     for (const std::string& protectedFolder : protectedFolders) {
         if (patternPath == protectedFolder)
             return true; // Pattern path is a protected folder
         
         // Check if the patternPath starts with a protected folder and includes a dangerous pattern
         if (patternPath.find(protectedFolder) == 0) {
-            std::string relativePath = patternPath.substr(protectedFolder.size());
+            relativePath = patternPath.substr(protectedFolder.size());
             
             // Split the relativePath by '/' to handle multiple levels of wildcards
-            std::vector<std::string> pathSegments;
-            std::string pathSegment;
+            pathSegments.clear();
+            pathSegment = "";
             
             for (char c : relativePath) {
                 if (c == '/') {
@@ -535,8 +540,16 @@ std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadO
     std::vector<std::vector<std::string>> commands;
     
     bool isFirstEntry = true;
+    std::string trimmedLine;
+    std::istringstream iss;
+    std::istringstream argIss;
+    std::string arg;
+    std::vector<std::string> commandParts;
+    std::string part;
+    bool inQuotes;
+    
     while (fgets(line, sizeof(line), configFile)) {
-        std::string trimmedLine = line;
+        trimmedLine = line;
         trimmedLine.erase(trimmedLine.find_last_not_of("\r\n") + 1);  // Remove trailing newline character
         
         if (trimmedLine.empty() || trimmedLine[0] == '#')
@@ -556,16 +569,14 @@ std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadO
             currentOption = trimmedLine.substr(1, trimmedLine.size() - 2);  // Extract option name
         } else {
             // Command line
-            std::istringstream iss(trimmedLine);
-            std::vector<std::string> commandParts;
-            std::string part;
-            bool inQuotes = false;
+            iss.str(trimmedLine);
+            inQuotes = false;
             while (std::getline(iss, part, '\'')) {
                 if (!part.empty()) {
                     if (!inQuotes) {
                         // Outside quotes, split on spaces
-                        std::istringstream argIss(part);
-                        std::string arg;
+                        argIss.str(part);
+                        //std::string arg;
                         while (argIss >> arg)
                             commandParts.push_back(arg);
                     } else
@@ -597,13 +608,17 @@ void populateSelectedItemsList(const std::string& sourceType, const std::string&
         jsonData = readJsonFromFile(jsonStringOrPath);
     
     if (jsonData && json_is_array(jsonData)) {
+        const char* value;
+        json_t* keyValue;
+        json_t* item;
+        
         size_t arraySize = json_array_size(jsonData);
         for (size_t i = 0; i < arraySize; ++i) {
-            json_t* item = json_array_get(jsonData, i);
+            item = json_array_get(jsonData, i);
             if (item && json_is_object(item)) {
-                json_t* keyValue = json_object_get(item, jsonKey.c_str());
+                keyValue = json_object_get(item, jsonKey.c_str());
                 if (keyValue && json_is_string(keyValue)) {
-                    const char* value = json_string_value(keyValue);
+                    value = json_string_value(keyValue);
                     if (value) {
                         selectedItemsList.emplace_back(value);
                     }
@@ -686,8 +701,11 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
     std::string jsonPath, jsonString;
     size_t startPos, endPos;
     
+    std::vector<std::string> modifiedCmd;
+    std::string modifiedArg, lastArg, replacement;
+    
     for (const auto& cmd : commands) {
-        std::vector<std::string> modifiedCmd;
+        modifiedCmd.clear();
         //modifiedCmd.reserve(cmd.size()); // Reserve memory for efficiency
         
         if (cmd.size() > 1) {
@@ -700,8 +718,8 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
         }
         
         for (const auto& arg : cmd) {
-            std::string modifiedArg = arg; // Working with a copy for modifications
-            std::string lastArg = ""; // Initialize lastArg for each argument
+            modifiedArg = arg; // Working with a copy for modifications
+            lastArg = ""; // Initialize lastArg for each argument
             
             while (modifiedArg.find("{file_source}") != std::string::npos) {
                 modifiedArg = replacePlaceholder(modifiedArg, "{file_source}", entry);
@@ -726,7 +744,7 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
                 startPos = modifiedArg.find("{list_source(");
                 endPos = modifiedArg.find(")}");
                 if (endPos != std::string::npos && endPos > startPos) {
-                    std::string replacement = stringToList(listString)[entryIndex];
+                    replacement = stringToList(listString)[entryIndex];
                     modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
                 }
                 if (modifiedArg == lastArg)
@@ -738,7 +756,7 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
                 startPos = modifiedArg.find("{json_source(");
                 endPos = modifiedArg.find(")}");
                 if (endPos != std::string::npos && endPos > startPos) {
-                    std::string replacement = replaceJsonPlaceholder(modifiedArg.substr(startPos, endPos - startPos + 2), "json_source", jsonString);
+                    replacement = replaceJsonPlaceholder(modifiedArg.substr(startPos, endPos - startPos + 2), "json_source", jsonString);
                     modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
                 }
                 if (modifiedArg == lastArg)
@@ -750,7 +768,7 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
                 startPos = modifiedArg.find("{json_file_source(");
                 endPos = modifiedArg.find(")}");
                 if (endPos != std::string::npos && endPos > startPos) {
-                    std::string replacement = replaceJsonPlaceholder(modifiedArg.substr(startPos, endPos - startPos + 2), "json_file_source", jsonPath);
+                    replacement = replaceJsonPlaceholder(modifiedArg.substr(startPos, endPos - startPos + 2), "json_file_source", jsonPath);
                     modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
                 }
                 if (modifiedArg == lastArg)
@@ -793,6 +811,7 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
     size_t occurrence;
     size_t tryCounter = 0;
     size_t startPos, endPos;
+    size_t listIndex;
     
     // Overwrite globals
     commandSuccess = true;
@@ -873,7 +892,7 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                         startPos = arg.find("{list(");
                         endPos = arg.find(")}");
                         if (endPos != std::string::npos && endPos > startPos) {
-                            size_t listIndex = std::stoi(arg.substr(startPos, endPos - startPos + 2));
+                            listIndex = std::stoi(arg.substr(startPos, endPos - startPos + 2));
                             replacement = stringToList(listString)[listIndex];
                             arg.replace(startPos, endPos - startPos + 2, replacement);
                             if (arg == lastArg) {
