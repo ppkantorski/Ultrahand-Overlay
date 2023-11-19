@@ -68,7 +68,8 @@ static const std::string ultrahandRepo = "https://github.com/ppkantorski/Ultraha
 
 static bool commandSuccess = false;
 static bool refreshGui = false;
-
+static bool usingErista = util::IsErista();
+static bool usingMariko = !(util::IsErista()); // mariko is determined by it not being erista
 
 
 void initializeTheme(std::string themeIniPath = themeConfigIniPath) {
@@ -243,7 +244,8 @@ void addAppInfo(auto& list, auto& packageHeader, std::string type = "package") {
     constexpr int fontSize = 16;    // Adjust the font size as needed
     int numEntries = 0;   // Adjust the number of entries as needed
     
-    std::string::size_type startPos, spacePos;
+    size_t startPos, endPos, spacePos;
+    std::string line;
     
     std::string packageSectionString = "";
     std::string packageInfoString = "";
@@ -273,9 +275,10 @@ void addAppInfo(auto& list, auto& packageHeader, std::string type = "package") {
         startPos = 0;
         spacePos = 0;
         
+        
         while (startPos < aboutText.length()) {
-            std::string::size_type endPos = std::min(startPos + maxLineLength, aboutText.length());
-            std::string line = aboutText.substr(startPos, endPos - startPos);
+            endPos = std::min(startPos + maxLineLength, aboutText.length());
+            line = aboutText.substr(startPos, endPos - startPos);
             
             // Check if the current line ends with a space; if not, find the last space in the line
             if (endPos < aboutText.length() && aboutText[endPos] != ' ') {
@@ -307,8 +310,8 @@ void addAppInfo(auto& list, auto& packageHeader, std::string type = "package") {
         spacePos = 0;
         
         while (startPos < creditsText.length()) {
-            std::string::size_type endPos = std::min(startPos + maxLineLength, creditsText.length());
-            std::string line = creditsText.substr(startPos, endPos - startPos);
+            endPos = std::min(startPos + maxLineLength, creditsText.length());
+            line = creditsText.substr(startPos, endPos - startPos);
             
             // Check if the current line ends with a space; if not, find the last space in the line
             if (endPos < creditsText.length() && creditsText[endPos] != ' ') {
@@ -407,17 +410,20 @@ bool isDangerousCombination(const std::string& patternPath) {
     }
     
     // Check if the patternPath is a protected folder
+    std::string relativePath, pathSegment;
+    std::vector<std::string> pathSegments;
+    
     for (const std::string& protectedFolder : protectedFolders) {
         if (patternPath == protectedFolder)
             return true; // Pattern path is a protected folder
         
         // Check if the patternPath starts with a protected folder and includes a dangerous pattern
         if (patternPath.find(protectedFolder) == 0) {
-            std::string relativePath = patternPath.substr(protectedFolder.size());
+            relativePath = patternPath.substr(protectedFolder.size());
             
             // Split the relativePath by '/' to handle multiple levels of wildcards
-            std::vector<std::string> pathSegments;
-            std::string pathSegment;
+            pathSegments.clear();
+            pathSegment = "";
             
             for (char c : relativePath) {
                 if (c == '/') {
@@ -535,8 +541,15 @@ std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadO
     std::vector<std::vector<std::string>> commands;
     
     bool isFirstEntry = true;
+    std::string trimmedLine;
+    std::string part, arg;
+    bool inQuotes;
+    
+    std::vector<std::string> commandParts;
+    std::istringstream iss, argIss; // Move this line outside the loop
+    
     while (fgets(line, sizeof(line), configFile)) {
-        std::string trimmedLine = line;
+        trimmedLine = line;
         trimmedLine.erase(trimmedLine.find_last_not_of("\r\n") + 1);  // Remove trailing newline character
         
         if (trimmedLine.empty() || trimmedLine[0] == '#')
@@ -556,16 +569,22 @@ std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadO
             currentOption = trimmedLine.substr(1, trimmedLine.size() - 2);  // Extract option name
         } else {
             // Command line
-            std::istringstream iss(trimmedLine);
-            std::vector<std::string> commandParts;
-            std::string part;
-            bool inQuotes = false;
+            //std::istringstream iss(trimmedLine);
+            iss.clear(); // Reset stream state
+            iss.str(trimmedLine); // Set new content
+            
+            commandParts.clear();
+            
+            part = "";
+            inQuotes = false;
             while (std::getline(iss, part, '\'')) {
                 if (!part.empty()) {
                     if (!inQuotes) {
                         // Outside quotes, split on spaces
-                        std::istringstream argIss(part);
-                        std::string arg;
+                        argIss.clear();
+                        argIss.str(part);
+                        //std::istringstream argIss(part);
+                        arg = "";
                         while (argIss >> arg)
                             commandParts.push_back(arg);
                     } else
@@ -587,6 +606,7 @@ std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadO
 
 
 
+
 // Function to populate selectedItemsListOff from a JSON array based on a key
 void populateSelectedItemsList(const std::string& sourceType, const std::string& jsonStringOrPath, const std::string& jsonKey, std::vector<std::string>& selectedItemsList) {
     json_t* jsonData = nullptr;
@@ -597,7 +617,10 @@ void populateSelectedItemsList(const std::string& sourceType, const std::string&
         jsonData = readJsonFromFile(jsonStringOrPath);
     
     if (jsonData && json_is_array(jsonData)) {
+        
         size_t arraySize = json_array_size(jsonData);
+        selectedItemsList.reserve(arraySize); // Preallocate memory for efficiency
+        
         for (size_t i = 0; i < arraySize; ++i) {
             json_t* item = json_array_get(jsonData, i);
             if (item && json_is_object(item)) {
@@ -618,6 +641,7 @@ void populateSelectedItemsList(const std::string& sourceType, const std::string&
         jsonData = nullptr;
     }
 }
+
 
 
 /**
@@ -680,88 +704,114 @@ std::string replaceIniPlaceholder(const std::string& arg, const std::string& ini
 
 // this will modify `commands`
 std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std::vector<std::string>>& commands, const std::string& entry, size_t entryIndex) {
+    
+    bool inEristaSection = false;
+    bool inMarikoSection = false;
+    
     std::vector<std::vector<std::string>> modifiedCommands;
     //std::vector<std::string> listData;
     std::string listString;
     std::string jsonPath, jsonString;
     size_t startPos, endPos;
     
+    std::vector<std::string> modifiedCmd;
+    std::string modifiedArg, lastArg, replacement, commandName;
+    
     for (const auto& cmd : commands) {
-        std::vector<std::string> modifiedCmd;
+        if (cmd.empty())
+            continue;
+        
+        modifiedCmd.clear();
+        
         //modifiedCmd.reserve(cmd.size()); // Reserve memory for efficiency
+        commandName = cmd[0];
         
-        if (cmd.size() > 1) {
-            if ((cmd[0] == "list_source") && listString.empty())
-                listString = removeQuotes(cmd[1]);
-            else if ((cmd[0] == "json_file_source") && jsonPath.empty())
-                jsonPath = preprocessPath(cmd[1]);
-            else if ((cmd[0] == "json_source") && jsonString.empty())
-                jsonString = cmd[1];
+        if (commandName == "erista:" || commandName == "Erista:") {
+            inEristaSection = true;
+            inMarikoSection = false;
+            continue;
+        } else if (commandName == "mariko:" || commandName == "Mariko:") {
+            inEristaSection = false;
+            inMarikoSection = true;
+            continue;
         }
         
-        for (const auto& arg : cmd) {
-            std::string modifiedArg = arg; // Working with a copy for modifications
-            std::string lastArg = ""; // Initialize lastArg for each argument
+        if ((inEristaSection && !inMarikoSection && usingErista) || (!inEristaSection && inMarikoSection && usingMariko) || (!inEristaSection && !inMarikoSection)) {
             
-            while (modifiedArg.find("{file_source}") != std::string::npos) {
-                modifiedArg = replacePlaceholder(modifiedArg, "{file_source}", entry);
-                if (modifiedArg == lastArg)
-                    break;
-                lastArg = modifiedArg;
-            }
-            while (modifiedArg.find("{file_name}") != std::string::npos) {
-                modifiedArg = replacePlaceholder(modifiedArg, "{file_name}", getNameFromPath(entry));
-                if (modifiedArg == lastArg)
-                    break;
-                lastArg = modifiedArg;
-            }
-            while (modifiedArg.find("{folder_name}") != std::string::npos) {
-                modifiedArg = replacePlaceholder(modifiedArg, "{folder_name}", getParentDirNameFromPath(entry));
-                if (modifiedArg == lastArg)
-                    break;
-                lastArg = modifiedArg;
-            }
-            while (modifiedArg.find("{list_source(") != std::string::npos) {
-                modifiedArg = replacePlaceholder(modifiedArg, "*", std::to_string(entryIndex));
-                startPos = modifiedArg.find("{list_source(");
-                endPos = modifiedArg.find(")}");
-                if (endPos != std::string::npos && endPos > startPos) {
-                    std::string replacement = stringToList(listString)[entryIndex];
-                    modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
-                }
-                if (modifiedArg == lastArg)
-                    break;
-                lastArg = modifiedArg;
-            }
-            while (modifiedArg.find("{json_source(") != std::string::npos) {
-                modifiedArg = replacePlaceholder(modifiedArg, "*", std::to_string(entryIndex));
-                startPos = modifiedArg.find("{json_source(");
-                endPos = modifiedArg.find(")}");
-                if (endPos != std::string::npos && endPos > startPos) {
-                    std::string replacement = replaceJsonPlaceholder(modifiedArg.substr(startPos, endPos - startPos + 2), "json_source", jsonString);
-                    modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
-                }
-                if (modifiedArg == lastArg)
-                    break;
-                lastArg = modifiedArg;
-            }
-            while (modifiedArg.find("{json_file_source(") != std::string::npos) {
-                modifiedArg = replacePlaceholder(modifiedArg, "*", std::to_string(entryIndex));
-                startPos = modifiedArg.find("{json_file_source(");
-                endPos = modifiedArg.find(")}");
-                if (endPos != std::string::npos && endPos > startPos) {
-                    std::string replacement = replaceJsonPlaceholder(modifiedArg.substr(startPos, endPos - startPos + 2), "json_file_source", jsonPath);
-                    modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
-                }
-                if (modifiedArg == lastArg)
-                    break;
-                lastArg = modifiedArg;
+            if (cmd.size() > 1) {
+                if ((commandName == "list_source") && listString.empty())
+                    listString = removeQuotes(cmd[1]);
+                else if ((commandName == "json_file_source") && jsonPath.empty())
+                    jsonPath = preprocessPath(cmd[1]);
+                else if ((commandName == "json_source") && jsonString.empty())
+                    jsonString = cmd[1];
             }
             
-            modifiedCmd.push_back(std::move(modifiedArg)); // Move modified arg to the modified command vector
+            
+            for (const auto& arg : cmd) {
+                modifiedArg = arg; // Working with a copy for modifications
+                lastArg = ""; // Initialize lastArg for each argument
+                
+                while (modifiedArg.find("{file_source}") != std::string::npos) {
+                    modifiedArg = replacePlaceholder(modifiedArg, "{file_source}", entry);
+                    if (modifiedArg == lastArg)
+                        break;
+                    lastArg = modifiedArg;
+                }
+                while (modifiedArg.find("{file_name}") != std::string::npos) {
+                    modifiedArg = replacePlaceholder(modifiedArg, "{file_name}", getNameFromPath(entry));
+                    if (modifiedArg == lastArg)
+                        break;
+                    lastArg = modifiedArg;
+                }
+                while (modifiedArg.find("{folder_name}") != std::string::npos) {
+                    modifiedArg = replacePlaceholder(modifiedArg, "{folder_name}", getParentDirNameFromPath(entry));
+                    if (modifiedArg == lastArg)
+                        break;
+                    lastArg = modifiedArg;
+                }
+                while (modifiedArg.find("{list_source(") != std::string::npos) {
+                    modifiedArg = replacePlaceholder(modifiedArg, "*", std::to_string(entryIndex));
+                    startPos = modifiedArg.find("{list_source(");
+                    endPos = modifiedArg.find(")}");
+                    if (endPos != std::string::npos && endPos > startPos) {
+                        replacement = stringToList(listString)[entryIndex];
+                        modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
+                    }
+                    if (modifiedArg == lastArg)
+                        break;
+                    lastArg = modifiedArg;
+                }
+                while (modifiedArg.find("{json_source(") != std::string::npos) {
+                    modifiedArg = replacePlaceholder(modifiedArg, "*", std::to_string(entryIndex));
+                    startPos = modifiedArg.find("{json_source(");
+                    endPos = modifiedArg.find(")}");
+                    if (endPos != std::string::npos && endPos > startPos) {
+                        replacement = replaceJsonPlaceholder(modifiedArg.substr(startPos, endPos - startPos + 2), "json_source", jsonString);
+                        modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
+                    }
+                    if (modifiedArg == lastArg)
+                        break;
+                    lastArg = modifiedArg;
+                }
+                while (modifiedArg.find("{json_file_source(") != std::string::npos) {
+                    modifiedArg = replacePlaceholder(modifiedArg, "*", std::to_string(entryIndex));
+                    startPos = modifiedArg.find("{json_file_source(");
+                    endPos = modifiedArg.find(")}");
+                    if (endPos != std::string::npos && endPos > startPos) {
+                        replacement = replaceJsonPlaceholder(modifiedArg.substr(startPos, endPos - startPos + 2), "json_file_source", jsonPath);
+                        modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
+                    }
+                    if (modifiedArg == lastArg)
+                        break;
+                    lastArg = modifiedArg;
+                }
+                
+                modifiedCmd.push_back(std::move(modifiedArg)); // Move modified arg to the modified command vector
+            }
+            
+            modifiedCommands.emplace_back(std::move(modifiedCmd)); // Move modified command to the result vector
         }
-        
-        modifiedCommands.emplace_back(std::move(modifiedCmd)); // Move modified command to the result vector
     }
     return modifiedCommands;
 }
@@ -779,9 +829,6 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
     
     bool logging = false;
     
-    bool usingErista = util::IsErista();
-    bool usingMariko = !(usingErista); // mariko is determined by it not being erista
-    
     bool inEristaSection = false;
     bool inMarikoSection = false;
     
@@ -793,6 +840,7 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
     size_t occurrence;
     size_t tryCounter = 0;
     size_t startPos, endPos;
+    size_t listIndex;
     
     // Overwrite globals
     commandSuccess = true;
@@ -804,6 +852,7 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
     std::string replacement;
     std::vector<std::string> modifiedCmd;
     
+    std::string message;
     
     for (const auto& cmd : commands) {
         
@@ -824,16 +873,16 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                 logMessage("Try #"+std::to_string(tryCounter));
             continue;
         } else if (commandName == "erista:" || commandName == "Erista:") {
-            inEristaSection = true && usingErista;
+            inEristaSection = true;
             inMarikoSection = false;
             continue;
         } else if (commandName == "mariko:" || commandName == "Mariko:") {
             inEristaSection = false;
-            inMarikoSection = true && usingMariko;
+            inMarikoSection = true;
             continue;
         }
         
-        if (inEristaSection || inMarikoSection || !(inEristaSection && inMarikoSection)) {
+        if ((inEristaSection && !inMarikoSection && usingErista) || (!inEristaSection && inMarikoSection && usingMariko) || (!inEristaSection && !inMarikoSection)) {
             if (tryCounter == 0 || (commandSuccess && tryCounter != 0)) {
                 // Create a modified command vector to store changes
                 //std::vector<std::string> modifiedCmd = cmd;
@@ -873,7 +922,7 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                         startPos = arg.find("{list(");
                         endPos = arg.find(")}");
                         if (endPos != std::string::npos && endPos > startPos) {
-                            size_t listIndex = std::stoi(arg.substr(startPos, endPos - startPos + 2));
+                            listIndex = std::stoi(arg.substr(startPos, endPos - startPos + 2));
                             replacement = stringToList(listString)[listIndex];
                             arg.replace(startPos, endPos - startPos + 2, replacement);
                             if (arg == lastArg) {
@@ -1282,7 +1331,7 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                 
                 // Log the command using logMessage
                 if (logging) {
-                    std::string message = "Executing command: ";
+                    message = "Executing command: ";
                     for (const std::string& token : modifiedCmd)
                         message += token + " ";
                     logMessage(message);

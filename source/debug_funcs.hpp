@@ -21,12 +21,13 @@
 
 // Specify the log file path
 const std::string logFilePath = "sdmc:/config/ultrahand/log.txt";
-const int maxLines = 5000;
 
 
 
 // This function looks at a .txt file and removes the begging lines until the log is of maxLines size.
 void trimLog(FILE* file) {
+    const int maxLines = 5000;
+    
     if (file != nullptr) {
         // Read the existing lines into a buffer
         fseek(file, 0, SEEK_END);
@@ -82,7 +83,7 @@ void trimLog(FILE* file) {
 void logMessage(const std::string& message) {
     std::time_t currentTime = std::time(nullptr);
     std::string logEntry = std::asctime(std::localtime(&currentTime));
-    std::size_t lastNonNewline = logEntry.find_last_not_of("\r\n");
+    size_t lastNonNewline = logEntry.find_last_not_of("\r\n");
     if (lastNonNewline != std::string::npos) {
         logEntry.erase(lastNonNewline + 1);
     }

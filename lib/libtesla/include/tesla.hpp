@@ -1241,7 +1241,7 @@ namespace tsl {
         static std::vector<std::string> split(const std::string& str, char delim = ' ') {
             std::vector<std::string> out;
             
-            std::size_t current, previous = 0;
+            size_t current, previous = 0;
             current = str.find(delim);
             while (current != std::string::npos) {
                 out.push_back(str.substr(previous, current - previous));
@@ -1696,6 +1696,15 @@ namespace tsl {
                 this->fillScreen({ 0x00, 0x00, 0x00, 0x00 });
             }
             
+            struct Glyph {
+                stbtt_fontinfo *currFont;
+                float currFontSize;
+                int bounds[4];
+                int xAdvance;
+                u8 *glyphBmp;
+                int width, height;
+            };
+            
             /**
              * @brief Draws a string
              *
@@ -1712,14 +1721,6 @@ namespace tsl {
                 float currX = x;
                 float currY = y;
                 
-                struct Glyph {
-                    stbtt_fontinfo *currFont;
-                    float currFontSize;
-                    int bounds[4];
-                    int xAdvance;
-                    u8 *glyphBmp;
-                    int width, height;
-                };
                 
                 static std::unordered_map<u64, Glyph> s_glyphCache;
                 

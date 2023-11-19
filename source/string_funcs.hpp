@@ -91,7 +91,7 @@ std::string removeQuotes(const std::string& str) {
 std::string replaceMultipleSlashes(const std::string& input) {
     std::string output;
     bool previousSlash = false;
-
+    
     for (char c : input) {
         if (c == '/') {
             if (!previousSlash) {
@@ -103,7 +103,7 @@ std::string replaceMultipleSlashes(const std::string& input) {
             previousSlash = false;
         }
     }
-
+    
     return output;
 }
 
@@ -309,8 +309,7 @@ std::string formatPriorityString(const std::string& priority, int desiredWidth=4
             formattedString = "0"+formattedString;
         }
     }
-
-
+    
     // Convert the stringstream to a string and return it
     return formattedString;
 }
@@ -340,13 +339,13 @@ std::string removeTag(const std::string &input) {
 std::string cleanVersionLabel(const std::string &input) {
     std::regex versionRegex(R"([v-]?(\d+\.\d+\.\d+))");
     std::smatch match;
-
+    
     if (std::regex_search(input, match, versionRegex)) {
         if (match.size() > 1) {
             return match[1].str();
         }
     }
-
+    
     // Return an empty string if no version number is found
     return input;
 }
@@ -354,7 +353,7 @@ std::string cleanVersionLabel(const std::string &input) {
 
 std::string extractTitle(const std::string& input) {
     size_t spacePos = input.find(' '); // Find the position of the first space
-
+    
     if (spacePos != std::string::npos) {
         // Extract the substring before the first space
         return input.substr(0, spacePos);

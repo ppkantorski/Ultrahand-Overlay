@@ -92,19 +92,6 @@ private:
     
     int MAX_PRIORITY = 20;
     
-    std::vector<std::string> defaultCombos = {"ZL+ZR+DDOWN", "ZL+ZR+DRIGHT", "ZL+ZR+DUP", "ZL+ZR+DLEFT", "L+R+DDOWN", "L+R+DRIGHT", "L+R+DUP", "L+R+DLEFT", "L+DDOWN+RS"};
-    std::unordered_map<std::string, std::string> comboMap = {
-        {"ZL+ZR+DDOWN", "\uE0E6+\uE0E7+\uE0EC"},
-        {"ZL+ZR+DRIGHT", "\uE0E6+\uE0E7+\uE0EE"},
-        {"ZL+ZR+DUP", "\uE0E6+\uE0E7+\uE0EB"},
-        {"ZL+ZR+DLEFT", "\uE0E6+\uE0E7+\uE0ED"},
-        {"L+R+DDOWN", "\uE0E4+\uE0E5+\uE0EC"},
-        {"L+R+DRIGHT", "\uE0E4+\uE0E5+\uE0EE"},
-        {"L+R+DUP", "\uE0E4+\uE0E5+\uE0EB"},
-        {"L+R+DLEFT", "\uE0E4+\uE0E5+\uE0ED"},
-        {"L+DDOWN+RS", "\uE0E4+\uE0EC+\uE0C5"}
-    };
-    std::vector<std::string> defaultLanguages = {"en", "es", "fr", "de", "ja", "ko", "it", "nl", "pt", "ru", "zh-cn", "zh-tw"};
 public:
     /**
      * @brief Constructs a `ScriptOverlay` instance.
@@ -137,6 +124,23 @@ public:
             inSettingsMenu = true;
         else
             inSubSettingsMenu = true;
+        
+        std::vector<std::string> defaultCombos = {"ZL+ZR+DDOWN", "ZL+ZR+DRIGHT", "ZL+ZR+DUP", "ZL+ZR+DLEFT", "L+R+DDOWN", "L+R+DRIGHT", "L+R+DUP", "L+R+DLEFT", "ZL+ZR+PLUS", "L+R+PLUS", "MINUS+PLUS", "L+DDOWN+RS"};
+        std::unordered_map<std::string, std::string> comboMap = {
+            {"ZL+ZR+DDOWN", "\uE0E6+\uE0E7+\uE0EC"},
+            {"ZL+ZR+DRIGHT", "\uE0E6+\uE0E7+\uE0EE"},
+            {"ZL+ZR+DUP", "\uE0E6+\uE0E7+\uE0EB"},
+            {"ZL+ZR+DLEFT", "\uE0E6+\uE0E7+\uE0ED"},
+            {"L+R+DDOWN", "\uE0E4+\uE0E5+\uE0EC"},
+            {"L+R+DRIGHT", "\uE0E4+\uE0E5+\uE0EE"},
+            {"L+R+DUP", "\uE0E4+\uE0E5+\uE0EB"},
+            {"L+R+DLEFT", "\uE0E4+\uE0E5+\uE0ED"},
+            {"ZL+ZR+PLUS", "\uE0E6+\uE0E7+\uE0B5"},
+            {"L+R+PLUS", "\uE0E4+\uE0E5+\uE0B5"},
+            {"MINUS+PLUS", "\uE0B6+\uE0B5"},
+            {"L+DDOWN+RS", "\uE0E4+\uE0EC+\uE0C5"}
+        };
+        std::vector<std::string> defaultLanguages = {"en", "es", "fr", "de", "ja", "ko", "it", "nl", "pt", "ru", "zh-cn", "zh-tw"};
         
         tsl::elm::List *list = new tsl::elm::List();
         
@@ -296,7 +300,7 @@ public:
                     lastSelectedListItem = listItem;
                 }
                 
-                listItem->setClickListener([this, combo, defaultCombo, listItem](uint64_t keys) { // Add 'this', 'i', and 'listItem' to the capture list
+                listItem->setClickListener([this, combo, mappedCombo=comboMap[combo], defaultCombo, listItem](uint64_t keys) { // Add 'this', 'i', and 'listItem' to the capture list
                     if (keys & KEY_A) {
                         if (combo != defaultCombo) {
                             setIniFileValue(settingsConfigIniPath, "ultrahand", "key_combo", combo);
@@ -304,7 +308,7 @@ public:
                         }
                         
                         lastSelectedListItem->setValue("");
-                        selectedListItem->setValue(comboMap[combo]);
+                        selectedListItem->setValue(mappedCombo);
                         listItem->setValue(CHECKMARK_SYMBOL);
                         lastSelectedListItem = listItem;
                         
@@ -1094,7 +1098,6 @@ public:
 class SelectionOverlay : public tsl::Gui {
 private:
     std::string filePath, specificKey, pathPattern, pathPatternOn, pathPatternOff, itemName, parentDirName, lastParentDirName;
-    std::vector<std::string> filesList, filesListOn, filesListOff, filterList, filterListOn, filterListOff;
     std::vector<std::vector<std::string>> commands;
     std::string specifiedFooterKey;
     bool toggleState = false;
@@ -1119,7 +1122,9 @@ public:
      *
      * Cleans up any resources associated with the `SelectionOverlay` instance.
      */
-    ~SelectionOverlay() {}
+    ~SelectionOverlay() {
+        commands.clear();
+    }
     
     /**
      * @brief Creates the graphical user interface (GUI) for the selection overlay.
@@ -1132,6 +1137,7 @@ public:
     virtual tsl::elm::Element* createUI() override {
         inSelectionMenu = true;
         PackageHeader packageHeader = getPackageHeaderFromIni(filePath+packageFileName);
+        std::vector<std::string> filesList, filesListOn, filesListOff, filterList, filterListOn, filterListOff;
         
         tsl::elm::List *list = new tsl::elm::List();
         
@@ -1151,27 +1157,47 @@ public:
         std::string listString, listStringOn, listStringOff;
         std::vector<std::string> listData, listDataOn, listDataOff;
         std::string jsonString, jsonStringOn, jsonStringOff;
+        std::string commandName;
         
+        bool inEristaSection = false;
+        bool inMarikoSection = false;
         
         // initial processing of commands
         for (const auto& cmd : commands) {
-            if (!cmd.empty()) { // Isolate command settings
+            if (cmd.empty()) { // Isolate command settings
+                continue;
+            }
+            
+            commandName = cmd[0];
+            
+            if (commandName == "erista:" || commandName == "Erista:") {
+                inEristaSection = true;
+                inMarikoSection = false;
+                continue;
+            } else if (commandName == "mariko:" || commandName == "Mariko:") {
+                inEristaSection = false;
+                inMarikoSection = true;
+                continue;
+            }
+            
+            if ((inEristaSection && !inMarikoSection && usingErista) || (!inEristaSection && inMarikoSection && usingMariko) || (!inEristaSection && !inMarikoSection)) {
+                
                 // Extract the command mode
-                if (cmd[0].find(modePattern) == 0) {
-                    commandMode = cmd[0].substr(modePattern.length());
+                if (commandName.find(modePattern) == 0) {
+                    commandMode = commandName.substr(modePattern.length());
                     if (std::find(commandModes.begin(), commandModes.end(), commandMode) == commandModes.end())
                         commandMode = commandModes[0]; // reset to default if commandMode is unknown
-                } else if (cmd[0].find(groupingPattern) == 0) {// Extract the command grouping
-                    commandGrouping = cmd[0].substr(groupingPattern.length());
+                } else if (commandName.find(groupingPattern) == 0) {// Extract the command grouping
+                    commandGrouping = commandName.substr(groupingPattern.length());
                     if (std::find(commandGroupings.begin(), commandGroupings.end(), commandGrouping) == commandGroupings.end())
                         commandGrouping = commandGroupings[0]; // reset to default if commandMode is unknown
                 }
                 
                 // Extract the command grouping
                 if (commandMode == "toggle") {
-                    if (cmd[0].find("on:") == 0)
+                    if (commandName.find("on:") == 0)
                         currentSection = "on";
-                    else if (cmd[0].find("off:") == 0)
+                    else if (commandName.find("off:") == 0)
                         currentSection = "off";
                     
                     // Seperation of command chuncks
@@ -1186,81 +1212,83 @@ public:
                     // 
                 }
                 
-            }
-            if (cmd.size() > 1) { // Pre-process advanced commands
-                if (cmd[0] == "filter") {
-                    if (currentSection == "global")
-                        filterList.push_back(cmd[1]);
-                    else if (currentSection == "on")
-                        filterListOn.push_back(cmd[1]);
-                    else if (currentSection == "off")
-                        filterListOff.push_back(cmd[1]);
-                } else if (cmd[0] == "file_source") {
-                    if (currentSection == "global") {
-                        pathPattern = cmd[1];
-                        filesList = getFilesListByWildcards(pathPattern);
-                        sourceType = "file";
-                    } else if (currentSection == "on") {
-                        pathPatternOn = cmd[1];
-                        filesListOn = getFilesListByWildcards(pathPatternOn);
-                        sourceTypeOn = "file";
-                    } else if (currentSection == "off") {
-                        pathPatternOff = cmd[1];
-                        filesListOff = getFilesListByWildcards(pathPatternOff);
-                        sourceTypeOff = "file";
-                    }
-                } else if (cmd[0] == "json_file_source") {
-                    if (currentSection == "global") {
-                        jsonPath = preprocessPath(cmd[1]);
-                        sourceType = "json_file";
-                        if (cmd.size() > 2)
-                            jsonKey = cmd[2]; //json display key
-                    } else if (currentSection == "on") {
-                        jsonPathOn = preprocessPath(cmd[1]);
-                        sourceTypeOn = "json_file";
-                        if (cmd.size() > 2)
-                            jsonKeyOn = cmd[2]; //json display key
-                    } else if (currentSection == "off") {
-                        jsonPathOff = preprocessPath(cmd[1]);
-                        sourceTypeOff = "json_file";
-                        if (cmd.size() > 2)
-                            jsonKeyOff = cmd[2]; //json display key
-                    }
-                } else if (cmd[0] == "list_source") {
-                    if (currentSection == "global") {
-                        listString = removeQuotes(cmd[1]);
-                        sourceType = "list";
-                    } else if (currentSection == "on") {
-                        listStringOn = removeQuotes(cmd[1]);
-                        sourceTypeOn = "list";
-                    } else if (currentSection == "off") {
-                        listStringOff = removeQuotes(cmd[1]);
-                        sourceTypeOff = "list";
-                    }
-                } else if (cmd[0] == "json_source") {
-                    if (currentSection == "global") {
-                        jsonString = removeQuotes(cmd[1]); // convert string to jsonData
-                        sourceType = "json";
-                        
-                        if (cmd.size() > 2)
-                            jsonKey = cmd[2]; //json display key
-                    } else if (currentSection == "on") {
-                        jsonStringOn = removeQuotes(cmd[1]); // convert string to jsonData
-                        sourceTypeOn = "json";
-                        
-                        if (cmd.size() > 2)
-                            jsonKeyOn = cmd[2]; //json display key
-                        
-                    } else if (currentSection == "off") {
-                        jsonStringOff = removeQuotes(cmd[1]); // convert string to jsonData
-                        sourceTypeOff = "json";
-                        
-                        if (cmd.size() > 2)
-                            jsonKeyOff = cmd[2]; //json display key
+                if (cmd.size() > 1) { // Pre-process advanced commands
+                    if (commandName == "filter") {
+                        if (currentSection == "global")
+                            filterList.push_back(cmd[1]);
+                        else if (currentSection == "on")
+                            filterListOn.push_back(cmd[1]);
+                        else if (currentSection == "off")
+                            filterListOff.push_back(cmd[1]);
+                    } else if (commandName == "file_source") {
+                        if (currentSection == "global") {
+                            pathPattern = cmd[1];
+                            filesList = getFilesListByWildcards(pathPattern);
+                            sourceType = "file";
+                        } else if (currentSection == "on") {
+                            pathPatternOn = cmd[1];
+                            filesListOn = getFilesListByWildcards(pathPatternOn);
+                            sourceTypeOn = "file";
+                        } else if (currentSection == "off") {
+                            pathPatternOff = cmd[1];
+                            filesListOff = getFilesListByWildcards(pathPatternOff);
+                            sourceTypeOff = "file";
+                        }
+                    } else if (commandName == "json_file_source") {
+                        if (currentSection == "global") {
+                            jsonPath = preprocessPath(cmd[1]);
+                            sourceType = "json_file";
+                            if (cmd.size() > 2)
+                                jsonKey = cmd[2]; //json display key
+                        } else if (currentSection == "on") {
+                            jsonPathOn = preprocessPath(cmd[1]);
+                            sourceTypeOn = "json_file";
+                            if (cmd.size() > 2)
+                                jsonKeyOn = cmd[2]; //json display key
+                        } else if (currentSection == "off") {
+                            jsonPathOff = preprocessPath(cmd[1]);
+                            sourceTypeOff = "json_file";
+                            if (cmd.size() > 2)
+                                jsonKeyOff = cmd[2]; //json display key
+                        }
+                    } else if (commandName == "list_source") {
+                        if (currentSection == "global") {
+                            listString = removeQuotes(cmd[1]);
+                            sourceType = "list";
+                        } else if (currentSection == "on") {
+                            listStringOn = removeQuotes(cmd[1]);
+                            sourceTypeOn = "list";
+                        } else if (currentSection == "off") {
+                            listStringOff = removeQuotes(cmd[1]);
+                            sourceTypeOff = "list";
+                        }
+                    } else if (commandName == "json_source") {
+                        if (currentSection == "global") {
+                            jsonString = removeQuotes(cmd[1]); // convert string to jsonData
+                            sourceType = "json";
+                            
+                            if (cmd.size() > 2)
+                                jsonKey = cmd[2]; //json display key
+                        } else if (currentSection == "on") {
+                            jsonStringOn = removeQuotes(cmd[1]); // convert string to jsonData
+                            sourceTypeOn = "json";
+                            
+                            if (cmd.size() > 2)
+                                jsonKeyOn = cmd[2]; //json display key
+                            
+                        } else if (currentSection == "off") {
+                            jsonStringOff = removeQuotes(cmd[1]); // convert string to jsonData
+                            sourceTypeOff = "json";
+                            
+                            if (cmd.size() > 2)
+                                jsonKeyOff = cmd[2]; //json display key
+                        }
                     }
                 }
-            } 
+            }
         }
+        
+        
         
         // items can be paths, commands, or variables depending on source
         std::vector<std::string> selectedItemsList, selectedItemsListOn, selectedItemsListOff;
@@ -1389,13 +1417,13 @@ public:
                     listItem->setValue(footer, true);
                 
                 
-                listItem->setClickListener([this, i, optionName, cmds=commands, footer, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
+                listItem->setClickListener([this, i, optionName, footer, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
                     if (keys & KEY_A) {
                         if (commandMode == "option") {
                             selectedFooterDict[specifiedFooterKey] = selectedItem;
                             lastSelectedListItem->setValue(footer, true);
                         }
-                        std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, selectedItem, i); // replace source
+                        std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(this->commands, selectedItem, i); // replace source
                         interpretAndExecuteCommand(modifiedCmds, filePath, specificKey); // Execute modified 
                         modifiedCmds.clear();
                         
@@ -1420,11 +1448,11 @@ public:
                 toggleStateOn = std::find(selectedItemsListOn.begin(), selectedItemsListOn.end(), selectedItem) != selectedItemsListOn.end();
                 toggleListItem->setState(toggleStateOn);
                 
-                toggleListItem->setStateChangedListener([this, i, cmdsOn=commandsOn, cmdsOff=commandsOff, selectedItem, selectedItemsListOn, selectedItemsListOff, toggleListItem](bool state) {
+                toggleListItem->setStateChangedListener([this, i, commandsOn, commandsOff, selectedItem, selectedItemsListOn, selectedItemsListOff, toggleListItem](bool state) {
                     if (!state) {
                         if (std::find(selectedItemsListOn.begin(), selectedItemsListOn.end(), selectedItem) != selectedItemsListOn.end()) {
                             // Toggle switched to On
-                            std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmdsOn, selectedItem, i); // replace source
+                            std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commandsOn, selectedItem, i); // replace source
                             interpretAndExecuteCommand(modifiedCmds, filePath, specificKey); // Execute modified 
                             modifiedCmds.clear();
                         } else
@@ -1432,7 +1460,7 @@ public:
                     } else {
                         if (std::find(selectedItemsListOff.begin(), selectedItemsListOff.end(), selectedItem) != selectedItemsListOff.end()) {
                             // Toggle switched to Off
-                            std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmdsOff, selectedItem, i); // replace source
+                            std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commandsOff, selectedItem, i); // replace source
                             interpretAndExecuteCommand(modifiedCmds, filePath, specificKey); // Execute modified 
                             modifiedCmds.clear();
                         } else
@@ -1513,10 +1541,8 @@ public:
  */
 class PackageMenu : public tsl::Gui {
 private:
-    tsl::hlp::ini::IniData packageConfigData;
     std::string packagePath, dropdownSection, currentPage, pathReplace, pathReplaceOn, pathReplaceOff;
     std::string filePath, specificKey, pathPattern, pathPatternOn, pathPatternOff, itemName, parentDirName, lastParentDirName;
-    std::vector<std::string> filesList, filesListOn, filesListOff, filterList, filterListOn, filterListOff;
     bool usingPages = false;
 public:
     /**
@@ -1558,6 +1584,8 @@ public:
             lastMenu = "subPackageMenu";
         }
         
+        tsl::hlp::ini::IniData packageConfigData;
+        std::vector<std::string> filesList, filesListOn, filesListOff, filterList, filterListOn, filterListOff;
         
         // Load options from INI file in the subdirectory
         std::string packageIniPath = packagePath + packageFileName;
@@ -1633,6 +1661,12 @@ public:
                         skipSection = true;
                         lastSection = dropdownSection;
                     }
+                    if (removeTag(optionName) == PACKAGE_INFO || removeTag(optionName) == "Package Info") {
+                        if (!skipSection) {
+                            lastSection = optionName;
+                            addAppInfo(list, packageHeader);
+                        }
+                    }
                     if (commands.size() == 0) {
                         if (optionName == dropdownSection)
                             skipSection = false;
@@ -1671,9 +1705,12 @@ public:
                             if (optionName != lastSection) {
                                 
                                 if (removeTag(optionName) == PACKAGE_INFO || removeTag(optionName) == "Package Info") {
+                                    logMessage("pre-before adding app info");
                                     if (!skipSection) {
                                         lastSection = optionName;
+                                        logMessage("before adding app info");
                                         addAppInfo(list, packageHeader);
+                                        logMessage("after adding app info");
                                     }
                                 } else {
                                     // Add a section break with small text to indicate the "Commands" section
@@ -1694,27 +1731,47 @@ public:
                     }
                 }
                 
+                std::string commandName;
+                
+                // initial processing of commands
+                bool inEristaSection = false;
+                bool inMarikoSection = false;
                 
                 // initial processing of commands
                 for (const auto& cmd : commands) {
+                    if (cmd.empty()) { // Isolate command settings
+                        continue;
+                    }
                     
-                    if (!cmd.empty()) { // Isolate command settings
+                    commandName = cmd[0];
+                    
+                    if (commandName == "erista:" || commandName == "Erista:") {
+                        inEristaSection = true;
+                        inMarikoSection = false;
+                        continue;
+                    } else if (commandName == "mariko:" || commandName == "Mariko:") {
+                        inEristaSection = false;
+                        inMarikoSection = true;
+                        continue;
+                    }
+                    
+                    if ((inEristaSection && !inMarikoSection && usingErista) || (!inEristaSection && inMarikoSection && usingMariko) || (!inEristaSection && !inMarikoSection)) {
                         // Extract the command mode
-                        if (cmd[0].find(modePattern) == 0) {
-                            commandMode = cmd[0].substr(modePattern.length());
+                        if (commandName.find(modePattern) == 0) {
+                            commandMode = commandName.substr(modePattern.length());
                             if (std::find(commandModes.begin(), commandModes.end(), commandMode) == commandModes.end())
                                 commandMode = commandModes[0]; // reset to default if commandMode is unknown
-                        } else if (cmd[0].find(groupingPattern) == 0) {// Extract the command grouping
-                            commandGrouping = cmd[0].substr(groupingPattern.length());
+                        } else if (commandName.find(groupingPattern) == 0) {// Extract the command grouping
+                            commandGrouping = commandName.substr(groupingPattern.length());
                             if (std::find(commandGroupings.begin(), commandGroupings.end(), commandGrouping) == commandGroupings.end())
                                 commandGrouping = commandGroupings[0]; // reset to default if commandMode is unknown
                         }
                         
                         // Extract the command grouping
                         if (commandMode == "toggle") {
-                            if (cmd[0].find("on:") == 0)
+                            if (commandName.find("on:") == 0)
                                 currentSection = "on";
-                            else if (cmd[0].find("off:") == 0)
+                            else if (commandName.find("off:") == 0)
                                 currentSection = "off";
                             
                             // Seperation of command chuncks
@@ -1726,19 +1783,18 @@ public:
                             else if (currentSection == "off")
                                 commandsOff.push_back(cmd);
                         }
-                        
-                    }
-                    if (cmd.size() > 1) { // Pre-process advanced commands
-                        if (cmd[0] == "file_source") {
-                            if (currentSection == "global") {
-                                pathPattern = cmd[1];
-                                sourceType = "file";
-                            } else if (currentSection == "on") {
-                                pathPatternOn = cmd[1];
-                                sourceTypeOn = "file";
-                            } else if (currentSection == "off") {
-                                pathPatternOff = cmd[1];
-                                sourceTypeOff = "file";
+                        if (cmd.size() > 1) { // Pre-process advanced commands
+                            if (commandName == "file_source") {
+                                if (currentSection == "global") {
+                                    pathPattern = cmd[1];
+                                    sourceType = "file";
+                                } else if (currentSection == "on") {
+                                    pathPatternOn = cmd[1];
+                                    sourceTypeOn = "file";
+                                } else if (currentSection == "off") {
+                                    pathPatternOff = cmd[1];
+                                    sourceTypeOff = "file";
+                                }
                             }
                         }
                     }
@@ -1767,6 +1823,7 @@ public:
                             setIniFileValue(packageConfigIniPath, optionName, "footer", commandFooter);
                         
                     }
+                    packageConfigData.clear();
                 } else { // write data if settings are not loaded
                     setIniFileValue(packageConfigIniPath, optionName, "mode", commandMode);
                     setIniFileValue(packageConfigIniPath, optionName, "grouping", commandGrouping);
@@ -1812,7 +1869,7 @@ public:
                             listItem->setValue(footer, true);
                         
                         //std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(option.second, pathReplace);
-                        listItem->setClickListener([cmds = commands, keyName = option.first, this, packagePath = this->packagePath, footer, lastSection, listItem](uint64_t keys) {
+                        listItem->setClickListener([commands, keyName = option.first, this, packagePath = this->packagePath, footer, lastSection, listItem](uint64_t keys) {
                             if ((keys & KEY_A) && (footer != UNAVAILABLE_SELECTION)) {
                                 if (inPackageMenu)
                                     inPackageMenu = false;
@@ -1831,7 +1888,7 @@ public:
                                     if (selectedFooterDict.find(newKey) == selectedFooterDict.end())
                                         selectedFooterDict[newKey] = footer;
                                 }
-                                tsl::changeTo<SelectionOverlay>(packagePath, keyName, cmds, newKey);
+                                tsl::changeTo<SelectionOverlay>(packagePath, keyName, commands, newKey);
                                 lastKeyName = keyName;
                                 
                                 return true;
@@ -1866,9 +1923,9 @@ public:
                                 listItem->setValue(footer);
                             
                             
-                            listItem->setClickListener([this, i, cmds=commands, keyName = option.first, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
+                            listItem->setClickListener([this, i, commands, keyName = option.first, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
                                 if (keys & KEY_A) {
-                                    std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, keyName, i); // replace source
+                                    std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commands, keyName, i); // replace source
                                     //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
                                     interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified
                                     modifiedCmds.clear();
@@ -1896,11 +1953,11 @@ public:
                             
                             toggleListItem->setState(toggleStateOn);
                             
-                            toggleListItem->setStateChangedListener([this, i, cmdsOn=commandsOn, cmdsOff=commandsOff, toggleStateOn, keyName = option.first](bool state) {
+                            toggleListItem->setStateChangedListener([this, i, commandsOn, commandsOff, toggleStateOn, keyName = option.first](bool state) {
                                 if (!state) {
                                     // Toggle switched to On
                                     if (toggleStateOn) {
-                                        std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmdsOn, preprocessPath(pathPatternOn), i); // replace source
+                                        std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commandsOn, preprocessPath(pathPatternOn), i); // replace source
                                         //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
                                         interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified
                                         modifiedCmds.clear();
@@ -1911,7 +1968,7 @@ public:
                                 } else {
                                     // Toggle switched to Off
                                     if (!toggleStateOn) {
-                                        std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmdsOff, preprocessPath(pathPatternOff), i); // replace source
+                                        std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commandsOff, preprocessPath(pathPatternOff), i); // replace source
                                         //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
                                         interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified 
                                         modifiedCmds.clear();
@@ -2033,7 +2090,6 @@ public:
  */
 class MainMenu : public tsl::Gui {
 private:
-    tsl::hlp::ini::IniData settingsData, themesData, packageConfigData;
     std::string packageIniPath = packageDirectory + packageFileName;
     std::string packageConfigIniPath = packageDirectory + configFileName;
     std::string menuMode, defaultMenuMode, inOverlayString, fullPath, optionName, priority, starred, hide;
@@ -2041,11 +2097,7 @@ private:
     bool useOverlayLaunchArgs = false;
     std::string hiddenMenuMode;
     bool initializingSpawn = false;
-    
     std::string defaultLang = "en";
-    std::string packagePath, pathReplace, pathReplaceOn, pathReplaceOff;
-    std::string filePath, specificKey, pathPattern, pathPatternOn, pathPatternOff, itemName, parentDirName, lastParentDirName;
-    std::vector<std::string> filesList, filesListOn, filesListOff, filterList, filterListOn, filterListOff;
     
 public:
     /**
@@ -2072,6 +2124,12 @@ public:
     virtual tsl::elm::Element* createUI() override {
         if (!inHiddenMode)
             inMainMenu = true;
+        
+        tsl::hlp::ini::IniData settingsData, packageConfigData;
+        std::string packagePath, pathReplace, pathReplaceOn, pathReplaceOff;
+        std::string filePath, specificKey, pathPattern, pathPatternOn, pathPatternOff, itemName, parentDirName, lastParentDirName;
+        std::vector<std::string> filesList, filesListOn, filesListOff, filterList, filterListOn, filterListOff;
+        
         
         lastMenuMode = hiddenMenuMode;
         
@@ -2142,6 +2200,7 @@ public:
                     setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_soc_temp", "true");
                 
             }
+            settingsData.clear();
         }
         if (!settingsLoaded) { // write data if settings are not loaded
             setIniFileValue(settingsConfigIniPath, "ultrahand", "default_lang", defaultLang);
@@ -2694,25 +2753,47 @@ public:
                         list->addItem(new tsl::elm::CategoryHeader(COMMANDS));
                     
                     
+                    std::string commandName;
+                    
+                    // initial processing of commands
+                    bool inEristaSection = false;
+                    bool inMarikoSection = false;
+                    
                     // initial processing of commands
                     for (const auto& cmd : commands) {
-                        if (!cmd.empty()) { // Isolate command settings
+                        if (cmd.empty()) { // Isolate command settings
+                            continue;
+                        }
+                        
+                        commandName = cmd[0];
+                        
+                        if (commandName == "erista:" || commandName == "Erista:") {
+                            inEristaSection = true;
+                            inMarikoSection = false;
+                            continue;
+                        } else if (commandName == "mariko:" || commandName == "Mariko:") {
+                            inEristaSection = false;
+                            inMarikoSection = true;
+                            continue;
+                        }
+                        
+                        if ((inEristaSection && !inMarikoSection && usingErista) || (!inEristaSection && inMarikoSection && usingMariko) || (!inEristaSection && !inMarikoSection)) {
                             // Extract the command mode
-                            if (cmd[0].find(modePattern) == 0) {
-                                commandMode = cmd[0].substr(modePattern.length());
+                            if (commandName.find(modePattern) == 0) {
+                                commandMode = commandName.substr(modePattern.length());
                                 if (std::find(commandModes.begin(), commandModes.end(), commandMode) == commandModes.end())
                                     commandMode = commandModes[0]; // reset to default if commandMode is unknown
-                            } else if (cmd[0].find(groupingPattern) == 0) {// Extract the command grouping
-                                commandGrouping = cmd[0].substr(groupingPattern.length());
+                            } else if (commandName.find(groupingPattern) == 0) {// Extract the command grouping
+                                commandGrouping = commandName.substr(groupingPattern.length());
                                 if (std::find(commandGroupings.begin(), commandGroupings.end(), commandGrouping) == commandGroupings.end())
                                     commandGrouping = commandGroupings[0]; // reset to default if commandMode is unknown
                             }
                             
                             // Extract the command grouping
                             if (commandMode == "toggle") {
-                                if (cmd[0].find("on:") == 0)
+                                if (commandName.find("on:") == 0)
                                     currentSection = "on";
-                                else if (cmd[0].find("off:") == 0)
+                                else if (commandName.find("off:") == 0)
                                     currentSection = "off";
                                 
                                 // Seperation of command chuncks
@@ -2724,21 +2805,21 @@ public:
                                 else if (currentSection == "off")
                                     commandsOff.push_back(cmd);
                             }
-                        }
-                        if (cmd.size() > 1) { // Pre-process advanced commands
-                            if (cmd[0] == "file_source") {
-                                if (currentSection == "global") {
-                                    pathPattern = cmd[1];
-                                    //filesList = getFilesListByWildcards(pathPattern);
-                                    sourceType = "file";
-                                } else if (currentSection == "on") {
-                                    pathPatternOn = cmd[1];
-                                    //filesListOn = getFilesListByWildcards(pathPatternOn);
-                                    sourceTypeOn = "file";
-                                } else if (currentSection == "off") {
-                                    pathPatternOff = cmd[1];
-                                    //filesListOff = getFilesListByWildcards(pathPatternOff);
-                                    sourceTypeOff = "file";
+                            if (cmd.size() > 1) { // Pre-process advanced commands
+                                if (commandName == "file_source") {
+                                    if (currentSection == "global") {
+                                        pathPattern = cmd[1];
+                                        //filesList = getFilesListByWildcards(pathPattern);
+                                        sourceType = "file";
+                                    } else if (currentSection == "on") {
+                                        pathPatternOn = cmd[1];
+                                        //filesListOn = getFilesListByWildcards(pathPatternOn);
+                                        sourceTypeOn = "file";
+                                    } else if (currentSection == "off") {
+                                        pathPatternOff = cmd[1];
+                                        //filesListOff = getFilesListByWildcards(pathPatternOff);
+                                        sourceTypeOff = "file";
+                                    }
                                 }
                             }
                         }
@@ -2770,6 +2851,7 @@ public:
                                 setIniFileValue(packageConfigIniPath, optionName, "footer", commandFooter);
                             
                         }
+                        packageConfigData.clear();
                     } else { // write data if settings are not loaded
                         setIniFileValue(packageConfigIniPath, optionName, "mode", commandMode);
                         setIniFileValue(packageConfigIniPath, optionName, "grouping", commandGrouping);
@@ -2805,10 +2887,10 @@ public:
                         }
                         
                         //std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(option.second, pathReplace);
-                        listItem->setClickListener([this, cmds = commands, keyName = option.first, packagePath = packageDirectory, listItem](uint64_t keys) {
+                        listItem->setClickListener([this, commands, keyName = option.first, packagePath = packageDirectory, listItem](uint64_t keys) {
                             if (keys & KEY_A) {
                                 inMainMenu = false;
-                                tsl::changeTo<SelectionOverlay>(packagePath, keyName, cmds);
+                                tsl::changeTo<SelectionOverlay>(packagePath, keyName, commands);
                                 return true;
                             } else if (keys & SCRIPT_KEY) {
                                 inMainMenu = false; // Set boolean to true when entering a submenu
@@ -2835,9 +2917,9 @@ public:
                             listItem->setValue(footer, true);
                             
                             if (sourceType == "json") { // For JSON wildcards
-                                listItem->setClickListener([this, i, cmds=commands, packagePath = packageDirectory, keyName = option.first, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
+                                listItem->setClickListener([this, i, commands, packagePath = packageDirectory, keyName = option.first, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
                                     if (keys & KEY_A) {
-                                        std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, selectedItem, i); // replace source
+                                        std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commands, selectedItem, i); // replace source
                                         //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
                                         
                                         interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified
@@ -2857,9 +2939,9 @@ public:
                                 });
                                 list->addItem(listItem);
                             } else {
-                                listItem->setClickListener([this, i, cmds=commands, packagePath = packageDirectory, keyName = option.first, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
+                                listItem->setClickListener([this, i, commands, packagePath = packageDirectory, keyName = option.first, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
                                     if (keys & KEY_A) {
-                                        std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, selectedItem, i); // replace source
+                                        std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commands, selectedItem, i); // replace source
                                         //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
                                         
                                         interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified
@@ -2886,11 +2968,11 @@ public:
                             
                             toggleListItem->setState(toggleStateOn);
                             
-                            toggleListItem->setStateChangedListener([this, i, cmdsOn=commandsOn, cmdsOff=commandsOff, toggleStateOn, packagePath = packageDirectory, keyName = option.first](bool state) {
+                            toggleListItem->setStateChangedListener([this, i, pathPatternOn, pathPatternOff, commandsOn, commandsOff, toggleStateOn, packagePath = packageDirectory, keyName = option.first](bool state) {
                                 if (!state) {
                                     // Toggle switched to On
                                     if (toggleStateOn) {
-                                        std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmdsOn, preprocessPath(pathPatternOn), i); // replace source
+                                        std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commandsOn, preprocessPath(pathPatternOn), i); // replace source
                                         //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
                                         interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified 
                                         modifiedCmds.clear();
@@ -2901,7 +2983,7 @@ public:
                                 } else {
                                     // Toggle switched to Off
                                     if (!toggleStateOn) {
-                                        std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmdsOff, preprocessPath(pathPatternOff),  i); // replace source
+                                        std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commandsOff, preprocessPath(pathPatternOff),  i); // replace source
                                         //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
                                         interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified
                                         modifiedCmds.clear();
