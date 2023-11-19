@@ -32,7 +32,6 @@
 
 
 // Overlay booleans
-//static bool shouldCloseMenu = false;
 static bool returningToMain = false;
 static bool returningToHiddenMain = false;
 static bool returningToSettings = false;
@@ -2221,7 +2220,6 @@ public:
                     if (overlayFileName == "ovlmenu.ovl" or overlayFileName.substr(0, 1) == ".")
                         continue;
                     
-                    //overlayList.push_back(overlayFileName);
                     
                     // Check if the overlay name exists in the INI data.
                     if (overlaysIniData.find(overlayFileName) == overlaysIniData.end()) {
