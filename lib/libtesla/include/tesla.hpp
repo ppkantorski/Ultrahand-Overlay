@@ -1241,7 +1241,7 @@ namespace tsl {
         static std::vector<std::string> split(const std::string& str, char delim = ' ') {
             std::vector<std::string> out;
             
-            std::size_t current, previous = 0;
+            size_t current, previous = 0;
             current = str.find(delim);
             while (current != std::string::npos) {
                 out.push_back(str.substr(previous, current - previous));
