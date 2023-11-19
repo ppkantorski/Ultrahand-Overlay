@@ -1121,7 +1121,9 @@ public:
      *
      * Cleans up any resources associated with the `SelectionOverlay` instance.
      */
-    ~SelectionOverlay() {}
+    ~SelectionOverlay() {
+        commands.clear();
+    }
     
     /**
      * @brief Creates the graphical user interface (GUI) for the selection overlay.
@@ -1285,6 +1287,8 @@ public:
             }
         }
         
+        
+        
         // items can be paths, commands, or variables depending on source
         std::vector<std::string> selectedItemsList, selectedItemsListOn, selectedItemsListOff;
         
@@ -1412,13 +1416,13 @@ public:
                     listItem->setValue(footer, true);
                 
                 
-                listItem->setClickListener([this, i, optionName, cmds=commands, footer, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
+                listItem->setClickListener([this, i, optionName, footer, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
                     if (keys & KEY_A) {
                         if (commandMode == "option") {
                             selectedFooterDict[specifiedFooterKey] = selectedItem;
                             lastSelectedListItem->setValue(footer, true);
                         }
-                        std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, selectedItem, i); // replace source
+                        std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(this->commands, selectedItem, i); // replace source
                         interpretAndExecuteCommand(modifiedCmds, filePath, specificKey); // Execute modified 
                         modifiedCmds.clear();
                         
@@ -1443,11 +1447,11 @@ public:
                 toggleStateOn = std::find(selectedItemsListOn.begin(), selectedItemsListOn.end(), selectedItem) != selectedItemsListOn.end();
                 toggleListItem->setState(toggleStateOn);
                 
-                toggleListItem->setStateChangedListener([this, i, cmdsOn=commandsOn, cmdsOff=commandsOff, selectedItem, selectedItemsListOn, selectedItemsListOff, toggleListItem](bool state) {
+                toggleListItem->setStateChangedListener([this, i, commandsOn, commandsOff, selectedItem, selectedItemsListOn, selectedItemsListOff, toggleListItem](bool state) {
                     if (!state) {
                         if (std::find(selectedItemsListOn.begin(), selectedItemsListOn.end(), selectedItem) != selectedItemsListOn.end()) {
                             // Toggle switched to On
-                            std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmdsOn, selectedItem, i); // replace source
+                            std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commandsOn, selectedItem, i); // replace source
                             interpretAndExecuteCommand(modifiedCmds, filePath, specificKey); // Execute modified 
                             modifiedCmds.clear();
                         } else
@@ -1455,7 +1459,7 @@ public:
                     } else {
                         if (std::find(selectedItemsListOff.begin(), selectedItemsListOff.end(), selectedItem) != selectedItemsListOff.end()) {
                             // Toggle switched to Off
-                            std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmdsOff, selectedItem, i); // replace source
+                            std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commandsOff, selectedItem, i); // replace source
                             interpretAndExecuteCommand(modifiedCmds, filePath, specificKey); // Execute modified 
                             modifiedCmds.clear();
                         } else
@@ -1864,7 +1868,7 @@ public:
                             listItem->setValue(footer, true);
                         
                         //std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(option.second, pathReplace);
-                        listItem->setClickListener([cmds = commands, keyName = option.first, this, packagePath = this->packagePath, footer, lastSection, listItem](uint64_t keys) {
+                        listItem->setClickListener([commands, keyName = option.first, this, packagePath = this->packagePath, footer, lastSection, listItem](uint64_t keys) {
                             if ((keys & KEY_A) && (footer != UNAVAILABLE_SELECTION)) {
                                 if (inPackageMenu)
                                     inPackageMenu = false;
@@ -1883,7 +1887,7 @@ public:
                                     if (selectedFooterDict.find(newKey) == selectedFooterDict.end())
                                         selectedFooterDict[newKey] = footer;
                                 }
-                                tsl::changeTo<SelectionOverlay>(packagePath, keyName, cmds, newKey);
+                                tsl::changeTo<SelectionOverlay>(packagePath, keyName, commands, newKey);
                                 lastKeyName = keyName;
                                 
                                 return true;
@@ -1918,9 +1922,9 @@ public:
                                 listItem->setValue(footer);
                             
                             
-                            listItem->setClickListener([this, i, cmds=commands, keyName = option.first, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
+                            listItem->setClickListener([this, i, commands, keyName = option.first, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
                                 if (keys & KEY_A) {
-                                    std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, keyName, i); // replace source
+                                    std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commands, keyName, i); // replace source
                                     //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
                                     interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified
                                     modifiedCmds.clear();
@@ -1948,11 +1952,11 @@ public:
                             
                             toggleListItem->setState(toggleStateOn);
                             
-                            toggleListItem->setStateChangedListener([this, i, cmdsOn=commandsOn, cmdsOff=commandsOff, toggleStateOn, keyName = option.first](bool state) {
+                            toggleListItem->setStateChangedListener([this, i, commandsOn, commandsOff, toggleStateOn, keyName = option.first](bool state) {
                                 if (!state) {
                                     // Toggle switched to On
                                     if (toggleStateOn) {
-                                        std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmdsOn, preprocessPath(pathPatternOn), i); // replace source
+                                        std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commandsOn, preprocessPath(pathPatternOn), i); // replace source
                                         //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
                                         interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified
                                         modifiedCmds.clear();
@@ -1963,7 +1967,7 @@ public:
                                 } else {
                                     // Toggle switched to Off
                                     if (!toggleStateOn) {
-                                        std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmdsOff, preprocessPath(pathPatternOff), i); // replace source
+                                        std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commandsOff, preprocessPath(pathPatternOff), i); // replace source
                                         //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
                                         interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified 
                                         modifiedCmds.clear();
@@ -2882,10 +2886,10 @@ public:
                         }
                         
                         //std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(option.second, pathReplace);
-                        listItem->setClickListener([this, cmds = commands, keyName = option.first, packagePath = packageDirectory, listItem](uint64_t keys) {
+                        listItem->setClickListener([this, commands, keyName = option.first, packagePath = packageDirectory, listItem](uint64_t keys) {
                             if (keys & KEY_A) {
                                 inMainMenu = false;
-                                tsl::changeTo<SelectionOverlay>(packagePath, keyName, cmds);
+                                tsl::changeTo<SelectionOverlay>(packagePath, keyName, commands);
                                 return true;
                             } else if (keys & SCRIPT_KEY) {
                                 inMainMenu = false; // Set boolean to true when entering a submenu
@@ -2912,9 +2916,9 @@ public:
                             listItem->setValue(footer, true);
                             
                             if (sourceType == "json") { // For JSON wildcards
-                                listItem->setClickListener([this, i, cmds=commands, packagePath = packageDirectory, keyName = option.first, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
+                                listItem->setClickListener([this, i, commands, packagePath = packageDirectory, keyName = option.first, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
                                     if (keys & KEY_A) {
-                                        std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, selectedItem, i); // replace source
+                                        std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commands, selectedItem, i); // replace source
                                         //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
                                         
                                         interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified
@@ -2934,9 +2938,9 @@ public:
                                 });
                                 list->addItem(listItem);
                             } else {
-                                listItem->setClickListener([this, i, cmds=commands, packagePath = packageDirectory, keyName = option.first, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
+                                listItem->setClickListener([this, i, commands, packagePath = packageDirectory, keyName = option.first, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
                                     if (keys & KEY_A) {
-                                        std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmds, selectedItem, i); // replace source
+                                        std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commands, selectedItem, i); // replace source
                                         //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
                                         
                                         interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified
@@ -2963,11 +2967,11 @@ public:
                             
                             toggleListItem->setState(toggleStateOn);
                             
-                            toggleListItem->setStateChangedListener([this, i, pathPatternOn, pathPatternOff, cmdsOn=commandsOn, cmdsOff=commandsOff, toggleStateOn, packagePath = packageDirectory, keyName = option.first](bool state) {
+                            toggleListItem->setStateChangedListener([this, i, pathPatternOn, pathPatternOff, commandsOn, commandsOff, toggleStateOn, packagePath = packageDirectory, keyName = option.first](bool state) {
                                 if (!state) {
                                     // Toggle switched to On
                                     if (toggleStateOn) {
-                                        std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmdsOn, preprocessPath(pathPatternOn), i); // replace source
+                                        std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commandsOn, preprocessPath(pathPatternOn), i); // replace source
                                         //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
                                         interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified 
                                         modifiedCmds.clear();
@@ -2978,7 +2982,7 @@ public:
                                 } else {
                                     // Toggle switched to Off
                                     if (!toggleStateOn) {
-                                        std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(cmdsOff, preprocessPath(pathPatternOff),  i); // replace source
+                                        std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commandsOff, preprocessPath(pathPatternOff),  i); // replace source
                                         //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
                                         interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified
                                         modifiedCmds.clear();
