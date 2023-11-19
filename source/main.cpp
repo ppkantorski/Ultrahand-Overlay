@@ -240,9 +240,6 @@ public:
             list->addItem(listItem);
             
             
-            
-            
-            
             listItem = new tsl::elm::ListItem(SOFTWARE_UPDATE);
             listItem->setValue(DROPDOWN_SYMBOL);
             
@@ -254,8 +251,6 @@ public:
                 return false;
             });
             list->addItem(listItem);
-            
-            
             
             
             list->addItem(new tsl::elm::CategoryHeader(UI_SETTINGS));
@@ -1379,33 +1374,6 @@ public:
                 populateSelectedItemsList(sourceType, (sourceType == "json") ? jsonString : jsonPath, jsonKey, selectedItemsList);
                 jsonPath = "";
                 jsonString = "";
-                
-                //if (sourceType == "json")
-                //    jsonData = stringToJson(jsonString);
-                //else if (sourceType == "json_file")
-                //    jsonData = readJsonFromFile(jsonPath);
-                ////
-                ////populateSelectedItemsList(sourceType, jsonString, jsonKey, selectedItemsList);
-                //
-                //// Populate items list based upon jsonKey
-                //if ((jsonData) && json_is_array(jsonData)) {
-                //    size_t arraySize = json_array_size(jsonData);
-                //    for (size_t i = 0; i < arraySize; ++i) {
-                //        json_t* item = json_array_get(jsonData, i);
-                //        if (item && json_is_object(item)) {
-                //            json_t* keyValue = json_object_get(item, jsonKey.c_str());
-                //            if (keyValue && json_is_string(keyValue)) {
-                //                const char* name = json_string_value(keyValue);
-                //                selectedItemsList.push_back(std::string(name));
-                //            }
-                //        }
-                //    }
-                //}
-                //// Free jsonDataOn
-                //if (jsonData != nullptr) {
-                //    json_decref(jsonData);
-                //    jsonData = nullptr;
-                //}
             }
         } else if (commandMode == "toggle") {
             if (sourceTypeOn == "file")
@@ -1416,33 +1384,6 @@ public:
                 populateSelectedItemsList(sourceTypeOn, (sourceTypeOn == "json") ? jsonStringOn : jsonPathOn, jsonKeyOn, selectedItemsListOn);
                 jsonPathOn = "";
                 jsonStringOn = "";
-                
-                //if (sourceTypeOn == "json")
-                //    jsonData = stringToJson(jsonStringOn);
-                //else if (sourceTypeOn == "json_file")
-                //    jsonData = readJsonFromFile(jsonPathOn);
-                ////
-                ////populateSelectedItemsList(jsonData, jsonKeyOn, selectedItemsListOn);
-                //
-                //// Populate items list based upon jsonKey
-                //if ((jsonData) && json_is_array(jsonData)) {
-                //    size_t arraySize = json_array_size(jsonData);
-                //    for (size_t i = 0; i < arraySize; ++i) {
-                //        json_t* item = json_array_get(jsonData, i);
-                //        if (item && json_is_object(item)) {
-                //            json_t* keyValue = json_object_get(item, jsonKeyOn.c_str());
-                //            if (keyValue && json_is_string(keyValue)) {
-                //                const char* name = json_string_value(keyValue);
-                //                selectedItemsListOn.push_back(std::string(name));
-                //            }
-                //        }
-                //    }
-                //}
-                //// Free jsonData
-                //if (jsonData != nullptr) {
-                //    json_decref(jsonData);
-                //    jsonData = nullptr;
-                //}
             }
             
             if (sourceTypeOff == "file")
@@ -1453,33 +1394,6 @@ public:
                 populateSelectedItemsList(sourceTypeOff, (sourceTypeOff == "json") ? jsonStringOff : jsonPathOff, jsonKeyOff, selectedItemsListOff);
                 jsonPathOff = "";
                 jsonStringOff = "";
-                
-                //if (sourceTypeOff == "json")
-                //    jsonData = stringToJson(jsonStringOff);
-                //else if (sourceTypeOff == "json_file")
-                //    jsonData = readJsonFromFile(jsonPathOff);
-                //
-                //populateSelectedItemsList(jsonData, jsonKeyOff, selectedItemsListOff);
-                
-                // Populate items list based upon jsonKey
-                //if ((jsonData) && json_is_array(jsonData)) {
-                //    size_t arraySize = json_array_size(jsonData);
-                //    for (size_t i = 0; i < arraySize; ++i) {
-                //        json_t* item = json_array_get(jsonData, i);
-                //        if (item && json_is_object(item)) {
-                //            json_t* keyValue = json_object_get(item, jsonKeyOff.c_str());
-                //            if (keyValue && json_is_string(keyValue)) {
-                //                const char* name = json_string_value(keyValue);
-                //                selectedItemsListOff.push_back(std::string(name));
-                //            }
-                //        }
-                //    }
-                //}
-                //// Free jsonData
-                //if (jsonData != nullptr) {
-                //    json_decref(jsonData);
-                //    jsonData = nullptr;
-                //}
             }
             
             
@@ -2798,10 +2712,6 @@ public:
                 //tsl::elm::ListItem* listItem = nullptr;
                 if (isFileOrDirectory(packageFilePath)) {
                     packageHeader = getPackageHeaderFromIni(packageFilePath+packageFileName);
-                    //if (count == 0) {
-                    //    // Add a section break with small text to indicate the "Packages" section
-                    //    list->addItem(new tsl::elm::CategoryHeader(PACKAGES));
-                    //}
                     
                     listItem = new tsl::elm::ListItem(newPackageName);
                     if (cleanVersionLabels == "true")
@@ -2824,9 +2734,9 @@ public:
                                 if (bootOptions.size() > 0) {
                                     for (const auto& bootOption:bootOptions) {
                                         std::string bootOptionName = bootOption.first;
-                                        auto& bootCommands = bootOption.second;
+                                        //auto& bootCommands = bootOption.second;
                                         if (bootOptionName == "boot") {
-                                            interpretAndExecuteCommand(bootCommands, packageFilePath+bootPackageFileName, bootOptionName); // Execute modified
+                                            interpretAndExecuteCommand(bootOption.second, packageFilePath+bootPackageFileName, bootOptionName); // Execute modified
                                             //bootCommands.clear();
                                             break;
                                         }
