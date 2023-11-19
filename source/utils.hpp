@@ -1090,16 +1090,16 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                                 hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
                             }
                         } else if (commandName == "hex-by-custom-offset" ||
-                                   commandName == "hex-by-custom-offset-decimal" ||
-                                   commandName == "hex-by-custom-offset-rdecimal") {
+                                   commandName == "hex-by-custom-decimal-offset" ||
+                                   commandName == "hex-by-custom-rdecimal-offset") {
                             if (cmdSize >= 5) {
                                 customPattern = removeQuotes(modifiedCmd[2]);
                                 offset = removeQuotes(modifiedCmd[3]);
                                 hexDataReplacement = removeQuotes(modifiedCmd[4]);
                                 
-                                if (commandName == "hex-by-custom-offset-decimal") {
+                                if (commandName == "hex-by-custom-decimal-offset") {
                                     hexDataReplacement = decimalToHex(hexDataReplacement);
-                                } else if (commandName == "hex-by-custom-offset-rdecimal") {
+                                } else if (commandName == "hex-by-custom-rdecimal-offset") {
                                     hexDataReplacement = decimalToReversedHex(hexDataReplacement);
                                 }
                                 
