@@ -545,6 +545,7 @@ std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadO
     bool inQuotes;
     
     std::vector<std::string> commandParts;
+    std::istringstream iss, argIss; // Move this line outside the loop
     
     while (fgets(line, sizeof(line), configFile)) {
         trimmedLine = line;
@@ -567,7 +568,10 @@ std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadO
             currentOption = trimmedLine.substr(1, trimmedLine.size() - 2);  // Extract option name
         } else {
             // Command line
-            std::istringstream iss(trimmedLine);
+            //std::istringstream iss(trimmedLine);
+            iss.clear(); // Reset stream state
+            iss.str(trimmedLine); // Set new content
+            
             commandParts.clear();
             
             part = "";
@@ -576,7 +580,9 @@ std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadO
                 if (!part.empty()) {
                     if (!inQuotes) {
                         // Outside quotes, split on spaces
-                        std::istringstream argIss(part);
+                        argIss.clear();
+                        argIss.str(part);
+                        //std::istringstream argIss(part);
                         arg = "";
                         while (argIss >> arg)
                             commandParts.push_back(arg);
