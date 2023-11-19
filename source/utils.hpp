@@ -541,12 +541,10 @@ std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadO
     
     bool isFirstEntry = true;
     std::string trimmedLine;
-    std::istringstream iss;
-    std::istringstream argIss;
-    std::string arg;
-    std::vector<std::string> commandParts;
-    std::string part;
+    std::string part, arg;
     bool inQuotes;
+    
+    std::vector<std::string> commandParts;
     
     while (fgets(line, sizeof(line), configFile)) {
         trimmedLine = line;
@@ -569,14 +567,17 @@ std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadO
             currentOption = trimmedLine.substr(1, trimmedLine.size() - 2);  // Extract option name
         } else {
             // Command line
-            iss.str(trimmedLine);
+            std::istringstream iss(trimmedLine);
+            commandParts.clear();
+            
+            part = "";
             inQuotes = false;
             while (std::getline(iss, part, '\'')) {
                 if (!part.empty()) {
                     if (!inQuotes) {
                         // Outside quotes, split on spaces
-                        argIss.str(part);
-                        //std::string arg;
+                        std::istringstream argIss(part);
+                        arg = "";
                         while (argIss >> arg)
                             commandParts.push_back(arg);
                     } else
@@ -598,6 +599,7 @@ std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadO
 
 
 
+
 // Function to populate selectedItemsListOff from a JSON array based on a key
 void populateSelectedItemsList(const std::string& sourceType, const std::string& jsonStringOrPath, const std::string& jsonKey, std::vector<std::string>& selectedItemsList) {
     json_t* jsonData = nullptr;
@@ -608,17 +610,14 @@ void populateSelectedItemsList(const std::string& sourceType, const std::string&
         jsonData = readJsonFromFile(jsonStringOrPath);
     
     if (jsonData && json_is_array(jsonData)) {
-        const char* value;
-        json_t* keyValue;
-        json_t* item;
         
         size_t arraySize = json_array_size(jsonData);
         for (size_t i = 0; i < arraySize; ++i) {
-            item = json_array_get(jsonData, i);
+            json_t* item = json_array_get(jsonData, i);
             if (item && json_is_object(item)) {
-                keyValue = json_object_get(item, jsonKey.c_str());
+                json_t* keyValue = json_object_get(item, jsonKey.c_str());
                 if (keyValue && json_is_string(keyValue)) {
-                    value = json_string_value(keyValue);
+                    const char* value = json_string_value(keyValue);
                     if (value) {
                         selectedItemsList.emplace_back(value);
                     }
@@ -633,6 +632,7 @@ void populateSelectedItemsList(const std::string& sourceType, const std::string&
         jsonData = nullptr;
     }
 }
+
 
 
 /**
