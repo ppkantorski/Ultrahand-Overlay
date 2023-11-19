@@ -24,19 +24,11 @@
 #include <path_funcs.hpp>
 #include <hex_funcs.hpp>
 #include <download_funcs.hpp>
-//#include <get_funcs.hpp>
-//#include <ini_funcs.hpp>
-//#include <json_funcs.hpp>
 #include <list_funcs.hpp>
 
 #include <payload.hpp> // Studious Pancake
-#include <util.hpp>
+#include <util.hpp> // Studious Pancake
 #include <tesla.hpp>
-
-
-//Payload::HekateConfigList const boot_config_list;
-//Payload::HekateConfigList const ini_config_list;
-//Payload::PayloadConfigList const payload_config_list;
 
 
 /**
@@ -641,7 +633,7 @@ void populateSelectedItemsList(const std::string& sourceType, const std::string&
  */
 std::string replacePlaceholder(const std::string& input, const std::string& placeholder, const std::string& replacement) {
     std::string result = input;
-    std::size_t pos = result.find(placeholder);
+    size_t pos = result.find(placeholder);
     if (pos != std::string::npos)
         result.replace(pos, placeholder.length(), replacement);
     return result;
@@ -654,8 +646,8 @@ std::string replaceIniPlaceholder(const std::string& arg, const std::string& ini
     std::string replacement = arg;
     std::string searchString = "{ini_file(";
     
-    std::size_t startPos = replacement.find(searchString);
-    std::size_t endPos = replacement.find(")}");
+    size_t startPos = replacement.find(searchString);
+    size_t endPos = replacement.find(")}");
     
     if (startPos != std::string::npos && endPos != std::string::npos && endPos > startPos) {
         std::string placeholderContent = replacement.substr(startPos + searchString.length(), endPos - startPos - searchString.length());
@@ -797,10 +789,10 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
         desiredSection, desiredNewSection, desiredKey, desiredNewKey, desiredValue, \
         offset, customPattern, hexDataToReplace, hexDataReplacement, fileUrl, clearOption;
     
-    std::size_t cmdSize;
-    std::size_t occurrence;
-    std::size_t tryCounter = 0;
-    std::size_t startPos, endPos;
+    size_t cmdSize;
+    size_t occurrence;
+    size_t tryCounter = 0;
+    size_t startPos, endPos;
     
     // Overwrite globals
     commandSuccess = true;
