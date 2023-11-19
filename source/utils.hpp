@@ -831,6 +831,7 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
     std::string replacement;
     std::vector<std::string> modifiedCmd;
     
+    std::string message;
     
     for (const auto& cmd : commands) {
         
@@ -1309,7 +1310,7 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                 
                 // Log the command using logMessage
                 if (logging) {
-                    std::string message = "Executing command: ";
+                    message = "Executing command: ";
                     for (const std::string& token : modifiedCmd)
                         message += token + " ";
                     logMessage(message);
