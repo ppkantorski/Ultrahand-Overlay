@@ -315,9 +315,10 @@ public:
             
             std::vector<std::string> defaultMenuModes = {"overlays", "packages"};
             
+            tsl::elm::ListItem* listItem = nullptr;
             for (const auto& defaultMenuMode : defaultMenuModes) {
                 
-                tsl::elm::ListItem* listItem = new tsl::elm::ListItem(defaultMenuMode);
+                listItem = new tsl::elm::ListItem(defaultMenuMode);
                 
                 if (defaultMenuMode == defaultMenu) {
                     listItem->setValue(CHECKMARK_SYMBOL);
@@ -347,10 +348,10 @@ public:
             
             std::string defaultCombo = trim(parseValueFromIniSection(settingsConfigIniPath, "ultrahand", "key_combo"));
             
-            
+            tsl::elm::ListItem* listItem = nullptr;
             for (const auto& combo : defaultCombos) {
                 
-                tsl::elm::ListItem* listItem = new tsl::elm::ListItem(comboMap[combo]);
+                listItem = new tsl::elm::ListItem(comboMap[combo]);
                 
                 if (combo == defaultCombo) {
                     listItem->setValue(CHECKMARK_SYMBOL);
@@ -383,16 +384,19 @@ public:
             
             std::string defaulLang = parseValueFromIniSection(settingsConfigIniPath, "ultrahand", "default_lang");
             
+            std::string langFile;
+            bool skipLang ;
             
-            
+            tsl::elm::ListItem* listItem = nullptr;
             for (const auto& defaultLangMode : defaultLanguages) {
-                std::string langFile = "/config/ultrahand/lang/"+defaultLangMode+".json";
-                bool skipLang = (!isFileOrDirectory(langFile));
+                langFile = "/config/ultrahand/lang/"+defaultLangMode+".json";
+                skipLang = (!isFileOrDirectory(langFile));
                 if (defaultLangMode != "en") {
                     if (skipLang)
                         continue;
                 }
-                tsl::elm::ListItem* listItem = new tsl::elm::ListItem(defaultLangMode);
+                
+                listItem = new tsl::elm::ListItem(defaultLangMode);
                 
                 if (defaultLangMode == defaulLang) {
                     listItem->setValue(CHECKMARK_SYMBOL);
@@ -533,9 +537,10 @@ public:
             
             list->addItem(listItem);
             
+            std::string themeName;
             
             for (const auto& themeFile : themeFilesList) {
-                std::string themeName = dropExtension(getNameFromPath(themeFile));
+                themeName = dropExtension(getNameFromPath(themeFile));
                 
                 if (themeName == "default")
                     continue;
@@ -2536,6 +2541,7 @@ public:
                 std::string overlayStarred;
                 std::string overlayVersion, overlayName;
                 std::string overlayFile, newOverlayName;
+                size_t lastUnderscorePos, secondLastUnderscorePos, thirdLastUnderscorePos;
                 
                 for (const auto& taintedOverlayFileName : overlayList) {
                     
@@ -2551,20 +2557,20 @@ public:
                         overlayStarred = "true";
                     
                     // Find the position of the last underscore
-                    size_t lastUnderscorePos = taintedOverlayFileName.rfind('_');
+                    lastUnderscorePos = taintedOverlayFileName.rfind('_');
                     // Check if an underscore was found
                     if (lastUnderscorePos != std::string::npos) {
                         // Extract overlayFileName starting from the character after the last underscore
                         overlayFileName = taintedOverlayFileName.substr(lastUnderscorePos + 1);
                         
                         // Now, find the position of the second-to-last underscore
-                        size_t secondLastUnderscorePos = taintedOverlayFileName.rfind('_', lastUnderscorePos - 1);
+                        secondLastUnderscorePos = taintedOverlayFileName.rfind('_', lastUnderscorePos - 1);
                         
                         if (secondLastUnderscorePos != std::string::npos) {
                             // Extract overlayName between the two underscores
                             overlayVersion = taintedOverlayFileName.substr(secondLastUnderscorePos + 1, lastUnderscorePos - secondLastUnderscorePos - 1);
                             // Now, find the position of the second-to-last underscore
-                            size_t thirdLastUnderscorePos = taintedOverlayFileName.rfind('_', secondLastUnderscorePos - 1);
+                            thirdLastUnderscorePos = taintedOverlayFileName.rfind('_', secondLastUnderscorePos - 1);
                             if (secondLastUnderscorePos != std::string::npos)
                                 overlayName = taintedOverlayFileName.substr(thirdLastUnderscorePos + 1, secondLastUnderscorePos - thirdLastUnderscorePos - 1);
                         }
