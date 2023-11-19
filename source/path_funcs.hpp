@@ -115,7 +115,7 @@ void deleteFileOrDirectory(const std::string& pathToDelete) {
             if (directory != nullptr) {
                 dirent* entry;
                 while ((entry = readdir(directory)) != nullptr) {
-                    std::string fileName = entry->d_name;
+                    const std::string& fileName = entry->d_name;
                     if (fileName != "." && fileName != "..") {
                         std::string filePath = pathToDelete + "/" + fileName;
                         deleteFileOrDirectory(filePath);
