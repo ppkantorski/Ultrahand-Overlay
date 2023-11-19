@@ -66,8 +66,8 @@
 //#include "../../../source/string_funcs.hpp"
 #include "../../../source/ini_funcs.hpp"
 #include "../../../source/json_funcs.hpp"
-#include "../../../common/half.hpp"
-using half_float::half;
+//#include "../../../common/half.hpp"
+//using half_float::half;
 
 static std::unordered_map<std::string, std::string> hexSumCache;
 
@@ -2308,7 +2308,8 @@ namespace tsl {
                     Color clickColor1 = highlightColor1;
                     Color clickColor2 = clickColor;
                     
-                    half progress = half((std::sin(2.0 * M_PI * fmod(std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count(), 1.0)) + 1.0) / 2.0);
+                    //half progress = half((std::sin(2.0 * M_PI * fmod(std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count(), 1.0)) + 1.0) / 2.0);
+                    float progress = (std::sin(2.0 * M_PI * fmod(std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count(), 1.0)) + 1.0) / 2.0;
                     
                     if (progress >= 0.5) {
                         clickColor1 = clickColor;
@@ -2395,7 +2396,8 @@ namespace tsl {
                 // Calculate the progress for one full sine wave per second
                 //const double cycleDuration = 1.0;  // 1 second for one full sine wave
                 //double timeCounter = 
-                half progress = half((std::sin(2.0 * M_PI * fmod(std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count(), 1.0)) + 1.0) / 2.0);
+                //half progress = half((std::sin(2.0 * M_PI * fmod(std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count(), 1.0)) + 1.0) / 2.0);
+                float progress = ((std::sin(2.0 * M_PI * fmod(std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count(), 1.0)) + 1.0) / 2.0);
 
                 highlightColor = {
                     static_cast<u8>((highlightColor1.r - highlightColor2.r) * progress + highlightColor2.r),
@@ -3580,7 +3582,8 @@ namespace tsl {
                             } else {
                                 // Calculate the increment based on the desired scroll rate
                                 //this->m_scrollOffset = (1.0-0.9) * this->m_scrollOffset + 0.9 * (0.1 * std::chrono::duration_cast<std::chrono::milliseconds>(t - 2000ms).count());
-                                this->m_scrollOffset = (half(0.1) * std::chrono::duration_cast<std::chrono::milliseconds>(t - 2000ms).count());
+                                //this->m_scrollOffset = (half(0.1) * std::chrono::duration_cast<std::chrono::milliseconds>(t - 2000ms).count());
+                                this->m_scrollOffset = ((0.1) * std::chrono::duration_cast<std::chrono::milliseconds>(t - 2000ms).count());
                                 //this->m_scrollOffset = (customRound(0.10 * std::chrono::duration_cast<std::chrono::milliseconds>((t) - 2000ms).count() * 10000.0) / 10000.0);
                             }
                         } // CUSTOM MODIFICATION END
@@ -3709,7 +3712,8 @@ namespace tsl {
             bool m_touched = false;
 
             u16 m_maxScroll = 0;
-            half m_scrollOffset = half(0);
+            //half m_scrollOffset = half(0);
+            float m_scrollOffset = 0.0;
             u32 m_maxWidth = 0;
             u32 m_textWidth = 0;
         };
@@ -3852,7 +3856,8 @@ namespace tsl {
             Color trackBarColor = RGB888(trackBarColorStr, "#555555");
             std::chrono::duration<long int, std::ratio<1, 1000000000>> t;
             Color highlightColor = a({0xf,0xf,0xf,0xf});
-            half progress;
+            //alf progress;
+            float progress;
             
             /**
              * @brief Constructor
@@ -3927,7 +3932,8 @@ namespace tsl {
 
                 renderer->drawString(this->m_icon, false, this->getX() + 15, this->getY() + 50, 23, a(defaultTextColor));
 
-                u16 handlePos = (this->getWidth() - 95) * static_cast<half>(this->m_value) / 100;
+                //u16 handlePos = (this->getWidth() - 95) * static_cast<half>(this->m_value) / 100;
+                u16 handlePos = (this->getWidth() - 95) * (this->m_value) / 100;
                 renderer->drawCircle(this->getX() + 60, this->getY() + 42, 2, true, a(tsl::style::color::ColorHighlight));
                 renderer->drawCircle(this->getX() + 60 + this->getWidth() - 95, this->getY() + 42, 2, true, a(tsl::style::color::ColorFrame));
                 renderer->drawRect(this->getX() + 60 + handlePos, this->getY() + 40, this->getWidth() - 95 - handlePos, 5, a(tsl::style::color::ColorFrame));
@@ -3946,16 +3952,20 @@ namespace tsl {
             }
 
             virtual void drawHighlight(gfx::Renderer *renderer) override {
-                static half counter = half(0);
-                progress = half((std::sin(counter) + 1.0) / 2.0);
+                //static half counter = half(0);
+                //progress = half((std::sin(counter) + 1.0) / 2.0);
+                static float counter = 0.0;
+                progress = ((std::sin(counter) + 1.0) / 2.0);
                 highlightColor = {   static_cast<u8>((0x2 - 0x8) * progress + 0x8),
                                      static_cast<u8>((0x8 - 0xF) * progress + 0xF),
                                      static_cast<u8>((0xC - 0xF) * progress + 0xF),
                                      static_cast<u8>((0x6 - 0xD) * progress + 0xD) };
 
-                counter += half(0.1F);
+                //counter += half(0.1F);
+                counter += 0.1F;
 
-                u16 handlePos = (this->getWidth() - 95) * static_cast<half>(this->m_value) / 100;
+                //u16 handlePos = (this->getWidth() - 95) * static_cast<half>(this->m_value) / 100;
+                u16 handlePos = (this->getWidth() - 95) * (this->m_value) / 100;
 
                 s32 x = 0;
                 s32 y = 0;
