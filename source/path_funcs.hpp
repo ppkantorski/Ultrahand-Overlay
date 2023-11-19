@@ -186,12 +186,15 @@ void moveFileOrDirectory(const std::string& sourcePath, const std::string& desti
             }
             
             struct dirent* entry;
+            
+            std::string sourceFilePath, destinationFilePath;
+            
             while ((entry = readdir(dir)) != NULL) {
-                const std::string fileOrFolderName = entry->d_name;
+                const std::string& fileOrFolderName = entry->d_name;
                 
                 if (fileOrFolderName != "." && fileOrFolderName != "..") {
-                    std::string sourceFilePath = sourcePath + fileOrFolderName;
-                    std::string destinationFilePath = destinationPath + fileOrFolderName;
+                    sourceFilePath = sourcePath + fileOrFolderName;
+                    destinationFilePath = destinationPath + fileOrFolderName;
                     
                     if (entry->d_type == DT_DIR) {
                         // Append trailing slash to destination path for folders
@@ -256,6 +259,8 @@ void moveFilesOrDirectoriesByPattern(const std::string& sourcePathPattern, const
     //logMessage("File List:\n" + fileListAsString);
     
     //logMessage("pre loop");
+    std::string folderName, fixedDestinationPath;
+    
     // Iterate through the file list
     for (const std::string& sourceFileOrDirectory : fileList) {
         //logMessage("sourceFileOrDirectory: "+sourceFileOrDirectory);
@@ -265,14 +270,14 @@ void moveFilesOrDirectoriesByPattern(const std::string& sourcePathPattern, const
             moveFileOrDirectory(sourceFileOrDirectory.c_str(), destinationPath.c_str());
         } else if (isDirectory(sourceFileOrDirectory)) {
             // if sourceFile is a directory (needs conditoin handling)
-            std::string folderName = getNameFromPath(sourceFileOrDirectory);
-            std::string fixedDestinationPath = destinationPath + folderName + "/";
-        
+            folderName = getNameFromPath(sourceFileOrDirectory);
+            fixedDestinationPath = destinationPath + folderName + "/";
+            
             //logMessage("fixedDestinationPath: "+fixedDestinationPath);
-        
+            
             moveFileOrDirectory(sourceFileOrDirectory.c_str(), fixedDestinationPath.c_str());
         }
-
+        
     }
     //logMessage("post loop");
 }
@@ -377,17 +382,19 @@ void copyFileOrDirectory(const std::string& fromFileOrDirectory, const std::stri
                     DIR* dir = opendir(fromDirectory.c_str());
                     if (dir != nullptr) {
                         dirent* entry;
+                        std::string fromFilePath, subFolderPath;
+                        
                         while ((entry = readdir(dir)) != nullptr) {
-                            std::string fileOrFolderName = entry->d_name;
+                            const std::string& fileOrFolderName = entry->d_name;
                             
                             // handle cade for files
                             if (fileOrFolderName != "." && fileOrFolderName != "..") {
-                                std::string fromFilePath = fromDirectory + fileOrFolderName;
+                                fromFilePath = fromDirectory + fileOrFolderName;
                                 copyFileOrDirectory(fromFilePath, toDirPath);
                             }
                             // handle case for subfolders within the from file path
                             if (entry->d_type == DT_DIR && fileOrFolderName != "." && fileOrFolderName != "..") {
-                                std::string subFolderPath = fromDirectory + fileOrFolderName + "/";
+                                subFolderPath = fromDirectory + fileOrFolderName + "/";
                                 copyFileOrDirectory(subFolderPath, toDirPath);
                             }
                             
