@@ -30,7 +30,7 @@
 #include <path_funcs.hpp>
 
 
-constexpr size_t BufferSize = 131072;
+constexpr size_t BufferSize = 4096;//131072;
 
 /**
  * @brief Represents a package header structure.
