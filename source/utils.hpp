@@ -618,6 +618,8 @@ void populateSelectedItemsList(const std::string& sourceType, const std::string&
     if (jsonData && json_is_array(jsonData)) {
         
         size_t arraySize = json_array_size(jsonData);
+        selectedItemsList.reserve(arraySize); // Preallocate memory for efficiency
+        
         for (size_t i = 0; i < arraySize; ++i) {
             json_t* item = json_array_get(jsonData, i);
             if (item && json_is_object(item)) {
