@@ -595,6 +595,39 @@ std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadO
 
 
 
+// Function to populate selectedItemsListOff from a JSON array based on a key
+void populateSelectedItemsList(const std::string& sourceType, const std::string& jsonStringOrPath, const std::string& jsonKey, std::vector<std::string>& selectedItemsList) {
+    json_t* jsonData = nullptr;
+    
+    if (sourceType == "json")
+        jsonData = stringToJson(jsonStringOrPath);
+    else if (sourceType == "json_file")
+        jsonData = readJsonFromFile(jsonStringOrPath);
+    
+    if (jsonData && json_is_array(jsonData)) {
+        size_t arraySize = json_array_size(jsonData);
+        for (size_t i = 0; i < arraySize; ++i) {
+            json_t* item = json_array_get(jsonData, i);
+            if (item && json_is_object(item)) {
+                json_t* keyValue = json_object_get(item, jsonKey.c_str());
+                if (keyValue && json_is_string(keyValue)) {
+                    const char* value = json_string_value(keyValue);
+                    if (value) {
+                        selectedItemsList.emplace_back(value);
+                    }
+                }
+            }
+        }
+    }
+    
+    // Free jsonDataOn
+    if (jsonData != nullptr) {
+        json_decref(jsonData);
+        jsonData = nullptr;
+    }
+}
+
+
 /**
  * @brief Replaces a placeholder with a replacement string in the input.
  *
