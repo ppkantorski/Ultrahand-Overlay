@@ -240,13 +240,13 @@ static std::vector<std::string> split(const std::string& str, char delim = ' ') 
  */
 static std::map<std::string, std::map<std::string, std::string>> parseIni(const std::string &str) {
     std::map<std::string, std::map<std::string, std::string>> iniData;
-
+    
     auto lines = split(str, '\n');
-
+    
     std::string lastHeader = "";
     for (auto& line : lines) {
         line.erase(std::remove_if(line.begin(), line.end(), ::isspace), line.end());
-
+        
         if (line[0] == '[' && line[line.size() - 1] == ']') {
             lastHeader = line.substr(1, line.size() - 2);
             iniData.emplace(lastHeader, std::map<std::string, std::string>{});
@@ -568,7 +568,7 @@ void setIniFile(const std::string& fileToEdit, const std::string& desiredSection
                 keyFound = true;
             }
         }
-
+        
         if (sectionFound && !keyFound && desiredNewKey.empty() && trim(currentSection) != trim(desiredSection)) {
             if (!updatedContent.empty() && updatedContent.substr(updatedContent.length() - 2) == "\n\n") {
                 updatedContent = updatedContent.substr(0, updatedContent.length() - 1);
@@ -582,14 +582,14 @@ void setIniFile(const std::string& fileToEdit, const std::string& desiredSection
             }
             keyFound = true;
         }
-
+        
         if (trim(currentSection) == trim(desiredSection)) {
             sectionFound = true;
             delimiterPos = trimmedLine.find('=');
-
+            
             if (delimiterPos != std::string::npos) {
                 lineKey = trim(trimmedLine.substr(0, delimiterPos));
-
+                
                 if (lineKey == desiredKey) {
                     keyFound = true;
                     originalValue = getValueFromLine(trimmedLine);
@@ -613,10 +613,10 @@ void setIniFile(const std::string& fileToEdit, const std::string& desiredSection
                 }
             }
         }
-
+        
         updatedContent += line;
     }
-
+    
     if (sectionFound && !keyFound && desiredNewKey.empty()) {
         if (!updatedContent.empty() && updatedContent.substr(updatedContent.length() - 2) == "\n\n") {
             updatedContent = updatedContent.substr(0, updatedContent.length() - 1);
