@@ -1168,16 +1168,16 @@ public:
             commandName = cmd[0];
             
             if (commandName == "erista:" || commandName == "Erista:") {
-                inEristaSection = usingErista;
+                inEristaSection = true;
                 inMarikoSection = false;
                 continue;
             } else if (commandName == "mariko:" || commandName == "Mariko:") {
                 inEristaSection = false;
-                inMarikoSection = usingMariko;
+                inMarikoSection = true;
                 continue;
             }
             
-            if (inEristaSection || inMarikoSection || !(inEristaSection && inMarikoSection)) {
+            if ((inEristaSection && !inMarikoSection && usingErista) || (!inEristaSection && inMarikoSection && usingMariko) || (!inEristaSection && !inMarikoSection)) {
                 
                 // Extract the command mode
                 if (commandName.find(modePattern) == 0) {
@@ -1741,16 +1741,16 @@ public:
                     commandName = cmd[0];
                     
                     if (commandName == "erista:" || commandName == "Erista:") {
-                        inEristaSection = usingErista;
+                        inEristaSection = true;
                         inMarikoSection = false;
                         continue;
                     } else if (commandName == "mariko:" || commandName == "Mariko:") {
                         inEristaSection = false;
-                        inMarikoSection = usingMariko;
+                        inMarikoSection = true;
                         continue;
                     }
                     
-                    if (inEristaSection || inMarikoSection || (!inEristaSection && !inMarikoSection)) {
+                    if ((inEristaSection && !inMarikoSection && usingErista) || (!inEristaSection && inMarikoSection && usingMariko) || (!inEristaSection && !inMarikoSection)) {
                         // Extract the command mode
                         if (commandName.find(modePattern) == 0) {
                             commandMode = commandName.substr(modePattern.length());
@@ -2760,16 +2760,16 @@ public:
                         commandName = cmd[0];
                         
                         if (commandName == "erista:" || commandName == "Erista:") {
-                            inEristaSection = usingErista;
+                            inEristaSection = true;
                             inMarikoSection = false;
                             continue;
                         } else if (commandName == "mariko:" || commandName == "Mariko:") {
                             inEristaSection = false;
-                            inMarikoSection = usingMariko;
+                            inMarikoSection = true;
                             continue;
                         }
                         
-                        if (inEristaSection || inMarikoSection || (!inEristaSection && !inMarikoSection)) {
+                        if ((inEristaSection && !inMarikoSection && usingErista) || (!inEristaSection && inMarikoSection && usingMariko) || (!inEristaSection && !inMarikoSection)) {
                             // Extract the command mode
                             if (commandName.find(modePattern) == 0) {
                                 commandMode = commandName.substr(modePattern.length());
