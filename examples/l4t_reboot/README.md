@@ -1,4 +1,4 @@
-# l4t_reboot - Ubuntu Helper Function
+# l4t_reboot - Ubuntu Helper Function (deprecated)
 
 "l4t_reboot" is an Ubuntu helper function designed to streamline the handling of L4T (Linux for Tegra) reboots. This tool provides a convenient way to manage and execute reboot operations on your Ubuntu-based system.
 

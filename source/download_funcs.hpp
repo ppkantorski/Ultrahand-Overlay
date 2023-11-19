@@ -11,9 +11,9 @@
  *
  *   Note: Please be aware that this notice cannot be altered or removed. It is a part
  *   of the project's documentation and must remain intact.
- *
+ * 
+ *  Licensed under CC BY-NC-SA 4.0
  *  Copyright (c) 2023 ppkantorski
- *  All rights reserved.
  ********************************************************************************/
 
 #pragma once
@@ -43,6 +43,40 @@ size_t writeCallback(void* contents, size_t size, size_t nmemb, FILE* file) {
     size_t written = fwrite(contents, size, nmemb, file);
     return written;
 }
+
+
+// Declare the CallbackData structure
+//struct CallbackData {
+//    FILE* file;
+//    // Add any additional data you need here
+//};
+//
+//
+//// Your progress callback function
+//int progressCallback(void* clientp, curl_off_t dltotal, curl_off_t dlnow, curl_off_t ultotal, curl_off_t ulnow) {
+//    CallbackData* callbackData = static_cast<CallbackData*>(clientp);
+//
+//    // Log at the beginning to confirm callback invocation
+//    logMessage("Progress callback invoked.");
+//
+//    // Log the values of dltotal and dlnow
+//    logMessage("Total Size: " + std::to_string(dltotal) + " bytes");
+//    logMessage("Downloaded: " + std::to_string(dlnow) + " bytes");
+//
+//    // Update your progress variable here
+//    float progress = (dltotal > 0) ? (dlnow * 100.0 / dltotal) : 0.0;
+//
+//    // Log the download progress
+//    logMessage("Download Progress: " + std::to_string(progress) + "%");
+//
+//    // Log at the end to confirm callback completion
+//    logMessage("Progress callback completed.");
+//
+//    // Return 0 to continue the transfer
+//    return 0;
+//}
+
+
 
 
 /**
@@ -109,12 +143,19 @@ bool downloadFile(const std::string& url, const std::string& toDestination) {
         return false;
     }
     
+    // Allocate CallbackData dynamically
+    //CallbackData* callbackData = new CallbackData{file};
+    //
+    //curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
+    //curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, progressCallback);
+    //curl_easy_setopt(curl, CURLOPT_XFERINFODATA, callbackData);
+    
+    curl_easy_setopt(curl, CURLOPT_BUFFERSIZE, 4096);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeCallback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, file);
     
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
     
-    curl_easy_setopt(curl, CURLOPT_BUFFERSIZE, 2048);
     
     // Set a user agent
     curl_easy_setopt(curl, CURLOPT_USERAGENT, "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36");
@@ -129,19 +170,22 @@ bool downloadFile(const std::string& url, const std::string& toDestination) {
     //logMessage("destination: "+destination);
     
     CURLcode result = curl_easy_perform(curl);
+    curl_easy_cleanup(curl);
+    fclose(file);
+    //delete callbackData;
     if (result != CURLE_OK) {
         logMessage(std::string("Error downloading file: ") + curl_easy_strerror(result));
-        curl_easy_cleanup(curl);
+        //curl_easy_cleanup(curl);
         //curl_global_cleanup();
-        fclose(file);
+        //fclose(file);
         // Delete the file if nothing was written to it
         std::remove(destination.c_str());
         return false;
     }
     
-    curl_easy_cleanup(curl);
+    //curl_easy_cleanup(curl);
     //curl_global_cleanup();
-    fclose(file);
+    //fclose(file);
     
     // Check if the file is empty
     long fileSize = ftell(file);
@@ -176,12 +220,10 @@ bool unzipFile(const std::string& zipFilePath, const std::string& toDestination)
         std::string fileName = entry.d_name;
         std::string extractedFilePath = toDestination + fileName;
         
-        //createDirectory(toDestination);
-        
+        // Skip over present directory entries when extracting files from a zip archive
         if (!extractedFilePath.empty() && extractedFilePath.back() == '/') {
             continue;
         }
-        
         
         // Extract the directory path from the extracted file path
         std::string directoryPath;
@@ -193,12 +235,12 @@ bool unzipFile(const std::string& zipFilePath, const std::string& toDestination)
         
         createDirectory(directoryPath);
         
-        if (isDirectory(directoryPath)) {
-            logMessage("directoryPath: success");
-        } else {
-            logMessage("directoryPath: failure");
-        }
-        
+        //if (isDirectory(directoryPath)) {
+        //    logMessage("directoryPath: "+directoryPath+" exists");
+        //} else {
+        //    logMessage("directoryPath: "+directoryPath+" does not exist");
+        //}
+        //
         //logMessage(std::string("directoryPath: ") + directoryPath);
 
         ZZIP_FILE* file = zzip_file_open(dir, entry.d_name, 0);

@@ -10,8 +10,8 @@
 #
 #   GitHub Repository: https://github.com/ppkantorski/Ultrahand-Overlay
 #
+# Licensed under CC BY-NC-SA 4.0
 # Copyright (c) 2023 ppkantorski
-# All rights reserved.
 ##################################################################################
 
 #---------------------------------------------------------------------------------
@@ -55,7 +55,7 @@ include $(DEVKITPRO)/libnx/switch_rules
 #---------------------------------------------------------------------------------
 APP_TITLE	:= Ultrahand
 APP_AUTHOR	:= b0rd2dEAth
-APP_VERSION	:= 1.4.6
+APP_VERSION	:= 1.4.7
 TARGET	    := ovlmenu
 BUILD	    := build
 SOURCES	    := source common 
@@ -67,15 +67,15 @@ NO_ICON	    := 1
 #---------------------------------------------------------------------------------
 ARCH := -march=armv8-a+crc+crypto -mtune=cortex-a57 -mtp=soft -fPIE
 
-CFLAGS := -g -Wall -Os -ffunction-sections \
+CFLAGS := -Wall -Os -ffunction-sections -fdata-sections -flto\
 			$(ARCH) $(DEFINES)
 
 CFLAGS += $(INCLUDE) -D__SWITCH__ -DAPP_VERSION="\"$(APP_VERSION)\""
 
 CXXFLAGS := $(CFLAGS) -fexceptions -std=c++20 -Wno-dangling-else
 
-ASFLAGS := -g $(ARCH)
-LDFLAGS = -specs=$(DEVKITPRO)/libnx/switch.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
+ASFLAGS := $(ARCH)
+LDFLAGS += -specs=$(DEVKITPRO)/libnx/switch.specs $(ARCH) -Wl,-Map,$(notdir $*.map) -Wl,--gc-sections
 
 LIBS := -lcurl -lz -lzzip -lmbedtls -lmbedx509 -lmbedcrypto -ljansson -lnx 
 
