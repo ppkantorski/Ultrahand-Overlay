@@ -25,7 +25,7 @@
 #include <sys/stat.h> // Added for stat
 
 
-const std::size_t hexBufferSize = 4096;
+const size_t hexBufferSize = 4096;
 
 
 // For improving the speed of hexing consecutively with the same file and asciiPattern.
@@ -145,14 +145,14 @@ std::vector<std::string> findHexDataOffsets(const std::string& filePath, const s
         fclose(file);
         return offsets;
     }
-    //std::size_t fileSize = fileStatus.st_size;
+    //size_t fileSize = fileStatus.st_size;
     
     // Convert the hex data string to binary data
     std::vector<unsigned char> binaryData; // Changed to use unsigned char
     std::string byteString;
     unsigned char byte;
     
-    for (std::size_t i = 0; i < hexData.length(); i += 2) {
+    for (size_t i = 0; i < hexData.length(); i += 2) {
         byteString = hexData.substr(i, 2);
         byte = static_cast<unsigned char>(std::stoi(byteString, nullptr, 16)); // Changed to use unsigned char
         binaryData.push_back(byte);
@@ -161,11 +161,11 @@ std::vector<std::string> findHexDataOffsets(const std::string& filePath, const s
     // Read the file in chunks to find the offsets where the hex data is located
     std::vector<unsigned char> buffer(hexBufferSize); // Changed to use unsigned char
     std::streampos offset = 0;
-    std::size_t bytesRead = 0; // Changed to std::size_t
+    size_t bytesRead = 0; // Changed to size_t
     std::streampos currentOffset;
     
-    while ((bytesRead = fread(buffer.data(), sizeof(unsigned char), hexBufferSize, file)) > 0) { // Changed to use unsigned char and std::size_t
-        for (std::size_t i = 0; i < bytesRead; i++) {
+    while ((bytesRead = fread(buffer.data(), sizeof(unsigned char), hexBufferSize, file)) > 0) { // Changed to use unsigned char and size_t
+        for (size_t i = 0; i < bytesRead; i++) {
             if (std::memcmp(buffer.data() + i, binaryData.data(), binaryData.size()) == 0) {
                 currentOffset = static_cast<std::streampos>(offset) + static_cast<std::streamoff>(i);
                 offsets.push_back(std::to_string(currentOffset));
@@ -197,24 +197,24 @@ std::vector<std::string> findHexDataOffsetsF(FILE* file, const std::string& hexD
         return offsets;
     }
     
-    //std::size_t fileSize = fileStatus.st_size;
+    //size_t fileSize = fileStatus.st_size;
     
     // Convert the hex data string to binary data
     std::vector<unsigned char> binaryData; // Changed to use unsigned char
-    for (std::size_t i = 0; i < hexData.length(); i += 2) {
+    for (size_t i = 0; i < hexData.length(); i += 2) {
         std::string byteString = hexData.substr(i, 2);
         unsigned char byte = static_cast<unsigned char>(std::stoi(byteString, nullptr, 16)); // Changed to use unsigned char
         binaryData.push_back(byte);
     }
     
     // Read the file in chunks to find the offsets where the hex data is located
-    //const std::size_t bufferSize = 131072;
+    //const size_t bufferSize = 131072;
     std::vector<unsigned char> buffer(hexBufferSize); // Changed to use unsigned char
     std::streampos offset = 0;
-    std::size_t bytesRead = 0; // Changed to std::size_t
+    size_t bytesRead = 0; // Changed to size_t
     std::streampos currentOffset;
-    while ((bytesRead = fread(buffer.data(), sizeof(unsigned char), hexBufferSize, file)) > 0) { // Changed to use unsigned char and std::size_t
-        for (std::size_t i = 0; i < bytesRead; i++) {
+    while ((bytesRead = fread(buffer.data(), sizeof(unsigned char), hexBufferSize, file)) > 0) { // Changed to use unsigned char and size_t
+        for (size_t i = 0; i < bytesRead; i++) {
             if (std::memcmp(buffer.data() + i, binaryData.data(), binaryData.size()) == 0) {
                 currentOffset = static_cast<std::streampos>(offset) + static_cast<std::streamoff>(i);
                 offsets.push_back(std::to_string(currentOffset));
@@ -259,14 +259,14 @@ void hexEditByOffset(const std::string& filePath, const std::string& offsetStr, 
     std::vector<unsigned char> binaryData; // Changed to use unsigned char
     std::string byteString;
     unsigned char byte;
-    for (std::size_t i = 0; i < hexData.length(); i += 2) {
+    for (size_t i = 0; i < hexData.length(); i += 2) {
         byteString = hexData.substr(i, 2);
         byte = static_cast<unsigned char>(std::stoi(byteString, nullptr, 16)); // Changed to use unsigned char
         binaryData.push_back(byte);
     }
     
     // Calculate the number of bytes to be replaced
-    std::size_t bytesToReplace = binaryData.size();
+    size_t bytesToReplace = binaryData.size();
     
     // Read the existing data from the file
     std::vector<unsigned char> existingData(bytesToReplace); // Changed to use unsigned char
@@ -590,8 +590,8 @@ std::string replaceHexPlaceholder(const std::string& arg, const std::string& hex
     std::string replacement = arg;
     std::string searchString = "{hex_file(";
     
-    std::size_t startPos = replacement.find(searchString);
-    std::size_t endPos = replacement.find(")}");
+    size_t startPos = replacement.find(searchString);
+    size_t endPos = replacement.find(")}");
     
     if (startPos != std::string::npos && endPos != std::string::npos && endPos > startPos) {
         std::string placeholderContent = replacement.substr(startPos + searchString.length(), endPos - startPos - searchString.length());
