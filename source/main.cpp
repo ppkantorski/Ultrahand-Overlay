@@ -65,6 +65,7 @@ static std::string groupingPattern = ";grouping=";
 static std::string lastMenu = "";
 static std::string lastMenuMode = "";
 static std::string lastKeyName = "";
+
 static std::unordered_map<std::string, std::string> selectedFooterDict;
 static auto selectedListItem = static_cast<tsl::elm::ListItem*>(nullptr);
 static auto lastSelectedListItem = static_cast<tsl::elm::ListItem*>(nullptr);
