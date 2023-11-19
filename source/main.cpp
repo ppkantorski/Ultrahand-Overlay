@@ -1097,7 +1097,6 @@ public:
 class SelectionOverlay : public tsl::Gui {
 private:
     std::string filePath, specificKey, pathPattern, pathPatternOn, pathPatternOff, itemName, parentDirName, lastParentDirName;
-    std::vector<std::string> filesList, filesListOn, filesListOff, filterList, filterListOn, filterListOff;
     std::vector<std::vector<std::string>> commands;
     std::string specifiedFooterKey;
     bool toggleState = false;
@@ -1135,6 +1134,7 @@ public:
     virtual tsl::elm::Element* createUI() override {
         inSelectionMenu = true;
         PackageHeader packageHeader = getPackageHeaderFromIni(filePath+packageFileName);
+        std::vector<std::string> filesList, filesListOn, filesListOff, filterList, filterListOn, filterListOff;
         
         tsl::elm::List *list = new tsl::elm::List();
         
@@ -1536,10 +1536,8 @@ public:
  */
 class PackageMenu : public tsl::Gui {
 private:
-    tsl::hlp::ini::IniData packageConfigData;
     std::string packagePath, dropdownSection, currentPage, pathReplace, pathReplaceOn, pathReplaceOff;
     std::string filePath, specificKey, pathPattern, pathPatternOn, pathPatternOff, itemName, parentDirName, lastParentDirName;
-    std::vector<std::string> filesList, filesListOn, filesListOff, filterList, filterListOn, filterListOff;
     bool usingPages = false;
 public:
     /**
@@ -1581,6 +1579,8 @@ public:
             lastMenu = "subPackageMenu";
         }
         
+        tsl::hlp::ini::IniData packageConfigData;
+        std::vector<std::string> filesList, filesListOn, filesListOff, filterList, filterListOn, filterListOff;
         
         // Load options from INI file in the subdirectory
         std::string packageIniPath = packagePath + packageFileName;
@@ -1818,6 +1818,7 @@ public:
                             setIniFileValue(packageConfigIniPath, optionName, "footer", commandFooter);
                         
                     }
+                    packageConfigData.clear();
                 } else { // write data if settings are not loaded
                     setIniFileValue(packageConfigIniPath, optionName, "mode", commandMode);
                     setIniFileValue(packageConfigIniPath, optionName, "grouping", commandGrouping);
@@ -2084,7 +2085,6 @@ public:
  */
 class MainMenu : public tsl::Gui {
 private:
-    tsl::hlp::ini::IniData settingsData, themesData, packageConfigData;
     std::string packageIniPath = packageDirectory + packageFileName;
     std::string packageConfigIniPath = packageDirectory + configFileName;
     std::string menuMode, defaultMenuMode, inOverlayString, fullPath, optionName, priority, starred, hide;
@@ -2092,11 +2092,7 @@ private:
     bool useOverlayLaunchArgs = false;
     std::string hiddenMenuMode;
     bool initializingSpawn = false;
-    
     std::string defaultLang = "en";
-    std::string packagePath, pathReplace, pathReplaceOn, pathReplaceOff;
-    std::string filePath, specificKey, pathPattern, pathPatternOn, pathPatternOff, itemName, parentDirName, lastParentDirName;
-    std::vector<std::string> filesList, filesListOn, filesListOff, filterList, filterListOn, filterListOff;
     
 public:
     /**
@@ -2123,6 +2119,12 @@ public:
     virtual tsl::elm::Element* createUI() override {
         if (!inHiddenMode)
             inMainMenu = true;
+        
+        tsl::hlp::ini::IniData settingsData, packageConfigData;
+        std::string packagePath, pathReplace, pathReplaceOn, pathReplaceOff;
+        std::string filePath, specificKey, pathPattern, pathPatternOn, pathPatternOff, itemName, parentDirName, lastParentDirName;
+        std::vector<std::string> filesList, filesListOn, filesListOff, filterList, filterListOn, filterListOff;
+        
         
         lastMenuMode = hiddenMenuMode;
         
@@ -2193,6 +2195,7 @@ public:
                     setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_soc_temp", "true");
                 
             }
+            settingsData.clear();
         }
         if (!settingsLoaded) { // write data if settings are not loaded
             setIniFileValue(settingsConfigIniPath, "ultrahand", "default_lang", defaultLang);
@@ -2843,6 +2846,7 @@ public:
                                 setIniFileValue(packageConfigIniPath, optionName, "footer", commandFooter);
                             
                         }
+                        packageConfigData.clear();
                     } else { // write data if settings are not loaded
                         setIniFileValue(packageConfigIniPath, optionName, "mode", commandMode);
                         setIniFileValue(packageConfigIniPath, optionName, "grouping", commandGrouping);
@@ -2959,7 +2963,7 @@ public:
                             
                             toggleListItem->setState(toggleStateOn);
                             
-                            toggleListItem->setStateChangedListener([this, i, cmdsOn=commandsOn, cmdsOff=commandsOff, toggleStateOn, packagePath = packageDirectory, keyName = option.first](bool state) {
+                            toggleListItem->setStateChangedListener([this, i, pathPatternOn, pathPatternOff, cmdsOn=commandsOn, cmdsOff=commandsOff, toggleStateOn, packagePath = packageDirectory, keyName = option.first](bool state) {
                                 if (!state) {
                                     // Toggle switched to On
                                     if (toggleStateOn) {
