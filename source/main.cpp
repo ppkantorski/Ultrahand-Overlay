@@ -1154,27 +1154,47 @@ public:
         std::string listString, listStringOn, listStringOff;
         std::vector<std::string> listData, listDataOn, listDataOff;
         std::string jsonString, jsonStringOn, jsonStringOff;
+        std::string commandName;
         
+        bool inEristaSection = false;
+        bool inMarikoSection = false;
         
         // initial processing of commands
         for (const auto& cmd : commands) {
-            if (!cmd.empty()) { // Isolate command settings
+            if (cmd.empty()) { // Isolate command settings
+                continue;
+            }
+            
+            commandName = cmd[0];
+            
+            if (commandName == "erista:" || commandName == "Erista:") {
+                inEristaSection = true && usingErista;
+                inMarikoSection = false;
+                continue;
+            } else if (commandName == "mariko:" || commandName == "Mariko:") {
+                inEristaSection = false;
+                inMarikoSection = true && usingMariko;
+                continue;
+            }
+            
+            if (inEristaSection || inMarikoSection || !(inEristaSection && inMarikoSection)) {
+                
                 // Extract the command mode
-                if (cmd[0].find(modePattern) == 0) {
-                    commandMode = cmd[0].substr(modePattern.length());
+                if (commandName.find(modePattern) == 0) {
+                    commandMode = commandName.substr(modePattern.length());
                     if (std::find(commandModes.begin(), commandModes.end(), commandMode) == commandModes.end())
                         commandMode = commandModes[0]; // reset to default if commandMode is unknown
-                } else if (cmd[0].find(groupingPattern) == 0) {// Extract the command grouping
-                    commandGrouping = cmd[0].substr(groupingPattern.length());
+                } else if (commandName.find(groupingPattern) == 0) {// Extract the command grouping
+                    commandGrouping = commandName.substr(groupingPattern.length());
                     if (std::find(commandGroupings.begin(), commandGroupings.end(), commandGrouping) == commandGroupings.end())
                         commandGrouping = commandGroupings[0]; // reset to default if commandMode is unknown
                 }
                 
                 // Extract the command grouping
                 if (commandMode == "toggle") {
-                    if (cmd[0].find("on:") == 0)
+                    if (commandName.find("on:") == 0)
                         currentSection = "on";
-                    else if (cmd[0].find("off:") == 0)
+                    else if (commandName.find("off:") == 0)
                         currentSection = "off";
                     
                     // Seperation of command chuncks
@@ -1189,80 +1209,80 @@ public:
                     // 
                 }
                 
-            }
-            if (cmd.size() > 1) { // Pre-process advanced commands
-                if (cmd[0] == "filter") {
-                    if (currentSection == "global")
-                        filterList.push_back(cmd[1]);
-                    else if (currentSection == "on")
-                        filterListOn.push_back(cmd[1]);
-                    else if (currentSection == "off")
-                        filterListOff.push_back(cmd[1]);
-                } else if (cmd[0] == "file_source") {
-                    if (currentSection == "global") {
-                        pathPattern = cmd[1];
-                        filesList = getFilesListByWildcards(pathPattern);
-                        sourceType = "file";
-                    } else if (currentSection == "on") {
-                        pathPatternOn = cmd[1];
-                        filesListOn = getFilesListByWildcards(pathPatternOn);
-                        sourceTypeOn = "file";
-                    } else if (currentSection == "off") {
-                        pathPatternOff = cmd[1];
-                        filesListOff = getFilesListByWildcards(pathPatternOff);
-                        sourceTypeOff = "file";
-                    }
-                } else if (cmd[0] == "json_file_source") {
-                    if (currentSection == "global") {
-                        jsonPath = preprocessPath(cmd[1]);
-                        sourceType = "json_file";
-                        if (cmd.size() > 2)
-                            jsonKey = cmd[2]; //json display key
-                    } else if (currentSection == "on") {
-                        jsonPathOn = preprocessPath(cmd[1]);
-                        sourceTypeOn = "json_file";
-                        if (cmd.size() > 2)
-                            jsonKeyOn = cmd[2]; //json display key
-                    } else if (currentSection == "off") {
-                        jsonPathOff = preprocessPath(cmd[1]);
-                        sourceTypeOff = "json_file";
-                        if (cmd.size() > 2)
-                            jsonKeyOff = cmd[2]; //json display key
-                    }
-                } else if (cmd[0] == "list_source") {
-                    if (currentSection == "global") {
-                        listString = removeQuotes(cmd[1]);
-                        sourceType = "list";
-                    } else if (currentSection == "on") {
-                        listStringOn = removeQuotes(cmd[1]);
-                        sourceTypeOn = "list";
-                    } else if (currentSection == "off") {
-                        listStringOff = removeQuotes(cmd[1]);
-                        sourceTypeOff = "list";
-                    }
-                } else if (cmd[0] == "json_source") {
-                    if (currentSection == "global") {
-                        jsonString = removeQuotes(cmd[1]); // convert string to jsonData
-                        sourceType = "json";
-                        
-                        if (cmd.size() > 2)
-                            jsonKey = cmd[2]; //json display key
-                    } else if (currentSection == "on") {
-                        jsonStringOn = removeQuotes(cmd[1]); // convert string to jsonData
-                        sourceTypeOn = "json";
-                        
-                        if (cmd.size() > 2)
-                            jsonKeyOn = cmd[2]; //json display key
-                        
-                    } else if (currentSection == "off") {
-                        jsonStringOff = removeQuotes(cmd[1]); // convert string to jsonData
-                        sourceTypeOff = "json";
-                        
-                        if (cmd.size() > 2)
-                            jsonKeyOff = cmd[2]; //json display key
+                if (cmd.size() > 1) { // Pre-process advanced commands
+                    if (commandName == "filter") {
+                        if (currentSection == "global")
+                            filterList.push_back(cmd[1]);
+                        else if (currentSection == "on")
+                            filterListOn.push_back(cmd[1]);
+                        else if (currentSection == "off")
+                            filterListOff.push_back(cmd[1]);
+                    } else if (commandName == "file_source") {
+                        if (currentSection == "global") {
+                            pathPattern = cmd[1];
+                            filesList = getFilesListByWildcards(pathPattern);
+                            sourceType = "file";
+                        } else if (currentSection == "on") {
+                            pathPatternOn = cmd[1];
+                            filesListOn = getFilesListByWildcards(pathPatternOn);
+                            sourceTypeOn = "file";
+                        } else if (currentSection == "off") {
+                            pathPatternOff = cmd[1];
+                            filesListOff = getFilesListByWildcards(pathPatternOff);
+                            sourceTypeOff = "file";
+                        }
+                    } else if (commandName == "json_file_source") {
+                        if (currentSection == "global") {
+                            jsonPath = preprocessPath(cmd[1]);
+                            sourceType = "json_file";
+                            if (cmd.size() > 2)
+                                jsonKey = cmd[2]; //json display key
+                        } else if (currentSection == "on") {
+                            jsonPathOn = preprocessPath(cmd[1]);
+                            sourceTypeOn = "json_file";
+                            if (cmd.size() > 2)
+                                jsonKeyOn = cmd[2]; //json display key
+                        } else if (currentSection == "off") {
+                            jsonPathOff = preprocessPath(cmd[1]);
+                            sourceTypeOff = "json_file";
+                            if (cmd.size() > 2)
+                                jsonKeyOff = cmd[2]; //json display key
+                        }
+                    } else if (commandName == "list_source") {
+                        if (currentSection == "global") {
+                            listString = removeQuotes(cmd[1]);
+                            sourceType = "list";
+                        } else if (currentSection == "on") {
+                            listStringOn = removeQuotes(cmd[1]);
+                            sourceTypeOn = "list";
+                        } else if (currentSection == "off") {
+                            listStringOff = removeQuotes(cmd[1]);
+                            sourceTypeOff = "list";
+                        }
+                    } else if (commandName == "json_source") {
+                        if (currentSection == "global") {
+                            jsonString = removeQuotes(cmd[1]); // convert string to jsonData
+                            sourceType = "json";
+                            
+                            if (cmd.size() > 2)
+                                jsonKey = cmd[2]; //json display key
+                        } else if (currentSection == "on") {
+                            jsonStringOn = removeQuotes(cmd[1]); // convert string to jsonData
+                            sourceTypeOn = "json";
+                            
+                            if (cmd.size() > 2)
+                                jsonKeyOn = cmd[2]; //json display key
+                            
+                        } else if (currentSection == "off") {
+                            jsonStringOff = removeQuotes(cmd[1]); // convert string to jsonData
+                            sourceTypeOff = "json";
+                            
+                            if (cmd.size() > 2)
+                                jsonKeyOff = cmd[2]; //json display key
+                        }
                     }
                 }
-            } 
+            }
         }
         
         // items can be paths, commands, or variables depending on source
@@ -1697,27 +1717,47 @@ public:
                     }
                 }
                 
+                std::string commandName;
+                
+                // initial processing of commands
+                bool inEristaSection = false;
+                bool inMarikoSection = false;
                 
                 // initial processing of commands
                 for (const auto& cmd : commands) {
+                    if (cmd.empty()) { // Isolate command settings
+                        continue;
+                    }
                     
-                    if (!cmd.empty()) { // Isolate command settings
+                    commandName = cmd[0];
+                    
+                    if (commandName == "erista:" || commandName == "Erista:") {
+                        inEristaSection = true && usingErista;
+                        inMarikoSection = false;
+                        continue;
+                    } else if (commandName == "mariko:" || commandName == "Mariko:") {
+                        inEristaSection = false;
+                        inMarikoSection = true && usingMariko;
+                        continue;
+                    }
+                    
+                    if (inEristaSection || inMarikoSection || !(inEristaSection && inMarikoSection)) {
                         // Extract the command mode
-                        if (cmd[0].find(modePattern) == 0) {
-                            commandMode = cmd[0].substr(modePattern.length());
+                        if (commandName.find(modePattern) == 0) {
+                            commandMode = commandName.substr(modePattern.length());
                             if (std::find(commandModes.begin(), commandModes.end(), commandMode) == commandModes.end())
                                 commandMode = commandModes[0]; // reset to default if commandMode is unknown
-                        } else if (cmd[0].find(groupingPattern) == 0) {// Extract the command grouping
-                            commandGrouping = cmd[0].substr(groupingPattern.length());
+                        } else if (commandName.find(groupingPattern) == 0) {// Extract the command grouping
+                            commandGrouping = commandName.substr(groupingPattern.length());
                             if (std::find(commandGroupings.begin(), commandGroupings.end(), commandGrouping) == commandGroupings.end())
                                 commandGrouping = commandGroupings[0]; // reset to default if commandMode is unknown
                         }
                         
                         // Extract the command grouping
                         if (commandMode == "toggle") {
-                            if (cmd[0].find("on:") == 0)
+                            if (commandName.find("on:") == 0)
                                 currentSection = "on";
-                            else if (cmd[0].find("off:") == 0)
+                            else if (commandName.find("off:") == 0)
                                 currentSection = "off";
                             
                             // Seperation of command chuncks
@@ -1729,19 +1769,18 @@ public:
                             else if (currentSection == "off")
                                 commandsOff.push_back(cmd);
                         }
-                        
-                    }
-                    if (cmd.size() > 1) { // Pre-process advanced commands
-                        if (cmd[0] == "file_source") {
-                            if (currentSection == "global") {
-                                pathPattern = cmd[1];
-                                sourceType = "file";
-                            } else if (currentSection == "on") {
-                                pathPatternOn = cmd[1];
-                                sourceTypeOn = "file";
-                            } else if (currentSection == "off") {
-                                pathPatternOff = cmd[1];
-                                sourceTypeOff = "file";
+                        if (cmd.size() > 1) { // Pre-process advanced commands
+                            if (commandName == "file_source") {
+                                if (currentSection == "global") {
+                                    pathPattern = cmd[1];
+                                    sourceType = "file";
+                                } else if (currentSection == "on") {
+                                    pathPatternOn = cmd[1];
+                                    sourceTypeOn = "file";
+                                } else if (currentSection == "off") {
+                                    pathPatternOff = cmd[1];
+                                    sourceTypeOff = "file";
+                                }
                             }
                         }
                     }
@@ -2697,25 +2736,47 @@ public:
                         list->addItem(new tsl::elm::CategoryHeader(COMMANDS));
                     
                     
+                    std::string commandName;
+                    
+                    // initial processing of commands
+                    bool inEristaSection = false;
+                    bool inMarikoSection = false;
+                    
                     // initial processing of commands
                     for (const auto& cmd : commands) {
-                        if (!cmd.empty()) { // Isolate command settings
+                        if (cmd.empty()) { // Isolate command settings
+                            continue;
+                        }
+                        
+                        commandName = cmd[0];
+                        
+                        if (commandName == "erista:" || commandName == "Erista:") {
+                            inEristaSection = true && usingErista;
+                            inMarikoSection = false;
+                            continue;
+                        } else if (commandName == "mariko:" || commandName == "Mariko:") {
+                            inEristaSection = false;
+                            inMarikoSection = true && usingMariko;
+                            continue;
+                        }
+                        
+                        if (inEristaSection || inMarikoSection || !(inEristaSection && inMarikoSection)) {
                             // Extract the command mode
-                            if (cmd[0].find(modePattern) == 0) {
-                                commandMode = cmd[0].substr(modePattern.length());
+                            if (commandName.find(modePattern) == 0) {
+                                commandMode = commandName.substr(modePattern.length());
                                 if (std::find(commandModes.begin(), commandModes.end(), commandMode) == commandModes.end())
                                     commandMode = commandModes[0]; // reset to default if commandMode is unknown
-                            } else if (cmd[0].find(groupingPattern) == 0) {// Extract the command grouping
-                                commandGrouping = cmd[0].substr(groupingPattern.length());
+                            } else if (commandName.find(groupingPattern) == 0) {// Extract the command grouping
+                                commandGrouping = commandName.substr(groupingPattern.length());
                                 if (std::find(commandGroupings.begin(), commandGroupings.end(), commandGrouping) == commandGroupings.end())
                                     commandGrouping = commandGroupings[0]; // reset to default if commandMode is unknown
                             }
                             
                             // Extract the command grouping
                             if (commandMode == "toggle") {
-                                if (cmd[0].find("on:") == 0)
+                                if (commandName.find("on:") == 0)
                                     currentSection = "on";
-                                else if (cmd[0].find("off:") == 0)
+                                else if (commandName.find("off:") == 0)
                                     currentSection = "off";
                                 
                                 // Seperation of command chuncks
@@ -2727,21 +2788,21 @@ public:
                                 else if (currentSection == "off")
                                     commandsOff.push_back(cmd);
                             }
-                        }
-                        if (cmd.size() > 1) { // Pre-process advanced commands
-                            if (cmd[0] == "file_source") {
-                                if (currentSection == "global") {
-                                    pathPattern = cmd[1];
-                                    //filesList = getFilesListByWildcards(pathPattern);
-                                    sourceType = "file";
-                                } else if (currentSection == "on") {
-                                    pathPatternOn = cmd[1];
-                                    //filesListOn = getFilesListByWildcards(pathPatternOn);
-                                    sourceTypeOn = "file";
-                                } else if (currentSection == "off") {
-                                    pathPatternOff = cmd[1];
-                                    //filesListOff = getFilesListByWildcards(pathPatternOff);
-                                    sourceTypeOff = "file";
+                            if (cmd.size() > 1) { // Pre-process advanced commands
+                                if (commandName == "file_source") {
+                                    if (currentSection == "global") {
+                                        pathPattern = cmd[1];
+                                        //filesList = getFilesListByWildcards(pathPattern);
+                                        sourceType = "file";
+                                    } else if (currentSection == "on") {
+                                        pathPatternOn = cmd[1];
+                                        //filesListOn = getFilesListByWildcards(pathPatternOn);
+                                        sourceTypeOn = "file";
+                                    } else if (currentSection == "off") {
+                                        pathPatternOff = cmd[1];
+                                        //filesListOff = getFilesListByWildcards(pathPatternOff);
+                                        sourceTypeOff = "file";
+                                    }
                                 }
                             }
                         }
