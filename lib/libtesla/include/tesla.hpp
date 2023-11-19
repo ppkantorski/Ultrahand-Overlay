@@ -1696,6 +1696,15 @@ namespace tsl {
                 this->fillScreen({ 0x00, 0x00, 0x00, 0x00 });
             }
             
+            struct Glyph {
+                stbtt_fontinfo *currFont;
+                float currFontSize;
+                int bounds[4];
+                int xAdvance;
+                u8 *glyphBmp;
+                int width, height;
+            };
+            
             /**
              * @brief Draws a string
              *
@@ -1712,14 +1721,6 @@ namespace tsl {
                 float currX = x;
                 float currY = y;
                 
-                struct Glyph {
-                    stbtt_fontinfo *currFont;
-                    float currFontSize;
-                    int bounds[4];
-                    int xAdvance;
-                    u8 *glyphBmp;
-                    int width, height;
-                };
                 
                 static std::unordered_map<u64, Glyph> s_glyphCache;
                 
