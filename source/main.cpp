@@ -2428,6 +2428,7 @@ public:
         
         
         tsl::elm::List *list = new tsl::elm::List();
+        tsl::elm::ListItem* listItem = nullptr;
         
         if (!hiddenMenuMode.empty())
             menuMode = hiddenMenuMode;
@@ -2457,6 +2458,7 @@ public:
             std::vector<std::string> overlayList;
             std::vector<std::string> hiddenOverlayList;
             
+            std::string overlayFileName;
             
             // Load subdirectories
             if (!overlayFiles.empty()) {
@@ -2465,7 +2467,7 @@ public:
                 
                 for (const auto& overlayFile : overlayFiles) {
                     
-                    std::string overlayFileName = getNameFromPath(overlayFile);
+                    overlayFileName = getNameFromPath(overlayFile);
                     
                     if (overlayFileName == "ovlmenu.ovl" or overlayFileName.substr(0, 1) == ".")
                         continue;
@@ -2557,14 +2559,19 @@ public:
                     overlayList = hiddenOverlayList;
                 
                 
+                //std::string overlayFileName;
+                std::string overlayStarred;
+                std::string overlayVersion, overlayName;
+                std::string overlayFile, newOverlayName;
+                
                 for (const auto& taintedOverlayFileName : overlayList) {
                     
                     //logMessage(taintedOverlayFileName);
                     
-                    std::string overlayFileName;
-                    std::string overlayStarred = "false";
+                    //std::string overlayFileName;
+                    overlayStarred = "false";
                     
-                    std::string overlayVersion, overlayName;
+                    //std::string overlayVersion, overlayName;
                     
                     // Detect if starred
                     if ((taintedOverlayFileName.substr(0, 3) == "-1_"))
@@ -2593,7 +2600,7 @@ public:
                     
                     //logMessage(overlayFileName);
                     
-                    std::string overlayFile = overlayDirectory+overlayFileName;
+                    overlayFile = overlayDirectory+overlayFileName;
                     //logMessage(overlayFile);
                     
                     //// Get the name and version of the overlay file
@@ -2603,7 +2610,7 @@ public:
                     
                     //logMessage(overlayName);
                     
-                    std::string newOverlayName = overlayName.c_str();
+                    newOverlayName = overlayName.c_str();
                     if (overlayStarred == "true")
                         newOverlayName = STAR_SYMBOL+" "+newOverlayName;
                     
@@ -2612,7 +2619,6 @@ public:
                     // Toggle the starred status
                     std::string newStarred = (overlayStarred == "true") ? "false" : "true";
                     
-                    tsl::elm::ListItem* listItem = nullptr;
                     
                     //logMessage(overlayFile);
                     if (isFileOrDirectory(overlayFile)) {
@@ -2682,7 +2688,7 @@ public:
                 }
                 
                 if (!hiddenOverlayList.empty() && !inHiddenMode) {
-                    auto listItem = new tsl::elm::ListItem(HIDDEN, DROPDOWN_SYMBOL);
+                    listItem = new tsl::elm::ListItem(HIDDEN, DROPDOWN_SYMBOL);
                     
                     //std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(option.second, pathReplace);
                     listItem->setClickListener([this](uint64_t keys) {
@@ -2809,7 +2815,7 @@ public:
                 // Toggle the starred status
                 std::string newStarred = (packageStarred == "true") ? "false" : "true";
                 
-                tsl::elm::ListItem* listItem = nullptr;
+                //tsl::elm::ListItem* listItem = nullptr;
                 if (isFileOrDirectory(packageFilePath)) {
                     PackageHeader packageHeader = getPackageHeaderFromIni(packageFilePath+packageFileName);
                     //if (count == 0) {
@@ -2887,7 +2893,7 @@ public:
             }
             
             if (!hiddenPackageList.empty() && !inHiddenMode) {
-                auto listItem = new tsl::elm::ListItem(HIDDEN, DROPDOWN_SYMBOL);
+                listItem = new tsl::elm::ListItem(HIDDEN, DROPDOWN_SYMBOL);
                 
                 //std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(option.second, pathReplace);
                 listItem->setClickListener([this](uint64_t keys) {
@@ -3067,7 +3073,7 @@ public:
                     
                     
                     if (useSelection) { // For wildcard commands (dropdown menus)
-                        auto listItem = static_cast<tsl::elm::ListItem*>(nullptr);
+                        listItem = static_cast<tsl::elm::ListItem*>(nullptr);
                         if ((footer == DROPDOWN_SYMBOL) || (footer.empty()))
                             listItem = new tsl::elm::ListItem(removeTag(optionName), footer);
                         else {
@@ -3102,7 +3108,7 @@ public:
                         
                         
                         if (commandMode == "default" || commandMode == "option") { // for handiling toggles
-                            auto listItem = new tsl::elm::ListItem(removeTag(optionName));
+                            listItem = new tsl::elm::ListItem(removeTag(optionName));
                             listItem->setValue(footer, true);
                             
                             if (sourceType == "json") { // For JSON wildcards
