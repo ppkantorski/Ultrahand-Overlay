@@ -584,7 +584,6 @@ public:
             std::string defaulLang = parseValueFromIniSection(settingsConfigIniPath, "ultrahand", "default_lang");
             
             
-               
             toggleListItem = new tsl::elm::ToggleListItem(CLEAN_LABELS, false, ON, OFF);
             toggleListItem->setState((cleanVersionLabels == "true"));
             toggleListItem->setStateChangedListener([this, toggleListItem](bool state) {
