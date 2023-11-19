@@ -1656,6 +1656,12 @@ public:
                         skipSection = true;
                         lastSection = dropdownSection;
                     }
+                    if (removeTag(optionName) == PACKAGE_INFO || removeTag(optionName) == "Package Info") {
+                        if (!skipSection) {
+                            lastSection = optionName;
+                            addAppInfo(list, packageHeader);
+                        }
+                    }
                     if (commands.size() == 0) {
                         if (optionName == dropdownSection)
                             skipSection = false;
@@ -1694,9 +1700,12 @@ public:
                             if (optionName != lastSection) {
                                 
                                 if (removeTag(optionName) == PACKAGE_INFO || removeTag(optionName) == "Package Info") {
+                                    logMessage("pre-before adding app info");
                                     if (!skipSection) {
                                         lastSection = optionName;
+                                        logMessage("before adding app info");
                                         addAppInfo(list, packageHeader);
+                                        logMessage("after adding app info");
                                     }
                                 } else {
                                     // Add a section break with small text to indicate the "Commands" section
