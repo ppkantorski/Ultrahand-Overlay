@@ -480,7 +480,7 @@ void cleanIniFormatting(const std::string& filePath) {
     
     bool isNewSection = false;
     
-    char line[4096];
+    char line[BufferSize];
     
     std::string trimmedLine;
     while (fgets(line, sizeof(line), inputFile)) {
