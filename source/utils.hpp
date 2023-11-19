@@ -68,7 +68,8 @@ static const std::string ultrahandRepo = "https://github.com/ppkantorski/Ultraha
 
 static bool commandSuccess = false;
 static bool refreshGui = false;
-
+static bool usingErista = util::IsErista();
+static bool usingMariko = !(usingErista); // mariko is determined by it not being erista
 
 
 void initializeTheme(std::string themeIniPath = themeConfigIniPath) {
@@ -703,6 +704,10 @@ std::string replaceIniPlaceholder(const std::string& arg, const std::string& ini
 
 // this will modify `commands`
 std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std::vector<std::string>>& commands, const std::string& entry, size_t entryIndex) {
+    
+    bool inEristaSection = false;
+    bool inMarikoSection = false;
+    
     std::vector<std::vector<std::string>> modifiedCommands;
     //std::vector<std::string> listData;
     std::string listString;
@@ -710,84 +715,102 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
     size_t startPos, endPos;
     
     std::vector<std::string> modifiedCmd;
-    std::string modifiedArg, lastArg, replacement;
+    std::string modifiedArg, lastArg, replacement, commandName;
     
     for (const auto& cmd : commands) {
+        if (cmd.empty())
+            continue;
+        
         modifiedCmd.clear();
+        
         //modifiedCmd.reserve(cmd.size()); // Reserve memory for efficiency
+        commandName = cmd[0];
         
         if (cmd.size() > 1) {
-            if ((cmd[0] == "list_source") && listString.empty())
+            if ((commandName == "list_source") && listString.empty())
                 listString = removeQuotes(cmd[1]);
-            else if ((cmd[0] == "json_file_source") && jsonPath.empty())
+            else if ((commandName == "json_file_source") && jsonPath.empty())
                 jsonPath = preprocessPath(cmd[1]);
-            else if ((cmd[0] == "json_source") && jsonString.empty())
+            else if ((commandName == "json_source") && jsonString.empty())
                 jsonString = cmd[1];
         }
         
-        for (const auto& arg : cmd) {
-            modifiedArg = arg; // Working with a copy for modifications
-            lastArg = ""; // Initialize lastArg for each argument
-            
-            while (modifiedArg.find("{file_source}") != std::string::npos) {
-                modifiedArg = replacePlaceholder(modifiedArg, "{file_source}", entry);
-                if (modifiedArg == lastArg)
-                    break;
-                lastArg = modifiedArg;
-            }
-            while (modifiedArg.find("{file_name}") != std::string::npos) {
-                modifiedArg = replacePlaceholder(modifiedArg, "{file_name}", getNameFromPath(entry));
-                if (modifiedArg == lastArg)
-                    break;
-                lastArg = modifiedArg;
-            }
-            while (modifiedArg.find("{folder_name}") != std::string::npos) {
-                modifiedArg = replacePlaceholder(modifiedArg, "{folder_name}", getParentDirNameFromPath(entry));
-                if (modifiedArg == lastArg)
-                    break;
-                lastArg = modifiedArg;
-            }
-            while (modifiedArg.find("{list_source(") != std::string::npos) {
-                modifiedArg = replacePlaceholder(modifiedArg, "*", std::to_string(entryIndex));
-                startPos = modifiedArg.find("{list_source(");
-                endPos = modifiedArg.find(")}");
-                if (endPos != std::string::npos && endPos > startPos) {
-                    replacement = stringToList(listString)[entryIndex];
-                    modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
-                }
-                if (modifiedArg == lastArg)
-                    break;
-                lastArg = modifiedArg;
-            }
-            while (modifiedArg.find("{json_source(") != std::string::npos) {
-                modifiedArg = replacePlaceholder(modifiedArg, "*", std::to_string(entryIndex));
-                startPos = modifiedArg.find("{json_source(");
-                endPos = modifiedArg.find(")}");
-                if (endPos != std::string::npos && endPos > startPos) {
-                    replacement = replaceJsonPlaceholder(modifiedArg.substr(startPos, endPos - startPos + 2), "json_source", jsonString);
-                    modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
-                }
-                if (modifiedArg == lastArg)
-                    break;
-                lastArg = modifiedArg;
-            }
-            while (modifiedArg.find("{json_file_source(") != std::string::npos) {
-                modifiedArg = replacePlaceholder(modifiedArg, "*", std::to_string(entryIndex));
-                startPos = modifiedArg.find("{json_file_source(");
-                endPos = modifiedArg.find(")}");
-                if (endPos != std::string::npos && endPos > startPos) {
-                    replacement = replaceJsonPlaceholder(modifiedArg.substr(startPos, endPos - startPos + 2), "json_file_source", jsonPath);
-                    modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
-                }
-                if (modifiedArg == lastArg)
-                    break;
-                lastArg = modifiedArg;
-            }
-            
-            modifiedCmd.push_back(std::move(modifiedArg)); // Move modified arg to the modified command vector
+        if (commandName == "erista:" || commandName == "Erista:") {
+            inEristaSection = true && usingErista;
+            inMarikoSection = false;
+            continue;
+        } else if (commandName == "mariko:" || commandName == "Mariko:") {
+            inEristaSection = false;
+            inMarikoSection = true && usingMariko;
+            continue;
         }
         
-        modifiedCommands.emplace_back(std::move(modifiedCmd)); // Move modified command to the result vector
+        if (inEristaSection || inMarikoSection || !(inEristaSection && inMarikoSection)) {
+            
+            for (const auto& arg : cmd) {
+                modifiedArg = arg; // Working with a copy for modifications
+                lastArg = ""; // Initialize lastArg for each argument
+                
+                while (modifiedArg.find("{file_source}") != std::string::npos) {
+                    modifiedArg = replacePlaceholder(modifiedArg, "{file_source}", entry);
+                    if (modifiedArg == lastArg)
+                        break;
+                    lastArg = modifiedArg;
+                }
+                while (modifiedArg.find("{file_name}") != std::string::npos) {
+                    modifiedArg = replacePlaceholder(modifiedArg, "{file_name}", getNameFromPath(entry));
+                    if (modifiedArg == lastArg)
+                        break;
+                    lastArg = modifiedArg;
+                }
+                while (modifiedArg.find("{folder_name}") != std::string::npos) {
+                    modifiedArg = replacePlaceholder(modifiedArg, "{folder_name}", getParentDirNameFromPath(entry));
+                    if (modifiedArg == lastArg)
+                        break;
+                    lastArg = modifiedArg;
+                }
+                while (modifiedArg.find("{list_source(") != std::string::npos) {
+                    modifiedArg = replacePlaceholder(modifiedArg, "*", std::to_string(entryIndex));
+                    startPos = modifiedArg.find("{list_source(");
+                    endPos = modifiedArg.find(")}");
+                    if (endPos != std::string::npos && endPos > startPos) {
+                        replacement = stringToList(listString)[entryIndex];
+                        modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
+                    }
+                    if (modifiedArg == lastArg)
+                        break;
+                    lastArg = modifiedArg;
+                }
+                while (modifiedArg.find("{json_source(") != std::string::npos) {
+                    modifiedArg = replacePlaceholder(modifiedArg, "*", std::to_string(entryIndex));
+                    startPos = modifiedArg.find("{json_source(");
+                    endPos = modifiedArg.find(")}");
+                    if (endPos != std::string::npos && endPos > startPos) {
+                        replacement = replaceJsonPlaceholder(modifiedArg.substr(startPos, endPos - startPos + 2), "json_source", jsonString);
+                        modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
+                    }
+                    if (modifiedArg == lastArg)
+                        break;
+                    lastArg = modifiedArg;
+                }
+                while (modifiedArg.find("{json_file_source(") != std::string::npos) {
+                    modifiedArg = replacePlaceholder(modifiedArg, "*", std::to_string(entryIndex));
+                    startPos = modifiedArg.find("{json_file_source(");
+                    endPos = modifiedArg.find(")}");
+                    if (endPos != std::string::npos && endPos > startPos) {
+                        replacement = replaceJsonPlaceholder(modifiedArg.substr(startPos, endPos - startPos + 2), "json_file_source", jsonPath);
+                        modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
+                    }
+                    if (modifiedArg == lastArg)
+                        break;
+                    lastArg = modifiedArg;
+                }
+                
+                modifiedCmd.push_back(std::move(modifiedArg)); // Move modified arg to the modified command vector
+            }
+            
+            modifiedCommands.emplace_back(std::move(modifiedCmd)); // Move modified command to the result vector
+        }
     }
     return modifiedCommands;
 }
@@ -804,9 +827,6 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
 void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& commands, const std::string& packagePath="", const std::string& selectedCommand="") {
     
     bool logging = false;
-    
-    bool usingErista = util::IsErista();
-    bool usingMariko = !(usingErista); // mariko is determined by it not being erista
     
     bool inEristaSection = false;
     bool inMarikoSection = false;
