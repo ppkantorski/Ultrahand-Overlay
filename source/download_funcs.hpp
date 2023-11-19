@@ -27,7 +27,7 @@
 #include "debug_funcs.hpp"
 //#include "json_funcs.hpp"
 
-
+const size_t downloadBufferSize = 4096;
 
 /**
  * @brief Callback function to write received data to a file.
@@ -150,7 +150,7 @@ bool downloadFile(const std::string& url, const std::string& toDestination) {
     //curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, progressCallback);
     //curl_easy_setopt(curl, CURLOPT_XFERINFODATA, callbackData);
     
-    curl_easy_setopt(curl, CURLOPT_BUFFERSIZE, 4096);
+    curl_easy_setopt(curl, CURLOPT_BUFFERSIZE, downloadBufferSize);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeCallback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, file);
     
