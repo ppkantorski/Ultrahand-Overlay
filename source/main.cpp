@@ -92,7 +92,7 @@ private:
     
     int MAX_PRIORITY = 20;
     
-    std::vector<std::string> defaultCombos = {"ZL+ZR+DDOWN", "ZL+ZR+DRIGHT", "ZL+ZR+DUP", "ZL+ZR+DLEFT", "L+R+DDOWN", "L+R+DRIGHT", "L+R+DUP", "L+R+DLEFT", "L+DDOWN+RS"};
+    std::vector<std::string> defaultCombos = {"ZL+ZR+DDOWN", "ZL+ZR+DRIGHT", "ZL+ZR+DUP", "ZL+ZR+DLEFT", "L+R+DDOWN", "L+R+DRIGHT", "L+R+DUP", "L+R+DLEFT", "ZL+ZR+PLUS", "L+R+PLUS", "PLUS+MINUS", "L+DDOWN+RS"};
     std::unordered_map<std::string, std::string> comboMap = {
         {"ZL+ZR+DDOWN", "\uE0E6+\uE0E7+\uE0EC"},
         {"ZL+ZR+DRIGHT", "\uE0E6+\uE0E7+\uE0EE"},
@@ -102,6 +102,9 @@ private:
         {"L+R+DRIGHT", "\uE0E4+\uE0E5+\uE0EE"},
         {"L+R+DUP", "\uE0E4+\uE0E5+\uE0EB"},
         {"L+R+DLEFT", "\uE0E4+\uE0E5+\uE0ED"},
+        {"ZL+ZR+PLUS", "\uE0E6+\uE0E7+\uE0B5"},
+        {"L+R+PLUS", "\uE0E4+\uE0E5+\uE0B5"},
+        {"PLUS+MINUS", "\uE0B5+\uE0B6"},
         {"L+DDOWN+RS", "\uE0E4+\uE0EC+\uE0C5"}
     };
     std::vector<std::string> defaultLanguages = {"en", "es", "fr", "de", "ja", "ko", "it", "nl", "pt", "ru", "zh-cn", "zh-tw"};
@@ -584,7 +587,6 @@ public:
             std::string defaulLang = parseValueFromIniSection(settingsConfigIniPath, "ultrahand", "default_lang");
             
             
-               
             toggleListItem = new tsl::elm::ToggleListItem(CLEAN_LABELS, false, ON, OFF);
             toggleListItem->setState((cleanVersionLabels == "true"));
             toggleListItem->setStateChangedListener([this, toggleListItem](bool state) {
