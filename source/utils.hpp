@@ -726,15 +726,6 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
         //modifiedCmd.reserve(cmd.size()); // Reserve memory for efficiency
         commandName = cmd[0];
         
-        if (cmd.size() > 1) {
-            if ((commandName == "list_source") && listString.empty())
-                listString = removeQuotes(cmd[1]);
-            else if ((commandName == "json_file_source") && jsonPath.empty())
-                jsonPath = preprocessPath(cmd[1]);
-            else if ((commandName == "json_source") && jsonString.empty())
-                jsonString = cmd[1];
-        }
-        
         if (commandName == "erista:" || commandName == "Erista:") {
             inEristaSection = true && usingErista;
             inMarikoSection = false;
@@ -746,6 +737,16 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
         }
         
         if (inEristaSection || inMarikoSection || !(inEristaSection && inMarikoSection)) {
+            
+            if (cmd.size() > 1) {
+                if ((commandName == "list_source") && listString.empty())
+                    listString = removeQuotes(cmd[1]);
+                else if ((commandName == "json_file_source") && jsonPath.empty())
+                    jsonPath = preprocessPath(cmd[1]);
+                else if ((commandName == "json_source") && jsonString.empty())
+                    jsonString = cmd[1];
+            }
+            
             
             for (const auto& arg : cmd) {
                 modifiedArg = arg; // Working with a copy for modifications
