@@ -92,22 +92,6 @@ private:
     
     int MAX_PRIORITY = 20;
     
-    std::vector<std::string> defaultCombos = {"ZL+ZR+DDOWN", "ZL+ZR+DRIGHT", "ZL+ZR+DUP", "ZL+ZR+DLEFT", "L+R+DDOWN", "L+R+DRIGHT", "L+R+DUP", "L+R+DLEFT", "ZL+ZR+PLUS", "L+R+PLUS", "MINUS+PLUS", "L+DDOWN+RS"};
-    std::unordered_map<std::string, std::string> comboMap = {
-        {"ZL+ZR+DDOWN", "\uE0E6+\uE0E7+\uE0EC"},
-        {"ZL+ZR+DRIGHT", "\uE0E6+\uE0E7+\uE0EE"},
-        {"ZL+ZR+DUP", "\uE0E6+\uE0E7+\uE0EB"},
-        {"ZL+ZR+DLEFT", "\uE0E6+\uE0E7+\uE0ED"},
-        {"L+R+DDOWN", "\uE0E4+\uE0E5+\uE0EC"},
-        {"L+R+DRIGHT", "\uE0E4+\uE0E5+\uE0EE"},
-        {"L+R+DUP", "\uE0E4+\uE0E5+\uE0EB"},
-        {"L+R+DLEFT", "\uE0E4+\uE0E5+\uE0ED"},
-        {"ZL+ZR+PLUS", "\uE0E6+\uE0E7+\uE0B5"},
-        {"L+R+PLUS", "\uE0E4+\uE0E5+\uE0B5"},
-        {"MINUS+PLUS", "\uE0B6+\uE0B5"},
-        {"L+DDOWN+RS", "\uE0E4+\uE0EC+\uE0C5"}
-    };
-    std::vector<std::string> defaultLanguages = {"en", "es", "fr", "de", "ja", "ko", "it", "nl", "pt", "ru", "zh-cn", "zh-tw"};
 public:
     /**
      * @brief Constructs a `ScriptOverlay` instance.
@@ -140,6 +124,23 @@ public:
             inSettingsMenu = true;
         else
             inSubSettingsMenu = true;
+        
+        std::vector<std::string> defaultCombos = {"ZL+ZR+DDOWN", "ZL+ZR+DRIGHT", "ZL+ZR+DUP", "ZL+ZR+DLEFT", "L+R+DDOWN", "L+R+DRIGHT", "L+R+DUP", "L+R+DLEFT", "ZL+ZR+PLUS", "L+R+PLUS", "MINUS+PLUS", "L+DDOWN+RS"};
+        std::unordered_map<std::string, std::string> comboMap = {
+            {"ZL+ZR+DDOWN", "\uE0E6+\uE0E7+\uE0EC"},
+            {"ZL+ZR+DRIGHT", "\uE0E6+\uE0E7+\uE0EE"},
+            {"ZL+ZR+DUP", "\uE0E6+\uE0E7+\uE0EB"},
+            {"ZL+ZR+DLEFT", "\uE0E6+\uE0E7+\uE0ED"},
+            {"L+R+DDOWN", "\uE0E4+\uE0E5+\uE0EC"},
+            {"L+R+DRIGHT", "\uE0E4+\uE0E5+\uE0EE"},
+            {"L+R+DUP", "\uE0E4+\uE0E5+\uE0EB"},
+            {"L+R+DLEFT", "\uE0E4+\uE0E5+\uE0ED"},
+            {"ZL+ZR+PLUS", "\uE0E6+\uE0E7+\uE0B5"},
+            {"L+R+PLUS", "\uE0E4+\uE0E5+\uE0B5"},
+            {"MINUS+PLUS", "\uE0B6+\uE0B5"},
+            {"L+DDOWN+RS", "\uE0E4+\uE0EC+\uE0C5"}
+        };
+        std::vector<std::string> defaultLanguages = {"en", "es", "fr", "de", "ja", "ko", "it", "nl", "pt", "ru", "zh-cn", "zh-tw"};
         
         tsl::elm::List *list = new tsl::elm::List();
         
@@ -299,7 +300,7 @@ public:
                     lastSelectedListItem = listItem;
                 }
                 
-                listItem->setClickListener([this, combo, defaultCombo, listItem](uint64_t keys) { // Add 'this', 'i', and 'listItem' to the capture list
+                listItem->setClickListener([this, combo, mappedCombo=comboMap[combo], defaultCombo, listItem](uint64_t keys) { // Add 'this', 'i', and 'listItem' to the capture list
                     if (keys & KEY_A) {
                         if (combo != defaultCombo) {
                             setIniFileValue(settingsConfigIniPath, "ultrahand", "key_combo", combo);
@@ -307,7 +308,7 @@ public:
                         }
                         
                         lastSelectedListItem->setValue("");
-                        selectedListItem->setValue(comboMap[combo]);
+                        selectedListItem->setValue(mappedCombo);
                         listItem->setValue(CHECKMARK_SYMBOL);
                         lastSelectedListItem = listItem;
                         
