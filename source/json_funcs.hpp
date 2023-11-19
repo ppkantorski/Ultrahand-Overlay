@@ -34,17 +34,17 @@ json_t* readJsonFromFile(const std::string& filePath) {
         //fprintf(stderr, "Error opening file: %s\n", filePath.c_str());
         return nullptr;
     }
-
+    
     // Open the file
     FILE* file = fopen(filePath.c_str(), "r");
     if (!file) {
         //fprintf(stderr, "Error opening file: %s\n", filePath.c_str());
         return nullptr;
     }
-
+    
     // Get the file size
     size_t fileSize = fileStat.st_size;
-
+    
     // Read the file content into a buffer
     char* buffer = static_cast<char*>(malloc(fileSize + 1));
     if (!buffer) {
@@ -52,13 +52,13 @@ json_t* readJsonFromFile(const std::string& filePath) {
         fclose(file);
         return nullptr;
     }
-
+    
     size_t bytesRead = fread(buffer, 1, fileSize, file);
     buffer[bytesRead] = '\0';
-
+    
     // Close the file
     fclose(file);
-
+    
     // Parse the JSON data
     json_error_t error;
     json_t* root = json_loads(buffer, JSON_DECODE_ANY, &error);
@@ -67,10 +67,10 @@ json_t* readJsonFromFile(const std::string& filePath) {
         free(buffer);
         return nullptr;
     }
-
+    
     // Clean up
     free(buffer);
-
+    
     return root;
 }
 
@@ -104,11 +104,7 @@ std::string replaceJsonPlaceholder(const std::string& arg, const std::string& co
     std::string replacement = arg;
     std::string searchString = "{" + commandName + "(";
     size_t startPos = replacement.find(searchString);
-    size_t endPos;
-    size_t nextPos;
-    size_t commaPos;
-    size_t len;
-    size_t _index;
+    size_t endPos, nextPos, commaPos, len, _index;
     bool validValue;
     std::vector<std::string> keysAndIndexes;
     
