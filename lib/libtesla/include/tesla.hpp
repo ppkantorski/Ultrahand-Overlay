@@ -61,13 +61,8 @@
 //#include <filesystem> // Comment out filesystem
 
 // CUSTOM SECTION START
-//#include <jansson.h>
-//#include "../../../source/get_funcs.hpp"
-//#include "../../../source/string_funcs.hpp"
 #include "../../../source/ini_funcs.hpp"
 #include "../../../source/json_funcs.hpp"
-//#include "../../../common/half.hpp"
-//using half_float::half;
 
 static std::unordered_map<std::string, std::string> hexSumCache;
 
