@@ -539,7 +539,7 @@ void setIniFile(const std::string& fileToEdit, const std::string& desiredSection
     std::string updatedContent;
     std::string currentSection;
     std::string formattedDesiredValue = trim(desiredValue);
-    char line[131072];
+    char line[BufferSize];
     
     bool sectionFound = false;
     bool keyFound = false;
