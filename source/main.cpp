@@ -775,7 +775,7 @@ public:
             
             
             // Capitalize entryMode
-            std::string hideLabel(entryMode);
+            std::string hideLabel = entryMode;
             //hideLabel[0] = std::toupper(hideLabel[0]);
             
             if (hideLabel == "overlay")
@@ -3004,6 +3004,7 @@ public:
         }
         if (initializingSpawn) {
             initializingSpawn = false;
+            useCombo2 = true;
             return createUI(); 
         }
         
