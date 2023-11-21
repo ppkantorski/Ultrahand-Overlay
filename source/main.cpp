@@ -430,6 +430,7 @@ public:
             overlayHeader.about = "Ultrahand Overlay is a versatile tool that enables you to create and share custom command-based packages.";
             overlayHeader.credits = "Special thanks to B3711, ComplexNarrative, Faker_dev, MasaGratoR, meha, WerWolv, HookedBehemoth and many others. <3";
             addAppInfo(list, overlayHeader, "overlay");
+            overlayHeader.clear(); // free memory
             
         } else if (dropdownSelection == "themeMenu") {
             
@@ -762,16 +763,15 @@ public:
             std::string priorityValue = parseValueFromIniSection(settingsIniPath, entryName, "priority");
             
             std::string hideOption = parseValueFromIniSection(settingsIniPath, entryName, "hide");
-            bool hide = false;
-            
-            std::string useOverlayLaunchArgs = parseValueFromIniSection(settingsIniPath, entryName, "use_launch_args");
-            
-            
             if (hideOption.empty())
                 hideOption = "false";
             
+            
+            bool hide = false;
             if (hideOption == "true")
                 hide = true;
+            
+            std::string useOverlayLaunchArgs = parseValueFromIniSection(settingsIniPath, entryName, "use_launch_args");
             
             
             // Capitalize entryMode
@@ -1609,6 +1609,7 @@ public:
         std::string pageRightName = "";
         std::string drawLocation = "";
         
+        std::string commandName;
         std::string commandFooter;
         std::string commandMode;
         std::string commandGrouping;
@@ -1625,6 +1626,11 @@ public:
         
         std::string footer;
         bool useSelection;
+        size_t pos;
+        
+        bool inEristaSection;
+        bool inMarikoSection;
+        
         
         for (size_t i = 0; i < options.size(); ++i) {
             auto& option = options[i];
@@ -1731,11 +1737,10 @@ public:
                     }
                 }
                 
-                std::string commandName;
                 
                 // initial processing of commands
-                bool inEristaSection = false;
-                bool inMarikoSection = false;
+                inEristaSection = false;
+                inMarikoSection = false;
                 
                 // initial processing of commands
                 for (const auto& cmd : commands) {
@@ -1837,7 +1842,7 @@ public:
                     optionName = optionName.substr(1); // Strip the "*" character on the left
                     footer = DROPDOWN_SYMBOL;
                 } else {
-                    size_t pos = optionName.find(" - ");
+                    pos = optionName.find(" - ");
                     if (pos != std::string::npos) {
                         footer = optionName.substr(pos + 2); // Assign the part after "&&" as the footer
                         optionName = optionName.substr(0, pos); // Strip the "&&" and everything after it
@@ -2472,6 +2477,7 @@ public:
                     if (listItem != nullptr)
                         list->addItem(listItem);
                 }
+                overlayList.clear();
                 
                 if (!hiddenOverlayList.empty() && !inHiddenMode) {
                     listItem = new tsl::elm::ListItem(HIDDEN, DROPDOWN_SYMBOL);
@@ -2565,6 +2571,9 @@ public:
                     }
                 }
             }
+            packagesIniData.clear();
+            subdirectories.clear();
+            
             std::sort(packageList.begin(), packageList.end());
             std::sort(hiddenPackageList.begin(), hiddenPackageList.end());
             
@@ -2620,6 +2629,8 @@ public:
                     if (hidePackageVersions != "true")
                        listItem->setValue(packageHeader.version, true);
                     
+                    packageHeader.clear(); // free memory
+                    
                     // Add a click listener to load the overlay when clicked upon
                     listItem->setClickListener([this, packageFilePath, newStarred, packageName](s64 key) {
                         if (key & KEY_A) {
@@ -2627,12 +2638,12 @@ public:
                             inHiddenMode = false;
                             
                             // read commands from package's boot_package.ini
-                            
                             if (isFileOrDirectory(packageFilePath+bootPackageFileName)) {
                                 std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> bootOptions = loadOptionsFromIni(packageFilePath+bootPackageFileName, true);
                                 if (bootOptions.size() > 0) {
+                                    std::string bootOptionName;
                                     for (const auto& bootOption:bootOptions) {
-                                        std::string bootOptionName = bootOption.first;
+                                        bootOptionName = bootOption.first;
                                         auto& bootCommands = bootOption.second;
                                         if (bootOptionName == "boot") {
                                             interpretAndExecuteCommand(bootCommands, packageFilePath+bootPackageFileName, bootOptionName); // Execute modified
@@ -2675,6 +2686,7 @@ public:
                     list->addItem(listItem);
                 }
             }
+            packageList.clear();
             
             if (!hiddenPackageList.empty() && !inHiddenMode) {
                 listItem = new tsl::elm::ListItem(HIDDEN, DROPDOWN_SYMBOL);
@@ -2703,6 +2715,8 @@ public:
                 std::string optionName, footer;
                 bool useSelection;
                 
+                std::string commandName;
+                
                 std::string commandFooter = "null";
                 std::string commandMode = "default";
                 std::string commandGrouping = "default";
@@ -2718,6 +2732,11 @@ public:
                 
                 auto toggleListItem = static_cast<tsl::elm::ToggleListItem*>(nullptr);
                 bool toggleStateOn;
+                
+                bool inEristaSection;
+                bool inMarikoSection;
+                
+                size_t pos;
                 
                 
                 for (size_t i = 0; i < options.size(); ++i) {
@@ -2757,11 +2776,11 @@ public:
                         list->addItem(new tsl::elm::CategoryHeader(COMMANDS));
                     
                     
-                    std::string commandName;
+                    //std::string commandName;
                     
                     // initial processing of commands
-                    bool inEristaSection = false;
-                    bool inMarikoSection = false;
+                    inEristaSection = false;
+                    inMarikoSection = false;
                     
                     // initial processing of commands
                     for (const auto& cmd : commands) {
@@ -2869,7 +2888,7 @@ public:
                         optionName = optionName.substr(1); // Strip the "*" character on the left
                         footer = DROPDOWN_SYMBOL;
                     } else {
-                        size_t pos = optionName.find(" - ");
+                        pos = optionName.find(" - ");
                         if (pos != std::string::npos) {
                             footer = optionName.substr(pos + 2); // Assign the part after "&&" as the footer
                             optionName = optionName.substr(0, pos); // Strip the "&&" and everything after it
