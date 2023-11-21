@@ -2283,7 +2283,7 @@ public:
                     // Check if the overlay name exists in the INI data.
                     if (overlaysIniData.find(overlayFileName) == overlaysIniData.end()) {
                         // The entry doesn't exist; initialize it.
-                        overlayList.push_back("0020?"+overlayFileName);
+                        overlayList.push_back("0020:"+overlayFileName);
                         setIniFileValue(overlaysIniFilePath, overlayFileName, "priority", "20");
                         setIniFileValue(overlaysIniFilePath, overlayFileName, "star", "false");
                         setIniFileValue(overlaysIniFilePath, overlayFileName, "hide", "false");
@@ -2339,15 +2339,15 @@ public:
                         
                         if (hide == "false") {
                             if (starred == "true")
-                                overlayList.push_back("-1?"+priority+"?"+overlayName+"?"+overlayVersion+"?"+overlayFileName);
+                                overlayList.push_back("-1:"+priority+":"+overlayName+":"+overlayVersion+":"+overlayFileName);
                             else
-                                overlayList.push_back(priority+"?"+overlayName+"?"+overlayVersion+"?"+overlayFileName);
+                                overlayList.push_back(priority+":"+overlayName+":"+overlayVersion+":"+overlayFileName);
                             
                         } else {
                             if (starred == "true")
-                                hiddenOverlayList.push_back("-1?"+priority+"?"+overlayName+"?"+overlayVersion+"?"+overlayFileName);
+                                hiddenOverlayList.push_back("-1:"+priority+":"+overlayName+":"+overlayVersion+":"+overlayFileName);
                             else
-                                hiddenOverlayList.push_back(priority+"?"+overlayName+"?"+overlayVersion+"?"+overlayFileName);
+                                hiddenOverlayList.push_back(priority+":"+overlayName+":"+overlayVersion+":"+overlayFileName);
                             
                         }
                     }
@@ -2379,24 +2379,24 @@ public:
                     overlayName = "";
                     
                     // Detect if starred
-                    if ((taintedOverlayFileName.substr(0, 3) == "-1?"))
+                    if ((taintedOverlayFileName.substr(0, 3) == "-1:"))
                         overlayStarred = "true";
                     
                     // Find the position of the last underscore
-                    lastUnderscorePos = taintedOverlayFileName.rfind('?');
+                    lastUnderscorePos = taintedOverlayFileName.rfind(':');
                     // Check if an underscore was found
                     if (lastUnderscorePos != std::string::npos) {
                         // Extract overlayFileName starting from the character after the last underscore
                         overlayFileName = taintedOverlayFileName.substr(lastUnderscorePos + 1);
                         
                         // Now, find the position of the second-to-last underscore
-                        secondLastUnderscorePos = taintedOverlayFileName.rfind('?', lastUnderscorePos - 1);
+                        secondLastUnderscorePos = taintedOverlayFileName.rfind(':', lastUnderscorePos - 1);
                         
                         if (secondLastUnderscorePos != std::string::npos) {
                             // Extract overlayName between the two underscores
                             overlayVersion = taintedOverlayFileName.substr(secondLastUnderscorePos + 1, lastUnderscorePos - secondLastUnderscorePos - 1);
                             // Now, find the position of the second-to-last underscore
-                            thirdLastUnderscorePos = taintedOverlayFileName.rfind('?', secondLastUnderscorePos - 1);
+                            thirdLastUnderscorePos = taintedOverlayFileName.rfind(':', secondLastUnderscorePos - 1);
                             if (secondLastUnderscorePos != std::string::npos)
                                 overlayName = taintedOverlayFileName.substr(thirdLastUnderscorePos + 1, secondLastUnderscorePos - thirdLastUnderscorePos - 1);
                         }
@@ -2521,7 +2521,7 @@ public:
                 // Check if the overlay name exists in the INI data.
                 if (packagesIniData.find(packageName) == packagesIniData.end()) {
                     // The entry doesn't exist; initialize it.
-                    packageList.push_back("0020?"+packageName);
+                    packageList.push_back("0020:"+packageName);
                     setIniFileValue(packagesIniFilePath, packageName, "priority", "20");
                     setIniFileValue(packagesIniFilePath, packageName, "star", "false");
                     setIniFileValue(packagesIniFilePath, packageName, "hide", "false");
@@ -2554,14 +2554,14 @@ public:
                     
                     if (hide == "false") {
                         if (starred == "true")
-                            packageList.push_back("-1?"+priority+"?"+packageName);
+                            packageList.push_back("-1:"+priority+":"+packageName);
                         else
-                            packageList.push_back(priority+"?"+packageName);
+                            packageList.push_back(priority+":"+packageName);
                     } else {
                         if (starred == "true")
-                            hiddenPackageList.push_back("-1?"+priority+"?"+packageName);
+                            hiddenPackageList.push_back("-1:"+priority+":"+packageName);
                         else
-                            hiddenPackageList.push_back(priority+"?"+packageName);
+                            hiddenPackageList.push_back(priority+":"+packageName);
                     }
                 }
             }
@@ -2593,7 +2593,7 @@ public:
                 packageName = taintePackageName.c_str();
                 packageStarred = "false";
                 
-                if ((packageName.length() >= 2) && (packageName.substr(0, 3) == "-1?")) {
+                if ((packageName.length() >= 2) && (packageName.substr(0, 3) == "-1:")) {
                     // strip first two characters
                     packageName = packageName.substr(3);
                     packageStarred = "true";
