@@ -1611,21 +1611,25 @@ namespace tsl {
                 s32 xChange = 1 - (radius << 1);
                 s32 yChange = 0;
                 
+                s32 y0;
+                s32 y1;
+                s32 x0;
+                
                 while (x >= y) {
                     if(filled) {
                         for (s32 i = centerX - x; i <= centerX + x; i++) {
-                            s32 y0 = centerY + y;
-                            s32 y1 = centerY - y;
-                            s32 x0 = i;
+                            y0 = centerY + y;
+                            y1 = centerY - y;
+                            x0 = i;
                             
                             this->setPixelBlendDst(x0, y0, color);
                             this->setPixelBlendDst(x0, y1, color);
                         }
                         
                         for (s32 i = centerX - y; i <= centerX + y; i++) {
-                            s32 y0 = centerY + x;
-                            s32 y1 = centerY - x;
-                            s32 x0 = i;
+                            y0 = centerY + x;
+                            y1 = centerY - x;
+                            x0 = i;
                             
                             this->setPixelBlendDst(x0, y0, color);
                             this->setPixelBlendDst(x0, y1, color);
@@ -1672,8 +1676,7 @@ namespace tsl {
             void drawBitmap(s32 x, s32 y, s32 w, s32 h, const u8 *bmp) {
                 for (s32 y1 = 0; y1 < h; y1++) {
                     for (s32 x1 = 0; x1 < w; x1++) {
-                        const Color color = { static_cast<u8>(bmp[0] >> 4), static_cast<u8>(bmp[1] >> 4), static_cast<u8>(bmp[2] >> 4), static_cast<u8>(bmp[3] >> 4) };
-                        setPixelBlendSrc(x + x1, y + y1, a(color));
+                        setPixelBlendSrc(x + x1, y + y1, a({ static_cast<u8>(bmp[0] >> 4), static_cast<u8>(bmp[1] >> 4), static_cast<u8>(bmp[2] >> 4), static_cast<u8>(bmp[3] >> 4) }));
                         bmp += 4;
                     }
                 }
@@ -1776,16 +1779,19 @@ namespace tsl {
                     }
                     
                     if (glyph->glyphBmp != nullptr && !std::iswspace(currCharacter) && fontSize > 0 && color.a != 0x0) {
+                        Color tmpColor = {0xF,0xF,0xF,0xF};
+                        uint8_t bmpColor;
                         
                         auto x = currX + glyph->bounds[0];
                         auto y = currY + glyph->bounds[1];
+                        
                         for (s32 bmpY = 0; bmpY < glyph->height; bmpY++) {
                             for (s32 bmpX = 0; bmpX < glyph->width; bmpX++) {
-                                auto bmpColor = glyph->glyphBmp[glyph->width * bmpY + bmpX] >> 4;
+                                bmpColor = glyph->glyphBmp[glyph->width * bmpY + bmpX] >> 4;
                                 if (bmpColor == 0xF) {
                                     this->setPixel(x + bmpX, y + bmpY, color);
                                 } else if (bmpColor != 0x0) {
-                                    Color tmpColor = color;
+                                    tmpColor = color;
                                     tmpColor.a = bmpColor * (float(tmpColor.a) / 0xF);
                                     this->setPixelBlendDst(x + bmpX, y + bmpY, tmpColor);
                                 }
@@ -1891,6 +1897,8 @@ namespace tsl {
             
             static inline float s_opacity = 1.0F;
             
+            u32 tmpPos;
+            
             /**
              * @brief Get the current framebuffer address
              *
@@ -1962,7 +1970,7 @@ namespace tsl {
              */
             u32 getPixelOffset(s32 x, s32 y) {
                 if (!this->m_scissoringStack.empty()) {
-                    auto currScissorConfig = this->m_scissoringStack.top();
+                    auto& currScissorConfig = this->m_scissoringStack.top();
                     if (x < currScissorConfig.x ||
                         y < currScissorConfig.y ||
                         x > currScissorConfig.x + currScissorConfig.w ||
@@ -1970,7 +1978,7 @@ namespace tsl {
                             return UINT32_MAX;
                 }
                 
-                u32 tmpPos = ((y & 127) / 16) + (x / 32 * 8) + ((y / 16 / 8) * (((cfg::FramebufferWidth / 2) / 16 * 8)));
+                tmpPos = ((y & 127) / 16) + (x / 32 * 8) + ((y / 16 / 8) * (((cfg::FramebufferWidth / 2) / 16 * 8)));
                 tmpPos *= 16 * 16 * 4;
                 
                 tmpPos += ((y % 16) / 8) * 512 + ((x % 32) / 16) * 256 + ((y % 8) / 2) * 64 + ((x % 16) / 8) * 32 + (y % 2) * 16 + (x % 8) * 2;
@@ -2157,6 +2165,10 @@ namespace tsl {
             Color clickColor1 = {0xf,0xf,0xf,0xf};
             Color clickColor2 = {0xf,0xf,0xf,0xf};
             
+            s32 x, y;
+            s32 amplitude;
+            
+            
             /**
              * @brief Handles focus requesting
              * @note This function should return the element to focus.
@@ -2319,13 +2331,14 @@ namespace tsl {
                         0xF
                     };
                     
-                    s32 x = 0, y = 0;
+                    x = 0;
+                    y = 0;
                     if (this->m_highlightShaking) {
                         t = (std::chrono::system_clock::now() - this->m_highlightShakingStartTime);
                         if (t >= 100ms)
                             this->m_highlightShaking = false;
                         else {
-                            s32 amplitude = std::rand() % 5 + 5;
+                            amplitude = std::rand() % 5 + 5;
                             
                             switch (this->m_highlightShakingDirection) {
                                 case FocusDirection::Up:
@@ -2401,14 +2414,15 @@ namespace tsl {
                     static_cast<u8>((highlightColor1.b - highlightColor2.b) * progress + highlightColor2.b),
                     0xF
                 };
-                s32 x = 0, y = 0;
+                x = 0;
+                y = 0;
                 
                 if (this->m_highlightShaking) {
                     t = (std::chrono::system_clock::now() - this->m_highlightShakingStartTime);
                     if (t >= 100ms)
                         this->m_highlightShaking = false;
                     else {
-                        s32 amplitude = std::rand() % 5 + 5;
+                        amplitude = std::rand() % 5 + 5;
                         
                         switch (this->m_highlightShakingDirection) {
                             case FocusDirection::Up:
@@ -4622,7 +4636,7 @@ namespace tsl {
             }
             
             if (touchDetected) {
-            
+                
                 u32 xDistance = std::abs(static_cast<s32>(initialTouchPos.x) - static_cast<s32>(touchPos.x));
                 u32 yDistance = std::abs(static_cast<s32>(initialTouchPos.y) - static_cast<s32>(touchPos.y));
                 
