@@ -1331,6 +1331,8 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                         clearOption = removeQuotes(modifiedCmd[1]);
                         if (clearOption == "log")
                             deleteFileOrDirectory(logFilePath);
+                        else if (clearOption == "hex_sum_cache")
+                            hexSumCache.clear();
                     }
                 }
                 
