@@ -40,7 +40,7 @@
 namespace util {
     
     bool IsErista() { // CUSTOM MODIFICATION
-        SetSysProductModel model;
+        SetSysProductModel model = SetSysProductModel_Invalid;
         setsysGetProductModel(&model);
         
         if (model == SetSysProductModel_Nx || \
@@ -52,7 +52,7 @@ namespace util {
     
     
     bool IsMariko() { // CUSTOM MODIFICATION
-        SetSysProductModel model;
+        SetSysProductModel model = SetSysProductModel_Invalid;
         setsysGetProductModel(&model);
         
         if (model == SetSysProductModel_Iowa || \
