@@ -1870,12 +1870,12 @@ public:
                                 listItem->setValue(footer, true);
                         }
                         
-                        if (footer == UNAVAILABLE_SELECTION)
-                            listItem->setValue(footer, true);
+                        if (footer == UNAVAILABLE_SELECTION || footer == "Not available")
+                            listItem->setValue(UNAVAILABLE_SELECTION, true);
                         
                         //std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(option.second, pathReplace);
                         listItem->setClickListener([commands, keyName = option.first, this, packagePath = this->packagePath, footer, lastSection, listItem](uint64_t keys) {
-                            if ((keys & KEY_A) && (footer != UNAVAILABLE_SELECTION)) {
+                            if ((keys & KEY_A) && (footer != UNAVAILABLE_SELECTION && footer != "Not available")) {
                                 if (inPackageMenu)
                                     inPackageMenu = false;
                                 if (inSubPackageMenu)
