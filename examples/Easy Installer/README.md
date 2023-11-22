@@ -20,9 +20,9 @@ The `package.ini` file contains the configuration settings for Easy Installer. Y
 
 To use Easy Installer:
 
-1. Modify `package.ini` along with the json repository files with your desired homebrew/commands. (not necessary)
+1. Modify `package.ini` along with the `json repository files` with your desired homebrew/commands. (not necessary)
 2. Save the `package.ini` file after making any changes.
-3. Move the `package.ini` and the json repository files to `/switch/.packages/Easy Installer/`.
+3. Move the `package.ini` and the `json repository files` to `/switch/.packages/Easy Installer/`.
 4. Run from the Packages menu on Ultrahand.
 
 ## Additional Information

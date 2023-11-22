@@ -45,6 +45,15 @@ struct PackageHeader {
     std::string about;
     std::string credits;
     std::string color;
+    
+    void clear() {
+        title.clear();
+        version.clear();
+        creator.clear();
+        about.clear();
+        credits.clear();
+        color.clear();
+    }
 };
 
 /**

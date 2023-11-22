@@ -430,6 +430,7 @@ public:
             overlayHeader.about = "Ultrahand Overlay is a versatile tool that enables you to create and share custom command-based packages.";
             overlayHeader.credits = "Special thanks to B3711, ComplexNarrative, Faker_dev, MasaGratoR, meha, WerWolv, HookedBehemoth and many others. <3";
             addAppInfo(list, overlayHeader, "overlay");
+            overlayHeader.clear(); // free memory
             
         } else if (dropdownSelection == "themeMenu") {
             
@@ -762,20 +763,19 @@ public:
             std::string priorityValue = parseValueFromIniSection(settingsIniPath, entryName, "priority");
             
             std::string hideOption = parseValueFromIniSection(settingsIniPath, entryName, "hide");
+            if (hideOption.empty())
+                hideOption = "false";
+            
+            
             bool hide = false;
+            if (hideOption == "true")
+                hide = true;
             
             std::string useOverlayLaunchArgs = parseValueFromIniSection(settingsIniPath, entryName, "use_launch_args");
             
             
-            if (hideOption.empty())
-                hideOption = "false";
-            
-            if (hideOption == "true")
-                hide = true;
-            
-            
             // Capitalize entryMode
-            std::string hideLabel(entryMode);
+            std::string hideLabel = entryMode;
             //hideLabel[0] = std::toupper(hideLabel[0]);
             
             if (hideLabel == "overlay")
@@ -1609,6 +1609,7 @@ public:
         std::string pageRightName = "";
         std::string drawLocation = "";
         
+        std::string commandName;
         std::string commandFooter;
         std::string commandMode;
         std::string commandGrouping;
@@ -1625,6 +1626,11 @@ public:
         
         std::string footer;
         bool useSelection;
+        size_t pos;
+        
+        bool inEristaSection;
+        bool inMarikoSection;
+        
         
         for (size_t i = 0; i < options.size(); ++i) {
             auto& option = options[i];
@@ -1731,11 +1737,10 @@ public:
                     }
                 }
                 
-                std::string commandName;
                 
                 // initial processing of commands
-                bool inEristaSection = false;
-                bool inMarikoSection = false;
+                inEristaSection = false;
+                inMarikoSection = false;
                 
                 // initial processing of commands
                 for (const auto& cmd : commands) {
@@ -1837,7 +1842,7 @@ public:
                     optionName = optionName.substr(1); // Strip the "*" character on the left
                     footer = DROPDOWN_SYMBOL;
                 } else {
-                    size_t pos = optionName.find(" - ");
+                    pos = optionName.find(" - ");
                     if (pos != std::string::npos) {
                         footer = optionName.substr(pos + 2); // Assign the part after "&&" as the footer
                         optionName = optionName.substr(0, pos); // Strip the "&&" and everything after it
@@ -2283,7 +2288,7 @@ public:
                     // Check if the overlay name exists in the INI data.
                     if (overlaysIniData.find(overlayFileName) == overlaysIniData.end()) {
                         // The entry doesn't exist; initialize it.
-                        overlayList.push_back("0020_"+overlayFileName);
+                        overlayList.push_back("0020:"+overlayFileName);
                         setIniFileValue(overlaysIniFilePath, overlayFileName, "priority", "20");
                         setIniFileValue(overlaysIniFilePath, overlayFileName, "star", "false");
                         setIniFileValue(overlaysIniFilePath, overlayFileName, "hide", "false");
@@ -2339,15 +2344,15 @@ public:
                         
                         if (hide == "false") {
                             if (starred == "true")
-                                overlayList.push_back("-1_"+priority+"_"+overlayName+"_"+overlayVersion+"_"+overlayFileName);
+                                overlayList.push_back("-1:"+priority+":"+overlayName+":"+overlayVersion+":"+overlayFileName);
                             else
-                                overlayList.push_back(priority+"_"+overlayName+"_"+overlayVersion+"_"+overlayFileName);
+                                overlayList.push_back(priority+":"+overlayName+":"+overlayVersion+":"+overlayFileName);
                             
                         } else {
                             if (starred == "true")
-                                hiddenOverlayList.push_back("-1_"+priority+"_"+overlayName+"_"+overlayVersion+"_"+overlayFileName);
+                                hiddenOverlayList.push_back("-1:"+priority+":"+overlayName+":"+overlayVersion+":"+overlayFileName);
                             else
-                                hiddenOverlayList.push_back(priority+"_"+overlayName+"_"+overlayVersion+"_"+overlayFileName);
+                                hiddenOverlayList.push_back(priority+":"+overlayName+":"+overlayVersion+":"+overlayFileName);
                             
                         }
                     }
@@ -2370,29 +2375,33 @@ public:
                 std::string overlayFile, newOverlayName;
                 size_t lastUnderscorePos, secondLastUnderscorePos, thirdLastUnderscorePos;
                 
+                std::string newStarred;
+                
                 for (const auto& taintedOverlayFileName : overlayList) {
-                    
+                    overlayFileName = "";
                     overlayStarred = "false";
+                    overlayVersion = "";
+                    overlayName = "";
                     
                     // Detect if starred
-                    if ((taintedOverlayFileName.substr(0, 3) == "-1_"))
+                    if ((taintedOverlayFileName.substr(0, 3) == "-1:"))
                         overlayStarred = "true";
                     
                     // Find the position of the last underscore
-                    lastUnderscorePos = taintedOverlayFileName.rfind('_');
+                    lastUnderscorePos = taintedOverlayFileName.rfind(':');
                     // Check if an underscore was found
                     if (lastUnderscorePos != std::string::npos) {
                         // Extract overlayFileName starting from the character after the last underscore
                         overlayFileName = taintedOverlayFileName.substr(lastUnderscorePos + 1);
                         
                         // Now, find the position of the second-to-last underscore
-                        secondLastUnderscorePos = taintedOverlayFileName.rfind('_', lastUnderscorePos - 1);
+                        secondLastUnderscorePos = taintedOverlayFileName.rfind(':', lastUnderscorePos - 1);
                         
                         if (secondLastUnderscorePos != std::string::npos) {
                             // Extract overlayName between the two underscores
                             overlayVersion = taintedOverlayFileName.substr(secondLastUnderscorePos + 1, lastUnderscorePos - secondLastUnderscorePos - 1);
                             // Now, find the position of the second-to-last underscore
-                            thirdLastUnderscorePos = taintedOverlayFileName.rfind('_', secondLastUnderscorePos - 1);
+                            thirdLastUnderscorePos = taintedOverlayFileName.rfind(':', secondLastUnderscorePos - 1);
                             if (secondLastUnderscorePos != std::string::npos)
                                 overlayName = taintedOverlayFileName.substr(thirdLastUnderscorePos + 1, secondLastUnderscorePos - thirdLastUnderscorePos - 1);
                         }
@@ -2407,7 +2416,7 @@ public:
                     
                     
                     // Toggle the starred status
-                    std::string newStarred = (overlayStarred == "true") ? "false" : "true";
+                    newStarred = (overlayStarred == "true") ? "false" : "true";
                     
                     
                     //logMessage(overlayFile);
@@ -2468,6 +2477,7 @@ public:
                     if (listItem != nullptr)
                         list->addItem(listItem);
                 }
+                overlayList.clear();
                 
                 if (!hiddenOverlayList.empty() && !inHiddenMode) {
                     listItem = new tsl::elm::ListItem(HIDDEN, DROPDOWN_SYMBOL);
@@ -2517,7 +2527,7 @@ public:
                 // Check if the overlay name exists in the INI data.
                 if (packagesIniData.find(packageName) == packagesIniData.end()) {
                     // The entry doesn't exist; initialize it.
-                    packageList.push_back("0020_"+packageName);
+                    packageList.push_back("0020:"+packageName);
                     setIniFileValue(packagesIniFilePath, packageName, "priority", "20");
                     setIniFileValue(packagesIniFilePath, packageName, "star", "false");
                     setIniFileValue(packagesIniFilePath, packageName, "hide", "false");
@@ -2550,17 +2560,20 @@ public:
                     
                     if (hide == "false") {
                         if (starred == "true")
-                            packageList.push_back("-1_"+priority+"_"+packageName);
+                            packageList.push_back("-1:"+priority+":"+packageName);
                         else
-                            packageList.push_back(priority+"_"+packageName);
+                            packageList.push_back(priority+":"+packageName);
                     } else {
                         if (starred == "true")
-                            hiddenPackageList.push_back("-1_"+priority+"_"+packageName);
+                            hiddenPackageList.push_back("-1:"+priority+":"+packageName);
                         else
-                            hiddenPackageList.push_back(priority+"_"+packageName);
+                            hiddenPackageList.push_back(priority+":"+packageName);
                     }
                 }
             }
+            packagesIniData.clear();
+            subdirectories.clear();
+            
             std::sort(packageList.begin(), packageList.end());
             std::sort(hiddenPackageList.begin(), hiddenPackageList.end());
             
@@ -2589,7 +2602,7 @@ public:
                 packageName = taintePackageName.c_str();
                 packageStarred = "false";
                 
-                if ((packageName.length() >= 2) && (packageName.substr(0, 3) == "-1_")) {
+                if ((packageName.length() >= 2) && (packageName.substr(0, 3) == "-1:")) {
                     // strip first two characters
                     packageName = packageName.substr(3);
                     packageStarred = "true";
@@ -2616,6 +2629,8 @@ public:
                     if (hidePackageVersions != "true")
                        listItem->setValue(packageHeader.version, true);
                     
+                    packageHeader.clear(); // free memory
+                    
                     // Add a click listener to load the overlay when clicked upon
                     listItem->setClickListener([this, packageFilePath, newStarred, packageName](s64 key) {
                         if (key & KEY_A) {
@@ -2623,12 +2638,12 @@ public:
                             inHiddenMode = false;
                             
                             // read commands from package's boot_package.ini
-                            
                             if (isFileOrDirectory(packageFilePath+bootPackageFileName)) {
                                 std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> bootOptions = loadOptionsFromIni(packageFilePath+bootPackageFileName, true);
                                 if (bootOptions.size() > 0) {
+                                    std::string bootOptionName;
                                     for (const auto& bootOption:bootOptions) {
-                                        std::string bootOptionName = bootOption.first;
+                                        bootOptionName = bootOption.first;
                                         auto& bootCommands = bootOption.second;
                                         if (bootOptionName == "boot") {
                                             interpretAndExecuteCommand(bootCommands, packageFilePath+bootPackageFileName, bootOptionName); // Execute modified
@@ -2671,6 +2686,7 @@ public:
                     list->addItem(listItem);
                 }
             }
+            packageList.clear();
             
             if (!hiddenPackageList.empty() && !inHiddenMode) {
                 listItem = new tsl::elm::ListItem(HIDDEN, DROPDOWN_SYMBOL);
@@ -2699,6 +2715,8 @@ public:
                 std::string optionName, footer;
                 bool useSelection;
                 
+                std::string commandName;
+                
                 std::string commandFooter = "null";
                 std::string commandMode = "default";
                 std::string commandGrouping = "default";
@@ -2714,6 +2732,11 @@ public:
                 
                 auto toggleListItem = static_cast<tsl::elm::ToggleListItem*>(nullptr);
                 bool toggleStateOn;
+                
+                bool inEristaSection;
+                bool inMarikoSection;
+                
+                size_t pos;
                 
                 
                 for (size_t i = 0; i < options.size(); ++i) {
@@ -2753,11 +2776,11 @@ public:
                         list->addItem(new tsl::elm::CategoryHeader(COMMANDS));
                     
                     
-                    std::string commandName;
+                    //std::string commandName;
                     
                     // initial processing of commands
-                    bool inEristaSection = false;
-                    bool inMarikoSection = false;
+                    inEristaSection = false;
+                    inMarikoSection = false;
                     
                     // initial processing of commands
                     for (const auto& cmd : commands) {
@@ -2865,7 +2888,7 @@ public:
                         optionName = optionName.substr(1); // Strip the "*" character on the left
                         footer = DROPDOWN_SYMBOL;
                     } else {
-                        size_t pos = optionName.find(" - ");
+                        pos = optionName.find(" - ");
                         if (pos != std::string::npos) {
                             footer = optionName.substr(pos + 2); // Assign the part after "&&" as the footer
                             optionName = optionName.substr(0, pos); // Strip the "&&" and everything after it
@@ -3004,6 +3027,7 @@ public:
         }
         if (initializingSpawn) {
             initializingSpawn = false;
+            useCombo2 = true;
             return createUI(); 
         }
         
@@ -3157,6 +3181,12 @@ public:
      * It can be used to perform actions or updates specific to the overlay's visibility.
      */
     virtual void onShow() override {
+        //if (usingMariko) {
+        //    logMessage("Using Mariko.");
+        //}
+        //if (usingErista) {
+        //    logMessage("Using Erista.");
+        //}
         //if (rootFrame != nullptr) {
         //    if (inMainMenu && redrawMenu) {
         //        //tsl::Overlay::get()->getCurrentGui()->removeFocus();
