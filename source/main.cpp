@@ -3181,6 +3181,12 @@ public:
      * It can be used to perform actions or updates specific to the overlay's visibility.
      */
     virtual void onShow() override {
+        //if (usingMariko) {
+        //    logMessage("Using Mariko.");
+        //}
+        //if (usingErista) {
+        //    logMessage("Using Erista.");
+        //}
         //if (rootFrame != nullptr) {
         //    if (inMainMenu && redrawMenu) {
         //        //tsl::Overlay::get()->getCurrentGui()->removeFocus();
