@@ -18,7 +18,7 @@
 namespace util {
 
     bool IsErista();
-
+    bool IsMariko(); // custom addition
     bool SupportsMarikoRebootToConfig();
 
 }
