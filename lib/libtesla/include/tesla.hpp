@@ -2713,6 +2713,10 @@ namespace tsl {
                 int offset = 0;
                 // Check if m_title is "Ultrahand"
                 if (this->m_title == "Ultrahand" && this->m_subtitle != "Ultrahand Package" && this->m_subtitle != "Ultrahand Script") {
+                    chargeStringSTD = "";
+                    PCB_temperatureStringSTD = "";
+                    SOC_temperatureStringSTD = "";
+                    
                     firstHalf = "Ultra";
                     secondHalf = "hand";
                     
