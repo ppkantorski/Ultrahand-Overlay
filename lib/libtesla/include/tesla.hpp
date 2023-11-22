@@ -1611,21 +1611,25 @@ namespace tsl {
                 s32 xChange = 1 - (radius << 1);
                 s32 yChange = 0;
                 
+                s32 y0;
+                s32 y1;
+                s32 x0;
+                
                 while (x >= y) {
                     if(filled) {
                         for (s32 i = centerX - x; i <= centerX + x; i++) {
-                            s32 y0 = centerY + y;
-                            s32 y1 = centerY - y;
-                            s32 x0 = i;
+                            y0 = centerY + y;
+                            y1 = centerY - y;
+                            x0 = i;
                             
                             this->setPixelBlendDst(x0, y0, color);
                             this->setPixelBlendDst(x0, y1, color);
                         }
                         
                         for (s32 i = centerX - y; i <= centerX + y; i++) {
-                            s32 y0 = centerY + x;
-                            s32 y1 = centerY - x;
-                            s32 x0 = i;
+                            y0 = centerY + x;
+                            y1 = centerY - x;
+                            x0 = i;
                             
                             this->setPixelBlendDst(x0, y0, color);
                             this->setPixelBlendDst(x0, y1, color);
@@ -1672,8 +1676,7 @@ namespace tsl {
             void drawBitmap(s32 x, s32 y, s32 w, s32 h, const u8 *bmp) {
                 for (s32 y1 = 0; y1 < h; y1++) {
                     for (s32 x1 = 0; x1 < w; x1++) {
-                        const Color color = { static_cast<u8>(bmp[0] >> 4), static_cast<u8>(bmp[1] >> 4), static_cast<u8>(bmp[2] >> 4), static_cast<u8>(bmp[3] >> 4) };
-                        setPixelBlendSrc(x + x1, y + y1, a(color));
+                        setPixelBlendSrc(x + x1, y + y1, a({ static_cast<u8>(bmp[0] >> 4), static_cast<u8>(bmp[1] >> 4), static_cast<u8>(bmp[2] >> 4), static_cast<u8>(bmp[3] >> 4) }));
                         bmp += 4;
                     }
                 }
@@ -1776,16 +1779,19 @@ namespace tsl {
                     }
                     
                     if (glyph->glyphBmp != nullptr && !std::iswspace(currCharacter) && fontSize > 0 && color.a != 0x0) {
+                        Color tmpColor = {0xF,0xF,0xF,0xF};
+                        uint8_t bmpColor;
                         
                         auto x = currX + glyph->bounds[0];
                         auto y = currY + glyph->bounds[1];
+                        
                         for (s32 bmpY = 0; bmpY < glyph->height; bmpY++) {
                             for (s32 bmpX = 0; bmpX < glyph->width; bmpX++) {
-                                auto bmpColor = glyph->glyphBmp[glyph->width * bmpY + bmpX] >> 4;
+                                bmpColor = glyph->glyphBmp[glyph->width * bmpY + bmpX] >> 4;
                                 if (bmpColor == 0xF) {
                                     this->setPixel(x + bmpX, y + bmpY, color);
                                 } else if (bmpColor != 0x0) {
-                                    Color tmpColor = color;
+                                    tmpColor = color;
                                     tmpColor.a = bmpColor * (float(tmpColor.a) / 0xF);
                                     this->setPixelBlendDst(x + bmpX, y + bmpY, tmpColor);
                                 }
@@ -1891,6 +1897,8 @@ namespace tsl {
             
             static inline float s_opacity = 1.0F;
             
+            u32 tmpPos;
+            
             /**
              * @brief Get the current framebuffer address
              *
@@ -1962,7 +1970,7 @@ namespace tsl {
              */
             u32 getPixelOffset(s32 x, s32 y) {
                 if (!this->m_scissoringStack.empty()) {
-                    auto currScissorConfig = this->m_scissoringStack.top();
+                    auto& currScissorConfig = this->m_scissoringStack.top();
                     if (x < currScissorConfig.x ||
                         y < currScissorConfig.y ||
                         x > currScissorConfig.x + currScissorConfig.w ||
@@ -1970,7 +1978,7 @@ namespace tsl {
                             return UINT32_MAX;
                 }
                 
-                u32 tmpPos = ((y & 127) / 16) + (x / 32 * 8) + ((y / 16 / 8) * (((cfg::FramebufferWidth / 2) / 16 * 8)));
+                tmpPos = ((y & 127) / 16) + (x / 32 * 8) + ((y / 16 / 8) * (((cfg::FramebufferWidth / 2) / 16 * 8)));
                 tmpPos *= 16 * 16 * 4;
                 
                 tmpPos += ((y % 16) / 8) * 512 + ((x % 32) / 16) * 256 + ((y % 8) / 2) * 64 + ((x % 16) / 8) * 32 + (y % 2) * 16 + (x % 8) * 2;
@@ -2140,18 +2148,14 @@ namespace tsl {
             
             std::string disableSelectionBGStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "disable_selection_bg");
             bool disableSelectionBG = (!disableSelectionBGStr.empty() && disableSelectionBGStr != "false");
-            std::string selectionBGColorStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "selection_bg_color");
-            Color selectionBGColor = RGB888(selectionBGColorStr, "#000000");
             
-            std::string highlightColor1Str = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "highlight_color_1");
-            std::string highlightColor2Str = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "highlight_color_2");
+            Color selectionBGColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "selection_bg_color"), "#000000");
             
-            Color highlightColor1 = RGB888(highlightColor1Str, "#2288CC");
-            Color highlightColor2 = RGB888(highlightColor2Str, "#88FFFF");
+            Color highlightColor1 = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "highlight_color_1"), "#2288CC");
+            Color highlightColor2 = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "highlight_color_2"), "#88FFFF");
             Color highlightColor = {0xf,0xf,0xf,0xf};
             
-            std::string clickColorStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "click_color");
-            Color clickColor = RGB888(clickColorStr, "#F7253E");
+            Color clickColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "click_color"), "#F7253E");
             
             std::chrono::duration<long int, std::ratio<1, 1000000000>> t;
             //double timeCounter;
@@ -2160,6 +2164,10 @@ namespace tsl {
             float progress;
             Color clickColor1 = {0xf,0xf,0xf,0xf};
             Color clickColor2 = {0xf,0xf,0xf,0xf};
+            
+            s32 x, y;
+            s32 amplitude;
+            
             
             /**
              * @brief Handles focus requesting
@@ -2323,13 +2331,14 @@ namespace tsl {
                         0xF
                     };
                     
-                    s32 x = 0, y = 0;
+                    x = 0;
+                    y = 0;
                     if (this->m_highlightShaking) {
                         t = (std::chrono::system_clock::now() - this->m_highlightShakingStartTime);
                         if (t >= 100ms)
                             this->m_highlightShaking = false;
                         else {
-                            s32 amplitude = std::rand() % 5 + 5;
+                            amplitude = std::rand() % 5 + 5;
                             
                             switch (this->m_highlightShakingDirection) {
                                 case FocusDirection::Up:
@@ -2405,14 +2414,15 @@ namespace tsl {
                     static_cast<u8>((highlightColor1.b - highlightColor2.b) * progress + highlightColor2.b),
                     0xF
                 };
-                s32 x = 0, y = 0;
+                x = 0;
+                y = 0;
                 
                 if (this->m_highlightShaking) {
                     t = (std::chrono::system_clock::now() - this->m_highlightShakingStartTime);
                     if (t >= 100ms)
                         this->m_highlightShaking = false;
                     else {
-                        s32 amplitude = std::rand() % 5 + 5;
+                        amplitude = std::rand() % 5 + 5;
                         
                         switch (this->m_highlightShakingDirection) {
                             case FocusDirection::Up:
@@ -2670,15 +2680,14 @@ namespace tsl {
             std::string disableColorfulLogoStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "disable_colorful_logo");
             bool disableColorfulLogo = (!disableColorfulLogoStr.empty() && disableColorfulLogoStr == "true");
             
-            std::string defaultTextColorStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "text_color");
-            tsl::Color defaultTextColor = RGB888(defaultTextColorStr);
-            std::string clockColorStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "clock_color");
-            tsl::Color clockColor = RGB888(clockColorStr);
-            std::string batteryColorStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "battery_color");
-            tsl::Color batteryColor = RGB888(batteryColorStr);
+            tsl::Color defaultTextColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "text_color"));
+            tsl::Color clockColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "clock_color"));
+            tsl::Color batteryColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "battery_color"));
             tsl::Color highlightColor = {0xF, 0xF, 0xF, 0xF};
+            
             std::string firstHalf, secondHalf;
             tsl::Color handColor = RGB888("#F7253E");
+            tsl::Color titleColor = {0xF, 0xF, 0xF, 0xF};
             const double cycleDuration = 1.5;
             float counter = 0;
             float countOffset;
@@ -2686,6 +2695,7 @@ namespace tsl {
             float progress;
             float letterWidth;
             float x, y;
+            int offset, y_offset;
             int fontSize;
             char timeStr[20]; // Allocate a buffer to store the time string
             char PCB_temperatureStr[10];
@@ -2694,7 +2704,7 @@ namespace tsl {
             std::string chargeStringSTD;
             std::string PCB_temperatureStringSTD;
             std::string SOC_temperatureStringSTD;
-            
+            std::string menuBottomLine;
             
             OverlayFrame(const std::string& title, const std::string& subtitle, const std::string& menuMode = "", const std::string& colorSelection = "", const std::string& pageLeftName = "", const std::string& pageRightName = "")
                 : Element(), m_menuMode(menuMode), m_title(title), m_subtitle(subtitle), m_colorSelection(colorSelection), m_pageLeftName(pageLeftName), m_pageRightName(pageRightName) {} // CUSTOM MODIFICATION
@@ -2710,9 +2720,13 @@ namespace tsl {
                 //renderer->drawRect(tsl::cfg::FramebufferWidth - 1, 0, 1, tsl::cfg::FramebufferHeight, a(0xF222)); // CUSTOM MODIFICATION, not sure why this call was even necessary after comparisons.
                 
                 y = 50;
-                int offset = 0;
+                offset = 0;
                 // Check if m_title is "Ultrahand"
                 if (this->m_title == "Ultrahand" && this->m_subtitle != "Ultrahand Package" && this->m_subtitle != "Ultrahand Script") {
+                    chargeStringSTD = "";
+                    PCB_temperatureStringSTD = "";
+                    SOC_temperatureStringSTD = "";
+                    
                     firstHalf = "Ultra";
                     secondHalf = "hand";
                     
@@ -2779,7 +2793,7 @@ namespace tsl {
                     //struct timespec currentTime;
                     clock_gettime(CLOCK_REALTIME, &currentTime);
                     
-                    int y_offset = 44;
+                    y_offset = 44;
                     if ((hideBattery == "true" && hidePCBTemp == "true" && hideSOCTemp == "true") || (hideClock == "true"))
                         y_offset += 12;
                     
@@ -2843,7 +2857,7 @@ namespace tsl {
                     if (hidePCBTemp != "true" && hideBattery != "true")
                          SOC_temperatureStringSTD += " ";
                     
-                    int offset = 0;
+                    offset = 0;
                     if (hidePCBTemp != "true") {
                         PCB_temperatureStringSTD = PCB_temperatureStr;
                         if (PCB_temperature > 0) {
@@ -2859,15 +2873,15 @@ namespace tsl {
                         }
                     }
                 } else {
-                    static float counter = 0;
-                    float progress;
-                    float letterWidth;
-                    float x = 20;
-                    int y = 50;
-                    int fontSize = 32;
+                    //static float counter = 0;
+                    //progress;
+                    //letterWidth;
+                    x = 20;
+                    y = 50;
+                    fontSize = 32;
                     if (this->m_subtitle == "Ultrahand Package") {
-                        std::string title = std::string(this->m_title);
-                        auto titleColor = a(Color(0x0, 0xF, 0x0, 0xF));
+                        std::string& title = this->m_title;
+                        titleColor = a(Color(0x0, 0xF, 0x0, 0xF));
                         if (this->m_colorSelection == "" || this->m_colorSelection == "green") {
                             titleColor = a(Color(0x0, 0xF, 0x0, 0xF));
                             renderer->drawString(title.c_str(), false, x, y, fontSize, titleColor);
@@ -2920,9 +2934,9 @@ namespace tsl {
                             }
                         } else if (this->m_colorSelection.size() == 7 && this->m_colorSelection[0] == '#') {
                             // Check if m_colorSelection is a valid hexadecimal color
-                            std::string hexColor = this->m_colorSelection.substr(1);
-                            if (isValidHexColor(hexColor)) {
-                                titleColor = RGB888(hexColor);
+                            //std::string hexColor = this->m_colorSelection.substr(1);
+                            if (isValidHexColor(this->m_colorSelection.substr(1))) {
+                                titleColor = RGB888(this->m_colorSelection.substr(1));
                                 renderer->drawString(title.c_str(), false, x, y, fontSize, titleColor);
                             } else {
                                 // Invalid hexadecimal color, handle the error accordingly
@@ -2946,7 +2960,7 @@ namespace tsl {
                 
                 renderer->drawRect(15, tsl::cfg::FramebufferHeight - 73, tsl::cfg::FramebufferWidth - 30, 1, a(defaultTextColor));
                 
-                std::string menuBottomLine = "\uE0E1"+GAP_2+BACK+GAP_1+"\uE0E0"+GAP_2+OK+GAP_1;
+                menuBottomLine = "\uE0E1"+GAP_2+BACK+GAP_1+"\uE0E0"+GAP_2+OK+GAP_1;
                 if (this->m_menuMode == "packages") {
                     //menuBottomLine = "\uE0E1"+GAP_2+"Close"+GAP_1+"\uE0E0"+GAP_2+OK+GAP_1+"\uE0ED"+GAP_2+OVERLAYS;
                     menuBottomLine += "\uE0ED"+GAP_2+OVERLAYS;
@@ -3041,8 +3055,7 @@ namespace tsl {
          */
         class HeaderOverlayFrame : public Element {
         public:
-            std::string defaultTextColorStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "text_color");
-            tsl::Color defaultTextColor = RGB888(defaultTextColorStr);
+            tsl::Color defaultTextColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "text_color"));
             
             HeaderOverlayFrame(u16 headerHeight = 175) : Element(), m_headerHeight(headerHeight) {}
             virtual ~HeaderOverlayFrame() {
@@ -3181,8 +3194,14 @@ namespace tsl {
                     delete item;
             }
             
-            std::string trackBarColorStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "trackbar_color");
-            Color trackBarColor = RGB888(trackBarColorStr, "#555555");
+            Color trackBarColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "trackbar_color"), "#555555");
+            float scrollbarHeight;
+            float scrollbarOffset;
+            int offset;
+            float prevOffset;
+            s32 y;
+            bool handled;
+            u16 i;
             
             virtual void draw(gfx::Renderer *renderer) override {
                 
@@ -3238,10 +3257,10 @@ namespace tsl {
                 renderer->disableScissoring();
                 
                 if (this->m_listHeight > this->getHeight()) {
-                    float scrollbarHeight = static_cast<float>(this->getHeight() * this->getHeight()) / this->m_listHeight;
-                    float scrollbarOffset = (static_cast<double>(this->m_offset)) / static_cast<double>(this->m_listHeight - this->getHeight()) * (this->getHeight() - std::ceil(scrollbarHeight));
+                    scrollbarHeight = static_cast<float>(this->getHeight() * this->getHeight()) / this->m_listHeight;
+                    scrollbarOffset = (static_cast<float>(this->m_offset)) / static_cast<float>(this->m_listHeight - this->getHeight()) * (this->getHeight() - std::ceil(scrollbarHeight));
                     
-                    int offset = 9;
+                    offset = 9;
                     renderer->drawRect(this->getRightBound() + 10+offset, this->getY() + scrollbarOffset, 5, scrollbarHeight - 50, trackBarColor);
                     renderer->drawCircle(this->getRightBound() + 12+offset, this->getY() + scrollbarOffset, 2, true, trackBarColor);
                     renderer->drawCircle(this->getRightBound() + 12+offset, ( this->getY() + scrollbarOffset + (this->getY() + scrollbarOffset + this->getY() + scrollbarOffset + scrollbarHeight - 50)/2)/2, 2, true, trackBarColor);
@@ -3249,7 +3268,7 @@ namespace tsl {
                     renderer->drawCircle(this->getRightBound() + 12+offset, (this->getY() + scrollbarOffset + scrollbarHeight - 50 + (this->getY() + scrollbarOffset + this->getY() + scrollbarOffset + scrollbarHeight - 50)/2)/2, 2, true, trackBarColor);
                     renderer->drawCircle(this->getRightBound() + 12+offset, this->getY() + scrollbarOffset + scrollbarHeight - 50, 2, true, trackBarColor);
                     
-                    float prevOffset = this->m_offset;
+                    prevOffset = this->m_offset;
                     
                     if (Element::getInputMode() == InputMode::Controller)
                         this->m_offset += ((this->m_nextOffset) - this->m_offset) * 0.1F;
@@ -3263,7 +3282,7 @@ namespace tsl {
             }
             
             virtual void layout(u16 parentX, u16 parentY, u16 parentWidth, u16 parentHeight) override {
-                s32 y = this->getY() - this->m_offset;
+                y = this->getY() - this->m_offset;
                 
                 this->m_listHeight = 0;
                 for (auto &entry : this->m_items)
@@ -3277,7 +3296,7 @@ namespace tsl {
             }
             
             virtual bool onTouch(TouchEvent event, s32 currX, s32 currY, s32 prevX, s32 prevY, s32 initialX, s32 initialY) {
-                bool handled = false;
+                handled = false;
                 
                 // Discard touches out of bounds
                 if (!this->inBounds(currX, currY))
@@ -3362,7 +3381,7 @@ namespace tsl {
                     return nullptr;
                 
                 if (direction == FocusDirection::None) {
-                    u16 i = 0;
+                    i = 0;
                     
                     if (oldFocus == nullptr) {
                         s32 elementHeight = 0;
@@ -3501,13 +3520,12 @@ namespace tsl {
          */
         class ListItem : public Element {
         public:
-            std::string defaultTextColorStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "text_color"); // CUSTOM MODIFICATION
-            tsl::Color defaultTextColor = RGB888(defaultTextColorStr);
-            std::string selectedTextColorStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "selection_text_color");
-            tsl::Color selectedTextColor = RGB888(selectedTextColorStr);
+            tsl::Color defaultTextColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "text_color")); ; // CUSTOM MODIFICATION
+            tsl::Color selectedTextColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "selection_text_color"));
             
             std::chrono::system_clock::time_point timeIn;// = std::chrono::system_clock::now();
             std::chrono::duration<long int, std::ratio<1, 1000000000>> t;
+            u32 width, height;
             
             /**
              * @brief Constructor
@@ -3526,18 +3544,18 @@ namespace tsl {
                 
                 if (this->m_maxWidth == 0) {
                     if (this->m_value.length() > 0) {
-                        auto [valueWidth, valueHeight] = renderer->drawString(this->m_value.c_str(), false, 0, 0, 20, tsl::style::color::ColorTransparent);
-                        this->m_maxWidth = this->getWidth() - valueWidth - 70;
+                        std::tie(width, height) = renderer->drawString(this->m_value.c_str(), false, 0, 0, 20, tsl::style::color::ColorTransparent);
+                        this->m_maxWidth = this->getWidth() - width - 70;
                     } else {
                         this->m_maxWidth = this->getWidth() - 40;
                     }
                     
-                    auto [width, height] = renderer->drawString(this->m_text.c_str(), false, 0, 0, 23, tsl::style::color::ColorTransparent);
+                    std::tie(width, height) = renderer->drawString(this->m_text.c_str(), false, 0, 0, 23, tsl::style::color::ColorTransparent);
                     this->m_trunctuated = width > this->m_maxWidth;
                     
                     if (this->m_trunctuated) {
                         this->m_scrollText = this->m_text + "        ";
-                        auto [width, height] = renderer->drawString(this->m_scrollText.c_str(), false, 0, 0, 23, tsl::style::color::ColorTransparent);
+                        std::tie(width, height) = renderer->drawString(this->m_scrollText.c_str(), false, 0, 0, 23, tsl::style::color::ColorTransparent);
                         this->m_scrollText += this->m_text;
                         this->m_textWidth = width;
                         this->m_ellipsisText = renderer->limitStringLength(this->m_text, false, 24, this->m_maxWidth);
@@ -3776,8 +3794,7 @@ namespace tsl {
         
         class CategoryHeader : public Element {
         public:
-            std::string defaultTextColorStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "text_color");
-            tsl::Color defaultTextColor = RGB888(defaultTextColorStr);
+            tsl::Color defaultTextColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "text_color"));
             
             CategoryHeader(const std::string &title, bool hasSeparator = false) : m_text(title), m_hasSeparator(hasSeparator) {}
             virtual ~CategoryHeader() {}
@@ -3832,14 +3849,15 @@ namespace tsl {
          */
         class TrackBar : public Element {
         public:
-            std::string defaultTextColorStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "text_color");
-            tsl::Color defaultTextColor = RGB888(defaultTextColorStr);
-            std::string trackBarColorStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "trackbar_color");
-            Color trackBarColor = RGB888(trackBarColorStr, "#555555");
+            tsl::Color defaultTextColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "text_color"));
+            Color trackBarColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "trackbar_color"), "#555555");
             std::chrono::duration<long int, std::ratio<1, 1000000000>> t;
             Color highlightColor = a({0xf,0xf,0xf,0xf});
             //alf progress;
             float progress;
+            float counter = 0.0;
+            s32 x, y;
+            s32 amplitude;
             
             /**
              * @brief Constructor
@@ -3936,7 +3954,7 @@ namespace tsl {
             virtual void drawHighlight(gfx::Renderer *renderer) override {
                 //static half counter = half(0);
                 //progress = half((std::sin(counter) + 1.0) / 2.0);
-                static float counter = 0.0;
+                //static float counter = 0.0;
                 progress = ((std::sin(counter) + 1.0) / 2.0);
                 highlightColor = {   static_cast<u8>((0x2 - 0x8) * progress + 0x8),
                                      static_cast<u8>((0x8 - 0xF) * progress + 0xF),
@@ -3949,15 +3967,15 @@ namespace tsl {
                 //u16 handlePos = (this->getWidth() - 95) * static_cast<half>(this->m_value) / 100;
                 u16 handlePos = (this->getWidth() - 95) * (this->m_value) / 100;
                 
-                s32 x = 0;
-                s32 y = 0;
+                x = 0;
+                y = 0;
                 
                 if (Element::m_highlightShaking) {
                     t = (std::chrono::system_clock::now() - Element::m_highlightShakingStartTime);
                     if (t >= 100ms)
                         Element::m_highlightShaking = false;
                     else {
-                        s32 amplitude = std::rand() % 5 + 5;
+                        amplitude = std::rand() % 5 + 5;
                         
                         switch (Element::m_highlightShakingDirection) {
                             case FocusDirection::Up:
@@ -4122,6 +4140,8 @@ namespace tsl {
          */
         class NamedStepTrackBar : public StepTrackBar {
         public:
+            u16 trackBarWidth, stepWidth, currentDescIndex;
+            u32 descWidth, descHeight;
             /**
              * @brief Constructor
              *
@@ -4135,16 +4155,16 @@ namespace tsl {
             
             virtual void draw(gfx::Renderer *renderer) override {
                 
-                u16 trackBarWidth = this->getWidth() - 95;
-                u16 stepWidth = trackBarWidth / (this->m_numSteps - 1);
+                trackBarWidth = this->getWidth() - 95;
+                stepWidth = trackBarWidth / (this->m_numSteps - 1);
                 
                 for (u8 i = 0; i < this->m_numSteps; i++) {
                     renderer->drawRect(this->getX() + 60 + stepWidth * i, this->getY() + 50, 1, 10, a(tsl::style::color::ColorFrame));
                 }
                 
-                u8 currentDescIndex = std::clamp(this->m_value / (100 / (this->m_numSteps - 1)), 0, this->m_numSteps - 1);
+                currentDescIndex = std::clamp(this->m_value / (100 / (this->m_numSteps - 1)), 0, this->m_numSteps - 1);
                 
-                auto [descWidth, descHeight] = renderer->drawString(this->m_stepDescriptions[currentDescIndex].c_str(), false, 0, 0, 15, tsl::style::color::ColorTransparent);
+                std::tie(descWidth, descHeight) = renderer->drawString(this->m_stepDescriptions[currentDescIndex].c_str(), false, 0, 0, 15, tsl::style::color::ColorTransparent);
                 renderer->drawString(this->m_stepDescriptions[currentDescIndex].c_str(), false, ((this->getX() + 60) + (this->getWidth() - 95) / 2) - (descWidth / 2), this->getY() + 20, 15, a(tsl::style::color::ColorDescription));
                 
                 StepTrackBar::draw(renderer);
@@ -4616,7 +4636,7 @@ namespace tsl {
             }
             
             if (touchDetected) {
-            
+                
                 u32 xDistance = std::abs(static_cast<s32>(initialTouchPos.x) - static_cast<s32>(touchPos.x));
                 u32 yDistance = std::abs(static_cast<s32>(initialTouchPos.y) - static_cast<s32>(touchPos.y));
                 
