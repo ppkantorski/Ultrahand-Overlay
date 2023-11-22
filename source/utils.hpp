@@ -69,7 +69,7 @@ static const std::string ultrahandRepo = "https://github.com/ppkantorski/Ultraha
 static bool commandSuccess = false;
 static bool refreshGui = false;
 static bool usingErista = util::IsErista();
-static bool usingMariko = !(util::IsErista()); // mariko is determined by it not being erista
+static bool usingMariko = util::IsMariko();
 
 
 void initializeTheme(std::string themeIniPath = themeConfigIniPath) {
