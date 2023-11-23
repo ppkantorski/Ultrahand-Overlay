@@ -833,9 +833,11 @@ public:
             
             std::string priorityValue = parseValueFromIniSection(settingsIniPath, entryName, "priority");
             
+            auto listItem = static_cast<tsl::elm::ListItem*>(nullptr);
+            std::string iStr;
             for (int i = 0; i <= MAX_PRIORITY; ++i) { // for i in range 0->20 with 20 being the max value
-                std::string iStr = std::to_string(i);
-                tsl::elm::ListItem* listItem = new tsl::elm::ListItem(iStr);
+                iStr = std::to_string(i);
+                listItem = new tsl::elm::ListItem(iStr);
                 
                 if (iStr == priorityValue) {
                     listItem->setValue(CHECKMARK_SYMBOL);
