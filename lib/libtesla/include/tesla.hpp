@@ -390,7 +390,7 @@ void parseLanguage(std::string langFile) {
     updateIfNotEmpty(HIDDEN_PACKAGES, "HIDDEN_PACKAGES", langData);
     updateIfNotEmpty(HIDDEN, "HIDDEN", langData);
     updateIfNotEmpty(HIDE_PACKAGE, "HIDE_PACKAGE", langData);
-    updateIfNotEmpty(HIDE_OVERLAY, "HIDE_PACKAGE", langData);
+    updateIfNotEmpty(HIDE_OVERLAY, "HIDE_OVERLAY", langData);
     updateIfNotEmpty(LAUNCH_ARGUMENTS, "LAUNCH_ARGUMENTS", langData);
     updateIfNotEmpty(COMMANDS, "COMMANDS", langData);
     updateIfNotEmpty(SETTINGS, "SETTINGS", langData);
