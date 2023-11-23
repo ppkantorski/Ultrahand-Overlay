@@ -1105,6 +1105,8 @@ private:
     bool toggleState = false;
     std::string packageConfigIniPath;
     std::string commandMode, commandGrouping;
+    
+    std::string lastSelectedListItemFooter = "";
 public:
     /**
      * @brief Constructs a `SelectionOverlay` instance.
@@ -1404,8 +1406,8 @@ public:
                 footer = "";
                 optionName = selectedItem;
                 if (pos != std::string::npos) {
-                    footer = selectedItem.substr(pos + 2); // Assign the part after "&&" as the footer
-                    optionName = selectedItem.substr(0, pos); // Strip the "&&" and everything after it
+                    footer = selectedItem.substr(pos + 2); // Assign the part after " - " as the footer
+                    optionName = selectedItem.substr(0, pos); // Strip the " - " and everything after it
                 }
                 listItem = new tsl::elm::ListItem(optionName);
                 
@@ -1413,8 +1415,13 @@ public:
                     if (selectedFooterDict[specifiedFooterKey] == selectedItem) { // needs to be fixed
                         lastSelectedListItem = listItem;
                         listItem->setValue(CHECKMARK_SYMBOL);
-                    } else
-                        listItem->setValue(footer);
+                    } else {
+                        if (pos != std::string::npos) {
+                            listItem->setValue(footer, true);
+                        } else {
+                            listItem->setValue(footer);
+                        }
+                    }
                 } else
                     listItem->setValue(footer, true);
                 
@@ -1423,7 +1430,7 @@ public:
                     if (keys & KEY_A) {
                         if (commandMode == "option") {
                             selectedFooterDict[specifiedFooterKey] = selectedItem;
-                            lastSelectedListItem->setValue(footer, true);
+                            lastSelectedListItem->setValue(lastSelectedListItemFooter, true);
                         }
                         std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(this->commands, selectedItem, i); // replace source
                         interpretAndExecuteCommand(modifiedCmds, filePath, specificKey); // Execute modified 
@@ -1434,8 +1441,10 @@ public:
                         else
                             listItem->setValue(CROSSMARK_SYMBOL);
                         
-                        if (commandMode == "option")
+                        if (commandMode == "option") {
+                            lastSelectedListItemFooter = footer;
                             lastSelectedListItem = listItem;
+                        }
                         
                         return true;
                     }
