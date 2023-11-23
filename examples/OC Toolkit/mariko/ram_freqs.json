@@ -232,5 +232,29 @@
         "label": "3000 MHz - unsafe",
         "hex": "00B42D",
         "rhex": "2DB400"
+    },
+    {
+        "name": "3033 MHz",
+        "label": "3033 MHz - unsafe",
+        "hex": "004A2E",
+        "rhex": "2E4A00"
+    },
+    {
+        "name": "3052 MHz",
+        "label": "3052 MHz - unsafe",
+        "hex": "00952E",
+        "rhex": "2E9500"
+    },
+    {
+        "name": "3072 MHz",
+        "label": "3072 MHz - unsafe",
+        "hex": "00E02E",
+        "rhex": "2EE000"
+    },
+    {
+        "name": "3097 MHz",
+        "label": "3097 MHz - unsafe",
+        "hex": "00442F",
+        "rhex": "2F4400"
     }
 ]
