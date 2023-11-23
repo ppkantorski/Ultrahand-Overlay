@@ -12,9 +12,9 @@
  *
  *   Note: Please be aware that this notice cannot be altered or removed. It is a part
  *   of the project's documentation and must remain intact.
- *
+ * 
+ *  Licensed under CC BY-NC-SA 4.0
  *  Copyright (c) 2023 ppkantorski
- *  All rights reserved.
  ********************************************************************************/
 
 #pragma once
@@ -73,13 +73,12 @@ std::string removeWhiteSpaces(const std::string& str) {
  * @return The string with quotes removed.
  */
 std::string removeQuotes(const std::string& str) {
-    std::size_t firstQuote = str.find_first_of("'\"");
-    std::size_t lastQuote = str.find_last_of("'\"");
-    if (firstQuote != std::string::npos && lastQuote != std::string::npos && firstQuote < lastQuote) {
-        return str.substr(firstQuote + 1, lastQuote - firstQuote - 1);
+    if (str.size() >= 2 && ((str.front() == '\'' && str.back() == '\'') || (str.front() == '"' && str.back() == '"'))) {
+        return str.substr(1, str.size() - 2);
     }
     return str;
 }
+
 
 /**
  * @brief Replaces multiple consecutive slashes with a single slash in a string.
@@ -92,7 +91,7 @@ std::string removeQuotes(const std::string& str) {
 std::string replaceMultipleSlashes(const std::string& input) {
     std::string output;
     bool previousSlash = false;
-
+    
     for (char c : input) {
         if (c == '/') {
             if (!previousSlash) {
@@ -104,7 +103,7 @@ std::string replaceMultipleSlashes(const std::string& input) {
             previousSlash = false;
         }
     }
-
+    
     return output;
 }
 
@@ -233,26 +232,6 @@ bool isFileOrDirectory(const std::string& path) {
 }
 
 
-/**
- * @brief Converts a string to an integer.
- *
- * This function attempts to convert the specified string to an integer.
- * If the conversion fails due to invalid input or out-of-range values,
- * it returns 0.
- *
- * @param input_string The string to convert to an integer.
- * @return The converted integer value or 0 on conversion failure.
- */
-int stringToNumber(const std::string& input_string) {
-    try {
-        return std::stoi(input_string);
-    } catch (const std::invalid_argument& e) {
-        return 0;
-    } catch (const std::out_of_range& e) {
-        return 0;
-    }
-}
-
 
 /**
  * @brief Splits a string into a vector of strings using a delimiter.
@@ -300,14 +279,13 @@ json_t* stringToJson(const std::string& input) {
     
     //logMessage(input.c_str());
     jsonObj = json_loads(input.c_str(), 0, &error);
-
-    if (!jsonObj) {
+    if (jsonObj) {
+        return jsonObj;
+    } else {
         // Return an empty json_t* (you can also return nullptr)
-        jsonObj = json_object();
-        //logMessage("ERROR LOADING JSON FROM STRING!");
+        logMessage("ERROR LOADING JSON FROM STRING!");
+        return json_object();
     }
-
-    return jsonObj;
 }
 
 
@@ -331,8 +309,7 @@ std::string formatPriorityString(const std::string& priority, int desiredWidth=4
             formattedString = "0"+formattedString;
         }
     }
-
-
+    
     // Convert the stringstream to a string and return it
     return formattedString;
 }
@@ -362,13 +339,13 @@ std::string removeTag(const std::string &input) {
 std::string cleanVersionLabel(const std::string &input) {
     std::regex versionRegex(R"([v-]?(\d+\.\d+\.\d+))");
     std::smatch match;
-
+    
     if (std::regex_search(input, match, versionRegex)) {
         if (match.size() > 1) {
             return match[1].str();
         }
     }
-
+    
     // Return an empty string if no version number is found
     return input;
 }
@@ -376,7 +353,7 @@ std::string cleanVersionLabel(const std::string &input) {
 
 std::string extractTitle(const std::string& input) {
     size_t spacePos = input.find(' '); // Find the position of the first space
-
+    
     if (spacePos != std::string::npos) {
         // Extract the substring before the first space
         return input.substr(0, spacePos);
@@ -386,6 +363,7 @@ std::string extractTitle(const std::string& input) {
     }
 }
 
+
 std::string removeFilename(const std::string& path) {
     size_t found = path.find_last_of("/\\");
     if (found != std::string::npos) {
@@ -393,3 +371,4 @@ std::string removeFilename(const std::string& path) {
     }
     return path; // If no directory separator is found, return the original path
 }
+

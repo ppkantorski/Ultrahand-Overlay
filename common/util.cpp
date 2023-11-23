@@ -20,23 +20,50 @@
 #include <optional>
 #include <cstdio>
 
+/// Console Product Models
+//typedef enum {
+//    SetSysProductModel_Invalid = 0, ///< Invalid Model
+//    SetSysProductModel_Nx      = 1, ///< Erista Model
+//    SetSysProductModel_Copper  = 2, ///< Erista "Simulation" Model
+//    SetSysProductModel_Iowa    = 3, ///< Mariko Model
+//    SetSysProductModel_Hoag    = 4, ///< Mariko Lite Model
+//    SetSysProductModel_Calcio  = 5, ///< Mariko "Simulation" Model
+//    SetSysProductModel_Aula    = 6, ///< Mariko Pro Model(?)
+//} SetSysProductModel;
+
+/**
+ * @brief GetProductModel
+ * @param[out] model Output SetSysProductModel.
+ */
+//Result setsysGetProductModel(SetSysProductModel *model);
+
 namespace util {
-
-    bool IsErista() {
-        static std::optional<bool> impl;
-
-        if (impl.has_value())
-            return *impl;
-
-        u64 type = 0;
-
-        if (R_FAILED(splGetConfig(SplConfigItem_HardwareType, &type)))
-            return false;
-
-        impl = (type == 0 /* SplHardwareType_Icosa */ || type == 1 /* SplHardwareType_Copper */);
-
-        return *impl;
+    
+    bool IsErista() { // CUSTOM MODIFICATION
+        SetSysProductModel model = SetSysProductModel_Invalid;
+        setsysGetProductModel(&model);
+        
+        if (model == SetSysProductModel_Nx || \
+            model == SetSysProductModel_Copper)
+            return true;
+        
+        return false;
     }
+    
+    
+    bool IsMariko() { // CUSTOM MODIFICATION
+        SetSysProductModel model = SetSysProductModel_Invalid;
+        setsysGetProductModel(&model);
+        
+        if (model == SetSysProductModel_Iowa || \
+            model == SetSysProductModel_Hoag || \
+            model == SetSysProductModel_Calcio || \
+            model == SetSysProductModel_Aula)
+            return true;
+        
+        return false;
+    }
+
 
     /**
      * Since 1.6.0, Atmosphère bpc-mitm overwrites the reboot on mariko to prevent clearing
