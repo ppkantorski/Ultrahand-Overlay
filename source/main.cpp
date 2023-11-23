@@ -2278,6 +2278,8 @@ public:
             if (!overlayFiles.empty()) {
                 // Load the INI file and parse its content.
                 std::map<std::string, std::map<std::string, std::string>> overlaysIniData = getParsedDataFromIniFile(overlaysIniFilePath);
+                Result result;
+                std::string overlayName, overlayVersion;
                 
                 for (const auto& overlayFile : overlayFiles) {
                     
@@ -2340,7 +2342,7 @@ public:
                         
                         
                         // Get the name and version of the overlay file
-                        auto [result, overlayName, overlayVersion] = getOverlayInfo(overlayDirectory+overlayFileName);
+                        std::tie(result, overlayName, overlayVersion) = getOverlayInfo(overlayDirectory+overlayFileName);
                         if (result != ResultSuccess)
                             continue;
                         
@@ -2373,7 +2375,7 @@ public:
                 
                 //std::string overlayFileName;
                 std::string overlayStarred;
-                std::string overlayVersion, overlayName;
+                //std::string overlayVersion, overlayName;
                 std::string overlayFile, newOverlayName;
                 size_t lastUnderscorePos, secondLastUnderscorePos, thirdLastUnderscorePos;
                 
