@@ -1025,14 +1025,14 @@ namespace tsl {
         }
         
         if (isValidHexColor(hexColor)) {
-            std::string r = hexColor.substr(0, 2); // Extract the first two characters (red component)
-            std::string g = hexColor.substr(2, 2); // Extract the next two characters (green component)
-            std::string b = hexColor.substr(4, 2); // Extract the last two characters (blue component)
+            //std::string r = hexColor.substr(0, 2); // Extract the first two characters (red component)
+            //std::string g = hexColor.substr(2, 2); // Extract the next two characters (green component)
+            //std::string b = hexColor.substr(4, 2); // Extract the last two characters (blue component)
             
             // Convert the RGBA8888 strings to RGBA4444
-            uint8_t redValue = std::stoi(r, nullptr, 16) >> 4;   // Right-shift by 4 bits
-            uint8_t greenValue = std::stoi(g, nullptr, 16) >> 4; // Right-shift by 4 bits
-            uint8_t blueValue = std::stoi(b, nullptr, 16) >> 4;  // Right-shift by 4 bits
+            uint8_t redValue = std::stoi(hexColor.substr(0, 2), nullptr, 16) >> 4;   // Right-shift by 4 bits
+            uint8_t greenValue = std::stoi(hexColor.substr(2, 2), nullptr, 16) >> 4; // Right-shift by 4 bits
+            uint8_t blueValue = std::stoi(hexColor.substr(4, 2), nullptr, 16) >> 4;  // Right-shift by 4 bits
             
             // Create a Color with the extracted RGB values
             
@@ -2845,12 +2845,12 @@ namespace tsl {
                         PCB_temperatureStringSTD += " ";
                         // Use the 'timeStr' to display the time
                         if (powerCacheIsCharging)
-                            renderer->drawString(chargeStringSTD.c_str(), false, tsl::cfg::FramebufferWidth - calculateStringWidth(chargeStringSTD, 20) - 20, y_offset, 20, tsl::Color(0x0, 0xF, 0x0, 0xF));
+                            renderer->drawString(chargeStringSTD.c_str(), false, tsl::cfg::FramebufferWidth - calculateStringWidth(chargeStringSTD, 20) - 19, y_offset, 20, tsl::Color(0x0, 0xF, 0x0, 0xF));
                         else {
                             if (batteryCharge <= 20) {
-                                renderer->drawString(chargeStringSTD.c_str(), false, tsl::cfg::FramebufferWidth - calculateStringWidth(chargeStringSTD, 20) - 20, y_offset, 20, tsl::Color(0xF, 0x0, 0x0, 0xF));
+                                renderer->drawString(chargeStringSTD.c_str(), false, tsl::cfg::FramebufferWidth - calculateStringWidth(chargeStringSTD, 20) - 19, y_offset, 20, tsl::Color(0xF, 0x0, 0x0, 0xF));
                             } else {
-                                renderer->drawString(chargeStringSTD.c_str(), false, tsl::cfg::FramebufferWidth - calculateStringWidth(chargeStringSTD, 20) - 20, y_offset, 20, batteryColor);
+                                renderer->drawString(chargeStringSTD.c_str(), false, tsl::cfg::FramebufferWidth - calculateStringWidth(chargeStringSTD, 20) - 19, y_offset, 20, batteryColor);
                             }
                         }
                     }
