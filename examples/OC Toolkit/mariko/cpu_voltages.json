@@ -23,6 +23,26 @@
         "name": "1160 mV",
         "label": "1160 mV - unsafe",
         "hex": "880400"
+    },
+    {
+        "name": "1170 mV",
+        "label": "1170 mV - unsafe",
+        "hex": "920400"
+    },
+    {
+        "name": "1180 mV",
+        "label": "1180 mV - unsafe",
+        "hex": "9C0400"
+    },
+    {
+        "name": "1190 mV",
+        "label": "1190 mV - unsafe",
+        "hex": "A60400"
+    },
+    {
+        "name": "1200 mV",
+        "label": "1200 mV - unsafe",
+        "hex": "B00400"
     }
 ]
 
