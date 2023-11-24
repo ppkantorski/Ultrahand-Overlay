@@ -833,9 +833,11 @@ public:
             
             std::string priorityValue = parseValueFromIniSection(settingsIniPath, entryName, "priority");
             
+            auto listItem = static_cast<tsl::elm::ListItem*>(nullptr);
+            std::string iStr;
             for (int i = 0; i <= MAX_PRIORITY; ++i) { // for i in range 0->20 with 20 being the max value
-                std::string iStr = std::to_string(i);
-                tsl::elm::ListItem* listItem = new tsl::elm::ListItem(iStr);
+                iStr = std::to_string(i);
+                listItem = new tsl::elm::ListItem(iStr);
                 
                 if (iStr == priorityValue) {
                     listItem->setValue(CHECKMARK_SYMBOL);
@@ -1103,6 +1105,8 @@ private:
     bool toggleState = false;
     std::string packageConfigIniPath;
     std::string commandMode, commandGrouping;
+    
+    std::string lastSelectedListItemFooter = "";
 public:
     /**
      * @brief Constructs a `SelectionOverlay` instance.
@@ -1402,8 +1406,8 @@ public:
                 footer = "";
                 optionName = selectedItem;
                 if (pos != std::string::npos) {
-                    footer = selectedItem.substr(pos + 2); // Assign the part after "&&" as the footer
-                    optionName = selectedItem.substr(0, pos); // Strip the "&&" and everything after it
+                    footer = selectedItem.substr(pos + 2); // Assign the part after " - " as the footer
+                    optionName = selectedItem.substr(0, pos); // Strip the " - " and everything after it
                 }
                 listItem = new tsl::elm::ListItem(optionName);
                 
@@ -1411,8 +1415,13 @@ public:
                     if (selectedFooterDict[specifiedFooterKey] == selectedItem) { // needs to be fixed
                         lastSelectedListItem = listItem;
                         listItem->setValue(CHECKMARK_SYMBOL);
-                    } else
-                        listItem->setValue(footer);
+                    } else {
+                        if (pos != std::string::npos) {
+                            listItem->setValue(footer, true);
+                        } else {
+                            listItem->setValue(footer);
+                        }
+                    }
                 } else
                     listItem->setValue(footer, true);
                 
@@ -1421,19 +1430,21 @@ public:
                     if (keys & KEY_A) {
                         if (commandMode == "option") {
                             selectedFooterDict[specifiedFooterKey] = selectedItem;
-                            lastSelectedListItem->setValue(footer, true);
+                            lastSelectedListItem->setValue(lastSelectedListItemFooter, true);
                         }
-                        std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(this->commands, selectedItem, i); // replace source
-                        interpretAndExecuteCommand(modifiedCmds, filePath, specificKey); // Execute modified 
-                        modifiedCmds.clear();
+                        //std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(this->commands, selectedItem, i); // replace source
+                        interpretAndExecuteCommand(getSourceReplacement(this->commands, selectedItem, i), filePath, specificKey); // Execute modified 
+                        //modifiedCmds.clear();
                         
                         if (commandSuccess)
                             listItem->setValue(CHECKMARK_SYMBOL);
                         else
                             listItem->setValue(CROSSMARK_SYMBOL);
                         
-                        if (commandMode == "option")
+                        if (commandMode == "option") {
+                            lastSelectedListItemFooter = footer;
                             lastSelectedListItem = listItem;
+                        }
                         
                         return true;
                     }
@@ -1452,17 +1463,17 @@ public:
                     if (!state) {
                         if (std::find(selectedItemsListOn.begin(), selectedItemsListOn.end(), selectedItem) != selectedItemsListOn.end()) {
                             // Toggle switched to On
-                            std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commandsOn, selectedItem, i); // replace source
-                            interpretAndExecuteCommand(modifiedCmds, filePath, specificKey); // Execute modified 
-                            modifiedCmds.clear();
+                            //std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commandsOn, selectedItem, i); // replace source
+                            interpretAndExecuteCommand(getSourceReplacement(commandsOn, selectedItem, i), filePath, specificKey); // Execute modified 
+                            //modifiedCmds.clear();
                         } else
                             toggleListItem->setState(!state);
                     } else {
                         if (std::find(selectedItemsListOff.begin(), selectedItemsListOff.end(), selectedItem) != selectedItemsListOff.end()) {
                             // Toggle switched to Off
-                            std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commandsOff, selectedItem, i); // replace source
-                            interpretAndExecuteCommand(modifiedCmds, filePath, specificKey); // Execute modified 
-                            modifiedCmds.clear();
+                            //std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commandsOff, selectedItem, i); // replace source
+                            interpretAndExecuteCommand(getSourceReplacement(commandsOff, selectedItem, i), filePath, specificKey); // Execute modified 
+                            //modifiedCmds.clear();
                         } else
                             toggleListItem->setState(!state);
                     }
@@ -1930,10 +1941,10 @@ public:
                             
                             listItem->setClickListener([this, i, commands, keyName = option.first, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
                                 if (keys & KEY_A) {
-                                    std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commands, keyName, i); // replace source
+                                    //std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commands, keyName, i); // replace source
                                     //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
-                                    interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified
-                                    modifiedCmds.clear();
+                                    interpretAndExecuteCommand(getSourceReplacement(commands, keyName, i), packagePath, keyName); // Execute modified
+                                    //modifiedCmds.clear();
                                     if (commandSuccess)
                                         listItem->setValue(CHECKMARK_SYMBOL);
                                     else
@@ -1962,10 +1973,10 @@ public:
                                 if (!state) {
                                     // Toggle switched to On
                                     if (toggleStateOn) {
-                                        std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commandsOn, preprocessPath(pathPatternOn), i); // replace source
+                                        //std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commandsOn, preprocessPath(pathPatternOn), i); // replace source
                                         //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
-                                        interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified
-                                        modifiedCmds.clear();
+                                        interpretAndExecuteCommand(getSourceReplacement(commandsOn, preprocessPath(pathPatternOn), i), packagePath, keyName); // Execute modified
+                                        //modifiedCmds.clear();
                                     } else {
                                         // Handle the case where the command should only run in the source_on section
                                         // Add your specific code here
@@ -1973,10 +1984,10 @@ public:
                                 } else {
                                     // Toggle switched to Off
                                     if (!toggleStateOn) {
-                                        std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commandsOff, preprocessPath(pathPatternOff), i); // replace source
+                                        //std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commandsOff, preprocessPath(pathPatternOff), i); // replace source
                                         //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
-                                        interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified 
-                                        modifiedCmds.clear();
+                                        interpretAndExecuteCommand(getSourceReplacement(commandsOff, preprocessPath(pathPatternOff), i), packagePath, keyName); // Execute modified 
+                                        //modifiedCmds.clear();
                                     } else {
                                         // Handle the case where the command should only run in the source_off section
                                         // Add your specific code here
@@ -2276,6 +2287,8 @@ public:
             if (!overlayFiles.empty()) {
                 // Load the INI file and parse its content.
                 std::map<std::string, std::map<std::string, std::string>> overlaysIniData = getParsedDataFromIniFile(overlaysIniFilePath);
+                Result result;
+                std::string overlayName, overlayVersion;
                 
                 for (const auto& overlayFile : overlayFiles) {
                     
@@ -2338,7 +2351,7 @@ public:
                         
                         
                         // Get the name and version of the overlay file
-                        auto [result, overlayName, overlayVersion] = getOverlayInfo(overlayDirectory+overlayFileName);
+                        std::tie(result, overlayName, overlayVersion) = getOverlayInfo(overlayDirectory+overlayFileName);
                         if (result != ResultSuccess)
                             continue;
                         
@@ -2371,7 +2384,7 @@ public:
                 
                 //std::string overlayFileName;
                 std::string overlayStarred;
-                std::string overlayVersion, overlayName;
+                //std::string overlayVersion, overlayName;
                 std::string overlayFile, newOverlayName;
                 size_t lastUnderscorePos, secondLastUnderscorePos, thirdLastUnderscorePos;
                 
@@ -2942,11 +2955,11 @@ public:
                             if (sourceType == "json") { // For JSON wildcards
                                 listItem->setClickListener([this, i, commands, packagePath = packageDirectory, keyName = option.first, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
                                     if (keys & KEY_A) {
-                                        std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commands, selectedItem, i); // replace source
+                                        //std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commands, selectedItem, i); // replace source
                                         //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
                                         
-                                        interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified
-                                        modifiedCmds.clear();
+                                        interpretAndExecuteCommand(getSourceReplacement(commands, selectedItem, i), packagePath, keyName); // Execute modified
+                                        //modifiedCmds.clear();
                                         if (commandSuccess)
                                             listItem->setValue(CHECKMARK_SYMBOL);
                                         else
@@ -2964,11 +2977,11 @@ public:
                             } else {
                                 listItem->setClickListener([this, i, commands, packagePath = packageDirectory, keyName = option.first, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
                                     if (keys & KEY_A) {
-                                        std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commands, selectedItem, i); // replace source
+                                        //std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commands, selectedItem, i); // replace source
                                         //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
                                         
-                                        interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified
-                                        modifiedCmds.clear();
+                                        interpretAndExecuteCommand(getSourceReplacement(commands, selectedItem, i), packagePath, keyName); // Execute modified
+                                        //modifiedCmds.clear();
                                         if (commandSuccess)
                                             listItem->setValue(CHECKMARK_SYMBOL);
                                         else
