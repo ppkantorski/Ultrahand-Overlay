@@ -1377,6 +1377,7 @@ public:
         if (commandGrouping == "default")
             list->addItem(new tsl::elm::CategoryHeader(removeTag(specificKey.substr(1)))); // remove * from key
         
+        // initialize variables
         auto listItem = static_cast<tsl::elm::ListItem*>(nullptr);
         size_t pos;
         std::string footer;
@@ -1860,7 +1861,7 @@ public:
                     }
                 }
                 
-                if (commandMode == "option") {
+                if (commandMode == "option" || (commandMode == "toggle" && !useSelection)) {
                     // override loading of the command footer
                     if (commandFooter != "null")
                         footer = commandFooter;
@@ -1964,34 +1965,22 @@ public:
                         } else if (commandMode == "toggle") {
                             
                             toggleListItem = new tsl::elm::ToggleListItem(removeTag(optionName), false, ON, OFF);
+                            
                             // Set the initial state of the toggle item
-                            toggleStateOn = isFileOrDirectory(preprocessPath(pathPatternOn));
+                            if (!pathPatternOn.empty())
+                                toggleStateOn = isFileOrDirectory(preprocessPath(pathPatternOn));
+                            else
+                                toggleStateOn = (footer == "On");
                             
                             toggleListItem->setState(toggleStateOn);
                             
                             toggleListItem->setStateChangedListener([this, i, commandsOn, commandsOff, toggleStateOn, keyName = option.first](bool state) {
-                                if (!state) {
-                                    // Toggle switched to On
-                                    if (toggleStateOn) {
-                                        //std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commandsOn, preprocessPath(pathPatternOn), i); // replace source
-                                        //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
-                                        interpretAndExecuteCommand(getSourceReplacement(commandsOn, preprocessPath(pathPatternOn), i), packagePath, keyName); // Execute modified
-                                        //modifiedCmds.clear();
-                                    } else {
-                                        // Handle the case where the command should only run in the source_on section
-                                        // Add your specific code here
-                                    }
+                                if (state) {
+                                    interpretAndExecuteCommand(getSourceReplacement(commandsOn, preprocessPath(pathPatternOn), i), packagePath, keyName); // Execute modified
+                                    setIniFileValue((packagePath+configFileName).c_str(), keyName.c_str(), "footer", "On");
                                 } else {
-                                    // Toggle switched to Off
-                                    if (!toggleStateOn) {
-                                        //std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commandsOff, preprocessPath(pathPatternOff), i); // replace source
-                                        //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
-                                        interpretAndExecuteCommand(getSourceReplacement(commandsOff, preprocessPath(pathPatternOff), i), packagePath, keyName); // Execute modified 
-                                        //modifiedCmds.clear();
-                                    } else {
-                                        // Handle the case where the command should only run in the source_off section
-                                        // Add your specific code here
-                                    }
+                                    interpretAndExecuteCommand(getSourceReplacement(commandsOff, preprocessPath(pathPatternOff), i), packagePath, keyName); // Execute modified
+                                    setIniFileValue((packagePath+configFileName).c_str(), keyName.c_str(), "footer", "Off");
                                 }
                             });
                             list->addItem(toggleListItem);
@@ -2909,9 +2898,15 @@ public:
                     }
                     
                     // override loading of the command footer
-                    if (commandFooter != "null")
-                        footer = commandFooter;
-                    
+                    //if (commandFooter != "null")
+                    //    footer = commandFooter;
+                    if (commandMode == "option" || (commandMode == "toggle" && !useSelection)) {
+                        // override loading of the command footer
+                        if (commandFooter != "null")
+                            footer = commandFooter;
+                        else
+                            footer = OPTION_SYMBOL;
+                    }
                     
                     if (useSelection) { // For wildcard commands (dropdown menus)
                         listItem = static_cast<tsl::elm::ListItem*>(nullptr);
@@ -2999,34 +2994,22 @@ public:
                         } else if (commandMode == "toggle") {
                             
                             toggleListItem = new tsl::elm::ToggleListItem(removeTag(optionName), false, ON, OFF);
+                            
                             // Set the initial state of the toggle item
-                            toggleStateOn = isFileOrDirectory(preprocessPath(pathPatternOn));
+                            if (!pathPatternOn.empty())
+                                toggleStateOn = isFileOrDirectory(preprocessPath(pathPatternOn));
+                            else
+                                toggleStateOn = (footer == "On");
                             
                             toggleListItem->setState(toggleStateOn);
                             
                             toggleListItem->setStateChangedListener([this, i, pathPatternOn, pathPatternOff, commandsOn, commandsOff, toggleStateOn, packagePath = packageDirectory, keyName = option.first](bool state) {
-                                if (!state) {
-                                    // Toggle switched to On
-                                    if (toggleStateOn) {
-                                        std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commandsOn, preprocessPath(pathPatternOn), i); // replace source
-                                        //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
-                                        interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified 
-                                        modifiedCmds.clear();
-                                    } else {
-                                        // Handle the case where the command should only run in the source_on section
-                                        // Add your specific code here
-                                    }
+                                if (state) {
+                                    interpretAndExecuteCommand(getSourceReplacement(commandsOn, preprocessPath(pathPatternOn), i), packagePath, keyName); // Execute modified
+                                    setIniFileValue((packagePath+configFileName).c_str(), keyName.c_str(), "footer", "On");
                                 } else {
-                                    // Toggle switched to Off
-                                    if (!toggleStateOn) {
-                                        std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commandsOff, preprocessPath(pathPatternOff),  i); // replace source
-                                        //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
-                                        interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified
-                                        modifiedCmds.clear();
-                                    } else {
-                                        // Handle the case where the command should only run in the source_off section
-                                        // Add your specific code here
-                                    }
+                                    interpretAndExecuteCommand(getSourceReplacement(commandsOff, preprocessPath(pathPatternOff), i), packagePath, keyName); // Execute modified
+                                    setIniFileValue((packagePath+configFileName).c_str(), keyName.c_str(), "footer", "Off");
                                 }
                             });
                             list->addItem(toggleListItem);
