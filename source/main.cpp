@@ -1848,15 +1848,6 @@ public:
                 }
                 
                 
-                
-                if (commandMode == "option" || commandMode == "toggle") {
-                    // override loading of the command footer
-                    if (commandFooter != "null")
-                        footer = commandFooter;
-                    else
-                        footer = OPTION_SYMBOL;
-                }
-                
                 // Get Option name and footer
                 if (optionName[0] == '*') { 
                     useSelection = true;
@@ -1868,6 +1859,14 @@ public:
                         footer = optionName.substr(pos + 2); // Assign the part after "&&" as the footer
                         optionName = optionName.substr(0, pos); // Strip the "&&" and everything after it
                     }
+                }
+                
+                if (commandMode == "option" || (commandMode == "toggle" && !useSelection)) {
+                    // override loading of the command footer
+                    if (commandFooter != "null")
+                        footer = commandFooter;
+                    else
+                        footer = OPTION_SYMBOL;
                 }
                 
                 if (skipSection == false) { // for skipping the drawing of sections
@@ -2885,18 +2884,6 @@ public:
                     }
                     
                     
-                    
-                    // override loading of the command footer
-                    //if (commandFooter != "null")
-                    //    footer = commandFooter;
-                    if (commandMode == "option" || commandMode == "toggle") {
-                        // override loading of the command footer
-                        if (commandFooter != "null")
-                            footer = commandFooter;
-                        else
-                            footer = OPTION_SYMBOL;
-                    }
-                    
                     // get Option Name and footer
                     if (optionName[0] == '*') { 
                         useSelection = true;
@@ -2908,6 +2895,17 @@ public:
                             footer = optionName.substr(pos + 2); // Assign the part after "&&" as the footer
                             optionName = optionName.substr(0, pos); // Strip the "&&" and everything after it
                         }
+                    }
+                    
+                    // override loading of the command footer
+                    //if (commandFooter != "null")
+                    //    footer = commandFooter;
+                    if (commandMode == "option" || (commandMode == "toggle" && !useSelection)) {
+                        // override loading of the command footer
+                        if (commandFooter != "null")
+                            footer = commandFooter;
+                        else
+                            footer = OPTION_SYMBOL;
                     }
                     
                     if (useSelection) { // For wildcard commands (dropdown menus)
