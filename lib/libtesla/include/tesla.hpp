@@ -2363,10 +2363,10 @@ namespace tsl {
                     }
                     
                     
-                    renderer->drawRect(this->getX() + x - 4, this->getY() + y - 4, this->getWidth() + 8, 4, a(highlightColor));
-                    renderer->drawRect(this->getX() + x - 4, this->getY() + y + this->getHeight(), this->getWidth() + 8, 4, a(highlightColor));
-                    renderer->drawRect(this->getX() + x - 4, this->getY() + y, 4, this->getHeight(), a(highlightColor));
-                    renderer->drawRect(this->getX() + x + this->getWidth(), this->getY() + y, 4, this->getHeight(), a(highlightColor));
+                    renderer->drawRect(this->getX() + x - 4, this->getY() + y - 4, this->getWidth() + 8, 4, highlightColor);
+                    renderer->drawRect(this->getX() + x - 4, this->getY() + y + this->getHeight(), this->getWidth() + 8, 4, highlightColor);
+                    renderer->drawRect(this->getX() + x - 4, this->getY() + y, 4, this->getHeight(), highlightColor);
+                    renderer->drawRect(this->getX() + x + this->getWidth(), this->getY() + y, 4, this->getHeight(), highlightColor);
                 }
             }
             
@@ -2446,10 +2446,10 @@ namespace tsl {
                     }
                 }
                 if ((disableSelectionBG && this->m_clickAnimationProgress == 0) || !disableSelectionBG) {
-                    renderer->drawRect(this->getX() + x - 4, this->getY() + y - 4, this->getWidth() + 8, 4, a(highlightColor));
-                    renderer->drawRect(this->getX() + x - 4, this->getY() + y + this->getHeight(), this->getWidth() + 8, 4, a(highlightColor));
-                    renderer->drawRect(this->getX() + x - 4, this->getY() + y, 4, this->getHeight(), a(highlightColor));
-                    renderer->drawRect(this->getX() + x + this->getWidth(), this->getY() + y, 4, this->getHeight(), a(highlightColor));
+                    renderer->drawRect(this->getX() + x - 4, this->getY() + y - 4, this->getWidth() + 8, 4, highlightColor);
+                    renderer->drawRect(this->getX() + x - 4, this->getY() + y + this->getHeight(), this->getWidth() + 8, 4, highlightColor);
+                    renderer->drawRect(this->getX() + x - 4, this->getY() + y, 4, this->getHeight(), highlightColor);
+                    renderer->drawRect(this->getX() + x + this->getWidth(), this->getY() + y, 4, this->getHeight(), highlightColor);
                 }
                 //renderer->drawRect(ELEMENT_BOUNDS(this), a(0xF000)); // This has been moved here (needs to be toggleable)
             }
@@ -2716,7 +2716,7 @@ namespace tsl {
             
             // CUSTOM SECTION START
             virtual void draw(gfx::Renderer *renderer) override {
-                renderer->fillScreen(a(tsl::style::color::ColorFrameBackground));
+                renderer->fillScreen(tsl::style::color::ColorFrameBackground);
                 //renderer->drawRect(tsl::cfg::FramebufferWidth - 1, 0, 1, tsl::cfg::FramebufferHeight, a(0xF222)); // CUSTOM MODIFICATION, not sure why this call was even necessary after comparisons.
                 
                 y = 50;
@@ -2755,7 +2755,7 @@ namespace tsl {
                             };
                             
                             // Draw each character with its corresponding highlight color
-                            //renderer->drawString(std::string(1, letter).c_str(), false, x, y + offset, fontSize, a(highlightColor));
+                            //renderer->drawString(std::string(1, letter).c_str(), false, x, y + offset, fontSize, highlightColor);
                             
                             // Call the renderer->drawString function
                             renderer->drawString(std::string(1, letter).c_str(), false, x, y + offset, fontSize, highlightColor);
@@ -2881,31 +2881,31 @@ namespace tsl {
                     fontSize = 32;
                     if (this->m_subtitle == "Ultrahand Package") {
                         std::string& title = this->m_title;
-                        titleColor = a(Color(0x0, 0xF, 0x0, 0xF));
+                        titleColor = Color(0x0, 0xF, 0x0, 0xF);
                         if (this->m_colorSelection == "" || this->m_colorSelection == "green") {
-                            titleColor = a(Color(0x0, 0xF, 0x0, 0xF));
+                            titleColor = Color(0x0, 0xF, 0x0, 0xF);
                             renderer->drawString(title.c_str(), false, x, y, fontSize, titleColor);
                         } else if (this->m_colorSelection == "red") {
                             //titleColor = a(Color(0xF, 0x0, 0x0, 0xF));
                             titleColor = RGB888("#F7253E");
                             renderer->drawString(title.c_str(), false, x, y, fontSize, titleColor);
                         } else if (this->m_colorSelection == "blue") {
-                            titleColor = a(Color(0x7, 0x7, 0xF, 0xF));
+                            titleColor = Color(0x7, 0x7, 0xF, 0xF);
                             renderer->drawString(title.c_str(), false, x, y, fontSize, titleColor);
                         } else if (this->m_colorSelection == "yellow") {
-                            titleColor = a(Color(0xF, 0xF, 0x0, 0xF));
+                            titleColor = Color(0xF, 0xF, 0x0, 0xF);
                             renderer->drawString(title.c_str(), false, x, y, fontSize, titleColor);
                         } else if (this->m_colorSelection == "orange") {
-                            titleColor = a(Color(0xFF, 0xA5, 0x00, 0xFF));
+                            titleColor = Color(0xFF, 0xA5, 0x00, 0xFF);
                             renderer->drawString(title.c_str(), false, x, y, fontSize, titleColor);
                         } else if (this->m_colorSelection == "pink") {
-                            titleColor = a(Color(0xFF, 0x69, 0xB4, 0xFF));
+                            titleColor = Color(0xFF, 0x69, 0xB4, 0xFF);
                             renderer->drawString(title.c_str(), false, x, y, fontSize, titleColor);
                         } else if (this->m_colorSelection == "purple") {
-                            titleColor = a(Color(0x80, 0x00, 0x80, 0xFF));
+                            titleColor = Color(0x80, 0x00, 0x80, 0xFF);
                             renderer->drawString(title.c_str(), false, x, y, fontSize, titleColor);
                         } else if (this->m_colorSelection == "white") {
-                            titleColor = a(Color(0xF, 0xF, 0xF, 0xF));
+                            titleColor = Color(0xF, 0xF, 0xF, 0xF);
                             renderer->drawString(title.c_str(), false, x, y, fontSize, titleColor);
                         } else if (this->m_colorSelection == "ultra") {
                             for (char letter : title) {
@@ -2921,7 +2921,7 @@ namespace tsl {
                                 };
                                 
                                 // Draw each character with its corresponding highlight color
-                                renderer->drawString(std::string(1, letter).c_str(), false, x, y, fontSize, a(highlightColor));
+                                renderer->drawString(std::string(1, letter).c_str(), false, x, y, fontSize, highlightColor);
                                 
                                 // Manually calculate the width of the current letter
                                 letterWidth = calculateStringWidth(std::string(1, letter), fontSize);
@@ -2947,18 +2947,18 @@ namespace tsl {
                             renderer->drawString(title.c_str(), false, x, y, fontSize, titleColor);
                         }
                     } else if (this->m_subtitle == "Ultrahand Script") {
-                        renderer->drawString(this->m_title.c_str(), false, 20, 50, 32, a(Color(0xFF, 0x33, 0x3F, 0xFF)));
+                        renderer->drawString(this->m_title.c_str(), false, 20, 50, 32, Color(0xFF, 0x33, 0x3F, 0xFF));
                     } else {
-                        renderer->drawString(this->m_title.c_str(), false, 20, 50, 30, a(defaultTextColor));
+                        renderer->drawString(this->m_title.c_str(), false, 20, 50, 30, defaultTextColor);
                     }
                 }
                 
                 if (this->m_title == "Ultrahand") {
-                    renderer->drawString(versionLabel.c_str(), false, 20, y+20+offset, 15, a(tsl::style::color::ColorDescription));
+                    renderer->drawString(versionLabel.c_str(), false, 20, y+20+offset, 15, tsl::style::color::ColorDescription);
                 } else
-                    renderer->drawString(this->m_subtitle.c_str(), false, 20, y+20+offset, 15, a(tsl::style::color::ColorDescription));
+                    renderer->drawString(this->m_subtitle.c_str(), false, 20, y+20+offset, 15, tsl::style::color::ColorDescription);
                 
-                renderer->drawRect(15, tsl::cfg::FramebufferHeight - 73, tsl::cfg::FramebufferWidth - 30, 1, a(defaultTextColor));
+                renderer->drawRect(15, tsl::cfg::FramebufferHeight - 73, tsl::cfg::FramebufferWidth - 30, 1, defaultTextColor);
                 
                 menuBottomLine = "\uE0E1"+GAP_2+BACK+GAP_1+"\uE0E0"+GAP_2+OK+GAP_1;
                 if (this->m_menuMode == "packages") {
@@ -2975,7 +2975,7 @@ namespace tsl {
                     menuBottomLine += "\uE0EE"+GAP_2 + this->m_pageRightName;
                 }
                 
-                renderer->drawString(menuBottomLine.c_str(), false, 30, 693, 23, a(defaultTextColor));
+                renderer->drawString(menuBottomLine.c_str(), false, 30, 693, 23, defaultTextColor);
                 
                 if (this->m_contentElement != nullptr)
                     this->m_contentElement->frame(renderer);
@@ -3067,12 +3067,12 @@ namespace tsl {
             }
             
             virtual void draw(gfx::Renderer *renderer) override {
-                renderer->fillScreen(a(tsl::style::color::ColorFrameBackground));
+                renderer->fillScreen(tsl::style::color::ColorFrameBackground);
                 renderer->drawRect(tsl::cfg::FramebufferWidth - 1, 0, 1, tsl::cfg::FramebufferHeight, a(0xF222));
                 
-                renderer->drawRect(15, tsl::cfg::FramebufferHeight - 73, tsl::cfg::FramebufferWidth - 30, 1, a(defaultTextColor));
+                renderer->drawRect(15, tsl::cfg::FramebufferHeight - 73, tsl::cfg::FramebufferWidth - 30, 1, defaultTextColor);
                 
-                renderer->drawString(("\uE0E1  "+BACK+"     \uE0E0  "+OK).c_str(), false, 30, 693, 23, a(defaultTextColor)); // CUSTOM MODIFICATION
+                renderer->drawString(("\uE0E1  "+BACK+"     \uE0E0  "+OK).c_str(), false, 30, 693, 23, defaultTextColor); // CUSTOM MODIFICATION
                 
                 if (this->m_header != nullptr)
                     this->m_header->frame(renderer);
@@ -3168,7 +3168,7 @@ namespace tsl {
             virtual ~DebugRectangle() {}
             
             virtual void draw(gfx::Renderer *renderer) override {
-                renderer->drawRect(ELEMENT_BOUNDS(this), a(this->m_color));
+                renderer->drawRect(ELEMENT_BOUNDS(this), this->m_color);
             }
             
             virtual void layout(u16 parentX, u16 parentY, u16 parentWidth, u16 parentHeight) override {}
@@ -3539,7 +3539,7 @@ namespace tsl {
             
             virtual void draw(gfx::Renderer *renderer) override {
                 if (this->m_touched && Element::getInputMode() == InputMode::Touch) {
-                    renderer->drawRect(ELEMENT_BOUNDS(this), a(tsl::style::color::ColorClickAnimation));
+                    renderer->drawRect(ELEMENT_BOUNDS(this), tsl::style::color::ColorClickAnimation);
                 }
                 
                 if (this->m_maxWidth == 0) {
@@ -3564,8 +3564,8 @@ namespace tsl {
                     }
                 }
                 
-                renderer->drawRect(this->getX(), this->getY(), this->getWidth(), 1, a(tsl::style::color::ColorFrame));
-                renderer->drawRect(this->getX(), this->getTopBound(), this->getWidth(), 1, a(tsl::style::color::ColorFrame));
+                renderer->drawRect(this->getX(), this->getY(), this->getWidth(), 1, tsl::style::color::ColorFrame);
+                renderer->drawRect(this->getX(), this->getTopBound(), this->getWidth(), 1, tsl::style::color::ColorFrame);
                 
                 if (this->m_trunctuated) {
                     if (this->m_focused) {
@@ -3588,26 +3588,26 @@ namespace tsl {
                             }
                         } // CUSTOM MODIFICATION END
                     } else {
-                        renderer->drawString(this->m_ellipsisText.c_str(), false, this->getX() + 20, this->getY() + 45, 23, a(defaultTextColor));
+                        renderer->drawString(this->m_ellipsisText.c_str(), false, this->getX() + 20, this->getY() + 45, 23, defaultTextColor);
                     }
                 } else {
                     if (this->m_focused)
-                        renderer->drawString(this->m_text.c_str(), false, this->getX() + 20, this->getY() + 45, 23, a(selectedTextColor));
+                        renderer->drawString(this->m_text.c_str(), false, this->getX() + 20, this->getY() + 45, 23, selectedTextColor);
                     else
-                        renderer->drawString(this->m_text.c_str(), false, this->getX() + 20, this->getY() + 45, 23, a(defaultTextColor));
+                        renderer->drawString(this->m_text.c_str(), false, this->getX() + 20, this->getY() + 45, 23, defaultTextColor);
                 }
                 
                 
                 // CUSTOM SECTION START (modification for submenu footer color)
                 if (this->m_value == DROPDOWN_SYMBOL || this->m_value == OPTION_SYMBOL) {
                     if (this->m_focused)
-                        renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45, this->getY() + 45, 20, this->m_faint ? a(tsl::style::color::ColorDescription) : a(selectedTextColor));
+                        renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45, this->getY() + 45, 20, this->m_faint ? tsl::style::color::ColorDescription : selectedTextColor);
                     else
-                        renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45, this->getY() + 45, 20, this->m_faint ? a(tsl::style::color::ColorDescription) : a(defaultTextColor));
+                        renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45, this->getY() + 45, 20, this->m_faint ? tsl::style::color::ColorDescription : defaultTextColor);
                 } else if (this->m_value == CROSSMARK_SYMBOL) {
-                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45, this->getY() + 45, 20, this->m_faint ? a(tsl::style::color::ColorDescription) : a(Color(0xF, 0x0, 0x0, 0xF)));
+                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45, this->getY() + 45, 20, this->m_faint ? tsl::style::color::ColorDescription : Color(0xF, 0x0, 0x0, 0xF));
                 } else {
-                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45, this->getY() + 45, 20, this->m_faint ? a(tsl::style::color::ColorDescription) : a(tsl::style::color::ColorHighlight));
+                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45, this->getY() + 45, 20, this->m_faint ? tsl::style::color::ColorDescription : tsl::style::color::ColorHighlight);
                 }
                 // CUSTOM SECTION END 
             }
@@ -3800,11 +3800,11 @@ namespace tsl {
             virtual ~CategoryHeader() {}
             
             virtual void draw(gfx::Renderer *renderer) override {
-                renderer->drawRect(this->getX() - 2, this->getBottomBound() - 30, 5, 23, a(defaultTextColor));
-                renderer->drawString(this->m_text.c_str(), false, this->getX() + 13, this->getBottomBound() - 12, 15, a(defaultTextColor));
+                renderer->drawRect(this->getX() - 2, this->getBottomBound() - 30, 5, 23, defaultTextColor);
+                renderer->drawString(this->m_text.c_str(), false, this->getX() + 13, this->getBottomBound() - 12, 15, defaultTextColor);
                 
                 //if (this->m_hasSeparator)
-                //    renderer->drawRect(this->getX(), this->getBottomBound(), this->getWidth(), 1, a(tsl::style::color::ColorFrame)); // CUSTOM MODIFICATION
+                //    renderer->drawRect(this->getX(), this->getBottomBound(), this->getWidth(), 1, tsl::style::color::ColorFrame); // CUSTOM MODIFICATION
             }
             
             virtual void layout(u16 parentX, u16 parentY, u16 parentWidth, u16 parentHeight) override {
@@ -3852,7 +3852,7 @@ namespace tsl {
             tsl::Color defaultTextColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "text_color"));
             Color trackBarColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "trackbar_color"), "#555555");
             std::chrono::duration<long int, std::ratio<1, 1000000000>> t;
-            Color highlightColor = a({0xf,0xf,0xf,0xf});
+            Color highlightColor = {0xf,0xf,0xf,0xf};
             //alf progress;
             float progress;
             float counter = 0.0;
@@ -3927,20 +3927,20 @@ namespace tsl {
             }
             
             virtual void draw(gfx::Renderer *renderer) override {
-                renderer->drawRect(this->getX(), this->getY(), this->getWidth(), 1, a(tsl::style::color::ColorFrame));
-                renderer->drawRect(this->getX(), this->getBottomBound(), this->getWidth(), 1, a(tsl::style::color::ColorFrame));
+                renderer->drawRect(this->getX(), this->getY(), this->getWidth(), 1, tsl::style::color::ColorFrame);
+                renderer->drawRect(this->getX(), this->getBottomBound(), this->getWidth(), 1, tsl::style::color::ColorFrame);
                 
-                renderer->drawString(this->m_icon, false, this->getX() + 15, this->getY() + 50, 23, a(defaultTextColor));
+                renderer->drawString(this->m_icon, false, this->getX() + 15, this->getY() + 50, 23, defaultTextColor);
                 
                 //u16 handlePos = (this->getWidth() - 95) * static_cast<half>(this->m_value) / 100;
                 u16 handlePos = (this->getWidth() - 95) * (this->m_value) / 100;
-                renderer->drawCircle(this->getX() + 60, this->getY() + 42, 2, true, a(tsl::style::color::ColorHighlight));
-                renderer->drawCircle(this->getX() + 60 + this->getWidth() - 95, this->getY() + 42, 2, true, a(tsl::style::color::ColorFrame));
-                renderer->drawRect(this->getX() + 60 + handlePos, this->getY() + 40, this->getWidth() - 95 - handlePos, 5, a(tsl::style::color::ColorFrame));
-                renderer->drawRect(this->getX() + 60, this->getY() + 40, handlePos, 5, a(tsl::style::color::ColorHighlight));
+                renderer->drawCircle(this->getX() + 60, this->getY() + 42, 2, true, tsl::style::color::ColorHighlight);
+                renderer->drawCircle(this->getX() + 60 + this->getWidth() - 95, this->getY() + 42, 2, true, tsl::style::color::ColorFrame);
+                renderer->drawRect(this->getX() + 60 + handlePos, this->getY() + 40, this->getWidth() - 95 - handlePos, 5, tsl::style::color::ColorFrame);
+                renderer->drawRect(this->getX() + 60, this->getY() + 40, handlePos, 5, tsl::style::color::ColorHighlight);
                 
-                renderer->drawCircle(this->getX() + 62 + handlePos, this->getY() + 42, 18, true, a(trackBarColor));
-                renderer->drawCircle(this->getX() + 62 + handlePos, this->getY() + 42, 18, false, a(tsl::style::color::ColorFrame));
+                renderer->drawCircle(this->getX() + 62 + handlePos, this->getY() + 42, 18, true, trackBarColor);
+                renderer->drawCircle(this->getX() + 62 + handlePos, this->getY() + 42, 18, false, tsl::style::color::ColorFrame);
             }
             
             virtual void layout(u16 parentX, u16 parentY, u16 parentWidth, u16 parentHeight) override {
@@ -4000,7 +4000,7 @@ namespace tsl {
                 }
                 
                 for (u8 i = 16; i <= 19; i++) {
-                    renderer->drawCircle(this->getX() + 62 + x + handlePos, this->getY() + 42 + y, i, false, a(highlightColor));
+                    renderer->drawCircle(this->getX() + 62 + x + handlePos, this->getY() + 42 + y, i, false, highlightColor);
                 }
             }
             
@@ -4159,13 +4159,13 @@ namespace tsl {
                 stepWidth = trackBarWidth / (this->m_numSteps - 1);
                 
                 for (u8 i = 0; i < this->m_numSteps; i++) {
-                    renderer->drawRect(this->getX() + 60 + stepWidth * i, this->getY() + 50, 1, 10, a(tsl::style::color::ColorFrame));
+                    renderer->drawRect(this->getX() + 60 + stepWidth * i, this->getY() + 50, 1, 10, tsl::style::color::ColorFrame);
                 }
                 
                 currentDescIndex = std::clamp(this->m_value / (100 / (this->m_numSteps - 1)), 0, this->m_numSteps - 1);
                 
                 std::tie(descWidth, descHeight) = renderer->drawString(this->m_stepDescriptions[currentDescIndex].c_str(), false, 0, 0, 15, tsl::style::color::ColorTransparent);
-                renderer->drawString(this->m_stepDescriptions[currentDescIndex].c_str(), false, ((this->getX() + 60) + (this->getWidth() - 95) / 2) - (descWidth / 2), this->getY() + 20, 15, a(tsl::style::color::ColorDescription));
+                renderer->drawString(this->m_stepDescriptions[currentDescIndex].c_str(), false, ((this->getX() + 60) + (this->getWidth() - 95) / 2) - (descWidth / 2), this->getY() + 20, 15, tsl::style::color::ColorDescription);
                 
                 StepTrackBar::draw(renderer);
             }
