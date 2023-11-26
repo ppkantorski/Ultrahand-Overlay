@@ -2953,10 +2953,11 @@ namespace tsl {
                     }
                 }
                 
+                
                 if (this->m_title == "Ultrahand") {
-                    renderer->drawString(versionLabel.c_str(), false, 20, y+20+offset, 15, tsl::style::color::ColorDescription);
+                    renderer->drawString(versionLabel.c_str(), false, 20, y+26, 15, tsl::style::color::ColorDescription);
                 } else
-                    renderer->drawString(this->m_subtitle.c_str(), false, 20, y+20+offset, 15, tsl::style::color::ColorDescription);
+                    renderer->drawString(this->m_subtitle.c_str(), false, 20, y+22, 15, tsl::style::color::ColorDescription);
                 
                 renderer->drawRect(15, tsl::cfg::FramebufferHeight - 73, tsl::cfg::FramebufferWidth - 30, 1, defaultTextColor);
                 
