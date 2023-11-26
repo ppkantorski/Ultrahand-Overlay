@@ -2795,7 +2795,7 @@ namespace tsl {
                     
                     y_offset = 44;
                     if ((hideBattery == "true" && hidePCBTemp == "true" && hideSOCTemp == "true") || (hideClock == "true"))
-                        y_offset += 12;
+                        y_offset += 11;
                     
                     if (hideClock != "true") {// Use the 'timeStr' to display the time
                         
