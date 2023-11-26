@@ -2842,7 +2842,7 @@ namespace tsl {
                     
                     if (hideBattery != "true" && batteryCharge > 0) {
                         chargeStringSTD = chargeString;
-                        PCB_temperatureStringSTD += " ";
+                        //PCB_temperatureStringSTD += " ";
                         // Use the 'timeStr' to display the time
                         if (powerCacheIsCharging)
                             renderer->drawString(chargeStringSTD.c_str(), false, tsl::cfg::FramebufferWidth - calculateStringWidth(chargeStringSTD, 20) - 19, y_offset, 20, tsl::Color(0x0, 0xF, 0x0, 0xF));
@@ -2854,8 +2854,8 @@ namespace tsl {
                             }
                         }
                     }
-                    if (hidePCBTemp != "true" && hideBattery != "true")
-                         SOC_temperatureStringSTD += " ";
+                    //if (hidePCBTemp != "true" && hideBattery != "true")
+                    //     SOC_temperatureStringSTD += " ";
                     
                     offset = 0;
                     if (hidePCBTemp != "true") {
