@@ -2807,7 +2807,7 @@ namespace tsl {
                         localizeTimeStr(timeStr); // for language localizations
                         
                         renderer->drawString(timeStr, false, tsl::cfg::FramebufferWidth - calculateStringWidth(timeStr, 20) - 20, y_offset, 20, clockColor);
-                        y_offset += 24;
+                        y_offset += 22;
                     }
                     
                     // check in 1s intervals
@@ -2955,9 +2955,9 @@ namespace tsl {
                 
                 
                 if (this->m_title == "Ultrahand") {
-                    renderer->drawString(versionLabel.c_str(), false, 20, y+26, 15, tsl::style::color::ColorDescription);
+                    renderer->drawString(versionLabel.c_str(), false, 20, y+25, 15, tsl::style::color::ColorDescription);
                 } else
-                    renderer->drawString(this->m_subtitle.c_str(), false, 20, y+22, 15, tsl::style::color::ColorDescription);
+                    renderer->drawString(this->m_subtitle.c_str(), false, 20, y+20, 15, tsl::style::color::ColorDescription);
                 
                 renderer->drawRect(15, tsl::cfg::FramebufferHeight - 73, tsl::cfg::FramebufferWidth - 30, 1, defaultTextColor);
                 
