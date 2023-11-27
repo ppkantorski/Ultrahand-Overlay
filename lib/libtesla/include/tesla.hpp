@@ -3577,7 +3577,7 @@ namespace tsl {
                 
                 if (this->m_trunctuated) {
                     if (this->m_focused) {
-                        renderer->enableScissoring(this->getX()+4, 97, this->m_maxWidth + 40 -4, tsl::cfg::FramebufferHeight-73-97);
+                        renderer->enableScissoring(this->getX()+7, 97, this->m_maxWidth + 40 - 10, tsl::cfg::FramebufferHeight-73-97);
                         //renderer->enableScissoring(this->getX(), this->getY(), this->m_maxWidth + 40, this->getHeight());
                         //renderer->drawString(this->m_scrollText.c_str(), false, this->getX() + 20.0 - std::round(this->m_scrollOffset*10000.0)/10000.0, this->getY() + 45, 23, defaultTextColor);
                         renderer->drawString(this->m_scrollText.c_str(), false, this->getX() + 20.0 - this->m_scrollOffset, this->getY() + 45, 23, selectedTextColor);
@@ -3609,13 +3609,13 @@ namespace tsl {
                 // CUSTOM SECTION START (modification for submenu footer color)
                 if (this->m_value == DROPDOWN_SYMBOL || this->m_value == OPTION_SYMBOL) {
                     if (this->m_focused)
-                        renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45, this->getY() + 45, 20, this->m_faint ? tsl::style::color::ColorDescription : selectedTextColor);
+                        renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 9, this->getY() + 45, 20, this->m_faint ? tsl::style::color::ColorDescription : selectedTextColor);
                     else
-                        renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45, this->getY() + 45, 20, this->m_faint ? tsl::style::color::ColorDescription : defaultTextColor);
+                        renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 9, this->getY() + 45, 20, this->m_faint ? tsl::style::color::ColorDescription : defaultTextColor);
                 } else if (this->m_value == CROSSMARK_SYMBOL) {
-                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45, this->getY() + 45, 20, this->m_faint ? tsl::style::color::ColorDescription : Color(0xF, 0x0, 0x0, 0xF));
+                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 9, this->getY() + 45, 20, this->m_faint ? tsl::style::color::ColorDescription : Color(0xF, 0x0, 0x0, 0xF));
                 } else {
-                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45, this->getY() + 45, 20, this->m_faint ? tsl::style::color::ColorDescription : tsl::style::color::ColorHighlight);
+                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 9, this->getY() + 45, 20, this->m_faint ? tsl::style::color::ColorDescription : tsl::style::color::ColorHighlight);
                 }
                 // CUSTOM SECTION END 
             }
