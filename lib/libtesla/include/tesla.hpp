@@ -2799,9 +2799,9 @@ namespace tsl {
                     //struct timespec currentTime;
                     clock_gettime(CLOCK_REALTIME, &currentTime);
                     
-                    y_offset = 44;
+                    y_offset = 45;
                     if ((hideBattery == "true" && hidePCBTemp == "true" && hideSOCTemp == "true") || (hideClock == "true"))
-                        y_offset += 11;
+                        y_offset += 10;
                     
                     if (hideClock != "true") {// Use the 'timeStr' to display the time
                         
@@ -2813,7 +2813,7 @@ namespace tsl {
                         localizeTimeStr(timeStr); // for language localizations
                         
                         renderer->drawString(timeStr, false, tsl::cfg::FramebufferWidth - calculateStringWidth(timeStr, 20) - 20, y_offset, 20, clockColor);
-                        y_offset += 24;
+                        y_offset += 22;
                     }
                     
                     // check in 1s intervals
