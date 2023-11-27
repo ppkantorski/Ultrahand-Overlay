@@ -1413,8 +1413,9 @@ public:
                 listItem = new tsl::elm::ListItem(optionName);
                 
                 if (commandMode == "option") {
-                    if (selectedFooterDict[specifiedFooterKey] == selectedItem) { // needs to be fixed
+                    if (selectedFooterDict[specifiedFooterKey] == optionName) { // needs to be fixed
                         lastSelectedListItem = listItem;
+                        lastSelectedListItemFooter = footer;
                         listItem->setValue(CHECKMARK_SYMBOL);
                     } else {
                         if (pos != std::string::npos) {
@@ -1426,11 +1427,12 @@ public:
                 } else
                     listItem->setValue(footer, true);
                 
+                //
                 
                 listItem->setClickListener([this, i, optionName, footer, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
                     if (keys & KEY_A) {
                         if (commandMode == "option") {
-                            selectedFooterDict[specifiedFooterKey] = selectedItem;
+                            selectedFooterDict[specifiedFooterKey] = optionName;
                             lastSelectedListItem->setValue(lastSelectedListItemFooter, true);
                         }
                         //std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(this->commands, selectedItem, i); // replace source
