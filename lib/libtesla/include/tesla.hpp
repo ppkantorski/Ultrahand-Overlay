@@ -2446,10 +2446,16 @@ namespace tsl {
                     }
                 }
                 if ((disableSelectionBG && this->m_clickAnimationProgress == 0) || !disableSelectionBG) {
-                    renderer->drawRect(this->getX() + x - 4, this->getY() + y - 4, this->getWidth() + 8, 4, highlightColor);
-                    renderer->drawRect(this->getX() + x - 4, this->getY() + y + this->getHeight(), this->getWidth() + 8, 4, highlightColor);
-                    renderer->drawRect(this->getX() + x - 4, this->getY() + y, 4, this->getHeight(), highlightColor);
+                    
+                    renderer->drawRect(this->getX() + x + 4, this->getY() + y - 4, this->getWidth() - 4, 4, highlightColor);
+                    renderer->drawRect(this->getX() + x + 4, this->getY() + y + this->getHeight(), this->getWidth() - 4, 4, highlightColor);
+                    renderer->drawRect(this->getX() + x, this->getY() + y, 4, this->getHeight(), highlightColor);
                     renderer->drawRect(this->getX() + x + this->getWidth(), this->getY() + y, 4, this->getHeight(), highlightColor);
+                    
+                    renderer->drawCircle(this->getX() + x + 2, this->getY() + y + this->getHeight() + 1, 2, true, highlightColor);
+                    renderer->drawCircle(this->getX() + x + 2, this->getY() + y - 2, 2, true, highlightColor);
+                    renderer->drawCircle(this->getX() + x + this->getWidth() + 1, this->getY() + y + this->getHeight() + 1, 2, true, highlightColor);
+                    renderer->drawCircle(this->getX() + x + this->getWidth() + 1, this->getY() + y - 2, 2, true, highlightColor);
                 }
                 //renderer->drawRect(ELEMENT_BOUNDS(this), a(0xF000)); // This has been moved here (needs to be toggleable)
             }
@@ -3565,12 +3571,13 @@ namespace tsl {
                     }
                 }
                 
-                renderer->drawRect(this->getX(), this->getY(), this->getWidth(), 1, tsl::style::color::ColorFrame);
-                renderer->drawRect(this->getX(), this->getTopBound(), this->getWidth(), 1, tsl::style::color::ColorFrame);
+                //renderer->drawRect(this->getX(), this->getY(), this->getWidth(), 1, tsl::style::color::ColorFrame);
+                //renderer->drawRect(this->getX()+4, this->getTopBound(), this->getWidth()-4, 1, a(0x0000));
+                renderer->drawRect(this->getX()+4, this->getTopBound(), this->getWidth()-4, 1, tsl::style::color::ColorFrame);
                 
                 if (this->m_trunctuated) {
                     if (this->m_focused) {
-                        renderer->enableScissoring(this->getX(), 97, this->m_maxWidth + 40, tsl::cfg::FramebufferHeight-73-97);
+                        renderer->enableScissoring(this->getX()+4, 97, this->m_maxWidth + 40 -4, tsl::cfg::FramebufferHeight-73-97);
                         //renderer->enableScissoring(this->getX(), this->getY(), this->m_maxWidth + 40, this->getHeight());
                         //renderer->drawString(this->m_scrollText.c_str(), false, this->getX() + 20.0 - std::round(this->m_scrollOffset*10000.0)/10000.0, this->getY() + 45, 23, defaultTextColor);
                         renderer->drawString(this->m_scrollText.c_str(), false, this->getX() + 20.0 - this->m_scrollOffset, this->getY() + 45, 23, selectedTextColor);
@@ -3928,8 +3935,8 @@ namespace tsl {
             }
             
             virtual void draw(gfx::Renderer *renderer) override {
-                renderer->drawRect(this->getX(), this->getY(), this->getWidth(), 1, tsl::style::color::ColorFrame);
-                renderer->drawRect(this->getX(), this->getBottomBound(), this->getWidth(), 1, tsl::style::color::ColorFrame);
+                //renderer->drawRect(this->getX(), this->getY(), this->getWidth(), 1, tsl::style::color::ColorFrame);
+                //renderer->drawRect(this->getX(), this->getBottomBound(), this->getWidth(), 1, tsl::style::color::ColorFrame);
                 
                 renderer->drawString(this->m_icon, false, this->getX() + 15, this->getY() + 50, 23, defaultTextColor);
                 
@@ -3937,7 +3944,7 @@ namespace tsl {
                 u16 handlePos = (this->getWidth() - 95) * (this->m_value) / 100;
                 renderer->drawCircle(this->getX() + 60, this->getY() + 42, 2, true, tsl::style::color::ColorHighlight);
                 renderer->drawCircle(this->getX() + 60 + this->getWidth() - 95, this->getY() + 42, 2, true, tsl::style::color::ColorFrame);
-                renderer->drawRect(this->getX() + 60 + handlePos, this->getY() + 40, this->getWidth() - 95 - handlePos, 5, tsl::style::color::ColorFrame);
+                //renderer->drawRect(this->getX() + 60 + handlePos, this->getY() + 40, this->getWidth() - 95 - handlePos, 5, tsl::style::color::ColorFrame);
                 renderer->drawRect(this->getX() + 60, this->getY() + 40, handlePos, 5, tsl::style::color::ColorHighlight);
                 
                 renderer->drawCircle(this->getX() + 62 + handlePos, this->getY() + 42, 18, true, trackBarColor);
