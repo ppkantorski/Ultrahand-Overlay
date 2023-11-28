@@ -2447,15 +2447,15 @@ namespace tsl {
                 }
                 if ((disableSelectionBG && this->m_clickAnimationProgress == 0) || !disableSelectionBG) {
                     
-                    renderer->drawRect(this->getX() + x + 4, this->getY() + y - 4, this->getWidth() - 4, 4, highlightColor);
-                    renderer->drawRect(this->getX() + x + 4, this->getY() + y + this->getHeight(), this->getWidth() - 4, 4, highlightColor);
-                    renderer->drawRect(this->getX() + x, this->getY() + y, 4, this->getHeight(), highlightColor);
-                    renderer->drawRect(this->getX() + x + this->getWidth(), this->getY() + y, 4, this->getHeight(), highlightColor);
+                    renderer->drawRect(this->getX() + x + 5 -1, this->getY() + y - 4, this->getWidth() - 5 +2, 5, highlightColor);
+                    renderer->drawRect(this->getX() + x + 5 -1, this->getY() + y + this->getHeight(), this->getWidth() - 5 +2, 5, highlightColor);
+                    renderer->drawRect(this->getX() + x, this->getY() + y + 2 - 2, 5, this->getHeight()-3 +4, highlightColor);
+                    renderer->drawRect(this->getX() + x + this->getWidth(), this->getY() + y + 2 -2, 5, this->getHeight()-3 +4, highlightColor);
                     
-                    renderer->drawCircle(this->getX() + x + 2, this->getY() + y + this->getHeight() + 1, 2, true, highlightColor);
-                    renderer->drawCircle(this->getX() + x + 2, this->getY() + y - 2, 2, true, highlightColor);
-                    renderer->drawCircle(this->getX() + x + this->getWidth() + 1, this->getY() + y + this->getHeight() + 1, 2, true, highlightColor);
-                    renderer->drawCircle(this->getX() + x + this->getWidth() + 1, this->getY() + y - 2, 2, true, highlightColor);
+                    renderer->drawCircle(this->getX() + x + 2, this->getY() + y + this->getHeight() + 2, 2.5, true, highlightColor);
+                    renderer->drawCircle(this->getX() + x + 2, this->getY() + y - 2, 2.5, true, highlightColor);
+                    renderer->drawCircle(this->getX() + x + this->getWidth() + 2, this->getY() + y + this->getHeight() + 2, 2.5, true, highlightColor);
+                    renderer->drawCircle(this->getX() + x + this->getWidth() + 2, this->getY() + y - 2, 2.5, true, highlightColor);
                 }
                 //renderer->drawRect(ELEMENT_BOUNDS(this), a(0xF000)); // This has been moved here (needs to be toggleable)
             }
@@ -3573,7 +3573,7 @@ namespace tsl {
                 
                 //renderer->drawRect(this->getX(), this->getY(), this->getWidth(), 1, tsl::style::color::ColorFrame);
                 //renderer->drawRect(this->getX()+4, this->getTopBound(), this->getWidth()-4, 1, a(0x0000));
-                renderer->drawRect(this->getX()+4, this->getTopBound(), this->getWidth()-4, 1, tsl::style::color::ColorFrame);
+                renderer->drawRect(this->getX()+5, this->getTopBound(), this->getWidth()-5, 1, tsl::style::color::ColorFrame);
                 
                 if (this->m_trunctuated) {
                     if (this->m_focused) {
