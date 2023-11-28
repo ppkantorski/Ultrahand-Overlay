@@ -919,7 +919,7 @@ void reinitializeVersionLabels() {
 
 #pragma GCC diagnostic pop
 
-#define ELEMENT_BOUNDS(elem) elem->getX(), elem->getY(), elem->getWidth(), elem->getHeight()
+#define ELEMENT_BOUNDS(elem) elem->getX(), elem->getY(), elem->getWidth()+2, elem->getHeight()
 
 #define ASSERT_EXIT(x) if (R_FAILED(x)) std::exit(1)
 #define ASSERT_FATAL(x) if (Result res = x; R_FAILED(res)) fatalThrow(res)
@@ -2372,15 +2372,15 @@ namespace tsl {
                     //renderer->drawRect(this->getX() + x + this->getWidth(), this->getY() + y, 4, this->getHeight(), highlightColor);
                     
                     
-                    renderer->drawRect(this->getX() + x + 5 -1, this->getY() + y - 4, this->getWidth() - 5 +2, 5, highlightColor);
-                    renderer->drawRect(this->getX() + x + 5 -1, this->getY() + y + this->getHeight(), this->getWidth() - 5 +2, 5, highlightColor);
+                    renderer->drawRect(this->getX() + x + 5 -1, this->getY() + y - 4, this->getWidth() - 5 +2 +4, 5, highlightColor);
+                    renderer->drawRect(this->getX() + x + 5 -1, this->getY() + y + this->getHeight(), this->getWidth() - 5 +2 +4, 5, highlightColor);
                     renderer->drawRect(this->getX() + x, this->getY() + y + 2 - 2, 5, this->getHeight()-3 +4, highlightColor);
-                    renderer->drawRect(this->getX() + x + this->getWidth(), this->getY() + y + 2 -2, 5, this->getHeight()-3 +4, highlightColor);
+                    renderer->drawRect(this->getX() + x + this->getWidth()+4, this->getY() + y + 2 -2, 5, this->getHeight()-3 +4, highlightColor);
                     
                     renderer->drawCircle(this->getX() + x + 2, this->getY() + y + this->getHeight() + 2, 2.5, true, highlightColor);
                     renderer->drawCircle(this->getX() + x + 2, this->getY() + y - 2, 2.5, true, highlightColor);
-                    renderer->drawCircle(this->getX() + x + this->getWidth() + 2, this->getY() + y + this->getHeight() + 2, 2.5, true, highlightColor);
-                    renderer->drawCircle(this->getX() + x + this->getWidth() + 2, this->getY() + y - 2, 2.5, true, highlightColor);
+                    renderer->drawCircle(this->getX() + x + this->getWidth() + 2+4, this->getY() + y + this->getHeight() + 2, 2.5, true, highlightColor);
+                    renderer->drawCircle(this->getX() + x + this->getWidth() + 2+4, this->getY() + y - 2, 2.5, true, highlightColor);
                     
                 }
             }
@@ -2462,15 +2462,15 @@ namespace tsl {
                 }
                 if ((disableSelectionBG && this->m_clickAnimationProgress == 0) || !disableSelectionBG) {
                     
-                    renderer->drawRect(this->getX() + x + 5 -1, this->getY() + y - 4, this->getWidth() - 5 +2, 5, highlightColor);
-                    renderer->drawRect(this->getX() + x + 5 -1, this->getY() + y + this->getHeight(), this->getWidth() - 5 +2, 5, highlightColor);
+                    renderer->drawRect(this->getX() + x + 5 -1, this->getY() + y - 4, this->getWidth() - 5 +2 +4, 5, highlightColor);
+                    renderer->drawRect(this->getX() + x + 5 -1, this->getY() + y + this->getHeight(), this->getWidth() - 5 +2 +4, 5, highlightColor);
                     renderer->drawRect(this->getX() + x, this->getY() + y + 2 - 2, 5, this->getHeight()-3 +4, highlightColor);
-                    renderer->drawRect(this->getX() + x + this->getWidth(), this->getY() + y + 2 -2, 5, this->getHeight()-3 +4, highlightColor);
+                    renderer->drawRect(this->getX() + x + this->getWidth()+4, this->getY() + y + 2 -2, 5, this->getHeight()-3 +4, highlightColor);
                     
                     renderer->drawCircle(this->getX() + x + 2, this->getY() + y + this->getHeight() + 2, 2.5, true, highlightColor);
                     renderer->drawCircle(this->getX() + x + 2, this->getY() + y - 2, 2.5, true, highlightColor);
-                    renderer->drawCircle(this->getX() + x + this->getWidth() + 2, this->getY() + y + this->getHeight() + 2, 2.5, true, highlightColor);
-                    renderer->drawCircle(this->getX() + x + this->getWidth() + 2, this->getY() + y - 2, 2.5, true, highlightColor);
+                    renderer->drawCircle(this->getX() + x + this->getWidth() + 2+4, this->getY() + y + this->getHeight() + 2, 2.5, true, highlightColor);
+                    renderer->drawCircle(this->getX() + x + this->getWidth() + 2+4, this->getY() + y - 2, 2.5, true, highlightColor);
                 }
                 //renderer->drawRect(ELEMENT_BOUNDS(this), a(0xF000)); // This has been moved here (needs to be toggleable)
             }
@@ -3593,11 +3593,11 @@ namespace tsl {
                 
                 //renderer->drawRect(this->getX(), this->getY(), this->getWidth(), 1, tsl::style::color::ColorFrame);
                 //renderer->drawRect(this->getX()+4, this->getTopBound(), this->getWidth()-4, 1, a(0x0000));
-                renderer->drawRect(this->getX()+5, this->getTopBound(), this->getWidth()-5, 1, tsl::style::color::ColorFrame);
+                renderer->drawRect(this->getX()+5, this->getTopBound(), this->getWidth()-5+10, 1, tsl::style::color::ColorFrame);
                 
                 if (this->m_trunctuated) {
                     if (this->m_focused) {
-                        renderer->enableScissoring(this->getX()+7, 97, this->m_maxWidth + 40 - 10, tsl::cfg::FramebufferHeight-73-97);
+                        renderer->enableScissoring(this->getX()+7, 97, this->m_maxWidth + 40 - 10+2+4, tsl::cfg::FramebufferHeight-73-97);
                         //renderer->enableScissoring(this->getX(), this->getY(), this->m_maxWidth + 40, this->getHeight());
                         //renderer->drawString(this->m_scrollText.c_str(), false, this->getX() + 20.0 - std::round(this->m_scrollOffset*10000.0)/10000.0, this->getY() + 45, 23, defaultTextColor);
                         renderer->drawString(this->m_scrollText.c_str(), false, this->getX() + 20.0 - this->m_scrollOffset, this->getY() + 45, 23, selectedTextColor);
@@ -3629,19 +3629,19 @@ namespace tsl {
                 // CUSTOM SECTION START (modification for submenu footer color)
                 if (this->m_value == DROPDOWN_SYMBOL || this->m_value == OPTION_SYMBOL) {
                     if (this->m_focused)
-                        renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10, this->getY() + 45, 20, this->m_faint ? tsl::style::color::ColorDescription : selectedTextColor);
+                        renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +4, this->getY() + 45, 20, this->m_faint ? tsl::style::color::ColorDescription : selectedTextColor);
                     else
-                        renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10, this->getY() + 45, 20, this->m_faint ? tsl::style::color::ColorDescription : defaultTextColor);
+                        renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +4, this->getY() + 45, 20, this->m_faint ? tsl::style::color::ColorDescription : defaultTextColor);
                 } else if (this->m_value == CROSSMARK_SYMBOL) {
-                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10, this->getY() + 45, 20, this->m_faint ? tsl::style::color::ColorDescription : Color(0xF, 0x0, 0x0, 0xF));
+                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +4, this->getY() + 45, 20, this->m_faint ? tsl::style::color::ColorDescription : Color(0xF, 0x0, 0x0, 0xF));
                 } else {
-                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10, this->getY() + 45, 20, this->m_faint ? tsl::style::color::ColorDescription : tsl::style::color::ColorHighlight);
+                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +4, this->getY() + 45, 20, this->m_faint ? tsl::style::color::ColorDescription : tsl::style::color::ColorHighlight);
                 }
                 // CUSTOM SECTION END 
             }
             
             virtual void layout(u16 parentX, u16 parentY, u16 parentWidth, u16 parentHeight) override {
-                this->setBoundaries(this->getX(), this->getY(), this->getWidth(), tsl::style::ListItemDefaultHeight);
+                this->setBoundaries(this->getX(), this->getY(), this->getWidth()-2, tsl::style::ListItemDefaultHeight);
             }
             
             virtual bool onClick(u64 keys) override {
