@@ -144,13 +144,13 @@ static const std::string CROSSMARK_SYMBOL = "\uE14C";
 static const std::string STAR_SYMBOL = "\u2605";
 
 
-float customRound(float num) {
-    if (num >= 0) {
-        return floor(num + 0.5);
-    } else {
-        return ceil(num - 0.5);
-    }
-}
+//float customRound(float num) {
+//    if (num >= 0) {
+//        return floor(num + 0.5);
+//    } else {
+//        return ceil(num - 0.5);
+//    }
+//}
 
 // English string definitions
 
@@ -211,7 +211,7 @@ static std::string REBOOT = "Reboot";
 static std::string SHUTDOWN = "Shutdown";
 static std::string GAP_1 = "     ";
 static std::string GAP_2 = "  ";
-static std::string USERGUIDE_OFFSET = "156";
+static std::string USERGUIDE_OFFSET = "162";
 static std::string SETTINGS_MENU = "Settings Menu";
 static std::string SCRIPT_OVERLAY = "Script Overlay";
 static std::string STAR_FAVORITE = "Star/Favorite";
@@ -317,7 +317,7 @@ void reinitializeLangVars() {
     SHUTDOWN = "Shutdown";
     GAP_1 = "     ";
     GAP_2 = "  ";
-    USERGUIDE_OFFSET = "156";
+    USERGUIDE_OFFSET = "162";
     SETTINGS_MENU = "Settings Menu";
     SCRIPT_OVERLAY = "Script Overlay";
     STAR_FAVORITE = "Star/Favorite";
