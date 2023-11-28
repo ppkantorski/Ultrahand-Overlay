@@ -919,7 +919,7 @@ void reinitializeVersionLabels() {
 
 #pragma GCC diagnostic pop
 
-#define ELEMENT_BOUNDS(elem) elem->getX(), elem->getY(), elem->getWidth()+2, elem->getHeight()
+#define ELEMENT_BOUNDS(elem) elem->getX(), elem->getY(), elem->getWidth()+4, elem->getHeight()
 
 #define ASSERT_EXIT(x) if (R_FAILED(x)) std::exit(1)
 #define ASSERT_FATAL(x) if (Result res = x; R_FAILED(res)) fatalThrow(res)
@@ -1021,7 +1021,7 @@ namespace tsl {
         return Color(r, g, b, a);
     }
     
-    Color RGB888(std::string hexColor, std::string defaultHexColor = "#FFFFFF") {
+    Color RGB888(std::string hexColor, std::string defaultHexColor = "#FFFFFF", size_t alpha = 15) {
         // Remove the '#' character if it's present
         if (!hexColor.empty() && hexColor[0] == '#') {
             hexColor = hexColor.substr(1);
@@ -1039,7 +1039,7 @@ namespace tsl {
             
             // Create a Color with the extracted RGB values
             
-            return Color(redValue, greenValue, blueValue, 15);
+            return Color(redValue, greenValue, blueValue, alpha);
         }
         return RGB888(defaultHexColor);
     }
@@ -2152,6 +2152,7 @@ namespace tsl {
             std::string disableSelectionBGStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "disable_selection_bg");
             bool disableSelectionBG = (!disableSelectionBGStr.empty() && disableSelectionBGStr != "false");
             
+            bool invertBGClickColor = (parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "invert_bg_click_color") == "true");
             Color selectionBGColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "selection_bg_color"), "#000000");
             
             Color highlightColor1 = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "highlight_color_1"), "#2288CC");
@@ -2310,8 +2311,15 @@ namespace tsl {
             virtual void drawClickAnimation(gfx::Renderer *renderer) {
                 saturation = tsl::style::ListItemHighlightSaturation * (float(this->m_clickAnimationProgress) / float(tsl::style::ListItemHighlightLength));
                 
-                animColor.g = saturation;
-                animColor.b = saturation;
+                if (invertBGClickColor) {
+                    animColor.r = 15;
+                    animColor.g = 15-saturation;
+                    animColor.b = 15-saturation;
+                } else {
+                    animColor.r = 0;
+                    animColor.g = saturation;
+                    animColor.b = saturation;
+                }
                 
                 if (!disableSelectionBG)
                     renderer->drawRect(ELEMENT_BOUNDS(this), (animColor));
@@ -2701,14 +2709,27 @@ namespace tsl {
             
             std::string disableColorfulLogoStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "disable_colorful_logo");
             bool disableColorfulLogo = (!disableColorfulLogoStr.empty() && disableColorfulLogoStr == "true");
+            tsl::Color logoColor1 = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "logo_color_1"), "#FFFFFF");
+            tsl::Color logoColor2 = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "logo_color_2"), "#F7253E");
+            
+            
+            std::string backgroundAlphaStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "bg_alpha");
+            size_t defaultBackgroundAlpha = (!backgroundAlphaStr.empty()) ? std::stoi(backgroundAlphaStr) : 13;
+            
+            tsl::Color defaultBackgroundColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "bg_color"), "#000000", defaultBackgroundAlpha);
             
             tsl::Color defaultTextColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "text_color"));
             tsl::Color clockColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "clock_color"));
             tsl::Color batteryColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "battery_color"));
             tsl::Color highlightColor = {0xF, 0xF, 0xF, 0xF};
             
+            tsl::Color versionTextColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "version_text_color"), "#AAAAAA");
+            tsl::Color onTextColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "on_text_color"), "#00FFDD");
+            tsl::Color offTextColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "off_text_color"), "#AAAAAA");
+            
+            
             std::string firstHalf, secondHalf;
-            tsl::Color handColor = RGB888("#F7253E");
+            //tsl::Color handColor = RGB888("#F7253E");
             tsl::Color titleColor = {0xF, 0xF, 0xF, 0xF};
             const double cycleDuration = 1.5;
             float counter = 0;
@@ -2738,7 +2759,8 @@ namespace tsl {
             
             // CUSTOM SECTION START
             virtual void draw(gfx::Renderer *renderer) override {
-                renderer->fillScreen(tsl::style::color::ColorFrameBackground);
+                renderer->fillScreen(defaultBackgroundColor);
+                //renderer->fillScreen(tsl::style::color::ColorFrameBackground);
                 //renderer->drawRect(tsl::cfg::FramebufferWidth - 1, 0, 1, tsl::cfg::FramebufferHeight, a(0xF222)); // CUSTOM MODIFICATION, not sure why this call was even necessary after comparisons.
                 
                 y = 50;
@@ -2793,7 +2815,7 @@ namespace tsl {
                         }
                     } else {
                         for (char letter : firstHalf) {
-                            renderer->drawString(std::string(1, letter).c_str(), false, x, y + offset, fontSize, tsl::Color(0xF,0xF,0xF,0xF));
+                            renderer->drawString(std::string(1, letter).c_str(), false, x, y + offset, fontSize, logoColor1);
                             
                             // Manually calculate the width of the current letter
                             letterWidth = calculateStringWidth(std::string(1, letter), fontSize);
@@ -2808,7 +2830,7 @@ namespace tsl {
                     
                     
                     // Draw the second half of the string in red color
-                    renderer->drawString(secondHalf.c_str(), false, x, y+offset, fontSize, handColor);
+                    renderer->drawString(secondHalf.c_str(), false, x, y+offset, fontSize, logoColor2);
                     
                     
                     // Time drawing implementation
@@ -2977,9 +2999,9 @@ namespace tsl {
                 
                 
                 if (this->m_title == "Ultrahand") {
-                    renderer->drawString(versionLabel.c_str(), false, 20, y+25, 15, tsl::style::color::ColorDescription);
+                    renderer->drawString(versionLabel.c_str(), false, 20, y+25, 15, versionTextColor);
                 } else
-                    renderer->drawString(this->m_subtitle.c_str(), false, 20, y+20, 15, tsl::style::color::ColorDescription);
+                    renderer->drawString(this->m_subtitle.c_str(), false, 20, y+20, 15, versionTextColor);
                 
                 renderer->drawRect(15, tsl::cfg::FramebufferHeight - 73, tsl::cfg::FramebufferWidth - 30, 1, defaultTextColor);
                 
@@ -3078,6 +3100,10 @@ namespace tsl {
          */
         class HeaderOverlayFrame : public Element {
         public:
+            std::string backgroundAlphaStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "bg_alpha");
+            size_t defaultBackgroundAlpha = (!backgroundAlphaStr.empty()) ? std::stoi(backgroundAlphaStr) : 13;
+            tsl::Color defaultBackgroundColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "bg_color"), "#000000", defaultBackgroundAlpha);
+            
             tsl::Color defaultTextColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "text_color"));
             
             HeaderOverlayFrame(u16 headerHeight = 175) : Element(), m_headerHeight(headerHeight) {}
@@ -3090,7 +3116,8 @@ namespace tsl {
             }
             
             virtual void draw(gfx::Renderer *renderer) override {
-                renderer->fillScreen(tsl::style::color::ColorFrameBackground);
+                renderer->fillScreen(defaultBackgroundColor);
+                //renderer->fillScreen(tsl::style::color::ColorFrameBackground);
                 renderer->drawRect(tsl::cfg::FramebufferWidth - 1, 0, 1, tsl::cfg::FramebufferHeight, a(0xF222));
                 
                 renderer->drawRect(15, tsl::cfg::FramebufferHeight - 73, tsl::cfg::FramebufferWidth - 30, 1, defaultTextColor);
@@ -3543,8 +3570,17 @@ namespace tsl {
          */
         class ListItem : public Element {
         public:
+            std::string seperatorAlphaStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "seperator_alpha");
+            size_t seperatorAlpha = (!seperatorAlphaStr.empty()) ? std::stoi(seperatorAlphaStr) : 7;
+            
+            tsl::Color seperatorColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "seperator_color"), "#777777", seperatorAlpha);
+            
             tsl::Color defaultTextColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "text_color")); ; // CUSTOM MODIFICATION
             tsl::Color selectedTextColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "selection_text_color"));
+            
+            tsl::Color invalidTextColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "invalid_text_color"), "#FF0000");
+            tsl::Color onTextColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "on_text_color"), "#00FFDD");
+            tsl::Color offTextColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "off_text_color"), "#AAAAAA");
             
             std::chrono::system_clock::time_point timeIn;// = std::chrono::system_clock::now();
             std::chrono::duration<long int, std::ratio<1, 1000000000>> t;
@@ -3593,7 +3629,9 @@ namespace tsl {
                 
                 //renderer->drawRect(this->getX(), this->getY(), this->getWidth(), 1, tsl::style::color::ColorFrame);
                 //renderer->drawRect(this->getX()+4, this->getTopBound(), this->getWidth()-4, 1, a(0x0000));
-                renderer->drawRect(this->getX()+5, this->getTopBound(), this->getWidth()-5+10, 1, tsl::style::color::ColorFrame);
+                
+                //renderer->drawRect(this->getX()+5, this->getTopBound(), this->getWidth()-5+10, 1, tsl::style::color::ColorFrame);
+                renderer->drawRect(this->getX()+5, this->getTopBound(), this->getWidth()-5+10, 1, seperatorColor);
                 
                 if (this->m_trunctuated) {
                     if (this->m_focused) {
@@ -3629,13 +3667,13 @@ namespace tsl {
                 // CUSTOM SECTION START (modification for submenu footer color)
                 if (this->m_value == DROPDOWN_SYMBOL || this->m_value == OPTION_SYMBOL) {
                     if (this->m_focused)
-                        renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +4, this->getY() + 45, 20, this->m_faint ? tsl::style::color::ColorDescription : selectedTextColor);
+                        renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +4, this->getY() + 45, 20, this->m_faint ? offTextColor : selectedTextColor);
                     else
-                        renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +4, this->getY() + 45, 20, this->m_faint ? tsl::style::color::ColorDescription : defaultTextColor);
+                        renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +4, this->getY() + 45, 20, this->m_faint ? offTextColor : defaultTextColor);
                 } else if (this->m_value == CROSSMARK_SYMBOL) {
-                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +4, this->getY() + 45, 20, this->m_faint ? tsl::style::color::ColorDescription : Color(0xF, 0x0, 0x0, 0xF));
+                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +4, this->getY() + 45, 20, this->m_faint ? offTextColor : invalidTextColor);
                 } else {
-                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +4, this->getY() + 45, 20, this->m_faint ? tsl::style::color::ColorDescription : tsl::style::color::ColorHighlight);
+                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +4, this->getY() + 45, 20, this->m_faint ? offTextColor : onTextColor);
                 }
                 // CUSTOM SECTION END 
             }
@@ -3877,7 +3915,7 @@ namespace tsl {
          */
         class TrackBar : public Element {
         public:
-            tsl::Color defaultTextColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "text_color"));
+            Color defaultTextColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "text_color"));
             Color trackBarColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "trackbar_color"), "#555555");
             std::chrono::duration<long int, std::ratio<1, 1000000000>> t;
             Color highlightColor = {0xf,0xf,0xf,0xf};
@@ -4170,6 +4208,9 @@ namespace tsl {
         public:
             u16 trackBarWidth, stepWidth, currentDescIndex;
             u32 descWidth, descHeight;
+            
+            tsl::Color offTextColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "off_text_color"), "#AAAAAA");
+            
             /**
              * @brief Constructor
              *
@@ -4193,7 +4234,7 @@ namespace tsl {
                 currentDescIndex = std::clamp(this->m_value / (100 / (this->m_numSteps - 1)), 0, this->m_numSteps - 1);
                 
                 std::tie(descWidth, descHeight) = renderer->drawString(this->m_stepDescriptions[currentDescIndex].c_str(), false, 0, 0, 15, tsl::style::color::ColorTransparent);
-                renderer->drawString(this->m_stepDescriptions[currentDescIndex].c_str(), false, ((this->getX() + 60) + (this->getWidth() - 95) / 2) - (descWidth / 2), this->getY() + 20, 15, tsl::style::color::ColorDescription);
+                renderer->drawString(this->m_stepDescriptions[currentDescIndex].c_str(), false, ((this->getX() + 60) + (this->getWidth() - 95) / 2) - (descWidth / 2), this->getY() + 20, 15, offTextColor);
                 
                 StepTrackBar::draw(renderer);
             }
