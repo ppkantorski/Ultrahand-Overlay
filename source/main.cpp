@@ -501,6 +501,8 @@ public:
                         deleteFileOrDirectory("/config/ultrahand/theme.ini");
                         copyFileOrDirectory(themeFile, "/config/ultrahand/theme.ini");
                         
+                        initializeTheme();
+                        
                         reloadMenu = true;
                         reloadMenu2 = true;
                         
