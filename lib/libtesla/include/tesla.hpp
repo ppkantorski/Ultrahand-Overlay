@@ -158,6 +158,7 @@ float customRound(float num) {
 
 float M_PI = 3.14159265358979323846;
 
+static std::string DEFAULT_CHAR_WIDTH = "0.33";
 static std::string UNAVAILABLE_SELECTION = "Not available";
 static std::string OVERLAYS = "Overlays"; //defined in libTesla now
 static std::string OVERLAY = "Overlay";
@@ -263,6 +264,7 @@ static std::string DEC = "Dec ";
 
 // Constant string definitions (English)
 void reinitializeLangVars() {
+    DEFAULT_CHAR_WIDTH = "0.33";
     UNAVAILABLE_SELECTION = "Not available";
     OVERLAYS = "Overlays"; //defined in libTesla now
     OVERLAY = "Overlay";
@@ -381,6 +383,7 @@ void parseLanguage(std::string langFile) {
     json_t* langData = readJsonFromFile(langFile);
     
     // Use the updateIfNotEmpty function to update global variables
+    updateIfNotEmpty(DEFAULT_CHAR_WIDTH, "DEFAULT_CHAR_WIDTH", langData);
     updateIfNotEmpty(UNAVAILABLE_SELECTION, "UNAVAILABLE_SELECTION", langData);
     updateIfNotEmpty(OVERLAYS, "OVERLAYS", langData);
     updateIfNotEmpty(OVERLAY, "OVERLAY", langData);
@@ -2638,7 +2641,8 @@ namespace tsl {
                 // Lookup the width of the current character
                 letterWidth = characterWidths[letter];
                 if (letterWidth == 0) {
-                    letterWidth = 0.33; // default width
+                    //letterWidth = 0.33; // default width
+                    letterWidth = std::stof(DEFAULT_CHAR_WIDTH);
                 }
                 
                 // Accumulate the width
