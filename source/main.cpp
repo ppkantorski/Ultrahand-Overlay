@@ -529,11 +529,10 @@ public:
             });
             list->addItem(toggleListItem);
             
-            
-            toggleListItem = new tsl::elm::ToggleListItem(BATTERY, false, ON, OFF);
-            toggleListItem->setState((hideBattery == "false"));
+            toggleListItem = new tsl::elm::ToggleListItem(SOC_TEMPERATURE, false, ON, OFF);
+            toggleListItem->setState((hideSOCTemp == "false"));
             toggleListItem->setStateChangedListener([this, toggleListItem](bool state) {
-                setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_battery", state ? "false" : "true");
+                setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_soc_temp", state ? "false" : "true");
                 reinitializeWidgetVars();
                 redrawWidget = true;
             });
@@ -548,14 +547,15 @@ public:
             });
             list->addItem(toggleListItem);
             
-            toggleListItem = new tsl::elm::ToggleListItem(SOC_TEMPERATURE, false, ON, OFF);
-            toggleListItem->setState((hideSOCTemp == "false"));
+            toggleListItem = new tsl::elm::ToggleListItem(BATTERY, false, ON, OFF);
+            toggleListItem->setState((hideBattery == "false"));
             toggleListItem->setStateChangedListener([this, toggleListItem](bool state) {
-                setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_soc_temp", state ? "false" : "true");
+                setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_battery", state ? "false" : "true");
                 reinitializeWidgetVars();
                 redrawWidget = true;
             });
             list->addItem(toggleListItem);
+            
             
         } else if (dropdownSelection == "miscMenu") {
             list->addItem(new tsl::elm::CategoryHeader(MENU_ITEMS));
