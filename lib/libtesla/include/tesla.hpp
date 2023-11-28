@@ -2366,10 +2366,22 @@ namespace tsl {
                     }
                     
                     
-                    renderer->drawRect(this->getX() + x - 4, this->getY() + y - 4, this->getWidth() + 8, 4, highlightColor);
-                    renderer->drawRect(this->getX() + x - 4, this->getY() + y + this->getHeight(), this->getWidth() + 8, 4, highlightColor);
-                    renderer->drawRect(this->getX() + x - 4, this->getY() + y, 4, this->getHeight(), highlightColor);
-                    renderer->drawRect(this->getX() + x + this->getWidth(), this->getY() + y, 4, this->getHeight(), highlightColor);
+                    //renderer->drawRect(this->getX() + x - 4, this->getY() + y - 4, this->getWidth() + 8, 4, highlightColor);
+                    //renderer->drawRect(this->getX() + x - 4, this->getY() + y + this->getHeight(), this->getWidth() + 8, 4, highlightColor);
+                    //renderer->drawRect(this->getX() + x - 4, this->getY() + y, 4, this->getHeight(), highlightColor);
+                    //renderer->drawRect(this->getX() + x + this->getWidth(), this->getY() + y, 4, this->getHeight(), highlightColor);
+                    
+                    
+                    renderer->drawRect(this->getX() + x + 5 -1, this->getY() + y - 4, this->getWidth() - 5 +2, 5, highlightColor);
+                    renderer->drawRect(this->getX() + x + 5 -1, this->getY() + y + this->getHeight(), this->getWidth() - 5 +2, 5, highlightColor);
+                    renderer->drawRect(this->getX() + x, this->getY() + y + 2 - 2, 5, this->getHeight()-3 +4, highlightColor);
+                    renderer->drawRect(this->getX() + x + this->getWidth(), this->getY() + y + 2 -2, 5, this->getHeight()-3 +4, highlightColor);
+                    
+                    renderer->drawCircle(this->getX() + x + 2, this->getY() + y + this->getHeight() + 2, 2.5, true, highlightColor);
+                    renderer->drawCircle(this->getX() + x + 2, this->getY() + y - 2, 2.5, true, highlightColor);
+                    renderer->drawCircle(this->getX() + x + this->getWidth() + 2, this->getY() + y + this->getHeight() + 2, 2.5, true, highlightColor);
+                    renderer->drawCircle(this->getX() + x + this->getWidth() + 2, this->getY() + y - 2, 2.5, true, highlightColor);
+                    
                 }
             }
             
@@ -3569,7 +3581,11 @@ namespace tsl {
                         std::tie(width, height) = renderer->drawString(this->m_scrollText.c_str(), false, 0, 0, 23, tsl::style::color::ColorTransparent);
                         this->m_scrollText += this->m_text;
                         this->m_textWidth = width;
-                        this->m_ellipsisText = renderer->limitStringLength(this->m_text, false, 23, this->m_maxWidth);
+                        if (this->m_value.length() > 0) {
+                            this->m_ellipsisText = renderer->limitStringLength(this->m_text, false, 23, this->m_maxWidth);
+                        } else {
+                            this->m_ellipsisText = renderer->limitStringLength(this->m_text, false, 24, this->m_maxWidth);
+                        }
                     } else {
                         this->m_textWidth = width;
                     }
