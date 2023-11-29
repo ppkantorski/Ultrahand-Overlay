@@ -1043,6 +1043,25 @@ namespace tsl {
         }
         return RGB888(defaultHexColor);
     }
+    std::tuple<float, float, float> hexToRGB444Floats(std::string hexColor, std::string defaultHexColor = "#FFFFFF") {
+        // Remove the '#' character if it's present
+        if (!hexColor.empty() && hexColor[0] == '#') {
+            hexColor = hexColor.substr(1);
+        }
+        
+        if (isValidHexColor(hexColor)) {
+            unsigned int hexValue = std::stoul(hexColor, nullptr, 16);
+            
+            // Extract red, green, blue components from RGB888 to RGB444
+            float red = static_cast<float>((hexValue >> 16) & 0xFF) / 255.0f * 15.0f;
+            float green = static_cast<float>((hexValue >> 8) & 0xFF) / 255.0f * 15.0f;
+            float blue = static_cast<float>((hexValue) & 0xFF) / 255.0f * 15.0f;
+            
+            return std::make_tuple(red, green, blue);
+        }
+        return hexToRGB444Floats(defaultHexColor);
+    }
+    
     
     
     namespace style {
@@ -2748,6 +2767,9 @@ namespace tsl {
             std::string SOC_temperatureStringSTD;
             std::string menuBottomLine;
             
+            std::tuple<float,float,float> dynamicLogoRGB1 = hexToRGB444Floats(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "dynamic_logo_color_1"), "#00FF6A");
+            std::tuple<float,float,float> dynamicLogoRGB2 = hexToRGB444Floats(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "dynamic_logo_color_2"), "#8080EA");
+            
             OverlayFrame(const std::string& title, const std::string& subtitle, const std::string& menuMode = "", const std::string& colorSelection = "", const std::string& pageLeftName = "", const std::string& pageRightName = "")
                 : Element(), m_menuMode(menuMode), m_title(title), m_subtitle(subtitle), m_colorSelection(colorSelection), m_pageLeftName(pageLeftName), m_pageRightName(pageRightName) {} // CUSTOM MODIFICATION
             
@@ -2786,16 +2808,42 @@ namespace tsl {
                             //progress = calculateAmplitude(counter - x * 0.001F);
                             counter = (2 * M_PI * (fmod(std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count(), cycleDuration) + countOffset) / 1.5);
                             //progress = calculateAmplitude(counter);
-                            progress = (std::sin(counter) + 1) / 2;
-                            
                             
                             // Calculate the corresponding highlight color for each letter
+                            //progress = (std::sin(counter) + 1) / 2;
+                            //highlightColor = {
+                            //    static_cast<u8>((0xA - 0xF) * (3 - 1.5*progress) + 0xF),
+                            //    static_cast<u8>((0xA - 0xF) * 1.5*progress + 0xF),
+                            //    static_cast<u8>((0xA - 0xF) * (1.25 - progress) + 0xF),
+                            //    0xF
+                            //};
+                            
+                            //float red1 = 0;
+                            //float green1 = 15;
+                            //float blue1 = 6.25;
+                            
+                            //float red2 = 7.5;
+                            //float green2 = 7.5;
+                            //float blue2 = 13.75;
+                            
+                            progress = std::sin(counter); // -1 to 1
+                            
                             highlightColor = {
-                                static_cast<u8>((0xA - 0xF) * (3 - 1.5*progress) + 0xF),
-                                static_cast<u8>((0xA - 0xF) * 1.5*progress + 0xF),
-                                static_cast<u8>((0xA - 0xF) * (1.25 - progress) + 0xF),
-                                0xF
+                                static_cast<u8>((std::get<0>(dynamicLogoRGB2) - std::get<0>(dynamicLogoRGB1)) * (progress + 1.) / 2. + std::get<0>(dynamicLogoRGB1)),
+                                static_cast<u8>((std::get<1>(dynamicLogoRGB2) - std::get<1>(dynamicLogoRGB1)) * (progress + 1.) / 2. + std::get<1>(dynamicLogoRGB1)),
+                                static_cast<u8>((std::get<2>(dynamicLogoRGB2) - std::get<2>(dynamicLogoRGB1)) * (progress + 1.) / 2. + std::get<2>(dynamicLogoRGB1)),
+                                15
                             };
+                            
+                            
+                            // we want to rewrite this function using the color variables above
+                            //highlightColor = {
+                            //    static_cast<u8>(3.75  +  (3.75 * progress)), // ranges from 0 to 7.5
+                            //    static_cast<u8>(11.25 + (-3.75 * progress)), // ranges from 15 to 7.5
+                            //    static_cast<u8>(10.0  +  (3.75 * progress)), // ranges from 6.25 to 13.75
+                            //    15
+                            //};
+                            
                             
                             // Draw each character with its corresponding highlight color
                             //renderer->drawString(std::string(1, letter).c_str(), false, x, y + offset, fontSize, highlightColor);
