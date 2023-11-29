@@ -152,6 +152,12 @@ void initializeTheme(std::string themeIniPath = themeConfigIniPath) {
             if (themedSection.count("logo_color_2") == 0)
                 setIniFileValue(themeIniPath, "theme", "logo_color_2", "#FF0000");
             
+            if (themedSection.count("dynamic_logo_color_1") == 0)
+                setIniFileValue(themeIniPath, "theme", "dynamic_logo_color_1", "#00FF6A");
+            
+            if (themedSection.count("dynamic_logo_color_2") == 0)
+                setIniFileValue(themeIniPath, "theme", "dynamic_logo_color_2", "#8080EA");
+            
         } else
             initialize = true;
     } else
@@ -181,6 +187,8 @@ void initializeTheme(std::string themeIniPath = themeConfigIniPath) {
         setIniFileValue(themeIniPath, "theme", "disable_colorful_logo", "false");
         setIniFileValue(themeIniPath, "theme", "logo_color_1", "#FFFFFF");
         setIniFileValue(themeIniPath, "theme", "logo_color_2", "#F7253E");
+        setIniFileValue(themeIniPath, "theme", "dynamic_logo_color_1", "#00FF6A");
+        setIniFileValue(themeIniPath, "theme", "dynamic_logo_color_2", "#8080EA");
     }
 }
 
