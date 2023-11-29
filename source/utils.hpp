@@ -243,8 +243,8 @@ void copyTeslaKeyComboToUltrahand() {
 
 
 void addHelpInfo(auto& list) {
-    tsl::Color infoTextColor = tsl::RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "info_text_color"), "#FFFFFF");
-    tsl::Color onTextColor = tsl::RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "on_text_color"), "#00FFDD");
+    tsl::Color infoTextColor = tsl::RGB888(parseValueFromIniSection(themeConfigIniPath, "theme", "info_text_color"), "#FFFFFF");
+    tsl::Color onTextColor = tsl::RGB888(parseValueFromIniSection(themeConfigIniPath, "theme", "on_text_color"), "#00FFDD");
     
     // Add a section break with small text to indicate the "Commands" section
     list->addItem(new tsl::elm::CategoryHeader(USER_GUIDE));
@@ -296,7 +296,7 @@ void addAppInfo(auto& list, auto& packageHeader, std::string type = "package") {
     else
         list->addItem(new tsl::elm::CategoryHeader(OVERLAY_INFO));
     
-    tsl::Color infoTextColor = tsl::RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "info_text_color"), "#FFFFFF");
+    tsl::Color infoTextColor = tsl::RGB888(parseValueFromIniSection(themeConfigIniPath, "theme", "info_text_color"), "#FFFFFF");
     
     constexpr int maxLineLength = 28;  // Adjust the maximum line length as needed
     constexpr int lineHeight = 20;  // Adjust the line height as needed
