@@ -153,7 +153,7 @@ void initializeTheme(std::string themeIniPath = themeConfigIniPath) {
                 setIniFileValue(themeIniPath, "theme", "logo_color_2", "#FF0000");
             
             if (themedSection.count("dynamic_logo_color_1") == 0)
-                setIniFileValue(themeIniPath, "theme", "dynamic_logo_color_1", "#00FF6A");
+                setIniFileValue(themeIniPath, "theme", "dynamic_logo_color_1", "#00FF67");
             
             if (themedSection.count("dynamic_logo_color_2") == 0)
                 setIniFileValue(themeIniPath, "theme", "dynamic_logo_color_2", "#8080EA");
@@ -187,7 +187,7 @@ void initializeTheme(std::string themeIniPath = themeConfigIniPath) {
         setIniFileValue(themeIniPath, "theme", "disable_colorful_logo", "false");
         setIniFileValue(themeIniPath, "theme", "logo_color_1", "#FFFFFF");
         setIniFileValue(themeIniPath, "theme", "logo_color_2", "#F7253E");
-        setIniFileValue(themeIniPath, "theme", "dynamic_logo_color_1", "#00FF6A");
+        setIniFileValue(themeIniPath, "theme", "dynamic_logo_color_1", "#00FF67");
         setIniFileValue(themeIniPath, "theme", "dynamic_logo_color_2", "#8080EA");
     }
 }
