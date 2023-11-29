@@ -2333,8 +2333,8 @@ namespace tsl {
                     saturation = tsl::style::ListItemHighlightSaturation * (float(this->m_clickAnimationProgress) / float(tsl::style::ListItemHighlightLength));
                     if (invertBGClickColor) {
                         animColor.r = 15-saturation;
-                        animColor.g = 15;
-                        animColor.b = 15-saturation;
+                        animColor.g = 15-saturation;
+                        animColor.b = 15;
                     } else {
                         animColor.r = 0;
                         animColor.g = saturation;
