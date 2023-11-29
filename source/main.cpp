@@ -481,6 +481,8 @@ public:
             
             std::string themeName;
             
+            sort(themeFilesList.begin(), themeFilesList.end());
+            
             for (const auto& themeFile : themeFilesList) {
                 themeName = dropExtension(getNameFromPath(themeFile));
                 
@@ -498,8 +500,8 @@ public:
                     if (keys & KEY_A) {
                         //if (defaultLangMode != defaultLang) {
                         setIniFileValue(settingsConfigIniPath, "ultrahand", "current_theme", themeName);
-                        deleteFileOrDirectory("/config/ultrahand/theme.ini");
-                        copyFileOrDirectory(themeFile, "/config/ultrahand/theme.ini");
+                        deleteFileOrDirectory(themeConfigIniPath);
+                        copyFileOrDirectory(themeFile, themeConfigIniPath);
                         
                         initializeTheme();
                         
