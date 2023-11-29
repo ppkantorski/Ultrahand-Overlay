@@ -481,6 +481,8 @@ public:
             
             std::string themeName;
             
+            sort(themeFilesList.begin(), themeFilesList.end());
+            
             for (const auto& themeFile : themeFilesList) {
                 themeName = dropExtension(getNameFromPath(themeFile));
                 
@@ -498,8 +500,10 @@ public:
                     if (keys & KEY_A) {
                         //if (defaultLangMode != defaultLang) {
                         setIniFileValue(settingsConfigIniPath, "ultrahand", "current_theme", themeName);
-                        deleteFileOrDirectory("/config/ultrahand/theme.ini");
-                        copyFileOrDirectory(themeFile, "/config/ultrahand/theme.ini");
+                        deleteFileOrDirectory(themeConfigIniPath);
+                        copyFileOrDirectory(themeFile, themeConfigIniPath);
+                        
+                        initializeTheme();
                         
                         reloadMenu = true;
                         reloadMenu2 = true;
@@ -529,16 +533,6 @@ public:
             });
             list->addItem(toggleListItem);
             
-            
-            toggleListItem = new tsl::elm::ToggleListItem(BATTERY, false, ON, OFF);
-            toggleListItem->setState((hideBattery == "false"));
-            toggleListItem->setStateChangedListener([this, toggleListItem](bool state) {
-                setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_battery", state ? "false" : "true");
-                reinitializeWidgetVars();
-                redrawWidget = true;
-            });
-            list->addItem(toggleListItem);
-            
             toggleListItem = new tsl::elm::ToggleListItem(SOC_TEMPERATURE, false, ON, OFF);
             toggleListItem->setState((hideSOCTemp == "false"));
             toggleListItem->setStateChangedListener([this, toggleListItem](bool state) {
@@ -556,6 +550,16 @@ public:
                 redrawWidget = true;
             });
             list->addItem(toggleListItem);
+            
+            toggleListItem = new tsl::elm::ToggleListItem(BATTERY, false, ON, OFF);
+            toggleListItem->setState((hideBattery == "false"));
+            toggleListItem->setStateChangedListener([this, toggleListItem](bool state) {
+                setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_battery", state ? "false" : "true");
+                reinitializeWidgetVars();
+                redrawWidget = true;
+            });
+            list->addItem(toggleListItem);
+            
             
         } else if (dropdownSelection == "miscMenu") {
             list->addItem(new tsl::elm::CategoryHeader(MENU_ITEMS));
