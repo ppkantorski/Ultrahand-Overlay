@@ -2309,21 +2309,20 @@ namespace tsl {
              * @param renderer Renderer
              */
             virtual void drawClickAnimation(gfx::Renderer *renderer) {
-                saturation = tsl::style::ListItemHighlightSaturation * (float(this->m_clickAnimationProgress) / float(tsl::style::ListItemHighlightLength));
                 
-                if (invertBGClickColor) {
-                    animColor.r = 15;
-                    animColor.g = 15-saturation;
-                    animColor.b = 15-saturation;
-                } else {
-                    animColor.r = 0;
-                    animColor.g = saturation;
-                    animColor.b = saturation;
-                }
-                
-                if (!disableSelectionBG)
+                if (!disableSelectionBG) {
+                    saturation = tsl::style::ListItemHighlightSaturation * (float(this->m_clickAnimationProgress) / float(tsl::style::ListItemHighlightLength));
+                    if (invertBGClickColor) {
+                        animColor.r = 15-saturation;
+                        animColor.g = 15;
+                        animColor.b = 15-saturation;
+                    } else {
+                        animColor.r = 0;
+                        animColor.g = saturation;
+                        animColor.b = saturation;
+                    }
                     renderer->drawRect(ELEMENT_BOUNDS(this), (animColor));
-                else {
+                } else {
                     clickColor1 = highlightColor1;
                     clickColor2 = clickColor;
                     
