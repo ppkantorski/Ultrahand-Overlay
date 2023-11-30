@@ -2745,7 +2745,7 @@ namespace tsl {
             tsl::Color onTextColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "on_text_color"), "#00FFDD");
             tsl::Color offTextColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "off_text_color"), "#AAAAAA");
             
-            std::tuple<float,float,float> dynamicLogoRGB1 = hexToRGB444Floats(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "dynamic_logo_color_1"), "#00FF6F");
+            std::tuple<float,float,float> dynamicLogoRGB1 = hexToRGB444Floats(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "dynamic_logo_color_1"), "#00E669");
             std::tuple<float,float,float> dynamicLogoRGB2 = hexToRGB444Floats(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "dynamic_logo_color_2"), "#8080EA");
             
             std::string firstHalf, secondHalf;
