@@ -85,11 +85,38 @@ void initializeTheme(std::string themeIniPath = themeConfigIniPath) {
             if (themedSection.count("clock_color") == 0)
                 setIniFileValue(themeIniPath, "theme", "clock_color", "#FFFFFF");
             
+            if (themedSection.count("bg_alpha") == 0)
+                setIniFileValue(themeIniPath, "theme", "bg_alpha", "13");
+            
+            if (themedSection.count("bg_color") == 0)
+                setIniFileValue(themeIniPath, "theme", "bg_color", "#000000");
+            
+            if (themedSection.count("seperator_alpha") == 0)
+                setIniFileValue(themeIniPath, "theme", "seperator_alpha", "7");
+            
+            if (themedSection.count("seperator_color") == 0)
+                setIniFileValue(themeIniPath, "theme", "seperator_color", "#777777");
+            
             if (themedSection.count("battery_color") == 0)
                 setIniFileValue(themeIniPath, "theme", "battery_color", "#FFFFFF");
             
             if (themedSection.count("text_color") == 0)
                 setIniFileValue(themeIniPath, "theme", "text_color", "#FFFFFF");
+            
+            if (themedSection.count("info_text_color") == 0)
+                setIniFileValue(themeIniPath, "theme", "info_text_color", "#FFFFFF");
+            
+            if (themedSection.count("version_text_color") == 0)
+                setIniFileValue(themeIniPath, "theme", "version_text_color", "#AAAAAA");
+            
+            if (themedSection.count("on_text_color") == 0)
+                setIniFileValue(themeIniPath, "theme", "on_text_color", "#00FFDD");
+            
+            if (themedSection.count("off_text_color") == 0)
+                setIniFileValue(themeIniPath, "theme", "off_text_color", "#AAAAAA");
+            
+            if (themedSection.count("invalid_text_color") == 0)
+                setIniFileValue(themeIniPath, "theme", "invalid_text_color", "#FF0000");
             
             if (themedSection.count("selection_text_color") == 0)
                 setIniFileValue(themeIniPath, "theme", "selection_text_color", "#FFFFFF");
@@ -109,12 +136,27 @@ void initializeTheme(std::string themeIniPath = themeConfigIniPath) {
             if (themedSection.count("click_color") == 0)
                 setIniFileValue(themeIniPath, "theme", "click_color", "#F7253E");
             
+            if (themedSection.count("invert_bg_click_color") == 0)
+                setIniFileValue(themeIniPath, "theme", "invert_bg_click_color", "false");
+            
             if (themedSection.count("disable_selection_bg") == 0)
                 setIniFileValue(themeIniPath, "theme", "disable_selection_bg", "true");
             
             // For disabling colorful logo
             if (themedSection.count("disable_colorful_logo") == 0)
                 setIniFileValue(themeIniPath, "theme", "disable_colorful_logo", "false");
+            
+            if (themedSection.count("logo_color_1") == 0)
+                setIniFileValue(themeIniPath, "theme", "logo_color_1", "#FFFFFF");
+            
+            if (themedSection.count("logo_color_2") == 0)
+                setIniFileValue(themeIniPath, "theme", "logo_color_2", "#FF0000");
+            
+            if (themedSection.count("dynamic_logo_color_1") == 0)
+                setIniFileValue(themeIniPath, "theme", "dynamic_logo_color_1", "#00E669");
+            
+            if (themedSection.count("dynamic_logo_color_2") == 0)
+                setIniFileValue(themeIniPath, "theme", "dynamic_logo_color_2", "#8080EA");
             
         } else
             initialize = true;
@@ -124,16 +166,29 @@ void initializeTheme(std::string themeIniPath = themeConfigIniPath) {
     if (initialize) {
         setIniFileValue(themeIniPath, "theme", "clock_color", "#FFFFFF");
         setIniFileValue(themeIniPath, "theme", "battery_color", "#FFFFFF");
+        setIniFileValue(themeIniPath, "theme", "bg_alpha", "13");
+        setIniFileValue(themeIniPath, "theme", "bg_color", "#000000");
+        setIniFileValue(themeIniPath, "theme", "seperator_alpha", "7");
+        setIniFileValue(themeIniPath, "theme", "seperator_color", "#777777");
         setIniFileValue(themeIniPath, "theme", "text_color", "#FFFFFF");
+        setIniFileValue(themeIniPath, "theme", "info_text_color", "#FFFFFF");
+        setIniFileValue(themeIniPath, "theme", "version_text_color", "#AAAAAA");
+        setIniFileValue(themeIniPath, "theme", "on_text_color", "#00FFDD");
+        setIniFileValue(themeIniPath, "theme", "off_text_color", "#AAAAAA");
+        setIniFileValue(themeIniPath, "theme", "invalid_text_color", "#FF0000");
         setIniFileValue(themeIniPath, "theme", "selection_text_color", "#FFFFFF");
         setIniFileValue(themeIniPath, "theme", "selection_bg_color", "#000000");
         setIniFileValue(themeIniPath, "theme", "trackbar_color", "#555555");
         setIniFileValue(themeIniPath, "theme", "highlight_color_1", "#2288CC");
         setIniFileValue(themeIniPath, "theme", "highlight_color_2", "#88FFFF");
         setIniFileValue(themeIniPath, "theme", "click_color", "#F7253E");
+        setIniFileValue(themeIniPath, "theme", "invert_bg_click_color", "false");
         setIniFileValue(themeIniPath, "theme", "disable_selection_bg", "true");
         setIniFileValue(themeIniPath, "theme", "disable_colorful_logo", "false");
-        
+        setIniFileValue(themeIniPath, "theme", "logo_color_1", "#FFFFFF");
+        setIniFileValue(themeIniPath, "theme", "logo_color_2", "#F7253E");
+        setIniFileValue(themeIniPath, "theme", "dynamic_logo_color_1", "#00E669");
+        setIniFileValue(themeIniPath, "theme", "dynamic_logo_color_2", "#8080EA");
     }
 }
 
@@ -188,6 +243,9 @@ void copyTeslaKeyComboToUltrahand() {
 
 
 void addHelpInfo(auto& list) {
+    tsl::Color infoTextColor = tsl::RGB888(parseValueFromIniSection(themeConfigIniPath, "theme", "info_text_color"), "#FFFFFF");
+    tsl::Color onTextColor = tsl::RGB888(parseValueFromIniSection(themeConfigIniPath, "theme", "on_text_color"), "#00FFDD");
+    
     // Add a section break with small text to indicate the "Commands" section
     list->addItem(new tsl::elm::CategoryHeader(USER_GUIDE));
     
@@ -223,9 +281,9 @@ void addHelpInfo(auto& list) {
     
     
     if ((sectionString != "") && (infoString != "")) {
-        list->addItem(new tsl::elm::CustomDrawer([lineHeight, xOffset, fontSize, sectionString, infoString](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
-            renderer->drawString(sectionString.c_str(), false, x + 12, y + lineHeight, fontSize, tsl::style::color::ColorText);
-            renderer->drawString(infoString.c_str(), false, x + xOffset+ 12, y + lineHeight, fontSize, tsl::style::color::ColorHighlight);
+        list->addItem(new tsl::elm::CustomDrawer([lineHeight, xOffset, fontSize, sectionString, infoString, infoTextColor, onTextColor](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
+            renderer->drawString(sectionString.c_str(), false, x + 12, y + lineHeight, fontSize, infoTextColor);
+            renderer->drawString(infoString.c_str(), false, x + xOffset+ 12, y + lineHeight, fontSize, onTextColor);
         }), fontSize * numEntries + lineHeight);
     }
 }
@@ -237,6 +295,8 @@ void addAppInfo(auto& list, auto& packageHeader, std::string type = "package") {
         list->addItem(new tsl::elm::CategoryHeader(PACKAGE_INFO));
     else
         list->addItem(new tsl::elm::CategoryHeader(OVERLAY_INFO));
+    
+    tsl::Color infoTextColor = tsl::RGB888(parseValueFromIniSection(themeConfigIniPath, "theme", "info_text_color"), "#FFFFFF");
     
     constexpr int maxLineLength = 28;  // Adjust the maximum line length as needed
     constexpr int lineHeight = 20;  // Adjust the line height as needed
@@ -341,9 +401,9 @@ void addAppInfo(auto& list, auto& packageHeader, std::string type = "package") {
     
     
     if ((packageSectionString != "") && (packageInfoString != "")) {
-        list->addItem(new tsl::elm::CustomDrawer([lineHeight, xOffset, fontSize, packageSectionString, packageInfoString](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
-            renderer->drawString(packageSectionString.c_str(), false, x + 12, y + lineHeight, fontSize, tsl::style::color::ColorText);
-            renderer->drawString(packageInfoString.c_str(), false, x + xOffset, y + lineHeight, fontSize, tsl::style::color::ColorText);
+        list->addItem(new tsl::elm::CustomDrawer([lineHeight, xOffset, fontSize, packageSectionString, packageInfoString, infoTextColor](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
+            renderer->drawString(packageSectionString.c_str(), false, x + 12, y + lineHeight, fontSize, infoTextColor);
+            renderer->drawString(packageInfoString.c_str(), false, x + xOffset, y + lineHeight, fontSize, infoTextColor);
         }), fontSize * numEntries + lineHeight);
     }
 }
@@ -899,6 +959,7 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                             replacement = replaceHexPlaceholder(arg.substr(startPos, endPos - startPos + 2), hexPath);
                             arg.replace(startPos, endPos - startPos + 2, replacement);
                             if (arg == lastArg) {
+                                arg.replace(startPos, endPos - startPos + 2, "-1"); // fall back replacement value of -1
                                 commandSuccess = false;
                                 break;
                             }
@@ -913,6 +974,7 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                             replacement = replaceIniPlaceholder(arg.substr(startPos, endPos - startPos + 2), iniPath);
                             arg.replace(startPos, endPos - startPos + 2, replacement);
                             if (arg == lastArg) {
+                                arg.replace(startPos, endPos - startPos + 2, "-1"); // fall back replacement value of -1
                                 commandSuccess = false;
                                 break;
                             }
@@ -928,6 +990,7 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                             replacement = stringToList(listString)[listIndex];
                             arg.replace(startPos, endPos - startPos + 2, replacement);
                             if (arg == lastArg) {
+                                arg.replace(startPos, endPos - startPos + 2, "-1"); // fall back replacement value of -1
                                 commandSuccess = false;
                                 break;
                             }
@@ -942,6 +1005,7 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                             replacement = replaceJsonPlaceholder(arg.substr(startPos, endPos - startPos + 2), "json", jsonString);
                             arg.replace(startPos, endPos - startPos + 2, replacement);
                             if (arg == lastArg) {
+                                arg.replace(startPos, endPos - startPos + 2, "-1"); // fall back replacement value of -1
                                 commandSuccess = false;
                                 break;
                             }
@@ -956,6 +1020,7 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                             replacement = replaceJsonPlaceholder(arg.substr(startPos, endPos - startPos + 2), "json_file", jsonPath);
                             arg.replace(startPos, endPos - startPos + 2, replacement);
                             if (arg == lastArg) {
+                                arg.replace(startPos, endPos - startPos + 2, "-1"); // fall back replacement value of -1
                                 commandSuccess = false;
                                 break;
                             }

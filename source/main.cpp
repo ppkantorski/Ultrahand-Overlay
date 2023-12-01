@@ -481,6 +481,8 @@ public:
             
             std::string themeName;
             
+            sort(themeFilesList.begin(), themeFilesList.end());
+            
             for (const auto& themeFile : themeFilesList) {
                 themeName = dropExtension(getNameFromPath(themeFile));
                 
@@ -498,8 +500,10 @@ public:
                     if (keys & KEY_A) {
                         //if (defaultLangMode != defaultLang) {
                         setIniFileValue(settingsConfigIniPath, "ultrahand", "current_theme", themeName);
-                        deleteFileOrDirectory("/config/ultrahand/theme.ini");
-                        copyFileOrDirectory(themeFile, "/config/ultrahand/theme.ini");
+                        deleteFileOrDirectory(themeConfigIniPath);
+                        copyFileOrDirectory(themeFile, themeConfigIniPath);
+                        
+                        initializeTheme();
                         
                         reloadMenu = true;
                         reloadMenu2 = true;
@@ -529,16 +533,6 @@ public:
             });
             list->addItem(toggleListItem);
             
-            
-            toggleListItem = new tsl::elm::ToggleListItem(BATTERY, false, ON, OFF);
-            toggleListItem->setState((hideBattery == "false"));
-            toggleListItem->setStateChangedListener([this, toggleListItem](bool state) {
-                setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_battery", state ? "false" : "true");
-                reinitializeWidgetVars();
-                redrawWidget = true;
-            });
-            list->addItem(toggleListItem);
-            
             toggleListItem = new tsl::elm::ToggleListItem(SOC_TEMPERATURE, false, ON, OFF);
             toggleListItem->setState((hideSOCTemp == "false"));
             toggleListItem->setStateChangedListener([this, toggleListItem](bool state) {
@@ -556,6 +550,16 @@ public:
                 redrawWidget = true;
             });
             list->addItem(toggleListItem);
+            
+            toggleListItem = new tsl::elm::ToggleListItem(BATTERY, false, ON, OFF);
+            toggleListItem->setState((hideBattery == "false"));
+            toggleListItem->setStateChangedListener([this, toggleListItem](bool state) {
+                setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_battery", state ? "false" : "true");
+                reinitializeWidgetVars();
+                redrawWidget = true;
+            });
+            list->addItem(toggleListItem);
+            
             
         } else if (dropdownSelection == "miscMenu") {
             list->addItem(new tsl::elm::CategoryHeader(MENU_ITEMS));
@@ -833,9 +837,11 @@ public:
             
             std::string priorityValue = parseValueFromIniSection(settingsIniPath, entryName, "priority");
             
+            auto listItem = static_cast<tsl::elm::ListItem*>(nullptr);
+            std::string iStr;
             for (int i = 0; i <= MAX_PRIORITY; ++i) { // for i in range 0->20 with 20 being the max value
-                std::string iStr = std::to_string(i);
-                tsl::elm::ListItem* listItem = new tsl::elm::ListItem(iStr);
+                iStr = std::to_string(i);
+                listItem = new tsl::elm::ListItem(iStr);
                 
                 if (iStr == priorityValue) {
                     listItem->setValue(CHECKMARK_SYMBOL);
@@ -1103,6 +1109,8 @@ private:
     bool toggleState = false;
     std::string packageConfigIniPath;
     std::string commandMode, commandGrouping;
+    
+    std::string lastSelectedListItemFooter = "";
 public:
     /**
      * @brief Constructs a `SelectionOverlay` instance.
@@ -1373,6 +1381,7 @@ public:
         if (commandGrouping == "default")
             list->addItem(new tsl::elm::CategoryHeader(removeTag(specificKey.substr(1)))); // remove * from key
         
+        // initialize variables
         auto listItem = static_cast<tsl::elm::ListItem*>(nullptr);
         size_t pos;
         std::string footer;
@@ -1402,38 +1411,47 @@ public:
                 footer = "";
                 optionName = selectedItem;
                 if (pos != std::string::npos) {
-                    footer = selectedItem.substr(pos + 2); // Assign the part after "&&" as the footer
-                    optionName = selectedItem.substr(0, pos); // Strip the "&&" and everything after it
+                    footer = selectedItem.substr(pos + 2); // Assign the part after " - " as the footer
+                    optionName = selectedItem.substr(0, pos); // Strip the " - " and everything after it
                 }
                 listItem = new tsl::elm::ListItem(optionName);
                 
                 if (commandMode == "option") {
-                    if (selectedFooterDict[specifiedFooterKey] == selectedItem) { // needs to be fixed
+                    if (selectedFooterDict[specifiedFooterKey] == optionName) { // needs to be fixed
                         lastSelectedListItem = listItem;
+                        lastSelectedListItemFooter = footer;
                         listItem->setValue(CHECKMARK_SYMBOL);
-                    } else
-                        listItem->setValue(footer);
+                    } else {
+                        if (pos != std::string::npos) {
+                            listItem->setValue(footer, true);
+                        } else {
+                            listItem->setValue(footer);
+                        }
+                    }
                 } else
                     listItem->setValue(footer, true);
                 
+                //
                 
                 listItem->setClickListener([this, i, optionName, footer, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
                     if (keys & KEY_A) {
                         if (commandMode == "option") {
-                            selectedFooterDict[specifiedFooterKey] = selectedItem;
-                            lastSelectedListItem->setValue(footer, true);
+                            selectedFooterDict[specifiedFooterKey] = optionName;
+                            lastSelectedListItem->setValue(lastSelectedListItemFooter, true);
                         }
-                        std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(this->commands, selectedItem, i); // replace source
-                        interpretAndExecuteCommand(modifiedCmds, filePath, specificKey); // Execute modified 
-                        modifiedCmds.clear();
+                        //std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(this->commands, selectedItem, i); // replace source
+                        interpretAndExecuteCommand(getSourceReplacement(this->commands, selectedItem, i), filePath, specificKey); // Execute modified 
+                        //modifiedCmds.clear();
                         
                         if (commandSuccess)
                             listItem->setValue(CHECKMARK_SYMBOL);
                         else
                             listItem->setValue(CROSSMARK_SYMBOL);
                         
-                        if (commandMode == "option")
+                        if (commandMode == "option") {
+                            lastSelectedListItemFooter = footer;
                             lastSelectedListItem = listItem;
+                        }
                         
                         return true;
                     }
@@ -1452,17 +1470,17 @@ public:
                     if (!state) {
                         if (std::find(selectedItemsListOn.begin(), selectedItemsListOn.end(), selectedItem) != selectedItemsListOn.end()) {
                             // Toggle switched to On
-                            std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commandsOn, selectedItem, i); // replace source
-                            interpretAndExecuteCommand(modifiedCmds, filePath, specificKey); // Execute modified 
-                            modifiedCmds.clear();
+                            //std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commandsOn, selectedItem, i); // replace source
+                            interpretAndExecuteCommand(getSourceReplacement(commandsOn, selectedItem, i), filePath, specificKey); // Execute modified 
+                            //modifiedCmds.clear();
                         } else
                             toggleListItem->setState(!state);
                     } else {
                         if (std::find(selectedItemsListOff.begin(), selectedItemsListOff.end(), selectedItem) != selectedItemsListOff.end()) {
                             // Toggle switched to Off
-                            std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commandsOff, selectedItem, i); // replace source
-                            interpretAndExecuteCommand(modifiedCmds, filePath, specificKey); // Execute modified 
-                            modifiedCmds.clear();
+                            //std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commandsOff, selectedItem, i); // replace source
+                            interpretAndExecuteCommand(getSourceReplacement(commandsOff, selectedItem, i), filePath, specificKey); // Execute modified 
+                            //modifiedCmds.clear();
                         } else
                             toggleListItem->setState(!state);
                     }
@@ -1849,7 +1867,7 @@ public:
                     }
                 }
                 
-                if (commandMode == "option") {
+                if (commandMode == "option" || (commandMode == "toggle" && !useSelection)) {
                     // override loading of the command footer
                     if (commandFooter != "null")
                         footer = commandFooter;
@@ -1930,10 +1948,10 @@ public:
                             
                             listItem->setClickListener([this, i, commands, keyName = option.first, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
                                 if (keys & KEY_A) {
-                                    std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commands, keyName, i); // replace source
+                                    //std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commands, keyName, i); // replace source
                                     //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
-                                    interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified
-                                    modifiedCmds.clear();
+                                    interpretAndExecuteCommand(getSourceReplacement(commands, keyName, i), packagePath, keyName); // Execute modified
+                                    //modifiedCmds.clear();
                                     if (commandSuccess)
                                         listItem->setValue(CHECKMARK_SYMBOL);
                                     else
@@ -1953,34 +1971,22 @@ public:
                         } else if (commandMode == "toggle") {
                             
                             toggleListItem = new tsl::elm::ToggleListItem(removeTag(optionName), false, ON, OFF);
+                            
                             // Set the initial state of the toggle item
-                            toggleStateOn = isFileOrDirectory(preprocessPath(pathPatternOn));
+                            if (!pathPatternOn.empty())
+                                toggleStateOn = isFileOrDirectory(preprocessPath(pathPatternOn));
+                            else
+                                toggleStateOn = (footer == "On");
                             
                             toggleListItem->setState(toggleStateOn);
                             
                             toggleListItem->setStateChangedListener([this, i, commandsOn, commandsOff, toggleStateOn, keyName = option.first](bool state) {
-                                if (!state) {
-                                    // Toggle switched to On
-                                    if (toggleStateOn) {
-                                        std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commandsOn, preprocessPath(pathPatternOn), i); // replace source
-                                        //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
-                                        interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified
-                                        modifiedCmds.clear();
-                                    } else {
-                                        // Handle the case where the command should only run in the source_on section
-                                        // Add your specific code here
-                                    }
+                                if (state) {
+                                    interpretAndExecuteCommand(getSourceReplacement(commandsOn, preprocessPath(pathPatternOn), i), packagePath, keyName); // Execute modified
+                                    setIniFileValue((packagePath+configFileName).c_str(), keyName.c_str(), "footer", "On");
                                 } else {
-                                    // Toggle switched to Off
-                                    if (!toggleStateOn) {
-                                        std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commandsOff, preprocessPath(pathPatternOff), i); // replace source
-                                        //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
-                                        interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified 
-                                        modifiedCmds.clear();
-                                    } else {
-                                        // Handle the case where the command should only run in the source_off section
-                                        // Add your specific code here
-                                    }
+                                    interpretAndExecuteCommand(getSourceReplacement(commandsOff, preprocessPath(pathPatternOff), i), packagePath, keyName); // Execute modified
+                                    setIniFileValue((packagePath+configFileName).c_str(), keyName.c_str(), "footer", "Off");
                                 }
                             });
                             list->addItem(toggleListItem);
@@ -2276,6 +2282,8 @@ public:
             if (!overlayFiles.empty()) {
                 // Load the INI file and parse its content.
                 std::map<std::string, std::map<std::string, std::string>> overlaysIniData = getParsedDataFromIniFile(overlaysIniFilePath);
+                Result result;
+                std::string overlayName, overlayVersion;
                 
                 for (const auto& overlayFile : overlayFiles) {
                     
@@ -2338,7 +2346,7 @@ public:
                         
                         
                         // Get the name and version of the overlay file
-                        auto [result, overlayName, overlayVersion] = getOverlayInfo(overlayDirectory+overlayFileName);
+                        std::tie(result, overlayName, overlayVersion) = getOverlayInfo(overlayDirectory+overlayFileName);
                         if (result != ResultSuccess)
                             continue;
                         
@@ -2371,7 +2379,7 @@ public:
                 
                 //std::string overlayFileName;
                 std::string overlayStarred;
-                std::string overlayVersion, overlayName;
+                //std::string overlayVersion, overlayName;
                 std::string overlayFile, newOverlayName;
                 size_t lastUnderscorePos, secondLastUnderscorePos, thirdLastUnderscorePos;
                 
@@ -2896,9 +2904,15 @@ public:
                     }
                     
                     // override loading of the command footer
-                    if (commandFooter != "null")
-                        footer = commandFooter;
-                    
+                    //if (commandFooter != "null")
+                    //    footer = commandFooter;
+                    if (commandMode == "option" || (commandMode == "toggle" && !useSelection)) {
+                        // override loading of the command footer
+                        if (commandFooter != "null")
+                            footer = commandFooter;
+                        else
+                            footer = OPTION_SYMBOL;
+                    }
                     
                     if (useSelection) { // For wildcard commands (dropdown menus)
                         listItem = static_cast<tsl::elm::ListItem*>(nullptr);
@@ -2942,11 +2956,11 @@ public:
                             if (sourceType == "json") { // For JSON wildcards
                                 listItem->setClickListener([this, i, commands, packagePath = packageDirectory, keyName = option.first, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
                                     if (keys & KEY_A) {
-                                        std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commands, selectedItem, i); // replace source
+                                        //std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commands, selectedItem, i); // replace source
                                         //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
                                         
-                                        interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified
-                                        modifiedCmds.clear();
+                                        interpretAndExecuteCommand(getSourceReplacement(commands, selectedItem, i), packagePath, keyName); // Execute modified
+                                        //modifiedCmds.clear();
                                         if (commandSuccess)
                                             listItem->setValue(CHECKMARK_SYMBOL);
                                         else
@@ -2964,11 +2978,11 @@ public:
                             } else {
                                 listItem->setClickListener([this, i, commands, packagePath = packageDirectory, keyName = option.first, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
                                     if (keys & KEY_A) {
-                                        std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commands, selectedItem, i); // replace source
+                                        //std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commands, selectedItem, i); // replace source
                                         //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
                                         
-                                        interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified
-                                        modifiedCmds.clear();
+                                        interpretAndExecuteCommand(getSourceReplacement(commands, selectedItem, i), packagePath, keyName); // Execute modified
+                                        //modifiedCmds.clear();
                                         if (commandSuccess)
                                             listItem->setValue(CHECKMARK_SYMBOL);
                                         else
@@ -2986,34 +3000,22 @@ public:
                         } else if (commandMode == "toggle") {
                             
                             toggleListItem = new tsl::elm::ToggleListItem(removeTag(optionName), false, ON, OFF);
+                            
                             // Set the initial state of the toggle item
-                            toggleStateOn = isFileOrDirectory(preprocessPath(pathPatternOn));
+                            if (!pathPatternOn.empty())
+                                toggleStateOn = isFileOrDirectory(preprocessPath(pathPatternOn));
+                            else
+                                toggleStateOn = (footer == "On");
                             
                             toggleListItem->setState(toggleStateOn);
                             
                             toggleListItem->setStateChangedListener([this, i, pathPatternOn, pathPatternOff, commandsOn, commandsOff, toggleStateOn, packagePath = packageDirectory, keyName = option.first](bool state) {
-                                if (!state) {
-                                    // Toggle switched to On
-                                    if (toggleStateOn) {
-                                        std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commandsOn, preprocessPath(pathPatternOn), i); // replace source
-                                        //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
-                                        interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified 
-                                        modifiedCmds.clear();
-                                    } else {
-                                        // Handle the case where the command should only run in the source_on section
-                                        // Add your specific code here
-                                    }
+                                if (state) {
+                                    interpretAndExecuteCommand(getSourceReplacement(commandsOn, preprocessPath(pathPatternOn), i), packagePath, keyName); // Execute modified
+                                    setIniFileValue((packagePath+configFileName).c_str(), keyName.c_str(), "footer", "On");
                                 } else {
-                                    // Toggle switched to Off
-                                    if (!toggleStateOn) {
-                                        std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commandsOff, preprocessPath(pathPatternOff),  i); // replace source
-                                        //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
-                                        interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified
-                                        modifiedCmds.clear();
-                                    } else {
-                                        // Handle the case where the command should only run in the source_off section
-                                        // Add your specific code here
-                                    }
+                                    interpretAndExecuteCommand(getSourceReplacement(commandsOff, preprocessPath(pathPatternOff), i), packagePath, keyName); // Execute modified
+                                    setIniFileValue((packagePath+configFileName).c_str(), keyName.c_str(), "footer", "Off");
                                 }
                             });
                             list->addItem(toggleListItem);
