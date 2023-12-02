@@ -21,7 +21,7 @@
     },
     {
         "name": "-20 mV",
-        "label": "-20 mV - up to 2665MHz RAM",
+        "label": "-20 mV - <= 2665MHz RAM",
         "hex": "14B3"
     },
     {
@@ -41,7 +41,7 @@
     },
     {
         "name": "-40 mV",
-        "label": "-40 mV - up to 2400MHz RAM",
+        "label": "-40 mV - <= 2400MHz RAM",
         "hex": "28B3"
     },
     {
