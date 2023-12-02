@@ -1,0 +1,77 @@
+[
+    {
+        "name": "0 mV",
+        "label": "0 mV - default",
+        "hex": "00B3"
+    },
+    {
+        "name": "-5 mV",
+        "label": "-5 mV",
+        "hex": "05B3"
+    },
+    {
+        "name": "-10 mV",
+        "label": "-10 mV",
+        "hex": "0AB3"
+    },
+    {
+        "name": "-15 mV",
+        "label": "-15 mV",
+        "hex": "0FB3"
+    },
+    {
+        "name": "-20 mV",
+        "label": "-20 mV - up to 2665MHz RAM",
+        "hex": "14B3"
+    },
+    {
+        "name": "-25 mV",
+        "label": "-25 mV",
+        "hex": "19B3"
+    },
+    {
+        "name": "-30 mV",
+        "label": "-30 mV",
+        "hex": "1EB3"
+    },
+    {
+        "name": "-35 mV",
+        "label": "-35 mV",
+        "hex": "23B3"
+    },
+    {
+        "name": "-40 mV",
+        "label": "-40 mV - up to 2400MHz RAM",
+        "hex": "28B3"
+    },
+    {
+        "name": "-45 mV",
+        "label": "-45 mV",
+        "hex": "2DB3"
+    },
+    {
+        "name": "-50 mV",
+        "label": "-50 mV",
+        "hex": "32B3"
+    },
+    {
+        "name": "-55 mV",
+        "label": "-55 mV",
+        "hex": "37B3"
+    },
+    {
+        "name": "-60 mV",
+        "label": "-60 mV",
+        "hex": "3CB3"
+    },
+    {
+        "name": "-65 mV",
+        "label": "-65 mV",
+        "hex": "41B3"
+    },
+    {
+        "name": "-70 mV",
+        "label": "-70 mV",
+        "hex": "46B3"
+    }
+]
