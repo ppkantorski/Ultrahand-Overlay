@@ -1,5 +1,45 @@
 [
     {
+        "name": "1600 MHz",
+        "label": "1600 MHz",
+        "hex": "006A18"
+    },
+    {
+        "name": "1633 MHz",
+        "label": "1633 MHz",
+        "hex": "E0EA18"
+    },
+    {
+        "name": "1666 MHz",
+        "label": "1666 MHz",
+        "hex": "D06B19"
+    },
+    {
+        "name": "1700 MHz",
+        "label": "1700 MHz",
+        "hex": "A0F019"
+    },
+    {
+        "name": "1733 MHz",
+        "label": "1733 MHz",
+        "hex": "88711A"
+    },
+    {
+        "name": "1766 MHz",
+        "label": "1766 MHz",
+        "hex": "70F21A"
+    },
+    {
+        "name": "1800 MHz",
+        "label": "1800 MHz",
+        "hex": "40771B"
+    },
+    {
+        "name": "1833 MHz",
+        "label": "1833 MHz",
+        "hex": "20F81B"
+    },
+    {
         "name": "1866 MHz",
         "label": "1866 MHz",
         "hex": "10791C"

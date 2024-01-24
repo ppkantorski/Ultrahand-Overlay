@@ -5,6 +5,56 @@
         "hex": "000000"
     },
     {
+        "name": "925 mV",
+        "label": "925 mV",
+        "hex": "481D0E"
+    },
+    {
+        "name": "937.5 mV",
+        "label": "937.5 mV",
+        "hex": "1C4E0E"
+    },
+    {
+        "name": "950 mV",
+        "label": "950 mV",
+        "hex": "F07E0E"
+    },
+    {
+        "name": "962.5 mV",
+        "label": "962.5 mV",
+        "hex": "C4AF0E"
+    },
+    {
+        "name": "975 mV",
+        "label": "975 mV",
+        "hex": "98E00E"
+    },
+    {
+        "name": "987.5 mV",
+        "label": "987.5 mV",
+        "hex": "6CZZ0F"
+    },
+    {
+        "name": "1000 mV",
+        "label": "1000 mV",
+        "hex": "40420F"
+    },
+    {
+        "name": "1012.5 mV",
+        "label": "1012.5 mV",
+        "hex": "14730F"
+    },
+    {
+        "name": "1025 mV",
+        "label": "1025 mV",
+        "hex": "E8A30F"
+    },
+    {
+        "name": "1037.5 mV",
+        "label": "1037.5 mV",
+        "hex": "BCD40F"
+    },
+    {
         "name": "1050 mV",
         "label": "1050 mV",
         "hex": "900510"

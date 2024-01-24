@@ -1,5 +1,9 @@
 [
     {
+        "name": "Do not override",
+        "hex": "000000"
+    },
+    {
         "name": "500 mV",
         "hex": "F401"
     },
