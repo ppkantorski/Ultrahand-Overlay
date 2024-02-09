@@ -1,0 +1,102 @@
+[
+    {
+        "name": "550 mV",
+        "label": "550 mV - -70 mV",
+        "hex": "2602"
+    },
+    {
+        "name": "555 mV",
+        "label": "555 mV - -65 mV",
+        "hex": "2B02"
+    },
+    {
+        "name": "560 mV",
+        "label": "560 mV - -60 mV",
+        "hex": "3020"
+    },
+    {
+        "name": "565 mV",
+        "label": "565 mV - -55 mV",
+        "hex": "3502"
+    },
+    {
+        "name": "570 mV",
+        "label": "570 mV - -50 mV",
+        "hex": "3A02"
+    },
+    {
+        "name": "575 mV",
+        "label": "575 mV - -45 mV",
+        "hex": "3F02"
+    },
+    {
+        "name": "580 mV",
+        "label": "580 mV - -40 mV",
+        "hex": "4402"
+    },
+    {
+        "name": "585 mV",
+        "label": "585 mV - -35 mV",
+        "hex": "4902"
+    },
+    {
+        "name": "590 mV",
+        "label": "590 mV - -30 mV",
+        "hex": "4E02"
+    },
+    {
+        "name": "595 mV",
+        "label": "595 mV - -25 mV",
+        "hex": "5302"
+    },
+    {
+        "name": "600 mV",
+        "label": "600 mV - -20 mV",
+        "hex": "5802"
+    },
+    {
+        "name": "610 mV",
+        "label": "610 mV - -10 mV",
+        "hex": "6202"
+    },
+    {
+        "name": "615 mV",
+        "label": "615 mV - -5 mV",
+        "hex": "6702"
+    },
+    {
+        "name": "620 mV",
+        "label": "620 mV - default",
+        "hex": "6C02"
+    },
+    {
+        "name": "625 mV",
+        "label": "625 mV - +5 mV",
+        "hex": "7102"
+    },
+    {
+        "name": "630 mV",
+        "label": "630 mV - +10 mV",
+        "hex": "7602"
+    },
+    {
+        "name": "635 mV",
+        "label": "635 mV - +15 mV",
+        "hex": "7B02"
+    },
+    {
+        "name": "640 mV",
+        "label": "640 mV - +20 mV",
+        "hex": "8002"
+    },
+    {
+        "name": "645 mV",
+        "label": "645 mV - +25 mV",
+        "hex": "8502"
+    },
+    {
+        "name": "650 mV",
+        "label": "650 mV - +30 mV",
+        "hex": "8A02"
+    }
+]
