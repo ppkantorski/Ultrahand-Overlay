@@ -1005,9 +1005,14 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                             replacement = replaceJsonPlaceholder(arg.substr(startPos, endPos - startPos + 2), "json", jsonString);
                             arg.replace(startPos, endPos - startPos + 2, replacement);
                             if (arg == lastArg) {
-                                arg.replace(startPos, endPos - startPos + 2, "{json(-1)}"); // fall back replacement value of -1
-                                commandSuccess = false;
-                                break;
+                                if (lastArg != "{json(-1)}") {
+                                    arg.replace(startPos, endPos - startPos + 2, "{json(-1)}"); // fall back replacement value of -1
+                                    commandSuccess = false;
+                                } else {
+                                    arg.replace(startPos, endPos - startPos + 2, "-1"); // fall back replacement value of -1
+                                    commandSuccess = false;
+                                    break;
+                                }
                             }
                         } else
                             break;
