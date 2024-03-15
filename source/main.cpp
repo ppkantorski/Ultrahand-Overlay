@@ -426,7 +426,7 @@ public:
             PackageHeader overlayHeader;
             overlayHeader.title = "Ultrahand Overlay";
             overlayHeader.version = std::string(APP_VERSION);
-            overlayHeader.creator = "b0rd2dEAth";
+            overlayHeader.creator = "ppkantorski";
             overlayHeader.about = "Ultrahand Overlay is a versatile tool that enables you to create and share custom command-based packages.";
             overlayHeader.credits = "Special thanks to B3711, ComplexNarrative, Faker_dev, MasaGratoR, meha, WerWolv, HookedBehemoth and many others. <3";
             addAppInfo(list, overlayHeader, "overlay");
