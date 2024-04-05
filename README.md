@@ -87,6 +87,6 @@ Contributions are welcome! If you have any ideas, suggestions, or bug reports, p
 
 ## License
 
-This project is licensed under the [CC-BY-NC-SA 4.0 License](LICENSE).
+This project is licensed under the [GPLv2 License](LICENSE) but also includes custom libararies licensed under [CC-by-NC-4.0-SA]().
 
 Copyright (c) 2023 ppkantorski
