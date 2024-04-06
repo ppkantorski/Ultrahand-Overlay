@@ -34,9 +34,6 @@ Note: Before applying any overlays or modifications, make sure you understand th
 
 Contributions from the community are welcome! If you have any improvements, bug fixes, or new examples to share, feel free to submit a pull request.
 
-## License
-
-This project is licensed under the [CC-BY-NC-SA-4.0 License](LICENSE).
 
 Copyright (c) 2023 ppkantorski
 
