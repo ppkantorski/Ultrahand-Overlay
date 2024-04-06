@@ -10,7 +10,7 @@
 #
 #   GitHub Repository: https://github.com/ppkantorski/Ultrahand-Overlay
 #
-# Licensed under CC BY-NC-SA 4.0
+# Licensed under GPLv2
 # Copyright (c) 2023 ppkantorski
 ##################################################################################
 
