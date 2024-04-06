@@ -2,7 +2,6 @@
 [![platform](https://img.shields.io/badge/platform-Switch-898c8c?logo=C++.svg)](https://gbatemp.net/forums/nintendo-switch.283/)
 [![language](https://img.shields.io/badge/language-C++-ba1632?logo=C++.svg)](https://github.com/topics/cpp)
 [![GPLv2 License](https://img.shields.io/badge/license%201-GPLv2-blue.svg)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)
-[![CC-BY-SA 4.0 License](https://img.shields.io/badge/license%202-CC--BY--SA%204.0-blue.svg)](https://creativecommons.org/licenses/by-sa/4.0/deed.en)
 [![Downloads](https://img.shields.io/github/downloads/ppkantorski/Ultrahand-Overlay/total?color=189c11)](https://github.com/ppkantorski/Ultrahand-Overlay/releases)
 
 Create directories, manage files, and customize configurations effortlessly using simple ini files.
@@ -88,6 +87,6 @@ Contributions are welcome! If you have any ideas, suggestions, or bug reports, p
 
 ## License
 
-This project is licensed and distributed under both [GPLv2](LICENSE_1) and [CC-BY-SA 4.0](LICENSE_2).
+This project is licensed and distributed under [GPLv2](LICENSE_1) with custom code utilizing GPLv2 + [CC-BY 4.0](LICENSE_2).
 
 Copyright (c) 2023 ppkantorski
