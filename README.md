@@ -88,6 +88,6 @@ Contributions are welcome! If you have any ideas, suggestions, or bug reports, p
 
 ## License
 
-This project is licensed and distributed under both [GPLv2](LICENSE) and [CC-BY-SA 4.0](LICENSE_2).
+This project is licensed and distributed under both [GPLv2](LICENSE_1) and [CC-BY-SA 4.0](LICENSE_2).
 
 Copyright (c) 2023 ppkantorski
