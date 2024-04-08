@@ -2460,9 +2460,10 @@ public:
                                     // Now, you can use the newStarred value for further processing if needed
                                 }
                                 if (inHiddenMode) {
-                                    tsl::goBack();
+                                    //tsl::goBack();
                                     inMainMenu = false;
                                     inHiddenMode = true;
+                                    reloadMenu2 = true;
                                 }
                                 tsl::changeTo<MainMenu>(hiddenMenuMode);
                                 //lastMenuMode = tmpMode;
@@ -2670,9 +2671,10 @@ public:
                                 setIniFileValue(packagesIniFilePath, packageName, "star", newStarred); // Update the INI file with the new value
                             
                             if (inHiddenMode) {
-                                tsl::goBack();
+                                //tsl::goBack();
                                 inMainMenu = false;
                                 inHiddenMode = true;
+                                reloadMenu2 = true;
                             }
                             tsl::changeTo<MainMenu>(hiddenMenuMode);
                             return true;
