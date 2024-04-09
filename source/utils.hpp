@@ -65,7 +65,7 @@ static const std::string overlaysIniFilePath = settingsPath + "overlays.ini";
 static const std::string packagesIniFilePath = settingsPath + "packages.ini";
 static const std::string ultrahandRepo = "https://github.com/ppkantorski/Ultrahand-Overlay/";
 
-
+static bool isDownloadCommand = false;
 static bool commandSuccess = false;
 static bool refreshGui = false;
 static bool usingErista = util::IsErista();
@@ -786,6 +786,9 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
         //modifiedCmd.reserve(cmd.size()); // Reserve memory for efficiency
         commandName = cmd[0];
         
+        if (commandName == "download")
+            isDownloadCommand = true;
+        
         if (commandName == "erista:" || commandName == "Erista:") {
             inEristaSection = true;
             inMarikoSection = false;
@@ -1229,6 +1232,7 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                         destinationPath = preprocessPath(modifiedCmd[2]);
                         downloadSuccess = false;
                         
+                        //setIniFileValue((packagePath+configFileName).c_str(), selectedCommand.c_str(), "footer", "downloading");
                         for (size_t i = 0; i < 3; ++i) { // Try 3 times.
                             downloadSuccess = downloadFile(fileUrl, destinationPath);
                             if (downloadSuccess)
