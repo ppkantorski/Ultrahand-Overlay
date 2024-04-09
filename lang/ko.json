@@ -32,6 +32,7 @@
     "UPDATE_LANGUAGES": "언어 업데이트",
     "THEME": "테마",
     "DEFAULT": "기본값",
+    "DOWNLOADING": "downloading",
     "ROOT_PACKAGE": "루트 패키지",
     "SORT_PRIORITY": "정렬 순서",
     "FAILED_TO_OPEN": "파일 열기 실패",
