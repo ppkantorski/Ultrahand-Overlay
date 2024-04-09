@@ -32,6 +32,7 @@
     "UPDATE_LANGUAGES": "Update Languages",
     "THEME": "Theme",
     "DEFAULT": "default",
+    "DOWNLOADING": "downloading",
     "ROOT_PACKAGE": "Root Package",
     "SORT_PRIORITY": "Sort Priority",
     "FAILED_TO_OPEN": "Failed to open file",
