@@ -32,6 +32,7 @@
     "UPDATE_LANGUAGES": "Mettre à jour les langues",
     "THEME": "Thème",
     "DEFAULT": "défaut",
+    "DOWNLOADING": "downloading",
     "ROOT_PACKAGE": "Paquet Racine",
     "SORT_PRIORITY": "Priorité de tri",
     "FAILED_TO_OPEN": "Échec de l'ouverture du fichier",
