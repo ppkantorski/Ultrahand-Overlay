@@ -378,15 +378,26 @@ public:
             
             
             listItem->setClickListener([this, listItem](uint64_t keys) { // Add 'command' to the capture list
-                if (keys & KEY_A) {
-                    deleteFileOrDirectory("/config/ultrahand/downloads/ovlmenu.ovl");
-                    isDownloaded = downloadFile(ultrahandRepo+"releases/latest/download/ovlmenu.ovl", "/config/ultrahand/downloads/");
-                    if (isDownloaded) {
-                        moveFileOrDirectory("/config/ultrahand/downloads/ovlmenu.ovl", "/switch/.overlays/ovlmenu.ovl");
-                        listItem->setValue(CHECKMARK_SYMBOL);
-                        languagesVersion = "latest";
-                    } else
-                        listItem->setValue(CROSSMARK_SYMBOL, false);
+                if (keys & KEY_A || isDownloadCommand) {
+                    bool runningDownload = false;
+                    if (isDownloadCommand)
+                        runningDownload = true;
+
+                    if (!runningDownload) {
+                        isDownloadCommand = true;
+                        listItem->setValue(DOWNLOADING);
+                    } else {
+                        deleteFileOrDirectory("/config/ultrahand/downloads/ovlmenu.ovl");
+                        isDownloaded = downloadFile(ultrahandRepo+"releases/latest/download/ovlmenu.ovl", "/config/ultrahand/downloads/");
+                        if (isDownloaded) {
+                            moveFileOrDirectory("/config/ultrahand/downloads/ovlmenu.ovl", "/switch/.overlays/ovlmenu.ovl");
+                            listItem->setValue(CHECKMARK_SYMBOL);
+                            languagesVersion = "latest";
+                        } else
+                            listItem->setValue(CROSSMARK_SYMBOL, false);
+
+                        isDownloadCommand = false;
+                    }
                     
                     return true;
                 }
@@ -399,22 +410,32 @@ public:
             // Envolke selectionOverlay in optionMode
             
             listItem->setClickListener([this, listItem](uint64_t keys) { // Add 'command' to the capture list
-                if (keys & KEY_A) {
-                    deleteFileOrDirectory("/config/ultrahand/downloads/ovlmenu.ovl");
-                    bool languageDownloaded = false;
-                    if (languagesVersion == "latest")
-                        languageDownloaded = downloadFile(ultrahandRepo+"releases/latest/download/lang.zip", "/config/ultrahand/downloads/");
-                    else
-                        languageDownloaded = downloadFile(ultrahandRepo+"releases/download/v"+languagesVersion+"/lang.zip", "/config/ultrahand/downloads/");
-                    if (languageDownloaded) {
-                        unzipFile("/config/ultrahand/downloads/lang.zip", "/config/ultrahand/downloads/lang/");
-                        deleteFileOrDirectory("/config/ultrahand/downloads/lang.zip");
-                        deleteFileOrDirectory("/config/ultrahand/lang/");
-                        moveFileOrDirectory("/config/ultrahand/downloads/lang/", "/config/ultrahand/lang/");
-                        listItem->setValue(CHECKMARK_SYMBOL);
-                    } else
-                        listItem->setValue(CROSSMARK_SYMBOL, false);
-                    
+                if (keys & KEY_A || isDownloadCommand) {
+                    bool runningDownload = false;
+                    if (isDownloadCommand)
+                        runningDownload = true;
+
+                    if (!runningDownload) {
+                        isDownloadCommand = true;
+                        listItem->setValue(DOWNLOADING);
+                    } else {
+                        deleteFileOrDirectory("/config/ultrahand/downloads/ovlmenu.ovl");
+                        bool languageDownloaded = false;
+                        if (languagesVersion == "latest")
+                            languageDownloaded = downloadFile(ultrahandRepo+"releases/latest/download/lang.zip", "/config/ultrahand/downloads/");
+                        else
+                            languageDownloaded = downloadFile(ultrahandRepo+"releases/download/v"+languagesVersion+"/lang.zip", "/config/ultrahand/downloads/");
+                        if (languageDownloaded) {
+                            unzipFile("/config/ultrahand/downloads/lang.zip", "/config/ultrahand/downloads/lang/");
+                            deleteFileOrDirectory("/config/ultrahand/downloads/lang.zip");
+                            deleteFileOrDirectory("/config/ultrahand/lang/");
+                            moveFileOrDirectory("/config/ultrahand/downloads/lang/", "/config/ultrahand/lang/");
+                            listItem->setValue(CHECKMARK_SYMBOL);
+                        } else
+                            listItem->setValue(CROSSMARK_SYMBOL, false);
+                        
+                        isDownloadCommand = false;
+                    }
                     return true;
                 }
                 return false;
@@ -1434,19 +1455,30 @@ public:
                 //
                 
                 listItem->setClickListener([this, i, optionName, footer, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
-                    if (keys & KEY_A) {
+                    if ((keys & KEY_A) || isDownloadCommand) {
+                        bool runningDownload = false;
+                        if (isDownloadCommand)
+                            runningDownload = true;
+
                         if (commandMode == "option") {
                             selectedFooterDict[specifiedFooterKey] = optionName;
                             lastSelectedListItem->setValue(lastSelectedListItemFooter, true);
                         }
-                        //std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(this->commands, selectedItem, i); // replace source
-                        interpretAndExecuteCommand(getSourceReplacement(this->commands, selectedItem, i), filePath, specificKey); // Execute modified 
-                        //modifiedCmds.clear();
+                        std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(this->commands, selectedItem, i); // replace source
+
+                        if (isDownloadCommand && !runningDownload) {
+                            listItem->setValue(DOWNLOADING);
+                        } else {
+                            interpretAndExecuteCommand(modifiedCmds, filePath, specificKey); // Execute modified 
+                            if (commandSuccess)
+                                listItem->setValue(CHECKMARK_SYMBOL);
+                            else
+                                listItem->setValue(CROSSMARK_SYMBOL);
+                            isDownloadCommand = false;
+                            runningDownload = false;
+                        }
+                        modifiedCmds.clear();
                         
-                        if (commandSuccess)
-                            listItem->setValue(CHECKMARK_SYMBOL);
-                        else
-                            listItem->setValue(CROSSMARK_SYMBOL);
                         
                         if (commandMode == "option") {
                             lastSelectedListItemFooter = footer;
@@ -1947,15 +1979,27 @@ public:
                             
                             
                             listItem->setClickListener([this, i, commands, keyName = option.first, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
-                                if (keys & KEY_A) {
-                                    //std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commands, keyName, i); // replace source
+                                if ((keys & KEY_A) || isDownloadCommand) {
+                                    bool runningDownload = false;
+                                    if (isDownloadCommand)
+                                        runningDownload = true;
+
+                                    std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commands, keyName, i); // replace source
                                     //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
-                                    interpretAndExecuteCommand(getSourceReplacement(commands, keyName, i), packagePath, keyName); // Execute modified
-                                    //modifiedCmds.clear();
-                                    if (commandSuccess)
-                                        listItem->setValue(CHECKMARK_SYMBOL);
-                                    else
-                                        listItem->setValue(CROSSMARK_SYMBOL);
+
+                                    if (isDownloadCommand && !runningDownload) {
+                                        listItem->setValue(DOWNLOADING);
+                                    } else {
+                                        interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified
+                                        if (commandSuccess)
+                                            listItem->setValue(CHECKMARK_SYMBOL);
+                                        else
+                                            listItem->setValue(CROSSMARK_SYMBOL);
+                                        isDownloadCommand = false;
+                                        runningDownload = false;
+                                    }
+                                    modifiedCmds.clear();
+
                                     return true;
                                 }  else if (keys & SCRIPT_KEY) {
                                     if (inPackageMenu)
@@ -2957,16 +3001,28 @@ public:
                             
                             if (sourceType == "json") { // For JSON wildcards
                                 listItem->setClickListener([this, i, commands, packagePath = packageDirectory, keyName = option.first, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
-                                    if (keys & KEY_A) {
-                                        //std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commands, selectedItem, i); // replace source
+                                    if ((keys & KEY_A) || isDownloadCommand) {
+                                        bool runningDownload = false;
+                                        if (isDownloadCommand)
+                                            runningDownload = true;
+
+                                        std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commands, selectedItem, i); // replace source
                                         //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
-                                        
-                                        interpretAndExecuteCommand(getSourceReplacement(commands, selectedItem, i), packagePath, keyName); // Execute modified
-                                        //modifiedCmds.clear();
-                                        if (commandSuccess)
-                                            listItem->setValue(CHECKMARK_SYMBOL);
-                                        else
-                                            listItem->setValue(CROSSMARK_SYMBOL);
+
+                                        if (isDownloadCommand && !runningDownload) {
+                                            listItem->setValue(DOWNLOADING);
+                                        } else {
+                                            interpretAndExecuteCommand(getSourceReplacement(modifiedCmds, selectedItem, i), packagePath, keyName); // Execute modified
+                                            
+                                            if (commandSuccess)
+                                                listItem->setValue(CHECKMARK_SYMBOL);
+                                            else
+                                                listItem->setValue(CROSSMARK_SYMBOL);
+                                            isDownloadCommand = false;
+                                            runningDownload = false;
+                                        }
+                                        modifiedCmds.clear();
+
                                         return true;
                                     } else if (keys & SCRIPT_KEY) {
                                         inMainMenu = false; // Set boolean to true when entering a submenu
@@ -2979,16 +3035,28 @@ public:
                                 list->addItem(listItem);
                             } else {
                                 listItem->setClickListener([this, i, commands, packagePath = packageDirectory, keyName = option.first, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
-                                    if (keys & KEY_A) {
-                                        //std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commands, selectedItem, i); // replace source
+                                    if ((keys & KEY_A) || isDownloadCommand) {
+                                        bool runningDownload = false;
+                                        if (isDownloadCommand)
+                                            runningDownload = true;
+
+                                        std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commands, selectedItem, i); // replace source
                                         //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
                                         
-                                        interpretAndExecuteCommand(getSourceReplacement(commands, selectedItem, i), packagePath, keyName); // Execute modified
-                                        //modifiedCmds.clear();
-                                        if (commandSuccess)
-                                            listItem->setValue(CHECKMARK_SYMBOL);
-                                        else
-                                            listItem->setValue(CROSSMARK_SYMBOL);
+                                        if (isDownloadCommand && !runningDownload) {
+                                            listItem->setValue(DOWNLOADING);
+                                        } else {
+                                            interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified
+                                            
+                                            if (commandSuccess)
+                                                listItem->setValue(CHECKMARK_SYMBOL);
+                                            else
+                                                listItem->setValue(CROSSMARK_SYMBOL);
+                                            isDownloadCommand = false;
+                                            runningDownload = false;
+                                        }
+                                        modifiedCmds.clear();
+
                                         return true;
                                     } else if (keys & SCRIPT_KEY) {
                                         inMainMenu = false; // Set boolean to true when entering a submenu
