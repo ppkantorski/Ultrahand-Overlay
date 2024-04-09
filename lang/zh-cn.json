@@ -32,6 +32,7 @@
     "UPDATE_LANGUAGES": "更新语言包",
     "THEME": "插件主题设置",
     "DEFAULT": "默认状态",
+    "DOWNLOADING": "downloading",
     "ROOT_PACKAGE": "插件包初始页",
     "SORT_PRIORITY": "优先级顺序",
     "FAILED_TO_OPEN": "未能打开该文件夹",
