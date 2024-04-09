@@ -191,6 +191,7 @@ static std::string UPDATE_ULTRAHAND = "Update Ultrahand";
 static std::string UPDATE_LANGUAGES = "Update Languages";
 static std::string THEME = "Theme";
 static std::string DEFAULT = "default";
+static std::string DOWNLOADING = "downloading";
 static std::string ROOT_PACKAGE = "Root Package";
 static std::string SORT_PRIORITY = "Sort Priority";
 static std::string FAILED_TO_OPEN = "Failed to open file";
@@ -297,6 +298,7 @@ void reinitializeLangVars() {
     UPDATE_LANGUAGES = "Update Languages";
     THEME = "Theme";
     DEFAULT = "default";
+    DOWNLOADING = "downloading";
     ROOT_PACKAGE = "Root Package";
     SORT_PRIORITY = "Sort Priority";
     FAILED_TO_OPEN = "Failed to open file";
@@ -416,6 +418,7 @@ void parseLanguage(std::string langFile) {
     updateIfNotEmpty(UPDATE_LANGUAGES, "UPDATE_LANGUAGES", langData);
     updateIfNotEmpty(THEME, "THEME", langData);
     updateIfNotEmpty(DEFAULT, "DEFAULT", langData);
+    updateIfNotEmpty(DOWNLOADING, "downloading", langData);
     updateIfNotEmpty(ROOT_PACKAGE, "ROOT_PACKAGE", langData);
     updateIfNotEmpty(SORT_PRIORITY, "SORT_PRIORITY", langData);
     updateIfNotEmpty(FAILED_TO_OPEN, "FAILED_TO_OPEN", langData);
