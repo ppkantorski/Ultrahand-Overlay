@@ -32,6 +32,7 @@
     "UPDATE_LANGUAGES": "Sprachen aktualisieren",
     "THEME": "Theme",
     "DEFAULT": "Standard",
+    "DOWNLOADING": "downloading",
     "ROOT_PACKAGE": "Stamm-Paket",
     "SORT_PRIORITY": "Sortierpriorität",
     "FAILED_TO_OPEN": "Konnte Datei nicht öffnen",
