@@ -32,6 +32,7 @@
     "UPDATE_LANGUAGES": "Actualizar Idiomas",
     "THEME": "Tema",
     "DEFAULT": "defecto",
+    "DOWNLOADING": "downloading",
     "ROOT_PACKAGE": "Paquete Raíz",
     "SORT_PRIORITY": "Prioridad de Orden",
     "FAILED_TO_OPEN": "No se pudo abrir el archivo",
