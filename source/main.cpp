@@ -385,7 +385,7 @@ public:
 
                     if (!runningDownload) {
                         isDownloadCommand = true;
-                        listItem->setValue(DOWNLOADING);
+                        listItem->setValue(DOWNLOAD_SYMBOL);
                     } else {
                         deleteFileOrDirectory("/config/ultrahand/downloads/ovlmenu.ovl");
                         isDownloaded = downloadFile(ultrahandRepo+"releases/latest/download/ovlmenu.ovl", "/config/ultrahand/downloads/");
@@ -417,7 +417,7 @@ public:
 
                     if (!runningDownload) {
                         isDownloadCommand = true;
-                        listItem->setValue(DOWNLOADING);
+                        listItem->setValue(DOWNLOAD_SYMBOL);
                     } else {
                         deleteFileOrDirectory("/config/ultrahand/downloads/ovlmenu.ovl");
                         bool languageDownloaded = false;
@@ -1467,7 +1467,7 @@ public:
                         std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(this->commands, selectedItem, i); // replace source
 
                         if (isDownloadCommand && !runningDownload) {
-                            listItem->setValue(DOWNLOADING);
+                            listItem->setValue(DOWNLOAD_SYMBOL);
                         } else {
                             interpretAndExecuteCommand(modifiedCmds, filePath, specificKey); // Execute modified 
                             if (commandSuccess)
@@ -1988,7 +1988,7 @@ public:
                                     //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
 
                                     if (isDownloadCommand && !runningDownload) {
-                                        listItem->setValue(DOWNLOADING);
+                                        listItem->setValue(DOWNLOAD_SYMBOL);
                                     } else {
                                         interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified
                                         if (commandSuccess)
@@ -3010,7 +3010,7 @@ public:
                                         //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
 
                                         if (isDownloadCommand && !runningDownload) {
-                                            listItem->setValue(DOWNLOADING);
+                                            listItem->setValue(DOWNLOAD_SYMBOL);
                                         } else {
                                             interpretAndExecuteCommand(getSourceReplacement(modifiedCmds, selectedItem, i), packagePath, keyName); // Execute modified
                                             
@@ -3044,7 +3044,7 @@ public:
                                         //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
                                         
                                         if (isDownloadCommand && !runningDownload) {
-                                            listItem->setValue(DOWNLOADING);
+                                            listItem->setValue(DOWNLOAD_SYMBOL);
                                         } else {
                                             interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified
                                             
