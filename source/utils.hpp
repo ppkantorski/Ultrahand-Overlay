@@ -785,10 +785,10 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
         
         //modifiedCmd.reserve(cmd.size()); // Reserve memory for efficiency
         commandName = cmd[0];
-        
+
         if (commandName == "download")
             isDownloadCommand = true;
-        
+
         if (commandName == "erista:" || commandName == "Erista:") {
             inEristaSection = true;
             inMarikoSection = false;
@@ -962,7 +962,7 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                             replacement = replaceHexPlaceholder(arg.substr(startPos, endPos - startPos + 2), hexPath);
                             arg.replace(startPos, endPos - startPos + 2, replacement);
                             if (arg == lastArg) {
-                                arg.replace(startPos, endPos - startPos + 2, "-1"); // fall back replacement value of -1
+                                arg.replace(startPos, endPos - startPos + 2, "null"); // fall back replacement value of null
                                 commandSuccess = false;
                                 break;
                             }
@@ -977,7 +977,7 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                             replacement = replaceIniPlaceholder(arg.substr(startPos, endPos - startPos + 2), iniPath);
                             arg.replace(startPos, endPos - startPos + 2, replacement);
                             if (arg == lastArg) {
-                                arg.replace(startPos, endPos - startPos + 2, "-1"); // fall back replacement value of -1
+                                arg.replace(startPos, endPos - startPos + 2, "null"); // fall back replacement value of null
                                 commandSuccess = false;
                                 break;
                             }
@@ -993,7 +993,7 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                             replacement = stringToList(listString)[listIndex];
                             arg.replace(startPos, endPos - startPos + 2, replacement);
                             if (arg == lastArg) {
-                                arg.replace(startPos, endPos - startPos + 2, "-1"); // fall back replacement value of -1
+                                arg.replace(startPos, endPos - startPos + 2, "null"); // fall back replacement value of null
                                 commandSuccess = false;
                                 break;
                             }
@@ -1008,7 +1008,7 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                             replacement = replaceJsonPlaceholder(arg.substr(startPos, endPos - startPos + 2), "json", jsonString);
                             arg.replace(startPos, endPos - startPos + 2, replacement);
                             if (arg == lastArg) {
-                                arg.replace(startPos, endPos - startPos + 2, "-1"); // fall back replacement value of -1
+                                arg.replace(startPos, endPos - startPos + 2, "null"); // fall back replacement value of null
                                 commandSuccess = false;
                                 break;
                             }
@@ -1023,7 +1023,7 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                             replacement = replaceJsonPlaceholder(arg.substr(startPos, endPos - startPos + 2), "json_file", jsonPath);
                             arg.replace(startPos, endPos - startPos + 2, replacement);
                             if (arg == lastArg) {
-                                arg.replace(startPos, endPos - startPos + 2, "-1"); // fall back replacement value of -1
+                                arg.replace(startPos, endPos - startPos + 2, "null"); // fall back replacement value of null
                                 commandSuccess = false;
                                 break;
                             }
