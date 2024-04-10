@@ -35,6 +35,6 @@ Note: Before applying any overlays or modifications, make sure you understand th
 Contributions from the community are welcome! If you have any improvements, bug fixes, or new examples to share, feel free to submit a pull request.
 
 
-Copyright (c) 2023 ppkantorski
+Copyright (c) 2024 ppkantorski
 
 All rights reserved.
