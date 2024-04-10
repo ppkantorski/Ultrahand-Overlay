@@ -89,4 +89,4 @@ Contributions are welcome! If you have any ideas, suggestions, or bug reports, p
 
 This project is licensed and distributed under [GPLv2](LICENSE_1) with custom code utilizing [CC-BY-4.0](LICENSE_2).
 
-Copyright (c) 2023 ppkantorski
+Copyright (c) 2024 ppkantorski
