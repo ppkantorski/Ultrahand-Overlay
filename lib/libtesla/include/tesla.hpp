@@ -15,7 +15,7 @@
  *   Note: Please be aware that this notice cannot be altered or removed. It is a part
  *   of the project's documentation and must remain intact.
  *
- *  Copyright (c) 2023 ppkantorski
+ *  Copyright (c) 2024 ppkantorski
  ********************************************************************************/
 
 /**
