@@ -15,7 +15,7 @@
  *   Note: Please be aware that this notice cannot be altered or removed. It is a part
  *   of the project's documentation and must remain intact.
  *
- *  Copyright (c) 2024 ppkantorski
+ *  Copyright (c) 2023 ppkantorski
  ********************************************************************************/
 
 /**
@@ -141,7 +141,7 @@ static const std::string OPTION_SYMBOL = "\u22EF";
 static const std::string DROPDOWN_SYMBOL = "\u25B6";
 static const std::string CHECKMARK_SYMBOL = "\uE14B";
 static const std::string CROSSMARK_SYMBOL = "\uE14C";
-static const std::string DOWNLOAD_SYMBOL = "\u25BD";
+static const std::string DOWNLOAD_SYMBOL = "\u2193";
 static const std::string STAR_SYMBOL = "\u2605";
 
 
