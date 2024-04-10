@@ -12,7 +12,7 @@
  *   of the project's documentation and must remain intact.
  *
  *  Licensed under both GPLv2 and CC-BY-4.0
- *  Copyright (c) 2023 ppkantorski
+ *  Copyright (c) 2024 ppkantorski
  ********************************************************************************/
 
 #include <cstdio>
