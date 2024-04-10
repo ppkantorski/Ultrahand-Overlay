@@ -13,7 +13,7 @@
  *   of the project's documentation and must remain intact.
  *
  *  Licensed under GPLv2
- *  Copyright (c) 2024 ppkantorski
+ *  Copyright (c) 2023 ppkantorski
  ********************************************************************************/
 
 #pragma once
@@ -1008,7 +1008,7 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                             replacement = replaceJsonPlaceholder(arg.substr(startPos, endPos - startPos + 2), "json", jsonString);
                             arg.replace(startPos, endPos - startPos + 2, replacement);
                             if (arg == lastArg) {
-                                arg.replace(startPos, endPos - startPos + 2, "null"); // fall back replacement value of null
+                                arg.replace(startPos, endPos - startPos + 2, UNAVAILABLE_SELECTION); // fall back replacement value of `UNAVAILABLE_SELECTION`
                                 commandSuccess = false;
                                 break;
                             }
@@ -1023,7 +1023,7 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                             replacement = replaceJsonPlaceholder(arg.substr(startPos, endPos - startPos + 2), "json_file", jsonPath);
                             arg.replace(startPos, endPos - startPos + 2, replacement);
                             if (arg == lastArg) {
-                                arg.replace(startPos, endPos - startPos + 2, "null"); // fall back replacement value of null
+                                arg.replace(startPos, endPos - startPos + 2, UNAVAILABLE_SELECTION); // fall back replacement value of `UNAVAILABLE_SELECTION`
                                 commandSuccess = false;
                                 break;
                             }
