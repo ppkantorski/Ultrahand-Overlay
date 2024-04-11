@@ -51,12 +51,11 @@ bool pchtxt2ips(const std::string& pchtxtPath, const std::string& outputFolder) 
 
     char line[2048]; // Assuming maximum line length is 512 characters
     
-    logMessage("debug stage 1");
 
     uint32_t lineNum = 0;
     std::string nsobid;
     while (fgets(line, sizeof(line), pchtxtFile) != NULL) {
-        logMessage("debug stage 2");
+
         ++lineNum;
         // Check for newline character to handle lines longer than the buffer
         if (line[strlen(line) - 1] != '\n') {
@@ -64,17 +63,14 @@ bool pchtxt2ips(const std::string& pchtxtPath, const std::string& outputFolder) 
             break;
         }
 
-        logMessage("debug stage 3");
         std::string lineStr(line);
         if (lineStr.empty() || lineStr.find('@') == 0) continue;  // Skip empty lines and lines starting with '@'
 
-        logMessage("debug stage 4");
         if (lineStr.find("@nsobid-") == 0) {
             nsobid = lineStr.substr(8); // Extract the nsobid value
             continue;
         }
 
-        logMessage("debug stage 5");
         std::string addressStr, valueStr;
 
         // Tokenize the line using std::istringstream
@@ -84,7 +80,6 @@ bool pchtxt2ips(const std::string& pchtxtPath, const std::string& outputFolder) 
             continue;
         }
 
-        logMessage("debug stage 6");
         char* endPtr;
         uint32_t address = std::strtoul(addressStr.c_str(), &endPtr, 16);
         if (*endPtr != '\0') {
@@ -92,7 +87,6 @@ bool pchtxt2ips(const std::string& pchtxtPath, const std::string& outputFolder) 
             continue;
         }
 
-        logMessage("debug stage 7");
         std::vector<uint8_t> valueBytes;
         for (size_t i = 0; i < valueStr.length(); i += 2) {
             uint8_t byte = std::stoi(valueStr.substr(i, 2), nullptr, 16);
@@ -105,7 +99,6 @@ bool pchtxt2ips(const std::string& pchtxtPath, const std::string& outputFolder) 
             continue;
         }
         
-        logMessage("debug stage 8");
         patches.push_back(std::make_pair(address, valueBytes));
     }
 
@@ -134,8 +127,6 @@ bool pchtxt2ips(const std::string& pchtxtPath, const std::string& outputFolder) 
 
     fclose(pchtxtFile);
 
-
-    logMessage("debug stage 9");
     std::string ipsFileName = nsobid + ".ips";
 
     // Construct IPS file path
@@ -151,10 +142,8 @@ bool pchtxt2ips(const std::string& pchtxtPath, const std::string& outputFolder) 
         return success;
     }
 
-    logMessage("debug stage 10");
     fwrite(IPS32_HEAD_MAGIC.c_str(), 1, IPS32_HEAD_MAGIC.size(), ipsFile);
 
-    logMessage("debug stage 11");
     for (const auto& patch : patches) {
         uint32_t address = patch.first;
         const std::vector<uint8_t>& value = patch.second;
@@ -164,11 +153,9 @@ bool pchtxt2ips(const std::string& pchtxtPath, const std::string& outputFolder) 
         fwrite(value.data(), 1, value.size(), ipsFile);  // Write value
     }
 
-    logMessage("debug stage 12");
     fwrite(IPS32_FOOT_MAGIC.c_str(), 1, IPS32_FOOT_MAGIC.size(), ipsFile);
 
     fclose(ipsFile);
 
-    logMessage("debug stage 13");
     return success;
 }
