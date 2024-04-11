@@ -123,7 +123,7 @@ bool pchtxt2ips(const std::string& pchtxtPath, const std::string& outputFolder) 
         }
     }
     
-    logMessage("nsobid: "+nsobid);
+    //logMessage("nsobid: "+nsobid);
 
     fclose(pchtxtFile);
 
@@ -132,7 +132,7 @@ bool pchtxt2ips(const std::string& pchtxtPath, const std::string& outputFolder) 
     // Construct IPS file path
     std::string ipsFilePath = outputFolder + ipsFileName;
 
-    logMessage("ipsFilePath: "+ipsFilePath);
+    //logMessage("ipsFilePath: "+ipsFilePath);
 
     // Write IPS file
     FILE* ipsFile = fopen(ipsFilePath.c_str(), "wb");
