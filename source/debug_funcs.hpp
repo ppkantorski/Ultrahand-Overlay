@@ -11,13 +11,12 @@
  *   Note: Please be aware that this notice cannot be altered or removed. It is a part
  *   of the project's documentation and must remain intact.
  * 
- *  Licensed under CC BY-NC-SA 4.0
- *  Copyright (c) 2023 ppkantorski
+ *  Licensed under both GPLv2 and CC-BY-4.0
+ *  Copyright (c) 2024 ppkantorski
  ********************************************************************************/
 
 #pragma once
 #include <cstdio>
-#include <switch.h>
 
 // Specify the log file path
 const std::string logFilePath = "sdmc:/config/ultrahand/log.txt";
