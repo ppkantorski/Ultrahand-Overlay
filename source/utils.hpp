@@ -25,6 +25,7 @@
 #include <hex_funcs.hpp>
 #include <download_funcs.hpp>
 #include <list_funcs.hpp>
+#include <mod_funcs.hpp>
 
 #include <payload.hpp> // Studious Pancake
 #include <util.hpp> // Studious Pancake
@@ -1245,6 +1246,12 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                         sourcePath = preprocessPath(modifiedCmd[1]);
                         destinationPath = preprocessPath(modifiedCmd[2]);
                         commandSuccess = unzipFile(sourcePath, destinationPath) && commandSuccess;
+                    }
+                } else if (commandName == "pchtxt2ips") {
+                    if (cmdSize >= 3) {
+                        sourcePath = preprocessPath(modifiedCmd[1]);
+                        destinationPath = preprocessPath(modifiedCmd[2]);
+                        commandSuccess = pchtxt2ips(sourcePath, destinationPath) && commandSuccess;
                     }
                 } else if (commandName == "exec") {
                     if (cmdSize >= 2) {
