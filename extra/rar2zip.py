@@ -99,16 +99,40 @@ def convert_rar_to_zip(directory):
             if file.endswith(".rar"):
                 rar_file = os.path.join(root, file)
                 try:
+                    # Extract the .rar file
                     Archive(rar_file).extractall(root)
-                    os.rename(rar_file, os.path.splitext(rar_file)[0] + ".zip")
                     
-                    # Delete the folder created after extraction
-                    extracted_folder = os.path.splitext(rar_file)[0]
-                    if os.path.exists(extracted_folder):
-                        shutil.rmtree(extracted_folder)
+                    # Get the list of extracted folders
+                    extracted_folders = [name for name in os.listdir(root) if os.path.isdir(os.path.join(root, name))]
+                    
+                    # Process each extracted folder
+                    for extracted_folder in extracted_folders:
+                        # Create the .zip file for this extracted folder
+                        zip_file = os.path.join(root, extracted_folder + ".zip")
+                        shutil.make_archive(os.path.join(root, extracted_folder), 'zip', root, extracted_folder)
+                        
+                        # Remove the extracted folder
+                        shutil.rmtree(os.path.join(root, extracted_folder))
+                        
+                    # Remove the .rar file
+                    os.remove(rar_file)
                     
                 except Exception as e:
                     print(f"Failed to convert: {rar_file}. Error: {e}")
+
+
+"""
+Removes files named "..." from all directories within the specified directory.
+
+Args:
+    directory (str): The path to the directory to clean up.
+"""
+def cleanup_directory(directory):
+    for root, _, files in os.walk(directory):
+        for file in files:
+            if file == "...":
+                os.remove(os.path.join(root, file))
+
 
 if __name__ == "__main__":
     import sys
@@ -120,3 +144,4 @@ if __name__ == "__main__":
     install_dependencies()
     directory = sys.argv[1]
     convert_rar_to_zip(directory)
+    cleanup_directory(directory)
