@@ -12,7 +12,7 @@ Description:
     Note: Please be aware that this notice cannot be altered or removed. It is a part
     of the project's documentation and must remain intact.
     
-Licensed under both GPLv2 and CC-BY-4.0
+Licensed under CC-BY-NC-SA-4.0
 Copyright (c) 2024 ppkantorski
 """
 
