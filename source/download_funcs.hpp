@@ -215,33 +215,50 @@ bool unzipFile(const std::string& zipFilePath, const std::string& toDestination)
     bool success = true;
     ZZIP_DIRENT entry;
     while (zzip_dir_read(dir, &entry)) {
-        if (entry.d_name[0] == '\0') continue;  // Skip empty entries
+        // Skip empty entries, "..." files, and files starting with "."
+        if (entry.d_name[0] == '\0') {
+            continue;
+        }
 
         std::string fileName = entry.d_name;
         std::string extractedFilePath = toDestination + fileName;
-        
+
+        // Skip extractedFilePath ends with "..."
+        if (extractedFilePath.size() >= 3 && extractedFilePath.substr(extractedFilePath.size() - 3) == "...")
+            continue;
+
+        // Replace ":" characters except in "sdmc:/"
+        size_t firstColonPos = extractedFilePath.find(':');
+        if (firstColonPos != std::string::npos) {
+            size_t colonPos = extractedFilePath.find(':', firstColonPos + 1);
+            while (colonPos != std::string::npos) {
+                extractedFilePath[colonPos] = ' ';
+                colonPos = extractedFilePath.find(':', colonPos + 1);
+            }
+        }
+
+        // Replace double spaces with single space
+        size_t pos = extractedFilePath.find("  ");
+        while (pos != std::string::npos) {
+            extractedFilePath.replace(pos, 2, " ");
+            pos = extractedFilePath.find("  ", pos + 1);
+        }
+
+
         // Skip over present directory entries when extracting files from a zip archive
         if (!extractedFilePath.empty() && extractedFilePath.back() == '/') {
             continue;
         }
-        
+
         // Extract the directory path from the extracted file path
         std::string directoryPath;
         if (extractedFilePath.back() != '/') {
-            directoryPath = extractedFilePath.substr(0, extractedFilePath.find_last_of('/'))+"/";
+            directoryPath = extractedFilePath.substr(0, extractedFilePath.find_last_of('/')) + "/";
         } else {
             directoryPath = extractedFilePath;
         }
-        
+
         createDirectory(directoryPath);
-        
-        //if (isDirectory(directoryPath)) {
-        //    logMessage("directoryPath: "+directoryPath+" exists");
-        //} else {
-        //    logMessage("directoryPath: "+directoryPath+" does not exist");
-        //}
-        //
-        //logMessage(std::string("directoryPath: ") + directoryPath);
 
         ZZIP_FILE* file = zzip_file_open(dir, entry.d_name, 0);
         if (file) {
@@ -271,3 +288,4 @@ bool unzipFile(const std::string& zipFilePath, const std::string& toDestination)
     zzip_dir_close(dir);
     return success;
 }
+
