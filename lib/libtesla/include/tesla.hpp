@@ -15,7 +15,7 @@
  *   Note: Please be aware that this notice cannot be altered or removed. It is a part
  *   of the project's documentation and must remain intact.
  *
- *  Copyright (c) 2023 ppkantorski
+ *  Copyright (c) 2024 ppkantorski
  ********************************************************************************/
 
 /**
@@ -1621,7 +1621,7 @@ namespace tsl {
              * @param h Height
              * @param color Color
              */
-            inline void drawRect(s32 x, s32 y, s32 w, s32 h, Color color) {
+            inline void drawRect(float x, float y, float w, float h, Color color) {
                 for (s32 x1 = x; x1 < (x + w); x1++)
                     for (s32 y1 = y; y1 < (y + h); y1++)
                         this->setPixelBlendDst(x1, y1, color);
@@ -3355,16 +3355,18 @@ namespace tsl {
                 renderer->disableScissoring();
                 
                 if (this->m_listHeight > this->getHeight()) {
-                    scrollbarHeight = static_cast<float>(this->getHeight() * this->getHeight()) / this->m_listHeight;
-                    scrollbarOffset = (static_cast<float>(this->m_offset)) / static_cast<float>(this->m_listHeight - this->getHeight()) * (this->getHeight() - std::ceil(scrollbarHeight));
+                    scrollbarHeight = static_cast<float>(this->getHeight() * this->getHeight() / this->m_listHeight - 50);
+                    if (scrollbarHeight < 0)
+                        scrollbarHeight = 0;
+                    scrollbarOffset = (static_cast<float>(this->m_offset)) / static_cast<float>(this->m_listHeight - this->getHeight()) * static_cast<float>(this->getHeight() - std::ceil(scrollbarHeight + 50));
                     
                     offset = 11;
-                    renderer->drawRect(this->getRightBound() + 10+offset, this->getY() + scrollbarOffset, 5, scrollbarHeight - 50, trackBarColor);
+                    renderer->drawRect(this->getRightBound() + 10+offset, this->getY() + scrollbarOffset, 5, scrollbarHeight, trackBarColor);
                     renderer->drawCircle(this->getRightBound() + 12+offset, this->getY() + scrollbarOffset, 2, true, trackBarColor);
-                    renderer->drawCircle(this->getRightBound() + 12+offset, ( this->getY() + scrollbarOffset + (this->getY() + scrollbarOffset + this->getY() + scrollbarOffset + scrollbarHeight - 50)/2)/2, 2, true, trackBarColor);
-                    renderer->drawCircle(this->getRightBound() + 12+offset, (this->getY() + scrollbarOffset + this->getY() + scrollbarOffset + scrollbarHeight - 50)/2, 2, true, trackBarColor);
-                    renderer->drawCircle(this->getRightBound() + 12+offset, (this->getY() + scrollbarOffset + scrollbarHeight - 50 + (this->getY() + scrollbarOffset + this->getY() + scrollbarOffset + scrollbarHeight - 50)/2)/2, 2, true, trackBarColor);
-                    renderer->drawCircle(this->getRightBound() + 12+offset, this->getY() + scrollbarOffset + scrollbarHeight - 50, 2, true, trackBarColor);
+                    renderer->drawCircle(this->getRightBound() + 12+offset, ( this->getY() + scrollbarOffset + (this->getY() + scrollbarOffset + this->getY() + scrollbarOffset + scrollbarHeight)/2)/2, 2, true, trackBarColor);
+                    renderer->drawCircle(this->getRightBound() + 12+offset, (this->getY() + scrollbarOffset + this->getY() + scrollbarOffset + scrollbarHeight)/2, 2, true, trackBarColor);
+                    renderer->drawCircle(this->getRightBound() + 12+offset, (this->getY() + scrollbarOffset + scrollbarHeight + (this->getY() + scrollbarOffset + this->getY() + scrollbarOffset + scrollbarHeight)/2)/2, 2, true, trackBarColor);
+                    renderer->drawCircle(this->getRightBound() + 12+offset, this->getY() + scrollbarOffset + scrollbarHeight, 2, true, trackBarColor);
                     
                     prevOffset = this->m_offset;
                     
