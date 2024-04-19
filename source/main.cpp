@@ -3527,7 +3527,7 @@ public:
                         simulatedNextPageComplete = true;
                     }
                 }
-
+                
                 if ((keysHeld & KEY_DRIGHT) && !(keysHeld & (KEY_DLEFT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR)) && !stillTouching) {
                     if (menuMode != "packages") {
                         setIniFileValue(settingsConfigIniPath, "ultrahand", "last_menu", "packages");
@@ -3545,12 +3545,12 @@ public:
                         return true;
                     }
                 }
-
+                
                 if (simulatedBack && !simulatedBackComplete) {
                     keysHeld |= KEY_B;
                     simulatedBack = false;
                 }
-
+                
                 if ((keysHeld & KEY_B) && !stillTouching) {
                     //inMainMenu = false;
                     setIniFileValue(settingsConfigIniPath, "ultrahand", "last_menu", defaultMenuMode);
@@ -3558,12 +3558,12 @@ public:
                     simulatedBackComplete = true;
                     return true;
                 }
-
+                
                 if (simulatedMenu && !simulatedMenuComplete) {
                     keysHeld |= SYSTEM_SETTINGS_KEY;
                     simulatedMenu = false;
                 }
-
+                
                 if ((keysHeld & SYSTEM_SETTINGS_KEY) && !stillTouching) {
                     tsl::changeTo<UltrahandSettingsMenu>();
                     simulatedMenuComplete = true;
@@ -3577,17 +3577,17 @@ public:
                     simulatedNextPage = false;
                     simulatedNextPageComplete = true;
                 }
-
+                
                 if (simulatedMenu && !simulatedMenuComplete) {
                     simulatedMenu = false;
                     simulatedMenuComplete = true;
                 }
-
+                
                 if (simulatedBack && !simulatedBackComplete) {
                     keysHeld |= KEY_B;
                     simulatedBack = false;
                 }
-
+                
                 if ((keysHeld & KEY_B) && !stillTouching) {
                     returningToMain = true;
                     inHiddenMode = false;
