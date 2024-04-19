@@ -686,6 +686,7 @@ static bool simulatedMenu = false;
 static bool simulatedMenuComplete = true;
 static bool stillTouching = false;
 static bool interruptedTouch = false;
+static bool touchInBounds = false;
 
 
 // Battery implementation
@@ -3684,6 +3685,9 @@ namespace tsl {
             tsl::Color onTextColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "on_text_color"), "#00FFDD");
             tsl::Color offTextColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "off_text_color"), "#AAAAAA");
             
+            tsl::Color clickTextColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "click_text_color"));
+            tsl::Color clickColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "click_color"));
+
             std::chrono::system_clock::time_point timeIn;// = std::chrono::system_clock::now();
             std::chrono::duration<long int, std::ratio<1, 1000000000>> t;
             u32 width, height;
@@ -3699,8 +3703,13 @@ namespace tsl {
             virtual ~ListItem() {}
             
             virtual void draw(gfx::Renderer *renderer) override {
+                bool useClickTextColor = false;
                 if (this->m_touched && Element::getInputMode() == InputMode::Touch) {
-                    renderer->drawRect(ELEMENT_BOUNDS(this), tsl::style::color::ColorClickAnimation);
+                    if (touchInBounds) {
+                        renderer->drawRect(ELEMENT_BOUNDS(this), clickColor);
+                        useClickTextColor = true;
+                    }
+                    //renderer->drawRect(ELEMENT_BOUNDS(this), tsl::style::color::ColorClickAnimation);
                 }
                 
                 if (this->m_maxWidth == 0) {
@@ -3756,26 +3765,27 @@ namespace tsl {
                             }
                         } // CUSTOM MODIFICATION END
                     } else {
-                        renderer->drawString(this->m_ellipsisText.c_str(), false, this->getX() + 20, this->getY() + 45, 23, defaultTextColor);
+                        renderer->drawString(this->m_ellipsisText.c_str(), false, this->getX() + 20, this->getY() + 45, 23, !useClickTextColor ? defaultTextColor : clickTextColor);
                     }
                 } else {
-                    if (this->m_focused)
-                        renderer->drawString(this->m_text.c_str(), false, this->getX() + 20, this->getY() + 45, 23, selectedTextColor);
-                    else
-                        renderer->drawString(this->m_text.c_str(), false, this->getX() + 20, this->getY() + 45, 23, defaultTextColor);
+                    if (this->m_focused) {
+                        renderer->drawString(this->m_text.c_str(), false, this->getX() + 20, this->getY() + 45, 23, !useClickTextColor ? selectedTextColor : clickTextColor);
+                    } else {
+                        renderer->drawString(this->m_text.c_str(), false, this->getX() + 20, this->getY() + 45, 23, !useClickTextColor ? defaultTextColor : clickTextColor);
+                    }
                 }
                 
                 
                 // CUSTOM SECTION START (modification for submenu footer color)
                 if (this->m_value == DROPDOWN_SYMBOL || this->m_value == OPTION_SYMBOL) {
                     if (this->m_focused)
-                        renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +4, this->getY() + 45, 20, this->m_faint ? offTextColor : selectedTextColor);
+                        renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +4, this->getY() + 45, 20, !useClickTextColor ? (this->m_faint ? offTextColor : selectedTextColor) : clickTextColor);
                     else
-                        renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +4, this->getY() + 45, 20, this->m_faint ? offTextColor : defaultTextColor);
+                        renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +4, this->getY() + 45, 20, !useClickTextColor ? (this->m_faint ? offTextColor : defaultTextColor) : clickTextColor);
                 } else if (this->m_value == CROSSMARK_SYMBOL) {
-                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +4, this->getY() + 45, 20, this->m_faint ? offTextColor : invalidTextColor);
+                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +4, this->getY() + 45, 20, !useClickTextColor ? (this->m_faint ? offTextColor : invalidTextColor) : clickTextColor);
                 } else {
-                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +4, this->getY() + 45, 20, this->m_faint ? offTextColor : onTextColor);
+                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +4, this->getY() + 45, 20, !useClickTextColor ? (this->m_faint ? offTextColor : onTextColor) : clickTextColor);
                 }
                 // CUSTOM SECTION END 
             }
@@ -4934,8 +4944,12 @@ namespace tsl {
                     elm::Element::setInputMode(InputMode::Touch);
                     if (currentFocus != nullptr)
                         lastFocus = currentFocus;
-                    if (initialTouchPos.y <= cfg::FramebufferHeight - 73U && initialTouchPos.y > 73U && initialTouchPos.x <= cfg::FramebufferWidth)
+                    if (initialTouchPos.y <= cfg::FramebufferHeight - 73U && initialTouchPos.y > 73U && initialTouchPos.x <= cfg::FramebufferWidth && initialTouchPos.x > 0U) {
+                        touchInBounds = true;
                         currentGui->removeFocus();
+                    } else {
+                        touchInBounds = false;
+                    }
                     touchEvent = elm::TouchEvent::Touch;
                 }
                 
