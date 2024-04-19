@@ -134,6 +134,9 @@ void initializeTheme(std::string themeIniPath = themeConfigIniPath) {
             if (themedSection.count("highlight_color_2") == 0)
                 setIniFileValue(themeIniPath, "theme", "highlight_color_2", "#88FFFF");
             
+            if (themedSection.count("click_text_color") == 0)
+                setIniFileValue(themeIniPath, "theme", "click_text_color", "#000000");
+
             if (themedSection.count("click_color") == 0)
                 setIniFileValue(themeIniPath, "theme", "click_color", "#F7253E");
             
