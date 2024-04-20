@@ -57,10 +57,12 @@ static bool redrawWidget = false;
 
 
 // Command mode globals
+static std::vector<std::string> commandSystems = {"default", "erista", "mariko"};
 static std::vector<std::string> commandModes = {"default", "toggle", "option"};
 static std::vector<std::string> commandGroupings = {"default", "split", "split2", "split3", "split4"};
 static std::string modePattern = ";mode=";
 static std::string groupingPattern = ";grouping=";
+static std::string systemPattern = ";system=";
 
 static std::string lastMenu = "";
 static std::string lastMenuMode = "";
@@ -1303,7 +1305,7 @@ private:
     std::string specifiedFooterKey;
     bool toggleState = false;
     std::string packageConfigIniPath;
-    std::string commandMode, commandGrouping;
+    std::string commandSystem, commandMode, commandGrouping;
     
     std::string lastSelectedListItemFooter = "";
 public:
@@ -1346,6 +1348,7 @@ public:
         
         packageConfigIniPath = filePath + configFileName;
         
+        commandSystem = commandSystems[0];
         commandMode = commandModes[0];
         commandGrouping = commandGroupings[0];
         
@@ -1373,11 +1376,11 @@ public:
             
             commandName = cmd[0];
             
-            if (commandName == "erista:" || commandName == "Erista:") {
+            if (stringToLowercase(commandName) == "erista:") {
                 inEristaSection = true;
                 inMarikoSection = false;
                 continue;
-            } else if (commandName == "mariko:" || commandName == "Mariko:") {
+            } else if (stringToLowercase(commandName) == "mariko:") {
                 inEristaSection = false;
                 inMarikoSection = true;
                 continue;
@@ -1385,8 +1388,12 @@ public:
             
             if ((inEristaSection && !inMarikoSection && usingErista) || (!inEristaSection && inMarikoSection && usingMariko) || (!inEristaSection && !inMarikoSection)) {
                 
-                // Extract the command mode
-                if (commandName.find(modePattern) == 0) {
+                
+                if (commandName.find(systemPattern) == 0) {// Extract the command system
+                    commandSystem = commandName.substr(systemPattern.length());
+                    if (std::find(commandSystems.begin(), commandSystems.end(), commandSystem) == commandSystems.end())
+                        commandSystem = commandSystems[0]; // reset to default if commandMode is unknown
+                } else if (commandName.find(modePattern) == 0) { // Extract the command mode
                     commandMode = commandName.substr(modePattern.length());
                     if (std::find(commandModes.begin(), commandModes.end(), commandMode) == commandModes.end())
                         commandMode = commandModes[0]; // reset to default if commandMode is unknown
@@ -1907,6 +1914,8 @@ public:
         
         
         bool skipSection = false;
+        bool skipSystem = false;
+
         // Populate the sub menu with options
         //for (const auto& option : options) {
         std::string lastSection = "";
@@ -1916,6 +1925,7 @@ public:
         
         std::string commandName;
         std::string commandFooter;
+        std::string commandSystem;
         std::string commandMode;
         std::string commandGrouping;
         
@@ -1947,6 +1957,7 @@ public:
             useSelection = false;
             
             commandFooter = "null";
+            commandSystem = "default";
             commandMode = "default";
             commandGrouping = "default";
             
@@ -2060,19 +2071,23 @@ public:
                     
                     commandName = cmd[0];
                     
-                    if (commandName == "erista:" || commandName == "Erista:") {
+                    if (stringToLowercase(commandName) == "erista:") {
                         inEristaSection = true;
                         inMarikoSection = false;
                         continue;
-                    } else if (commandName == "mariko:" || commandName == "Mariko:") {
+                    } else if (stringToLowercase(commandName) == "mariko:") {
                         inEristaSection = false;
                         inMarikoSection = true;
                         continue;
                     }
                     
                     if ((inEristaSection && !inMarikoSection && usingErista) || (!inEristaSection && inMarikoSection && usingMariko) || (!inEristaSection && !inMarikoSection)) {
-                        // Extract the command mode
-                        if (commandName.find(modePattern) == 0) {
+
+                        if (commandName.find(systemPattern) == 0) {// Extract the command system
+                            commandSystem = commandName.substr(systemPattern.length());
+                            if (std::find(commandSystems.begin(), commandSystems.end(), commandSystem) == commandSystems.end())
+                                commandSystem = commandSystems[0]; // reset to default if commandSystem is unknown
+                        } else if (commandName.find(modePattern) == 0) { // Extract the command mode
                             commandMode = commandName.substr(modePattern.length());
                             if (std::find(commandModes.begin(), commandModes.end(), commandMode) == commandModes.end())
                                 commandMode = commandModes[0]; // reset to default if commandMode is unknown
@@ -2122,6 +2137,11 @@ public:
                         auto& optionSection = packageConfigData[optionName];
                         
                         // For hiding the versions of overlays/packages
+                        if (optionSection.count("system") > 0)
+                            commandSystem = optionSection["system"];
+                        else
+                            setIniFileValue(packageConfigIniPath, optionName, "system", commandSystem);
+
                         if (optionSection.count("mode") > 0)
                             commandMode = optionSection["mode"];
                         else
@@ -2140,6 +2160,7 @@ public:
                     }
                     packageConfigData.clear();
                 } else { // write data if settings are not loaded
+                    setIniFileValue(packageConfigIniPath, optionName, "system", commandSystem);
                     setIniFileValue(packageConfigIniPath, optionName, "mode", commandMode);
                     setIniFileValue(packageConfigIniPath, optionName, "grouping", commandGrouping);
                     setIniFileValue(packageConfigIniPath, optionName, "footer", "null");
@@ -2166,8 +2187,15 @@ public:
                     else
                         footer = OPTION_SYMBOL;
                 }
+
+                skipSystem = false;
+                if (commandSystem == "erista" && !usingErista) {
+                    skipSystem = true;
+                } else if (commandSystem == "mariko" && !usingMariko) {
+                    skipSystem = true;
+                }
                 
-                if (skipSection == false) { // for skipping the drawing of sections
+                if (!skipSection && !skipSystem) { // for skipping the drawing of sections
                     if (useSelection) { // For wildcard commands (dropdown menus)
                         
                         if ((footer == DROPDOWN_SYMBOL) || (footer.empty()))
@@ -2518,7 +2546,7 @@ public:
         std::string filePath, specificKey, pathPattern, pathPatternOn, pathPatternOff, itemName, parentDirName, lastParentDirName;
         std::vector<std::string> filesList, filesListOn, filesListOff, filterList, filterListOn, filterListOff;
         
-        
+        bool skipSystem = false;
         lastMenuMode = hiddenMenuMode;
         
         //defaultMenuMode = "last_menu";
@@ -3128,6 +3156,7 @@ public:
                 std::string commandName;
                 
                 std::string commandFooter = "null";
+                std::string commandSystem = "default";
                 std::string commandMode = "default";
                 std::string commandGrouping = "default";
                 
@@ -3159,6 +3188,7 @@ public:
                     useSelection = false;
                     
                     commandFooter = "null";
+                    commandSystem = "default";
                     commandMode = "default";
                     commandGrouping = "default";
                     
@@ -3200,11 +3230,11 @@ public:
                         
                         commandName = cmd[0];
                         
-                        if (commandName == "erista:" || commandName == "Erista:") {
+                        if (stringToLowercase(commandName) == "erista:") {
                             inEristaSection = true;
                             inMarikoSection = false;
                             continue;
-                        } else if (commandName == "mariko:" || commandName == "Mariko:") {
+                        } else if (stringToLowercase(commandName) == "mariko:") {
                             inEristaSection = false;
                             inMarikoSection = true;
                             continue;
@@ -3212,7 +3242,11 @@ public:
                         
                         if ((inEristaSection && !inMarikoSection && usingErista) || (!inEristaSection && inMarikoSection && usingMariko) || (!inEristaSection && !inMarikoSection)) {
                             // Extract the command mode
-                            if (commandName.find(modePattern) == 0) {
+                            if (commandName.find(systemPattern) == 0) {// Extract the command system
+                                commandSystem = commandName.substr(systemPattern.length());
+                                if (std::find(commandSystems.begin(), commandSystems.end(), commandSystem) == commandSystems.end())
+                                    commandSystem = commandSystems[0]; // reset to default if commandSystem is unknown
+                            } else if (commandName.find(modePattern) == 0) {
                                 commandMode = commandName.substr(modePattern.length());
                                 if (std::find(commandModes.begin(), commandModes.end(), commandMode) == commandModes.end())
                                     commandMode = commandModes[0]; // reset to default if commandMode is unknown
@@ -3267,6 +3301,12 @@ public:
                             auto& optionSection = packageConfigData[optionName];
                             
                             // For hiding the versions of overlays/packages
+
+                            if (optionSection.count("system") > 0)
+                                commandSystem = optionSection["system"];
+                            else
+                                setIniFileValue(packageConfigIniPath, optionName, "system", commandSystem);
+
                             if (optionSection.count("mode") > 0)
                                 commandMode = optionSection["mode"];
                             else
@@ -3286,6 +3326,7 @@ public:
                         }
                         packageConfigData.clear();
                     } else { // write data if settings are not loaded
+                        setIniFileValue(packageConfigIniPath, optionName, "system", commandSystem);
                         setIniFileValue(packageConfigIniPath, optionName, "mode", commandMode);
                         setIniFileValue(packageConfigIniPath, optionName, "grouping", commandGrouping);
                         setIniFileValue(packageConfigIniPath, optionName, "footer", commandFooter);
@@ -3315,151 +3356,160 @@ public:
                         else
                             footer = OPTION_SYMBOL;
                     }
+
+                    skipSystem = false;
+                    if (commandSystem == "erista" && !usingErista) {
+                        skipSystem = true;
+                    } else if (commandSystem == "mariko" && !usingMariko) {
+                        skipSystem = true;
+                    }
                     
-                    if (useSelection) { // For wildcard commands (dropdown menus)
-                        listItem = static_cast<tsl::elm::ListItem*>(nullptr);
-                        if ((footer == DROPDOWN_SYMBOL) || (footer.empty()))
-                            listItem = new tsl::elm::ListItem(removeTag(optionName), footer);
-                        else {
-                            listItem = new tsl::elm::ListItem(removeTag(optionName));
-                            listItem->setValue(footer, true);
-                        }
-                        
-                        //std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(option.second, pathReplace);
-                        listItem->setClickListener([this, commands, keyName = option.first, packagePath = packageDirectory, listItem](uint64_t keys) {
-                            if (simulatedSelect && !simulatedSelectComplete) {
-                                keys |= KEY_A;
-                                simulatedSelect = false;
+                    if (!skipSystem) {
+                        if (useSelection) { // For wildcard commands (dropdown menus)
+                            listItem = static_cast<tsl::elm::ListItem*>(nullptr);
+                            if ((footer == DROPDOWN_SYMBOL) || (footer.empty()))
+                                listItem = new tsl::elm::ListItem(removeTag(optionName), footer);
+                            else {
+                                listItem = new tsl::elm::ListItem(removeTag(optionName));
+                                listItem->setValue(footer, true);
                             }
-                            if (keys & KEY_A) {
-                                inMainMenu = false;
-                                tsl::changeTo<SelectionOverlay>(packagePath, keyName, commands);
-                                simulatedSelectComplete = true;
-                                return true;
-                            } else if (keys & SCRIPT_KEY) {
-                                inMainMenu = false; // Set boolean to true when entering a submenu
-                                tsl::changeTo<ScriptOverlay>(packagePath, keyName, true);
-                                return true;
-                            }
-                            return false;
-                        });
-                        
-                        list->addItem(listItem);
-                    } else { // For everything else
-                        
-                        const std::string& selectedItem = optionName;
-                        
-                        // For entries that are paths
-                        itemName = getNameFromPath(selectedItem);
-                        if (!isDirectory(preprocessPath(selectedItem)))
-                            itemName = dropExtension(itemName);
-                        parentDirName = getParentDirNameFromPath(selectedItem);
-                        
-                        
-                        if (commandMode == "default" || commandMode == "option") { // for handiling toggles
-                            listItem = new tsl::elm::ListItem(removeTag(optionName));
-                            listItem->setValue(footer, true);
                             
-                            if (sourceType == "json") { // For JSON wildcards
-                                listItem->setClickListener([this, i, commands, packagePath = packageDirectory, keyName = option.first, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
-                                    if (simulatedSelect && !simulatedSelectComplete) {
-                                        keys |= KEY_A;
-                                        simulatedSelect = false;
-                                    }
-                                    if ((keys & KEY_A) || isDownloadCommand) {
-                                        bool runningDownload = false;
-                                        if (isDownloadCommand)
-                                            runningDownload = true;
-
-                                        std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commands, selectedItem, i); // replace source
-                                        //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
-
-                                        if (isDownloadCommand && !runningDownload) {
-                                            listItem->setValue(DOWNLOAD_SYMBOL);
-                                        } else {
-                                            interpretAndExecuteCommand(getSourceReplacement(modifiedCmds, selectedItem, i), packagePath, keyName); // Execute modified
-                                            
-                                            if (commandSuccess)
-                                                listItem->setValue(CHECKMARK_SYMBOL);
-                                            else
-                                                listItem->setValue(CROSSMARK_SYMBOL);
-                                            isDownloadCommand = false;
-                                            runningDownload = false;
-                                        }
-                                        modifiedCmds.clear();
-
-                                        simulatedSelectComplete = true;
-                                        return true;
-                                    } else if (keys & SCRIPT_KEY) {
-                                        inMainMenu = false; // Set boolean to true when entering a submenu
-                                        tsl::changeTo<ScriptOverlay>(packagePath, keyName, true);
-                                        return true;
-                                    }
-                                    
-                                    return false;
-                                });
-                                list->addItem(listItem);
-                            } else {
-                                listItem->setClickListener([this, i, commands, packagePath = packageDirectory, keyName = option.first, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
-                                    if (simulatedSelect && !simulatedSelectComplete) {
-                                        keys |= KEY_A;
-                                        simulatedSelect = false;
-                                    }
-
-                                    if ((keys & KEY_A) || isDownloadCommand) {
-                                        bool runningDownload = false;
-                                        if (isDownloadCommand)
-                                            runningDownload = true;
-
-                                        std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commands, selectedItem, i); // replace source
-                                        //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
-                                        
-                                        if (isDownloadCommand && !runningDownload) {
-                                            listItem->setValue(DOWNLOAD_SYMBOL);
-                                        } else {
-                                            interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified
-                                            
-                                            if (commandSuccess)
-                                                listItem->setValue(CHECKMARK_SYMBOL);
-                                            else
-                                                listItem->setValue(CROSSMARK_SYMBOL);
-                                            isDownloadCommand = false;
-                                            runningDownload = false;
-                                        }
-                                        modifiedCmds.clear();
-                                        simulatedSelectComplete = true;
-                                        return true;
-                                    } else if (keys & SCRIPT_KEY) {
-                                        inMainMenu = false; // Set boolean to true when entering a submenu
-                                        tsl::changeTo<ScriptOverlay>(packagePath, keyName, true);
-                                        return true;
-                                    }
-                                    return false;
-                                });
-                                list->addItem(listItem);
-                            }
-                        } else if (commandMode == "toggle") {
-                            
-                            toggleListItem = new tsl::elm::ToggleListItem(removeTag(optionName), false, ON, OFF);
-                            
-                            // Set the initial state of the toggle item
-                            if (!pathPatternOn.empty())
-                                toggleStateOn = isFileOrDirectory(preprocessPath(pathPatternOn));
-                            else
-                                toggleStateOn = (footer == "On");
-                            
-                            toggleListItem->setState(toggleStateOn);
-                            
-                            toggleListItem->setStateChangedListener([this, i, pathPatternOn, pathPatternOff, commandsOn, commandsOff, toggleStateOn, packagePath = packageDirectory, keyName = option.first](bool state) {
-                                if (state) {
-                                    interpretAndExecuteCommand(getSourceReplacement(commandsOn, preprocessPath(pathPatternOn), i), packagePath, keyName); // Execute modified
-                                    setIniFileValue((packagePath+configFileName).c_str(), keyName.c_str(), "footer", "On");
-                                } else {
-                                    interpretAndExecuteCommand(getSourceReplacement(commandsOff, preprocessPath(pathPatternOff), i), packagePath, keyName); // Execute modified
-                                    setIniFileValue((packagePath+configFileName).c_str(), keyName.c_str(), "footer", "Off");
+                            //std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(option.second, pathReplace);
+                            listItem->setClickListener([this, commands, keyName = option.first, packagePath = packageDirectory, listItem](uint64_t keys) {
+                                if (simulatedSelect && !simulatedSelectComplete) {
+                                    keys |= KEY_A;
+                                    simulatedSelect = false;
                                 }
+                                if (keys & KEY_A) {
+                                    inMainMenu = false;
+                                    tsl::changeTo<SelectionOverlay>(packagePath, keyName, commands);
+                                    simulatedSelectComplete = true;
+                                    return true;
+                                } else if (keys & SCRIPT_KEY) {
+                                    inMainMenu = false; // Set boolean to true when entering a submenu
+                                    tsl::changeTo<ScriptOverlay>(packagePath, keyName, true);
+                                    return true;
+                                }
+                                return false;
                             });
-                            list->addItem(toggleListItem);
+                            
+                            list->addItem(listItem);
+                        } else { // For everything else
+                            
+                            const std::string& selectedItem = optionName;
+                            
+                            // For entries that are paths
+                            itemName = getNameFromPath(selectedItem);
+                            if (!isDirectory(preprocessPath(selectedItem)))
+                                itemName = dropExtension(itemName);
+                            parentDirName = getParentDirNameFromPath(selectedItem);
+                            
+                            
+                            if (commandMode == "default" || commandMode == "option") { // for handiling toggles
+                                listItem = new tsl::elm::ListItem(removeTag(optionName));
+                                listItem->setValue(footer, true);
+                                
+                                if (sourceType == "json") { // For JSON wildcards
+                                    listItem->setClickListener([this, i, commands, packagePath = packageDirectory, keyName = option.first, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
+                                        if (simulatedSelect && !simulatedSelectComplete) {
+                                            keys |= KEY_A;
+                                            simulatedSelect = false;
+                                        }
+                                        if ((keys & KEY_A) || isDownloadCommand) {
+                                            bool runningDownload = false;
+                                            if (isDownloadCommand)
+                                                runningDownload = true;
+    
+                                            std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commands, selectedItem, i); // replace source
+                                            //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
+    
+                                            if (isDownloadCommand && !runningDownload) {
+                                                listItem->setValue(DOWNLOAD_SYMBOL);
+                                            } else {
+                                                interpretAndExecuteCommand(getSourceReplacement(modifiedCmds, selectedItem, i), packagePath, keyName); // Execute modified
+                                                
+                                                if (commandSuccess)
+                                                    listItem->setValue(CHECKMARK_SYMBOL);
+                                                else
+                                                    listItem->setValue(CROSSMARK_SYMBOL);
+                                                isDownloadCommand = false;
+                                                runningDownload = false;
+                                            }
+                                            modifiedCmds.clear();
+    
+                                            simulatedSelectComplete = true;
+                                            return true;
+                                        } else if (keys & SCRIPT_KEY) {
+                                            inMainMenu = false; // Set boolean to true when entering a submenu
+                                            tsl::changeTo<ScriptOverlay>(packagePath, keyName, true);
+                                            return true;
+                                        }
+                                        
+                                        return false;
+                                    });
+                                    list->addItem(listItem);
+                                } else {
+                                    listItem->setClickListener([this, i, commands, packagePath = packageDirectory, keyName = option.first, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
+                                        if (simulatedSelect && !simulatedSelectComplete) {
+                                            keys |= KEY_A;
+                                            simulatedSelect = false;
+                                        }
+                                        
+                                        if ((keys & KEY_A) || isDownloadCommand) {
+                                            bool runningDownload = false;
+                                            if (isDownloadCommand)
+                                                runningDownload = true;
+                                            
+                                            std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commands, selectedItem, i); // replace source
+                                            //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
+                                            
+                                            if (isDownloadCommand && !runningDownload) {
+                                                listItem->setValue(DOWNLOAD_SYMBOL);
+                                            } else {
+                                                interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified
+                                                
+                                                if (commandSuccess)
+                                                    listItem->setValue(CHECKMARK_SYMBOL);
+                                                else
+                                                    listItem->setValue(CROSSMARK_SYMBOL);
+                                                isDownloadCommand = false;
+                                                runningDownload = false;
+                                            }
+                                            modifiedCmds.clear();
+                                            simulatedSelectComplete = true;
+                                            return true;
+                                        } else if (keys & SCRIPT_KEY) {
+                                            inMainMenu = false; // Set boolean to true when entering a submenu
+                                            tsl::changeTo<ScriptOverlay>(packagePath, keyName, true);
+                                            return true;
+                                        }
+                                        return false;
+                                    });
+                                    list->addItem(listItem);
+                                }
+                            } else if (commandMode == "toggle") {
+                                
+                                toggleListItem = new tsl::elm::ToggleListItem(removeTag(optionName), false, ON, OFF);
+                                
+                                // Set the initial state of the toggle item
+                                if (!pathPatternOn.empty())
+                                    toggleStateOn = isFileOrDirectory(preprocessPath(pathPatternOn));
+                                else
+                                    toggleStateOn = (footer == "On");
+                                
+                                toggleListItem->setState(toggleStateOn);
+                                
+                                toggleListItem->setStateChangedListener([this, i, pathPatternOn, pathPatternOff, commandsOn, commandsOff, toggleStateOn, packagePath = packageDirectory, keyName = option.first](bool state) {
+                                    if (state) {
+                                        interpretAndExecuteCommand(getSourceReplacement(commandsOn, preprocessPath(pathPatternOn), i), packagePath, keyName); // Execute modified
+                                        setIniFileValue((packagePath+configFileName).c_str(), keyName.c_str(), "footer", "On");
+                                    } else {
+                                        interpretAndExecuteCommand(getSourceReplacement(commandsOff, preprocessPath(pathPatternOff), i), packagePath, keyName); // Execute modified
+                                        setIniFileValue((packagePath+configFileName).c_str(), keyName.c_str(), "footer", "Off");
+                                    }
+                                });
+                                list->addItem(toggleListItem);
+                            }
                         }
                     }
                 }
@@ -3527,7 +3577,7 @@ public:
                         simulatedNextPageComplete = true;
                     }
                 }
-                
+
                 if ((keysHeld & KEY_DRIGHT) && !(keysHeld & (KEY_DLEFT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR)) && !stillTouching) {
                     if (menuMode != "packages") {
                         setIniFileValue(settingsConfigIniPath, "ultrahand", "last_menu", "packages");
@@ -3545,12 +3595,12 @@ public:
                         return true;
                     }
                 }
-                
+
                 if (simulatedBack && !simulatedBackComplete) {
                     keysHeld |= KEY_B;
                     simulatedBack = false;
                 }
-                
+
                 if ((keysHeld & KEY_B) && !stillTouching) {
                     //inMainMenu = false;
                     setIniFileValue(settingsConfigIniPath, "ultrahand", "last_menu", defaultMenuMode);
@@ -3558,12 +3608,12 @@ public:
                     simulatedBackComplete = true;
                     return true;
                 }
-                
+
                 if (simulatedMenu && !simulatedMenuComplete) {
                     keysHeld |= SYSTEM_SETTINGS_KEY;
                     simulatedMenu = false;
                 }
-                
+
                 if ((keysHeld & SYSTEM_SETTINGS_KEY) && !stillTouching) {
                     tsl::changeTo<UltrahandSettingsMenu>();
                     simulatedMenuComplete = true;
@@ -3577,17 +3627,17 @@ public:
                     simulatedNextPage = false;
                     simulatedNextPageComplete = true;
                 }
-                
+
                 if (simulatedMenu && !simulatedMenuComplete) {
                     simulatedMenu = false;
                     simulatedMenuComplete = true;
                 }
-                
+
                 if (simulatedBack && !simulatedBackComplete) {
                     keysHeld |= KEY_B;
                     simulatedBack = false;
                 }
-                
+
                 if ((keysHeld & KEY_B) && !stillTouching) {
                     returningToMain = true;
                     inHiddenMode = false;
