@@ -4858,7 +4858,7 @@ namespace tsl {
             static u64 lastUpPressTimestamp = 0; // Store the timestamp of the last up button press
             
             // Define a threshold for double-click timing (in milliseconds)
-            constexpr u64 DOUBLE_CLICK_THRESHOLD_MS = 200;
+            constexpr u64 DOUBLE_CLICK_THRESHOLD_MS = 170;
         
             // If the up button is pressed
             if (!touchDetected && keysDown & HidNpadButton_AnyUp) {
