@@ -793,11 +793,11 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
         if (commandName == "download")
             isDownloadCommand = true;
 
-        if (commandName == "erista:" || commandName == "Erista:") {
+        if (stringToLowercase(commandName) == "erista:") {
             inEristaSection = true;
             inMarikoSection = false;
             continue;
-        } else if (commandName == "mariko:" || commandName == "Mariko:") {
+        } else if (stringToLowercase(commandName) == "mariko:") {
             inEristaSection = false;
             inMarikoSection = true;
             continue;
@@ -941,11 +941,11 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
             if (logging)
                 logMessage("Try #"+std::to_string(tryCounter));
             continue;
-        } else if (commandName == "erista:" || commandName == "Erista:") {
+        } else if (stringToLowercase(commandName) == "erista:") {
             inEristaSection = true;
             inMarikoSection = false;
             continue;
-        } else if (commandName == "mariko:" || commandName == "Mariko:") {
+        } else if (stringToLowercase(commandName) == "mariko:") {
             inEristaSection = false;
             inMarikoSection = true;
             continue;
