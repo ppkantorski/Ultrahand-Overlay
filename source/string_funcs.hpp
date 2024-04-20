@@ -289,6 +289,24 @@ json_t* stringToJson(const std::string& input) {
 }
 
 
+
+/**
+ * @brief Converts a string to lowercase.
+ *
+ * This function takes a string as input and returns a lowercase version of that string.
+ *
+ * @param str The input string to convert to lowercase.
+ * @return The lowercase version of the input string.
+ */
+
+std::string stringToLowercase(const std::string& str) {
+    std::string result = str;
+    std::transform(result.begin(), result.end(), result.begin(),
+                   [](unsigned char c) { return std::tolower(c); });
+    return result;
+}
+
+
 /**
  * @brief Formats a priority string to a desired width.
  *
