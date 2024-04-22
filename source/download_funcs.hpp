@@ -45,39 +45,6 @@ size_t writeCallback(void* contents, size_t size, size_t nmemb, FILE* file) {
 }
 
 
-// Declare the CallbackData structure
-//struct CallbackData {
-//    FILE* file;
-//    // Add any additional data you need here
-//};
-//
-//
-//// Your progress callback function
-//int progressCallback(void* clientp, curl_off_t dltotal, curl_off_t dlnow, curl_off_t ultotal, curl_off_t ulnow) {
-//    CallbackData* callbackData = static_cast<CallbackData*>(clientp);
-//
-//    // Log at the beginning to confirm callback invocation
-//    logMessage("Progress callback invoked.");
-//
-//    // Log the values of dltotal and dlnow
-//    logMessage("Total Size: " + std::to_string(dltotal) + " bytes");
-//    logMessage("Downloaded: " + std::to_string(dlnow) + " bytes");
-//
-//    // Update your progress variable here
-//    float progress = (dltotal > 0) ? (dlnow * 100.0 / dltotal) : 0.0;
-//
-//    // Log the download progress
-//    logMessage("Download Progress: " + std::to_string(progress) + "%");
-//
-//    // Log at the end to confirm callback completion
-//    logMessage("Progress callback completed.");
-//
-//    // Return 0 to continue the transfer
-//    return 0;
-//}
-
-
-
 
 /**
  * @brief Downloads a file from a URL to a specified destination.
@@ -195,8 +162,12 @@ bool downloadFile(const std::string& url, const std::string& toDestination) {
         return false;
     }
 
+    logMessage("Download Complete!");
     return true;
 }
+
+
+
 
 /**
  * @brief Extracts files from a ZIP archive to a specified destination.
@@ -265,7 +236,7 @@ bool unzipFile(const std::string& zipFilePath, const std::string& toDestination)
             FILE* outputFile = fopen(extractedFilePath.c_str(), "wb");
             if (outputFile) {
                 zzip_ssize_t bytesRead;
-                const zzip_ssize_t bufferSize = 131072;
+                const zzip_ssize_t bufferSize = 4096;
                 char buffer[bufferSize];
 
                 while ((bytesRead = zzip_file_read(file, buffer, bufferSize)) > 0) {
