@@ -419,32 +419,39 @@ public:
             
             auto listItem = new tsl::elm::ListItem(UPDATE_ULTRAHAND);
             
-            
             listItem->setClickListener([this, listItem](uint64_t keys) { // Add 'command' to the capture list
                 if (simulatedSelect && !simulatedSelectComplete) {
                     keys |= KEY_A;
                     simulatedSelect = false;
                 }
-                if (keys & KEY_A || isDownloadCommand) {
-                    bool runningDownload = false;
-                    if (isDownloadCommand)
-                        runningDownload = true;
 
-                    if (!runningDownload) {
+                static bool lastRunningInterpreter = false;
+                if ((keys & KEY_A) || (runningInterpreter.load(std::memory_order_acquire) || (!runningInterpreter.load(std::memory_order_acquire) && lastRunningInterpreter))) {
+                    if (!runningInterpreter.load(std::memory_order_acquire) && !lastRunningInterpreter) {
                         isDownloadCommand = true;
-                        listItem->setValue(DOWNLOAD_SYMBOL);
-                    } else {
-                        deleteFileOrDirectory("/config/ultrahand/downloads/ovlmenu.ovl");
-                        isDownloaded = downloadFile(ultrahandRepo+"releases/latest/download/ovlmenu.ovl", "/config/ultrahand/downloads/");
-                        if (isDownloaded) {
-                            moveFileOrDirectory("/config/ultrahand/downloads/ovlmenu.ovl", "/switch/.overlays/ovlmenu.ovl");
-                            listItem->setValue(CHECKMARK_SYMBOL);
-                            languagesVersion = "latest";
-                        } else
-                            listItem->setValue(CROSSMARK_SYMBOL, false);
-
-                        isDownloadCommand = false;
+                        std::vector<std::vector<std::string>> interpreterCommands = {
+                            {"delete", "/config/ultrahand/downloads/ovlmenu.ovl"},
+                            {"download", ultrahandRepo + "releases/latest/download/ovlmenu.ovl", "/config/ultrahand/downloads/"},
+                            {"move", "/config/ultrahand/downloads/ovlmenu.ovl", "/switch/.overlays/ovlmenu.ovl"}
+                        };
+                        enqueueInterpreterCommand(interpreterCommands, "", "");
+                        runningInterpreter.store(true, std::memory_order_release);
+                        
+                        if (isDownloadCommand)
+                            listItem->setValue(DOWNLOAD_SYMBOL);
+                        else
+                            listItem->setValue(INPROGRESS_SYMBOL);
                     }
+                    
+                    if (!runningInterpreter.load(std::memory_order_acquire) && lastRunningInterpreter) {
+                        isDownloadCommand = false;
+                        if (commandSuccess)
+                            listItem->setValue(CHECKMARK_SYMBOL);
+                        else
+                            listItem->setValue(CROSSMARK_SYMBOL);
+                    }
+                    
+                    lastRunningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                     simulatedSelectComplete = true;
                     return true;
                 }
@@ -462,32 +469,36 @@ public:
                     simulatedSelect = false;
                 }
 
-                if (keys & KEY_A || isDownloadCommand) {
-                    bool runningDownload = false;
-                    if (isDownloadCommand)
-                        runningDownload = true;
-
-                    if (!runningDownload) {
+                static bool lastRunningInterpreter = false;
+                if ((keys & KEY_A) || (runningInterpreter.load(std::memory_order_acquire) || (!runningInterpreter.load(std::memory_order_acquire) && lastRunningInterpreter))) {
+                    if (!runningInterpreter.load(std::memory_order_acquire) && !lastRunningInterpreter) {
                         isDownloadCommand = true;
-                        listItem->setValue(DOWNLOAD_SYMBOL);
-                    } else {
-                        deleteFileOrDirectory("/config/ultrahand/downloads/ovlmenu.ovl");
-                        bool languageDownloaded = false;
-                        if (languagesVersion == "latest")
-                            languageDownloaded = downloadFile(ultrahandRepo+"releases/latest/download/lang.zip", "/config/ultrahand/downloads/");
-                        else
-                            languageDownloaded = downloadFile(ultrahandRepo+"releases/download/v"+languagesVersion+"/lang.zip", "/config/ultrahand/downloads/");
-                        if (languageDownloaded) {
-                            unzipFile("/config/ultrahand/downloads/lang.zip", "/config/ultrahand/downloads/lang/");
-                            deleteFileOrDirectory("/config/ultrahand/downloads/lang.zip");
-                            deleteFileOrDirectory("/config/ultrahand/lang/");
-                            moveFileOrDirectory("/config/ultrahand/downloads/lang/", "/config/ultrahand/lang/");
-                            listItem->setValue(CHECKMARK_SYMBOL);
-                        } else
-                            listItem->setValue(CROSSMARK_SYMBOL, false);
+                        std::vector<std::vector<std::string>> interpreterCommands = {
+                            {"delete", "/config/ultrahand/downloads/ovlmenu.ovl"},
+                            {"download", ultrahandRepo + "releases/latest/download/lang.zip", "/config/ultrahand/downloads/"},
+                            {"unzip", "/config/ultrahand/downloads/lang.zip", "/config/ultrahand/downloads/lang/"},
+                            {"delete", "/config/ultrahand/downloads/lang.zip"},
+                            {"delete", "/config/ultrahand/lang/"},
+                            {"move", "/config/ultrahand/downloads/lang/", "/config/ultrahand/lang/"}
+                        };
+                        enqueueInterpreterCommand(interpreterCommands, "", "");
+                        runningInterpreter.store(true, std::memory_order_release);
                         
-                        isDownloadCommand = false;
+                        if (isDownloadCommand)
+                            listItem->setValue(DOWNLOAD_SYMBOL);
+                        else
+                            listItem->setValue(INPROGRESS_SYMBOL);
                     }
+                    
+                    if (!runningInterpreter.load(std::memory_order_acquire) && lastRunningInterpreter) {
+                        isDownloadCommand = false;
+                        if (commandSuccess)
+                            listItem->setValue(CHECKMARK_SYMBOL);
+                        else
+                            listItem->setValue(CROSSMARK_SYMBOL);
+                    }
+                    
+                    lastRunningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                     simulatedSelectComplete = true;
                     return true;
                 }
@@ -1674,6 +1685,7 @@ public:
                 
                 if (commandMode == "option") {
                     if (selectedFooterDict[specifiedFooterKey] == itemName) { // needs to be fixed
+                        logMessage("pre-listener itemName: "+itemName);
                         lastSelectedListItem = listItem;
                         lastSelectedListItemFooter = footer;
                         listItem->setValue(CHECKMARK_SYMBOL);
@@ -1694,35 +1706,50 @@ public:
                         keys |= KEY_A;
                         simulatedSelect = false;
                     }
-                    if ((keys & KEY_A) || isDownloadCommand) {
-                        bool runningDownload = false;
-                        if (isDownloadCommand)
-                            runningDownload = true;
 
-                        if (commandMode == "option") {
-                            selectedFooterDict[specifiedFooterKey] = itemName;
-                            lastSelectedListItem->setValue(lastSelectedListItemFooter, true);
-                        }
-                        std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(this->commands, selectedItem, i); // replace source
+                    static bool lastRunningInterpreter = false;
+                    if ((keys & KEY_A) || (runningInterpreter.load(std::memory_order_acquire) || (!runningInterpreter.load(std::memory_order_acquire) && lastRunningInterpreter))) {
 
-                        if (isDownloadCommand && !runningDownload) {
-                            listItem->setValue(DOWNLOAD_SYMBOL);
-                        } else {
-                            interpretAndExecuteCommand(modifiedCmds, filePath, specificKey); // Execute modified 
-                            if (commandSuccess)
-                                listItem->setValue(CHECKMARK_SYMBOL);
-                            else
-                                listItem->setValue(CROSSMARK_SYMBOL);
+                        if (!runningInterpreter.load(std::memory_order_acquire) && !lastRunningInterpreter) {
+                            //if (commandMode == "option") {
+                            //    
+                            //}
+
+                            //std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(this->commands, selectedItem, i);
+                            //applySourceReplacement(this->commands, selectedItem, i);
+                            //this->commands = getSourceReplacement(this->commands, selectedItem, i);
                             isDownloadCommand = false;
-                            runningDownload = false;
-                        }
-                        modifiedCmds.clear();
-                        
-                        
-                        if (commandMode == "option") {
-                            lastSelectedListItemFooter = footer;
+                            enqueueInterpreterCommand(getSourceReplacement(this->commands, selectedItem, i), filePath, specificKey);
+                            //modifiedCmds.clear();
+                            runningInterpreter.store(true, std::memory_order_release);
+                            
+                            if (isDownloadCommand)
+                                listItem->setValue(DOWNLOAD_SYMBOL);
+                            else
+                                listItem->setValue(INPROGRESS_SYMBOL);
+
+                            if (commandMode == "option") {
+                                selectedFooterDict[specifiedFooterKey] = listItem->getText();
+                                //logMessage("specifiedFooterKey: "+specifiedFooterKey);
+                                //logMessage("itemName: "+listItem->getText());
+                                lastSelectedListItem->setValue(lastSelectedListItemFooter, true);
+
+                                lastSelectedListItemFooter = footer;
+                            }
                             lastSelectedListItem = listItem;
                         }
+                        
+                        if (!runningInterpreter.load(std::memory_order_acquire) && lastRunningInterpreter) {
+                            isDownloadCommand = false;
+
+                            if (commandSuccess)
+                                lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
+                            else
+                                lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
+                        }
+
+                        lastRunningInterpreter = runningInterpreter.load(std::memory_order_acquire);
+                        
                         
                         simulatedSelectComplete = true;
                         return true;
@@ -1743,6 +1770,8 @@ public:
                         if (std::find(selectedItemsListOn.begin(), selectedItemsListOn.end(), selectedItem) != selectedItemsListOn.end()) {
                             // Toggle switched to On
                             //std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commandsOn, selectedItem, i); // replace source
+                            //applySourceReplacement(commandsOn, selectedItem, i);
+                            //commandsOn = getSourceReplacement(commandsOn, selectedItem, i);
                             interpretAndExecuteCommand(getSourceReplacement(commandsOn, selectedItem, i), filePath, specificKey); // Execute modified 
                             //modifiedCmds.clear();
                         } else
@@ -1751,6 +1780,8 @@ public:
                         if (std::find(selectedItemsListOff.begin(), selectedItemsListOff.end(), selectedItem) != selectedItemsListOff.end()) {
                             // Toggle switched to Off
                             //std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commandsOff, selectedItem, i); // replace source
+                            //applySourceReplacement(commandsOff, selectedItem, i);
+                            //commandsOff = getSourceReplacement(commandsOff, selectedItem, i);
                             interpretAndExecuteCommand(getSourceReplacement(commandsOff, selectedItem, i), filePath, specificKey); // Execute modified 
                             //modifiedCmds.clear();
                         } else
@@ -2212,7 +2243,7 @@ public:
                             listItem->setValue(UNAVAILABLE_SELECTION, true);
                         
                         //std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(option.second, pathReplace);
-                        listItem->setClickListener([commands, keyName = option.first, this, packagePath = this->packagePath, footer, lastSection, listItem](uint64_t keys) {
+                        listItem->setClickListener([this, commands, keyName = option.first, packagePath = this->packagePath, footer, lastSection, listItem](uint64_t keys) {
                             if (simulatedSelect && !simulatedSelectComplete) {
                                 keys |= KEY_A;
                                 simulatedSelect = false;
@@ -2280,26 +2311,36 @@ public:
                                     simulatedSelect = false;
                                 }
 
-                                if ((keys & KEY_A) || isDownloadCommand) {
-                                    bool runningDownload = false;
-                                    if (isDownloadCommand)
-                                        runningDownload = true;
+                                static bool lastRunningInterpreter = false;
+                                if ((keys & KEY_A) || (runningInterpreter.load(std::memory_order_acquire) || (!runningInterpreter.load(std::memory_order_acquire) && lastRunningInterpreter))) {
 
-                                    std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commands, keyName, i); // replace source
-                                    //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
-
-                                    if (isDownloadCommand && !runningDownload) {
-                                        listItem->setValue(DOWNLOAD_SYMBOL);
-                                    } else {
-                                        interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified
-                                        if (commandSuccess)
-                                            listItem->setValue(CHECKMARK_SYMBOL);
-                                        else
-                                            listItem->setValue(CROSSMARK_SYMBOL);
+                                    if (!runningInterpreter.load(std::memory_order_acquire) && !lastRunningInterpreter) {
+                                        //std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commands, selectedItem, i);
+                                        //applySourceReplacement(commands, selectedItem, i);
+                                        //commands = getSourceReplacement(commands, selectedItem, i);
                                         isDownloadCommand = false;
-                                        runningDownload = false;
+                                        enqueueInterpreterCommand(getSourceReplacement(commands, selectedItem, i), packagePath, keyName);
+                                        //modifiedCmds.clear();
+                                        runningInterpreter.store(true, std::memory_order_release);
+                                        
+                                        if (isDownloadCommand)
+                                            listItem->setValue(DOWNLOAD_SYMBOL);
+                                        else
+                                            listItem->setValue(INPROGRESS_SYMBOL);
+                                        lastSelectedListItem = listItem;
                                     }
-                                    modifiedCmds.clear();
+                                    
+                                    if (!runningInterpreter.load(std::memory_order_acquire) && lastRunningInterpreter) {
+                                        isDownloadCommand = false;
+
+                                        if (commandSuccess)
+                                            lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
+                                        else
+                                            lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
+                                    }
+                                    
+                                    lastRunningInterpreter = runningInterpreter.load(std::memory_order_acquire);
+                                    
 
                                     simulatedSelectComplete = true;
                                     return true;
@@ -2328,9 +2369,13 @@ public:
                             
                             toggleListItem->setStateChangedListener([this, i, commandsOn, commandsOff, toggleStateOn, keyName = option.first](bool state) {
                                 if (state) {
+                                    //applySourceReplacement(commandsOn, preprocessPath(pathPatternOn), i);
+                                    //commandsOn = getSourceReplacement(commandsOn, preprocessPath(pathPatternOn), i);
                                     interpretAndExecuteCommand(getSourceReplacement(commandsOn, preprocessPath(pathPatternOn), i), packagePath, keyName); // Execute modified
                                     setIniFileValue((packagePath+configFileName).c_str(), keyName.c_str(), "footer", "On");
                                 } else {
+                                    //applySourceReplacement(commandsOff, preprocessPath(pathPatternOff), i);
+                                    //commandsOff = getSourceReplacement(commandsOff, preprocessPath(pathPatternOff), i);
                                     interpretAndExecuteCommand(getSourceReplacement(commandsOff, preprocessPath(pathPatternOff), i), packagePath, keyName); // Execute modified
                                     setIniFileValue((packagePath+configFileName).c_str(), keyName.c_str(), "footer", "Off");
                                 }
@@ -3410,32 +3455,43 @@ public:
                                 listItem->setValue(footer, true);
                                 
                                 if (sourceType == "json") { // For JSON wildcards
+                                    
                                     listItem->setClickListener([this, i, commands, packagePath = packageDirectory, keyName = option.first, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
                                         if (simulatedSelect && !simulatedSelectComplete) {
                                             keys |= KEY_A;
                                             simulatedSelect = false;
                                         }
-                                        if ((keys & KEY_A) || isDownloadCommand) {
-                                            bool runningDownload = false;
-                                            if (isDownloadCommand)
-                                                runningDownload = true;
-    
-                                            std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commands, selectedItem, i); // replace source
-                                            //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
-    
-                                            if (isDownloadCommand && !runningDownload) {
-                                                listItem->setValue(DOWNLOAD_SYMBOL);
-                                            } else {
-                                                interpretAndExecuteCommand(getSourceReplacement(modifiedCmds, selectedItem, i), packagePath, keyName); // Execute modified
-                                                
-                                                if (commandSuccess)
-                                                    listItem->setValue(CHECKMARK_SYMBOL);
-                                                else
-                                                    listItem->setValue(CROSSMARK_SYMBOL);
+
+                                        static bool lastRunningInterpreter = false;
+                                        if ((keys & KEY_A) || (runningInterpreter.load(std::memory_order_acquire) || (!runningInterpreter.load(std::memory_order_acquire) && lastRunningInterpreter))) {
+                                            
+                                            if (!runningInterpreter.load(std::memory_order_acquire) && !lastRunningInterpreter) {
+                                                //std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commands, selectedItem, i);
+                                                //applySourceReplacement(commands, selectedItem, i);
+                                                //commands = getSourceReplacement(commands, selectedItem, i);
                                                 isDownloadCommand = false;
-                                                runningDownload = false;
+                                                enqueueInterpreterCommand(getSourceReplacement(commands, selectedItem, i), packagePath, keyName);
+                                                //modifiedCmds.clear();
+                                                runningInterpreter.store(true, std::memory_order_release);
+                                                
+                                                if (isDownloadCommand)
+                                                    listItem->setValue(DOWNLOAD_SYMBOL);
+                                                else
+                                                    listItem->setValue(INPROGRESS_SYMBOL);
+                                                lastSelectedListItem = listItem;
                                             }
-                                            modifiedCmds.clear();
+                                            
+                                            if (!runningInterpreter.load(std::memory_order_acquire) && lastRunningInterpreter) {
+                                                isDownloadCommand = false;
+
+                                                if (commandSuccess)
+                                                    lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
+                                                else
+                                                    lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
+                                            }
+                                            
+                                            lastRunningInterpreter = runningInterpreter.load(std::memory_order_acquire);
+                                            
     
                                             simulatedSelectComplete = true;
                                             return true;
@@ -3449,33 +3505,45 @@ public:
                                     });
                                     list->addItem(listItem);
                                 } else {
+                                    
                                     listItem->setClickListener([this, i, commands, packagePath = packageDirectory, keyName = option.first, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
                                         if (simulatedSelect && !simulatedSelectComplete) {
                                             keys |= KEY_A;
                                             simulatedSelect = false;
                                         }
                                         
-                                        if ((keys & KEY_A) || isDownloadCommand) {
-                                            bool runningDownload = false;
-                                            if (isDownloadCommand)
-                                                runningDownload = true;
+                                        static bool lastRunningInterpreter = false;
+                                        if ((keys & KEY_A) || (runningInterpreter.load(std::memory_order_acquire) || (!runningInterpreter.load(std::memory_order_acquire) && lastRunningInterpreter))) {
+
                                             
-                                            std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commands, selectedItem, i); // replace source
                                             //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
                                             
-                                            if (isDownloadCommand && !runningDownload) {
-                                                listItem->setValue(DOWNLOAD_SYMBOL);
-                                            } else {
-                                                interpretAndExecuteCommand(modifiedCmds, packagePath, keyName); // Execute modified
-                                                
-                                                if (commandSuccess)
-                                                    listItem->setValue(CHECKMARK_SYMBOL);
-                                                else
-                                                    listItem->setValue(CROSSMARK_SYMBOL);
+                                            if (!runningInterpreter.load(std::memory_order_acquire) && !lastRunningInterpreter) {
+                                                //std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commands, selectedItem, i);
+                                                //applySourceReplacement(commands, selectedItem, i);
+                                                //commands = getSourceReplacement(commands, selectedItem, i);
                                                 isDownloadCommand = false;
-                                                runningDownload = false;
+                                                enqueueInterpreterCommand(getSourceReplacement(commands, selectedItem, i), packagePath, keyName);
+                                                //modifiedCmds.clear();
+                                                runningInterpreter.store(true, std::memory_order_release);
+                                                
+                                                if (isDownloadCommand)
+                                                    listItem->setValue(DOWNLOAD_SYMBOL);
+                                                else
+                                                    listItem->setValue(INPROGRESS_SYMBOL);
+                                                lastSelectedListItem = listItem;
                                             }
-                                            modifiedCmds.clear();
+                                            
+                                            if (!runningInterpreter.load(std::memory_order_acquire) && lastRunningInterpreter) {
+                                                isDownloadCommand = false;
+
+                                                if (commandSuccess)
+                                                    lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
+                                                else
+                                                    lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
+                                            }
+                                            
+                                            lastRunningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                                             simulatedSelectComplete = true;
                                             return true;
                                         } else if (keys & SCRIPT_KEY) {
@@ -3501,9 +3569,13 @@ public:
                                 
                                 toggleListItem->setStateChangedListener([this, i, pathPatternOn, pathPatternOff, commandsOn, commandsOff, toggleStateOn, packagePath = packageDirectory, keyName = option.first](bool state) {
                                     if (state) {
+                                        //applySourceReplacement(commandsOn, preprocessPath(pathPatternOn), i);
+                                        //commandsOn = getSourceReplacement(commandsOn, preprocessPath(pathPatternOn), i);
                                         interpretAndExecuteCommand(getSourceReplacement(commandsOn, preprocessPath(pathPatternOn), i), packagePath, keyName); // Execute modified
                                         setIniFileValue((packagePath+configFileName).c_str(), keyName.c_str(), "footer", "On");
                                     } else {
+                                        //applySourceReplacement(commandsOff, preprocessPath(pathPatternOff), i);
+                                        //commandsOff = getSourceReplacement(commandsOff, preprocessPath(pathPatternOff), i);
                                         interpretAndExecuteCommand(getSourceReplacement(commandsOff, preprocessPath(pathPatternOff), i), packagePath, keyName); // Execute modified
                                         setIniFileValue((packagePath+configFileName).c_str(), keyName.c_str(), "footer", "Off");
                                     }
@@ -3705,6 +3777,7 @@ public:
         ASSERT_FATAL(socketInitializeDefault());
         ASSERT_FATAL(nifmInitialize(NifmServiceType_User));
         ASSERT_FATAL(smInitialize());
+        startInterpreterThread();
     }
     
     /**
@@ -3722,6 +3795,7 @@ public:
         spsmExit();
         splExit();
         fsdevUnmountAll();
+        closeInterpreterThread();
     }
     
     /**
