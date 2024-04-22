@@ -32,6 +32,10 @@
 #include <tesla.hpp>
 
 
+#include <queue>
+#include <mutex>
+#include <condition_variable>
+
 /**
  * @brief Ultrahand-Overlay Configuration Paths
  *
@@ -893,7 +897,8 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
  * @param commands A list of commands, where each command is represented as a vector of strings.
  */
 void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& commands, const std::string& packagePath="", const std::string& selectedCommand="") {
-    
+    //logMessage("INSIDE_INTERPRETER");
+
     bool logging = false;
     
     bool inEristaSection = false;
@@ -1427,3 +1432,66 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
         }
     }
 }
+
+
+// Thread information structure
+Thread interpreterThread;
+std::queue<std::tuple<std::vector<std::vector<std::string>>, std::string, std::string>> interpreterQueue;
+std::mutex queueMutex;
+std::condition_variable queueCondition;
+static bool interpreterThreadExit = false;
+
+// Define an atomic bool for interpreter completion
+static std::atomic<bool> runningInterpreter(false);
+
+void backgroundInterpreter(void*) {
+    while (!interpreterThreadExit) {
+        std::tuple<std::vector<std::vector<std::string>>, std::string, std::string> args;
+        
+        {
+            std::unique_lock<std::mutex> lock(queueMutex);
+            queueCondition.wait(lock, [] { return !interpreterQueue.empty() || interpreterThreadExit; });
+
+            if (!interpreterQueue.empty()) {
+                args = std::move(interpreterQueue.front());
+                interpreterQueue.pop();
+            }
+        } // Release the lock before processing the command
+
+        if (!std::get<0>(args).empty()) {
+            runningInterpreter.store(true, std::memory_order_release);
+            
+            //logMessage("Running Interpreter...");
+            interpretAndExecuteCommand(std::get<0>(args), std::get<1>(args), std::get<2>(args));
+            //logMessage("Interpreter complete.");
+            runningInterpreter.store(false, std::memory_order_release);
+        }
+    }
+}
+
+
+// Start interpreter thread
+void startInterpreterThread() {
+    interpreterThreadExit = false;
+    threadCreate(&interpreterThread, backgroundInterpreter, nullptr, nullptr, 0x4000, 0x10, -2);
+    threadStart(&interpreterThread);
+}
+
+// Close interpreter thread
+void closeInterpreterThread() {
+    {
+        std::lock_guard<std::mutex> lock(queueMutex);
+        interpreterThreadExit = true;
+        queueCondition.notify_one();
+    }
+    threadWaitForExit(&interpreterThread);
+    threadClose(&interpreterThread);
+}
+
+// Enqueue command for interpretation
+void enqueueInterpreterCommand(const std::vector<std::vector<std::string>>& commands, const std::string& packagePath="", const std::string& selectedCommand="") {
+    std::lock_guard<std::mutex> lock(queueMutex);
+    interpreterQueue.push(std::make_tuple(commands, packagePath, selectedCommand));
+    queueCondition.notify_one();
+}
+
