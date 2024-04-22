@@ -441,14 +441,16 @@ public:
                             listItem->setValue(DOWNLOAD_SYMBOL);
                         else
                             listItem->setValue(INPROGRESS_SYMBOL);
+
+                        lastSelectedListItem = listItem;
                     }
                     
                     if (!runningInterpreter.load(std::memory_order_acquire) && lastRunningInterpreter) {
                         isDownloadCommand = false;
                         if (commandSuccess)
-                            listItem->setValue(CHECKMARK_SYMBOL);
+                            lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
                         else
-                            listItem->setValue(CROSSMARK_SYMBOL);
+                            lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
                     }
                     
                     lastRunningInterpreter = runningInterpreter.load(std::memory_order_acquire);
@@ -488,14 +490,15 @@ public:
                             listItem->setValue(DOWNLOAD_SYMBOL);
                         else
                             listItem->setValue(INPROGRESS_SYMBOL);
+                        lastSelectedListItem = listItem;
                     }
                     
                     if (!runningInterpreter.load(std::memory_order_acquire) && lastRunningInterpreter) {
                         isDownloadCommand = false;
                         if (commandSuccess)
-                            listItem->setValue(CHECKMARK_SYMBOL);
+                            lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
                         else
-                            listItem->setValue(CROSSMARK_SYMBOL);
+                            lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
                     }
                     
                     lastRunningInterpreter = runningInterpreter.load(std::memory_order_acquire);
