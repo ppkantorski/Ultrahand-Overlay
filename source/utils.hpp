@@ -1479,6 +1479,12 @@ void backgroundInterpreter(void*) {
         if (!std::get<0>(args).empty()) {
             runningInterpreter.store(true, std::memory_order_release);
             
+
+            runningInterpreter.store(false, std::memory_order_release);
+            abortDownload.store(false, std::memory_order_release);
+            abortUnzip.store(false, std::memory_order_release);
+            abortFileOp.store(false, std::memory_order_release);
+            abortCommand.store(false, std::memory_order_release);
             //logMessage("Running Interpreter...");
             interpretAndExecuteCommand(std::get<0>(args), std::get<1>(args), std::get<2>(args));
             //logMessage("Interpreter complete.");
@@ -1495,7 +1501,7 @@ void backgroundInterpreter(void*) {
 // Start interpreter thread
 void startInterpreterThread() {
     interpreterThreadExit = false;
-    threadCreate(&interpreterThread, backgroundInterpreter, nullptr, nullptr, 0x8000, 0x10, -2);
+    threadCreate(&interpreterThread, backgroundInterpreter, nullptr, nullptr, 0x10000, 0x10, -2);
     threadStart(&interpreterThread);
 }
 
