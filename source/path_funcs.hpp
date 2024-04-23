@@ -21,6 +21,8 @@
 #include <sys/stat.h>
 #include <dirent.h>
 
+static std::atomic<bool> abortFileOp(false);
+
 /**
  * @brief Creates a single directory if it doesn't exist.
  *
@@ -299,11 +301,21 @@ void copySingleFile(const std::string& fromFile, const std::string& toFile) {
         char buffer[bufferSize];
         size_t bytesRead;
         
-        while ((bytesRead = fread(buffer, 1, bufferSize, srcFile)) > 0)
+        while ((bytesRead = fread(buffer, 1, bufferSize, srcFile)) > 0) {
             fwrite(buffer, 1, bytesRead, destFile);
+            if (abortFileOp.load(std::memory_order_acquire)) {
+                break;
+            }
+        }
+
         
         fclose(srcFile);
         fclose(destFile);
+        if (abortFileOp.load(std::memory_order_acquire)) {
+            deleteFileOrDirectory(toFile);
+            abortFileOp.store(false, std::memory_order_release);
+        }
+
     } else {
         // Error opening files or performing copy action.
         // Handle the error accordingly.
