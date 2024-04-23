@@ -27,7 +27,7 @@
 #include "debug_funcs.hpp"
 //#include "json_funcs.hpp"
 
-const size_t downloadBufferSize = 4096*2;
+const size_t downloadBufferSize = 4096*3;
 
 /**
  * @brief Callback function to write received data to a file.
@@ -40,8 +40,8 @@ const size_t downloadBufferSize = 4096*2;
  */
 size_t writeCallback(void* contents, size_t size, size_t nmemb, FILE* file) {
     // Callback function to write received data to a file
-    size_t written = fwrite(contents, size, nmemb, file);
-    return written;
+    //size_t written = fwrite(contents, size, nmemb, file);
+    return fwrite(contents, size, nmemb, file);
 }
 
 
