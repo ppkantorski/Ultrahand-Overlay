@@ -1478,6 +1478,7 @@ void backgroundInterpreter(void*) {
             interpretAndExecuteCommand(std::get<0>(args), std::get<1>(args), std::get<2>(args));
             //logMessage("Interpreter complete.");
             runningInterpreter.store(false, std::memory_order_release);
+            abortDownload.store(false, std::memory_order_release);
         }
     }
 }
@@ -1500,6 +1501,7 @@ void closeInterpreterThread() {
     threadWaitForExit(&interpreterThread);
     threadClose(&interpreterThread);
     runningInterpreter.store(false, std::memory_order_release);
+    abortDownload.store(false, std::memory_order_release);
 }
 
 // Enqueue command for interpretation
