@@ -4937,22 +4937,26 @@ namespace tsl {
                 if (!oldTouchDetected) {
                     initialTouchPos = touchPos;
                     elm::Element::setInputMode(InputMode::Touch);
-                    if (initialTouchPos.y <= cfg::FramebufferHeight - 73U && initialTouchPos.y > 73U && initialTouchPos.x <= cfg::FramebufferWidth && initialTouchPos.x > 0U) {
-                        touchInBounds = true;
-                        currentGui->removeFocus();
-                    } else {
-                        touchInBounds = false;
+                    if (!runningInterpreter.load(std::memory_order_acquire)) {
+                        if (initialTouchPos.y <= cfg::FramebufferHeight - 73U && initialTouchPos.y > 73U && initialTouchPos.x <= cfg::FramebufferWidth && initialTouchPos.x > 0U) {
+                            touchInBounds = true;
+                            currentGui->removeFocus();
+                        } else {
+                            touchInBounds = false;
+                        }
                     }
                     touchEvent = elm::TouchEvent::Touch;
                 }
                 
                 // Call onTouch method for the top element to handle touch event
                 if (currentGui != nullptr && topElement != nullptr) {
-                    topElement->onTouch(touchEvent, touchPos.x, touchPos.y, oldTouchPos.x, oldTouchPos.y, initialTouchPos.x, initialTouchPos.y);
-                    if (currentFocus != nullptr && touchEvent != elm::TouchEvent::Scroll)
-                        currentGui->requestFocus(currentFocus, FocusDirection::None);
-                    else
-                        currentGui->removeFocus();
+                    if (!runningInterpreter.load(std::memory_order_acquire)) {
+                        topElement->onTouch(touchEvent, touchPos.x, touchPos.y, oldTouchPos.x, oldTouchPos.y, initialTouchPos.x, initialTouchPos.y);
+                        if (currentFocus != nullptr && touchEvent != elm::TouchEvent::Scroll)
+                            currentGui->requestFocus(currentFocus, FocusDirection::None);
+                        else
+                            currentGui->removeFocus();
+                    }
                     //// Check if the top element contains the touch position
                     //if (topElement->inBounds(touchPos.x, touchPos.y)) {
                     //    // Request focus for the top element
@@ -4991,7 +4995,7 @@ namespace tsl {
                 }
                 stillTouching = true;
             } else {
-                if (!interruptedTouch) {
+                if (!interruptedTouch && !runningInterpreter.load(std::memory_order_acquire)) {
                     // Check touch button locations for specific actions
                     if (oldTouchPos.x < 150U && oldTouchPos.y > cfg::FramebufferHeight - 73U) {
                         if (initialTouchPos.x < 150U && initialTouchPos.y > cfg::FramebufferHeight - 73U) {
