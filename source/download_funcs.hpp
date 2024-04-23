@@ -31,6 +31,8 @@ const size_t downloadBufferSize = 4096*3;
 
 // Shared atomic flag to indicate whether to abort the download operation
 static std::atomic<bool> abortDownload(false);
+// Define an atomic bool for interpreter completion
+static std::atomic<bool> abortUnzip(false);
 
 /**
  * @brief Callback function to write received data to a file.
@@ -68,7 +70,7 @@ int progressCallback(void *clientp, curl_off_t dltotal, curl_off_t dlnow, curl_o
  */
 bool downloadFile(const std::string& url, const std::string& toDestination) {
     abortDownload.store(false, std::memory_order_release); // Reset abort flag
-    
+
     if (url.find_first_of("{}") != std::string::npos) {
         logMessage(std::string("Invalid URL: ") + url);
         return false;
@@ -207,6 +209,10 @@ bool unzipFile(const std::string& zipFilePath, const std::string& toDestination)
     bool success = true;
     ZZIP_DIRENT entry;
     while (zzip_dir_read(dir, &entry)) {
+        if (abortUnzip.load(std::memory_order_acquire)) {
+            break;
+        }
+
         // Skip empty entries, "..." files, and files starting with "."
         if (entry.d_name[0] == '\0') {
             continue;
