@@ -200,6 +200,8 @@ bool downloadFile(const std::string& url, const std::string& toDestination) {
  * @return True if the extraction was successful, false otherwise.
  */
 bool unzipFile(const std::string& zipFilePath, const std::string& toDestination) {
+    abortUnzip.store(false, std::memory_order_release); // Reset abort flag
+
     ZZIP_DIR* dir = zzip_dir_open(zipFilePath.c_str(), nullptr);
     if (!dir) {
         logMessage(std::string("Error opening zip file: ") + zipFilePath);
@@ -210,6 +212,7 @@ bool unzipFile(const std::string& zipFilePath, const std::string& toDestination)
     ZZIP_DIRENT entry;
     while (zzip_dir_read(dir, &entry)) {
         if (abortUnzip.load(std::memory_order_acquire)) {
+            abortUnzip.store(false, std::memory_order_release); // Reset abort flag
             break;
         }
 
@@ -263,7 +266,7 @@ bool unzipFile(const std::string& zipFilePath, const std::string& toDestination)
             FILE* outputFile = fopen(extractedFilePath.c_str(), "wb");
             if (outputFile) {
                 zzip_ssize_t bytesRead;
-                const zzip_ssize_t bufferSize = 4096*2;
+                const zzip_ssize_t bufferSize = 4096*3;
                 char buffer[bufferSize];
 
                 while ((bytesRead = zzip_file_read(file, buffer, bufferSize)) > 0) {
