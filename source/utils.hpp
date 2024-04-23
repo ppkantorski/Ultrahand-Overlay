@@ -1262,11 +1262,12 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                         downloadSuccess = false;
                         
                         //setIniFileValue((packagePath+configFileName).c_str(), selectedCommand.c_str(), "footer", "downloading");
-                        for (size_t i = 0; i < 3; ++i) { // Try 3 times.
-                            downloadSuccess = downloadFile(fileUrl, destinationPath);
-                            if (downloadSuccess)
-                                break;
-                        }
+                        //for (size_t i = 0; i < 3; ++i) { // Try 3 times.
+                        //    downloadSuccess = downloadFile(fileUrl, destinationPath);
+                        //    if (downloadSuccess)
+                        //        break;
+                        //}
+                        downloadSuccess = downloadFile(fileUrl, destinationPath);
                         commandSuccess = (downloadSuccess && commandSuccess);
                     }
                 } else if (commandName == "unzip") {
