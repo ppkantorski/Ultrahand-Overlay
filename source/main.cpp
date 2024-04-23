@@ -785,7 +785,7 @@ public:
                     simulatedBack = false;
                 }
 
-                if ((keysHeld & KEY_B) && !stillTouching) {
+                if ((keysHeld & KEY_B) && !stillTouching && !runningInterpreter.load(std::memory_order_acquire)) {
                     inSettingsMenu = false;
                     if (lastMenu != "hiddenMenuMode")
                         returningToMain = true;
@@ -817,7 +817,7 @@ public:
                 simulatedBack = false;
             }
 
-            if ((keysHeld & KEY_B) && !stillTouching) {
+            if ((keysHeld & KEY_B) && !stillTouching  && !runningInterpreter.load(std::memory_order_acquire)) {
                 inSubSettingsMenu = false;
                 returningToSettings = true;
                 tsl::goBack();
@@ -1059,7 +1059,7 @@ public:
                     simulatedBack = false;
                 }
 
-                if ((keysHeld & KEY_B) && !stillTouching) {
+                if ((keysHeld & KEY_B) && !stillTouching && !runningInterpreter.load(std::memory_order_acquire)) {
                     inSettingsMenu = false;
                     if (lastMenu != "hiddenMenuMode")
                         returningToMain = true;
@@ -1100,7 +1100,7 @@ public:
                 simulatedBack = false;
             }
 
-            if ((keysHeld & KEY_B) && !stillTouching) {
+            if ((keysHeld & KEY_B) && !stillTouching  && !runningInterpreter.load(std::memory_order_acquire)) {
                 inSubSettingsMenu = false;
                 returningToSettings = true;
                 tsl::goBack();
@@ -1286,7 +1286,7 @@ public:
                 simulatedBack = false;
             }
 
-            if ((keysHeld & KEY_B) && !stillTouching) {
+            if ((keysHeld & KEY_B) && !stillTouching  && !runningInterpreter.load(std::memory_order_acquire)) {
                 inScriptMenu = false;
                 if (isFromMainMenu == false) {
                     if (lastMenu == "packageMenu")
@@ -1849,7 +1849,7 @@ public:
                 simulatedBack = false;
             }
 
-            if ((keysHeld & KEY_B) && !stillTouching) {
+            if ((keysHeld & KEY_B) && !stillTouching && !runningInterpreter.load(std::memory_order_acquire)) {
                 inSelectionMenu = false;
                 
                 if (lastMenu == "packageMenu")
@@ -2487,7 +2487,7 @@ public:
                 keysHeld |= KEY_B;
                 simulatedBack = false;
             }
-            if ((keysHeld & KEY_B) && !stillTouching) {
+            if ((keysHeld & KEY_B) && !stillTouching && !runningInterpreter.load(std::memory_order_acquire)) {
                 inPackageMenu = false;
                 returningToMain = true;
                 
@@ -2522,7 +2522,7 @@ public:
                 keysHeld |= KEY_B;
                 simulatedBack = false;
             }
-            if ((keysHeld & KEY_B) && !stillTouching) {
+            if ((keysHeld & KEY_B) && !stillTouching && !runningInterpreter.load(std::memory_order_acquire)) {
                 inSubPackageMenu = false;
                 returningToPackage = true;
                 lastMenu = "packageMenu";
@@ -3682,7 +3682,7 @@ public:
                     simulatedBack = false;
                 }
 
-                if ((keysHeld & KEY_B) && !stillTouching) {
+                if ((keysHeld & KEY_B) && !stillTouching && !runningInterpreter.load(std::memory_order_acquire)) {
                     //inMainMenu = false;
                     setIniFileValue(settingsConfigIniPath, "ultrahand", "last_menu", defaultMenuMode);
                     tsl::Overlay::get()->close();
@@ -3719,7 +3719,7 @@ public:
                     simulatedBack = false;
                 }
 
-                if ((keysHeld & KEY_B) && !stillTouching) {
+                if ((keysHeld & KEY_B) && !stillTouching  && !runningInterpreter.load(std::memory_order_acquire)) {
                     returningToMain = true;
                     inHiddenMode = false;
                     
