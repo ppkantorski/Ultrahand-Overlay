@@ -434,7 +434,7 @@ public:
                             {"download", ultrahandRepo + "releases/latest/download/ovlmenu.ovl", "/config/ultrahand/downloads/"},
                             {"move", "/config/ultrahand/downloads/ovlmenu.ovl", "/switch/.overlays/ovlmenu.ovl"}
                         };
-                        enqueueInterpreterCommand(interpreterCommands, "", "");
+                        enqueueInterpreterCommand(std::move(interpreterCommands), "", "");
                         runningInterpreter.store(true, std::memory_order_release);
                         
                         if (isDownloadCommand)
@@ -484,7 +484,7 @@ public:
                             {"delete", "/config/ultrahand/lang/"},
                             {"move", "/config/ultrahand/downloads/lang/", "/config/ultrahand/lang/"}
                         };
-                        enqueueInterpreterCommand(interpreterCommands, "", "");
+                        enqueueInterpreterCommand(std::move(interpreterCommands), "", "");
                         runningInterpreter.store(true, std::memory_order_release);
                         
                         if (isDownloadCommand)
