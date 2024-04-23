@@ -1485,7 +1485,7 @@ void backgroundInterpreter(void*) {
 // Start interpreter thread
 void startInterpreterThread() {
     interpreterThreadExit = false;
-    threadCreate(&interpreterThread, backgroundInterpreter, nullptr, nullptr, 0x4000, 0x10, -2);
+    threadCreate(&interpreterThread, backgroundInterpreter, nullptr, nullptr, 0x8000, 0x10, -2);
     threadStart(&interpreterThread);
 }
 
