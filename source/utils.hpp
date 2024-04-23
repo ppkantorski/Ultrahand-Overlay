@@ -137,6 +137,9 @@ void initializeTheme(std::string themeIniPath = themeConfigIniPath) {
             
             if (themedSection.count("highlight_color_2") == 0)
                 setIniFileValue(themeIniPath, "theme", "highlight_color_2", "#88FFFF");
+
+            if (themedSection.count("highlight_color_3") == 0)
+                setIniFileValue(themeIniPath, "theme", "highlight_color_3", "#FFFF45");
             
             if (themedSection.count("click_text_color") == 0)
                 setIniFileValue(themeIniPath, "theme", "click_text_color", "#000000");
@@ -189,6 +192,7 @@ void initializeTheme(std::string themeIniPath = themeConfigIniPath) {
         setIniFileValue(themeIniPath, "theme", "trackbar_color", "#555555");
         setIniFileValue(themeIniPath, "theme", "highlight_color_1", "#2288CC");
         setIniFileValue(themeIniPath, "theme", "highlight_color_2", "#88FFFF");
+        setIniFileValue(themeIniPath, "theme", "highlight_color_3", "#FFFF45");
         setIniFileValue(themeIniPath, "theme", "click_color", "#F7253E");
         setIniFileValue(themeIniPath, "theme", "invert_bg_click_color", "false");
         setIniFileValue(themeIniPath, "theme", "disable_selection_bg", "true");
@@ -1442,7 +1446,7 @@ std::condition_variable queueCondition;
 static bool interpreterThreadExit = false;
 
 // Define an atomic bool for interpreter completion
-static std::atomic<bool> runningInterpreter(false);
+//static std::atomic<bool> runningInterpreter(false);
 
 void backgroundInterpreter(void*) {
     while (!interpreterThreadExit) {
