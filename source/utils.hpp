@@ -1456,6 +1456,7 @@ static bool interpreterThreadExit = false;
 // Define an atomic bool for interpreter completion
 //static std::atomic<bool> runningInterpreter(false);
 
+
 void backgroundInterpreter(void*) {
     while (!interpreterThreadExit) {
         std::tuple<std::vector<std::vector<std::string>>, std::string, std::string> args;
