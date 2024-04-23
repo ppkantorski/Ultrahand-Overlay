@@ -1498,6 +1498,7 @@ void closeInterpreterThread() {
     }
     threadWaitForExit(&interpreterThread);
     threadClose(&interpreterThread);
+    runningInterpreter.store(false, std::memory_order_release);
 }
 
 // Enqueue command for interpretation
