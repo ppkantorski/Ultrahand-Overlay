@@ -804,6 +804,13 @@ public:
                     //tsl::Overlay::get()->close();
                     return true;
                 }
+
+                // Check for back button press
+                if ((keysHeld & KEY_R) && !stillTouching && runningInterpreter.load(std::memory_order_acquire)) {
+                    commandSuccess = false;
+                    closeInterpreterThread();
+                    return true;
+                }
             }
         } else if (inSubSettingsMenu) {
 
@@ -829,6 +836,13 @@ public:
                 }
                 //tsl::Overlay::get()->close();
                 simulatedBackComplete = true;
+                return true;
+            }
+
+            // Check for back button press
+            if ((keysHeld & KEY_R) && !stillTouching && runningInterpreter.load(std::memory_order_acquire)) {
+                commandSuccess = false;
+                closeInterpreterThread();
                 return true;
             }
         }
@@ -1083,6 +1097,13 @@ public:
                     //tsl::Overlay::get()->close();
                     return true;
                 }
+
+                // Check for back button press
+                if ((keysHeld & KEY_R) && !stillTouching && runningInterpreter.load(std::memory_order_acquire)) {
+                    commandSuccess = false;
+                    closeInterpreterThread();
+                    return true;
+                }
             }
         } else if (inSubSettingsMenu) {
             if (simulatedNextPage && !simulatedNextPageComplete && !runningInterpreter.load(std::memory_order_acquire)) {
@@ -1106,6 +1127,13 @@ public:
                 tsl::goBack();
                 //tsl::Overlay::get()->close();
                 simulatedBackComplete = true;
+                return true;
+            }
+
+            // Check for back button press
+            if ((keysHeld & KEY_R) && !stillTouching && runningInterpreter.load(std::memory_order_acquire)) {
+                commandSuccess = false;
+                closeInterpreterThread();
                 return true;
             }
         }
@@ -1298,6 +1326,13 @@ public:
                 tsl::goBack();
                 //tsl::Overlay::get()->close();
                 simulatedBackComplete = true;
+                return true;
+            }
+
+            // Check for back button press
+            if ((keysHeld & KEY_R) && !stillTouching && runningInterpreter.load(std::memory_order_acquire)) {
+                commandSuccess = false;
+                closeInterpreterThread();
                 return true;
             }
         }
@@ -1873,6 +1908,13 @@ public:
                 
                 tsl::goBack();
                 simulatedBackComplete = true;
+                return true;
+            }
+
+            // Check for back button press
+            if ((keysHeld & KEY_R) && !stillTouching && runningInterpreter.load(std::memory_order_acquire)) {
+                commandSuccess = false;
+                closeInterpreterThread();
                 return true;
             }
         }
@@ -2505,6 +2547,12 @@ public:
                 simulatedBackComplete = true;
                 return true;
             }
+            // Check for back button press
+            if ((keysHeld & KEY_R) && !stillTouching && runningInterpreter.load(std::memory_order_acquire)) {
+                commandSuccess = false;
+                closeInterpreterThread();
+                return true;
+            }
         }
         
         if (!returningToSubPackage && inSubPackageMenu) {
@@ -2530,6 +2578,12 @@ public:
                 
                 //tsl::Overlay::get()->close();
                 simulatedBackComplete = true;
+                return true;
+            }
+            // Check for back button press
+            if ((keysHeld & KEY_R) && !stillTouching && runningInterpreter.load(std::memory_order_acquire)) {
+                commandSuccess = false;
+                closeInterpreterThread();
                 return true;
             }
         }
@@ -3690,6 +3744,13 @@ public:
                     return true;
                 }
 
+                // Check for back button press
+                if ((keysHeld & KEY_R) && !stillTouching && runningInterpreter.load(std::memory_order_acquire)) {
+                    commandSuccess = false;
+                    closeInterpreterThread();
+                    return true;
+                }
+
                 if (simulatedMenu && !simulatedMenuComplete && !runningInterpreter.load(std::memory_order_acquire)) {
                     keysHeld |= SYSTEM_SETTINGS_KEY;
                     simulatedMenu = false;
@@ -3733,6 +3794,13 @@ public:
                     
                     tsl::goBack();
                     simulatedBackComplete = true;
+                    return true;
+                }
+
+                // Check for back button press
+                if ((keysHeld & KEY_R) && !stillTouching && runningInterpreter.load(std::memory_order_acquire)) {
+                    commandSuccess = false;
+                    closeInterpreterThread();
                     return true;
                 }
             }
