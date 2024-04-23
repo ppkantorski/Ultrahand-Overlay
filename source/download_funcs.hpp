@@ -27,7 +27,7 @@
 #include "debug_funcs.hpp"
 //#include "json_funcs.hpp"
 
-const size_t downloadBufferSize = 4096;
+const size_t downloadBufferSize = 4096*2;
 
 /**
  * @brief Callback function to write received data to a file.
@@ -236,7 +236,7 @@ bool unzipFile(const std::string& zipFilePath, const std::string& toDestination)
             FILE* outputFile = fopen(extractedFilePath.c_str(), "wb");
             if (outputFile) {
                 zzip_ssize_t bytesRead;
-                const zzip_ssize_t bufferSize = 4096;
+                const zzip_ssize_t bufferSize = 4096*2;
                 char buffer[bufferSize];
 
                 while ((bytesRead = zzip_file_read(file, buffer, bufferSize)) > 0) {
