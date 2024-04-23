@@ -171,7 +171,7 @@ public:
             // Envolke selectionOverlay in optionMode
             
             listItem->setClickListener([this, listItem](uint64_t keys) { // Add 'command' to the capture list
-                if (simulatedSelect && !simulatedSelectComplete) {
+                if (simulatedSelect && !simulatedSelectComplete && !runningInterpreter.load(std::memory_order_acquire)) {
                     keys |= KEY_A;
                     simulatedSelect = false;
                 }
@@ -193,7 +193,7 @@ public:
             // Envolke selectionOverlay in optionMode
             
             listItem->setClickListener([this, listItem](uint64_t keys) { // Add 'command' to the capture list
-                if (simulatedSelect && !simulatedSelectComplete) {
+                if (simulatedSelect && !simulatedSelectComplete && !runningInterpreter.load(std::memory_order_acquire)) {
                     keys |= KEY_A;
                     simulatedSelect = false;
                 }
@@ -229,7 +229,7 @@ public:
             listItem = new tsl::elm::ListItem(THEME);
             listItem->setValue(currentTheme);
             listItem->setClickListener([this, listItem](uint64_t keys) { // Add 'command' to the capture list
-                if (simulatedSelect && !simulatedSelectComplete) {
+                if (simulatedSelect && !simulatedSelectComplete && !runningInterpreter.load(std::memory_order_acquire)) {
                     keys |= KEY_A;
                     simulatedSelect = false;
                 }
@@ -248,7 +248,7 @@ public:
             listItem->setValue(DROPDOWN_SYMBOL);
             
             listItem->setClickListener([this, listItem](uint64_t keys) { // Add 'command' to the capture list
-                if (simulatedSelect && !simulatedSelectComplete) {
+                if (simulatedSelect && !simulatedSelectComplete && !runningInterpreter.load(std::memory_order_acquire)) {
                     keys |= KEY_A;
                     simulatedSelect = false;
                 }
@@ -266,7 +266,7 @@ public:
             listItem->setValue(DROPDOWN_SYMBOL);
             
             listItem->setClickListener([this, listItem](uint64_t keys) { // Add 'command' to the capture list
-                if (simulatedSelect && !simulatedSelectComplete) {
+                if (simulatedSelect && !simulatedSelectComplete && !runningInterpreter.load(std::memory_order_acquire)) {
                     keys |= KEY_A;
                     simulatedSelect = false;
                 }
@@ -298,7 +298,7 @@ public:
                 }
                 
                 listItem->setClickListener([this, defaultMenuMode, listItem](uint64_t keys) { // Add 'this', 'i', and 'listItem' to the capture list
-                    if (simulatedSelect && !simulatedSelectComplete) {
+                    if (simulatedSelect && !simulatedSelectComplete && !runningInterpreter.load(std::memory_order_acquire)) {
                         keys |= KEY_A;
                         simulatedSelect = false;
                     }
@@ -334,7 +334,7 @@ public:
                 }
                 
                 listItem->setClickListener([this, combo, mappedCombo=comboMap[combo], defaultCombo, listItem](uint64_t keys) { // Add 'this', 'i', and 'listItem' to the capture list
-                    if (simulatedSelect && !simulatedSelectComplete) {
+                    if (simulatedSelect && !simulatedSelectComplete && !runningInterpreter.load(std::memory_order_acquire)) {
                         keys |= KEY_A;
                         simulatedSelect = false;
                     }
@@ -384,7 +384,7 @@ public:
                 }
                 
                 listItem->setClickListener([this, skipLang, defaultLangMode, defaulLang, langFile, listItem](uint64_t keys) { // Add 'this', 'i', and 'listItem' to the capture list
-                    if (simulatedSelect && !simulatedSelectComplete) {
+                    if (simulatedSelect && !simulatedSelectComplete && !runningInterpreter.load(std::memory_order_acquire)) {
                         keys |= KEY_A;
                         simulatedSelect = false;
                     }
@@ -420,7 +420,7 @@ public:
             auto listItem = new tsl::elm::ListItem(UPDATE_ULTRAHAND);
             
             listItem->setClickListener([this, listItem](uint64_t keys) { // Add 'command' to the capture list
-                if (simulatedSelect && !simulatedSelectComplete) {
+                if (simulatedSelect && !simulatedSelectComplete && !runningInterpreter.load(std::memory_order_acquire)) {
                     keys |= KEY_A;
                     simulatedSelect = false;
                 }
@@ -467,7 +467,7 @@ public:
             // Envolke selectionOverlay in optionMode
             
             listItem->setClickListener([this, listItem](uint64_t keys) { // Add 'command' to the capture list
-                if (simulatedSelect && !simulatedSelectComplete) {
+                if (simulatedSelect && !simulatedSelectComplete && !runningInterpreter.load(std::memory_order_acquire)) {
                     keys |= KEY_A;
                     simulatedSelect = false;
                 }
@@ -543,7 +543,7 @@ public:
             }
             
             listItem->setClickListener([this, defaultTheme, listItem](uint64_t keys) { // Add 'this', 'i', and 'listItem' to the capture list
-                if (simulatedSelect && !simulatedSelectComplete) {
+                if (simulatedSelect && !simulatedSelectComplete && !runningInterpreter.load(std::memory_order_acquire)) {
                     keys |= KEY_A;
                     simulatedSelect = false;
                 }
@@ -593,7 +593,7 @@ public:
                 }
                 
                 listItem->setClickListener([this, themeName, currentTheme, themeFile, listItem](uint64_t keys) { // Add 'this', 'i', and 'listItem' to the capture list
-                    if (simulatedSelect && !simulatedSelectComplete) {
+                    if (simulatedSelect && !simulatedSelectComplete && !runningInterpreter.load(std::memory_order_acquire)) {
                         keys |= KEY_A;
                         simulatedSelect = false;
                     }
@@ -770,17 +770,17 @@ public:
                     reloadMenu3 = false;
                 }
 
-                if (simulatedNextPage && !simulatedNextPageComplete) {
+                if (simulatedNextPage && !simulatedNextPageComplete && !runningInterpreter.load(std::memory_order_acquire)) {
                     simulatedNextPage = false;
                     simulatedNextPageComplete = true;
                 }
 
-                if (simulatedMenu && !simulatedMenuComplete) {
+                if (simulatedMenu && !simulatedMenuComplete && !runningInterpreter.load(std::memory_order_acquire)) {
                     simulatedMenu = false;
                     simulatedMenuComplete = true;
                 }
 
-                if (simulatedBack && !simulatedBackComplete) {
+                if (simulatedBack && !simulatedBackComplete && !runningInterpreter.load(std::memory_order_acquire)) {
                     keysHeld |= KEY_B;
                     simulatedBack = false;
                 }
@@ -812,7 +812,7 @@ public:
                 simulatedNextPageComplete = true;
             }
 
-            if (simulatedBack && !simulatedBackComplete) {
+            if (simulatedBack && !simulatedBackComplete && !runningInterpreter.load(std::memory_order_acquire)) {
                 keysHeld |= KEY_B;
                 simulatedBack = false;
             }
@@ -945,7 +945,7 @@ public:
             // Envolke selectionOverlay in optionMode
             
             listItem->setClickListener([this, listItem](uint64_t keys) { // Add 'command' to the capture list
-                if (simulatedSelect && !simulatedSelectComplete) {
+                if (simulatedSelect && !simulatedSelectComplete && !runningInterpreter.load(std::memory_order_acquire)) {
                     keys |= KEY_A;
                     simulatedSelect = false;
                 }
@@ -991,7 +991,7 @@ public:
                 }
                 
                 listItem->setClickListener([this, iStr, priorityValue, listItem](uint64_t keys) { // Add 'this', 'i', and 'listItem' to the capture list
-                    if (simulatedSelect && !simulatedSelectComplete) {
+                    if (simulatedSelect && !simulatedSelectComplete && !runningInterpreter.load(std::memory_order_acquire)) {
                         keys |= KEY_A;
                         simulatedSelect = false;
                     }
@@ -1044,17 +1044,17 @@ public:
 
         if (inSettingsMenu && !inSubSettingsMenu) {
             if (!returningToSettings) {
-                if (simulatedNextPage && !simulatedNextPageComplete) {
+                if (simulatedNextPage && !simulatedNextPageComplete && !runningInterpreter.load(std::memory_order_acquire)) {
                     simulatedNextPage = false;
                     simulatedNextPageComplete = true;
                 }
 
-                if (simulatedMenu && !simulatedMenuComplete) {
+                if (simulatedMenu && !simulatedMenuComplete && !runningInterpreter.load(std::memory_order_acquire)) {
                     simulatedMenu = false;
                     simulatedMenuComplete = true;
                 }
 
-                if (simulatedBack && !simulatedBackComplete) {
+                if (simulatedBack && !simulatedBackComplete && !runningInterpreter.load(std::memory_order_acquire)) {
                     keysHeld |= KEY_B;
                     simulatedBack = false;
                 }
@@ -1085,17 +1085,17 @@ public:
                 }
             }
         } else if (inSubSettingsMenu) {
-            if (simulatedNextPage && !simulatedNextPageComplete) {
+            if (simulatedNextPage && !simulatedNextPageComplete && !runningInterpreter.load(std::memory_order_acquire)) {
                 simulatedNextPage = false;
                 simulatedNextPageComplete = true;
             }
 
-            if (simulatedMenu && !simulatedMenuComplete) {
+            if (simulatedMenu && !simulatedMenuComplete && !runningInterpreter.load(std::memory_order_acquire)) {
                 simulatedMenu = false;
                 simulatedMenuComplete = true;
             }
 
-            if (simulatedBack && !simulatedBackComplete) {
+            if (simulatedBack && !simulatedBackComplete && !runningInterpreter.load(std::memory_order_acquire)) {
                 keysHeld |= KEY_B;
                 simulatedBack = false;
             }
@@ -1198,7 +1198,7 @@ public:
                 } else if (isInSection) {
                     listItem = new tsl::elm::ListItem(line);
                     listItem->setClickListener([line, this, listItem](uint64_t keys) {
-                        if (simulatedSelect && !simulatedSelectComplete) {
+                        if (simulatedSelect && !simulatedSelectComplete && !runningInterpreter.load(std::memory_order_acquire)) {
                             keys |= KEY_A;
                             simulatedSelect = false;
                         }
@@ -1271,17 +1271,17 @@ public:
         //}
 
         if (inScriptMenu) {
-            if (simulatedNextPage && !simulatedNextPageComplete) {
+            if (simulatedNextPage && !simulatedNextPageComplete && !runningInterpreter.load(std::memory_order_acquire)) {
                 simulatedNextPage = false;
                 simulatedNextPageComplete = true;
             }
 
-            if (simulatedMenu && !simulatedMenuComplete) {
+            if (simulatedMenu && !simulatedMenuComplete && !runningInterpreter.load(std::memory_order_acquire)) {
                 simulatedMenu = false;
                 simulatedMenuComplete = true;
             }
 
-            if (simulatedBack && !simulatedBackComplete) {
+            if (simulatedBack && !simulatedBackComplete && !runningInterpreter.load(std::memory_order_acquire)) {
                 keysHeld |= KEY_B;
                 simulatedBack = false;
             }
@@ -1707,7 +1707,7 @@ public:
                 //
                 
                 listItem->setClickListener([this, i, footer, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
-                    if (simulatedSelect && !simulatedSelectComplete) {
+                    if (simulatedSelect && !simulatedSelectComplete && !runningInterpreter.load(std::memory_order_acquire)) {
                         keys |= KEY_A;
                         simulatedSelect = false;
                     }
@@ -1834,17 +1834,17 @@ public:
         }
         
         if (inSelectionMenu) {
-            if (simulatedNextPage && !simulatedNextPageComplete) {
+            if (simulatedNextPage && !simulatedNextPageComplete && !runningInterpreter.load(std::memory_order_acquire)) {
                 simulatedNextPage = false;
                 simulatedNextPageComplete = true;
             }
 
-            if (simulatedMenu && !simulatedMenuComplete) {
+            if (simulatedMenu && !simulatedMenuComplete && !runningInterpreter.load(std::memory_order_acquire)) {
                 simulatedMenu = false;
                 simulatedMenuComplete = true;
             }
 
-            if (simulatedBack && !simulatedBackComplete) {
+            if (simulatedBack && !simulatedBackComplete && !runningInterpreter.load(std::memory_order_acquire)) {
                 keysHeld |= KEY_B;
                 simulatedBack = false;
             }
@@ -2049,7 +2049,7 @@ public:
                             listItem = new tsl::elm::ListItem(removeTag(optionName.substr(1)), DROPDOWN_SYMBOL);
                             
                             listItem->setClickListener([this, optionName](s64 keys) {
-                                if (simulatedSelect && !simulatedSelectComplete) {
+                                if (simulatedSelect && !simulatedSelectComplete && !runningInterpreter.load(std::memory_order_acquire)) {
                                     keys |= KEY_A;
                                     simulatedSelect = false;
                                 }
@@ -2250,7 +2250,7 @@ public:
                         
                         //std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(option.second, pathReplace);
                         listItem->setClickListener([this, commands, keyName = option.first, packagePath = this->packagePath, footer, lastSection, listItem](uint64_t keys) {
-                            if (simulatedSelect && !simulatedSelectComplete) {
+                            if (simulatedSelect && !simulatedSelectComplete && !runningInterpreter.load(std::memory_order_acquire)) {
                                 keys |= KEY_A;
                                 simulatedSelect = false;
                             }
@@ -2312,7 +2312,7 @@ public:
                             
                             
                             listItem->setClickListener([this, i, commands, keyName = option.first, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
-                                if (simulatedSelect && !simulatedSelectComplete) {
+                                if (simulatedSelect && !simulatedSelectComplete && !runningInterpreter.load(std::memory_order_acquire)) {
                                     keys |= KEY_A;
                                     simulatedSelect = false;
                                 }
@@ -2437,12 +2437,12 @@ public:
         }
         
         if (usingPages) {
-            if (simulatedMenu && !simulatedMenuComplete) {
+            if (simulatedMenu && !simulatedMenuComplete && !runningInterpreter.load(std::memory_order_acquire)) {
                 simulatedMenu = false;
                 simulatedMenuComplete = true;
             }
 
-            if (simulatedNextPage && !simulatedNextPageComplete) {
+            if (simulatedNextPage && !simulatedNextPageComplete && !runningInterpreter.load(std::memory_order_acquire)) {
                 if (currentPage == "left") {
                     keysHeld |= KEY_DRIGHT;
                     simulatedNextPage = false;
@@ -2473,17 +2473,17 @@ public:
         }
         
         if (!returningToPackage && inPackageMenu) {
-            if (simulatedMenu && !simulatedMenuComplete) {
+            if (simulatedMenu && !simulatedMenuComplete && !runningInterpreter.load(std::memory_order_acquire)) {
                 simulatedMenu = false;
                 simulatedMenuComplete = true;
             }
 
-            if (simulatedNextPage && !simulatedNextPageComplete) {
+            if (simulatedNextPage && !simulatedNextPageComplete && !runningInterpreter.load(std::memory_order_acquire)) {
                 simulatedNextPage = false;
                 simulatedNextPageComplete = true;
             }
 
-            if (simulatedBack && !simulatedBackComplete) {
+            if (simulatedBack && !simulatedBackComplete && !runningInterpreter.load(std::memory_order_acquire)) {
                 keysHeld |= KEY_B;
                 simulatedBack = false;
             }
@@ -2508,17 +2508,17 @@ public:
         }
         
         if (!returningToSubPackage && inSubPackageMenu) {
-            if (simulatedMenu && !simulatedMenuComplete) {
+            if (simulatedMenu && !simulatedMenuComplete && !runningInterpreter.load(std::memory_order_acquire)) {
                 simulatedMenu = false;
                 simulatedMenuComplete = true;
             }
 
-            if (simulatedNextPage && !simulatedNextPageComplete) {
+            if (simulatedNextPage && !simulatedNextPageComplete && !runningInterpreter.load(std::memory_order_acquire)) {
                 simulatedNextPage = false;
                 simulatedNextPageComplete = true;
             }
 
-            if (simulatedBack && !simulatedBackComplete) {
+            if (simulatedBack && !simulatedBackComplete && !runningInterpreter.load(std::memory_order_acquire)) {
                 keysHeld |= KEY_B;
                 simulatedBack = false;
             }
@@ -2894,7 +2894,7 @@ public:
                         
                         // Add a click listener to load the overlay when clicked upon
                         listItem->setClickListener([this, overlayFile, newStarred, overlayFileName, overlayName](s64 keys) {
-                            if (simulatedSelect && !simulatedSelectComplete) {
+                            if (simulatedSelect && !simulatedSelectComplete && !runningInterpreter.load(std::memory_order_acquire)) {
                                 keys |= KEY_A;
                                 simulatedSelect = false;
                             }
@@ -2956,7 +2956,7 @@ public:
                     
                     //std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(option.second, pathReplace);
                     listItem->setClickListener([this](uint64_t keys) {
-                        if (simulatedSelect && !simulatedSelectComplete) {
+                        if (simulatedSelect && !simulatedSelectComplete && !runningInterpreter.load(std::memory_order_acquire)) {
                             keys |= KEY_A;
                             simulatedSelect = false;
                         }
@@ -3111,7 +3111,7 @@ public:
                     
                     // Add a click listener to load the overlay when clicked upon
                     listItem->setClickListener([this, packageFilePath, newStarred, packageName](s64 keys) {
-                        if (simulatedSelect && !simulatedSelectComplete) {
+                        if (simulatedSelect && !simulatedSelectComplete && !runningInterpreter.load(std::memory_order_acquire)) {
                             keys |= KEY_A;
                             simulatedSelect = false;
                         }
@@ -3175,7 +3175,7 @@ public:
             if (!hiddenPackageList.empty() && !inHiddenMode) {
                 listItem = new tsl::elm::ListItem(HIDDEN, DROPDOWN_SYMBOL);
                 listItem->setClickListener([this](uint64_t keys) {
-                    if (simulatedSelect && !simulatedSelectComplete) {
+                    if (simulatedSelect && !simulatedSelectComplete && !runningInterpreter.load(std::memory_order_acquire)) {
                         keys |= KEY_A;
                         simulatedSelect = false;
                     }
@@ -3428,7 +3428,7 @@ public:
                             
                             //std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(option.second, pathReplace);
                             listItem->setClickListener([this, commands, keyName = option.first, packagePath = packageDirectory, listItem](uint64_t keys) {
-                                if (simulatedSelect && !simulatedSelectComplete) {
+                                if (simulatedSelect && !simulatedSelectComplete && !runningInterpreter.load(std::memory_order_acquire)) {
                                     keys |= KEY_A;
                                     simulatedSelect = false;
                                 }
@@ -3464,7 +3464,7 @@ public:
                                 if (sourceType == "json") { // For JSON wildcards
                                     
                                     listItem->setClickListener([this, i, commands, packagePath = packageDirectory, keyName = option.first, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
-                                        if (simulatedSelect && !simulatedSelectComplete) {
+                                        if (simulatedSelect && !simulatedSelectComplete && !runningInterpreter.load(std::memory_order_acquire)) {
                                             keys |= KEY_A;
                                             simulatedSelect = false;
                                         }
@@ -3515,7 +3515,7 @@ public:
                                 } else {
                                     
                                     listItem->setClickListener([this, i, commands, packagePath = packageDirectory, keyName = option.first, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
-                                        if (simulatedSelect && !simulatedSelectComplete) {
+                                        if (simulatedSelect && !simulatedSelectComplete && !runningInterpreter.load(std::memory_order_acquire)) {
                                             keys |= KEY_A;
                                             simulatedSelect = false;
                                         }
@@ -3645,7 +3645,7 @@ public:
             
             if (!freshSpawn && !returningToMain && !returningToHiddenMain) {
 
-                if (simulatedNextPage && !simulatedNextPageComplete) {
+                if (simulatedNextPage && !simulatedNextPageComplete && !runningInterpreter.load(std::memory_order_acquire)) {
                     if (menuMode != "packages") {
                         keysHeld |= KEY_DRIGHT;
                         simulatedNextPage = false;
@@ -3677,7 +3677,7 @@ public:
                     }
                 }
 
-                if (simulatedBack && !simulatedBackComplete) {
+                if (simulatedBack && !simulatedBackComplete && !runningInterpreter.load(std::memory_order_acquire)) {
                     keysHeld |= KEY_B;
                     simulatedBack = false;
                 }
@@ -3690,7 +3690,7 @@ public:
                     return true;
                 }
 
-                if (simulatedMenu && !simulatedMenuComplete) {
+                if (simulatedMenu && !simulatedMenuComplete && !runningInterpreter.load(std::memory_order_acquire)) {
                     keysHeld |= SYSTEM_SETTINGS_KEY;
                     simulatedMenu = false;
                 }
@@ -3704,17 +3704,17 @@ public:
         }
         if (!inMainMenu && inHiddenMode) {
             if (!returningToHiddenMain && !returningToMain) {
-                if (simulatedNextPage && !simulatedNextPageComplete) {
+                if (simulatedNextPage && !simulatedNextPageComplete && !runningInterpreter.load(std::memory_order_acquire)) {
                     simulatedNextPage = false;
                     simulatedNextPageComplete = true;
                 }
 
-                if (simulatedMenu && !simulatedMenuComplete) {
+                if (simulatedMenu && !simulatedMenuComplete && !runningInterpreter.load(std::memory_order_acquire)) {
                     simulatedMenu = false;
                     simulatedMenuComplete = true;
                 }
 
-                if (simulatedBack && !simulatedBackComplete) {
+                if (simulatedBack && !simulatedBackComplete && !runningInterpreter.load(std::memory_order_acquire)) {
                     keysHeld |= KEY_B;
                     simulatedBack = false;
                 }
