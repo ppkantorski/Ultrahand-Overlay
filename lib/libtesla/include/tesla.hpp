@@ -4799,8 +4799,9 @@ namespace tsl {
             auto topElement = currentGui->getTopElement();
             auto bottomElement = currentGui->getBottomElement(); // Backend is still not implemented/working yet
             
+
             // Handle input when no element is focused
-            if (currentFocus == nullptr  && !simulatedBack && simulatedBackComplete && !stillTouching) {
+            if (currentFocus == nullptr  && !simulatedBack && simulatedBackComplete && !stillTouching && !runningInterpreter.load(std::memory_order_acquire)) {
                 // Check for back button press
                 if (keysDown & HidNpadButton_B) {
                     // Handle back button press
@@ -4861,7 +4862,7 @@ namespace tsl {
             handled = handled | currentGui->handleInput(keysDown, keysHeld, touchPos, joyStickPosLeft, joyStickPosRight);
             
             // Handle arrow key navigation when no touch input is detected
-            if (!touchDetected && !oldTouchDetected && !handled && currentFocus != nullptr && !stillTouching) {
+            if (!touchDetected && !oldTouchDetected && !handled && currentFocus != nullptr && !stillTouching && !runningInterpreter.load(std::memory_order_acquire)) {
                 static bool shouldShake = true;
                 
                 // Check for single arrow key press
