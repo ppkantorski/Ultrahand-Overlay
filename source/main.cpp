@@ -809,6 +809,9 @@ public:
                 if ((keysHeld & KEY_R) && !stillTouching && runningInterpreter.load(std::memory_order_acquire)) {
                     commandSuccess = false;
                     abortDownload.store(true, std::memory_order_release);
+                    abortUnzip.store(true, std::memory_order_release);
+                    abortFileOp.store(true, std::memory_order_release);
+                    abortCommand.store(true, std::memory_order_release);
                     return true;
                 }
             }
@@ -843,6 +846,9 @@ public:
             if ((keysHeld & KEY_R) && !stillTouching && runningInterpreter.load(std::memory_order_acquire)) {
                 commandSuccess = false;
                 abortDownload.store(true, std::memory_order_release);
+                abortUnzip.store(true, std::memory_order_release);
+                abortFileOp.store(true, std::memory_order_release);
+                abortCommand.store(true, std::memory_order_release);
                 return true;
             }
         }
@@ -1102,6 +1108,9 @@ public:
                 if ((keysHeld & KEY_R) && !stillTouching && runningInterpreter.load(std::memory_order_acquire)) {
                     commandSuccess = false;
                     abortDownload.store(true, std::memory_order_release);
+                    abortUnzip.store(true, std::memory_order_release);
+                    abortFileOp.store(true, std::memory_order_release);
+                    abortCommand.store(true, std::memory_order_release);
                     return true;
                 }
             }
@@ -1134,6 +1143,9 @@ public:
             if ((keysHeld & KEY_R) && !stillTouching && runningInterpreter.load(std::memory_order_acquire)) {
                 commandSuccess = false;
                 abortDownload.store(true, std::memory_order_release);
+                abortUnzip.store(true, std::memory_order_release);
+                abortFileOp.store(true, std::memory_order_release);
+                abortCommand.store(true, std::memory_order_release);
                 return true;
             }
         }
@@ -1333,6 +1345,9 @@ public:
             if ((keysHeld & KEY_R) && !stillTouching && runningInterpreter.load(std::memory_order_acquire)) {
                 commandSuccess = false;
                 abortDownload.store(true, std::memory_order_release);
+                abortUnzip.store(true, std::memory_order_release);
+                abortFileOp.store(true, std::memory_order_release);
+                abortCommand.store(true, std::memory_order_release);
                 return true;
             }
         }
@@ -1915,6 +1930,9 @@ public:
             if ((keysHeld & KEY_R) && !stillTouching && runningInterpreter.load(std::memory_order_acquire)) {
                 commandSuccess = false;
                 abortDownload.store(true, std::memory_order_release);
+                abortUnzip.store(true, std::memory_order_release);
+                abortFileOp.store(true, std::memory_order_release);
+                abortCommand.store(true, std::memory_order_release);
                 return true;
             }
         }
@@ -2551,6 +2569,9 @@ public:
             if ((keysHeld & KEY_R) && !stillTouching && runningInterpreter.load(std::memory_order_acquire)) {
                 commandSuccess = false;
                 abortDownload.store(true, std::memory_order_release);
+                abortUnzip.store(true, std::memory_order_release);
+                abortFileOp.store(true, std::memory_order_release);
+                abortCommand.store(true, std::memory_order_release);
                 return true;
             }
         }
@@ -2584,6 +2605,9 @@ public:
             if ((keysHeld & KEY_R) && !stillTouching && runningInterpreter.load(std::memory_order_acquire)) {
                 commandSuccess = false;
                 abortDownload.store(true, std::memory_order_release);
+                abortUnzip.store(true, std::memory_order_release);
+                abortFileOp.store(true, std::memory_order_release);
+                abortCommand.store(true, std::memory_order_release);
                 return true;
             }
         }
@@ -3748,6 +3772,9 @@ public:
                 if ((keysHeld & KEY_R) && !stillTouching && runningInterpreter.load(std::memory_order_acquire)) {
                     commandSuccess = false;
                     abortDownload.store(true, std::memory_order_release);
+                    abortUnzip.store(true, std::memory_order_release);
+                    abortFileOp.store(true, std::memory_order_release);
+                    abortCommand.store(true, std::memory_order_release);
                     return true;
                 }
 
@@ -3801,6 +3828,9 @@ public:
                 if ((keysHeld & KEY_R) && !stillTouching && runningInterpreter.load(std::memory_order_acquire)) {
                     commandSuccess = false;
                     abortDownload.store(true, std::memory_order_release);
+                    abortUnzip.store(true, std::memory_order_release);
+                    abortFileOp.store(true, std::memory_order_release);
+                    abortCommand.store(true, std::memory_order_release);
                     return true;
                 }
             }
