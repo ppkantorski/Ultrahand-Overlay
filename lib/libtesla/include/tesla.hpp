@@ -4890,7 +4890,7 @@ namespace tsl {
             }
 
             // If the up button is pressed, shift focus to the top element
-            if (!touchDetected && keysDown & HidNpadButton_L) {
+            if (!touchDetected && keysDown & HidNpadButton_L && !runningInterpreter.load(std::memory_order_acquire)) {
                 topElement = currentGui->getTopElement();
                 if (topElement != nullptr) {
                     currentGui->requestFocus(topElement, FocusDirection::None);
@@ -4898,7 +4898,7 @@ namespace tsl {
             }
 
             // If the down button is pressed, shift focus to the bottom element
-            if (!touchDetected && keysDown & HidNpadButton_R) {
+            if (!touchDetected && keysDown & HidNpadButton_R && !runningInterpreter.load(std::memory_order_acquire)) {
                 bottomElement = currentGui->getBottomElement();
                 if (bottomElement != nullptr) {
                     currentGui->requestFocus(bottomElement, FocusDirection::None);
