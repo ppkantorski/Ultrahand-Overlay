@@ -36,6 +36,9 @@
 #include <mutex>
 #include <condition_variable>
 
+
+static std::atomic<bool> abortCommand(false);
+
 /**
  * @brief Ultrahand-Overlay Configuration Paths
  *
@@ -941,7 +944,12 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
     std::string message;
     
     for (const auto& cmd : commands) {
-        
+        if (abortCommand.load(std::memory_order_acquire)) {
+            abortCommand.store(false, std::memory_order_release);
+            commandSuccess = false;
+            return;
+        }
+
         // Check the command and perform the appropriate action
         if (cmd.empty())
             continue; // Empty command, do nothing
@@ -1453,9 +1461,6 @@ std::mutex queueMutex;
 std::condition_variable queueCondition;
 static bool interpreterThreadExit = false;
 
-// Define an atomic bool for interpreter completion
-//static std::atomic<bool> runningInterpreter(false);
-
 
 void backgroundInterpreter(void*) {
     while (!interpreterThreadExit) {
@@ -1479,6 +1484,9 @@ void backgroundInterpreter(void*) {
             //logMessage("Interpreter complete.");
             runningInterpreter.store(false, std::memory_order_release);
             abortDownload.store(false, std::memory_order_release);
+            abortUnzip.store(false, std::memory_order_release);
+            abortFileOp.store(false, std::memory_order_release);
+            abortCommand.store(false, std::memory_order_release);
         }
     }
 }
@@ -1502,6 +1510,9 @@ void closeInterpreterThread() {
     threadClose(&interpreterThread);
     runningInterpreter.store(false, std::memory_order_release);
     abortDownload.store(false, std::memory_order_release);
+    abortUnzip.store(false, std::memory_order_release);
+    abortFileOp.store(false, std::memory_order_release);
+    abortCommand.store(false, std::memory_order_release);
 }
 
 // Enqueue command for interpretation
