@@ -451,6 +451,7 @@ public:
                             lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
                         else
                             lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
+                        closeInterpreterThread();
                     }
                     
                     lastRunningInterpreter = runningInterpreter.load(std::memory_order_acquire);
@@ -499,6 +500,7 @@ public:
                             lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
                         else
                             lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
+                        closeInterpreterThread();
                     }
                     
                     lastRunningInterpreter = runningInterpreter.load(std::memory_order_acquire);
@@ -1749,6 +1751,7 @@ public:
                                 lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
                             else
                                 lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
+                            closeInterpreterThread();
                         }
 
                         lastRunningInterpreter = runningInterpreter.load(std::memory_order_acquire);
@@ -2340,6 +2343,7 @@ public:
                                             lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
                                         else
                                             lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
+                                        closeInterpreterThread();
                                     }
                                     
                                     lastRunningInterpreter = runningInterpreter.load(std::memory_order_acquire);
@@ -3491,6 +3495,7 @@ public:
                                                     lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
                                                 else
                                                     lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
+                                                closeInterpreterThread();
                                             }
                                             
                                             lastRunningInterpreter = runningInterpreter.load(std::memory_order_acquire);
@@ -3544,6 +3549,7 @@ public:
                                                     lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
                                                 else
                                                     lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
+                                                closeInterpreterThread();
                                             }
                                             
                                             lastRunningInterpreter = runningInterpreter.load(std::memory_order_acquire);
@@ -3780,7 +3786,7 @@ public:
         ASSERT_FATAL(socketInitializeDefault());
         ASSERT_FATAL(nifmInitialize(NifmServiceType_User));
         ASSERT_FATAL(smInitialize());
-        startInterpreterThread();
+        //startInterpreterThread();
     }
     
     /**
