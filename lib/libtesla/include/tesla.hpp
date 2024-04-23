@@ -689,6 +689,8 @@ static bool stillTouching = false;
 static bool interruptedTouch = false;
 static bool touchInBounds = false;
 
+// Define an atomic bool for interpreter completion
+static std::atomic<bool> runningInterpreter(false);
 
 // Battery implementation
 static bool powerInitialized = false;
@@ -2206,6 +2208,7 @@ namespace tsl {
             
             Color highlightColor1 = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "highlight_color_1"), "#2288CC");
             Color highlightColor2 = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "highlight_color_2"), "#88FFFF");
+            Color highlightColor3 = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "highlight_color_3"), "#FFFF45");
             Color highlightColor = {0xf,0xf,0xf,0xf};
             
             Color clickColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "click_color"), "#F7253E");
@@ -2478,13 +2481,21 @@ namespace tsl {
                 //double timeCounter = 
                 //half progress = half((std::sin(2.0 * M_PI * fmod(std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count(), 1.0)) + 1.0) / 2.0);
                 progress = ((std::sin(2.0 * M_PI * fmod(std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count(), 1.0)) + 1.0) / 2.0);
-                
-                highlightColor = {
-                    static_cast<u8>((highlightColor1.r - highlightColor2.r) * progress + highlightColor2.r),
-                    static_cast<u8>((highlightColor1.g - highlightColor2.g) * progress + highlightColor2.g),
-                    static_cast<u8>((highlightColor1.b - highlightColor2.b) * progress + highlightColor2.b),
-                    0xF
-                };
+                if (runningInterpreter.load(std::memory_order_acquire)) {
+                    highlightColor = {
+                        static_cast<u8>((highlightColor3.r - highlightColor2.r) * progress + highlightColor2.r),
+                        static_cast<u8>((highlightColor3.g - highlightColor2.g) * progress + highlightColor2.g),
+                        static_cast<u8>((highlightColor3.b - highlightColor2.b) * progress + highlightColor2.b),
+                        0xF
+                    };
+                } else {
+                    highlightColor = {
+                        static_cast<u8>((highlightColor1.r - highlightColor2.r) * progress + highlightColor2.r),
+                        static_cast<u8>((highlightColor1.g - highlightColor2.g) * progress + highlightColor2.g),
+                        static_cast<u8>((highlightColor1.b - highlightColor2.b) * progress + highlightColor2.b),
+                        0xF
+                    };
+                }
                 x = 0;
                 y = 0;
                 
