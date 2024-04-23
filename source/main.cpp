@@ -808,7 +808,7 @@ public:
                 // Check for back button press
                 if ((keysHeld & KEY_R) && !stillTouching && runningInterpreter.load(std::memory_order_acquire)) {
                     commandSuccess = false;
-                    closeInterpreterThread();
+                    abortDownload.store(true, std::memory_order_release);
                     return true;
                 }
             }
@@ -842,7 +842,7 @@ public:
             // Check for back button press
             if ((keysHeld & KEY_R) && !stillTouching && runningInterpreter.load(std::memory_order_acquire)) {
                 commandSuccess = false;
-                closeInterpreterThread();
+                abortDownload.store(true, std::memory_order_release);
                 return true;
             }
         }
@@ -1101,7 +1101,7 @@ public:
                 // Check for back button press
                 if ((keysHeld & KEY_R) && !stillTouching && runningInterpreter.load(std::memory_order_acquire)) {
                     commandSuccess = false;
-                    closeInterpreterThread();
+                    abortDownload.store(true, std::memory_order_release);
                     return true;
                 }
             }
@@ -1133,7 +1133,7 @@ public:
             // Check for back button press
             if ((keysHeld & KEY_R) && !stillTouching && runningInterpreter.load(std::memory_order_acquire)) {
                 commandSuccess = false;
-                closeInterpreterThread();
+                abortDownload.store(true, std::memory_order_release);
                 return true;
             }
         }
@@ -1332,7 +1332,7 @@ public:
             // Check for back button press
             if ((keysHeld & KEY_R) && !stillTouching && runningInterpreter.load(std::memory_order_acquire)) {
                 commandSuccess = false;
-                closeInterpreterThread();
+                abortDownload.store(true, std::memory_order_release);
                 return true;
             }
         }
@@ -1914,7 +1914,7 @@ public:
             // Check for back button press
             if ((keysHeld & KEY_R) && !stillTouching && runningInterpreter.load(std::memory_order_acquire)) {
                 commandSuccess = false;
-                closeInterpreterThread();
+                abortDownload.store(true, std::memory_order_release);
                 return true;
             }
         }
@@ -2550,7 +2550,7 @@ public:
             // Check for back button press
             if ((keysHeld & KEY_R) && !stillTouching && runningInterpreter.load(std::memory_order_acquire)) {
                 commandSuccess = false;
-                closeInterpreterThread();
+                abortDownload.store(true, std::memory_order_release);
                 return true;
             }
         }
@@ -2583,7 +2583,7 @@ public:
             // Check for back button press
             if ((keysHeld & KEY_R) && !stillTouching && runningInterpreter.load(std::memory_order_acquire)) {
                 commandSuccess = false;
-                closeInterpreterThread();
+                abortDownload.store(true, std::memory_order_release);
                 return true;
             }
         }
@@ -3747,7 +3747,7 @@ public:
                 // Check for back button press
                 if ((keysHeld & KEY_R) && !stillTouching && runningInterpreter.load(std::memory_order_acquire)) {
                     commandSuccess = false;
-                    closeInterpreterThread();
+                    abortDownload.store(true, std::memory_order_release);
                     return true;
                 }
 
@@ -3800,7 +3800,7 @@ public:
                 // Check for back button press
                 if ((keysHeld & KEY_R) && !stillTouching && runningInterpreter.load(std::memory_order_acquire)) {
                     commandSuccess = false;
-                    closeInterpreterThread();
+                    abortDownload.store(true, std::memory_order_release);
                     return true;
                 }
             }
