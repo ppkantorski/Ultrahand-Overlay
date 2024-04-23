@@ -29,6 +29,9 @@
 
 const size_t downloadBufferSize = 4096*3;
 
+// Shared atomic flag to indicate whether to abort the download operation
+static std::atomic<bool> abortDownload(false);
+
 /**
  * @brief Callback function to write received data to a file.
  *
@@ -44,6 +47,16 @@ size_t writeCallback(void* contents, size_t size, size_t nmemb, FILE* file) {
     return fwrite(contents, size, nmemb, file);
 }
 
+ 
+// Progress callback function to check for abort condition
+int progressCallback(void *clientp, curl_off_t dltotal, curl_off_t dlnow, curl_off_t ultotal, curl_off_t ulnow) {
+    // Check if the download should be aborted
+    if (abortDownload.load(std::memory_order_acquire)) {
+        abortDownload.store(false, std::memory_order_release);
+        return 1; // Abort the transfer
+    }
+    return 0; // Continue the transfer
+}
 
 
 /**
@@ -54,6 +67,7 @@ size_t writeCallback(void* contents, size_t size, size_t nmemb, FILE* file) {
  * @return True if the download was successful, false otherwise.
  */
 bool downloadFile(const std::string& url, const std::string& toDestination) {
+    abortDownload.store(false, std::memory_order_release); // Reset abort flag
     
     if (url.find_first_of("{}") != std::string::npos) {
         logMessage(std::string("Invalid URL: ") + url);
@@ -117,6 +131,13 @@ bool downloadFile(const std::string& url, const std::string& toDestination) {
     //curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, progressCallback);
     //curl_easy_setopt(curl, CURLOPT_XFERINFODATA, callbackData);
     
+    // Set progress callback function
+    curl_easy_setopt(curl, CURLOPT_PROGRESSFUNCTION, progressCallback);
+    
+    // Enable progress meter
+    curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
+
+
     curl_easy_setopt(curl, CURLOPT_BUFFERSIZE, downloadBufferSize);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeCallback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, file);
