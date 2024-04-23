@@ -143,6 +143,9 @@ void initializeTheme(std::string themeIniPath = themeConfigIniPath) {
 
             if (themedSection.count("highlight_color_3") == 0)
                 setIniFileValue(themeIniPath, "theme", "highlight_color_3", "#FFFF45");
+
+            if (themedSection.count("highlight_color_4") == 0)
+                setIniFileValue(themeIniPath, "theme", "highlight_color_4", "#F7253E");
             
             if (themedSection.count("click_text_color") == 0)
                 setIniFileValue(themeIniPath, "theme", "click_text_color", "#000000");
@@ -197,6 +200,7 @@ void initializeTheme(std::string themeIniPath = themeConfigIniPath) {
         setIniFileValue(themeIniPath, "theme", "highlight_color_1", "#2288CC");
         setIniFileValue(themeIniPath, "theme", "highlight_color_2", "#88FFFF");
         setIniFileValue(themeIniPath, "theme", "highlight_color_3", "#FFFF45");
+        setIniFileValue(themeIniPath, "theme", "highlight_color_4", "#F7253E");
         setIniFileValue(themeIniPath, "theme", "click_color", "#F7253E");
         setIniFileValue(themeIniPath, "theme", "invert_bg_click_color", "false");
         setIniFileValue(themeIniPath, "theme", "disable_selection_bg", "true");
