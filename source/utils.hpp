@@ -1461,11 +1461,18 @@ std::mutex queueMutex;
 std::condition_variable queueCondition;
 static bool interpreterThreadExit = false;
 
+void clearInterpreterFlags() {
+    runningInterpreter.store(false, std::memory_order_release);
+    abortDownload.store(false, std::memory_order_release);
+    abortUnzip.store(false, std::memory_order_release);
+    abortFileOp.store(false, std::memory_order_release);
+    abortCommand.store(false, std::memory_order_release);
+}
 
 void backgroundInterpreter(void*) {
     while (!interpreterThreadExit) {
         std::tuple<std::vector<std::vector<std::string>>, std::string, std::string> args;
-        
+
         {
             std::unique_lock<std::mutex> lock(queueMutex);
             queueCondition.wait(lock, [] { return !interpreterQueue.empty() || interpreterThreadExit; });
@@ -1477,35 +1484,25 @@ void backgroundInterpreter(void*) {
         } // Release the lock before processing the command
 
         if (!std::get<0>(args).empty()) {
+            // Clear flags and perform any cleanup if necessary
+            clearInterpreterFlags();
             runningInterpreter.store(true, std::memory_order_release);
-            
+
+            interpretAndExecuteCommand(std::move(std::get<0>(args)), std::move(std::get<1>(args)), std::move(std::get<2>(args)));
 
             runningInterpreter.store(false, std::memory_order_release);
-            abortDownload.store(false, std::memory_order_release);
-            abortUnzip.store(false, std::memory_order_release);
-            abortFileOp.store(false, std::memory_order_release);
-            abortCommand.store(false, std::memory_order_release);
-            //logMessage("Running Interpreter...");
-            interpretAndExecuteCommand(std::get<0>(args), std::get<1>(args), std::get<2>(args));
-            //logMessage("Interpreter complete.");
-            runningInterpreter.store(false, std::memory_order_release);
-            abortDownload.store(false, std::memory_order_release);
-            abortUnzip.store(false, std::memory_order_release);
-            abortFileOp.store(false, std::memory_order_release);
-            abortCommand.store(false, std::memory_order_release);
+            // Clear flags and perform any cleanup if necessary
+            clearInterpreterFlags();
         }
     }
 }
 
-
-// Start interpreter thread
 void startInterpreterThread() {
     interpreterThreadExit = false;
-    threadCreate(&interpreterThread, backgroundInterpreter, nullptr, nullptr, 0x10000, 0x10, -2);
+    threadCreate(&interpreterThread, backgroundInterpreter, nullptr, nullptr, 0x8000, 0x10, -2);
     threadStart(&interpreterThread);
 }
 
-// Close interpreter thread
 void closeInterpreterThread() {
     {
         std::lock_guard<std::mutex> lock(queueMutex);
@@ -1514,18 +1511,18 @@ void closeInterpreterThread() {
     }
     threadWaitForExit(&interpreterThread);
     threadClose(&interpreterThread);
-    runningInterpreter.store(false, std::memory_order_release);
-    abortDownload.store(false, std::memory_order_release);
-    abortUnzip.store(false, std::memory_order_release);
-    abortFileOp.store(false, std::memory_order_release);
-    abortCommand.store(false, std::memory_order_release);
+    // Reset flags
+    clearInterpreterFlags();
 }
 
-// Enqueue command for interpretation
-void enqueueInterpreterCommand(const std::vector<std::vector<std::string>>& commands, const std::string& packagePath="", const std::string& selectedCommand="") {
+void enqueueInterpreterCommand(std::vector<std::vector<std::string>>&& commands, const std::string& packagePath, const std::string& selectedCommand) {
     startInterpreterThread();
-    std::lock_guard<std::mutex> lock(queueMutex);
-    interpreterQueue.push(std::make_tuple(commands, packagePath, selectedCommand));
+    {
+        std::lock_guard<std::mutex> lock(queueMutex);
+        interpreterQueue.emplace(std::move(commands), packagePath, selectedCommand);
+    }
     queueCondition.notify_one();
 }
+
+
 
