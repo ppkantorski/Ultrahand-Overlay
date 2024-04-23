@@ -122,6 +122,9 @@ void initializeTheme(std::string themeIniPath = themeConfigIniPath) {
             
             if (themedSection.count("invalid_text_color") == 0)
                 setIniFileValue(themeIniPath, "theme", "invalid_text_color", "#FF0000");
+
+            if (themedSection.count("inprogress_text_color") == 0)
+                setIniFileValue(themeIniPath, "theme", "inprogress_text_color", "#FFFF45");
             
             if (themedSection.count("selection_text_color") == 0)
                 setIniFileValue(themeIniPath, "theme", "selection_text_color", "#FFFFFF");
@@ -187,6 +190,7 @@ void initializeTheme(std::string themeIniPath = themeConfigIniPath) {
         setIniFileValue(themeIniPath, "theme", "on_text_color", "#00FFDD");
         setIniFileValue(themeIniPath, "theme", "off_text_color", "#AAAAAA");
         setIniFileValue(themeIniPath, "theme", "invalid_text_color", "#FF0000");
+        setIniFileValue(themeIniPath, "theme", "inprogress_text_color", "#FFFF45");
         setIniFileValue(themeIniPath, "theme", "selection_text_color", "#FFFFFF");
         setIniFileValue(themeIniPath, "theme", "selection_bg_color", "#000000");
         setIniFileValue(themeIniPath, "theme", "trackbar_color", "#555555");
@@ -1494,6 +1498,7 @@ void closeInterpreterThread() {
 
 // Enqueue command for interpretation
 void enqueueInterpreterCommand(const std::vector<std::vector<std::string>>& commands, const std::string& packagePath="", const std::string& selectedCommand="") {
+    startInterpreterThread();
     std::lock_guard<std::mutex> lock(queueMutex);
     interpreterQueue.push(std::make_tuple(commands, packagePath, selectedCommand));
     queueCondition.notify_one();
