@@ -2209,6 +2209,7 @@ namespace tsl {
             Color highlightColor1 = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "highlight_color_1"), "#2288CC");
             Color highlightColor2 = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "highlight_color_2"), "#88FFFF");
             Color highlightColor3 = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "highlight_color_3"), "#FFFF45");
+            Color highlightColor4 = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "highlight_color_4"), "#F7253E");
             Color highlightColor = {0xf,0xf,0xf,0xf};
             
             Color clickColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "click_color"), "#F7253E");
@@ -2483,9 +2484,9 @@ namespace tsl {
                 progress = ((std::sin(2.0 * M_PI * fmod(std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count(), 1.0)) + 1.0) / 2.0);
                 if (runningInterpreter.load(std::memory_order_acquire)) {
                     highlightColor = {
-                        static_cast<u8>((highlightColor3.r - highlightColor2.r) * progress + highlightColor2.r),
-                        static_cast<u8>((highlightColor3.g - highlightColor2.g) * progress + highlightColor2.g),
-                        static_cast<u8>((highlightColor3.b - highlightColor2.b) * progress + highlightColor2.b),
+                        static_cast<u8>((highlightColor3.r - highlightColor4.r) * progress + highlightColor4.r),
+                        static_cast<u8>((highlightColor3.g - highlightColor4.g) * progress + highlightColor4.g),
+                        static_cast<u8>((highlightColor3.b - highlightColor4.b) * progress + highlightColor4.b),
                         0xF
                     };
                 } else {
