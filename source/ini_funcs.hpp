@@ -30,7 +30,7 @@
 #include <path_funcs.hpp>
 
 
-constexpr size_t BufferSize = 4096;//131072;
+constexpr size_t BufferSize = 4096*3;//131072;
 
 /**
  * @brief Represents a package header structure.
@@ -568,7 +568,7 @@ void setIniFile(const std::string& fileToEdit, const std::string& desiredSection
                     updatedContent = updatedContent.substr(0, updatedContent.length() - 1);
                     addNewLine = true;
                 }
-                updatedContent += desiredKey + " = " + formattedDesiredValue + "\n";
+                updatedContent += desiredKey + "=" + formattedDesiredValue + "\n";
                 
                 if (addNewLine) { // if it ended with \n\n, add one more newline
                     updatedContent += "\n";
@@ -583,7 +583,7 @@ void setIniFile(const std::string& fileToEdit, const std::string& desiredSection
                 updatedContent = updatedContent.substr(0, updatedContent.length() - 1);
                 addNewLine = true;
             }
-            updatedContent += desiredKey + " = " + formattedDesiredValue + "\n";
+            updatedContent += desiredKey + "=" + formattedDesiredValue + "\n";
             // Add a newline character if the last part of updatedContent initially had "\n"
             if (addNewLine) {
                 updatedContent += "\n";
@@ -608,9 +608,9 @@ void setIniFile(const std::string& fileToEdit, const std::string& desiredSection
                     }
                     
                     if (!desiredNewKey.empty()) {
-                        updatedContent += desiredNewKey + " = " + originalValue + "\n";
+                        updatedContent += desiredNewKey + "=" + originalValue + "\n";
                     } else {
-                        updatedContent += desiredKey + " = " + formattedDesiredValue + "\n";
+                        updatedContent += desiredKey + "=" + formattedDesiredValue + "\n";
                     }
                     
                     // Add a newline character if the last part of updatedContent initially had "\n"
@@ -631,7 +631,7 @@ void setIniFile(const std::string& fileToEdit, const std::string& desiredSection
             updatedContent = updatedContent.substr(0, updatedContent.length() - 1);
             addNewLine = true;
         }
-        updatedContent += desiredKey + " = " + formattedDesiredValue + "\n";
+        updatedContent += desiredKey + "=" + formattedDesiredValue + "\n";
         // Add a newline character if the last part of updatedContent initially had "\n"
         if (addNewLine) {
             updatedContent += "\n";
@@ -640,7 +640,7 @@ void setIniFile(const std::string& fileToEdit, const std::string& desiredSection
     }
 
     if (!sectionFound && !keyFound && desiredNewKey.empty()) {
-        updatedContent += "\n[" + desiredSection + "]\n" + desiredKey + " = " + formattedDesiredValue + "\n";
+        updatedContent += "\n[" + desiredSection + "]\n" + desiredKey + "=" + formattedDesiredValue + "\n";
     }
 
     fclose(configFile);
