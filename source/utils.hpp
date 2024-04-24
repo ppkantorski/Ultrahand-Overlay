@@ -1262,12 +1262,13 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                         downloadSuccess = false;
                         
                         //setIniFileValue((packagePath+configFileName).c_str(), selectedCommand.c_str(), "footer", "downloading");
-                        //for (size_t i = 0; i < 3; ++i) { // Try 3 times.
-                        //    downloadSuccess = downloadFile(fileUrl, destinationPath);
-                        //    if (downloadSuccess)
-                        //        break;
-                        //}
-                        downloadSuccess = downloadFile(fileUrl, destinationPath);
+                        for (size_t i = 0; i < 3; ++i) { // Try 3 times.
+                            downloadSuccess = downloadFile(fileUrl, destinationPath);
+                            if (downloadSuccess)
+                                break;
+                        }
+                        //downloadSuccess = enqueueDownloadFile(fileUrl, destinationPath);
+                        //downloadSuccess = downloadFile(fileUrl, destinationPath);
                         commandSuccess = (downloadSuccess && commandSuccess);
                     }
                 } else if (commandName == "unzip") {
@@ -1275,6 +1276,7 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                         sourcePath = preprocessPath(modifiedCmd[1]);
                         destinationPath = preprocessPath(modifiedCmd[2]);
                         commandSuccess = unzipFile(sourcePath, destinationPath) && commandSuccess;
+                        //commandSuccess = enqueueUnzipFile(sourcePath, destinationPath) && commandSuccess;
                     }
                 } else if (commandName == "pchtxt2ips") {
                     if (cmdSize >= 3) {
