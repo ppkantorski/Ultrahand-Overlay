@@ -1264,6 +1264,8 @@ void interpretAndExecuteCommand(const std::vector<std::vector<std::string>>& com
                         //setIniFileValue((packagePath+configFileName).c_str(), selectedCommand.c_str(), "footer", "downloading");
                         for (size_t i = 0; i < 3; ++i) { // Try 3 times.
                             downloadSuccess = downloadFile(fileUrl, destinationPath);
+                            if (abortDownload.load(std::memory_order_acquire))
+                                break;
                             if (downloadSuccess)
                                 break;
                         }
