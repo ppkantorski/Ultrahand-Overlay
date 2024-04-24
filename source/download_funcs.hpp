@@ -21,6 +21,7 @@
 #include <curl/curl.h>
 #include <zlib.h>
 #include <zzip/zzip.h>
+//#include <queue>
 #include "string_funcs.hpp"
 #include "get_funcs.hpp"
 #include "path_funcs.hpp"
@@ -33,32 +34,54 @@ const size_t downloadBufferSize = 4096*3;
 static std::atomic<bool> abortDownload(false);
 // Define an atomic bool for interpreter completion
 static std::atomic<bool> abortUnzip(false);
+static std::atomic<int> downloadPercentage(-1);
 
-/**
- * @brief Callback function to write received data to a file.
- *
- * @param contents Pointer to the received data.
- * @param size Size of each data element.
- * @param nmemb Number of data elements.
- * @param file Pointer to the file to write to.
- * @return Number of elements successfully written.
- */
+
+
+// Callback function to write received data to a file.
 size_t writeCallback(void* contents, size_t size, size_t nmemb, FILE* file) {
-    // Callback function to write received data to a file
-    //size_t written = fwrite(contents, size, nmemb, file);
     return fwrite(contents, size, nmemb, file);
 }
 
- 
+
 // Progress callback function to check for abort condition
-int progressCallback(void *clientp, curl_off_t dltotal, curl_off_t dlnow, curl_off_t ultotal, curl_off_t ulnow) {
+void updateProgress(std::atomic<int>* percentage, double totalToDownload, double nowDownloaded) {
+    // Ensure that the file to be downloaded is not empty
+    // because that would cause a division by zero error later on
+    if (totalToDownload <= 0.0) {
+        return;
+    }
+
+    // Calculate download progress percentage
+    double fractionDownloaded = nowDownloaded / totalToDownload;
+    int progress = static_cast<int>(round(fractionDownloaded * 100));
+
+    // Update the atomic variable with the progress percentage
+    percentage->store(progress, std::memory_order_release);
+}
+
+// Your C function
+extern "C" int progressCallback(void* ptr, double totalToDownload, double nowDownloaded,
+                                double totalToUpload, double nowUploaded) {
+    // Call the C++ function to update the progress
+    updateProgress(&downloadPercentage, totalToDownload, nowDownloaded);
+
     // Check if the download should be aborted
     if (abortDownload.load(std::memory_order_acquire)) {
-        abortDownload.store(false, std::memory_order_release);
-        return 1; // Abort the transfer
+        // Return non-zero to indicate abort
+        // Reset downloadPercentage to -1
+        downloadPercentage.store(-1, std::memory_order_release);
+
+        return 1;
     }
-    return 0; // Continue the transfer
+
+    // You can also update other atomic variables here if needed
+
+    // Return 0 to continue the transfer
+    return 0;
 }
+
+
 
 
 /**
@@ -135,7 +158,9 @@ bool downloadFile(const std::string& url, const std::string& toDestination) {
     
     // Set progress callback function
     curl_easy_setopt(curl, CURLOPT_PROGRESSFUNCTION, progressCallback);
-    
+    // Pass the address of abortDownload as the progress callback data
+    curl_easy_setopt(curl, CURLOPT_PROGRESSDATA, &abortDownload);
+
     // Enable progress meter
     curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
 
@@ -184,7 +209,7 @@ bool downloadFile(const std::string& url, const std::string& toDestination) {
         std::remove(destination.c_str());
         return false;
     }
-
+    //downloadPercentage.store(100, std::memory_order_release);
     logMessage("Download Complete!");
     return true;
 }
@@ -290,3 +315,158 @@ bool unzipFile(const std::string& zipFilePath, const std::string& toDestination)
     return success;
 }
 
+
+
+// Thread information structure
+//Thread downloadThread;
+//Thread unzipThread;
+//std::queue<std::pair<std::string, std::string>> downloadQueue;
+//std::queue<std::pair<std::string, std::string>> unzipQueue;
+//std::mutex downloadMutex;
+//std::mutex unzipMutex;
+//std::condition_variable downloadCondition;
+//std::condition_variable unzipCondition;
+//static bool downloadThreadExit = false;
+//static bool unzipThreadExit = false;
+//static std::atomic<bool> downloadTaskSuccess(false);
+//static std::atomic<bool> unzipTaskSuccess(false);
+//
+//bool downloadFileTask(const std::string& url, const std::string& destination) {
+//    if (!downloadFile(url, destination)) {
+//        logMessage("Failed to download file from: " + url);
+//        return false;
+//    } else {
+//        return true;
+//    }
+//}
+//
+//bool unzipFileTask(const std::string& zipFilePath, const std::string& destination) {
+//    if (!unzipFile(zipFilePath, destination)) {
+//        logMessage("Failed to unzip file: " + zipFilePath);
+//        return false;
+//    } else {
+//        return true;
+//    }
+//}
+//
+//void backgroundDownload(void*) {
+//    while (!downloadThreadExit) {
+//        std::pair<std::string, std::string> args;
+//
+//        {
+//            std::unique_lock<std::mutex> lock(downloadMutex);
+//            downloadCondition.wait(lock, [] { return !downloadQueue.empty() || downloadThreadExit; });
+//
+//            if (downloadQueue.empty() && downloadThreadExit) {
+//                // Exit the loop if the queue is empty and the exit flag is set
+//                break;
+//            }
+//
+//            args = std::move(downloadQueue.front());
+//            downloadQueue.pop();
+//        } // Release the lock before processing the command
+//
+//        if (!args.first.empty()) {
+//            downloadTaskSuccess = downloadFileTask(args.first, args.second);
+//            // Notify the calling thread that the task is complete
+//            {
+//                std::lock_guard<std::mutex> lock(downloadMutex);
+//                downloadCondition.notify_one();
+//            }
+//        }
+//    }
+//}
+//
+//void backgroundUnzip(void*) {
+//    while (!unzipThreadExit) {
+//        std::pair<std::string, std::string> args;
+//
+//        {
+//            std::unique_lock<std::mutex> lock(unzipMutex);
+//            unzipCondition.wait(lock, [] { return !unzipQueue.empty() || unzipThreadExit; });
+//
+//            if (unzipQueue.empty() && unzipThreadExit) {
+//                // Exit the loop if the queue is empty and the exit flag is set
+//                break;
+//            }
+//
+//            args = std::move(unzipQueue.front());
+//            unzipQueue.pop();
+//        } // Release the lock before processing the command
+//
+//        if (!args.first.empty()) {
+//            unzipTaskSuccess = unzipFileTask(args.first, args.second);
+//            // Notify the calling thread that the task is complete
+//            {
+//                std::lock_guard<std::mutex> lock(unzipMutex);
+//                unzipCondition.notify_one();
+//            }
+//        }
+//    }
+//}
+//
+//void startDownloadThread() {
+//    downloadThreadExit = false;
+//    threadCreate(&downloadThread, backgroundDownload, nullptr, nullptr, 0x4000, 0x10, -2);
+//    threadStart(&downloadThread);
+//}
+//
+//void startUnzipThread() {
+//    unzipThreadExit = false;
+//    threadCreate(&unzipThread, backgroundUnzip, nullptr, nullptr, 0x4000, 0x10, -2);
+//    threadStart(&unzipThread);
+//}
+//
+//void closeDownloadThread() {
+//    downloadThreadExit = true;
+//    downloadCondition.notify_one();
+//    threadWaitForExit(&downloadThread);
+//    threadClose(&downloadThread);
+//}
+//
+//void closeUnzipThread() {
+//    unzipThreadExit = true;
+//    unzipCondition.notify_one();
+//    threadWaitForExit(&unzipThread);
+//    threadClose(&unzipThread);
+//}
+//
+//bool enqueueDownloadFile(const std::string& url, const std::string& destination) {
+//    startDownloadThread();
+//    
+//    {
+//        std::lock_guard<std::mutex> lock(downloadMutex);
+//        downloadTaskSuccess = false;  // Reset task success flag
+//        downloadQueue.emplace(url, destination);
+//        downloadCondition.notify_one();
+//    }
+//
+//    // Wait for the download operation to complete
+//    std::unique_lock<std::mutex> lock(downloadMutex);
+//    downloadCondition.wait(lock, [] { return downloadTaskSuccess || downloadThreadExit; });
+//
+//    closeDownloadThread(); // Close the download thread after completion
+//
+//    return downloadTaskSuccess; // Return the success status
+//}
+//
+//
+//bool enqueueUnzipFile(const std::string& zipFilePath, const std::string& destination) {
+//    startUnzipThread();
+//    
+//    {
+//        std::lock_guard<std::mutex> lock(unzipMutex);
+//        // Reset task success flag
+//        unzipTaskSuccess = false;
+//        unzipQueue.emplace(zipFilePath, destination);
+//        unzipCondition.notify_one();
+//    }
+//
+//    // Wait for the unzip operation to complete
+//    std::unique_lock<std::mutex> lock(unzipMutex);
+//    unzipCondition.wait(lock, [] { return unzipTaskSuccess || unzipThreadExit; });
+//
+//    closeUnzipThread(); // Close the unzip thread after completion
+//
+//    return unzipTaskSuccess; // Return the success status
+//}
