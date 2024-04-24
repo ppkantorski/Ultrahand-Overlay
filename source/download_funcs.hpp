@@ -28,7 +28,7 @@
 #include "debug_funcs.hpp"
 //#include "json_funcs.hpp"
 
-const size_t downloadBufferSize = 4096*3;
+const size_t downloadBufferSize = 4096*2;
 
 // Shared atomic flag to indicate whether to abort the download operation
 static std::atomic<bool> abortDownload(false);
@@ -53,11 +53,11 @@ void updateProgress(std::atomic<int>* percentage, double totalToDownload, double
     }
 
     // Calculate download progress percentage
-    double fractionDownloaded = nowDownloaded / totalToDownload;
-    int progress = static_cast<int>(round(fractionDownloaded * 100));
+    //double fractionDownloaded = nowDownloaded / totalToDownload;
+    //int progress = static_cast<int>(round(nowDownloaded / totalToDownload * 100));
 
     // Update the atomic variable with the progress percentage
-    percentage->store(progress, std::memory_order_release);
+    percentage->store(static_cast<int>(round(nowDownloaded / totalToDownload * 100)), std::memory_order_release);
 }
 
 // Your C function
@@ -291,7 +291,7 @@ bool unzipFile(const std::string& zipFilePath, const std::string& toDestination)
             FILE* outputFile = fopen(extractedFilePath.c_str(), "wb");
             if (outputFile) {
                 zzip_ssize_t bytesRead;
-                const zzip_ssize_t bufferSize = 4096*3;
+                const zzip_ssize_t bufferSize = 4096*2;
                 char buffer[bufferSize];
 
                 while ((bytesRead = zzip_file_read(file, buffer, bufferSize)) > 0) {
@@ -314,8 +314,6 @@ bool unzipFile(const std::string& zipFilePath, const std::string& toDestination)
     zzip_dir_close(dir);
     return success;
 }
-
-
 
 // Thread information structure
 //Thread downloadThread;
