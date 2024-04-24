@@ -1763,6 +1763,13 @@ public:
                     }
 
                     static bool lastRunningInterpreter = false;
+                    int currentPercentage = downloadPercentage.load(std::memory_order_acquire);
+                    if (currentPercentage != -1) {
+                        lastSelectedListItem->setValue(DOWNLOAD_SYMBOL + " " + std::to_string(currentPercentage)+"%");
+                        if (currentPercentage == 100)
+                            downloadPercentage.store(-1, std::memory_order_release);
+                    }
+
                     if ((keys & KEY_A) || (runningInterpreter.load(std::memory_order_acquire) || (!runningInterpreter.load(std::memory_order_acquire) && lastRunningInterpreter))) {
 
                         if (!runningInterpreter.load(std::memory_order_acquire) && !lastRunningInterpreter) {
@@ -2377,6 +2384,14 @@ public:
                                     simulatedSelect = false;
                                 }
 
+                                int currentPercentage = downloadPercentage.load(std::memory_order_acquire);
+                                if (currentPercentage != -1) {
+                                    lastSelectedListItem->setValue(DOWNLOAD_SYMBOL + " " + std::to_string(currentPercentage)+"%");
+                                    if (currentPercentage == 100)
+                                        downloadPercentage.store(-1, std::memory_order_release);
+                                }
+
+
                                 static bool lastRunningInterpreter = false;
                                 if ((keys & KEY_A) || (runningInterpreter.load(std::memory_order_acquire) || (!runningInterpreter.load(std::memory_order_acquire) && lastRunningInterpreter))) {
 
@@ -2406,6 +2421,7 @@ public:
                                         closeInterpreterThread();
                                     }
                                     
+
                                     lastRunningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                                     
 
@@ -3547,6 +3563,14 @@ public:
                                             simulatedSelect = false;
                                         }
 
+                                        int currentPercentage = downloadPercentage.load(std::memory_order_acquire);
+                                        if (currentPercentage != -1) {
+                                            lastSelectedListItem->setValue(DOWNLOAD_SYMBOL + " " + std::to_string(currentPercentage)+"%");
+                                            if (currentPercentage == 100)
+                                                downloadPercentage.store(-1, std::memory_order_release);
+                                        }
+
+
                                         static bool lastRunningInterpreter = false;
                                         if ((keys & KEY_A) || (runningInterpreter.load(std::memory_order_acquire) || (!runningInterpreter.load(std::memory_order_acquire) && lastRunningInterpreter))) {
                                             
@@ -3575,6 +3599,7 @@ public:
                                                     lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
                                                 closeInterpreterThread();
                                             }
+
                                             
                                             lastRunningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                                             
@@ -3598,6 +3623,14 @@ public:
                                             simulatedSelect = false;
                                         }
                                         
+                                        int currentPercentage = downloadPercentage.load(std::memory_order_acquire);
+                                        if (currentPercentage != -1) {
+                                            lastSelectedListItem->setValue(DOWNLOAD_SYMBOL + " " + std::to_string(currentPercentage)+"%");
+                                            if (currentPercentage == 100)
+                                                downloadPercentage.store(-1, std::memory_order_release);
+                                        }
+
+
                                         static bool lastRunningInterpreter = false;
                                         if ((keys & KEY_A) || (runningInterpreter.load(std::memory_order_acquire) || (!runningInterpreter.load(std::memory_order_acquire) && lastRunningInterpreter))) {
 
@@ -3630,6 +3663,7 @@ public:
                                                 closeInterpreterThread();
                                             }
                                             
+
                                             lastRunningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                                             simulatedSelectComplete = true;
                                             return true;
