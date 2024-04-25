@@ -951,6 +951,9 @@ void interpretAndExecuteCommand(std::vector<std::vector<std::string>>&& commands
         const std::string& commandName = cmd[0];
 
         if (commandName == "try:") {
+            if (commandSuccess)
+                break;
+
             //tryCounter++;
             //if (commandSuccess && tryCounter > 1)
             //    break;
