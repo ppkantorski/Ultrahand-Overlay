@@ -21,6 +21,8 @@
 #include <jansson.h>
 #include <get_funcs.hpp>
 
+//constexpr size_t jsonBufferSize = 1024; // Choose an appropriate buffer size
+
 /**
  * @brief Reads JSON data from a file and returns it as a `json_t` object.
  *
@@ -45,31 +47,27 @@ json_t* readJsonFromFile(const std::string& filePath) {
     // Get the file size
     size_t fileSize = fileStat.st_size;
     
-    // Read the file content into a buffer
-    char* buffer = static_cast<char*>(malloc(fileSize + 1));
-    if (!buffer) {
-        //fprintf(stderr, "Memory allocation error.\n");
-        fclose(file);
-        return nullptr;
-    }
+    // Use a fixed-size buffer for reading file content
+    constexpr size_t bufferSize = 4096; // Choose an appropriate buffer size
+    char buffer[bufferSize];
+    std::string jsonContent;
     
-    size_t bytesRead = fread(buffer, 1, fileSize, file);
-    buffer[bytesRead] = '\0';
+    // Read the file content into the buffer
+    while (!feof(file)) {
+        size_t bytesRead = fread(buffer, 1, bufferSize, file);
+        jsonContent.append(buffer, bytesRead);
+    }
     
     // Close the file
     fclose(file);
     
     // Parse the JSON data
     json_error_t error;
-    json_t* root = json_loads(buffer, JSON_DECODE_ANY, &error);
+    json_t* root = json_loads(jsonContent.c_str(), JSON_DECODE_ANY, &error);
     if (!root) {
         //fprintf(stderr, "Error parsing JSON: %s\n", error.text);
-        free(buffer);
         return nullptr;
     }
-    
-    // Clean up
-    free(buffer);
     
     return root;
 }
@@ -97,8 +95,7 @@ std::string replaceJsonPlaceholder(const std::string& arg, const std::string& co
     }
     
     if (!jsonDict) {
-        // If JSON parsing failed or jsonDict is nullptr, return the original string
-        return arg;
+        return arg; // Return the original string if JSON parsing failed or jsonDict is nullptr
     }
     
     std::string replacement = arg;
@@ -107,26 +104,24 @@ std::string replaceJsonPlaceholder(const std::string& arg, const std::string& co
     size_t endPos, nextPos, commaPos, len, _index;
     bool validValue;
     std::vector<std::string> keysAndIndexes;
+    keysAndIndexes.reserve(5); // Reserve capacity for keysAndIndexes vector
     
     while (startPos != std::string::npos) {
-        keysAndIndexes.clear();
+        keysAndIndexes.clear(); // Clear the vector for reuse
         endPos = replacement.find(")}", startPos);
         if (endPos == std::string::npos) {
-            
             break;  // Missing closing brace, exit the loop
         }
         
         std::string placeholder = replacement.substr(startPos, endPos - startPos + 2);
         
         // Extract keys and indexes from the placeholder
-        //std::vector<std::string> keysAndIndexes;
-        //keysAndIndexes.clear();
         nextPos = startPos + searchString.length();
         
         while (nextPos < endPos) {
             commaPos = replacement.find(',', nextPos);
             len = (commaPos != std::string::npos) ? (commaPos - nextPos) : (endPos - nextPos);
-            keysAndIndexes.push_back(replacement.substr(nextPos, len));
+            keysAndIndexes.emplace_back(replacement.substr(nextPos, len));
             nextPos += len + 1;
         }
         
