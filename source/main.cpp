@@ -72,6 +72,8 @@ static std::unordered_map<std::string, std::string> selectedFooterDict;
 static auto selectedListItem = static_cast<tsl::elm::ListItem*>(nullptr);
 static auto lastSelectedListItem = static_cast<tsl::elm::ListItem*>(nullptr);
 
+//static tsl::elm::OverlayFrame* rootFrame = nullptr;
+
 static std::string hideUserGuide = "false";
 
 
@@ -461,6 +463,12 @@ public:
                             lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
                         closeInterpreterThread();
                     }
+
+                    if (threadFailure.load(std::memory_order_acquire)) {
+                        threadFailure.store(false, std::memory_order_release);
+                        commandSuccess = false;
+                        lastRunningInterpreter = true;
+                    }
                     
                     lastRunningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                     simulatedSelectComplete = true;
@@ -517,6 +525,12 @@ public:
                         else
                             lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
                         closeInterpreterThread();
+                    }
+
+                    if (threadFailure.load(std::memory_order_acquire)) {
+                        threadFailure.store(false, std::memory_order_release);
+                        commandSuccess = false;
+                        lastRunningInterpreter = true;
                     }
                     
                     lastRunningInterpreter = runningInterpreter.load(std::memory_order_acquire);
@@ -750,7 +764,7 @@ public:
         } else
             list->addItem(new tsl::elm::ListItem(FAILED_TO_OPEN + ": " + settingsIniPath));
         
-        
+
         tsl::elm::OverlayFrame *rootFrame = new tsl::elm::OverlayFrame("Ultrahand", versionLabel);
         rootFrame->setContent(list);
         list = nullptr;
@@ -869,7 +883,6 @@ public:
             }
         }
         
-        
         if (returningToSettings && !(keysHeld & KEY_B)){
             returningToSettings = false;
             inSettingsMenu = true;
@@ -877,6 +890,12 @@ public:
         
         if (redrawWidget)
             reinitializeWidgetVars();
+
+
+        if (triggerExit.load(std::memory_order_acquire)) {
+            triggerExit.store(false, std::memory_order_release);
+            tsl::Overlay::get()->close();
+        }
         
         return false;
     }
@@ -1051,6 +1070,7 @@ public:
         } else
             list->addItem(new tsl::elm::ListItem(FAILED_TO_OPEN+": " + settingsIniPath));
         
+
         tsl::elm::OverlayFrame *rootFrame = new tsl::elm::OverlayFrame("Ultrahand", versionLabel);
         //rootFrame = new tsl::elm::OverlayFrame(entryName, "Ultrahand Settings");
         rootFrame->setContent(list);
@@ -1171,6 +1191,11 @@ public:
             returningToSettings = false;
             inSettingsMenu = true;
         }
+
+        if (triggerExit.load(std::memory_order_acquire)) {
+            triggerExit.store(false, std::memory_order_release);
+            tsl::Overlay::get()->close();
+        }
         
         return false;
     }
@@ -1281,7 +1306,7 @@ public:
                             
                             commandVec.emplace_back(std::move(commandParts));
                             
-                            interpretAndExecuteCommand(commandVec, filePath, specificKey);
+                            interpretAndExecuteCommand(std::move(commandVec), filePath, specificKey);
                             commandVec.clear();
                             
                             if (commandSuccess)
@@ -1300,6 +1325,7 @@ public:
         } else
             list->addItem(new tsl::elm::ListItem(FAILED_TO_OPEN+": " + packageFile));
         
+
         tsl::elm::OverlayFrame *rootFrame = new tsl::elm::OverlayFrame(packageName, "Ultrahand Script");
         rootFrame->setContent(list);
         list = nullptr;
@@ -1366,6 +1392,11 @@ public:
                 abortCommand.store(true, std::memory_order_release);
                 return true;
             }
+        }
+
+        if (triggerExit.load(std::memory_order_acquire)) {
+            triggerExit.store(false, std::memory_order_release);
+            tsl::Overlay::get()->close();
         }
         
         return false;
@@ -1580,6 +1611,7 @@ public:
             }
         }
         
+
         
         
         // items can be paths, commands, or variables depending on source
@@ -1827,6 +1859,12 @@ public:
                             closeInterpreterThread();
                         }
 
+                        if (threadFailure.load(std::memory_order_acquire)) {
+                            threadFailure.store(false, std::memory_order_release);
+                            commandSuccess = false;
+                            lastRunningInterpreter = true;
+                        }
+
                         lastRunningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                         
                         
@@ -1871,6 +1909,7 @@ public:
             }
         }
         
+        filesList.clear();
         selectedItemsList.clear();
         selectedItemsListOn.clear();
         selectedItemsListOff.clear();
@@ -1900,7 +1939,7 @@ public:
         //    simulatedBack = false;
         //    simulatedBackComplete = true;
         //}
-
+        
         if (refreshGui) {
             tsl::changeTo<SelectionOverlay>(filePath, specificKey, commands, specifiedFooterKey);
             refreshGui = false;
@@ -1959,6 +1998,11 @@ public:
                 return true;
             }
         }
+
+        if (triggerExit.load(std::memory_order_acquire)) {
+            triggerExit.store(false, std::memory_order_release);
+            tsl::Overlay::get()->close();
+        }
         
         return false;
     }
@@ -1991,6 +2035,8 @@ public:
      * Cleans up any resources associated with the `PackageMenu` instance.
      */
     ~PackageMenu() {
+        //logMessage("Clearing footer dict...");
+        selectedFooterDict.clear();
         //if (returningToMain) {
         //    hexSumCache.clear();
         //    selectedFooterDict.clear(); // Clears all data from the map, making it empty again
@@ -2025,7 +2071,7 @@ public:
         PackageHeader packageHeader = getPackageHeaderFromIni(packageIniPath);
         
         //rootFrame = new tsl::elm::OverlayFrame(getNameFromPath(packagePath), "Ultrahand Package", "", packageHeader.color);
-        tsl::elm::List *list = new tsl::elm::List();
+        tsl::elm::List* list = new tsl::elm::List();
         auto listItem = static_cast<tsl::elm::ListItem*>(nullptr);
         auto toggleListItem = static_cast<tsl::elm::ToggleListItem*>(nullptr);
         bool toggleStateOn;
@@ -2436,6 +2482,12 @@ public:
                                             lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
                                         closeInterpreterThread();
                                     }
+
+                                    if (threadFailure.load(std::memory_order_acquire)) {
+                                        threadFailure.store(false, std::memory_order_release);
+                                        commandSuccess = false;
+                                        lastRunningInterpreter = true;
+                                    }
                                     
 
                                     lastRunningInterpreter = runningInterpreter.load(std::memory_order_acquire);
@@ -2487,7 +2539,8 @@ public:
         }
         
         options.clear();
-        
+        filesList.clear();
+
         tsl::elm::OverlayFrame *rootFrame = nullptr;
         if (usingPages) {
             if (currentPage == "left")
@@ -2652,6 +2705,11 @@ public:
         if (returningToSubPackage && !(keysHeld & KEY_B)){
             returningToSubPackage = false;
             inSubPackageMenu = true;
+        }
+
+        if (triggerExit.load(std::memory_order_acquire)) {
+            triggerExit.store(false, std::memory_order_release);
+            tsl::Overlay::get()->close();
         }
         
         return false;
@@ -3235,11 +3293,11 @@ public:
                                 std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> bootOptions = loadOptionsFromIni(packageFilePath+bootPackageFileName, true);
                                 if (bootOptions.size() > 0) {
                                     std::string bootOptionName;
-                                    for (const auto& bootOption:bootOptions) {
+                                    for (auto& bootOption:bootOptions) {
                                         bootOptionName = bootOption.first;
                                         auto& bootCommands = bootOption.second;
                                         if (bootOptionName == "boot") {
-                                            interpretAndExecuteCommand(bootCommands, packageFilePath+bootPackageFileName, bootOptionName); // Execute modified
+                                            interpretAndExecuteCommand(std::move(bootCommands), packageFilePath+bootPackageFileName, bootOptionName); // Execute modified
                                             break;
                                         }
                                     }
@@ -3616,6 +3674,12 @@ public:
                                                 closeInterpreterThread();
                                             }
 
+                                            if (threadFailure.load(std::memory_order_acquire)) {
+                                                threadFailure.store(false, std::memory_order_release);
+                                                commandSuccess = false;
+                                                lastRunningInterpreter = true;
+                                            }
+
                                             
                                             lastRunningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                                             
@@ -3678,6 +3742,12 @@ public:
                                                     lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
                                                 closeInterpreterThread();
                                             }
+
+                                            if (threadFailure.load(std::memory_order_acquire)) {
+                                                threadFailure.store(false, std::memory_order_release);
+                                                commandSuccess = false;
+                                                lastRunningInterpreter = true;
+                                            }
                                             
 
                                             lastRunningInterpreter = runningInterpreter.load(std::memory_order_acquire);
@@ -3733,7 +3803,8 @@ public:
             return createUI(); 
         }
         
-        
+        filesList.clear();
+
         tsl::elm::OverlayFrame *rootFrame = new tsl::elm::OverlayFrame("Ultrahand", versionLabel, menuMode+hiddenMenuMode);
         rootFrame->setContent(list);
         list = nullptr;
@@ -3903,6 +3974,11 @@ public:
         if (redrawWidget) {
             reinitializeWidgetVars();
             redrawWidget = false;
+        }
+
+        if (triggerExit.load(std::memory_order_acquire)) {
+            triggerExit.store(false, std::memory_order_release);
+            tsl::Overlay::get()->close();
         }
         
         return false;
