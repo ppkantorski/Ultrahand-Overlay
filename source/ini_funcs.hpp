@@ -30,7 +30,7 @@
 #include <path_funcs.hpp>
 
 
-//onstexpr size_t BufferSize = 1024;//131072;
+constexpr size_t BufferSize = 4096*3;//131072;
 
 /**
  * @brief Represents a package header structure.
@@ -78,7 +78,7 @@ PackageHeader getPackageHeaderFromIni(const std::string& filePath) {
         return packageHeader;
     }
     
-    constexpr size_t BufferSize = 4096; // Choose a larger buffer size for reading lines
+    //constexpr size_t BufferSize = 4096; // Choose a larger buffer size for reading lines
     char line[BufferSize];
     
     const std::string titlePrefix = ";title=";
@@ -353,7 +353,7 @@ std::vector<std::string> parseSectionsFromIni(const std::string& filePath) {
         return sections; // Return an empty list if the file cannot be opened
     }
     
-    constexpr size_t BufferSize = 4096;
+    //constexpr size_t BufferSize = 4096;
     char line[BufferSize];
     
     std::string trimmedLine;
@@ -382,7 +382,7 @@ std::string parseValueFromIniSection(const std::string& filePath, const std::str
     }
     
     std::string currentSection = "";
-    constexpr size_t BufferSize = 4096;
+    //constexpr size_t BufferSize = 4096;
     char line[BufferSize];
     
     size_t delimiterPos;
@@ -426,7 +426,7 @@ std::string parseValueFromIniSectionF(FILE*& file, const std::string& filePath, 
     }
     
     std::string currentSection = "";
-    constexpr size_t BufferSize = 4096;
+    //constexpr size_t BufferSize = 4096;
     char line[BufferSize];
     
     std::string trimmedLine;
@@ -490,7 +490,7 @@ void cleanIniFormatting(const std::string& filePath) {
     
     bool isNewSection = false;
     
-    constexpr size_t BufferSize = 4096; // Choose a larger buffer size for reading lines
+    //constexpr size_t BufferSize = 4096; // Choose a larger buffer size for reading lines
     char line[BufferSize];
     
     std::string trimmedLine;
@@ -550,7 +550,7 @@ void setIniFile(const std::string& fileToEdit, const std::string& desiredSection
     std::string updatedContent;
     std::string currentSection;
     std::string formattedDesiredValue = trim(desiredValue);
-    constexpr size_t BufferSize = 4096;
+    //constexpr size_t BufferSize = 4096;
     char line[BufferSize];
     
     bool sectionFound = false;
@@ -728,7 +728,7 @@ void addIniSection(const char* filePath, const char* sectionName) {
         return;
     }
     
-    constexpr size_t BufferSize = 4096;
+    //constexpr size_t BufferSize = 4096;
     char line[BufferSize];
     bool sectionExists = false;
     while (fgets(line, sizeof(line), inputFile)) {
@@ -792,7 +792,7 @@ void renameIniSection(const std::string& filePath, const std::string& currentSec
     
     std::string currentSection;
     bool renaming = false;
-    constexpr size_t BufferSize = 4096;
+    //constexpr size_t BufferSize = 4096;
     char line[BufferSize];
     
     std::string currentLine, sectionName;
@@ -868,7 +868,7 @@ void removeIniSection(const std::string& filePath, const std::string& sectionNam
     
     std::string currentSection;
     bool removing = false;
-    constexpr size_t BufferSize = 4096;
+    //constexpr size_t BufferSize = 4096;
     char line[BufferSize];
     
     std::string currentLine, _section;
