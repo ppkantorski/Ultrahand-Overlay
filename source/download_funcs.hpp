@@ -152,26 +152,15 @@ bool downloadFile(const std::string& url, const std::string& toDestination) {
         return false;
     }
     
-    // Set progress callback function
+
     curl_easy_setopt(curl, CURLOPT_PROGRESSFUNCTION, progressCallback);
-    // Pass the address of abortDownload as the progress callback data
     curl_easy_setopt(curl, CURLOPT_PROGRESSDATA, &abortDownload);
-
-    // Enable progress meter
     curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
-
-
     curl_easy_setopt(curl, CURLOPT_BUFFERSIZE, downloadBufferSize);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeCallback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, file);
-    
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-    
-    
-    // Set a user agent
     curl_easy_setopt(curl, CURLOPT_USERAGENT, "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36");
-    
-    // Enable following redirects
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
     
     // If you have a cacert.pem file, you can set it as a trusted CA
@@ -186,17 +175,9 @@ bool downloadFile(const std::string& url, const std::string& toDestination) {
     //delete callbackData;
     if (result != CURLE_OK) {
         logMessage(std::string("Error downloading file: ") + curl_easy_strerror(result));
-        //curl_easy_cleanup(curl);
-        //curl_global_cleanup();
-        //fclose(file);
-        // Delete the file if nothing was written to it
         deleteFileOrDirectory(destination.c_str());
         return false;
     }
-    
-    //curl_easy_cleanup(curl);
-    //curl_global_cleanup();
-    //fclose(file);
     
     // Check if the file is empty
     long fileSize = ftell(file);
@@ -205,7 +186,7 @@ bool downloadFile(const std::string& url, const std::string& toDestination) {
         deleteFileOrDirectory(destination.c_str());
         return false;
     }
-    //downloadPercentage.store(100, std::memory_order_release);
+    
     logMessage("Download Complete!");
     return true;
 }
