@@ -28,14 +28,16 @@
 #include "debug_funcs.hpp"
 //#include "json_funcs.hpp"
 
-const size_t downloadBufferSize = 4096;
+const size_t downloadBufferSize = 512;
+const zzip_ssize_t unzipBufferSize = 512;
+
 
 // Shared atomic flag to indicate whether to abort the download operation
 static std::atomic<bool> abortDownload(false);
 // Define an atomic bool for interpreter completion
 static std::atomic<bool> abortUnzip(false);
 static std::atomic<int> downloadPercentage(-1);
-
+static std::atomic<int> unzipPercentage(-1);
 
 
 // Callback function to write received data to a file.
@@ -291,10 +293,10 @@ bool unzipFile(const std::string& zipFilePath, const std::string& toDestination)
             FILE* outputFile = fopen(extractedFilePath.c_str(), "wb");
             if (outputFile) {
                 zzip_ssize_t bytesRead;
-                const zzip_ssize_t bufferSize = 4096;
-                char buffer[bufferSize];
+                //const zzip_ssize_t bufferSize = 512;
+                char buffer[unzipBufferSize];
 
-                while ((bytesRead = zzip_file_read(file, buffer, bufferSize)) > 0) {
+                while ((bytesRead = zzip_file_read(file, buffer, unzipBufferSize)) > 0) {
                     fwrite(buffer, 1, bytesRead, outputFile);
                 }
 
@@ -314,157 +316,3 @@ bool unzipFile(const std::string& zipFilePath, const std::string& toDestination)
     zzip_dir_close(dir);
     return success;
 }
-
-// Thread information structure
-//Thread downloadThread;
-//Thread unzipThread;
-//std::queue<std::pair<std::string, std::string>> downloadQueue;
-//std::queue<std::pair<std::string, std::string>> unzipQueue;
-//std::mutex downloadMutex;
-//std::mutex unzipMutex;
-//std::condition_variable downloadCondition;
-//std::condition_variable unzipCondition;
-//static bool downloadThreadExit = false;
-//static bool unzipThreadExit = false;
-//static std::atomic<bool> downloadTaskSuccess(false);
-//static std::atomic<bool> unzipTaskSuccess(false);
-//
-//bool downloadFileTask(const std::string& url, const std::string& destination) {
-//    if (!downloadFile(url, destination)) {
-//        logMessage("Failed to download file from: " + url);
-//        return false;
-//    } else {
-//        return true;
-//    }
-//}
-//
-//bool unzipFileTask(const std::string& zipFilePath, const std::string& destination) {
-//    if (!unzipFile(zipFilePath, destination)) {
-//        logMessage("Failed to unzip file: " + zipFilePath);
-//        return false;
-//    } else {
-//        return true;
-//    }
-//}
-//
-//void backgroundDownload(void*) {
-//    while (!downloadThreadExit) {
-//        std::pair<std::string, std::string> args;
-//
-//        {
-//            std::unique_lock<std::mutex> lock(downloadMutex);
-//            downloadCondition.wait(lock, [] { return !downloadQueue.empty() || downloadThreadExit; });
-//
-//            if (downloadQueue.empty() && downloadThreadExit) {
-//                // Exit the loop if the queue is empty and the exit flag is set
-//                break;
-//            }
-//
-//            args = std::move(downloadQueue.front());
-//            downloadQueue.pop();
-//        } // Release the lock before processing the command
-//
-//        if (!args.first.empty()) {
-//            downloadTaskSuccess = downloadFileTask(args.first, args.second);
-//            // Notify the calling thread that the task is complete
-//            {
-//                std::lock_guard<std::mutex> lock(downloadMutex);
-//                downloadCondition.notify_one();
-//            }
-//        }
-//    }
-//}
-//
-//void backgroundUnzip(void*) {
-//    while (!unzipThreadExit) {
-//        std::pair<std::string, std::string> args;
-//
-//        {
-//            std::unique_lock<std::mutex> lock(unzipMutex);
-//            unzipCondition.wait(lock, [] { return !unzipQueue.empty() || unzipThreadExit; });
-//
-//            if (unzipQueue.empty() && unzipThreadExit) {
-//                // Exit the loop if the queue is empty and the exit flag is set
-//                break;
-//            }
-//
-//            args = std::move(unzipQueue.front());
-//            unzipQueue.pop();
-//        } // Release the lock before processing the command
-//
-//        if (!args.first.empty()) {
-//            unzipTaskSuccess = unzipFileTask(args.first, args.second);
-//            // Notify the calling thread that the task is complete
-//            {
-//                std::lock_guard<std::mutex> lock(unzipMutex);
-//                unzipCondition.notify_one();
-//            }
-//        }
-//    }
-//}
-//
-//void startDownloadThread() {
-//    downloadThreadExit = false;
-//    threadCreate(&downloadThread, backgroundDownload, nullptr, nullptr, 0x4000, 0x10, -2);
-//    threadStart(&downloadThread);
-//}
-//
-//void startUnzipThread() {
-//    unzipThreadExit = false;
-//    threadCreate(&unzipThread, backgroundUnzip, nullptr, nullptr, 0x4000, 0x10, -2);
-//    threadStart(&unzipThread);
-//}
-//
-//void closeDownloadThread() {
-//    downloadThreadExit = true;
-//    downloadCondition.notify_one();
-//    threadWaitForExit(&downloadThread);
-//    threadClose(&downloadThread);
-//}
-//
-//void closeUnzipThread() {
-//    unzipThreadExit = true;
-//    unzipCondition.notify_one();
-//    threadWaitForExit(&unzipThread);
-//    threadClose(&unzipThread);
-//}
-//
-//bool enqueueDownloadFile(const std::string& url, const std::string& destination) {
-//    startDownloadThread();
-//    
-//    {
-//        std::lock_guard<std::mutex> lock(downloadMutex);
-//        downloadTaskSuccess = false;  // Reset task success flag
-//        downloadQueue.emplace(url, destination);
-//        downloadCondition.notify_one();
-//    }
-//
-//    // Wait for the download operation to complete
-//    std::unique_lock<std::mutex> lock(downloadMutex);
-//    downloadCondition.wait(lock, [] { return downloadTaskSuccess || downloadThreadExit; });
-//
-//    closeDownloadThread(); // Close the download thread after completion
-//
-//    return downloadTaskSuccess; // Return the success status
-//}
-//
-//
-//bool enqueueUnzipFile(const std::string& zipFilePath, const std::string& destination) {
-//    startUnzipThread();
-//    
-//    {
-//        std::lock_guard<std::mutex> lock(unzipMutex);
-//        // Reset task success flag
-//        unzipTaskSuccess = false;
-//        unzipQueue.emplace(zipFilePath, destination);
-//        unzipCondition.notify_one();
-//    }
-//
-//    // Wait for the unzip operation to complete
-//    std::unique_lock<std::mutex> lock(unzipMutex);
-//    unzipCondition.wait(lock, [] { return unzipTaskSuccess || unzipThreadExit; });
-//
-//    closeUnzipThread(); // Close the unzip thread after completion
-//
-//    return unzipTaskSuccess; // Return the success status
-//}
