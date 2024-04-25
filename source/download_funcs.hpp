@@ -148,15 +148,9 @@ bool downloadFile(const std::string& url, const std::string& toDestination) {
     if (!file) {
         logMessage(std::string("Error opening file: ") + destination);
         curl_easy_cleanup(curl);
+        deleteFileOrDirectory(destination.c_str());
         return false;
     }
-    
-    // Allocate CallbackData dynamically
-    //CallbackData* callbackData = new CallbackData{file};
-    //
-    //curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
-    //curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, progressCallback);
-    //curl_easy_setopt(curl, CURLOPT_XFERINFODATA, callbackData);
     
     // Set progress callback function
     curl_easy_setopt(curl, CURLOPT_PROGRESSFUNCTION, progressCallback);
@@ -196,7 +190,7 @@ bool downloadFile(const std::string& url, const std::string& toDestination) {
         //curl_global_cleanup();
         //fclose(file);
         // Delete the file if nothing was written to it
-        std::remove(destination.c_str());
+        deleteFileOrDirectory(destination.c_str());
         return false;
     }
     
@@ -208,7 +202,7 @@ bool downloadFile(const std::string& url, const std::string& toDestination) {
     long fileSize = ftell(file);
     if (fileSize == 0) {
         logMessage(std::string("Error downloading file: Empty file"));
-        std::remove(destination.c_str());
+        deleteFileOrDirectory(destination.c_str());
         return false;
     }
     //downloadPercentage.store(100, std::memory_order_release);
