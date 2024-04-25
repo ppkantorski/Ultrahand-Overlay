@@ -1490,13 +1490,14 @@ std::condition_variable queueCondition;
 static bool interpreterThreadExit = false;
 
 void clearInterpreterFlags() {
-    threadFailure.store(false, std::memory_order_release);
     runningInterpreter.store(false, std::memory_order_release);
     abortDownload.store(false, std::memory_order_release);
     abortUnzip.store(false, std::memory_order_release);
     abortFileOp.store(false, std::memory_order_release);
     abortCommand.store(false, std::memory_order_release);
 }
+
+
 
 void backgroundInterpreter(void*) {
     try {
@@ -1516,6 +1517,7 @@ void backgroundInterpreter(void*) {
             if (!std::get<0>(args).empty()) {
                 // Clear flags and perform any cleanup if necessary
                 clearInterpreterFlags();
+                threadFailure.store(false, std::memory_order_release);
                 runningInterpreter.store(true, std::memory_order_release);
 
                 interpretAndExecuteCommand(std::move(std::get<0>(args)), std::move(std::get<1>(args)), std::move(std::get<2>(args)));
@@ -1532,33 +1534,13 @@ void backgroundInterpreter(void*) {
             interpreterQueue.pop();
         }
         clearInterpreterFlags();
-        threadFailure.store(true, std::memory_order_release);
         runningInterpreter.store(false, std::memory_order_release);
+        threadFailure.store(true, std::memory_order_release);
         logMessage("Interpreter failure.");
+        //closeInterpreterThread();
         // Optionally, log the exception or perform additional cleanup
     }
 }
-
-
-void startInterpreterThread(int stackSize = 0x12000) {
-    interpreterThreadExit = false;
-    int result = threadCreate(&interpreterThread, backgroundInterpreter, nullptr, nullptr, stackSize, 0x10, 1);
-    if (result != 0) {
-        // Failed to create thread, clear the queue and reset flags
-        std::lock_guard<std::mutex> lock(queueMutex);
-        while (!interpreterQueue.empty()) {
-            interpreterQueue.pop();
-        }
-        clearInterpreterFlags();
-        threadFailure.store(true, std::memory_order_release);
-        runningInterpreter.store(false, std::memory_order_release);
-        logMessage("Failed to create interpreter thread.");
-        return;
-    }
-    threadStart(&interpreterThread);
-}
-
-
 
 void closeInterpreterThread() {
     logMessage("Closing interpreter...");
@@ -1573,6 +1555,29 @@ void closeInterpreterThread() {
     clearInterpreterFlags();
     logMessage("Interpreter has been closed.");
 }
+
+
+
+void startInterpreterThread(int stackSize = 0x12000) {
+    interpreterThreadExit = false;
+    int result = threadCreate(&interpreterThread, backgroundInterpreter, nullptr, nullptr, stackSize, 0x10, 1);
+    if (result != 0) {
+        // Failed to create thread, clear the queue and reset flags
+        std::lock_guard<std::mutex> lock(queueMutex);
+        while (!interpreterQueue.empty()) {
+            interpreterQueue.pop();
+        }
+        clearInterpreterFlags();
+        runningInterpreter.store(false, std::memory_order_release);
+        threadFailure.store(true, std::memory_order_release);
+        logMessage("Failed to create interpreter thread.");
+        return;
+    }
+    threadStart(&interpreterThread);
+}
+
+
+
 
 void enqueueInterpreterCommand(std::vector<std::vector<std::string>>&& commands, const std::string& packagePath, const std::string& selectedCommand) {
     if (isDownloadCommand)
