@@ -436,6 +436,13 @@ public:
                         downloadPercentage.store(-1, std::memory_order_release);
                 }
 
+                if (threadFailure.load(std::memory_order_acquire)) {
+                    threadFailure.store(false, std::memory_order_release);
+                    commandSuccess = false;
+                    lastRunningInterpreter = true;
+                    logMessage("killing command");
+                }
+
                 if ((keys & KEY_A) || (runningInterpreter.load(std::memory_order_acquire) || (!runningInterpreter.load(std::memory_order_acquire) && lastRunningInterpreter))) {
                     if (!runningInterpreter.load(std::memory_order_acquire) && !lastRunningInterpreter) {
                         isDownloadCommand = true;
@@ -455,6 +462,7 @@ public:
                         lastSelectedListItem = listItem;
                     }
                     
+
                     if (!runningInterpreter.load(std::memory_order_acquire) && lastRunningInterpreter) {
                         isDownloadCommand = false;
                         if (commandSuccess)
@@ -462,12 +470,6 @@ public:
                         else
                             lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
                         closeInterpreterThread();
-                    }
-
-                    if (threadFailure.load(std::memory_order_acquire)) {
-                        threadFailure.store(false, std::memory_order_release);
-                        commandSuccess = false;
-                        lastRunningInterpreter = true;
                     }
                     
                     lastRunningInterpreter = runningInterpreter.load(std::memory_order_acquire);
@@ -496,6 +498,12 @@ public:
                         downloadPercentage.store(-1, std::memory_order_release);
                 }
 
+                if (threadFailure.load(std::memory_order_acquire)) {
+                    threadFailure.store(false, std::memory_order_release);
+                    commandSuccess = false;
+                    lastRunningInterpreter = true;
+                    logMessage("killing command");
+                }
 
                 if ((keys & KEY_A) || (runningInterpreter.load(std::memory_order_acquire) || (!runningInterpreter.load(std::memory_order_acquire) && lastRunningInterpreter))) {
                     if (!runningInterpreter.load(std::memory_order_acquire) && !lastRunningInterpreter) {
@@ -518,6 +526,7 @@ public:
                         lastSelectedListItem = listItem;
                     }
                     
+
                     if (!runningInterpreter.load(std::memory_order_acquire) && lastRunningInterpreter) {
                         isDownloadCommand = false;
                         if (commandSuccess)
@@ -525,12 +534,6 @@ public:
                         else
                             lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
                         closeInterpreterThread();
-                    }
-
-                    if (threadFailure.load(std::memory_order_acquire)) {
-                        threadFailure.store(false, std::memory_order_release);
-                        commandSuccess = false;
-                        lastRunningInterpreter = true;
                     }
                     
                     lastRunningInterpreter = runningInterpreter.load(std::memory_order_acquire);
@@ -1818,6 +1821,13 @@ public:
                             downloadPercentage.store(-1, std::memory_order_release);
                     }
 
+                    if (threadFailure.load(std::memory_order_acquire)) {
+                        threadFailure.store(false, std::memory_order_release);
+                        commandSuccess = false;
+                        lastRunningInterpreter = true;
+                        logMessage("killing command");
+                    }
+
                     if ((keys & KEY_A) || (runningInterpreter.load(std::memory_order_acquire) || (!runningInterpreter.load(std::memory_order_acquire) && lastRunningInterpreter))) {
 
                         if (!runningInterpreter.load(std::memory_order_acquire) && !lastRunningInterpreter) {
@@ -1849,6 +1859,7 @@ public:
                             lastSelectedListItem = listItem;
                         }
                         
+
                         if (!runningInterpreter.load(std::memory_order_acquire) && lastRunningInterpreter) {
                             isDownloadCommand = false;
 
@@ -1857,12 +1868,6 @@ public:
                             else
                                 lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
                             closeInterpreterThread();
-                        }
-
-                        if (threadFailure.load(std::memory_order_acquire)) {
-                            threadFailure.store(false, std::memory_order_release);
-                            commandSuccess = false;
-                            lastRunningInterpreter = true;
                         }
 
                         lastRunningInterpreter = runningInterpreter.load(std::memory_order_acquire);
@@ -1939,7 +1944,7 @@ public:
         //    simulatedBack = false;
         //    simulatedBackComplete = true;
         //}
-        
+
         if (refreshGui) {
             tsl::changeTo<SelectionOverlay>(filePath, specificKey, commands, specifiedFooterKey);
             refreshGui = false;
@@ -2446,6 +2451,7 @@ public:
                                     simulatedSelect = false;
                                 }
 
+                                static bool lastRunningInterpreter = false;
                                 int currentPercentage = downloadPercentage.load(std::memory_order_acquire);
                                 if (currentPercentage != -1) {
                                     lastSelectedListItem->setValue(DOWNLOAD_SYMBOL + " " + std::to_string(currentPercentage)+"%");
@@ -2453,8 +2459,14 @@ public:
                                         downloadPercentage.store(-1, std::memory_order_release);
                                 }
 
+                                if (threadFailure.load(std::memory_order_acquire)) {
+                                    threadFailure.store(false, std::memory_order_release);
+                                    commandSuccess = false;
+                                    lastRunningInterpreter = true;
+                                    logMessage("killing command");
+                                    closeInterpreterThread();
+                                }
 
-                                static bool lastRunningInterpreter = false;
                                 if ((keys & KEY_A) || (runningInterpreter.load(std::memory_order_acquire) || (!runningInterpreter.load(std::memory_order_acquire) && lastRunningInterpreter))) {
 
                                     if (!runningInterpreter.load(std::memory_order_acquire) && !lastRunningInterpreter) {
@@ -2473,6 +2485,7 @@ public:
                                         lastSelectedListItem = listItem;
                                     }
                                     
+
                                     if (!runningInterpreter.load(std::memory_order_acquire) && lastRunningInterpreter) {
                                         isDownloadCommand = false;
 
@@ -2482,14 +2495,7 @@ public:
                                             lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
                                         closeInterpreterThread();
                                     }
-
-                                    if (threadFailure.load(std::memory_order_acquire)) {
-                                        threadFailure.store(false, std::memory_order_release);
-                                        commandSuccess = false;
-                                        lastRunningInterpreter = true;
-                                    }
                                     
-
                                     lastRunningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                                     
 
@@ -3637,6 +3643,7 @@ public:
                                             simulatedSelect = false;
                                         }
 
+                                        static bool lastRunningInterpreter = false;
                                         int currentPercentage = downloadPercentage.load(std::memory_order_acquire);
                                         if (currentPercentage != -1) {
                                             lastSelectedListItem->setValue(DOWNLOAD_SYMBOL + " " + std::to_string(currentPercentage)+"%");
@@ -3644,8 +3651,13 @@ public:
                                                 downloadPercentage.store(-1, std::memory_order_release);
                                         }
 
+                                        if (threadFailure.load(std::memory_order_acquire)) {
+                                            threadFailure.store(false, std::memory_order_release);
+                                            commandSuccess = false;
+                                            lastRunningInterpreter = true;
+                                            logMessage("killing command");
+                                        }
 
-                                        static bool lastRunningInterpreter = false;
                                         if ((keys & KEY_A) || (runningInterpreter.load(std::memory_order_acquire) || (!runningInterpreter.load(std::memory_order_acquire) && lastRunningInterpreter))) {
                                             
                                             if (!runningInterpreter.load(std::memory_order_acquire) && !lastRunningInterpreter) {
@@ -3664,6 +3676,7 @@ public:
                                                 lastSelectedListItem = listItem;
                                             }
                                             
+
                                             if (!runningInterpreter.load(std::memory_order_acquire) && lastRunningInterpreter) {
                                                 isDownloadCommand = false;
 
@@ -3674,13 +3687,6 @@ public:
                                                 closeInterpreterThread();
                                             }
 
-                                            if (threadFailure.load(std::memory_order_acquire)) {
-                                                threadFailure.store(false, std::memory_order_release);
-                                                commandSuccess = false;
-                                                lastRunningInterpreter = true;
-                                            }
-
-                                            
                                             lastRunningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                                             
     
@@ -3703,6 +3709,7 @@ public:
                                             simulatedSelect = false;
                                         }
                                         
+                                        static bool lastRunningInterpreter = false;
                                         int currentPercentage = downloadPercentage.load(std::memory_order_acquire);
                                         if (currentPercentage != -1) {
                                             lastSelectedListItem->setValue(DOWNLOAD_SYMBOL + " " + std::to_string(currentPercentage)+"%");
@@ -3710,8 +3717,13 @@ public:
                                                 downloadPercentage.store(-1, std::memory_order_release);
                                         }
 
+                                        if (threadFailure.load(std::memory_order_acquire)) {
+                                            threadFailure.store(false, std::memory_order_release);
+                                            commandSuccess = false;
+                                            lastRunningInterpreter = true;
+                                            logMessage("killing command");
+                                        }
 
-                                        static bool lastRunningInterpreter = false;
                                         if ((keys & KEY_A) || (runningInterpreter.load(std::memory_order_acquire) || (!runningInterpreter.load(std::memory_order_acquire) && lastRunningInterpreter))) {
 
                                             
@@ -3733,6 +3745,7 @@ public:
                                                 lastSelectedListItem = listItem;
                                             }
                                             
+
                                             if (!runningInterpreter.load(std::memory_order_acquire) && lastRunningInterpreter) {
                                                 isDownloadCommand = false;
 
@@ -3742,14 +3755,7 @@ public:
                                                     lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
                                                 closeInterpreterThread();
                                             }
-
-                                            if (threadFailure.load(std::memory_order_acquire)) {
-                                                threadFailure.store(false, std::memory_order_release);
-                                                commandSuccess = false;
-                                                lastRunningInterpreter = true;
-                                            }
                                             
-
                                             lastRunningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                                             simulatedSelectComplete = true;
                                             return true;
@@ -4028,7 +4034,7 @@ public:
         spsmExit();
         splExit();
         fsdevUnmountAll();
-        closeInterpreterThread();
+        //closeInterpreterThread();
     }
     
     /**
