@@ -934,10 +934,7 @@ void interpretAndExecuteCommand(std::vector<std::vector<std::string>>&& commands
     interpreterLogging = false;
 
     while (!commands.empty()) {
-        if (!commandSuccess && inTrySection){
-            break;
-        }
-        
+
         auto& cmd = commands.front(); // Get the first command for processing
 
         if (abortCommand.load(std::memory_order_acquire)) {
@@ -972,6 +969,11 @@ void interpretAndExecuteCommand(std::vector<std::vector<std::string>>&& commands
         } else if (stringToLowercase(commandName) == "mariko:") {
             inEristaSection = false;
             inMarikoSection = true;
+            commands.erase(commands.begin()); // Remove processed command
+            continue;
+        }
+
+        if (!commandSuccess && inTrySection){
             commands.erase(commands.begin()); // Remove processed command
             continue;
         }
