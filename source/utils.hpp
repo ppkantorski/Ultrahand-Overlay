@@ -1542,7 +1542,7 @@ void backgroundInterpreter(void*) {
 
 void startInterpreterThread(int stackSize = 0x12000) {
     interpreterThreadExit = false;
-    int result = threadCreate(&interpreterThread, backgroundInterpreter, nullptr, nullptr, stackSize, 0x10, -2);
+    int result = threadCreate(&interpreterThread, backgroundInterpreter, nullptr, nullptr, stackSize, 0x10, 1);
     if (result != 0) {
         // Failed to create thread, clear the queue and reset flags
         std::lock_guard<std::mutex> lock(queueMutex);
