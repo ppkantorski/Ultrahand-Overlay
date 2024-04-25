@@ -25,6 +25,29 @@
 #include <debug_funcs.hpp>
 
 
+
+// Function to remove invalid characters from file names
+std::string cleanFileName(const std::string& fileName) {
+    std::string cleanedFileName;
+    for (char c : fileName) {
+        if (std::isalnum(c) || std::isspace(c) || c == '-' || c == '_') {
+            cleanedFileName += c;
+        }
+    }
+    return cleanedFileName;
+}
+
+// Function to clean directory names by removing invalid characters
+std::string cleanDirectoryName(const std::string& name) {
+    std::string cleanedName;
+    for (char c : name) {
+        if (std::isalnum(c) || std::isspace(c) || c == '-' || c == '_') {
+            cleanedName += c;
+        }
+    }
+    return cleanedName;
+}
+
 /**
  * @brief Trims leading and trailing whitespaces from a string.
  *
