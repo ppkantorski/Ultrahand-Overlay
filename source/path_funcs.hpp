@@ -23,7 +23,7 @@
 
 static std::atomic<bool> abortFileOp(false);
 
-const size_t copyBufferSize = 512; // Increase buffer size to 128 KB
+const size_t copyBufferSize = 4096*3; // Increase buffer size to 128 KB
 
 /**
  * @brief Creates a single directory if it doesn't exist.
