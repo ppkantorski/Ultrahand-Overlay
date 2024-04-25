@@ -909,7 +909,7 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
 
 // forward declarartion
 void processCommand(const std::vector<std::string>& cmd, const std::string& packagePath, const std::string& selectedCommand);
-
+//void enqueueCommand(std::vector<std::string>&& command, const std::string& packagePath, const std::string& selectedCommand);
 
 /**
  * @brief Interpret and execute a list of commands.
@@ -1089,6 +1089,7 @@ void interpretAndExecuteCommand(std::vector<std::vector<std::string>>&& commands
                     }
                 } else {
                     processCommand(cmd, packagePath, selectedCommand);
+                    //enqueueCommand(std::move(cmd), packagePath, selectedCommand);
                 }
 
                 if (interpreterLogging) {
@@ -1103,8 +1104,6 @@ void interpretAndExecuteCommand(std::vector<std::vector<std::string>>&& commands
         commands.erase(commands.begin()); // Remove processed command
     }
 }
-
-
 
 
 
@@ -1327,12 +1326,13 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                 bool resetCommandSuccess;
                 for (auto& bootOption:bootOptions) {
                     bootOptionName = bootOption.first;
-                    auto& bootCommands = bootOption.second;
+                    auto bootCommands = bootOption.second;
                     if (bootOptionName == bootCommandName) {
                         resetCommandSuccess = false;
                         if (!commandSuccess)
                             resetCommandSuccess = true;
                         interpretAndExecuteCommand(std::move(bootCommands), packagePath+bootPackageFileName, bootOptionName); // Execute modified 
+                        //enqueueInterpreterCommand(std::move(bootCommands), packagePath+bootPackageFileName, bootOptionName);
                         if (resetCommandSuccess) {
                             commandSuccess = false;
                             resetCommandSuccess = false;
@@ -1540,9 +1540,9 @@ void backgroundInterpreter(void*) {
 }
 
 
-void startInterpreterThread() {
+void startInterpreterThread(int stackSize = 0x12000) {
     interpreterThreadExit = false;
-    int result = threadCreate(&interpreterThread, backgroundInterpreter, nullptr, nullptr, 0x8000, 0x10, -2);
+    int result = threadCreate(&interpreterThread, backgroundInterpreter, nullptr, nullptr, stackSize, 0x10, -2);
     if (result != 0) {
         // Failed to create thread, clear the queue and reset flags
         std::lock_guard<std::mutex> lock(queueMutex);
@@ -1575,7 +1575,10 @@ void closeInterpreterThread() {
 }
 
 void enqueueInterpreterCommand(std::vector<std::vector<std::string>>&& commands, const std::string& packagePath, const std::string& selectedCommand) {
-    startInterpreterThread();
+    if (isDownloadCommand)
+        startInterpreterThread(0x8000);
+    else
+        startInterpreterThread();
     {
         std::lock_guard<std::mutex> lock(queueMutex);
         interpreterQueue.emplace(std::move(commands), packagePath, selectedCommand);
@@ -1585,3 +1588,99 @@ void enqueueInterpreterCommand(std::vector<std::vector<std::string>>&& commands,
 
 
 
+// Thread information structure
+//Thread commandThread;
+//std::queue<std::tuple<std::vector<std::string>, std::string, std::string>> commandQueue;
+//std::mutex commandQueueMutex;
+//std::condition_variable commandQueueCondition;
+//static bool commandThreadExit = false;
+//
+//
+//
+//void backgroundCommand(void*) {
+//    try {
+//        while (!commandThreadExit) {
+//            std::tuple<std::vector<std::string>, std::string, std::string> args;
+//
+//            {
+//                std::unique_lock<std::mutex> lock(commandQueueMutex);
+//                commandQueueCondition.wait(lock, [] { return !commandQueue.empty() || commandThreadExit; });
+//
+//                if (!commandQueue.empty()) {
+//                    args = std::move(commandQueue.front());
+//                    commandQueue.pop();
+//                }
+//            } // Release the lock before processing the command
+//
+//            if (!std::get<0>(args).empty()) {
+//                processCommand(std::move(std::get<0>(args)), std::move(std::get<1>(args)), std::move(std::get<2>(args)));
+//            }
+//        }
+//    } catch (...) {
+//        // Exception occurred, clear the queue and reset flags
+//        std::lock_guard<std::mutex> lock(commandQueueMutex);
+//        while (!commandQueue.empty()) {
+//            commandQueue.pop();
+//        }
+//        logMessage("Command failure.");
+//        // Optionally, log the exception or perform additional cleanup
+//    }
+//}
+//
+//
+//void startCommandThread() {
+//    commandThreadExit = false;
+//    int result = threadCreate(&commandThread, backgroundCommand, nullptr, nullptr, 0x4000, 0x10, -2);
+//    if (result != 0) {
+//        // Failed to create thread, clear the queue and reset flags
+//        std::lock_guard<std::mutex> lock(commandQueueMutex);
+//        while (!commandQueue.empty()) {
+//            commandQueue.pop();
+//        }
+//        logMessage("Failed to create command thread.");
+//        return;
+//    }
+//    threadStart(&commandThread);
+//}
+//
+//
+//
+//void closeCommandThread() {
+//    logMessage("Closing command...");
+//    {
+//        std::lock_guard<std::mutex> lock(commandQueueMutex);
+//        commandThreadExit = true;
+//        commandQueueCondition.notify_one();
+//    }
+//    threadWaitForExit(&commandThread);
+//    threadClose(&commandThread);
+//    logMessage("Command has been closed.");
+//}
+//
+//void enqueueCommand(std::vector<std::string>&& command, const std::string& packagePath, const std::string& selectedCommand) {
+//    startCommandThread(); // Start the command thread if it's not already running
+//
+//    // Enqueue the command
+//    {
+//        std::lock_guard<std::mutex> lock(commandQueueMutex);
+//        commandQueue.emplace(std::move(command), packagePath, selectedCommand);
+//    }
+//    commandQueueCondition.notify_one(); // Notify the command thread that a new command is available
+//
+//    // Wait for the command thread to complete execution
+//    while (true) {
+//        {
+//            std::lock_guard<std::mutex> lock(commandQueueMutex);
+//            if (commandQueue.empty()) {
+//                break; // If the queue is empty, the command thread has completed
+//            }
+//        }
+//        std::this_thread::sleep_for(std::chrono::milliseconds(100)); // Wait for 100 milliseconds before checking again
+//    }
+//
+//    // Close the command thread
+//    closeCommandThread();
+//}
+//
+//
+//
