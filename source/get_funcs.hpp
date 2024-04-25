@@ -166,40 +166,45 @@ std::string getFileNameFromURL(const std::string& url) {
 
 
 /**
- * @brief Extracts the name of the parent directory from a given file path.
+ * @brief Extracts the name of the parent directory from a given file path at a specified level.
  *
  * @param path The file path from which to extract the parent directory name.
- * @return The parent directory name.
+ * @param level The level of the parent directory to extract (0 for immediate parent, 1 for grandparent, and so on).
+ * @return The name of the parent directory at the specified level.
  */
-std::string getParentDirNameFromPath(const std::string& path) {
-    // Find the position of the last occurrence of the directory separator '/'
-    size_t lastSlashPos = removeEndingSlash(path).rfind('/');
-    
-    // Check if the slash is found and not at the beginning of the path
-    if (lastSlashPos != std::string::npos && lastSlashPos != 0) {
-        // Find the position of the second last occurrence of the directory separator '/'
-        size_t secondLastSlashPos = path.rfind('/', lastSlashPos - 1);
-        
-        // Check if the second last slash is found
-        if (secondLastSlashPos != std::string::npos) {
-            // Extract the substring between the second last and last slashes
-            std::string subPath = path.substr(secondLastSlashPos + 1, lastSlashPos - secondLastSlashPos - 1);
-            
-            // Check if the substring contains spaces or special characters
-            if (subPath.find_first_of(" \t\n\r\f\v") != std::string::npos) {
-                // If it does, return the substring within quotes
-                return "\"" + subPath + "\"";
-            }
-            
-            // If it doesn't, return the substring as is
-            return subPath;
-        }
+std::string getParentDirNameFromPath(const std::string& path, size_t level = 0) {
+    // Split the path into individual directories
+    std::vector<std::string> directories;
+    size_t pos = 0;
+    while (pos != std::string::npos) {
+        size_t nextPos = path.find('/', pos + 1);
+        directories.push_back(path.substr(pos + 1, nextPos - pos - 1));
+        pos = nextPos;
     }
-    
-    // If the path format is not as expected or the parent directory is not found,
+
+    // Calculate the index of the desired directory
+    size_t targetIndex = directories.size() - 2 - level; // Adjusted to get parent directory
+
+    // Check if the target index is valid
+    if (targetIndex < directories.size() - 1) {
+        // Extract the directory name at the target index
+        std::string targetDir = directories[targetIndex];
+
+        // Check if the directory name contains spaces or special characters
+        if (targetDir.find_first_of(" \t\n\r\f\v") != std::string::npos) {
+            // If it does, return the directory name within quotes
+            return "\"" + targetDir + "\"";
+        }
+
+        // If it doesn't, return the directory name as is
+        return targetDir;
+    }
+
+    // If the path format is not as expected or the target directory is not found,
     // return an empty string or handle the case accordingly
     return "";
 }
+
 
 /**
  * @brief Extracts the parent directory path from a given file path.

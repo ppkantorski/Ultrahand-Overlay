@@ -15,7 +15,7 @@
  *   Note: Please be aware that this notice cannot be altered or removed. It is a part
  *   of the project's documentation and must remain intact.
  *
- *  Copyright (c) 2023 ppkantorski
+ *  Copyright (c) 2024 ppkantorski
  ********************************************************************************/
 
 /**
@@ -66,6 +66,10 @@
 
 static std::unordered_map<std::string, std::string> hexSumCache;
 
+// Define an atomic bool for interpreter completion
+static std::atomic<bool> threadFailure(false);
+static std::atomic<bool> runningInterpreter(false);
+
 /**
  * @brief Shutdown modes for the Ultrahand-Overlay project.
  *
@@ -106,6 +110,17 @@ static std::unordered_map<std::string, std::string> hexSumCache;
 #define KEY_RIGHT (HidNpadButton_Right | HidNpadButton_StickLRight | HidNpadButton_StickRRight)
 
 
+// Define a mask with all possible key flags
+constexpr u64 ALL_KEYS_MASK = 
+    KEY_A | KEY_B | KEY_X | KEY_Y |
+    KEY_DUP | KEY_DDOWN | KEY_DLEFT | KEY_DRIGHT |
+    KEY_L | KEY_R | KEY_ZL | KEY_ZR |
+    KEY_SL | KEY_SR |
+    KEY_LSTICK | KEY_RSTICK |
+    KEY_PLUS | KEY_MINUS;
+
+
+
 static bool useCombo2 = false;
 static bool updateMenuCombos = false;
 /**
@@ -142,6 +157,7 @@ static const std::string DROPDOWN_SYMBOL = "\u25B6";
 static const std::string CHECKMARK_SYMBOL = "\uE14B";
 static const std::string CROSSMARK_SYMBOL = "\uE14C";
 static const std::string DOWNLOAD_SYMBOL = "\u2193";
+static const std::string INPROGRESS_SYMBOL = "\u25CF";
 static const std::string STAR_SYMBOL = "\u2605";
 
 
@@ -664,6 +680,19 @@ bool isValidHexColor(const std::string& hexColor) {
     return true;
 }
 
+// Variables for touch commands
+static bool simulatedBack = false;
+static bool simulatedBackComplete = true;
+static bool simulatedSelect = false;
+static bool simulatedSelectComplete = true;
+static bool simulatedNextPage = false;
+static bool simulatedNextPageComplete = true;
+static bool simulatedMenu = false;
+static bool simulatedMenuComplete = true;
+static bool stillTouching = false;
+static bool interruptedTouch = false;
+static bool touchInBounds = false;
+
 
 // Battery implementation
 static bool powerInitialized = false;
@@ -920,7 +949,7 @@ void reinitializeVersionLabels() {
 
 #pragma GCC diagnostic pop
 
-#define ELEMENT_BOUNDS(elem) elem->getX(), elem->getY(), elem->getWidth()+4, elem->getHeight()
+#define ELEMENT_BOUNDS(elem) elem->getX()+4, elem->getY(), elem->getWidth()+4, elem->getHeight()
 
 #define ASSERT_EXIT(x) if (R_FAILED(x)) std::exit(1)
 #define ASSERT_FATAL(x) if (Result res = x; R_FAILED(res)) fatalThrow(res)
@@ -939,6 +968,9 @@ void reinitializeVersionLabels() {
 
 using namespace std::literals::string_literals;
 using namespace std::literals::chrono_literals;
+
+
+
 
 namespace tsl {
     
@@ -1621,7 +1653,7 @@ namespace tsl {
              * @param h Height
              * @param color Color
              */
-            inline void drawRect(s32 x, s32 y, s32 w, s32 h, Color color) {
+            inline void drawRect(float x, float y, float w, float h, Color color) {
                 for (s32 x1 = x; x1 < (x + w); x1++)
                     for (s32 y1 = y; y1 < (y + h); y1++)
                         this->setPixelBlendDst(x1, y1, color);
@@ -2156,7 +2188,8 @@ namespace tsl {
             Touch,
             Hold,
             Scroll,
-            Release
+            Release,
+            None
         };
         
         /**
@@ -2177,6 +2210,8 @@ namespace tsl {
             
             Color highlightColor1 = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "highlight_color_1"), "#2288CC");
             Color highlightColor2 = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "highlight_color_2"), "#88FFFF");
+            Color highlightColor3 = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "highlight_color_3"), "#FFFF45");
+            Color highlightColor4 = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "highlight_color_4"), "#F7253E");
             Color highlightColor = {0xf,0xf,0xf,0xf};
             
             Color clickColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "click_color"), "#F7253E");
@@ -2449,13 +2484,21 @@ namespace tsl {
                 //double timeCounter = 
                 //half progress = half((std::sin(2.0 * M_PI * fmod(std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count(), 1.0)) + 1.0) / 2.0);
                 progress = ((std::sin(2.0 * M_PI * fmod(std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count(), 1.0)) + 1.0) / 2.0);
-                
-                highlightColor = {
-                    static_cast<u8>((highlightColor1.r - highlightColor2.r) * progress + highlightColor2.r),
-                    static_cast<u8>((highlightColor1.g - highlightColor2.g) * progress + highlightColor2.g),
-                    static_cast<u8>((highlightColor1.b - highlightColor2.b) * progress + highlightColor2.b),
-                    0xF
-                };
+                if (runningInterpreter.load(std::memory_order_acquire)) {
+                    highlightColor = {
+                        static_cast<u8>((highlightColor3.r - highlightColor4.r) * progress + highlightColor4.r),
+                        static_cast<u8>((highlightColor3.g - highlightColor4.g) * progress + highlightColor4.g),
+                        static_cast<u8>((highlightColor3.b - highlightColor4.b) * progress + highlightColor4.b),
+                        0xF
+                    };
+                } else {
+                    highlightColor = {
+                        static_cast<u8>((highlightColor1.r - highlightColor2.r) * progress + highlightColor2.r),
+                        static_cast<u8>((highlightColor1.g - highlightColor2.g) * progress + highlightColor2.g),
+                        static_cast<u8>((highlightColor1.b - highlightColor2.b) * progress + highlightColor2.b),
+                        0xF
+                    };
+                }
                 x = 0;
                 y = 0;
                 
@@ -2583,6 +2626,31 @@ namespace tsl {
              */
             inline Element* getParent() { return this->m_parent; }
             
+
+            virtual std::vector<Element*> getChildren() const {
+                return {}; // Return empty vector for simplicity
+            }
+
+            ///**
+            // * @brief Adds a child element to this element
+            // *
+            // * @param child Child element to add
+            // */
+            //void addChild(Element* child) {
+            //    // Set the parent of the child to this element
+            //    child->setParent(this);
+            //    // Add the child to the list of children
+            //    m_children.push_back(child);
+            //}
+            //
+            ///**
+            // * @brief Get the list of child elements
+            // *
+            // * @return Vector of child elements
+            // */
+            //const std::vector<Element*>& getChildren() const { return this->m_children; }
+
+
             /**
              * @brief Marks this element as focused or unfocused to draw the highlight
              *
@@ -2631,7 +2699,7 @@ namespace tsl {
             
             s32 m_x = 0, m_y = 0, m_width = 0, m_height = 0;
             Element *m_parent = nullptr;
-            
+            std::vector<Element*> m_children;
             std::function<bool(u64 keys)> m_clickListener = [](u64) { return false; };
             
         };
@@ -3355,16 +3423,18 @@ namespace tsl {
                 renderer->disableScissoring();
                 
                 if (this->m_listHeight > this->getHeight()) {
-                    scrollbarHeight = static_cast<float>(this->getHeight() * this->getHeight()) / this->m_listHeight;
-                    scrollbarOffset = (static_cast<float>(this->m_offset)) / static_cast<float>(this->m_listHeight - this->getHeight()) * (this->getHeight() - std::ceil(scrollbarHeight));
+                    scrollbarHeight = static_cast<float>(this->getHeight() * this->getHeight() / this->m_listHeight - 50);
+                    if (scrollbarHeight < 0)
+                        scrollbarHeight = 0;
+                    scrollbarOffset = (static_cast<float>(this->m_offset)) / static_cast<float>(this->m_listHeight - this->getHeight()) * static_cast<float>(this->getHeight() - std::ceil(scrollbarHeight + 50));
                     
                     offset = 11;
-                    renderer->drawRect(this->getRightBound() + 10+offset, this->getY() + scrollbarOffset, 5, scrollbarHeight - 50, trackBarColor);
+                    renderer->drawRect(this->getRightBound() + 10+offset, this->getY() + scrollbarOffset, 5, scrollbarHeight, trackBarColor);
                     renderer->drawCircle(this->getRightBound() + 12+offset, this->getY() + scrollbarOffset, 2, true, trackBarColor);
-                    renderer->drawCircle(this->getRightBound() + 12+offset, ( this->getY() + scrollbarOffset + (this->getY() + scrollbarOffset + this->getY() + scrollbarOffset + scrollbarHeight - 50)/2)/2, 2, true, trackBarColor);
-                    renderer->drawCircle(this->getRightBound() + 12+offset, (this->getY() + scrollbarOffset + this->getY() + scrollbarOffset + scrollbarHeight - 50)/2, 2, true, trackBarColor);
-                    renderer->drawCircle(this->getRightBound() + 12+offset, (this->getY() + scrollbarOffset + scrollbarHeight - 50 + (this->getY() + scrollbarOffset + this->getY() + scrollbarOffset + scrollbarHeight - 50)/2)/2, 2, true, trackBarColor);
-                    renderer->drawCircle(this->getRightBound() + 12+offset, this->getY() + scrollbarOffset + scrollbarHeight - 50, 2, true, trackBarColor);
+                    renderer->drawCircle(this->getRightBound() + 12+offset, ( this->getY() + scrollbarOffset + (this->getY() + scrollbarOffset + this->getY() + scrollbarOffset + scrollbarHeight)/2)/2, 2, true, trackBarColor);
+                    renderer->drawCircle(this->getRightBound() + 12+offset, (this->getY() + scrollbarOffset + this->getY() + scrollbarOffset + scrollbarHeight)/2, 2, true, trackBarColor);
+                    renderer->drawCircle(this->getRightBound() + 12+offset, (this->getY() + scrollbarOffset + scrollbarHeight + (this->getY() + scrollbarOffset + this->getY() + scrollbarOffset + scrollbarHeight)/2)/2, 2, true, trackBarColor);
+                    renderer->drawCircle(this->getRightBound() + 12+offset, this->getY() + scrollbarOffset + scrollbarHeight, 2, true, trackBarColor);
                     
                     prevOffset = this->m_offset;
                     
@@ -3625,11 +3695,15 @@ namespace tsl {
             
             tsl::Color defaultTextColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "text_color")); ; // CUSTOM MODIFICATION
             tsl::Color selectedTextColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "selection_text_color"));
-            
+            tsl::Color inprogressTextColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "inprogress_text_color"));
+
             tsl::Color invalidTextColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "invalid_text_color"), "#FF0000");
             tsl::Color onTextColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "on_text_color"), "#00FFDD");
             tsl::Color offTextColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "off_text_color"), "#AAAAAA");
             
+            tsl::Color clickTextColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "click_text_color"));
+            tsl::Color clickColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "click_color"));
+
             std::chrono::system_clock::time_point timeIn;// = std::chrono::system_clock::now();
             std::chrono::duration<long int, std::ratio<1, 1000000000>> t;
             u32 width, height;
@@ -3645,8 +3719,13 @@ namespace tsl {
             virtual ~ListItem() {}
             
             virtual void draw(gfx::Renderer *renderer) override {
+                bool useClickTextColor = false;
                 if (this->m_touched && Element::getInputMode() == InputMode::Touch) {
-                    renderer->drawRect(ELEMENT_BOUNDS(this), tsl::style::color::ColorClickAnimation);
+                    if (touchInBounds) {
+                        renderer->drawRect(ELEMENT_BOUNDS(this), clickColor);
+                        useClickTextColor = true;
+                    }
+                    //renderer->drawRect(ELEMENT_BOUNDS(this), tsl::style::color::ColorClickAnimation);
                 }
                 
                 if (this->m_maxWidth == 0) {
@@ -3702,26 +3781,29 @@ namespace tsl {
                             }
                         } // CUSTOM MODIFICATION END
                     } else {
-                        renderer->drawString(this->m_ellipsisText.c_str(), false, this->getX() + 20, this->getY() + 45, 23, defaultTextColor);
+                        renderer->drawString(this->m_ellipsisText.c_str(), false, this->getX() + 20, this->getY() + 45, 23, !useClickTextColor ? defaultTextColor : clickTextColor);
                     }
                 } else {
-                    if (this->m_focused)
-                        renderer->drawString(this->m_text.c_str(), false, this->getX() + 20, this->getY() + 45, 23, selectedTextColor);
-                    else
-                        renderer->drawString(this->m_text.c_str(), false, this->getX() + 20, this->getY() + 45, 23, defaultTextColor);
+                    if (this->m_focused) {
+                        renderer->drawString(this->m_text.c_str(), false, this->getX() + 20, this->getY() + 45, 23, !useClickTextColor ? selectedTextColor : clickTextColor);
+                    } else {
+                        renderer->drawString(this->m_text.c_str(), false, this->getX() + 20, this->getY() + 45, 23, !useClickTextColor ? defaultTextColor : clickTextColor);
+                    }
                 }
                 
                 
                 // CUSTOM SECTION START (modification for submenu footer color)
                 if (this->m_value == DROPDOWN_SYMBOL || this->m_value == OPTION_SYMBOL) {
                     if (this->m_focused)
-                        renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +4, this->getY() + 45, 20, this->m_faint ? offTextColor : selectedTextColor);
+                        renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +4, this->getY() + 45, 20, !useClickTextColor ? (this->m_faint ? offTextColor : selectedTextColor) : clickTextColor);
                     else
-                        renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +4, this->getY() + 45, 20, this->m_faint ? offTextColor : defaultTextColor);
+                        renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +4, this->getY() + 45, 20, !useClickTextColor ? (this->m_faint ? offTextColor : defaultTextColor) : clickTextColor);
+                } else if (((this->m_value).find(DOWNLOAD_SYMBOL) != std::string::npos) || this->m_value == INPROGRESS_SYMBOL) {
+                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +4, this->getY() + 45, 20, !useClickTextColor ? (this->m_faint ? offTextColor : inprogressTextColor) : clickTextColor);
                 } else if (this->m_value == CROSSMARK_SYMBOL) {
-                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +4, this->getY() + 45, 20, this->m_faint ? offTextColor : invalidTextColor);
+                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +4, this->getY() + 45, 20, !useClickTextColor ? (this->m_faint ? offTextColor : invalidTextColor) : clickTextColor);
                 } else {
-                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +4, this->getY() + 45, 20, this->m_faint ? offTextColor : onTextColor);
+                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +4, this->getY() + 45, 20, !useClickTextColor ? (this->m_faint ? offTextColor : onTextColor) : clickTextColor);
                 }
                 // CUSTOM SECTION END 
             }
@@ -4307,6 +4389,9 @@ namespace tsl {
         virtual ~Gui() {
             if (this->m_topElement != nullptr)
                 delete this->m_topElement;
+
+            if (this->m_bottomElement != nullptr)
+                delete this->m_bottomElement;
         }
         
         /**
@@ -4346,6 +4431,15 @@ namespace tsl {
             return this->m_topElement;
         }
         
+        /**
+         * @brief Gets the bottom level element
+         *
+         * @return Bottom level element
+         */
+        elm::Element* getBottomElement() {
+            return this->m_bottomElement;
+        }
+
         /**
          * @brief Get the currently focused element
          *
@@ -4404,12 +4498,27 @@ namespace tsl {
     private:
         elm::Element *m_focusedElement = nullptr;
         elm::Element *m_topElement = nullptr;
-        
+        elm::Element *m_bottomElement = nullptr;
+
         bool m_initialFocusSet = false;
         
         friend class Overlay;
         friend class gfx::Renderer;
         
+        //// Function to recursively find the bottom element
+        //void findBottomElement(elm::Element* currentElement) {
+        //    // Base case: if the current element has no children, it is the bottom element
+        //    if (currentElement->getChildren().empty()) {
+        //        m_bottomElement = currentElement;
+        //        return;
+        //    }
+        //
+        //    // Recursive case: traverse through all children elements
+        //    for (elm::Element* child : currentElement->getChildren()) {
+        //        findBottomElement(child);
+        //    }
+        //}
+
         /**
          * @brief Draws the Gui
          *
@@ -4660,6 +4769,8 @@ namespace tsl {
             renderer.endFrame();
         }
         
+
+
         /**
          * @brief Called once per frame with the latest HID inputs
          *
@@ -4668,33 +4779,44 @@ namespace tsl {
          * @param touchInput Last touch position
          * @param leftJoyStick Left joystick position
          * @param rightJoyStick Right joystick position
-         * @return Weather or not the input has been consumed
+         * @return Whether or not the input has been consumed
          */
         void handleInput(u64 keysDown, u64 keysHeld, bool touchDetected, const HidTouchState &touchPos, HidAnalogStickState joyStickPosLeft, HidAnalogStickState joyStickPosRight) {
+            // Static variables to maintain state between function calls
             static HidTouchState initialTouchPos = { 0 };
             static HidTouchState oldTouchPos = { 0 };
             static bool oldTouchDetected = false;
             static elm::TouchEvent touchEvent;
+            static elm::TouchEvent oldTouchEvent;
             static u32 repeatTick = 0;
             
             auto& currentGui = this->getCurrentGui();
             
+            // Return early if current GUI is not available
             if (currentGui == nullptr)
                 return;
             
+            // Retrieve current focus and top/bottom elements of the GUI
             auto currentFocus = currentGui->getFocusedElement();
             auto topElement = currentGui->getTopElement();
+            auto bottomElement = currentGui->getBottomElement(); // Backend is still not implemented/working yet
             
-            if (currentFocus == nullptr) {
+
+            // Handle input when no element is focused
+            if (currentFocus == nullptr  && !simulatedBack && simulatedBackComplete && !stillTouching && !runningInterpreter.load(std::memory_order_acquire)) {
+                // Check for back button press
                 if (keysDown & HidNpadButton_B) {
+                    // Handle back button press
                     if (!currentGui->handleInput(HidNpadButton_B, 0,{},{},{}))
                         this->goBack();
                     return;
                 }
                 
+                // If there is no top element, return early
                 if (topElement == nullptr)
                     return;
                 else if (currentGui != nullptr) {
+                    // Set focus to top element if initial focus is not set or arrow keys are pressed
                     if (!currentGui->initialFocusSet() || keysDown & (HidNpadButton_AnyUp | HidNpadButton_AnyDown | HidNpadButton_AnyLeft | HidNpadButton_AnyRight)) {
                         currentGui->requestFocus(topElement, FocusDirection::None);
                         currentGui->markInitialFocusSet();
@@ -4702,33 +4824,55 @@ namespace tsl {
                     }
                 }
             }
+
+            // If nothing is highlighted AND the menu is fully loaded/drawn, set focus to topElement
+            if (!touchDetected && (!oldTouchDetected || (oldTouchEvent == elm::TouchEvent::Scroll)) && currentFocus == nullptr) {
+                if (!simulatedBack && simulatedBackComplete ) {
+                    //f (lastTouchedElement != nullptr) {
+                    //   currentGui->removeFocus();
+                    //   currentGui->requestFocus(lastTouchedElement, FocusDirection::None);
+                    //
+
+                    if (topElement != nullptr) {
+                        currentGui->removeFocus();
+                        currentGui->requestFocus(topElement, FocusDirection::None);
+                    }
+                }
+            }
             
             bool handled = false;
             elm::Element *parentElement = currentFocus;
             
+            // Propagate click events upwards through the hierarchy
             while (!handled && parentElement != nullptr) {
                 handled = parentElement->onClick(keysDown);
                 parentElement = parentElement->getParent();
             }
             
             parentElement = currentFocus;
+            // Propagate input events upwards through the hierarchy
             while (!handled && parentElement != nullptr) {
                 handled = parentElement->handleInput(keysDown, keysHeld, touchPos, joyStickPosLeft, joyStickPosRight);
                 parentElement = parentElement->getParent();
             }
             
+            // Return early if the GUI has changed
             if (currentGui != this->getCurrentGui())
                 return;
             
+            // Handle input events for the current GUI
             handled = handled | currentGui->handleInput(keysDown, keysHeld, touchPos, joyStickPosLeft, joyStickPosRight);
             
-            if (!handled && currentFocus != nullptr) {
+            // Handle arrow key navigation when no touch input is detected
+            if (!touchDetected && !oldTouchDetected && !handled && currentFocus != nullptr && !stillTouching && !runningInterpreter.load(std::memory_order_acquire)) {
                 static bool shouldShake = true;
                 
+                // Check for single arrow key press
                 if ((((keysHeld & HidNpadButton_AnyUp) != 0) + ((keysHeld & HidNpadButton_AnyDown) != 0) + ((keysHeld & HidNpadButton_AnyLeft) != 0) + ((keysHeld & HidNpadButton_AnyRight) != 0)) == 1) {
                     if ((repeatTick == 0 || repeatTick > 20) && (repeatTick % 4) == 0) {
+                        // Request focus based on arrow key direction
                         if (keysHeld & HidNpadButton_AnyUp)
-                            currentGui->requestFocus(currentFocus->getParent(), FocusDirection::Up, shouldShake);
+                            currentGui->requestFocus(currentGui->getTopElement(), FocusDirection::Up, shouldShake); // Request focus on the top element when double-clicking up
                         else if (keysHeld & HidNpadButton_AnyDown)
                             currentGui->requestFocus(currentFocus->getParent(), FocusDirection::Down, shouldShake);
                         else if (keysHeld & HidNpadButton_AnyLeft)
@@ -4740,26 +4884,50 @@ namespace tsl {
                     }
                     repeatTick++;
                 } else {
+                    // Handle back button press
                     if (keysDown & HidNpadButton_B)
                         this->goBack();
                     repeatTick = 0;
                     shouldShake = true;
                 }
             }
-            
-            if (!touchDetected && oldTouchDetected) {
-                if (currentGui != nullptr && topElement != nullptr)
-                    topElement->onTouch(elm::TouchEvent::Release, oldTouchPos.x, oldTouchPos.y, oldTouchPos.x, oldTouchPos.y, initialTouchPos.x, initialTouchPos.y);
+
+            // If the up button is pressed, shift focus to the top element
+            if (!touchDetected && keysDown & HidNpadButton_L && !runningInterpreter.load(std::memory_order_acquire)) {
+                topElement = currentGui->getTopElement();
+                if (topElement != nullptr) {
+                    currentGui->requestFocus(topElement, FocusDirection::None);
+                }
+            }
+
+            // If the down button is pressed, shift focus to the bottom element
+            if (!touchDetected && keysDown & HidNpadButton_R && !runningInterpreter.load(std::memory_order_acquire)) {
+                bottomElement = currentGui->getBottomElement();
+                if (bottomElement != nullptr) {
+                    currentGui->requestFocus(bottomElement, FocusDirection::None);
+                }
             }
             
+            // Handle touch release event
+            if (!touchDetected && oldTouchDetected) {
+                if (currentGui != nullptr && topElement != nullptr) {
+                    topElement->onTouch(elm::TouchEvent::Release, oldTouchPos.x, oldTouchPos.y, oldTouchPos.x, oldTouchPos.y, initialTouchPos.x, initialTouchPos.y);
+                }
+            }
+            
+            // Handle touch input
             if (touchDetected) {
-                
+                if (!interruptedTouch)
+                    interruptedTouch = ((keysHeld & ALL_KEYS_MASK) != 0);
+
+                // Calculate touch distance
                 u32 xDistance = std::abs(static_cast<s32>(initialTouchPos.x) - static_cast<s32>(touchPos.x));
                 u32 yDistance = std::abs(static_cast<s32>(initialTouchPos.y) - static_cast<s32>(touchPos.y));
                 
                 xDistance *= xDistance;
                 yDistance *= yDistance;
                 
+                // Determine touch event type (scroll or hold)
                 if ((xDistance + yDistance) > 1000) {
                     elm::Element::setInputMode(InputMode::TouchScroll);
                     touchEvent = elm::TouchEvent::Scroll;
@@ -4767,19 +4935,56 @@ namespace tsl {
                     if (touchEvent != elm::TouchEvent::Scroll)
                         touchEvent = elm::TouchEvent::Hold;
                 }
-                // CUSTOM MODIFICATION START
-                //if (!oldTouchDetected) {
-                //    initialTouchPos = touchPos;
-                //    elm::Element::setInputMode(InputMode::Touch);
-                //    currentGui->removeFocus();
-                //    touchEvent = elm::TouchEvent::Touch;
-                //}
-                //
-                // CUSTOM MODIFICATION END
+
+                // Handle touch input initiation
+                if (!oldTouchDetected) {
+                    initialTouchPos = touchPos;
+                    elm::Element::setInputMode(InputMode::Touch);
+                    if (!runningInterpreter.load(std::memory_order_acquire)) {
+                        if (initialTouchPos.y <= cfg::FramebufferHeight - 73U && initialTouchPos.y > 73U && initialTouchPos.x <= cfg::FramebufferWidth && initialTouchPos.x > 0U) {
+                            touchInBounds = true;
+                            currentGui->removeFocus();
+                        } else {
+                            touchInBounds = false;
+                        }
+                    }
+                    touchEvent = elm::TouchEvent::Touch;
+                }
                 
-                if (currentGui != nullptr && topElement != nullptr)
-                    topElement->onTouch(touchEvent, touchPos.x, touchPos.y, oldTouchPos.x, oldTouchPos.y, initialTouchPos.x, initialTouchPos.y);
-                
+                // Call onTouch method for the top element to handle touch event
+                if (currentGui != nullptr && topElement != nullptr) {
+                    if (!runningInterpreter.load(std::memory_order_acquire)) {
+                        topElement->onTouch(touchEvent, touchPos.x, touchPos.y, oldTouchPos.x, oldTouchPos.y, initialTouchPos.x, initialTouchPos.y);
+                        if (currentFocus != nullptr && touchEvent != elm::TouchEvent::Scroll)
+                            currentGui->requestFocus(currentFocus, FocusDirection::None);
+                        else
+                            currentGui->removeFocus();
+                    }
+                    //// Check if the top element contains the touch position
+                    //if (topElement->inBounds(touchPos.x, touchPos.y)) {
+                    //    // Request focus for the top element
+                    //    currentGui->requestFocus(topElement, FocusDirection::None);
+                    //} else {
+                    //    // Iterate through elements to find the touched element
+                    //    for (auto &element : currentGui->getTopElement()->getChildren()) {
+                    //        if (element->inBounds(touchPos.x, touchPos.y)) {
+                    //            // Determine the direction to move
+                    //            FocusDirection direction = (element->getY() < touchPos.y) ? FocusDirection::Down : FocusDirection::Up;
+                    //
+                    //            // Request focus for the touched element in the specified direction
+                    //            currentGui->requestFocus(element, direction);
+                    //            // Set the top element to the touched element
+                    //            topElement = element;
+                    //            break;
+                    //        }
+                    //    }
+                    //}
+                }
+
+
+
+
+                // Update old touch position
                 oldTouchPos = touchPos;
                 
                 // Hide overlay when touching out of bounds
@@ -4791,22 +4996,53 @@ namespace tsl {
                         this->hide();
                     }
                 }
+                stillTouching = true;
             } else {
-                if (oldTouchPos.x < 150U && oldTouchPos.y > cfg::FramebufferHeight - 73U)
-                    if (initialTouchPos.x < 150U && initialTouchPos.y > cfg::FramebufferHeight - 73U)
-                        if (!currentGui->handleInput(HidNpadButton_B, 0,{},{},{}))
-                            this->goBack();
+                if (!interruptedTouch && !runningInterpreter.load(std::memory_order_acquire)) {
+                    // Check touch button locations for specific actions
+                    if (oldTouchPos.x < 150U && oldTouchPos.y > cfg::FramebufferHeight - 73U) {
+                        if (initialTouchPos.x < 150U && initialTouchPos.y > cfg::FramebufferHeight - 73U) {
+                            simulatedBackComplete = false;
+                            simulatedBack = true;
+                        }
+                    }
+                    if (oldTouchPos.x >= 150U && oldTouchPos.x < 260U && oldTouchPos.y > cfg::FramebufferHeight - 73U) {
+                        if (initialTouchPos.x >= 150U && initialTouchPos.x < 260U && initialTouchPos.y > cfg::FramebufferHeight - 73U) {
+                            simulatedSelectComplete = false;
+                            simulatedSelect = true;
+                        }
+                    }
+                    if (oldTouchPos.x >= 260U && oldTouchPos.x <= cfg::FramebufferWidth && oldTouchPos.y > cfg::FramebufferHeight - 73U) {
+                        if (initialTouchPos.x >= 260U && initialTouchPos.x <= cfg::FramebufferWidth && initialTouchPos.y > cfg::FramebufferHeight - 73U) {
+                            simulatedNextPageComplete = false;
+                            simulatedNextPage = true;
+                        }
+                    }
+                    if (oldTouchPos.x > 0U && oldTouchPos.x <= cfg::FramebufferWidth && oldTouchPos.y > 0U && oldTouchPos.y <= 73U) {
+                        if (initialTouchPos.x > 0U && initialTouchPos.x <= cfg::FramebufferWidth && initialTouchPos.y > 0U && initialTouchPos.y <= 73U) {
+                            simulatedMenuComplete = false;
+                            simulatedMenu = true;
+                        }
+                    }
+                }
                 
+                // Set input mode to controller when touch input ends
                 elm::Element::setInputMode(InputMode::Controller);
                 
+                // Reset touch-related variables
                 oldTouchPos = { 0 };
                 initialTouchPos = { 0 };
+                touchEvent = elm::TouchEvent::None;
+                stillTouching = false;
+                interruptedTouch = false;
             }
             
+
             oldTouchDetected = touchDetected;
-            
+            oldTouchEvent = touchEvent;
         }
-        
+
+
         /**
          * @brief Clears the screen
          *
@@ -4836,6 +5072,7 @@ namespace tsl {
             this->m_disableNextAnimation = true;
         }
         
+
         /**
          * @brief Changes to a different Gui
          *
@@ -4846,12 +5083,17 @@ namespace tsl {
             if (this->m_guiStack.top() != nullptr && this->m_guiStack.top()->m_focusedElement != nullptr)
                 this->m_guiStack.top()->m_focusedElement->resetClickAnimation();
             
-            gui->m_topElement = gui->createUI();
             
+            // Create the top element of the new Gui
+            gui->m_topElement = gui->createUI();
+
+            
+            // Push the new Gui onto the stack
             this->m_guiStack.push(std::move(gui));
             
             return this->m_guiStack.top();
         }
+
         
         /**
          * @brief Creates a new Gui and changes to it

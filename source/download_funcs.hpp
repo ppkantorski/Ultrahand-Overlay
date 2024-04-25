@@ -21,60 +21,67 @@
 #include <curl/curl.h>
 #include <zlib.h>
 #include <zzip/zzip.h>
+//#include <queue>
 #include "string_funcs.hpp"
 #include "get_funcs.hpp"
 #include "path_funcs.hpp"
 #include "debug_funcs.hpp"
 //#include "json_funcs.hpp"
 
-const size_t downloadBufferSize = 4096;
+const size_t downloadBufferSize = 512;
+const zzip_ssize_t unzipBufferSize = 512;
 
-/**
- * @brief Callback function to write received data to a file.
- *
- * @param contents Pointer to the received data.
- * @param size Size of each data element.
- * @param nmemb Number of data elements.
- * @param file Pointer to the file to write to.
- * @return Number of elements successfully written.
- */
+
+// Shared atomic flag to indicate whether to abort the download operation
+static std::atomic<bool> abortDownload(false);
+// Define an atomic bool for interpreter completion
+static std::atomic<bool> abortUnzip(false);
+static std::atomic<int> downloadPercentage(-1);
+static std::atomic<int> unzipPercentage(-1);
+
+
+// Callback function to write received data to a file.
 size_t writeCallback(void* contents, size_t size, size_t nmemb, FILE* file) {
-    // Callback function to write received data to a file
-    size_t written = fwrite(contents, size, nmemb, file);
-    return written;
+    return fwrite(contents, size, nmemb, file);
 }
 
 
-// Declare the CallbackData structure
-//struct CallbackData {
-//    FILE* file;
-//    // Add any additional data you need here
-//};
-//
-//
-//// Your progress callback function
-//int progressCallback(void* clientp, curl_off_t dltotal, curl_off_t dlnow, curl_off_t ultotal, curl_off_t ulnow) {
-//    CallbackData* callbackData = static_cast<CallbackData*>(clientp);
-//
-//    // Log at the beginning to confirm callback invocation
-//    logMessage("Progress callback invoked.");
-//
-//    // Log the values of dltotal and dlnow
-//    logMessage("Total Size: " + std::to_string(dltotal) + " bytes");
-//    logMessage("Downloaded: " + std::to_string(dlnow) + " bytes");
-//
-//    // Update your progress variable here
-//    float progress = (dltotal > 0) ? (dlnow * 100.0 / dltotal) : 0.0;
-//
-//    // Log the download progress
-//    logMessage("Download Progress: " + std::to_string(progress) + "%");
-//
-//    // Log at the end to confirm callback completion
-//    logMessage("Progress callback completed.");
-//
-//    // Return 0 to continue the transfer
-//    return 0;
-//}
+// Progress callback function to check for abort condition
+void updateProgress(std::atomic<int>* percentage, double totalToDownload, double nowDownloaded) {
+    // Ensure that the file to be downloaded is not empty
+    // because that would cause a division by zero error later on
+    if (totalToDownload <= 0.0) {
+        return;
+    }
+
+    // Calculate download progress percentage
+    //double fractionDownloaded = nowDownloaded / totalToDownload;
+    //int progress = static_cast<int>(round(nowDownloaded / totalToDownload * 100));
+
+    // Update the atomic variable with the progress percentage
+    percentage->store(static_cast<int>(round(nowDownloaded / totalToDownload * 100)), std::memory_order_release);
+}
+
+// Your C function
+extern "C" int progressCallback(void* ptr, double totalToDownload, double nowDownloaded,
+                                double totalToUpload, double nowUploaded) {
+    // Call the C++ function to update the progress
+    updateProgress(&downloadPercentage, totalToDownload, nowDownloaded);
+
+    // Check if the download should be aborted
+    if (abortDownload.load(std::memory_order_acquire)) {
+        // Return non-zero to indicate abort
+        // Reset downloadPercentage to -1
+        downloadPercentage.store(-1, std::memory_order_release);
+
+        return 1;
+    }
+
+    // You can also update other atomic variables here if needed
+
+    // Return 0 to continue the transfer
+    return 0;
+}
 
 
 
@@ -87,7 +94,8 @@ size_t writeCallback(void* contents, size_t size, size_t nmemb, FILE* file) {
  * @return True if the download was successful, false otherwise.
  */
 bool downloadFile(const std::string& url, const std::string& toDestination) {
-    
+    abortDownload.store(false, std::memory_order_release); // Reset abort flag
+
     if (url.find_first_of("{}") != std::string::npos) {
         logMessage(std::string("Invalid URL: ") + url);
         return false;
@@ -140,27 +148,19 @@ bool downloadFile(const std::string& url, const std::string& toDestination) {
     if (!file) {
         logMessage(std::string("Error opening file: ") + destination);
         curl_easy_cleanup(curl);
+        deleteFileOrDirectory(destination.c_str());
         return false;
     }
     
-    // Allocate CallbackData dynamically
-    //CallbackData* callbackData = new CallbackData{file};
-    //
-    //curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
-    //curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, progressCallback);
-    //curl_easy_setopt(curl, CURLOPT_XFERINFODATA, callbackData);
-    
+
+    curl_easy_setopt(curl, CURLOPT_PROGRESSFUNCTION, progressCallback);
+    curl_easy_setopt(curl, CURLOPT_PROGRESSDATA, &abortDownload);
+    curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
     curl_easy_setopt(curl, CURLOPT_BUFFERSIZE, downloadBufferSize);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeCallback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, file);
-    
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-    
-    
-    // Set a user agent
     curl_easy_setopt(curl, CURLOPT_USERAGENT, "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36");
-    
-    // Enable following redirects
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
     
     // If you have a cacert.pem file, you can set it as a trusted CA
@@ -175,28 +175,24 @@ bool downloadFile(const std::string& url, const std::string& toDestination) {
     //delete callbackData;
     if (result != CURLE_OK) {
         logMessage(std::string("Error downloading file: ") + curl_easy_strerror(result));
-        //curl_easy_cleanup(curl);
-        //curl_global_cleanup();
-        //fclose(file);
-        // Delete the file if nothing was written to it
-        std::remove(destination.c_str());
+        deleteFileOrDirectory(destination.c_str());
         return false;
     }
-    
-    //curl_easy_cleanup(curl);
-    //curl_global_cleanup();
-    //fclose(file);
     
     // Check if the file is empty
     long fileSize = ftell(file);
     if (fileSize == 0) {
         logMessage(std::string("Error downloading file: Empty file"));
-        std::remove(destination.c_str());
+        deleteFileOrDirectory(destination.c_str());
         return false;
     }
-
+    
+    logMessage("Download Complete!");
     return true;
 }
+
+
+
 
 /**
  * @brief Extracts files from a ZIP archive to a specified destination.
@@ -206,6 +202,8 @@ bool downloadFile(const std::string& url, const std::string& toDestination) {
  * @return True if the extraction was successful, false otherwise.
  */
 bool unzipFile(const std::string& zipFilePath, const std::string& toDestination) {
+    abortUnzip.store(false, std::memory_order_release); // Reset abort flag
+
     ZZIP_DIR* dir = zzip_dir_open(zipFilePath.c_str(), nullptr);
     if (!dir) {
         logMessage(std::string("Error opening zip file: ") + zipFilePath);
@@ -215,43 +213,65 @@ bool unzipFile(const std::string& zipFilePath, const std::string& toDestination)
     bool success = true;
     ZZIP_DIRENT entry;
     while (zzip_dir_read(dir, &entry)) {
-        if (entry.d_name[0] == '\0') continue;  // Skip empty entries
+        if (abortUnzip.load(std::memory_order_acquire)) {
+            abortUnzip.store(false, std::memory_order_release); // Reset abort flag
+            break;
+        }
+
+        // Skip empty entries, "..." files, and files starting with "."
+        if (entry.d_name[0] == '\0') {
+            continue;
+        }
 
         std::string fileName = entry.d_name;
         std::string extractedFilePath = toDestination + fileName;
-        
+
+        // Skip extractedFilePath ends with "..."
+        if (extractedFilePath.size() >= 3 && extractedFilePath.substr(extractedFilePath.size() - 3) == "...")
+            continue;
+
+        // Replace ":" characters except in "sdmc:/"
+        size_t firstColonPos = extractedFilePath.find(':');
+        if (firstColonPos != std::string::npos) {
+            size_t colonPos = extractedFilePath.find(':', firstColonPos + 1);
+            while (colonPos != std::string::npos) {
+                extractedFilePath[colonPos] = ' ';
+                colonPos = extractedFilePath.find(':', colonPos + 1);
+            }
+        }
+
+        // Replace double spaces with single space
+        size_t pos = extractedFilePath.find("  ");
+        while (pos != std::string::npos) {
+            extractedFilePath.replace(pos, 2, " ");
+            pos = extractedFilePath.find("  ", pos + 1);
+        }
+
+
         // Skip over present directory entries when extracting files from a zip archive
         if (!extractedFilePath.empty() && extractedFilePath.back() == '/') {
             continue;
         }
-        
+
         // Extract the directory path from the extracted file path
         std::string directoryPath;
         if (extractedFilePath.back() != '/') {
-            directoryPath = extractedFilePath.substr(0, extractedFilePath.find_last_of('/'))+"/";
+            directoryPath = extractedFilePath.substr(0, extractedFilePath.find_last_of('/')) + "/";
         } else {
             directoryPath = extractedFilePath;
         }
-        
+
         createDirectory(directoryPath);
-        
-        //if (isDirectory(directoryPath)) {
-        //    logMessage("directoryPath: "+directoryPath+" exists");
-        //} else {
-        //    logMessage("directoryPath: "+directoryPath+" does not exist");
-        //}
-        //
-        //logMessage(std::string("directoryPath: ") + directoryPath);
 
         ZZIP_FILE* file = zzip_file_open(dir, entry.d_name, 0);
         if (file) {
             FILE* outputFile = fopen(extractedFilePath.c_str(), "wb");
             if (outputFile) {
                 zzip_ssize_t bytesRead;
-                const zzip_ssize_t bufferSize = 131072;
-                char buffer[bufferSize];
+                //const zzip_ssize_t bufferSize = 512;
+                char buffer[unzipBufferSize];
 
-                while ((bytesRead = zzip_file_read(file, buffer, bufferSize)) > 0) {
+                while ((bytesRead = zzip_file_read(file, buffer, unzipBufferSize)) > 0) {
                     fwrite(buffer, 1, bytesRead, outputFile);
                 }
 

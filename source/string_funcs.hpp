@@ -25,6 +25,29 @@
 #include <debug_funcs.hpp>
 
 
+
+// Function to remove invalid characters from file names
+std::string cleanFileName(const std::string& fileName) {
+    std::string cleanedFileName;
+    for (char c : fileName) {
+        if (std::isalnum(c) || std::isspace(c) || c == '-' || c == '_') {
+            cleanedFileName += c;
+        }
+    }
+    return cleanedFileName;
+}
+
+// Function to clean directory names by removing invalid characters
+std::string cleanDirectoryName(const std::string& name) {
+    std::string cleanedName;
+    for (char c : name) {
+        if (std::isalnum(c) || std::isspace(c) || c == '-' || c == '_') {
+            cleanedName += c;
+        }
+    }
+    return cleanedName;
+}
+
 /**
  * @brief Trims leading and trailing whitespaces from a string.
  *
@@ -286,6 +309,24 @@ json_t* stringToJson(const std::string& input) {
         logMessage("ERROR LOADING JSON FROM STRING!");
         return json_object();
     }
+}
+
+
+
+/**
+ * @brief Converts a string to lowercase.
+ *
+ * This function takes a string as input and returns a lowercase version of that string.
+ *
+ * @param str The input string to convert to lowercase.
+ * @return The lowercase version of the input string.
+ */
+
+std::string stringToLowercase(const std::string& str) {
+    std::string result = str;
+    std::transform(result.begin(), result.end(), result.begin(),
+                   [](unsigned char c) { return std::tolower(c); });
+    return result;
 }
 
 
