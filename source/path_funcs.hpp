@@ -23,6 +23,8 @@
 
 static std::atomic<bool> abortFileOp(false);
 
+const size_t copyBufferSize = 512; // Increase buffer size to 128 KB
+
 /**
  * @brief Creates a single directory if it doesn't exist.
  *
@@ -109,10 +111,11 @@ void deleteFileOrDirectory(const std::string& pathToDelete) {
     if (stat(pathToDelete.c_str(), &pathStat) == 0) {
         if (S_ISREG(pathStat.st_mode)) {
             if (std::remove(pathToDelete.c_str()) == 0) {
-                // Deletion successful
+                //logMessage("File deleted: " + pathToDelete);
+            } else {
+                logMessage("Failed to delete file: " + pathToDelete);
             }
         } else if (S_ISDIR(pathStat.st_mode)) {
-            // Delete all files in the directory
             DIR* directory = opendir(pathToDelete.c_str());
             if (directory != nullptr) {
                 dirent* entry;
@@ -124,15 +127,23 @@ void deleteFileOrDirectory(const std::string& pathToDelete) {
                     }
                 }
                 closedir(directory);
+            } else {
+                logMessage("Failed to open directory: " + pathToDelete);
             }
             
-            // Remove the directory itself
             if (rmdir(pathToDelete.c_str()) == 0) {
-                // Deletion successful
+                //logMessage("Directory deleted: " + pathToDelete);
+            } else {
+                logMessage("Failed to delete directory: " + pathToDelete);
             }
+        } else {
+            logMessage("Invalid file type: " + pathToDelete);
         }
+    } else {
+        //logMessage("Error accessing path: " + pathToDelete);
     }
 }
+
 
 /**
  * @brief Deletes files or directories that match a specified pattern.
@@ -297,11 +308,10 @@ void copySingleFile(const std::string& fromFile, const std::string& toFile) {
     FILE* srcFile = fopen(fromFile.c_str(), "rb");
     FILE* destFile = fopen(toFile.c_str(), "wb");
     if (srcFile && destFile) {
-        const size_t bufferSize = 4096*2; // Increase buffer size to 128 KB
-        char buffer[bufferSize];
+        char buffer[copyBufferSize];
         size_t bytesRead;
         
-        while ((bytesRead = fread(buffer, 1, bufferSize, srcFile)) > 0) {
+        while ((bytesRead = fread(buffer, 1, copyBufferSize, srcFile)) > 0) {
             fwrite(buffer, 1, bytesRead, destFile);
             if (abortFileOp.load(std::memory_order_acquire)) {
                 break;
