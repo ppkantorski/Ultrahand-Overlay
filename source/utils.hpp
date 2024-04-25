@@ -977,6 +977,7 @@ void interpretAndExecuteCommand(std::vector<std::vector<std::string>>&& commands
         }
 
         if (!commandSuccess && inTrySection){
+            inTrySection = false;
             commands.erase(commands.begin()); // Remove processed command
             continue;
         }
