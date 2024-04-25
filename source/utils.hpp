@@ -1294,8 +1294,10 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             //setIniFileValue((packagePath+configFileName).c_str(), selectedCommand.c_str(), "footer", "downloading");
             for (size_t i = 0; i < 3; ++i) { // Try 3 times.
                 downloadSuccess = downloadFile(fileUrl, destinationPath);
-                if (abortDownload.load(std::memory_order_acquire))
+                if (abortDownload.load(std::memory_order_acquire)) {
+                    downloadSuccess = false;
                     break;
+                }
                 if (downloadSuccess)
                     break;
             }
