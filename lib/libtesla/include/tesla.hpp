@@ -66,6 +66,10 @@
 
 static std::unordered_map<std::string, std::string> hexSumCache;
 
+// Define an atomic bool for interpreter completion
+static std::atomic<bool> threadFailure(false);
+static std::atomic<bool> runningInterpreter(false);
+
 /**
  * @brief Shutdown modes for the Ultrahand-Overlay project.
  *
@@ -689,8 +693,6 @@ static bool stillTouching = false;
 static bool interruptedTouch = false;
 static bool touchInBounds = false;
 
-// Define an atomic bool for interpreter completion
-static std::atomic<bool> runningInterpreter(false);
 
 // Battery implementation
 static bool powerInitialized = false;
@@ -3796,7 +3798,7 @@ namespace tsl {
                         renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +4, this->getY() + 45, 20, !useClickTextColor ? (this->m_faint ? offTextColor : selectedTextColor) : clickTextColor);
                     else
                         renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +4, this->getY() + 45, 20, !useClickTextColor ? (this->m_faint ? offTextColor : defaultTextColor) : clickTextColor);
-                } else if (this->m_value == DOWNLOAD_SYMBOL || this->m_value == INPROGRESS_SYMBOL) {
+                } else if (((this->m_value).find(DOWNLOAD_SYMBOL) != std::string::npos) || this->m_value == INPROGRESS_SYMBOL) {
                     renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +4, this->getY() + 45, 20, !useClickTextColor ? (this->m_faint ? offTextColor : inprogressTextColor) : clickTextColor);
                 } else if (this->m_value == CROSSMARK_SYMBOL) {
                     renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +4, this->getY() + 45, 20, !useClickTextColor ? (this->m_faint ? offTextColor : invalidTextColor) : clickTextColor);
