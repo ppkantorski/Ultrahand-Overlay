@@ -1611,7 +1611,7 @@ void closeInterpreterThread() {
 
 
 
-void startInterpreterThread(int stackSize = 0x12000) {
+void startInterpreterThread(int stackSize = 0x10000) {
     interpreterThreadExit = false;
     int result = threadCreate(&interpreterThread, backgroundInterpreter, nullptr, nullptr, stackSize, 0x10, 1);
     if (result != 0) {
