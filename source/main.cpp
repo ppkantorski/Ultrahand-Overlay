@@ -440,7 +440,7 @@ public:
                     threadFailure.store(false, std::memory_order_release);
                     commandSuccess = false;
                     lastRunningInterpreter = true;
-                    logMessage("killing command");
+                    //logMessage("killing command");
                 }
 
                 if ((keys & KEY_A) || (runningInterpreter.load(std::memory_order_acquire) || (!runningInterpreter.load(std::memory_order_acquire) && lastRunningInterpreter))) {
@@ -502,7 +502,7 @@ public:
                     threadFailure.store(false, std::memory_order_release);
                     commandSuccess = false;
                     lastRunningInterpreter = true;
-                    logMessage("killing command");
+                    //logMessage("killing command");
                 }
 
                 if ((keys & KEY_A) || (runningInterpreter.load(std::memory_order_acquire) || (!runningInterpreter.load(std::memory_order_acquire) && lastRunningInterpreter))) {
@@ -1825,7 +1825,7 @@ public:
                         threadFailure.store(false, std::memory_order_release);
                         commandSuccess = false;
                         lastRunningInterpreter = true;
-                        logMessage("killing command");
+                        //logMessage("killing command");
                     }
 
                     if ((keys & KEY_A) || (runningInterpreter.load(std::memory_order_acquire) || (!runningInterpreter.load(std::memory_order_acquire) && lastRunningInterpreter))) {
@@ -2463,8 +2463,8 @@ public:
                                     threadFailure.store(false, std::memory_order_release);
                                     commandSuccess = false;
                                     lastRunningInterpreter = true;
-                                    logMessage("killing command");
-                                    closeInterpreterThread();
+                                    //logMessage("killing command");
+                                    //closeInterpreterThread();
                                 }
 
                                 if ((keys & KEY_A) || (runningInterpreter.load(std::memory_order_acquire) || (!runningInterpreter.load(std::memory_order_acquire) && lastRunningInterpreter))) {
@@ -3655,7 +3655,7 @@ public:
                                             threadFailure.store(false, std::memory_order_release);
                                             commandSuccess = false;
                                             lastRunningInterpreter = true;
-                                            logMessage("killing command");
+                                            //logMessage("killing command");
                                         }
 
                                         if ((keys & KEY_A) || (runningInterpreter.load(std::memory_order_acquire) || (!runningInterpreter.load(std::memory_order_acquire) && lastRunningInterpreter))) {
@@ -3721,7 +3721,7 @@ public:
                                             threadFailure.store(false, std::memory_order_release);
                                             commandSuccess = false;
                                             lastRunningInterpreter = true;
-                                            logMessage("killing command");
+                                            //logMessage("killing command");
                                         }
 
                                         if ((keys & KEY_A) || (runningInterpreter.load(std::memory_order_acquire) || (!runningInterpreter.load(std::memory_order_acquire) && lastRunningInterpreter))) {
