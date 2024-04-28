@@ -2690,7 +2690,7 @@ public:
                 inPackageMenu = false;
                 if (lastPage == "right") {
                     tsl::goBack();
-                    tsl::goBack();
+                    //tsl::goBack();
                 } else {
                     tsl::goBack();
                 }
@@ -2707,7 +2707,7 @@ public:
                 if (lastPage == "right") {
                     tsl::goBack();
                     tsl::goBack();
-                    tsl::goBack();
+                    //tsl::goBack();
                 } else {
                     tsl::goBack();
                     tsl::goBack();
@@ -2743,7 +2743,9 @@ public:
             if (currentPage == "left") {
                 if ((keysHeld & KEY_DRIGHT) && !(keysHeld & (KEY_DLEFT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR)) && !stillTouching) {
                     lastPage = "right";
-                    tsl::changeTo<PackageMenu>(packagePath, dropdownSection, "right");
+                    lastPackage = packagePath;
+                    tsl::goBack();
+                    tsl::changeTo<PackageMenu>(lastPackage, dropdownSection, "right");
                     simulatedNextPageComplete = true;
                     return true;
                 }
@@ -2751,7 +2753,9 @@ public:
                 if ((keysHeld & KEY_DLEFT) && !(keysHeld & (KEY_DRIGHT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR)) && !stillTouching) {
                     //tsl::changeTo<PackageMenu>(packagePath, dropdownSection, "left");
                     lastPage = "left";
+                    lastPackage = packagePath;
                     tsl::goBack();
+                    tsl::changeTo<PackageMenu>(lastPackage, dropdownSection, "left");
                     simulatedNextPageComplete = true;
                     return true;
                 }
@@ -2807,7 +2811,7 @@ public:
                     
                     lastPage = "left";
                     tsl::goBack();
-                    tsl::goBack();
+                    //tsl::goBack();
                     //tsl::goBack();
                     //tsl::changeTo<MainMenu>();
                     
@@ -2851,7 +2855,7 @@ public:
                     inSubPackageMenu = false;
                     returningToPackage = true;
                     lastMenu = "packageMenu";
-                    tsl::goBack();
+                    //tsl::goBack();
                     tsl::goBack();
                     
                     //tsl::Overlay::get()->close();
