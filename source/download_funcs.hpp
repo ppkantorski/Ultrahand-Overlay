@@ -28,8 +28,8 @@
 #include "debug_funcs.hpp"
 //#include "json_funcs.hpp"
 
-const size_t downloadBufferSize = 512;
-const zzip_ssize_t unzipBufferSize = 512;
+//const size_t downloadBufferSize = 512;
+//const zzip_ssize_t unzipBufferSize = 512;
 
 
 // Shared atomic flag to indicate whether to abort the download operation
@@ -47,41 +47,38 @@ size_t writeCallback(void* contents, size_t size, size_t nmemb, FILE* file) {
 
 
 // Progress callback function to check for abort condition
-void updateProgress(std::atomic<int>* percentage, double totalToDownload, double nowDownloaded) {
-    // Ensure that the file to be downloaded is not empty
-    // because that would cause a division by zero error later on
-    if (totalToDownload <= 0.0) {
-        return;
-    }
-
-    // Calculate download progress percentage
-    //double fractionDownloaded = nowDownloaded / totalToDownload;
-    //int progress = static_cast<int>(round(nowDownloaded / totalToDownload * 100));
-
-    // Update the atomic variable with the progress percentage
-    percentage->store(static_cast<int>(round(nowDownloaded / totalToDownload * 100)), std::memory_order_release);
-}
+//void updateProgress(std::atomic<int>* percentage, double totalToDownload, double nowDownloaded) {
+//    // Ensure that the file to be downloaded is not empty
+//    // because that would cause a division by zero error later on
+//    if (totalToDownload <= 0.0) {
+//        return;
+//    }
+//
+//    // Calculate download progress percentage
+//    //double fractionDownloaded = nowDownloaded / totalToDownload;
+//    //int progress = static_cast<int>(round(nowDownloaded / totalToDownload * 100));
+//
+//    // Update the atomic variable with the progress percentage
+//    percentage->store(static_cast<int>(round(nowDownloaded / totalToDownload * 100)), std::memory_order_release);
+//}
 
 // Your C function
-extern "C" int progressCallback(void* ptr, double totalToDownload, double nowDownloaded,
-                                double totalToUpload, double nowUploaded) {
-    // Call the C++ function to update the progress
-    updateProgress(&downloadPercentage, totalToDownload, nowDownloaded);
+extern "C" int progressCallback(void* ptr, double totalToDownload, double nowDownloaded, double totalToUpload, double nowUploaded) {
+    auto percentage = static_cast<std::atomic<int>*>(ptr);
 
-    // Check if the download should be aborted
-    if (abortDownload.load(std::memory_order_acquire)) {
-        // Return non-zero to indicate abort
-        // Reset downloadPercentage to -1
-        downloadPercentage.store(-1, std::memory_order_release);
-
-        return 1;
+    if (totalToDownload > 0) {
+        int newProgress = static_cast<int>((nowDownloaded / totalToDownload) * 100);
+        percentage->store(newProgress, std::memory_order_release);
     }
 
-    // You can also update other atomic variables here if needed
+    if (abortDownload.load(std::memory_order_acquire)) {
+        percentage->store(-1, std::memory_order_release);
+        return 1;  // Abort
+    }
 
-    // Return 0 to continue the transfer
-    return 0;
+    return 0;  // Continue
 }
+
 
 
 
@@ -154,9 +151,9 @@ bool downloadFile(const std::string& url, const std::string& toDestination) {
     
 
     curl_easy_setopt(curl, CURLOPT_PROGRESSFUNCTION, progressCallback);
-    curl_easy_setopt(curl, CURLOPT_PROGRESSDATA, &abortDownload);
+    curl_easy_setopt(curl, CURLOPT_PROGRESSDATA, &downloadPercentage);
     curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
-    curl_easy_setopt(curl, CURLOPT_BUFFERSIZE, downloadBufferSize);
+    //curl_easy_setopt(curl, CURLOPT_BUFFERSIZE, downloadBufferSize);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeCallback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, file);
     curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
@@ -268,10 +265,10 @@ bool unzipFile(const std::string& zipFilePath, const std::string& toDestination)
             FILE* outputFile = fopen(extractedFilePath.c_str(), "wb");
             if (outputFile) {
                 zzip_ssize_t bytesRead;
-                //const zzip_ssize_t bufferSize = 512;
-                char buffer[unzipBufferSize];
+                const zzip_ssize_t bufferSize = 4096;
+                char buffer[bufferSize];
 
-                while ((bytesRead = zzip_file_read(file, buffer, unzipBufferSize)) > 0) {
+                while ((bytesRead = zzip_file_read(file, buffer, bufferSize)) > 0) {
                     fwrite(buffer, 1, bytesRead, outputFile);
                 }
 
