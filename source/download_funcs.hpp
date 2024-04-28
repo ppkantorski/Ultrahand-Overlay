@@ -46,21 +46,7 @@ size_t writeCallback(void* contents, size_t size, size_t nmemb, FILE* file) {
 }
 
 
-// Progress callback function to check for abort condition
-//void updateProgress(std::atomic<int>* percentage, double totalToDownload, double nowDownloaded) {
-//    // Ensure that the file to be downloaded is not empty
-//    // because that would cause a division by zero error later on
-//    if (totalToDownload <= 0.0) {
-//        return;
-//    }
-//
-//    // Calculate download progress percentage
-//    //double fractionDownloaded = nowDownloaded / totalToDownload;
-//    //int progress = static_cast<int>(round(nowDownloaded / totalToDownload * 100));
-//
-//    // Update the atomic variable with the progress percentage
-//    percentage->store(static_cast<int>(round(nowDownloaded / totalToDownload * 100)), std::memory_order_release);
-//}
+
 
 // Your C function
 extern "C" int progressCallback(void* ptr, double totalToDownload, double nowDownloaded, double totalToUpload, double nowUploaded) {
@@ -92,6 +78,7 @@ extern "C" int progressCallback(void* ptr, double totalToDownload, double nowDow
  */
 bool downloadFile(const std::string& url, const std::string& toDestination) {
     abortDownload.store(false, std::memory_order_release); // Reset abort flag
+    //downloadPercentage.store(0, std::memory_order_release); // Reset download percentage
 
     if (url.find_first_of("{}") != std::string::npos) {
         logMessage(std::string("Invalid URL: ") + url);
