@@ -81,6 +81,9 @@ json_t* readJsonFromFile(const std::string& filePath) {
 }
 
 
+// Global mutex for thread-safe JSON operations
+std::mutex jsonMutex;
+
 /**
  * @brief Replaces a JSON source placeholder with the actual JSON source.
  *
@@ -93,12 +96,14 @@ json_t* readJsonFromFile(const std::string& filePath) {
  */
 std::string replaceJsonPlaceholder(const std::string& arg, const std::string& commandName, const std::string& jsonPathOrString) {
     json_t* jsonDict = nullptr;
-    json_error_t error;
+    
+    // Use std::lock_guard to ensure thread safety when accessing JSON data
+    std::lock_guard<std::mutex> lock(jsonMutex);
     
     if (commandName == "json" || commandName == "json_source") {
         jsonDict = stringToJson(jsonPathOrString);
     } else if (commandName == "json_file" || commandName == "json_file_source") {
-        jsonDict = json_load_file(jsonPathOrString.c_str(), 0, &error);
+        jsonDict = readJsonFromFile(jsonPathOrString); // Using the function to read JSON from a file
     }
     
     if (!jsonDict) {
