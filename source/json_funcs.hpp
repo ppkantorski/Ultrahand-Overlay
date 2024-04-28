@@ -30,48 +30,55 @@
  * @return A `json_t` object representing the parsed JSON data. Returns `nullptr` on error.
  */
 json_t* readJsonFromFile(const std::string& filePath) {
-    // Check if the file exists
+    // Check file existence and size
     struct stat fileStat;
-    if (stat(filePath.c_str(), &fileStat) != 0) {
-        //fprintf(stderr, "Error opening file: %s\n", filePath.c_str());
+    if (stat(filePath.c_str(), &fileStat) != 0 || fileStat.st_size == 0) {
+        //logMessage("File does not exist or is empty: " + filePath);
         return nullptr;
     }
-    
+
     // Open the file
-    FILE* file = fopen(filePath.c_str(), "r");
+    FILE* file = fopen(filePath.c_str(), "rb"); // Open in binary mode to ensure no character translation
     if (!file) {
-        //fprintf(stderr, "Error opening file: %s\n", filePath.c_str());
+        //logMessage("Failed to open file: " + filePath);
         return nullptr;
     }
-    
-    // Get the file size
-    size_t fileSize = fileStat.st_size;
-    
-    // Use a fixed-size buffer for reading file content
-    constexpr size_t bufferSize = 4096; // Choose an appropriate buffer size
-    char buffer[bufferSize];
-    std::string jsonContent;
-    
-    // Read the file content into the buffer
-    while (!feof(file)) {
-        size_t bytesRead = fread(buffer, 1, bufferSize, file);
-        jsonContent.append(buffer, bytesRead);
+
+    // Allocate memory based on file size
+    char* buffer = new (std::nothrow) char[fileStat.st_size + 1];
+    if (!buffer) {
+        fclose(file);
+        //logMessage("Memory allocation failed for reading file: " + filePath);
+        return nullptr;
     }
-    
-    // Close the file
-    fclose(file);
-    
-    // Parse the JSON data
+
+    // Read the entire file into the buffer
+    size_t bytesRead = fread(buffer, 1, fileStat.st_size, file);
+    if (bytesRead < static_cast<size_t>(fileStat.st_size)) {
+        fclose(file);
+        delete[] buffer;
+        logMessage("Failed to read the entire file: " + filePath);
+        return nullptr;
+    }
+
+    // Null-terminate the buffer to make it a valid C-string
+    buffer[bytesRead] = '\0';
+
+    // Parse the JSON content
     json_error_t error;
-    json_t* root = json_loads(jsonContent.c_str(), JSON_DECODE_ANY, &error);
+    json_t* root = json_loads(buffer, 0, &error);
     if (!root) {
-        //fprintf(stderr, "Error parsing JSON: %s\n", error.text);
-        return nullptr;
+        //logMessage("JSON parsing error at line " + std::to_string(error.line) + ": " + error.text);
+    } else {
+        //logMessage("JSON file successfully parsed.");
     }
-    
+
+    // Clean up
+    fclose(file);
+    delete[] buffer;
+
     return root;
 }
-
 
 
 /**

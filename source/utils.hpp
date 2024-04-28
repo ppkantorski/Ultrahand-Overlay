@@ -1540,27 +1540,30 @@ Thread interpreterThread;
 std::queue<std::tuple<std::vector<std::vector<std::string>>, std::string, std::string>> interpreterQueue;
 std::mutex queueMutex;
 std::condition_variable queueCondition;
-static bool interpreterThreadExit = false;
+std::atomic<bool> interpreterThreadExit{false};
+//static bool lastRunningInterpreter = false;
 
-void clearInterpreterFlags() {
-    runningInterpreter.store(false, std::memory_order_release);
-    abortDownload.store(false, std::memory_order_release);
-    abortUnzip.store(false, std::memory_order_release);
-    abortFileOp.store(false, std::memory_order_release);
-    abortCommand.store(false, std::memory_order_release);
+void clearInterpreterFlags(bool state = false) {
+    abortDownload.store(state, std::memory_order_release);
+    abortUnzip.store(state, std::memory_order_release);
+    abortFileOp.store(state, std::memory_order_release);
+    abortCommand.store(state, std::memory_order_release);
 }
 
 
 
 void backgroundInterpreter(void*) {
     try {
-        while (!interpreterThreadExit) {
+        while (!interpreterThreadExit.load()) {
             std::tuple<std::vector<std::vector<std::string>>, std::string, std::string> args;
 
             {
                 std::unique_lock<std::mutex> lock(queueMutex);
-                queueCondition.wait(lock, [] { return !interpreterQueue.empty() || interpreterThreadExit; });
-
+                queueCondition.wait(lock, [] { return !interpreterQueue.empty() || interpreterThreadExit.load(); });
+                if (interpreterThreadExit.load()) {
+                    logMessage("Exiting Thread...");
+                    break;
+                }
                 if (!interpreterQueue.empty()) {
                     args = std::move(interpreterQueue.front());
                     interpreterQueue.pop();
@@ -1568,16 +1571,20 @@ void backgroundInterpreter(void*) {
             } // Release the lock before processing the command
 
             if (!std::get<0>(args).empty()) {
+                logMessage("Start of interpreter");
                 // Clear flags and perform any cleanup if necessary
                 clearInterpreterFlags();
                 threadFailure.store(false, std::memory_order_release);
+                
                 runningInterpreter.store(true, std::memory_order_release);
-
                 interpretAndExecuteCommand(std::move(std::get<0>(args)), std::move(std::get<1>(args)), std::move(std::get<2>(args)));
 
                 runningInterpreter.store(false, std::memory_order_release);
                 // Clear flags and perform any cleanup if necessary
                 clearInterpreterFlags();
+                //interpreterThreadExit.store(true, std::memory_order_release);
+                logMessage("End of interpreter");
+                //break;
             }
         }
     } catch (...) {
@@ -1596,33 +1603,29 @@ void backgroundInterpreter(void*) {
 }
 
 void closeInterpreterThread() {
-    logMessage("Closing interpreter...");
-    {
-        std::lock_guard<std::mutex> lock(queueMutex);
-        interpreterThreadExit = true;
-        queueCondition.notify_one();
-    }
-    threadWaitForExit(&interpreterThread);
-    threadClose(&interpreterThread);
-    // Reset flags
-    clearInterpreterFlags();
-    logMessage("Interpreter has been closed.");
+   logMessage("Closing interpreter...");
+   {
+       std::lock_guard<std::mutex> lock(queueMutex);
+       interpreterThreadExit.store(true, std::memory_order_release);
+       queueCondition.notify_one();
+   }
+   threadWaitForExit(&interpreterThread);
+   threadClose(&interpreterThread);
+   // Reset flags
+   clearInterpreterFlags();
+   logMessage("Interpreter has been closed.");
 }
 
 
 
-void startInterpreterThread(int stackSize = 0x10000) {
-    interpreterThreadExit = false;
-    int result = threadCreate(&interpreterThread, backgroundInterpreter, nullptr, nullptr, stackSize, 0x10, 1);
+void startInterpreterThread(int stackSize = 0x9000) {
+    //if (isDownloadCommand)
+    //    stackSize = 0x8000;
+    interpreterThreadExit.store(false, std::memory_order_release);
+
+    int result = threadCreate(&interpreterThread, backgroundInterpreter, nullptr, nullptr, stackSize, 0x2B, -2);
     if (result != 0) {
-        // Failed to create thread, clear the queue and reset flags
-        std::lock_guard<std::mutex> lock(queueMutex);
-        while (!interpreterQueue.empty()) {
-            interpreterQueue.pop();
-        }
-        clearInterpreterFlags();
-        runningInterpreter.store(false, std::memory_order_release);
-        threadFailure.store(true, std::memory_order_release);
+        commandSuccess = false;
         logMessage("Failed to create interpreter thread.");
         return;
     }
@@ -1638,18 +1641,12 @@ void enqueueInterpreterCommand(std::vector<std::vector<std::string>>&& commands,
         interpreterQueue.emplace(std::move(commands), packagePath, selectedCommand);
     }
 
-    // Check if the interpreter thread is running
-    if (!interpreterThreadExit) {
-        // Close the interpreter thread if it's running
-        closeInterpreterThread();
-    }
-
     // Start a new interpreter thread
-    if (isDownloadCommand) {
-        startInterpreterThread(0x8000);
-    } else {
-        startInterpreterThread();
-    }
+    //if (isDownloadCommand) {
+    //    startInterpreterThread(0x8000);
+    //} else {
+    //    startInterpreterThread();
+    //}
     queueCondition.notify_one();
 }
 

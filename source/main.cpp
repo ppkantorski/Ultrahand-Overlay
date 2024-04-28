@@ -64,6 +64,8 @@ static std::string modePattern = ";mode=";
 static std::string groupingPattern = ";grouping=";
 static std::string systemPattern = ";system=";
 
+static std::string lastPage = "left";
+static std::string lastPackage = "";
 static std::string lastMenu = "";
 static std::string lastMenuMode = "";
 static std::string lastKeyName = "";
@@ -173,9 +175,11 @@ public:
             // Envolke selectionOverlay in optionMode
             
             listItem->setClickListener([this, listItem](uint64_t keys) { // Add 'command' to the capture list
-                bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
+                bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+                if (_runningInterpreter)
+                    return false;
 
-                if (simulatedSelect && !simulatedSelectComplete && !_runningInterpreter) {
+                if (simulatedSelect && !simulatedSelectComplete) {
                     keys |= KEY_A;
                     simulatedSelect = false;
                 }
@@ -197,9 +201,11 @@ public:
             // Envolke selectionOverlay in optionMode
             
             listItem->setClickListener([this, listItem](uint64_t keys) { // Add 'command' to the capture list
-                bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
+                bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+                if (_runningInterpreter)
+                    return false;
 
-                if (simulatedSelect && !simulatedSelectComplete && !_runningInterpreter) {
+                if (simulatedSelect && !simulatedSelectComplete) {
                     keys |= KEY_A;
                     simulatedSelect = false;
                 }
@@ -235,9 +241,11 @@ public:
             listItem = new tsl::elm::ListItem(THEME);
             listItem->setValue(currentTheme);
             listItem->setClickListener([this, listItem](uint64_t keys) { // Add 'command' to the capture list
-                bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
+                bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+                if (_runningInterpreter)
+                    return false;
 
-                if (simulatedSelect && !simulatedSelectComplete && !_runningInterpreter) {
+                if (simulatedSelect && !simulatedSelectComplete) {
                     keys |= KEY_A;
                     simulatedSelect = false;
                 }
@@ -256,9 +264,11 @@ public:
             listItem->setValue(DROPDOWN_SYMBOL);
             
             listItem->setClickListener([this, listItem](uint64_t keys) { // Add 'command' to the capture list
-                bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
+                bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+                if (_runningInterpreter)
+                    return false;
 
-                if (simulatedSelect && !simulatedSelectComplete && !_runningInterpreter) {
+                if (simulatedSelect && !simulatedSelectComplete) {
                     keys |= KEY_A;
                     simulatedSelect = false;
                 }
@@ -276,9 +286,11 @@ public:
             listItem->setValue(DROPDOWN_SYMBOL);
             
             listItem->setClickListener([this, listItem](uint64_t keys) { // Add 'command' to the capture list
-                bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
+                bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+                if (_runningInterpreter)
+                    return false;
 
-                if (simulatedSelect && !simulatedSelectComplete && !_runningInterpreter) {
+                if (simulatedSelect && !simulatedSelectComplete) {
                     keys |= KEY_A;
                     simulatedSelect = false;
                 }
@@ -310,8 +322,11 @@ public:
                 }
                 
                 listItem->setClickListener([this, defaultMenuMode, listItem](uint64_t keys) { // Add 'this', 'i', and 'listItem' to the capture list
-                    bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
-                    if (simulatedSelect && !simulatedSelectComplete && !_runningInterpreter) {
+                    bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+                    if (_runningInterpreter)
+                        return false;
+
+                    if (simulatedSelect && !simulatedSelectComplete) {
                         keys |= KEY_A;
                         simulatedSelect = false;
                     }
@@ -347,8 +362,11 @@ public:
                 }
                 
                 listItem->setClickListener([this, combo, mappedCombo=comboMap[combo], defaultCombo, listItem](uint64_t keys) { // Add 'this', 'i', and 'listItem' to the capture list
-                    bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
-                    if (simulatedSelect && !simulatedSelectComplete && !_runningInterpreter) {
+                    bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+                    if (_runningInterpreter)
+                        return false;
+
+                    if (simulatedSelect && !simulatedSelectComplete) {
                         keys |= KEY_A;
                         simulatedSelect = false;
                     }
@@ -398,8 +416,11 @@ public:
                 }
                 
                 listItem->setClickListener([this, skipLang, defaultLangMode, defaulLang, langFile, listItem](uint64_t keys) { // Add 'this', 'i', and 'listItem' to the capture list
-                    bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
-                    if (simulatedSelect && !simulatedSelectComplete && !_runningInterpreter) {
+                    bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+                    if (_runningInterpreter)
+                        return false;
+
+                    if (simulatedSelect && !simulatedSelectComplete) {
                         keys |= KEY_A;
                         simulatedSelect = false;
                     }
@@ -435,59 +456,63 @@ public:
             auto listItem = new tsl::elm::ListItem(UPDATE_ULTRAHAND);
             
             listItem->setClickListener([this, listItem](uint64_t keys) { // Add 'command' to the capture list
-                bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
+                static bool lastRunningInterpreter = false;
+                bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+                if (_runningInterpreter) {
 
-                if (simulatedSelect && !simulatedSelectComplete && !_runningInterpreter) {
+                    //int currentPercentage = downloadPercentage.load(std::memory_order_acquire);
+                    //logMessage("currentPercentage: "+std::to_string(currentPercentage));
+                    if (downloadPercentage.load(std::memory_order_acquire) != -1) {
+                        lastSelectedListItem->setValue(DOWNLOAD_SYMBOL + " " + std::to_string(downloadPercentage.load(std::memory_order_acquire))+"%");
+                        if (downloadPercentage.load(std::memory_order_acquire) == 100)
+                            downloadPercentage.store(-1, std::memory_order_release);
+                    }
+
+                    if (threadFailure.load(std::memory_order_acquire)) {
+                        threadFailure.store(false, std::memory_order_release);
+                        commandSuccess = false;
+                        //lastRunningInterpreter = true;
+                        //logMessage("killing command");
+                    }
+
+                    return false;
+                }
+
+                if (lastRunningInterpreter) {
+                    isDownloadCommand = false;
+                    if (commandSuccess)
+                        lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
+                    else
+                        lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
+                    ////closeInterpreterThread();
+                    lastRunningInterpreter = false;
+                    return true;
+                }
+
+                if (simulatedSelect && !simulatedSelectComplete) {
                     keys |= KEY_A;
                     simulatedSelect = false;
                 }
 
-                static bool lastRunningInterpreter = false;
-
-                int currentPercentage = downloadPercentage.load(std::memory_order_acquire);
-                if (currentPercentage != -1) {
-                    lastSelectedListItem->setValue(DOWNLOAD_SYMBOL + " " + std::to_string(currentPercentage)+"%");
-                    if (currentPercentage == 100)
-                        downloadPercentage.store(-1, std::memory_order_release);
-                }
-
-                if (threadFailure.load(std::memory_order_acquire)) {
-                    threadFailure.store(false, std::memory_order_release);
-                    commandSuccess = false;
+                if ((keys & KEY_A)) {
+                    isDownloadCommand = true;
+                    std::vector<std::vector<std::string>> interpreterCommands = {
+                        {"delete", "/config/ultrahand/downloads/ovlmenu.ovl"},
+                        {"download", ultrahandRepo + "releases/latest/download/ovlmenu.ovl", "/config/ultrahand/downloads/"},
+                        {"move", "/config/ultrahand/downloads/ovlmenu.ovl", "/switch/.overlays/ovlmenu.ovl"}
+                    };
+                    runningInterpreter.store(true, std::memory_order_release);
+                    enqueueInterpreterCommand(std::move(interpreterCommands), "", "");
+                    //runningInterpreter.store(true, std::memory_order_release);
+                    //lastRunningInterpreter = true;
+                    if (isDownloadCommand)
+                        listItem->setValue(DOWNLOAD_SYMBOL);
+                    else
+                        listItem->setValue(INPROGRESS_SYMBOL);
+                    lastSelectedListItem = listItem;
+                    
+                    
                     lastRunningInterpreter = true;
-                    //logMessage("killing command");
-                }
-
-                if ((keys & KEY_A) || (_runningInterpreter || (!_runningInterpreter && lastRunningInterpreter))) {
-                    if (!_runningInterpreter && !lastRunningInterpreter) {
-                        isDownloadCommand = true;
-                        std::vector<std::vector<std::string>> interpreterCommands = {
-                            {"delete", "/config/ultrahand/downloads/ovlmenu.ovl"},
-                            {"download", ultrahandRepo + "releases/latest/download/ovlmenu.ovl", "/config/ultrahand/downloads/"},
-                            {"move", "/config/ultrahand/downloads/ovlmenu.ovl", "/switch/.overlays/ovlmenu.ovl"}
-                        };
-                        enqueueInterpreterCommand(std::move(interpreterCommands), "", "");
-                        runningInterpreter.store(true, std::memory_order_release);
-                        
-                        if (isDownloadCommand)
-                            listItem->setValue(DOWNLOAD_SYMBOL);
-                        else
-                            listItem->setValue(INPROGRESS_SYMBOL);
-
-                        lastSelectedListItem = listItem;
-                    }
-                    
-
-                    if (!_runningInterpreter && lastRunningInterpreter) {
-                        isDownloadCommand = false;
-                        if (commandSuccess)
-                            lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
-                        else
-                            lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
-                        closeInterpreterThread();
-                    }
-                    
-                    lastRunningInterpreter = _runningInterpreter;
                     simulatedSelectComplete = true;
                     return true;
                 }
@@ -500,60 +525,67 @@ public:
             // Envolke selectionOverlay in optionMode
             
             listItem->setClickListener([this, listItem](uint64_t keys) { // Add 'command' to the capture list
-                bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
+                static bool lastRunningInterpreter = false;
 
-                if (simulatedSelect && !simulatedSelectComplete && !_runningInterpreter) {
+                bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+                if (_runningInterpreter) {
+                    //int currentPercentage = downloadPercentage.load(std::memory_order_acquire);
+                    //logMessage("currentPercentage: "+std::to_string(currentPercentage));
+                    if (downloadPercentage.load(std::memory_order_acquire) != -1) {
+                        lastSelectedListItem->setValue(DOWNLOAD_SYMBOL + " " + std::to_string(downloadPercentage.load(std::memory_order_acquire))+"%");
+                        if (downloadPercentage.load(std::memory_order_acquire) == 100)
+                            downloadPercentage.store(-1, std::memory_order_release);
+                    }
+                    
+                    if (threadFailure.load(std::memory_order_acquire)) {
+                        threadFailure.store(false, std::memory_order_release);
+                        commandSuccess = false;
+                        //lastRunningInterpreter = true;
+                        //logMessage("killing command");
+                    }
+
+                    return false;
+                }
+
+                if (lastRunningInterpreter) {
+                    isDownloadCommand = false;
+                    if (commandSuccess)
+                        lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
+                    else
+                        lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
+                    ////closeInterpreterThread();
+                    lastRunningInterpreter = false;
+
+                    return true;
+                }
+
+                if (simulatedSelect && !simulatedSelectComplete) {
                     keys |= KEY_A;
                     simulatedSelect = false;
                 }
-
-                static bool lastRunningInterpreter = false;
-                int currentPercentage = downloadPercentage.load(std::memory_order_acquire);
-                if (currentPercentage != -1) {
-                    lastSelectedListItem->setValue(DOWNLOAD_SYMBOL + " " + std::to_string(currentPercentage)+"%");
-                    if (currentPercentage == 100)
-                        downloadPercentage.store(-1, std::memory_order_release);
-                }
-
-                if (threadFailure.load(std::memory_order_acquire)) {
-                    threadFailure.store(false, std::memory_order_release);
-                    commandSuccess = false;
+                
+                if ((keys & KEY_A)) {
+                    isDownloadCommand = true;
+                    std::vector<std::vector<std::string>> interpreterCommands = {
+                        {"delete", "/config/ultrahand/downloads/ovlmenu.ovl"},
+                        {"download", ultrahandRepo + "releases/latest/download/lang.zip", "/config/ultrahand/downloads/"},
+                        {"unzip", "/config/ultrahand/downloads/lang.zip", "/config/ultrahand/downloads/lang/"},
+                        {"delete", "/config/ultrahand/downloads/lang.zip"},
+                        {"delete", "/config/ultrahand/lang/"},
+                        {"move", "/config/ultrahand/downloads/lang/", "/config/ultrahand/lang/"}
+                    };
+                    runningInterpreter.store(true, std::memory_order_release);
+                    enqueueInterpreterCommand(std::move(interpreterCommands), "", "");
+                    //runningInterpreter.store(true, std::memory_order_release);
+                    //lastRunningInterpreter = true;
+                    if (isDownloadCommand)
+                        listItem->setValue(DOWNLOAD_SYMBOL);
+                    else
+                        listItem->setValue(INPROGRESS_SYMBOL);
+                    lastSelectedListItem = listItem;
+                    
+                    
                     lastRunningInterpreter = true;
-                    //logMessage("killing command");
-                }
-
-                if ((keys & KEY_A) || (_runningInterpreter || (!_runningInterpreter && lastRunningInterpreter))) {
-                    if (!_runningInterpreter && !lastRunningInterpreter) {
-                        isDownloadCommand = true;
-                        std::vector<std::vector<std::string>> interpreterCommands = {
-                            {"delete", "/config/ultrahand/downloads/ovlmenu.ovl"},
-                            {"download", ultrahandRepo + "releases/latest/download/lang.zip", "/config/ultrahand/downloads/"},
-                            {"unzip", "/config/ultrahand/downloads/lang.zip", "/config/ultrahand/downloads/lang/"},
-                            {"delete", "/config/ultrahand/downloads/lang.zip"},
-                            {"delete", "/config/ultrahand/lang/"},
-                            {"move", "/config/ultrahand/downloads/lang/", "/config/ultrahand/lang/"}
-                        };
-                        enqueueInterpreterCommand(std::move(interpreterCommands), "", "");
-                        runningInterpreter.store(true, std::memory_order_release);
-                        
-                        if (isDownloadCommand)
-                            listItem->setValue(DOWNLOAD_SYMBOL);
-                        else
-                            listItem->setValue(INPROGRESS_SYMBOL);
-                        lastSelectedListItem = listItem;
-                    }
-                    
-
-                    if (!_runningInterpreter && lastRunningInterpreter) {
-                        isDownloadCommand = false;
-                        if (commandSuccess)
-                            lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
-                        else
-                            lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
-                        closeInterpreterThread();
-                    }
-                    
-                    lastRunningInterpreter = _runningInterpreter;
                     simulatedSelectComplete = true;
                     return true;
                 }
@@ -593,8 +625,11 @@ public:
             }
             
             listItem->setClickListener([this, defaultTheme, listItem](uint64_t keys) { // Add 'this', 'i', and 'listItem' to the capture list
-                bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
-                if (simulatedSelect && !simulatedSelectComplete && !_runningInterpreter) {
+                bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+                if (_runningInterpreter)
+                    return false;
+
+                if (simulatedSelect && !simulatedSelectComplete) {
                     keys |= KEY_A;
                     simulatedSelect = false;
                 }
@@ -644,8 +679,11 @@ public:
                 }
                 
                 listItem->setClickListener([this, themeName, currentTheme, themeFile, listItem](uint64_t keys) { // Add 'this', 'i', and 'listItem' to the capture list
-                    bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
-                    if (simulatedSelect && !simulatedSelectComplete && !_runningInterpreter) {
+                    bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+                    if (_runningInterpreter)
+                        return false;
+
+                    if (simulatedSelect && !simulatedSelectComplete) {
                         keys |= KEY_A;
                         simulatedSelect = false;
                     }
@@ -812,11 +850,22 @@ public:
         //    simulatedBack = false;
         //    simulatedBackComplete = true;
         //}
-
+        bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+        if (_runningInterpreter) {
+            // Check for back button press
+            if ((keysHeld & KEY_R) && !stillTouching) {
+                commandSuccess = false;
+                abortDownload.store(true, std::memory_order_release);
+                abortUnzip.store(true, std::memory_order_release);
+                abortFileOp.store(true, std::memory_order_release);
+                abortCommand.store(true, std::memory_order_release);
+                return true;
+            }
+            return false;
+        }
 
         if (inSettingsMenu && !inSubSettingsMenu) {
             if (!returningToSettings) {
-                bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
 
                 if (reloadMenu3) {
                     tsl::goBack();
@@ -824,22 +873,22 @@ public:
                     reloadMenu3 = false;
                 }
 
-                if (simulatedNextPage && !simulatedNextPageComplete && !_runningInterpreter) {
+                if (simulatedNextPage && !simulatedNextPageComplete) {
                     simulatedNextPage = false;
                     simulatedNextPageComplete = true;
                 }
 
-                if (simulatedMenu && !simulatedMenuComplete && !_runningInterpreter) {
+                if (simulatedMenu && !simulatedMenuComplete) {
                     simulatedMenu = false;
                     simulatedMenuComplete = true;
                 }
 
-                if (simulatedBack && !simulatedBackComplete && !_runningInterpreter) {
+                if (simulatedBack && !simulatedBackComplete) {
                     keysHeld |= KEY_B;
                     simulatedBack = false;
                 }
 
-                if ((keysHeld & KEY_B) && !stillTouching && !_runningInterpreter) {
+                if ((keysHeld & KEY_B) && !stillTouching) {
                     inSettingsMenu = false;
                     if (lastMenu != "hiddenMenuMode")
                         returningToMain = true;
@@ -858,31 +907,20 @@ public:
                     //tsl::Overlay::get()->close();
                     return true;
                 }
-
-                // Check for back button press
-                if ((keysHeld & KEY_R) && !stillTouching && _runningInterpreter) {
-                    commandSuccess = false;
-                    abortDownload.store(true, std::memory_order_release);
-                    abortUnzip.store(true, std::memory_order_release);
-                    abortFileOp.store(true, std::memory_order_release);
-                    abortCommand.store(true, std::memory_order_release);
-                    return true;
-                }
             }
         } else if (inSubSettingsMenu) {
-            bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
 
             if (simulatedNextPage && !simulatedNextPageComplete) {
                 simulatedNextPage = false;
                 simulatedNextPageComplete = true;
             }
 
-            if (simulatedBack && !simulatedBackComplete && !_runningInterpreter) {
+            if (simulatedBack && !simulatedBackComplete) {
                 keysHeld |= KEY_B;
                 simulatedBack = false;
             }
 
-            if ((keysHeld & KEY_B) && !stillTouching  && !_runningInterpreter) {
+            if ((keysHeld & KEY_B) && !stillTouching) {
                 inSubSettingsMenu = false;
                 returningToSettings = true;
                 tsl::goBack();
@@ -897,15 +935,6 @@ public:
                 return true;
             }
 
-            // Check for back button press
-            if ((keysHeld & KEY_R) && !stillTouching && _runningInterpreter) {
-                commandSuccess = false;
-                abortDownload.store(true, std::memory_order_release);
-                abortUnzip.store(true, std::memory_order_release);
-                abortFileOp.store(true, std::memory_order_release);
-                abortCommand.store(true, std::memory_order_release);
-                return true;
-            }
         }
         
         if (returningToSettings && !(keysHeld & KEY_B)){
@@ -1025,8 +1054,11 @@ public:
             // Envolke selectionOverlay in optionMode
             
             listItem->setClickListener([this, listItem](uint64_t keys) { // Add 'command' to the capture list
-                bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
-                if (simulatedSelect && !simulatedSelectComplete && !_runningInterpreter) {
+                bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+                if (_runningInterpreter)
+                    return false;
+
+                if (simulatedSelect && !simulatedSelectComplete) {
                     keys |= KEY_A;
                     simulatedSelect = false;
                 }
@@ -1072,8 +1104,11 @@ public:
                 }
                 
                 listItem->setClickListener([this, iStr, priorityValue, listItem](uint64_t keys) { // Add 'this', 'i', and 'listItem' to the capture list
-                    bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
-                    if (simulatedSelect && !simulatedSelectComplete && !_runningInterpreter) {
+                    bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+                    if (_runningInterpreter)
+                        return false;
+
+                    if (simulatedSelect && !simulatedSelectComplete) {
                         keys |= KEY_A;
                         simulatedSelect = false;
                     }
@@ -1124,26 +1159,38 @@ public:
         //    simulatedBack = false;
         //    simulatedBackComplete = true;
         //}
+        bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+        if (_runningInterpreter) {
+            // Check for back button press
+            if ((keysHeld & KEY_R) && !stillTouching) {
+                commandSuccess = false;
+                abortDownload.store(true, std::memory_order_release);
+                abortUnzip.store(true, std::memory_order_release);
+                abortFileOp.store(true, std::memory_order_release);
+                abortCommand.store(true, std::memory_order_release);
+                return true;
+            }
+            return false;
+        }
 
         if (inSettingsMenu && !inSubSettingsMenu) {
             if (!returningToSettings) {
-                bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
-                if (simulatedNextPage && !simulatedNextPageComplete && !_runningInterpreter) {
+                if (simulatedNextPage && !simulatedNextPageComplete) {
                     simulatedNextPage = false;
                     simulatedNextPageComplete = true;
                 }
 
-                if (simulatedMenu && !simulatedMenuComplete && !_runningInterpreter) {
+                if (simulatedMenu && !simulatedMenuComplete) {
                     simulatedMenu = false;
                     simulatedMenuComplete = true;
                 }
 
-                if (simulatedBack && !simulatedBackComplete && !_runningInterpreter) {
+                if (simulatedBack && !simulatedBackComplete) {
                     keysHeld |= KEY_B;
                     simulatedBack = false;
                 }
 
-                if ((keysHeld & KEY_B) && !stillTouching && !_runningInterpreter) {
+                if ((keysHeld & KEY_B) && !stillTouching) {
                     inSettingsMenu = false;
                     if (lastMenu != "hiddenMenuMode")
                         returningToMain = true;
@@ -1167,50 +1214,29 @@ public:
                     //tsl::Overlay::get()->close();
                     return true;
                 }
-
-                // Check for back button press
-                if ((keysHeld & KEY_R) && !stillTouching && _runningInterpreter) {
-                    commandSuccess = false;
-                    abortDownload.store(true, std::memory_order_release);
-                    abortUnzip.store(true, std::memory_order_release);
-                    abortFileOp.store(true, std::memory_order_release);
-                    abortCommand.store(true, std::memory_order_release);
-                    return true;
-                }
             }
         } else if (inSubSettingsMenu) {
-            bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
-            if (simulatedNextPage && !simulatedNextPageComplete && !_runningInterpreter) {
+            if (simulatedNextPage && !simulatedNextPageComplete) {
                 simulatedNextPage = false;
                 simulatedNextPageComplete = true;
             }
 
-            if (simulatedMenu && !simulatedMenuComplete && !_runningInterpreter) {
+            if (simulatedMenu && !simulatedMenuComplete) {
                 simulatedMenu = false;
                 simulatedMenuComplete = true;
             }
 
-            if (simulatedBack && !simulatedBackComplete && !_runningInterpreter) {
+            if (simulatedBack && !simulatedBackComplete) {
                 keysHeld |= KEY_B;
                 simulatedBack = false;
             }
 
-            if ((keysHeld & KEY_B) && !stillTouching  && !_runningInterpreter) {
+            if ((keysHeld & KEY_B) && !stillTouching) {
                 inSubSettingsMenu = false;
                 returningToSettings = true;
                 tsl::goBack();
                 //tsl::Overlay::get()->close();
                 simulatedBackComplete = true;
-                return true;
-            }
-
-            // Check for back button press
-            if ((keysHeld & KEY_R) && !stillTouching && _runningInterpreter) {
-                commandSuccess = false;
-                abortDownload.store(true, std::memory_order_release);
-                abortUnzip.store(true, std::memory_order_release);
-                abortFileOp.store(true, std::memory_order_release);
-                abortCommand.store(true, std::memory_order_release);
                 return true;
             }
         }
@@ -1308,8 +1334,10 @@ public:
                 } else if (isInSection) {
                     listItem = new tsl::elm::ListItem(line);
                     listItem->setClickListener([line, this, listItem](uint64_t keys) {
-                        bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
-                        if (simulatedSelect && !simulatedSelectComplete && !_runningInterpreter) {
+                        bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+                        if (_runningInterpreter)
+                            return false;
+                        if (simulatedSelect && !simulatedSelectComplete) {
                             keys |= KEY_A;
                             simulatedSelect = false;
                         }
@@ -1381,25 +1409,37 @@ public:
         //    simulatedBack = false;
         //    simulatedBackComplete = true;
         //}
+        bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+        if (_runningInterpreter) {
+            // Check for back button press
+            if ((keysHeld & KEY_R) && !stillTouching) {
+                commandSuccess = false;
+                abortDownload.store(true, std::memory_order_release);
+                abortUnzip.store(true, std::memory_order_release);
+                abortFileOp.store(true, std::memory_order_release);
+                abortCommand.store(true, std::memory_order_release);
+                return true;
+            }
+            return false;
+        }
 
         if (inScriptMenu) {
-            bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
-            if (simulatedNextPage && !simulatedNextPageComplete && !_runningInterpreter) {
+            if (simulatedNextPage && !simulatedNextPageComplete) {
                 simulatedNextPage = false;
                 simulatedNextPageComplete = true;
             }
 
-            if (simulatedMenu && !simulatedMenuComplete && !_runningInterpreter) {
+            if (simulatedMenu && !simulatedMenuComplete) {
                 simulatedMenu = false;
                 simulatedMenuComplete = true;
             }
 
-            if (simulatedBack && !simulatedBackComplete && !_runningInterpreter) {
+            if (simulatedBack && !simulatedBackComplete) {
                 keysHeld |= KEY_B;
                 simulatedBack = false;
             }
 
-            if ((keysHeld & KEY_B) && !stillTouching  && !_runningInterpreter) {
+            if ((keysHeld & KEY_B) && !stillTouching) {
                 inScriptMenu = false;
                 if (isFromMainMenu == false) {
                     if (lastMenu == "packageMenu")
@@ -1411,16 +1451,6 @@ public:
                 tsl::goBack();
                 //tsl::Overlay::get()->close();
                 simulatedBackComplete = true;
-                return true;
-            }
-
-            // Check for back button press
-            if ((keysHeld & KEY_R) && !stillTouching && _runningInterpreter) {
-                commandSuccess = false;
-                abortDownload.store(true, std::memory_order_release);
-                abortUnzip.store(true, std::memory_order_release);
-                abortFileOp.store(true, std::memory_order_release);
-                abortCommand.store(true, std::memory_order_release);
                 return true;
             }
         }
@@ -1836,70 +1866,76 @@ public:
                 //
                 
                 listItem->setClickListener([this, i, footer, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
-                    bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
-                    if (simulatedSelect && !simulatedSelectComplete && !_runningInterpreter) {
+                    static bool lastRunningInterpreter = false;
+                    bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+                    if (_runningInterpreter) {
+                        
+                        //int currentPercentage = downloadPercentage.load(std::memory_order_acquire);
+
+                        //logMessage("currentPercentage: "+std::to_string(downloadPercentage.load(std::memory_order_acquire)));
+                        if (downloadPercentage.load(std::memory_order_acquire) != -1) {
+                            lastSelectedListItem->setValue(DOWNLOAD_SYMBOL + " " + std::to_string(downloadPercentage.load(std::memory_order_acquire))+"%");
+                            if (downloadPercentage.load(std::memory_order_acquire) == 100)
+                                downloadPercentage.store(-1, std::memory_order_release);
+                        }
+
+                        if (threadFailure.load(std::memory_order_acquire)) {
+                            threadFailure.store(false, std::memory_order_release);
+                            commandSuccess = false;
+                            //lastRunningInterpreter = true;
+                            //logMessage("killing command");
+                        }
+
+                        return false;
+                    }
+
+                    if (lastRunningInterpreter) {
+                        isDownloadCommand = false;
+
+                        if (commandSuccess)
+                            lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
+                        else
+                            lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
+                        ////closeInterpreterThread();
+                        lastRunningInterpreter = false;
+                        return true;
+                    }
+
+                    if (simulatedSelect && !simulatedSelectComplete) {
                         keys |= KEY_A;
                         simulatedSelect = false;
                     }
 
-                    static bool lastRunningInterpreter = false;
-                    int currentPercentage = downloadPercentage.load(std::memory_order_acquire);
-                    if (currentPercentage != -1) {
-                        lastSelectedListItem->setValue(DOWNLOAD_SYMBOL + " " + std::to_string(currentPercentage)+"%");
-                        if (currentPercentage == 100)
-                            downloadPercentage.store(-1, std::memory_order_release);
-                    }
+                    if ((keys & KEY_A)) {
 
-                    if (threadFailure.load(std::memory_order_acquire)) {
-                        threadFailure.store(false, std::memory_order_release);
-                        commandSuccess = false;
-                        lastRunningInterpreter = true;
-                        //logMessage("killing command");
-                    }
-
-                    if ((keys & KEY_A) || (_runningInterpreter || (!_runningInterpreter && lastRunningInterpreter))) {
-
-                        if (!_runningInterpreter && !lastRunningInterpreter) {
-                            //if (commandMode == "option") {
-                            //    
-                            //}
-
-                            //std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(this->commands, selectedItem, i);
-                            //applySourceReplacement(this->commands, selectedItem, i);
-                            //this->commands = getSourceReplacement(this->commands, selectedItem, i);
-                            isDownloadCommand = false;
-                            enqueueInterpreterCommand(getSourceReplacement(this->commands, selectedItem, i), filePath, specificKey);
-                            //modifiedCmds.clear();
-                            runningInterpreter.store(true, std::memory_order_release);
-                            
-                            if (isDownloadCommand)
-                                listItem->setValue(DOWNLOAD_SYMBOL);
-                            else
-                                listItem->setValue(INPROGRESS_SYMBOL);
-
-                            if (commandMode == "option") {
-                                selectedFooterDict[specifiedFooterKey] = listItem->getText();
-                                //logMessage("specifiedFooterKey: "+specifiedFooterKey);
-                                //logMessage("itemName: "+listItem->getText());
-                                lastSelectedListItem->setValue(lastSelectedListItemFooter, true);
-
-                                lastSelectedListItemFooter = footer;
-                            }
-                            lastSelectedListItem = listItem;
+                        //if (commandMode == "option") {
+                        //    
+                        //}
+                        //std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(this->commands, selectedItem, i);
+                        //applySourceReplacement(this->commands, selectedItem, i);
+                        //this->commands = getSourceReplacement(this->commands, selectedItem, i);
+                        isDownloadCommand = false;
+                        runningInterpreter.store(true, std::memory_order_release);
+                        enqueueInterpreterCommand(getSourceReplacement(this->commands, selectedItem, i), filePath, specificKey);
+                        //lastRunningInterpreter = true;
+                        //modifiedCmds.clear();
+                        //runningInterpreter.store(true, std::memory_order_release);
+                        
+                        if (isDownloadCommand)
+                            listItem->setValue(DOWNLOAD_SYMBOL);
+                        else
+                            listItem->setValue(INPROGRESS_SYMBOL);
+                        if (commandMode == "option") {
+                            selectedFooterDict[specifiedFooterKey] = listItem->getText();
+                            //logMessage("specifiedFooterKey: "+specifiedFooterKey);
+                            //logMessage("itemName: "+listItem->getText());
+                            lastSelectedListItem->setValue(lastSelectedListItemFooter, true);
+                            lastSelectedListItemFooter = footer;
                         }
+                        lastSelectedListItem = listItem;
                         
 
-                        if (!_runningInterpreter && lastRunningInterpreter) {
-                            isDownloadCommand = false;
-
-                            if (commandSuccess)
-                                lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
-                            else
-                                lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
-                            closeInterpreterThread();
-                        }
-
-                        lastRunningInterpreter = _runningInterpreter;
+                        lastRunningInterpreter = true;
                         
                         
                         simulatedSelectComplete = true;
@@ -1973,31 +2009,47 @@ public:
         //    simulatedBack = false;
         //    simulatedBackComplete = true;
         //}
+        bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+        if (_runningInterpreter) {
+            // Check for back button press
+            if ((keysHeld & KEY_R) && !stillTouching) {
+                commandSuccess = false;
+                abortDownload.store(true, std::memory_order_release);
+                abortUnzip.store(true, std::memory_order_release);
+                abortFileOp.store(true, std::memory_order_release);
+                abortCommand.store(true, std::memory_order_release);
+                //closeInterpreterThread();
+                return true;
+            }
+
+            return false;
+        }
 
         if (refreshGui) {
+            tsl::goBack();
             tsl::changeTo<SelectionOverlay>(filePath, specificKey, commands, specifiedFooterKey);
             refreshGui = false;
         }
         
         if (inSelectionMenu) {
-            bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
+            
 
-            if (simulatedNextPage && !simulatedNextPageComplete && !_runningInterpreter) {
+            if (simulatedNextPage && !simulatedNextPageComplete) {
                 simulatedNextPage = false;
                 simulatedNextPageComplete = true;
             }
 
-            if (simulatedMenu && !simulatedMenuComplete && !_runningInterpreter) {
+            if (simulatedMenu && !simulatedMenuComplete) {
                 simulatedMenu = false;
                 simulatedMenuComplete = true;
             }
 
-            if (simulatedBack && !simulatedBackComplete && !_runningInterpreter) {
+            if (simulatedBack && !simulatedBackComplete) {
                 keysHeld |= KEY_B;
                 simulatedBack = false;
             }
 
-            if ((keysHeld & KEY_B) && !stillTouching && !_runningInterpreter) {
+            if ((keysHeld & KEY_B) && !stillTouching) {
                 inSelectionMenu = false;
                 
                 if (lastMenu == "packageMenu")
@@ -2021,16 +2073,6 @@ public:
                 
                 tsl::goBack();
                 simulatedBackComplete = true;
-                return true;
-            }
-
-            // Check for back button press
-            if ((keysHeld & KEY_R) && !stillTouching && _runningInterpreter) {
-                commandSuccess = false;
-                abortDownload.store(true, std::memory_order_release);
-                abortUnzip.store(true, std::memory_order_release);
-                abortFileOp.store(true, std::memory_order_release);
-                abortCommand.store(true, std::memory_order_release);
                 return true;
             }
         }
@@ -2214,8 +2256,10 @@ public:
                             listItem = new tsl::elm::ListItem(removeTag(optionName.substr(1)), DROPDOWN_SYMBOL);
                             
                             listItem->setClickListener([this, optionName](s64 keys) {
-                                bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
-                                if (simulatedSelect && !simulatedSelectComplete && !_runningInterpreter) {
+                                bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+                                if (_runningInterpreter)
+                                    return false;
+                                if (simulatedSelect && !simulatedSelectComplete) {
                                     keys |= KEY_A;
                                     simulatedSelect = false;
                                 }
@@ -2416,9 +2460,11 @@ public:
                         
                         //std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(option.second, pathReplace);
                         listItem->setClickListener([this, commands, keyName = option.first, packagePath = this->packagePath, footer, lastSection, listItem](uint64_t keys) {
-                            bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
+                            bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+                            if (_runningInterpreter)
+                                return false;
 
-                            if (simulatedSelect && !simulatedSelectComplete && !_runningInterpreter) {
+                            if (simulatedSelect && !simulatedSelectComplete) {
                                 keys |= KEY_A;
                                 simulatedSelect = false;
                             }
@@ -2480,61 +2526,60 @@ public:
                             
                             
                             listItem->setClickListener([this, i, commands, keyName = option.first, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
-                                bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
-                                if (simulatedSelect && !simulatedSelectComplete && !_runningInterpreter) {
+                                static bool lastRunningInterpreter = false;
+                                bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+                                if (_runningInterpreter) {
+                                    //int currentPercentage = downloadPercentage.load(std::memory_order_acquire);
+                                    //logMessage("currentPercentage: "+std::to_string(currentPercentage));
+                                    if (downloadPercentage.load(std::memory_order_acquire) != -1) {
+                                        lastSelectedListItem->setValue(DOWNLOAD_SYMBOL + " " + std::to_string(downloadPercentage.load(std::memory_order_acquire))+"%");
+                                        if (downloadPercentage.load(std::memory_order_acquire) == 100)
+                                            downloadPercentage.store(-1, std::memory_order_release);
+                                    }
+                                    if (threadFailure.load(std::memory_order_acquire)) {
+                                        threadFailure.store(false, std::memory_order_release);
+                                        commandSuccess = false;
+                                        //lastRunningInterpreter = true;
+                                        //logMessage("killing command");
+                                        ////closeInterpreterThread();
+                                    }
+                                    return false;
+                                }
+
+                                if (lastRunningInterpreter) {
+                                    isDownloadCommand = false;
+
+                                    if (commandSuccess)
+                                        lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
+                                    else
+                                        lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
+                                    ////closeInterpreterThread();
+                                    lastRunningInterpreter = false;
+                                }
+
+                                if (simulatedSelect && !simulatedSelectComplete) {
                                     keys |= KEY_A;
                                     simulatedSelect = false;
                                 }
 
-                                static bool lastRunningInterpreter = false;
+                                if ((keys & KEY_A)) {
 
-                                int currentPercentage = downloadPercentage.load(std::memory_order_acquire);
-                                if (currentPercentage != -1) {
-                                    lastSelectedListItem->setValue(DOWNLOAD_SYMBOL + " " + std::to_string(currentPercentage)+"%");
-                                    if (currentPercentage == 100)
-                                        downloadPercentage.store(-1, std::memory_order_release);
-                                }
-
-                                if (threadFailure.load(std::memory_order_acquire)) {
-                                    threadFailure.store(false, std::memory_order_release);
-                                    commandSuccess = false;
+                                    //std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commands, selectedItem, i);
+                                    //applySourceReplacement(commands, selectedItem, i);
+                                    //commands = getSourceReplacement(commands, selectedItem, i);
+                                    isDownloadCommand = false;
+                                    runningInterpreter.store(true, std::memory_order_release);
+                                    enqueueInterpreterCommand(getSourceReplacement(commands, selectedItem, i), packagePath, keyName);
+                                    //lastRunningInterpreter = true;
+                                    //modifiedCmds.clear();
+                                    //runningInterpreter.store(true, std::memory_order_release);
+                                    if (isDownloadCommand)
+                                        listItem->setValue(DOWNLOAD_SYMBOL);
+                                    else
+                                        listItem->setValue(INPROGRESS_SYMBOL);
+                                    lastSelectedListItem = listItem;
+                                    
                                     lastRunningInterpreter = true;
-                                    //logMessage("killing command");
-                                    closeInterpreterThread();
-                                }
-
-                                if ((keys & KEY_A) || (_runningInterpreter || (!_runningInterpreter && lastRunningInterpreter))) {
-
-                                    if (!_runningInterpreter && !lastRunningInterpreter) {
-                                        //std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commands, selectedItem, i);
-                                        //applySourceReplacement(commands, selectedItem, i);
-                                        //commands = getSourceReplacement(commands, selectedItem, i);
-                                        isDownloadCommand = false;
-                                        enqueueInterpreterCommand(getSourceReplacement(commands, selectedItem, i), packagePath, keyName);
-                                        //modifiedCmds.clear();
-                                        runningInterpreter.store(true, std::memory_order_release);
-                                        
-                                        if (isDownloadCommand)
-                                            listItem->setValue(DOWNLOAD_SYMBOL);
-                                        else
-                                            listItem->setValue(INPROGRESS_SYMBOL);
-                                        lastSelectedListItem = listItem;
-                                    }
-                                    
-
-                                    if (!_runningInterpreter && lastRunningInterpreter) {
-                                        isDownloadCommand = false;
-
-                                        if (commandSuccess)
-                                            lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
-                                        else
-                                            lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
-                                        closeInterpreterThread();
-                                    }
-                                    
-                                    lastRunningInterpreter = _runningInterpreter;
-                                    
-
                                     simulatedSelectComplete = true;
                                     return true;
                                 }  else if (keys & SCRIPT_KEY) {
@@ -2616,22 +2661,72 @@ public:
         //    simulatedBack = false;
         //    simulatedBackComplete = true;
         //}
+        
+        bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+        if (_runningInterpreter) {
+            // Check for back button press
+            if ((keysHeld & KEY_R) && !stillTouching) {
+                commandSuccess = false;
+                abortDownload.store(true, std::memory_order_release);
+                abortUnzip.store(true, std::memory_order_release);
+                abortFileOp.store(true, std::memory_order_release);
+                abortCommand.store(true, std::memory_order_release);
+                //closeInterpreterThread();
+                return true;
+            }
+
+            return false;
+        }
 
         // Your existing logic for handling other inputs
-        if (refreshGui) {
-            tsl::changeTo<PackageMenu>(packagePath);
+        if (refreshGui && !returningToPackage) {
             refreshGui = false;
+            //tsl::changeTo<PackageMenu>(packagePath);
+            ////closeInterpreterThread();
+            
+            if (inPackageMenu) {
+                lastPackage = packagePath;
+                inSubPackageMenu = false;
+                inPackageMenu = false;
+                if (lastPage == "right") {
+                    tsl::goBack();
+                    //tsl::goBack();
+                } else {
+                    tsl::goBack();
+                }
+                inPackageMenu = true;
+                lastPage = "left";
+                tsl::changeTo<PackageMenu>(lastPackage);
+                //lastPage == "left";
+            }
+
+            if (inSubPackageMenu) {
+                lastPackage = packagePath;
+                inSubPackageMenu = false;
+                inPackageMenu = false;
+                if (lastPage == "right") {
+                    tsl::goBack();
+                    tsl::goBack();
+                    //tsl::goBack();
+                } else {
+                    tsl::goBack();
+                    tsl::goBack();
+                }
+                inPackageMenu = true;
+                lastPage = "left";
+                tsl::changeTo<PackageMenu>(lastPackage);
+                //lastPage == "left";
+            }
+            
         }
-        
-        bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
 
         if (usingPages) {
-            if (simulatedMenu && !simulatedMenuComplete && !_runningInterpreter) {
+            if (simulatedMenu && !simulatedMenuComplete) {
                 simulatedMenu = false;
                 simulatedMenuComplete = true;
             }
 
-            if (simulatedNextPage && !simulatedNextPageComplete && !_runningInterpreter) {
+            if (simulatedNextPage && !simulatedNextPageComplete) {
                 if (currentPage == "left") {
                     keysHeld |= KEY_DRIGHT;
                     simulatedNextPage = false;
@@ -2647,14 +2742,20 @@ public:
             }
             if (currentPage == "left") {
                 if ((keysHeld & KEY_DRIGHT) && !(keysHeld & (KEY_DLEFT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR)) && !stillTouching) {
-                    tsl::changeTo<PackageMenu>(packagePath, dropdownSection, "right");
+                    lastPage = "right";
+                    lastPackage = packagePath;
+                    tsl::goBack();
+                    tsl::changeTo<PackageMenu>(lastPackage, dropdownSection, "right");
                     simulatedNextPageComplete = true;
                     return true;
                 }
             } else if (currentPage == "right") {
                 if ((keysHeld & KEY_DLEFT) && !(keysHeld & (KEY_DRIGHT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR)) && !stillTouching) {
                     //tsl::changeTo<PackageMenu>(packagePath, dropdownSection, "left");
+                    lastPage = "left";
+                    lastPackage = packagePath;
                     tsl::goBack();
+                    tsl::changeTo<PackageMenu>(lastPackage, dropdownSection, "left");
                     simulatedNextPageComplete = true;
                     return true;
                 }
@@ -2662,82 +2763,105 @@ public:
         }
         
         if (!returningToPackage && inPackageMenu) {
-            if (simulatedMenu && !simulatedMenuComplete && !_runningInterpreter) {
+            if (simulatedMenu && !simulatedMenuComplete) {
                 simulatedMenu = false;
                 simulatedMenuComplete = true;
             }
 
-            if (simulatedNextPage && !simulatedNextPageComplete && !_runningInterpreter) {
+            if (simulatedNextPage && !simulatedNextPageComplete) {
                 simulatedNextPage = false;
                 simulatedNextPageComplete = true;
             }
 
-            if (simulatedBack && !simulatedBackComplete && !_runningInterpreter) {
+            if (simulatedBack && !simulatedBackComplete) {
                 keysHeld |= KEY_B;
                 simulatedBack = false;
             }
-            if ((keysHeld & KEY_B) && !stillTouching && !_runningInterpreter) {
-                inPackageMenu = false;
-                returningToMain = true;
-                
-                // Free-up memory
-                hexSumCache.clear();
-                selectedFooterDict.clear(); // Clears all data from the map, making it empty again
-                selectedListItem = new tsl::elm::ListItem("");
-                lastSelectedListItem = new tsl::elm::ListItem("");
-                
-                tsl::goBack();
-                tsl::goBack();
-                tsl::changeTo<MainMenu>();
-                
-                //tsl::Overlay::get()->close();
-                simulatedBackComplete = true;
-                return true;
-            }
-            // Check for back button press
-            if ((keysHeld & KEY_R) && !stillTouching && _runningInterpreter) {
-                commandSuccess = false;
-                abortDownload.store(true, std::memory_order_release);
-                abortUnzip.store(true, std::memory_order_release);
-                abortFileOp.store(true, std::memory_order_release);
-                abortCommand.store(true, std::memory_order_release);
-                return true;
+            if (!usingPages || (usingPages && lastPage == "left")) {
+                if ((keysHeld & KEY_B) && !stillTouching) {
+                    ////closeInterpreterThread();
+                    inPackageMenu = false;
+                    returningToMain = true;
+                    
+                    // Free-up memory
+                    hexSumCache.clear();
+                    selectedFooterDict.clear(); // Clears all data from the map, making it empty again
+                    selectedListItem = nullptr;
+                    lastSelectedListItem = nullptr;
+                    
+                    tsl::goBack();
+                    //tsl::goBack();
+                    //tsl::changeTo<MainMenu>();
+                    
+                    //tsl::Overlay::get()->close();
+                    simulatedBackComplete = true;
+                    return true;
+                }
+            } else if (usingPages && lastPage == "right") {
+                if ((keysHeld & KEY_B) && !stillTouching) {
+                    ////closeInterpreterThread();
+                    inPackageMenu = false;
+                    returningToMain = true;
+                    
+                    // Free-up memory
+                    hexSumCache.clear();
+                    selectedFooterDict.clear(); // Clears all data from the map, making it empty again
+                    selectedListItem = nullptr;
+                    lastSelectedListItem = nullptr;
+                    
+                    lastPage = "left";
+                    tsl::goBack();
+                    //tsl::goBack();
+                    //tsl::goBack();
+                    //tsl::changeTo<MainMenu>();
+                    
+                    //tsl::Overlay::get()->close();
+                    simulatedBackComplete = true;
+                    return true;
+                }
             }
         }
         
         if (!returningToSubPackage && inSubPackageMenu) {
-            if (simulatedMenu && !simulatedMenuComplete && !_runningInterpreter) {
+            if (simulatedMenu && !simulatedMenuComplete) {
                 simulatedMenu = false;
                 simulatedMenuComplete = true;
             }
 
-            if (simulatedNextPage && !simulatedNextPageComplete && !_runningInterpreter) {
+            if (simulatedNextPage && !simulatedNextPageComplete) {
                 simulatedNextPage = false;
                 simulatedNextPageComplete = true;
             }
 
-            if (simulatedBack && !simulatedBackComplete && !_runningInterpreter) {
+            if (simulatedBack && !simulatedBackComplete) {
                 keysHeld |= KEY_B;
                 simulatedBack = false;
             }
-            if ((keysHeld & KEY_B) && !stillTouching && !_runningInterpreter) {
-                inSubPackageMenu = false;
-                returningToPackage = true;
-                lastMenu = "packageMenu";
-                tsl::goBack();
-                
-                //tsl::Overlay::get()->close();
-                simulatedBackComplete = true;
-                return true;
-            }
-            // Check for back button press
-            if ((keysHeld & KEY_R) && !stillTouching && _runningInterpreter) {
-                commandSuccess = false;
-                abortDownload.store(true, std::memory_order_release);
-                abortUnzip.store(true, std::memory_order_release);
-                abortFileOp.store(true, std::memory_order_release);
-                abortCommand.store(true, std::memory_order_release);
-                return true;
+            if (!usingPages || (usingPages && lastPage == "left")) {
+                if ((keysHeld & KEY_B) && !stillTouching) {
+                    ////closeInterpreterThread();
+                    inSubPackageMenu = false;
+                    returningToPackage = true;
+                    lastMenu = "packageMenu";
+                    tsl::goBack();
+                    
+                    //tsl::Overlay::get()->close();
+                    simulatedBackComplete = true;
+                    return true;
+                }
+            } else if (usingPages && lastPage == "right") {
+                if ((keysHeld & KEY_B) && !stillTouching) {
+                    ////closeInterpreterThread();
+                    inSubPackageMenu = false;
+                    returningToPackage = true;
+                    lastMenu = "packageMenu";
+                    //tsl::goBack();
+                    tsl::goBack();
+                    
+                    //tsl::Overlay::get()->close();
+                    simulatedBackComplete = true;
+                    return true;
+                }
             }
         }
         
@@ -3106,9 +3230,13 @@ public:
                         
                         // Add a click listener to load the overlay when clicked upon
                         listItem->setClickListener([this, overlayFile, newStarred, overlayFileName, overlayName](s64 keys) {
-                            bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
+                            bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+                            if (_runningInterpreter) {
 
-                            if (simulatedSelect && !simulatedSelectComplete && !_runningInterpreter) {
+                                return false;
+                            }
+
+                            if (simulatedSelect && !simulatedSelectComplete) {
                                 keys |= KEY_A;
                                 simulatedSelect = false;
                             }
@@ -3170,9 +3298,11 @@ public:
                     
                     //std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(option.second, pathReplace);
                     listItem->setClickListener([this](uint64_t keys) {
-                        bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
+                        bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+                        if (_runningInterpreter)
+                            return false;
 
-                        if (simulatedSelect && !simulatedSelectComplete && !_runningInterpreter) {
+                        if (simulatedSelect && !simulatedSelectComplete) {
                             keys |= KEY_A;
                             simulatedSelect = false;
                         }
@@ -3327,9 +3457,13 @@ public:
                     
                     // Add a click listener to load the overlay when clicked upon
                     listItem->setClickListener([this, packageFilePath, newStarred, packageName](s64 keys) {
-                        bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
+                        bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+                        if (_runningInterpreter) {
 
-                        if (simulatedSelect && !simulatedSelectComplete && !_runningInterpreter) {
+                            return false;
+                        }
+
+                        if (simulatedSelect && !simulatedSelectComplete) {
                             keys |= KEY_A;
                             simulatedSelect = false;
                         }
@@ -3393,8 +3527,11 @@ public:
             if (!hiddenPackageList.empty() && !inHiddenMode) {
                 listItem = new tsl::elm::ListItem(HIDDEN, DROPDOWN_SYMBOL);
                 listItem->setClickListener([this](uint64_t keys) {
-                    bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
-                    if (simulatedSelect && !simulatedSelectComplete && !_runningInterpreter) {
+                    bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+                    if (_runningInterpreter)
+                        return false;
+
+                    if (simulatedSelect && !simulatedSelectComplete) {
                         keys |= KEY_A;
                         simulatedSelect = false;
                     }
@@ -3647,9 +3784,11 @@ public:
                             
                             //std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(option.second, pathReplace);
                             listItem->setClickListener([this, commands, keyName = option.first, packagePath = packageDirectory, listItem](uint64_t keys) {
-                                bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
+                                bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+                                if (_runningInterpreter)
+                                    return false;
 
-                                if (simulatedSelect && !simulatedSelectComplete && !_runningInterpreter) {
+                                if (simulatedSelect && !simulatedSelectComplete) {
                                     keys |= KEY_A;
                                     simulatedSelect = false;
                                 }
@@ -3685,58 +3824,64 @@ public:
                                 if (sourceType == "json") { // For JSON wildcards
                                     
                                     listItem->setClickListener([this, i, commands, packagePath = packageDirectory, keyName = option.first, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
-                                        bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
+                                        static bool lastRunningInterpreter = false;
 
-                                        if (simulatedSelect && !simulatedSelectComplete && !_runningInterpreter) {
+                                        bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+                                        if (_runningInterpreter) {
+                                            //int currentPercentage = downloadPercentage.load(std::memory_order_acquire);
+                                            //logMessage("currentPercentage: "+std::to_string(currentPercentage));
+                                            if (downloadPercentage.load(std::memory_order_acquire) != -1) {
+                                                lastSelectedListItem->setValue(DOWNLOAD_SYMBOL + " " + std::to_string(downloadPercentage.load(std::memory_order_acquire))+"%");
+                                                if (downloadPercentage.load(std::memory_order_acquire) == 100)
+                                                    downloadPercentage.store(-1, std::memory_order_release);
+                                            }
+                                            
+                                            if (threadFailure.load(std::memory_order_acquire)) {
+                                                threadFailure.store(false, std::memory_order_release);
+                                                commandSuccess = false;
+                                                //lastRunningInterpreter = true;
+                                                //logMessage("killing command");
+                                            }
+                                            return false;
+                                        }
+
+                                        if (lastRunningInterpreter) {
+                                            isDownloadCommand = false;
+
+                                            if (commandSuccess)
+                                                lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
+                                            else
+                                                lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
+                                            ////closeInterpreterThread();
+                                            lastRunningInterpreter = false;
+                                        }
+
+
+                                        if (simulatedSelect && !simulatedSelectComplete) {
                                             keys |= KEY_A;
                                             simulatedSelect = false;
                                         }
 
-                                        static bool lastRunningInterpreter = false;
-                                        int currentPercentage = downloadPercentage.load(std::memory_order_acquire);
-                                        if (currentPercentage != -1) {
-                                            lastSelectedListItem->setValue(DOWNLOAD_SYMBOL + " " + std::to_string(currentPercentage)+"%");
-                                            if (currentPercentage == 100)
-                                                downloadPercentage.store(-1, std::memory_order_release);
-                                        }
 
-                                        if (threadFailure.load(std::memory_order_acquire)) {
-                                            threadFailure.store(false, std::memory_order_release);
-                                            commandSuccess = false;
+                                        if ((keys & KEY_A)) {
+                                            
+                                            //std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commands, selectedItem, i);
+                                            //applySourceReplacement(commands, selectedItem, i);
+                                            //commands = getSourceReplacement(commands, selectedItem, i);
+                                            isDownloadCommand = false;
+                                            runningInterpreter.store(true, std::memory_order_release);
+                                            enqueueInterpreterCommand(getSourceReplacement(commands, selectedItem, i), packagePath, keyName);
+                                            //modifiedCmds.clear();
+                                            //runningInterpreter.store(true, std::memory_order_release);
+                                            //lastRunningInterpreter = true;
+                                            if (isDownloadCommand)
+                                                listItem->setValue(DOWNLOAD_SYMBOL);
+                                            else
+                                                listItem->setValue(INPROGRESS_SYMBOL);
+                                            lastSelectedListItem = listItem;
+                                            
+
                                             lastRunningInterpreter = true;
-                                            //logMessage("killing command");
-                                        }
-
-                                        if ((keys & KEY_A) || (_runningInterpreter || (!_runningInterpreter && lastRunningInterpreter))) {
-                                            
-                                            if (!_runningInterpreter && !lastRunningInterpreter) {
-                                                //std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commands, selectedItem, i);
-                                                //applySourceReplacement(commands, selectedItem, i);
-                                                //commands = getSourceReplacement(commands, selectedItem, i);
-                                                isDownloadCommand = false;
-                                                enqueueInterpreterCommand(getSourceReplacement(commands, selectedItem, i), packagePath, keyName);
-                                                //modifiedCmds.clear();
-                                                runningInterpreter.store(true, std::memory_order_release);
-                                                
-                                                if (isDownloadCommand)
-                                                    listItem->setValue(DOWNLOAD_SYMBOL);
-                                                else
-                                                    listItem->setValue(INPROGRESS_SYMBOL);
-                                                lastSelectedListItem = listItem;
-                                            }
-                                            
-
-                                            if (!_runningInterpreter && lastRunningInterpreter) {
-                                                isDownloadCommand = false;
-
-                                                if (commandSuccess)
-                                                    lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
-                                                else
-                                                    lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
-                                                closeInterpreterThread();
-                                            }
-
-                                            lastRunningInterpreter = _runningInterpreter;
                                             
     
                                             simulatedSelectComplete = true;
@@ -3753,60 +3898,64 @@ public:
                                 } else {
                                     
                                     listItem->setClickListener([this, i, commands, packagePath = packageDirectory, keyName = option.first, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
-                                        bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
-                                        if (simulatedSelect && !simulatedSelectComplete && !_runningInterpreter) {
+                                        static bool lastRunningInterpreter = false;
+                                        bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+                                        if (_runningInterpreter) {
+                                            //int currentPercentage = downloadPercentage.load(std::memory_order_acquire);
+                                            //logMessage("currentPercentage: "+std::to_string(currentPercentage));
+                                            if (downloadPercentage.load(std::memory_order_acquire) != -1) {
+                                                lastSelectedListItem->setValue(DOWNLOAD_SYMBOL + " " + std::to_string(downloadPercentage.load(std::memory_order_acquire))+"%");
+                                                if (downloadPercentage.load(std::memory_order_acquire) == 100)
+                                                    downloadPercentage.store(-1, std::memory_order_release);
+                                            }
+                                            if (threadFailure.load(std::memory_order_acquire)) {
+                                                threadFailure.store(false, std::memory_order_release);
+                                                commandSuccess = false;
+                                                //lastRunningInterpreter = true;
+                                                //logMessage("killing command");
+                                            }
+                                            return false;
+                                        }
+
+                                        if (lastRunningInterpreter) {
+                                            isDownloadCommand = false;
+
+                                            if (commandSuccess)
+                                                lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
+                                            else
+                                                lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
+                                            ////closeInterpreterThread();
+                                            lastRunningInterpreter = false;
+                                        }
+
+                                        if (simulatedSelect && !simulatedSelectComplete) {
                                             keys |= KEY_A;
                                             simulatedSelect = false;
                                         }
                                         
-                                        static bool lastRunningInterpreter = false;
-                                        int currentPercentage = downloadPercentage.load(std::memory_order_acquire);
-                                        if (currentPercentage != -1) {
-                                            lastSelectedListItem->setValue(DOWNLOAD_SYMBOL + " " + std::to_string(currentPercentage)+"%");
-                                            if (currentPercentage == 100)
-                                                downloadPercentage.store(-1, std::memory_order_release);
-                                        }
 
-                                        if (threadFailure.load(std::memory_order_acquire)) {
-                                            threadFailure.store(false, std::memory_order_release);
-                                            commandSuccess = false;
-                                            lastRunningInterpreter = true;
-                                            //logMessage("killing command");
-                                        }
-
-                                        if ((keys & KEY_A) || (_runningInterpreter || (!_runningInterpreter && lastRunningInterpreter))) {
-
+                                        if ((keys & KEY_A)) {
                                             
                                             //modifiedCmds = getSecondaryReplacement(modifiedCmds); // replace list and json
                                             
-                                            if (!_runningInterpreter && !lastRunningInterpreter) {
-                                                //std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commands, selectedItem, i);
-                                                //applySourceReplacement(commands, selectedItem, i);
-                                                //commands = getSourceReplacement(commands, selectedItem, i);
-                                                isDownloadCommand = false;
-                                                enqueueInterpreterCommand(getSourceReplacement(commands, selectedItem, i), packagePath, keyName);
-                                                //modifiedCmds.clear();
-                                                runningInterpreter.store(true, std::memory_order_release);
-                                                
-                                                if (isDownloadCommand)
-                                                    listItem->setValue(DOWNLOAD_SYMBOL);
-                                                else
-                                                    listItem->setValue(INPROGRESS_SYMBOL);
-                                                lastSelectedListItem = listItem;
-                                            }
+                                            //std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commands, selectedItem, i);
+                                            //applySourceReplacement(commands, selectedItem, i);
+                                            //commands = getSourceReplacement(commands, selectedItem, i);
+                                            isDownloadCommand = false;
+                                            runningInterpreter.store(true, std::memory_order_release);
+                                            enqueueInterpreterCommand(getSourceReplacement(commands, selectedItem, i), packagePath, keyName);
+                                            //lastRunningInterpreter = true;
+                                            //modifiedCmds.clear();
+                                            //runningInterpreter.store(true, std::memory_order_release);
                                             
-
-                                            if (!_runningInterpreter && lastRunningInterpreter) {
-                                                isDownloadCommand = false;
-
-                                                if (commandSuccess)
-                                                    lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
-                                                else
-                                                    lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
-                                                closeInterpreterThread();
-                                            }
+                                            if (isDownloadCommand)
+                                                listItem->setValue(DOWNLOAD_SYMBOL);
+                                            else
+                                                listItem->setValue(INPROGRESS_SYMBOL);
+                                            lastSelectedListItem = listItem;
                                             
-                                            lastRunningInterpreter = _runningInterpreter;
+                                            
+                                            lastRunningInterpreter = true;
                                             simulatedSelectComplete = true;
                                             return true;
                                         } else if (keys & SCRIPT_KEY) {
@@ -3889,9 +4038,28 @@ public:
         //    simulatedBackComplete = true;
         //}
 
+        bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+        if (_runningInterpreter) {
+            // Check for back button press
+            if ((keysHeld & KEY_R) && !stillTouching) {
+                commandSuccess = false;
+                abortDownload.store(true, std::memory_order_release);
+                abortUnzip.store(true, std::memory_order_release);
+                abortFileOp.store(true, std::memory_order_release);
+                abortCommand.store(true, std::memory_order_release);
+                return true;
+            }
+            return false;
+        }
+
         if (refreshGui) {
-            tsl::changeTo<MainMenu>(lastMenuMode);
             refreshGui = false;
+            ////closeInterpreterThread();
+            tsl::goBack();
+            setIniFileValue(settingsConfigIniPath, "ultrahand", "last_menu", "packages");
+            returningToMain = true;
+            tsl::changeTo<MainMenu>();
+            return true;
         }
         
         if (inMainMenu && !inHiddenMode){
@@ -3899,8 +4067,8 @@ public:
                 tsl::Overlay::get()->close();
             
             if (!freshSpawn && !returningToMain && !returningToHiddenMain) {
-                bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
-                if (simulatedNextPage && !simulatedNextPageComplete && !_runningInterpreter) {
+                
+                if (simulatedNextPage && !simulatedNextPageComplete) {
                     if (menuMode != "packages") {
                         keysHeld |= KEY_DRIGHT;
                         simulatedNextPage = false;
@@ -3926,18 +4094,18 @@ public:
                     if (menuMode != "overlays") {
                         setIniFileValue(settingsConfigIniPath, "ultrahand", "last_menu", "overlays");
                         tsl::goBack();
-                        tsl::changeTo<MainMenu>();
+                        tsl::Overlay::get()->getCurrentGui()->removeFocus();
                         simulatedNextPageComplete = true;
                         return true;
                     }
                 }
 
-                if (simulatedBack && !simulatedBackComplete && !_runningInterpreter) {
+                if (simulatedBack && !simulatedBackComplete) {
                     keysHeld |= KEY_B;
                     simulatedBack = false;
                 }
 
-                if ((keysHeld & KEY_B) && !stillTouching && !_runningInterpreter) {
+                if ((keysHeld & KEY_B) && !stillTouching) {
                     //inMainMenu = false;
                     setIniFileValue(settingsConfigIniPath, "ultrahand", "last_menu", defaultMenuMode);
                     tsl::Overlay::get()->close();
@@ -3945,17 +4113,7 @@ public:
                     return true;
                 }
 
-                // Check for back button press
-                if ((keysHeld & KEY_R) && !stillTouching && _runningInterpreter) {
-                    commandSuccess = false;
-                    abortDownload.store(true, std::memory_order_release);
-                    abortUnzip.store(true, std::memory_order_release);
-                    abortFileOp.store(true, std::memory_order_release);
-                    abortCommand.store(true, std::memory_order_release);
-                    return true;
-                }
-
-                if (simulatedMenu && !simulatedMenuComplete && !_runningInterpreter) {
+                if (simulatedMenu && !simulatedMenuComplete) {
                     keysHeld |= SYSTEM_SETTINGS_KEY;
                     simulatedMenu = false;
                 }
@@ -3969,24 +4127,23 @@ public:
         }
         if (!inMainMenu && inHiddenMode) {
             if (!returningToHiddenMain && !returningToMain) {
-                bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
 
-                if (simulatedNextPage && !simulatedNextPageComplete && !_runningInterpreter) {
+                if (simulatedNextPage && !simulatedNextPageComplete) {
                     simulatedNextPage = false;
                     simulatedNextPageComplete = true;
                 }
 
-                if (simulatedMenu && !simulatedMenuComplete && !_runningInterpreter) {
+                if (simulatedMenu && !simulatedMenuComplete) {
                     simulatedMenu = false;
                     simulatedMenuComplete = true;
                 }
 
-                if (simulatedBack && !simulatedBackComplete && !_runningInterpreter) {
+                if (simulatedBack && !simulatedBackComplete) {
                     keysHeld |= KEY_B;
                     simulatedBack = false;
                 }
 
-                if ((keysHeld & KEY_B) && !stillTouching  && !_runningInterpreter) {
+                if ((keysHeld & KEY_B) && !stillTouching) {
                     returningToMain = true;
                     inHiddenMode = false;
                     
@@ -4000,16 +4157,6 @@ public:
                     
                     tsl::goBack();
                     simulatedBackComplete = true;
-                    return true;
-                }
-
-                // Check for back button press
-                if ((keysHeld & KEY_R) && !stillTouching && _runningInterpreter) {
-                    commandSuccess = false;
-                    abortDownload.store(true, std::memory_order_release);
-                    abortUnzip.store(true, std::memory_order_release);
-                    abortFileOp.store(true, std::memory_order_release);
-                    abortCommand.store(true, std::memory_order_release);
                     return true;
                 }
             }
@@ -4068,7 +4215,7 @@ public:
         ASSERT_FATAL(socketInitializeDefault());
         ASSERT_FATAL(nifmInitialize(NifmServiceType_User));
         ASSERT_FATAL(smInitialize());
-        //startInterpreterThread();
+        startInterpreterThread();
     }
     
     /**
@@ -4086,7 +4233,7 @@ public:
         spsmExit();
         splExit();
         fsdevUnmountAll();
-        //closeInterpreterThread();
+        closeInterpreterThread();
     }
     
     /**
