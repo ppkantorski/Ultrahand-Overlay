@@ -29,7 +29,7 @@
 
 #include <tesla.hpp>
 #include <utils.hpp>
-
+#include <fstream>
 
 // Overlay booleans
 static bool returningToMain = false;
@@ -75,6 +75,10 @@ static auto selectedListItem = static_cast<tsl::elm::ListItem*>(nullptr);
 static auto lastSelectedListItem = static_cast<tsl::elm::ListItem*>(nullptr);
 
 //static tsl::elm::OverlayFrame* rootFrame = nullptr;
+//std::unique_ptr<tsl::elm::OverlayFrame> rootFrame = std::make_unique<tsl::elm::OverlayFrame>("", "");
+//std::unique_ptr<tsl::elm::List> list = std::make_unique<tsl::elm::List>();
+
+
 
 static std::string hideUserGuide = "false";
 
@@ -149,7 +153,7 @@ public:
         std::vector<std::string> defaultLanguages = {"en", "es", "fr", "de", "ja", "ko", "it", "nl", "pt", "ru", "zh-cn", "zh-tw"};
         
         tsl::elm::List *list = new tsl::elm::List();
-        
+        //list = std::make_unique<tsl::elm::List>();
         
         if (dropdownSelection.empty()) {
             list->addItem(new tsl::elm::CategoryHeader(MAIN_SETTINGS));
@@ -827,7 +831,11 @@ public:
 
         tsl::elm::OverlayFrame *rootFrame = new tsl::elm::OverlayFrame("Ultrahand", versionLabel);
         rootFrame->setContent(list);
-        list = nullptr;
+        list->clear();
+
+        //rootFrame = std::make_unique<tsl::elm::OverlayFrame>("Ultrahand", versionLabel);
+        //rootFrame->setContent(list.release());
+
         return rootFrame;
     }
     
@@ -1002,7 +1010,7 @@ public:
             inSubSettingsMenu = true;
         
         tsl::elm::List *list = new tsl::elm::List();
-        
+        //list = std::make_unique<tsl::elm::List>();
         
         if (dropdownSelection.empty()) {
             list->addItem(new tsl::elm::CategoryHeader(header+" "+SETTINGS));
@@ -1134,9 +1142,11 @@ public:
         
 
         tsl::elm::OverlayFrame *rootFrame = new tsl::elm::OverlayFrame("Ultrahand", versionLabel);
-        //rootFrame = new tsl::elm::OverlayFrame(entryName, "Ultrahand Settings");
+        
+        //tsl::elm::OverlayFrame *rootFrame = new tsl::elm::OverlayFrame(entryName, "Ultrahand Settings");
         rootFrame->setContent(list);
-        list = nullptr;
+        list->clear();
+        
         return rootFrame;
     }
     
@@ -1302,6 +1312,7 @@ public:
             packageName = ROOT_PACKAGE;
         
         tsl::elm::List *list = new tsl::elm::List();
+        //list = std::make_unique<tsl::elm::List>();
         
         std::string packageFile = filePath + packageFileName;
         std::string fileContent = getFileContents(packageFile);
@@ -1385,8 +1396,11 @@ public:
         
 
         tsl::elm::OverlayFrame *rootFrame = new tsl::elm::OverlayFrame(packageName, "Ultrahand Script");
+        //rootFrame = std::make_unique<tsl::elm::OverlayFrame>(packageName, "Ultrahand Script");
+        //rootFrame->setContent(list.release());
         rootFrame->setContent(list);
-        list = nullptr;
+        list->clear();
+        //list = nullptr;
         return rootFrame;
     }
     
@@ -1519,6 +1533,7 @@ public:
         std::vector<std::string> filesList, filesListOn, filesListOff, filterList, filterListOn, filterListOff;
         
         tsl::elm::List *list = new tsl::elm::List();
+        //list = std::make_unique<tsl::elm::List>();
         
         packageConfigIniPath = filePath + configFileName;
         
@@ -1986,7 +2001,10 @@ public:
         
         tsl::elm::OverlayFrame *rootFrame = new tsl::elm::OverlayFrame(getNameFromPath(filePath), "Ultrahand Package", "", packageHeader.color);
         rootFrame->setContent(list);
-        list = nullptr;
+        list->clear();
+        //rootFrame = std::make_unique<tsl::elm::OverlayFrame>(getNameFromPath(filePath), "Ultrahand Package", "", packageHeader.color);
+        //rootFrame->setContent(list.release());
+
         return rootFrame;
     }
     
@@ -2025,7 +2043,7 @@ public:
             return false;
         }
 
-        if (refreshGui) {
+        if (refreshGui && !stillTouching) {
             tsl::goBack();
             tsl::changeTo<SelectionOverlay>(filePath, specificKey, commands, specifiedFooterKey);
             refreshGui = false;
@@ -2115,6 +2133,9 @@ public:
     ~PackageMenu() {
         //logMessage("Clearing footer dict...");
         selectedFooterDict.clear();
+        hexSumCache.clear();
+        //    selectedListItem = new tsl::elm::ListItem("");
+        //    lastSelectedListItem = new tsl::elm::ListItem("");
         //if (returningToMain) {
         //    hexSumCache.clear();
         //    selectedFooterDict.clear(); // Clears all data from the map, making it empty again
@@ -2150,6 +2171,7 @@ public:
         
         //rootFrame = new tsl::elm::OverlayFrame(getNameFromPath(packagePath), "Ultrahand Package", "", packageHeader.color);
         tsl::elm::List* list = new tsl::elm::List();
+        //list = std::make_unique<tsl::elm::List>();
         auto listItem = static_cast<tsl::elm::ListItem*>(nullptr);
         auto toggleListItem = static_cast<tsl::elm::ToggleListItem*>(nullptr);
         bool toggleStateOn;
@@ -2629,15 +2651,22 @@ public:
         filesList.clear();
 
         tsl::elm::OverlayFrame *rootFrame = nullptr;
+        //rootFrame = std::make_unique<tsl::elm::OverlayFrame>(getNameFromPath(packagePath), "Ultrahand Package", "", packageHeader.color);
+
         if (usingPages) {
-            if (currentPage == "left")
+            if (currentPage == "left") {
                 rootFrame = new tsl::elm::OverlayFrame(getNameFromPath(packagePath), "Ultrahand Package", "", packageHeader.color, "", pageRightName);
-            else if (currentPage == "right")
+            }
+            else if (currentPage == "right") {
                 rootFrame = new tsl::elm::OverlayFrame(getNameFromPath(packagePath), "Ultrahand Package", "", packageHeader.color, pageLeftName, "");
-        } else
+            }
+        } else {
             rootFrame = new tsl::elm::OverlayFrame(getNameFromPath(packagePath), "Ultrahand Package", "", packageHeader.color);
+        }
+
         rootFrame->setContent(list);
-        list = nullptr;
+        list->clear();
+
         return rootFrame;
     }
     
@@ -2679,7 +2708,7 @@ public:
         }
 
         // Your existing logic for handling other inputs
-        if (refreshGui && !returningToPackage) {
+        if (refreshGui && !returningToPackage && !stillTouching) {
             refreshGui = false;
             //tsl::changeTo<PackageMenu>(packagePath);
             ////closeInterpreterThread();
@@ -3040,6 +3069,8 @@ public:
         
         
         tsl::elm::List *list = new tsl::elm::List();
+        //list = std::make_unique<tsl::elm::List>();
+
         tsl::elm::ListItem* listItem = nullptr;
         
         if (!hiddenMenuMode.empty())
@@ -3058,13 +3089,24 @@ public:
             std::vector<std::string> overlayFiles = getFilesListByWildcard(overlayDirectory+"*.ovl");
             
             
-            FILE* overlaysIniFile = fopen(overlaysIniFilePath.c_str(), "r");
-            if (!overlaysIniFile) {
-                fclose(fopen(overlaysIniFilePath.c_str(), "w")); // The INI file doesn't exist, so create an empty one.
-                initializingSpawn = true;
-            } else
-                fclose(overlaysIniFile); // The file exists, so close it.
-            
+            // Check if the overlays INI file exists
+            std::ifstream overlaysIniFile(overlaysIniFilePath);
+            if (!overlaysIniFile.is_open()) {
+                // The INI file doesn't exist, so create an empty one.
+                std::ofstream createFile(overlaysIniFilePath);
+                if (!createFile.is_open()) {
+                    // Handle the case where the file couldn't be created
+                    //initializingSpawn = false; // Or any other appropriate action
+                } else {
+                    // File created successfully
+                    initializingSpawn = true;
+                }
+            } else {
+                // The file exists
+                //initializingSpawn = true; // Or any other appropriate action
+            }
+            overlaysIniFile.close(); // Close the file
+
             // load overlayList from overlaysIniFilePath.  this will be the overlayFilenames
             std::vector<std::string> overlayList;
             std::vector<std::string> hiddenOverlayList;
@@ -3330,12 +3372,14 @@ public:
             createDirectory(packageDirectory);
             
             
-            FILE* packagesIniFile = fopen(packagesIniFilePath.c_str(), "r");
-            if (!packagesIniFile) {
-                fclose(fopen(packagesIniFilePath.c_str(), "w")); // The INI file doesn't exist, so create an empty one.
+            std::fstream packagesIniFile(packagesIniFilePath, std::ios::in);
+            if (!packagesIniFile.is_open()) {
+                std::ofstream createFile(packagesIniFilePath); // Create an empty INI file if it doesn't exist
+                createFile.close();
                 initializingSpawn = true;
-            } else
-                fclose(packagesIniFile); // The file exists, so close it.
+            } else {
+                packagesIniFile.close();
+            }
             
             std::vector<std::string> packageList;
             std::vector<std::string> hiddenPackageList;
@@ -4011,8 +4055,10 @@ public:
         filesList.clear();
 
         tsl::elm::OverlayFrame *rootFrame = new tsl::elm::OverlayFrame("Ultrahand", versionLabel, menuMode+hiddenMenuMode);
+        //rootFrame = std::make_unique<tsl::elm::OverlayFrame>("Ultrahand", versionLabel, menuMode+hiddenMenuMode);
+
         rootFrame->setContent(list);
-        list = nullptr;
+        list->clear();
         
         return rootFrame;
     }
@@ -4052,7 +4098,7 @@ public:
             return false;
         }
 
-        if (refreshGui) {
+        if (refreshGui && !stillTouching) {
             refreshGui = false;
             ////closeInterpreterThread();
             tsl::goBack();

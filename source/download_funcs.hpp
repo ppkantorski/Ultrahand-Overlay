@@ -40,6 +40,14 @@ static std::atomic<int> downloadPercentage(-1);
 static std::atomic<int> unzipPercentage(-1);
 
 
+// Define a custom deleter for the unique_ptr to properly clean up the CURL handle
+struct CurlDeleter {
+    void operator()(CURL* curl) const {
+        curl_easy_cleanup(curl);
+    }
+};
+
+
 // Callback function to write received data to a file.
 size_t writeCallback(void* contents, size_t size, size_t nmemb, FILE* file) {
     return fwrite(contents, size, nmemb, file);
@@ -84,13 +92,13 @@ bool downloadFile(const std::string& url, const std::string& toDestination) {
         logMessage(std::string("Invalid URL: ") + url);
         return false;
     }
-    
-    std::string destination = toDestination.c_str();
-    
+
+    std::string destination = toDestination;
+
     // Check if the destination ends with "/"
     if (destination.back() == '/') {
         createDirectory(destination);
-        
+
         // Extract the filename from the URL
         size_t lastSlash = url.find_last_of('/');
         if (lastSlash != std::string::npos) {
@@ -100,82 +108,64 @@ bool downloadFile(const std::string& url, const std::string& toDestination) {
             logMessage(std::string("Invalid URL: ") + url);
             return false;
         }
-        
+
     } else {
-        createDirectory(destination.substr(0, destination.find_last_of('/'))+"/");
+        createDirectory(destination.substr(0, destination.find_last_of('/')) + "/");
     }
-    
-    
-    //curl_global_init(CURL_GLOBAL_SSL);
-    const int MAX_RETRIES = 3;
-    int retryCount = 0;
-    CURL* curl = nullptr;
-    
-    while (retryCount < MAX_RETRIES) {
-        curl = curl_easy_init();
-        if (curl) {
-            // Successful initialization, break out of the loop
-            break;
-        } else {
-            // Failed initialization, increment retry count and try again
-            retryCount++;
-            logMessage("Error initializing curl. Retrying...");
-        }
-    }
+
+    // Initialize libcurl using a unique_ptr with custom deleter
+    std::unique_ptr<CURL, CurlDeleter> curl(curl_easy_init());
     if (!curl) {
-        // Failed to initialize curl after multiple attempts
-        logMessage("Error initializing curl after multiple retries.");
+        logMessage("Error initializing curl.");
         return false;
     }
-    
+
     FILE* file = fopen(destination.c_str(), "wb");
     if (!file) {
         logMessage(std::string("Error opening file: ") + destination);
-        curl_easy_cleanup(curl);
-        deleteFileOrDirectory(destination.c_str());
         return false;
     }
-    
 
-    curl_easy_setopt(curl, CURLOPT_PROGRESSFUNCTION, progressCallback);
-    curl_easy_setopt(curl, CURLOPT_PROGRESSDATA, &downloadPercentage);
-    curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
-    //curl_easy_setopt(curl, CURLOPT_BUFFERSIZE, downloadBufferSize);
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeCallback);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, file);
-    curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-    curl_easy_setopt(curl, CURLOPT_USERAGENT, "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36");
-    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-    
-    // If you have a cacert.pem file, you can set it as a trusted CA
-    //curl_easy_setopt(curl, CURLOPT_CAINFO, "sdmc:/config/ultrahand/cacert.pem");
-    
-    
-    //logMessage("destination: "+destination);
-    
-    CURLcode result = curl_easy_perform(curl);
-    curl_easy_cleanup(curl);
+    // Set libcurl options for progress tracking and writing data to the file
+    curl_easy_setopt(curl.get(), CURLOPT_URL, url.c_str());
+    curl_easy_setopt(curl.get(), CURLOPT_WRITEFUNCTION, writeCallback);
+    curl_easy_setopt(curl.get(), CURLOPT_WRITEDATA, file);
+    curl_easy_setopt(curl.get(), CURLOPT_PROGRESSFUNCTION, progressCallback);
+    curl_easy_setopt(curl.get(), CURLOPT_PROGRESSDATA, &downloadPercentage);
+    curl_easy_setopt(curl.get(), CURLOPT_NOPROGRESS, 0L);
+    curl_easy_setopt(curl.get(), CURLOPT_USERAGENT, "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36");
+    curl_easy_setopt(curl.get(), CURLOPT_FOLLOWLOCATION, 1L);
+
+    // Perform the download
+    CURLcode result = curl_easy_perform(curl.get());
     fclose(file);
-    //delete callbackData;
+
     if (result != CURLE_OK) {
         logMessage(std::string("Error downloading file: ") + curl_easy_strerror(result));
         deleteFileOrDirectory(destination.c_str());
         return false;
     }
-    
+
     // Check if the file is empty
-    long fileSize = ftell(file);
-    if (fileSize == 0) {
+    std::ifstream checkFile(destination);
+    if (!checkFile || checkFile.peek() == std::ifstream::traits_type::eof()) {
         logMessage(std::string("Error downloading file: Empty file"));
         deleteFileOrDirectory(destination.c_str());
         return false;
     }
-    
+    checkFile.close();
+
     logMessage("Download Complete!");
     return true;
 }
 
 
+// Define a custom deleter for the unique_ptr to properly close the ZZIP_DIR handle
+struct ZzipDirDeleter {
+    void operator()(ZZIP_DIR* dir) const {
+        zzip_dir_close(dir);
+    }
+};
 
 
 /**
@@ -188,7 +178,8 @@ bool downloadFile(const std::string& url, const std::string& toDestination) {
 bool unzipFile(const std::string& zipFilePath, const std::string& toDestination) {
     abortUnzip.store(false, std::memory_order_release); // Reset abort flag
 
-    ZZIP_DIR* dir = zzip_dir_open(zipFilePath.c_str(), nullptr);
+    // Open the ZIP archive using a unique_ptr with custom deleter
+    std::unique_ptr<ZZIP_DIR, ZzipDirDeleter> dir(zzip_dir_open(zipFilePath.c_str(), nullptr));
     if (!dir) {
         logMessage(std::string("Error opening zip file: ") + zipFilePath);
         return false;
@@ -196,7 +187,7 @@ bool unzipFile(const std::string& zipFilePath, const std::string& toDestination)
 
     bool success = true;
     ZZIP_DIRENT entry;
-    while (zzip_dir_read(dir, &entry)) {
+    while (zzip_dir_read(dir.get(), &entry)) {
         if (abortUnzip.load(std::memory_order_acquire)) {
             abortUnzip.store(false, std::memory_order_release); // Reset abort flag
             break;
@@ -247,7 +238,7 @@ bool unzipFile(const std::string& zipFilePath, const std::string& toDestination)
 
         createDirectory(directoryPath);
 
-        ZZIP_FILE* file = zzip_file_open(dir, entry.d_name, 0);
+        ZZIP_FILE* file = zzip_file_open(dir.get(), entry.d_name, 0);
         if (file) {
             FILE* outputFile = fopen(extractedFilePath.c_str(), "wb");
             if (outputFile) {
@@ -272,6 +263,5 @@ bool unzipFile(const std::string& zipFilePath, const std::string& toDestination)
         }
     }
 
-    zzip_dir_close(dir);
     return success;
 }
