@@ -5168,40 +5168,30 @@ namespace tsl {
         static void parseOverlaySettings() {
             hlp::ini::IniData parsedConfig = hlp::ini::readOverlaySettings(ULTRAHAND_CONFIG_FILE);
             
-            try {
-                u64 decodedKeys = hlp::comboStringToKeys(parsedConfig["ultrahand"]["key_combo"]); // CUSTOM MODIFICATION
-                if (decodedKeys)
-                    tsl::cfg::launchCombo = decodedKeys;
-            } catch (const std::exception& e) {}
+            u64 decodedKeys = hlp::comboStringToKeys(parsedConfig["ultrahand"]["key_combo"]); // CUSTOM MODIFICATION
+            if (decodedKeys)
+                tsl::cfg::launchCombo = decodedKeys;
             
-            try {
-                datetimeFormat = removeQuotes(parsedConfig["ultrahand"]["datetime_format"]); // read datetime_format
-            } catch (const std::exception& e) {}
+            datetimeFormat = removeQuotes(parsedConfig["ultrahand"]["datetime_format"]); // read datetime_format
             if (datetimeFormat.empty()) {
                 datetimeFormat = removeQuotes(DEFAULT_DT_FORMAT);
             }
             
-            try {
-                hideClock = removeQuotes(parsedConfig["ultrahand"]["hide_clock"]);
-            } catch (const std::exception& e) {}
+            hideClock = removeQuotes(parsedConfig["ultrahand"]["hide_clock"]);
             if (hideClock.empty())
                 hideClock = "false";
             
-            try {
-                hideBattery = removeQuotes(parsedConfig["ultrahand"]["hide_battery"]);
-            } catch (const std::exception& e) {}
+            hideBattery = removeQuotes(parsedConfig["ultrahand"]["hide_battery"]);
             if (hideBattery.empty())
                 hideBattery = "false";
             
-            try {
-                hidePCBTemp = removeQuotes(parsedConfig["ultrahand"]["hide_pcb_temp"]);
-            } catch (const std::exception& e) {}
+            hidePCBTemp = removeQuotes(parsedConfig["ultrahand"]["hide_pcb_temp"]);
+
             if (hidePCBTemp.empty())
                 hidePCBTemp = "false";
             
-            try {
-                hideSOCTemp = removeQuotes(parsedConfig["ultrahand"]["hide_soc_temp"]);
-            } catch (const std::exception& e) {}
+            hideSOCTemp = removeQuotes(parsedConfig["ultrahand"]["hide_soc_temp"]);
+            
             if (hideSOCTemp.empty())
                 hideSOCTemp = "false";
             
