@@ -77,6 +77,28 @@ json_t* readJsonFromFile(const std::string& filePath) {
 }
 
 
+/**
+ * @brief Parses a JSON string into a json_t object.
+ *
+ * This function takes a JSON string as input and parses it into a json_t object using Jansson library's `json_loads` function.
+ * If parsing fails, it logs the error and returns nullptr.
+ *
+ * @param input The input JSON string to parse.
+ * @return A json_t object representing the parsed JSON, or nullptr if parsing fails.
+ */
+json_t* stringToJson(const std::string& input) {
+    json_error_t error;
+    json_t* jsonObj = json_loads(input.c_str(), 0, &error);
+
+    if (!jsonObj) {
+        logMessage("Failed to parse JSON: " + std::string(error.text) + " at line " + std::to_string(error.line));
+        return nullptr; // Return nullptr to indicate failure clearly
+    }
+
+    return jsonObj;
+}
+
+
 
 /**
  * @brief Replaces a JSON source placeholder with the actual JSON source.
@@ -159,6 +181,7 @@ std::string replaceJsonPlaceholder(const std::string& arg, const std::string& co
     
     return replacement;
 }
+
 
 
 
