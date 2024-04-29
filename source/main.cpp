@@ -70,9 +70,9 @@ static std::string lastMenu = "";
 static std::string lastMenuMode = "";
 static std::string lastKeyName = "";
 
-std::unordered_map<std::string, std::string> selectedFooterDict;
-auto selectedListItem = static_cast<tsl::elm::ListItem*>(nullptr);
-auto lastSelectedListItem = static_cast<tsl::elm::ListItem*>(nullptr);
+static std::unordered_map<std::string, std::string> selectedFooterDict;
+static auto selectedListItem = static_cast<tsl::elm::ListItem*>(nullptr);
+static auto lastSelectedListItem = static_cast<tsl::elm::ListItem*>(nullptr);
 
 //static tsl::elm::OverlayFrame* rootFrame = nullptr;
 //std::unique_ptr<tsl::elm::OverlayFrame> rootFrame = std::make_unique<tsl::elm::OverlayFrame>("", "");
