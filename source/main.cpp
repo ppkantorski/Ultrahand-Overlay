@@ -75,8 +75,8 @@ static auto selectedListItem = static_cast<tsl::elm::ListItem*>(nullptr);
 static auto lastSelectedListItem = static_cast<tsl::elm::ListItem*>(nullptr);
 
 //static tsl::elm::OverlayFrame* rootFrame = nullptr;
-std::unique_ptr<tsl::elm::OverlayFrame> rootFrame = std::make_unique<tsl::elm::OverlayFrame>("", "");
-std::unique_ptr<tsl::elm::List> list = std::make_unique<tsl::elm::List>();
+//std::unique_ptr<tsl::elm::OverlayFrame> rootFrame = std::make_unique<tsl::elm::OverlayFrame>("", "");
+//std::unique_ptr<tsl::elm::List> list = std::make_unique<tsl::elm::List>();
 
 
 
@@ -152,8 +152,8 @@ public:
         };
         std::vector<std::string> defaultLanguages = {"en", "es", "fr", "de", "ja", "ko", "it", "nl", "pt", "ru", "zh-cn", "zh-tw"};
         
-        //tsl::elm::List *list = new tsl::elm::List();
-        list = std::make_unique<tsl::elm::List>();
+        tsl::elm::List *list = new tsl::elm::List();
+        //list = std::make_unique<tsl::elm::List>();
         
         if (dropdownSelection.empty()) {
             list->addItem(new tsl::elm::CategoryHeader(MAIN_SETTINGS));
@@ -829,13 +829,13 @@ public:
             list->addItem(new tsl::elm::ListItem(FAILED_TO_OPEN + ": " + settingsIniPath));
         
 
-        //tsl::elm::OverlayFrame *rootFrame = new tsl::elm::OverlayFrame("Ultrahand", versionLabel);
-        //rootFrame->setContent(list);
+        tsl::elm::OverlayFrame *rootFrame = new tsl::elm::OverlayFrame("Ultrahand", versionLabel);
+        rootFrame->setContent(list);
         
-        rootFrame = std::make_unique<tsl::elm::OverlayFrame>("Ultrahand", versionLabel);
-        rootFrame->setContent(list.release());
+        //rootFrame = std::make_unique<tsl::elm::OverlayFrame>("Ultrahand", versionLabel);
+        //rootFrame->setContent(list.release());
 
-        return rootFrame.release();
+        return rootFrame;
     }
     
     /**
@@ -1008,8 +1008,8 @@ public:
         else
             inSubSettingsMenu = true;
         
-        //tsl::elm::List *list = new tsl::elm::List();
-        list = std::make_unique<tsl::elm::List>();
+        tsl::elm::List *list = new tsl::elm::List();
+        //list = std::make_unique<tsl::elm::List>();
         
         if (dropdownSelection.empty()) {
             list->addItem(new tsl::elm::CategoryHeader(header+" "+SETTINGS));
@@ -1140,12 +1140,13 @@ public:
             list->addItem(new tsl::elm::ListItem(FAILED_TO_OPEN+": " + settingsIniPath));
         
 
-        //tsl::elm::OverlayFrame *rootFrame = new tsl::elm::OverlayFrame("Ultrahand", versionLabel);
-        rootFrame = std::make_unique<tsl::elm::OverlayFrame>("Ultrahand", versionLabel);
-        //rootFrame = new tsl::elm::OverlayFrame(entryName, "Ultrahand Settings");
-        rootFrame->setContent(list.release());
+        tsl::elm::OverlayFrame *rootFrame = new tsl::elm::OverlayFrame("Ultrahand", versionLabel);
         
-        return rootFrame.release();
+        rootFrame = new tsl::elm::OverlayFrame(entryName, "Ultrahand Settings");
+        //rootFrame = std::make_unique<tsl::elm::OverlayFrame>("Ultrahand", versionLabel);
+        //rootFrame->setContent(list.release());
+        
+        return rootFrame;
     }
     
     /**
@@ -1309,8 +1310,8 @@ public:
         if (packageName == ".packages")
             packageName = ROOT_PACKAGE;
         
-        //tsl::elm::List *list = new tsl::elm::List();
-        list = std::make_unique<tsl::elm::List>();
+        tsl::elm::List *list = new tsl::elm::List();
+        //list = std::make_unique<tsl::elm::List>();
         
         std::string packageFile = filePath + packageFileName;
         std::string fileContent = getFileContents(packageFile);
@@ -1393,11 +1394,12 @@ public:
             list->addItem(new tsl::elm::ListItem(FAILED_TO_OPEN+": " + packageFile));
         
 
-        //tsl::elm::OverlayFrame *rootFrame = new tsl::elm::OverlayFrame(packageName, "Ultrahand Script");
-        rootFrame = std::make_unique<tsl::elm::OverlayFrame>(packageName, "Ultrahand Script");
-        rootFrame->setContent(list.release());
+        tsl::elm::OverlayFrame *rootFrame = new tsl::elm::OverlayFrame(packageName, "Ultrahand Script");
+        //rootFrame = std::make_unique<tsl::elm::OverlayFrame>(packageName, "Ultrahand Script");
+        //rootFrame->setContent(list.release());
+        rootFrame->setContent(list);
         //list = nullptr;
-        return rootFrame.release();
+        return rootFrame;
     }
     
     /**
@@ -1528,8 +1530,8 @@ public:
         PackageHeader packageHeader = getPackageHeaderFromIni(filePath+packageFileName);
         std::vector<std::string> filesList, filesListOn, filesListOff, filterList, filterListOn, filterListOff;
         
-        //tsl::elm::List *list = new tsl::elm::List();
-        list = std::make_unique<tsl::elm::List>();
+        tsl::elm::List *list = new tsl::elm::List();
+        //list = std::make_unique<tsl::elm::List>();
         
         packageConfigIniPath = filePath + configFileName;
         
@@ -1995,13 +1997,13 @@ public:
         selectedItemsListOn.clear();
         selectedItemsListOff.clear();
         
-        //tsl::elm::OverlayFrame *rootFrame = new tsl::elm::OverlayFrame(getNameFromPath(filePath), "Ultrahand Package", "", packageHeader.color);
-        //rootFrame->setContent(list);
+        tsl::elm::OverlayFrame *rootFrame = new tsl::elm::OverlayFrame(getNameFromPath(filePath), "Ultrahand Package", "", packageHeader.color);
+        rootFrame->setContent(list);
         
-        rootFrame = std::make_unique<tsl::elm::OverlayFrame>(getNameFromPath(filePath), "Ultrahand Package", "", packageHeader.color);
-        rootFrame->setContent(list.release());
+        //rootFrame = std::make_unique<tsl::elm::OverlayFrame>(getNameFromPath(filePath), "Ultrahand Package", "", packageHeader.color);
+        //rootFrame->setContent(list.release());
 
-        return rootFrame.release();
+        return rootFrame;
     }
     
     /**
@@ -2163,8 +2165,8 @@ public:
         PackageHeader packageHeader = getPackageHeaderFromIni(packageIniPath);
         
         //rootFrame = new tsl::elm::OverlayFrame(getNameFromPath(packagePath), "Ultrahand Package", "", packageHeader.color);
-        //tsl::elm::List* list = new tsl::elm::List();
-        list = std::make_unique<tsl::elm::List>();
+        tsl::elm::List* list = new tsl::elm::List();
+        //list = std::make_unique<tsl::elm::List>();
         auto listItem = static_cast<tsl::elm::ListItem*>(nullptr);
         auto toggleListItem = static_cast<tsl::elm::ToggleListItem*>(nullptr);
         bool toggleStateOn;
@@ -2643,21 +2645,23 @@ public:
         options.clear();
         filesList.clear();
 
-        //tsl::elm::OverlayFrame *rootFrame = nullptr;
-        rootFrame = std::make_unique<tsl::elm::OverlayFrame>(getNameFromPath(packagePath), "Ultrahand Package", "", packageHeader.color);
+        tsl::elm::OverlayFrame *rootFrame = nullptr;
+        //rootFrame = std::make_unique<tsl::elm::OverlayFrame>(getNameFromPath(packagePath), "Ultrahand Package", "", packageHeader.color);
 
         if (usingPages) {
             if (currentPage == "left") {
-                rootFrame = std::make_unique<tsl::elm::OverlayFrame>(getNameFromPath(packagePath), "Ultrahand Package", "", packageHeader.color, "", pageRightName);
+                rootFrame = new tsl::elm::OverlayFrame(getNameFromPath(packagePath), "Ultrahand Package", "", packageHeader.color, "", pageRightName);
             }
             else if (currentPage == "right") {
-                rootFrame = std::make_unique<tsl::elm::OverlayFrame>(getNameFromPath(packagePath), "Ultrahand Package", "", packageHeader.color, pageLeftName, "");
+                rootFrame = new tsl::elm::OverlayFrame(getNameFromPath(packagePath), "Ultrahand Package", "", packageHeader.color, pageLeftName, "");
             }
+        } else {
+            rootFrame = new tsl::elm::OverlayFrame(getNameFromPath(packagePath), "Ultrahand Package", "", packageHeader.color);
         }
 
-        rootFrame->setContent(list.release());
+        rootFrame->setContent(list);
         
-        return rootFrame.release();
+        return rootFrame;
     }
     
     /**
@@ -3058,8 +3062,8 @@ public:
             versionLabel = APP_VERSION+std::string("   (")+ extractTitle(loaderInfo)+" v"+cleanVersionLabel(loaderInfo)+std::string(")");
         
         
-        //tsl::elm::List *list = new tsl::elm::List();
-        list = std::make_unique<tsl::elm::List>();
+        tsl::elm::List *list = new tsl::elm::List();
+        //list = std::make_unique<tsl::elm::List>();
 
         tsl::elm::ListItem* listItem = nullptr;
         
@@ -4044,13 +4048,13 @@ public:
         
         filesList.clear();
 
-        //tsl::elm::OverlayFrame *rootFrame = new tsl::elm::OverlayFrame("Ultrahand", versionLabel, menuMode+hiddenMenuMode);
-        rootFrame = std::make_unique<tsl::elm::OverlayFrame>("Ultrahand", versionLabel, menuMode+hiddenMenuMode);
+        tsl::elm::OverlayFrame *rootFrame = new tsl::elm::OverlayFrame("Ultrahand", versionLabel, menuMode+hiddenMenuMode);
+        //rootFrame = std::make_unique<tsl::elm::OverlayFrame>("Ultrahand", versionLabel, menuMode+hiddenMenuMode);
 
-        rootFrame->setContent(list.release());
+        rootFrame->setContent(list);
         
         
-        return rootFrame.release();
+        return rootFrame;
     }
     
     /**
