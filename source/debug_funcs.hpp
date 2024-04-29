@@ -16,7 +16,7 @@
  ********************************************************************************/
 
 #pragma once
-#include <cstdio>
+#include <fstream>
 
 // Specify the log file path
 const std::string logFilePath = "sdmc:/config/ultrahand/log.txt";
@@ -41,12 +41,13 @@ void logMessage(const std::string& message) {
     
     logEntry = "[" + logEntry + "] " + message + "\n";
     
-    FILE* file = fopen(logFilePath.c_str(), "a");
-    if (file != nullptr) {
-        fputs(logEntry.c_str(), file);
-        // If the file grows too large, consider implementing trimLog(file);
-        fclose(file);
+    // Open the file with std::ofstream in append mode
+    std::ofstream file(logFilePath, std::ios::app);
+    if (file.is_open()) {
+        file << logEntry;
+        file.close(); // Explicitly closing the file, though it will automatically close upon destruction
     } else {
         // Handle error when file opening fails, such as logging to an alternative output or retrying
+        //std::cerr << "Failed to open log file: " << logFilePath << std::endl;
     }
 }
