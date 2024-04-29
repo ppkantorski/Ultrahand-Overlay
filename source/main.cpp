@@ -70,9 +70,9 @@ static std::string lastMenu = "";
 static std::string lastMenuMode = "";
 static std::string lastKeyName = "";
 
-static std::unordered_map<std::string, std::string> selectedFooterDict;
-static auto selectedListItem = static_cast<tsl::elm::ListItem*>(nullptr);
-static auto lastSelectedListItem = static_cast<tsl::elm::ListItem*>(nullptr);
+std::unordered_map<std::string, std::string> selectedFooterDict;
+auto selectedListItem = static_cast<tsl::elm::ListItem*>(nullptr);
+auto lastSelectedListItem = static_cast<tsl::elm::ListItem*>(nullptr);
 
 //static tsl::elm::OverlayFrame* rootFrame = nullptr;
 //std::unique_ptr<tsl::elm::OverlayFrame> rootFrame = std::make_unique<tsl::elm::OverlayFrame>("", "");
@@ -831,7 +831,8 @@ public:
 
         tsl::elm::OverlayFrame *rootFrame = new tsl::elm::OverlayFrame("Ultrahand", versionLabel);
         rootFrame->setContent(list);
-        
+        list->clear();
+
         //rootFrame = std::make_unique<tsl::elm::OverlayFrame>("Ultrahand", versionLabel);
         //rootFrame->setContent(list.release());
 
@@ -1142,9 +1143,9 @@ public:
 
         tsl::elm::OverlayFrame *rootFrame = new tsl::elm::OverlayFrame("Ultrahand", versionLabel);
         
-        rootFrame = new tsl::elm::OverlayFrame(entryName, "Ultrahand Settings");
-        //rootFrame = std::make_unique<tsl::elm::OverlayFrame>("Ultrahand", versionLabel);
-        //rootFrame->setContent(list.release());
+        //tsl::elm::OverlayFrame *rootFrame = new tsl::elm::OverlayFrame(entryName, "Ultrahand Settings");
+        rootFrame->setContent(list);
+        list->clear();
         
         return rootFrame;
     }
@@ -1398,6 +1399,7 @@ public:
         //rootFrame = std::make_unique<tsl::elm::OverlayFrame>(packageName, "Ultrahand Script");
         //rootFrame->setContent(list.release());
         rootFrame->setContent(list);
+        list->clear();
         //list = nullptr;
         return rootFrame;
     }
@@ -1999,7 +2001,7 @@ public:
         
         tsl::elm::OverlayFrame *rootFrame = new tsl::elm::OverlayFrame(getNameFromPath(filePath), "Ultrahand Package", "", packageHeader.color);
         rootFrame->setContent(list);
-        
+        list->clear();
         //rootFrame = std::make_unique<tsl::elm::OverlayFrame>(getNameFromPath(filePath), "Ultrahand Package", "", packageHeader.color);
         //rootFrame->setContent(list.release());
 
@@ -2660,7 +2662,8 @@ public:
         }
 
         rootFrame->setContent(list);
-        
+        list->clear();
+
         return rootFrame;
     }
     
@@ -4052,7 +4055,7 @@ public:
         //rootFrame = std::make_unique<tsl::elm::OverlayFrame>("Ultrahand", versionLabel, menuMode+hiddenMenuMode);
 
         rootFrame->setContent(list);
-        
+        list->clear();
         
         return rootFrame;
     }
