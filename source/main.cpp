@@ -2132,7 +2132,10 @@ public:
      */
     ~PackageMenu() {
         //logMessage("Clearing footer dict...");
-        //selectedFooterDict.clear();
+        selectedFooterDict.clear();
+        hexSumCache.clear();
+        //    selectedListItem = new tsl::elm::ListItem("");
+        //    lastSelectedListItem = new tsl::elm::ListItem("");
         //if (returningToMain) {
         //    hexSumCache.clear();
         //    selectedFooterDict.clear(); // Clears all data from the map, making it empty again
