@@ -1618,7 +1618,7 @@ void closeInterpreterThread() {
 
 
 
-void startInterpreterThread(int stackSize = 0x9000) {
+void startInterpreterThread(int stackSize = 0x8000) {
     //if (isDownloadCommand)
     //    stackSize = 0x8000;
     interpreterThreadExit.store(false, std::memory_order_release);
