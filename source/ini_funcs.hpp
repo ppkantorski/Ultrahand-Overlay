@@ -65,40 +65,151 @@ struct PackageHeader {
 
 PackageHeader getPackageHeaderFromIni(const std::string& filePath) {
     PackageHeader packageHeader;
-    std::ifstream file(filePath);
-    if (!file.is_open()) {
-        logMessage("Failed to open the file: " +filePath);
-        return packageHeader; // Return empty header if file cannot be opened
+    
+    FILE* file = fopen(filePath.c_str(), "r");
+    if (file == nullptr) {
+        packageHeader.title = "";
+        packageHeader.version = "";
+        packageHeader.creator = "";
+        packageHeader.about = "";
+        packageHeader.credits = "";
+        packageHeader.color = "";
+        return packageHeader;
     }
-
-    std::string line;
-    const std::map<std::string, std::string*> headerFields = {
-        {";title=", &packageHeader.title},
-        {";version=", &packageHeader.version},
-        {";creator=", &packageHeader.creator},
-        {";about=", &packageHeader.about},
-        {";credits=", &packageHeader.credits},
-        {";color=", &packageHeader.color}
-    };
-
-    while (getline(file, line)) {
-        for (const auto& field : headerFields) {
-            size_t pos = line.find(field.first);
-            if (pos != std::string::npos) {
-                pos += field.first.length();
-                size_t endPos = line.find('\n', pos);
-                std::string value = trim(line.substr(pos, endPos - pos));
-                size_t quotePos = value.find("'");
-                if (quotePos != std::string::npos) {
-                    size_t endQuote = value.find("'", quotePos + 1);
-                    *field.second = value.substr(quotePos + 1, endQuote - quotePos - 1);
-                } else {
-                    *field.second = value;
-                }
+    
+    constexpr size_t BufferSize = 1024; // Choose a larger buffer size for reading lines
+    char line[BufferSize];
+    
+    const std::string titlePrefix = ";title=";
+    const std::string versionPrefix = ";version=";
+    const std::string creatorPrefix = ";creator=";
+    const std::string aboutPrefix = ";about=";
+    const std::string creditsPrefix = ";credits=";
+    const std::string colorPrefix = ";color=";
+    
+    size_t titlePos, versionPos, creatorPos, aboutPos, creditsPos, colorPos, startPos, endPos;
+    std::string strLine;
+    while (fgets(line, sizeof(line), file)) {
+        strLine = line;
+        
+        titlePos = strLine.find(titlePrefix);
+        if (titlePos != std::string::npos) {
+            titlePos += titlePrefix.length();
+            startPos = strLine.find("'", titlePos);
+            endPos = strLine.find("'", startPos + 1);
+            
+            if (startPos != std::string::npos && endPos != std::string::npos) {
+                // Value enclosed in single quotes
+                packageHeader.title = strLine.substr(startPos + 1, endPos - startPos - 1);
+            } else {
+                // Value not enclosed in quotes
+                packageHeader.title = strLine.substr(titlePos, endPos - titlePos);
             }
+            
+            // Remove trailing whitespace or newline characters
+            packageHeader.title.erase(packageHeader.title.find_last_not_of(" \t\r\n") + 1);
+        }
+        
+        versionPos = strLine.find(versionPrefix);
+        if (versionPos != std::string::npos) {
+            versionPos += versionPrefix.length();
+            startPos = strLine.find("'", versionPos);
+            endPos = strLine.find("'", startPos + 1);
+            
+            if (startPos != std::string::npos && endPos != std::string::npos) {
+                // Value enclosed in single quotes
+                packageHeader.version = strLine.substr(startPos + 1, endPos - startPos - 1);
+            } else {
+                // Value not enclosed in quotes
+                packageHeader.version = strLine.substr(versionPos, endPos - versionPos);
+            }
+            
+            // Remove trailing whitespace or newline characters
+            packageHeader.version.erase(packageHeader.version.find_last_not_of(" \t\r\n") + 1);
+        }
+        
+        creatorPos = strLine.find(creatorPrefix);
+        if (creatorPos != std::string::npos) {
+            creatorPos += creatorPrefix.length();
+            startPos = strLine.find("'", creatorPos);
+            endPos = strLine.find("'", startPos + 1);
+            
+            if (startPos != std::string::npos && endPos != std::string::npos) {
+                // Value enclosed in single quotes
+                packageHeader.creator = strLine.substr(startPos + 1, endPos - startPos - 1);
+            } else {
+                // Value not enclosed in quotes
+                packageHeader.creator = strLine.substr(creatorPos, endPos - creatorPos);
+            }
+            
+            // Remove trailing whitespace or newline characters
+            packageHeader.creator.erase(packageHeader.creator.find_last_not_of(" \t\r\n") + 1);
+        }
+        
+        aboutPos = strLine.find(aboutPrefix);
+        if (aboutPos != std::string::npos) {
+            aboutPos += aboutPrefix.length();
+            startPos = strLine.find("'", aboutPos);
+            endPos = strLine.find("'", startPos + 1);
+            
+            if (startPos != std::string::npos && endPos != std::string::npos) {
+                // Value enclosed in single quotes
+                packageHeader.about = strLine.substr(startPos + 1, endPos - startPos - 1);
+            } else {
+                // Value not enclosed in quotes
+                packageHeader.about = strLine.substr(aboutPos, endPos - aboutPos);
+            }
+            
+            // Remove trailing whitespace or newline characters
+            packageHeader.about.erase(packageHeader.about.find_last_not_of(" \t\r\n") + 1);
+        }
+        
+        creditsPos = strLine.find(creditsPrefix);
+        if (creditsPos != std::string::npos) {
+            creditsPos += creditsPrefix.length();
+            startPos = strLine.find("'", creditsPos);
+            endPos = strLine.find("'", startPos + 1);
+            
+            if (startPos != std::string::npos && endPos != std::string::npos) {
+                // Value enclosed in single quotes
+                packageHeader.credits = strLine.substr(startPos + 1, endPos - startPos - 1);
+            } else {
+                // Value not enclosed in quotes
+                packageHeader.credits = strLine.substr(creditsPos, endPos - creditsPos);
+            }
+            
+            // Remove trailing whitespace or newline characters
+            packageHeader.credits.erase(packageHeader.credits.find_last_not_of(" \t\r\n") + 1);
+        }
+        
+        colorPos = strLine.find(colorPrefix);
+        if (colorPos != std::string::npos) {
+            colorPos += colorPrefix.length();
+            startPos = strLine.find("'", colorPos);
+            endPos = strLine.find("'", startPos + 1);
+            
+            if (startPos != std::string::npos && endPos != std::string::npos) {
+                // Value enclosed in single quotes
+                packageHeader.color = strLine.substr(startPos + 1, endPos - startPos - 1);
+            } else {
+                // Value not enclosed in quotes
+                packageHeader.color = strLine.substr(colorPos, endPos - colorPos);
+            }
+            
+            // Remove trailing whitespace or newline characters
+            packageHeader.color.erase(packageHeader.color.find_last_not_of(" \t\r\n") + 1);
+        }
+        
+        
+        if (!packageHeader.version.empty() && !packageHeader.creator.empty() && !packageHeader.about.empty() && !packageHeader.credits.empty() && !packageHeader.color.empty()) {
+            break; // Both version and creator found, exit the loop
         }
     }
-
+    
+    
+    
+    fclose(file);
+    
     return packageHeader;
 }
 
