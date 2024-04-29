@@ -18,7 +18,7 @@
  ********************************************************************************/
 
 #pragma once
-#include <sys/stat.h>
+#include <fstream>
 #include <dirent.h>
 
 static std::atomic<bool> abortFileOp(false);
@@ -89,10 +89,10 @@ void createDirectory(const std::string& directoryPath) {
  * @param content The content to be written to the text file.
  */
 void createTextFile(const std::string& filePath, const std::string& content) {
-    FILE* file = std::fopen(filePath.c_str(), "w");
-    if (file != nullptr) {
-        std::fwrite(content.c_str(), 1, content.length(), file);
-        std::fclose(file);
+    std::ofstream file(filePath);
+    if (file.is_open()) {
+        file << content;
+        file.close();
     }
 }
 
@@ -305,32 +305,33 @@ void moveFilesOrDirectoriesByPattern(const std::string& sourcePathPattern, const
  * @param toFile The path of the destination where the file will be copied.
  */
 void copySingleFile(const std::string& fromFile, const std::string& toFile) {
-    FILE* srcFile = fopen(fromFile.c_str(), "rb");
-    FILE* destFile = fopen(toFile.c_str(), "wb");
+    std::ifstream srcFile(fromFile, std::ios::binary);
+    std::ofstream destFile(toFile, std::ios::binary);
+    
     if (srcFile && destFile) {
         char buffer[copyBufferSize];
-        size_t bytesRead;
         
-        while ((bytesRead = fread(buffer, 1, copyBufferSize, srcFile)) > 0) {
-            fwrite(buffer, 1, bytesRead, destFile);
+        while (srcFile.read(buffer, copyBufferSize)) {
+            destFile.write(buffer, copyBufferSize);
             if (abortFileOp.load(std::memory_order_acquire)) {
                 break;
             }
         }
-
         
-        fclose(srcFile);
-        fclose(destFile);
+        // Write remaining bytes if any
+        destFile.write(buffer, srcFile.gcount());
+        
         if (abortFileOp.load(std::memory_order_acquire)) {
-            deleteFileOrDirectory(toFile);
+            destFile.close();
+            std::remove(toFile.c_str());
             abortFileOp.store(false, std::memory_order_release);
         }
-
     } else {
         // Error opening files or performing copy action.
         // Handle the error accordingly.
     }
 }
+
 
 /**
  * @brief Copies a file or directory from the source path to the destination path.
