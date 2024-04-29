@@ -79,7 +79,7 @@ LDFLAGS += -specs=$(DEVKITPRO)/libnx/switch.specs $(ARCH) -Wl,-Map,$(notdir $*.m
 
 LIBS := -lcurl -lz -lzzip -lmbedtls -lmbedx509 -lmbedcrypto -ljansson -lnx 
 
-CXXFLAGS += -fno-exceptions -ffunction-sections -fdata-sections
+CXXFLAGS += -fno-exceptions -ffunction-sections -fdata-sections -fno-rtti
 LDFLAGS += -Wl,--gc-sections -Wl,--as-needed
 
 #---------------------------------------------------------------------------------
