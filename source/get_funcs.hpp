@@ -18,7 +18,6 @@
  ********************************************************************************/
 
 #pragma once
-#include <sys/stat.h>
 #include <dirent.h>
 #include <fnmatch.h>
 #include <jansson.h>
@@ -37,34 +36,38 @@ constexpr Result ResultParseError = MAKERESULT(OverlayLoaderModuleId, 1);
  * @return A tuple containing the result code, module name, and display version.
  */
 std::tuple<Result, std::string, std::string> getOverlayInfo(std::string filePath) {
-    FILE* file = fopen(filePath.c_str(), "r");
+    std::ifstream file(filePath, std::ios::binary);
     
+    if (!file) {
+        return { ResultParseError, "", "" }; // File could not be opened
+    }
+
     NroHeader nroHeader;
     NroAssetHeader assetHeader;
     NacpStruct nacp;
     
     // Read NRO header
-    fseek(file, sizeof(NroStart), SEEK_SET);
-    if (fread(&nroHeader, sizeof(NroHeader), 1, file) != 1) {
-        fclose(file);
+    file.seekg(sizeof(NroStart), std::ios::beg);
+    if (!file.read(reinterpret_cast<char*>(&nroHeader), sizeof(NroHeader))) {
+        file.close();
         return { ResultParseError, "", "" };
     }
     
     // Read asset header
-    fseek(file, nroHeader.size, SEEK_SET);
-    if (fread(&assetHeader, sizeof(NroAssetHeader), 1, file) != 1) {
-        fclose(file);
+    file.seekg(nroHeader.size, std::ios::beg);
+    if (!file.read(reinterpret_cast<char*>(&assetHeader), sizeof(NroAssetHeader))) {
+        file.close();
         return { ResultParseError, "", "" };
     }
     
     // Read NACP struct
-    fseek(file, nroHeader.size + assetHeader.nacp.offset, SEEK_SET);
-    if (fread(&nacp, sizeof(NacpStruct), 1, file) != 1) {
-        fclose(file);
+    file.seekg(nroHeader.size + assetHeader.nacp.offset, std::ios::beg);
+    if (!file.read(reinterpret_cast<char*>(&nacp), sizeof(NacpStruct))) {
+        file.close();
         return { ResultParseError, "", "" };
     }
     
-    fclose(file);
+    file.close();
     
     // Return overlay information
     return {
@@ -76,25 +79,31 @@ std::tuple<Result, std::string, std::string> getOverlayInfo(std::string filePath
 
 
 /**
- * @brief Reads the contents of a file and returns it as a string.
+ * @brief Reads the contents of a file and returns it as a string, normalizing line endings.
  *
  * @param filePath The path to the file to be read.
- * @return The content of the file as a string.
+ * @return The content of the file as a string with line endings normalized to '\n'.
  */
 std::string getFileContents(const std::string& filePath) {
-    std::string content;
-    FILE* file = fopen(filePath.c_str(), "rb");
-    if (file) {
-        struct stat fileInfo;
-        if (stat(filePath.c_str(), &fileInfo) == 0 && fileInfo.st_size > 0) {
-            content.resize(fileInfo.st_size);
-            fread(&content[0], 1, fileInfo.st_size, file);
-        }
-        fclose(file);
-        
-        // Normalize line endings to '\n'
-        content.erase(std::remove(content.begin(), content.end(), '\r'), content.end());
+    std::ifstream file(filePath, std::ios::binary | std::ios::ate); // Open the file at the end to get the file size quickly
+    if (!file) {
+        return ""; // Return an empty string if the file cannot be opened
     }
+
+    std::streamsize size = file.tellg(); // Get the size of the file
+    file.seekg(0, std::ios::beg); // Reset the position to the beginning of the file
+
+    if (size <= 0) {
+        return ""; // Return empty string if the file is empty
+    }
+
+    std::string content(size, '\0'); // Pre-allocate the string with the size of the file
+    if (!file.read(&content[0], size)) {
+        return ""; // Return empty string if reading fails
+    }
+
+    // Normalize line endings to '\n'
+    content.erase(std::remove(content.begin(), content.end(), '\r'), content.end());
     return content;
 }
 
