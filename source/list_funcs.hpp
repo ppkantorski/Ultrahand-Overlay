@@ -19,8 +19,6 @@
 
 
 #pragma once
-#include <sys/stat.h>
-#include <dirent.h>
 
 /**
  * @brief Removes entries from a vector of strings that match a specified entry.
