@@ -99,31 +99,39 @@ json_t* stringToJson(const std::string& input) {
 }
 
 
+// Define a custom deleter for json_t*
+struct JsonDeleter {
+    void operator()(json_t* json) const {
+        if (json) {
+            json_decref(json);
+        }
+    }
+};
+
 
 /**
  * @brief Replaces a JSON source placeholder with the actual JSON source.
  *
  * @param arg The input string containing the placeholder.
  * @param commandName The name of the JSON command (e.g., "json", "json_file").
- * @param jsonDict A pointer to the JSON object from which to extract the source.
- *                If not provided (default nullptr), no JSON replacement will occur.
+ * @param jsonPathOrString The path to the JSON file or the JSON string itself.
  * @return std::string The input string with the placeholder replaced by the actual JSON source,
  *                   or the original input string if replacement failed or jsonDict is nullptr.
  */
 std::string replaceJsonPlaceholder(const std::string& arg, const std::string& commandName, const std::string& jsonPathOrString) {
-    json_t* jsonDict = nullptr;
-    json_error_t error;
-    
+    // Use unique_ptr with custom deleter for json_t
+    std::unique_ptr<json_t, JsonDeleter> jsonDict;
+
     if (commandName == "json" || commandName == "json_source") {
-        jsonDict = stringToJson(jsonPathOrString);
+        jsonDict.reset(stringToJson(jsonPathOrString));
     } else if (commandName == "json_file" || commandName == "json_file_source") {
-        jsonDict = json_load_file(jsonPathOrString.c_str(), 0, &error);
+        jsonDict.reset(json_load_file(jsonPathOrString.c_str(), 0, nullptr));
     }
-    
+
     if (!jsonDict) {
         return arg; // Return the original string if JSON parsing failed or jsonDict is nullptr
     }
-    
+
     std::string replacement = arg;
     std::string searchString = "{" + commandName + "(";
     size_t startPos = replacement.find(searchString);
@@ -131,27 +139,27 @@ std::string replaceJsonPlaceholder(const std::string& arg, const std::string& co
     bool validValue;
     std::vector<std::string> keysAndIndexes;
     keysAndIndexes.reserve(5); // Reserve capacity for keysAndIndexes vector
-    
+
     while (startPos != std::string::npos) {
         keysAndIndexes.clear(); // Clear the vector for reuse
         endPos = replacement.find(")}", startPos);
         if (endPos == std::string::npos) {
             break;  // Missing closing brace, exit the loop
         }
-        
+
         std::string placeholder = replacement.substr(startPos, endPos - startPos + 2);
-        
+
         // Extract keys and indexes from the placeholder
         nextPos = startPos + searchString.length();
-        
+
         while (nextPos < endPos) {
             commaPos = replacement.find(',', nextPos);
             len = (commaPos != std::string::npos) ? (commaPos - nextPos) : (endPos - nextPos);
             keysAndIndexes.emplace_back(replacement.substr(nextPos, len));
             nextPos += len + 1;
         }
-        
-        json_t* value = jsonDict;
+
+        json_t* value = jsonDict.get();
         validValue = true;
         for (const std::string& keyIndex : keysAndIndexes) {
             if (json_is_object(value)) {
@@ -164,21 +172,16 @@ std::string replaceJsonPlaceholder(const std::string& arg, const std::string& co
                 break; // Invalid JSON structure, exit the loop
             }
         }
-        
+
         if (validValue && value != nullptr && json_is_string(value)) {
             // Replace the placeholder with the JSON value
             replacement.replace(startPos, endPos - startPos + 2, json_string_value(value));
         }
-        
+
         // Move to the next placeholder
         startPos = replacement.find(searchString, endPos);
     }
-    
-    // Free JSON data if it's not already freed
-    if (jsonDict != nullptr) {
-        json_decref(jsonDict);
-    }
-    
+
     return replacement;
 }
 
