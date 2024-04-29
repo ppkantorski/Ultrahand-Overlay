@@ -55,7 +55,7 @@ include $(DEVKITPRO)/libnx/switch_rules
 #---------------------------------------------------------------------------------
 APP_TITLE	:= Ultrahand
 APP_AUTHOR	:= ppkantorski
-APP_VERSION	:= 1.5.2
+APP_VERSION	:= 1.5.3
 TARGET	    := ovlmenu
 BUILD	    := build
 SOURCES	    := source common 
@@ -72,13 +72,15 @@ CFLAGS := -Wall -Os -ffunction-sections -fdata-sections -flto\
 
 CFLAGS += $(INCLUDE) -D__SWITCH__ -DAPP_VERSION="\"$(APP_VERSION)\""
 
-CXXFLAGS := $(CFLAGS) -fexceptions -std=c++20 -Wno-dangling-else
+CXXFLAGS := $(CFLAGS) -std=c++20 -Wno-dangling-else
 
 ASFLAGS := $(ARCH)
-LDFLAGS += -specs=$(DEVKITPRO)/libnx/switch.specs $(ARCH) -Wl,-Map,$(notdir $*.map) -Wl,--gc-sections
+LDFLAGS += -specs=$(DEVKITPRO)/libnx/switch.specs $(ARCH) -Wl,-Map,$(notdir $*.map)
 
 LIBS := -lcurl -lz -lzzip -lmbedtls -lmbedx509 -lmbedcrypto -ljansson -lnx 
 
+CXXFLAGS += -fno-exceptions -ffunction-sections -fdata-sections
+LDFLAGS += -Wl,--gc-sections -Wl,--as-needed
 
 #---------------------------------------------------------------------------------
 # list of directories containing libraries, this must be the top level containing
