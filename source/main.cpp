@@ -2808,7 +2808,11 @@ public:
                 if ((keysHeld & KEY_B) && !stillTouching) {
                     ////closeInterpreterThread();
                     inPackageMenu = false;
-                    returningToMain = true;
+
+                    if (!inHiddenMode)
+                        returningToMain = true;
+                    else
+                        returningToHiddenMain = true;
                     
                     // Free-up memory
                     hexSumCache.clear();
@@ -2828,7 +2832,12 @@ public:
                 if ((keysHeld & KEY_B) && !stillTouching) {
                     ////closeInterpreterThread();
                     inPackageMenu = false;
-                    returningToMain = true;
+
+                    if (!inHiddenMode)
+                        returningToMain = true;
+                    else
+                        returningToHiddenMain = true;
+
                     
                     // Free-up memory
                     hexSumCache.clear();
@@ -3491,7 +3500,7 @@ public:
                     
                     listItem = new tsl::elm::ListItem(newPackageName);
                     if (cleanVersionLabels == "true")
-                        packageHeader.version = cleanVersionLabel(packageHeader.version);
+                        packageHeader.version = removeQuotes(cleanVersionLabel(packageHeader.version));
                     if (hidePackageVersions != "true")
                        listItem->setValue(packageHeader.version, true);
                     
@@ -3512,7 +3521,7 @@ public:
 
                         if (keys & KEY_A) {
                             inMainMenu = false;
-                            inHiddenMode = false;
+                            //inHiddenMode = false;
                             
                             // read commands from package's boot_package.ini
                             if (isFileOrDirectory(packageFilePath+bootPackageFileName)) {
@@ -4272,6 +4281,7 @@ public:
      * properly shut down services to avoid memory leaks.
      */
     virtual void exitServices() override {
+        closeInterpreterThread();
         socketExit();
         nifmExit();
         i2cExit();
@@ -4279,7 +4289,6 @@ public:
         spsmExit();
         splExit();
         fsdevUnmountAll();
-        closeInterpreterThread();
     }
     
     /**
