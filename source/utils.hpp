@@ -1199,7 +1199,7 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
         if (cmdSize >= 2) {
             std::string sourcePath = preprocessPath(cmd[1]);
             std::string desiredSection = removeQuotes(cmd[2]);
-            std::string removeIniSection(sourcePath.c_str(), desiredSection.c_str());
+            removeIniSection(sourcePath.c_str(), desiredSection.c_str());
         }
     } else if (commandName == "set-ini-val" || commandName == "set-ini-value") {
         if (cmdSize >= 5) {
