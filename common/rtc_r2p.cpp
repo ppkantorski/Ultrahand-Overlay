@@ -15,7 +15,7 @@
  */
 #include "rtc_r2p.hpp"
 
-#include <cstdio>
+//#include <cstdio>
 
 namespace Max77620Rtc {
 
@@ -78,7 +78,7 @@ namespace Max77620Rtc {
 			Result rc = i2csessionSendAuto(&session, &cmd, sizeof(cmd), I2cTransactionOption_All);
 
 			if (R_FAILED(rc)) {
-				std::printf("i2c: Failed to send i2c register (%hhu): 2%03u-%04u\n", reg, R_MODULE(rc), R_DESCRIPTION(rc));
+				//std::printf("i2c: Failed to send i2c register (%hhu): 2%03u-%04u\n", reg, R_MODULE(rc), R_DESCRIPTION(rc));
 				return false;
 			}
 
@@ -94,12 +94,12 @@ namespace Max77620Rtc {
 
 			cmd.reg = reg;
 			if (R_FAILED(rc = i2csessionSendAuto(&session, &cmd, sizeof(cmd), I2cTransactionOption_All))) {
-				std::printf("i2c: Failed to send i2c register for recv (%hhu): 2%03u-%04u\n", reg, R_MODULE(rc), R_DESCRIPTION(rc));
+				//std::printf("i2c: Failed to send i2c register for recv (%hhu): 2%03u-%04u\n", reg, R_MODULE(rc), R_DESCRIPTION(rc));
 				return false;
 			}
 
 			if (R_FAILED(rc = i2csessionReceiveAuto(&session, &rec, sizeof(rec), I2cTransactionOption_All))) {
-				std::printf("i2c: Failed to recv i2c register (%hhu): 2%03u-%04u\n", reg, R_MODULE(rc), R_DESCRIPTION(rc));
+				//std::printf("i2c: Failed to recv i2c register (%hhu): 2%03u-%04u\n", reg, R_MODULE(rc), R_DESCRIPTION(rc));
 				return false;
 			}
 
@@ -144,7 +144,7 @@ namespace Max77620Rtc {
 
 		I2cSession session = {};
 		if (R_FAILED(rc = i2cOpenSession(&session, I2cDevice_Max77620Rtc))) {
-			std::printf("i2c: Failed to open i2c session: 2%03u-%04u\n", R_MODULE(rc), R_DESCRIPTION(rc));
+			//std::printf("i2c: Failed to open i2c session: 2%03u-%04u\n", R_MODULE(rc), R_DESCRIPTION(rc));
 			i2cExit();
 			return false;
 		}

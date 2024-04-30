@@ -18,6 +18,8 @@
  ********************************************************************************/
 
 #pragma once
+//#include <sys/stat.h>
+#include <fstream>
 #include <dirent.h>
 #include <fnmatch.h>
 #include <jansson.h>
@@ -35,47 +37,42 @@ constexpr Result ResultParseError = MAKERESULT(OverlayLoaderModuleId, 1);
  * @param filePath The path to the overlay module file.
  * @return A tuple containing the result code, module name, and display version.
  */
-std::tuple<Result, std::string, std::string> getOverlayInfo(std::string filePath) {
+std::tuple<Result, std::string, std::string> getOverlayInfo(const std::string& filePath) {
     std::ifstream file(filePath, std::ios::binary);
-    
     if (!file) {
-        return { ResultParseError, "", "" }; // File could not be opened
+        return {ResultParseError, "", ""};
     }
 
     NroHeader nroHeader;
     NroAssetHeader assetHeader;
     NacpStruct nacp;
-    
+
     // Read NRO header
     file.seekg(sizeof(NroStart), std::ios::beg);
     if (!file.read(reinterpret_cast<char*>(&nroHeader), sizeof(NroHeader))) {
-        file.close();
-        return { ResultParseError, "", "" };
+        return {ResultParseError, "", ""};
     }
-    
+
     // Read asset header
     file.seekg(nroHeader.size, std::ios::beg);
     if (!file.read(reinterpret_cast<char*>(&assetHeader), sizeof(NroAssetHeader))) {
-        file.close();
-        return { ResultParseError, "", "" };
+        return {ResultParseError, "", ""};
     }
-    
+
     // Read NACP struct
     file.seekg(nroHeader.size + assetHeader.nacp.offset, std::ios::beg);
     if (!file.read(reinterpret_cast<char*>(&nacp), sizeof(NacpStruct))) {
-        file.close();
-        return { ResultParseError, "", "" };
+        return {ResultParseError, "", ""};
     }
-    
-    file.close();
-    
-    // Return overlay information
+
+    // Assuming nacp.lang[0].name and nacp.display_version are null-terminated
     return {
         ResultSuccess,
-        std::string(nacp.lang[0].name, std::strlen(nacp.lang[0].name)),
-        std::string(nacp.display_version, std::strlen(nacp.display_version))
+        std::string(nacp.lang[0].name),
+        std::string(nacp.display_version)
     };
 }
+
 
 
 /**
@@ -85,27 +82,27 @@ std::tuple<Result, std::string, std::string> getOverlayInfo(std::string filePath
  * @return The content of the file as a string with line endings normalized to '\n'.
  */
 std::string getFileContents(const std::string& filePath) {
-    std::ifstream file(filePath, std::ios::binary | std::ios::ate); // Open the file at the end to get the file size quickly
+    std::ifstream file(filePath, std::ios::binary | std::ios::ate);
     if (!file) {
-        return ""; // Return an empty string if the file cannot be opened
+        logMessage("Failed to open file: " + filePath);
+        return "";
     }
 
-    std::streamsize size = file.tellg(); // Get the size of the file
-    file.seekg(0, std::ios::beg); // Reset the position to the beginning of the file
-
+    std::streamsize size = file.tellg();
     if (size <= 0) {
-        return ""; // Return empty string if the file is empty
+        return "";
     }
 
-    std::string content(size, '\0'); // Pre-allocate the string with the size of the file
+    file.seekg(0, std::ios::beg);
+    std::string content(size, '\0');
     if (!file.read(&content[0], size)) {
-        return ""; // Return empty string if reading fails
+        logMessage("Failed to read file: " + filePath);
     }
 
-    // Normalize line endings to '\n'
     content.erase(std::remove(content.begin(), content.end(), '\r'), content.end());
     return content;
 }
+
 
 
 
@@ -438,14 +435,3 @@ std::vector<std::string> getFilesListByWildcards(const std::string& pathPattern)
     return fileList;
 }
 
-
-
-const char* getStringFromJson(json_t* root, const char* key) {
-    json_t* value = json_object_get(root, key);
-
-    if (value && json_is_string(value)) {
-        return json_string_value(value);
-    } else {
-        return ""; // Key not found or not a string, return empty string/char*
-    }
-}

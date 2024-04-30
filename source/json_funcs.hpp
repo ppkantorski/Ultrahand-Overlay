@@ -17,11 +17,22 @@
 
 #include <cstdio>
 #include <string>
-#include <fstream>
+#include <sys/stat.h>
 #include <jansson.h>
 #include <get_funcs.hpp>
 
 //constexpr size_t jsonBufferSize = 1024; // Choose an appropriate buffer size
+
+// Define a custom deleter for json_t*
+struct JsonDeleter {
+    void operator()(json_t* json) const {
+        if (json) {
+            json_decref(json);
+        }
+    }
+};
+
+
 
 /**
  * @brief Reads JSON data from a file and returns it as a `json_t` object.
@@ -30,40 +41,43 @@
  * @return A `json_t` object representing the parsed JSON data. Returns `nullptr` on error.
  */
 json_t* readJsonFromFile(const std::string& filePath) {
+    // Check file existence and size
+    struct stat fileStat;
+    if (stat(filePath.c_str(), &fileStat) != 0 || fileStat.st_size == 0) {
+        //logMessage("File does not exist or is empty: " + filePath);
+        return nullptr;
+    }
+
     // Open the file
-    std::ifstream file(filePath, std::ios::binary);
-    if (!file.is_open()) {
+    FILE* file = fopen(filePath.c_str(), "rb"); // Open in binary mode to ensure no character translation
+    if (!file) {
         //logMessage("Failed to open file: " + filePath);
         return nullptr;
     }
 
-    // Get the file size
-    file.seekg(0, std::ios::end);
-    std::streampos fileSize = file.tellg();
-    file.seekg(0, std::ios::beg);
-
-    if (fileSize == 0) {
-        //logMessage("File is empty: " + filePath);
-        file.close();
+    // Allocate memory based on file size
+    char* buffer = new (std::nothrow) char[fileStat.st_size + 1];
+    if (!buffer) {
+        fclose(file);
+        //logMessage("Memory allocation failed for reading file: " + filePath);
         return nullptr;
     }
 
-    // Allocate memory based on file size
-    std::vector<char> buffer(fileSize);
-    file.read(buffer.data(), fileSize);
-
-    if (file.gcount() != fileSize) {
-        //logMessage("Failed to read the entire file: " + filePath);
-        file.close();
+    // Read the entire file into the buffer
+    size_t bytesRead = fread(buffer, 1, fileStat.st_size, file);
+    if (bytesRead < static_cast<size_t>(fileStat.st_size)) {
+        fclose(file);
+        delete[] buffer;
+        logMessage("Failed to read the entire file: " + filePath);
         return nullptr;
     }
 
     // Null-terminate the buffer to make it a valid C-string
-    buffer.push_back('\0');
+    buffer[bytesRead] = '\0';
 
     // Parse the JSON content
     json_error_t error;
-    json_t* root = json_loads(buffer.data(), 0, &error);
+    json_t* root = json_loads(buffer, 0, &error);
     if (!root) {
         //logMessage("JSON parsing error at line " + std::to_string(error.line) + ": " + error.text);
     } else {
@@ -71,11 +85,11 @@ json_t* readJsonFromFile(const std::string& filePath) {
     }
 
     // Clean up
-    file.close();
+    fclose(file);
+    delete[] buffer;
 
     return root;
 }
-
 
 /**
  * @brief Parses a JSON string into a json_t object.
@@ -99,39 +113,30 @@ json_t* stringToJson(const std::string& input) {
 }
 
 
-// Define a custom deleter for json_t*
-struct JsonDeleter {
-    void operator()(json_t* json) const {
-        if (json) {
-            json_decref(json);
-        }
-    }
-};
-
-
 /**
  * @brief Replaces a JSON source placeholder with the actual JSON source.
  *
  * @param arg The input string containing the placeholder.
  * @param commandName The name of the JSON command (e.g., "json", "json_file").
- * @param jsonPathOrString The path to the JSON file or the JSON string itself.
+ * @param jsonDict A pointer to the JSON object from which to extract the source.
+ *                If not provided (default nullptr), no JSON replacement will occur.
  * @return std::string The input string with the placeholder replaced by the actual JSON source,
  *                   or the original input string if replacement failed or jsonDict is nullptr.
  */
 std::string replaceJsonPlaceholder(const std::string& arg, const std::string& commandName, const std::string& jsonPathOrString) {
-    // Use unique_ptr with custom deleter for json_t
-    std::unique_ptr<json_t, JsonDeleter> jsonDict;
-
+    json_t* jsonDict = nullptr;
+    json_error_t error;
+    
     if (commandName == "json" || commandName == "json_source") {
-        jsonDict.reset(stringToJson(jsonPathOrString));
+        jsonDict = stringToJson(jsonPathOrString);
     } else if (commandName == "json_file" || commandName == "json_file_source") {
-        jsonDict.reset(json_load_file(jsonPathOrString.c_str(), 0, nullptr));
+        jsonDict = json_load_file(jsonPathOrString.c_str(), 0, &error);
     }
-
+    
     if (!jsonDict) {
         return arg; // Return the original string if JSON parsing failed or jsonDict is nullptr
     }
-
+    
     std::string replacement = arg;
     std::string searchString = "{" + commandName + "(";
     size_t startPos = replacement.find(searchString);
@@ -139,27 +144,27 @@ std::string replaceJsonPlaceholder(const std::string& arg, const std::string& co
     bool validValue;
     std::vector<std::string> keysAndIndexes;
     keysAndIndexes.reserve(5); // Reserve capacity for keysAndIndexes vector
-
+    
     while (startPos != std::string::npos) {
         keysAndIndexes.clear(); // Clear the vector for reuse
         endPos = replacement.find(")}", startPos);
         if (endPos == std::string::npos) {
             break;  // Missing closing brace, exit the loop
         }
-
+        
         std::string placeholder = replacement.substr(startPos, endPos - startPos + 2);
-
+        
         // Extract keys and indexes from the placeholder
         nextPos = startPos + searchString.length();
-
+        
         while (nextPos < endPos) {
             commaPos = replacement.find(',', nextPos);
             len = (commaPos != std::string::npos) ? (commaPos - nextPos) : (endPos - nextPos);
             keysAndIndexes.emplace_back(replacement.substr(nextPos, len));
             nextPos += len + 1;
         }
-
-        json_t* value = jsonDict.get();
+        
+        json_t* value = jsonDict;
         validValue = true;
         for (const std::string& keyIndex : keysAndIndexes) {
             if (json_is_object(value)) {
@@ -172,19 +177,31 @@ std::string replaceJsonPlaceholder(const std::string& arg, const std::string& co
                 break; // Invalid JSON structure, exit the loop
             }
         }
-
+        
         if (validValue && value != nullptr && json_is_string(value)) {
             // Replace the placeholder with the JSON value
             replacement.replace(startPos, endPos - startPos + 2, json_string_value(value));
         }
-
+        
         // Move to the next placeholder
         startPos = replacement.find(searchString, endPos);
     }
-
+    
+    // Free JSON data if it's not already freed
+    if (jsonDict != nullptr) {
+        json_decref(jsonDict);
+    }
+    
     return replacement;
 }
 
 
+const char* getStringFromJson(json_t* root, const char* key) {
+    json_t* value = json_object_get(root, key);
 
-
+    if (value && json_is_string(value)) {
+        return json_string_value(value);
+    } else {
+        return ""; // Key not found or not a string, return empty string/char*
+    }
+}

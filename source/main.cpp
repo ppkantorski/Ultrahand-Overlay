@@ -2132,8 +2132,6 @@ public:
      */
     ~PackageMenu() {
         //logMessage("Clearing footer dict...");
-        selectedFooterDict.clear();
-        hexSumCache.clear();
         //    selectedListItem = new tsl::elm::ListItem("");
         //    lastSelectedListItem = new tsl::elm::ListItem("");
         //if (returningToMain) {
@@ -4215,11 +4213,13 @@ public:
             returningToMain = false;
             inMainMenu = true;
             selectedFooterDict.clear();
+            hexSumCache.clear();
         }
         if (returningToHiddenMain && !(keysHeld & KEY_B)){
             returningToHiddenMain = false;
             inHiddenMode = true;
             selectedFooterDict.clear();
+            hexSumCache.clear();
         }
         
         if (redrawWidget) {

@@ -18,7 +18,7 @@
 #include <switch.h>
 
 #include <optional>
-#include <cstdio>
+//#include <cstdio>
 
 /// Console Product Models
 //typedef enum {
