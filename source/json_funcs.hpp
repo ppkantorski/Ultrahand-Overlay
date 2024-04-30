@@ -15,7 +15,7 @@
  *  Copyright (c) 2024 ppkantorski
  ********************************************************************************/
 
-#include <cstdio>
+#include <fstream>
 #include <string>
 #include <sys/stat.h>
 #include <jansson.h>

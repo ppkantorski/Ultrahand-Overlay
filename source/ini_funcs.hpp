@@ -17,8 +17,7 @@
  ********************************************************************************/
 
 #pragma once
-#include <sys/stat.h>
-#include <cstdio>   // For FILE*, fopen(), fclose(), fprintf(), etc.
+#include <fstream>
 #include <cstring>  // For std::string, strlen(), etc.
 #include <string>   // For std::string
 #include <vector>   // For std::vector
