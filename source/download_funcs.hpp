@@ -28,7 +28,7 @@
 #include "debug_funcs.hpp"
 //#include "json_funcs.hpp"
 
-//const size_t downloadBufferSize = 512;
+//const size_t downloadBufferSize = 4096*2;
 //const zzip_ssize_t unzipBufferSize = 512;
 
 
@@ -49,30 +49,31 @@ struct CurlDeleter {
 
 
 // Callback function to write received data to a file.
-size_t writeCallback(void* contents, size_t size, size_t nmemb, FILE* file) {
-    return fwrite(contents, size, nmemb, file);
+size_t writeCallback(void* ptr, size_t size, size_t nmemb, std::ostream* stream) {
+    auto& file = *static_cast<std::ofstream*>(stream);
+    size_t totalBytes = size * nmemb;
+    file.write(static_cast<const char*>(ptr), totalBytes);
+    return totalBytes;
 }
 
 
 
-
 // Your C function
-extern "C" int progressCallback(void* ptr, double totalToDownload, double nowDownloaded, double totalToUpload, double nowUploaded) {
+extern "C" int progressCallback(void *ptr, curl_off_t totalToDownload, curl_off_t nowDownloaded, curl_off_t totalToUpload, curl_off_t nowUploaded) {
     auto percentage = static_cast<std::atomic<int>*>(ptr);
 
     if (totalToDownload > 0) {
-        int newProgress = static_cast<int>((nowDownloaded / totalToDownload) * 100);
+        int newProgress = static_cast<int>(double(nowDownloaded) / double(totalToDownload) *100);
         percentage->store(newProgress, std::memory_order_release);
     }
 
     if (abortDownload.load(std::memory_order_acquire)) {
         percentage->store(-1, std::memory_order_release);
-        return 1;  // Abort
+        return 1;  // Abort the download
     }
 
-    return 0;  // Continue
+    return 0;  // Continue the download
 }
-
 
 
 
@@ -85,72 +86,64 @@ extern "C" int progressCallback(void* ptr, double totalToDownload, double nowDow
  * @return True if the download was successful, false otherwise.
  */
 bool downloadFile(const std::string& url, const std::string& toDestination) {
-    abortDownload.store(false, std::memory_order_release); // Reset abort flag
-    //downloadPercentage.store(0, std::memory_order_release); // Reset download percentage
+    abortDownload.store(false);
+    //downloadPercentage.store(0);
 
     if (url.find_first_of("{}") != std::string::npos) {
-        logMessage(std::string("Invalid URL: ") + url);
+        logMessage("Invalid URL: " + url);
         return false;
     }
 
     std::string destination = toDestination;
-
-    // Check if the destination ends with "/"
     if (destination.back() == '/') {
         createDirectory(destination);
-
-        // Extract the filename from the URL
         size_t lastSlash = url.find_last_of('/');
         if (lastSlash != std::string::npos) {
-            std::string filename = url.substr(lastSlash + 1);
-            destination += filename;
+            destination += url.substr(lastSlash + 1);
         } else {
-            logMessage(std::string("Invalid URL: ") + url);
+            logMessage("Invalid URL: " + url);
             return false;
         }
-
     } else {
-        createDirectory(destination.substr(0, destination.find_last_of('/')) + "/");
+        createDirectory(destination.substr(0, destination.find_last_of('/')));
     }
 
-    // Initialize libcurl using a unique_ptr with custom deleter
+    std::ofstream file(destination, std::ios::binary);
+    if (!file.is_open()) {
+        logMessage("Error opening file: " + destination);
+        return false;
+    }
+
     std::unique_ptr<CURL, CurlDeleter> curl(curl_easy_init());
     if (!curl) {
         logMessage("Error initializing curl.");
         return false;
     }
 
-    FILE* file = fopen(destination.c_str(), "wb");
-    if (!file) {
-        logMessage(std::string("Error opening file: ") + destination);
-        return false;
-    }
-
-    // Set libcurl options for progress tracking and writing data to the file
     curl_easy_setopt(curl.get(), CURLOPT_URL, url.c_str());
     curl_easy_setopt(curl.get(), CURLOPT_WRITEFUNCTION, writeCallback);
-    curl_easy_setopt(curl.get(), CURLOPT_WRITEDATA, file);
-    curl_easy_setopt(curl.get(), CURLOPT_PROGRESSFUNCTION, progressCallback);
-    curl_easy_setopt(curl.get(), CURLOPT_PROGRESSDATA, &downloadPercentage);
+    curl_easy_setopt(curl.get(), CURLOPT_WRITEDATA, &file);
     curl_easy_setopt(curl.get(), CURLOPT_NOPROGRESS, 0L);
+    curl_easy_setopt(curl.get(), CURLOPT_XFERINFOFUNCTION, progressCallback);
+    curl_easy_setopt(curl.get(), CURLOPT_XFERINFODATA, &downloadPercentage);
     curl_easy_setopt(curl.get(), CURLOPT_USERAGENT, "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36");
     curl_easy_setopt(curl.get(), CURLOPT_FOLLOWLOCATION, 1L);
+    //curl_easy_setopt(curl.get(), CURLOPT_MAXREDIRS, 5); // Limit the number of redirects
 
-    // Perform the download
+
     CURLcode result = curl_easy_perform(curl.get());
-    fclose(file);
+    file.close();
 
     if (result != CURLE_OK) {
-        logMessage(std::string("Error downloading file: ") + curl_easy_strerror(result));
-        deleteFileOrDirectory(destination.c_str());
+        logMessage("Error downloading file: " + std::string(curl_easy_strerror(result)));
+        deleteFileOrDirectory(destination);
         return false;
     }
 
-    // Check if the file is empty
     std::ifstream checkFile(destination);
     if (!checkFile || checkFile.peek() == std::ifstream::traits_type::eof()) {
-        logMessage(std::string("Error downloading file: Empty file"));
-        deleteFileOrDirectory(destination.c_str());
+        logMessage("Error downloading file: Empty file");
+        deleteFileOrDirectory(destination);
         return false;
     }
     checkFile.close();
@@ -240,22 +233,21 @@ bool unzipFile(const std::string& zipFilePath, const std::string& toDestination)
 
         ZZIP_FILE* file = zzip_file_open(dir.get(), entry.d_name, 0);
         if (file) {
-            FILE* outputFile = fopen(extractedFilePath.c_str(), "wb");
-            if (outputFile) {
+            std::ofstream outputFile(extractedFilePath, std::ios::binary);
+            if (outputFile.is_open()) {
                 zzip_ssize_t bytesRead;
                 const zzip_ssize_t bufferSize = 4096;
                 char buffer[bufferSize];
-
+            
                 while ((bytesRead = zzip_file_read(file, buffer, bufferSize)) > 0) {
-                    fwrite(buffer, 1, bytesRead, outputFile);
+                    outputFile.write(buffer, bytesRead);
                 }
-
-                fclose(outputFile);
+            
+                outputFile.close();
             } else {
                 logMessage(std::string("Error opening output file: ") + extractedFilePath);
                 success = false;
             }
-
             zzip_file_close(file);
         } else {
             logMessage(std::string("Error opening file in zip: ") + fileName);
