@@ -87,7 +87,7 @@ extern "C" int progressCallback(void *ptr, curl_off_t totalToDownload, curl_off_
  */
 bool downloadFile(const std::string& url, const std::string& toDestination) {
     abortDownload.store(false);
-    //downloadPercentage.store(0);
+    downloadPercentage.store(0, std::memory_order_release);
 
     if (url.find_first_of("{}") != std::string::npos) {
         logMessage("Invalid URL: " + url);
@@ -148,6 +148,8 @@ bool downloadFile(const std::string& url, const std::string& toDestination) {
     }
     checkFile.close();
 
+    if (downloadPercentage.load(std::memory_order_acquire) == -1 || downloadPercentage.load(std::memory_order_acquire) == 0)
+        downloadPercentage.store(100, std::memory_order_release);
     logMessage("Download Complete!");
     return true;
 }
