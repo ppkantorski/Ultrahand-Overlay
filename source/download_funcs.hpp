@@ -17,7 +17,7 @@
  ********************************************************************************/
 
 #pragma once
-#include <cstdio>
+#include <fstream>
 #include <curl/curl.h>
 #include <zlib.h>
 #include <zzip/zzip.h>
