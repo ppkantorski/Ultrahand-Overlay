@@ -20,6 +20,7 @@
 #pragma once
 #include <string>
 #include <vector>
+#include <jansson.h>
 #include <regex>
 #include <debug_funcs.hpp>
 
