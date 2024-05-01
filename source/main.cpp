@@ -2135,6 +2135,8 @@ public:
      * Cleans up any resources associated with the `PackageMenu` instance.
      */
     ~PackageMenu() {
+        lastSelectedListItem = nullptr;
+        selectedListItem = nullptr;
         //logMessage("Clearing footer dict...");
         //    selectedListItem = new tsl::elm::ListItem("");
         //    lastSelectedListItem = new tsl::elm::ListItem("");
