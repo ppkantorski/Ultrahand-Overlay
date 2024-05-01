@@ -74,6 +74,8 @@ static std::unordered_map<std::string, std::string> selectedFooterDict;
 static auto selectedListItem = static_cast<tsl::elm::ListItem*>(nullptr);
 static auto lastSelectedListItem = static_cast<tsl::elm::ListItem*>(nullptr);
 
+static bool lastRunningInterpreter = false;
+
 //static tsl::elm::OverlayFrame* rootFrame = nullptr;
 //std::unique_ptr<tsl::elm::OverlayFrame> rootFrame = std::make_unique<tsl::elm::OverlayFrame>("", "");
 //std::unique_ptr<tsl::elm::List> list = std::make_unique<tsl::elm::List>();
@@ -460,7 +462,7 @@ public:
             auto listItem = new tsl::elm::ListItem(UPDATE_ULTRAHAND);
             
             listItem->setClickListener([this, listItem](uint64_t keys) { // Add 'command' to the capture list
-                static bool lastRunningInterpreter = false;
+                //static bool lastRunningInterpreter = false;
                 bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
                 if (_runningInterpreter) {
 
@@ -480,17 +482,6 @@ public:
                     }
 
                     return false;
-                }
-
-                if (lastRunningInterpreter) {
-                    isDownloadCommand = false;
-                    if (commandSuccess)
-                        lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
-                    else
-                        lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
-                    ////closeInterpreterThread();
-                    lastRunningInterpreter = false;
-                    return true;
                 }
 
                 if (simulatedSelect && !simulatedSelectComplete) {
@@ -529,7 +520,7 @@ public:
             // Envolke selectionOverlay in optionMode
             
             listItem->setClickListener([this, listItem](uint64_t keys) { // Add 'command' to the capture list
-                static bool lastRunningInterpreter = false;
+                //static bool lastRunningInterpreter = false;
 
                 bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
                 if (_runningInterpreter) {
@@ -551,17 +542,17 @@ public:
                     return false;
                 }
 
-                if (lastRunningInterpreter) {
-                    isDownloadCommand = false;
-                    if (commandSuccess)
-                        lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
-                    else
-                        lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
-                    ////closeInterpreterThread();
-                    lastRunningInterpreter = false;
-
-                    return true;
-                }
+                //if (lastRunningInterpreter) {
+                //    isDownloadCommand = false;
+                //    if (commandSuccess)
+                //        lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
+                //    else
+                //        lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
+                //    ////closeInterpreterThread();
+                //    lastRunningInterpreter = false;
+                //    
+                //    return true;
+                //}
 
                 if (simulatedSelect && !simulatedSelectComplete) {
                     keys |= KEY_A;
@@ -870,6 +861,17 @@ public:
                 return true;
             }
             return false;
+        }
+
+        if (lastRunningInterpreter) {
+            isDownloadCommand = false;
+            if (commandSuccess)
+                lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
+            else
+                lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
+            ////closeInterpreterThread();
+            lastRunningInterpreter = false;
+            return true;
         }
 
         if (inSettingsMenu && !inSubSettingsMenu) {
@@ -1881,7 +1883,7 @@ public:
                 //
                 
                 listItem->setClickListener([this, i, footer, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
-                    static bool lastRunningInterpreter = false;
+                    //static bool lastRunningInterpreter = false;
                     bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
                     if (_runningInterpreter) {
                         
@@ -1902,18 +1904,6 @@ public:
                         }
 
                         return false;
-                    }
-
-                    if (lastRunningInterpreter) {
-                        isDownloadCommand = false;
-
-                        if (commandSuccess)
-                            lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
-                        else
-                            lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
-                        ////closeInterpreterThread();
-                        lastRunningInterpreter = false;
-                        return true;
                     }
 
                     if (simulatedSelect && !simulatedSelectComplete) {
@@ -2041,6 +2031,18 @@ public:
             }
 
             return false;
+        }
+
+        if (lastRunningInterpreter) {
+            isDownloadCommand = false;
+
+            if (commandSuccess)
+                lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
+            else
+                lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
+            ////closeInterpreterThread();
+            lastRunningInterpreter = false;
+            return true;
         }
 
         if (refreshGui && !stillTouching) {
@@ -2546,7 +2548,7 @@ public:
                             
                             
                             listItem->setClickListener([this, i, commands, keyName = option.first, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
-                                static bool lastRunningInterpreter = false;
+                                //static bool lastRunningInterpreter = false;
                                 bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
                                 if (_runningInterpreter) {
                                     //int currentPercentage = downloadPercentage.load(std::memory_order_acquire);
@@ -2564,17 +2566,6 @@ public:
                                         ////closeInterpreterThread();
                                     }
                                     return false;
-                                }
-
-                                if (lastRunningInterpreter) {
-                                    isDownloadCommand = false;
-
-                                    if (commandSuccess)
-                                        lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
-                                    else
-                                        lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
-                                    ////closeInterpreterThread();
-                                    lastRunningInterpreter = false;
                                 }
 
                                 if (simulatedSelect && !simulatedSelectComplete) {
@@ -2703,6 +2694,18 @@ public:
             }
 
             return false;
+        }
+
+        if (lastRunningInterpreter) {
+            isDownloadCommand = false;
+
+            if (commandSuccess)
+                lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
+            else
+                lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
+            ////closeInterpreterThread();
+            lastRunningInterpreter = false;
+            return true;
         }
 
         // Your existing logic for handling other inputs
@@ -3878,7 +3881,7 @@ public:
                                 if (sourceType == "json") { // For JSON wildcards
                                     
                                     listItem->setClickListener([this, i, commands, packagePath = packageDirectory, keyName = option.first, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
-                                        static bool lastRunningInterpreter = false;
+                                        //static bool lastRunningInterpreter = false;
 
                                         bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
                                         if (_runningInterpreter) {
@@ -3897,17 +3900,6 @@ public:
                                                 //logMessage("killing command");
                                             }
                                             return false;
-                                        }
-
-                                        if (lastRunningInterpreter) {
-                                            isDownloadCommand = false;
-
-                                            if (commandSuccess)
-                                                lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
-                                            else
-                                                lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
-                                            ////closeInterpreterThread();
-                                            lastRunningInterpreter = false;
                                         }
 
 
@@ -3952,7 +3944,7 @@ public:
                                 } else {
                                     
                                     listItem->setClickListener([this, i, commands, packagePath = packageDirectory, keyName = option.first, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
-                                        static bool lastRunningInterpreter = false;
+                                        
                                         bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
                                         if (_runningInterpreter) {
                                             //int currentPercentage = downloadPercentage.load(std::memory_order_acquire);
@@ -3969,17 +3961,6 @@ public:
                                                 //logMessage("killing command");
                                             }
                                             return false;
-                                        }
-
-                                        if (lastRunningInterpreter) {
-                                            isDownloadCommand = false;
-
-                                            if (commandSuccess)
-                                                lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
-                                            else
-                                                lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
-                                            ////closeInterpreterThread();
-                                            lastRunningInterpreter = false;
                                         }
 
                                         if (simulatedSelect && !simulatedSelectComplete) {
@@ -4006,6 +3987,7 @@ public:
                                                 listItem->setValue(DOWNLOAD_SYMBOL);
                                             else
                                                 listItem->setValue(INPROGRESS_SYMBOL);
+
                                             lastSelectedListItem = listItem;
                                             
                                             
@@ -4106,6 +4088,18 @@ public:
                 return true;
             }
             return false;
+        }
+
+        if (lastRunningInterpreter) {
+            isDownloadCommand = false;
+            
+            if (commandSuccess)
+                lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
+            else
+                lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
+            ////closeInterpreterThread();
+            lastRunningInterpreter = false;
+            return true;
         }
 
         if (refreshGui && !stillTouching) {
