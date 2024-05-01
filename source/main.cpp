@@ -906,6 +906,9 @@ public:
                         returningToHiddenMain = true;
                     lastMenu = "settingsMenu";
                     
+                    if (parseValueFromIniSection(settingsConfigIniPath, "ultrahand", "last_menu") == "overlays")
+                        closeInterpreterThread();
+
                     tsl::goBack();
                     
                     if (reloadMenu) {
@@ -4172,6 +4175,8 @@ public:
 
                 if ((keysHeld & SYSTEM_SETTINGS_KEY) && !stillTouching) {
                     tsl::changeTo<UltrahandSettingsMenu>();
+                    if (parseValueFromIniSection(settingsConfigIniPath, "ultrahand", "last_menu") == "overlays")
+                        startInterpreterThread();
                     simulatedMenuComplete = true;
                     return true;
                 }
