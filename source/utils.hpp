@@ -1551,11 +1551,12 @@ void backgroundInterpreter(void*) {
             logMessage("End of interpreter");
             //break;
         }
+        //logMessage("looping...");
     }
 }
 
 void closeInterpreterThread() {
-   logMessage("Closing interpreter...");
+   //logMessage("Closing interpreter...");
    {
        std::lock_guard<std::mutex> lock(queueMutex);
        interpreterThreadExit.store(true, std::memory_order_release);
@@ -1565,7 +1566,7 @@ void closeInterpreterThread() {
    threadClose(&interpreterThread);
    // Reset flags
    clearInterpreterFlags();
-   logMessage("Interpreter has been closed.");
+   //logMessage("Interpreter has been closed.");
 }
 
 
