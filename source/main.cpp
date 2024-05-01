@@ -2941,7 +2941,7 @@ private:
     std::string menuMode, defaultMenuMode, inOverlayString, fullPath, optionName, priority, starred, hide;
     bool useDefaultMenu = false;
     bool useOverlayLaunchArgs = false;
-    std::string hiddenMenuMode;
+    std::string hiddenMenuMode, dropdownSection;
     bool initializingSpawn = false;
     std::string defaultLang = "en";
     
@@ -2951,7 +2951,7 @@ public:
      *
      * Initializes a new instance of the `MainMenu` class with the necessary parameters.
      */
-    MainMenu(const std::string& hiddenMenuMode = "") : hiddenMenuMode(hiddenMenuMode) {}
+    MainMenu(const std::string& hiddenMenuMode = "", const std::string& sectionName = "") : hiddenMenuMode(hiddenMenuMode), dropdownSection(sectionName) {}
     /**
      * @brief Destroys the `MainMenu` instance.
      *
@@ -3384,231 +3384,232 @@ public:
         if (menuMode == "packages" ) {
             //startInterpreterThread();
 
-            // Create the directory if it doesn't exist
-            createDirectory(packageDirectory);
-            
-            
-            std::fstream packagesIniFile(packagesIniFilePath, std::ios::in);
-            if (!packagesIniFile.is_open()) {
-                std::ofstream createFile(packagesIniFilePath); // Create an empty INI file if it doesn't exist
-                createFile.close();
-                initializingSpawn = true;
-            } else {
-                packagesIniFile.close();
-            }
-            
-            std::vector<std::string> packageList;
-            std::vector<std::string> hiddenPackageList;
-            
-            // Load the INI file and parse its content.
-            std::map<std::string, std::map<std::string, std::string>> packagesIniData = getParsedDataFromIniFile(packagesIniFilePath);
-            // Load subdirectories
-            std::vector<std::string> subdirectories = getSubdirectories(packageDirectory);
-            //for (size_t i = 0; i < subdirectories.size(); ++i) {
-            for (const auto& packageName: subdirectories) {
-                if (packageName.substr(0, 1) == ".")
-                    continue;
-                // Check if the overlay name exists in the INI data.
-                if (packagesIniData.find(packageName) == packagesIniData.end()) {
-                    // The entry doesn't exist; initialize it.
-                    packageList.push_back("0020:"+packageName);
-                    setIniFileValue(packagesIniFilePath, packageName, "priority", "20");
-                    setIniFileValue(packagesIniFilePath, packageName, "star", "false");
-                    setIniFileValue(packagesIniFilePath, packageName, "hide", "false");
+            if (dropdownSection.empty()) {
+                // Create the directory if it doesn't exist
+                createDirectory(packageDirectory);
+                
+                
+                std::fstream packagesIniFile(packagesIniFilePath, std::ios::in);
+                if (!packagesIniFile.is_open()) {
+                    std::ofstream createFile(packagesIniFilePath); // Create an empty INI file if it doesn't exist
+                    createFile.close();
+                    initializingSpawn = true;
                 } else {
-                    // Read priority and starred status from ini
-                    priority = "0020";
-                    starred = "false";
-                    hide = "false";
-                    
-                    // Check if the "priority" key exists in overlaysIniData for overlayFileName
-                    if (packagesIniData.find(packageName) != packagesIniData.end() &&
-                        packagesIniData[packageName].find("priority") != packagesIniData[packageName].end()) {
-                        priority = formatPriorityString(packagesIniData[packageName]["priority"]);
-                    } else
+                    packagesIniFile.close();
+                }
+                
+                std::vector<std::string> packageList;
+                std::vector<std::string> hiddenPackageList;
+                
+                // Load the INI file and parse its content.
+                std::map<std::string, std::map<std::string, std::string>> packagesIniData = getParsedDataFromIniFile(packagesIniFilePath);
+                // Load subdirectories
+                std::vector<std::string> subdirectories = getSubdirectories(packageDirectory);
+                //for (size_t i = 0; i < subdirectories.size(); ++i) {
+                for (const auto& packageName: subdirectories) {
+                    if (packageName.substr(0, 1) == ".")
+                        continue;
+                    // Check if the overlay name exists in the INI data.
+                    if (packagesIniData.find(packageName) == packagesIniData.end()) {
+                        // The entry doesn't exist; initialize it.
+                        packageList.push_back("0020:"+packageName);
                         setIniFileValue(packagesIniFilePath, packageName, "priority", "20");
-                    
-                    // Check if the "star" key exists in overlaysIniData for overlayFileName
-                    if (packagesIniData.find(packageName) != packagesIniData.end() &&
-                        packagesIniData[packageName].find("star") != packagesIniData[packageName].end()) {
-                        starred = packagesIniData[packageName]["star"];
-                    } else
                         setIniFileValue(packagesIniFilePath, packageName, "star", "false");
-                    
-                    // Check if the "star" key exists in overlaysIniData for overlayFileName
-                    if (packagesIniData.find(packageName) != packagesIniData.end() &&
-                        packagesIniData[packageName].find("hide") != packagesIniData[packageName].end()) {
-                        hide = packagesIniData[packageName]["hide"];
-                    } else
                         setIniFileValue(packagesIniFilePath, packageName, "hide", "false");
-                    
-                    if (hide == "false") {
-                        if (starred == "true")
-                            packageList.push_back("-1:"+priority+":"+packageName);
-                        else
-                            packageList.push_back(priority+":"+packageName);
                     } else {
-                        if (starred == "true")
-                            hiddenPackageList.push_back("-1:"+priority+":"+packageName);
-                        else
-                            hiddenPackageList.push_back(priority+":"+packageName);
+                        // Read priority and starred status from ini
+                        priority = "0020";
+                        starred = "false";
+                        hide = "false";
+                        
+                        // Check if the "priority" key exists in overlaysIniData for overlayFileName
+                        if (packagesIniData.find(packageName) != packagesIniData.end() &&
+                            packagesIniData[packageName].find("priority") != packagesIniData[packageName].end()) {
+                            priority = formatPriorityString(packagesIniData[packageName]["priority"]);
+                        } else
+                            setIniFileValue(packagesIniFilePath, packageName, "priority", "20");
+                        
+                        // Check if the "star" key exists in overlaysIniData for overlayFileName
+                        if (packagesIniData.find(packageName) != packagesIniData.end() &&
+                            packagesIniData[packageName].find("star") != packagesIniData[packageName].end()) {
+                            starred = packagesIniData[packageName]["star"];
+                        } else
+                            setIniFileValue(packagesIniFilePath, packageName, "star", "false");
+                        
+                        // Check if the "star" key exists in overlaysIniData for overlayFileName
+                        if (packagesIniData.find(packageName) != packagesIniData.end() &&
+                            packagesIniData[packageName].find("hide") != packagesIniData[packageName].end()) {
+                            hide = packagesIniData[packageName]["hide"];
+                        } else
+                            setIniFileValue(packagesIniFilePath, packageName, "hide", "false");
+                        
+                        if (hide == "false") {
+                            if (starred == "true")
+                                packageList.push_back("-1:"+priority+":"+packageName);
+                            else
+                                packageList.push_back(priority+":"+packageName);
+                        } else {
+                            if (starred == "true")
+                                hiddenPackageList.push_back("-1:"+priority+":"+packageName);
+                            else
+                                hiddenPackageList.push_back(priority+":"+packageName);
+                        }
                     }
                 }
-            }
-            packagesIniData.clear();
-            subdirectories.clear();
-            
-            std::sort(packageList.begin(), packageList.end());
-            std::sort(hiddenPackageList.begin(), hiddenPackageList.end());
-            
-            if (inHiddenMode) {
-                packageList = hiddenPackageList;
-                hiddenPackageList.clear();
-            }
-            
-            std::string taintePackageName;
-            std::string packageName;
-            std::string packageStarred;
-            std::string newPackageName;
-            std::string packageFilePath;
-            std::string newStarred;
-            PackageHeader packageHeader;
-            
-            for (size_t i = 0; i < packageList.size(); ++i) {
-                taintePackageName = packageList[i];
-                if (i == 0) {
-                    if (!inHiddenMode)
-                        list->addItem(new tsl::elm::CategoryHeader(PACKAGES));
-                    else
-                        list->addItem(new tsl::elm::CategoryHeader(HIDDEN_PACKAGES));
-                }
-                //bool usingStar = false;
-                packageName = taintePackageName.c_str();
-                packageStarred = "false";
+                packagesIniData.clear();
+                subdirectories.clear();
                 
-                if ((packageName.length() >= 2) && (packageName.substr(0, 3) == "-1:")) {
-                    // strip first two characters
-                    packageName = packageName.substr(3);
-                    packageStarred = "true";
+                std::sort(packageList.begin(), packageList.end());
+                std::sort(hiddenPackageList.begin(), hiddenPackageList.end());
+                
+                if (inHiddenMode) {
+                    packageList = hiddenPackageList;
+                    hiddenPackageList.clear();
                 }
                 
-                packageName = packageName.substr(5);
+                std::string taintePackageName;
+                std::string packageName;
+                std::string packageStarred;
+                std::string newPackageName;
+                std::string packageFilePath;
+                std::string newStarred;
+                PackageHeader packageHeader;
                 
-                newPackageName = packageName.c_str();
-                if (packageStarred == "true")
-                    newPackageName = STAR_SYMBOL+" "+newPackageName;
-                
-                packageFilePath = packageDirectory + packageName+ "/";
-                
-                // Toggle the starred status
-                newStarred = (packageStarred == "true") ? "false" : "true";
-                
-                //tsl::elm::ListItem* listItem = nullptr;
-                if (isFileOrDirectory(packageFilePath)) {
-                    packageHeader = getPackageHeaderFromIni(packageFilePath+packageFileName);
+                for (size_t i = 0; i < packageList.size(); ++i) {
+                    taintePackageName = packageList[i];
+                    if (i == 0) {
+                        if (!inHiddenMode)
+                            list->addItem(new tsl::elm::CategoryHeader(PACKAGES));
+                        else
+                            list->addItem(new tsl::elm::CategoryHeader(HIDDEN_PACKAGES));
+                    }
+                    //bool usingStar = false;
+                    packageName = taintePackageName.c_str();
+                    packageStarred = "false";
                     
-                    listItem = new tsl::elm::ListItem(newPackageName);
-                    if (cleanVersionLabels == "true")
-                        packageHeader.version = removeQuotes(cleanVersionLabel(packageHeader.version));
-                    if (hidePackageVersions != "true")
-                       listItem->setValue(packageHeader.version, true);
+                    if ((packageName.length() >= 2) && (packageName.substr(0, 3) == "-1:")) {
+                        // strip first two characters
+                        packageName = packageName.substr(3);
+                        packageStarred = "true";
+                    }
                     
-                    packageHeader.clear(); // free memory
+                    packageName = packageName.substr(5);
                     
-                    // Add a click listener to load the overlay when clicked upon
-                    listItem->setClickListener([this, packageFilePath, newStarred, packageName](s64 keys) {
-                        bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
-                        if (_runningInterpreter) {
-
+                    newPackageName = packageName.c_str();
+                    if (packageStarred == "true")
+                        newPackageName = STAR_SYMBOL+" "+newPackageName;
+                    
+                    packageFilePath = packageDirectory + packageName+ "/";
+                    
+                    // Toggle the starred status
+                    newStarred = (packageStarred == "true") ? "false" : "true";
+                    
+                    //tsl::elm::ListItem* listItem = nullptr;
+                    if (isFileOrDirectory(packageFilePath)) {
+                        packageHeader = getPackageHeaderFromIni(packageFilePath+packageFileName);
+                        
+                        listItem = new tsl::elm::ListItem(newPackageName);
+                        if (cleanVersionLabels == "true")
+                            packageHeader.version = removeQuotes(cleanVersionLabel(packageHeader.version));
+                        if (hidePackageVersions != "true")
+                           listItem->setValue(packageHeader.version, true);
+                        
+                        packageHeader.clear(); // free memory
+                        
+                        // Add a click listener to load the overlay when clicked upon
+                        listItem->setClickListener([this, packageFilePath, newStarred, packageName](s64 keys) {
+                            bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+                            if (_runningInterpreter) {
+    
+                                return false;
+                            }
+    
+                            if (simulatedSelect && !simulatedSelectComplete) {
+                                keys |= KEY_A;
+                                simulatedSelect = false;
+                            }
+    
+                            if (keys & KEY_A) {
+                                inMainMenu = false;
+                                //inHiddenMode = false;
+                                
+                                // read commands from package's boot_package.ini
+                                if (isFileOrDirectory(packageFilePath+bootPackageFileName)) {
+                                    std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> bootOptions = loadOptionsFromIni(packageFilePath+bootPackageFileName, true);
+                                    if (bootOptions.size() > 0) {
+                                        std::string bootOptionName;
+                                        for (auto& bootOption:bootOptions) {
+                                            bootOptionName = bootOption.first;
+                                            auto& bootCommands = bootOption.second;
+                                            if (bootOptionName == "boot") {
+                                                interpretAndExecuteCommand(std::move(bootCommands), packageFilePath+bootPackageFileName, bootOptionName); // Execute modified
+                                                break;
+                                            }
+                                        }
+                                        bootOptions.clear();
+                                    }
+                                }
+                                
+                                tsl::changeTo<PackageMenu>(packageFilePath, "");
+                                simulatedSelectComplete = true;
+                                return true;
+                            } else if (keys & STAR_KEY) {
+                                if (!packageName.empty())
+                                    setIniFileValue(packagesIniFilePath, packageName, "star", newStarred); // Update the INI file with the new value
+                                
+                                if (inHiddenMode) {
+                                    //tsl::goBack();
+                                    inMainMenu = false;
+                                    inHiddenMode = true;
+                                    reloadMenu2 = true;
+                                }
+                                tsl::changeTo<MainMenu>(hiddenMenuMode);
+                                return true;
+                            } else if (keys & SETTINGS_KEY) {
+                                
+                                if (!inHiddenMode) {
+                                    lastMenu = "";
+                                    inMainMenu = false;
+                                } else {
+                                    lastMenu = "hiddenMenuMode";
+                                    inHiddenMode = false;
+                                }
+                                
+                                tsl::changeTo<SettingsMenu>(packageName, "package");
+                                return true;
+                            }
                             return false;
-                        }
-
+                        });
+                        list->addItem(listItem);
+                    }
+                }
+                packageList.clear();
+                
+                if (!hiddenPackageList.empty() && !inHiddenMode) {
+                    listItem = new tsl::elm::ListItem(HIDDEN, DROPDOWN_SYMBOL);
+                    listItem->setClickListener([this](uint64_t keys) {
+                        bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+                        if (_runningInterpreter)
+                            return false;
+                        
                         if (simulatedSelect && !simulatedSelectComplete) {
                             keys |= KEY_A;
                             simulatedSelect = false;
                         }
-
+                        
                         if (keys & KEY_A) {
                             inMainMenu = false;
-                            //inHiddenMode = false;
-                            
-                            // read commands from package's boot_package.ini
-                            if (isFileOrDirectory(packageFilePath+bootPackageFileName)) {
-                                std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> bootOptions = loadOptionsFromIni(packageFilePath+bootPackageFileName, true);
-                                if (bootOptions.size() > 0) {
-                                    std::string bootOptionName;
-                                    for (auto& bootOption:bootOptions) {
-                                        bootOptionName = bootOption.first;
-                                        auto& bootCommands = bootOption.second;
-                                        if (bootOptionName == "boot") {
-                                            interpretAndExecuteCommand(std::move(bootCommands), packageFilePath+bootPackageFileName, bootOptionName); // Execute modified
-                                            break;
-                                        }
-                                    }
-                                    bootOptions.clear();
-                                }
-                            }
-                            
-                            tsl::changeTo<PackageMenu>(packageFilePath, "");
+                            inHiddenMode = true;
+                            tsl::changeTo<MainMenu>("packages");
                             simulatedSelectComplete = true;
-                            return true;
-                        } else if (keys & STAR_KEY) {
-                            if (!packageName.empty())
-                                setIniFileValue(packagesIniFilePath, packageName, "star", newStarred); // Update the INI file with the new value
-                            
-                            if (inHiddenMode) {
-                                //tsl::goBack();
-                                inMainMenu = false;
-                                inHiddenMode = true;
-                                reloadMenu2 = true;
-                            }
-                            tsl::changeTo<MainMenu>(hiddenMenuMode);
-                            return true;
-                        } else if (keys & SETTINGS_KEY) {
-                            
-                            if (!inHiddenMode) {
-                                lastMenu = "";
-                                inMainMenu = false;
-                            } else {
-                                lastMenu = "hiddenMenuMode";
-                                inHiddenMode = false;
-                            }
-                            
-                            tsl::changeTo<SettingsMenu>(packageName, "package");
                             return true;
                         }
                         return false;
                     });
+                    
                     list->addItem(listItem);
                 }
             }
-            packageList.clear();
-            
-            if (!hiddenPackageList.empty() && !inHiddenMode) {
-                listItem = new tsl::elm::ListItem(HIDDEN, DROPDOWN_SYMBOL);
-                listItem->setClickListener([this](uint64_t keys) {
-                    bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
-                    if (_runningInterpreter)
-                        return false;
-
-                    if (simulatedSelect && !simulatedSelectComplete) {
-                        keys |= KEY_A;
-                        simulatedSelect = false;
-                    }
-
-                    if (keys & KEY_A) {
-                        inMainMenu = false;
-                        inHiddenMode = true;
-                        tsl::changeTo<MainMenu>("packages");
-                        simulatedSelectComplete = true;
-                        return true;
-                    }
-                    return false;
-                });
-                
-                list->addItem(listItem);
-            }
-            
             
             // ********* THIS PART NEEDS TO MIRROR WHAT IS WITHIN SUBMENU *********
             
@@ -3616,8 +3617,11 @@ public:
                 // Load options from INI file
                 std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> options = loadOptionsFromIni(packageIniPath, true);
                 
+                bool skipSection = false;
+
                 // initialize packageConfigIniPath text file
-                
+                std::string lastSection = "";
+
                 std::string optionName, footer;
                 bool useSelection;
                 
@@ -3675,15 +3679,63 @@ public:
                     commandsOn.clear();
                     commandsOff.clear();
                     
+                    // Custom header implementation
+                    if (!dropdownSection.empty()) {
+                        if (i == 0) {
+                            // Add a section break with small text to indicate the "Commands" section
+                            list->addItem(new tsl::elm::CategoryHeader(removeTag(dropdownSection.substr(1))));
+                            skipSection = true;
+                            lastSection = dropdownSection;
+                        }
+                        if (commands.size() == 0) {
+                            if (optionName == dropdownSection)
+                                skipSection = false;
+                            else
+                                skipSection = true;
+                            continue;
+                        }
+                    } else {
+                        if (commands.size() == 0 && optionName[0] != '*') {
+                            // Add a section break with small text to indicate the "Commands" section
+                            if (optionName != lastSection)
+                                list->addItem(new tsl::elm::CategoryHeader(removeTag(optionName)));
+                            lastSection = optionName;
+                            skipSection = false;
+                            continue;
+                        } else if (i == 0) { // Add a section break with small text to indicate the "Commands" section
+                            list->addItem(new tsl::elm::CategoryHeader(COMMANDS));
+                            skipSection = false;
+                            lastSection = "Commands";
+                        }
+                    }
                     
-                    if (commands.size() == 0) {
-                        // Add a section break with small text to indicate the "Commands" section
-                        list->addItem(new tsl::elm::CategoryHeader(removeTag(optionName)));
-                        continue;
-                    } else if (i == 0) // Add a section break with small text to indicate the "Commands" section
-                        list->addItem(new tsl::elm::CategoryHeader(COMMANDS));
-                    
-                    
+                    if (optionName[0] == '*') {
+                        // Create reference to PackageMenu with dropdownSection set to optionName
+                        listItem = new tsl::elm::ListItem(removeTag(optionName.substr(1)), DROPDOWN_SYMBOL);
+                        
+                        listItem->setClickListener([this, optionName](s64 keys) {
+                            bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+                            if (_runningInterpreter)
+                                return false;
+                            if (simulatedSelect && !simulatedSelectComplete) {
+                                keys |= KEY_A;
+                                simulatedSelect = false;
+                            }
+                            if (keys & KEY_A) {
+                                inPackageMenu = false;
+                                tsl::changeTo<MainMenu>("", optionName);
+                                simulatedSelectComplete = true;
+                                return true;
+                            }
+                            return false;
+                        });
+                        list->addItem(listItem);
+                        
+                        skipSection = true;
+                    }
+
+
+
                     //std::string commandName;
                     
                     // initial processing of commands
@@ -3832,7 +3884,7 @@ public:
                         skipSystem = true;
                     }
                     
-                    if (!skipSystem) {
+                    if (!skipSection && !skipSystem) {
                         if (useSelection) { // For wildcard commands (dropdown menus)
                             listItem = static_cast<tsl::elm::ListItem*>(nullptr);
                             if ((footer == DROPDOWN_SYMBOL) || (footer.empty()))
@@ -4037,7 +4089,7 @@ public:
                     }
                 }
                 
-                if (hideUserGuide != "true")
+                if (hideUserGuide != "true" && dropdownSection.empty())
                     addHelpInfo(list);
             }
         }
@@ -4049,7 +4101,7 @@ public:
         
         filesList.clear();
 
-        tsl::elm::OverlayFrame *rootFrame = new tsl::elm::OverlayFrame("Ultrahand", versionLabel, menuMode+hiddenMenuMode);
+        tsl::elm::OverlayFrame *rootFrame = new tsl::elm::OverlayFrame("Ultrahand", versionLabel, menuMode+hiddenMenuMode+dropdownSection);
         //rootFrame = std::make_unique<tsl::elm::OverlayFrame>("Ultrahand", versionLabel, menuMode+hiddenMenuMode);
 
         rootFrame->setContent(list);
@@ -4114,8 +4166,22 @@ public:
             tsl::changeTo<MainMenu>();
             return true;
         }
+
+        if (!dropdownSection.empty()) {
+            if (simulatedBack && !simulatedBackComplete) {
+                keysHeld |= KEY_B;
+                simulatedBack = false;
+            }
+
+            if ((keysHeld & KEY_B) && !stillTouching) {
+                returningToMain = true;
+                tsl::goBack();
+                simulatedBackComplete = true;
+                return true;
+            }
+        }
         
-        if (inMainMenu && !inHiddenMode){
+        if (inMainMenu && !inHiddenMode && dropdownSection.empty()){
             if (isDownloaded) // for handling software updates
                 tsl::Overlay::get()->close();
             
