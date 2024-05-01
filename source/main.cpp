@@ -3086,6 +3086,8 @@ public:
         
         // Overlays menu
         if (menuMode == "overlays") {
+            //closeInterpreterThread();
+
             if (!inHiddenMode)
                 list->addItem(new tsl::elm::CategoryHeader(OVERLAYS));
             else
@@ -3374,7 +3376,8 @@ public:
         
         // Packages menu
         if (menuMode == "packages" ) {
-            
+            //startInterpreterThread();
+
             // Create the directory if it doesn't exist
             createDirectory(packageDirectory);
             
@@ -4139,6 +4142,7 @@ public:
                     if (menuMode != "packages") {
                         setIniFileValue(settingsConfigIniPath, "ultrahand", "last_menu", "packages");
                         tsl::changeTo<MainMenu>();
+                        startInterpreterThread();
                         simulatedNextPageComplete = true;
                         return true;
                     }
@@ -4146,6 +4150,7 @@ public:
                 if ((keysHeld & KEY_DLEFT) && !(keysHeld & (KEY_DRIGHT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR)) && !stillTouching) {
                     if (menuMode != "overlays") {
                         setIniFileValue(settingsConfigIniPath, "ultrahand", "last_menu", "overlays");
+                        closeInterpreterThread();
                         tsl::goBack();
                         tsl::Overlay::get()->getCurrentGui()->removeFocus();
                         simulatedNextPageComplete = true;
@@ -4270,7 +4275,7 @@ public:
         ASSERT_FATAL(socketInitializeDefault());
         ASSERT_FATAL(nifmInitialize(NifmServiceType_User));
         ASSERT_FATAL(smInitialize());
-        startInterpreterThread();
+        //startInterpreterThread();
     }
     
     /**
