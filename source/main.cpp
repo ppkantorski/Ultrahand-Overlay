@@ -179,7 +179,7 @@ public:
             
             // Envolke selectionOverlay in optionMode
             
-            listItem->setClickListener([listItem](uint64_t keys) { // Add 'command' to the capture list
+            listItem->setClickListener([listItemPtr = listItem](uint64_t keys) { // Add 'command' to the capture list
                 bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                 if (_runningInterpreter)
                     return false;
@@ -191,7 +191,7 @@ public:
 
                 if (keys & KEY_A) {
                     tsl::changeTo<UltrahandSettingsMenu>("keyComboMenu");
-                    selectedListItem = listItem;
+                    selectedListItem = listItemPtr;
                     simulatedSelectComplete = true;
                     return true;
                 }
@@ -205,7 +205,7 @@ public:
             
             // Envolke selectionOverlay in optionMode
             
-            listItem->setClickListener([listItem](uint64_t keys) { // Add 'command' to the capture list
+            listItem->setClickListener([listItemPtr = listItem](uint64_t keys) { // Add 'command' to the capture list
                 bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                 if (_runningInterpreter)
                     return false;
@@ -216,7 +216,7 @@ public:
                 }
                 if (keys & KEY_A) {
                     tsl::changeTo<UltrahandSettingsMenu>("languageMenu");
-                    selectedListItem = listItem;
+                    selectedListItem = listItemPtr;
                     simulatedSelectComplete = true;
                     return true;
                 }
@@ -228,7 +228,7 @@ public:
             listItem = new tsl::elm::ListItem(SOFTWARE_UPDATE);
             listItem->setValue(DROPDOWN_SYMBOL);
             
-            listItem->setClickListener([listItem](uint64_t keys) { // Add 'command' to the capture list
+            listItem->setClickListener([](uint64_t keys) { // Add 'command' to the capture list
                 if (keys & KEY_A) {
                     tsl::changeTo<UltrahandSettingsMenu>("softwareUpdateMenu");
                     return true;
@@ -245,7 +245,7 @@ public:
                 currentTheme = DEFAULT;
             listItem = new tsl::elm::ListItem(THEME);
             listItem->setValue(currentTheme);
-            listItem->setClickListener([listItem](uint64_t keys) { // Add 'command' to the capture list
+            listItem->setClickListener([listItemPtr = listItem](uint64_t keys) { // Add 'command' to the capture list
                 bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                 if (_runningInterpreter)
                     return false;
@@ -256,7 +256,7 @@ public:
                 }
                 if (keys & KEY_A) {
                     tsl::changeTo<UltrahandSettingsMenu>("themeMenu");
-                    selectedListItem = listItem;
+                    selectedListItem = listItemPtr;
                     simulatedSelectComplete = true;
                     return true;
                 }
@@ -268,7 +268,7 @@ public:
             listItem = new tsl::elm::ListItem(WIDGET);
             listItem->setValue(DROPDOWN_SYMBOL);
             
-            listItem->setClickListener([listItem](uint64_t keys) { // Add 'command' to the capture list
+            listItem->setClickListener([](uint64_t keys) { // Add 'command' to the capture list
                 bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                 if (_runningInterpreter)
                     return false;
@@ -290,7 +290,7 @@ public:
             listItem = new tsl::elm::ListItem(MISCELLANEOUS);
             listItem->setValue(DROPDOWN_SYMBOL);
             
-            listItem->setClickListener([listItem](uint64_t keys) { // Add 'command' to the capture list
+            listItem->setClickListener([](uint64_t keys) { // Add 'command' to the capture list
                 bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                 if (_runningInterpreter)
                     return false;
@@ -326,7 +326,7 @@ public:
                     lastSelectedListItem = listItem;
                 }
                 
-                listItem->setClickListener([defaultMenuMode, listItem](uint64_t keys) { // Add 'this', 'i', and 'listItem' to the capture list
+                listItem->setClickListener([defaultMenuMode, listItemPtr = listItem](uint64_t keys) { // Add 'this', 'i', and 'listItem' to the capture list
                     bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                     if (_runningInterpreter)
                         return false;
@@ -339,8 +339,8 @@ public:
                         setIniFileValue(settingsConfigIniPath, "ultrahand", "default_menu", defaultMenuMode);
                         lastSelectedListItem->setValue("");
                         selectedListItem->setValue(defaultMenuMode);
-                        listItem->setValue(CHECKMARK_SYMBOL);
-                        lastSelectedListItem = listItem;
+                        listItemPtr->setValue(CHECKMARK_SYMBOL);
+                        lastSelectedListItem = listItemPtr;
                         simulatedSelectComplete = true;
                         return true;
                     }
@@ -366,7 +366,7 @@ public:
                     lastSelectedListItem = listItem;
                 }
                 
-                listItem->setClickListener([combo, mappedCombo=comboMap[combo], defaultCombo, listItem](uint64_t keys) { // Add 'this', 'i', and 'listItem' to the capture list
+                listItem->setClickListener([combo, mappedCombo=comboMap[combo], defaultCombo, listItemPtr = listItem](uint64_t keys) { // Add 'this', 'i', and 'listItem' to the capture list
                     bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                     if (_runningInterpreter)
                         return false;
@@ -383,8 +383,8 @@ public:
                         
                         lastSelectedListItem->setValue("");
                         selectedListItem->setValue(mappedCombo);
-                        listItem->setValue(CHECKMARK_SYMBOL);
-                        lastSelectedListItem = listItem;
+                        listItemPtr->setValue(CHECKMARK_SYMBOL);
+                        lastSelectedListItem = listItemPtr;
                         
                         simulatedSelectComplete = true;
                         return true;
@@ -420,7 +420,7 @@ public:
                     lastSelectedListItem = listItem;
                 }
                 
-                listItem->setClickListener([skipLang, defaultLangMode, defaulLang, langFile, listItem](uint64_t keys) { // Add 'this', 'i', and 'listItem' to the capture list
+                listItem->setClickListener([skipLang, defaultLangMode, defaulLang, langFile, listItemPtr = listItem](uint64_t keys) { // Add 'this', 'i', and 'listItem' to the capture list
                     bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                     if (_runningInterpreter)
                         return false;
@@ -443,8 +443,8 @@ public:
                         
                         lastSelectedListItem->setValue("");
                         selectedListItem->setValue(defaultLangMode);
-                        listItem->setValue(CHECKMARK_SYMBOL);
-                        lastSelectedListItem = listItem;
+                        listItemPtr->setValue(CHECKMARK_SYMBOL);
+                        lastSelectedListItem = listItemPtr;
                         
                         simulatedSelectComplete = true;
                         return true;
@@ -460,7 +460,7 @@ public:
             
             auto listItem = new tsl::elm::ListItem(UPDATE_ULTRAHAND);
             
-            listItem->setClickListener([listItem](uint64_t keys) { // Add 'command' to the capture list
+            listItem->setClickListener([listItemPtr = listItem](uint64_t keys) { // Add 'command' to the capture list
                 //static bool lastRunningInterpreter = false;
                 bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                 if (_runningInterpreter) {
@@ -500,10 +500,10 @@ public:
                     //runningInterpreter.store(true, std::memory_order_release);
                     //lastRunningInterpreter = true;
                     if (isDownloadCommand)
-                        listItem->setValue(DOWNLOAD_SYMBOL);
+                        listItemPtr->setValue(DOWNLOAD_SYMBOL);
                     else
-                        listItem->setValue(INPROGRESS_SYMBOL);
-                    lastSelectedListItem = listItem;
+                        listItemPtr->setValue(INPROGRESS_SYMBOL);
+                    lastSelectedListItem = listItemPtr;
                     
                     
                     lastRunningInterpreter = true;
@@ -518,7 +518,7 @@ public:
             
             // Envolke selectionOverlay in optionMode
             
-            listItem->setClickListener([listItem](uint64_t keys) { // Add 'command' to the capture list
+            listItem->setClickListener([listItemPtr = listItem](uint64_t keys) { // Add 'command' to the capture list
                 //static bool lastRunningInterpreter = false;
 
                 bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
@@ -573,10 +573,10 @@ public:
                     //runningInterpreter.store(true, std::memory_order_release);
                     //lastRunningInterpreter = true;
                     if (isDownloadCommand)
-                        listItem->setValue(DOWNLOAD_SYMBOL);
+                        listItemPtr->setValue(DOWNLOAD_SYMBOL);
                     else
-                        listItem->setValue(INPROGRESS_SYMBOL);
-                    lastSelectedListItem = listItem;
+                        listItemPtr->setValue(INPROGRESS_SYMBOL);
+                    lastSelectedListItem = listItemPtr;
                     
                     
                     lastRunningInterpreter = true;
@@ -618,7 +618,7 @@ public:
                 lastSelectedListItem = listItem;
             }
             
-            listItem->setClickListener([defaultTheme, listItem](uint64_t keys) { // Add 'this', 'i', and 'listItem' to the capture list
+            listItem->setClickListener([defaultTheme, listItemPtr = listItem](uint64_t keys) { // Add 'this', 'i', and 'listItem' to the capture list
                 bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                 if (_runningInterpreter)
                     return false;
@@ -644,8 +644,8 @@ public:
                     
                     lastSelectedListItem->setValue("");
                     selectedListItem->setValue(DEFAULT);
-                    listItem->setValue(CHECKMARK_SYMBOL);
-                    lastSelectedListItem = listItem;
+                    listItemPtr->setValue(CHECKMARK_SYMBOL);
+                    lastSelectedListItem = listItemPtr;
                     
                     simulatedSelectComplete = true;
                     return true;
@@ -672,7 +672,7 @@ public:
                     lastSelectedListItem = listItem;
                 }
                 
-                listItem->setClickListener([themeName, currentTheme, themeFile, listItem](uint64_t keys) { // Add 'this', 'i', and 'listItem' to the capture list
+                listItem->setClickListener([themeName, currentTheme, themeFile, listItemPtr = listItem](uint64_t keys) { // Add 'this', 'i', and 'listItem' to the capture list
                     bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                     if (_runningInterpreter)
                         return false;
@@ -695,8 +695,8 @@ public:
                         
                         lastSelectedListItem->setValue("");
                         selectedListItem->setValue(themeName);
-                        listItem->setValue(CHECKMARK_SYMBOL);
-                        lastSelectedListItem = listItem;
+                        listItemPtr->setValue(CHECKMARK_SYMBOL);
+                        lastSelectedListItem = listItemPtr;
                         
                         simulatedSelectComplete = true;
                         return true;
@@ -712,7 +712,7 @@ public:
             
             auto toggleListItem = new tsl::elm::ToggleListItem(CLOCK, false, ON, OFF);
             toggleListItem->setState((hideClock == "false"));
-            toggleListItem->setStateChangedListener([this, toggleListItem](bool state) {
+            toggleListItem->setStateChangedListener([](bool state) {
                 setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_clock", state ? "false" : "true");
                 reinitializeWidgetVars();
                 redrawWidget = true;
@@ -721,7 +721,7 @@ public:
             
             toggleListItem = new tsl::elm::ToggleListItem(SOC_TEMPERATURE, false, ON, OFF);
             toggleListItem->setState((hideSOCTemp == "false"));
-            toggleListItem->setStateChangedListener([this, toggleListItem](bool state) {
+            toggleListItem->setStateChangedListener([](bool state) {
                 setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_soc_temp", state ? "false" : "true");
                 reinitializeWidgetVars();
                 redrawWidget = true;
@@ -730,7 +730,7 @@ public:
             
             toggleListItem = new tsl::elm::ToggleListItem(PCB_TEMPERATURE, false, ON, OFF);
             toggleListItem->setState((hidePCBTemp == "false"));
-            toggleListItem->setStateChangedListener([this, toggleListItem](bool state) {
+            toggleListItem->setStateChangedListener([](bool state) {
                 setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_pcb_temp", state ? "false" : "true");
                 reinitializeWidgetVars();
                 redrawWidget = true;
@@ -739,7 +739,7 @@ public:
             
             toggleListItem = new tsl::elm::ToggleListItem(BATTERY, false, ON, OFF);
             toggleListItem->setState((hideBattery == "false"));
-            toggleListItem->setStateChangedListener([this, toggleListItem](bool state) {
+            toggleListItem->setStateChangedListener([](bool state) {
                 setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_battery", state ? "false" : "true");
                 reinitializeWidgetVars();
                 redrawWidget = true;
@@ -753,7 +753,7 @@ public:
             
             auto toggleListItem = new tsl::elm::ToggleListItem(USER_GUIDE, false, ON, OFF);
             toggleListItem->setState((hideUserGuide == "false"));
-            toggleListItem->setStateChangedListener([this, toggleListItem](bool state) {
+            toggleListItem->setStateChangedListener([](bool state) {
                 setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_user_guide", state ? "false" : "true");
                 if ((hideUserGuide == "false") != state)
                     reloadMenu = true;
@@ -781,7 +781,7 @@ public:
             
             toggleListItem = new tsl::elm::ToggleListItem(CLEAN_LABELS, false, ON, OFF);
             toggleListItem->setState((cleanVersionLabels == "true"));
-            toggleListItem->setStateChangedListener([this, toggleListItem](bool state) {
+            toggleListItem->setStateChangedListener([](bool state) {
                 setIniFileValue(settingsConfigIniPath, "ultrahand", "clean_version_labels", state ? "true" : "false");
                 if ((cleanVersionLabels == "true") != state) {
                     if (cleanVersionLabels == "false")
@@ -799,7 +799,7 @@ public:
             
             toggleListItem = new tsl::elm::ToggleListItem(OVERLAY_LABELS, false, ON, OFF);
             toggleListItem->setState((hideOverlayVersions == "false"));
-            toggleListItem->setStateChangedListener([this, toggleListItem](bool state) {
+            toggleListItem->setStateChangedListener([](bool state) {
                 setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_overlay_versions", state ? "false" : "true");
                 if ((hideOverlayVersions == "false") != state)
                     reloadMenu = true;
@@ -808,7 +808,7 @@ public:
             
             toggleListItem = new tsl::elm::ToggleListItem(PACKAGE_LABELS, false, ON, OFF);
             toggleListItem->setState((hidePackageVersions == "false"));
-            toggleListItem->setStateChangedListener([this, toggleListItem](bool state) {
+            toggleListItem->setStateChangedListener([](bool state) {
                 setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_package_versions", state ? "false" : "true");
                 if ((hidePackageVersions == "false") != state)
                     reloadMenu = true;
@@ -1065,7 +1065,7 @@ public:
             
             // Envolke selectionOverlay in optionMode
             
-            listItem->setClickListener([&, listItem](uint64_t keys) { // Add 'command' to the capture list
+            listItem->setClickListener([&entryName = this->entryName, &entryMode = this->entryMode, &overlayName = this->overlayName, listItemPtr = listItem](uint64_t keys) { // Add 'command' to the capture list
                 bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                 if (_runningInterpreter)
                     return false;
@@ -1076,7 +1076,7 @@ public:
                 }
                 if (keys & KEY_A) {
                     tsl::changeTo<SettingsMenu>(entryName, entryMode, overlayName, "priority");
-                    selectedListItem = listItem;
+                    selectedListItem = listItemPtr;
                     simulatedSelectComplete = true;
                     return true;
                 }
@@ -1088,7 +1088,7 @@ public:
                 // Envoke toggling
                 toggleListItem = new tsl::elm::ToggleListItem(LAUNCH_ARGUMENTS, false, ON, OFF);
                 toggleListItem->setState((useOverlayLaunchArgs=="true"));
-                toggleListItem->setStateChangedListener([&, useOverlayLaunchArgs, toggleListItem](bool state) {
+                toggleListItem->setStateChangedListener([&settingsIniPath = settingsIniPath, &entryName = entryName, useOverlayLaunchArgs](bool state) {
                     setIniFileValue(settingsIniPath, entryName, "use_launch_args", state ? "true" : "false");
                     if ((useOverlayLaunchArgs=="true") != state)
                         reloadMenu = true; // this reloads before main menu
@@ -1115,7 +1115,7 @@ public:
                     lastSelectedListItem = listItem;
                 }
                 
-                listItem->setClickListener([&, iStr, priorityValue, listItem](uint64_t keys) { // Add 'this', 'i', and 'listItem' to the capture list
+                listItem->setClickListener([&settingsIniPath = this->settingsIniPath, &entryName = this->entryName, iStr, priorityValue, listItemPtr = listItem](uint64_t keys) { // Add 'this', 'i', and 'listItem' to the capture list
                     bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                     if (_runningInterpreter)
                         return false;
@@ -1130,8 +1130,8 @@ public:
                         setIniFileValue(settingsIniPath, entryName, "priority", iStr);
                         lastSelectedListItem->setValue("");
                         selectedListItem->setValue(iStr);
-                        listItem->setValue(CHECKMARK_SYMBOL);
-                        lastSelectedListItem = listItem;
+                        listItemPtr->setValue(CHECKMARK_SYMBOL);
+                        lastSelectedListItem = listItemPtr;
                         simulatedSelectComplete = true;
                         return true;
                     }
@@ -1348,7 +1348,7 @@ public:
                     }
                 } else if (isInSection) {
                     listItem = new tsl::elm::ListItem(line);
-                    listItem->setClickListener([&, line, listItem](uint64_t keys) {
+                    listItem->setClickListener([&inQuotes = this->inQuotes, &filePath = this->filePath, &specificKey = this->specificKey, line, listItemPtr = listItem](uint64_t keys) {
                         bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                         if (_runningInterpreter)
                             return false;
@@ -1383,9 +1383,9 @@ public:
                             commandVec.clear();
                             
                             if (commandSuccess)
-                                listItem->setValue(CHECKMARK_SYMBOL);
+                                listItemPtr->setValue(CHECKMARK_SYMBOL);
                             else
-                                listItem->setValue(CROSSMARK_SYMBOL);
+                                listItemPtr->setValue(CROSSMARK_SYMBOL);
 
                             simulatedSelectComplete = true;
                             return true;
@@ -1887,7 +1887,8 @@ public:
                 //
                 
                 //auto& commands = this->commands; // Assuming 'commands' is a member of the class
-                listItem->setClickListener([&, i, footer, selectedItem, listItem](uint64_t keys) {
+                listItem->setClickListener([&commands = this->commands, &filePath = this->filePath, &specificKey = this->specificKey, &commandMode = this->commandMode,
+                    &specifiedFooterKey = this->specifiedFooterKey, &lastSelectedListItemFooter = this->lastSelectedListItemFooter, i, footer, selectedItem, listItemPtr = listItem](uint64_t keys) {
 
                     //static bool lastRunningInterpreter = false;
                     bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
@@ -1933,17 +1934,17 @@ public:
                         //runningInterpreter.store(true, std::memory_order_release);
                         
                         if (isDownloadCommand)
-                            listItem->setValue(DOWNLOAD_SYMBOL);
+                            listItemPtr->setValue(DOWNLOAD_SYMBOL);
                         else
-                            listItem->setValue(INPROGRESS_SYMBOL);
+                            listItemPtr->setValue(INPROGRESS_SYMBOL);
                         if (commandMode == "option") {
-                            selectedFooterDict[specifiedFooterKey] = listItem->getText();
+                            selectedFooterDict[specifiedFooterKey] = listItemPtr->getText();
                             //logMessage("specifiedFooterKey: "+specifiedFooterKey);
                             //logMessage("itemName: "+listItem->getText());
                             lastSelectedListItem->setValue(lastSelectedListItemFooter, true);
                             lastSelectedListItemFooter = footer;
                         }
-                        lastSelectedListItem = listItem;
+                        lastSelectedListItem = listItemPtr;
                         
 
                         lastRunningInterpreter = true;
@@ -1963,7 +1964,9 @@ public:
                 toggleStateOn = std::find(selectedItemsListOn.begin(), selectedItemsListOn.end(), selectedItem) != selectedItemsListOn.end();
                 toggleListItem->setState(toggleStateOn);
                 
-                toggleListItem->setStateChangedListener([&, i, selectedItem, toggleListItem](bool state) {
+                toggleListItem->setStateChangedListener([&commandsOn = this->commandsOn, &commandsOff = this->commandsOff, &filePath = this->filePath,
+                    &specificKey = this->specificKey, i, selectedItem](bool state) {
+
                     if (!state) {
                         interpretAndExecuteCommand(getSourceReplacement(commandsOn, selectedItem, i), filePath, specificKey); // Execute modified 
                         //toggleListItem->setState(!state);
@@ -2271,7 +2274,7 @@ public:
                             // Create reference to PackageMenu with dropdownSection set to optionName
                             listItem = new tsl::elm::ListItem(removeTag(optionName.substr(1)), DROPDOWN_SYMBOL);
                             
-                            listItem->setClickListener([this, optionName](s64 keys) {
+                            listItem->setClickListener([&packagePath=this->packagePath, optionName](s64 keys) {
                                 bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                                 if (_runningInterpreter)
                                     return false;
@@ -2475,7 +2478,7 @@ public:
                             listItem->setValue(UNAVAILABLE_SELECTION, true);
                         
                         //std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(option.second, pathReplace);
-                        listItem->setClickListener([&, commands, keyName = option.first, packagePath = this->packagePath, footer, lastSection, listItem](uint64_t keys) {
+                        listItem->setClickListener([commands, keyName = option.first, &packagePath = this->packagePath, footer, lastSection, listItemPtr = listItem](uint64_t keys) {
                             bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                             if (_runningInterpreter)
                                 return false;
@@ -2492,7 +2495,7 @@ public:
                                     if (inSubPackageMenu)
                                         inSubPackageMenu = false;
                                     
-                                    selectedListItem = listItem;
+                                    selectedListItem = listItemPtr;
                                     
                                     std::string newKey = "";
                                     if (inPackageMenu) {
@@ -2541,7 +2544,7 @@ public:
                                 listItem->setValue(footer);
                             
                             
-                            listItem->setClickListener([&, i, commands, keyName = option.first, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
+                            listItem->setClickListener([i, commands, keyName = option.first, &packagePath = this->packagePath, selectedItem, listItemPtr = listItem](uint64_t keys) { // Add 'command' to the capture list
                                 //static bool lastRunningInterpreter = false;
                                 bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                                 if (_runningInterpreter) {
@@ -2579,10 +2582,10 @@ public:
                                     //modifiedCmds.clear();
                                     //runningInterpreter.store(true, std::memory_order_release);
                                     if (isDownloadCommand)
-                                        listItem->setValue(DOWNLOAD_SYMBOL);
+                                        listItemPtr->setValue(DOWNLOAD_SYMBOL);
                                     else
-                                        listItem->setValue(INPROGRESS_SYMBOL);
-                                    lastSelectedListItem = listItem;
+                                        listItemPtr->setValue(INPROGRESS_SYMBOL);
+                                    lastSelectedListItem = listItemPtr;
                                     
                                     lastRunningInterpreter = true;
                                     simulatedSelectComplete = true;
@@ -2610,7 +2613,7 @@ public:
                             
                             toggleListItem->setState(toggleStateOn);
                             
-                            toggleListItem->setStateChangedListener([&, i, commandsOn, commandsOff, keyName = option.first](bool state) {
+                            toggleListItem->setStateChangedListener([i, commandsOn, commandsOff, keyName = option.first, &packagePath = this->packagePath, &pathPatternOn = this->pathPatternOn, &pathPatternOff = this->pathPatternOff](bool state) {
                                 if (state) {
                                     //applySourceReplacement(commandsOn, preprocessPath(pathPatternOn), i);
                                     //commandsOn = getSourceReplacement(commandsOn, preprocessPath(pathPatternOn), i);
@@ -3278,7 +3281,7 @@ public:
                             listItem->setValue(overlayVersion, true);
                         
                         // Add a click listener to load the overlay when clicked upon
-                        listItem->setClickListener([this, overlayFile, newStarred, overlayFileName, overlayName](s64 keys) {
+                        listItem->setClickListener([&hiddenMenuMode = this->hiddenMenuMode, overlayFile, newStarred, overlayFileName, overlayName](s64 keys) {
                             bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                             if (_runningInterpreter) {
 
@@ -3346,7 +3349,7 @@ public:
                     listItem = new tsl::elm::ListItem(HIDDEN, DROPDOWN_SYMBOL);
                     
                     //std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(option.second, pathReplace);
-                    listItem->setClickListener([this](uint64_t keys) {
+                    listItem->setClickListener([](uint64_t keys) {
                         bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                         if (_runningInterpreter)
                             return false;
@@ -3509,7 +3512,7 @@ public:
                         packageHeader.clear(); // free memory
                         
                         // Add a click listener to load the overlay when clicked upon
-                        listItem->setClickListener([this, packageFilePath, newStarred, packageName](s64 keys) {
+                        listItem->setClickListener([&hiddenMenuMode = this->hiddenMenuMode, packageFilePath, newStarred, packageName](s64 keys) {
                             bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                             if (_runningInterpreter) {
     
@@ -3705,7 +3708,7 @@ public:
                         // Create reference to PackageMenu with dropdownSection set to optionName
                         listItem = new tsl::elm::ListItem(removeTag(optionName.substr(1)), DROPDOWN_SYMBOL);
                         
-                        listItem->setClickListener([this, optionName](s64 keys) {
+                        listItem->setClickListener([optionName](s64 keys) {
                             bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                             if (_runningInterpreter)
                                 return false;
@@ -3887,7 +3890,7 @@ public:
                             }
                             
                             //std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(option.second, pathReplace);
-                            listItem->setClickListener([this, commands, keyName = option.first, packagePath = packageDirectory, listItem](uint64_t keys) {
+                            listItem->setClickListener([commands, keyName = option.first, packagePath = packageDirectory](uint64_t keys) {
                                 bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                                 if (_runningInterpreter)
                                     return false;
@@ -3927,7 +3930,7 @@ public:
                                 
                                 if (sourceType == "json") { // For JSON wildcards
                                     
-                                    listItem->setClickListener([&, i, commands, packagePath = packageDirectory, keyName = option.first, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
+                                    listItem->setClickListener([i, commands, packagePath = packageDirectory, keyName = option.first, selectedItem, listItemPtr = listItem](uint64_t keys) { // Add 'command' to the capture list
                                         //static bool lastRunningInterpreter = false;
 
                                         bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
@@ -3968,10 +3971,10 @@ public:
                                             //runningInterpreter.store(true, std::memory_order_release);
                                             //lastRunningInterpreter = true;
                                             if (isDownloadCommand)
-                                                listItem->setValue(DOWNLOAD_SYMBOL);
+                                                listItemPtr->setValue(DOWNLOAD_SYMBOL);
                                             else
-                                                listItem->setValue(INPROGRESS_SYMBOL);
-                                            lastSelectedListItem = listItem;
+                                                listItemPtr->setValue(INPROGRESS_SYMBOL);
+                                            lastSelectedListItem = listItemPtr;
                                             
 
                                             lastRunningInterpreter = true;
@@ -3990,7 +3993,7 @@ public:
                                     list->addItem(listItem);
                                 } else {
                                     
-                                    listItem->setClickListener([&, i, commands, packagePath = packageDirectory, keyName = option.first, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
+                                    listItem->setClickListener([i, commands, packagePath = packageDirectory, keyName = option.first, selectedItem, listItemPtr = listItem](uint64_t keys) { // Add 'command' to the capture list
                                         
                                         bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                                         if (_runningInterpreter) {
@@ -4031,11 +4034,11 @@ public:
                                             //runningInterpreter.store(true, std::memory_order_release);
                                             
                                             if (isDownloadCommand)
-                                                listItem->setValue(DOWNLOAD_SYMBOL);
+                                                listItemPtr->setValue(DOWNLOAD_SYMBOL);
                                             else
-                                                listItem->setValue(INPROGRESS_SYMBOL);
+                                                listItemPtr->setValue(INPROGRESS_SYMBOL);
 
-                                            lastSelectedListItem = listItem;
+                                            lastSelectedListItem = listItemPtr;
                                             
                                             
                                             lastRunningInterpreter = true;
@@ -4062,7 +4065,7 @@ public:
                                 
                                 toggleListItem->setState(toggleStateOn);
                                 
-                                toggleListItem->setStateChangedListener([&, i, pathPatternOn, pathPatternOff, commandsOn, commandsOff, packagePath = packageDirectory, keyName = option.first](bool state) {
+                                toggleListItem->setStateChangedListener([i, pathPatternOn, pathPatternOff, commandsOn, commandsOff, packagePath = packageDirectory, keyName = option.first](bool state) {
                                     if (state) {
                                         //applySourceReplacement(commandsOn, preprocessPath(pathPatternOn), i);
                                         //commandsOn = getSourceReplacement(commandsOn, preprocessPath(pathPatternOn), i);
