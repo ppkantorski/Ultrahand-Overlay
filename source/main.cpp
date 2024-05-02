@@ -179,8 +179,8 @@ public:
             
             // Envolke selectionOverlay in optionMode
             
-            listItem->setClickListener([this, listItem](uint64_t keys) { // Add 'command' to the capture list
-                bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+            listItem->setClickListener([listItem](uint64_t keys) { // Add 'command' to the capture list
+                bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                 if (_runningInterpreter)
                     return false;
 
@@ -205,8 +205,8 @@ public:
             
             // Envolke selectionOverlay in optionMode
             
-            listItem->setClickListener([this, listItem](uint64_t keys) { // Add 'command' to the capture list
-                bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+            listItem->setClickListener([listItem](uint64_t keys) { // Add 'command' to the capture list
+                bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                 if (_runningInterpreter)
                     return false;
 
@@ -228,7 +228,7 @@ public:
             listItem = new tsl::elm::ListItem(SOFTWARE_UPDATE);
             listItem->setValue(DROPDOWN_SYMBOL);
             
-            listItem->setClickListener([this, listItem](uint64_t keys) { // Add 'command' to the capture list
+            listItem->setClickListener([listItem](uint64_t keys) { // Add 'command' to the capture list
                 if (keys & KEY_A) {
                     tsl::changeTo<UltrahandSettingsMenu>("softwareUpdateMenu");
                     return true;
@@ -245,8 +245,8 @@ public:
                 currentTheme = DEFAULT;
             listItem = new tsl::elm::ListItem(THEME);
             listItem->setValue(currentTheme);
-            listItem->setClickListener([this, listItem](uint64_t keys) { // Add 'command' to the capture list
-                bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+            listItem->setClickListener([listItem](uint64_t keys) { // Add 'command' to the capture list
+                bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                 if (_runningInterpreter)
                     return false;
 
@@ -268,8 +268,8 @@ public:
             listItem = new tsl::elm::ListItem(WIDGET);
             listItem->setValue(DROPDOWN_SYMBOL);
             
-            listItem->setClickListener([this, listItem](uint64_t keys) { // Add 'command' to the capture list
-                bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+            listItem->setClickListener([listItem](uint64_t keys) { // Add 'command' to the capture list
+                bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                 if (_runningInterpreter)
                     return false;
 
@@ -290,8 +290,8 @@ public:
             listItem = new tsl::elm::ListItem(MISCELLANEOUS);
             listItem->setValue(DROPDOWN_SYMBOL);
             
-            listItem->setClickListener([this, listItem](uint64_t keys) { // Add 'command' to the capture list
-                bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+            listItem->setClickListener([listItem](uint64_t keys) { // Add 'command' to the capture list
+                bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                 if (_runningInterpreter)
                     return false;
 
@@ -326,8 +326,8 @@ public:
                     lastSelectedListItem = listItem;
                 }
                 
-                listItem->setClickListener([this, defaultMenuMode, listItem](uint64_t keys) { // Add 'this', 'i', and 'listItem' to the capture list
-                    bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+                listItem->setClickListener([defaultMenuMode, listItem](uint64_t keys) { // Add 'this', 'i', and 'listItem' to the capture list
+                    bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                     if (_runningInterpreter)
                         return false;
 
@@ -366,8 +366,8 @@ public:
                     lastSelectedListItem = listItem;
                 }
                 
-                listItem->setClickListener([this, combo, mappedCombo=comboMap[combo], defaultCombo, listItem](uint64_t keys) { // Add 'this', 'i', and 'listItem' to the capture list
-                    bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+                listItem->setClickListener([combo, mappedCombo=comboMap[combo], defaultCombo, listItem](uint64_t keys) { // Add 'this', 'i', and 'listItem' to the capture list
+                    bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                     if (_runningInterpreter)
                         return false;
 
@@ -420,8 +420,8 @@ public:
                     lastSelectedListItem = listItem;
                 }
                 
-                listItem->setClickListener([this, skipLang, defaultLangMode, defaulLang, langFile, listItem](uint64_t keys) { // Add 'this', 'i', and 'listItem' to the capture list
-                    bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+                listItem->setClickListener([skipLang, defaultLangMode, defaulLang, langFile, listItem](uint64_t keys) { // Add 'this', 'i', and 'listItem' to the capture list
+                    bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                     if (_runningInterpreter)
                         return false;
 
@@ -460,9 +460,9 @@ public:
             
             auto listItem = new tsl::elm::ListItem(UPDATE_ULTRAHAND);
             
-            listItem->setClickListener([this, listItem](uint64_t keys) { // Add 'command' to the capture list
+            listItem->setClickListener([listItem](uint64_t keys) { // Add 'command' to the capture list
                 //static bool lastRunningInterpreter = false;
-                bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+                bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                 if (_runningInterpreter) {
 
                     //int currentPercentage = downloadPercentage.load(std::memory_order_acquire);
@@ -518,10 +518,10 @@ public:
             
             // Envolke selectionOverlay in optionMode
             
-            listItem->setClickListener([this, listItem](uint64_t keys) { // Add 'command' to the capture list
+            listItem->setClickListener([listItem](uint64_t keys) { // Add 'command' to the capture list
                 //static bool lastRunningInterpreter = false;
 
-                bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+                bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                 if (_runningInterpreter) {
                     //int currentPercentage = downloadPercentage.load(std::memory_order_acquire);
                     //logMessage("currentPercentage: "+std::to_string(currentPercentage));
@@ -618,8 +618,8 @@ public:
                 lastSelectedListItem = listItem;
             }
             
-            listItem->setClickListener([this, defaultTheme, listItem](uint64_t keys) { // Add 'this', 'i', and 'listItem' to the capture list
-                bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+            listItem->setClickListener([defaultTheme, listItem](uint64_t keys) { // Add 'this', 'i', and 'listItem' to the capture list
+                bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                 if (_runningInterpreter)
                     return false;
 
@@ -672,8 +672,8 @@ public:
                     lastSelectedListItem = listItem;
                 }
                 
-                listItem->setClickListener([this, themeName, currentTheme, themeFile, listItem](uint64_t keys) { // Add 'this', 'i', and 'listItem' to the capture list
-                    bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+                listItem->setClickListener([themeName, currentTheme, themeFile, listItem](uint64_t keys) { // Add 'this', 'i', and 'listItem' to the capture list
+                    bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                     if (_runningInterpreter)
                         return false;
 
@@ -848,7 +848,7 @@ public:
         //    simulatedBack = false;
         //    simulatedBackComplete = true;
         //}
-        bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+        bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
         if (_runningInterpreter) {
             // Check for back button press
             if ((keysHeld & KEY_R) && !stillTouching) {
@@ -1049,7 +1049,7 @@ public:
             // Envoke toggling
             auto toggleListItem = new tsl::elm::ToggleListItem(hideLabel, false, ON, OFF);
             toggleListItem->setState(hide);
-            toggleListItem->setStateChangedListener([this, hide, toggleListItem](bool state) {
+            toggleListItem->setStateChangedListener([&, hide, toggleListItem](bool state) {
                 setIniFileValue(settingsIniPath, entryName, "hide", state ? "true" : "false");
                 if (hide != state)
                     reloadMenu = true; // this reloads before main menu
@@ -1065,8 +1065,8 @@ public:
             
             // Envolke selectionOverlay in optionMode
             
-            listItem->setClickListener([this, listItem](uint64_t keys) { // Add 'command' to the capture list
-                bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+            listItem->setClickListener([&, listItem](uint64_t keys) { // Add 'command' to the capture list
+                bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                 if (_runningInterpreter)
                     return false;
 
@@ -1088,7 +1088,7 @@ public:
                 // Envoke toggling
                 toggleListItem = new tsl::elm::ToggleListItem(LAUNCH_ARGUMENTS, false, ON, OFF);
                 toggleListItem->setState((useOverlayLaunchArgs=="true"));
-                toggleListItem->setStateChangedListener([this, useOverlayLaunchArgs, toggleListItem](bool state) {
+                toggleListItem->setStateChangedListener([&, useOverlayLaunchArgs, toggleListItem](bool state) {
                     setIniFileValue(settingsIniPath, entryName, "use_launch_args", state ? "true" : "false");
                     if ((useOverlayLaunchArgs=="true") != state)
                         reloadMenu = true; // this reloads before main menu
@@ -1115,8 +1115,8 @@ public:
                     lastSelectedListItem = listItem;
                 }
                 
-                listItem->setClickListener([this, iStr, priorityValue, listItem](uint64_t keys) { // Add 'this', 'i', and 'listItem' to the capture list
-                    bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+                listItem->setClickListener([&, iStr, priorityValue, listItem](uint64_t keys) { // Add 'this', 'i', and 'listItem' to the capture list
+                    bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                     if (_runningInterpreter)
                         return false;
 
@@ -1173,7 +1173,7 @@ public:
         //    simulatedBack = false;
         //    simulatedBackComplete = true;
         //}
-        bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+        bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
         if (_runningInterpreter) {
             // Check for back button press
             if ((keysHeld & KEY_R) && !stillTouching) {
@@ -1348,8 +1348,8 @@ public:
                     }
                 } else if (isInSection) {
                     listItem = new tsl::elm::ListItem(line);
-                    listItem->setClickListener([line, this, listItem](uint64_t keys) {
-                        bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+                    listItem->setClickListener([&, line, listItem](uint64_t keys) {
+                        bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                         if (_runningInterpreter)
                             return false;
                         if (simulatedSelect && !simulatedSelectComplete) {
@@ -1427,7 +1427,7 @@ public:
         //    simulatedBack = false;
         //    simulatedBackComplete = true;
         //}
-        bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+        bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
         if (_runningInterpreter) {
             // Check for back button press
             if ((keysHeld & KEY_R) && !stillTouching) {
@@ -1494,6 +1494,8 @@ class SelectionOverlay : public tsl::Gui {
 private:
     std::string filePath, specificKey, pathPattern, pathPatternOn, pathPatternOff, itemName, groupingName, lastGroupingName;
     std::vector<std::vector<std::string>> commands;
+    std::vector<std::vector<std::string>> commandsOn;
+    std::vector<std::vector<std::string>> commandsOff;
     std::string specifiedFooterKey;
     bool toggleState = false;
     std::string packageConfigIniPath;
@@ -1521,6 +1523,8 @@ public:
      */
     ~SelectionOverlay() {
         commands.clear();
+        commandsOn.clear();
+        commandsOff.clear();
     }
     
     /**
@@ -1551,8 +1555,6 @@ public:
         std::string jsonKey, jsonKeyOn, jsonKeyOff;
         
         
-        std::vector<std::vector<std::string>> commandsOn;
-        std::vector<std::vector<std::string>> commandsOff;
         std::string listString, listStringOn, listStringOff;
         std::vector<std::string> listData, listDataOn, listDataOff;
         std::string jsonString, jsonStringOn, jsonStringOff;
@@ -1804,7 +1806,7 @@ public:
                         lastGroupingName = groupingName.c_str();
                     }
                 }
-                if (commandGrouping == "split2") {
+                else if (commandGrouping == "split2") {
                     groupingName = removeQuotes(getParentDirNameFromPath(selectedItem));
 
                     pos = groupingName.find(" - ");
@@ -1819,7 +1821,7 @@ public:
                         lastGroupingName = groupingName.c_str();
                     }
                 }
-                if (commandGrouping == "split3") {
+                else if (commandGrouping == "split3") {
                     groupingName = removeQuotes(getNameFromPath(selectedItem));
 
                     pos = groupingName.find(" - ");
@@ -1834,7 +1836,7 @@ public:
                         lastGroupingName = groupingName.c_str();
                     }
                 }
-                if (commandGrouping == "split4") {
+                else if (commandGrouping == "split4") {
                     groupingName = removeQuotes(getParentDirNameFromPath(selectedItem, 2));
                     itemName = removeQuotes(dropExtension(getNameFromPath(selectedItem)));
                     footer = removeQuotes(getParentDirNameFromPath(selectedItem));
@@ -1884,9 +1886,11 @@ public:
                 
                 //
                 
-                listItem->setClickListener([this, i, footer, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
+                //auto& commands = this->commands; // Assuming 'commands' is a member of the class
+                listItem->setClickListener([&, i, footer, selectedItem, listItem](uint64_t keys) {
+
                     //static bool lastRunningInterpreter = false;
-                    bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+                    bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                     if (_runningInterpreter) {
                         
                         //int currentPercentage = downloadPercentage.load(std::memory_order_acquire);
@@ -1923,7 +1927,7 @@ public:
                         //this->commands = getSourceReplacement(this->commands, selectedItem, i);
                         isDownloadCommand = false;
                         runningInterpreter.store(true, std::memory_order_release);
-                        enqueueInterpreterCommand(getSourceReplacement(this->commands, selectedItem, i), filePath, specificKey);
+                        enqueueInterpreterCommand(getSourceReplacement(commands, selectedItem, i), filePath, specificKey);
                         //lastRunningInterpreter = true;
                         //modifiedCmds.clear();
                         //runningInterpreter.store(true, std::memory_order_release);
@@ -1959,37 +1963,23 @@ public:
                 toggleStateOn = std::find(selectedItemsListOn.begin(), selectedItemsListOn.end(), selectedItem) != selectedItemsListOn.end();
                 toggleListItem->setState(toggleStateOn);
                 
-                toggleListItem->setStateChangedListener([this, i, commandsOn, commandsOff, selectedItem, selectedItemsListOn, selectedItemsListOff, toggleListItem](bool state) {
+                toggleListItem->setStateChangedListener([&, i, selectedItem, toggleListItem](bool state) {
                     if (!state) {
-                        if (std::find(selectedItemsListOn.begin(), selectedItemsListOn.end(), selectedItem) != selectedItemsListOn.end()) {
-                            // Toggle switched to On
-                            //std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commandsOn, selectedItem, i); // replace source
-                            //applySourceReplacement(commandsOn, selectedItem, i);
-                            //commandsOn = getSourceReplacement(commandsOn, selectedItem, i);
-                            interpretAndExecuteCommand(getSourceReplacement(commandsOn, selectedItem, i), filePath, specificKey); // Execute modified 
-                            //modifiedCmds.clear();
-                        } else
-                            toggleListItem->setState(!state);
+                        interpretAndExecuteCommand(getSourceReplacement(commandsOn, selectedItem, i), filePath, specificKey); // Execute modified 
+                        //toggleListItem->setState(!state);
                     } else {
-                        if (std::find(selectedItemsListOff.begin(), selectedItemsListOff.end(), selectedItem) != selectedItemsListOff.end()) {
-                            // Toggle switched to Off
-                            //std::vector<std::vector<std::string>> modifiedCmds = getSourceReplacement(commandsOff, selectedItem, i); // replace source
-                            //applySourceReplacement(commandsOff, selectedItem, i);
-                            //commandsOff = getSourceReplacement(commandsOff, selectedItem, i);
-                            interpretAndExecuteCommand(getSourceReplacement(commandsOff, selectedItem, i), filePath, specificKey); // Execute modified 
-                            //modifiedCmds.clear();
-                        } else
-                            toggleListItem->setState(!state);
+                        interpretAndExecuteCommand(getSourceReplacement(commandsOff, selectedItem, i), filePath, specificKey); // Execute modified 
+                        //toggleListItem->setState(!state);
                     }
                 });
                 list->addItem(toggleListItem);
             }
         }
         
-        filesList.clear();
-        selectedItemsList.clear();
-        selectedItemsListOn.clear();
-        selectedItemsListOff.clear();
+        //filesList.clear();
+        //selectedItemsList.clear();
+        //selectedItemsListOn.clear();
+        //selectedItemsListOff.clear();
         
         //tsl::elm::OverlayFrame *rootFrame = new tsl::elm::OverlayFrame(getNameFromPath(filePath), "Ultrahand Package", "", packageHeader.color);
         //rootFrame->setContent(list);
@@ -2019,7 +2009,7 @@ public:
         //    simulatedBack = false;
         //    simulatedBackComplete = true;
         //}
-        bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+        bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
         if (_runningInterpreter) {
             // Check for back button press
             if ((keysHeld & KEY_R) && !stillTouching) {
@@ -2282,7 +2272,7 @@ public:
                             listItem = new tsl::elm::ListItem(removeTag(optionName.substr(1)), DROPDOWN_SYMBOL);
                             
                             listItem->setClickListener([this, optionName](s64 keys) {
-                                bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+                                bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                                 if (_runningInterpreter)
                                     return false;
                                 if (simulatedSelect && !simulatedSelectComplete) {
@@ -2485,8 +2475,8 @@ public:
                             listItem->setValue(UNAVAILABLE_SELECTION, true);
                         
                         //std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(option.second, pathReplace);
-                        listItem->setClickListener([this, commands, keyName = option.first, packagePath = this->packagePath, footer, lastSection, listItem](uint64_t keys) {
-                            bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+                        listItem->setClickListener([&, commands, keyName = option.first, packagePath = this->packagePath, footer, lastSection, listItem](uint64_t keys) {
+                            bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                             if (_runningInterpreter)
                                 return false;
 
@@ -2551,9 +2541,9 @@ public:
                                 listItem->setValue(footer);
                             
                             
-                            listItem->setClickListener([this, i, commands, keyName = option.first, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
+                            listItem->setClickListener([&, i, commands, keyName = option.first, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
                                 //static bool lastRunningInterpreter = false;
-                                bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+                                bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                                 if (_runningInterpreter) {
                                     //int currentPercentage = downloadPercentage.load(std::memory_order_acquire);
                                     //logMessage("currentPercentage: "+std::to_string(currentPercentage));
@@ -2620,7 +2610,7 @@ public:
                             
                             toggleListItem->setState(toggleStateOn);
                             
-                            toggleListItem->setStateChangedListener([this, i, commandsOn, commandsOff, toggleStateOn, keyName = option.first](bool state) {
+                            toggleListItem->setStateChangedListener([&, i, commandsOn, commandsOff, keyName = option.first](bool state) {
                                 if (state) {
                                     //applySourceReplacement(commandsOn, preprocessPath(pathPatternOn), i);
                                     //commandsOn = getSourceReplacement(commandsOn, preprocessPath(pathPatternOn), i);
@@ -2685,7 +2675,7 @@ public:
         //    simulatedBackComplete = true;
         //}
         
-        bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+        bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
         if (_runningInterpreter) {
             // Check for back button press
             if ((keysHeld & KEY_R) && !stillTouching) {
@@ -3289,7 +3279,7 @@ public:
                         
                         // Add a click listener to load the overlay when clicked upon
                         listItem->setClickListener([this, overlayFile, newStarred, overlayFileName, overlayName](s64 keys) {
-                            bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+                            bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                             if (_runningInterpreter) {
 
                                 return false;
@@ -3357,7 +3347,7 @@ public:
                     
                     //std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(option.second, pathReplace);
                     listItem->setClickListener([this](uint64_t keys) {
-                        bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+                        bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                         if (_runningInterpreter)
                             return false;
 
@@ -3520,7 +3510,7 @@ public:
                         
                         // Add a click listener to load the overlay when clicked upon
                         listItem->setClickListener([this, packageFilePath, newStarred, packageName](s64 keys) {
-                            bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+                            bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                             if (_runningInterpreter) {
     
                                 return false;
@@ -3589,8 +3579,8 @@ public:
                 
                 if (!hiddenPackageList.empty() && !inHiddenMode) {
                     listItem = new tsl::elm::ListItem(HIDDEN, DROPDOWN_SYMBOL);
-                    listItem->setClickListener([this](uint64_t keys) {
-                        bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+                    listItem->setClickListener([](uint64_t keys) {
+                        bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                         if (_runningInterpreter)
                             return false;
                         
@@ -3716,7 +3706,7 @@ public:
                         listItem = new tsl::elm::ListItem(removeTag(optionName.substr(1)), DROPDOWN_SYMBOL);
                         
                         listItem->setClickListener([this, optionName](s64 keys) {
-                            bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+                            bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                             if (_runningInterpreter)
                                 return false;
                             if (simulatedSelect && !simulatedSelectComplete) {
@@ -3898,7 +3888,7 @@ public:
                             
                             //std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(option.second, pathReplace);
                             listItem->setClickListener([this, commands, keyName = option.first, packagePath = packageDirectory, listItem](uint64_t keys) {
-                                bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+                                bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                                 if (_runningInterpreter)
                                     return false;
 
@@ -3937,10 +3927,10 @@ public:
                                 
                                 if (sourceType == "json") { // For JSON wildcards
                                     
-                                    listItem->setClickListener([this, i, commands, packagePath = packageDirectory, keyName = option.first, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
+                                    listItem->setClickListener([&, i, commands, packagePath = packageDirectory, keyName = option.first, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
                                         //static bool lastRunningInterpreter = false;
 
-                                        bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+                                        bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                                         if (_runningInterpreter) {
                                             //int currentPercentage = downloadPercentage.load(std::memory_order_acquire);
                                             //logMessage("currentPercentage: "+std::to_string(currentPercentage));
@@ -4000,9 +3990,9 @@ public:
                                     list->addItem(listItem);
                                 } else {
                                     
-                                    listItem->setClickListener([this, i, commands, packagePath = packageDirectory, keyName = option.first, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
+                                    listItem->setClickListener([&, i, commands, packagePath = packageDirectory, keyName = option.first, selectedItem, listItem](uint64_t keys) { // Add 'command' to the capture list
                                         
-                                        bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+                                        bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                                         if (_runningInterpreter) {
                                             //int currentPercentage = downloadPercentage.load(std::memory_order_acquire);
                                             //logMessage("currentPercentage: "+std::to_string(currentPercentage));
@@ -4072,7 +4062,7 @@ public:
                                 
                                 toggleListItem->setState(toggleStateOn);
                                 
-                                toggleListItem->setStateChangedListener([this, i, pathPatternOn, pathPatternOff, commandsOn, commandsOff, toggleStateOn, packagePath = packageDirectory, keyName = option.first](bool state) {
+                                toggleListItem->setStateChangedListener([&, i, pathPatternOn, pathPatternOff, commandsOn, commandsOff, packagePath = packageDirectory, keyName = option.first](bool state) {
                                     if (state) {
                                         //applySourceReplacement(commandsOn, preprocessPath(pathPatternOn), i);
                                         //commandsOn = getSourceReplacement(commandsOn, preprocessPath(pathPatternOn), i);
@@ -4132,7 +4122,7 @@ public:
         //    simulatedBackComplete = true;
         //}
 
-        bool _runningInterpreter(runningInterpreter.load(std::memory_order_acquire));
+        bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
         if (_runningInterpreter) {
             // Check for back button press
             if ((keysHeld & KEY_R) && !stillTouching) {
