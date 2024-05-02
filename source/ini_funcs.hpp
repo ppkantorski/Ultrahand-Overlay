@@ -91,7 +91,7 @@ PackageHeader getPackageHeaderFromIni(const std::string& filePath) {
                 if (endPos == std::string::npos) {
                     endPos = line.length();
                 }
-                *field = trim(line.substr(startPos, endPos - startPos));
+                *field = removeQuotes(trim(line.substr(startPos, endPos - startPos)));
                 break; // Break after processing the first match in a line
             }
         }
