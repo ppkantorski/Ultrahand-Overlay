@@ -1516,7 +1516,7 @@ public:
      */
     SelectionOverlay(const std::string& path, const std::string& key = "", const std::vector<std::vector<std::string>>& cmds = {}, const std::string& footerKey = "")
         : filePath(path), specificKey(key), commands(cmds), specifiedFooterKey(footerKey) {
-            
+            //lastSelectedListItem = nullptr;
         }
     /**
      * @brief Destroys the `SelectionOverlay` instance.
@@ -1524,8 +1524,7 @@ public:
      * Cleans up any resources associated with the `SelectionOverlay` instance.
      */
     ~SelectionOverlay() {
-        lastSelectedListItem = nullptr;
-        selectedListItem = nullptr;
+        //lastSelectedListItem = nullptr;
     }
     
     /**
@@ -1940,17 +1939,15 @@ public:
                             listItemPtr->setValue(INPROGRESS_SYMBOL);
                         if (commandMode == "option") {
                             selectedFooterDict[specifiedFooterKey] = listItemPtr->getText();
-                            //logMessage("specifiedFooterKey: "+specifiedFooterKey);
-                            //logMessage("itemName: "+listItem->getText());
-                            lastSelectedListItem->setValue(lastSelectedListItemFooter, true);
+                            if (lastSelectedListItem)
+                                lastSelectedListItem->setValue(lastSelectedListItemFooter, true);
                             lastSelectedListItemFooter = footer;
                         }
+
                         lastSelectedListItem = listItemPtr;
                         
 
                         lastRunningInterpreter = true;
-                        
-                        
                         simulatedSelectComplete = true;
                         return true;
                     }
@@ -2129,17 +2126,18 @@ public:
      * Cleans up any resources associated with the `PackageMenu` instance.
      */
     ~PackageMenu() {
-        lastSelectedListItem = nullptr;
-        selectedListItem = nullptr;
+        //lastSelectedListItem = nullptr;
+        //selectedListItem = nullptr;
         //logMessage("Clearing footer dict...");
         //    selectedListItem = new tsl::elm::ListItem("");
         //    lastSelectedListItem = new tsl::elm::ListItem("");
-        //if (returningToMain) {
-        //    hexSumCache.clear();
-        //    selectedFooterDict.clear(); // Clears all data from the map, making it empty again
-        //    selectedListItem = new tsl::elm::ListItem("");
-        //    lastSelectedListItem = new tsl::elm::ListItem("");
-        //}
+        if (returningToMain) {
+            logMessage("cclearing...");
+            hexSumCache.clear();
+            selectedFooterDict.clear(); // Clears all data from the map, making it empty again
+            //selectedListItem = new tsl::elm::ListItem("");
+            //lastSelectedListItem = new tsl::elm::ListItem("");
+        }
     }
     
     /**
@@ -2817,10 +2815,10 @@ public:
                         returningToHiddenMain = true;
                     
                     // Free-up memory
-                    hexSumCache.clear();
-                    selectedFooterDict.clear(); // Clears all data from the map, making it empty again
-                    selectedListItem = nullptr;
-                    lastSelectedListItem = nullptr;
+                    //hexSumCache.clear();
+                    //selectedFooterDict.clear(); // Clears all data from the map, making it empty again
+                    //selectedListItem = nullptr;
+                    //lastSelectedListItem = nullptr;
                     
                     tsl::goBack();
                     //tsl::goBack();
@@ -2842,10 +2840,10 @@ public:
 
                     
                     // Free-up memory
-                    hexSumCache.clear();
-                    selectedFooterDict.clear(); // Clears all data from the map, making it empty again
-                    selectedListItem = nullptr;
-                    lastSelectedListItem = nullptr;
+                    //hexSumCache.clear();
+                    //selectedFooterDict.clear(); // Clears all data from the map, making it empty again
+                    //selectedListItem = nullptr;
+                    //lastSelectedListItem = nullptr;
                     
                     lastPage = "left";
                     tsl::goBack();
