@@ -3060,14 +3060,8 @@ public:
                     hidePackageVersions = "false";
                 }
                 
-                //if (ultrahandSection.count("last_menu") > 0) {
-                //    menuMode = ultrahandSection["last_menu"];
-                //    if (ultrahandSection.count("default_menu") > 0) {
-                //        defaultMenuMode = ultrahandSection["default_menu"];
-                //        if (ultrahandSection.count("in_overlay") > 0)
-                //            settingsLoaded = true;
-                //    }
-                //}
+                if (ultrahandSection.count("in_overlay") > 0)
+                    settingsLoaded = true;
                 
                 if (ultrahandSection.count("default_lang") > 0)
                     defaultLang = ultrahandSection["default_lang"];
@@ -3092,7 +3086,7 @@ public:
         if (!settingsLoaded) { // write data if settings are not loaded
             setIniFileValue(settingsConfigIniPath, "ultrahand", "default_lang", defaultLang);
             //setIniFileValue(settingsConfigIniPath, "ultrahand", "default_menu", defaultMenuMode);
-            setIniFileValue(settingsConfigIniPath, "ultrahand", "last_menu", menuMode);
+            //setIniFileValue(settingsConfigIniPath, "ultrahand", "last_menu", menuMode);
             setIniFileValue(settingsConfigIniPath, "ultrahand", "in_overlay", "false");
         }
         
