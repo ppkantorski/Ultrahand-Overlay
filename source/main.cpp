@@ -390,6 +390,7 @@ public:
                     if (keys & KEY_A) {
                         if (combo != defaultCombo) {
                             setIniFileValue(settingsConfigIniPath, "ultrahand", "key_combo", combo);
+                            setIniFileValue(teslaSettingsConfigIniPath, "tesla", "key_combo", combo);
                             reloadMenu = true;
                         }
                         
@@ -1720,7 +1721,6 @@ public:
             }
         }
         
-
         
         
         // items can be paths, commands, or variables depending on source
@@ -1890,7 +1890,6 @@ public:
                 } else if (commandGrouping == "split2") {
                     footer = dropExtension(getNameFromPath(selectedItem));
                 }
-
 
 
                 listItem = std::make_unique<tsl::elm::ListItem>(itemName);
@@ -2076,7 +2075,6 @@ public:
         
         if (inSelectionMenu) {
             
-
             if (simulatedNextPage && !simulatedNextPageComplete) {
                 simulatedNextPage = false;
                 simulatedNextPageComplete = true;
@@ -3567,12 +3565,12 @@ public:
     
                                 return false;
                             }
-    
+                            
                             if (simulatedSelect && !simulatedSelectComplete) {
                                 keys |= KEY_A;
                                 simulatedSelect = false;
                             }
-    
+                            
                             if (keys & KEY_A) {
                                 inMainMenu = false;
                                 //inHiddenMode = false;
@@ -4030,7 +4028,7 @@ public:
 
                                             lastRunningInterpreter = true;
                                             
-    
+                                            
                                             simulatedSelectComplete = true;
                                             return true;
                                         } else if (keys & SCRIPT_KEY) {
@@ -4220,12 +4218,12 @@ public:
                 simulatedNextPage = false;
                 simulatedNextPageComplete = true;
             }
-            
+
             if (simulatedMenu && !simulatedMenuComplete) {
                 simulatedMenu = false;
                 simulatedMenuComplete = true;
             }
-            
+
             if (simulatedBack && !simulatedBackComplete) {
                 keysHeld |= KEY_B;
                 simulatedBack = false;
@@ -4415,7 +4413,7 @@ public:
      * properly shut down services to avoid memory leaks.
      */
     virtual void exitServices() override {
-        closeInterpreterThread();
+        closeInterpreterThread(); // shouldn't be running, but run close anyways
         socketExit();
         nifmExit();
         i2cExit();
