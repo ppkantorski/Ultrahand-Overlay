@@ -4216,6 +4216,16 @@ public:
         }
 
         if (!dropdownSection.empty()) {
+            if (simulatedNextPage && !simulatedNextPageComplete) {
+                simulatedNextPage = false;
+                simulatedNextPageComplete = true;
+            }
+            
+            if (simulatedMenu && !simulatedMenuComplete) {
+                simulatedMenu = false;
+                simulatedMenuComplete = true;
+            }
+            
             if (simulatedBack && !simulatedBackComplete) {
                 keysHeld |= KEY_B;
                 simulatedBack = false;
