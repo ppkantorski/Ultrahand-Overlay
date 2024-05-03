@@ -162,6 +162,13 @@ struct ZzipDirDeleter {
     }
 };
 
+struct ZzipFileDeleter {
+    void operator()(ZZIP_FILE* file) const {
+        if (file) {
+            zzip_file_close(file);
+        }
+    }
+};
 
 /**
  * @brief Extracts files from a ZIP archive to a specified destination.
@@ -173,10 +180,9 @@ struct ZzipDirDeleter {
 bool unzipFile(const std::string& zipFilePath, const std::string& toDestination) {
     abortUnzip.store(false, std::memory_order_release); // Reset abort flag
 
-    // Open the ZIP archive using a unique_ptr with custom deleter
     std::unique_ptr<ZZIP_DIR, ZzipDirDeleter> dir(zzip_dir_open(zipFilePath.c_str(), nullptr));
     if (!dir) {
-        logMessage(std::string("Error opening zip file: ") + zipFilePath);
+        logMessage("Error opening zip file: " + zipFilePath);
         return false;
     }
 
@@ -184,75 +190,56 @@ bool unzipFile(const std::string& zipFilePath, const std::string& toDestination)
     ZZIP_DIRENT entry;
     while (zzip_dir_read(dir.get(), &entry)) {
         if (abortUnzip.load(std::memory_order_acquire)) {
-            abortUnzip.store(false, std::memory_order_release); // Reset abort flag
+            abortUnzip.store(false, std::memory_order_release);
+            success = false;
             break;
         }
 
-        // Skip empty entries, "..." files, and files starting with "."
-        if (entry.d_name[0] == '\0') {
-            continue;
-        }
+        if (entry.d_name[0] == '\0') continue; // Skip empty entries
 
         std::string fileName = entry.d_name;
         std::string extractedFilePath = toDestination + fileName;
+        if (extractedFilePath.size() >= 3 && extractedFilePath.substr(extractedFilePath.size() - 3) == "...") continue; // Skip problematic entries
 
-        // Skip extractedFilePath ends with "..."
-        if (extractedFilePath.size() >= 3 && extractedFilePath.substr(extractedFilePath.size() - 3) == "...")
-            continue;
-
-        // Replace ":" characters except in "sdmc:/"
+        // Clean up path characters and skip directories
         size_t firstColonPos = extractedFilePath.find(':');
-        if (firstColonPos != std::string::npos) {
+        while (firstColonPos != std::string::npos && firstColonPos < extractedFilePath.size()) {
             size_t colonPos = extractedFilePath.find(':', firstColonPos + 1);
-            while (colonPos != std::string::npos) {
-                extractedFilePath[colonPos] = ' ';
-                colonPos = extractedFilePath.find(':', colonPos + 1);
-            }
+            if (colonPos != std::string::npos) extractedFilePath[colonPos] = ' ';
+            firstColonPos = colonPos;
         }
 
-        // Replace double spaces with single space
         size_t pos = extractedFilePath.find("  ");
         while (pos != std::string::npos) {
             extractedFilePath.replace(pos, 2, " ");
             pos = extractedFilePath.find("  ", pos + 1);
         }
 
+        if (!extractedFilePath.empty() && extractedFilePath.back() == '/') continue; // Skip directories
 
-        // Skip over present directory entries when extracting files from a zip archive
-        if (!extractedFilePath.empty() && extractedFilePath.back() == '/') {
-            continue;
-        }
-
-        // Extract the directory path from the extracted file path
-        std::string directoryPath;
-        if (extractedFilePath.back() != '/') {
-            directoryPath = extractedFilePath.substr(0, extractedFilePath.find_last_of('/')) + "/";
-        } else {
-            directoryPath = extractedFilePath;
-        }
-
+        std::string directoryPath = (extractedFilePath.back() != '/') ? 
+            extractedFilePath.substr(0, extractedFilePath.find_last_of('/') + 1) : extractedFilePath;
+        
         createDirectory(directoryPath);
 
-        ZZIP_FILE* file = zzip_file_open(dir.get(), entry.d_name, 0);
+        std::unique_ptr<ZZIP_FILE, ZzipFileDeleter> file(zzip_file_open(dir.get(), entry.d_name, 0));
         if (file) {
             std::ofstream outputFile(extractedFilePath, std::ios::binary);
             if (outputFile.is_open()) {
-                zzip_ssize_t bytesRead;
                 const zzip_ssize_t bufferSize = 4096;
                 char buffer[bufferSize];
-            
-                while ((bytesRead = zzip_file_read(file, buffer, bufferSize)) > 0) {
+                zzip_ssize_t bytesRead;
+
+                while ((bytesRead = zzip_file_read(file.get(), buffer, bufferSize)) > 0) {
                     outputFile.write(buffer, bytesRead);
                 }
-            
                 outputFile.close();
             } else {
-                logMessage(std::string("Error opening output file: ") + extractedFilePath);
+                logMessage("Error opening output file: " + extractedFilePath);
                 success = false;
             }
-            zzip_file_close(file);
         } else {
-            logMessage(std::string("Error opening file in zip: ") + fileName);
+            logMessage("Error opening file in zip: " + fileName);
             success = false;
         }
     }
