@@ -512,6 +512,7 @@ public:
                     };
                     runningInterpreter.store(true, std::memory_order_release);
                     enqueueInterpreterCommand(std::move(interpreterCommands), "", "");
+                    startInterpreterThread();
                     //runningInterpreter.store(true, std::memory_order_release);
                     //lastRunningInterpreter = true;
                     if (isDownloadCommand)
@@ -586,6 +587,7 @@ public:
                     };
                     runningInterpreter.store(true, std::memory_order_release);
                     enqueueInterpreterCommand(std::move(interpreterCommands), "", "");
+                    startInterpreterThread();
                     //runningInterpreter.store(true, std::memory_order_release);
                     //lastRunningInterpreter = true;
                     if (isDownloadCommand)
@@ -889,7 +891,7 @@ public:
                 lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
             else
                 lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
-            ////closeInterpreterThread();
+            closeInterpreterThread();
             lastRunningInterpreter = false;
             return true;
         }
@@ -1955,6 +1957,7 @@ public:
                         isDownloadCommand = false;
                         runningInterpreter.store(true, std::memory_order_release);
                         enqueueInterpreterCommand(getSourceReplacement(commands, selectedItem, i), filePath, specificKey);
+                        startInterpreterThread();
                         //lastRunningInterpreter = true;
                         //modifiedCmds.clear();
                         //runningInterpreter.store(true, std::memory_order_release);
@@ -2060,7 +2063,7 @@ public:
                 lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
             else
                 lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
-            ////closeInterpreterThread();
+            closeInterpreterThread();
             lastRunningInterpreter = false;
             return true;
         }
@@ -2591,7 +2594,7 @@ public:
                                         commandSuccess = false;
                                         //lastRunningInterpreter = true;
                                         //logMessage("killing command");
-                                        ////closeInterpreterThread();
+                                        //closeInterpreterThread();
                                     }
                                     return false;
                                 }
@@ -2609,6 +2612,7 @@ public:
                                     isDownloadCommand = false;
                                     runningInterpreter.store(true, std::memory_order_release);
                                     enqueueInterpreterCommand(getSourceReplacement(commands, selectedItem, i), packagePath, keyName);
+                                    startInterpreterThread();
                                     //lastRunningInterpreter = true;
                                     //modifiedCmds.clear();
                                     //runningInterpreter.store(true, std::memory_order_release);
@@ -2733,7 +2737,7 @@ public:
                 lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
             else
                 lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
-            ////closeInterpreterThread();
+            closeInterpreterThread();
             lastRunningInterpreter = false;
             return true;
         }
@@ -2742,7 +2746,7 @@ public:
         if (refreshGui && !returningToPackage && !stillTouching) {
             refreshGui = false;
             //tsl::changeTo<PackageMenu>(packagePath);
-            ////closeInterpreterThread();
+            //closeInterpreterThread();
             
             if (inPackageMenu) {
                 lastPackage = packagePath;
@@ -4012,6 +4016,7 @@ public:
                                             isDownloadCommand = false;
                                             runningInterpreter.store(true, std::memory_order_release);
                                             enqueueInterpreterCommand(getSourceReplacement(commands, selectedItem, i), packagePath, keyName);
+                                            startInterpreterThread();
                                             //modifiedCmds.clear();
                                             //runningInterpreter.store(true, std::memory_order_release);
                                             //lastRunningInterpreter = true;
@@ -4075,6 +4080,7 @@ public:
                                             isDownloadCommand = false;
                                             runningInterpreter.store(true, std::memory_order_release);
                                             enqueueInterpreterCommand(getSourceReplacement(commands, selectedItem, i), packagePath, keyName);
+                                            startInterpreterThread();
                                             //lastRunningInterpreter = true;
                                             //modifiedCmds.clear();
                                             //runningInterpreter.store(true, std::memory_order_release);
@@ -4193,7 +4199,7 @@ public:
                 lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
             else
                 lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
-            ////closeInterpreterThread();
+            closeInterpreterThread();
             lastRunningInterpreter = false;
             return true;
         }
@@ -4250,7 +4256,7 @@ public:
                         selectedListItem.reset();
                         lastSelectedListItem.reset();
                         tsl::changeTo<MainMenu>();
-                        startInterpreterThread();
+                        //startInterpreterThread();
                         simulatedNextPageComplete = true;
                         return true;
                     }
@@ -4261,7 +4267,7 @@ public:
                         defaultMenu = "overlays";
                         selectedListItem.reset();
                         lastSelectedListItem.reset();
-                        closeInterpreterThread();
+                        //closeInterpreterThread();
                         tsl::goBack();
                         tsl::Overlay::get()->getCurrentGui()->removeFocus();
                         simulatedNextPageComplete = true;
