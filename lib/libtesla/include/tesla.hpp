@@ -3416,7 +3416,7 @@ namespace tsl {
                 }
                 this->m_itemsToRemove.clear();
                 
-                renderer->enableScissoring(this->getLeftBound(), this->getTopBound() +2, this->getWidth(), this->getHeight() + 4);
+                renderer->enableScissoring(this->getLeftBound(), this->getTopBound() , this->getWidth(), this->getHeight() + 4);
                 
                 for (auto &entry : this->m_items) {
                     if (entry->getBottomBound() > this->getTopBound() && entry->getTopBound() < this->getBottomBound()) {
