@@ -4257,6 +4257,7 @@ public:
                         defaultMenu = "packages";
                         selectedListItem.reset();
                         lastSelectedListItem.reset();
+                        tsl::pop();
                         tsl::changeTo<MainMenu>();
                         //startInterpreterThread();
                         simulatedNextPageComplete = true;
@@ -4270,8 +4271,10 @@ public:
                         selectedListItem.reset();
                         lastSelectedListItem.reset();
                         //closeInterpreterThread();
-                        tsl::goBack();
-                        tsl::Overlay::get()->getCurrentGui()->removeFocus();
+                        tsl::pop();
+                        tsl::changeTo<MainMenu>();
+                        //tsl::Overlay::get()->getCurrentGui()->createUI();
+                        //tsl::Overlay::get()->getCurrentGui()->removeFocus();
                         simulatedNextPageComplete = true;
                         return true;
                     }
