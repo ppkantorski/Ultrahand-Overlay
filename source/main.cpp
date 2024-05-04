@@ -196,6 +196,7 @@ public:
                 }
 
                 if (keys & KEY_A) {
+                    tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemPtr.get(), tsl::FocusDirection::None);
                     tsl::changeTo<UltrahandSettingsMenu>("keyComboMenu");
                     selectedListItem.reset();
                     selectedListItem = listItemPtr;
@@ -222,6 +223,7 @@ public:
                     simulatedSelect = false;
                 }
                 if (keys & KEY_A) {
+                    tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemPtr.get(), tsl::FocusDirection::None);
                     tsl::changeTo<UltrahandSettingsMenu>("languageMenu");
                     selectedListItem.reset();
                     selectedListItem = listItemPtr;
@@ -236,9 +238,15 @@ public:
             listItem = std::make_unique<tsl::elm::ListItem>(SOFTWARE_UPDATE);
             listItem->setValue(DROPDOWN_SYMBOL);
             
-            listItem->setClickListener([](uint64_t keys) { // Add 'command' to the capture list
+            listItem->setClickListener([listItemPtr = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){})](uint64_t keys) { // Add 'command' to the capture list
+                if (simulatedSelect && !simulatedSelectComplete) {
+                    keys |= KEY_A;
+                    simulatedSelect = false;
+                }
                 if (keys & KEY_A) {
+                    tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemPtr.get(), tsl::FocusDirection::None);
                     tsl::changeTo<UltrahandSettingsMenu>("softwareUpdateMenu");
+                    simulatedSelectComplete = true;
                     return true;
                 }
                 return false;
@@ -263,6 +271,7 @@ public:
                     simulatedSelect = false;
                 }
                 if (keys & KEY_A) {
+                    tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemPtr.get(), tsl::FocusDirection::None);
                     tsl::changeTo<UltrahandSettingsMenu>("themeMenu");
                     selectedListItem.reset();
                     selectedListItem = listItemPtr;
@@ -277,7 +286,7 @@ public:
             listItem = std::make_unique<tsl::elm::ListItem>(WIDGET);
             listItem->setValue(DROPDOWN_SYMBOL);
             
-            listItem->setClickListener([](uint64_t keys) { // Add 'command' to the capture list
+            listItem->setClickListener([listItemPtr = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){})](uint64_t keys) { // Add 'command' to the capture list
                 bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                 if (_runningInterpreter)
                     return false;
@@ -287,6 +296,7 @@ public:
                     simulatedSelect = false;
                 }
                 if (keys & KEY_A) {
+                    tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemPtr.get(), tsl::FocusDirection::None);
                     tsl::changeTo<UltrahandSettingsMenu>("widgetMenu");
                     simulatedSelectComplete = true;
                     return true;
@@ -299,7 +309,7 @@ public:
             listItem = std::make_unique<tsl::elm::ListItem>(MISCELLANEOUS);
             listItem->setValue(DROPDOWN_SYMBOL);
             
-            listItem->setClickListener([](uint64_t keys) { // Add 'command' to the capture list
+            listItem->setClickListener([listItemPtr = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){})](uint64_t keys) { // Add 'command' to the capture list
                 bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                 if (_runningInterpreter)
                     return false;
@@ -309,6 +319,7 @@ public:
                     simulatedSelect = false;
                 }
                 if (keys & KEY_A) {
+                    tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemPtr.get(), tsl::FocusDirection::None);
                     tsl::changeTo<UltrahandSettingsMenu>("miscMenu");
                     simulatedSelectComplete = true;
                     return true;
@@ -389,6 +400,7 @@ public:
                         simulatedSelect = false;
                     }
                     if (keys & KEY_A) {
+                        tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemPtr.get(), tsl::FocusDirection::None);
                         if (combo != defaultCombo) {
                             setIniFileValue(settingsConfigIniPath, "ultrahand", "key_combo", combo);
                             setIniFileValue(teslaSettingsConfigIniPath, "tesla", "key_combo", combo);
@@ -446,6 +458,7 @@ public:
                         simulatedSelect = false;
                     }
                     if (keys & KEY_A) {
+                        tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemPtr.get(), tsl::FocusDirection::None);
                         //if (defaultLangMode != defaulLang) {
                         setIniFileValue(settingsConfigIniPath, "ultrahand", "default_lang", defaultLangMode);
                         reloadMenu = true;
@@ -653,7 +666,8 @@ public:
                 }
 
                 if (keys & KEY_A) {
-                    
+                    tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemPtr.get(), tsl::FocusDirection::None);
+
                     //if (defaultLangMode != defaultLang) {
                     setIniFileValue(settingsConfigIniPath, "ultrahand", "current_theme", "default");
                     deleteFileOrDirectory(themeConfigIniPath);
@@ -709,6 +723,7 @@ public:
                     }
 
                     if (keys & KEY_A) {
+                        tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemPtr.get(), tsl::FocusDirection::None);
                         //if (defaultLangMode != defaultLang) {
                         setIniFileValue(settingsConfigIniPath, "ultrahand", "current_theme", themeName);
                         deleteFileOrDirectory(themeConfigIniPath);
@@ -1165,6 +1180,7 @@ public:
                         simulatedSelect = false;
                     }
                     if (keys & KEY_A) {
+                        tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemPtr.get(), tsl::FocusDirection::None);
                         if (iStr != priorityValue)
                             reloadMenu = true;
                         setIniFileValue(settingsIniPath, entryName, "priority", iStr);
