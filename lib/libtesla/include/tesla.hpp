@@ -2216,7 +2216,9 @@ namespace tsl {
             Color highlightColor4 = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "highlight_color_4"), "#F7253E");
             Color highlightColor = {0xf,0xf,0xf,0xf};
             
-            Color clickColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "click_color"), "#F7253E");
+            std::string clickAlphaStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "click_alpha");
+            size_t clickAlpha = (!clickAlphaStr.empty()) ? std::stoi(clickAlphaStr) : 7;
+            Color clickColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "click_color"), "#F7253E", clickAlpha);
             
             std::chrono::duration<long int, std::ratio<1, 1000000000>> t;
             //double timeCounter;
@@ -2436,15 +2438,15 @@ namespace tsl {
                     //renderer->drawRect(this->getX() + x + this->getWidth(), this->getY() + y, 4, this->getHeight(), highlightColor);
                     
                     
-                    renderer->drawRect(this->getX() + x + 5 -1, this->getY() + y - 4, this->getWidth() - 5 +2 +4, 5, highlightColor);
-                    renderer->drawRect(this->getX() + x + 5 -1, this->getY() + y + this->getHeight(), this->getWidth() - 5 +2 +4, 5, highlightColor);
-                    renderer->drawRect(this->getX() + x, this->getY() + y + 2 - 2, 5, this->getHeight()-3 +4, highlightColor);
-                    renderer->drawRect(this->getX() + x + this->getWidth()+4, this->getY() + y + 2 -2, 5, this->getHeight()-3 +4, highlightColor);
+                    renderer->drawRect(this->getX() + x + 2, this->getY() + y - 4, this->getWidth() - 5 +2 +4, 5, highlightColor);
+                    renderer->drawRect(this->getX() + x + 2, this->getY() + y + this->getHeight(), this->getWidth() - 5 +2 +4, 5, highlightColor);
+                    renderer->drawRect(this->getX() + x -2, this->getY() + y + 2 - 2, 5, this->getHeight()-3 +4, highlightColor);
+                    renderer->drawRect(this->getX() + x + this->getWidth()+2, this->getY() + y + 2 -2, 5, this->getHeight()-3 +4, highlightColor);
                     
-                    renderer->drawCircle(this->getX() + x + 2, this->getY() + y + this->getHeight() + 2, 2.5, true, highlightColor);
-                    renderer->drawCircle(this->getX() + x + 2, this->getY() + y - 2, 2.5, true, highlightColor);
-                    renderer->drawCircle(this->getX() + x + this->getWidth() + 2+4, this->getY() + y + this->getHeight() + 2, 2.5, true, highlightColor);
-                    renderer->drawCircle(this->getX() + x + this->getWidth() + 2+4, this->getY() + y - 2, 2.5, true, highlightColor);
+                    renderer->drawCircle(this->getX() + x, this->getY() + y + this->getHeight() + 2, 2.5, true, highlightColor);
+                    renderer->drawCircle(this->getX() + x, this->getY() + y - 2, 2.5, true, highlightColor);
+                    renderer->drawCircle(this->getX() + x + this->getWidth() +4, this->getY() + y + this->getHeight() + 2, 2.5, true, highlightColor);
+                    renderer->drawCircle(this->getX() + x + this->getWidth() +4, this->getY() + y - 2, 2.5, true, highlightColor);
                     
                 }
             }
@@ -2534,15 +2536,15 @@ namespace tsl {
                 }
                 if ((disableSelectionBG && this->m_clickAnimationProgress == 0) || !disableSelectionBG) {
                     
-                    renderer->drawRect(this->getX() + x + 5 -1, this->getY() + y - 4, this->getWidth() - 5 +2 +4, 5, highlightColor);
-                    renderer->drawRect(this->getX() + x + 5 -1, this->getY() + y + this->getHeight(), this->getWidth() - 5 +2 +4, 5, highlightColor);
-                    renderer->drawRect(this->getX() + x, this->getY() + y + 2 - 2, 5, this->getHeight()-3 +4, highlightColor);
-                    renderer->drawRect(this->getX() + x + this->getWidth()+4, this->getY() + y + 2 -2, 5, this->getHeight()-3 +4, highlightColor);
+                    renderer->drawRect(this->getX() + x + 2, this->getY() + y - 4, this->getWidth() - 5 +2 +4, 5, highlightColor);
+                    renderer->drawRect(this->getX() + x + 2, this->getY() + y + this->getHeight(), this->getWidth() - 5 +2 +4, 5, highlightColor);
+                    renderer->drawRect(this->getX() + x -2, this->getY() + y + 2 - 2, 5, this->getHeight()-3 +4, highlightColor);
+                    renderer->drawRect(this->getX() + x + this->getWidth()+2, this->getY() + y + 2 -2, 5, this->getHeight()-3 +4, highlightColor);
                     
-                    renderer->drawCircle(this->getX() + x + 2, this->getY() + y + this->getHeight() + 2, 2.5, true, highlightColor);
-                    renderer->drawCircle(this->getX() + x + 2, this->getY() + y - 2, 2.5, true, highlightColor);
-                    renderer->drawCircle(this->getX() + x + this->getWidth() + 2+4, this->getY() + y + this->getHeight() + 2, 2.5, true, highlightColor);
-                    renderer->drawCircle(this->getX() + x + this->getWidth() + 2+4, this->getY() + y - 2, 2.5, true, highlightColor);
+                    renderer->drawCircle(this->getX() + x, this->getY() + y + this->getHeight() + 2, 2.5, true, highlightColor);
+                    renderer->drawCircle(this->getX() + x, this->getY() + y - 2, 2.5, true, highlightColor);
+                    renderer->drawCircle(this->getX() + x + this->getWidth() + 4, this->getY() + y + this->getHeight() + 2, 2.5, true, highlightColor);
+                    renderer->drawCircle(this->getX() + x + this->getWidth() + 4, this->getY() + y - 2, 2.5, true, highlightColor);
                 }
                 //renderer->drawRect(ELEMENT_BOUNDS(this), a(0xF000)); // This has been moved here (needs to be toggleable)
             }
@@ -3728,7 +3730,10 @@ namespace tsl {
             tsl::Color offTextColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "off_text_color"), "#AAAAAA");
             
             tsl::Color clickTextColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "click_text_color"));
-            tsl::Color clickColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "click_color"));
+
+            std::string clickAlphaStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "click_alpha");
+            size_t clickAlpha = (!clickAlphaStr.empty()) ? std::stoi(clickAlphaStr) : 7;
+            Color clickColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "click_color"), "#F7253E", clickAlpha);
 
             std::chrono::system_clock::time_point timeIn;// = std::chrono::system_clock::now();
             std::chrono::duration<long int, std::ratio<1, 1000000000>> t;
@@ -3784,14 +3789,14 @@ namespace tsl {
                 //renderer->drawRect(this->getX()+4, this->getTopBound(), this->getWidth()-4, 1, a(0x0000));
                 
                 //renderer->drawRect(this->getX()+5, this->getTopBound(), this->getWidth()-5+10, 1, tsl::style::color::ColorFrame);
-                renderer->drawRect(this->getX()+5, this->getTopBound(), this->getWidth()-5+10, 1, seperatorColor);
+                renderer->drawRect(this->getX()+5-2, this->getTopBound(), this->getWidth()-5+10, 1, seperatorColor);
                 
                 if (this->m_trunctuated) {
                     if (this->m_focused) {
-                        renderer->enableScissoring(this->getX()+7, 97, this->m_maxWidth + 40 - 10+2+4, tsl::cfg::FramebufferHeight-73-97);
+                        renderer->enableScissoring(this->getX()+7, 97, this->m_maxWidth + 40 - 10+4, tsl::cfg::FramebufferHeight-73-97);
                         //renderer->enableScissoring(this->getX(), this->getY(), this->m_maxWidth + 40, this->getHeight());
                         //renderer->drawString(this->m_scrollText.c_str(), false, this->getX() + 20.0 - std::round(this->m_scrollOffset*10000.0)/10000.0, this->getY() + 45, 23, defaultTextColor);
-                        renderer->drawString(this->m_scrollText.c_str(), false, this->getX() + 20.0 - this->m_scrollOffset, this->getY() + 45, 23, selectedTextColor);
+                        renderer->drawString(this->m_scrollText.c_str(), false, this->getX() + 20.0-2 - this->m_scrollOffset, this->getY() + 45, 23, selectedTextColor);
                         renderer->disableScissoring();
                         t = std::chrono::system_clock::now() - this->timeIn;
                         if (t >= 2000ms) {
@@ -3807,13 +3812,13 @@ namespace tsl {
                             }
                         } // CUSTOM MODIFICATION END
                     } else {
-                        renderer->drawString(this->m_ellipsisText.c_str(), false, this->getX() + 20, this->getY() + 45, 23, !useClickTextColor ? defaultTextColor : clickTextColor);
+                        renderer->drawString(this->m_ellipsisText.c_str(), false, this->getX() + 20-2, this->getY() + 45, 23, !useClickTextColor ? defaultTextColor : clickTextColor);
                     }
                 } else {
                     if (this->m_focused) {
-                        renderer->drawString(this->m_text.c_str(), false, this->getX() + 20, this->getY() + 45, 23, !useClickTextColor ? selectedTextColor : clickTextColor);
+                        renderer->drawString(this->m_text.c_str(), false, this->getX() + 20-2, this->getY() + 45, 23, !useClickTextColor ? selectedTextColor : clickTextColor);
                     } else {
-                        renderer->drawString(this->m_text.c_str(), false, this->getX() + 20, this->getY() + 45, 23, !useClickTextColor ? defaultTextColor : clickTextColor);
+                        renderer->drawString(this->m_text.c_str(), false, this->getX() + 20-2, this->getY() + 45, 23, !useClickTextColor ? defaultTextColor : clickTextColor);
                     }
                 }
                 
@@ -3821,21 +3826,21 @@ namespace tsl {
                 // CUSTOM SECTION START (modification for submenu footer color)
                 if (this->m_value == DROPDOWN_SYMBOL || this->m_value == OPTION_SYMBOL) {
                     if (this->m_focused)
-                        renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +4, this->getY() + 45, 20, !useClickTextColor ? (this->m_faint ? offTextColor : selectedTextColor) : clickTextColor);
+                        renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +2, this->getY() + 45, 20, !useClickTextColor ? (this->m_faint ? offTextColor : selectedTextColor) : clickTextColor);
                     else
-                        renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +4, this->getY() + 45, 20, !useClickTextColor ? (this->m_faint ? offTextColor : defaultTextColor) : clickTextColor);
+                        renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +2, this->getY() + 45, 20, !useClickTextColor ? (this->m_faint ? offTextColor : defaultTextColor) : clickTextColor);
                 } else if (((this->m_value).find(DOWNLOAD_SYMBOL) != std::string::npos) || this->m_value == INPROGRESS_SYMBOL) {
-                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +4, this->getY() + 45, 20, !useClickTextColor ? (this->m_faint ? offTextColor : inprogressTextColor) : clickTextColor);
+                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +2, this->getY() + 45, 20, (this->m_faint ? offTextColor : inprogressTextColor));
                 } else if (this->m_value == CROSSMARK_SYMBOL) {
-                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +4, this->getY() + 45, 20, !useClickTextColor ? (this->m_faint ? offTextColor : invalidTextColor) : clickTextColor);
+                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +2, this->getY() + 45, 20, (this->m_faint ? offTextColor : invalidTextColor));
                 } else {
-                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +4, this->getY() + 45, 20, !useClickTextColor ? (this->m_faint ? offTextColor : onTextColor) : clickTextColor);
+                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +2, this->getY() + 45, 20, (this->m_faint ? offTextColor : onTextColor));
                 }
                 // CUSTOM SECTION END 
             }
             
             virtual void layout(u16 parentX, u16 parentY, u16 parentWidth, u16 parentHeight) override {
-                this->setBoundaries(this->getX(), this->getY(), this->getWidth()-2, tsl::style::ListItemDefaultHeight);
+                this->setBoundaries(this->getX()+2, this->getY(), this->getWidth()-2, tsl::style::ListItemDefaultHeight);
             }
             
             virtual bool onClick(u64 keys) override {
@@ -4981,10 +4986,10 @@ namespace tsl {
                 if (currentGui != nullptr && topElement != nullptr) {
                     if (!runningInterpreter.load(std::memory_order_acquire)) {
                         topElement->onTouch(touchEvent, touchPos.x, touchPos.y, oldTouchPos.x, oldTouchPos.y, initialTouchPos.x, initialTouchPos.y);
-                        if (currentFocus != nullptr && touchEvent != elm::TouchEvent::Scroll)
-                            currentGui->requestFocus(currentFocus, FocusDirection::None);
-                        else
-                            currentGui->removeFocus();
+                        //if (currentFocus != nullptr && touchEvent != elm::TouchEvent::Scroll)
+                        //    currentGui->requestFocus(currentFocus, FocusDirection::None);
+                        //else
+                        currentGui->removeFocus();
                     }
                     //// Check if the top element contains the touch position
                     //if (topElement->inBounds(touchPos.x, touchPos.y)) {
