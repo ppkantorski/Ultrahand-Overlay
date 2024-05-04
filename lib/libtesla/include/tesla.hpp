@@ -3009,7 +3009,7 @@ namespace tsl {
                         if (powerCacheIsCharging)
                             renderer->drawString(chargeStringSTD.c_str(), false, tsl::cfg::FramebufferWidth - calculateStringWidth(chargeStringSTD, 20) - 19, y_offset, 20, tsl::Color(0x0, 0xF, 0x0, 0xF));
                         else {
-                            if (batteryCharge <= 20) {
+                            if (batteryCharge < 20) {
                                 renderer->drawString(chargeStringSTD.c_str(), false, tsl::cfg::FramebufferWidth - calculateStringWidth(chargeStringSTD, 20) - 19, y_offset, 20, tsl::Color(0xF, 0x0, 0x0, 0xF));
                             } else {
                                 renderer->drawString(chargeStringSTD.c_str(), false, tsl::cfg::FramebufferWidth - calculateStringWidth(chargeStringSTD, 20) - 19, y_offset, 20, batteryColor);
