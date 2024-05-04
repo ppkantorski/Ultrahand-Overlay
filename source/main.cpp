@@ -521,6 +521,7 @@ public:
                         listItemPtr->setValue(DOWNLOAD_SYMBOL);
                     else
                         listItemPtr->setValue(INPROGRESS_SYMBOL);
+                    tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemPtr.get(), tsl::FocusDirection::None);
                     lastSelectedListItem.reset();
                     lastSelectedListItem = listItemPtr;
                     
@@ -596,6 +597,7 @@ public:
                         listItemPtr->setValue(DOWNLOAD_SYMBOL);
                     else
                         listItemPtr->setValue(INPROGRESS_SYMBOL);
+                    tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemPtr.get(), tsl::FocusDirection::None);
                     lastSelectedListItem.reset();
                     lastSelectedListItem = listItemPtr;
                     
@@ -737,7 +739,8 @@ public:
             
             auto toggleListItem = std::make_unique<tsl::elm::ToggleListItem>(CLOCK, false, ON, OFF);
             toggleListItem->setState((hideClock == "false"));
-            toggleListItem->setStateChangedListener([](bool state) {
+            toggleListItem->setStateChangedListener([listItemPtr = std::shared_ptr<tsl::elm::ListItem>(toggleListItem.get(), [](auto*){})](bool state) {
+                tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemPtr.get(), tsl::FocusDirection::None);
                 setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_clock", state ? "false" : "true");
                 reinitializeWidgetVars();
                 redrawWidget = true;
@@ -746,7 +749,8 @@ public:
             
             toggleListItem = std::make_unique<tsl::elm::ToggleListItem>(SOC_TEMPERATURE, false, ON, OFF);
             toggleListItem->setState((hideSOCTemp == "false"));
-            toggleListItem->setStateChangedListener([](bool state) {
+            toggleListItem->setStateChangedListener([listItemPtr = std::shared_ptr<tsl::elm::ListItem>(toggleListItem.get(), [](auto*){})](bool state) {
+                tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemPtr.get(), tsl::FocusDirection::None);
                 setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_soc_temp", state ? "false" : "true");
                 reinitializeWidgetVars();
                 redrawWidget = true;
@@ -755,7 +759,8 @@ public:
             
             toggleListItem = std::make_unique<tsl::elm::ToggleListItem>(PCB_TEMPERATURE, false, ON, OFF);
             toggleListItem->setState((hidePCBTemp == "false"));
-            toggleListItem->setStateChangedListener([](bool state) {
+            toggleListItem->setStateChangedListener([listItemPtr = std::shared_ptr<tsl::elm::ListItem>(toggleListItem.get(), [](auto*){})](bool state) {
+                tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemPtr.get(), tsl::FocusDirection::None);
                 setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_pcb_temp", state ? "false" : "true");
                 reinitializeWidgetVars();
                 redrawWidget = true;
@@ -764,7 +769,8 @@ public:
             
             toggleListItem = std::make_unique<tsl::elm::ToggleListItem>(BATTERY, false, ON, OFF);
             toggleListItem->setState((hideBattery == "false"));
-            toggleListItem->setStateChangedListener([](bool state) {
+            toggleListItem->setStateChangedListener([listItemPtr = std::shared_ptr<tsl::elm::ListItem>(toggleListItem.get(), [](auto*){})](bool state) {
+                tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemPtr.get(), tsl::FocusDirection::None);
                 setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_battery", state ? "false" : "true");
                 reinitializeWidgetVars();
                 redrawWidget = true;
@@ -778,7 +784,8 @@ public:
             
             auto toggleListItem = std::make_unique<tsl::elm::ToggleListItem>(USER_GUIDE, false, ON, OFF);
             toggleListItem->setState((hideUserGuide == "false"));
-            toggleListItem->setStateChangedListener([](bool state) {
+            toggleListItem->setStateChangedListener([listItemPtr = std::shared_ptr<tsl::elm::ListItem>(toggleListItem.get(), [](auto*){})](bool state) {
+                tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemPtr.get(), tsl::FocusDirection::None);
                 setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_user_guide", state ? "false" : "true");
                 if ((hideUserGuide == "false") != state)
                     reloadMenu = true;
@@ -806,7 +813,8 @@ public:
             
             toggleListItem = std::make_unique<tsl::elm::ToggleListItem>(CLEAN_LABELS, false, ON, OFF);
             toggleListItem->setState((cleanVersionLabels == "true"));
-            toggleListItem->setStateChangedListener([](bool state) {
+            toggleListItem->setStateChangedListener([listItemPtr = std::shared_ptr<tsl::elm::ListItem>(toggleListItem.get(), [](auto*){})](bool state) {
+                tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemPtr.get(), tsl::FocusDirection::None);
                 setIniFileValue(settingsConfigIniPath, "ultrahand", "clean_version_labels", state ? "true" : "false");
                 if ((cleanVersionLabels == "true") != state) {
                     if (cleanVersionLabels == "false")
@@ -824,7 +832,8 @@ public:
             
             toggleListItem = std::make_unique<tsl::elm::ToggleListItem>(OVERLAY_LABELS, false, ON, OFF);
             toggleListItem->setState((hideOverlayVersions == "false"));
-            toggleListItem->setStateChangedListener([](bool state) {
+            toggleListItem->setStateChangedListener([listItemPtr = std::shared_ptr<tsl::elm::ListItem>(toggleListItem.get(), [](auto*){})](bool state) {
+                tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemPtr.get(), tsl::FocusDirection::None);
                 setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_overlay_versions", state ? "false" : "true");
                 if ((hideOverlayVersions == "false") != state)
                     reloadMenu = true;
@@ -833,7 +842,8 @@ public:
             
             toggleListItem = std::make_unique<tsl::elm::ToggleListItem>(PACKAGE_LABELS, false, ON, OFF);
             toggleListItem->setState((hidePackageVersions == "false"));
-            toggleListItem->setStateChangedListener([](bool state) {
+            toggleListItem->setStateChangedListener([listItemPtr = std::shared_ptr<tsl::elm::ListItem>(toggleListItem.get(), [](auto*){})](bool state) {
+                tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemPtr.get(), tsl::FocusDirection::None);
                 setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_package_versions", state ? "false" : "true");
                 if ((hidePackageVersions == "false") != state)
                     reloadMenu = true;
@@ -1074,7 +1084,8 @@ public:
             // Envoke toggling
             auto toggleListItem = std::make_unique<tsl::elm::ToggleListItem>(hideLabel, false, ON, OFF);
             toggleListItem->setState(hide);
-            toggleListItem->setStateChangedListener([&settingsIniPath = this->settingsIniPath, &entryName = this->entryName](bool state) {
+            toggleListItem->setStateChangedListener([&settingsIniPath = this->settingsIniPath, &entryName = this->entryName, listItemPtr = std::shared_ptr<tsl::elm::ListItem>(toggleListItem.get(), [](auto*){})](bool state) {
+                tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemPtr.get(), tsl::FocusDirection::None);
                 setIniFileValue(settingsIniPath, entryName, "hide", state ? "true" : "false");
                 if (state)
                     reloadMenu = true; // this reloads before main menu
@@ -1114,7 +1125,8 @@ public:
                 // Envoke toggling
                 toggleListItem = std::make_unique<tsl::elm::ToggleListItem>(LAUNCH_ARGUMENTS, false, ON, OFF);
                 toggleListItem->setState((useOverlayLaunchArgs=="true"));
-                toggleListItem->setStateChangedListener([&settingsIniPath = settingsIniPath, &entryName = entryName, useOverlayLaunchArgs](bool state) {
+                toggleListItem->setStateChangedListener([&settingsIniPath = settingsIniPath, &entryName = entryName, useOverlayLaunchArgs, listItemPtr = std::shared_ptr<tsl::elm::ListItem>(toggleListItem.get(), [](auto*){})](bool state) {
+                    tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemPtr.get(), tsl::FocusDirection::None);
                     setIniFileValue(settingsIniPath, entryName, "use_launch_args", state ? "true" : "false");
                     if ((useOverlayLaunchArgs=="true") != state)
                         reloadMenu = true; // this reloads before main menu
@@ -1966,6 +1978,7 @@ public:
                             listItemPtr->setValue(DOWNLOAD_SYMBOL);
                         else
                             listItemPtr->setValue(INPROGRESS_SYMBOL);
+                        tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemPtr.get(), tsl::FocusDirection::None);
                         if (commandMode == "option") {
                             selectedFooterDict[specifiedFooterKey] = listItemPtr->getText();
                             if (lastSelectedListItem)
@@ -1993,8 +2006,9 @@ public:
                 toggleListItem->setState(toggleStateOn);
                 
                 toggleListItem->setStateChangedListener([&commandsOn = this->commandsOn, &commandsOff = this->commandsOff, &filePath = this->filePath,
-                    &specificKey = this->specificKey, i, selectedItem](bool state) {
+                    &specificKey = this->specificKey, i, selectedItem, listItemPtr = std::shared_ptr<tsl::elm::ListItem>(toggleListItem.get(), [](auto*){})](bool state) {
 
+                    tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemPtr.get(), tsl::FocusDirection::None);
                     if (!state) {
                         interpretAndExecuteCommand(getSourceReplacement(commandsOn, selectedItem, i), filePath, specificKey); // Execute modified 
                         //toggleListItem->setState(!state);
@@ -2619,6 +2633,7 @@ public:
                                         listItemPtr->setValue(DOWNLOAD_SYMBOL);
                                     else
                                         listItemPtr->setValue(INPROGRESS_SYMBOL);
+                                    tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemPtr.get(), tsl::FocusDirection::None);
                                     lastSelectedListItem.reset();
                                     lastSelectedListItem = listItemPtr;
                                     
@@ -2648,7 +2663,8 @@ public:
                             
                             toggleListItem->setState(toggleStateOn);
                             
-                            toggleListItem->setStateChangedListener([i, commandsOn, commandsOff, keyName = option.first, &packagePath = this->packagePath, &pathPatternOn = this->pathPatternOn, &pathPatternOff = this->pathPatternOff](bool state) {
+                            toggleListItem->setStateChangedListener([i, commandsOn, commandsOff, keyName = option.first, &packagePath = this->packagePath, &pathPatternOn = this->pathPatternOn, &pathPatternOff = this->pathPatternOff, listItemPtr = std::shared_ptr<tsl::elm::ListItem>(toggleListItem.get(), [](auto*){})](bool state) {
+                                tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemPtr.get(), tsl::FocusDirection::None);
                                 if (state) {
                                     //applySourceReplacement(commandsOn, preprocessPath(pathPatternOn), i);
                                     //commandsOn = getSourceReplacement(commandsOn, preprocessPath(pathPatternOn), i);
@@ -4016,6 +4032,8 @@ public:
                                                 listItemPtr->setValue(DOWNLOAD_SYMBOL);
                                             else
                                                 listItemPtr->setValue(INPROGRESS_SYMBOL);
+                                            tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemPtr.get(), tsl::FocusDirection::None);
+
                                             lastSelectedListItem.reset();
                                             lastSelectedListItem = listItemPtr;
                                             
@@ -4081,6 +4099,7 @@ public:
                                                 listItemPtr->setValue(DOWNLOAD_SYMBOL);
                                             else
                                                 listItemPtr->setValue(INPROGRESS_SYMBOL);
+                                            tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemPtr.get(), tsl::FocusDirection::None);
 
                                             lastSelectedListItem.reset();
                                             lastSelectedListItem = listItemPtr;
@@ -4110,7 +4129,8 @@ public:
                                 
                                 toggleListItem->setState(toggleStateOn);
                                 
-                                toggleListItem->setStateChangedListener([i, pathPatternOn, pathPatternOff, commandsOn, commandsOff, packagePath = packageDirectory, keyName = option.first](bool state) {
+                                toggleListItem->setStateChangedListener([i, pathPatternOn, pathPatternOff, commandsOn, commandsOff, packagePath = packageDirectory, keyName = option.first, listItemPtr = std::shared_ptr<tsl::elm::ListItem>(toggleListItem.get(), [](auto*){})](bool state) {
+                                    tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemPtr.get(), tsl::FocusDirection::None);
                                     if (state) {
                                         //applySourceReplacement(commandsOn, preprocessPath(pathPatternOn), i);
                                         //commandsOn = getSourceReplacement(commandsOn, preprocessPath(pathPatternOn), i);
