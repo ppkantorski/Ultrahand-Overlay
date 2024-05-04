@@ -3436,7 +3436,7 @@ namespace tsl {
                     }
                     
                     // Calculate the maximum scrollable height.
-                    int maxScrollableHeight = this->m_listHeight - this->getHeight();
+                    int maxScrollableHeight = this->m_listHeight - this->getHeight() + 60;
                     if (maxScrollableHeight < 1) maxScrollableHeight = 1; // Prevent division by zero.
                     
                     // Calculate the scrollbar offset, adjusting the range it covers by decreasing it by 3 units.
