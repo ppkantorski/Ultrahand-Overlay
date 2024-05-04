@@ -3968,12 +3968,18 @@ namespace tsl {
             virtual ~ToggleListItem() {}
             
             virtual bool onClick(u64 keys) override {
+                if (simulatedSelect && !simulatedSelectComplete) {
+                    keys |= KEY_A;
+                    simulatedSelect = false;
+                }
+
                 if (keys & HidNpadButton_A) {
                     this->m_state = !this->m_state;
                     
                     this->setState(this->m_state);
                     this->m_stateChangedListener(this->m_state);
                     
+                    simulatedSelectComplete = true;
                     return ListItem::onClick(keys);
                 }
                 
