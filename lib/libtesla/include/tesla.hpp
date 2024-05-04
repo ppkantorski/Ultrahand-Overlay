@@ -3149,7 +3149,7 @@ namespace tsl {
                 this->setBoundaries(parentX, parentY, parentWidth, parentHeight);
                 
                 if (this->m_contentElement != nullptr) {
-                    this->m_contentElement->setBoundaries(parentX + 35, parentY + 102, parentWidth - 85, parentHeight - 73 - 105); // CUSTOM MODIFICATION (125->105->102)
+                    this->m_contentElement->setBoundaries(parentX + 35, parentY + 97, parentWidth - 85, parentHeight - 73 - 105); // CUSTOM MODIFICATION (125->105->102)
                     this->m_contentElement->invalidate();
                 }
             }
@@ -3414,7 +3414,7 @@ namespace tsl {
                 }
                 this->m_itemsToRemove.clear();
                 
-                renderer->enableScissoring(this->getLeftBound(), this->getTopBound() - 5, this->getWidth(), this->getHeight() + 4);
+                renderer->enableScissoring(this->getLeftBound(), this->getTopBound() +2, this->getWidth(), this->getHeight() + 4);
                 
                 for (auto &entry : this->m_items) {
                     if (entry->getBottomBound() > this->getTopBound() && entry->getTopBound() < this->getBottomBound()) {
@@ -3425,15 +3425,35 @@ namespace tsl {
                 renderer->disableScissoring();
                 
                 if (this->m_listHeight > this->getHeight()) {
-                    scrollbarHeight = static_cast<float>(this->getHeight() * this->getHeight() / this->m_listHeight - 50);
-                    if (scrollbarHeight < 0)
-                        scrollbarHeight = 0;
-                    scrollbarOffset = (static_cast<float>(this->m_offset)) / static_cast<float>(this->m_listHeight - this->getHeight()) * static_cast<float>(this->getHeight() - std::ceil(scrollbarHeight + 50));
                     
+                    float viewHeight = static_cast<float>(this->getHeight());
+                    float totalHeight = static_cast<float>(this->m_listHeight);
+                    
+                    // Calculate the height of the scrollbar to represent the portion of the content that is viewable.
+                    scrollbarHeight = (viewHeight * viewHeight) / totalHeight;
+                    if (scrollbarHeight > viewHeight) {
+                        scrollbarHeight = viewHeight; // Ensures the scrollbar is not larger than the container.
+                    }
+                    
+                    // Calculate the maximum scrollable height.
+                    int maxScrollableHeight = this->m_listHeight - this->getHeight();
+                    if (maxScrollableHeight < 1) maxScrollableHeight = 1; // Prevent division by zero.
+                    
+                    // Calculate the scrollbar offset, adjusting the range it covers by decreasing it by 3 units.
+                    scrollbarOffset = (static_cast<double>(this->m_offset) / maxScrollableHeight) * (viewHeight - scrollbarHeight - 3);
+                    
+                    // Increase the starting position of the scrollbar by 8 units as previously defined.
+                    scrollbarOffset += 8;
+                    
+                    // Ensure the scrollbar does not go outside the viewable area. Adjust the condition to stop 3 units earlier.
+                    if (scrollbarOffset + scrollbarHeight > viewHeight - 3) {
+                        scrollbarOffset = viewHeight - 3 - scrollbarHeight;
+                    }
+
                     offset = 11;
                     renderer->drawRect(this->getRightBound() + 10+offset, this->getY() + scrollbarOffset, 5, scrollbarHeight, trackBarColor);
                     renderer->drawCircle(this->getRightBound() + 12+offset, this->getY() + scrollbarOffset, 2, true, trackBarColor);
-                    renderer->drawCircle(this->getRightBound() + 12+offset, ( this->getY() + scrollbarOffset + (this->getY() + scrollbarOffset + this->getY() + scrollbarOffset + scrollbarHeight)/2)/2, 2, true, trackBarColor);
+                    renderer->drawCircle(this->getRightBound() + 12+offset, (this->getY() + scrollbarOffset + (this->getY() + scrollbarOffset + this->getY() + scrollbarOffset + scrollbarHeight)/2)/2, 2, true, trackBarColor);
                     renderer->drawCircle(this->getRightBound() + 12+offset, (this->getY() + scrollbarOffset + this->getY() + scrollbarOffset + scrollbarHeight)/2, 2, true, trackBarColor);
                     renderer->drawCircle(this->getRightBound() + 12+offset, (this->getY() + scrollbarOffset + scrollbarHeight + (this->getY() + scrollbarOffset + this->getY() + scrollbarOffset + scrollbarHeight)/2)/2, 2, true, trackBarColor);
                     renderer->drawCircle(this->getRightBound() + 12+offset, this->getY() + scrollbarOffset + scrollbarHeight, 2, true, trackBarColor);
@@ -3458,11 +3478,13 @@ namespace tsl {
                 for (auto &entry : this->m_items)
                     this->m_listHeight += entry->getHeight();
                 
+                this->m_listHeight -= 30;
                 for (auto &entry : this->m_items) {
                     entry->setBoundaries(this->getX(), y, this->getWidth(), entry->getHeight());
                     entry->invalidate();
                     y += entry->getHeight();
                 }
+                y -= 30;
             }
             
             virtual bool onTouch(TouchEvent event, s32 currX, s32 currY, s32 prevX, s32 prevY, s32 initialX, s32 initialY) {
