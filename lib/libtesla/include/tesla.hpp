@@ -1187,6 +1187,8 @@ namespace tsl {
     }
     
     [[maybe_unused]] static void goBack();
+
+    [[maybe_unused]] static void pop();
     
     [[maybe_unused]] static void setNextOverlay(const std::string& ovlPath, std::string args = "");
     
@@ -5148,11 +5150,17 @@ namespace tsl {
             if (this->m_guiStack.empty())
                 this->close();
         }
+
+        void pop() {
+            if (!this->m_guiStack.empty())
+                this->m_guiStack.pop();
+        }
         
         template<typename G, typename ...Args>
         friend std::unique_ptr<tsl::Gui>& changeTo(Args&&... args);
         
         friend void goBack();
+        friend void pop();
         
         template<typename, tsl::impl::LaunchFlags>
         friend int loop(int argc, char** argv);
@@ -5374,6 +5382,11 @@ namespace tsl {
         Overlay::get()->goBack();
     }
     
+    static void pop() {
+        Overlay::get()->pop();
+    }
+
+
     static void setNextOverlay(const std::string& ovlPath, std::string origArgs) {
         
         //std::string args = std::filesystem::path(ovlPath).filename();
