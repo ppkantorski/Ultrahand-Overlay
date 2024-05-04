@@ -3436,7 +3436,7 @@ namespace tsl {
                     }
                     
                     // Calculate the maximum scrollable height.
-                    int maxScrollableHeight = this->m_listHeight - this->getHeight() + 60;
+                    int maxScrollableHeight = this->m_listHeight - this->getHeight() + 64;
                     if (maxScrollableHeight < 1) maxScrollableHeight = 1; // Prevent division by zero.
                     
                     // Calculate the scrollbar offset, adjusting the range it covers by decreasing it by 3 units.
@@ -3478,13 +3478,13 @@ namespace tsl {
                 for (auto &entry : this->m_items)
                     this->m_listHeight += entry->getHeight();
                 
-                this->m_listHeight -= 30;
+                this->m_listHeight -= 32;
                 for (auto &entry : this->m_items) {
                     entry->setBoundaries(this->getX(), y, this->getWidth(), entry->getHeight());
                     entry->invalidate();
                     y += entry->getHeight();
                 }
-                y -= 30;
+                y -= 32;
             }
             
             virtual bool onTouch(TouchEvent event, s32 currX, s32 currY, s32 prevX, s32 prevY, s32 initialX, s32 initialY) {
