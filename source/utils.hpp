@@ -310,7 +310,7 @@ void addHelpInfo(auto& list) {
         list->addItem(new tsl::elm::CustomDrawer([lineHeight, xOffset, fontSize, sectionString, infoString, infoTextColor, onTextColor](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
             renderer->drawString(sectionString.c_str(), false, x + 12, y + lineHeight, fontSize, infoTextColor);
             renderer->drawString(infoString.c_str(), false, x + xOffset+ 12, y + lineHeight, fontSize, onTextColor);
-        }), fontSize * numEntries + lineHeight);
+        }), fontSize * numEntries);
     }
 }
 
@@ -430,7 +430,7 @@ void addAppInfo(auto& list, auto& packageHeader, std::string type = "package") {
         list->addItem(new tsl::elm::CustomDrawer([lineHeight, xOffset, fontSize, packageSectionString, packageInfoString, infoTextColor](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
             renderer->drawString(packageSectionString.c_str(), false, x + 12, y + lineHeight, fontSize, infoTextColor);
             renderer->drawString(packageInfoString.c_str(), false, x + xOffset, y + lineHeight, fontSize, infoTextColor);
-        }), fontSize * numEntries + lineHeight);
+        }), fontSize * numEntries);
     }
 }
 
