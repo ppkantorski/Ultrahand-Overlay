@@ -876,7 +876,7 @@ public:
         bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
         if (_runningInterpreter) {
             // Check for back button press
-            if ((keysHeld & KEY_R) && !stillTouching) {
+            if ((keysHeld & KEY_R) && !(keysHeld & (KEY_DLEFT | KEY_DRIGHT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_ZL | KEY_ZR)) && !stillTouching) {
                 commandSuccess = false;
                 abortDownload.store(true, std::memory_order_release);
                 abortUnzip.store(true, std::memory_order_release);
@@ -1205,7 +1205,7 @@ public:
         bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
         if (_runningInterpreter) {
             // Check for back button press
-            if ((keysHeld & KEY_R) && !stillTouching) {
+            if ((keysHeld & KEY_R) && !(keysHeld & (KEY_DLEFT | KEY_DRIGHT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_ZL | KEY_ZR)) && !stillTouching) {
                 commandSuccess = false;
                 abortDownload.store(true, std::memory_order_release);
                 abortUnzip.store(true, std::memory_order_release);
@@ -1459,7 +1459,7 @@ public:
         bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
         if (_runningInterpreter) {
             // Check for back button press
-            if ((keysHeld & KEY_R) && !stillTouching) {
+            if ((keysHeld & KEY_R) && !(keysHeld & (KEY_DLEFT | KEY_DRIGHT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_ZL | KEY_ZR)) && !stillTouching) {
                 commandSuccess = false;
                 abortDownload.store(true, std::memory_order_release);
                 abortUnzip.store(true, std::memory_order_release);
@@ -2043,7 +2043,7 @@ public:
         bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
         if (_runningInterpreter) {
             // Check for back button press
-            if ((keysHeld & KEY_R) && !stillTouching) {
+            if ((keysHeld & KEY_R) && !(keysHeld & (KEY_DLEFT | KEY_DRIGHT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_ZL | KEY_ZR)) && !stillTouching) {
                 commandSuccess = false;
                 abortDownload.store(true, std::memory_order_release);
                 abortUnzip.store(true, std::memory_order_release);
@@ -2716,7 +2716,7 @@ public:
         bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
         if (_runningInterpreter) {
             // Check for back button press
-            if ((keysHeld & KEY_R) && !stillTouching) {
+            if ((keysHeld & KEY_R) && !(keysHeld & (KEY_DLEFT | KEY_DRIGHT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_ZL | KEY_ZR)) && !stillTouching) {
                 commandSuccess = false;
                 abortDownload.store(true, std::memory_order_release);
                 abortUnzip.store(true, std::memory_order_release);
@@ -4173,7 +4173,7 @@ public:
         bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
         if (_runningInterpreter) {
             // Check for back button press
-            if ((keysHeld & KEY_R) && !stillTouching) {
+            if ((keysHeld & KEY_R) && !(keysHeld & (KEY_DLEFT | KEY_DRIGHT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_ZL | KEY_ZR)) && !stillTouching) {
                 commandSuccess = false;
                 abortDownload.store(true, std::memory_order_release);
                 abortUnzip.store(true, std::memory_order_release);
