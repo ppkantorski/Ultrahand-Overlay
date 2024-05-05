@@ -2984,6 +2984,10 @@ public:
             }
 
             if ((keysHeld & KEY_B) && !stillTouching) {
+                if (!inHiddenMode)
+                    returningToMain = true;
+                else
+                    returningToHiddenMain = true;
                 tsl::goBack();
                 simulatedBackComplete = true;
                 return true;
