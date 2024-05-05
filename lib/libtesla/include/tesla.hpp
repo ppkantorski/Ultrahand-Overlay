@@ -2862,7 +2862,7 @@ namespace tsl {
                 y = 50;
                 offset = 0;
                 // Check if m_title is "Ultrahand"
-                if (this->m_title == "Ultrahand" && this->m_subtitle != "Ultrahand Package" && this->m_subtitle != "Ultrahand Script") {
+                if (this->m_title == "Ultrahand" && (this->m_subtitle.find("Ultrahand Package") == std::string::npos) && this->m_subtitle != "Ultrahand Script") {
                     chargeStringSTD = "";
                     PCB_temperatureStringSTD = "";
                     SOC_temperatureStringSTD = "";
@@ -3045,7 +3045,7 @@ namespace tsl {
                     x = 20;
                     y = 50;
                     fontSize = 32;
-                    if (this->m_subtitle == "Ultrahand Package") {
+                    if (this->m_subtitle.find("Ultrahand Package") != std::string::npos) {
                         std::string& title = this->m_title;
                         titleColor = Color(0x0, 0xF, 0x0, 0xF);
                         if (this->m_colorSelection == "" || this->m_colorSelection == "green") {
