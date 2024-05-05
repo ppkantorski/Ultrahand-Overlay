@@ -2864,14 +2864,14 @@ public:
                 simulatedNextPageComplete = true;
             }
 
-            if (simulatedBack && !simulatedBackComplete) {
-                keysHeld |= KEY_B;
-                simulatedBack = false;
-            }
             if (!usingPages || (usingPages && lastPage == "left")) {
+                if (simulatedBack && !simulatedBackComplete) {
+                    keysHeld |= KEY_B;
+                    simulatedBack = false;
+                }
                 if ((keysHeld & KEY_B) && !stillTouching) {
                     ////closeInterpreterThread();
-                    inPackageMenu = false;
+                    //inPackageMenu = false;
 
                     if (!inHiddenMode)
                         returningToMain = true;
@@ -2895,9 +2895,13 @@ public:
                     return true;
                 }
             } else if (usingPages && lastPage == "right") {
+                if (simulatedBack && !simulatedBackComplete) {
+                    keysHeld |= KEY_B;
+                    simulatedBack = false;
+                }
                 if ((keysHeld & KEY_B) && !stillTouching) {
                     ////closeInterpreterThread();
-                    inPackageMenu = false;
+                    //inPackageMenu = false;
 
                     if (!inHiddenMode)
                         returningToMain = true;
@@ -2937,11 +2941,11 @@ public:
                 simulatedNextPageComplete = true;
             }
 
-            if (simulatedBack && !simulatedBackComplete) {
-                keysHeld |= KEY_B;
-                simulatedBack = false;
-            }
             if (!usingPages || (usingPages && lastPage == "left")) {
+                if (simulatedBack && !simulatedBackComplete) {
+                    keysHeld |= KEY_B;
+                    simulatedBack = false;
+                }
                 if ((keysHeld & KEY_B) && !stillTouching) {
                     ////closeInterpreterThread();
                     inSubPackageMenu = false;
@@ -2954,6 +2958,10 @@ public:
                     return true;
                 }
             } else if (usingPages && lastPage == "right") {
+                if (simulatedBack && !simulatedBackComplete) {
+                    keysHeld |= KEY_B;
+                    simulatedBack = false;
+                }
                 if ((keysHeld & KEY_B) && !stillTouching) {
                     ////closeInterpreterThread();
                     inSubPackageMenu = false;
@@ -4360,12 +4368,14 @@ public:
             freshSpawn = false;
         
         if (returningToMain && !(keysHeld & KEY_B)){
+            inPackageMenu = false;
             returningToMain = false;
             inMainMenu = true;
             selectedFooterDict.clear();
             hexSumCache.clear();
         }
         if (returningToHiddenMain && !(keysHeld & KEY_B)){
+            inPackageMenu = false;
             returningToHiddenMain = false;
             inHiddenMode = true;
             selectedFooterDict.clear();
