@@ -2862,7 +2862,7 @@ namespace tsl {
                 y = 50;
                 offset = 0;
                 // Check if m_title is "Ultrahand"
-                if (this->m_title == "Ultrahand" && (this->m_subtitle.find("Ultrahand Package") == std::string::npos) && this->m_subtitle != "Ultrahand Script") {
+                if (this->m_title == "Ultrahand" && (this->m_subtitle.find("Ultrahand Package") == std::string::npos) && (this->m_subtitle.find("Ultrahand Script") == std::string::npos)) {
                     chargeStringSTD = "";
                     PCB_temperatureStringSTD = "";
                     SOC_temperatureStringSTD = "";
@@ -3112,7 +3112,7 @@ namespace tsl {
                         } else { // for unknown colors
                             renderer->drawString(title.c_str(), false, x, y, fontSize, titleColor);
                         }
-                    } else if (this->m_subtitle == "Ultrahand Script") {
+                    } else if (this->m_subtitle.find("Ultrahand Script") != std::string::npos) {
                         renderer->drawString(this->m_title.c_str(), false, 20, 50, 32, Color(0xFF, 0x33, 0x3F, 0xFF));
                     } else {
                         renderer->drawString(this->m_title.c_str(), false, 20, 50, 30, defaultTextColor);
