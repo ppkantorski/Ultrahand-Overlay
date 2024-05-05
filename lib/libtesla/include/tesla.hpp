@@ -4995,7 +4995,8 @@ namespace tsl {
                         //if (currentFocus != nullptr && touchEvent != elm::TouchEvent::Scroll)
                         //    currentGui->requestFocus(currentFocus, FocusDirection::None);
                         //else
-                        currentGui->removeFocus();
+                        if (touchPos.x > 0U && touchPos.x <= cfg::FramebufferWidth && touchPos.y > 73U && touchPos.y <= cfg::FramebufferHeight - 73U)
+                            currentGui->removeFocus();
                     }
                     //// Check if the top element contains the touch position
                     //if (topElement->inBounds(touchPos.x, touchPos.y)) {
