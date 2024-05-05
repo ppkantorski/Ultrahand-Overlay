@@ -154,7 +154,10 @@ void initializeTheme(std::string themeIniPath = themeConfigIniPath) {
                 setIniFileValue(themeIniPath, "theme", "highlight_color_4", "#F7253E");
             
             if (themedSection.count("click_text_color") == 0)
-                setIniFileValue(themeIniPath, "theme", "click_text_color", "#000000");
+                setIniFileValue(themeIniPath, "theme", "click_text_color", "#FFFFFF");
+
+            if (themedSection.count("click_alpha") == 0)
+                setIniFileValue(themeIniPath, "theme", "click_alpha", "7");
 
             if (themedSection.count("click_color") == 0)
                 setIniFileValue(themeIniPath, "theme", "click_color", "#F7253E");
@@ -207,6 +210,8 @@ void initializeTheme(std::string themeIniPath = themeConfigIniPath) {
         setIniFileValue(themeIniPath, "theme", "highlight_color_2", "#88FFFF");
         setIniFileValue(themeIniPath, "theme", "highlight_color_3", "#FFFF45");
         setIniFileValue(themeIniPath, "theme", "highlight_color_4", "#F7253E");
+        setIniFileValue(themeIniPath, "theme", "click_text_color", "#FFFFFF");
+        setIniFileValue(themeIniPath, "theme", "click_alpha", "7");
         setIniFileValue(themeIniPath, "theme", "click_color", "#F7253E");
         setIniFileValue(themeIniPath, "theme", "invert_bg_click_color", "false");
         setIniFileValue(themeIniPath, "theme", "disable_selection_bg", "true");
@@ -310,7 +315,7 @@ void addHelpInfo(auto& list) {
         list->addItem(new tsl::elm::CustomDrawer([lineHeight, xOffset, fontSize, sectionString, infoString, infoTextColor, onTextColor](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
             renderer->drawString(sectionString.c_str(), false, x + 12, y + lineHeight, fontSize, infoTextColor);
             renderer->drawString(infoString.c_str(), false, x + xOffset+ 12, y + lineHeight, fontSize, onTextColor);
-        }), fontSize * numEntries + lineHeight);
+        }), fontSize * numEntries +2);
     }
 }
 
@@ -430,7 +435,7 @@ void addAppInfo(auto& list, auto& packageHeader, std::string type = "package") {
         list->addItem(new tsl::elm::CustomDrawer([lineHeight, xOffset, fontSize, packageSectionString, packageInfoString, infoTextColor](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
             renderer->drawString(packageSectionString.c_str(), false, x + 12, y + lineHeight, fontSize, infoTextColor);
             renderer->drawString(packageInfoString.c_str(), false, x + xOffset, y + lineHeight, fontSize, infoTextColor);
-        }), fontSize * numEntries + lineHeight);
+        }), fontSize * numEntries +2);
     }
 }
 

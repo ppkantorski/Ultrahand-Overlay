@@ -1187,6 +1187,8 @@ namespace tsl {
     }
     
     [[maybe_unused]] static void goBack();
+
+    [[maybe_unused]] static void pop();
     
     [[maybe_unused]] static void setNextOverlay(const std::string& ovlPath, std::string args = "");
     
@@ -2214,7 +2216,9 @@ namespace tsl {
             Color highlightColor4 = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "highlight_color_4"), "#F7253E");
             Color highlightColor = {0xf,0xf,0xf,0xf};
             
-            Color clickColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "click_color"), "#F7253E");
+            std::string clickAlphaStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "click_alpha");
+            size_t clickAlpha = (!clickAlphaStr.empty()) ? std::stoi(clickAlphaStr) : 7;
+            Color clickColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "click_color"), "#F7253E", clickAlpha);
             
             std::chrono::duration<long int, std::ratio<1, 1000000000>> t;
             //double timeCounter;
@@ -2434,15 +2438,15 @@ namespace tsl {
                     //renderer->drawRect(this->getX() + x + this->getWidth(), this->getY() + y, 4, this->getHeight(), highlightColor);
                     
                     
-                    renderer->drawRect(this->getX() + x + 5 -1, this->getY() + y - 4, this->getWidth() - 5 +2 +4, 5, highlightColor);
-                    renderer->drawRect(this->getX() + x + 5 -1, this->getY() + y + this->getHeight(), this->getWidth() - 5 +2 +4, 5, highlightColor);
-                    renderer->drawRect(this->getX() + x, this->getY() + y + 2 - 2, 5, this->getHeight()-3 +4, highlightColor);
-                    renderer->drawRect(this->getX() + x + this->getWidth()+4, this->getY() + y + 2 -2, 5, this->getHeight()-3 +4, highlightColor);
+                    renderer->drawRect(this->getX() + x + 2, this->getY() + y - 4, this->getWidth() - 5 +2 +4, 5, highlightColor);
+                    renderer->drawRect(this->getX() + x + 2, this->getY() + y + this->getHeight(), this->getWidth() - 5 +2 +4, 5, highlightColor);
+                    renderer->drawRect(this->getX() + x -2, this->getY() + y + 2 - 2, 5, this->getHeight()-3 +4, highlightColor);
+                    renderer->drawRect(this->getX() + x + this->getWidth()+2, this->getY() + y + 2 -2, 5, this->getHeight()-3 +4, highlightColor);
                     
-                    renderer->drawCircle(this->getX() + x + 2, this->getY() + y + this->getHeight() + 2, 2.5, true, highlightColor);
-                    renderer->drawCircle(this->getX() + x + 2, this->getY() + y - 2, 2.5, true, highlightColor);
-                    renderer->drawCircle(this->getX() + x + this->getWidth() + 2+4, this->getY() + y + this->getHeight() + 2, 2.5, true, highlightColor);
-                    renderer->drawCircle(this->getX() + x + this->getWidth() + 2+4, this->getY() + y - 2, 2.5, true, highlightColor);
+                    renderer->drawCircle(this->getX() + x, this->getY() + y + this->getHeight() + 2, 2.5, true, highlightColor);
+                    renderer->drawCircle(this->getX() + x, this->getY() + y - 2, 2.5, true, highlightColor);
+                    renderer->drawCircle(this->getX() + x + this->getWidth() +4, this->getY() + y + this->getHeight() + 2, 2.5, true, highlightColor);
+                    renderer->drawCircle(this->getX() + x + this->getWidth() +4, this->getY() + y - 2, 2.5, true, highlightColor);
                     
                 }
             }
@@ -2532,15 +2536,15 @@ namespace tsl {
                 }
                 if ((disableSelectionBG && this->m_clickAnimationProgress == 0) || !disableSelectionBG) {
                     
-                    renderer->drawRect(this->getX() + x + 5 -1, this->getY() + y - 4, this->getWidth() - 5 +2 +4, 5, highlightColor);
-                    renderer->drawRect(this->getX() + x + 5 -1, this->getY() + y + this->getHeight(), this->getWidth() - 5 +2 +4, 5, highlightColor);
-                    renderer->drawRect(this->getX() + x, this->getY() + y + 2 - 2, 5, this->getHeight()-3 +4, highlightColor);
-                    renderer->drawRect(this->getX() + x + this->getWidth()+4, this->getY() + y + 2 -2, 5, this->getHeight()-3 +4, highlightColor);
+                    renderer->drawRect(this->getX() + x + 2, this->getY() + y - 4, this->getWidth() - 5 +2 +4, 5, highlightColor);
+                    renderer->drawRect(this->getX() + x + 2, this->getY() + y + this->getHeight(), this->getWidth() - 5 +2 +4, 5, highlightColor);
+                    renderer->drawRect(this->getX() + x -2, this->getY() + y + 2 - 2, 5, this->getHeight()-3 +4, highlightColor);
+                    renderer->drawRect(this->getX() + x + this->getWidth()+2, this->getY() + y + 2 -2, 5, this->getHeight()-3 +4, highlightColor);
                     
-                    renderer->drawCircle(this->getX() + x + 2, this->getY() + y + this->getHeight() + 2, 2.5, true, highlightColor);
-                    renderer->drawCircle(this->getX() + x + 2, this->getY() + y - 2, 2.5, true, highlightColor);
-                    renderer->drawCircle(this->getX() + x + this->getWidth() + 2+4, this->getY() + y + this->getHeight() + 2, 2.5, true, highlightColor);
-                    renderer->drawCircle(this->getX() + x + this->getWidth() + 2+4, this->getY() + y - 2, 2.5, true, highlightColor);
+                    renderer->drawCircle(this->getX() + x, this->getY() + y + this->getHeight() + 2, 2.5, true, highlightColor);
+                    renderer->drawCircle(this->getX() + x, this->getY() + y - 2, 2.5, true, highlightColor);
+                    renderer->drawCircle(this->getX() + x + this->getWidth() + 4, this->getY() + y + this->getHeight() + 2, 2.5, true, highlightColor);
+                    renderer->drawCircle(this->getX() + x + this->getWidth() + 4, this->getY() + y - 2, 2.5, true, highlightColor);
                 }
                 //renderer->drawRect(ELEMENT_BOUNDS(this), a(0xF000)); // This has been moved here (needs to be toggleable)
             }
@@ -3009,7 +3013,7 @@ namespace tsl {
                         if (powerCacheIsCharging)
                             renderer->drawString(chargeStringSTD.c_str(), false, tsl::cfg::FramebufferWidth - calculateStringWidth(chargeStringSTD, 20) - 19, y_offset, 20, tsl::Color(0x0, 0xF, 0x0, 0xF));
                         else {
-                            if (batteryCharge <= 20) {
+                            if (batteryCharge < 20) {
                                 renderer->drawString(chargeStringSTD.c_str(), false, tsl::cfg::FramebufferWidth - calculateStringWidth(chargeStringSTD, 20) - 19, y_offset, 20, tsl::Color(0xF, 0x0, 0x0, 0xF));
                             } else {
                                 renderer->drawString(chargeStringSTD.c_str(), false, tsl::cfg::FramebufferWidth - calculateStringWidth(chargeStringSTD, 20) - 19, y_offset, 20, batteryColor);
@@ -3149,7 +3153,7 @@ namespace tsl {
                 this->setBoundaries(parentX, parentY, parentWidth, parentHeight);
                 
                 if (this->m_contentElement != nullptr) {
-                    this->m_contentElement->setBoundaries(parentX + 35, parentY + 102, parentWidth - 85, parentHeight - 73 - 105); // CUSTOM MODIFICATION (125->105->102)
+                    this->m_contentElement->setBoundaries(parentX + 35, parentY + 97, parentWidth - 85, parentHeight - 73 - 105); // CUSTOM MODIFICATION (125->105->102)
                     this->m_contentElement->invalidate();
                 }
             }
@@ -3414,7 +3418,7 @@ namespace tsl {
                 }
                 this->m_itemsToRemove.clear();
                 
-                renderer->enableScissoring(this->getLeftBound(), this->getTopBound() - 5, this->getWidth(), this->getHeight() + 4);
+                renderer->enableScissoring(this->getLeftBound(), this->getTopBound() , this->getWidth(), this->getHeight() + 4);
                 
                 for (auto &entry : this->m_items) {
                     if (entry->getBottomBound() > this->getTopBound() && entry->getTopBound() < this->getBottomBound()) {
@@ -3425,15 +3429,35 @@ namespace tsl {
                 renderer->disableScissoring();
                 
                 if (this->m_listHeight > this->getHeight()) {
-                    scrollbarHeight = static_cast<float>(this->getHeight() * this->getHeight() / this->m_listHeight - 50);
-                    if (scrollbarHeight < 0)
-                        scrollbarHeight = 0;
-                    scrollbarOffset = (static_cast<float>(this->m_offset)) / static_cast<float>(this->m_listHeight - this->getHeight()) * static_cast<float>(this->getHeight() - std::ceil(scrollbarHeight + 50));
                     
+                    float viewHeight = static_cast<float>(this->getHeight());
+                    float totalHeight = static_cast<float>(this->m_listHeight);
+                    
+                    // Calculate the height of the scrollbar to represent the portion of the content that is viewable.
+                    scrollbarHeight = (viewHeight * viewHeight) / totalHeight;
+                    if (scrollbarHeight > viewHeight) {
+                        scrollbarHeight = viewHeight; // Ensures the scrollbar is not larger than the container.
+                    }
+                    
+                    // Calculate the maximum scrollable height.
+                    int maxScrollableHeight = this->m_listHeight - this->getHeight() + 64;
+                    if (maxScrollableHeight < 1) maxScrollableHeight = 1; // Prevent division by zero.
+                    
+                    // Calculate the scrollbar offset, adjusting the range it covers by decreasing it by 3 units.
+                    scrollbarOffset = (static_cast<double>(this->m_offset) / maxScrollableHeight) * (viewHeight - scrollbarHeight - 3);
+                    
+                    // Increase the starting position of the scrollbar by 8 units as previously defined.
+                    scrollbarOffset += 8;
+                    
+                    // Ensure the scrollbar does not go outside the viewable area. Adjust the condition to stop 3 units earlier.
+                    if (scrollbarOffset + scrollbarHeight > viewHeight - 3) {
+                        scrollbarOffset = viewHeight - 3 - scrollbarHeight;
+                    }
+
                     offset = 11;
                     renderer->drawRect(this->getRightBound() + 10+offset, this->getY() + scrollbarOffset, 5, scrollbarHeight, trackBarColor);
                     renderer->drawCircle(this->getRightBound() + 12+offset, this->getY() + scrollbarOffset, 2, true, trackBarColor);
-                    renderer->drawCircle(this->getRightBound() + 12+offset, ( this->getY() + scrollbarOffset + (this->getY() + scrollbarOffset + this->getY() + scrollbarOffset + scrollbarHeight)/2)/2, 2, true, trackBarColor);
+                    renderer->drawCircle(this->getRightBound() + 12+offset, (this->getY() + scrollbarOffset + (this->getY() + scrollbarOffset + this->getY() + scrollbarOffset + scrollbarHeight)/2)/2, 2, true, trackBarColor);
                     renderer->drawCircle(this->getRightBound() + 12+offset, (this->getY() + scrollbarOffset + this->getY() + scrollbarOffset + scrollbarHeight)/2, 2, true, trackBarColor);
                     renderer->drawCircle(this->getRightBound() + 12+offset, (this->getY() + scrollbarOffset + scrollbarHeight + (this->getY() + scrollbarOffset + this->getY() + scrollbarOffset + scrollbarHeight)/2)/2, 2, true, trackBarColor);
                     renderer->drawCircle(this->getRightBound() + 12+offset, this->getY() + scrollbarOffset + scrollbarHeight, 2, true, trackBarColor);
@@ -3458,11 +3482,13 @@ namespace tsl {
                 for (auto &entry : this->m_items)
                     this->m_listHeight += entry->getHeight();
                 
+                this->m_listHeight -= 32;
                 for (auto &entry : this->m_items) {
                     entry->setBoundaries(this->getX(), y, this->getWidth(), entry->getHeight());
                     entry->invalidate();
                     y += entry->getHeight();
                 }
+                y -= 32;
             }
             
             virtual bool onTouch(TouchEvent event, s32 currX, s32 currY, s32 prevX, s32 prevY, s32 initialX, s32 initialY) {
@@ -3704,7 +3730,10 @@ namespace tsl {
             tsl::Color offTextColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "off_text_color"), "#AAAAAA");
             
             tsl::Color clickTextColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "click_text_color"));
-            tsl::Color clickColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "click_color"));
+
+            std::string clickAlphaStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "click_alpha");
+            size_t clickAlpha = (!clickAlphaStr.empty()) ? std::stoi(clickAlphaStr) : 7;
+            Color clickColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "click_color"), "#F7253E", clickAlpha);
 
             std::chrono::system_clock::time_point timeIn;// = std::chrono::system_clock::now();
             std::chrono::duration<long int, std::ratio<1, 1000000000>> t;
@@ -3760,14 +3789,14 @@ namespace tsl {
                 //renderer->drawRect(this->getX()+4, this->getTopBound(), this->getWidth()-4, 1, a(0x0000));
                 
                 //renderer->drawRect(this->getX()+5, this->getTopBound(), this->getWidth()-5+10, 1, tsl::style::color::ColorFrame);
-                renderer->drawRect(this->getX()+5, this->getTopBound(), this->getWidth()-5+10, 1, seperatorColor);
+                renderer->drawRect(this->getX()+5-2, this->getTopBound(), this->getWidth()-5+10, 1, seperatorColor);
                 
                 if (this->m_trunctuated) {
                     if (this->m_focused) {
-                        renderer->enableScissoring(this->getX()+7, 97, this->m_maxWidth + 40 - 10+2+4, tsl::cfg::FramebufferHeight-73-97);
+                        renderer->enableScissoring(this->getX()+7, 97, this->m_maxWidth + 40 - 10+4, tsl::cfg::FramebufferHeight-73-97);
                         //renderer->enableScissoring(this->getX(), this->getY(), this->m_maxWidth + 40, this->getHeight());
                         //renderer->drawString(this->m_scrollText.c_str(), false, this->getX() + 20.0 - std::round(this->m_scrollOffset*10000.0)/10000.0, this->getY() + 45, 23, defaultTextColor);
-                        renderer->drawString(this->m_scrollText.c_str(), false, this->getX() + 20.0 - this->m_scrollOffset, this->getY() + 45, 23, selectedTextColor);
+                        renderer->drawString(this->m_scrollText.c_str(), false, this->getX() + 20.0-2 - this->m_scrollOffset, this->getY() + 45, 23, selectedTextColor);
                         renderer->disableScissoring();
                         t = std::chrono::system_clock::now() - this->timeIn;
                         if (t >= 2000ms) {
@@ -3783,13 +3812,13 @@ namespace tsl {
                             }
                         } // CUSTOM MODIFICATION END
                     } else {
-                        renderer->drawString(this->m_ellipsisText.c_str(), false, this->getX() + 20, this->getY() + 45, 23, !useClickTextColor ? defaultTextColor : clickTextColor);
+                        renderer->drawString(this->m_ellipsisText.c_str(), false, this->getX() + 20-2, this->getY() + 45, 23, !useClickTextColor ? defaultTextColor : clickTextColor);
                     }
                 } else {
                     if (this->m_focused) {
-                        renderer->drawString(this->m_text.c_str(), false, this->getX() + 20, this->getY() + 45, 23, !useClickTextColor ? selectedTextColor : clickTextColor);
+                        renderer->drawString(this->m_text.c_str(), false, this->getX() + 20-2, this->getY() + 45, 23, !useClickTextColor ? selectedTextColor : clickTextColor);
                     } else {
-                        renderer->drawString(this->m_text.c_str(), false, this->getX() + 20, this->getY() + 45, 23, !useClickTextColor ? defaultTextColor : clickTextColor);
+                        renderer->drawString(this->m_text.c_str(), false, this->getX() + 20-2, this->getY() + 45, 23, !useClickTextColor ? defaultTextColor : clickTextColor);
                     }
                 }
                 
@@ -3797,21 +3826,21 @@ namespace tsl {
                 // CUSTOM SECTION START (modification for submenu footer color)
                 if (this->m_value == DROPDOWN_SYMBOL || this->m_value == OPTION_SYMBOL) {
                     if (this->m_focused)
-                        renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +4, this->getY() + 45, 20, !useClickTextColor ? (this->m_faint ? offTextColor : selectedTextColor) : clickTextColor);
+                        renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +2, this->getY() + 45, 20, !useClickTextColor ? (this->m_faint ? offTextColor : selectedTextColor) : clickTextColor);
                     else
-                        renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +4, this->getY() + 45, 20, !useClickTextColor ? (this->m_faint ? offTextColor : defaultTextColor) : clickTextColor);
+                        renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +2, this->getY() + 45, 20, !useClickTextColor ? (this->m_faint ? offTextColor : defaultTextColor) : clickTextColor);
                 } else if (((this->m_value).find(DOWNLOAD_SYMBOL) != std::string::npos) || this->m_value == INPROGRESS_SYMBOL) {
-                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +4, this->getY() + 45, 20, !useClickTextColor ? (this->m_faint ? offTextColor : inprogressTextColor) : clickTextColor);
+                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +2, this->getY() + 45, 20, (this->m_faint ? offTextColor : inprogressTextColor));
                 } else if (this->m_value == CROSSMARK_SYMBOL) {
-                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +4, this->getY() + 45, 20, !useClickTextColor ? (this->m_faint ? offTextColor : invalidTextColor) : clickTextColor);
+                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +2, this->getY() + 45, 20, (this->m_faint ? offTextColor : invalidTextColor));
                 } else {
-                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +4, this->getY() + 45, 20, !useClickTextColor ? (this->m_faint ? offTextColor : onTextColor) : clickTextColor);
+                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +2, this->getY() + 45, 20, (this->m_faint ? offTextColor : onTextColor));
                 }
                 // CUSTOM SECTION END 
             }
             
             virtual void layout(u16 parentX, u16 parentY, u16 parentWidth, u16 parentHeight) override {
-                this->setBoundaries(this->getX(), this->getY(), this->getWidth()-2, tsl::style::ListItemDefaultHeight);
+                this->setBoundaries(this->getX()+2, this->getY(), this->getWidth()-2, tsl::style::ListItemDefaultHeight);
             }
             
             virtual bool onClick(u64 keys) override {
@@ -3939,12 +3968,18 @@ namespace tsl {
             virtual ~ToggleListItem() {}
             
             virtual bool onClick(u64 keys) override {
+                if (simulatedSelect && !simulatedSelectComplete) {
+                    keys |= KEY_A;
+                    simulatedSelect = false;
+                }
+
                 if (keys & HidNpadButton_A) {
                     this->m_state = !this->m_state;
                     
                     this->setState(this->m_state);
                     this->m_stateChangedListener(this->m_state);
                     
+                    simulatedSelectComplete = true;
                     return ListItem::onClick(keys);
                 }
                 
@@ -4895,7 +4930,7 @@ namespace tsl {
             }
 
             // If the up button is pressed, shift focus to the top element
-            if (!touchDetected && keysDown & HidNpadButton_L && !runningInterpreter.load(std::memory_order_acquire)) {
+            if (!touchDetected && (keysDown & HidNpadButton_L) && !(keysHeld & (KEY_DLEFT | KEY_DRIGHT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_R | KEY_ZL | KEY_ZR)) && !runningInterpreter.load(std::memory_order_acquire)) {
                 topElement = currentGui->getTopElement();
                 if (topElement != nullptr) {
                     currentGui->requestFocus(topElement, FocusDirection::None);
@@ -4903,7 +4938,7 @@ namespace tsl {
             }
 
             // If the down button is pressed, shift focus to the bottom element
-            if (!touchDetected && keysDown & HidNpadButton_R && !runningInterpreter.load(std::memory_order_acquire)) {
+            if (!touchDetected && (keysDown & HidNpadButton_R) && !(keysHeld & (KEY_DLEFT | KEY_DRIGHT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_ZL | KEY_ZR)) && !runningInterpreter.load(std::memory_order_acquire)) {
                 bottomElement = currentGui->getBottomElement();
                 if (bottomElement != nullptr) {
                     currentGui->requestFocus(bottomElement, FocusDirection::None);
@@ -4957,10 +4992,10 @@ namespace tsl {
                 if (currentGui != nullptr && topElement != nullptr) {
                     if (!runningInterpreter.load(std::memory_order_acquire)) {
                         topElement->onTouch(touchEvent, touchPos.x, touchPos.y, oldTouchPos.x, oldTouchPos.y, initialTouchPos.x, initialTouchPos.y);
-                        if (currentFocus != nullptr && touchEvent != elm::TouchEvent::Scroll)
-                            currentGui->requestFocus(currentFocus, FocusDirection::None);
-                        else
-                            currentGui->removeFocus();
+                        //if (currentFocus != nullptr && touchEvent != elm::TouchEvent::Scroll)
+                        //    currentGui->requestFocus(currentFocus, FocusDirection::None);
+                        //else
+                        currentGui->removeFocus();
                     }
                     //// Check if the top element contains the touch position
                     //if (topElement->inBounds(touchPos.x, touchPos.y)) {
@@ -5126,11 +5161,17 @@ namespace tsl {
             if (this->m_guiStack.empty())
                 this->close();
         }
+
+        void pop() {
+            if (!this->m_guiStack.empty())
+                this->m_guiStack.pop();
+        }
         
         template<typename G, typename ...Args>
         friend std::unique_ptr<tsl::Gui>& changeTo(Args&&... args);
         
         friend void goBack();
+        friend void pop();
         
         template<typename, tsl::impl::LaunchFlags>
         friend int loop(int argc, char** argv);
@@ -5352,6 +5393,11 @@ namespace tsl {
         Overlay::get()->goBack();
     }
     
+    static void pop() {
+        Overlay::get()->pop();
+    }
+
+
     static void setNextOverlay(const std::string& ovlPath, std::string origArgs) {
         
         //std::string args = std::filesystem::path(ovlPath).filename();
