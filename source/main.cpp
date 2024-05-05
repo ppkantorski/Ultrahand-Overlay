@@ -1967,7 +1967,13 @@ public:
         //tsl::elm::OverlayFrame *rootFrame = new tsl::elm::OverlayFrame(getNameFromPath(filePath), "Ultrahand Package", "", packageHeader.color);
         //rootFrame->setContent(list);
         //list->clear();
-        auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(getNameFromPath(filePath), "Ultrahand Package", "", packageHeader.color);
+        std::string subLabel;
+        if (packageHeader.version != "")
+            subLabel = packageHeader.version + "   (Ultrahand Package)";
+        else
+            subLabel = "Ultrahand Package";
+
+        auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(getNameFromPath(filePath), subLabel, "", packageHeader.color);
         rootFrame->setContent(list.release());
 
         return rootFrame.release();
