@@ -2160,14 +2160,9 @@ public:
         tsl::hlp::ini::IniData packageConfigData;
         std::vector<std::string> filesList, filesListOn, filesListOff, filterList, filterListOn, filterListOff;
         
-        std::string packageIniPath, packageConfigIniPath;
 
-        packageIniPath = packagePath + packageName;
-
-        logMessage("packageIniPath: "+packageIniPath);
-        logMessage("packagePath: "+packagePath);
-
-        packageConfigIniPath = packagePath + configFileName;
+        std::string packageIniPath = packagePath + packageName;
+        std::string packageConfigIniPath = packagePath + configFileName;
 
         PackageHeader packageHeader = getPackageHeaderFromIni(packageIniPath);
         
@@ -2668,15 +2663,21 @@ public:
 
         std::unique_ptr<tsl::elm::OverlayFrame> rootFrame;
 
+        std::string subLabel;
+        if (packageHeader.version != "")
+            subLabel = packageHeader.version + "   (Ultrahand Package)";
+        else
+            subLabel = "Ultrahand Package";
+
         if (usingPages) {
             if (currentPage == "left") {
-                rootFrame = std::make_unique<tsl::elm::OverlayFrame>(getNameFromPath(packagePath), "Ultrahand Package", "", packageHeader.color, "", pageRightName);
+                rootFrame = std::make_unique<tsl::elm::OverlayFrame>(getNameFromPath(packagePath), subLabel, "", packageHeader.color, "", pageRightName);
             }
             else if (currentPage == "right") {
-                rootFrame = std::make_unique<tsl::elm::OverlayFrame>(getNameFromPath(packagePath), "Ultrahand Package", "", packageHeader.color, pageLeftName, "");
+                rootFrame = std::make_unique<tsl::elm::OverlayFrame>(getNameFromPath(packagePath), subLabel, "", packageHeader.color, pageLeftName, "");
             }
         } else {
-            rootFrame = std::make_unique<tsl::elm::OverlayFrame>(getNameFromPath(packagePath), "Ultrahand Package", "", packageHeader.color);
+            rootFrame = std::make_unique<tsl::elm::OverlayFrame>(getNameFromPath(packagePath), subLabel, "", packageHeader.color);
         }
 
         rootFrame->setContent(list.release());
