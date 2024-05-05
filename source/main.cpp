@@ -78,7 +78,6 @@ static std::unordered_map<std::string, std::string> selectedFooterDict;
 static std::shared_ptr<tsl::elm::ListItem> selectedListItem;
 static std::shared_ptr<tsl::elm::ListItem> lastSelectedListItem;
 
-
 static bool lastRunningInterpreter = false;
 
 //static tsl::elm::OverlayFrame* rootFrame = nullptr;
@@ -95,6 +94,8 @@ const static auto SCRIPT_KEY = KEY_MINUS;
 const static auto SYSTEM_SETTINGS_KEY = KEY_PLUS;
 const static auto SETTINGS_KEY = KEY_Y;
 const static auto STAR_KEY = KEY_X;
+
+
 
 
 
@@ -230,6 +231,7 @@ public:
                     simulatedSelectComplete = true;
                     return true;
                 }
+
                 return false;
             });
             list->addItem(listItem.release());
@@ -327,52 +329,7 @@ public:
                 return false;
             });
             list->addItem(listItem.release());
-            
-        //} else if (dropdownSelection == "defaultMenu") {
-        //    
-        //    list->addItem(new tsl::elm::CategoryHeader("Default Menu"));
-        //    
-        //    std::string defaultMenu = parseValueFromIniSection(settingsConfigIniPath, "ultrahand", "default_menu");
-        //    
-        //    std::vector<std::string> defaultMenuModes = {"overlays", "packages"};
-        //    
-        //    std::unique_ptr<tsl::elm::ListItem> listItem;
-        //
-        //    for (const auto& defaultMenuMode : defaultMenuModes) {
-        //        
-        //        listItem = std::make_unique<tsl::elm::ListItem>(defaultMenuMode);
-        //        
-        //        if (defaultMenuMode == defaultMenu) {
-        //            listItem->setValue(CHECKMARK_SYMBOL);
-        //            lastSelectedListItem.reset();
-        //            lastSelectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){});
-        //        }
-        //        
-        //        listItem->setClickListener([defaultMenuMode, listItemPtr = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){})](uint64_t keys) { // Add 'this', 'i', and 'listItem' to the capture list
-        //            bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
-        //            if (_runningInterpreter)
-        //                return false;
-        //
-        //            if (simulatedSelect && !simulatedSelectComplete) {
-        //                keys |= KEY_A;
-        //                simulatedSelect = false;
-        //            }
-        //            if (keys & KEY_A) {
-        //                setIniFileValue(settingsConfigIniPath, "ultrahand", "default_menu", defaultMenuMode);
-        //                lastSelectedListItem->setValue("");
-        //                selectedListItem->setValue(defaultMenuMode);
-        //                listItemPtr->setValue(CHECKMARK_SYMBOL);
-        //                lastSelectedListItem.reset();
-        //                lastSelectedListItem = listItemPtr;
-        //                simulatedSelectComplete = true;
-        //                return true;
-        //            }
-        //            return false;
-        //        });
-        //        
-        //        list->addItem(listItem.release());
-        //    }
-        //    
+
         } else if (dropdownSelection == "keyComboMenu") {
             
             list->addItem(new tsl::elm::CategoryHeader(KEY_COMBO));
@@ -449,9 +406,15 @@ public:
                 }
                 
                 listItem->setClickListener([skipLang, defaultLangMode, defaulLang, langFile, listItemPtr = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){})](uint64_t keys) { // Add 'this', 'i', and 'listItem' to the capture list
+                    
                     bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                     if (_runningInterpreter)
                         return false;
+
+                    //if (!initialRun && lastSelectedListItem != listItemPtr) {
+                    //    tsl::Overlay::get()->getCurrentGui()->requestFocus(tsl::Overlay::get()->getCurrentGui()->getTopElement(), tsl::FocusDirection::Down);
+                    //    initialRun = true;
+                    //}
 
                     if (simulatedSelect && !simulatedSelectComplete) {
                         keys |= KEY_A;
@@ -477,8 +440,10 @@ public:
                         lastSelectedListItem = listItemPtr;
                         
                         simulatedSelectComplete = true;
+                        
                         return true;
                     }
+                    
                     return false;
                 });
                 
@@ -494,22 +459,6 @@ public:
                 //static bool lastRunningInterpreter = false;
                 bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                 if (_runningInterpreter) {
-
-                    //int currentPercentage = downloadPercentage.load(std::memory_order_acquire);
-                    //logMessage("currentPercentage: "+std::to_string(currentPercentage));
-                    if (downloadPercentage.load(std::memory_order_acquire) != -1) {
-                        lastSelectedListItem->setValue(DOWNLOAD_SYMBOL + " " + std::to_string(downloadPercentage.load(std::memory_order_acquire))+"%");
-                        if (downloadPercentage.load(std::memory_order_acquire) == 100)
-                            downloadPercentage.store(-1, std::memory_order_release);
-                    }
-
-                    if (threadFailure.load(std::memory_order_acquire)) {
-                        threadFailure.store(false, std::memory_order_release);
-                        commandSuccess = false;
-                        //lastRunningInterpreter = true;
-                        //logMessage("killing command");
-                    }
-
                     return false;
                 }
 
@@ -556,35 +505,8 @@ public:
 
                 bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                 if (_runningInterpreter) {
-                    //int currentPercentage = downloadPercentage.load(std::memory_order_acquire);
-                    //logMessage("currentPercentage: "+std::to_string(currentPercentage));
-                    if (downloadPercentage.load(std::memory_order_acquire) != -1) {
-                        lastSelectedListItem->setValue(DOWNLOAD_SYMBOL + " " + std::to_string(downloadPercentage.load(std::memory_order_acquire))+"%");
-                        if (downloadPercentage.load(std::memory_order_acquire) == 100)
-                            downloadPercentage.store(-1, std::memory_order_release);
-                    }
-                    
-                    if (threadFailure.load(std::memory_order_acquire)) {
-                        threadFailure.store(false, std::memory_order_release);
-                        commandSuccess = false;
-                        //lastRunningInterpreter = true;
-                        //logMessage("killing command");
-                    }
-
                     return false;
                 }
-
-                //if (lastRunningInterpreter) {
-                //    isDownloadCommand = false;
-                //    if (commandSuccess)
-                //        lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
-                //    else
-                //        lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
-                //    ////closeInterpreterThread();
-                //    lastRunningInterpreter = false;
-                //    
-                //    return true;
-                //}
 
                 if (simulatedSelect && !simulatedSelectComplete) {
                     keys |= KEY_A;
@@ -754,8 +676,8 @@ public:
             
             auto toggleListItem = std::make_unique<tsl::elm::ToggleListItem>(CLOCK, false, ON, OFF);
             toggleListItem->setState((hideClock == "false"));
-            toggleListItem->setStateChangedListener([listItemPtr = std::shared_ptr<tsl::elm::ListItem>(toggleListItem.get(), [](auto*){})](bool state) {
-                tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemPtr.get(), tsl::FocusDirection::None);
+            toggleListItem->setStateChangedListener([listItemRaw = toggleListItem.get()](bool state) {
+                tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemRaw, tsl::FocusDirection::None);
                 setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_clock", state ? "false" : "true");
                 reinitializeWidgetVars();
                 redrawWidget = true;
@@ -764,8 +686,8 @@ public:
             
             toggleListItem = std::make_unique<tsl::elm::ToggleListItem>(SOC_TEMPERATURE, false, ON, OFF);
             toggleListItem->setState((hideSOCTemp == "false"));
-            toggleListItem->setStateChangedListener([listItemPtr = std::shared_ptr<tsl::elm::ListItem>(toggleListItem.get(), [](auto*){})](bool state) {
-                tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemPtr.get(), tsl::FocusDirection::None);
+            toggleListItem->setStateChangedListener([listItemRaw = toggleListItem.get()](bool state) {
+                tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemRaw, tsl::FocusDirection::None);
                 setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_soc_temp", state ? "false" : "true");
                 reinitializeWidgetVars();
                 redrawWidget = true;
@@ -774,8 +696,8 @@ public:
             
             toggleListItem = std::make_unique<tsl::elm::ToggleListItem>(PCB_TEMPERATURE, false, ON, OFF);
             toggleListItem->setState((hidePCBTemp == "false"));
-            toggleListItem->setStateChangedListener([listItemPtr = std::shared_ptr<tsl::elm::ListItem>(toggleListItem.get(), [](auto*){})](bool state) {
-                tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemPtr.get(), tsl::FocusDirection::None);
+            toggleListItem->setStateChangedListener([listItemRaw = toggleListItem.get()](bool state) {
+                tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemRaw, tsl::FocusDirection::None);
                 setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_pcb_temp", state ? "false" : "true");
                 reinitializeWidgetVars();
                 redrawWidget = true;
@@ -784,8 +706,8 @@ public:
             
             toggleListItem = std::make_unique<tsl::elm::ToggleListItem>(BATTERY, false, ON, OFF);
             toggleListItem->setState((hideBattery == "false"));
-            toggleListItem->setStateChangedListener([listItemPtr = std::shared_ptr<tsl::elm::ListItem>(toggleListItem.get(), [](auto*){})](bool state) {
-                tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemPtr.get(), tsl::FocusDirection::None);
+            toggleListItem->setStateChangedListener([listItemRaw = toggleListItem.get()](bool state) {
+                tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemRaw, tsl::FocusDirection::None);
                 setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_battery", state ? "false" : "true");
                 reinitializeWidgetVars();
                 redrawWidget = true;
@@ -799,8 +721,8 @@ public:
             
             auto toggleListItem = std::make_unique<tsl::elm::ToggleListItem>(USER_GUIDE, false, ON, OFF);
             toggleListItem->setState((hideUserGuide == "false"));
-            toggleListItem->setStateChangedListener([listItemPtr = std::shared_ptr<tsl::elm::ListItem>(toggleListItem.get(), [](auto*){})](bool state) {
-                tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemPtr.get(), tsl::FocusDirection::None);
+            toggleListItem->setStateChangedListener([listItemRaw = toggleListItem.get()](bool state) {
+                tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemRaw, tsl::FocusDirection::None);
                 setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_user_guide", state ? "false" : "true");
                 if ((hideUserGuide == "false") != state)
                     reloadMenu = true;
@@ -828,8 +750,8 @@ public:
             
             toggleListItem = std::make_unique<tsl::elm::ToggleListItem>(CLEAN_LABELS, false, ON, OFF);
             toggleListItem->setState((cleanVersionLabels == "true"));
-            toggleListItem->setStateChangedListener([listItemPtr = std::shared_ptr<tsl::elm::ListItem>(toggleListItem.get(), [](auto*){})](bool state) {
-                tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemPtr.get(), tsl::FocusDirection::None);
+            toggleListItem->setStateChangedListener([listItemRaw = toggleListItem.get()](bool state) {
+                tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemRaw, tsl::FocusDirection::None);
                 setIniFileValue(settingsConfigIniPath, "ultrahand", "clean_version_labels", state ? "true" : "false");
                 if ((cleanVersionLabels == "true") != state) {
                     if (cleanVersionLabels == "false")
@@ -847,8 +769,8 @@ public:
             
             toggleListItem = std::make_unique<tsl::elm::ToggleListItem>(OVERLAY_LABELS, false, ON, OFF);
             toggleListItem->setState((hideOverlayVersions == "false"));
-            toggleListItem->setStateChangedListener([listItemPtr = std::shared_ptr<tsl::elm::ListItem>(toggleListItem.get(), [](auto*){})](bool state) {
-                tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemPtr.get(), tsl::FocusDirection::None);
+            toggleListItem->setStateChangedListener([listItemRaw = toggleListItem.get()](bool state) {
+                tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemRaw, tsl::FocusDirection::None);
                 setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_overlay_versions", state ? "false" : "true");
                 if ((hideOverlayVersions == "false") != state)
                     reloadMenu = true;
@@ -857,8 +779,8 @@ public:
             
             toggleListItem = std::make_unique<tsl::elm::ToggleListItem>(PACKAGE_LABELS, false, ON, OFF);
             toggleListItem->setState((hidePackageVersions == "false"));
-            toggleListItem->setStateChangedListener([listItemPtr = std::shared_ptr<tsl::elm::ListItem>(toggleListItem.get(), [](auto*){})](bool state) {
-                tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemPtr.get(), tsl::FocusDirection::None);
+            toggleListItem->setStateChangedListener([listItemRaw = toggleListItem.get()](bool state) {
+                tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemRaw, tsl::FocusDirection::None);
                 setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_package_versions", state ? "false" : "true");
                 if ((hidePackageVersions == "false") != state)
                     reloadMenu = true;
@@ -900,6 +822,22 @@ public:
         //}
         bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
         if (_runningInterpreter) {
+
+            //int currentPercentage = downloadPercentage.load(std::memory_order_acquire);
+            //logMessage("currentPercentage: "+std::to_string(currentPercentage));
+            if (downloadPercentage.load(std::memory_order_acquire) != -1) {
+                lastSelectedListItem->setValue(DOWNLOAD_SYMBOL + " " + std::to_string(downloadPercentage.load(std::memory_order_acquire))+"%");
+                if (downloadPercentage.load(std::memory_order_acquire) == 100)
+                    downloadPercentage.store(-1, std::memory_order_release);
+            }
+
+            if (threadFailure.load(std::memory_order_acquire)) {
+                threadFailure.store(false, std::memory_order_release);
+                commandSuccess = false;
+                //lastRunningInterpreter = true;
+                //logMessage("killing command");
+            }
+
             // Check for back button press
             if ((keysHeld & KEY_R) && !(keysHeld & (KEY_DLEFT | KEY_DRIGHT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_ZL | KEY_ZR)) && !stillTouching) {
                 commandSuccess = false;
@@ -1099,8 +1037,8 @@ public:
             // Envoke toggling
             auto toggleListItem = std::make_unique<tsl::elm::ToggleListItem>(hideLabel, false, ON, OFF);
             toggleListItem->setState(hide);
-            toggleListItem->setStateChangedListener([&settingsIniPath = this->settingsIniPath, &entryName = this->entryName, listItemPtr = std::shared_ptr<tsl::elm::ListItem>(toggleListItem.get(), [](auto*){})](bool state) {
-                tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemPtr.get(), tsl::FocusDirection::None);
+            toggleListItem->setStateChangedListener([&settingsIniPath = this->settingsIniPath, &entryName = this->entryName, listItemRaw = toggleListItem.get()](bool state) {
+                tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemRaw, tsl::FocusDirection::None);
                 setIniFileValue(settingsIniPath, entryName, "hide", state ? "true" : "false");
                 if (state)
                     reloadMenu = true; // this reloads before main menu
@@ -1140,8 +1078,8 @@ public:
                 // Envoke toggling
                 toggleListItem = std::make_unique<tsl::elm::ToggleListItem>(LAUNCH_ARGUMENTS, false, ON, OFF);
                 toggleListItem->setState((useOverlayLaunchArgs=="true"));
-                toggleListItem->setStateChangedListener([&settingsIniPath = settingsIniPath, &entryName = entryName, useOverlayLaunchArgs, listItemPtr = std::shared_ptr<tsl::elm::ListItem>(toggleListItem.get(), [](auto*){})](bool state) {
-                    tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemPtr.get(), tsl::FocusDirection::None);
+                toggleListItem->setStateChangedListener([&settingsIniPath = settingsIniPath, &entryName = entryName, useOverlayLaunchArgs, listItemRaw = toggleListItem.get()](bool state) {
+                    tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemRaw, tsl::FocusDirection::None);
                     setIniFileValue(settingsIniPath, entryName, "use_launch_args", state ? "true" : "false");
                     if ((useOverlayLaunchArgs=="true") != state)
                         reloadMenu = true; // this reloads before main menu
@@ -1949,23 +1887,6 @@ public:
                     //static bool lastRunningInterpreter = false;
                     bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                     if (_runningInterpreter) {
-                        
-                        //int currentPercentage = downloadPercentage.load(std::memory_order_acquire);
-
-                        //logMessage("currentPercentage: "+std::to_string(downloadPercentage.load(std::memory_order_acquire)));
-                        if (downloadPercentage.load(std::memory_order_acquire) != -1) {
-                            lastSelectedListItem->setValue(DOWNLOAD_SYMBOL + " " + std::to_string(downloadPercentage.load(std::memory_order_acquire))+"%");
-                            if (downloadPercentage.load(std::memory_order_acquire) == 100)
-                                downloadPercentage.store(-1, std::memory_order_release);
-                        }
-
-                        if (threadFailure.load(std::memory_order_acquire)) {
-                            threadFailure.store(false, std::memory_order_release);
-                            commandSuccess = false;
-                            //lastRunningInterpreter = true;
-                            //logMessage("killing command");
-                        }
-
                         return false;
                     }
 
@@ -2022,9 +1943,9 @@ public:
                 toggleListItem->setState(toggleStateOn);
                 
                 toggleListItem->setStateChangedListener([&commandsOn = this->commandsOn, &commandsOff = this->commandsOff, &filePath = this->filePath,
-                    &specificKey = this->specificKey, i, selectedItem, listItemPtr = std::shared_ptr<tsl::elm::ListItem>(toggleListItem.get(), [](auto*){})](bool state) {
+                    &specificKey = this->specificKey, i, selectedItem, listItemRaw = toggleListItem.get()](bool state) {
 
-                    tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemPtr.get(), tsl::FocusDirection::None);
+                    tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemRaw, tsl::FocusDirection::None);
                     if (!state) {
                         interpretAndExecuteCommand(getSourceReplacement(commandsOn, selectedItem, i), filePath, specificKey); // Execute modified 
                         //toggleListItem->setState(!state);
@@ -2072,6 +1993,23 @@ public:
         //}
         bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
         if (_runningInterpreter) {
+            
+            //int currentPercentage = downloadPercentage.load(std::memory_order_acquire);
+
+            //logMessage("currentPercentage: "+std::to_string(downloadPercentage.load(std::memory_order_acquire)));
+            if (downloadPercentage.load(std::memory_order_acquire) != -1) {
+                lastSelectedListItem->setValue(DOWNLOAD_SYMBOL + " " + std::to_string(downloadPercentage.load(std::memory_order_acquire))+"%");
+                if (downloadPercentage.load(std::memory_order_acquire) == 100)
+                    downloadPercentage.store(-1, std::memory_order_release);
+            }
+
+            if (threadFailure.load(std::memory_order_acquire)) {
+                threadFailure.store(false, std::memory_order_release);
+                commandSuccess = false;
+                //lastRunningInterpreter = true;
+                //logMessage("killing command");
+            }
+
             // Check for back button press
             if ((keysHeld & KEY_R) && !(keysHeld & (KEY_DLEFT | KEY_DRIGHT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_ZL | KEY_ZR)) && !stillTouching) {
                 commandSuccess = false;
@@ -2611,20 +2549,6 @@ public:
                                 //static bool lastRunningInterpreter = false;
                                 bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                                 if (_runningInterpreter) {
-                                    //int currentPercentage = downloadPercentage.load(std::memory_order_acquire);
-                                    //logMessage("currentPercentage: "+std::to_string(currentPercentage));
-                                    if (downloadPercentage.load(std::memory_order_acquire) != -1) {
-                                        lastSelectedListItem->setValue(DOWNLOAD_SYMBOL + " " + std::to_string(downloadPercentage.load(std::memory_order_acquire))+"%");
-                                        if (downloadPercentage.load(std::memory_order_acquire) == 100)
-                                            downloadPercentage.store(-1, std::memory_order_release);
-                                    }
-                                    if (threadFailure.load(std::memory_order_acquire)) {
-                                        threadFailure.store(false, std::memory_order_release);
-                                        commandSuccess = false;
-                                        //lastRunningInterpreter = true;
-                                        //logMessage("killing command");
-                                        //closeInterpreterThread();
-                                    }
                                     return false;
                                 }
 
@@ -2679,8 +2603,8 @@ public:
                             
                             toggleListItem->setState(toggleStateOn);
                             
-                            toggleListItem->setStateChangedListener([i, commandsOn, commandsOff, keyName = option.first, &packagePath = this->packagePath, &pathPatternOn = this->pathPatternOn, &pathPatternOff = this->pathPatternOff, listItemPtr = std::shared_ptr<tsl::elm::ListItem>(toggleListItem.get(), [](auto*){})](bool state) {
-                                tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemPtr.get(), tsl::FocusDirection::None);
+                            toggleListItem->setStateChangedListener([i, commandsOn, commandsOff, keyName = option.first, &packagePath = this->packagePath, &pathPatternOn = this->pathPatternOn, &pathPatternOff = this->pathPatternOff, listItemRaw = toggleListItem.get()](bool state) {
+                                tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemRaw, tsl::FocusDirection::None);
                                 if (state) {
                                     //applySourceReplacement(commandsOn, preprocessPath(pathPatternOn), i);
                                     //commandsOn = getSourceReplacement(commandsOn, preprocessPath(pathPatternOn), i);
@@ -2747,6 +2671,21 @@ public:
         
         bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
         if (_runningInterpreter) {
+            //int currentPercentage = downloadPercentage.load(std::memory_order_acquire);
+            //logMessage("currentPercentage: "+std::to_string(currentPercentage));
+            if (downloadPercentage.load(std::memory_order_acquire) != -1) {
+                lastSelectedListItem->setValue(DOWNLOAD_SYMBOL + " " + std::to_string(downloadPercentage.load(std::memory_order_acquire))+"%");
+                if (downloadPercentage.load(std::memory_order_acquire) == 100)
+                    downloadPercentage.store(-1, std::memory_order_release);
+            }
+            if (threadFailure.load(std::memory_order_acquire)) {
+                threadFailure.store(false, std::memory_order_release);
+                commandSuccess = false;
+                //lastRunningInterpreter = true;
+                //logMessage("killing command");
+                //closeInterpreterThread();
+            }
+
             // Check for back button press
             if ((keysHeld & KEY_R) && !(keysHeld & (KEY_DLEFT | KEY_DRIGHT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_ZL | KEY_ZR)) && !stillTouching) {
                 commandSuccess = false;
@@ -4008,20 +3947,6 @@ public:
 
                                         bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                                         if (_runningInterpreter) {
-                                            //int currentPercentage = downloadPercentage.load(std::memory_order_acquire);
-                                            //logMessage("currentPercentage: "+std::to_string(currentPercentage));
-                                            if (downloadPercentage.load(std::memory_order_acquire) != -1) {
-                                                lastSelectedListItem->setValue(DOWNLOAD_SYMBOL + " " + std::to_string(downloadPercentage.load(std::memory_order_acquire))+"%");
-                                                if (downloadPercentage.load(std::memory_order_acquire) == 100)
-                                                    downloadPercentage.store(-1, std::memory_order_release);
-                                            }
-                                            
-                                            if (threadFailure.load(std::memory_order_acquire)) {
-                                                threadFailure.store(false, std::memory_order_release);
-                                                commandSuccess = false;
-                                                //lastRunningInterpreter = true;
-                                                //logMessage("killing command");
-                                            }
                                             return false;
                                         }
 
@@ -4074,19 +3999,6 @@ public:
                                         
                                         bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                                         if (_runningInterpreter) {
-                                            //int currentPercentage = downloadPercentage.load(std::memory_order_acquire);
-                                            //logMessage("currentPercentage: "+std::to_string(currentPercentage));
-                                            if (downloadPercentage.load(std::memory_order_acquire) != -1) {
-                                                lastSelectedListItem->setValue(DOWNLOAD_SYMBOL + " " + std::to_string(downloadPercentage.load(std::memory_order_acquire))+"%");
-                                                if (downloadPercentage.load(std::memory_order_acquire) == 100)
-                                                    downloadPercentage.store(-1, std::memory_order_release);
-                                            }
-                                            if (threadFailure.load(std::memory_order_acquire)) {
-                                                threadFailure.store(false, std::memory_order_release);
-                                                commandSuccess = false;
-                                                //lastRunningInterpreter = true;
-                                                //logMessage("killing command");
-                                            }
                                             return false;
                                         }
 
@@ -4145,8 +4057,8 @@ public:
                                 
                                 toggleListItem->setState(toggleStateOn);
                                 
-                                toggleListItem->setStateChangedListener([i, pathPatternOn, pathPatternOff, commandsOn, commandsOff, packagePath = packageDirectory, keyName = option.first, listItemPtr = std::shared_ptr<tsl::elm::ListItem>(toggleListItem.get(), [](auto*){})](bool state) {
-                                    tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemPtr.get(), tsl::FocusDirection::None);
+                                toggleListItem->setStateChangedListener([i, pathPatternOn, pathPatternOff, commandsOn, commandsOff, packagePath = packageDirectory, keyName = option.first, listItemRaw = toggleListItem.get()](bool state) {
+                                    tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemRaw, tsl::FocusDirection::None);
                                     if (state) {
                                         //applySourceReplacement(commandsOn, preprocessPath(pathPatternOn), i);
                                         //commandsOn = getSourceReplacement(commandsOn, preprocessPath(pathPatternOn), i);
@@ -4208,6 +4120,21 @@ public:
 
         bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
         if (_runningInterpreter) {
+            //int currentPercentage = downloadPercentage.load(std::memory_order_acquire);
+            //logMessage("currentPercentage: "+std::to_string(currentPercentage));
+            if (downloadPercentage.load(std::memory_order_acquire) != -1) {
+                lastSelectedListItem->setValue(DOWNLOAD_SYMBOL + " " + std::to_string(downloadPercentage.load(std::memory_order_acquire))+"%");
+                if (downloadPercentage.load(std::memory_order_acquire) == 100)
+                    downloadPercentage.store(-1, std::memory_order_release);
+            }
+            
+            if (threadFailure.load(std::memory_order_acquire)) {
+                threadFailure.store(false, std::memory_order_release);
+                commandSuccess = false;
+                //lastRunningInterpreter = true;
+                //logMessage("killing command");
+            }
+
             // Check for back button press
             if ((keysHeld & KEY_R) && !(keysHeld & (KEY_DLEFT | KEY_DRIGHT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_ZL | KEY_ZR)) && !stillTouching) {
                 commandSuccess = false;
