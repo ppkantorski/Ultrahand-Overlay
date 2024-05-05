@@ -1394,9 +1394,14 @@ public:
         } else
             list->addItem(new tsl::elm::ListItem(FAILED_TO_OPEN+": " + packageFile));
         
+        std::string subLabel;
+        if (packageHeader.version != "")
+            subLabel = packageHeader.version + "   (Ultrahand Script)";
+        else
+            subLabel = "Ultrahand Script";
 
         //tsl::elm::OverlayFrame *rootFrame = new tsl::elm::OverlayFrame(packageName, "Ultrahand Script");
-        auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(packageName, "Ultrahand Script");
+        auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(packageName, subLabel);
         rootFrame->setContent(list.release());
         //rootFrame->setContent(list);
 
