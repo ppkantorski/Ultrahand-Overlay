@@ -2872,7 +2872,7 @@ public:
                 if ((keysHeld & KEY_B) && !stillTouching) {
                     ////closeInterpreterThread();
                     inPackageMenu = false;
-                    
+
                     if (!inHiddenMode)
                         returningToMain = true;
                     else
@@ -2977,10 +2977,16 @@ public:
             }
         }
         
-        if (returningToPackage && !(keysHeld & KEY_B)){
-            returningToPackage = false;
-            inPackageMenu = true;
+        
+        if (simulatedBack && !simulatedBackComplete) {
+            keysHeld |= KEY_B;
+            simulatedBack = false;
+        }
+        
+        if ((keysHeld & KEY_B) && !stillTouching) {
+            tsl::goBack();
             simulatedBackComplete = true;
+            return true;
         }
         
         if (returningToSubPackage && !(keysHeld & KEY_B)){
