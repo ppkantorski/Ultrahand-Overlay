@@ -2862,7 +2862,7 @@ namespace tsl {
                 y = 50;
                 offset = 0;
                 // Check if m_title is "Ultrahand"
-                if (this->m_title == "Ultrahand" && this->m_subtitle != "Ultrahand Package" && this->m_subtitle != "Ultrahand Script") {
+                if (this->m_title == "Ultrahand" && (this->m_subtitle.find("Ultrahand Package") == std::string::npos) && (this->m_subtitle.find("Ultrahand Script") == std::string::npos)) {
                     chargeStringSTD = "";
                     PCB_temperatureStringSTD = "";
                     SOC_temperatureStringSTD = "";
@@ -3045,7 +3045,7 @@ namespace tsl {
                     x = 20;
                     y = 50;
                     fontSize = 32;
-                    if (this->m_subtitle == "Ultrahand Package") {
+                    if (this->m_subtitle.find("Ultrahand Package") != std::string::npos) {
                         std::string& title = this->m_title;
                         titleColor = Color(0x0, 0xF, 0x0, 0xF);
                         if (this->m_colorSelection == "" || this->m_colorSelection == "green") {
@@ -3112,7 +3112,7 @@ namespace tsl {
                         } else { // for unknown colors
                             renderer->drawString(title.c_str(), false, x, y, fontSize, titleColor);
                         }
-                    } else if (this->m_subtitle == "Ultrahand Script") {
+                    } else if (this->m_subtitle.find("Ultrahand Script") != std::string::npos) {
                         renderer->drawString(this->m_title.c_str(), false, 20, 50, 32, Color(0xFF, 0x33, 0x3F, 0xFF));
                     } else {
                         renderer->drawString(this->m_title.c_str(), false, 20, 50, 30, defaultTextColor);
@@ -4995,7 +4995,8 @@ namespace tsl {
                         //if (currentFocus != nullptr && touchEvent != elm::TouchEvent::Scroll)
                         //    currentGui->requestFocus(currentFocus, FocusDirection::None);
                         //else
-                        currentGui->removeFocus();
+                        if (touchPos.x > 0U && touchPos.x <= cfg::FramebufferWidth && touchPos.y > 73U && touchPos.y <= cfg::FramebufferHeight - 73U)
+                            currentGui->removeFocus();
                     }
                     //// Check if the top element contains the touch position
                     //if (topElement->inBounds(touchPos.x, touchPos.y)) {

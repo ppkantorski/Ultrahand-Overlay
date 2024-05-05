@@ -1394,9 +1394,15 @@ public:
         } else
             list->addItem(new tsl::elm::ListItem(FAILED_TO_OPEN+": " + packageFile));
         
+        PackageHeader packageHeader = getPackageHeaderFromIni(packageFile);
+        std::string subLabel;
+        if (packageHeader.version != "")
+            subLabel = packageHeader.version + "   (Ultrahand Script)";
+        else
+            subLabel = "Ultrahand Script";
 
         //tsl::elm::OverlayFrame *rootFrame = new tsl::elm::OverlayFrame(packageName, "Ultrahand Script");
-        auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(packageName, "Ultrahand Script");
+        auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(packageName, subLabel);
         rootFrame->setContent(list.release());
         //rootFrame->setContent(list);
 
@@ -1967,7 +1973,13 @@ public:
         //tsl::elm::OverlayFrame *rootFrame = new tsl::elm::OverlayFrame(getNameFromPath(filePath), "Ultrahand Package", "", packageHeader.color);
         //rootFrame->setContent(list);
         //list->clear();
-        auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(getNameFromPath(filePath), "Ultrahand Package", "", packageHeader.color);
+        std::string subLabel;
+        if (packageHeader.version != "")
+            subLabel = packageHeader.version + "   (Ultrahand Package)";
+        else
+            subLabel = "Ultrahand Package";
+
+        auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(getNameFromPath(filePath), subLabel, "", packageHeader.color);
         rootFrame->setContent(list.release());
 
         return rootFrame.release();
@@ -2160,14 +2172,9 @@ public:
         tsl::hlp::ini::IniData packageConfigData;
         std::vector<std::string> filesList, filesListOn, filesListOff, filterList, filterListOn, filterListOff;
         
-        std::string packageIniPath, packageConfigIniPath;
 
-        packageIniPath = packagePath + packageName;
-
-        logMessage("packageIniPath: "+packageIniPath);
-        logMessage("packagePath: "+packagePath);
-
-        packageConfigIniPath = packagePath + configFileName;
+        std::string packageIniPath = packagePath + packageName;
+        std::string packageConfigIniPath = packagePath + configFileName;
 
         PackageHeader packageHeader = getPackageHeaderFromIni(packageIniPath);
         
@@ -2668,15 +2675,21 @@ public:
 
         std::unique_ptr<tsl::elm::OverlayFrame> rootFrame;
 
+        std::string subLabel;
+        if (packageHeader.version != "")
+            subLabel = packageHeader.version + "   (Ultrahand Package)";
+        else
+            subLabel = "Ultrahand Package";
+
         if (usingPages) {
             if (currentPage == "left") {
-                rootFrame = std::make_unique<tsl::elm::OverlayFrame>(getNameFromPath(packagePath), "Ultrahand Package", "", packageHeader.color, "", pageRightName);
+                rootFrame = std::make_unique<tsl::elm::OverlayFrame>(getNameFromPath(packagePath), subLabel, "", packageHeader.color, "", pageRightName);
             }
             else if (currentPage == "right") {
-                rootFrame = std::make_unique<tsl::elm::OverlayFrame>(getNameFromPath(packagePath), "Ultrahand Package", "", packageHeader.color, pageLeftName, "");
+                rootFrame = std::make_unique<tsl::elm::OverlayFrame>(getNameFromPath(packagePath), subLabel, "", packageHeader.color, pageLeftName, "");
             }
         } else {
-            rootFrame = std::make_unique<tsl::elm::OverlayFrame>(getNameFromPath(packagePath), "Ultrahand Package", "", packageHeader.color);
+            rootFrame = std::make_unique<tsl::elm::OverlayFrame>(getNameFromPath(packagePath), subLabel, "", packageHeader.color);
         }
 
         rootFrame->setContent(list.release());
@@ -2851,14 +2864,14 @@ public:
                 simulatedNextPageComplete = true;
             }
 
-            if (simulatedBack && !simulatedBackComplete) {
-                keysHeld |= KEY_B;
-                simulatedBack = false;
-            }
             if (!usingPages || (usingPages && lastPage == "left")) {
+                if (simulatedBack && !simulatedBackComplete) {
+                    keysHeld |= KEY_B;
+                    simulatedBack = false;
+                }
                 if ((keysHeld & KEY_B) && !stillTouching) {
                     ////closeInterpreterThread();
-                    inPackageMenu = false;
+                    //inPackageMenu = false;
 
                     if (!inHiddenMode)
                         returningToMain = true;
@@ -2882,9 +2895,13 @@ public:
                     return true;
                 }
             } else if (usingPages && lastPage == "right") {
+                if (simulatedBack && !simulatedBackComplete) {
+                    keysHeld |= KEY_B;
+                    simulatedBack = false;
+                }
                 if ((keysHeld & KEY_B) && !stillTouching) {
                     ////closeInterpreterThread();
-                    inPackageMenu = false;
+                    //inPackageMenu = false;
 
                     if (!inHiddenMode)
                         returningToMain = true;
@@ -2924,11 +2941,11 @@ public:
                 simulatedNextPageComplete = true;
             }
 
-            if (simulatedBack && !simulatedBackComplete) {
-                keysHeld |= KEY_B;
-                simulatedBack = false;
-            }
             if (!usingPages || (usingPages && lastPage == "left")) {
+                if (simulatedBack && !simulatedBackComplete) {
+                    keysHeld |= KEY_B;
+                    simulatedBack = false;
+                }
                 if ((keysHeld & KEY_B) && !stillTouching) {
                     ////closeInterpreterThread();
                     inSubPackageMenu = false;
@@ -2941,6 +2958,10 @@ public:
                     return true;
                 }
             } else if (usingPages && lastPage == "right") {
+                if (simulatedBack && !simulatedBackComplete) {
+                    keysHeld |= KEY_B;
+                    simulatedBack = false;
+                }
                 if ((keysHeld & KEY_B) && !stillTouching) {
                     ////closeInterpreterThread();
                     inSubPackageMenu = false;
@@ -4347,12 +4368,14 @@ public:
             freshSpawn = false;
         
         if (returningToMain && !(keysHeld & KEY_B)){
+            inPackageMenu = false;
             returningToMain = false;
             inMainMenu = true;
             selectedFooterDict.clear();
             hexSumCache.clear();
         }
         if (returningToHiddenMain && !(keysHeld & KEY_B)){
+            inPackageMenu = false;
             returningToHiddenMain = false;
             inHiddenMode = true;
             selectedFooterDict.clear();
