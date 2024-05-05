@@ -2887,6 +2887,7 @@ public:
                     }
                     if (nestedMenuCount > 0) {
                         nestedMenuCount--;
+                        returningToPackage = true;
                     }
                     
                     // Free-up memory
@@ -2924,6 +2925,7 @@ public:
                     }
                     if (nestedMenuCount > 0) {
                         nestedMenuCount--;
+                        returningToPackage = true;
                     }
                     
                     // Free-up memory
@@ -3006,6 +3008,10 @@ public:
         //        return true;
         //    }
         //}
+        if (returningToPackage && !(keysHeld & KEY_B)){
+            returningToPackage = false;
+            inPackageMenu = true;
+        }
         
         if (returningToSubPackage && !(keysHeld & KEY_B)){
             returningToSubPackage = false;
