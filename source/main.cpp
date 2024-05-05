@@ -2976,17 +2976,18 @@ public:
                 }
             }
         }
-        
-        
-        if (simulatedBack && !simulatedBackComplete) {
-            keysHeld |= KEY_B;
-            simulatedBack = false;
-        }
-        
-        if ((keysHeld & KEY_B) && !stillTouching) {
-            tsl::goBack();
-            simulatedBackComplete = true;
-            return true;
+
+        if (!stillTouching) {
+            if (simulatedBack && !simulatedBackComplete) {
+                keysHeld |= KEY_B;
+                simulatedBack = false;
+            }
+
+            if ((keysHeld & KEY_B) && !stillTouching) {
+                tsl::goBack();
+                simulatedBackComplete = true;
+                return true;
+            }
         }
         
         if (returningToSubPackage && !(keysHeld & KEY_B)){
