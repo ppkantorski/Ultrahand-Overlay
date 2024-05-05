@@ -55,6 +55,7 @@ static bool isDownloaded = false;
 
 static bool redrawWidget = false;
 
+static size_t nestedMenuCount = 0;
 
 // Command mode globals
 static std::vector<std::string> commandSystems = {"default", "erista", "mariko"};
@@ -2510,6 +2511,7 @@ public:
                                 
                                 if (keys & KEY_A) {
                                     interpretAndExecuteCommand(std::move(commands), "", ""); // Now correctly moved
+                                    nestedMenuCount++;
                                     tsl::changeTo<PackageMenu>(forwarderPackagePath, "", "left", forwarderPackageIniName);
                                     simulatedSelectComplete = true;
                                     return true;
@@ -2871,12 +2873,21 @@ public:
                 }
                 if ((keysHeld & KEY_B) && !stillTouching) {
                     ////closeInterpreterThread();
-                    inPackageMenu = false;
+                    //inPackageMenu = false;
+                    //inNestedPackageMenu = false;
 
-                    if (!inHiddenMode)
-                        returningToMain = true;
-                    else
-                        returningToHiddenMain = true;
+                    if (nestedMenuCount == 0) {
+                        inPackageMenu = false;
+                        //inNestedPackageMenu = false;
+                        
+                        if (!inHiddenMode)
+                            returningToMain = true;
+                        else
+                            returningToHiddenMain = true;
+                    }
+                    if (nestedMenuCount > 0) {
+                        nestedMenuCount--;
+                    }
                     
                     // Free-up memory
                     hexSumCache.clear();
@@ -2901,13 +2912,19 @@ public:
                 }
                 if ((keysHeld & KEY_B) && !stillTouching) {
                     ////closeInterpreterThread();
-                    inPackageMenu = false;
 
-                    if (!inHiddenMode)
-                        returningToMain = true;
-                    else
-                        returningToHiddenMain = true;
-
+                    if (nestedMenuCount == 0) {
+                        inPackageMenu = false;
+                        //inNestedPackageMenu = false;
+                        
+                        if (!inHiddenMode)
+                            returningToMain = true;
+                        else
+                            returningToHiddenMain = true;
+                    }
+                    if (nestedMenuCount > 0) {
+                        nestedMenuCount--;
+                    }
                     
                     // Free-up memory
                     hexSumCache.clear();
@@ -2977,7 +2994,7 @@ public:
             }
         }
 
-        //if (!stillTouching && (returningToMain || returningToHiddenMain)) {
+        //if (!stillTouching && (inNestedPackageMenu)) {
         //    if (simulatedBack && !simulatedBackComplete) {
         //        keysHeld |= KEY_B;
         //        simulatedBack = false;
