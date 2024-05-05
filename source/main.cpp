@@ -2977,7 +2977,7 @@ public:
             }
         }
 
-        if (!stillTouching) {
+        if (!stillTouching && inPackageMenu) {
             if (simulatedBack && !simulatedBackComplete) {
                 keysHeld |= KEY_B;
                 simulatedBack = false;
