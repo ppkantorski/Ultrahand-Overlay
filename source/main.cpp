@@ -2871,8 +2871,8 @@ public:
                 }
                 if ((keysHeld & KEY_B) && !stillTouching) {
                     ////closeInterpreterThread();
-                    //inPackageMenu = false;
-
+                    inPackageMenu = false;
+                    
                     if (!inHiddenMode)
                         returningToMain = true;
                     else
@@ -2901,7 +2901,7 @@ public:
                 }
                 if ((keysHeld & KEY_B) && !stillTouching) {
                     ////closeInterpreterThread();
-                    //inPackageMenu = false;
+                    inPackageMenu = false;
 
                     if (!inHiddenMode)
                         returningToMain = true;
@@ -2980,11 +2980,13 @@ public:
         if (returningToPackage && !(keysHeld & KEY_B)){
             returningToPackage = false;
             inPackageMenu = true;
+            simulatedBackComplete = true;
         }
         
         if (returningToSubPackage && !(keysHeld & KEY_B)){
             returningToSubPackage = false;
             inSubPackageMenu = true;
+            simulatedBackComplete = true;
         }
 
         if (triggerExit.load(std::memory_order_acquire)) {
@@ -4368,14 +4370,12 @@ public:
             freshSpawn = false;
         
         if (returningToMain && !(keysHeld & KEY_B)){
-            inPackageMenu = false;
             returningToMain = false;
             inMainMenu = true;
             selectedFooterDict.clear();
             hexSumCache.clear();
         }
         if (returningToHiddenMain && !(keysHeld & KEY_B)){
-            inPackageMenu = false;
             returningToHiddenMain = false;
             inHiddenMode = true;
             selectedFooterDict.clear();
