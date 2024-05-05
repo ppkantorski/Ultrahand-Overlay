@@ -1394,6 +1394,7 @@ public:
         } else
             list->addItem(new tsl::elm::ListItem(FAILED_TO_OPEN+": " + packageFile));
         
+        PackageHeader packageHeader = getPackageHeaderFromIni(packageFile);
         std::string subLabel;
         if (packageHeader.version != "")
             subLabel = packageHeader.version + "   (Ultrahand Script)";
