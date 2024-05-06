@@ -53,7 +53,7 @@
 
 ## Usage
 
-To build overlays with `libultra` + `libtesla`, simply add the `lib` folder to your project, then import `tesla.hpp`.
+To build Ultrahand overlays with `libultra` + `libtesla`, simply add the `lib` folder to your project, then import `tesla.hpp`.
 
 ## Contribution
 
