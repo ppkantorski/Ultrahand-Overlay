@@ -19,7 +19,7 @@
 #include <string>
 #include <fstream>
 #include <jansson.h>
-#include <get_funcs.hpp>
+#include "string_funcs.hpp"
 
 //constexpr size_t jsonBufferSize = 1024; // Choose an appropriate buffer size
 
