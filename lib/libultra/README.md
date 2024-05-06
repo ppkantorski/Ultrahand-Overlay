@@ -53,7 +53,7 @@
 
 ## Usage
 
-To incorporate `libultra` into your project, include the desired header files corresponding to the functionalities you require. You can then leverage the provided functions within your code to enhance productivity and streamline development tasks.  To build overlays with `libultra` + `libtesla`, simply add the `lib` folder to your project, then import `tesla.hpp`.
+To build overlays with `libultra` + `libtesla`, simply add the `lib` folder to your project, then import `tesla.hpp`.
 
 ## Contribution
 
