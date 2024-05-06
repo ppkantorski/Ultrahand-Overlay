@@ -61,6 +61,6 @@ We welcome contributions to `libultra`! If you have ideas for additional helper 
 
 ## License
 
-`libultra` is licensed under both [GPLv2](LICENSE) and [CC-BY-4.0](SUB_LICENSE).
+Licensed under both [GPLv2](LICENSE) and [CC-BY-4.0](SUB_LICENSE).
 
 Copyright (c) 2024 ppkantorski
