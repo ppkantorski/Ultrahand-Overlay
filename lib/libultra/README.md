@@ -60,4 +60,4 @@ We welcome contributions to `libultra`! If you have ideas for additional helper 
 
 ## License
 
-`libultra` is licensed under [CC-BY-4.0](LICENSE) as well as GPLv2.
+`libultra` is licensed under both GPLv2 and [CC-BY-4.0](LICENSE).
