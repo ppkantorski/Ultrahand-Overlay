@@ -23,6 +23,7 @@
 #include <jansson.h>
 #include <regex>
 #include <sys/stat.h>
+#include <dirent.h>
 #include "debug_funcs.hpp"
 
 
@@ -241,6 +242,8 @@ bool isDirectory(const std::string& path) {
     }
     return false;
 }
+
+
 
 /**
  * @brief Checks if a path points to a file or directory.
