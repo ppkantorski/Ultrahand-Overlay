@@ -6,6 +6,10 @@
 
 ## Features
 
+### Ultra Header
+
+- **ultra.hpp**: The main header file for the `libultra` library, including all essential functions and declarations for seamless integration into your projects.
+
 ### Debug Functions
 
 - **debug_funcs.hpp**: A collection of functions tailored for debugging purposes, aiding in identifying and resolving issues within your codebase.
@@ -46,9 +50,6 @@
 
 - **string_funcs.hpp**: A collection of string manipulation functions, providing utilities for tasks such as formatting, searching, and modification of strings.
 
-### Ultra Header
-
-- **ultra.hpp**: The main header file for the `libultra` library, including all essential functions and declarations for seamless integration into your projects.
 
 ## Usage
 
