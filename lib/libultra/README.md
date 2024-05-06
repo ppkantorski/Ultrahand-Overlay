@@ -61,4 +61,4 @@ We welcome contributions to `libultra`! If you have ideas for additional helper 
 
 ## License
 
-`libultra` is licensed under both GPLv2 and [CC-BY-4.0](LICENSE).
+`libultra` is licensed under both [GPLv2](https://github.com/ppkantorski/Ultrahand-Overlay/blob/main/LICENSE) and [CC-BY-4.0](LICENSE).
