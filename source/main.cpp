@@ -55,6 +55,7 @@ static bool isDownloaded = false;
 
 static bool redrawWidget = false;
 
+static size_t nestedMenuCount = 0;
 
 // Command mode globals
 static std::vector<std::string> commandSystems = {"default", "erista", "mariko"};
@@ -2510,6 +2511,7 @@ public:
                                 
                                 if (keys & KEY_A) {
                                     interpretAndExecuteCommand(std::move(commands), "", ""); // Now correctly moved
+                                    nestedMenuCount++;
                                     tsl::changeTo<PackageMenu>(forwarderPackagePath, "", "left", forwarderPackageIniName);
                                     simulatedSelectComplete = true;
                                     return true;
@@ -2872,11 +2874,21 @@ public:
                 if ((keysHeld & KEY_B) && !stillTouching) {
                     ////closeInterpreterThread();
                     //inPackageMenu = false;
+                    //inNestedPackageMenu = false;
 
-                    if (!inHiddenMode)
-                        returningToMain = true;
-                    else
-                        returningToHiddenMain = true;
+                    if (nestedMenuCount == 0) {
+                        inPackageMenu = false;
+                        //inNestedPackageMenu = false;
+                        
+                        if (!inHiddenMode)
+                            returningToMain = true;
+                        else
+                            returningToHiddenMain = true;
+                    }
+                    if (nestedMenuCount > 0) {
+                        nestedMenuCount--;
+                        returningToPackage = true;
+                    }
                     
                     // Free-up memory
                     hexSumCache.clear();
@@ -2901,13 +2913,20 @@ public:
                 }
                 if ((keysHeld & KEY_B) && !stillTouching) {
                     ////closeInterpreterThread();
-                    //inPackageMenu = false;
 
-                    if (!inHiddenMode)
-                        returningToMain = true;
-                    else
-                        returningToHiddenMain = true;
-
+                    if (nestedMenuCount == 0) {
+                        inPackageMenu = false;
+                        //inNestedPackageMenu = false;
+                        
+                        if (!inHiddenMode)
+                            returningToMain = true;
+                        else
+                            returningToHiddenMain = true;
+                    }
+                    if (nestedMenuCount > 0) {
+                        nestedMenuCount--;
+                        returningToPackage = true;
+                    }
                     
                     // Free-up memory
                     hexSumCache.clear();
@@ -2976,7 +2995,19 @@ public:
                 }
             }
         }
-        
+
+        //if (!stillTouching && (inNestedPackageMenu)) {
+        //    if (simulatedBack && !simulatedBackComplete) {
+        //        keysHeld |= KEY_B;
+        //        simulatedBack = false;
+        //    }
+        //    
+        //    if ((keysHeld & KEY_B) && !stillTouching) {
+        //        tsl::goBack();
+        //        simulatedBackComplete = true;
+        //        return true;
+        //    }
+        //}
         if (returningToPackage && !(keysHeld & KEY_B)){
             returningToPackage = false;
             inPackageMenu = true;
@@ -2985,6 +3016,7 @@ public:
         if (returningToSubPackage && !(keysHeld & KEY_B)){
             returningToSubPackage = false;
             inSubPackageMenu = true;
+            simulatedBackComplete = true;
         }
 
         if (triggerExit.load(std::memory_order_acquire)) {
@@ -4368,14 +4400,12 @@ public:
             freshSpawn = false;
         
         if (returningToMain && !(keysHeld & KEY_B)){
-            inPackageMenu = false;
             returningToMain = false;
             inMainMenu = true;
             selectedFooterDict.clear();
             hexSumCache.clear();
         }
         if (returningToHiddenMain && !(keysHeld & KEY_B)){
-            inPackageMenu = false;
             returningToHiddenMain = false;
             inHiddenMode = true;
             selectedFooterDict.clear();
