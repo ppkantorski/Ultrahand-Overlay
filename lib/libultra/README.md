@@ -53,11 +53,11 @@
 
 ## Usage
 
-To incorporate `libultra` into your project, simply include the desired header files corresponding to the functionalities you require. You can then leverage the provided functions within your code to enhance productivity and streamline development tasks.
+To incorporate `libultra` into your project, include the desired header files corresponding to the functionalities you require. You can then leverage the provided functions within your code to enhance productivity and streamline development tasks.  To build overlays with `libultra` + `libtesla`, simply add the `lib` folder to your project, then import `tesla.hpp`.
 
 ## Contribution
 
-Contributions to `libultra` are welcome. If you have ideas for additional helper functions or improvements to existing ones, feel free to submit a pull request or open an issue on GitHub. Together, we can continue to expand and enhance this library for the benefit of the developer community.
+Contributions to `libultra` are welcome. If you have ideas for additional helper functions or improvements to existing ones, feel free to submit a pull request or open an issue on GitHub.
 
 ## License
 
