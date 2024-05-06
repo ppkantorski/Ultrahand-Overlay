@@ -20,11 +20,6 @@
 #include <switch.h>
 #include <fstream>
 #include <fnmatch.h>
-#include <path_funcs.hpp>
-#include <hex_funcs.hpp>
-#include <download_funcs.hpp>
-#include <list_funcs.hpp>
-#include <mod_funcs.hpp>
 
 #include <payload.hpp> // Studious Pancake
 #include <util.hpp> // Studious Pancake
