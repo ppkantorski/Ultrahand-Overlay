@@ -126,8 +126,9 @@ void deleteFileOrDirectory(const std::string& pathToDelete) {
             std::unique_ptr<DIR, DirCloser> directory(opendir(pathToDelete.c_str()));
             if (directory != nullptr) {
                 struct dirent* entry;
+                std::string fileName;
                 while ((entry = readdir(directory.get())) != nullptr) {
-                    const std::string fileName = entry->d_name;
+                    fileName = entry->d_name;
                     if (fileName != "." && fileName != "..") {
                         deleteFileOrDirectory(pathToDelete + "/" + fileName);
                     }
@@ -201,11 +202,13 @@ void moveFileOrDirectory(const std::string& sourcePath, const std::string& desti
         }
 
         dirent* entry;
+        std::string fileName, fullSourcePath, fullDestPath;
+
         while ((entry = readdir(dir.get())) != nullptr) {
-            std::string fileName = entry->d_name;
+            fileName = entry->d_name;
             if (fileName != "." && fileName != "..") {
-                std::string fullSourcePath = sourcePath + "/" + fileName;
-                std::string fullDestPath = destinationPath + "/" + fileName;
+                fullSourcePath = sourcePath + "/" + fileName;
+                fullDestPath = destinationPath + "/" + fileName;
                 moveFileOrDirectory(fullSourcePath, fullDestPath);
             }
         }
@@ -350,12 +353,14 @@ void copyFileOrDirectory(const std::string& fromPath, const std::string& toPath)
         createDirectory(toDirPath);
 
         dirent* entry;
+        std::string newFromPath;
+
         while ((entry = readdir(dir.get())) != nullptr) {
             if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
                 continue;
             }
 
-            std::string newFromPath = fromPath + '/' + entry->d_name;
+            newFromPath = fromPath + '/' + entry->d_name;
             copyFileOrDirectory(newFromPath, toDirPath);
         }
     }
