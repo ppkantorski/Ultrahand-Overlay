@@ -257,13 +257,14 @@ std::vector<std::string> getSubdirectories(const std::string& directoryPath) {
     std::unique_ptr<DIR, DirCloser> dir(opendir(directoryPath.c_str()));
     
     if (dir) {
+        std::string entryName, fullPath;
         dirent* entry;
         while ((entry = readdir(dir.get())) != nullptr) {
-            std::string entryName = entry->d_name;
+            entryName = entry->d_name;
             
             // Exclude current directory (.) and parent directory (..)
             if (entryName != "." && entryName != "..") {
-                std::string fullPath = directoryPath + "/" + entryName;
+                fullPath = directoryPath + "/" + entryName;
                 struct stat entryStat;
                 
                 if (stat(fullPath.c_str(), &entryStat) == 0 && S_ISDIR(entryStat.st_mode)) {
@@ -369,13 +370,16 @@ std::vector<std::string> getFilesListByWildcard(const std::string& pathPattern) 
     std::unique_ptr<DIR, DirCloser> dir(opendir(dirPath.c_str()));
     if (!dir) return fileList;  // Early exit if the directory cannot be opened
 
+    std::string entryName, entryPath;
+    bool isEntryDirectory;
+
     dirent* entry;
     while ((entry = readdir(dir.get())) != nullptr) {
-        std::string entryName = entry->d_name;
+        entryName = entry->d_name;
         if (entryName == "." || entryName == "..") continue;
 
-        std::string entryPath = dirPath + entryName;
-        bool isEntryDirectory = isDirectory2(entry, entryPath);
+        entryPath = dirPath + entryName;
+        isEntryDirectory = isDirectory2(entry, entryPath);
 
         if (isFolderWildcard && isEntryDirectory) {
             if (fnmatch(wildcard.c_str(), entryName.c_str(), FNM_NOESCAPE) == 0) {
@@ -419,12 +423,14 @@ std::vector<std::string> getFilesListByWildcards(const std::string& pathPattern)
         if (secondWildcardPos != std::string::npos) {
             // Get the list of directories matching the first wildcard
             std::vector<std::string> subDirs = getFilesListByWildcards(dirPath + firstWildcard + "*/");
+            std::string subPattern;
+            std::vector<std::string> subFileList;
 
             // Process each directory recursively
             for (const std::string& subDir : subDirs) {
                 // Append the rest of the path pattern after the first wildcard to each subdirectory
-                std::string subPattern = subDir + pathPattern.substr(secondWildcardPos);
-                std::vector<std::string> subFileList = getFilesListByWildcards(subPattern);
+                subPattern = subDir + pathPattern.substr(secondWildcardPos);
+                subFileList = getFilesListByWildcards(subPattern);
                 fileList.insert(fileList.end(), subFileList.begin(), subFileList.end());
             }
         } else {
