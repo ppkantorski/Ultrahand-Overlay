@@ -63,7 +63,7 @@ extern "C" int progressCallback(void *ptr, curl_off_t totalToDownload, curl_off_
     auto percentage = static_cast<std::atomic<int>*>(ptr);
 
     if (totalToDownload > 0) {
-        int newProgress = static_cast<int>(double(nowDownloaded) / double(totalToDownload) *100);
+        int newProgress = static_cast<int>(float(nowDownloaded) / float(totalToDownload) *100);
         percentage->store(newProgress, std::memory_order_release);
     }
 
