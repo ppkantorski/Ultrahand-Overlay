@@ -2891,6 +2891,7 @@ public:
                     }
                     
                     // Free-up memory
+                    directoryCache.clear();
                     hexSumCache.clear();
                     selectedFooterDict.clear(); // Clears all data from the map, making it empty again
                     selectedListItem.reset();
@@ -2929,6 +2930,7 @@ public:
                     }
                     
                     // Free-up memory
+                    directoryCache.clear();
                     hexSumCache.clear();
                     selectedFooterDict.clear(); // Clears all data from the map, making it empty again
                     selectedListItem.reset();
