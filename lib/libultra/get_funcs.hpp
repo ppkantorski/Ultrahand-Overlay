@@ -24,12 +24,23 @@
 #include <fnmatch.h>
 #include <jansson.h>
 #include "debug_funcs.hpp"
-#include <string_funcs.hpp>
+#include "string_funcs.hpp"
+
 
 // Constants for overlay module
 constexpr int OverlayLoaderModuleId = 348;
 constexpr Result ResultSuccess = MAKERESULT(0, 0);
 constexpr Result ResultParseError = MAKERESULT(OverlayLoaderModuleId, 1);
+
+
+
+struct DirCloser {
+    void operator()(DIR* dir) const {
+        if (dir) closedir(dir);
+    }
+};
+
+
 
 /**
  * @brief Retrieves overlay module information from a given file.
@@ -157,15 +168,21 @@ std::string getNameFromPath(const std::string& path) {
 }
 
 /**
- * @brief Extracts the file name from a URL.
+ * @brief Extracts the file name from a full file path.
  *
- * @param url The URL from which to extract the file name.
- * @return The extracted file name.
+ * This function takes a filesystem path and returns only the file name,
+ * stripping away any directory paths that precede it.
+ *
+ * @param path The full path to the file.
+ * @return The file name extracted from the full path.
  */
-std::string getFileNameFromURL(const std::string& url) {
-    size_t lastSlash = url.find_last_of('/');
-    if (lastSlash != std::string::npos)
-        return url.substr(lastSlash + 1);
+std::string getFileName(const std::string& path) {
+    // Find the last slash in the path
+    size_t pos = path.find_last_of("/\\");
+    if (pos != std::string::npos) {
+        // Return the substring after the last slash
+        return path.substr(pos + 1);
+    }
     return "";
 }
 
@@ -237,29 +254,28 @@ std::string getParentDirFromPath(const std::string& path) {
  */
 std::vector<std::string> getSubdirectories(const std::string& directoryPath) {
     std::vector<std::string> subdirectories;
+    std::unique_ptr<DIR, DirCloser> dir(opendir(directoryPath.c_str()));
     
-    DIR* dir = opendir(directoryPath.c_str());
-    if (dir != nullptr) {
-        struct dirent* entry;
-        while ((entry = readdir(dir)) != nullptr) {
+    if (dir) {
+        dirent* entry;
+        while ((entry = readdir(dir.get())) != nullptr) {
             std::string entryName = entry->d_name;
             
             // Exclude current directory (.) and parent directory (..)
             if (entryName != "." && entryName != "..") {
-                struct stat entryStat;
                 std::string fullPath = directoryPath + "/" + entryName;
+                struct stat entryStat;
                 
                 if (stat(fullPath.c_str(), &entryStat) == 0 && S_ISDIR(entryStat.st_mode)) {
                     subdirectories.push_back(entryName);
                 }
             }
         }
-        
-        closedir(dir);
     }
     
     return subdirectories;
 }
+
 
 /**
  * @brief Recursively retrieves a list of files from a directory.
@@ -269,31 +285,28 @@ std::vector<std::string> getSubdirectories(const std::string& directoryPath) {
  */
 std::vector<std::string> getFilesListFromDirectory(const std::string& directoryPath) {
     std::vector<std::string> fileList;
+    std::unique_ptr<DIR, DirCloser> dir(opendir(directoryPath.c_str()));
     
-    DIR* dir = opendir(directoryPath.c_str());
-    if (dir != nullptr) {
+    if (dir) {
         dirent* entry;
-        std::string entryName, entryPath;
-        std::vector<std::string> subDirFiles;
-        while ((entry = readdir(dir)) != nullptr) {
-            entryName = entry->d_name;
-            entryPath = directoryPath;
+        while ((entry = readdir(dir.get())) != nullptr) {
+            std::string entryName = entry->d_name;
+            std::string entryPath = directoryPath;
             if (entryPath.back() != '/')
                 entryPath += '/';
             entryPath += entryName;
             
-            // Skip directories "." and ".."
+            // Skip the current and parent directory entries
             if (entryName != "." && entryName != "..") {
                 if (isDirectory(entryPath)) {
                     // Recursively retrieve files from subdirectories
-                    subDirFiles = getFilesListFromDirectory(entryPath);
+                    std::vector<std::string> subDirFiles = getFilesListFromDirectory(entryPath);
                     fileList.insert(fileList.end(), subDirFiles.begin(), subDirFiles.end());
                 } else {
                     fileList.push_back(entryPath);
                 }
             }
         }
-        closedir(dir);
     }
 
     return fileList;
@@ -309,83 +322,44 @@ std::vector<std::string> getFilesListFromDirectory(const std::string& directoryP
 std::vector<std::string> getFilesListByWildcard(const std::string& pathPattern) {
     std::string dirPath = "";
     std::string wildcard = "";
-    
     size_t wildcardPos = pathPattern.find('*');
+
     if (wildcardPos != std::string::npos) {
         size_t slashPos = pathPattern.rfind('/', wildcardPos);
-        
-        if (slashPos != std::string::npos) {
-            dirPath = pathPattern.substr(0, slashPos + 1);
-            wildcard = pathPattern.substr(slashPos + 1);
-        } else {
-            dirPath = "";
-            wildcard = pathPattern;
-        }
+        dirPath = (slashPos != std::string::npos) ? pathPattern.substr(0, slashPos + 1) : "";
+        wildcard = (slashPos != std::string::npos) ? pathPattern.substr(slashPos + 1) : pathPattern;
     } else {
         dirPath = pathPattern + "/";
     }
-    
-    //logMessage("dirPath: " + dirPath);
-    //logMessage("wildcard: " + wildcard);
-    
+
     std::vector<std::string> fileList;
-    
-    bool isFolderWildcard = wildcard.back() == '/';
+    bool isFolderWildcard = !wildcard.empty() && wildcard.back() == '/';
+
     if (isFolderWildcard) {
-        wildcard = wildcard.substr(0, wildcard.size() - 1);  // Remove the trailing slash
+        wildcard.pop_back();  // Remove the trailing slash for matching
     }
-    
-    //logMessage("isFolderWildcard: " + std::to_string(isFolderWildcard));
-    
-    DIR* dir = opendir(dirPath.c_str());
-    if (dir != nullptr) {
+
+    std::unique_ptr<DIR, DirCloser> dir(opendir(dirPath.c_str()));
+    if (dir) {
         dirent* entry;
-        
-        std::string entryName, entryPath, prefix, suffix;
-        bool isEntryDirectory;
-        size_t wildcardPos;
-        
-        while ((entry = readdir(dir)) != nullptr) {
-            entryName = entry->d_name;
-            entryPath = dirPath + entryName;
+        while ((entry = readdir(dir.get())) != nullptr) {
+            std::string entryName = entry->d_name;
+            if (entryName == "." || entryName == "..") continue;
             
-            isEntryDirectory = isDirectory(entryPath);
-            
-            //logMessage("entryName: " + entryName);
-            //logMessage("entryPath: " + entryPath);
-            //logMessage("isFolderWildcard: " + std::to_string(isFolderWildcard));
-            //logMessage("isEntryDirectory: " + std::to_string(isEntryDirectory));
-            
+            std::string entryPath = dirPath + entryName;
+            bool isEntryDirectory = isDirectory(entryPath);
+
             if (isFolderWildcard && isEntryDirectory && fnmatch(wildcard.c_str(), entryName.c_str(), FNM_NOESCAPE) == 0) {
-                if (entryName != "." && entryName != "..") {
-                    fileList.push_back(entryPath+"/");
-                }
-            } else if (!isFolderWildcard && !isEntryDirectory) {
-                wildcardPos = wildcard.find('*');
-                if (wildcardPos != std::string::npos) {
-                    prefix = wildcard.substr(0, wildcardPos);
-                    if (entryName.find(prefix) == 0) {
-                        suffix = wildcard.substr(wildcardPos + 1);
-                        if (entryName.size() >= suffix.size() && entryName.compare(entryName.size() - suffix.size(), suffix.size(), suffix) == 0) {
-                            fileList.push_back(entryPath);
-                        }
-                    }
-                } else if (fnmatch(wildcard.c_str(), entryName.c_str(), FNM_NOESCAPE) == 0) {
-                    fileList.push_back(entryPath);
-                }
+                fileList.push_back(entryPath + "/");
+            } else if (!isFolderWildcard && !isEntryDirectory && fnmatch(wildcard.c_str(), entryName.c_str(), FNM_NOESCAPE) == 0) {
+                fileList.push_back(entryPath);
             }
         }
-        closedir(dir);
     }
-    
-    //std::string fileListAsString;
-    //for (const std::string& filePath : fileList) {
-    //    fileListAsString += filePath + "\n";
-    //}
-    //logMessage("File List:\n" + fileListAsString);
-    
+
     return fileList;
 }
+
 
 /**
  * @brief Gets a list of files and folders based on a wildcard pattern.
