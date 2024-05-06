@@ -118,27 +118,30 @@ void deleteFileOrDirectory(const std::string& pathToDelete) {
     if (stat(pathToDelete.c_str(), &pathStat) == 0) {
         if (S_ISREG(pathStat.st_mode)) {
             if (std::remove(pathToDelete.c_str()) == 0) {
-                // Log message: File deleted successfully
+                //logMessage("File deleted: " + pathToDelete);
             } else {
                 logMessage("Failed to delete file: " + pathToDelete);
             }
         } else if (S_ISDIR(pathStat.st_mode)) {
             std::unique_ptr<DIR, DirCloser> directory(opendir(pathToDelete.c_str()));
-            if (directory != nullptr) {
-                struct dirent* entry;
-                std::string fileName;
+            if (directory) {
+                dirent* entry;
                 while ((entry = readdir(directory.get())) != nullptr) {
-                    fileName = entry->d_name;
+                    const std::string& fileName = entry->d_name;
                     if (fileName != "." && fileName != "..") {
-                        deleteFileOrDirectory(pathToDelete + "/" + fileName);
+                        std::string filePath = pathToDelete + "/" + fileName;
+                        deleteFileOrDirectory(filePath);
                     }
                 }
             } else {
                 logMessage("Failed to open directory: " + pathToDelete);
             }
 
+            // Close the directory before deleting
+            directory.reset();
+
             if (rmdir(pathToDelete.c_str()) == 0) {
-                // Log message: Directory deleted successfully
+                //logMessage("Directory deleted: " + pathToDelete);
             } else {
                 logMessage("Failed to delete directory: " + pathToDelete);
             }
@@ -146,7 +149,7 @@ void deleteFileOrDirectory(const std::string& pathToDelete) {
             logMessage("Invalid file type: " + pathToDelete);
         }
     } else {
-        logMessage("Error accessing path: " + pathToDelete);
+        //logMessage("Error accessing path: " + pathToDelete);
     }
 }
 
@@ -212,6 +215,9 @@ void moveFileOrDirectory(const std::string& sourcePath, const std::string& desti
                 moveFileOrDirectory(fullSourcePath, fullDestPath);
             }
         }
+
+        // Close the directory before removing it
+        dir.reset();
 
         // After moving all contents, remove the source directory
         rmdir(sourcePath.c_str());
