@@ -57,7 +57,7 @@ To incorporate `libultra` into your project, simply include the desired header f
 
 ## Contribution
 
-We welcome contributions to `libultra`! If you have ideas for additional helper functions or improvements to existing ones, feel free to submit a pull request or open an issue on GitHub. Together, we can continue to expand and enhance this library for the benefit of the developer community.
+Contributions to `libultra` are welcome. If you have ideas for additional helper functions or improvements to existing ones, feel free to submit a pull request or open an issue on GitHub. Together, we can continue to expand and enhance this library for the benefit of the developer community.
 
 ## License
 
