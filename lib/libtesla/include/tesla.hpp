@@ -3431,7 +3431,7 @@ namespace tsl {
                 if (this->m_listHeight > this->getHeight()) {
                     
                     float viewHeight = static_cast<float>(this->getHeight() -16);
-                    float totalHeight = static_cast<float>(this->m_listHeight );
+                    float totalHeight = static_cast<float>(this->m_listHeight +16);
                     
                     // Calculate the height of the scrollbar to represent the portion of the content that is viewable.
                     scrollbarHeight = (viewHeight * viewHeight) / totalHeight;
@@ -3440,19 +3440,20 @@ namespace tsl {
                     }
                     
                     // Calculate the maximum scrollable height.
-                    int maxScrollableHeight = this->m_listHeight - viewHeight;
+                    int maxScrollableHeight = totalHeight - viewHeight;
                     if (maxScrollableHeight < 1) maxScrollableHeight = 1; // Prevent division by zero.
                     
                     // Calculate the scrollbar offset, adjusting the range it covers by decreasing it by 3 units.
                     scrollbarOffset = (static_cast<double>(this->m_offset) / maxScrollableHeight) * (viewHeight - scrollbarHeight);
                     
-                    // Increase the starting position of the scrollbar by 8 units as previously defined.
-                    scrollbarOffset += 8;
                     
                     // Ensure the scrollbar does not go outside the viewable area. Adjust the condition to stop 3 units earlier.
                     if (scrollbarOffset + scrollbarHeight > viewHeight) {
                         scrollbarOffset = viewHeight - scrollbarHeight;
                     }
+
+                    // Increase the starting position of the scrollbar by 8 units as previously defined.
+                    scrollbarOffset += 8;
 
                     offset = 11;
                     renderer->drawRect(this->getRightBound() + 10+offset, this->getY() + scrollbarOffset, 5, scrollbarHeight, trackBarColor);
