@@ -58,13 +58,13 @@
 #include <list>
 #include <stack>
 #include <map>
+
 //#include <filesystem> // Comment out filesystem
 
 // CUSTOM SECTION START
-#include "../../../source/ini_funcs.hpp"
-#include "../../../source/json_funcs.hpp"
+#include "../../libultra/ultra.hpp"
 
-static std::unordered_map<std::string, std::string> hexSumCache;
+//static std::unordered_map<std::string, std::string> hexSumCache;
 
 // Define an atomic bool for interpreter completion
 static std::atomic<bool> threadFailure(false);
@@ -5566,7 +5566,7 @@ extern "C" {
     
     u32 __nx_applet_type = AppletType_None;
     u32 __nx_fs_num_sessions = 1;
-    u32  __nx_nv_transfermem_size = 0x20000;
+    u32  __nx_nv_transfermem_size = 0x18000;
     ViLayerFlags __nx_vi_stray_layer_flags = (ViLayerFlags)0;
     
     /**
