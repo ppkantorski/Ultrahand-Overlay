@@ -277,6 +277,28 @@ std::vector<std::string> getSubdirectories(const std::string& directoryPath) {
 }
 
 
+// Cache to store directory status
+std::unordered_map<std::string, bool> directoryCache;
+
+bool isDirectory2(struct dirent* entry, const std::string& path) {
+    if (entry->d_type == DT_DIR) {
+        return true;
+    } else if (entry->d_type == DT_UNKNOWN) {
+        // Check if directory status is already cached
+        auto it = directoryCache.find(path);
+        if (it != directoryCache.end()) {
+            return it->second;
+        } else {
+            struct stat path_stat;
+            stat(path.c_str(), &path_stat);
+            bool isDir = S_ISDIR(path_stat.st_mode);
+            directoryCache[path] = isDir; // Cache directory status
+            return isDir;
+        }
+    }
+    return false;
+}
+
 /**
  * @brief Recursively retrieves a list of files from a directory.
  *
@@ -287,25 +309,26 @@ std::vector<std::string> getFilesListFromDirectory(const std::string& directoryP
     std::vector<std::string> fileList;
     std::unique_ptr<DIR, DirCloser> dir(opendir(directoryPath.c_str()));
     
-    if (dir) {
-        dirent* entry;
-        while ((entry = readdir(dir.get())) != nullptr) {
-            std::string entryName = entry->d_name;
-            std::string entryPath = directoryPath;
-            if (entryPath.back() != '/')
-                entryPath += '/';
-            entryPath += entryName;
-            
-            // Skip the current and parent directory entries
-            if (entryName != "." && entryName != "..") {
-                if (isDirectory(entryPath)) {
-                    // Recursively retrieve files from subdirectories
-                    std::vector<std::string> subDirFiles = getFilesListFromDirectory(entryPath);
-                    fileList.insert(fileList.end(), subDirFiles.begin(), subDirFiles.end());
-                } else {
-                    fileList.push_back(entryPath);
-                }
-            }
+    if (!dir) return fileList;  // Return empty list if directory cannot be opened
+
+    struct dirent* entry;
+    while ((entry = readdir(dir.get())) != nullptr) {
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
+            continue;  // Skip the current and parent directory entries
+        }
+
+        std::string entryPath = directoryPath;
+        if (entryPath.back() != '/') {
+            entryPath += '/';
+        }
+        entryPath += entry->d_name;
+
+        if (isDirectory2(entry, entryPath)) {  // Check if the path is a directory
+            // Recursively retrieve files from subdirectories
+            std::vector<std::string> subDirFiles = getFilesListFromDirectory(entryPath);
+            fileList.insert(fileList.end(), subDirFiles.begin(), subDirFiles.end());
+        } else {
+            fileList.push_back(entryPath);  // It's a file, add to the list
         }
     }
 
@@ -320,38 +343,46 @@ std::vector<std::string> getFilesListFromDirectory(const std::string& directoryP
  * @return A vector of strings containing the paths of matching files and folders.
  */
 std::vector<std::string> getFilesListByWildcard(const std::string& pathPattern) {
-    std::string dirPath = "";
-    std::string wildcard = "";
+    std::string dirPath;
+    std::string wildcard;
     size_t wildcardPos = pathPattern.find('*');
 
     if (wildcardPos != std::string::npos) {
         size_t slashPos = pathPattern.rfind('/', wildcardPos);
-        dirPath = (slashPos != std::string::npos) ? pathPattern.substr(0, slashPos + 1) : "";
-        wildcard = (slashPos != std::string::npos) ? pathPattern.substr(slashPos + 1) : pathPattern;
+        if (slashPos != std::string::npos) {
+            dirPath = pathPattern.substr(0, slashPos + 1);
+            wildcard = pathPattern.substr(slashPos + 1);
+        } else {
+            dirPath = "./";  // Assume current directory if no slash is found
+            wildcard = pathPattern;
+        }
     } else {
         dirPath = pathPattern + "/";
     }
 
-    std::vector<std::string> fileList;
     bool isFolderWildcard = !wildcard.empty() && wildcard.back() == '/';
-
     if (isFolderWildcard) {
-        wildcard.pop_back();  // Remove the trailing slash for matching
+        wildcard.pop_back();  // Prepare wildcard for directory matching
     }
 
+    std::vector<std::string> fileList;
     std::unique_ptr<DIR, DirCloser> dir(opendir(dirPath.c_str()));
-    if (dir) {
-        dirent* entry;
-        while ((entry = readdir(dir.get())) != nullptr) {
-            std::string entryName = entry->d_name;
-            if (entryName == "." || entryName == "..") continue;
-            
-            std::string entryPath = dirPath + entryName;
-            bool isEntryDirectory = isDirectory(entryPath);
+    if (!dir) return fileList;  // Early exit if the directory cannot be opened
 
-            if (isFolderWildcard && isEntryDirectory && fnmatch(wildcard.c_str(), entryName.c_str(), FNM_NOESCAPE) == 0) {
+    dirent* entry;
+    while ((entry = readdir(dir.get())) != nullptr) {
+        std::string entryName = entry->d_name;
+        if (entryName == "." || entryName == "..") continue;
+
+        std::string entryPath = dirPath + entryName;
+        bool isEntryDirectory = isDirectory2(entry, entryPath);
+
+        if (isFolderWildcard && isEntryDirectory) {
+            if (fnmatch(wildcard.c_str(), entryName.c_str(), FNM_NOESCAPE) == 0) {
                 fileList.push_back(entryPath + "/");
-            } else if (!isFolderWildcard && !isEntryDirectory && fnmatch(wildcard.c_str(), entryName.c_str(), FNM_NOESCAPE) == 0) {
+            }
+        } else if (!isFolderWildcard && !isEntryDirectory) {
+            if (fnmatch(wildcard.c_str(), entryName.c_str(), FNM_NOESCAPE) == 0) {
                 fileList.push_back(entryPath);
             }
         }
@@ -359,6 +390,7 @@ std::vector<std::string> getFilesListByWildcard(const std::string& pathPattern) 
 
     return fileList;
 }
+
 
 
 /**
@@ -372,40 +404,34 @@ std::vector<std::string> getFilesListByWildcard(const std::string& pathPattern) 
  */
 std::vector<std::string> getFilesListByWildcards(const std::string& pathPattern) {
     std::vector<std::string> fileList;
-    
-    // Check if the pattern contains multiple wildcards
-    size_t wildcardPos = pathPattern.find('*');
-    if (wildcardPos != std::string::npos && pathPattern.find('*', wildcardPos + 1) != std::string::npos) {
-        std::string dirPath = "";
-        std::string wildcard = "";
-        
-        // Extract the directory path and the first wildcard
-        size_t slashPos = pathPattern.rfind('/', wildcardPos);
-        if (slashPos != std::string::npos) {
-            dirPath = pathPattern.substr(0, slashPos + 1);
-            wildcard = pathPattern.substr(slashPos + 1, wildcardPos - slashPos - 1);
+
+    // Find the position of the first wildcard
+    size_t firstWildcardPos = pathPattern.find('*');
+    if (firstWildcardPos != std::string::npos) {
+        // Check if there's another wildcard following the first
+        size_t secondWildcardPos = pathPattern.find('*', firstWildcardPos + 1);
+        size_t slashPos = pathPattern.rfind('/', firstWildcardPos);
+
+        // Extract directory path up to the first wildcard
+        std::string dirPath = (slashPos != std::string::npos) ? pathPattern.substr(0, slashPos + 1) : "";
+        std::string firstWildcard = (slashPos != std::string::npos) ? pathPattern.substr(slashPos + 1, firstWildcardPos - slashPos - 1) : pathPattern.substr(0, firstWildcardPos);
+
+        if (secondWildcardPos != std::string::npos) {
+            // Get the list of directories matching the first wildcard
+            std::vector<std::string> subDirs = getFilesListByWildcards(dirPath + firstWildcard + "*/");
+
+            // Process each directory recursively
+            for (const std::string& subDir : subDirs) {
+                // Append the rest of the path pattern after the first wildcard to each subdirectory
+                std::string subPattern = subDir + pathPattern.substr(secondWildcardPos);
+                std::vector<std::string> subFileList = getFilesListByWildcards(subPattern);
+                fileList.insert(fileList.end(), subFileList.begin(), subFileList.end());
+            }
         } else {
-            dirPath = "";
-            wildcard = pathPattern.substr(0, wildcardPos);
+            // If there's only one wildcard, use getFilesListByWildcard directly
+            fileList = getFilesListByWildcard(pathPattern);
         }
-        
-        // Get the list of directories matching the first wildcard
-        std::vector<std::string> subDirs = getFilesListByWildcard(dirPath + wildcard + "*/");
-        
-        std::string subPattern;
-        std::vector<std::string> subFileList;
-        
-        // Process each subdirectory recursively
-        for (const std::string& subDir : subDirs) {
-            subPattern = subDir + removeLeadingSlash(pathPattern.substr(wildcardPos + 1));
-            subFileList = getFilesListByWildcards(subPattern);
-            fileList.insert(fileList.end(), subFileList.begin(), subFileList.end());
-        }
-    } else {
-        // Only one wildcard present, use getFilesListByWildcard directly
-        fileList = getFilesListByWildcard(pathPattern);
     }
-    
+
     return fileList;
 }
-
