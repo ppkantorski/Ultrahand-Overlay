@@ -899,7 +899,7 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
  *
  * @param commands A list of commands, where each command is represented as a vector of strings.
  */
-void interpretAndExecuteCommand(std::vector<std::vector<std::string>>&& commands, const std::string& packagePath="", const std::string& selectedCommand="") {
+void interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& commands, const std::string& packagePath="", const std::string& selectedCommand="") {
     bool inEristaSection = false;
     bool inMarikoSection = false;
     //size_t tryCounter = 0;
@@ -1103,15 +1103,15 @@ void interpretAndExecuteCommand(std::vector<std::vector<std::string>>&& commands
                     }
                 } else if (commandName == "json_file") {
                     if (cmdSize >= 2) {
-                        jsonPath = preprocessPath(cmd[1]);
+                        jsonPath = preprocessPath(cmd[1], packagePath);
                     }
                 } else if (commandName == "ini_file") {
                     if (cmdSize >= 2) {
-                        iniPath = preprocessPath(cmd[1]);
+                        iniPath = preprocessPath(cmd[1], packagePath);
                     }
                 } else if (commandName == "hex_file") {
                     if (cmdSize >= 2) {
-                        hexPath = preprocessPath(cmd[1]);
+                        hexPath = preprocessPath(cmd[1], packagePath);
                     }
                 } else {
                     processCommand(cmd, packagePath, selectedCommand);
@@ -1133,13 +1133,13 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
 
     if (commandName == "make" || commandName == "mkdir") { // Make command
         if (cmdSize >= 2) {
-            std::string sourcePath = preprocessPath(cmd[1]);
+            std::string sourcePath = preprocessPath(cmd[1], packagePath);
             createDirectory(sourcePath);
         }
     } else if (commandName == "copy" || commandName == "cp") { // Copy command
         if (cmdSize >= 3) {
-            std::string sourcePath = preprocessPath(cmd[1]);
-            std::string destinationPath = preprocessPath(cmd[2]);
+            std::string sourcePath = preprocessPath(cmd[1], packagePath);
+            std::string destinationPath = preprocessPath(cmd[2], packagePath);
             
             if (sourcePath.find('*') != std::string::npos)
                 copyFileOrDirectoryByPattern(sourcePath, destinationPath); // Delete files or directories by pattern
@@ -1148,7 +1148,7 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
         }
     } else if (commandName == "delete" || commandName == "del") { // Delete command
         if (cmdSize >= 2) {
-            std::string sourcePath = preprocessPath(cmd[1]);
+            std::string sourcePath = preprocessPath(cmd[1], packagePath);
             if (!isDangerousCombination(sourcePath)) {
                 if (sourcePath.find('*') != std::string::npos)
                     deleteFileOrDirectoryByPattern(sourcePath); // Delete files or directories by pattern
@@ -1159,11 +1159,11 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
     } else if (commandName.compare(0, 7, "mirror_") == 0) {
         
         if (cmdSize >= 2) {
-            std::string sourcePath = preprocessPath(cmd[1]);
+            std::string sourcePath = preprocessPath(cmd[1], packagePath);
             
             std::string destinationPath;
             if (cmdSize >= 3) {
-                destinationPath = preprocessPath(cmd[2]);
+                destinationPath = preprocessPath(cmd[2], packagePath);
             } else {
                 destinationPath = "sdmc:/";
             }
@@ -1173,8 +1173,8 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
         }
     } else if (commandName == "rename" || commandName == "move" || commandName == "mv") { // Rename command
         if (cmdSize >= 3) {
-            std::string sourcePath = preprocessPath(cmd[1]);
-            std::string destinationPath = preprocessPath(cmd[2]);
+            std::string sourcePath = preprocessPath(cmd[1], packagePath);
+            std::string destinationPath = preprocessPath(cmd[2], packagePath);
             if (!isDangerousCombination(sourcePath)) {
                 if (sourcePath.find('*') != std::string::npos)
                     moveFilesOrDirectoriesByPattern(sourcePath, destinationPath); // Move files by pattern
@@ -1184,26 +1184,26 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
         }
     } else if (commandName == "add-ini-section") {
         if (cmdSize >= 2) {
-            std::string sourcePath = preprocessPath(cmd[1]);
+            std::string sourcePath = preprocessPath(cmd[1], packagePath);
             std::string desiredSection = removeQuotes(cmd[2]);
             addIniSection(sourcePath.c_str(), desiredSection.c_str());
         }
     } else if (commandName == "rename-ini-section") {
         if (cmdSize >= 3) {
-            std::string sourcePath = preprocessPath(cmd[1]);
+            std::string sourcePath = preprocessPath(cmd[1], packagePath);
             std::string desiredSection = removeQuotes(cmd[2]);
             std::string desiredNewSection = removeQuotes(cmd[3]);
             renameIniSection(sourcePath.c_str(), desiredSection.c_str(), desiredNewSection.c_str());
         }
     } else if (commandName == "remove-ini-section") {
         if (cmdSize >= 2) {
-            std::string sourcePath = preprocessPath(cmd[1]);
+            std::string sourcePath = preprocessPath(cmd[1], packagePath);
             std::string desiredSection = removeQuotes(cmd[2]);
             removeIniSection(sourcePath.c_str(), desiredSection.c_str());
         }
     } else if (commandName == "set-ini-val" || commandName == "set-ini-value") {
         if (cmdSize >= 5) {
-            std::string sourcePath = preprocessPath(cmd[1]);
+            std::string sourcePath = preprocessPath(cmd[1], packagePath);
             std::string desiredSection = removeQuotes(cmd[2]);
             std::string desiredKey = removeQuotes(cmd[3]);
             std::string desiredValue = "";
@@ -1216,7 +1216,7 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
         }
     } else if (commandName == "set-ini-key") {
         if (cmdSize >= 5) {
-            std::string sourcePath = preprocessPath(cmd[1]);
+            std::string sourcePath = preprocessPath(cmd[1], packagePath);
             std::string desiredSection = removeQuotes(cmd[2]);
             std::string desiredKey = removeQuotes(cmd[3]);
             std::string desiredNewKey;
@@ -1234,7 +1234,7 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
         }
     } else if (commandName.compare(0, 7, "hex-by-") == 0) {
         if (cmdSize >= 4) {
-            std::string sourcePath = preprocessPath(cmd[1]);
+            std::string sourcePath = preprocessPath(cmd[1], packagePath);
             const std::string& secondArg = removeQuotes(cmd[2]);
             const std::string& thirdArg = removeQuotes(cmd[3]);
             
@@ -1305,7 +1305,7 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
     } else if (commandName == "download") {
         if (cmdSize >= 3) {
             std::string fileUrl = preprocessUrl(cmd[1]);
-            std::string destinationPath = preprocessPath(cmd[2]);
+            std::string destinationPath = preprocessPath(cmd[2], packagePath);
             bool downloadSuccess = false;
             
             //setIniFileValue((packagePath+configFileName).c_str(), selectedCommand.c_str(), "footer", "downloading");
@@ -1324,15 +1324,15 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
         }
     } else if (commandName == "unzip") {
         if (cmdSize >= 3) {
-            std::string sourcePath = preprocessPath(cmd[1]);
-            std::string destinationPath = preprocessPath(cmd[2]);
+            std::string sourcePath = preprocessPath(cmd[1], packagePath);
+            std::string destinationPath = preprocessPath(cmd[2], packagePath);
             commandSuccess = unzipFile(sourcePath, destinationPath) && commandSuccess;
             //commandSuccess = enqueueUnzipFile(sourcePath, destinationPath) && commandSuccess;
         }
     } else if (commandName == "pchtxt2ips") {
         if (cmdSize >= 3) {
-            std::string sourcePath = preprocessPath(cmd[1]);
-            std::string destinationPath = preprocessPath(cmd[2]);
+            std::string sourcePath = preprocessPath(cmd[1], packagePath);
+            std::string destinationPath = preprocessPath(cmd[2], packagePath);
             commandSuccess = pchtxt2ips(sourcePath, destinationPath) && commandSuccess;
         }
     } else if (commandName == "exec") {
@@ -1345,13 +1345,13 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                 bool resetCommandSuccess;
                 for (auto& bootOption:bootOptions) {
                     bootOptionName = bootOption.first;
-                    auto bootCommands = bootOption.second;
+                    auto& bootCommands = bootOption.second;
                     if (bootOptionName == bootCommandName) {
                         resetCommandSuccess = false;
                         if (!commandSuccess)
                             resetCommandSuccess = true;
-                        interpretAndExecuteCommand(std::move(bootCommands), packagePath+bootPackageFileName, bootOptionName); // Execute modified 
-                        //enqueueInterpreterCommand(std::move(bootCommands), packagePath+bootPackageFileName, bootOptionName);
+                        interpretAndExecuteCommands(std::move(bootCommands), packagePath, bootOptionName); // Execute modified 
+                        //enqueueInterpreterCommands(std::move(bootCommands), packagePath+bootPackageFileName, bootOptionName);
                         if (resetCommandSuccess) {
                             commandSuccess = false;
                             resetCommandSuccess = false;
@@ -1479,11 +1479,16 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
         triggerExit.store(true, std::memory_order_release);
         return;
     } else if (commandName == "backlight") {
-        lblInitialize();
-        LblBacklightSwitchStatus lblstatus = LblBacklightSwitchStatus_Disabled;
-        lblGetBacklightSwitchStatus(&lblstatus);
-        lblstatus ? lblSwitchBacklightOff(0) : lblSwitchBacklightOn(0);
-        lblExit();
+        if (cmdSize >= 2) {
+            std::string togglePattern = removeQuotes(cmd[1]);
+            lblInitialize();
+            if (togglePattern == "on")
+                lblSwitchBacklightOn(0);
+            else if (togglePattern == "off")
+                lblSwitchBacklightOff(0);
+            lblExit();
+        }
+        
     } else if (commandName == "refresh") {
         refreshGui = true;
     } else if (commandName == "logging") {
@@ -1542,7 +1547,7 @@ void backgroundInterpreter(void*) {
             threadFailure.store(false, std::memory_order_release);
             
             runningInterpreter.store(true, std::memory_order_release);
-            interpretAndExecuteCommand(std::move(std::get<0>(args)), std::move(std::get<1>(args)), std::move(std::get<2>(args)));
+            interpretAndExecuteCommands(std::move(std::get<0>(args)), std::move(std::get<1>(args)), std::move(std::get<2>(args)));
 
             runningInterpreter.store(false, std::memory_order_release);
             // Clear flags and perform any cleanup if necessary
@@ -1588,7 +1593,7 @@ void startInterpreterThread(int stackSize = 0x8000) {
 
 
 
-void enqueueInterpreterCommand(std::vector<std::vector<std::string>>&& commands, const std::string& packagePath, const std::string& selectedCommand) {
+void enqueueInterpreterCommands(std::vector<std::vector<std::string>>&& commands, const std::string& packagePath, const std::string& selectedCommand) {
     {
         std::lock_guard<std::mutex> lock(queueMutex);
         interpreterQueue.emplace(std::move(commands), packagePath, selectedCommand);
