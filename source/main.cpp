@@ -3246,6 +3246,7 @@ public:
             }
             overlaysIniFile.close(); // Close the file
 
+
             // load overlayList from overlaysIniFilePath.  this will be the overlayFilenames
             std::vector<std::string> overlayList;
             std::vector<std::string> hiddenOverlayList;
@@ -3275,7 +3276,7 @@ public:
                         setIniFileValue(overlaysIniFilePath, overlayFileName, "star", "false");
                         setIniFileValue(overlaysIniFilePath, overlayFileName, "hide", "false");
                         setIniFileValue(overlaysIniFilePath, overlayFileName, "use_launch_args", "false");
-                        setIniFileValue(overlaysIniFilePath, overlayFileName, "launch_args", "");
+                        setIniFileValue(overlaysIniFilePath, overlayFileName, "launch_args", "''");
                         
                     } else {
                         // Read priority and starred status from ini
@@ -3316,7 +3317,7 @@ public:
                             overlaysIniData[overlayFileName].find("launch_args") != overlaysIniData[overlayFileName].end()) {
                             //overlayLaunchArgs = overlaysIniData[overlayFileName]["launch_args"];
                         } else
-                            setIniFileValue(overlaysIniFilePath, overlayFileName, "launch_args", "");
+                            setIniFileValue(overlaysIniFilePath, overlayFileName, "launch_args", "''");
                         
                         
                         // Get the name and version of the overlay file
@@ -3426,7 +3427,7 @@ public:
                                 
                                 setIniFileValue(settingsConfigIniPath, "ultrahand", "in_overlay", "true"); // this is handled within tesla.hpp
                                 std::string useOverlayLaunchArgs = parseValueFromIniSection(overlaysIniFilePath, overlayFileName, "use_launch_args");
-                                std::string overlayLaunchArgs = parseValueFromIniSection(overlaysIniFilePath, overlayFileName, "launch_args");
+                                std::string overlayLaunchArgs = removeQuotes(parseValueFromIniSection(overlaysIniFilePath, overlayFileName, "launch_args"));
                                 
                                 if (inHiddenMode) {
                                     setIniFileValue(settingsConfigIniPath, "ultrahand", "in_hidden_overlay", "true");
@@ -4443,6 +4444,7 @@ public:
                         tsl::pop();
                         returningToMain = true;
                         tsl::changeTo<MainMenu>();
+                        simulatedBackComplete = true;
                         return true;
                     }
 
