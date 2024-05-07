@@ -19,7 +19,7 @@
 #include <string>
 #include <fstream>
 #include <jansson.h>
-#include <get_funcs.hpp>
+#include "string_funcs.hpp"
 
 //constexpr size_t jsonBufferSize = 1024; // Choose an appropriate buffer size
 
@@ -125,27 +125,31 @@ std::string replaceJsonPlaceholder(const std::string& arg, const std::string& co
     std::string searchString = "{" + commandName + "(";
     size_t startPos = replacement.find(searchString);
     
+    size_t endPos, nextPos, commaPos;
+    std::string key;
+    size_t index;
+    bool validValue;
+
     while (startPos != std::string::npos) {
-        size_t endPos = replacement.find(")}", startPos);
+        endPos = replacement.find(")}", startPos);
         if (endPos == std::string::npos) {
             break;
         }
 
-        size_t nextPos = startPos + searchString.length();
-        size_t commaPos;
+        nextPos = startPos + searchString.length();
         json_t* value = jsonDict.get();
-        bool validValue = true;
+        validValue = true;
 
         while (nextPos < endPos && validValue) {
             commaPos = replacement.find(',', nextPos);
             if (commaPos == std::string::npos || commaPos > endPos) {
                 commaPos = endPos;
             }
-            std::string key = trim(replacement.substr(nextPos, commaPos - nextPos));
+            key = trim(replacement.substr(nextPos, commaPos - nextPos));
             if (json_is_object(value)) {
                 value = json_object_get(value, key.c_str());
             } else if (json_is_array(value)) {
-                size_t index = std::stoul(key);
+                index = std::stoul(key);
                 value = json_array_get(value, index);
             } else {
                 validValue = false;

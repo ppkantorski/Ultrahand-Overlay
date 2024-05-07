@@ -25,11 +25,11 @@
 #include <cstring> // Added for std::memcmp
 
 
-const size_t hexBufferSize = 4096;
+//const size_t hexBufferSize = 4096;
 
 
 // For improving the speed of hexing consecutively with the same file and asciiPattern.
-//static std::unordered_map<std::string, std::string> hexSumCache; // MOVED TO main.cpp
+static std::unordered_map<std::string, std::string> hexSumCache; // MOVED TO main.cpp
 
 /**
  * @brief Converts an ASCII string to a hexadecimal string.
@@ -155,7 +155,7 @@ std::vector<std::string> findHexDataOffsets(const std::string& filePath, const s
     }
 
     // Read the file in chunks to find the offsets where the hex data is located
-    constexpr size_t hexBufferSize = 4096; // Arbitrary buffer size, can be adjusted
+    constexpr size_t hexBufferSize = 4096*4; // Arbitrary buffer size, can be adjusted
     std::vector<unsigned char> buffer(hexBufferSize);
     size_t bytesRead = 0;
     size_t offset = 0;

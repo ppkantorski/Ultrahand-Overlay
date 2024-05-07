@@ -58,13 +58,13 @@
 #include <list>
 #include <stack>
 #include <map>
+
 //#include <filesystem> // Comment out filesystem
 
 // CUSTOM SECTION START
-#include "../../../source/ini_funcs.hpp"
-#include "../../../source/json_funcs.hpp"
+#include "../../libultra/ultra.hpp"
 
-static std::unordered_map<std::string, std::string> hexSumCache;
+//static std::unordered_map<std::string, std::string> hexSumCache;
 
 // Define an atomic bool for interpreter completion
 static std::atomic<bool> threadFailure(false);
@@ -3430,8 +3430,8 @@ namespace tsl {
                 
                 if (this->m_listHeight > this->getHeight()) {
                     
-                    float viewHeight = static_cast<float>(this->getHeight());
-                    float totalHeight = static_cast<float>(this->m_listHeight);
+                    float viewHeight = static_cast<float>(this->getHeight() -16);
+                    float totalHeight = static_cast<float>(this->m_listHeight +16);
                     
                     // Calculate the height of the scrollbar to represent the portion of the content that is viewable.
                     scrollbarHeight = (viewHeight * viewHeight) / totalHeight;
@@ -3440,19 +3440,20 @@ namespace tsl {
                     }
                     
                     // Calculate the maximum scrollable height.
-                    int maxScrollableHeight = this->m_listHeight - this->getHeight() + 64;
+                    int maxScrollableHeight = totalHeight - viewHeight;
                     if (maxScrollableHeight < 1) maxScrollableHeight = 1; // Prevent division by zero.
                     
                     // Calculate the scrollbar offset, adjusting the range it covers by decreasing it by 3 units.
-                    scrollbarOffset = (static_cast<double>(this->m_offset) / maxScrollableHeight) * (viewHeight - scrollbarHeight - 3);
+                    scrollbarOffset = (static_cast<double>(this->m_offset) / maxScrollableHeight) * (viewHeight - scrollbarHeight);
                     
-                    // Increase the starting position of the scrollbar by 8 units as previously defined.
-                    scrollbarOffset += 8;
                     
                     // Ensure the scrollbar does not go outside the viewable area. Adjust the condition to stop 3 units earlier.
-                    if (scrollbarOffset + scrollbarHeight > viewHeight - 3) {
-                        scrollbarOffset = viewHeight - 3 - scrollbarHeight;
+                    if (scrollbarOffset + scrollbarHeight > viewHeight) {
+                        scrollbarOffset = viewHeight - scrollbarHeight;
                     }
+
+                    // Increase the starting position of the scrollbar by 8 units as previously defined.
+                    scrollbarOffset += 8;
 
                     offset = 11;
                     renderer->drawRect(this->getRightBound() + 10+offset, this->getY() + scrollbarOffset, 5, scrollbarHeight, trackBarColor);
@@ -5566,7 +5567,7 @@ extern "C" {
     
     u32 __nx_applet_type = AppletType_None;
     u32 __nx_fs_num_sessions = 1;
-    u32  __nx_nv_transfermem_size = 0x20000;
+    u32  __nx_nv_transfermem_size = 0x16000;
     ViLayerFlags __nx_vi_stray_layer_flags = (ViLayerFlags)0;
     
     /**

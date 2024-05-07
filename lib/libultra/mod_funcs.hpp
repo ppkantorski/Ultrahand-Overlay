@@ -21,7 +21,7 @@
 #include <sstream>
 #include <vector>
 #include <string>
-#include <debug_funcs.hpp>
+#include "debug_funcs.hpp"
 
 const std::string IPS32_HEAD_MAGIC = "IPS32";
 const std::string IPS32_FOOT_MAGIC = "EEOF";

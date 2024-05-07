@@ -25,8 +25,8 @@
 #include <sstream>  // For std::istringstream
 #include <algorithm> // For std::remove_if
 #include <cctype>   // For ::isspace
-#include <get_funcs.hpp>
-#include <path_funcs.hpp>
+#include "get_funcs.hpp"
+#include "path_funcs.hpp"
 
 
 //constexpr size_t BufferSize = 4096*3;//131072;
@@ -81,13 +81,15 @@ PackageHeader getPackageHeaderFromIni(const std::string& filePath) {
     };
 
     std::string line;
+    size_t startPos, endPos;
+
     while (getline(file, line)) {
         // Process each prefix in the map
         for (const auto& [prefix, field] : fieldMap) {
-            size_t startPos = line.find(prefix);
+            startPos = line.find(prefix);
             if (startPos != std::string::npos) {
                 startPos += prefix.length();
-                size_t endPos = line.find_first_of(";\r\n", startPos); // Assume ';' or newlines mark the end
+                endPos = line.find_first_of(";\r\n", startPos); // Assume ';' or newlines mark the end
                 if (endPos == std::string::npos) {
                     endPos = line.length();
                 }
@@ -146,8 +148,13 @@ static std::map<std::string, std::map<std::string, std::string>> parseIni(const 
     auto lines = split(str, '\n');
     std::string lastHeader = "";
 
+    std::string trimmedLine;
+
+    size_t delimiterPos;
+    std::string key, value;
+
     for (auto& line : lines) {
-        std::string trimmedLine = trim(line);
+        trimmedLine = trim(line);
 
         if (trimmedLine.empty() || trimmedLine[0] == '#') {
             // Ignore empty lines and comments
@@ -159,10 +166,10 @@ static std::map<std::string, std::map<std::string, std::string>> parseIni(const 
             iniData[lastHeader]; // Ensures the section exists even if it remains empty
         }
         else {
-            size_t delimiterPos = trimmedLine.find('=');
+            delimiterPos = trimmedLine.find('=');
             if (delimiterPos != std::string::npos) {
-                std::string key = trim(trimmedLine.substr(0, delimiterPos));
-                std::string value = trim(trimmedLine.substr(delimiterPos + 1));
+                key = trim(trimmedLine.substr(0, delimiterPos));
+                value = trim(trimmedLine.substr(delimiterPos + 1));
                 if (!lastHeader.empty()) {
                     iniData[lastHeader][key] = value;
                 }
@@ -193,9 +200,13 @@ std::map<std::string, std::map<std::string, std::string>> getParsedDataFromIniFi
     }
 
     std::string line, currentSection;
+    std::string trimmedLine;
+
+    size_t delimiterPos;
+    std::string key, value;
 
     while (getline(configFile, line)) {
-        std::string trimmedLine = trim(line);
+        trimmedLine = trim(line);
 
         if (trimmedLine.empty()) continue;
 
@@ -203,10 +214,10 @@ std::map<std::string, std::map<std::string, std::string>> getParsedDataFromIniFi
             // Remove the brackets and set the current section
             currentSection = trimmedLine.substr(1, trimmedLine.size() - 2);
         } else {
-            size_t delimiterPos = trimmedLine.find('=');
+            delimiterPos = trimmedLine.find('=');
             if (delimiterPos != std::string::npos) {
-                std::string key = trim(trimmedLine.substr(0, delimiterPos));
-                std::string value = trim(trimmedLine.substr(delimiterPos + 1));
+                key = trim(trimmedLine.substr(0, delimiterPos));
+                value = trim(trimmedLine.substr(delimiterPos + 1));
                 parsedData[currentSection][key] = value;
             }
         }
@@ -267,8 +278,12 @@ std::string parseValueFromIniSection(const std::string& filePath, const std::str
 
     std::string line, currentSection;
 
+    size_t delimiterPos;
+    std::string currentKey;
+    std::string trimmedLine;
+
     while (std::getline(file, line)) {
-        std::string trimmedLine = trim(line);
+        trimmedLine = trim(line);
 
         if (trimmedLine.empty()) continue;
 
@@ -276,9 +291,9 @@ std::string parseValueFromIniSection(const std::string& filePath, const std::str
             currentSection = trimmedLine.substr(1, trimmedLine.size() - 2);
             if (currentSection != sectionName) continue;  // Skip processing other sections
         } else if (currentSection == sectionName) {
-            size_t delimiterPos = trimmedLine.find('=');
+            delimiterPos = trimmedLine.find('=');
             if (delimiterPos != std::string::npos) {
-                std::string currentKey = trim(trimmedLine.substr(0, delimiterPos));
+                currentKey = trim(trimmedLine.substr(0, delimiterPos));
                 if (currentKey == keyName) {
                     value = trim(trimmedLine.substr(delimiterPos + 1));
                     break;  // Found the key, exit the loop
@@ -321,8 +336,10 @@ void cleanIniFormatting(const std::string& filePath) {
     std::string line;
     bool isNewSection = false;
 
+    std::string trimmedLine;
+
     while (std::getline(inputFile, line)) {
-        std::string trimmedLine = trim(line);
+        trimmedLine = trim(line);
 
         // Add a newline before starting a new section, but not before the first section
         if (!trimmedLine.empty() && trimmedLine.front() == '[' && trimmedLine.back() == ']') {
@@ -371,8 +388,12 @@ void setIniFile(const std::string& fileToEdit, const std::string& desiredSection
     bool keyFound = false;
     std::string line, currentSection;
 
+    std::string trimmedLine;
+    size_t delimiterPos;
+    std::string key;
+
     while (getline(configFile, line)) {
-        std::string trimmedLine = trim(line);
+        trimmedLine = trim(line);
 
         if (trimmedLine.empty()) {
             buffer << line << '\n';
@@ -389,8 +410,8 @@ void setIniFile(const std::string& fileToEdit, const std::string& desiredSection
         }
 
         if (sectionFound && !keyFound && trimmedLine.find('=') != std::string::npos) {
-            size_t delimiterPos = trimmedLine.find('=');
-            std::string key = trimmedLine.substr(0, delimiterPos);
+            delimiterPos = trimmedLine.find('=');
+            key = trimmedLine.substr(0, delimiterPos);
             if (key == desiredKey) {
                 keyFound = true;
                 trimmedLine = (desiredNewKey.empty() ? desiredKey : desiredNewKey) + "=" + desiredValue;
@@ -548,13 +569,13 @@ void renameIniSection(const std::string& filePath, const std::string& currentSec
         return;
     }
 
-    std::string line;
+    std::string line, trimmedLine, sectionName;
 
     while (getline(configFile, line)) {
-        std::string trimmedLine = trim(line);
+        trimmedLine = trim(line);
 
         if (!trimmedLine.empty() && trimmedLine.front() == '[' && trimmedLine.back() == ']') {
-            std::string sectionName = trimmedLine.substr(1, trimmedLine.length() - 2);
+            sectionName = trimmedLine.substr(1, trimmedLine.length() - 2);
 
             if (sectionName == currentSectionName) {
                 tempFile << "[" << newSectionName << "]\n";
@@ -610,8 +631,10 @@ void removeIniSection(const std::string& filePath, const std::string& sectionNam
     std::string line, currentSection;
     bool inSectionToRemove = false;
 
+    std::string trimmedLine;
+
     while (getline(configFile, line)) {
-        std::string trimmedLine = trim(line);
+        trimmedLine = trim(line);
 
         // Check if the line represents a section
         if (!trimmedLine.empty() && trimmedLine.front() == '[' && trimmedLine.back() == ']') {
