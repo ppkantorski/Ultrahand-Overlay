@@ -1043,8 +1043,10 @@ public:
                 setIniFileValue(settingsIniPath, entryName, "hide", state ? "true" : "false");
                 if (state)
                     reloadMenu = true; // this reloads before main menu
-                else
+                else {
+                    reloadMenu = true;
                     reloadMenu2 = true; // this reloads at main menu
+                }
             });
             list->addItem(toggleListItem.release());
             
@@ -1084,8 +1086,10 @@ public:
                     setIniFileValue(settingsIniPath, entryName, "use_launch_args", state ? "true" : "false");
                     if ((useOverlayLaunchArgs=="true") != state)
                         reloadMenu = true; // this reloads before main menu
-                    if (!state)
+                    if (!state) {
+                        reloadMenu = true;
                         reloadMenu2 = true; // this reloads at main menu
+                    }
                 });
                 list->addItem(toggleListItem.release());
             }
