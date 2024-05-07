@@ -171,15 +171,21 @@ std::string removeEndingSlash(const std::string& pathPattern) {
  * @param path The input path string to preprocess.
  * @return The preprocessed path string.
  */
-std::string preprocessPath(const std::string& path) {
+std::string preprocessPath(const std::string& path, const std::string& packagePath = "") {
     std::string formattedPath = replaceMultipleSlashes(removeQuotes(path));
-    if (formattedPath.compare(0, 5, "sdmc:") != 0) {
-        return std::string("sdmc:") + formattedPath;
-    } else {
-        return formattedPath;
-    }
-}
 
+    // Replace "./" at the beginning of the path with the packagePath
+    if (!packagePath.empty() && formattedPath.substr(0, 2) == "./") {
+        formattedPath = packagePath + formattedPath.substr(2);
+    }
+
+    // Ensure all paths start with "sdmc:"
+    if (formattedPath.substr(0, 5) != "sdmc:") {
+        formattedPath = "sdmc:" + formattedPath;
+    }
+
+    return formattedPath;
+}
 /**
  * @brief Preprocesses a URL string by adding "https://" prefix.
  *
