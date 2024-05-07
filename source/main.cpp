@@ -1917,7 +1917,7 @@ public:
                         //this->commands = getSourceReplacement(this->commands, selectedItem, i);
                         isDownloadCommand = false;
                         runningInterpreter.store(true, std::memory_order_release);
-                        enqueueInterpreterCommands(getSourceReplacement(commands, selectedItem, i), filePath, specificKey);
+                        enqueueInterpreterCommands(getSourceReplacement(commands, selectedItem, i, filePath), filePath, specificKey);
                         startInterpreterThread();
                         //lastRunningInterpreter = true;
                         //modifiedCmds.clear();
@@ -1959,10 +1959,10 @@ public:
 
                     tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemRaw, tsl::FocusDirection::None);
                     if (!state) {
-                        interpretAndExecuteCommands(getSourceReplacement(commandsOn, selectedItem, i), filePath, specificKey); // Execute modified 
+                        interpretAndExecuteCommands(getSourceReplacement(commandsOn, selectedItem, i, filePath), filePath, specificKey); // Execute modified 
                         //toggleListItem->setState(!state);
                     } else {
-                        interpretAndExecuteCommands(getSourceReplacement(commandsOff, selectedItem, i), filePath, specificKey); // Execute modified 
+                        interpretAndExecuteCommands(getSourceReplacement(commandsOff, selectedItem, i, filePath), filePath, specificKey); // Execute modified 
                         //toggleListItem->setState(!state);
                     }
                 });
@@ -2516,7 +2516,7 @@ public:
                             std::string forwarderPackagePath = getParentDirFromPath(packageSource);
                             std::string forwarderPackageIniName = getNameFromPath(packageSource);
 
-                            listItem->setClickListener([commands, forwarderPackagePath, forwarderPackageIniName](s64 keys) mutable {
+                            listItem->setClickListener([commands, keyName = option.first, &packagePath = this->packagePath, forwarderPackagePath, forwarderPackageIniName](s64 keys) mutable {
 
 
                                 if (simulatedSelect && !simulatedSelectComplete) {
@@ -2525,7 +2525,7 @@ public:
                                 }
                                 
                                 if (keys & KEY_A) {
-                                    interpretAndExecuteCommands(std::move(commands), "", ""); // Now correctly moved
+                                    interpretAndExecuteCommands(std::move(commands), packagePath, keyName); // Now correctly moved
                                     nestedMenuCount++;
                                     tsl::changeTo<PackageMenu>(forwarderPackagePath, "", "left", forwarderPackageIniName);
                                     simulatedSelectComplete = true;
@@ -2536,7 +2536,7 @@ public:
                         } else {
                             
                             //std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(option.second, pathReplace);
-                            listItem->setClickListener([commands, keyName = option.first, &packagePath = this->packagePath, &packageName = this->packageName, footer, lastSection, listItemPtr = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){})](uint64_t keys) {
+                            listItem->setClickListener([commands, keyName = option.first, &packagePath = this->packagePath,  &packageName = this->packageName, footer, lastSection, listItemPtr = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){})](uint64_t keys) {
                                 bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                                 if (_runningInterpreter)
                                     return false;
@@ -2624,7 +2624,7 @@ public:
                                     //commands = getSourceReplacement(commands, selectedItem, i);
                                     isDownloadCommand = false;
                                     runningInterpreter.store(true, std::memory_order_release);
-                                    enqueueInterpreterCommands(getSourceReplacement(commands, selectedItem, i), packagePath, keyName);
+                                    enqueueInterpreterCommands(getSourceReplacement(commands, selectedItem, i, packagePath), packagePath, keyName);
                                     startInterpreterThread();
                                     //lastRunningInterpreter = true;
                                     //modifiedCmds.clear();
@@ -2676,12 +2676,12 @@ public:
                                 if (state) {
                                     //applySourceReplacement(commandsOn, preprocessPath(pathPatternOn), i);
                                     //commandsOn = getSourceReplacement(commandsOn, preprocessPath(pathPatternOn), i);
-                                    interpretAndExecuteCommands(getSourceReplacement(commandsOn, preprocessPath(pathPatternOn, packagePath), i), packagePath, keyName); // Execute modified
+                                    interpretAndExecuteCommands(getSourceReplacement(commandsOn, preprocessPath(pathPatternOn, packagePath), i, packagePath), packagePath, keyName); // Execute modified
                                     setIniFileValue((packagePath+configFileName).c_str(), keyName.c_str(), "footer", "On");
                                 } else {
                                     //applySourceReplacement(commandsOff, preprocessPath(pathPatternOff), i);
                                     //commandsOff = getSourceReplacement(commandsOff, preprocessPath(pathPatternOff), i);
-                                    interpretAndExecuteCommands(getSourceReplacement(commandsOff, preprocessPath(pathPatternOff, packagePath), i), packagePath, keyName); // Execute modified
+                                    interpretAndExecuteCommands(getSourceReplacement(commandsOff, preprocessPath(pathPatternOff, packagePath), i, packagePath), packagePath, keyName); // Execute modified
                                     setIniFileValue((packagePath+configFileName).c_str(), keyName.c_str(), "footer", "Off");
                                 }
                             });
@@ -4106,7 +4106,7 @@ public:
                                             //commands = getSourceReplacement(commands, selectedItem, i);
                                             isDownloadCommand = false;
                                             runningInterpreter.store(true, std::memory_order_release);
-                                            enqueueInterpreterCommands(getSourceReplacement(commands, selectedItem, i), packagePath, keyName);
+                                            enqueueInterpreterCommands(getSourceReplacement(commands, selectedItem, i, packagePath), packagePath, keyName);
                                             startInterpreterThread();
                                             //modifiedCmds.clear();
                                             //runningInterpreter.store(true, std::memory_order_release);
@@ -4159,7 +4159,7 @@ public:
                                             //commands = getSourceReplacement(commands, selectedItem, i);
                                             isDownloadCommand = false;
                                             runningInterpreter.store(true, std::memory_order_release);
-                                            enqueueInterpreterCommands(getSourceReplacement(commands, selectedItem, i), packagePath, keyName);
+                                            enqueueInterpreterCommands(getSourceReplacement(commands, selectedItem, i, packagePath), packagePath, keyName);
                                             startInterpreterThread();
                                             //lastRunningInterpreter = true;
                                             //modifiedCmds.clear();
@@ -4212,12 +4212,12 @@ public:
                                     if (state) {
                                         //applySourceReplacement(commandsOn, preprocessPath(pathPatternOn), i);
                                         //commandsOn = getSourceReplacement(commandsOn, preprocessPath(pathPatternOn), i);
-                                        interpretAndExecuteCommands(getSourceReplacement(commandsOn, preprocessPath(pathPatternOn), i), packagePath, keyName); // Execute modified
+                                        interpretAndExecuteCommands(getSourceReplacement(commandsOn, preprocessPath(pathPatternOn), i, packagePath), packagePath, keyName); // Execute modified
                                         setIniFileValue((packagePath+configFileName).c_str(), keyName.c_str(), "footer", "On");
                                     } else {
                                         //applySourceReplacement(commandsOff, preprocessPath(pathPatternOff), i);
                                         //commandsOff = getSourceReplacement(commandsOff, preprocessPath(pathPatternOff), i);
-                                        interpretAndExecuteCommands(getSourceReplacement(commandsOff, preprocessPath(pathPatternOff), i), packagePath, keyName); // Execute modified
+                                        interpretAndExecuteCommands(getSourceReplacement(commandsOff, preprocessPath(pathPatternOff), i, packagePath), packagePath, keyName); // Execute modified
                                         setIniFileValue((packagePath+configFileName).c_str(), keyName.c_str(), "footer", "Off");
                                     }
                                 });
