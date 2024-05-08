@@ -386,6 +386,7 @@ void setIniFile(const std::string& fileToEdit, const std::string& desiredSection
 
     bool sectionFound = false;
     bool keyFound = false;
+    bool firstSection = true;  // Flag to control new line before first section
     std::string line, currentSection;
 
     std::string trimmedLine;
@@ -396,17 +397,22 @@ void setIniFile(const std::string& fileToEdit, const std::string& desiredSection
         trimmedLine = trim(line);
 
         if (trimmedLine.empty()) {
-            buffer << line << '\n';
-            continue;
+            continue;  // Skip empty lines but do not add them to the buffer
         }
 
         if (trimmedLine[0] == '[' && trimmedLine.back() == ']') {
             if (sectionFound && !keyFound) {
-                buffer << desiredKey << "=" << desiredValue << '\n';
+                buffer << desiredKey << "=" << desiredValue << '\n';  // Add missing key-value pair
                 keyFound = true;
+            }
+            if (!firstSection) {
+                buffer << '\n';  // Add a newline before the start of a new section
             }
             currentSection = trimmedLine.substr(1, trimmedLine.size() - 2);
             sectionFound = (currentSection == desiredSection);
+            buffer << line << '\n';
+            firstSection = false;
+            continue;
         }
 
         if (sectionFound && !keyFound && trimmedLine.find('=') != std::string::npos) {
@@ -421,10 +427,11 @@ void setIniFile(const std::string& fileToEdit, const std::string& desiredSection
         buffer << trimmedLine << '\n';
     }
 
-    if (!sectionFound) {
+    if (!sectionFound && !keyFound) {
+        if (!firstSection) buffer << '\n';  // Ensure newline before adding a new section, unless it's the first section
         buffer << '\n' << '[' << desiredSection << ']' << '\n';
-    }
-    if (!keyFound) {
+        buffer << desiredKey << "=" << desiredValue << '\n';
+    } else if (!keyFound) {
         buffer << desiredKey << "=" << desiredValue << '\n';
     }
 

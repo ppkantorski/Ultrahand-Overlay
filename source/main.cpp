@@ -566,7 +566,7 @@ public:
             if (currentTheme.empty())
                 currentTheme = "default";
             
-            std::vector<std::string> themeFilesList = getFilesListByWildcard(themesPath+"*.ini");
+            std::vector<std::string> themeFilesList = getFilesListByWildcards(themesPath+"*.ini");
             
             auto listItem = std::make_unique<tsl::elm::ListItem>(DEFAULT);
             
@@ -1043,8 +1043,10 @@ public:
                 setIniFileValue(settingsIniPath, entryName, "hide", state ? "true" : "false");
                 if (state)
                     reloadMenu = true; // this reloads before main menu
-                else
+                else {
+                    reloadMenu = true;
                     reloadMenu2 = true; // this reloads at main menu
+                }
             });
             list->addItem(toggleListItem.release());
             
@@ -1084,8 +1086,10 @@ public:
                     setIniFileValue(settingsIniPath, entryName, "use_launch_args", state ? "true" : "false");
                     if ((useOverlayLaunchArgs=="true") != state)
                         reloadMenu = true; // this reloads before main menu
-                    if (!state)
+                    if (!state) {
+                        reloadMenu = true;
                         reloadMenu2 = true; // this reloads at main menu
+                    }
                 });
                 list->addItem(toggleListItem.release());
             }
@@ -1913,7 +1917,7 @@ public:
                         //this->commands = getSourceReplacement(this->commands, selectedItem, i);
                         isDownloadCommand = false;
                         runningInterpreter.store(true, std::memory_order_release);
-                        enqueueInterpreterCommands(getSourceReplacement(commands, selectedItem, i), filePath, specificKey);
+                        enqueueInterpreterCommands(getSourceReplacement(commands, selectedItem, i, filePath), filePath, specificKey);
                         startInterpreterThread();
                         //lastRunningInterpreter = true;
                         //modifiedCmds.clear();
@@ -1955,10 +1959,10 @@ public:
 
                     tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemRaw, tsl::FocusDirection::None);
                     if (!state) {
-                        interpretAndExecuteCommands(getSourceReplacement(commandsOn, selectedItem, i), filePath, specificKey); // Execute modified 
+                        interpretAndExecuteCommands(getSourceReplacement(commandsOn, selectedItem, i, filePath), filePath, specificKey); // Execute modified 
                         //toggleListItem->setState(!state);
                     } else {
-                        interpretAndExecuteCommands(getSourceReplacement(commandsOff, selectedItem, i), filePath, specificKey); // Execute modified 
+                        interpretAndExecuteCommands(getSourceReplacement(commandsOff, selectedItem, i, filePath), filePath, specificKey); // Execute modified 
                         //toggleListItem->setState(!state);
                     }
                 });
@@ -2512,7 +2516,7 @@ public:
                             std::string forwarderPackagePath = getParentDirFromPath(packageSource);
                             std::string forwarderPackageIniName = getNameFromPath(packageSource);
 
-                            listItem->setClickListener([commands, forwarderPackagePath, forwarderPackageIniName](s64 keys) mutable {
+                            listItem->setClickListener([commands, keyName = option.first, &packagePath = this->packagePath, forwarderPackagePath, forwarderPackageIniName](s64 keys) mutable {
 
 
                                 if (simulatedSelect && !simulatedSelectComplete) {
@@ -2521,7 +2525,7 @@ public:
                                 }
                                 
                                 if (keys & KEY_A) {
-                                    interpretAndExecuteCommands(std::move(commands), "", ""); // Now correctly moved
+                                    interpretAndExecuteCommands(std::move(commands), packagePath, keyName); // Now correctly moved
                                     nestedMenuCount++;
                                     tsl::changeTo<PackageMenu>(forwarderPackagePath, "", "left", forwarderPackageIniName);
                                     simulatedSelectComplete = true;
@@ -2532,7 +2536,7 @@ public:
                         } else {
                             
                             //std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(option.second, pathReplace);
-                            listItem->setClickListener([commands, keyName = option.first, &packagePath = this->packagePath, &packageName = this->packageName, footer, lastSection, listItemPtr = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){})](uint64_t keys) {
+                            listItem->setClickListener([commands, keyName = option.first, &packagePath = this->packagePath,  &packageName = this->packageName, footer, lastSection, listItemPtr = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){})](uint64_t keys) {
                                 bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
                                 if (_runningInterpreter)
                                     return false;
@@ -2620,7 +2624,7 @@ public:
                                     //commands = getSourceReplacement(commands, selectedItem, i);
                                     isDownloadCommand = false;
                                     runningInterpreter.store(true, std::memory_order_release);
-                                    enqueueInterpreterCommands(getSourceReplacement(commands, selectedItem, i), packagePath, keyName);
+                                    enqueueInterpreterCommands(getSourceReplacement(commands, selectedItem, i, packagePath), packagePath, keyName);
                                     startInterpreterThread();
                                     //lastRunningInterpreter = true;
                                     //modifiedCmds.clear();
@@ -2672,12 +2676,12 @@ public:
                                 if (state) {
                                     //applySourceReplacement(commandsOn, preprocessPath(pathPatternOn), i);
                                     //commandsOn = getSourceReplacement(commandsOn, preprocessPath(pathPatternOn), i);
-                                    interpretAndExecuteCommands(getSourceReplacement(commandsOn, preprocessPath(pathPatternOn, packagePath), i), packagePath, keyName); // Execute modified
+                                    interpretAndExecuteCommands(getSourceReplacement(commandsOn, preprocessPath(pathPatternOn, packagePath), i, packagePath), packagePath, keyName); // Execute modified
                                     setIniFileValue((packagePath+configFileName).c_str(), keyName.c_str(), "footer", "On");
                                 } else {
                                     //applySourceReplacement(commandsOff, preprocessPath(pathPatternOff), i);
                                     //commandsOff = getSourceReplacement(commandsOff, preprocessPath(pathPatternOff), i);
-                                    interpretAndExecuteCommands(getSourceReplacement(commandsOff, preprocessPath(pathPatternOff, packagePath), i), packagePath, keyName); // Execute modified
+                                    interpretAndExecuteCommands(getSourceReplacement(commandsOff, preprocessPath(pathPatternOff, packagePath), i, packagePath), packagePath, keyName); // Execute modified
                                     setIniFileValue((packagePath+configFileName).c_str(), keyName.c_str(), "footer", "Off");
                                 }
                             });
@@ -3225,7 +3229,7 @@ public:
             
             
             // Load overlay files
-            std::vector<std::string> overlayFiles = getFilesListByWildcard(overlayDirectory+"*.ovl");
+            std::vector<std::string> overlayFiles = getFilesListByWildcards(overlayDirectory+"*.ovl");
             
             
             // Check if the overlays INI file exists
@@ -3245,6 +3249,7 @@ public:
                 //initializingSpawn = true; // Or any other appropriate action
             }
             overlaysIniFile.close(); // Close the file
+
 
             // load overlayList from overlaysIniFilePath.  this will be the overlayFilenames
             std::vector<std::string> overlayList;
@@ -3275,7 +3280,7 @@ public:
                         setIniFileValue(overlaysIniFilePath, overlayFileName, "star", "false");
                         setIniFileValue(overlaysIniFilePath, overlayFileName, "hide", "false");
                         setIniFileValue(overlaysIniFilePath, overlayFileName, "use_launch_args", "false");
-                        setIniFileValue(overlaysIniFilePath, overlayFileName, "launch_args", "");
+                        setIniFileValue(overlaysIniFilePath, overlayFileName, "launch_args", "''");
                         
                     } else {
                         // Read priority and starred status from ini
@@ -3316,7 +3321,7 @@ public:
                             overlaysIniData[overlayFileName].find("launch_args") != overlaysIniData[overlayFileName].end()) {
                             //overlayLaunchArgs = overlaysIniData[overlayFileName]["launch_args"];
                         } else
-                            setIniFileValue(overlaysIniFilePath, overlayFileName, "launch_args", "");
+                            setIniFileValue(overlaysIniFilePath, overlayFileName, "launch_args", "''");
                         
                         
                         // Get the name and version of the overlay file
@@ -3426,7 +3431,7 @@ public:
                                 
                                 setIniFileValue(settingsConfigIniPath, "ultrahand", "in_overlay", "true"); // this is handled within tesla.hpp
                                 std::string useOverlayLaunchArgs = parseValueFromIniSection(overlaysIniFilePath, overlayFileName, "use_launch_args");
-                                std::string overlayLaunchArgs = parseValueFromIniSection(overlaysIniFilePath, overlayFileName, "launch_args");
+                                std::string overlayLaunchArgs = removeQuotes(parseValueFromIniSection(overlaysIniFilePath, overlayFileName, "launch_args"));
                                 
                                 if (inHiddenMode) {
                                     setIniFileValue(settingsConfigIniPath, "ultrahand", "in_hidden_overlay", "true");
@@ -4101,7 +4106,7 @@ public:
                                             //commands = getSourceReplacement(commands, selectedItem, i);
                                             isDownloadCommand = false;
                                             runningInterpreter.store(true, std::memory_order_release);
-                                            enqueueInterpreterCommands(getSourceReplacement(commands, selectedItem, i), packagePath, keyName);
+                                            enqueueInterpreterCommands(getSourceReplacement(commands, selectedItem, i, packagePath), packagePath, keyName);
                                             startInterpreterThread();
                                             //modifiedCmds.clear();
                                             //runningInterpreter.store(true, std::memory_order_release);
@@ -4154,7 +4159,7 @@ public:
                                             //commands = getSourceReplacement(commands, selectedItem, i);
                                             isDownloadCommand = false;
                                             runningInterpreter.store(true, std::memory_order_release);
-                                            enqueueInterpreterCommands(getSourceReplacement(commands, selectedItem, i), packagePath, keyName);
+                                            enqueueInterpreterCommands(getSourceReplacement(commands, selectedItem, i, packagePath), packagePath, keyName);
                                             startInterpreterThread();
                                             //lastRunningInterpreter = true;
                                             //modifiedCmds.clear();
@@ -4207,12 +4212,12 @@ public:
                                     if (state) {
                                         //applySourceReplacement(commandsOn, preprocessPath(pathPatternOn), i);
                                         //commandsOn = getSourceReplacement(commandsOn, preprocessPath(pathPatternOn), i);
-                                        interpretAndExecuteCommands(getSourceReplacement(commandsOn, preprocessPath(pathPatternOn), i), packagePath, keyName); // Execute modified
+                                        interpretAndExecuteCommands(getSourceReplacement(commandsOn, preprocessPath(pathPatternOn), i, packagePath), packagePath, keyName); // Execute modified
                                         setIniFileValue((packagePath+configFileName).c_str(), keyName.c_str(), "footer", "On");
                                     } else {
                                         //applySourceReplacement(commandsOff, preprocessPath(pathPatternOff), i);
                                         //commandsOff = getSourceReplacement(commandsOff, preprocessPath(pathPatternOff), i);
-                                        interpretAndExecuteCommands(getSourceReplacement(commandsOff, preprocessPath(pathPatternOff), i), packagePath, keyName); // Execute modified
+                                        interpretAndExecuteCommands(getSourceReplacement(commandsOff, preprocessPath(pathPatternOff), i, packagePath), packagePath, keyName); // Execute modified
                                         setIniFileValue((packagePath+configFileName).c_str(), keyName.c_str(), "footer", "Off");
                                     }
                                 });
@@ -4443,6 +4448,7 @@ public:
                         tsl::pop();
                         returningToMain = true;
                         tsl::changeTo<MainMenu>();
+                        simulatedBackComplete = true;
                         return true;
                     }
 

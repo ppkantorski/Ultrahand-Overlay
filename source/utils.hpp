@@ -756,7 +756,7 @@ std::string replaceIniPlaceholder(const std::string& arg, const std::string& ini
 
 
 // this will modify `commands`
-std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std::vector<std::string>>& commands, const std::string& entry, size_t entryIndex) {
+std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std::vector<std::string>>& commands, const std::string& entry, size_t entryIndex, const std::string& packagePath = "") {
     
     bool inEristaSection = false;
     bool inMarikoSection = false;
@@ -798,7 +798,7 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
                 if ((commandName == "list_source") && listString.empty())
                     listString = removeQuotes(cmd[1]);
                 else if ((commandName == "json_file_source") && jsonPath.empty())
-                    jsonPath = preprocessPath(cmd[1]);
+                    jsonPath = preprocessPath(cmd[1], packagePath);
                 else if ((commandName == "json_source") && jsonString.empty())
                     jsonString = cmd[1];
             }
