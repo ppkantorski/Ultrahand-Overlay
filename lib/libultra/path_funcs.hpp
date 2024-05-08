@@ -186,55 +186,81 @@ void deleteFileOrDirectoryByPattern(const std::string& pathPattern) {
  * @param destinationPath The path of the destination where the file or directory will be moved.
  */
 void moveFileOrDirectory(const std::string& sourcePath, const std::string& destinationPath) {
-    struct stat sourceInfo;
+    struct stat sourceInfo, destinationInfo;
     
-    if (stat(sourcePath.c_str(), &sourceInfo) != 0) {
-        logMessage("Source does not exist: " + sourcePath);
-        return;
-    }
-
-    if (S_ISDIR(sourceInfo.st_mode)) {
-        // Ensure the destination directory exists or create it
-        std::string parentDestPath = getParentDirFromPath(destinationPath);
-        mkdir(parentDestPath.c_str(), 0755); // Simplified, check existing and permissions
-
-        std::unique_ptr<DIR, DirCloser> dir(opendir(sourcePath.c_str()));
-        if (!dir) {
-            logMessage("Failed to open source directory: " + sourcePath);
+    //logMessage("sourcePath: "+sourcePath);
+    //logMessage("destinationPath: "+destinationPath);
+    
+    if (stat(sourcePath.c_str(), &sourceInfo) == 0) {
+        // Source file or directory exists
+        
+        // Check if the destination path exists
+        bool destinationExists = (stat(getParentDirFromPath(destinationPath).c_str(), &destinationInfo) == 0);
+        if (!destinationExists)
+            createDirectory(getParentDirFromPath(destinationPath).c_str()); // Create the destination directory
+        
+        if (S_ISDIR(sourceInfo.st_mode)) {
+            // Source path is a directory
+            std::unique_ptr<DIR, DirCloser> dir(opendir(sourcePath.c_str()));
+            if (!dir) {
+                logMessage("Failed to open source directory: " + sourcePath);
+                return;
+            }
+            
+            struct dirent* entry;
+            
+            std::string sourceFilePath, destinationFilePath;
+            
+            while ((entry = readdir(dir.get())) != NULL) {
+                const std::string& fileOrFolderName = entry->d_name;
+                
+                if (fileOrFolderName != "." && fileOrFolderName != "..") {
+                    sourceFilePath = sourcePath + fileOrFolderName;
+                    destinationFilePath = destinationPath + fileOrFolderName;
+                    
+                    if (entry->d_type == DT_DIR) {
+                        // Append trailing slash to destination path for folders
+                        destinationFilePath += "/";
+                        sourceFilePath += "/";
+                    }
+                    
+                    moveFileOrDirectory(sourceFilePath, destinationFilePath);
+                }
+            }
+            
+            dir.reset();  // Explicitly close the directory
+            
+            // Delete the source directory
+            deleteFileOrDirectory(sourcePath);
+            
+            return;
+        } else {
+            // Source path is a regular file
+            std::string filename = getNameFromPath(sourcePath.c_str());
+            
+            std::string destinationFilePath = destinationPath;
+            
+            if (destinationPath[destinationPath.length() - 1] == '/') {
+                destinationFilePath += filename;
+            }
+            
+            
+            //logMessage("sourcePath: "+sourcePath);
+            //logMessage("destinationFilePath: "+destinationFilePath);
+            
+            deleteFileOrDirectory(destinationFilePath); // delete destiantion file for overwriting
+            if (rename(sourcePath.c_str(), destinationFilePath.c_str()) == -1) {
+                //printf("Failed to move file: %s\n", sourcePath.c_str());
+                //logMessage("Failed to move file: "+sourcePath);
+                return;
+            }
+            
             return;
         }
-
-        dirent* entry;
-        std::string fileName, fullSourcePath, fullDestPath;
-
-        while ((entry = readdir(dir.get())) != nullptr) {
-            fileName = entry->d_name;
-            if (fileName != "." && fileName != "..") {
-                fullSourcePath = sourcePath + "/" + fileName;
-                fullDestPath = destinationPath + "/" + fileName;
-                moveFileOrDirectory(fullSourcePath, fullDestPath);
-            }
-        }
-
-        // Close the directory before removing it
-        dir.reset();
-
-        // After moving all contents, remove the source directory
-        rmdir(sourcePath.c_str());
-    } else {
-        // Handle files
-        std::string destinationFilePath = destinationPath;
-        if (destinationPath.back() == '/') {
-            destinationFilePath += getFileName(sourcePath);
-        }
-
-        // Remove the destination file if it exists
-        remove(destinationFilePath.c_str());
-
-        if (rename(sourcePath.c_str(), destinationFilePath.c_str()) != 0) {
-            logMessage("Failed to move file: " + sourcePath);
-        }
     }
+    
+    // Move unsuccessful or source file/directory doesn't exist
+    return;
 }
 
 
