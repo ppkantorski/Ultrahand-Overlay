@@ -1150,16 +1150,10 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
         if (cmdSize >= 2) {
             std::string sourcePath = preprocessPath(cmd[1], packagePath);
             if (!isDangerousCombination(sourcePath)) {
-                if (sourcePath.find('*') != std::string::npos) {
-                    logMessage("deleteing files by wildcard.");
-                    logMessage("sourcePath: "+sourcePath);
+                if (sourcePath.find('*') != std::string::npos)
                     deleteFileOrDirectoryByPattern(sourcePath); // Delete files or directories by pattern
-                }
-                else {
+                else
                     deleteFileOrDirectory(sourcePath);
-                }
-            } else {
-                logMessage("dangerous combination.");
             }
         }
     } else if (commandName.compare(0, 7, "mirror_") == 0) {
