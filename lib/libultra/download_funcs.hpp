@@ -127,6 +127,7 @@ bool downloadFile(const std::string& url, const std::string& toDestination) {
     curl_easy_setopt(curl.get(), CURLOPT_XFERINFOFUNCTION, progressCallback);
     curl_easy_setopt(curl.get(), CURLOPT_XFERINFODATA, &downloadPercentage);
     curl_easy_setopt(curl.get(), CURLOPT_USERAGENT, "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36");
+    curl_easy_setopt(curl.get(), CURLOPT_SSLVERSION, CURL_SSLVERSION_TLSv1_2); // Force TLS 1.2, if necessary
     curl_easy_setopt(curl.get(), CURLOPT_FOLLOWLOCATION, 1L);
     //curl_easy_setopt(curl.get(), CURLOPT_MAXREDIRS, 5); // Limit the number of redirects
 
@@ -188,7 +189,7 @@ bool unzipFile(const std::string& zipFilePath, const std::string& toDestination)
 
     bool success = true;
     const zzip_ssize_t bufferSize = 4096;
-    
+
     std::string fileName, extractedFilePath;
     size_t firstColonPos, colonPos, pos;
     std::string directoryPath;
