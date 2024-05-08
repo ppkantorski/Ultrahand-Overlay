@@ -338,51 +338,57 @@ std::vector<std::string> getFilesListFromDirectory(const std::string& directoryP
 
 
 // Recursive function to handle wildcard directories and file patterns
-void handleDirectory(const std::string& basePath, const std::vector<std::string>& parts, size_t partIndex, std::vector<std::string>& results, bool isLastPart) {
+void handleDirectory(const std::string& basePath, const std::vector<std::string>& parts, size_t partIndex, std::vector<std::string>& results, bool directoryOnly) {
     if (partIndex >= parts.size()) return;
 
-    std::unique_ptr<DIR, DirCloser> dir(opendir(basePath.c_str()));
-    if (!dir) {
-        logMessage("Failed to open directory: " + basePath);
-        return;
-    }
+    DIR* rawDir = opendir(basePath.c_str());
+    if (!rawDir) return;
+    std::unique_ptr<DIR, DirCloser> dir(rawDir);
 
-    dirent* entry;
+    struct dirent* entry;
     while ((entry = readdir(dir.get())) != nullptr) {
         std::string entryName = entry->d_name;
         if (entryName == "." || entryName == "..") continue;
 
         std::string fullPath = basePath + (basePath.back() == '/' ? "" : "/") + entryName;
-        if (isDirectory(fullPath)) {
-            if (partIndex < parts.size() - 1 && fnmatch(parts[partIndex].c_str(), entryName.c_str(), FNM_NOESCAPE) == 0) {
-                handleDirectory(fullPath, parts, partIndex + 1, results, partIndex + 2 == parts.size());
-            } else if (partIndex == parts.size() - 1 && fnmatch(parts[partIndex].c_str(), entryName.c_str(), FNM_NOESCAPE) == 0) {
-                results.push_back(fullPath + "/");
-            }
-        } else if (isLastPart && fnmatch(parts[partIndex].c_str(), entryName.c_str(), FNM_NOESCAPE) == 0) {
-            results.push_back(fullPath);
+        bool isCurrentDir = isDirectory(fullPath);
+        bool match = fnmatch(parts[partIndex].c_str(), entryName.c_str(), FNM_NOESCAPE) == 0;
+
+        if (!match) continue; // Only process matches
+
+        // Continue deeper if it's a directory and not the last part
+        if (isCurrentDir && partIndex < parts.size() - 1) {
+            handleDirectory(fullPath, parts, partIndex + 1, results, directoryOnly && (partIndex + 1 == parts.size() - 1));
+        }
+
+        // Add to results if it's the last part and matches the directoryOnly condition
+        if (match && partIndex == parts.size() - 1 && (directoryOnly ? isCurrentDir : true)) {
+            results.push_back(fullPath + (isCurrentDir ? "/" : ""));
         }
     }
 }
 
 std::vector<std::string> getFilesListByWildcards(const std::string& pathPattern) {
     std::vector<std::string> results;
-    std::string basePath = "/";
+    bool directoryOnly = pathPattern.back() == '/';
+    size_t prefixEnd = pathPattern.find(":/") + 2;
+    std::string basePath = pathPattern.substr(0, prefixEnd);
     std::vector<std::string> parts;
 
-    size_t start = pathPattern.find(":/") + 2;
-    size_t pos = start;
-    while ((pos = pathPattern.find('/', pos + 1)) != std::string::npos) {
+    size_t start = prefixEnd, pos;
+    while ((pos = pathPattern.find('/', start)) != std::string::npos) {
         parts.push_back(pathPattern.substr(start, pos - start));
         start = pos + 1;
     }
-    parts.push_back(pathPattern.substr(start)); // Include the last segment
+    if (!directoryOnly) {
+        parts.push_back(pathPattern.substr(start)); // Include the last segment if not directoryOnly
+    }
 
-    handleDirectory(basePath, parts, 0, results, true);
-
-    //for (const auto& file : results) {
-    //    logMessage("Found file: " + file);
-    //}
+    handleDirectory(basePath, parts, 0, results, directoryOnly);
+    logMessage("pathPattern: "+pathPattern);
+    for (const auto& file : results) {
+        logMessage("Found: " + file);
+    }
     return results;
 }
 
