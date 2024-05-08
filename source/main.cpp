@@ -566,7 +566,7 @@ public:
             if (currentTheme.empty())
                 currentTheme = "default";
             
-            std::vector<std::string> themeFilesList = getFilesListByWildcard(themesPath+"*.ini");
+            std::vector<std::string> themeFilesList = getFilesListByWildcards(themesPath+"*.ini");
             
             auto listItem = std::make_unique<tsl::elm::ListItem>(DEFAULT);
             
@@ -3229,7 +3229,7 @@ public:
             
             
             // Load overlay files
-            std::vector<std::string> overlayFiles = getFilesListByWildcard(overlayDirectory+"*.ovl");
+            std::vector<std::string> overlayFiles = getFilesListByWildcards(overlayDirectory+"*.ovl");
             
             
             // Check if the overlays INI file exists
