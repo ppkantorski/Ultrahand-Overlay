@@ -385,10 +385,10 @@ std::vector<std::string> getFilesListByWildcards(const std::string& pathPattern)
     }
 
     handleDirectory(basePath, parts, 0, results, directoryOnly);
-    logMessage("pathPattern: "+pathPattern);
-    for (const auto& file : results) {
-        logMessage("Found: " + file);
-    }
+    //logMessage("pathPattern: "+pathPattern);
+    //for (const auto& file : results) {
+    //    logMessage("Found: " + file);
+    //}
     return results;
 }
 
