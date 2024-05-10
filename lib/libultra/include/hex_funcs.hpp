@@ -26,7 +26,7 @@
 #include <cstring> // Added for std::memcmp
 
 
-size_t HEX_BUFFER_SIZE = 4096;
+size_t HEX_BUFFER_SIZE = 4096*4;
 
 
 // For improving the speed of hexing consecutively with the same file and asciiPattern.
