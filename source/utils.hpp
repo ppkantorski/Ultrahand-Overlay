@@ -25,7 +25,7 @@
 #include <util.hpp> // Studious Pancake
 #include <tesla.hpp>
 
-
+#include <numeric>
 #include <queue>
 #include <mutex>
 #include <condition_variable>
@@ -90,92 +90,63 @@ void initializeTheme(std::string themeIniPath = themeConfigIniPath) {
             
             if (themedSection.count("clock_color") == 0)
                 setIniFileValue(themeIniPath, "theme", "clock_color", "#FFFFFF");
-            
             if (themedSection.count("bg_alpha") == 0)
                 setIniFileValue(themeIniPath, "theme", "bg_alpha", "13");
-            
             if (themedSection.count("bg_color") == 0)
                 setIniFileValue(themeIniPath, "theme", "bg_color", "#000000");
-            
             if (themedSection.count("seperator_alpha") == 0)
                 setIniFileValue(themeIniPath, "theme", "seperator_alpha", "7");
-            
             if (themedSection.count("seperator_color") == 0)
                 setIniFileValue(themeIniPath, "theme", "seperator_color", "#777777");
-            
             if (themedSection.count("battery_color") == 0)
                 setIniFileValue(themeIniPath, "theme", "battery_color", "#FFFFFF");
-            
             if (themedSection.count("text_color") == 0)
                 setIniFileValue(themeIniPath, "theme", "text_color", "#FFFFFF");
-            
             if (themedSection.count("info_text_color") == 0)
                 setIniFileValue(themeIniPath, "theme", "info_text_color", "#FFFFFF");
-            
             if (themedSection.count("version_text_color") == 0)
                 setIniFileValue(themeIniPath, "theme", "version_text_color", "#AAAAAA");
-            
             if (themedSection.count("on_text_color") == 0)
                 setIniFileValue(themeIniPath, "theme", "on_text_color", "#00FFDD");
-            
             if (themedSection.count("off_text_color") == 0)
                 setIniFileValue(themeIniPath, "theme", "off_text_color", "#AAAAAA");
-            
             if (themedSection.count("invalid_text_color") == 0)
                 setIniFileValue(themeIniPath, "theme", "invalid_text_color", "#FF0000");
-
             if (themedSection.count("inprogress_text_color") == 0)
                 setIniFileValue(themeIniPath, "theme", "inprogress_text_color", "#FFFF45");
-            
             if (themedSection.count("selection_text_color") == 0)
                 setIniFileValue(themeIniPath, "theme", "selection_text_color", "#FFFFFF");
-            
             if (themedSection.count("selection_bg_color") == 0)
                 setIniFileValue(themeIniPath, "theme", "selection_bg_color", "#000000");
-            
             if (themedSection.count("trackbar_color") == 0)
                 setIniFileValue(themeIniPath, "theme", "trackbar_color", "#555555");
-            
             if (themedSection.count("highlight_color_1") == 0)
                 setIniFileValue(themeIniPath, "theme", "highlight_color_1", "#2288CC");
-            
             if (themedSection.count("highlight_color_2") == 0)
                 setIniFileValue(themeIniPath, "theme", "highlight_color_2", "#88FFFF");
-
             if (themedSection.count("highlight_color_3") == 0)
                 setIniFileValue(themeIniPath, "theme", "highlight_color_3", "#FFFF45");
-
             if (themedSection.count("highlight_color_4") == 0)
                 setIniFileValue(themeIniPath, "theme", "highlight_color_4", "#F7253E");
-            
             if (themedSection.count("click_text_color") == 0)
                 setIniFileValue(themeIniPath, "theme", "click_text_color", "#FFFFFF");
-
             if (themedSection.count("click_alpha") == 0)
                 setIniFileValue(themeIniPath, "theme", "click_alpha", "7");
-
             if (themedSection.count("click_color") == 0)
                 setIniFileValue(themeIniPath, "theme", "click_color", "#F7253E");
-            
             if (themedSection.count("invert_bg_click_color") == 0)
                 setIniFileValue(themeIniPath, "theme", "invert_bg_click_color", "false");
-            
             if (themedSection.count("disable_selection_bg") == 0)
                 setIniFileValue(themeIniPath, "theme", "disable_selection_bg", "true");
-            
             // For disabling colorful logo
             if (themedSection.count("disable_colorful_logo") == 0)
                 setIniFileValue(themeIniPath, "theme", "disable_colorful_logo", "false");
-            
             if (themedSection.count("logo_color_1") == 0)
                 setIniFileValue(themeIniPath, "theme", "logo_color_1", "#FFFFFF");
-            
             if (themedSection.count("logo_color_2") == 0)
                 setIniFileValue(themeIniPath, "theme", "logo_color_2", "#FF0000");
-            
             if (themedSection.count("dynamic_logo_color_1") == 0)
                 setIniFileValue(themeIniPath, "theme", "dynamic_logo_color_1", "#00E669");
-            
             if (themedSection.count("dynamic_logo_color_2") == 0)
                 setIniFileValue(themeIniPath, "theme", "dynamic_logo_color_2", "#8080EA");
             
@@ -590,6 +561,7 @@ bool isDangerousCombination(const std::string& patternPath) {
 
 
 
+
 /**
  * @brief Loads and parses options from an INI file.
  *
@@ -604,7 +576,7 @@ std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadO
     if (!configFile && makeConfig) {
         std::ofstream configFileOut(configIniPath);
         if (configFileOut) {
-            configFileOut << "[REBOOT]\nreboot\n[SHUTDOWN]\nshutdown\n";
+            configFileOut << "[REBOOT]\nreboot\n\n[SHUTDOWN]\nshutdown\n";
             configFileOut.close();
         }
         configFile.open(configIniPath);  // Reopen the newly created file
@@ -615,9 +587,11 @@ std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadO
     }
 
     std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> options;
-    std::string line, currentSection;
+    std::string line, currentSection, part, arg;
     std::vector<std::vector<std::string>> sectionCommands;
-    bool isFirstEntry = true;
+    std::vector<std::string> commandParts;
+    bool isFirstEntry = true, inQuotes = false;
+    std::istringstream iss, argIss; // Declare outside the loop
 
     while (getline(configFile, line)) {
         // Properly remove carriage returns and newlines
@@ -627,27 +601,23 @@ std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadO
         if (line.empty() || line[0] == '#') continue; // Skip empty or comment lines
 
         if (line.front() == '[' && line.back() == ']') { // Section headers
-            if (isFirstEntry) { // Clear commands for the first entry to prevent loading header comments
-                sectionCommands.clear();
-                isFirstEntry = false;
-            }
             if (!currentSection.empty()) {
                 options.emplace_back(std::move(currentSection), std::move(sectionCommands));
                 sectionCommands.clear();
             }
             currentSection = line.substr(1, line.size() - 2);
-        } else { // Command lines within sections
-            std::istringstream iss(line);
-            std::vector<std::string> commandParts;
-            std::string part;
-            bool inQuotes = false;
-
+            isFirstEntry = false;
+        } else if (!isFirstEntry) { // Command lines within sections
+            commandParts.clear();
+            iss.clear(); // Clear any error state
+            iss.str(line); // Set the new line to parse
+            inQuotes = false;
             while (std::getline(iss, part, '\'')) { // Split on single quotes
                 if (inQuotes) {
                     commandParts.push_back(part); // Inside quotes, treat as a whole argument
                 } else {
-                    std::istringstream argIss(part);
-                    std::string arg;
+                    argIss.clear(); // Clear any error state
+                    argIss.str(part); // Set part to parse
                     while (argIss >> arg) {
                         commandParts.push_back(arg); // Split part outside quotes by spaces
                     }
@@ -669,26 +639,30 @@ std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadO
 
 // Function to populate selectedItemsListOff from a JSON array based on a key
 void populateSelectedItemsList(const std::string& sourceType, const std::string& jsonStringOrPath, const std::string& jsonKey, std::vector<std::string>& selectedItemsList) {
-    std::unique_ptr<json_t, JsonDeleter> jsonData;
+    std::unique_ptr<json_t, void(*)(json_t*)> jsonData(nullptr, json_decref);  // Proper deleter for JSON objects
 
-    if (sourceType == "json")
+    if (sourceType == "json") {
         jsonData.reset(stringToJson(jsonStringOrPath));
-    else if (sourceType == "json_file")
+    } else if (sourceType == "json_file") {
         jsonData.reset(readJsonFromFile(jsonStringOrPath));
+    }
 
-    if (jsonData && json_is_array(jsonData.get())) {
-        size_t arraySize = json_array_size(jsonData.get());
-        selectedItemsList.reserve(arraySize); // Preallocate memory for efficiency
-        
-        for (size_t i = 0; i < arraySize; ++i) {
-            json_t* item = json_array_get(jsonData.get(), i);
-            if (item && json_is_object(item)) {
-                json_t* keyValue = json_object_get(item, jsonKey.c_str());
-                if (keyValue && json_is_string(keyValue)) {
-                    const char* value = json_string_value(keyValue);
-                    if (value) {
-                        selectedItemsList.emplace_back(value);
-                    }
+    if (!jsonData || !json_is_array(jsonData.get())) {
+        return; // Early return if jsonData is null or not an array
+    }
+
+    json_t* jsonArray = jsonData.get();
+    size_t arraySize = json_array_size(jsonArray);
+    selectedItemsList.reserve(arraySize); // Preallocate memory for efficiency
+
+    for (size_t i = 0; i < arraySize; ++i) {
+        json_t* item = json_array_get(jsonArray, i);
+        if (json_is_object(item)) {
+            json_t* keyValue = json_object_get(item, jsonKey.c_str());
+            if (keyValue && json_is_string(keyValue)) {
+                const char* value = json_string_value(keyValue);
+                if (value) {
+                    selectedItemsList.emplace_back(value);
                 }
             }
         }
@@ -709,48 +683,43 @@ void populateSelectedItemsList(const std::string& sourceType, const std::string&
  * @return The input string with placeholders replaced by the replacement string.
  */
 std::string replacePlaceholder(const std::string& input, const std::string& placeholder, const std::string& replacement) {
+    size_t pos = input.find(placeholder);
+    if (pos == std::string::npos) {
+        return input;  // Returns original string directly if no placeholder is found
+    }
     std::string result = input;
-    size_t pos = result.find(placeholder);
-    if (pos != std::string::npos)
-        result.replace(pos, placeholder.length(), replacement);
+    result.replace(pos, placeholder.length(), replacement);
     return result;
 }
 
 
 
+
 // `{hex_file(customAsciiPattern, offsetStr, length)}`
 std::string replaceIniPlaceholder(const std::string& arg, const std::string& iniPath) {
-    std::string replacement = arg;
-    std::string searchString = "{ini_file(";
-    
-    size_t startPos = replacement.find(searchString);
-    size_t endPos = replacement.find(")}");
-    
-    if (startPos != std::string::npos && endPos != std::string::npos && endPos > startPos) {
-        std::string placeholderContent = replacement.substr(startPos + searchString.length(), endPos - startPos - searchString.length());
-        
-        // Split the placeholder content into its components (customAsciiPattern, offsetStr, length)
-        std::vector<std::string> components;
-        std::istringstream componentStream(placeholderContent);
-        std::string component;
-        
-        while (std::getline(componentStream, component, ','))
-            components.push_back(trim(component));
-        
-        if (components.size() == 2) {
-            // Extract individual components
-            std::string iniSection = removeQuotes(components[0]);
-            std::string iniKey = removeQuotes(components[1]);
-            components.clear();
-            
-            // Call the parsing function and replace the placeholder
-            std::string parsedResult = parseValueFromIniSection(iniPath, iniSection, iniKey);
-            
-            // Replace the entire placeholder with the parsed result
-            replacement.replace(startPos, endPos - startPos + searchString.length() + 2, parsedResult);
-        }
+    const std::string searchString = "{ini_file(";
+    size_t startPos = arg.find(searchString);
+    if (startPos == std::string::npos) {
+        return arg;
     }
-    
+
+    size_t endPos = arg.find(")}", startPos);
+    if (endPos == std::string::npos || endPos <= startPos) {
+        return arg;
+    }
+
+    std::string replacement = arg;  // Now we copy arg because we need to modify it
+
+    std::string placeholderContent = replacement.substr(startPos + searchString.length(), endPos - startPos - searchString.length());
+    size_t commaPos = placeholderContent.find(',');
+    if (commaPos != std::string::npos) {
+        std::string iniSection = removeQuotes(trim(placeholderContent.substr(0, commaPos)));
+        std::string iniKey = removeQuotes(trim(placeholderContent.substr(commaPos + 1)));
+
+        std::string parsedResult = parseValueFromIniSection(iniPath, iniSection, iniKey);
+        replacement.replace(startPos, endPos - startPos + searchString.length() + 2, parsedResult);
+    }
+
     return replacement;
 }
 
@@ -890,7 +859,7 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
 
 // forward declarartion
 void processCommand(const std::vector<std::string>& cmd, const std::string& packagePath, const std::string& selectedCommand);
-//void enqueueCommand(std::vector<std::string>&& command, const std::string& packagePath, const std::string& selectedCommand);
+
 
 /**
  * @brief Interpret and execute a list of commands.
@@ -902,7 +871,6 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
 void interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& commands, const std::string& packagePath="", const std::string& selectedCommand="") {
     bool inEristaSection = false;
     bool inMarikoSection = false;
-    //size_t tryCounter = 0;
     bool inTrySection = false;
     std::string listString, jsonString, jsonPath, hexPath, iniPath, lastArg;
 
@@ -934,23 +902,17 @@ void interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
         if (commandName == "try:") {
             if (inTrySection && commandSuccess)
                 break;
-
-            //tryCounter++;
-            //if (commandSuccess && tryCounter > 1)
-            //    break;
             commandSuccess = true;
-            //if (interpreterLogging)
-            //    logMessage("Try #" + std::to_string(tryCounter));
 
             inTrySection = true;
             commands.erase(commands.begin()); // Remove processed command
             continue;
-        } else if (stringToLowercase(commandName) == "erista:") {
+        } else if (commandName == "erista:") {
             inEristaSection = true;
             inMarikoSection = false;
             commands.erase(commands.begin()); // Remove processed command
             continue;
-        } else if (stringToLowercase(commandName) == "mariko:") {
+        } else if (commandName == "mariko:") {
             inEristaSection = false;
             inMarikoSection = true;
             commands.erase(commands.begin()); // Remove processed command
@@ -963,7 +925,6 @@ void interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
         }
 
         if ((inEristaSection && !inMarikoSection && usingErista) || (!inEristaSection && inMarikoSection && usingMariko) || (!inEristaSection && !inMarikoSection)) {
-            //std::vector<std::string> modifiedCmd = std::move(cmd);
             if (!inTrySection || (commandSuccess && inTrySection)) {
                 for (auto& arg : cmd) {
                     lastArg = "";
@@ -972,11 +933,7 @@ void interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
                         endPos = arg.find(")}");
                         if (endPos != std::string::npos && endPos > startPos) {
                             replacement = replaceHexPlaceholder(arg.substr(startPos, endPos - startPos + 2), hexPath);
-                            if (replacement.empty()) {
-                                replacement = "null";
-                                arg.replace(startPos, endPos - startPos + 2, replacement);
-                                break;
-                            }
+                            if (replacement.empty()) {replacement = "null"; arg.replace(startPos, endPos - startPos + 2, replacement); break;}
 
                             arg.replace(startPos, endPos - startPos + 2, replacement);
                             if (arg == lastArg) {
@@ -996,11 +953,7 @@ void interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
                         if (endPos != std::string::npos && endPos > startPos) {
                             replacement = replaceIniPlaceholder(arg.substr(startPos, endPos - startPos + 2), iniPath);
 
-                            if (replacement.empty()) {
-                                replacement = "null";
-                                arg.replace(startPos, endPos - startPos + 2, replacement);
-                                break;
-                            }
+                            if (replacement.empty()) {replacement = "null"; arg.replace(startPos, endPos - startPos + 2, replacement); break;}
 
                             arg.replace(startPos, endPos - startPos + 2, replacement);
                             
@@ -1022,11 +975,7 @@ void interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
                         if (endPos != std::string::npos && endPos > startPos) {
                             listIndex = std::stoi(arg.substr(startPos, endPos - startPos + 2));
                             replacement = stringToList(listString)[listIndex];
-                            if (replacement.empty()) {
-                                replacement = "null";
-                                arg.replace(startPos, endPos - startPos + 2, replacement);
-                                break;
-                            }
+                            if (replacement.empty()) {replacement = "null"; arg.replace(startPos, endPos - startPos + 2, replacement); break;}
 
                             arg.replace(startPos, endPos - startPos + 2, replacement);
                             if (arg == lastArg) {
@@ -1045,11 +994,7 @@ void interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
                         endPos = arg.find(")}");
                         if (endPos != std::string::npos && endPos > startPos) {
                             replacement = replaceJsonPlaceholder(arg.substr(startPos, endPos - startPos + 2), "json", jsonString);
-                            if (replacement.empty()) {
-                                replacement = UNAVAILABLE_SELECTION;
-                                arg.replace(startPos, endPos - startPos + 2, replacement);
-                                break;
-                            }
+                            if (replacement.empty()) {replacement = UNAVAILABLE_SELECTION; arg.replace(startPos, endPos - startPos + 2, replacement); break;}
 
                             arg.replace(startPos, endPos - startPos + 2, replacement);
                             if (arg == lastArg) {
@@ -1068,6 +1013,8 @@ void interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
                         endPos = arg.find(")}");
                         if (endPos != std::string::npos && endPos > startPos) {
                             replacement = replaceJsonPlaceholder(arg.substr(startPos, endPos - startPos + 2), "json_file", jsonPath);
+                            if (replacement.empty()) {replacement = UNAVAILABLE_SELECTION; arg.replace(startPos, endPos - startPos + 2, replacement); break;}
+
                             arg.replace(startPos, endPos - startPos + 2, replacement);
                             if (arg == lastArg) {
                                 if (interpreterLogging)
@@ -1081,7 +1028,6 @@ void interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
                             break;
                         lastArg = arg;
                     }
-                    // Similar optimization for other replacements
                 }
 
                 if (interpreterLogging) {
@@ -1115,7 +1061,6 @@ void interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
                     }
                 } else {
                     processCommand(cmd, packagePath, selectedCommand);
-                    //enqueueCommand(std::move(cmd), packagePath, selectedCommand);
                 }
             }
         }
@@ -1136,17 +1081,21 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             std::string sourcePath = preprocessPath(cmd[1], packagePath);
             createDirectory(sourcePath);
         }
-    } else if (commandName == "copy" || commandName == "cp") { // Copy command
+    } else if (commandName == "cp" || commandName == "copy") { // Copy command
         if (cmdSize >= 3) {
             std::string sourcePath = preprocessPath(cmd[1], packagePath);
             std::string destinationPath = preprocessPath(cmd[2], packagePath);
             
             if (sourcePath.find('*') != std::string::npos)
                 copyFileOrDirectoryByPattern(sourcePath, destinationPath); // Delete files or directories by pattern
-            else
-                copyFileOrDirectory(sourcePath, destinationPath);
+            else {
+                long long totalBytesCopied = 0;
+                long long totalSize = getTotalSize(sourcePath);  // Ensure this is calculated if needed.
+                
+                copyFileOrDirectory(sourcePath, destinationPath, &totalBytesCopied, totalSize);
+            }
         }
-    } else if (commandName == "delete" || commandName == "del") { // Delete command
+    } else if (commandName == "del" || commandName == "delete") { // Delete command
         if (cmdSize >= 2) {
             std::string sourcePath = preprocessPath(cmd[1], packagePath);
             if (!isDangerousCombination(sourcePath)) {
@@ -1171,7 +1120,7 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             //std::string action = (commandName == "mirror_copy" || commandName == "mirror_cp") ? "copy" : "delete";
             mirrorFiles(sourcePath, destinationPath, (commandName == "mirror_copy" || commandName == "mirror_cp") ? "copy" : "delete");
         }
-    } else if (commandName == "rename" || commandName == "move" || commandName == "mv") { // Rename command
+    } else if (commandName == "mv" || commandName == "move" || commandName == "rename" ) { // Rename command
         if (cmdSize >= 3) {
             std::string sourcePath = preprocessPath(cmd[1], packagePath);
             std::string destinationPath = preprocessPath(cmd[2], packagePath);
@@ -1206,12 +1155,11 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             std::string sourcePath = preprocessPath(cmd[1], packagePath);
             std::string desiredSection = removeQuotes(cmd[2]);
             std::string desiredKey = removeQuotes(cmd[3]);
-            std::string desiredValue = "";
-            for (size_t i = 4; i < cmdSize; ++i) {
-                desiredValue += cmd[i];
-                if (i < cmdSize - 1)
-                    desiredValue += " ";
-            }
+            std::string desiredValue = std::accumulate(cmd.begin() + 4, cmd.end(), std::string(""),
+                [](const std::string& a, const std::string& b) -> std::string {
+                    return a.empty() ? b : a + " " + b;
+                });
+            
             setIniFileValue(sourcePath.c_str(), desiredSection.c_str(), desiredKey.c_str(), desiredValue.c_str());
         }
     } else if (commandName == "set-ini-key") {
@@ -1219,15 +1167,14 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             std::string sourcePath = preprocessPath(cmd[1], packagePath);
             std::string desiredSection = removeQuotes(cmd[2]);
             std::string desiredKey = removeQuotes(cmd[3]);
-            std::string desiredNewKey;
-            for (size_t i = 4; i < cmdSize; ++i) {
-                desiredNewKey += cmd[i];
-                if (i < cmdSize - 1)
-                    desiredNewKey += " ";
-            }
+            std::string desiredNewKey = std::accumulate(cmd.begin() + 4, cmd.end(), std::string(),
+                [](const std::string& a, const std::string& b) -> std::string {
+                    return a.empty() ? b : a + " " + b;
+                });
+            
             setIniFileKey(sourcePath.c_str(), desiredSection.c_str(), desiredKey.c_str(), desiredNewKey.c_str());
         }
-    } else if (commandName == "set-footer") {
+    }else if (commandName == "set-footer") {
         if (cmdSize >= 2) {
             std::string desiredValue = removeQuotes(cmd[1]);
             setIniFileValue((packagePath+configFileName).c_str(), selectedCommand.c_str(), "footer", desiredValue.c_str());
@@ -1237,64 +1184,34 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             std::string sourcePath = preprocessPath(cmd[1], packagePath);
             const std::string& secondArg = removeQuotes(cmd[2]);
             const std::string& thirdArg = removeQuotes(cmd[3]);
+            std::string actionType = commandName.substr(7);  // Extracts the specific action type part of the command name
             
-            if (commandName == "hex-by-offset") {
+            if (actionType == "offset") {
                 hexEditByOffset(sourcePath.c_str(), secondArg.c_str(), thirdArg.c_str());
-            } else if (commandName == "hex-by-swap") {
-                if (cmdSize >= 5) {
-                    size_t occurrence = std::stoul(removeQuotes(cmd[4]));
-                    hexEditFindReplace(sourcePath, secondArg, thirdArg, occurrence);
-                } else {
-                    hexEditFindReplace(sourcePath, secondArg, thirdArg);
-                }
-            } else if (commandName == "hex-by-string") {
+            } else if (actionType == "swap") {
+                size_t occurrence = (cmdSize >= 5) ? std::stoul(removeQuotes(cmd[4])) : 1;
+                hexEditFindReplace(sourcePath, secondArg, thirdArg, occurrence);
+            } else if (actionType == "string") {
                 std::string hexDataToReplace = asciiToHex(secondArg);
-                std::string hexDataReplacement = asciiToHex(thirdArg);
-                
-                // Fix miss-matched string sizes
-                if (hexDataReplacement.length() < hexDataToReplace.length()) {
-                    hexDataReplacement += std::string(hexDataToReplace.length() - hexDataReplacement.length(), '\0');
-                } else if (hexDataReplacement.length() > hexDataToReplace.length()) {
-                    hexDataToReplace += std::string(hexDataReplacement.length() - hexDataToReplace.length(), '\0');
-                }
-                
-                if (cmdSize >= 5) {
-                    size_t occurrence = std::stoul(removeQuotes(cmd[4]));
-                    hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, occurrence);
-                } else {
-                    hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
-                }
-            } else if (commandName == "hex-by-decimal") {
+                std::string hexDataReplacement = padToEqualLength(asciiToHex(thirdArg), hexDataToReplace.length());
+                hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, cmdSize >= 5 ? std::stoul(removeQuotes(cmd[4])) : 1);
+            } else if (actionType == "decimal") {
                 std::string hexDataToReplace = decimalToHex(secondArg);
-                std::string hexDataReplacement = decimalToHex(thirdArg);
-                
-                if (cmdSize >= 5) {
-                    size_t occurrence = std::stoul(removeQuotes(cmd[4]));
-                    hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, occurrence);
-                } else {
-                    hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
-                }
-            } else if (commandName == "hex-by-rdecimal") {
+                std::string hexDataReplacement = padToEqualLength(decimalToHex(thirdArg), hexDataToReplace.length());
+                hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, cmdSize >= 5 ? std::stoul(removeQuotes(cmd[4])) : 1);
+            } else if (actionType == "rdecimal") {
                 std::string hexDataToReplace = decimalToReversedHex(secondArg);
-                std::string hexDataReplacement = decimalToReversedHex(thirdArg);
-                
-                if (cmdSize >= 5) {
-                    size_t occurrence = std::stoul(removeQuotes(cmd[4]));
-                    hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, occurrence);
-                } else {
-                    hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
-                }
-            } else if (commandName == "hex-by-custom-offset" ||
-                       commandName == "hex-by-custom-decimal-offset" ||
-                       commandName == "hex-by-custom-rdecimal-offset") {
+                std::string hexDataReplacement = padToEqualLength(decimalToReversedHex(thirdArg), hexDataToReplace.length());
+                hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, cmdSize >= 5 ? std::stoul(removeQuotes(cmd[4])) : 1);
+            } else if (actionType.starts_with("custom-offset") || actionType.starts_with("custom-decimal-offset") || actionType.starts_with("custom-rdecimal-offset")) {
                 if (cmdSize >= 5) {
                     std::string customPattern = removeQuotes(cmd[2]);
                     std::string offset = removeQuotes(cmd[3]);
                     std::string hexDataReplacement = removeQuotes(cmd[4]);
                     
-                    if (commandName == "hex-by-custom-decimal-offset") {
+                    if (actionType == "custom-decimal-offset") {
                         hexDataReplacement = decimalToHex(hexDataReplacement);
-                    } else if (commandName == "hex-by-custom-rdecimal-offset") {
+                    } else if (actionType == "custom-rdecimal-offset") {
                         hexDataReplacement = decimalToReversedHex(hexDataReplacement);
                     }
                     
