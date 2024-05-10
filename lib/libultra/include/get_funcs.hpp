@@ -20,6 +20,7 @@
 #pragma once
 //#include <sys/stat.h>
 #include <fstream>
+#include <cstring>
 #include <dirent.h>
 #include <fnmatch.h>
 #include <jansson.h>
@@ -27,10 +28,6 @@
 #include "string_funcs.hpp"
 
 
-// Constants for overlay module
-constexpr int OverlayLoaderModuleId = 348;
-constexpr Result ResultSuccess = MAKERESULT(0, 0);
-constexpr Result ResultParseError = MAKERESULT(OverlayLoaderModuleId, 1);
 
 
 
@@ -39,50 +36,6 @@ struct DirCloser {
         if (dir) closedir(dir);
     }
 };
-
-
-
-/**
- * @brief Retrieves overlay module information from a given file.
- *
- * @param filePath The path to the overlay module file.
- * @return A tuple containing the result code, module name, and display version.
- */
-std::tuple<Result, std::string, std::string> getOverlayInfo(const std::string& filePath) {
-    std::ifstream file(filePath, std::ios::binary);
-    if (!file) {
-        return {ResultParseError, "", ""};
-    }
-
-    NroHeader nroHeader;
-    NroAssetHeader assetHeader;
-    NacpStruct nacp;
-
-    // Read NRO header
-    file.seekg(sizeof(NroStart), std::ios::beg);
-    if (!file.read(reinterpret_cast<char*>(&nroHeader), sizeof(NroHeader))) {
-        return {ResultParseError, "", ""};
-    }
-
-    // Read asset header
-    file.seekg(nroHeader.size, std::ios::beg);
-    if (!file.read(reinterpret_cast<char*>(&assetHeader), sizeof(NroAssetHeader))) {
-        return {ResultParseError, "", ""};
-    }
-
-    // Read NACP struct
-    file.seekg(nroHeader.size + assetHeader.nacp.offset, std::ios::beg);
-    if (!file.read(reinterpret_cast<char*>(&nacp), sizeof(NacpStruct))) {
-        return {ResultParseError, "", ""};
-    }
-
-    // Assuming nacp.lang[0].name and nacp.display_version are null-terminated
-    return {
-        ResultSuccess,
-        std::string(nacp.lang[0].name),
-        std::string(nacp.display_version)
-    };
-}
 
 
 
