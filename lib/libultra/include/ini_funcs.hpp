@@ -383,7 +383,7 @@ void setIniFile(const std::string& fileToEdit, const std::string& desiredSection
     std::stringstream buffer;  // Use stringstream to buffer the output.
 
     bool sectionFound = false;
-    bool keyFound = false;
+    bool keyFoundInSection = false; // Flag to track if the key is already found and updated within the desired section
     bool firstSection = true;  // Flag to control new line before first section
     std::string line, currentSection;
 
@@ -399,25 +399,26 @@ void setIniFile(const std::string& fileToEdit, const std::string& desiredSection
         }
 
         if (trimmedLine[0] == '[' && trimmedLine.back() == ']') {
-            if (sectionFound && !keyFound) {
+            if (sectionFound && !keyFoundInSection) {
                 buffer << desiredKey << "=" << desiredValue << '\n';  // Add missing key-value pair
-                keyFound = true;
+                keyFoundInSection = true;
             }
             if (!firstSection) {
                 buffer << '\n';  // Add a newline before the start of a new section
             }
             currentSection = trimmedLine.substr(1, trimmedLine.size() - 2);
             sectionFound = (currentSection == desiredSection);
+            keyFoundInSection = false; // Reset the flag when entering a new section
             buffer << line << '\n';
             firstSection = false;
             continue;
         }
 
-        if (sectionFound && !keyFound && trimmedLine.find('=') != std::string::npos) {
+        if (sectionFound && !keyFoundInSection && trimmedLine.find('=') != std::string::npos) {
             delimiterPos = trimmedLine.find('=');
             key = trimmedLine.substr(0, delimiterPos);
             if (key == desiredKey) {
-                keyFound = true;
+                keyFoundInSection = true; // Mark the key as found and updated
                 trimmedLine = (desiredNewKey.empty() ? desiredKey : desiredNewKey) + "=" + desiredValue;
             }
         }
@@ -425,11 +426,11 @@ void setIniFile(const std::string& fileToEdit, const std::string& desiredSection
         buffer << trimmedLine << '\n';
     }
 
-    if (!sectionFound && !keyFound) {
+    if (!sectionFound && !keyFoundInSection) {
         if (!firstSection) buffer << '\n';  // Ensure newline before adding a new section, unless it's the first section
         buffer << '\n' << '[' << desiredSection << ']' << '\n';
         buffer << desiredKey << "=" << desiredValue << '\n';
-    } else if (!keyFound) {
+    } else if (!keyFoundInSection) {
         buffer << desiredKey << "=" << desiredValue << '\n';
     }
 
