@@ -28,8 +28,8 @@
 #include "debug_funcs.hpp"
 //#include "json_funcs.hpp"
 
-const size_t downloadBufferSize = 4096*2;
-const zzip_ssize_t unzipBufferSize = 4096;
+size_t DOWNLOAD_BUFFER_SIZE = 4096*4;
+size_t UNZIP_BUFFER_SIZE = 4096*4;
 
 
 // Shared atomic flag to indicate whether to abort the download operation
@@ -132,7 +132,7 @@ bool downloadFile(const std::string& url, const std::string& toDestination) {
     curl_easy_setopt(curl.get(), CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_2TLS); // Enable HTTP/2
     curl_easy_setopt(curl.get(), CURLOPT_SSLVERSION, CURL_SSLVERSION_TLSv1_2); // Force TLS 1.2
     curl_easy_setopt(curl.get(), CURLOPT_FOLLOWLOCATION, 1L);
-    //curl_easy_setopt(curl.get(), CURLOPT_BUFFERSIZE, downloadBufferSize); // Increase buffer size
+    curl_easy_setopt(curl.get(), CURLOPT_BUFFERSIZE, DOWNLOAD_BUFFER_SIZE); // Increase buffer size
 
     CURLcode result = curl_easy_perform(curl.get());
     file.close();
@@ -214,10 +214,10 @@ bool unzipFile(const std::string& zipFilePath, const std::string& toDestination)
     std::string fileName, extractedFilePath;
     std::string directoryPath;
     int progress;
-    
-    char buffer[unzipBufferSize];
+
+    char buffer[UNZIP_BUFFER_SIZE];
     zzip_ssize_t bytesRead;
-    
+
     // Second pass: Extract files and update progress
     while (zzip_dir_read(dir.get(), &entry)) {
         //if (abortUnzip.load(std::memory_order_acquire)) {
@@ -250,7 +250,7 @@ bool unzipFile(const std::string& zipFilePath, const std::string& toDestination)
             continue;
         }
 
-        while ((bytesRead = zzip_file_read(file.get(), buffer, unzipBufferSize)) > 0) {
+        while ((bytesRead = zzip_file_read(file.get(), buffer, UNZIP_BUFFER_SIZE)) > 0) {
             if (abortUnzip.load(std::memory_order_acquire)) {
                 logMessage("Aborting unzip operation during file extraction.");
                 outputFile.close();
