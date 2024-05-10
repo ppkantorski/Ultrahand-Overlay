@@ -53,143 +53,82 @@ static std::atomic<bool> triggerExit(false);
  * These paths are used within the Ultrahand-Overlay project to manage configuration files
  * and directories.
  */
-static const std::string bootPackageFileName = "boot_package.ini";
-static const std::string packageFileName = "package.ini";
-static const std::string configFileName = "config.ini";
-static const std::string themeFileName = "theme.ini";
-static const std::string settingsPath = "sdmc:/config/ultrahand/";
-static const std::string settingsConfigIniPath = settingsPath + configFileName;
-static const std::string langPath = settingsPath+"lang/";
-static const std::string themeConfigIniPath = settingsPath + themeFileName;
-static const std::string themesPath = settingsPath+"themes/";
-static const std::string downloadsPath = settingsPath+"downloads/";
-static const std::string packageDirectory = "sdmc:/switch/.packages/";
-static const std::string overlayDirectory = "sdmc:/switch/.overlays/";
-static const std::string teslaSettingsConfigIniPath = "sdmc:/config/tesla/"+configFileName;
-static const std::string overlaysIniFilePath = settingsPath + "overlays.ini";
-static const std::string packagesIniFilePath = settingsPath + "packages.ini";
-static const std::string ultrahandRepo = "https://github.com/ppkantorski/Ultrahand-Overlay/";
 
-static bool isDownloadCommand = false;
-static bool commandSuccess = false;
-static bool refreshGui = false;
-static bool interpreterLogging = false;
 
-static bool usingErista = util::IsErista();
-static bool usingMariko = util::IsMariko();
+bool isDownloadCommand = false;
+bool commandSuccess = false;
+bool refreshGui = false;
+bool interpreterLogging = false;
+
+bool usingErista = util::IsErista();
+bool usingMariko = util::IsMariko();
+
 
 
 void initializeTheme(std::string themeIniPath = themeConfigIniPath) {
     tsl::hlp::ini::IniData themesData;
     bool initialize = false;
-    
-    // write default theme
+
+    // Prepare a map of default settings
+    std::map<std::string, std::string> defaultSettings = {
+        {"clock_color", whiteColor},
+        {"bg_alpha", "13"},
+        {"bg_color", blackColor},
+        {"seperator_alpha", "7"},
+        {"seperator_color", "#777777"},
+        {"battery_color", whiteColor},
+        {"text_color", whiteColor},
+        {"info_text_color", whiteColor},
+        {"version_text_color", "#AAAAAA"},
+        {"on_text_color", "#00FFDD"},
+        {"off_text_color", "#AAAAAA"},
+        {"invalid_text_color", "#FF0000"},
+        {"inprogress_text_color", "#FFFF45"},
+        {"selection_text_color", whiteColor},
+        {"selection_bg_color", blackColor},
+        {"trackbar_color", "#555555"},
+        {"highlight_color_1", "#2288CC"},
+        {"highlight_color_2", "#88FFFF"},
+        {"highlight_color_3", "#FFFF45"},
+        {"highlight_color_4", "#F7253E"},
+        {"click_text_color", whiteColor},
+        {"click_alpha", "7"},
+        {"click_color", "#F7253E"},
+        {"invert_bg_click_color", falseStr},
+        {"disable_selection_bg", trueStr},
+        {"disable_colorful_logo", falseStr},
+        {"logo_color_1", whiteColor},
+        {"logo_color_2", "#FF0000"},
+        {"dynamic_logo_color_1", "#00E669"},
+        {"dynamic_logo_color_2", "#8080EA"}
+    };
+
     if (isFileOrDirectory(themeIniPath)) {
         themesData = getParsedDataFromIniFile(themeIniPath);
-        if (themesData.count("theme") > 0) {
-            auto& themedSection = themesData["theme"];
-            
-            if (themedSection.count("clock_color") == 0)
-                setIniFileValue(themeIniPath, "theme", "clock_color", "#FFFFFF");
-            if (themedSection.count("bg_alpha") == 0)
-                setIniFileValue(themeIniPath, "theme", "bg_alpha", "13");
-            if (themedSection.count("bg_color") == 0)
-                setIniFileValue(themeIniPath, "theme", "bg_color", "#000000");
-            if (themedSection.count("seperator_alpha") == 0)
-                setIniFileValue(themeIniPath, "theme", "seperator_alpha", "7");
-            if (themedSection.count("seperator_color") == 0)
-                setIniFileValue(themeIniPath, "theme", "seperator_color", "#777777");
-            if (themedSection.count("battery_color") == 0)
-                setIniFileValue(themeIniPath, "theme", "battery_color", "#FFFFFF");
-            if (themedSection.count("text_color") == 0)
-                setIniFileValue(themeIniPath, "theme", "text_color", "#FFFFFF");
-            if (themedSection.count("info_text_color") == 0)
-                setIniFileValue(themeIniPath, "theme", "info_text_color", "#FFFFFF");
-            if (themedSection.count("version_text_color") == 0)
-                setIniFileValue(themeIniPath, "theme", "version_text_color", "#AAAAAA");
-            if (themedSection.count("on_text_color") == 0)
-                setIniFileValue(themeIniPath, "theme", "on_text_color", "#00FFDD");
-            if (themedSection.count("off_text_color") == 0)
-                setIniFileValue(themeIniPath, "theme", "off_text_color", "#AAAAAA");
-            if (themedSection.count("invalid_text_color") == 0)
-                setIniFileValue(themeIniPath, "theme", "invalid_text_color", "#FF0000");
-            if (themedSection.count("inprogress_text_color") == 0)
-                setIniFileValue(themeIniPath, "theme", "inprogress_text_color", "#FFFF45");
-            if (themedSection.count("selection_text_color") == 0)
-                setIniFileValue(themeIniPath, "theme", "selection_text_color", "#FFFFFF");
-            if (themedSection.count("selection_bg_color") == 0)
-                setIniFileValue(themeIniPath, "theme", "selection_bg_color", "#000000");
-            if (themedSection.count("trackbar_color") == 0)
-                setIniFileValue(themeIniPath, "theme", "trackbar_color", "#555555");
-            if (themedSection.count("highlight_color_1") == 0)
-                setIniFileValue(themeIniPath, "theme", "highlight_color_1", "#2288CC");
-            if (themedSection.count("highlight_color_2") == 0)
-                setIniFileValue(themeIniPath, "theme", "highlight_color_2", "#88FFFF");
-            if (themedSection.count("highlight_color_3") == 0)
-                setIniFileValue(themeIniPath, "theme", "highlight_color_3", "#FFFF45");
-            if (themedSection.count("highlight_color_4") == 0)
-                setIniFileValue(themeIniPath, "theme", "highlight_color_4", "#F7253E");
-            if (themedSection.count("click_text_color") == 0)
-                setIniFileValue(themeIniPath, "theme", "click_text_color", "#FFFFFF");
-            if (themedSection.count("click_alpha") == 0)
-                setIniFileValue(themeIniPath, "theme", "click_alpha", "7");
-            if (themedSection.count("click_color") == 0)
-                setIniFileValue(themeIniPath, "theme", "click_color", "#F7253E");
-            if (themedSection.count("invert_bg_click_color") == 0)
-                setIniFileValue(themeIniPath, "theme", "invert_bg_click_color", "false");
-            if (themedSection.count("disable_selection_bg") == 0)
-                setIniFileValue(themeIniPath, "theme", "disable_selection_bg", "true");
-            // For disabling colorful logo
-            if (themedSection.count("disable_colorful_logo") == 0)
-                setIniFileValue(themeIniPath, "theme", "disable_colorful_logo", "false");
-            if (themedSection.count("logo_color_1") == 0)
-                setIniFileValue(themeIniPath, "theme", "logo_color_1", "#FFFFFF");
-            if (themedSection.count("logo_color_2") == 0)
-                setIniFileValue(themeIniPath, "theme", "logo_color_2", "#FF0000");
-            if (themedSection.count("dynamic_logo_color_1") == 0)
-                setIniFileValue(themeIniPath, "theme", "dynamic_logo_color_1", "#00E669");
-            if (themedSection.count("dynamic_logo_color_2") == 0)
-                setIniFileValue(themeIniPath, "theme", "dynamic_logo_color_2", "#8080EA");
-            
-        } else
+
+        if (themesData.count(themeSection) > 0) {
+            auto& themedSection = themesData[themeSection];
+
+            // Iterate through each default setting and apply if not already set
+            for (const auto& [key, value] : defaultSettings) {
+                if (themedSection.count(key) == 0) {
+                    setIniFileValue(themeIniPath, themeSection, key, value);
+                }
+            }
+        } else {
             initialize = true;
-    } else
+        }
+    } else {
         initialize = true;
-    
+    }
+
+    // If the file does not exist or the theme section is missing, initialize with all default values
     if (initialize) {
-        setIniFileValue(themeIniPath, "theme", "clock_color", "#FFFFFF");
-        setIniFileValue(themeIniPath, "theme", "battery_color", "#FFFFFF");
-        setIniFileValue(themeIniPath, "theme", "bg_alpha", "13");
-        setIniFileValue(themeIniPath, "theme", "bg_color", "#000000");
-        setIniFileValue(themeIniPath, "theme", "seperator_alpha", "7");
-        setIniFileValue(themeIniPath, "theme", "seperator_color", "#777777");
-        setIniFileValue(themeIniPath, "theme", "text_color", "#FFFFFF");
-        setIniFileValue(themeIniPath, "theme", "info_text_color", "#FFFFFF");
-        setIniFileValue(themeIniPath, "theme", "version_text_color", "#AAAAAA");
-        setIniFileValue(themeIniPath, "theme", "on_text_color", "#00FFDD");
-        setIniFileValue(themeIniPath, "theme", "off_text_color", "#AAAAAA");
-        setIniFileValue(themeIniPath, "theme", "invalid_text_color", "#FF0000");
-        setIniFileValue(themeIniPath, "theme", "inprogress_text_color", "#FFFF45");
-        setIniFileValue(themeIniPath, "theme", "selection_text_color", "#FFFFFF");
-        setIniFileValue(themeIniPath, "theme", "selection_bg_color", "#000000");
-        setIniFileValue(themeIniPath, "theme", "trackbar_color", "#555555");
-        setIniFileValue(themeIniPath, "theme", "highlight_color_1", "#2288CC");
-        setIniFileValue(themeIniPath, "theme", "highlight_color_2", "#88FFFF");
-        setIniFileValue(themeIniPath, "theme", "highlight_color_3", "#FFFF45");
-        setIniFileValue(themeIniPath, "theme", "highlight_color_4", "#F7253E");
-        setIniFileValue(themeIniPath, "theme", "click_text_color", "#FFFFFF");
-        setIniFileValue(themeIniPath, "theme", "click_alpha", "7");
-        setIniFileValue(themeIniPath, "theme", "click_color", "#F7253E");
-        setIniFileValue(themeIniPath, "theme", "invert_bg_click_color", "false");
-        setIniFileValue(themeIniPath, "theme", "disable_selection_bg", "true");
-        setIniFileValue(themeIniPath, "theme", "disable_colorful_logo", "false");
-        setIniFileValue(themeIniPath, "theme", "logo_color_1", "#FFFFFF");
-        setIniFileValue(themeIniPath, "theme", "logo_color_2", "#F7253E");
-        setIniFileValue(themeIniPath, "theme", "dynamic_logo_color_1", "#00E669");
-        setIniFileValue(themeIniPath, "theme", "dynamic_logo_color_2", "#8080EA");
+        for (const auto& [key, value] : defaultSettings) {
+            setIniFileValue(themeIniPath, themeSection, key, value);
+        }
     }
 }
-
 
 
 /**
@@ -205,10 +144,10 @@ void copyTeslaKeyComboToUltrahand() {
     bool initializeTesla = false;
     if (isFileOrDirectory(teslaSettingsConfigIniPath)) {
         parsedData = getParsedDataFromIniFile(teslaSettingsConfigIniPath);
-        if (parsedData.count("tesla") > 0) {
-            auto& teslaSection = parsedData["tesla"];
-            if (teslaSection.count("key_combo") > 0) {
-                keyCombo = teslaSection["key_combo"];
+        if (parsedData.count(teslaStr) > 0) {
+            auto& teslaSection = parsedData[teslaStr];
+            if (teslaSection.count(keyComboStr) > 0) {
+                keyCombo = teslaSection[keyComboStr];
             } else
                 initializeTesla = true;
         } else
@@ -217,23 +156,23 @@ void copyTeslaKeyComboToUltrahand() {
         initializeTesla = true;
     
     if (initializeTesla)
-        setIniFileValue(teslaSettingsConfigIniPath, "tesla", "key_combo", keyCombo, legacyComment);
+        setIniFileValue(teslaSettingsConfigIniPath, teslaStr, keyComboStr, keyCombo, legacyComment);
     
     
     if (isFileOrDirectory(settingsConfigIniPath)) {
         parsedData = getParsedDataFromIniFile(settingsConfigIniPath);
-        if (parsedData.count("ultrahand") > 0) {
-            auto& ultrahandSection = parsedData["ultrahand"];
-            if (ultrahandSection.count("key_combo") == 0) { // no entry present
+        if (parsedData.count(projectName) > 0) {
+            auto& ultrahandSection = parsedData[projectName];
+            if (ultrahandSection.count(keyComboStr) == 0) { // no entry present
                 // Write the key combo to the destination file
-                setIniFileValue(settingsConfigIniPath, "ultrahand", "key_combo", keyCombo);
-                setIniFileValue(teslaSettingsConfigIniPath, "tesla", "key_combo", keyCombo, legacyComment);
+                setIniFileValue(settingsConfigIniPath, projectName, keyComboStr, keyCombo);
+                setIniFileValue(teslaSettingsConfigIniPath, teslaStr, keyComboStr, keyCombo, legacyComment);
             }
         }
     } else {
         // Write the key combo to the destination file
-        setIniFileValue(settingsConfigIniPath, "ultrahand", "key_combo", keyCombo);
-        setIniFileValue(teslaSettingsConfigIniPath, "tesla", "key_combo", keyCombo, legacyComment);
+        setIniFileValue(settingsConfigIniPath, projectName, keyComboStr, keyCombo);
+        setIniFileValue(teslaSettingsConfigIniPath, teslaStr, keyComboStr, keyCombo, legacyComment);
     }
     tsl::impl::parseOverlaySettings();
 }
@@ -289,8 +228,9 @@ std::tuple<Result, std::string, std::string> getOverlayInfo(const std::string& f
 
 
 void addHelpInfo(auto& list) {
-    tsl::Color infoTextColor = tsl::RGB888(parseValueFromIniSection(themeConfigIniPath, "theme", "info_text_color"), "#FFFFFF");
-    tsl::Color onTextColor = tsl::RGB888(parseValueFromIniSection(themeConfigIniPath, "theme", "on_text_color"), "#00FFDD");
+
+    tsl::Color infoTextColor = tsl::RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "info_text_color"), whiteColor);
+    tsl::Color onTextColor = tsl::RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "on_text_color"), "#00FFDD");
     
     // Add a section break with small text to indicate the "Commands" section
     list->addItem(new tsl::elm::CategoryHeader(USER_GUIDE));
@@ -335,14 +275,14 @@ void addHelpInfo(auto& list) {
 }
 
 
-void addAppInfo(auto& list, auto& packageHeader, std::string type = "package") {
+void addAppInfo(auto& list, auto& packageHeader, std::string type = packageStr) {
     // Add a section break with small text to indicate the "Commands" section
-    if (type == "package")
+    if (type == packageStr)
         list->addItem(new tsl::elm::CategoryHeader(PACKAGE_INFO));
     else
         list->addItem(new tsl::elm::CategoryHeader(OVERLAY_INFO));
     
-    tsl::Color infoTextColor = tsl::RGB888(parseValueFromIniSection(themeConfigIniPath, "theme", "info_text_color"), "#FFFFFF");
+    tsl::Color infoTextColor = tsl::RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "info_text_color"), whiteColor);
     
     constexpr int maxLineLength = 28;  // Adjust the maximum line length as needed
     constexpr int lineHeight = 20;  // Adjust the line height as needed
@@ -692,7 +632,7 @@ std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadO
 void populateSelectedItemsList(const std::string& sourceType, const std::string& jsonStringOrPath, const std::string& jsonKey, std::vector<std::string>& selectedItemsList) {
     std::unique_ptr<json_t, void(*)(json_t*)> jsonData(nullptr, json_decref);  // Proper deleter for JSON objects
 
-    if (sourceType == "json") {
+    if (sourceType == _jsonStr) {
         jsonData.reset(stringToJson(jsonStringOrPath));
     } else if (sourceType == "json_file") {
         jsonData.reset(readJsonFromFile(jsonStringOrPath));
@@ -853,7 +793,7 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
                     if (endPos != std::string::npos && endPos > startPos) {
                         replacement = stringToList(listString)[entryIndex];
                         if (replacement.empty()) {
-                            replacement = "null";
+                            replacement = nullStr;
                             modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
                             break;
                         }
@@ -870,7 +810,7 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
                     if (endPos != std::string::npos && endPos > startPos) {
                         replacement = replaceJsonPlaceholder(modifiedArg.substr(startPos, endPos - startPos + 2), "json_source", jsonString);
                         if (replacement.empty()) {
-                            replacement = "null";
+                            replacement = nullStr;
                             modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
                             break;
                         }
@@ -887,7 +827,7 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
                     if (endPos != std::string::npos && endPos > startPos) {
                         replacement = replaceJsonPlaceholder(modifiedArg.substr(startPos, endPos - startPos + 2), "json_file_source", jsonPath);
                         if (replacement.empty()) {
-                            replacement = "null";
+                            replacement = nullStr;
                             modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
                             break;
                         }
@@ -922,6 +862,33 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
  * @param commands A list of commands, where each command is represented as a vector of strings.
  */
 void interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& commands, const std::string& packagePath="", const std::string& selectedCommand="") {
+
+    auto settingsData = getParsedDataFromIniFile(settingsConfigIniPath);
+    if (settingsData.count(projectName) > 0) {
+        auto& ultrahandSection = settingsData[projectName];
+        if (settingsData.count(projectName) > 0) {
+            // Directly update buffer sizes without a map
+            std::string section = "copy_buffer_size";
+            if (ultrahandSection.count(section) > 0) {
+                COPY_BUFFER_SIZE = std::stoi(ultrahandSection[section]);
+            }
+            section = "unzip_buffer_size";
+            if (ultrahandSection.count(section) > 0) {
+                UNZIP_BUFFER_SIZE = std::stoi(ultrahandSection[section]);
+            }
+            section = "download_buffer_size";
+            if (ultrahandSection.count(section) > 0) {
+                DOWNLOAD_BUFFER_SIZE = std::stoi(ultrahandSection[section]);
+            }
+            section = "hex_buffer_size";
+            if (ultrahandSection.count(section) > 0) {
+                HEX_BUFFER_SIZE = std::stoi(ultrahandSection[section]);
+            }
+        }
+    }
+    settingsData.clear();
+
+
     bool inEristaSection = false;
     bool inMarikoSection = false;
     bool inTrySection = false;
@@ -986,13 +953,13 @@ void interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
                         endPos = arg.find(")}");
                         if (endPos != std::string::npos && endPos > startPos) {
                             replacement = replaceHexPlaceholder(arg.substr(startPos, endPos - startPos + 2), hexPath);
-                            if (replacement.empty()) {replacement = "null"; arg.replace(startPos, endPos - startPos + 2, replacement); break;}
+                            if (replacement.empty()) {replacement = nullStr; arg.replace(startPos, endPos - startPos + 2, replacement); break;}
 
                             arg.replace(startPos, endPos - startPos + 2, replacement);
                             if (arg == lastArg) {
                                 if (interpreterLogging)
                                     logMessage("failed replacement ard: "+arg);
-                                arg.replace(startPos, endPos - startPos + 2, "null"); // fall back replacement value of null
+                                arg.replace(startPos, endPos - startPos + 2, nullStr); // fall back replacement value of null
                                 commandSuccess = false;
                                 break;
                             }
@@ -1006,7 +973,7 @@ void interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
                         if (endPos != std::string::npos && endPos > startPos) {
                             replacement = replaceIniPlaceholder(arg.substr(startPos, endPos - startPos + 2), iniPath);
 
-                            if (replacement.empty()) {replacement = "null"; arg.replace(startPos, endPos - startPos + 2, replacement); break;}
+                            if (replacement.empty()) {replacement = nullStr; arg.replace(startPos, endPos - startPos + 2, replacement); break;}
 
                             arg.replace(startPos, endPos - startPos + 2, replacement);
                             
@@ -1014,7 +981,7 @@ void interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
                             if (arg == lastArg) {
                                 if (interpreterLogging)
                                     logMessage("failed replacement ard: "+arg);
-                                arg.replace(startPos, endPos - startPos + 2, "null"); // fall back replacement value of null
+                                arg.replace(startPos, endPos - startPos + 2, nullStr); // fall back replacement value of null
                                 commandSuccess = false;
                                 break;
                             }
@@ -1028,13 +995,13 @@ void interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
                         if (endPos != std::string::npos && endPos > startPos) {
                             listIndex = std::stoi(arg.substr(startPos, endPos - startPos + 2));
                             replacement = stringToList(listString)[listIndex];
-                            if (replacement.empty()) {replacement = "null"; arg.replace(startPos, endPos - startPos + 2, replacement); break;}
+                            if (replacement.empty()) {replacement = nullStr; arg.replace(startPos, endPos - startPos + 2, replacement); break;}
 
                             arg.replace(startPos, endPos - startPos + 2, replacement);
                             if (arg == lastArg) {
                                 if (interpreterLogging)
                                     logMessage("failed replacement ard: "+arg);
-                                arg.replace(startPos, endPos - startPos + 2, "null"); // fall back replacement value of null
+                                arg.replace(startPos, endPos - startPos + 2, nullStr); // fall back replacement value of null
                                 commandSuccess = false;
                                 break;
                             }
@@ -1046,7 +1013,7 @@ void interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
                         startPos = arg.find("{json(");
                         endPos = arg.find(")}");
                         if (endPos != std::string::npos && endPos > startPos) {
-                            replacement = replaceJsonPlaceholder(arg.substr(startPos, endPos - startPos + 2), "json", jsonString);
+                            replacement = replaceJsonPlaceholder(arg.substr(startPos, endPos - startPos + 2), _jsonStr, jsonString);
                             if (replacement.empty()) {replacement = UNAVAILABLE_SELECTION; arg.replace(startPos, endPos - startPos + 2, replacement); break;}
 
                             arg.replace(startPos, endPos - startPos + 2, replacement);
@@ -1092,11 +1059,11 @@ void interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
 
                 const size_t cmdSize = cmd.size();
 
-                if (commandName == "list") {
+                if (commandName == _listStr) {
                     if (cmdSize >= 2) {
                         listString = removeQuotes(cmd[1]);
                     }
-                } else if (commandName == "json") {
+                } else if (commandName == _jsonStr) {
                     if (cmdSize >= 2) {
                         jsonString = cmd[1];
                     }
@@ -1203,6 +1170,13 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             std::string desiredSection = removeQuotes(cmd[2]);
             removeIniSection(sourcePath.c_str(), desiredSection.c_str());
         }
+    } else if (commandName == "remove-ini-key") {
+        if (cmdSize >= 3) {
+            std::string sourcePath = preprocessPath(cmd[1], packagePath);
+            std::string desiredSection = removeQuotes(cmd[2]);
+            std::string desiredKey = removeQuotes(cmd[3]);
+            removeIniKey(sourcePath.c_str(), desiredSection.c_str(), desiredKey.c_str());
+        }
     } else if (commandName == "set-ini-val" || commandName == "set-ini-value") {
         if (cmdSize >= 5) {
             std::string sourcePath = preprocessPath(cmd[1], packagePath);
@@ -1230,7 +1204,7 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
     }else if (commandName == "set-footer") {
         if (cmdSize >= 2) {
             std::string desiredValue = removeQuotes(cmd[1]);
-            setIniFileValue((packagePath+configFileName).c_str(), selectedCommand.c_str(), "footer", desiredValue.c_str());
+            setIniFileValue((packagePath+configFileName).c_str(), selectedCommand.c_str(), footerStr, desiredValue.c_str());
         }
     } else if (commandName.compare(0, 7, "hex-by-") == 0) {
         if (cmdSize >= 4) {
@@ -1452,9 +1426,9 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
         if (cmdSize >= 2) {
             std::string togglePattern = removeQuotes(cmd[1]);
             lblInitialize();
-            if (togglePattern == "on")
+            if (togglePattern == lowerOnStr)
                 lblSwitchBacklightOn(0);
-            else if (togglePattern == "off")
+            else if (togglePattern == lowerOffStr)
                 lblSwitchBacklightOff(0);
             lblExit();
         }
@@ -1549,6 +1523,11 @@ void closeInterpreterThread() {
 void startInterpreterThread(int stackSize = 0x8000) {
     //if (isDownloadCommand)
     //    stackSize = 0x8000;
+
+    std::string interpreterHeap = parseValueFromIniSection(settingsConfigIniPath, projectName, "interpreter_heap");
+    if (!interpreterHeap.empty())
+        stackSize = std::stoi(interpreterHeap, nullptr, 16);  // Convert from base 16
+
     interpreterThreadExit.store(false, std::memory_order_release);
 
     int result = threadCreate(&interpreterThread, backgroundInterpreter, nullptr, nullptr, stackSize, 0x2B, -2);
@@ -1568,12 +1547,5 @@ void enqueueInterpreterCommands(std::vector<std::vector<std::string>>&& commands
         std::lock_guard<std::mutex> lock(queueMutex);
         interpreterQueue.emplace(std::move(commands), packagePath, selectedCommand);
     }
-
-    // Start a new interpreter thread
-    //if (isDownloadCommand) {
-    //    startInterpreterThread(0x8000);
-    //} else {
-    //    startInterpreterThread();
-    //}
     queueCondition.notify_one();
 }
