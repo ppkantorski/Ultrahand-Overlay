@@ -17,6 +17,7 @@
 
 #pragma once
 #include <fstream>
+#include <mutex>
 
 // Specify the log file path
 const std::string logFilePath = "sdmc:/config/ultrahand/log.txt";
