@@ -1,6 +1,6 @@
 # libultra
 
-![Ultrahand Logo](.pics/banner.png)
+![Ultrahand Logo](https://github.com/ppkantorski/Ultrahand-Overlay/blob/dev/.pics/banner.png)
 
 
 ## Overview
