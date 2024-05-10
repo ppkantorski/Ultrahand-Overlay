@@ -172,8 +172,9 @@ std::string getParentDirNameFromPath(const std::string& path, size_t level = 0) 
     // Split the path into individual directories
     std::vector<std::string> directories;
     size_t pos = 0;
+    size_t nextPos;
     while (pos != std::string::npos) {
-        size_t nextPos = path.find('/', pos + 1);
+        nextPos = path.find('/', pos + 1);
         directories.push_back(path.substr(pos + 1, nextPos - pos - 1));
         pos = nextPos;
     }
@@ -232,13 +233,13 @@ std::vector<std::string> getSubdirectories(const std::string& directoryPath) {
     if (dir) {
         std::string entryName, fullPath;
         dirent* entry;
+        struct stat entryStat;
         while ((entry = readdir(dir.get())) != nullptr) {
             entryName = entry->d_name;
             
             // Exclude current directory (.) and parent directory (..)
             if (entryName != "." && entryName != "..") {
                 fullPath = directoryPath + "/" + entryName;
-                struct stat entryStat;
                 
                 if (stat(fullPath.c_str(), &entryStat) == 0 && S_ISDIR(entryStat.st_mode)) {
                     subdirectories.push_back(entryName);
@@ -311,14 +312,17 @@ void handleDirectory(const std::string& basePath, const std::vector<std::string>
     std::unique_ptr<DIR, DirCloser> dir(rawDir);
 
     struct dirent* entry;
+    std::string entryName, fullPath;
+
+    bool isCurrentDir, match;
     while ((entry = readdir(dir.get())) != nullptr) {
-        std::string entryName = entry->d_name;
+        entryName = entry->d_name;
         if (entryName == "." || entryName == "..") continue;
 
-        std::string fullPath = basePath + (basePath.back() == '/' ? "" : "/") + entryName;
-        bool isCurrentDir = isDirectoryCached(entry, fullPath);
+        fullPath = basePath + (basePath.back() == '/' ? "" : "/") + entryName;
+        isCurrentDir = isDirectoryCached(entry, fullPath);
 
-        bool match = fnmatch(parts[partIndex].c_str(), entryName.c_str(), FNM_NOESCAPE) == 0;
+        match = fnmatch(parts[partIndex].c_str(), entryName.c_str(), FNM_NOESCAPE) == 0;
         if (!match) continue; // Only process matches
 
         if (isCurrentDir && partIndex < parts.size() - 1) {
