@@ -10,8 +10,7 @@
  *   reusability of code within the project.
  *
  *   These utilities are designed to operate independently, providing robust tools to
- *   support complex overlay functionalities and interactions without dependency on
- *   external libraries such as libtesla.
+ *   support complex overlay functionalities and interactions.
  *
  *   For the latest updates and contributions, visit the project's GitHub repository:
  *   GitHub Repository: https://github.com/ppkantorski/Ultrahand-Overlay
