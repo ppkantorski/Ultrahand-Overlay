@@ -27,9 +27,9 @@
 #define STBTT_STATIC
 #define TESLA_INIT_IMPL
 
+#include <ultra.hpp>
 #include <tesla.hpp>
 #include <utils.hpp>
-#include <fstream>
 
 // Overlay booleans
 static bool returningToMain = false;
@@ -3162,63 +3162,80 @@ public:
         
         bool settingsLoaded = false;
         if (isFileOrDirectory(settingsConfigIniPath)) {
-            settingsData = getParsedDataFromIniFile(settingsConfigIniPath);
+            auto settingsData = getParsedDataFromIniFile(settingsConfigIniPath);
             if (settingsData.count("ultrahand") > 0) {
                 auto& ultrahandSection = settingsData["ultrahand"];
-                if (ultrahandSection.count("in_overlay") > 0)
-                    settingsLoaded = true;
-                
-                if (ultrahandSection.count("hide_user_guide") > 0)
+        
+                // Handle each setting by checking existence and updating accordingly
+                if (ultrahandSection.count("hide_user_guide") > 0) {
                     hideUserGuide = ultrahandSection["hide_user_guide"];
-                else {
+                } else {
                     setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_user_guide", "false");
                 }
-                
-                if (ultrahandSection.count("clean_version_labels") > 0)
+        
+                if (ultrahandSection.count("clean_version_labels") > 0) {
                     cleanVersionLabels = ultrahandSection["clean_version_labels"];
-                else {
+                } else {
                     setIniFileValue(settingsConfigIniPath, "ultrahand", "clean_version_labels", "true");
                     cleanVersionLabels = "false";
                 }
-                
-                // For hiding the versions of overlays/packages
-                if (ultrahandSection.count("hide_overlay_versions") > 0)
+        
+                // Manage visibility settings with similar pattern
+                if (ultrahandSection.count("hide_overlay_versions") > 0) {
                     hideOverlayVersions = ultrahandSection["hide_overlay_versions"];
-                else {
+                } else {
                     setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_overlay_versions", "false");
                     hideOverlayVersions = "false";
                 }
-                if (ultrahandSection.count("hide_package_versions") > 0)
+        
+                if (ultrahandSection.count("hide_package_versions") > 0) {
                     hidePackageVersions = ultrahandSection["hide_package_versions"];
-                else {
+                } else {
                     setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_package_versions", "false");
                     hidePackageVersions = "false";
                 }
-                
-                if (ultrahandSection.count("default_lang") > 0)
+        
+                if (ultrahandSection.count("default_lang") > 0) {
                     defaultLang = ultrahandSection["default_lang"];
-                else
+                } else {
                     setIniFileValue(settingsConfigIniPath, "ultrahand", "default_lang", defaultLang);
-                
-                if (ultrahandSection.count("datetime_format") == 0)
+                }
+        
+                // Ensure default values are set if the settings are missing
+                if (ultrahandSection.count("datetime_format") == 0) {
                     setIniFileValue(settingsConfigIniPath, "ultrahand", "datetime_format", DEFAULT_DT_FORMAT);
+                }
+        
+                std::vector<std::string> settingsToEnsure = {"hide_clock", "hide_battery", "hide_pcb_temp", "hide_soc_temp"};
+                std::vector<std::string> defaultValues = {"false", "true", "true", "true"};
+                for (size_t i = 0; i < settingsToEnsure.size(); ++i) {
+                    if (ultrahandSection.count(settingsToEnsure[i]) == 0) {
+                        setIniFileValue(settingsConfigIniPath, "ultrahand", settingsToEnsure[i], defaultValues[i]);
+                    }
+                }
+        
+                std::map<std::string, size_t*> bufferSettings;
                 
-                if (ultrahandSection.count("hide_clock") == 0)
-                    setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_clock", "false");
-                if (ultrahandSection.count("hide_battery") == 0)
-                    setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_battery", "true");
-                if (ultrahandSection.count("hide_pcb_temp") == 0)
-                    setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_pcb_temp", "true");
-                if (ultrahandSection.count("hide_soc_temp") == 0)
-                    setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_soc_temp", "true");
+                bufferSettings["copy_buffer_size"] = &COPY_BUFFER_SIZE;
+                bufferSettings["unzip_buffer_size"] = &UNZIP_BUFFER_SIZE;
+                bufferSettings["download_buffer_size"] = &DOWNLOAD_BUFFER_SIZE;
+                bufferSettings["hex_buffer_size"] = &HEX_BUFFER_SIZE;
+
                 
+                // Use the map as intended
+                for (const auto& setting : bufferSettings) {
+                    if (ultrahandSection.count(setting.first) > 0) {
+                        *(setting.second) = std::stoi(ultrahandSection[setting.first]);
+                    }
+                }
+        
+                settingsLoaded = ultrahandSection.count("in_overlay") > 0;
             }
             settingsData.clear();
         }
-        if (!settingsLoaded) { // write data if settings are not loaded
+        
+        if (!settingsLoaded) { // Write data if settings are not loaded
             setIniFileValue(settingsConfigIniPath, "ultrahand", "default_lang", defaultLang);
-            //setIniFileValue(settingsConfigIniPath, "ultrahand", "default_menu", defaultMenuMode);
-            //setIniFileValue(settingsConfigIniPath, "ultrahand", "last_menu", menuMode);
             setIniFileValue(settingsConfigIniPath, "ultrahand", "in_overlay", "false");
         }
         
@@ -3243,11 +3260,18 @@ public:
         //    setIniFileValue(settingsConfigIniPath, "ultrahand", "default_menu", defaultMenuMode);
         //}
         
-        if (cleanVersionLabels == "true")
-            versionLabel = APP_VERSION+std::string("   (")+ extractTitle(loaderInfo)+" "+cleanVersionLabel(loaderInfo)+std::string(")"); // Still needs to parse nx-ovlloader instead of hard coding it
-        else
-            versionLabel = APP_VERSION+std::string("   (")+ extractTitle(loaderInfo)+" v"+cleanVersionLabel(loaderInfo)+std::string(")");
+        versionLabel = std::string(APP_VERSION) + "   (" + extractTitle(loaderInfo) + " " + (cleanVersionLabels == "true" ? "" : "v") + cleanVersionLabel(loaderInfo) + ")";
         
+        //std::string versionLabel = APP_VERSION;
+        //if (cleanVersionLabels != "true") {
+        //    versionLabel += "   (" + extractTitle(loaderInfo) + " v" + cleanVersionLabel(loaderInfo) + ")";
+        //}
+
+        //if (cleanVersionLabels == "true")
+        //    versionLabel = APP_VERSION+std::string("   (")+ extractTitle(loaderInfo)+" "+cleanVersionLabel(loaderInfo)+std::string(")"); // Still needs to parse nx-ovlloader instead of hard coding it
+        //else
+        //    versionLabel = APP_VERSION+std::string("   (")+ extractTitle(loaderInfo)+" v"+cleanVersionLabel(loaderInfo)+std::string(")");
+
         
         auto list = std::make_unique<tsl::elm::List>();
         //list = std::make_unique<tsl::elm::List>();
