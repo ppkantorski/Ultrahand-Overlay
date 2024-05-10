@@ -23,6 +23,7 @@
 
 #include <payload.hpp> // Studious Pancake
 #include <util.hpp> // Studious Pancake
+#include <ultra.hpp>
 #include <tesla.hpp>
 
 #include <numeric>
@@ -239,6 +240,54 @@ void copyTeslaKeyComboToUltrahand() {
 
 
 
+// Constants for overlay module
+constexpr int OverlayLoaderModuleId = 348;
+constexpr Result ResultSuccess = MAKERESULT(0, 0);
+constexpr Result ResultParseError = MAKERESULT(OverlayLoaderModuleId, 1);
+
+/**
+ * @brief Retrieves overlay module information from a given file.
+ *
+ * @param filePath The path to the overlay module file.
+ * @return A tuple containing the result code, module name, and display version.
+ */
+std::tuple<Result, std::string, std::string> getOverlayInfo(const std::string& filePath) {
+    std::ifstream file(filePath, std::ios::binary);
+    if (!file) {
+        return {ResultParseError, "", ""};
+    }
+
+    NroHeader nroHeader;
+    NroAssetHeader assetHeader;
+    NacpStruct nacp;
+
+    // Read NRO header
+    file.seekg(sizeof(NroStart), std::ios::beg);
+    if (!file.read(reinterpret_cast<char*>(&nroHeader), sizeof(NroHeader))) {
+        return {ResultParseError, "", ""};
+    }
+
+    // Read asset header
+    file.seekg(nroHeader.size, std::ios::beg);
+    if (!file.read(reinterpret_cast<char*>(&assetHeader), sizeof(NroAssetHeader))) {
+        return {ResultParseError, "", ""};
+    }
+
+    // Read NACP struct
+    file.seekg(nroHeader.size + assetHeader.nacp.offset, std::ios::beg);
+    if (!file.read(reinterpret_cast<char*>(&nacp), sizeof(NacpStruct))) {
+        return {ResultParseError, "", ""};
+    }
+
+    // Assuming nacp.lang[0].name and nacp.display_version are null-terminated
+    return {
+        ResultSuccess,
+        std::string(nacp.lang[0].name),
+        std::string(nacp.display_version)
+    };
+}
+
+
 void addHelpInfo(auto& list) {
     tsl::Color infoTextColor = tsl::RGB888(parseValueFromIniSection(themeConfigIniPath, "theme", "info_text_color"), "#FFFFFF");
     tsl::Color onTextColor = tsl::RGB888(parseValueFromIniSection(themeConfigIniPath, "theme", "on_text_color"), "#00FFDD");
@@ -404,6 +453,8 @@ void addAppInfo(auto& list, auto& packageHeader, std::string type = "package") {
         }), fontSize * numEntries +2);
     }
 }
+
+
 
 
 
@@ -855,6 +906,8 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
     }
     return modifiedCommands;
 }
+
+
 
 
 // forward declarartion
@@ -1524,4 +1577,3 @@ void enqueueInterpreterCommands(std::vector<std::vector<std::string>>&& commands
     //}
     queueCondition.notify_one();
 }
-
