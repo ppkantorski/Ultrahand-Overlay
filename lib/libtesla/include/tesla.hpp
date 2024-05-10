@@ -175,113 +175,115 @@ static const std::string STAR_SYMBOL = "\u2605";
 
 // English string definitions
 
+const std::string whiteColor = "#FFFFFF";
+const std::string blackColor = "#000000";
 
 
 float M_PI = 3.14159265358979323846;
 
-static std::string DEFAULT_CHAR_WIDTH = "0.33";
-static std::string UNAVAILABLE_SELECTION = "Not available";
-static std::string OVERLAYS = "Overlays"; //defined in libTesla now
-static std::string OVERLAY = "Overlay";
-static std::string HIDDEN_OVERLAYS = "Hidden Overlays";
-static std::string PACKAGES = "Packages"; //defined in libTesla now
-static std::string PACKAGE = "Package";
-static std::string HIDDEN_PACKAGES = "Hidden Packages";
-static std::string HIDDEN = "Hidden";
-static std::string HIDE_OVERLAY = "Hide Overlay";
-static std::string HIDE_PACKAGE = "Hide Package";
-static std::string LAUNCH_ARGUMENTS = "Launch Arguments";
-static std::string COMMANDS = "Commands";
-static std::string SETTINGS = "Settings";
-static std::string MAIN_SETTINGS = "Main Settings";
-static std::string UI_SETTINGS = "UI Settings";
-static std::string WIDGET = "Widget";
-static std::string CLOCK = "Clock";
-static std::string BATTERY = "Battery";
-static std::string SOC_TEMPERATURE = "SOC Temperature";
-static std::string PCB_TEMPERATURE = "PCB Temperature";
-static std::string MISCELLANEOUS = "Miscellaneous";
-static std::string MENU_ITEMS = "Menu Items";
-static std::string USER_GUIDE = "User Guide";
-static std::string VERSION_LABELS = "Version Labels";
-static std::string KEY_COMBO = "Key Combo";
-static std::string LANGUAGE = "Language";
-static std::string OVERLAY_INFO = "Overlay Info";
-static std::string SOFTWARE_UPDATE = "Software Update";
-static std::string UPDATE_ULTRAHAND = "Update Ultrahand";
-static std::string UPDATE_LANGUAGES = "Update Languages";
-static std::string THEME = "Theme";
-static std::string DEFAULT = "default";
-static std::string ROOT_PACKAGE = "Root Package";
-static std::string SORT_PRIORITY = "Sort Priority";
-static std::string FAILED_TO_OPEN = "Failed to open file";
-static std::string CLEAN_LABELS = "Clean Versions";
-static std::string OVERLAY_LABELS = "Overlay Versions";
-static std::string PACKAGE_LABELS = "Package Versions";
-static std::string ON = "On";
-static std::string OFF = "Off";
-static std::string PACKAGE_INFO = "Package Info";
-static std::string TITLE = "Title";
-static std::string VERSION = "Version";
-static std::string CREATOR = "Creator(s)";
-static std::string ABOUT = "About";
-static std::string CREDITS = "Credits";
-static std::string OK = "OK";
-static std::string BACK = "Back";
-static std::string REBOOT = "Reboot";
-static std::string SHUTDOWN = "Shutdown";
-static std::string GAP_1 = "     ";
-static std::string GAP_2 = "  ";
-static std::string USERGUIDE_OFFSET = "162";
-static std::string SETTINGS_MENU = "Settings Menu";
-static std::string SCRIPT_OVERLAY = "Script Overlay";
-static std::string STAR_FAVORITE = "Star/Favorite";
-static std::string APP_SETTINGS = "App Settings";
-static std::string ON_MAIN_MENU = "on Main Menu";
-static std::string ON_A_COMMAND = "on a command";
-static std::string ON_OVERLAY_PACKAGE = "on overlay/package";
+static std::string DEFAULT_CHAR_WIDTH;
+static std::string UNAVAILABLE_SELECTION;
+static std::string OVERLAYS; //defined in libTesla now
+static std::string OVERLAY;
+static std::string HIDDEN_OVERLAYS;
+static std::string PACKAGES; //defined in libTesla now
+static std::string PACKAGE;
+static std::string HIDDEN_PACKAGES;
+static std::string HIDDEN;
+static std::string HIDE_OVERLAY;
+static std::string HIDE_PACKAGE;
+static std::string LAUNCH_ARGUMENTS;
+static std::string COMMANDS;
+static std::string SETTINGS;
+static std::string MAIN_SETTINGS;
+static std::string UI_SETTINGS;
+static std::string WIDGET;
+static std::string CLOCK;
+static std::string BATTERY;
+static std::string SOC_TEMPERATURE;
+static std::string PCB_TEMPERATURE;
+static std::string MISCELLANEOUS;
+static std::string MENU_ITEMS;
+static std::string USER_GUIDE;
+static std::string VERSION_LABELS;
+static std::string KEY_COMBO;
+static std::string LANGUAGE;
+static std::string OVERLAY_INFO;
+static std::string SOFTWARE_UPDATE;
+static std::string UPDATE_ULTRAHAND;
+static std::string UPDATE_LANGUAGES;
+static std::string THEME;
+static std::string DEFAULT;
+static std::string ROOT_PACKAGE;
+static std::string SORT_PRIORITY;
+static std::string FAILED_TO_OPEN;
+static std::string CLEAN_LABELS;
+static std::string OVERLAY_LABELS;
+static std::string PACKAGE_LABELS;
+static std::string ON;
+static std::string OFF;
+static std::string PACKAGE_INFO;
+static std::string TITLE;
+static std::string VERSION;
+static std::string CREATOR;
+static std::string ABOUT;
+static std::string CREDITS;
+static std::string OK;
+static std::string BACK;
+static std::string REBOOT;
+static std::string SHUTDOWN;
+static std::string GAP_1;
+static std::string GAP_2;
+static std::string USERGUIDE_OFFSET;
+static std::string SETTINGS_MENU;
+static std::string SCRIPT_OVERLAY;
+static std::string STAR_FAVORITE;
+static std::string APP_SETTINGS;
+static std::string ON_MAIN_MENU;
+static std::string ON_A_COMMAND;
+static std::string ON_OVERLAY_PACKAGE;
 
-static std::string SUNDAY = "Sunday";
-static std::string MONDAY = "Monday";
-static std::string TUESDAY = "Tuesday";
-static std::string WEDNESDAY = "Wednesday";
-static std::string THURSDAY = "Thursday";
-static std::string FRIDAY = "Friday";
-static std::string SATURDAY = "Saturday";
+static std::string SUNDAY;
+static std::string MONDAY;
+static std::string TUESDAY;
+static std::string WEDNESDAY;
+static std::string THURSDAY;
+static std::string FRIDAY;
+static std::string SATURDAY;
 
-static std::string JANUARY = "January";
-static std::string FEBRUARY = "February";
-static std::string MARCH = "March";
-static std::string APRIL = "April";
-static std::string MAY = "May";
-static std::string JUNE = "June";
-static std::string JULY = "July";
-static std::string AUGUST = "August";
-static std::string SEPTEMBER = "September";
-static std::string OCTOBER = "October";
-static std::string NOVEMBER = "November";
-static std::string DECEMBER = "December";
+static std::string JANUARY;
+static std::string FEBRUARY;
+static std::string MARCH;
+static std::string APRIL;
+static std::string MAY;
+static std::string JUNE;
+static std::string JULY;
+static std::string AUGUST;
+static std::string SEPTEMBER;
+static std::string OCTOBER;
+static std::string NOVEMBER;
+static std::string DECEMBER;
 
-static std::string SUN = "Sun";
-static std::string MON = "Mon";
-static std::string TUE = "Tue";
-static std::string WED = "Wed";
-static std::string THU = "Thu";
-static std::string FRI = "Fri";
-static std::string SAT = "Sat";
+static std::string SUN;
+static std::string MON;
+static std::string TUE;
+static std::string WED;
+static std::string THU;
+static std::string FRI;
+static std::string SAT;
 
-static std::string JAN = "Jan";
-static std::string FEB = "Feb";
-static std::string MAR = "Mar";
-static std::string APR = "Apr";
-static std::string MAY_ABBR = "May";
-static std::string JUN = "Jun";
-static std::string JUL = "Jul";
-static std::string AUG = "Aug";
-static std::string SEP = "Sep";
-static std::string OCT = "Oct";
-static std::string NOV = "Nov";
-static std::string DEC = "Dec";
+static std::string JAN;
+static std::string FEB;
+static std::string MAR;
+static std::string APR;
+static std::string MAY_ABBR;
+static std::string JUN;
+static std::string JUL;
+static std::string AUG;
+static std::string SEP;
+static std::string OCT;
+static std::string NOV;
+static std::string DEC;
 
 // Constant string definitions (English)
 void reinitializeLangVars() {
@@ -392,6 +394,7 @@ void reinitializeLangVars() {
 
 
 
+
 // Define the updateIfNotEmpty function
 void updateIfNotEmpty(std::string& constant, const char* jsonKey, json_t* jsonData) {
     std::string newValue = getStringFromJson(jsonData, jsonKey);
@@ -402,113 +405,116 @@ void updateIfNotEmpty(std::string& constant, const char* jsonKey, json_t* jsonDa
 
 void parseLanguage(std::string langFile) {
     json_t* langData = readJsonFromFile(langFile);
+    if (!langData)
+        return;
     
-    // Use the updateIfNotEmpty function to update global variables
-    updateIfNotEmpty(DEFAULT_CHAR_WIDTH, "DEFAULT_CHAR_WIDTH", langData);
-    updateIfNotEmpty(UNAVAILABLE_SELECTION, "UNAVAILABLE_SELECTION", langData);
-    updateIfNotEmpty(OVERLAYS, "OVERLAYS", langData);
-    updateIfNotEmpty(OVERLAY, "OVERLAY", langData);
-    updateIfNotEmpty(HIDDEN_OVERLAYS, "HIDDEN_OVERLAYS", langData);
-    updateIfNotEmpty(PACKAGES, "PACKAGES", langData);
-    updateIfNotEmpty(PACKAGE, "PACKAGE", langData);
-    updateIfNotEmpty(HIDDEN_PACKAGES, "HIDDEN_PACKAGES", langData);
-    updateIfNotEmpty(HIDDEN, "HIDDEN", langData);
-    updateIfNotEmpty(HIDE_PACKAGE, "HIDE_PACKAGE", langData);
-    updateIfNotEmpty(HIDE_OVERLAY, "HIDE_OVERLAY", langData);
-    updateIfNotEmpty(LAUNCH_ARGUMENTS, "LAUNCH_ARGUMENTS", langData);
-    updateIfNotEmpty(COMMANDS, "COMMANDS", langData);
-    updateIfNotEmpty(SETTINGS, "SETTINGS", langData);
-    updateIfNotEmpty(MAIN_SETTINGS, "MAIN_SETTINGS", langData);
-    updateIfNotEmpty(UI_SETTINGS, "UI_SETTINGS", langData);
-    updateIfNotEmpty(WIDGET, "WIDGET", langData);
-    updateIfNotEmpty(CLOCK, "CLOCK", langData);
-    updateIfNotEmpty(BATTERY, "BATTERY", langData);
-    updateIfNotEmpty(SOC_TEMPERATURE, "SOC_TEMPERATURE", langData);
-    updateIfNotEmpty(PCB_TEMPERATURE, "PCB_TEMPERATURE", langData);
-    updateIfNotEmpty(MISCELLANEOUS, "MISCELLANEOUS", langData);
-    updateIfNotEmpty(MENU_ITEMS, "MENU_ITEMS", langData);
-    updateIfNotEmpty(USER_GUIDE, "USER_GUIDE", langData);
-    updateIfNotEmpty(VERSION_LABELS, "VERSION_LABELS", langData);
-    updateIfNotEmpty(KEY_COMBO, "KEY_COMBO", langData);
-    updateIfNotEmpty(LANGUAGE, "LANGUAGE", langData);
-    updateIfNotEmpty(OVERLAY_INFO, "OVERLAY_INFO", langData);
-    updateIfNotEmpty(SOFTWARE_UPDATE, "SOFTWARE_UPDATE", langData);
-    updateIfNotEmpty(UPDATE_ULTRAHAND, "UPDATE_ULTRAHAND", langData);
-    updateIfNotEmpty(UPDATE_LANGUAGES, "UPDATE_LANGUAGES", langData);
-    updateIfNotEmpty(THEME, "THEME", langData);
-    updateIfNotEmpty(DEFAULT, "DEFAULT", langData);
-    updateIfNotEmpty(ROOT_PACKAGE, "ROOT_PACKAGE", langData);
-    updateIfNotEmpty(SORT_PRIORITY, "SORT_PRIORITY", langData);
-    updateIfNotEmpty(FAILED_TO_OPEN, "FAILED_TO_OPEN", langData);
-    updateIfNotEmpty(CLEAN_LABELS, "CLEAN_LABELS", langData);
-    updateIfNotEmpty(OVERLAY_LABELS, "OVERLAY_LABELS", langData);
-    updateIfNotEmpty(PACKAGE_LABELS, "PACKAGE_LABELS", langData);
-    updateIfNotEmpty(ON, "ON", langData);
-    updateIfNotEmpty(OFF, "OFF", langData);
-    updateIfNotEmpty(PACKAGE_INFO, "PACKAGE_INFO", langData);
-    updateIfNotEmpty(TITLE, "TITLE", langData);
-    updateIfNotEmpty(VERSION, "VERSION", langData);
-    updateIfNotEmpty(CREATOR, "CREATOR", langData);
-    updateIfNotEmpty(ABOUT, "ABOUT", langData);
-    updateIfNotEmpty(CREDITS, "CREDITS", langData);
-    updateIfNotEmpty(OK, "OK", langData);
-    updateIfNotEmpty(BACK, "BACK", langData);
-    updateIfNotEmpty(REBOOT, "REBOOT", langData);
-    updateIfNotEmpty(SHUTDOWN, "SHUTDOWN", langData);
-    updateIfNotEmpty(GAP_1, "GAP_1", langData);
-    updateIfNotEmpty(GAP_2, "GAP_2", langData);
-    updateIfNotEmpty(USERGUIDE_OFFSET, "USERGUIDE_OFFSET", langData);
-    updateIfNotEmpty(SETTINGS_MENU, "SETTINGS_MENU", langData);
-    updateIfNotEmpty(SCRIPT_OVERLAY, "SCRIPT_OVERLAY", langData);
-    updateIfNotEmpty(STAR_FAVORITE, "STAR_FAVORITE", langData);
-    updateIfNotEmpty(APP_SETTINGS, "APP_SETTINGS", langData);
-    updateIfNotEmpty(ON_MAIN_MENU, "ON_MAIN_MENU", langData);
-    updateIfNotEmpty(ON_A_COMMAND, "ON_A_COMMAND", langData);
-    updateIfNotEmpty(ON_OVERLAY_PACKAGE, "ON_OVERLAY_PACKAGE", langData);
-    
-    // Day and Month names
-    updateIfNotEmpty(SUNDAY, "SUNDAY", langData);
-    updateIfNotEmpty(MONDAY, "MONDAY", langData);
-    updateIfNotEmpty(TUESDAY, "TUESDAY", langData);
-    updateIfNotEmpty(WEDNESDAY, "WEDNESDAY", langData);
-    updateIfNotEmpty(THURSDAY, "THURSDAY", langData);
-    updateIfNotEmpty(FRIDAY, "FRIDAY", langData);
-    updateIfNotEmpty(SATURDAY, "SATURDAY", langData);
-    
-    updateIfNotEmpty(JANUARY, "JANUARY", langData);
-    updateIfNotEmpty(FEBRUARY, "FEBRUARY", langData);
-    updateIfNotEmpty(MARCH, "MARCH", langData);
-    updateIfNotEmpty(APRIL, "APRIL", langData);
-    updateIfNotEmpty(MAY, "MAY", langData);
-    updateIfNotEmpty(JUNE, "JUNE", langData);
-    updateIfNotEmpty(JULY, "JULY", langData);
-    updateIfNotEmpty(AUGUST, "AUGUST", langData);
-    updateIfNotEmpty(SEPTEMBER, "SEPTEMBER", langData);
-    updateIfNotEmpty(OCTOBER, "OCTOBER", langData);
-    updateIfNotEmpty(NOVEMBER, "NOVEMBER", langData);
-    updateIfNotEmpty(DECEMBER, "DECEMBER", langData);
-    
-    updateIfNotEmpty(SUN, "SUN", langData);
-    updateIfNotEmpty(MON, "MON", langData);
-    updateIfNotEmpty(TUE, "TUE", langData);
-    updateIfNotEmpty(WED, "WED", langData);
-    updateIfNotEmpty(THU, "THU", langData);
-    updateIfNotEmpty(FRI, "FRI", langData);
-    updateIfNotEmpty(SAT, "SAT", langData);
-    
-    updateIfNotEmpty(JAN, "JAN", langData);
-    updateIfNotEmpty(FEB, "FEB", langData);
-    updateIfNotEmpty(MAR, "MAR", langData);
-    updateIfNotEmpty(APR, "APR", langData);
-    updateIfNotEmpty(MAY_ABBR, "MAY_ABBR", langData);
-    updateIfNotEmpty(JUN, "JUN", langData);
-    updateIfNotEmpty(JUL, "JUL", langData);
-    updateIfNotEmpty(AUG, "AUG", langData);
-    updateIfNotEmpty(SEP, "SEP", langData);
-    updateIfNotEmpty(OCT, "OCT", langData);
-    updateIfNotEmpty(NOV, "NOV", langData);
-    updateIfNotEmpty(DEC, "DEC", langData);
-    
+    std::map<std::string, std::string*> configMap = {
+        {"DEFAULT_CHAR_WIDTH", &DEFAULT_CHAR_WIDTH},
+        {"UNAVAILABLE_SELECTION", &UNAVAILABLE_SELECTION},
+        {"OVERLAYS", &OVERLAYS},
+        {"OVERLAY", &OVERLAY},
+        {"HIDDEN_OVERLAYS", &HIDDEN_OVERLAYS},
+        {"PACKAGES", &PACKAGES},
+        {"PACKAGE", &PACKAGE},
+        {"HIDDEN_PACKAGES", &HIDDEN_PACKAGES},
+        {"HIDDEN", &HIDDEN},
+        {"HIDE_PACKAGE", &HIDE_PACKAGE},
+        {"HIDE_OVERLAY", &HIDE_OVERLAY},
+        {"LAUNCH_ARGUMENTS", &LAUNCH_ARGUMENTS},
+        {"COMMANDS", &COMMANDS},
+        {"SETTINGS", &SETTINGS},
+        {"MAIN_SETTINGS", &MAIN_SETTINGS},
+        {"UI_SETTINGS", &UI_SETTINGS},
+        {"WIDGET", &WIDGET},
+        {"CLOCK", &CLOCK},
+        {"BATTERY", &BATTERY},
+        {"SOC_TEMPERATURE", &SOC_TEMPERATURE},
+        {"PCB_TEMPERATURE", &PCB_TEMPERATURE},
+        {"MISCELLANEOUS", &MISCELLANEOUS},
+        {"MENU_ITEMS", &MENU_ITEMS},
+        {"USER_GUIDE", &USER_GUIDE},
+        {"VERSION_LABELS", &VERSION_LABELS},
+        {"KEY_COMBO", &KEY_COMBO},
+        {"LANGUAGE", &LANGUAGE},
+        {"OVERLAY_INFO", &OVERLAY_INFO},
+        {"SOFTWARE_UPDATE", &SOFTWARE_UPDATE},
+        {"UPDATE_ULTRAHAND", &UPDATE_ULTRAHAND},
+        {"UPDATE_LANGUAGES", &UPDATE_LANGUAGES},
+        {"THEME", &THEME},
+        {"DEFAULT", &DEFAULT},
+        {"ROOT_PACKAGE", &ROOT_PACKAGE},
+        {"SORT_PRIORITY", &SORT_PRIORITY},
+        {"FAILED_TO_OPEN", &FAILED_TO_OPEN},
+        {"CLEAN_LABELS", &CLEAN_LABELS},
+        {"OVERLAY_LABELS", &OVERLAY_LABELS},
+        {"PACKAGE_LABELS", &PACKAGE_LABELS},
+        {"ON", &ON},
+        {"OFF", &OFF},
+        {"PACKAGE_INFO", &PACKAGE_INFO},
+        {"TITLE", &TITLE},
+        {"VERSION", &VERSION},
+        {"CREATOR", &CREATOR},
+        {"ABOUT", &ABOUT},
+        {"CREDITS", &CREDITS},
+        {"OK", &OK},
+        {"BACK", &BACK},
+        {"REBOOT", &REBOOT},
+        {"SHUTDOWN", &SHUTDOWN},
+        {"GAP_1", &GAP_1},
+        {"GAP_2", &GAP_2},
+        {"USERGUIDE_OFFSET", &USERGUIDE_OFFSET},
+        {"SETTINGS_MENU", &SETTINGS_MENU},
+        {"SCRIPT_OVERLAY", &SCRIPT_OVERLAY},
+        {"STAR_FAVORITE", &STAR_FAVORITE},
+        {"APP_SETTINGS", &APP_SETTINGS},
+        {"ON_MAIN_MENU", &ON_MAIN_MENU},
+        {"ON_A_COMMAND", &ON_A_COMMAND},
+        {"ON_OVERLAY_PACKAGE", &ON_OVERLAY_PACKAGE},
+        {"SUNDAY", &SUNDAY},
+        {"MONDAY", &MONDAY},
+        {"TUESDAY", &TUESDAY},
+        {"WEDNESDAY", &WEDNESDAY},
+        {"THURSDAY", &THURSDAY},
+        {"FRIDAY", &FRIDAY},
+        {"SATURDAY", &SATURDAY},
+        {"JANUARY", &JANUARY},
+        {"FEBRUARY", &FEBRUARY},
+        {"MARCH", &MARCH},
+        {"APRIL", &APRIL},
+        {"MAY", &MAY},
+        {"JUNE", &JUNE},
+        {"JULY", &JULY},
+        {"AUGUST", &AUGUST},
+        {"SEPTEMBER", &SEPTEMBER},
+        {"OCTOBER", &OCTOBER},
+        {"NOVEMBER", &NOVEMBER},
+        {"DECEMBER", &DECEMBER},
+        {"SUN", &SUN},
+        {"MON", &MON},
+        {"TUE", &TUE},
+        {"WED", &WED},
+        {"THU", &THU},
+        {"FRI", &FRI},
+        {"SAT", &SAT},
+        {"JAN", &JAN},
+        {"FEB", &FEB},
+        {"MAR", &MAR},
+        {"APR", &APR},
+        {"MAY_ABBR", &MAY_ABBR},
+        {"JUN", &JUN},
+        {"JUL", &JUL},
+        {"AUG", &AUG},
+        {"SEP", &SEP},
+        {"OCT", &OCT},
+        {"NOV", &NOV},
+        {"DEC", &DEC}
+    };
+
+    // Iterate over the map to update global variables
+    for (auto& kv : configMap) {
+        updateIfNotEmpty(*kv.second, kv.first.c_str(), langData);
+    }
+
     // Free langData
     if (langData != nullptr) {
         json_decref(langData);
@@ -914,10 +920,10 @@ static std::string datetimeFormat = removeQuotes(DEFAULT_DT_FORMAT);
 static std::string hideClock, hideBattery, hidePCBTemp, hideSOCTemp;
 
 void reinitializeWidgetVars() {
-    hideClock = parseValueFromIniSection("/config/ultrahand/config.ini", "ultrahand", "hide_clock");
-    hideBattery = parseValueFromIniSection("/config/ultrahand/config.ini", "ultrahand", "hide_battery");
-    hideSOCTemp = parseValueFromIniSection("/config/ultrahand/config.ini", "ultrahand", "hide_soc_temp");
-    hidePCBTemp = parseValueFromIniSection("/config/ultrahand/config.ini", "ultrahand", "hide_pcb_temp");
+    hideClock = parseValueFromIniSection(settingsConfigIniPath, projectName, "hide_clock");
+    hideBattery = parseValueFromIniSection(settingsConfigIniPath, projectName, "hide_battery");
+    hideSOCTemp = parseValueFromIniSection(settingsConfigIniPath, projectName, "hide_soc_temp");
+    hidePCBTemp = parseValueFromIniSection(settingsConfigIniPath, projectName, "hide_pcb_temp");
 }
 
 static std::string cleanVersionLabels, hideOverlayVersions, hidePackageVersions;
@@ -926,13 +932,10 @@ static std::string loaderInfo = envGetLoaderInfo();
 static std::string versionLabel;
 
 void reinitializeVersionLabels() {
-    cleanVersionLabels = parseValueFromIniSection("/config/ultrahand/config.ini", "ultrahand", "clean_version_labels");
-    hideOverlayVersions = parseValueFromIniSection("/config/ultrahand/config.ini", "ultrahand", "hide_overlay_versions");
-    hidePackageVersions = parseValueFromIniSection("/config/ultrahand/config.ini", "ultrahand", "hide_package_versions");
-    if (cleanVersionLabels == "true")
-        versionLabel = APP_VERSION+std::string("   (")+ extractTitle(loaderInfo)+" "+cleanVersionLabel(loaderInfo)+std::string(")"); // Still needs to parse nx-ovlloader instead of hard coding it
-    else
-        versionLabel = APP_VERSION+std::string("   (")+ extractTitle(loaderInfo)+" v"+cleanVersionLabel(loaderInfo)+std::string(")");
+    cleanVersionLabels = parseValueFromIniSection(settingsConfigIniPath, projectName, "clean_version_labels");
+    hideOverlayVersions = parseValueFromIniSection(settingsConfigIniPath, projectName, "hide_overlay_versions");
+    hidePackageVersions = parseValueFromIniSection(settingsConfigIniPath, projectName, "hide_package_versions");
+    versionLabel = std::string(APP_VERSION) + "   (" + extractTitle(loaderInfo) + " " + (cleanVersionLabels == trueStr ? "" : "v") + cleanVersionLabel(loaderInfo) + ")";
 }
 
 
@@ -1058,7 +1061,7 @@ namespace tsl {
         return Color(r, g, b, a);
     }
     
-    Color RGB888(std::string hexColor, std::string defaultHexColor = "#FFFFFF", size_t alpha = 15) {
+    Color RGB888(std::string hexColor, std::string defaultHexColor = whiteColor, size_t alpha = 15) {
         // Remove the '#' character if it's present
         if (!hexColor.empty() && hexColor[0] == '#') {
             hexColor = hexColor.substr(1);
@@ -1080,7 +1083,7 @@ namespace tsl {
         }
         return RGB888(defaultHexColor);
     }
-    std::tuple<float, float, float> hexToRGB444Floats(std::string hexColor, std::string defaultHexColor = "#FFFFFF") {
+    std::tuple<float, float, float> hexToRGB444Floats(std::string hexColor, std::string defaultHexColor = whiteColor) {
         // Remove the '#' character if it's present
         if (!hexColor.empty() && hexColor[0] == '#') {
             hexColor = hexColor.substr(1);
@@ -1122,8 +1125,8 @@ namespace tsl {
 
 
     
-    //std::string highlightColor1Str = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "highlight_color_1"); // format "X,X,X"
-    //std::string highlightColor2Str = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "highlight_color_2"); // format "X,X,X"
+    //std::string highlightColor1Str = parseValueFromIniSection(themeConfigIniPath, themeSection, "highlight_color_1"); // format "X,X,X"
+    //std::string highlightColor2Str = parseValueFromIniSection(themeConfigIniPath, themeSection, "highlight_color_2"); // format "X,X,X"
     
     // Declarations
     
@@ -1327,7 +1330,7 @@ namespace tsl {
              * @brief Tesla config file
              */
             //static const char* TESLA_CONFIG_FILE = "/config/tesla/config.ini"; // CUSTOM MODIFICATION
-            //static const char* ULTRAHAND_CONFIG_FILE = "/config/ultrahand/config.ini"; // CUSTOM MODIFICATION
+            //static const char* ULTRAHAND_CONFIG_FILE = settingsConfigIniPath; // CUSTOM MODIFICATION
             
             /**
              * @brief Parses an INI string
@@ -2210,21 +2213,21 @@ namespace tsl {
             Element() {}
             virtual ~Element() { }
             
-            std::string disableSelectionBGStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "disable_selection_bg");
+            std::string disableSelectionBGStr = parseValueFromIniSection(themeConfigIniPath, themeSection, "disable_selection_bg");
             bool disableSelectionBG = (!disableSelectionBGStr.empty() && disableSelectionBGStr != "false");
             
-            bool invertBGClickColor = (parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "invert_bg_click_color") == "true");
-            Color selectionBGColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "selection_bg_color"), "#000000");
+            bool invertBGClickColor = (parseValueFromIniSection(themeConfigIniPath, themeSection, "invert_bg_click_color") == "true");
+            Color selectionBGColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "selection_bg_color"), blackColor);
             
-            Color highlightColor1 = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "highlight_color_1"), "#2288CC");
-            Color highlightColor2 = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "highlight_color_2"), "#88FFFF");
-            Color highlightColor3 = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "highlight_color_3"), "#FFFF45");
-            Color highlightColor4 = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "highlight_color_4"), "#F7253E");
+            Color highlightColor1 = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "highlight_color_1"), "#2288CC");
+            Color highlightColor2 = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "highlight_color_2"), "#88FFFF");
+            Color highlightColor3 = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "highlight_color_3"), "#FFFF45");
+            Color highlightColor4 = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "highlight_color_4"), "#F7253E");
             Color highlightColor = {0xf,0xf,0xf,0xf};
             
-            std::string clickAlphaStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "click_alpha");
+            std::string clickAlphaStr = parseValueFromIniSection(themeConfigIniPath, themeSection, "click_alpha");
             size_t clickAlpha = (!clickAlphaStr.empty()) ? std::stoi(clickAlphaStr) : 7;
-            Color clickColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "click_color"), "#F7253E", clickAlpha);
+            Color clickColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "click_color"), "#F7253E", clickAlpha);
             
             std::chrono::duration<long int, std::ratio<1, 1000000000>> t;
             //double timeCounter;
@@ -2806,28 +2809,28 @@ namespace tsl {
             std::string m_pageLeftName; // CUSTOM MODIFICATION
             std::string m_pageRightName; // CUSTOM MODIFICATION
             
-            std::string disableColorfulLogoStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "disable_colorful_logo");
+            std::string disableColorfulLogoStr = parseValueFromIniSection(themeConfigIniPath, themeSection, "disable_colorful_logo");
             bool disableColorfulLogo = (!disableColorfulLogoStr.empty() && disableColorfulLogoStr == "true");
-            tsl::Color logoColor1 = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "logo_color_1"), "#FFFFFF");
-            tsl::Color logoColor2 = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "logo_color_2"), "#F7253E");
+            tsl::Color logoColor1 = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "logo_color_1"), whiteColor);
+            tsl::Color logoColor2 = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "logo_color_2"), "#F7253E");
             
             
-            std::string backgroundAlphaStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "bg_alpha");
+            std::string backgroundAlphaStr = parseValueFromIniSection(themeConfigIniPath, themeSection, "bg_alpha");
             size_t defaultBackgroundAlpha = (!backgroundAlphaStr.empty()) ? std::stoi(backgroundAlphaStr) : 13;
             
-            tsl::Color defaultBackgroundColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "bg_color"), "#000000", defaultBackgroundAlpha);
+            tsl::Color defaultBackgroundColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "bg_color"), blackColor, defaultBackgroundAlpha);
             
-            tsl::Color defaultTextColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "text_color"));
-            tsl::Color clockColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "clock_color"));
-            tsl::Color batteryColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "battery_color"));
+            tsl::Color defaultTextColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "text_color"));
+            tsl::Color clockColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "clock_color"));
+            tsl::Color batteryColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "battery_color"));
             tsl::Color highlightColor = {0xF, 0xF, 0xF, 0xF};
             
-            tsl::Color versionTextColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "version_text_color"), "#AAAAAA");
-            tsl::Color onTextColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "on_text_color"), "#00FFDD");
-            tsl::Color offTextColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "off_text_color"), "#AAAAAA");
+            tsl::Color versionTextColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "version_text_color"), "#AAAAAA");
+            tsl::Color onTextColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "on_text_color"), "#00FFDD");
+            tsl::Color offTextColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "off_text_color"), "#AAAAAA");
             
-            std::tuple<float,float,float> dynamicLogoRGB1 = hexToRGB444Floats(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "dynamic_logo_color_1"), "#00E669");
-            std::tuple<float,float,float> dynamicLogoRGB2 = hexToRGB444Floats(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "dynamic_logo_color_2"), "#8080EA");
+            std::tuple<float,float,float> dynamicLogoRGB1 = hexToRGB444Floats(parseValueFromIniSection(themeConfigIniPath, themeSection, "dynamic_logo_color_1"), "#00E669");
+            std::tuple<float,float,float> dynamicLogoRGB2 = hexToRGB444Floats(parseValueFromIniSection(themeConfigIniPath, themeSection, "dynamic_logo_color_2"), "#8080EA");
             
             std::string firstHalf, secondHalf;
             //tsl::Color handColor = RGB888("#F7253E");
@@ -3197,11 +3200,11 @@ namespace tsl {
          */
         class HeaderOverlayFrame : public Element {
         public:
-            std::string backgroundAlphaStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "bg_alpha");
+            std::string backgroundAlphaStr = parseValueFromIniSection(themeConfigIniPath, themeSection, "bg_alpha");
             size_t defaultBackgroundAlpha = (!backgroundAlphaStr.empty()) ? std::stoi(backgroundAlphaStr) : 13;
-            tsl::Color defaultBackgroundColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "bg_color"), "#000000", defaultBackgroundAlpha);
+            tsl::Color defaultBackgroundColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "bg_color"), blackColor, defaultBackgroundAlpha);
             
-            tsl::Color defaultTextColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "text_color"));
+            tsl::Color defaultTextColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "text_color"));
             
             HeaderOverlayFrame(u16 headerHeight = 175) : Element(), m_headerHeight(headerHeight) {}
             virtual ~HeaderOverlayFrame() {
@@ -3341,7 +3344,7 @@ namespace tsl {
                     delete item;
             }
             
-            Color trackBarColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "trackbar_color"), "#555555");
+            Color trackBarColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "trackbar_color"), "#555555");
             float scrollbarHeight;
             float scrollbarOffset;
             int offset;
@@ -3692,24 +3695,24 @@ namespace tsl {
          */
         class ListItem : public Element {
         public:
-            std::string seperatorAlphaStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "seperator_alpha");
+            std::string seperatorAlphaStr = parseValueFromIniSection(themeConfigIniPath, themeSection, "seperator_alpha");
             size_t seperatorAlpha = (!seperatorAlphaStr.empty()) ? std::stoi(seperatorAlphaStr) : 7;
             
-            tsl::Color seperatorColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "seperator_color"), "#777777", seperatorAlpha);
+            tsl::Color seperatorColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "seperator_color"), "#777777", seperatorAlpha);
             
-            tsl::Color defaultTextColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "text_color")); ; // CUSTOM MODIFICATION
-            tsl::Color selectedTextColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "selection_text_color"));
-            tsl::Color inprogressTextColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "inprogress_text_color"));
+            tsl::Color defaultTextColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "text_color")); ; // CUSTOM MODIFICATION
+            tsl::Color selectedTextColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "selection_text_color"));
+            tsl::Color inprogressTextColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "inprogress_text_color"));
 
-            tsl::Color invalidTextColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "invalid_text_color"), "#FF0000");
-            tsl::Color onTextColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "on_text_color"), "#00FFDD");
-            tsl::Color offTextColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "off_text_color"), "#AAAAAA");
+            tsl::Color invalidTextColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "invalid_text_color"), "#FF0000");
+            tsl::Color onTextColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "on_text_color"), "#00FFDD");
+            tsl::Color offTextColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "off_text_color"), "#AAAAAA");
             
-            tsl::Color clickTextColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "click_text_color"));
+            tsl::Color clickTextColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "click_text_color"));
 
-            std::string clickAlphaStr = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "click_alpha");
+            std::string clickAlphaStr = parseValueFromIniSection(themeConfigIniPath, themeSection, "click_alpha");
             size_t clickAlpha = (!clickAlphaStr.empty()) ? std::stoi(clickAlphaStr) : 7;
-            Color clickColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "click_color"), "#F7253E", clickAlpha);
+            Color clickColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "click_color"), "#F7253E", clickAlpha);
 
             std::chrono::system_clock::time_point timeIn;// = std::chrono::system_clock::now();
             std::chrono::duration<long int, std::ratio<1, 1000000000>> t;
@@ -4003,7 +4006,7 @@ namespace tsl {
         
         class CategoryHeader : public Element {
         public:
-            tsl::Color defaultTextColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "text_color"));
+            tsl::Color defaultTextColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "text_color"));
             
             CategoryHeader(const std::string &title, bool hasSeparator = false) : m_text(title), m_hasSeparator(hasSeparator) {}
             virtual ~CategoryHeader() {}
@@ -4058,8 +4061,8 @@ namespace tsl {
          */
         class TrackBar : public Element {
         public:
-            Color defaultTextColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "text_color"));
-            Color trackBarColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "trackbar_color"), "#555555");
+            Color defaultTextColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "text_color"));
+            Color trackBarColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "trackbar_color"), "#555555");
             std::chrono::duration<long int, std::ratio<1, 1000000000>> t;
             Color highlightColor = {0xf,0xf,0xf,0xf};
             //alf progress;
@@ -4352,7 +4355,7 @@ namespace tsl {
             u16 trackBarWidth, stepWidth, currentDescIndex;
             u32 descWidth, descHeight;
             
-            tsl::Color offTextColor = RGB888(parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "off_text_color"), "#AAAAAA");
+            tsl::Color offTextColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "off_text_color"), "#AAAAAA");
             
             /**
              * @brief Constructor
@@ -5188,28 +5191,28 @@ namespace tsl {
         static void parseOverlaySettings() {
             hlp::ini::IniData parsedConfig = hlp::ini::readOverlaySettings(ULTRAHAND_CONFIG_FILE);
             
-            u64 decodedKeys = hlp::comboStringToKeys(parsedConfig["ultrahand"]["key_combo"]); // CUSTOM MODIFICATION
+            u64 decodedKeys = hlp::comboStringToKeys(parsedConfig[projectName]["key_combo"]); // CUSTOM MODIFICATION
             if (decodedKeys)
                 tsl::cfg::launchCombo = decodedKeys;
             
-            datetimeFormat = removeQuotes(parsedConfig["ultrahand"]["datetime_format"]); // read datetime_format
+            datetimeFormat = removeQuotes(parsedConfig[projectName]["datetime_format"]); // read datetime_format
             if (datetimeFormat.empty()) {
                 datetimeFormat = removeQuotes(DEFAULT_DT_FORMAT);
             }
             
-            hideClock = removeQuotes(parsedConfig["ultrahand"]["hide_clock"]);
+            hideClock = removeQuotes(parsedConfig[projectName]["hide_clock"]);
             if (hideClock.empty())
                 hideClock = "false";
             
-            hideBattery = removeQuotes(parsedConfig["ultrahand"]["hide_battery"]);
+            hideBattery = removeQuotes(parsedConfig[projectName]["hide_battery"]);
             if (hideBattery.empty())
                 hideBattery = "false";
             
-            hidePCBTemp = removeQuotes(parsedConfig["ultrahand"]["hide_pcb_temp"]);
+            hidePCBTemp = removeQuotes(parsedConfig[projectName]["hide_pcb_temp"]);
             if (hidePCBTemp.empty())
                 hidePCBTemp = "false";
             
-            hideSOCTemp = removeQuotes(parsedConfig["ultrahand"]["hide_soc_temp"]);
+            hideSOCTemp = removeQuotes(parsedConfig[projectName]["hide_soc_temp"]);
             if (hideSOCTemp.empty())
                 hideSOCTemp = "false";
             
@@ -5228,7 +5231,7 @@ namespace tsl {
                 }}
             }, TESLA_CONFIG_FILE);
             hlp::ini::updateOverlaySettings({
-                { "ultrahand", { // CUSTOM MODIFICATION
+                { projectName, { // CUSTOM MODIFICATION
                     { "key_combo", tsl::hlp::keysToComboString(keys) }
                 }}
             }, ULTRAHAND_CONFIG_FILE);
@@ -5442,8 +5445,8 @@ namespace tsl {
         std::map<std::string, std::map<std::string, std::string>> settingsData = getParsedDataFromIniFile(settingsConfigPath);
         std::string inOverlayString;
         
-        if (settingsData.count("ultrahand") > 0 && settingsData["ultrahand"].count("in_overlay") > 0) {
-            inOverlayString = settingsData["ultrahand"]["in_overlay"];
+        if (settingsData.count(projectName) > 0 && settingsData[projectName].count("in_overlay") > 0) {
+            inOverlayString = settingsData[projectName]["in_overlay"];
         } else {
             inOverlayString = "false"; // Assign default value if the keys are not present
         }
@@ -5451,7 +5454,7 @@ namespace tsl {
         bool inOverlay = false;
         if (inOverlayString == "true") {
             inOverlay = true;
-            setIniFileValue(settingsConfigPath, "ultrahand", "in_overlay", "false");
+            setIniFileValue(settingsConfigPath, projectName, "in_overlay", "false");
         }
         
         if (inOverlay && skipCombo) {
@@ -5492,7 +5495,7 @@ namespace tsl {
                     shData.running = false;
                 
                 if (updateMenuCombos) { // CUSTOM MODIFICATION
-                    setIniFileValue(settingsConfigPath, "ultrahand", "key_combo", "L+DDOWN+RS");
+                    setIniFileValue(settingsConfigPath, projectName, "key_combo", "L+DDOWN+RS");
                     setIniFileValue(teslaSettingsConfigIniPath, "tesla", "key_combo", "L+DDOWN+RS");
                     updateMenuCombos = false;
                 }
