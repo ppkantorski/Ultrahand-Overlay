@@ -27,9 +27,9 @@
 #define STBTT_STATIC
 #define TESLA_INIT_IMPL
 
+#include <ultra.hpp>
 #include <tesla.hpp>
 #include <utils.hpp>
-#include <fstream>
 
 // Overlay booleans
 static bool returningToMain = false;
@@ -47,7 +47,7 @@ static bool inScriptMenu = false;
 static bool inSelectionMenu = false;
 //static bool defaultMenuLoaded = true;
 static bool freshSpawn = true;
-//static bool refreshGui = false;
+//static bool refreshGui = false; (moved)
 static bool reloadMenu = false;
 static bool reloadMenu2 = false;
 static bool reloadMenu3 = false;
@@ -831,7 +831,16 @@ public:
                 if (downloadPercentage.load(std::memory_order_acquire) == 100)
                     downloadPercentage.store(-1, std::memory_order_release);
             }
-
+            if (unzipPercentage.load(std::memory_order_acquire) != -1) {
+                lastSelectedListItem->setValue(UNZIP_SYMBOL + " " + std::to_string(unzipPercentage.load(std::memory_order_acquire))+"%");
+                if (unzipPercentage.load(std::memory_order_acquire) == 100)
+                    unzipPercentage.store(-1, std::memory_order_release);
+            }
+            if (copyPercentage.load(std::memory_order_acquire) != -1) {
+                lastSelectedListItem->setValue(COPY_SYMBOL + " " + std::to_string(copyPercentage.load(std::memory_order_acquire))+"%");
+                if (copyPercentage.load(std::memory_order_acquire) == 100)
+                    copyPercentage.store(-1, std::memory_order_release);
+            }
             if (threadFailure.load(std::memory_order_acquire)) {
                 threadFailure.store(false, std::memory_order_release);
                 commandSuccess = false;
@@ -852,6 +861,10 @@ public:
         }
 
         if (lastRunningInterpreter) {
+            downloadPercentage.store(-1, std::memory_order_release);
+            unzipPercentage.store(-1, std::memory_order_release);
+            copyPercentage.store(-1, std::memory_order_release);
+
             isDownloadCommand = false;
             if (commandSuccess)
                 lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
@@ -1753,7 +1766,7 @@ public:
             
             
             // WARNING: This assumes items list is a path list. (May need a long term solution still.)
-            if ((commandGrouping == "split" || commandGrouping == "split2" || commandGrouping == "split3" || commandGrouping == "split4") && sourceType == "file") {
+            if (sourceType == "file" && (commandGrouping == "split" || commandGrouping == "split2" || commandGrouping == "split3" || commandGrouping == "split4")) {
                 
                 std::sort(selectedItemsList.begin(), selectedItemsList.end(), [](const std::string& a, const std::string& b) {
                     std::string parentDirA = getParentDirNameFromPath(a);
@@ -1764,11 +1777,11 @@ public:
                         return parentDirA < parentDirB;
                     else {
                         // Parent directory names are the same, compare filenames
-                        std::string filenameA = getNameFromPath(a);
-                        std::string filenameB = getNameFromPath(b);
+                        //std::string filenameA = getNameFromPath(a);
+                        //std::string filenameB = getNameFromPath(b);
                         
                         // Compare filenames
-                        return filenameA < filenameB;
+                        return getNameFromPath(a) < getNameFromPath(b);
                     }
                 });
             } else {
@@ -1817,7 +1830,7 @@ public:
 
                     pos = groupingName.find(" - ");
                     if (pos != std::string::npos) {
-                        itemName = groupingName.substr(pos + 2); // Assign the part after " - " as the footer
+                        itemName = groupingName.substr(pos + 3); // Assign the part after " - " as the footer
                         groupingName = groupingName.substr(0, pos); // Strip the " - " and everything after it
                     }
 
@@ -1832,7 +1845,7 @@ public:
 
                     pos = groupingName.find(" - ");
                     if (pos != std::string::npos) {
-                        itemName = groupingName.substr(pos + 2); // Assign the part after " - " as the footer
+                        itemName = groupingName.substr(pos + 3); // Assign the part after " - " as the footer
                         groupingName = groupingName.substr(0, pos); // Strip the " - " and everything after it
                     }
 
@@ -1844,7 +1857,7 @@ public:
                 }
                 else if (commandGrouping == "split4") {
                     groupingName = removeQuotes(getParentDirNameFromPath(selectedItem, 2));
-                    itemName = removeQuotes(dropExtension(getNameFromPath(selectedItem)));
+                    itemName = trim(removeQuotes(dropExtension(getNameFromPath(selectedItem))));
                     footer = removeQuotes(getParentDirNameFromPath(selectedItem));
 
                     
@@ -2020,7 +2033,16 @@ public:
                 if (downloadPercentage.load(std::memory_order_acquire) == 100)
                     downloadPercentage.store(-1, std::memory_order_release);
             }
-
+            if (unzipPercentage.load(std::memory_order_acquire) != -1) {
+                lastSelectedListItem->setValue(UNZIP_SYMBOL + " " + std::to_string(unzipPercentage.load(std::memory_order_acquire))+"%");
+                if (unzipPercentage.load(std::memory_order_acquire) == 100)
+                    unzipPercentage.store(-1, std::memory_order_release);
+            }
+            if (copyPercentage.load(std::memory_order_acquire) != -1) {
+                lastSelectedListItem->setValue(COPY_SYMBOL + " " + std::to_string(copyPercentage.load(std::memory_order_acquire))+"%");
+                if (copyPercentage.load(std::memory_order_acquire) == 100)
+                    copyPercentage.store(-1, std::memory_order_release);
+            }
             if (threadFailure.load(std::memory_order_acquire)) {
                 threadFailure.store(false, std::memory_order_release);
                 commandSuccess = false;
@@ -2043,6 +2065,10 @@ public:
         }
 
         if (lastRunningInterpreter) {
+            downloadPercentage.store(-1, std::memory_order_release);
+            unzipPercentage.store(-1, std::memory_order_release);
+            copyPercentage.store(-1, std::memory_order_release);
+
             isDownloadCommand = false;
 
             if (commandSuccess)
@@ -2745,12 +2771,22 @@ public:
         
         bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
         if (_runningInterpreter) {
-            //int currentPercentage = downloadPercentage.load(std::memory_order_acquire);
+            //int currentPercentage = unzipPercentage.load(std::memory_order_acquire);
             //logMessage("currentPercentage: "+std::to_string(currentPercentage));
             if (downloadPercentage.load(std::memory_order_acquire) != -1) {
                 lastSelectedListItem->setValue(DOWNLOAD_SYMBOL + " " + std::to_string(downloadPercentage.load(std::memory_order_acquire))+"%");
                 if (downloadPercentage.load(std::memory_order_acquire) == 100)
                     downloadPercentage.store(-1, std::memory_order_release);
+            }
+            if (unzipPercentage.load(std::memory_order_acquire) != -1) {
+                lastSelectedListItem->setValue(UNZIP_SYMBOL + " " + std::to_string(unzipPercentage.load(std::memory_order_acquire))+"%");
+                if (unzipPercentage.load(std::memory_order_acquire) == 100)
+                    unzipPercentage.store(-1, std::memory_order_release);
+            }
+            if (copyPercentage.load(std::memory_order_acquire) != -1) {
+                lastSelectedListItem->setValue(COPY_SYMBOL + " " + std::to_string(copyPercentage.load(std::memory_order_acquire))+"%");
+                if (copyPercentage.load(std::memory_order_acquire) == 100)
+                    copyPercentage.store(-1, std::memory_order_release);
             }
             if (threadFailure.load(std::memory_order_acquire)) {
                 threadFailure.store(false, std::memory_order_release);
@@ -2775,6 +2811,10 @@ public:
         }
 
         if (lastRunningInterpreter) {
+            downloadPercentage.store(-1, std::memory_order_release);
+            unzipPercentage.store(-1, std::memory_order_release);
+            copyPercentage.store(-1, std::memory_order_release);
+
             isDownloadCommand = false;
 
             if (commandSuccess)
@@ -3122,63 +3162,80 @@ public:
         
         bool settingsLoaded = false;
         if (isFileOrDirectory(settingsConfigIniPath)) {
-            settingsData = getParsedDataFromIniFile(settingsConfigIniPath);
+            auto settingsData = getParsedDataFromIniFile(settingsConfigIniPath);
             if (settingsData.count("ultrahand") > 0) {
                 auto& ultrahandSection = settingsData["ultrahand"];
-                if (ultrahandSection.count("in_overlay") > 0)
-                    settingsLoaded = true;
-                
-                if (ultrahandSection.count("hide_user_guide") > 0)
+        
+                // Handle each setting by checking existence and updating accordingly
+                if (ultrahandSection.count("hide_user_guide") > 0) {
                     hideUserGuide = ultrahandSection["hide_user_guide"];
-                else {
+                } else {
                     setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_user_guide", "false");
                 }
-                
-                if (ultrahandSection.count("clean_version_labels") > 0)
+        
+                if (ultrahandSection.count("clean_version_labels") > 0) {
                     cleanVersionLabels = ultrahandSection["clean_version_labels"];
-                else {
+                } else {
                     setIniFileValue(settingsConfigIniPath, "ultrahand", "clean_version_labels", "true");
                     cleanVersionLabels = "false";
                 }
-                
-                // For hiding the versions of overlays/packages
-                if (ultrahandSection.count("hide_overlay_versions") > 0)
+        
+                // Manage visibility settings with similar pattern
+                if (ultrahandSection.count("hide_overlay_versions") > 0) {
                     hideOverlayVersions = ultrahandSection["hide_overlay_versions"];
-                else {
+                } else {
                     setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_overlay_versions", "false");
                     hideOverlayVersions = "false";
                 }
-                if (ultrahandSection.count("hide_package_versions") > 0)
+        
+                if (ultrahandSection.count("hide_package_versions") > 0) {
                     hidePackageVersions = ultrahandSection["hide_package_versions"];
-                else {
+                } else {
                     setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_package_versions", "false");
                     hidePackageVersions = "false";
                 }
-                
-                if (ultrahandSection.count("default_lang") > 0)
+        
+                if (ultrahandSection.count("default_lang") > 0) {
                     defaultLang = ultrahandSection["default_lang"];
-                else
+                } else {
                     setIniFileValue(settingsConfigIniPath, "ultrahand", "default_lang", defaultLang);
-                
-                if (ultrahandSection.count("datetime_format") == 0)
+                }
+        
+                // Ensure default values are set if the settings are missing
+                if (ultrahandSection.count("datetime_format") == 0) {
                     setIniFileValue(settingsConfigIniPath, "ultrahand", "datetime_format", DEFAULT_DT_FORMAT);
+                }
+        
+                std::vector<std::string> settingsToEnsure = {"hide_clock", "hide_battery", "hide_pcb_temp", "hide_soc_temp"};
+                std::vector<std::string> defaultValues = {"false", "true", "true", "true"};
+                for (size_t i = 0; i < settingsToEnsure.size(); ++i) {
+                    if (ultrahandSection.count(settingsToEnsure[i]) == 0) {
+                        setIniFileValue(settingsConfigIniPath, "ultrahand", settingsToEnsure[i], defaultValues[i]);
+                    }
+                }
+        
+                std::map<std::string, size_t*> bufferSettings;
                 
-                if (ultrahandSection.count("hide_clock") == 0)
-                    setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_clock", "false");
-                if (ultrahandSection.count("hide_battery") == 0)
-                    setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_battery", "true");
-                if (ultrahandSection.count("hide_pcb_temp") == 0)
-                    setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_pcb_temp", "true");
-                if (ultrahandSection.count("hide_soc_temp") == 0)
-                    setIniFileValue(settingsConfigIniPath, "ultrahand", "hide_soc_temp", "true");
+                bufferSettings["copy_buffer_size"] = &COPY_BUFFER_SIZE;
+                bufferSettings["unzip_buffer_size"] = &UNZIP_BUFFER_SIZE;
+                bufferSettings["download_buffer_size"] = &DOWNLOAD_BUFFER_SIZE;
+                bufferSettings["hex_buffer_size"] = &HEX_BUFFER_SIZE;
+
                 
+                // Use the map as intended
+                for (const auto& setting : bufferSettings) {
+                    if (ultrahandSection.count(setting.first) > 0) {
+                        *(setting.second) = std::stoi(ultrahandSection[setting.first]);
+                    }
+                }
+        
+                settingsLoaded = ultrahandSection.count("in_overlay") > 0;
             }
             settingsData.clear();
         }
-        if (!settingsLoaded) { // write data if settings are not loaded
+        
+        if (!settingsLoaded) { // Write data if settings are not loaded
             setIniFileValue(settingsConfigIniPath, "ultrahand", "default_lang", defaultLang);
-            //setIniFileValue(settingsConfigIniPath, "ultrahand", "default_menu", defaultMenuMode);
-            //setIniFileValue(settingsConfigIniPath, "ultrahand", "last_menu", menuMode);
             setIniFileValue(settingsConfigIniPath, "ultrahand", "in_overlay", "false");
         }
         
@@ -3203,11 +3260,18 @@ public:
         //    setIniFileValue(settingsConfigIniPath, "ultrahand", "default_menu", defaultMenuMode);
         //}
         
-        if (cleanVersionLabels == "true")
-            versionLabel = APP_VERSION+std::string("   (")+ extractTitle(loaderInfo)+" "+cleanVersionLabel(loaderInfo)+std::string(")"); // Still needs to parse nx-ovlloader instead of hard coding it
-        else
-            versionLabel = APP_VERSION+std::string("   (")+ extractTitle(loaderInfo)+" v"+cleanVersionLabel(loaderInfo)+std::string(")");
+        versionLabel = std::string(APP_VERSION) + "   (" + extractTitle(loaderInfo) + " " + (cleanVersionLabels == "true" ? "" : "v") + cleanVersionLabel(loaderInfo) + ")";
         
+        //std::string versionLabel = APP_VERSION;
+        //if (cleanVersionLabels != "true") {
+        //    versionLabel += "   (" + extractTitle(loaderInfo) + " v" + cleanVersionLabel(loaderInfo) + ")";
+        //}
+
+        //if (cleanVersionLabels == "true")
+        //    versionLabel = APP_VERSION+std::string("   (")+ extractTitle(loaderInfo)+" "+cleanVersionLabel(loaderInfo)+std::string(")"); // Still needs to parse nx-ovlloader instead of hard coding it
+        //else
+        //    versionLabel = APP_VERSION+std::string("   (")+ extractTitle(loaderInfo)+" v"+cleanVersionLabel(loaderInfo)+std::string(")");
+
         
         auto list = std::make_unique<tsl::elm::List>();
         //list = std::make_unique<tsl::elm::List>();
@@ -4277,7 +4341,16 @@ public:
                 if (downloadPercentage.load(std::memory_order_acquire) == 100)
                     downloadPercentage.store(-1, std::memory_order_release);
             }
-            
+            if (unzipPercentage.load(std::memory_order_acquire) != -1) {
+                lastSelectedListItem->setValue(UNZIP_SYMBOL + " " + std::to_string(unzipPercentage.load(std::memory_order_acquire))+"%");
+                if (unzipPercentage.load(std::memory_order_acquire) == 100)
+                    unzipPercentage.store(-1, std::memory_order_release);
+            }
+            if (copyPercentage.load(std::memory_order_acquire) != -1) {
+                lastSelectedListItem->setValue(COPY_SYMBOL + " " + std::to_string(copyPercentage.load(std::memory_order_acquire))+"%");
+                if (copyPercentage.load(std::memory_order_acquire) == 100)
+                    copyPercentage.store(-1, std::memory_order_release);
+            }
             if (threadFailure.load(std::memory_order_acquire)) {
                 threadFailure.store(false, std::memory_order_release);
                 commandSuccess = false;
@@ -4298,8 +4371,12 @@ public:
         }
 
         if (lastRunningInterpreter) {
-            isDownloadCommand = false;
             
+            downloadPercentage.store(-1, std::memory_order_release);
+            unzipPercentage.store(-1, std::memory_order_release);
+            copyPercentage.store(-1, std::memory_order_release);
+
+            isDownloadCommand = false;
             if (commandSuccess)
                 lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
             else
