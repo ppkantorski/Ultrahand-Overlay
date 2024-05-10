@@ -27,9 +27,7 @@
 
 static std::atomic<bool> abortFileOp(false);
 
-const size_t copyBufferSize = 4096*3; // Increase buffer size to 128 KB
-
-
+size_t COPY_BUFFER_SIZE = 4096*4; // Increase buffer size to 128 KB
 
 
 /**
@@ -349,15 +347,15 @@ static std::atomic<int> copyPercentage(-1);
 void copySingleFile(const std::string& fromFile, const std::string& toFile, long long& totalBytesCopied, const long long totalSize) {
     std::ifstream srcFile(fromFile, std::ios::binary);
     std::ofstream destFile(toFile, std::ios::binary);
-    //const size_t copyBufferSize = 4096;
-    char buffer[copyBufferSize];
+    //const size_t COPY_BUFFER_SIZE = 4096;
+    char buffer[COPY_BUFFER_SIZE];
     
     if (!srcFile || !destFile) {
         logMessage("Error opening files for copying.");
         return;
     }
 
-    while (srcFile.read(buffer, copyBufferSize)) {
+    while (srcFile.read(buffer, COPY_BUFFER_SIZE)) {
         if (abortFileOp.load(std::memory_order_acquire)) {
             destFile.close();
             srcFile.close();
