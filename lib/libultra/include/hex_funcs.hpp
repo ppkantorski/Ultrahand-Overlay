@@ -20,12 +20,13 @@
 #include <string>
 #include <vector>
 #include <algorithm>
+#include <functional>
 //#include <cstdio> // Added for FILE and fopen
 #include <fstream>
 #include <cstring> // Added for std::memcmp
 
 
-//const size_t hexBufferSize = 4096;
+size_t HEX_BUFFER_SIZE = 4096;
 
 
 // For improving the speed of hexing consecutively with the same file and asciiPattern.
@@ -146,12 +147,12 @@ std::vector<std::string> findHexDataOffsets(const std::string& filePath, const s
     }
 
     // Read the file in chunks to find the offsets where the hex data is located
-    constexpr size_t hexBufferSize = 4096*4; // Arbitrary buffer size, can be adjusted
-    std::vector<unsigned char> buffer(hexBufferSize);
+    constexpr size_t HEX_BUFFER_SIZE = 4096*4; // Arbitrary buffer size, can be adjusted
+    std::vector<unsigned char> buffer(HEX_BUFFER_SIZE);
     size_t bytesRead = 0;
     size_t offset = 0;
 
-    while (file.read(reinterpret_cast<char*>(buffer.data()), hexBufferSize)) {
+    while (file.read(reinterpret_cast<char*>(buffer.data()), HEX_BUFFER_SIZE)) {
         bytesRead = file.gcount();
         for (size_t i = 0; i < bytesRead; ++i) {
             if (offset + i + binaryData.size() <= fileSize && std::memcmp(buffer.data() + i, binaryData.data(), binaryData.size()) == 0) {
@@ -196,11 +197,11 @@ std::vector<std::string> findHexDataOffsets(const std::string& filePath, const s
 //    
 //    // Read the file in chunks to find the offsets where the hex data is located
 //    //const size_t bufferSize = 131072;
-//    std::vector<unsigned char> buffer(hexBufferSize); // Changed to use unsigned char
+//    std::vector<unsigned char> buffer(HEX_BUFFER_SIZE); // Changed to use unsigned char
 //    std::streampos offset = 0;
 //    size_t bytesRead = 0; // Changed to size_t
 //    std::streampos currentOffset;
-//    while ((bytesRead = fread(buffer.data(), sizeof(unsigned char), hexBufferSize, file)) > 0) { // Changed to use unsigned char and size_t
+//    while ((bytesRead = fread(buffer.data(), sizeof(unsigned char), HEX_BUFFER_SIZE, file)) > 0) { // Changed to use unsigned char and size_t
 //        for (size_t i = 0; i < bytesRead; i++) {
 //            if (std::memcmp(buffer.data() + i, binaryData.data(), binaryData.size()) == 0) {
 //                currentOffset = static_cast<std::streampos>(offset) + static_cast<std::streamoff>(i);
