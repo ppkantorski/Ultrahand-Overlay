@@ -110,7 +110,6 @@ json_t* stringToJson(const std::string& input) {
 // Replace JSON placeholders in the string
 std::string replaceJsonPlaceholder(const std::string& arg, const std::string& commandName, const std::string& jsonPathOrString) {
     std::unique_ptr<json_t, JsonDeleter> jsonDict;
-
     if (commandName == "json" || commandName == "json_source") {
         jsonDict.reset(stringToJson(jsonPathOrString));
     } else if (commandName == "json_file" || commandName == "json_file_source") {
@@ -118,53 +117,57 @@ std::string replaceJsonPlaceholder(const std::string& arg, const std::string& co
     }
 
     if (!jsonDict) {
-        return arg;
+        return arg; // Return original string if JSON data couldn't be loaded
     }
 
     std::string replacement = arg;
-    std::string searchString = "{" + commandName + "(";
+    const std::string searchString = "{" + commandName + "(";
     size_t startPos = replacement.find(searchString);
-    
-    size_t endPos, nextPos, commaPos;
-    std::string key;
-    size_t index;
-    bool validValue;
 
+    // Declare variables outside the loop to avoid reinitialization
+    size_t endPos = 0;
+    size_t nextPos = 0;
+    size_t commaPos = 0;
+    size_t index ;
+    std::string key;
+    bool validValue = false;
+    
     while (startPos != std::string::npos) {
         endPos = replacement.find(")}", startPos);
         if (endPos == std::string::npos) {
-            break;
+            break; // Break if no closing tag is found
         }
 
         nextPos = startPos + searchString.length();
-        json_t* value = jsonDict.get();
+        json_t* value = jsonDict.get(); // Get the JSON root object
         validValue = true;
 
         while (nextPos < endPos && validValue) {
             commaPos = replacement.find(',', nextPos);
             if (commaPos == std::string::npos || commaPos > endPos) {
-                commaPos = endPos;
+                commaPos = endPos; // Set to endPos if no comma is found or it's beyond endPos
             }
-            key = trim(replacement.substr(nextPos, commaPos - nextPos));
+
+            key = replacement.substr(nextPos, commaPos - nextPos); // Extract the key
             if (json_is_object(value)) {
-                value = json_object_get(value, key.c_str());
+                value = json_object_get(value, key.c_str()); // Navigate through object
             } else if (json_is_array(value)) {
-                index = std::stoul(key);
+                index = std::stoul(key); // Convert key to index for arrays
                 value = json_array_get(value, index);
             } else {
-                validValue = false;
+                validValue = false; // Set validValue to false if value is neither object nor array
             }
-            nextPos = commaPos + 1;
+            nextPos = commaPos + 1; // Move next position past the comma
         }
 
         if (validValue && value && json_is_string(value)) {
-            replacement.replace(startPos, endPos - startPos + 2, json_string_value(value));
+            replacement.replace(startPos, endPos + 2 - startPos, json_string_value(value)); // Replace text
         }
 
-        startPos = replacement.find(searchString, endPos + 2);
+        startPos = replacement.find(searchString, endPos + 2); // Find next occurrence
     }
 
-    return replacement;
+    return replacement; // Return the modified string
 }
 
 
