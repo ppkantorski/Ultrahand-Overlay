@@ -98,13 +98,10 @@ std::string decimalToHex(const std::string& decimalStr) {
 std::string decimalToReversedHex(const std::string& decimalStr, int order = 2) {
     std::string hexadecimal = decimalToHex(decimalStr);
     
-    std::string reversedHex(hexadecimal.length(), '0');  // Preallocate string with the required length
-    int numGroups = hexadecimal.length() / order;
-    
-    for (int group = 0; group < numGroups; ++group) {
-        for (int charInGroup = 0; charInGroup < order; ++charInGroup) {
-            reversedHex[group * order + charInGroup] = hexadecimal[(numGroups - 1 - group) * order + charInGroup];
-        }
+    // Reverse the hexadecimal string in groups of order
+    std::string reversedHex;
+    for (int i = hexadecimal.length() - order; i >= 0; i -= order) {
+        reversedHex += hexadecimal.substr(i, order);
     }
     
     return reversedHex;
