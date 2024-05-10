@@ -55,11 +55,12 @@ void createSingleDirectory(const std::string& directoryPath) {
 void createDirectory(const std::string& directoryPath) {
     std::string path = directoryPath;
     
+    std::string volume = "sdmc:/";
     // Remove leading "sdmc:/" if present
-    if (path.substr(0, 6) == "sdmc:/")
+    if (path.substr(0, 6) == volume)
         path = path.substr(6);
     
-    std::string parentPath = "sdmc:/";
+    std::string parentPath = volume;
     size_t pos = path.find('/');
     
     // Iterate through the path and create each directory level if it doesn't exist
@@ -113,7 +114,7 @@ void deleteFileOrDirectory(const std::string& pathToDelete) {
     std::vector<std::string> stack;
     stack.push_back(pathToDelete + (pathToDelete.back() == '/' ? "" : "/")); // Normalize the path
     struct stat pathStat;
-    std::string currentPath;
+    std::string currentPath, filePath;
     bool isEmpty;
 
     while (!stack.empty()) {
@@ -145,7 +146,7 @@ void deleteFileOrDirectory(const std::string& pathToDelete) {
             while ((entry = readdir(directory)) != nullptr) {
                 const std::string& fileName = entry->d_name;
                 if (fileName != "." && fileName != "..") {
-                    std::string filePath = currentPath + fileName;
+                    filePath = currentPath + fileName;
                     stack.push_back(filePath + (filePath.back() == '/' ? "" : "/"));
                     isEmpty = false;
                 }
@@ -474,6 +475,8 @@ void copyFileOrDirectory(const std::string& fromPath, const std::string& toPath,
 
     struct stat fromStat;
 
+    std::string subFromPath, subToPath;
+
     while (currentDirectoryIndex < directories.size()) {
         std::tie(currentFromPath, currentToPath) = directories[currentDirectoryIndex++]; // Get paths from the vector
 
@@ -507,8 +510,8 @@ void copyFileOrDirectory(const std::string& fromPath, const std::string& toPath,
             dirent* entry;
             while ((entry = readdir(dir)) != nullptr) {
                 if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) continue;
-                std::string subFromPath = currentFromPath + "/" + entry->d_name;
-                std::string subToPath = currentToPath + "/" + entry->d_name;
+                subFromPath = currentFromPath + "/" + entry->d_name;
+                subToPath = currentToPath + "/" + entry->d_name;
                 directories.push_back({subFromPath, subToPath}); // Add subdirectory to the vector for processing
             }
             closedir(dir);
