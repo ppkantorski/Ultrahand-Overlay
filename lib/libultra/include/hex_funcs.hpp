@@ -1,10 +1,10 @@
 /********************************************************************************
- * File: hex_funcs.hpp
+ * File: ini_funcs.hpp
  * Author: ppkantorski
  * Description:
- *   This header file provides functions for working with hexadecimal data in C++.
- *   It includes functions for converting between ASCII and hexadecimal strings,
- *   finding hexadecimal data offsets in a file, and editing hexadecimal data in a file.
+ *   This header file provides functions for working with INI (Initialization) files
+ *   in C++. It includes functions for reading, parsing, and editing INI files,
+ *   as well as cleaning INI file formatting.
  *
  *   For the latest updates and contributions, visit the project's GitHub repository.
  *   (GitHub Repository: https://github.com/ppkantorski/Ultrahand-Overlay)
@@ -17,561 +17,718 @@
  ********************************************************************************/
 
 #pragma once
-#include <string>
-#include <vector>
-#include <algorithm>
-#include <functional>
-//#include <cstdio> // Added for FILE and fopen
 #include <fstream>
-#include <cstring> // Added for std::memcmp
+#include <cstring>  // For std::string, strlen(), etc.
+#include <string>   // For std::string
+#include <vector>   // For std::vector
+#include <map>      // For std::map
+#include <sstream>  // For std::istringstream
+#include <algorithm> // For std::remove_if
+#include <cctype>   // For ::isspace
+#include "get_funcs.hpp"
+#include "path_funcs.hpp"
 
-
-size_t HEX_BUFFER_SIZE = 4096*4;
-
-
-// For improving the speed of hexing consecutively with the same file and asciiPattern.
-static std::unordered_map<std::string, std::string> hexSumCache; // MOVED TO main.cpp
 
 /**
- * @brief Converts an ASCII string to a hexadecimal string.
+ * @brief Represents a package header structure.
  *
- * This function takes an ASCII string as input and converts it into a hexadecimal string.
- *
- * @param asciiStr The ASCII string to convert.
- * @return The corresponding hexadecimal string.
+ * This structure holds information about a package header, including version,
+ * creator, and description.
  */
-std::string asciiToHex(const std::string& asciiStr) {
-    static const char hexDigits[] = "0123456789ABCDEF";
-    std::string hexStr;
-    hexStr.reserve(asciiStr.length() * 2);  // Reserve space for the hexadecimal string
-
-    for (unsigned char c : asciiStr) {
-        hexStr += hexDigits[c >> 4];   // Append the high nibble
-        hexStr += hexDigits[c & 0xF];  // Append the low nibble
-    }
-
-    return hexStr;
-}
-
-/**
- * @brief Converts a decimal string to a hexadecimal string.
- *
- * This function takes a decimal string as input and converts it into a hexadecimal string.
- *
- * @param decimalStr The decimal string to convert.
- * @return The corresponding hexadecimal string.
- */
-std::string decimalToHex(const std::string& decimalStr) {
-    int decimalValue = std::stoi(decimalStr);
-
-    // Edge case for zero
-    if (decimalValue == 0) {
-        return "00";
-    }
-
-    // Preallocate the maximum possible size for a 32-bit integer
-    char hexBuffer[8];  // 8 characters are enough for a full 32-bit integer
-    int index = 0;
-
-    while (decimalValue != 0) {
-        int remainder = decimalValue % 16;
-        // Fill the buffer from the end to the start
-        hexBuffer[7 - index] = (remainder < 10) ? ('0' + remainder) : ('A' + remainder - 10);
-        index++;
-        decimalValue /= 16;
-    }
-
-    // Construct string from the filled part of the buffer
-    return std::string(hexBuffer + 8 - index, index);
-}
-
-/**
- * @brief Converts a decimal string to a reversed hexadecimal string.
- *
- * This function takes a decimal string as input, converts it into a hexadecimal
- * string, and reverses the resulting hexadecimal string in groups of order.
- *
- * @param decimalStr The decimal string to convert.
- * @param order The grouping order for reversing the hexadecimal string.
- * @return The reversed hexadecimal string.
- */
-std::string decimalToReversedHex(const std::string& decimalStr, int order = 2) {
-    std::string hexadecimal = decimalToHex(decimalStr);
+struct PackageHeader {
+    std::string title;
+    std::string version;
+    std::string creator;
+    std::string about;
+    std::string credits;
+    std::string color;
     
-    std::string reversedHex(hexadecimal.length(), '0');  // Preallocate string with the required length
-    int numGroups = hexadecimal.length() / order;
-    
-    for (int group = 0; group < numGroups; ++group) {
-        for (int charInGroup = 0; charInGroup < order; ++charInGroup) {
-            reversedHex[group * order + charInGroup] = hexadecimal[(numGroups - 1 - group) * order + charInGroup];
-        }
+    void clear() {
+        title.clear();
+        version.clear();
+        creator.clear();
+        about.clear();
+        credits.clear();
+        color.clear();
     }
-    
-    return reversedHex;
-}
+};
 
 /**
- * @brief Finds the offsets of hexadecimal data in a file.
+ * @brief Retrieves the package header information from an INI file.
  *
- * This function searches for occurrences of hexadecimal data in a binary file
- * and returns the file offsets where the data is found.
+ * This function parses an INI file and extracts the package header information.
  *
- * @param filePath The path to the binary file.
- * @param hexData The hexadecimal data to search for.
- * @return A vector of strings containing the file offsets where the data is found.
+ * @param filePath The path to the INI file.
+ * @return The package header structure.
  */
-std::vector<std::string> findHexDataOffsets(const std::string& filePath, const std::string& hexData) {
-    std::vector<std::string> offsets;
-
-    // Open the file for reading in binary mode
-    std::ifstream file(filePath, std::ios::binary);
-    if (!file.is_open()) {
-        return offsets; // Return empty vector if file cannot be opened
+PackageHeader getPackageHeaderFromIni(const std::string& filePath) {
+    PackageHeader packageHeader;
+    std::ifstream file(filePath);
+    if (!file) {
+        return packageHeader; // Return default-constructed PackageHeader if file opening fails
     }
 
-    // Get the file size
-    file.seekg(0, std::ios::end);
-    size_t fileSize = file.tellg();
-    file.seekg(0, std::ios::beg);
+    // Map to store references to the fields of the structure
+    std::map<std::string, std::string*> fieldMap = {
+        {";title=", &packageHeader.title},
+        {";version=", &packageHeader.version},
+        {";creator=", &packageHeader.creator},
+        {";about=", &packageHeader.about},
+        {";credits=", &packageHeader.credits},
+        {";color=", &packageHeader.color}
+    };
 
-    // Convert the hex data string to binary data
-    std::vector<unsigned char> binaryData;
-    if (hexData.length() % 2 != 0) {
-        file.close();
-        return offsets; // Ensure hexData has an even length
-    }
-    for (size_t i = 0; i < hexData.length(); i += 2) {
-        std::string byteString = hexData.substr(i, 2);
-        unsigned char byte = static_cast<unsigned char>(std::stoi(byteString, nullptr, 16));
-        binaryData.push_back(byte);
-    }
+    std::string line;
+    size_t startPos, endPos;
 
-    // Read the file in chunks to find the offsets where the hex data is located
-    constexpr size_t HEX_BUFFER_SIZE = 4096*4; // Arbitrary buffer size, can be adjusted
-    std::vector<unsigned char> buffer(HEX_BUFFER_SIZE);
-    size_t bytesRead = 0;
-    size_t offset = 0;
-
-    while (file.read(reinterpret_cast<char*>(buffer.data()), HEX_BUFFER_SIZE)) {
-        bytesRead = file.gcount();
-        for (size_t i = 0; i < bytesRead; ++i) {
-            if (offset + i + binaryData.size() <= fileSize && std::memcmp(buffer.data() + i, binaryData.data(), binaryData.size()) == 0) {
-                offsets.push_back(std::to_string(offset + i));
+    while (getline(file, line)) {
+        // Process each prefix in the map
+        for (const auto& [prefix, field] : fieldMap) {
+            startPos = line.find(prefix);
+            if (startPos != std::string::npos) {
+                startPos += prefix.length();
+                endPos = line.find_first_of(";\r\n", startPos); // Assume ';' or newlines mark the end
+                if (endPos == std::string::npos) {
+                    endPos = line.length();
+                }
+                *field = removeQuotes(trim(line.substr(startPos, endPos - startPos)));
+                break; // Break after processing the first match in a line
             }
         }
-        offset += bytesRead;
     }
 
-    file.close();
-    return offsets;
-}
-
-/**
- * @brief Finds the offsets of hexadecimal data in a file.
- *
- * This function searches for occurrences of hexadecimal data in a binary file
- * and returns the file offsets where the data is found.
- *
- * @param filePath The path to the binary file.
- * @param hexData The hexadecimal data to search for.
- * @return A vector of strings containing the file offsets where the data is found.
- */
-//std::vector<std::string> findHexDataOffsetsF(FILE* file, const std::string& hexData) {
-//    std::vector<std::string> offsets;
-//    
-//    
-//    if (!file) {
-//        //std::cerr << "Failed to open the file." << std::endl;
-//        return offsets;
-//    }
-//    
-//    //size_t fileSize = fileStatus.st_size;
-//    
-//    // Convert the hex data string to binary data
-//    std::vector<unsigned char> binaryData; // Changed to use unsigned char
-//    for (size_t i = 0; i < hexData.length(); i += 2) {
-//        std::string byteString = hexData.substr(i, 2);
-//        unsigned char byte = static_cast<unsigned char>(std::stoi(byteString, nullptr, 16)); // Changed to use unsigned char
-//        binaryData.push_back(byte);
-//    }
-//    
-//    // Read the file in chunks to find the offsets where the hex data is located
-//    //const size_t bufferSize = 131072;
-//    std::vector<unsigned char> buffer(HEX_BUFFER_SIZE); // Changed to use unsigned char
-//    std::streampos offset = 0;
-//    size_t bytesRead = 0; // Changed to size_t
-//    std::streampos currentOffset;
-//    while ((bytesRead = fread(buffer.data(), sizeof(unsigned char), HEX_BUFFER_SIZE, file)) > 0) { // Changed to use unsigned char and size_t
-//        for (size_t i = 0; i < bytesRead; i++) {
-//            if (std::memcmp(buffer.data() + i, binaryData.data(), binaryData.size()) == 0) {
-//                currentOffset = static_cast<std::streampos>(offset) + static_cast<std::streamoff>(i);
-//                offsets.push_back(std::to_string(currentOffset));
-//            }
-//        }
-//        offset += bytesRead;
-//    }
-//    
-//    return offsets;
-//}
-
-
-// Function to convert a hex string to binary data
-std::vector<unsigned char> hexToBinary(const std::string& hexData) {
-    std::vector<unsigned char> binaryData;
-    for (size_t i = 0; i < hexData.length(); i += 2) {
-        std::string byteString = hexData.substr(i, 2);
-        unsigned char byte = static_cast<unsigned char>(std::stoi(byteString, nullptr, 16));
-        binaryData.push_back(byte);
-    }
-    return binaryData;
+    return packageHeader;
 }
 
 
 /**
- * @brief Edits hexadecimal data in a file at a specified offset.
+ * @brief Splits a string into a vector of substrings using a specified delimiter.
  *
- * This function opens a binary file, seeks to a specified offset, and replaces
- * the data at that offset with the provided hexadecimal data.
+ * This function splits a given string into multiple substrings based on the specified delimiter.
  *
- * @param filePath The path to the binary file.
- * @param offsetStr The offset in the file to performthe edit.
- * @param hexData The hexadecimal data to replace at the offset.
+ * @param str The input string to be split.
+ * @param delim The delimiter character used for splitting (default is space ' ').
+ * @return A vector of substrings obtained by splitting the input string.
  */
-void hexEditByOffset(const std::string& filePath, const std::string& offsetStr, const std::string& hexData) {
-    std::streampos offset = std::stoll(offsetStr);
+static std::vector<std::string> split(const std::string& str, char delim = ' ') {
+    std::vector<std::string> out;
 
-    // Open the file for both reading and writing in binary mode
-    std::fstream file(filePath, std::ios::binary | std::ios::in | std::ios::out);
-    if (!file.is_open()) {
-        logMessage("Failed to open the file.");
-        return;
+    // Reserve an estimated amount of space to reduce reallocations
+    out.reserve(10); // Assuming an average of 10 tokens per string
+
+    std::string_view strv = str;
+    size_t current, previous = 0;
+    current = strv.find(delim);
+
+    while (current != std::string::npos) {
+        out.emplace_back(strv.substr(previous, current - previous));
+        previous = current + 1;
+        current = strv.find(delim, previous);
     }
+    out.emplace_back(strv.substr(previous)); // No need to calculate the length
 
-    // Retrieve the file size
-    file.seekg(0, std::ios::end);
-    std::streampos fileSize = file.tellg();
-    file.seekg(0, std::ios::beg);
-
-    if (offset >= fileSize) {
-        logMessage("Offset exceeds file size.");
-        return;
-    }
-
-    // Convert the hex string to binary data
-    std::vector<unsigned char> binaryData(hexData.length() / 2);
-    for (size_t i = 0, j = 0; i < hexData.length(); i += 2, ++j) {
-        std::string byteString = hexData.substr(i, 2);
-        binaryData[j] = static_cast<unsigned char>(std::stoi(byteString, nullptr, 16));
-    }
-
-    // Move to the specified offset
-    file.seekg(offset);
-
-    // Write the binary data directly to the file at the offset
-    file.seekp(offset);
-    file.write(reinterpret_cast<const char*>(binaryData.data()), binaryData.size());
-    if (!file) {
-        logMessage("Failed to write data to the file.");
-        return;
-    }
+    return out;
 }
 
+
 /**
- * @brief Edits a specific offset in a file with custom hexadecimal data.
+ * @brief Parses an INI-formatted string into a map of sections and key-value pairs.
  *
- * This function searches for a custom pattern in the file and calculates a new offset
- * based on user-provided offsetStr and the found pattern. It then replaces the data
- * at the calculated offset with the provided hexadecimal data.
+ * This function parses an INI-formatted string and organizes the data into a map,
+ * where sections are keys and key-value pairs are stored within each section.
  *
- * @param filePath The path to the binary file.
- * @param offsetStr The user-provided offset for the edit.
- * @param customPattern The custom pattern to search for in the file.
- * @param hexDataReplacement The hexadecimal data to replace at the calculated offset.
- * @param occurrence The occurrence/index of the data to replace (default is "0" to replace all occurrences).
+ * @param str The INI-formatted string to parse.
+ * @return A map representing the parsed INI data.
  */
-void hexEditByCustomOffset(const std::string& filePath, const std::string& customAsciiPattern, const std::string& offsetStr, const std::string& hexDataReplacement, size_t occurrence = 0) {
+static std::map<std::string, std::map<std::string, std::string>> parseIni(const std::string &str) {
+    std::map<std::string, std::map<std::string, std::string>> iniData;
     
-    // Create a cache key based on filePath and customAsciiPattern
-    std::string cacheKey = filePath + '?' + customAsciiPattern + '?' + std::to_string(occurrence);
-    
-    int hexSum = -1;
-    
-    // Check if the result is already cached
-    auto cachedResult = hexSumCache.find(cacheKey);
-    if (cachedResult != hexSumCache.end()) {
-        hexSum = std::stoi(cachedResult->second); // load sum from cache
+    auto lines = split(str, '\n');
+    std::string lastHeader = "";
+
+    std::string trimmedLine;
+
+    size_t delimiterPos;
+    std::string key, value;
+
+    for (auto& line : lines) {
+        trimmedLine = trim(line);
+
+        if (trimmedLine.empty() || trimmedLine[0] == '#') {
+            // Ignore empty lines and comments
+            continue;
+        }
+
+        if (trimmedLine.front() == '[' && trimmedLine.back() == ']') {
+            lastHeader = trimmedLine.substr(1, trimmedLine.size() - 2);
+            iniData[lastHeader]; // Ensures the section exists even if it remains empty
+        }
+        else {
+            delimiterPos = trimmedLine.find('=');
+            if (delimiterPos != std::string::npos) {
+                key = trim(trimmedLine.substr(0, delimiterPos));
+                value = trim(trimmedLine.substr(delimiterPos + 1));
+                if (!lastHeader.empty()) {
+                    iniData[lastHeader][key] = value;
+                }
+            }
+        }
     }
-    
-    if (hexSum == -1) {
-        std::string customHexPattern;
-        if (customAsciiPattern[0] == '#') {
-            // remove #
-            customHexPattern = customAsciiPattern.substr(1);
+
+    return iniData;
+}
+
+
+/**
+ * @brief Parses an INI file and returns its content as a map of sections and key-value pairs.
+ *
+ * This function reads the contents of an INI file located at the specified path,
+ * parses it into a map structure, where section names are keys and key-value pairs
+ * are stored within each section.
+ *
+ * @param configIniPath The path to the INI file to be parsed.
+ * @return A map representing the parsed INI data.
+ */
+std::map<std::string, std::map<std::string, std::string>> getParsedDataFromIniFile(const std::string& configIniPath) {
+    std::map<std::string, std::map<std::string, std::string>> parsedData;
+    std::ifstream configFile(configIniPath);
+    if (!configFile) {
+        logMessage("Failed to open the file: " + configIniPath);
+        return parsedData;  // Return empty map if file cannot be opened
+    }
+
+    std::string line, currentSection;
+    std::string trimmedLine;
+
+    size_t delimiterPos;
+    std::string key, value;
+
+    while (getline(configFile, line)) {
+        trimmedLine = trim(line);
+
+        if (trimmedLine.empty()) continue;
+
+        if (trimmedLine.front() == '[' && trimmedLine.back() == ']') {
+            // Remove the brackets and set the current section
+            currentSection = trimmedLine.substr(1, trimmedLine.size() - 2);
         } else {
-            // Convert custom ASCII pattern to a custom hex pattern
-            customHexPattern = asciiToHex(customAsciiPattern);
-        }
-        
-        
-        // Find hex data offsets in the file
-        std::vector<std::string> offsets = findHexDataOffsets(filePath, customHexPattern);
-        
-        if (!offsets.empty()) {
-            hexSum = std::stoi(offsets[occurrence]);
-            
-            // Convert 'hexSum' to a string and add it to the cache
-            hexSumCache[cacheKey] = std::to_string(hexSum);
-        } else {
-            logMessage("Offset not found.");
-            return;
+            delimiterPos = trimmedLine.find('=');
+            if (delimiterPos != std::string::npos) {
+                key = trim(trimmedLine.substr(0, delimiterPos));
+                value = trim(trimmedLine.substr(delimiterPos + 1));
+                parsedData[currentSection][key] = value;
+            }
         }
     }
-    
-    
-    if (hexSum != -1) {
-        // Calculate the total offset to seek in the file
-        int sum = hexSum + std::stoi(offsetStr);
-        hexEditByOffset(filePath, std::to_string(sum), hexDataReplacement);
-    } else {
-        logMessage("Failed to find " + customAsciiPattern + ".");
-    }
+
+    return parsedData;
 }
 
-/**
- * @brief Finds and replaces hexadecimal data in a file.
- *
- * This function searches for occurrences of hexadecimal data in a binary file
- * and replaces them with a specified hexadecimal replacement data.
- *
- * @param filePath The path to the binary file.
- * @param hexDataToReplace The hexadecimal data to search for and replace.
- * @param hexDataReplacement The hexadecimal data to replace with.
- * @param occurrence The occurrence/index of the data to replace (default is "0" to replace all occurrences).
- */
-void hexEditFindReplace(const std::string& filePath, const std::string& hexDataToReplace, const std::string& hexDataReplacement, size_t occurrence = 0) {
-    std::vector<std::string> offsetStrs = findHexDataOffsets(filePath, hexDataToReplace);
 
-    if (offsetStrs.empty()) {
-        //std::cout << "Hex data to replace not found." << std::endl;
+/**
+ * @brief Parses sections from an INI file and returns them as a list of strings.
+ *
+ * This function reads an INI file and extracts the section names from it.
+ *
+ * @param filePath The path to the INI file.
+ * @return A vector of section names.
+ */
+std::vector<std::string> parseSectionsFromIni(const std::string& filePath) {
+    std::vector<std::string> sections;
+    std::ifstream file(filePath);
+    if (!file) {
+        logMessage("Failed to open the file: " + filePath);
+        return sections;  // Early return if the file cannot be opened
+    }
+
+    std::string line;
+
+    while (std::getline(file, line)) {
+        std::string trimmedLine = trim(line);
+        
+        // Check if the line contains a section header
+        if (!trimmedLine.empty() && trimmedLine.front() == '[' && trimmedLine.back() == ']') {
+            std::string sectionName = trimmedLine.substr(1, trimmedLine.size() - 2);
+            sections.push_back(sectionName);
+        }
+    }
+
+    return sections;
+}
+
+
+
+/**
+ * @brief Parses a specific value from a section and key in an INI file.
+ *
+ * @param filePath The path to the INI file.
+ * @param sectionName The name of the section containing the desired key.
+ * @param keyName The name of the key whose value is to be retrieved.
+ * @return The value as a string, or an empty string if the key or section isn't found.
+ */
+std::string parseValueFromIniSection(const std::string& filePath, const std::string& sectionName, const std::string& keyName) {
+    std::string value = "";
+    std::ifstream file(filePath);
+    if (!file) {
+        logMessage("Failed to open the file: " + filePath);
+        return value;  // Return empty if the file cannot be opened
+    }
+
+    std::string line, currentSection;
+
+    size_t delimiterPos;
+    std::string currentKey;
+    std::string trimmedLine;
+
+    while (std::getline(file, line)) {
+        trimmedLine = trim(line);
+
+        if (trimmedLine.empty()) continue;
+
+        if (trimmedLine.front() == '[' && trimmedLine.back() == ']') {
+            currentSection = trimmedLine.substr(1, trimmedLine.size() - 2);
+            if (currentSection != sectionName) continue;  // Skip processing other sections
+        } else if (currentSection == sectionName) {
+            delimiterPos = trimmedLine.find('=');
+            if (delimiterPos != std::string::npos) {
+                currentKey = trim(trimmedLine.substr(0, delimiterPos));
+                if (currentKey == keyName) {
+                    value = trim(trimmedLine.substr(delimiterPos + 1));
+                    break;  // Found the key, exit the loop
+                }
+            }
+        }
+    }
+
+    return value;
+}
+
+
+
+/**
+ * @brief Cleans the formatting of an INI file by removing empty lines and standardizing section formatting.
+ *
+ * This function takes an INI file located at the specified path, removes empty lines,
+ * and standardizes the formatting of sections by ensuring that there is a newline
+ * between each section's closing ']' and the next section's opening '['.
+ *
+ * @param filePath The path to the INI file to be cleaned.
+ */
+void cleanIniFormatting(const std::string& filePath) {
+    std::string tempPath = filePath + ".tmp";
+
+    // Open the input file with ifstream
+    std::ifstream inputFile(filePath);
+    if (!inputFile) {
+        logMessage("Failed to open the input file: " + filePath);
         return;
     }
 
-    // Open the file once for all operations
-    std::fstream file(filePath, std::ios::in | std::ios::out | std::ios::binary);
-    if (!file.is_open()) {
-        //std::cout << "Failed to open the file for editing." << std::endl;
+    // Create a temporary file for output with ofstream
+    std::ofstream outputFile(tempPath);
+    if (!outputFile) {
+        logMessage("Failed to create the output file: " + tempPath);
+        return;  // inputFile will be closed by destructor
+    }
+
+    std::string line;
+    bool isNewSection = false;
+
+    std::string trimmedLine;
+
+    while (std::getline(inputFile, line)) {
+        trimmedLine = trim(line);
+
+        // Add a newline before starting a new section, but not before the first section
+        if (!trimmedLine.empty() && trimmedLine.front() == '[' && trimmedLine.back() == ']') {
+            if (isNewSection) {
+                outputFile << '\n'; // Add an extra newline to separate sections
+            }
+            isNewSection = true;
+        }
+
+        if (!trimmedLine.empty()) {
+            outputFile << trimmedLine << '\n';
+        }
+    }
+
+    // Close both files
+    inputFile.close();
+    outputFile.close();
+
+    // Replace the original file with the cleaned up version
+    std::remove(filePath.c_str());
+    std::rename(tempPath.c_str(), filePath.c_str());
+}
+
+
+/**
+ * @brief Modifies or creates an INI file by adding or updating key-value pairs in the specified section.
+ *
+ * This function attempts to open the specified INI file for reading. If the file doesn't exist,
+ * it creates a new file and adds the specified section and key-value pair. If the file exists,
+ * it reads its contents, modifies or adds the key-value pair in the specified section, and saves
+ * the changes back to the original file.
+ *
+ * @param fileToEdit      The path to the INI file to be modified or created.
+ * @param desiredSection  The name of the section in which the key-value pair should be added or updated.
+ * @param desiredKey      The key for the key-value pair to be added or updated.
+ * @param desiredValue    The new value for the key-value pair.
+ * @param desiredNewKey   (Optional) If provided, the function will rename the key while preserving the original value.
+ */
+void setIniFile(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredValue, const std::string& desiredNewKey = "", const std::string& comment = "") {
+    std::ios::sync_with_stdio(false);  // Disable synchronization between C++ and C I/O.
+
+    std::ifstream configFile(fileToEdit);
+    std::stringstream buffer;  // Use stringstream to buffer the output.
+
+    bool sectionFound = false;
+    bool keyFound = false;
+    bool firstSection = true;  // Flag to control new line before first section
+    std::string line, currentSection;
+
+    std::string trimmedLine;
+    size_t delimiterPos;
+    std::string key;
+
+    while (getline(configFile, line)) {
+        trimmedLine = trim(line);
+
+        if (trimmedLine.empty()) {
+            continue;  // Skip empty lines but do not add them to the buffer
+        }
+
+        if (trimmedLine[0] == '[' && trimmedLine.back() == ']') {
+            if (sectionFound && !keyFound) {
+                buffer << desiredKey << "=" << desiredValue << '\n';  // Add missing key-value pair
+                keyFound = true;
+            }
+            if (!firstSection) {
+                buffer << '\n';  // Add a newline before the start of a new section
+            }
+            currentSection = trimmedLine.substr(1, trimmedLine.size() - 2);
+            sectionFound = (currentSection == desiredSection);
+            buffer << line << '\n';
+            firstSection = false;
+            continue;
+        }
+
+        if (sectionFound && !keyFound && trimmedLine.find('=') != std::string::npos) {
+            delimiterPos = trimmedLine.find('=');
+            key = trimmedLine.substr(0, delimiterPos);
+            if (key == desiredKey) {
+                keyFound = true;
+                trimmedLine = (desiredNewKey.empty() ? desiredKey : desiredNewKey) + "=" + desiredValue;
+            }
+        }
+
+        buffer << trimmedLine << '\n';
+    }
+
+    if (!sectionFound && !keyFound) {
+        if (!firstSection) buffer << '\n';  // Ensure newline before adding a new section, unless it's the first section
+        buffer << '\n' << '[' << desiredSection << ']' << '\n';
+        buffer << desiredKey << "=" << desiredValue << '\n';
+    } else if (!keyFound) {
+        buffer << desiredKey << "=" << desiredValue << '\n';
+    }
+
+    configFile.close();
+
+    std::ofstream outFile(fileToEdit);
+    outFile << buffer.str();
+    outFile.close();
+}
+
+
+
+/**
+ * @brief Sets the value of a key in an INI file within the specified section and cleans the formatting.
+ *
+ * This function sets the value of the specified key within the given section of the INI file.
+ * If the key or section does not exist, it creates them. After updating the INI file,
+ * it cleans the formatting to ensure proper INI file structure.
+ *
+ * @param fileToEdit      The path to the INI file to be modified or created.
+ * @param desiredSection  The name of the section in which the key-value pair should be added or updated.
+ * @param desiredKey      The key for the key-value pair to be added or updated.
+ * @param desiredValue    The new value for the key-value pair.
+ */
+void setIniFileValue(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredValue, const std::string& comment="") {
+    setIniFile(fileToEdit, desiredSection, desiredKey, desiredValue, "", comment);
+    //cleanIniFormatting(fileToEdit);
+}
+
+/**
+ * @brief Sets the key name to a new name in an INI file within the specified section and cleans the formatting.
+ *
+ * This function sets the key name to a new name within the given section of the INI file.
+ * If the key or section does not exist, it creates them. After updating the INI file,
+ * it cleans the formatting to ensure proper INI file structure.
+ *
+ * @param fileToEdit      The path to the INI file to be modified or created.
+ * @param desiredSection  The name of the section in which the key-name change should occur.
+ * @param desiredKey      The key name to be changed.
+ * @param desiredNewKey   The new key name to replace the original key name.
+ */
+void setIniFileKey(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredNewKey, const std::string& comment="") {
+    setIniFile(fileToEdit, desiredSection, desiredKey, "", desiredNewKey, comment);
+    //cleanIniFormatting(fileToEdit);
+}
+
+
+
+
+/**
+ * @brief Adds a new section to an INI file.
+ *
+ * This function adds a new section with the specified name to the INI file located at the
+ * specified path. If the section already exists, it does nothing.
+ *
+ * @param filePath The path to the INI file.
+ * @param sectionName The name of the section to add.
+ */
+void addIniSection(const std::string& filePath, const std::string& sectionName) {
+    // Open the input file to check if it exists and read from it
+    std::ifstream inputFile(filePath);
+    if (!inputFile) {
+        logMessage("Error: Failed to open INI file for reading.");
+        return;
+    }
+    
+    // Create a temporary file
+    std::string tempPath = filePath + ".tmp";
+    std::ofstream tempFile(tempPath);
+    if (!tempFile) {
+        logMessage("Error: Failed to create a temporary file.");
         return;
     }
 
-    if (occurrence == 0) {
-        // Replace all occurrences
-        for (const std::string& offsetStr : offsetStrs) {
-            hexEditByOffset(filePath, offsetStr, hexDataReplacement);
+    std::string line;
+    bool sectionExists = false;
+    std::string fullSectionName = "[" + sectionName + "]";
+
+    // Read through the file and copy lines to the temporary file
+    while (std::getline(inputFile, line)) {
+        // Check if the current line is the section to be added
+        if (line.compare(0, fullSectionName.length(), fullSectionName) == 0) {
+            sectionExists = true;
+            break;  // Section already exists, no need to continue
         }
-    } else if (occurrence > 0 && occurrence <= offsetStrs.size()) {
-        // Replace the specified occurrence/index
-        std::string offsetStr = offsetStrs[occurrence - 1];
-        hexEditByOffset(filePath, offsetStr, hexDataReplacement);
-    } else {
-        //std::cout << "Invalid occurrence/index specified." << std::endl;
+        tempFile << line << '\n';
     }
 
-    file.close(); // Close the file after all operations
+    // If the section does not exist, add it
+    if (!sectionExists) {
+        tempFile << fullSectionName << '\n';
+        // Continue copying the rest of the file if needed
+        while (std::getline(inputFile, line)) {
+            tempFile << line << '\n';
+        }
+    } else {
+        // If the section exists, finish copying the rest of the file
+        do {
+            tempFile << line << '\n';
+        } while (std::getline(inputFile, line));
+    }
+
+    inputFile.close();
+    tempFile.close();
+
+    // Replace the original file with the temp file
+    if (std::remove(filePath.c_str()) != 0) {
+        logMessage("Failed to delete the original file.");
+        return;
+    }
+    
+    if (std::rename(tempPath.c_str(), filePath.c_str()) != 0) {
+        logMessage("Failed to rename the temporary file.");
+    }
 }
 
-/**
- * @brief Finds and replaces hexadecimal data in a file.
- *
- * This function searches for occurrences of hexadecimal data in a binary file
- * and replaces them with a specified hexadecimal replacement data.
- *
- * @param filePath The path to the binary file.
- * @param hexDataToReplace The hexadecimal data to search for and replace.
- * @param hexDataReplacement The hexadecimal data to replace with.
- * @param occurrence The occurrence/index of the data to replace (default is "0" to replace all occurrences).
- */
-std::string parseHexDataAtCustomOffset(const std::string& filePath, const std::string& customAsciiPattern, const std::string& offsetStr, size_t length, size_t occurrence = 0) {
-    std::string cacheKey = filePath + '?' + customAsciiPattern + '?' + std::to_string(occurrence);
-    int hexSum = -1;
 
-    auto cachedResult = hexSumCache.find(cacheKey);
-    if (cachedResult != hexSumCache.end()) {
-        hexSum = std::stoi(cachedResult->second);
-    } else {
-        std::string customHexPattern = asciiToHex(customAsciiPattern); // Function should cache its results if expensive
-        std::vector<std::string> offsets = findHexDataOffsets(filePath, customHexPattern); // Consider optimizing this search
-        
-        if (!offsets.empty() && offsets.size() > occurrence) {
-            hexSum = std::stoi(offsets[occurrence]);
-            hexSumCache[cacheKey] = std::to_string(hexSum);
+
+
+/**
+ * @brief Renames a section in an INI file.
+ *
+ * This function renames the section with the specified current name to the specified new name
+ * in the INI file located at the specified path. If the current section does not exist, or if the
+ * new section name already exists, it does nothing.
+ *
+ * @param filePath The path to the INI file.
+ * @param currentSectionName The name of the section to rename.
+ * @param newSectionName The new name for the section.
+ */
+void renameIniSection(const std::string& filePath, const std::string& currentSectionName, const std::string& newSectionName) {
+    std::ifstream configFile(filePath);
+    if (!configFile) {
+        logMessage("Failed to open the input file: " + filePath);
+        return;
+    }
+
+    std::string tempPath = filePath + ".tmp";
+    std::ofstream tempFile(tempPath);
+    if (!tempFile) {
+        logMessage("Failed to create the temporary file: " + tempPath);
+        return;
+    }
+
+    std::string line, trimmedLine, sectionName;
+
+    while (getline(configFile, line)) {
+        trimmedLine = trim(line);
+
+        if (!trimmedLine.empty() && trimmedLine.front() == '[' && trimmedLine.back() == ']') {
+            sectionName = trimmedLine.substr(1, trimmedLine.length() - 2);
+
+            if (sectionName == currentSectionName) {
+                tempFile << "[" << newSectionName << "]\n";
+            } else {
+                tempFile << line << '\n';
+            }
         } else {
-            logMessage("Offset not found.");
-            return "";
+            tempFile << line << '\n';
         }
     }
-    
-    std::streampos totalOffset = hexSum + std::stoll(offsetStr);
-    std::vector<char> hexBuffer(length);
-    std::vector<char> hexStream(length * 2);
 
-    std::ifstream file(filePath, std::ios::binary);
-    if (!file) {
-        logMessage("Failed to open the file.");
-        return "";
-    }
-    
-    file.seekg(totalOffset);
-    if (!file) {
-        logMessage("Error seeking to offset.");
-        return "";
+    configFile.close();
+    tempFile.close();
+
+    // Replace the original file with the modified temporary file
+    if (remove(filePath.c_str()) != 0) {
+        logMessage("Failed to delete the original file: " + filePath);
+        return;
     }
 
-    file.read(hexBuffer.data(), length);
-    if (file.gcount() == static_cast<std::streamsize>(length)) {
-        const char hexDigits[] = "0123456789ABCDEF";
-        for (size_t i = 0; i < length; ++i) {
-            hexStream[i * 2] = hexDigits[(hexBuffer[i] >> 4) & 0xF];
-            hexStream[i * 2 + 1] = hexDigits[hexBuffer[i] & 0xF];
-        }
-    } else {
-        logMessage("Error reading data from file or end of file reached.");
-        return "";
+    if (rename(tempPath.c_str(), filePath.c_str()) != 0) {
+        logMessage("Failed to rename the temporary file: " + tempPath);
     }
-
-    file.close();
-    std::string result(hexStream.begin(), hexStream.end());
-    std::transform(result.begin(), result.end(), result.begin(), ::toupper);
-
-    return result;
 }
 
 
-/**
- * @brief Finds and replaces hexadecimal data in a file.
- *
- * This function searches for occurrences of hexadecimal data in a binary file
- * and replaces them with a specified hexadecimal replacement data.
- *
- * @param filePath The path to the binary file.
- * @param hexDataToReplace The hexadecimal data to search for and replace.
- * @param hexDataReplacement The hexadecimal data to replace with.
- * @param occurrence The occurrence/index of the data to replace (default is "0" to replace all occurrences).
- */
-//std::string parseHexDataAtCustomOffsetF(FILE*& file, const std::string& filePath, const std::string& customAsciiPattern, const std::string& offsetStr, size_t length, size_t occurrence = 0) {
-//    
-//    // Create a cache key based on filePath and customAsciiPattern
-//    std::string cacheKey = filePath + '?' + customAsciiPattern + '?' + std::to_string(occurrence);
-//    
-//    int hexSum = -1;
-//    
-//    // Check if the result is already cached
-//    auto cachedResult = hexSumCache.find(cacheKey);
-//    if (cachedResult != hexSumCache.end()) {
-//        hexSum = std::stoi(cachedResult->second); // load sum from cache
-//    }
-//    
-//    if (hexSum == -1) {
-//        // Convert custom ASCII pattern to a custom hex pattern
-//        std::string customHexPattern = asciiToHex(customAsciiPattern);
-//        
-//        // Find hex data offsets in the file
-//        std::vector<std::string> offsets = findHexDataOffsetsF(file, customHexPattern);
-//        
-//        if (!offsets.empty()) {
-//            hexSum = std::stoi(offsets[occurrence]);
-//            
-//            // Convert 'hexSum' to a string and add it to the cache
-//            hexSumCache[cacheKey] = std::to_string(hexSum);
-//        } else {
-//            logMessage("Offset not found.");
-//            return "";
-//        }
-//    }
-//    
-//    // Calculate the total offset to seek in the file
-//    int sum = hexSum + std::stoi(offsetStr);
-//    
-//    
-//    // Open the file for reading in binary mode
-//    //FILE* file = fopen(filePath.c_str(), "rb");
-//    if (!file) {
-//        logMessage("Failed to open the file.");
-//        return "";
-//    }
-//    
-//    // Seek to the specified offset
-//    if (fseek(file, sum, SEEK_SET) != 0) {
-//        logMessage("Error seeking to offset.");
-//        //fclose(file);
-//        return "";
-//    }
-//    
-//    char hexBuffer[length];
-//    char hexDigits[] = "0123456789ABCDEF";
-//    char* hexStream = new char[length * 2];  // Allocate memory for the result
-//    
-//    size_t bytesRead = fread(hexBuffer, 1, length, file);
-//    if (bytesRead == length) {
-//        for (size_t i = 0; i < length; ++i) {
-//            hexStream[i * 2] = hexDigits[(hexBuffer[i] >> 4) & 0xF];
-//            hexStream[i * 2 + 1] = hexDigits[hexBuffer[i] & 0xF];
-//        }
-//    } else if (feof(file)) {
-//        logMessage("End of file reached.");
-//    } else if (ferror(file)) {
-//        logMessage("Error reading data from file: " + std::to_string(errno));
-//    }
-//    
-//    
-//    
-//    // Convert lowercase hex to uppercase and return the result
-//    std::string result(hexStream, length * 2);
-//    std::transform(result.begin(), result.end(), result.begin(), ::toupper);
-//    
-//    delete[] hexStream;
-//    
-//    return result;
-//}
 
 
 /**
- * @brief Finds and replaces hexadecimal data in a file.
+ * @brief Removes a section from an INI file.
  *
- * This function searches for occurrences of hexadecimal data in a binary file
- * and replaces them with a specified hexadecimal replacement data.
+ * This function removes the section with the specified name, including all its associated key-value
+ * pairs, from the INI file located at the specified path. If the section does not exist in the file,
+ * it does nothing.
  *
- * @param filePath The path to the binary file.
- * @param hexDataToReplace The hexadecimal data to search for and replace.
- * @param hexDataReplacement The hexadecimal data to replace with.
- * @param occurrence The occurrence/index of the data to replace (default is "0" to replace all occurrences).
+ * @param filePath The path to the INI file.
+ * @param sectionName The name of the section to remove.
  */
+void removeIniSection(const std::string& filePath, const std::string& sectionName) {
+    std::ifstream configFile(filePath);
+    if (!configFile) {
+        logMessage("Failed to open the input file: " + filePath);
+        return; // Handle the error accordingly
+    }
 
-std::string replaceHexPlaceholder(const std::string& arg, const std::string& hexPath) {
-    const std::string searchString = "{hex_file(";
-    std::string replacement = arg;
+    std::string tempPath = filePath + ".tmp";
+    std::ofstream tempFile(tempPath);
+    if (!tempFile) {
+        logMessage("Failed to create the temporary file: " + tempPath);
+        return; // Handle the error accordingly
+    }
 
-    size_t startPos = replacement.find(searchString);
-    if (startPos == std::string::npos) return replacement;
+    std::string line, currentSection;
+    bool inSectionToRemove = false;
 
-    size_t endPos = replacement.find(")}", startPos + searchString.length());
-    if (endPos == std::string::npos) return replacement;
+    std::string trimmedLine;
 
-    std::string placeholderContent = replacement.substr(startPos + searchString.length(), endPos - startPos - searchString.length());
+    while (getline(configFile, line)) {
+        trimmedLine = trim(line);
+
+        // Check if the line represents a section
+        if (!trimmedLine.empty() && trimmedLine.front() == '[' && trimmedLine.back() == ']') {
+            currentSection = trimmedLine.substr(1, trimmedLine.length() - 2);
+
+            if (currentSection == sectionName) {
+                // Mark that we are in the section to remove
+                inSectionToRemove = true;
+            } else {
+                // We've reached a new section, so stop removing
+                inSectionToRemove = false;
+                tempFile << line << '\n'; // Write this new section header
+            }
+        } else if (!inSectionToRemove) {
+            // Write lines that are not part of the section to remove
+            tempFile << line << '\n';
+        }
+    }
+
+    configFile.close();
+    tempFile.close();
+
+    // Replace the original file with the temp file
+    if (remove(filePath.c_str()) != 0) {
+        logMessage("Failed to delete the original file: " + filePath);
+        return; // Handle the error accordingly
+    }
     
-    size_t firstComma = placeholderContent.find(',');
-    size_t secondComma = placeholderContent.rfind(',');
-    if (firstComma == std::string::npos || secondComma == std::string::npos || firstComma == secondComma) {
-        return replacement;  // Not enough parts
+    if (rename(tempPath.c_str(), filePath.c_str()) != 0) {
+        logMessage("Failed to rename the temporary file: "+ tempPath);
+        // Handle the error accordingly
+    }
+}
+
+
+// Removes a key-value pair from an ini accordingly.
+void removeIniKey(const std::string& filePath, const std::string& sectionName, const std::string& keyName) {
+    std::ifstream configFile(filePath);
+    if (!configFile) {
+        logMessage("Failed to open the input file: " + filePath);
+        return; // Handle the error accordingly
     }
 
-    std::string customAsciiPattern = trim(placeholderContent.substr(0, firstComma));
-    std::string offsetStr = trim(placeholderContent.substr(firstComma + 1, secondComma - firstComma - 1));
-    size_t length = std::stoul(trim(placeholderContent.substr(secondComma + 1)));
-
-    std::string parsedResult = parseHexDataAtCustomOffset(hexPath, customAsciiPattern, offsetStr, length);
-    if (!parsedResult.empty()) {
-        replacement.replace(startPos, endPos - startPos + searchString.length() + 2, parsedResult);
+    std::string tempPath = filePath + ".tmp";
+    std::ofstream tempFile(tempPath);
+    if (!tempFile) {
+        logMessage("Failed to create the temporary file: " + tempPath);
+        return; // Handle the error accordingly
     }
 
-    return replacement;
+    std::string line, currentSection;
+    bool inTargetSection = false;
+    std::string trimmedLine;
+
+    while (getline(configFile, line)) {
+        trimmedLine = trim(line);
+
+        // Check if the line represents a section
+        if (!trimmedLine.empty() && trimmedLine.front() == '[' && trimmedLine.back() == ']') {
+            currentSection = trimmedLine.substr(1, trimmedLine.length() - 2);
+
+            if (currentSection == sectionName) {
+                // We are in the target section
+                inTargetSection = true;
+            } else {
+                // We've left the target section
+                inTargetSection = false;
+            }
+            tempFile << line << '\n'; // Always write section headers
+        } else if (inTargetSection && trimmedLine.find(keyName + "=") == 0) {
+            // If we're in the target section and the line starts with the key, skip it
+            continue;
+        } else {
+            // Write lines that are not part of the key to remove
+            tempFile << line << '\n';
+        }
+    }
+
+    configFile.close();
+    tempFile.close();
+
+    // Replace the original file with the temp file
+    if (remove(filePath.c_str()) != 0) {
+        logMessage("Failed to delete the original file: " + filePath);
+        return; // Handle the error accordingly
+    }
+    
+    if (rename(tempPath.c_str(), filePath.c_str()) != 0) {
+        logMessage("Failed to rename the temporary file: "+ tempPath);
+        // Handle the error accordingly
+    }
 }
