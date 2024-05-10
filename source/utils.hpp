@@ -17,15 +17,14 @@
  ********************************************************************************/
 
 #pragma once
-#include <switch.h>
-#include <fstream>
-#include <fnmatch.h>
-
-#include <payload.hpp> // Studious Pancake
-#include <util.hpp> // Studious Pancake
 #include <ultra.hpp>
 #include <tesla.hpp>
+#include <switch.h>
+#include <payload.hpp> // Studious Pancake
+#include <util.hpp> // Studious Pancake
 
+#include <fstream>
+#include <fnmatch.h>
 #include <numeric>
 #include <queue>
 #include <mutex>
