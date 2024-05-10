@@ -157,6 +157,8 @@ static const std::string DROPDOWN_SYMBOL = "\u25B6";
 static const std::string CHECKMARK_SYMBOL = "\uE14B";
 static const std::string CROSSMARK_SYMBOL = "\uE14C";
 static const std::string DOWNLOAD_SYMBOL = "\u2193";
+static const std::string UNZIP_SYMBOL = "\u2191"; 
+static const std::string COPY_SYMBOL = "\u2192";
 static const std::string INPROGRESS_SYMBOL = "\u25CF";
 static const std::string STAR_SYMBOL = "\u2605";
 
@@ -1115,6 +1117,8 @@ namespace tsl {
             constexpr Color ColorClickAnimation   = { 0x0, 0x2, 0x2, 0xF };   ///< Element click animation color
         }
     }
+
+
     
     //std::string highlightColor1Str = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "highlight_color_1"); // format "X,X,X"
     //std::string highlightColor2Str = parseValueFromIniSection("/config/ultrahand/theme.ini", "theme", "highlight_color_2"); // format "X,X,X"
@@ -2882,24 +2886,6 @@ namespace tsl {
                             // Calculate the progress for each letter based on the counter
                             //progress = calculateAmplitude(counter - x * 0.001F);
                             counter = (2 * M_PI * (fmod(std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count(), cycleDuration) + countOffset) / 1.5);
-                            //progress = calculateAmplitude(counter);
-                            
-                            // Calculate the corresponding highlight color for each letter
-                            //progress = (std::sin(counter) + 1) / 2;
-                            //highlightColor = {
-                            //    static_cast<u8>((0xA - 0xF) * (3 - 1.5*progress) + 0xF),
-                            //    static_cast<u8>((0xA - 0xF) * 1.5*progress + 0xF),
-                            //    static_cast<u8>((0xA - 0xF) * (1.25 - progress) + 0xF),
-                            //    0xF
-                            //};
-                            
-                            //float red1 = 0;
-                            //float green1 = 15;
-                            //float blue1 = 6.25;
-                            
-                            //float red2 = 7.5;
-                            //float green2 = 7.5;
-                            //float blue2 = 13.75;
                             
                             progress = std::sin(counter); // -1 to 1
                             
@@ -2909,19 +2895,6 @@ namespace tsl {
                                 static_cast<u8>((std::get<2>(dynamicLogoRGB2) - std::get<2>(dynamicLogoRGB1)) * (progress + 1.) / 2. + std::get<2>(dynamicLogoRGB1)),
                                 15
                             };
-                            
-                            
-                            // we want to rewrite this function using the color variables above
-                            //highlightColor = {
-                            //    static_cast<u8>(3.75  +  (3.75 * progress)), // ranges from 0 to 7.5
-                            //    static_cast<u8>(11.25 + (-3.75 * progress)), // ranges from 15 to 7.5
-                            //    static_cast<u8>(10.0  +  (3.75 * progress)), // ranges from 6.25 to 13.75
-                            //    15
-                            //};
-                            
-                            
-                            // Draw each character with its corresponding highlight color
-                            //renderer->drawString(std::string(1, letter).c_str(), false, x, y + offset, fontSize, highlightColor);
                             
                             // Call the renderer->drawString function
                             renderer->drawString(std::string(1, letter).c_str(), false, x, y + offset, fontSize, highlightColor);
@@ -3830,7 +3803,7 @@ namespace tsl {
                         renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +2, this->getY() + 45, 20, !useClickTextColor ? (this->m_faint ? offTextColor : selectedTextColor) : clickTextColor);
                     else
                         renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +2, this->getY() + 45, 20, !useClickTextColor ? (this->m_faint ? offTextColor : defaultTextColor) : clickTextColor);
-                } else if (((this->m_value).find(DOWNLOAD_SYMBOL) != std::string::npos) || this->m_value == INPROGRESS_SYMBOL) {
+                } else if ((((this->m_value).find(DOWNLOAD_SYMBOL) != std::string::npos) || ((this->m_value).find(UNZIP_SYMBOL) != std::string::npos) || ((this->m_value).find(COPY_SYMBOL) != std::string::npos)) || this->m_value == INPROGRESS_SYMBOL) {
                     renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +2, this->getY() + 45, 20, (this->m_faint ? offTextColor : inprogressTextColor));
                 } else if (this->m_value == CROSSMARK_SYMBOL) {
                     renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +2, this->getY() + 45, 20, (this->m_faint ? offTextColor : invalidTextColor));
