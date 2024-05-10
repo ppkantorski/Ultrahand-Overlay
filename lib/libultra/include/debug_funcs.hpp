@@ -17,6 +17,7 @@
 
 #pragma once
 #include <fstream>
+#include <mutex>
 
 // Specify the log file path
 const std::string logFilePath = "sdmc:/config/ultrahand/log.txt";
@@ -31,23 +32,24 @@ std::mutex logMutex;
  * @param message The message to be logged.
  */
 void logMessage(const std::string& message) {
-    std::lock_guard<std::mutex> lock(logMutex); // Locks the mutex for the duration of this function
-
     std::time_t currentTime = std::time(nullptr);
-    std::string logEntry = std::asctime(std::localtime(&currentTime));
-    size_t lastNonNewline = logEntry.find_last_not_of("\r\n");
-    if (lastNonNewline != std::string::npos)
-        logEntry.erase(lastNonNewline + 1);
-    
-    logEntry = "[" + logEntry + "] " + message + "\n";
-    
-    // Open the file with std::ofstream in append mode
-    std::ofstream file(logFilePath, std::ios::app);
-    if (file.is_open()) {
-        file << logEntry;
-        file.close(); // Explicitly closing the file, though it will automatically close upon destruction
-    } else {
-        // Handle error when file opening fails, such as logging to an alternative output or retrying
-        //std::cerr << "Failed to open log file: " << logFilePath << std::endl;
-    }
+    std::tm* timeInfo = std::localtime(&currentTime);
+    char buffer[80];
+    strftime(buffer, 80, "[%Y-%m-%d %H:%M:%S] ", timeInfo);
+    std::string timestamp(buffer);
+
+    std::string logEntry = timestamp + message + "\n";
+
+    // Open the file with std::ofstream in append mode inside the lock
+    {
+        std::lock_guard<std::mutex> lock(logMutex); // Locks the mutex for the duration of this block
+
+        std::ofstream file(logFilePath, std::ios::app);
+        if (file.is_open()) {
+            file << logEntry;
+        } else {
+            // Handle error when file opening fails, such as logging to an alternative output or retrying
+            //std::cerr << "Failed to open log file: " << logFilePath << std::endl;
+        }
+    } // file closes automatically upon leaving this block
 }

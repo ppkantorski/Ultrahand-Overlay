@@ -55,11 +55,11 @@ include $(DEVKITPRO)/libnx/switch_rules
 #---------------------------------------------------------------------------------
 APP_TITLE	:= Ultrahand
 APP_AUTHOR	:= ppkantorski
-APP_VERSION	:= 1.5.6
+APP_VERSION	:= 1.5.7
 TARGET	    := ovlmenu
 BUILD	    := build
 SOURCES	    := source common 
-INCLUDES	:= source common include lib/libtesla/include
+INCLUDES	:= source common include lib/libultra/include lib/libtesla/include
 NO_ICON	    := 1
 
 #---------------------------------------------------------------------------------

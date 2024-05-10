@@ -19,6 +19,7 @@
 
 #pragma once
 #include <string>
+#include <iterator> 
 #include <vector>
 #include <jansson.h>
 #include <regex>
@@ -30,23 +31,19 @@
 
 // Function to remove invalid characters from file names
 std::string cleanFileName(const std::string& fileName) {
-    std::string cleanedFileName;
-    for (char c : fileName) {
-        if (std::isalnum(c) || std::isspace(c) || c == '-' || c == '_') {
-            cleanedFileName += c;
-        }
-    }
+    std::string cleanedFileName = fileName;
+    cleanedFileName.erase(std::remove_if(cleanedFileName.begin(), cleanedFileName.end(), [](char c) {
+        return !(std::isalnum(c) || std::isspace(c) || c == '-' || c == '_');
+    }), cleanedFileName.end());
     return cleanedFileName;
 }
 
 // Function to clean directory names by removing invalid characters
 std::string cleanDirectoryName(const std::string& name) {
-    std::string cleanedName;
-    for (char c : name) {
-        if (std::isalnum(c) || std::isspace(c) || c == '-' || c == '_') {
-            cleanedName += c;
-        }
-    }
+    std::string cleanedName = name;
+    cleanedName.erase(std::remove_if(cleanedName.begin(), cleanedName.end(), [](char c) {
+        return !(std::isalnum(c) || std::isspace(c) || c == '-' || c == '_');
+    }), cleanedName.end());
     return cleanedName;
 }
 
@@ -61,11 +58,13 @@ std::string cleanDirectoryName(const std::string& name) {
  */
 std::string trim(const std::string& str) {
     size_t first = str.find_first_not_of(" \t\n\r\f\v");
-    size_t last = str.find_last_not_of(" \t\n\r\f\v");
-    if (first == std::string::npos || last == std::string::npos)
+    if (first == std::string::npos)
         return "";
+
+    size_t last = str.find_last_not_of(" \t\n\r\f\v");
     return str.substr(first, last - first + 1);
 }
+
 
 
 /**
@@ -79,11 +78,12 @@ std::string trim(const std::string& str) {
  */
 std::string removeWhiteSpaces(const std::string& str) {
     std::string result;
-    for (char c : str) {
-        if (!std::isspace(static_cast<unsigned char>(c))) {
-            result.push_back(c);
-        }
-    }
+    result.reserve(str.size()); // Reserve space for the result to avoid reallocations
+    
+    std::remove_copy_if(str.begin(), str.end(), std::back_inserter(result), [](unsigned char c) {
+        return std::isspace(c);
+    });
+    
     return result;
 }
 
@@ -98,8 +98,12 @@ std::string removeWhiteSpaces(const std::string& str) {
  * @return The string with quotes removed.
  */
 std::string removeQuotes(const std::string& str) {
-    if (str.size() >= 2 && ((str.front() == '\'' && str.back() == '\'') || (str.front() == '"' && str.back() == '"'))) {
-        return str.substr(1, str.size() - 2);
+    if (str.size() >= 2) {
+        char frontQuote = str.front();
+        char backQuote = str.back();
+        if ((frontQuote == '\'' && backQuote == '\'') || (frontQuote == '"' && backQuote == '"')) {
+            return str.substr(1, str.size() - 2);
+        }
     }
     return str;
 }
@@ -115,8 +119,9 @@ std::string removeQuotes(const std::string& str) {
  */
 std::string replaceMultipleSlashes(const std::string& input) {
     std::string output;
-    bool previousSlash = false;
+    output.reserve(input.size()); // Reserve space for the output string
     
+    bool previousSlash = false;
     for (char c : input) {
         if (c == '/') {
             if (!previousSlash) {
@@ -132,6 +137,7 @@ std::string replaceMultipleSlashes(const std::string& input) {
     return output;
 }
 
+
 /**
  * @brief Removes the leading slash from a string if present.
  *
@@ -140,7 +146,7 @@ std::string replaceMultipleSlashes(const std::string& input) {
  * @param pathPattern The input string representing a path pattern.
  * @return The string with the leading slash removed.
  */
-std::string removeLeadingSlash(const std::string& pathPattern) {
+std::string_view removeLeadingSlash(const std::string_view& pathPattern) {
     if (!pathPattern.empty() && pathPattern[0] == '/') {
         return pathPattern.substr(1);
     }
@@ -186,6 +192,8 @@ std::string preprocessPath(const std::string& path, const std::string& packagePa
 
     return formattedPath;
 }
+
+
 /**
  * @brief Preprocesses a URL string by adding "https://" prefix.
  *
@@ -212,10 +220,10 @@ std::string preprocessUrl(const std::string& path) {
  * @param filename The input filename from which to drop the extension.
  * @return The filename without the extension.
  */
-std::string dropExtension(const std::string& filename) {
+std::string dropExtension(std::string filename) {
     size_t lastDotPos = filename.find_last_of(".");
     if (lastDotPos != std::string::npos) {
-        return filename.substr(0, lastDotPos);
+        filename.resize(lastDotPos); // Resize the string to remove the extension
     }
     return filename;
 }
@@ -275,21 +283,27 @@ bool isFileOrDirectory(const std::string& path) {
  * @return A vector of strings containing the split values.
  */
 std::vector<std::string> stringToList(const std::string& str) {
-    std::string values, token;
     std::vector<std::string> result;
     
-    // Check if the input string starts and ends with '(' and ')'
+    // Check if the input string starts and ends with '(' and ')' or '[' and ']'
     if ((str.front() == '(' && str.back() == ')') || (str.front() == '[' && str.back() == ']')) {
         // Remove the parentheses
-        values = str.substr(1, str.size() - 2);
+        std::string values = str.substr(1, str.size() - 2);
         
-        // Create a stringstream to split the string by commas
+        // Replace all commas with spaces for easier tokenization
+        std::replace(values.begin(), values.end(), ',', ' ');
+        
         std::istringstream ss(values);
         
-        while (std::getline(ss, token, ',')) {
-            // Remove any leading or trailing spaces from the token
-            token = token.substr(token.find_first_not_of(" "), token.find_last_not_of(" ") + 1);
-            result.push_back(token);
+        // Use std::copy to directly copy tokens into the result vector
+        std::copy(std::istream_iterator<std::string>(ss),
+                  std::istream_iterator<std::string>(),
+                  std::back_inserter(result));
+        
+        // Remove leading and trailing spaces from each token
+        for (std::string& token : result) {
+            token.erase(token.find_last_not_of(" \t\r\n") + 1);
+            token.erase(0, token.find_first_not_of(" \t\r\n"));
         }
     }
     
@@ -325,20 +339,19 @@ std::string stringToLowercase(const std::string& str) {
  * @param desiredWidth The desired width of the formatted string (default is 4).
  * @return A formatted priority string.
  */
-std::string formatPriorityString(const std::string& priority, int desiredWidth=4) {
-    std::string formattedString = priority;
+std::string formatPriorityString(const std::string& priority, int desiredWidth = 4) {
+    std::string formattedString;
+    int priorityLength = priority.length();
     
-    if (int(priority.length()) > desiredWidth) {
-        formattedString = "9" + std::string(desiredWidth - 1, '9'); // Set to 9's if too long
-    } else{
-        while (int(formattedString.length()) < desiredWidth) {
-            formattedString = "0"+formattedString;
-        }
+    if (priorityLength > desiredWidth) {
+        formattedString = std::string(desiredWidth, '9'); // Set to 9's if too long
+    } else {
+        formattedString = std::string(desiredWidth - priorityLength, '0') + priority;
     }
     
-    // Convert the stringstream to a string and return it
     return formattedString;
 }
+
 
 
 /**
@@ -362,18 +375,24 @@ std::string removeTag(const std::string &input) {
 
 
 // This will take a string like "v1.3.5-abasdfasdfa" and output "1.3.5". string could also look like "test-1.3.5-1" or "v1.3.5" and we will only want "1.3.5"
-std::string cleanVersionLabel(const std::string &input) {
-    std::regex versionRegex(R"([v-]?(\d+\.\d+\.\d+))");
-    std::smatch match;
-    
-    if (std::regex_search(input, match, versionRegex)) {
-        if (match.size() > 1) {
-            return match[1].str();
+std::string cleanVersionLabel(const std::string& input) {
+    std::string versionLabel;
+    versionLabel.reserve(input.size()); // Reserve space for the output string
+
+    bool foundDigit = false;
+    for (char c : input) {
+        if (std::isdigit(c) || c == '.') {
+            versionLabel += c;
+            if (std::isdigit(c)) {
+                foundDigit = true;
+            }
+        } else if (foundDigit) {
+            // Stop at the first non-digit character after encountering digits
+            break;
         }
     }
-    
-    // Return an empty string if no version number is found
-    return input;
+
+    return versionLabel;
 }
 
 
@@ -391,10 +410,17 @@ std::string extractTitle(const std::string& input) {
 
 
 std::string removeFilename(const std::string& path) {
-    size_t found = path.find_last_of("/\\");
+    size_t found = path.find_last_of('/');
     if (found != std::string::npos) {
         return path.substr(0, found + 1);
     }
     return path; // If no directory separator is found, return the original path
 }
 
+
+
+std::string padToEqualLength(const std::string& str, size_t len) {
+    if (str.length() < len)
+        return str + std::string(len - str.length(), '\0');
+    return str.substr(0, len);
+}
