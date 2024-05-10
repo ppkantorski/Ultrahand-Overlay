@@ -831,7 +831,16 @@ public:
                 if (downloadPercentage.load(std::memory_order_acquire) == 100)
                     downloadPercentage.store(-1, std::memory_order_release);
             }
-
+            if (unzipPercentage.load(std::memory_order_acquire) != -1) {
+                lastSelectedListItem->setValue(UNZIP_SYMBOL + " " + std::to_string(unzipPercentage.load(std::memory_order_acquire))+"%");
+                if (unzipPercentage.load(std::memory_order_acquire) == 100)
+                    unzipPercentage.store(-1, std::memory_order_release);
+            }
+            if (copyPercentage.load(std::memory_order_acquire) != -1) {
+                lastSelectedListItem->setValue(COPY_SYMBOL + " " + std::to_string(copyPercentage.load(std::memory_order_acquire))+"%");
+                if (copyPercentage.load(std::memory_order_acquire) == 100)
+                    copyPercentage.store(-1, std::memory_order_release);
+            }
             if (threadFailure.load(std::memory_order_acquire)) {
                 threadFailure.store(false, std::memory_order_release);
                 commandSuccess = false;
@@ -852,6 +861,10 @@ public:
         }
 
         if (lastRunningInterpreter) {
+            downloadPercentage.store(-1, std::memory_order_release);
+            unzipPercentage.store(-1, std::memory_order_release);
+            copyPercentage.store(-1, std::memory_order_release);
+
             isDownloadCommand = false;
             if (commandSuccess)
                 lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
@@ -1753,7 +1766,7 @@ public:
             
             
             // WARNING: This assumes items list is a path list. (May need a long term solution still.)
-            if ((commandGrouping == "split" || commandGrouping == "split2" || commandGrouping == "split3" || commandGrouping == "split4") && sourceType == "file") {
+            if (sourceType == "file" && (commandGrouping == "split" || commandGrouping == "split2" || commandGrouping == "split3" || commandGrouping == "split4")) {
                 
                 std::sort(selectedItemsList.begin(), selectedItemsList.end(), [](const std::string& a, const std::string& b) {
                     std::string parentDirA = getParentDirNameFromPath(a);
@@ -1817,7 +1830,7 @@ public:
 
                     pos = groupingName.find(" - ");
                     if (pos != std::string::npos) {
-                        itemName = groupingName.substr(pos + 2); // Assign the part after " - " as the footer
+                        itemName = groupingName.substr(pos + 3); // Assign the part after " - " as the footer
                         groupingName = groupingName.substr(0, pos); // Strip the " - " and everything after it
                     }
 
@@ -1832,7 +1845,7 @@ public:
 
                     pos = groupingName.find(" - ");
                     if (pos != std::string::npos) {
-                        itemName = groupingName.substr(pos + 2); // Assign the part after " - " as the footer
+                        itemName = groupingName.substr(pos + 3); // Assign the part after " - " as the footer
                         groupingName = groupingName.substr(0, pos); // Strip the " - " and everything after it
                     }
 
@@ -1844,7 +1857,7 @@ public:
                 }
                 else if (commandGrouping == "split4") {
                     groupingName = removeQuotes(getParentDirNameFromPath(selectedItem, 2));
-                    itemName = removeQuotes(dropExtension(getNameFromPath(selectedItem)));
+                    itemName = trim(removeQuotes(dropExtension(getNameFromPath(selectedItem))));
                     footer = removeQuotes(getParentDirNameFromPath(selectedItem));
 
                     
@@ -2020,7 +2033,16 @@ public:
                 if (downloadPercentage.load(std::memory_order_acquire) == 100)
                     downloadPercentage.store(-1, std::memory_order_release);
             }
-
+            if (unzipPercentage.load(std::memory_order_acquire) != -1) {
+                lastSelectedListItem->setValue(UNZIP_SYMBOL + " " + std::to_string(unzipPercentage.load(std::memory_order_acquire))+"%");
+                if (unzipPercentage.load(std::memory_order_acquire) == 100)
+                    unzipPercentage.store(-1, std::memory_order_release);
+            }
+            if (copyPercentage.load(std::memory_order_acquire) != -1) {
+                lastSelectedListItem->setValue(COPY_SYMBOL + " " + std::to_string(copyPercentage.load(std::memory_order_acquire))+"%");
+                if (copyPercentage.load(std::memory_order_acquire) == 100)
+                    copyPercentage.store(-1, std::memory_order_release);
+            }
             if (threadFailure.load(std::memory_order_acquire)) {
                 threadFailure.store(false, std::memory_order_release);
                 commandSuccess = false;
@@ -2043,6 +2065,10 @@ public:
         }
 
         if (lastRunningInterpreter) {
+            downloadPercentage.store(-1, std::memory_order_release);
+            unzipPercentage.store(-1, std::memory_order_release);
+            copyPercentage.store(-1, std::memory_order_release);
+
             isDownloadCommand = false;
 
             if (commandSuccess)
@@ -2745,12 +2771,22 @@ public:
         
         bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
         if (_runningInterpreter) {
-            //int currentPercentage = downloadPercentage.load(std::memory_order_acquire);
+            //int currentPercentage = unzipPercentage.load(std::memory_order_acquire);
             //logMessage("currentPercentage: "+std::to_string(currentPercentage));
             if (downloadPercentage.load(std::memory_order_acquire) != -1) {
                 lastSelectedListItem->setValue(DOWNLOAD_SYMBOL + " " + std::to_string(downloadPercentage.load(std::memory_order_acquire))+"%");
                 if (downloadPercentage.load(std::memory_order_acquire) == 100)
                     downloadPercentage.store(-1, std::memory_order_release);
+            }
+            if (unzipPercentage.load(std::memory_order_acquire) != -1) {
+                lastSelectedListItem->setValue(UNZIP_SYMBOL + " " + std::to_string(unzipPercentage.load(std::memory_order_acquire))+"%");
+                if (unzipPercentage.load(std::memory_order_acquire) == 100)
+                    unzipPercentage.store(-1, std::memory_order_release);
+            }
+            if (copyPercentage.load(std::memory_order_acquire) != -1) {
+                lastSelectedListItem->setValue(COPY_SYMBOL + " " + std::to_string(copyPercentage.load(std::memory_order_acquire))+"%");
+                if (copyPercentage.load(std::memory_order_acquire) == 100)
+                    copyPercentage.store(-1, std::memory_order_release);
             }
             if (threadFailure.load(std::memory_order_acquire)) {
                 threadFailure.store(false, std::memory_order_release);
@@ -2775,6 +2811,10 @@ public:
         }
 
         if (lastRunningInterpreter) {
+            downloadPercentage.store(-1, std::memory_order_release);
+            unzipPercentage.store(-1, std::memory_order_release);
+            copyPercentage.store(-1, std::memory_order_release);
+
             isDownloadCommand = false;
 
             if (commandSuccess)
@@ -4277,7 +4317,16 @@ public:
                 if (downloadPercentage.load(std::memory_order_acquire) == 100)
                     downloadPercentage.store(-1, std::memory_order_release);
             }
-            
+            if (unzipPercentage.load(std::memory_order_acquire) != -1) {
+                lastSelectedListItem->setValue(UNZIP_SYMBOL + " " + std::to_string(unzipPercentage.load(std::memory_order_acquire))+"%");
+                if (unzipPercentage.load(std::memory_order_acquire) == 100)
+                    unzipPercentage.store(-1, std::memory_order_release);
+            }
+            if (copyPercentage.load(std::memory_order_acquire) != -1) {
+                lastSelectedListItem->setValue(COPY_SYMBOL + " " + std::to_string(copyPercentage.load(std::memory_order_acquire))+"%");
+                if (copyPercentage.load(std::memory_order_acquire) == 100)
+                    copyPercentage.store(-1, std::memory_order_release);
+            }
             if (threadFailure.load(std::memory_order_acquire)) {
                 threadFailure.store(false, std::memory_order_release);
                 commandSuccess = false;
@@ -4298,8 +4347,12 @@ public:
         }
 
         if (lastRunningInterpreter) {
-            isDownloadCommand = false;
             
+            downloadPercentage.store(-1, std::memory_order_release);
+            unzipPercentage.store(-1, std::memory_order_release);
+            copyPercentage.store(-1, std::memory_order_release);
+
+            isDownloadCommand = false;
             if (commandSuccess)
                 lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
             else
