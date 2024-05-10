@@ -24,6 +24,67 @@
 
 #ifndef ULTRA_HPP
 #define ULTRA_HPP
+#include <string>
+
+const std::string bootPackageFileName = "boot_package.ini";
+const std::string packageFileName = "package.ini";
+const std::string configFileName = "config.ini";
+const std::string themeFileName = "theme.ini";
+const std::string projectName = "ultrahand";
+const std::string upperProjectName = "Ultrahand";
+const std::string settingsPath = "sdmc:/config/ultrahand/";
+const std::string settingsConfigIniPath = "sdmc:/config/ultrahand/config.ini";
+const std::string langPath = "sdmc:/config/ultrahand/lang/";
+const std::string themeConfigIniPath = "sdmc:/config/ultrahand/theme.ini";
+const std::string themesPath = "sdmc:/config/ultrahand/themes/";
+const std::string downloadsPath = "sdmc:/config/ultrahand/downloads/";
+const std::string packageDirectory = "sdmc:/switch/.packages/";
+const std::string overlayDirectory = "sdmc:/switch/.overlays/";
+const std::string teslaSettingsConfigIniPath = "sdmc:/config/tesla/config.ini";
+const std::string overlaysIniFilePath = "sdmc:/config/ultrahand/overlays.ini";
+const std::string packagesIniFilePath = "sdmc:/config/ultrahand/packages.ini";
+const std::string ultrahandRepo = "https://github.com/ppkantorski/Ultrahand-Overlay/";
+
+const std::string teslaStr = "tesla";
+const std::string eristaStr = "erista";
+const std::string marikoStr = "mariko";
+const std::string keyComboStr = "key_combo";
+const std::string defaultLangStr = "default_lang";
+const std::string launchArgsStr = "launch_args";
+const std::string useLaunchArgsStr = "use_launch_args";
+const std::string _listStr = "list";
+const std::string _jsonStr = "json";
+const std::string jsonFileStr = "json_file";
+const std::string packageStr = "package";
+const std::string packagesStr = "packages";
+const std::string overlayStr = "overlay";
+const std::string overlaysStr = "overlays";
+const std::string inOverlayStr = "in_overlay";
+const std::string inHiddenOverlayStr = "in_hidden_overlay";
+const std::string fileStr = "file";
+const std::string systemStr = "system";
+const std::string modeStr = "mode";
+const std::string groupingStr = "grouping";
+const std::string footerStr = "footer";
+const std::string toggleStr = "toggle";
+const std::string leftStr = "left";
+const std::string rightStr = "right";
+const std::string hideStr = "hide";
+const std::string starStr = "star";
+const std::string priorityStr = "priority";
+const std::string lowerOnStr = "on";
+const std::string lowerOffStr = "off";
+const std::string onStr = "On";
+const std::string offStr = "Off";
+const std::string trueStr = "true";
+const std::string falseStr = "false";
+const std::string globalStr = "global";
+const std::string defaultStr = "default";
+const std::string optionStr = "option";
+const std::string forwarderStr = "forwarder";
+const std::string nullStr = "null";
+const std::string themeSection = "theme";
+const std::string englishNotAvailable = "Not available";
 
 // Include all functional headers used in the libUltra library
 #include "debug_funcs.hpp"
