@@ -29,8 +29,6 @@
 #include "path_funcs.hpp"
 
 
-
-
 /**
  * @brief Represents a package header structure.
  *
@@ -676,3 +674,61 @@ void removeIniSection(const std::string& filePath, const std::string& sectionNam
     }
 }
 
+
+// Removes a key-value pair from an ini accordingly.
+void removeIniKey(const std::string& filePath, const std::string& sectionName, const std::string& keyName) {
+    std::ifstream configFile(filePath);
+    if (!configFile) {
+        logMessage("Failed to open the input file: " + filePath);
+        return; // Handle the error accordingly
+    }
+
+    std::string tempPath = filePath + ".tmp";
+    std::ofstream tempFile(tempPath);
+    if (!tempFile) {
+        logMessage("Failed to create the temporary file: " + tempPath);
+        return; // Handle the error accordingly
+    }
+
+    std::string line, currentSection;
+    bool inTargetSection = false;
+    std::string trimmedLine;
+
+    while (getline(configFile, line)) {
+        trimmedLine = trim(line);
+
+        // Check if the line represents a section
+        if (!trimmedLine.empty() && trimmedLine.front() == '[' && trimmedLine.back() == ']') {
+            currentSection = trimmedLine.substr(1, trimmedLine.length() - 2);
+
+            if (currentSection == sectionName) {
+                // We are in the target section
+                inTargetSection = true;
+            } else {
+                // We've left the target section
+                inTargetSection = false;
+            }
+            tempFile << line << '\n'; // Always write section headers
+        } else if (inTargetSection && trimmedLine.find(keyName + "=") == 0) {
+            // If we're in the target section and the line starts with the key, skip it
+            continue;
+        } else {
+            // Write lines that are not part of the key to remove
+            tempFile << line << '\n';
+        }
+    }
+
+    configFile.close();
+    tempFile.close();
+
+    // Replace the original file with the temp file
+    if (remove(filePath.c_str()) != 0) {
+        logMessage("Failed to delete the original file: " + filePath);
+        return; // Handle the error accordingly
+    }
+    
+    if (rename(tempPath.c_str(), filePath.c_str()) != 0) {
+        logMessage("Failed to rename the temporary file: "+ tempPath);
+        // Handle the error accordingly
+    }
+}
