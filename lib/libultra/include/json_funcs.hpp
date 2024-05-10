@@ -21,7 +21,6 @@
 #include <jansson.h>
 #include "string_funcs.hpp"
 
-//constexpr size_t jsonBufferSize = 1024; // Choose an appropriate buffer size
 
 
 // Define a custom deleter for json_t*
