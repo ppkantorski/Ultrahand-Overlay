@@ -419,8 +419,8 @@ std::string removeFilename(const std::string& path) {
 
 
 
-std::string padToEqualLength(const std::string& str, size_t len) {
-    if (str.length() < len)
-        return str + std::string(len - str.length(), '\0');
-    return str.substr(0, len);
-}
+//std::string padToEqualLength(const std::string& str, size_t len) {
+//    if (str.length() < len)
+//        return str + std::string(len - str.length(), '\0');
+//    return str.substr(0, len);
+//}
