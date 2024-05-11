@@ -1124,7 +1124,7 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                     deleteFileOrDirectory(sourcePath);
             }
         }
-    } else if (commandName.compare(0, 7, "mirror_") == 0) {
+    } else if (commandName.substr(0, 7) == "mirror_") {
         
         if (cmdSize >= 2) {
             std::string sourcePath = preprocessPath(cmd[1], packagePath);
@@ -1205,7 +1205,7 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             std::string desiredValue = removeQuotes(cmd[1]);
             setIniFileValue((packagePath+configFileName).c_str(), selectedCommand.c_str(), footerStr, desiredValue.c_str());
         }
-    } else if (commandName.substr(0, 7) == "hex-by-") {
+    } else if (commandName.compare(0, 7, "hex-by-") == 0) {
         if (cmdSize >= 4) {
             std::string sourcePath = preprocessPath(cmd[1], packagePath);
             const std::string& secondArg = removeQuotes(cmd[2]);
