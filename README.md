@@ -6,7 +6,7 @@
 
 Create directories, manage files, and customize configurations effortlessly using simple ini files.
 
-![Ultrahand Logo](.pics/banner.png)
+![Ultrahand Logo](.pics/ultrahand.png)
 
 Ultrahand Overlay is a [Tesla Menu](https://github.com/WerWolv/Tesla-Menu) replacement built from the ground up off of [libtesla](https://github.com/WerWolv/libtesla) that provides powerful C/C++ commands through the usage of its own custom interpretive programming language (similar to Shell/BASH).  It is a versatile tool that enables you to create and share custom command-based packages, providing enhanced functionality for managing settings, files and directories on your Nintendo Switch.
 
