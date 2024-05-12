@@ -71,6 +71,7 @@
 // Define an atomic bool for interpreter completion
 static std::atomic<bool> threadFailure(false);
 static std::atomic<bool> runningInterpreter(false);
+static std::atomic<bool> shakingProgress(true);
 
 /**
  * @brief Shutdown modes for the Ultrahand-Overlay project.
@@ -3107,10 +3108,8 @@ namespace tsl {
                 
                 menuBottomLine = "\uE0E1"+GAP_2+BACK+GAP_1+"\uE0E0"+GAP_2+OK+GAP_1;
                 if (this->m_menuMode == "packages") {
-                    //menuBottomLine = "\uE0E1"+GAP_2+"Close"+GAP_1+"\uE0E0"+GAP_2+OK+GAP_1+"\uE0ED"+GAP_2+OVERLAYS;
                     menuBottomLine += "\uE0ED"+GAP_2+OVERLAYS;
                 } else if (this->m_menuMode == "overlays") {
-                    //menuBottomLine = "\uE0E1"+GAP_2+"Close"+GAP_1+"\uE0E0"+GAP_2+OK+GAP_1+"\uE0ED"+GAP_2+PACKAGES;
                     menuBottomLine += "\uE0EE"+GAP_2+PACKAGES;
                 }
                 
@@ -3982,10 +3981,7 @@ namespace tsl {
             virtual void setState(bool state) {
                 this->m_state = state;
                 
-                if (state)
-                    this->setValue(this->m_onValue, false);
-                else
-                    this->setValue(this->m_offValue, true);
+                this->setValue(state ? this->m_onValue : this->m_offValue, !state);
             }
             
             /**
@@ -4818,6 +4814,32 @@ namespace tsl {
             auto bottomElement = currentGui->getBottomElement(); // Backend is still not implemented/working yet
             
 
+            static ssize_t counter = 0;
+            if (runningInterpreter.load()) {
+                if (keysDown & (HidNpadButton_AnyUp))
+                    currentFocus -> shakeHighlight(FocusDirection::Up);
+                else if (keysDown & (HidNpadButton_AnyDown))
+                    currentFocus -> shakeHighlight(FocusDirection::Down);
+                else if (keysDown & (HidNpadButton_AnyLeft))
+                    currentFocus -> shakeHighlight(FocusDirection::Left);
+                else if (keysDown & (HidNpadButton_AnyRight))
+                    currentFocus -> shakeHighlight(FocusDirection::Right);
+                else {
+                    if (shakingProgress.load()) {
+                        if (counter%4 == 0)
+                            currentFocus -> shakeHighlight(FocusDirection::Up);
+                        else if (counter%4  == 1)
+                            currentFocus -> shakeHighlight(FocusDirection::Right);
+                        else if (counter%4  == 2)
+                            currentFocus -> shakeHighlight(FocusDirection::Down);
+                        else if (counter%4  == 3)
+                            currentFocus -> shakeHighlight(FocusDirection::Left);
+                        counter++;
+                        if (counter >= 4) counter = 0; // Reset the counter after a full cycle to prevent overflow
+                    }
+                }
+            }
+
             // Handle input when no element is focused
             if (currentFocus == nullptr  && !simulatedBack && simulatedBackComplete && !stillTouching && !runningInterpreter.load(std::memory_order_acquire)) {
                 // Check for back button press
@@ -4842,7 +4864,7 @@ namespace tsl {
             }
 
             // If nothing is highlighted AND the menu is fully loaded/drawn, set focus to topElement
-            if (!touchDetected && (!oldTouchDetected || (oldTouchEvent == elm::TouchEvent::Scroll)) && currentFocus == nullptr) {
+            if (currentFocus == nullptr && !touchDetected && (!oldTouchDetected || (oldTouchEvent == elm::TouchEvent::Scroll))) {
                 if (!simulatedBack && simulatedBackComplete ) {
                     //f (lastTouchedElement != nullptr) {
                     //   currentGui->removeFocus();
