@@ -98,6 +98,77 @@ const static auto STAR_KEY = KEY_X;
 
 
 
+/**
+ * @brief Handles updates and checks when the interpreter is running.
+ *
+ * This function processes the progression of download, unzip, and copy operations,
+ * updates the user interface accordingly, and handles the thread failure and abort conditions.
+ *
+ * @param keysHeld A bitset representing keys that are held down.
+ * @param stillTouching Boolean indicating if the touchscreen is being interacted with.
+ * @param lastSelectedListItem Reference to the UI element displaying the current status.
+ * @param commandSuccess Reference to a boolean tracking the overall command success.
+ * @return `true` if the operation needs to abort, `false` otherwise.
+ */
+bool handleRunningInterpreter(uint64_t& keysHeld) {
+    static int lastPercentage = -1;
+    static bool inProgress = true;
+    bool shouldAbort = false;
+    int currentPercentage;
+
+    if (downloadPercentage.load(std::memory_order_acquire) != -1) {
+        currentPercentage = downloadPercentage.load(std::memory_order_acquire);
+        if (currentPercentage != lastPercentage) {
+            lastSelectedListItem->setValue(DOWNLOAD_SYMBOL + " " + std::to_string(currentPercentage) + "%");
+            lastPercentage = currentPercentage;
+        }
+        if (currentPercentage == 100) {
+            inProgress = true;
+            downloadPercentage.store(-1, std::memory_order_release);
+        }
+    } else if (unzipPercentage.load(std::memory_order_acquire) != -1) {
+        currentPercentage = unzipPercentage.load(std::memory_order_acquire);
+        if (currentPercentage != lastPercentage) {
+            lastSelectedListItem->setValue(UNZIP_SYMBOL + " " + std::to_string(currentPercentage) + "%");
+            lastPercentage = currentPercentage;
+        }
+        if (currentPercentage == 100) {
+            inProgress = true;
+            unzipPercentage.store(-1, std::memory_order_release);
+        }
+    } else if (copyPercentage.load(std::memory_order_acquire) != -1) {
+        currentPercentage = copyPercentage.load(std::memory_order_acquire);
+        if (currentPercentage != lastPercentage) {
+            lastSelectedListItem->setValue(COPY_SYMBOL + " " + std::to_string(currentPercentage) + "%");
+            lastPercentage = currentPercentage;
+        }
+        if (currentPercentage == 100) {
+            inProgress = true;
+            copyPercentage.store(-1, std::memory_order_release);
+        }
+    } else if (lastPercentage == -1 && inProgress) {
+        lastSelectedListItem->setValue(INPROGRESS_SYMBOL);
+        inProgress = false;
+    }
+
+    if (threadFailure.load(std::memory_order_acquire)) {
+        threadFailure.store(false, std::memory_order_release);
+        commandSuccess = false;
+    }
+
+    // Check for back button press
+    if ((keysHeld & KEY_R) && !(keysHeld & (KEY_DLEFT | KEY_DRIGHT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_ZL | KEY_ZR)) && !stillTouching) {
+        commandSuccess = false;
+        abortDownload.store(true, std::memory_order_release);
+        abortUnzip.store(true, std::memory_order_release);
+        abortFileOp.store(true, std::memory_order_release);
+        abortCommand.store(true, std::memory_order_release);
+        shouldAbort = true;
+    }
+
+    return shouldAbort;
+}
+
 
 
 // Forward declaration of the MainMenu class.
@@ -823,57 +894,22 @@ public:
         //}
         bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
         if (_runningInterpreter) {
-
-            //int currentPercentage = downloadPercentage.load(std::memory_order_acquire);
-            //logMessage("currentPercentage: "+std::to_string(currentPercentage));
-            if (downloadPercentage.load(std::memory_order_acquire) != -1) {
-                lastSelectedListItem->setValue(DOWNLOAD_SYMBOL + " " + std::to_string(downloadPercentage.load(std::memory_order_acquire))+"%");
-                if (downloadPercentage.load(std::memory_order_acquire) == 100)
-                    downloadPercentage.store(-1, std::memory_order_release);
-            }
-            if (unzipPercentage.load(std::memory_order_acquire) != -1) {
-                lastSelectedListItem->setValue(UNZIP_SYMBOL + " " + std::to_string(unzipPercentage.load(std::memory_order_acquire))+"%");
-                if (unzipPercentage.load(std::memory_order_acquire) == 100)
-                    unzipPercentage.store(-1, std::memory_order_release);
-            }
-            if (copyPercentage.load(std::memory_order_acquire) != -1) {
-                lastSelectedListItem->setValue(COPY_SYMBOL + " " + std::to_string(copyPercentage.load(std::memory_order_acquire))+"%");
-                if (copyPercentage.load(std::memory_order_acquire) == 100)
-                    copyPercentage.store(-1, std::memory_order_release);
-            }
-            if (threadFailure.load(std::memory_order_acquire)) {
-                threadFailure.store(false, std::memory_order_release);
-                commandSuccess = false;
-                //lastRunningInterpreter = true;
-                //logMessage("killing command");
-            }
-
-            // Check for back button press
-            if ((keysHeld & KEY_R) && !(keysHeld & (KEY_DLEFT | KEY_DRIGHT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_ZL | KEY_ZR)) && !stillTouching) {
-                commandSuccess = false;
-                abortDownload.store(true, std::memory_order_release);
-                abortUnzip.store(true, std::memory_order_release);
-                abortFileOp.store(true, std::memory_order_release);
-                abortCommand.store(true, std::memory_order_release);
-                return true;
-            }
-            return false;
+            return handleRunningInterpreter(keysHeld);
         }
-
         if (lastRunningInterpreter) {
+            while (!interpreterThreadExit.load()) {svcSleepThread(50'000'000);}
+
             downloadPercentage.store(-1, std::memory_order_release);
             unzipPercentage.store(-1, std::memory_order_release);
             copyPercentage.store(-1, std::memory_order_release);
 
             isDownloadCommand = false;
-            if (commandSuccess)
-                lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
-            else
-                lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
+            lastSelectedListItem->setValue(commandSuccess ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
             closeInterpreterThread();
             lastRunningInterpreter = false;
             return true;
         }
+
 
         if (inSettingsMenu && !inSubSettingsMenu) {
             if (!returningToSettings) {
@@ -965,6 +1001,7 @@ public:
             tsl::Overlay::get()->close();
         }
         
+        //svcSleepThread(10'000'000);
         return false;
     }
 };
@@ -1808,6 +1845,11 @@ public:
         auto toggleListItem = std::make_unique<tsl::elm::ToggleListItem>("", true, "", "");
         bool toggleStateOn;
         
+        if (selectedItemsList.empty()){
+            listItem = std::make_unique<tsl::elm::ListItem>("Empty");
+            list->addItem(listItem.release());
+        }
+
         // Add each file as a menu item
         for (size_t i = 0; i < selectedItemsList.size(); ++i) {
             const std::string& selectedItem = selectedItemsList[i];
@@ -2023,59 +2065,22 @@ public:
         //    simulatedBack = false;
         //    simulatedBackComplete = true;
         //}
+
         bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
         if (_runningInterpreter) {
-            
-            //int currentPercentage = downloadPercentage.load(std::memory_order_acquire);
-
-            //logMessage("currentPercentage: "+std::to_string(downloadPercentage.load(std::memory_order_acquire)));
-            if (downloadPercentage.load(std::memory_order_acquire) != -1) {
-                lastSelectedListItem->setValue(DOWNLOAD_SYMBOL + " " + std::to_string(downloadPercentage.load(std::memory_order_acquire))+"%");
-                if (downloadPercentage.load(std::memory_order_acquire) == 100)
-                    downloadPercentage.store(-1, std::memory_order_release);
-            }
-            if (unzipPercentage.load(std::memory_order_acquire) != -1) {
-                lastSelectedListItem->setValue(UNZIP_SYMBOL + " " + std::to_string(unzipPercentage.load(std::memory_order_acquire))+"%");
-                if (unzipPercentage.load(std::memory_order_acquire) == 100)
-                    unzipPercentage.store(-1, std::memory_order_release);
-            }
-            if (copyPercentage.load(std::memory_order_acquire) != -1) {
-                lastSelectedListItem->setValue(COPY_SYMBOL + " " + std::to_string(copyPercentage.load(std::memory_order_acquire))+"%");
-                if (copyPercentage.load(std::memory_order_acquire) == 100)
-                    copyPercentage.store(-1, std::memory_order_release);
-            }
-            if (threadFailure.load(std::memory_order_acquire)) {
-                threadFailure.store(false, std::memory_order_release);
-                commandSuccess = false;
-                //lastRunningInterpreter = true;
-                //logMessage("killing command");
-            }
-
-            // Check for back button press
-            if ((keysHeld & KEY_R) && !(keysHeld & (KEY_DLEFT | KEY_DRIGHT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_ZL | KEY_ZR)) && !stillTouching) {
-                commandSuccess = false;
-                abortDownload.store(true, std::memory_order_release);
-                abortUnzip.store(true, std::memory_order_release);
-                abortFileOp.store(true, std::memory_order_release);
-                abortCommand.store(true, std::memory_order_release);
-                //closeInterpreterThread();
-                return true;
-            }
-
-            return false;
+            bool result = handleRunningInterpreter(keysHeld);
+            if (result) return true;
+            else return false;
         }
-
         if (lastRunningInterpreter) {
+            while (!interpreterThreadExit.load()) {svcSleepThread(50'000'000);}
+            
             downloadPercentage.store(-1, std::memory_order_release);
             unzipPercentage.store(-1, std::memory_order_release);
             copyPercentage.store(-1, std::memory_order_release);
-
+            
             isDownloadCommand = false;
-
-            if (commandSuccess)
-                lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
-            else
-                lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
+            lastSelectedListItem->setValue(commandSuccess ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
             closeInterpreterThread();
             lastRunningInterpreter = false;
             return true;
@@ -2137,6 +2142,7 @@ public:
             tsl::Overlay::get()->close();
         }
         
+        //svcSleepThread(10'000'000);
         return false;
     }
 };
@@ -2202,7 +2208,6 @@ public:
         }
         
         tsl::hlp::ini::IniData packageConfigData;
-        std::vector<std::string> filesList, filesListOn, filesListOff, filterList, filterListOn, filterListOff;
         
 
         std::string packageIniPath = packagePath + packageName;
@@ -2720,12 +2725,11 @@ public:
         }
         
         options.clear();
-        filesList.clear();
 
         //tsl::elm::OverlayFrame *rootFrame = nullptr;
         //rootFrame = std::make_unique<tsl::elm::OverlayFrame>(getNameFromPath(packagePath), "Ultrahand Package", "", packageHeader.color);
 
-        std::unique_ptr<tsl::elm::OverlayFrame> rootFrame;
+        //std::unique_ptr<tsl::elm::OverlayFrame> rootFrame;
 
         std::string subLabel;
         if (packageHeader.version != "")
@@ -2733,16 +2737,14 @@ public:
         else
             subLabel = "Ultrahand Package";
 
-        if (usingPages) {
-            if (currentPage == leftStr) {
-                rootFrame = std::make_unique<tsl::elm::OverlayFrame>(getNameFromPath(packagePath), subLabel, "", packageHeader.color, "", pageRightName);
-            }
-            else if (currentPage == rightStr) {
-                rootFrame = std::make_unique<tsl::elm::OverlayFrame>(getNameFromPath(packagePath), subLabel, "", packageHeader.color, pageLeftName, "");
-            }
-        } else {
-            rootFrame = std::make_unique<tsl::elm::OverlayFrame>(getNameFromPath(packagePath), subLabel, "", packageHeader.color);
-        }
+        std::unique_ptr<tsl::elm::OverlayFrame> rootFrame = std::make_unique<tsl::elm::OverlayFrame>(
+            getNameFromPath(packagePath),
+            subLabel,
+            "",
+            packageHeader.color,
+            (usingPages && currentPage == rightStr) ? pageLeftName : "",
+            (usingPages && currentPage == leftStr) ? pageRightName : ""
+        );
 
         rootFrame->setContent(list.release());
 
@@ -2769,59 +2771,21 @@ public:
         //    simulatedBack = false;
         //    simulatedBackComplete = true;
         //}
-        
         bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
         if (_runningInterpreter) {
-            //int currentPercentage = unzipPercentage.load(std::memory_order_acquire);
-            //logMessage("currentPercentage: "+std::to_string(currentPercentage));
-            if (downloadPercentage.load(std::memory_order_acquire) != -1) {
-                lastSelectedListItem->setValue(DOWNLOAD_SYMBOL + " " + std::to_string(downloadPercentage.load(std::memory_order_acquire))+"%");
-                if (downloadPercentage.load(std::memory_order_acquire) == 100)
-                    downloadPercentage.store(-1, std::memory_order_release);
-            }
-            if (unzipPercentage.load(std::memory_order_acquire) != -1) {
-                lastSelectedListItem->setValue(UNZIP_SYMBOL + " " + std::to_string(unzipPercentage.load(std::memory_order_acquire))+"%");
-                if (unzipPercentage.load(std::memory_order_acquire) == 100)
-                    unzipPercentage.store(-1, std::memory_order_release);
-            }
-            if (copyPercentage.load(std::memory_order_acquire) != -1) {
-                lastSelectedListItem->setValue(COPY_SYMBOL + " " + std::to_string(copyPercentage.load(std::memory_order_acquire))+"%");
-                if (copyPercentage.load(std::memory_order_acquire) == 100)
-                    copyPercentage.store(-1, std::memory_order_release);
-            }
-            if (threadFailure.load(std::memory_order_acquire)) {
-                threadFailure.store(false, std::memory_order_release);
-                commandSuccess = false;
-                //lastRunningInterpreter = true;
-                //logMessage("killing command");
-                //closeInterpreterThread();
-            }
-
-            // Check for back button press
-            if ((keysHeld & KEY_R) && !(keysHeld & (KEY_DLEFT | KEY_DRIGHT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_ZL | KEY_ZR)) && !stillTouching) {
-                commandSuccess = false;
-                abortDownload.store(true, std::memory_order_release);
-                abortUnzip.store(true, std::memory_order_release);
-                abortFileOp.store(true, std::memory_order_release);
-                abortCommand.store(true, std::memory_order_release);
-                //closeInterpreterThread();
-                return true;
-            }
-
-            return false;
+            bool result = handleRunningInterpreter(keysHeld);
+            if (result) return true;
+            else return false;
         }
-
         if (lastRunningInterpreter) {
+            while (!interpreterThreadExit.load()) {svcSleepThread(50'000'000);}
+            
             downloadPercentage.store(-1, std::memory_order_release);
             unzipPercentage.store(-1, std::memory_order_release);
             copyPercentage.store(-1, std::memory_order_release);
-
+            
             isDownloadCommand = false;
-
-            if (commandSuccess)
-                lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
-            else
-                lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
+            lastSelectedListItem->setValue(commandSuccess ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
             closeInterpreterThread();
             lastRunningInterpreter = false;
             return true;
@@ -3090,6 +3054,7 @@ public:
             tsl::Overlay::get()->close();
         }
         
+        //svcSleepThread(10'000'000);
         return false;
     }
 };
@@ -4340,57 +4305,39 @@ public:
 
         bool _runningInterpreter = runningInterpreter.load(std::memory_order_acquire);
         if (_runningInterpreter) {
-            //int currentPercentage = downloadPercentage.load(std::memory_order_acquire);
-            //logMessage("currentPercentage: "+std::to_string(currentPercentage));
-            if (downloadPercentage.load(std::memory_order_acquire) != -1) {
-                lastSelectedListItem->setValue(DOWNLOAD_SYMBOL + " " + std::to_string(downloadPercentage.load(std::memory_order_acquire))+"%");
-                if (downloadPercentage.load(std::memory_order_acquire) == 100)
-                    downloadPercentage.store(-1, std::memory_order_release);
-            }
-            if (unzipPercentage.load(std::memory_order_acquire) != -1) {
-                lastSelectedListItem->setValue(UNZIP_SYMBOL + " " + std::to_string(unzipPercentage.load(std::memory_order_acquire))+"%");
-                if (unzipPercentage.load(std::memory_order_acquire) == 100)
-                    unzipPercentage.store(-1, std::memory_order_release);
-            }
-            if (copyPercentage.load(std::memory_order_acquire) != -1) {
-                lastSelectedListItem->setValue(COPY_SYMBOL + " " + std::to_string(copyPercentage.load(std::memory_order_acquire))+"%");
-                if (copyPercentage.load(std::memory_order_acquire) == 100)
-                    copyPercentage.store(-1, std::memory_order_release);
-            }
-            if (threadFailure.load(std::memory_order_acquire)) {
-                threadFailure.store(false, std::memory_order_release);
-                commandSuccess = false;
-                //lastRunningInterpreter = true;
-                //logMessage("killing command");
-            }
-
-            // Check for back button press
-            if ((keysHeld & KEY_R) && !(keysHeld & (KEY_DLEFT | KEY_DRIGHT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_ZL | KEY_ZR)) && !stillTouching) {
-                commandSuccess = false;
-                abortDownload.store(true, std::memory_order_release);
-                abortUnzip.store(true, std::memory_order_release);
-                abortFileOp.store(true, std::memory_order_release);
-                abortCommand.store(true, std::memory_order_release);
-                return true;
-            }
-            return false;
+            bool result = handleRunningInterpreter(keysHeld);
+            if (result) return true;
+            else return false;
         }
-
         if (lastRunningInterpreter) {
+            while (!interpreterThreadExit.load()) {svcSleepThread(50'000'000);}
             
             downloadPercentage.store(-1, std::memory_order_release);
             unzipPercentage.store(-1, std::memory_order_release);
             copyPercentage.store(-1, std::memory_order_release);
-
+            
             isDownloadCommand = false;
-            if (commandSuccess)
-                lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
-            else
-                lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
+            lastSelectedListItem->setValue(commandSuccess ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
             closeInterpreterThread();
             lastRunningInterpreter = false;
             return true;
         }
+
+        //if (lastRunningInterpreter) {
+        //    
+        //    downloadPercentage.store(-1, std::memory_order_release);
+        //    unzipPercentage.store(-1, std::memory_order_release);
+        //    copyPercentage.store(-1, std::memory_order_release);
+//
+        //    isDownloadCommand = false;
+        //    if (commandSuccess)
+        //        lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
+        //    else
+        //        lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
+        //    closeInterpreterThread();
+        //    lastRunningInterpreter = false;
+        //    return true;
+        //}
 
         if (refreshGui && !stillTouching) {
             refreshGui = false;
@@ -4579,6 +4526,7 @@ public:
             tsl::Overlay::get()->close();
         }
         
+        //svcSleepThread(10'000'000);
         return false;
     }
 };

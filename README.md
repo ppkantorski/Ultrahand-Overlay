@@ -6,7 +6,7 @@
 
 Create directories, manage files, and customize configurations effortlessly using simple ini files.
 
-![Ultrahand Logo](.pics/banner.png)
+[![Ultrahand Logo](.pics/banner.gif)](https://gbatemp.net/threads/ultrahand-overlay-the-fully-craft-able-overlay-executor.633560/)
 
 Ultrahand Overlay is a [Tesla Menu](https://github.com/WerWolv/Tesla-Menu) replacement built from the ground up off of [libtesla](https://github.com/WerWolv/libtesla) that provides powerful C/C++ commands through the usage of its own custom interpretive programming language (similar to Shell/BASH).  It is a versatile tool that enables you to create and share custom command-based packages, providing enhanced functionality for managing settings, files and directories on your Nintendo Switch.
 
@@ -76,7 +76,8 @@ Please note that running homebrew software on your Nintendo Switch may void your
 
 To compile and run the software, you need to have the following C/C++ dependencies installed:
 
-- [custom libtesla fork](https://github.com/ppkantorski/Ultrahand-Overlay/tree/main/lib/libtesla)
+- [libultra](lib/libultra)
+- [custom libtesla](lib/libtesla)
 - switch-curl
 - switch-zziplib
 - switch-mbedtls

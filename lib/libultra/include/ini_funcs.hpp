@@ -415,7 +415,7 @@ void setIniFile(const std::string& fileToEdit, const std::string& desiredSection
 
         if (sectionFound && !keyFound && trimmedLine.find('=') != std::string::npos) {
             delimiterPos = trimmedLine.find('=');
-            key = trimmedLine.substr(0, delimiterPos);
+            key = trim(trimmedLine.substr(0, delimiterPos));
             if (key == desiredKey) {
                 keyFound = true;
                 trimmedLine = (desiredNewKey.empty() ? desiredKey : desiredNewKey) + "=" + desiredValue;

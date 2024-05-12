@@ -488,7 +488,7 @@ void copyFileOrDirectory(const std::string& fromPath, const std::string& toPath,
         if (S_ISREG(fromStat.st_mode)) {
             // If it's a regular file, copy it to the toPath directory
             filename = getNameFromPath(currentFromPath);
-            toFilePath = currentToPath + "/" + filename;
+            toFilePath = getParentDirFromPath(currentToPath) + "/" + filename;
             createDirectory(getParentDirFromPath(toFilePath)); // Ensure the parent directory exists
             tempBytesCopied = totalBytesCopied ? *totalBytesCopied : 0;
             copySingleFile(currentFromPath, toFilePath, tempBytesCopied, totalSize);

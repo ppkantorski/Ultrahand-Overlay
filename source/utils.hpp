@@ -17,15 +17,14 @@
  ********************************************************************************/
 
 #pragma once
-#include <switch.h>
-#include <fstream>
-#include <fnmatch.h>
-
-#include <payload.hpp> // Studious Pancake
-#include <util.hpp> // Studious Pancake
 #include <ultra.hpp>
 #include <tesla.hpp>
+#include <switch.h>
+#include <payload.hpp> // Studious Pancake
+#include <util.hpp> // Studious Pancake
 
+#include <fstream>
+#include <fnmatch.h>
 #include <numeric>
 #include <queue>
 #include <mutex>
@@ -1125,7 +1124,7 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                     deleteFileOrDirectory(sourcePath);
             }
         }
-    } else if (commandName.compare(0, 7, "mirror_") == 0) {
+    } else if (commandName.substr(0, 7) == "mirror_") {
         
         if (cmdSize >= 2) {
             std::string sourcePath = preprocessPath(cmd[1], packagePath);
@@ -1206,39 +1205,69 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             std::string desiredValue = removeQuotes(cmd[1]);
             setIniFileValue((packagePath+configFileName).c_str(), selectedCommand.c_str(), footerStr, desiredValue.c_str());
         }
-    } else if (commandName.compare(0, 7, "hex-by-") == 0) {
+    } else if (commandName.substr(0, 7) == "hex-by-") {
         if (cmdSize >= 4) {
             std::string sourcePath = preprocessPath(cmd[1], packagePath);
             const std::string& secondArg = removeQuotes(cmd[2]);
             const std::string& thirdArg = removeQuotes(cmd[3]);
-            std::string actionType = commandName.substr(7);  // Extracts the specific action type part of the command name
             
-            if (actionType == "offset") {
+            if (commandName == "hex-by-offset") {
                 hexEditByOffset(sourcePath.c_str(), secondArg.c_str(), thirdArg.c_str());
-            } else if (actionType == "swap") {
-                size_t occurrence = (cmdSize >= 5) ? std::stoul(removeQuotes(cmd[4])) : 1;
-                hexEditFindReplace(sourcePath, secondArg, thirdArg, occurrence);
-            } else if (actionType == "string") {
+            } else if (commandName == "hex-by-swap") {
+                if (cmdSize >= 5) {
+                    size_t occurrence = std::stoul(removeQuotes(cmd[4]));
+                    hexEditFindReplace(sourcePath, secondArg, thirdArg, occurrence);
+                } else {
+                    hexEditFindReplace(sourcePath, secondArg, thirdArg);
+                }
+            } else if (commandName == "hex-by-string") {
                 std::string hexDataToReplace = asciiToHex(secondArg);
-                std::string hexDataReplacement = padToEqualLength(asciiToHex(thirdArg), hexDataToReplace.length());
-                hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, cmdSize >= 5 ? std::stoul(removeQuotes(cmd[4])) : 1);
-            } else if (actionType == "decimal") {
+                std::string hexDataReplacement = asciiToHex(thirdArg);
+                
+                // Fix miss-matched string sizes
+                if (hexDataReplacement.length() < hexDataToReplace.length()) {
+                    hexDataReplacement += std::string(hexDataToReplace.length() - hexDataReplacement.length(), '\0');
+                } else if (hexDataReplacement.length() > hexDataToReplace.length()) {
+                    hexDataToReplace += std::string(hexDataReplacement.length() - hexDataToReplace.length(), '\0');
+                }
+                
+                if (cmdSize >= 5) {
+                    size_t occurrence = std::stoul(removeQuotes(cmd[4]));
+                    hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, occurrence);
+                } else {
+                    hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
+                }
+            } else if (commandName == "hex-by-decimal") {
                 std::string hexDataToReplace = decimalToHex(secondArg);
-                std::string hexDataReplacement = padToEqualLength(decimalToHex(thirdArg), hexDataToReplace.length());
-                hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, cmdSize >= 5 ? std::stoul(removeQuotes(cmd[4])) : 1);
-            } else if (actionType == "rdecimal") {
+                std::string hexDataReplacement = decimalToHex(thirdArg);
+                
+                if (cmdSize >= 5) {
+                    size_t occurrence = std::stoul(removeQuotes(cmd[4]));
+                    hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, occurrence);
+                } else {
+                    hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
+                }
+            } else if (commandName == "hex-by-rdecimal") {
                 std::string hexDataToReplace = decimalToReversedHex(secondArg);
-                std::string hexDataReplacement = padToEqualLength(decimalToReversedHex(thirdArg), hexDataToReplace.length());
-                hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, cmdSize >= 5 ? std::stoul(removeQuotes(cmd[4])) : 1);
-            } else if (actionType.starts_with("custom-offset") || actionType.starts_with("custom-decimal-offset") || actionType.starts_with("custom-rdecimal-offset")) {
+                std::string hexDataReplacement = decimalToReversedHex(thirdArg);
+                
+                if (cmdSize >= 5) {
+                    size_t occurrence = std::stoul(removeQuotes(cmd[4]));
+                    hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, occurrence);
+                } else {
+                    hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
+                }
+            } else if (commandName == "hex-by-custom-offset" ||
+                       commandName == "hex-by-custom-decimal-offset" ||
+                       commandName == "hex-by-custom-rdecimal-offset") {
                 if (cmdSize >= 5) {
                     std::string customPattern = removeQuotes(cmd[2]);
                     std::string offset = removeQuotes(cmd[3]);
                     std::string hexDataReplacement = removeQuotes(cmd[4]);
                     
-                    if (actionType == "custom-decimal-offset") {
+                    if (commandName == "hex-by-custom-decimal-offset") {
                         hexDataReplacement = decimalToHex(hexDataReplacement);
-                    } else if (actionType == "custom-rdecimal-offset") {
+                    } else if (commandName == "hex-by-custom-rdecimal-offset") {
                         hexDataReplacement = decimalToReversedHex(hexDataReplacement);
                     }
                     
@@ -1496,7 +1525,7 @@ void backgroundInterpreter(void*) {
             runningInterpreter.store(false, std::memory_order_release);
             // Clear flags and perform any cleanup if necessary
             clearInterpreterFlags();
-            //interpreterThreadExit.store(true, std::memory_order_release);
+            interpreterThreadExit.store(true, std::memory_order_release);
             logMessage("End of interpreter");
             //break;
         }
@@ -1549,3 +1578,6 @@ void enqueueInterpreterCommands(std::vector<std::vector<std::string>>&& commands
     }
     queueCondition.notify_one();
 }
+
+
+
