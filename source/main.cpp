@@ -91,6 +91,14 @@ const static auto SYSTEM_SETTINGS_KEY = KEY_PLUS;
 const static auto SETTINGS_KEY = KEY_Y;
 const static auto STAR_KEY = KEY_X;
 
+template<typename Map, typename Func = std::function<std::string(const std::string&)>, typename... Args>
+std::string getValueOrDefault(const Map& data, const std::string& key, const std::string& defaultValue, Func formatFunc = nullptr, Args... args) {
+    auto it = data.find(key);
+    if (it != data.end()) {
+        return formatFunc ? formatFunc(it->second, args...) : it->second;
+    }
+    return defaultValue;
+}
 
 
 void clearMemory() {
@@ -1358,8 +1366,8 @@ public:
         auto list = std::make_unique<tsl::elm::List>();
         //list = std::make_unique<tsl::elm::List>();
         
-        std::string packageFile = filePath + fileName;
-        std::string fileContent = getFileContents(packageFile);
+        const std::string& packageFile = filePath + fileName;
+        const std::string& fileContent = getFileContents(packageFile);
         
         if (!fileContent.empty()) {
             std::string line;
@@ -1604,11 +1612,19 @@ public:
         bool inEristaSection = false;
         bool inMarikoSection = false;
         
+        // Remove all empty command strings
+        commands.erase(std::remove_if(commands.begin(), commands.end(),
+            [](const std::vector<std::string>& vec) {
+                return vec.empty(); // Check if the vector is empty
+                // Add other conditions as necessary
+            }),
+            commands.end());
+
         // initial processing of commands
         for (const auto& cmd : commands) {
-            if (cmd.empty()) { // Isolate command settings
-                continue;
-            }
+            //if (cmd.empty()) { // Isolate command settings
+            //    continue;
+            //}
             
             commandName = cmd[0];
             
@@ -1641,9 +1657,9 @@ public:
                 
                 // Extract the command grouping
                 if (commandMode == toggleStr) {
-                    if (commandName.find("on:") == 0)
+                    if (commandName == "on:")
                         currentSection = lowerOnStr;
-                    else if (commandName.find("off:") == 0)
+                    else if (commandName == "off:")
                         currentSection = lowerOffStr;
                     
                     // Seperation of command chuncks
@@ -2208,7 +2224,7 @@ public:
             commandsOff.clear();
             
             
-            if (drawLocation.empty() || currentPage == drawLocation || (optionName[0] == '@')) {
+            if (drawLocation.empty() || (currentPage == drawLocation) || (optionName.front() == '@')) {
                 
                 // Custom header implementation
                 if (!dropdownSection.empty()) {
@@ -2233,7 +2249,7 @@ public:
                     }
                 } else {
                     if (commands.size() == 0) {
-                        if (optionName[0] == '@') {
+                        if (optionName.front() == '@') {
                             if (drawLocation.empty()) {
                                 pageLeftName = optionName.substr(1);
                                 drawLocation = leftStr;
@@ -2242,7 +2258,7 @@ public:
                                 usingPages = true;
                                 drawLocation = rightStr;
                             }
-                        } else if (optionName[0] == '*') {
+                        } else if (optionName.front() == '*') {
                             // Create reference to PackageMenu with dropdownSection set to optionName
                             listItem = std::make_unique<tsl::elm::ListItem>(removeTag(optionName.substr(1)), DROPDOWN_SYMBOL);
                             
@@ -2304,11 +2320,20 @@ public:
                 inMarikoSection = false;
                 size_t delimiterPos;
 
+                // Remove all empty command strings
+                commands.erase(std::remove_if(commands.begin(), commands.end(),
+                    [](const std::vector<std::string>& vec) {
+                        return vec.empty(); // Check if the vector is empty
+                        // Add other conditions as necessary
+                    }),
+                    commands.end());
+
+
                 // initial processing of commands
                 for (const auto& cmd : commands) {
-                    if (cmd.empty()) { // Isolate command settings
-                        continue;
-                    }
+                    //if (cmd.empty()) { // Isolate command settings
+                    //    continue;
+                    //}
                     
                     commandName = cmd[0];
                     
@@ -2409,7 +2434,7 @@ public:
                 
                 
                 // Get Option name and footer
-                if (optionName[0] == '*') { 
+                if (optionName.front() == '*') { 
                     useSelection = true;
                     optionName = optionName.substr(1); // Strip the "*" character on the left
                     footer = DROPDOWN_SYMBOL;
@@ -3089,87 +3114,66 @@ public:
             if (!overlayFiles.empty()) {
                 // Load the INI file and parse its content.
                 std::map<std::string, std::map<std::string, std::string>> overlaysIniData = getParsedDataFromIniFile(overlaysIniFilePath);
-                Result result;
+                
                 std::string overlayName, overlayVersion;
                 
+                bool foundOvlmenu = false;  // Flag to indicate if "ovlmenu.ovl" has been found and removed
+                
+                overlayFiles.erase(
+                    std::remove_if(
+                        overlayFiles.begin(), 
+                        overlayFiles.end(),
+                        [&foundOvlmenu](const std::string& file) {
+                            std::string fileName = getNameFromPath(file);
+                            if (!foundOvlmenu && fileName == "ovlmenu.ovl") {
+                                foundOvlmenu = true;  // Mark as found and continue to remove
+                                return true;
+                            }
+                            return fileName.front() == '.';
+                        }
+                    ),
+                    overlayFiles.end()
+                );
+
+                // Assuming the existence of appropriate utility functions and types are defined elsewhere.
                 for (const auto& overlayFile : overlayFiles) {
-                    
-                    overlayFileName = getNameFromPath(overlayFile);
-                    
-                    if (overlayFileName == "ovlmenu.ovl" or overlayFileName.front() == '.')
-                        continue;
-                    
-                    
-                    // Check if the overlay name exists in the INI data.
-                    if (overlaysIniData.find(overlayFileName) == overlaysIniData.end()) {
-                        // The entry doesn't exist; initialize it.
-                        overlayList.push_back("0020:"+overlayFileName);
+                    const std::string& overlayFileName = getNameFromPath(overlayFile);
+                
+                    //if (overlayFileName == "ovlmenu.ovl" || overlayFileName.front() == '.') {
+                    //    continue;
+                    //}
+                
+                    auto it = overlaysIniData.find(overlayFileName);
+                    if (it == overlaysIniData.end()) {
+                        // Initialization of new entries
                         setIniFileValue(overlaysIniFilePath, overlayFileName, priorityStr, "20");
                         setIniFileValue(overlaysIniFilePath, overlayFileName, starStr, falseStr);
                         setIniFileValue(overlaysIniFilePath, overlayFileName, hideStr, falseStr);
                         setIniFileValue(overlaysIniFilePath, overlayFileName, useLaunchArgsStr, falseStr);
                         setIniFileValue(overlaysIniFilePath, overlayFileName, launchArgsStr, "''");
-                        
+                        overlayList.push_back("0020:" + overlayFileName);
                     } else {
-                        // Read priority and starred status from ini
-                        priority = "0020";
-                        starred = falseStr;
-                        hide = falseStr;
-                        
-                        // Check if the priorityStr key exists in overlaysIniData for overlayFileName
-                        if (overlaysIniData.find(overlayFileName) != overlaysIniData.end() &&
-                            overlaysIniData[overlayFileName].find(priorityStr) != overlaysIniData[overlayFileName].end()) {
-                            priority = formatPriorityString(overlaysIniData[overlayFileName][priorityStr]);
-                        } else
-                            setIniFileValue(overlaysIniFilePath, overlayFileName, priorityStr, "20");
-                        
-                        // Check if the starStr key exists in overlaysIniData for overlayFileName
-                        if (overlaysIniData.find(overlayFileName) != overlaysIniData.end() &&
-                            overlaysIniData[overlayFileName].find(starStr) != overlaysIniData[overlayFileName].end()) {
-                            starred = overlaysIniData[overlayFileName][starStr];
-                        } else
-                            setIniFileValue(overlaysIniFilePath, overlayFileName, starStr, falseStr);
-                        
-                        // Check if the hideStr key exists in overlaysIniData for overlayFileName
-                        if (overlaysIniData.find(overlayFileName) != overlaysIniData.end() &&
-                            overlaysIniData[overlayFileName].find(hideStr) != overlaysIniData[overlayFileName].end()) {
-                            hide = overlaysIniData[overlayFileName][hideStr];
-                        } else
-                            setIniFileValue(overlaysIniFilePath, overlayFileName, hideStr, falseStr);
-                        
-                        // Check if the hideStr key exists in overlaysIniData for overlayFileName
-                        if (overlaysIniData.find(overlayFileName) != overlaysIniData.end() &&
-                            overlaysIniData[overlayFileName].find(useLaunchArgsStr) != overlaysIniData[overlayFileName].end()) {
-                        } else
-                            setIniFileValue(overlaysIniFilePath, overlayFileName, useLaunchArgsStr, falseStr);
-                        
-                        // Check if the hideStr key exists in overlaysIniData for overlayFileName
-                        if (overlaysIniData.find(overlayFileName) != overlaysIniData.end() &&
-                            overlaysIniData[overlayFileName].find(launchArgsStr) != overlaysIniData[overlayFileName].end()) {
-                        } else
-                            setIniFileValue(overlaysIniFilePath, overlayFileName, launchArgsStr, "''");
-                        
-                        
-                        // Get the name and version of the overlay file
-                        std::tie(result, overlayName, overlayVersion) = getOverlayInfo(overlayDirectory+overlayFileName);
-                        if (result != ResultSuccess)
-                            continue;
-                        
+                        const std::string& priority = getValueOrDefault(it->second, priorityStr, "20", formatPriorityString, 1);
+                        const std::string& starred = getValueOrDefault(it->second, starStr, falseStr);
+                        const std::string& hide = getValueOrDefault(it->second, hideStr, falseStr);
+                        const std::string& useLaunchArgs = getValueOrDefault(it->second, useLaunchArgsStr, falseStr);
+                        const std::string& launchArgs = getValueOrDefault(it->second, launchArgsStr, "''");
+                
+                        const auto& [result, overlayName, overlayVersion] = getOverlayInfo(overlayDirectory + overlayFileName);
+                        if (result != ResultSuccess) continue;
+                
+                        const std::string& baseOverlayInfo = priority + ":" + overlayName + ":" + overlayVersion + ":" + overlayFileName;
+                        const std::string& fullOverlayInfo = (starred == trueStr) ? "-1:" + baseOverlayInfo : baseOverlayInfo;
+                
                         if (hide == falseStr) {
-                            if (starred == trueStr)
-                                overlayList.push_back("-1:"+priority+":"+overlayName+":"+overlayVersion+":"+overlayFileName);
-                            else
-                                overlayList.push_back(priority+":"+overlayName+":"+overlayVersion+":"+overlayFileName);
-                            
+                            overlayList.push_back(fullOverlayInfo);
                         } else {
-                            if (starred == trueStr)
-                                hiddenOverlayList.push_back("-1:"+priority+":"+overlayName+":"+overlayVersion+":"+overlayFileName);
-                            else
-                                hiddenOverlayList.push_back(priority+":"+overlayName+":"+overlayVersion+":"+overlayFileName);
-                            
+                            hiddenOverlayList.push_back(fullOverlayInfo);
                         }
                     }
                 }
+
+
                 
                 overlaysIniData.clear();
                 
@@ -3361,56 +3365,47 @@ public:
                 // Load subdirectories
                 std::vector<std::string> subdirectories = getSubdirectories(packageDirectory);
                 //for (size_t i = 0; i < subdirectories.size(); ++i) {
+
+                // Remove subdirectories starting with a dot
+                subdirectories.erase(
+                    std::remove_if(
+                        subdirectories.begin(), 
+                        subdirectories.end(),
+                        [](const std::string& dirName) {
+                            return dirName.front() == '.';
+                        }
+                    ),
+                    subdirectories.end()
+                );
+
                 for (const auto& packageName: subdirectories) {
-                    if (packageName.front() == '.')
-                        continue;
-                    // Check if the overlay name exists in the INI data.
-                    if (packagesIniData.find(packageName) == packagesIniData.end()) {
-                        // The entry doesn't exist; initialize it.
-                        packageList.push_back("0020:"+packageName);
+                    auto packageIt = packagesIniData.find(packageName);
+                    if (packageIt == packagesIniData.end()) {
+                        // Initialize missing package data
                         setIniFileValue(packagesIniFilePath, packageName, priorityStr, "20");
                         setIniFileValue(packagesIniFilePath, packageName, starStr, falseStr);
                         setIniFileValue(packagesIniFilePath, packageName, hideStr, falseStr);
+                        packageList.push_back("0020:" + packageName);
                     } else {
-                        // Read priority and starred status from ini
-                        priority = "0020";
-                        starred = falseStr;
-                        hide = falseStr;
-                        
-                        // Check if the priorityStr key exists in overlaysIniData for overlayFileName
-                        if (packagesIniData.find(packageName) != packagesIniData.end() &&
-                            packagesIniData[packageName].find(priorityStr) != packagesIniData[packageName].end()) {
-                            priority = formatPriorityString(packagesIniData[packageName][priorityStr]);
-                        } else
-                            setIniFileValue(packagesIniFilePath, packageName, priorityStr, "20");
-                        
-                        // Check if the starStr key exists in overlaysIniData for overlayFileName
-                        if (packagesIniData.find(packageName) != packagesIniData.end() &&
-                            packagesIniData[packageName].find(starStr) != packagesIniData[packageName].end()) {
-                            starred = packagesIniData[packageName][starStr];
-                        } else
-                            setIniFileValue(packagesIniFilePath, packageName, starStr, falseStr);
-                        
-                        // Check if the starStr key exists in overlaysIniData for overlayFileName
-                        if (packagesIniData.find(packageName) != packagesIniData.end() &&
-                            packagesIniData[packageName].find(hideStr) != packagesIniData[packageName].end()) {
-                            hide = packagesIniData[packageName][hideStr];
-                        } else
-                            setIniFileValue(packagesIniFilePath, packageName, hideStr, falseStr);
-                        
+                        // Process existing package data
+                        priority = (packageIt->second.find(priorityStr) != packageIt->second.end()) ? 
+                                    formatPriorityString(packageIt->second[priorityStr]) : "0020";
+                        starred = (packageIt->second.find(starStr) != packageIt->second.end()) ? 
+                                  packageIt->second[starStr] : falseStr;
+                        hide = (packageIt->second.find(hideStr) != packageIt->second.end()) ? 
+                               packageIt->second[hideStr] : falseStr;
+                
+                        const std::string& basePackageInfo = priority + ":" + packageName;
+                        const std::string& fullPackageInfo = (starred == trueStr) ? "-1:" + basePackageInfo : basePackageInfo;
+                
                         if (hide == falseStr) {
-                            if (starred == trueStr)
-                                packageList.push_back("-1:"+priority+":"+packageName);
-                            else
-                                packageList.push_back(priority+":"+packageName);
+                            packageList.push_back(fullPackageInfo);
                         } else {
-                            if (starred == trueStr)
-                                hiddenPackageList.push_back("-1:"+priority+":"+packageName);
-                            else
-                                hiddenPackageList.push_back(priority+":"+packageName);
+                            hiddenPackageList.push_back(fullPackageInfo);
                         }
                     }
                 }
+
                 packagesIniData.clear();
                 subdirectories.clear();
                 
@@ -3649,7 +3644,7 @@ public:
                             continue;
                         }
                     } else {
-                        if (commands.size() == 0 && optionName[0] != '*') {
+                        if (commands.size() == 0 && optionName.front() != '*') {
                             // Add a section break with small text to indicate the "Commands" section
                             if (optionName != lastSection)
                                 list->addItem(new tsl::elm::CategoryHeader(removeTag(optionName)));
@@ -3663,7 +3658,7 @@ public:
                         }
                     }
                     
-                    if (optionName[0] == '*') {
+                    if (optionName.front() == '*') {
                         // Create reference to PackageMenu with dropdownSection set to optionName
                         listItem = std::make_unique<tsl::elm::ListItem>(removeTag(optionName.substr(1)), DROPDOWN_SYMBOL);
                         
@@ -3694,11 +3689,19 @@ public:
                     
                     size_t delimiterPos;
 
+                    // Remove all empty command strings
+                    commands.erase(std::remove_if(commands.begin(), commands.end(),
+                        [](const std::vector<std::string>& vec) {
+                            return vec.empty(); // Check if the vector is empty
+                            // Add other conditions as necessary
+                        }),
+                        commands.end());
+
                     // initial processing of commands
                     for (const auto& cmd : commands) {
-                        if (cmd.empty()) { // Isolate command settings
-                            continue;
-                        }
+                        //f (cmd.empty()) { // Isolate command settings
+                        //   continue;
+                        //
                         
                         commandName = cmd[0];
                         
@@ -3798,7 +3801,7 @@ public:
                     
                     
                     // get Option Name and footer
-                    if (optionName[0] == '*') { 
+                    if (optionName.front() == '*') { 
                         useSelection = true;
                         optionName = optionName.substr(1); // Strip the "*" character on the left
                         footer = DROPDOWN_SYMBOL;
