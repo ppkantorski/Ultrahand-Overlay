@@ -48,6 +48,12 @@ bool pchtxt2ips(const std::string& pchtxtPath, const std::string& outputFolder) 
     uint32_t lineNum = 0;
     std::string nsobid;
 
+    uint32_t address;
+    uint8_t byte;
+    std::vector<uint8_t> valueBytes;
+
+    std::string addressStr, valueStr;
+    
     while (std::getline(pchtxtFile, line)) {
         ++lineNum;
         if (line.empty() || line.front() == '@') {
@@ -58,20 +64,21 @@ bool pchtxt2ips(const std::string& pchtxtPath, const std::string& outputFolder) 
         }
 
         std::istringstream iss(line);
-        std::string addressStr, valueStr;
+        addressStr = "";
+        valueStr = "";
         if (!(iss >> addressStr >> valueStr)) {
             continue;
         }
 
         char* endPtr;
-        uint32_t address = std::strtoul(addressStr.c_str(), &endPtr, 16);
+        address = std::strtoul(addressStr.c_str(), &endPtr, 16);
         if (*endPtr != '\0') {
             continue;
         }
 
-        std::vector<uint8_t> valueBytes;
+        
         for (size_t i = 0; i < valueStr.length(); i += 2) {
-            uint8_t byte = std::stoi(valueStr.substr(i, 2), nullptr, 16);
+            byte = std::stoi(valueStr.substr(i, 2), nullptr, 16);
             valueBytes.push_back(byte);
         }
         
@@ -80,6 +87,7 @@ bool pchtxt2ips(const std::string& pchtxtPath, const std::string& outputFolder) 
         }
 
         patches.push_back(std::make_pair(address, valueBytes));
+        valueBytes.clear();
     }
 
     if (nsobid.empty()) {
@@ -100,10 +108,11 @@ bool pchtxt2ips(const std::string& pchtxtPath, const std::string& outputFolder) 
 
     ipsFile.write(IPS32_HEAD_MAGIC.c_str(), IPS32_HEAD_MAGIC.size());
 
+    uint16_t valueLength;
     for (const auto& patch : patches) {
-        uint32_t address = patch.first;
+        address = patch.first;
         ipsFile.write(reinterpret_cast<const char*>(&address), sizeof(address));  // Write address
-        uint16_t valueLength = patch.second.size();
+        valueLength = patch.second.size();
         ipsFile.write(reinterpret_cast<const char*>(&valueLength), sizeof(valueLength));  // Write length of value
         ipsFile.write(reinterpret_cast<const char*>(patch.second.data()), patch.second.size());  // Write value
     }
