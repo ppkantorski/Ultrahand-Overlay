@@ -734,7 +734,7 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
         modifiedCmd.clear();
         
         modifiedCmd.reserve(cmd.size()); // Reserve memory for efficiency
-        
+
         commandName = cmd[0];
 
         if (commandName == "download")
@@ -1314,7 +1314,7 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                 std::string bootOptionName;
                 
                 bool resetCommandSuccess;
-                for (auto& bootOption:bootOptions) {
+                for (auto& bootOption: bootOptions) {
                     bootOptionName = bootOption.first;
                     auto& bootCommands = bootOption.second;
                     if (bootOptionName == bootCommandName) {
