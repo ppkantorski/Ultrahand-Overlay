@@ -240,8 +240,6 @@ void addHelpInfo(auto& list) {
     constexpr int fontSize = 16;    // Adjust the font size as needed
     int numEntries = 4;   // Adjust the number of entries as needed
     
-    //std::string::size_type startPos;
-    //std::string::size_type spacePos;
     
     std::string sectionString = "";
     std::string infoString = "";
@@ -431,7 +429,7 @@ bool isDangerousCombination(const std::string& patternPath) {
         "sdmc:/bootloader/",
         "sdmc:/switch/",
         "sdmc:/config/",
-        "sdmc:/"
+        rootPath
     };
     const std::vector<std::string> ultraProtectedFolders = {
         "sdmc:/Nintendo/",
@@ -503,8 +501,8 @@ bool isDangerousCombination(const std::string& patternPath) {
     }
     
     // Check if the patternPath is a dangerous pattern
-    if (patternPath.find("sdmc:/") == 0) {
-        std::string relativePath = patternPath.substr(6); // Remove "sdmc:/"
+    if (patternPath.find(rootPath) == 0) {
+        std::string relativePath = patternPath.substr(6); // Remove rootPath
         
         // Split the relativePath by '/' to handle multiple levels of wildcards
         std::vector<std::string> pathSegments;
@@ -588,7 +586,7 @@ std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadO
         line.erase(std::remove(line.begin(), line.end(), '\r'), line.end());
         line.erase(std::remove(line.begin(), line.end(), '\n'), line.end());
 
-        if (line.empty() || line[0] == '#') continue; // Skip empty or comment lines
+        if (line.empty() || line.front() == '#') continue; // Skip empty or comment lines
 
         if (line.front() == '[' && line.back() == ']') { // Section headers
             if (!currentSection.empty()) {
@@ -735,7 +733,8 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
         
         modifiedCmd.clear();
         
-        //modifiedCmd.reserve(cmd.size()); // Reserve memory for efficiency
+        modifiedCmd.reserve(cmd.size()); // Reserve memory for efficiency
+        
         commandName = cmd[0];
 
         if (commandName == "download")
@@ -1133,10 +1132,9 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             if (cmdSize >= 3) {
                 destinationPath = preprocessPath(cmd[2], packagePath);
             } else {
-                destinationPath = "sdmc:/";
+                destinationPath = rootPath;
             }
             
-            //std::string action = (commandName == "mirror_copy" || commandName == "mirror_cp") ? "copy" : "delete";
             mirrorFiles(sourcePath, destinationPath, (commandName == "mirror_copy" || commandName == "mirror_cp") ? "copy" : "delete");
         }
     } else if (commandName == "mv" || commandName == "move" || commandName == "rename" ) { // Rename command
@@ -1485,7 +1483,7 @@ std::queue<std::tuple<std::vector<std::vector<std::string>>, std::string, std::s
 std::mutex queueMutex;
 std::condition_variable queueCondition;
 std::atomic<bool> interpreterThreadExit{false};
-//static bool lastRunningInterpreter = false;
+
 
 void clearInterpreterFlags(bool state = false) {
     abortDownload.store(state, std::memory_order_release);
@@ -1534,7 +1532,6 @@ void backgroundInterpreter(void*) {
 }
 
 void closeInterpreterThread() {
-   //logMessage("Closing interpreter...");
    {
        std::lock_guard<std::mutex> lock(queueMutex);
        interpreterThreadExit.store(true, std::memory_order_release);
@@ -1544,14 +1541,11 @@ void closeInterpreterThread() {
    threadClose(&interpreterThread);
    // Reset flags
    clearInterpreterFlags();
-   //logMessage("Interpreter has been closed.");
 }
 
 
 
 void startInterpreterThread(int stackSize = 0x8000) {
-    //if (isDownloadCommand)
-    //    stackSize = 0x8000;
 
     std::string interpreterHeap = parseValueFromIniSection(settingsConfigIniPath, projectName, "interpreter_heap");
     if (!interpreterHeap.empty())
@@ -1580,4 +1574,8 @@ void enqueueInterpreterCommands(std::vector<std::vector<std::string>>&& commands
 }
 
 
-
+void resetPercentages() {
+    downloadPercentage.store(-1, std::memory_order_release);
+    unzipPercentage.store(-1, std::memory_order_release);
+    copyPercentage.store(-1, std::memory_order_release);
+}
