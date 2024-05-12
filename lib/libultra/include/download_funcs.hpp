@@ -21,7 +21,6 @@
 #include <curl/curl.h>
 #include <zlib.h>
 #include <zzip/zzip.h>
-//#include <queue>
 #include "string_funcs.hpp"
 #include "get_funcs.hpp"
 #include "path_funcs.hpp"
@@ -65,8 +64,8 @@ extern "C" int progressCallback(void *ptr, curl_off_t totalToDownload, curl_off_
     auto percentage = static_cast<std::atomic<int>*>(ptr);
 
     if (totalToDownload > 0) {
-        int newProgress = static_cast<int>(float(nowDownloaded) / float(totalToDownload) *100);
-        percentage->store(newProgress, std::memory_order_release);
+        //int newProgress = static_cast<int>(float(nowDownloaded) / float(totalToDownload) *100);
+        percentage->store(static_cast<int>(float(nowDownloaded) / float(totalToDownload) *100), std::memory_order_release);
     }
 
     if (abortDownload.load(std::memory_order_acquire)) {
@@ -89,7 +88,6 @@ extern "C" int progressCallback(void *ptr, curl_off_t totalToDownload, curl_off_
  */
 bool downloadFile(const std::string& url, const std::string& toDestination) {
     abortDownload.store(false);
-    downloadPercentage.store(0, std::memory_order_release);
 
     if (url.find_first_of("{}") != std::string::npos) {
         logMessage("Invalid URL: " + url);
@@ -121,6 +119,8 @@ bool downloadFile(const std::string& url, const std::string& toDestination) {
         logMessage("Error initializing curl.");
         return false;
     }
+
+    downloadPercentage.store(0, std::memory_order_release);
 
     curl_easy_setopt(curl.get(), CURLOPT_URL, url.c_str());
     curl_easy_setopt(curl.get(), CURLOPT_WRITEFUNCTION, writeCallback);
@@ -213,10 +213,11 @@ bool unzipFile(const std::string& zipFilePath, const std::string& toDestination)
 
     std::string fileName, extractedFilePath;
     std::string directoryPath;
-    int progress;
+    //int progress;
 
     char buffer[UNZIP_BUFFER_SIZE];
     zzip_ssize_t bytesRead;
+
 
     // Second pass: Extract files and update progress
     while (zzip_dir_read(dir.get(), &entry)) {
@@ -261,8 +262,8 @@ bool unzipFile(const std::string& zipFilePath, const std::string& toDestination)
             outputFile.write(buffer, bytesRead);
             currentUncompressedSize += bytesRead;
 
-            progress = static_cast<int>(100.0 * currentUncompressedSize / totalUncompressedSize);
-            unzipPercentage.store(progress, std::memory_order_release);
+            //progress = static_cast<int>(100.0 * currentUncompressedSize / totalUncompressedSize);
+            unzipPercentage.store(static_cast<int>(100.0 * currentUncompressedSize / totalUncompressedSize), std::memory_order_release);
         }
         outputFile.close();
 
