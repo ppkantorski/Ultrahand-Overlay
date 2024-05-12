@@ -149,12 +149,12 @@ static std::map<std::string, std::map<std::string, std::string>> parseIni(const 
     std::string trimmedLine;
 
     size_t delimiterPos;
-    std::string key, value;
+    //std::string key, value;
 
     for (auto& line : lines) {
         trimmedLine = trim(line);
 
-        if (trimmedLine.empty() || trimmedLine[0] == '#') {
+        if (trimmedLine.empty() || trimmedLine.front() == '#') {
             // Ignore empty lines and comments
             continue;
         }
@@ -166,10 +166,11 @@ static std::map<std::string, std::map<std::string, std::string>> parseIni(const 
         else {
             delimiterPos = trimmedLine.find('=');
             if (delimiterPos != std::string::npos) {
-                key = trim(trimmedLine.substr(0, delimiterPos));
-                value = trim(trimmedLine.substr(delimiterPos + 1));
+                //key = trim(trimmedLine.substr(0, delimiterPos));
+                //value = trim(trimmedLine.substr(delimiterPos + 1));
                 if (!lastHeader.empty()) {
-                    iniData[lastHeader][key] = value;
+                    //iniData[lastHeader][key] = value;
+                    iniData[lastHeader][trim(trimmedLine.substr(0, delimiterPos))] = trim(trimmedLine.substr(delimiterPos + 1));
                 }
             }
         }
