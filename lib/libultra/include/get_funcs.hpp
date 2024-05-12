@@ -30,7 +30,6 @@
 
 
 
-
 struct DirCloser {
     void operator()(DIR* dir) const {
         if (dir) closedir(dir);
@@ -75,7 +74,6 @@ std::string getFileContents(const std::string& filePath) {
 
 
 
-
 /**
  * @brief Concatenates the provided directory and file names to form a destination path.
  *
@@ -96,15 +94,13 @@ std::string getDestinationPath(const std::string& destinationDir, const std::str
 std::string getValueFromLine(const std::string& line) {
     // Find the position of '=' character from the end of the string
     size_t equalsPos = line.rfind('=');
-    if (equalsPos != std::string::npos) {
-        // Extract the substring starting from the character after '='
-        std::string value = line.substr(equalsPos + 1);
-
-        // Return the trimmed value
-        return trim(value);
+    if (equalsPos != std::string::npos && equalsPos + 1 < line.size()) {
+        // Directly return the trimmed substring after '='
+        return trim(line.substr(equalsPos + 1));
     }
-    return ""; // Return an empty string if '=' is not found
+    return ""; // Return an empty string if '=' is not found or no content after '='
 }
+
 
 
 /**
@@ -115,30 +111,20 @@ std::string getValueFromLine(const std::string& line) {
  * If the path is empty or no name is found, an empty string is returned.
  */
 std::string getNameFromPath(const std::string& path) {
-    size_t lastSlash = path.find_last_of('/');
-    if (lastSlash != std::string::npos) {
-        // Extract the substring after the last '/'
-        std::string name = path.substr(lastSlash + 1);
-
-        // If the extracted name is not empty, return it
-        if (!name.empty()) {
-            return name;
-        }
-
-        // The path ends with a slash, indicating a directory
-        std::string strippedPath = path.substr(0, lastSlash);
-
-        // Find the name from the stripped path
-        lastSlash = strippedPath.find_last_of('/');
-        if (lastSlash != std::string::npos) {
-            name = strippedPath.substr(lastSlash + 1);
-            return name;
-        }
+    size_t lastNonSlash = path.find_last_not_of('/');
+    if (lastNonSlash == std::string::npos) {
+        return "";  // All slashes, or empty string effectively
     }
 
-    // If '/' is not found or the path ends with a single '/', return the original path
-    return path;
+    size_t lastSlash = path.find_last_of('/', lastNonSlash);
+    if (lastSlash == std::string::npos) {
+        return path.substr(0, lastNonSlash + 1);  // No slashes, the entire path is a filename
+    }
+
+    return path.substr(lastSlash + 1, lastNonSlash - lastSlash);  // Standard case, efficiently handled
 }
+
+
 
 /**
  * @brief Extracts the file name from a full file path.
@@ -151,7 +137,7 @@ std::string getNameFromPath(const std::string& path) {
  */
 std::string getFileName(const std::string& path) {
     // Find the last slash in the path
-    size_t pos = path.find_last_of("/\\");
+    size_t pos = path.find_last_of("/");
     if (pos != std::string::npos) {
         // Return the substring after the last slash
         return path.substr(pos + 1);
@@ -169,38 +155,36 @@ std::string getFileName(const std::string& path) {
  * @return The name of the parent directory at the specified level.
  */
 std::string getParentDirNameFromPath(const std::string& path, size_t level = 0) {
-    // Split the path into individual directories
-    std::vector<std::string> directories;
-    size_t pos = 0;
-    size_t nextPos;
-    while (pos != std::string::npos) {
-        nextPos = path.find('/', pos + 1);
-        directories.push_back(path.substr(pos + 1, nextPos - pos - 1));
-        pos = nextPos;
+    if (path.empty()) return "";
+
+    // Start from the end of the string and move backwards to find the slashes
+    size_t endPos = path.find_last_not_of('/');
+    if (endPos == std::string::npos) return ""; // All slashes or empty path
+
+    size_t pos = path.rfind('/', endPos);
+    if (pos == std::string::npos || pos == 0) return ""; // No parent directory or single slash
+
+    while (level-- > 0 && pos != std::string::npos) {
+        endPos = pos - 1;
+        pos = path.rfind('/', endPos);
+        if (pos == std::string::npos || pos == 0) return ""; // No more directories to go up
     }
 
-    // Calculate the index of the desired directory
-    size_t targetIndex = directories.size() - 2 - level; // Adjusted to get parent directory
+    size_t start = path.rfind('/', pos - 1);
+    if (start == std::string::npos) start = 0;
+    else start += 1; // Move past the slash
 
-    // Check if the target index is valid
-    if (targetIndex < directories.size() - 1) {
-        // Extract the directory name at the target index
-        std::string targetDir = directories[targetIndex];
+    std::string parentDir = path.substr(start, pos - start);
 
-        // Check if the directory name contains spaces or special characters
-        if (targetDir.find_first_of(" \t\n\r\f\v") != std::string::npos) {
-            // If it does, return the directory name within quotes
-            return "\"" + targetDir + "\"";
-        }
-
-        // If it doesn't, return the directory name as is
-        return targetDir;
+    // Check for spaces or special characters
+    if (parentDir.find_first_of(" \t\n\r\f\v") != std::string::npos) {
+        // If it does, return the directory name within quotes
+        return "\"" + parentDir + "\"";
     }
 
-    // If the path format is not as expected or the target directory is not found,
-    // return an empty string or handle the case accordingly
-    return "";
+    return parentDir;
 }
+
 
 
 /**
@@ -212,8 +196,7 @@ std::string getParentDirNameFromPath(const std::string& path, size_t level = 0) 
 std::string getParentDirFromPath(const std::string& path) {
     size_t lastSlash = path.find_last_of('/');
     if (lastSlash != std::string::npos) {
-        std::string parentDir = path.substr(0, lastSlash + 1);
-        return parentDir;
+        return  path.substr(0, lastSlash + 1);
     }
     return path;
 }
