@@ -610,15 +610,15 @@ void mirrorFiles(const std::string& sourcePath, const std::string targetPath, co
  * @param path The path of the directory to ensure its existence.
  * @return True if the directory exists or was successfully created, false otherwise.
  */
-bool ensureDirectoryExists(const std::string& path) {
-    if (isDirectory(path))
-        return true;
-    else {
-        createDirectory(path);
-        if (isDirectory(path))
-            return true;
-    }
-    
-    //logMessage(std::string("Failed to create directory: ") + path);
-    return false;
-}
+//bool ensureDirectoryExists(const std::string& path) {
+//    if (isDirectory(path))
+//        return true;
+//    else {
+//        createDirectory(path);
+//        if (isDirectory(path))
+//            return true;
+//    }
+//    
+//    //logMessage(std::string("Failed to create directory: ") + path);
+//    return false;
+//}
