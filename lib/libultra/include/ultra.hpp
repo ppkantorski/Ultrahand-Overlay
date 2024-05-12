@@ -32,6 +32,7 @@ const std::string configFileName = "config.ini";
 const std::string themeFileName = "theme.ini";
 const std::string projectName = "ultrahand";
 const std::string upperProjectName = "Ultrahand";
+const std::string rootPath = "sdmc:/";
 const std::string settingsPath = "sdmc:/config/ultrahand/";
 const std::string settingsConfigIniPath = "sdmc:/config/ultrahand/config.ini";
 const std::string langPath = "sdmc:/config/ultrahand/lang/";
