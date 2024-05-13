@@ -243,6 +243,10 @@ void drawTable(std::unique_ptr<tsl::elm::List>& list, std::string sectionString,
     }), fontSize * numEntries +3);
 }
 
+void addTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::vector<std::string>>& tableData) {
+
+}
+
 
 void addHelpInfo(std::unique_ptr<tsl::elm::List>& list) {
     
@@ -737,7 +741,7 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
     std::vector<std::vector<std::string>> modifiedCommands;
     //std::vector<std::string> listData;
     std::string listString;
-    std::string jsonPath, jsCAPITAL_ON_STRing;
+    std::string jsonPath, jsonString;
     size_t startPos, endPos;
     
     std::vector<std::string> modifiedCmd;
@@ -773,8 +777,8 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
                     listString = removeQuotes(cmd[1]);
                 else if ((commandName == "json_file_source") && jsonPath.empty())
                     jsonPath = preprocessPath(cmd[1], packagePath);
-                else if ((commandName == "json_source") && jsCAPITAL_ON_STRing.empty())
-                    jsCAPITAL_ON_STRing = cmd[1];
+                else if ((commandName == "json_source") && jsonString.empty())
+                    jsonString = cmd[1];
             }
             
             
@@ -822,7 +826,7 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
                     startPos = modifiedArg.find("{json_source(");
                     endPos = modifiedArg.find(")}");
                     if (endPos != std::string::npos && endPos > startPos) {
-                        replacement = replaceJsonPlaceholder(modifiedArg.substr(startPos, endPos - startPos + 2), "json_source", jsCAPITAL_ON_STRing);
+                        replacement = replaceJsonPlaceholder(modifiedArg.substr(startPos, endPos - startPos + 2), "json_source", jsonString);
                         if (replacement.empty()) {
                             replacement = NULL_STR;
                             modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
@@ -862,6 +866,114 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
 }
 
 
+void applyPlaceholderReplacement(auto& cmd, std::string hexPath, std::string iniPath, std::string listString, std::string jsonString, std::string jsonPath) {
+    size_t startPos, endPos, listIndex;
+    std::string replacement, lastArg;
+
+    for (auto& arg : cmd) {
+        lastArg = "";
+        while ((!hexPath.empty() && (arg.find("{hex_file(") != std::string::npos))) {
+            startPos = arg.find("{hex_file(");
+            endPos = arg.find(")}");
+            if (endPos != std::string::npos && endPos > startPos) {
+                replacement = replaceHexPlaceholder(arg.substr(startPos, endPos - startPos + 2), hexPath);
+                if (replacement.empty()) {replacement = NULL_STR; arg.replace(startPos, endPos - startPos + 2, replacement); break;}
+                
+                arg.replace(startPos, endPos - startPos + 2, replacement);
+                if (arg == lastArg) {
+                    if (interpreterLogging)
+                        logMessage("failed replacement arg: "+arg);
+                    arg.replace(startPos, endPos - startPos + 2, NULL_STR); // fall back replacement value of null
+                    commandSuccess = false;
+                    break;
+                }
+            } else
+                break;
+            lastArg = arg;
+        }
+        while ((!iniPath.empty() && (arg.find("{ini_file(") != std::string::npos))) {
+            startPos = arg.find("{ini_file(");
+            endPos = arg.find(")}");
+            if (endPos != std::string::npos && endPos > startPos) {
+                replacement = replaceIniPlaceholder(arg.substr(startPos, endPos - startPos + 2), iniPath);
+                
+                if (replacement.empty()) {replacement = NULL_STR; arg.replace(startPos, endPos - startPos + 2, replacement); break;}
+                
+                arg.replace(startPos, endPos - startPos + 2, replacement);
+                
+                
+                if (arg == lastArg) {
+                    if (interpreterLogging)
+                        logMessage("failed replacement arg: "+arg);
+                    arg.replace(startPos, endPos - startPos + 2, NULL_STR); // fall back replacement value of null
+                    commandSuccess = false;
+                    break;
+                }
+            } else
+                break;
+            lastArg = arg;
+        }
+        while ((!listString.empty() && (arg.find("{list(") != std::string::npos))) {
+            startPos = arg.find("{list(");
+            endPos = arg.find(")}");
+            if (endPos != std::string::npos && endPos > startPos) {
+                listIndex = std::stoi(arg.substr(startPos, endPos - startPos + 2));
+                replacement = stringToList(listString)[listIndex];
+                if (replacement.empty()) {replacement = NULL_STR; arg.replace(startPos, endPos - startPos + 2, replacement); break;}
+                
+                arg.replace(startPos, endPos - startPos + 2, replacement);
+                if (arg == lastArg) {
+                    if (interpreterLogging)
+                        logMessage("failed replacement arg: "+arg);
+                    arg.replace(startPos, endPos - startPos + 2, NULL_STR); // fall back replacement value of null
+                    commandSuccess = false;
+                    break;
+                }
+            } else
+                break;
+            lastArg = arg;
+        }
+        while ((!jsonString.empty() && (arg.find("{json(") != std::string::npos))) {
+            startPos = arg.find("{json(");
+            endPos = arg.find(")}");
+            if (endPos != std::string::npos && endPos > startPos) {
+                replacement = replaceJsonPlaceholder(arg.substr(startPos, endPos - startPos + 2), JSON_STR, jsonString);
+                if (replacement.empty()) {replacement = UNAVAILABLE_SELECTION; arg.replace(startPos, endPos - startPos + 2, replacement); break;}
+                
+                arg.replace(startPos, endPos - startPos + 2, replacement);
+                if (arg == lastArg) {
+                    if (interpreterLogging)
+                        logMessage("failed replacement arg: "+arg);
+                    arg.replace(startPos, endPos - startPos + 2, UNAVAILABLE_SELECTION); // fall back replacement value of `UNAVAILABLE_SELECTION`
+                    commandSuccess = false;
+                    break;
+                }
+            } else
+                break;
+            lastArg = arg;
+        }
+        while ((!jsonPath.empty() && (arg.find("{json_file(") != std::string::npos))) {
+            startPos = arg.find("{json_file(");
+            endPos = arg.find(")}");
+            if (endPos != std::string::npos && endPos > startPos) {
+                replacement = replaceJsonPlaceholder(arg.substr(startPos, endPos - startPos + 2), "json_file", jsonPath);
+                if (replacement.empty()) {replacement = UNAVAILABLE_SELECTION; arg.replace(startPos, endPos - startPos + 2, replacement); break;}
+                
+                arg.replace(startPos, endPos - startPos + 2, replacement);
+                if (arg == lastArg) {
+                    if (interpreterLogging)
+                        logMessage("failed replacement arg: "+arg);
+                    arg.replace(startPos, endPos - startPos + 2, UNAVAILABLE_SELECTION); // fall back replacement value of `UNAVAILABLE_SELECTION`
+                    commandSuccess = false;
+                    
+                    break;
+                }
+            } else
+                break;
+            lastArg = arg;
+        }
+    }
+}
 
 
 // forward declarartion
@@ -906,9 +1018,9 @@ void interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
     bool inEristaSection = false;
     bool inMarikoSection = false;
     bool inTrySection = false;
-    std::string listString, jsCAPITAL_ON_STRing, jsonPath, hexPath, iniPath, lastArg;
+    std::string listString, jsonString, jsonPath, hexPath, iniPath, lastArg;
 
-    size_t startPos, endPos, listIndex;
+    //size_t startPos, endPos, listIndex;
     std::string replacement;
 
     // Overwrite globals
@@ -934,8 +1046,7 @@ void interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
         const std::string& commandName = cmd[0];
 
         if (commandName == "try:") {
-            if (inTrySection && commandSuccess)
-                break;
+            if (inTrySection && commandSuccess) break;
             commandSuccess = true;
 
             inTrySection = true;
@@ -960,109 +1071,8 @@ void interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
 
         if ((inEristaSection && !inMarikoSection && usingErista) || (!inEristaSection && inMarikoSection && usingMariko) || (!inEristaSection && !inMarikoSection)) {
             if (!inTrySection || (commandSuccess && inTrySection)) {
-                for (auto& arg : cmd) {
-                    lastArg = "";
-                    while ((!hexPath.empty() && (arg.find("{hex_file(") != std::string::npos))) {
-                        startPos = arg.find("{hex_file(");
-                        endPos = arg.find(")}");
-                        if (endPos != std::string::npos && endPos > startPos) {
-                            replacement = replaceHexPlaceholder(arg.substr(startPos, endPos - startPos + 2), hexPath);
-                            if (replacement.empty()) {replacement = NULL_STR; arg.replace(startPos, endPos - startPos + 2, replacement); break;}
 
-                            arg.replace(startPos, endPos - startPos + 2, replacement);
-                            if (arg == lastArg) {
-                                if (interpreterLogging)
-                                    logMessage("failed replacement ard: "+arg);
-                                arg.replace(startPos, endPos - startPos + 2, NULL_STR); // fall back replacement value of null
-                                commandSuccess = false;
-                                break;
-                            }
-                        } else
-                            break;
-                        lastArg = arg;
-                    }
-                    while ((!iniPath.empty() && (arg.find("{ini_file(") != std::string::npos))) {
-                        startPos = arg.find("{ini_file(");
-                        endPos = arg.find(")}");
-                        if (endPos != std::string::npos && endPos > startPos) {
-                            replacement = replaceIniPlaceholder(arg.substr(startPos, endPos - startPos + 2), iniPath);
-
-                            if (replacement.empty()) {replacement = NULL_STR; arg.replace(startPos, endPos - startPos + 2, replacement); break;}
-
-                            arg.replace(startPos, endPos - startPos + 2, replacement);
-                            
-
-                            if (arg == lastArg) {
-                                if (interpreterLogging)
-                                    logMessage("failed replacement ard: "+arg);
-                                arg.replace(startPos, endPos - startPos + 2, NULL_STR); // fall back replacement value of null
-                                commandSuccess = false;
-                                break;
-                            }
-                        } else
-                            break;
-                        lastArg = arg;
-                    }
-                    while ((!listString.empty() && (arg.find("{list(") != std::string::npos))) {
-                        startPos = arg.find("{list(");
-                        endPos = arg.find(")}");
-                        if (endPos != std::string::npos && endPos > startPos) {
-                            listIndex = std::stoi(arg.substr(startPos, endPos - startPos + 2));
-                            replacement = stringToList(listString)[listIndex];
-                            if (replacement.empty()) {replacement = NULL_STR; arg.replace(startPos, endPos - startPos + 2, replacement); break;}
-
-                            arg.replace(startPos, endPos - startPos + 2, replacement);
-                            if (arg == lastArg) {
-                                if (interpreterLogging)
-                                    logMessage("failed replacement ard: "+arg);
-                                arg.replace(startPos, endPos - startPos + 2, NULL_STR); // fall back replacement value of null
-                                commandSuccess = false;
-                                break;
-                            }
-                        } else
-                            break;
-                        lastArg = arg;
-                    }
-                    while ((!jsCAPITAL_ON_STRing.empty() && (arg.find("{json(") != std::string::npos))) {
-                        startPos = arg.find("{json(");
-                        endPos = arg.find(")}");
-                        if (endPos != std::string::npos && endPos > startPos) {
-                            replacement = replaceJsonPlaceholder(arg.substr(startPos, endPos - startPos + 2), JSON_STR, jsCAPITAL_ON_STRing);
-                            if (replacement.empty()) {replacement = UNAVAILABLE_SELECTION; arg.replace(startPos, endPos - startPos + 2, replacement); break;}
-
-                            arg.replace(startPos, endPos - startPos + 2, replacement);
-                            if (arg == lastArg) {
-                                if (interpreterLogging)
-                                    logMessage("failed replacement ard: "+arg);
-                                arg.replace(startPos, endPos - startPos + 2, UNAVAILABLE_SELECTION); // fall back replacement value of `UNAVAILABLE_SELECTION`
-                                commandSuccess = false;
-                                break;
-                            }
-                        } else
-                            break;
-                        lastArg = arg;
-                    }
-                    while ((!jsonPath.empty() && (arg.find("{json_file(") != std::string::npos))) {
-                        startPos = arg.find("{json_file(");
-                        endPos = arg.find(")}");
-                        if (endPos != std::string::npos && endPos > startPos) {
-                            replacement = replaceJsonPlaceholder(arg.substr(startPos, endPos - startPos + 2), "json_file", jsonPath);
-                            if (replacement.empty()) {replacement = UNAVAILABLE_SELECTION; arg.replace(startPos, endPos - startPos + 2, replacement); break;}
-
-                            arg.replace(startPos, endPos - startPos + 2, replacement);
-                            if (arg == lastArg) {
-                                if (interpreterLogging)
-                                    logMessage("failed replacement ard: "+arg);
-                                arg.replace(startPos, endPos - startPos + 2, UNAVAILABLE_SELECTION); // fall back replacement value of `UNAVAILABLE_SELECTION`
-                                commandSuccess = false;
-
-                                break;
-                            }
-                        } else
-                            break;
-                        lastArg = arg;
-                    }
-                }
+                applyPlaceholderReplacement(cmd, hexPath, iniPath, listString, jsonString, jsonPath);
 
                 if (interpreterLogging) {
                     std::string message = "Executing command: ";
@@ -1079,7 +1089,7 @@ void interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
                     }
                 } else if (commandName == JSON_STR) {
                     if (cmdSize >= 2) {
-                        jsCAPITAL_ON_STRing = cmd[1];
+                        jsonString = cmd[1];
                     }
                 } else if (commandName == "json_file") {
                     if (cmdSize >= 2) {
@@ -1525,6 +1535,7 @@ void backgroundInterpreter(void*) {
                 args = std::move(interpreterQueue.front());
                 interpreterQueue.pop();
             }
+            svcSleepThread(10'000'000);
         } // Release the lock before processing the command
 
         if (!std::get<0>(args).empty()) {
@@ -1539,7 +1550,7 @@ void backgroundInterpreter(void*) {
             runningInterpreter.store(false, std::memory_order_release);
             // Clear flags and perform any cleanup if necessary
             clearInterpreterFlags();
-            interpreterThreadExit.store(true, std::memory_order_release);
+            //interpreterThreadExit.store(true, std::memory_order_release);
             logMessage("End of interpreter");
             //break;
         }
