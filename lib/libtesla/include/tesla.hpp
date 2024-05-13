@@ -124,8 +124,8 @@ constexpr u64 ALL_KEYS_MASK =
 
 
 
-static bool useCombo2 = false;
 static bool updateMenuCombos = false;
+
 /**
  * @brief Ultrahand-Overlay Input Macros
  *
@@ -921,10 +921,10 @@ static std::string datetimeFormat = removeQuotes(DEFAULT_DT_FORMAT);
 static std::string hideClock, hideBattery, hidePCBTemp, hideSOCTemp;
 
 void reinitializeWidgetVars() {
-    hideClock = parseValueFromIniSection(settingsConfigIniPath, projectName, "hide_clock");
-    hideBattery = parseValueFromIniSection(settingsConfigIniPath, projectName, "hide_battery");
-    hideSOCTemp = parseValueFromIniSection(settingsConfigIniPath, projectName, "hide_soc_temp");
-    hidePCBTemp = parseValueFromIniSection(settingsConfigIniPath, projectName, "hide_pcb_temp");
+    hideClock = parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, PROJECT_NAME, "hide_clock");
+    hideBattery = parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, PROJECT_NAME, "hide_battery");
+    hideSOCTemp = parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, PROJECT_NAME, "hide_soc_temp");
+    hidePCBTemp = parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, PROJECT_NAME, "hide_pcb_temp");
 }
 
 static std::string cleanVersionLabels, hideOverlayVersions, hidePackageVersions;
@@ -933,11 +933,13 @@ static std::string loaderInfo = envGetLoaderInfo();
 static std::string versionLabel;
 
 void reinitializeVersionLabels() {
-    cleanVersionLabels = parseValueFromIniSection(settingsConfigIniPath, projectName, "clean_version_labels");
-    hideOverlayVersions = parseValueFromIniSection(settingsConfigIniPath, projectName, "hide_overlay_versions");
-    hidePackageVersions = parseValueFromIniSection(settingsConfigIniPath, projectName, "hide_package_versions");
-    versionLabel = std::string(APP_VERSION) + "   (" + extractTitle(loaderInfo) + " " + (cleanVersionLabels == trueStr ? "" : "v") + cleanVersionLabel(loaderInfo) + ")";
+    cleanVersionLabels = parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, PROJECT_NAME, "clean_version_labels");
+    hideOverlayVersions = parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, PROJECT_NAME, "hide_overlay_versions");
+    hidePackageVersions = parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, PROJECT_NAME, "hide_package_versions");
+    versionLabel = std::string(APP_VERSION) + "   (" + extractTitle(loaderInfo) + " " + (cleanVersionLabels == TRUE_STR ? "" : "v") + cleanVersionLabel(loaderInfo) + ")";
+    //versionLabel = (cleanVersionLabels == TRUE_STR) ? std::string(APP_VERSION) : (std::string(APP_VERSION) + "   (" + extractTitle(loaderInfo) + " v" + cleanVersionLabel(loaderInfo) + ")");
 }
+
 
 
 
@@ -1126,8 +1128,8 @@ namespace tsl {
 
 
     
-    //std::string highlightColor1Str = parseValueFromIniSection(themeConfigIniPath, themeSection, "highlight_color_1"); // format "X,X,X"
-    //std::string highlightColor2Str = parseValueFromIniSection(themeConfigIniPath, themeSection, "highlight_color_2"); // format "X,X,X"
+    //std::string highlightColor1Str = parseValueFromIniSection(THEME_CONFIG_INI_PATH, THEME_STR, "highlight_color_1"); // format "X,X,X"
+    //std::string highlightColor2Str = parseValueFromIniSection(THEME_CONFIG_INI_PATH, THEME_STR, "highlight_color_2"); // format "X,X,X"
     
     // Declarations
     
@@ -1331,7 +1333,7 @@ namespace tsl {
              * @brief Tesla config file
              */
             //static const char* TESLA_CONFIG_FILE = "/config/tesla/config.ini"; // CUSTOM MODIFICATION
-            //static const char* ULTRAHAND_CONFIG_FILE = settingsConfigIniPath; // CUSTOM MODIFICATION
+            //static const char* ULTRAHAND_CONFIG_FILE = SETTINGS_CONFIG_INI_PATH; // CUSTOM MODIFICATION
             
             /**
              * @brief Parses an INI string
@@ -2214,21 +2216,21 @@ namespace tsl {
             Element() {}
             virtual ~Element() { }
             
-            std::string disableSelectionBGStr = parseValueFromIniSection(themeConfigIniPath, themeSection, "disable_selection_bg");
+            std::string disableSelectionBGStr = parseValueFromIniSection(THEME_CONFIG_INI_PATH, THEME_STR, "disable_selection_bg");
             bool disableSelectionBG = (!disableSelectionBGStr.empty() && disableSelectionBGStr != "false");
             
-            bool invertBGClickColor = (parseValueFromIniSection(themeConfigIniPath, themeSection, "invert_bg_click_color") == "true");
-            Color selectionBGColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "selection_bg_color"), blackColor);
+            bool invertBGClickColor = (parseValueFromIniSection(THEME_CONFIG_INI_PATH, THEME_STR, "invert_bg_click_color") == "true");
+            Color selectionBGColor = RGB888(parseValueFromIniSection(THEME_CONFIG_INI_PATH, THEME_STR, "selection_bg_color"), blackColor);
             
-            Color highlightColor1 = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "highlight_color_1"), "#2288CC");
-            Color highlightColor2 = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "highlight_color_2"), "#88FFFF");
-            Color highlightColor3 = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "highlight_color_3"), "#FFFF45");
-            Color highlightColor4 = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "highlight_color_4"), "#F7253E");
+            Color highlightColor1 = RGB888(parseValueFromIniSection(THEME_CONFIG_INI_PATH, THEME_STR, "highlight_color_1"), "#2288CC");
+            Color highlightColor2 = RGB888(parseValueFromIniSection(THEME_CONFIG_INI_PATH, THEME_STR, "highlight_color_2"), "#88FFFF");
+            Color highlightColor3 = RGB888(parseValueFromIniSection(THEME_CONFIG_INI_PATH, THEME_STR, "highlight_color_3"), "#FFFF45");
+            Color highlightColor4 = RGB888(parseValueFromIniSection(THEME_CONFIG_INI_PATH, THEME_STR, "highlight_color_4"), "#F7253E");
             Color highlightColor = {0xf,0xf,0xf,0xf};
             
-            std::string clickAlphaStr = parseValueFromIniSection(themeConfigIniPath, themeSection, "click_alpha");
+            std::string clickAlphaStr = parseValueFromIniSection(THEME_CONFIG_INI_PATH, THEME_STR, "click_alpha");
             size_t clickAlpha = (!clickAlphaStr.empty()) ? std::stoi(clickAlphaStr) : 7;
-            Color clickColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "click_color"), "#F7253E", clickAlpha);
+            Color clickColor = RGB888(parseValueFromIniSection(THEME_CONFIG_INI_PATH, THEME_STR, "click_color"), "#F7253E", clickAlpha);
             
             std::chrono::duration<long int, std::ratio<1, 1000000000>> t;
             //double timeCounter;
@@ -2810,28 +2812,28 @@ namespace tsl {
             std::string m_pageLeftName; // CUSTOM MODIFICATION
             std::string m_pageRightName; // CUSTOM MODIFICATION
             
-            std::string disableColorfulLogoStr = parseValueFromIniSection(themeConfigIniPath, themeSection, "disable_colorful_logo");
+            std::string disableColorfulLogoStr = parseValueFromIniSection(THEME_CONFIG_INI_PATH, THEME_STR, "disable_colorful_logo");
             bool disableColorfulLogo = (!disableColorfulLogoStr.empty() && disableColorfulLogoStr == "true");
-            tsl::Color logoColor1 = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "logo_color_1"), whiteColor);
-            tsl::Color logoColor2 = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "logo_color_2"), "#F7253E");
+            tsl::Color logoColor1 = RGB888(parseValueFromIniSection(THEME_CONFIG_INI_PATH, THEME_STR, "logo_color_1"), whiteColor);
+            tsl::Color logoColor2 = RGB888(parseValueFromIniSection(THEME_CONFIG_INI_PATH, THEME_STR, "logo_color_2"), "#F7253E");
             
             
-            std::string backgroundAlphaStr = parseValueFromIniSection(themeConfigIniPath, themeSection, "bg_alpha");
+            std::string backgroundAlphaStr = parseValueFromIniSection(THEME_CONFIG_INI_PATH, THEME_STR, "bg_alpha");
             size_t defaultBackgroundAlpha = (!backgroundAlphaStr.empty()) ? std::stoi(backgroundAlphaStr) : 13;
             
-            tsl::Color defaultBackgroundColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "bg_color"), blackColor, defaultBackgroundAlpha);
+            tsl::Color defaultBackgroundColor = RGB888(parseValueFromIniSection(THEME_CONFIG_INI_PATH, THEME_STR, "bg_color"), blackColor, defaultBackgroundAlpha);
             
-            tsl::Color defaultTextColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "text_color"));
-            tsl::Color clockColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "clock_color"));
-            tsl::Color batteryColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "battery_color"));
+            tsl::Color defaultTextColor = RGB888(parseValueFromIniSection(THEME_CONFIG_INI_PATH, THEME_STR, "text_color"));
+            tsl::Color clockColor = RGB888(parseValueFromIniSection(THEME_CONFIG_INI_PATH, THEME_STR, "clock_color"));
+            tsl::Color batteryColor = RGB888(parseValueFromIniSection(THEME_CONFIG_INI_PATH, THEME_STR, "battery_color"));
             tsl::Color highlightColor = {0xF, 0xF, 0xF, 0xF};
             
-            tsl::Color versionTextColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "version_text_color"), "#AAAAAA");
-            tsl::Color onTextColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "on_text_color"), "#00FFDD");
-            tsl::Color offTextColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "off_text_color"), "#AAAAAA");
+            tsl::Color versionTextColor = RGB888(parseValueFromIniSection(THEME_CONFIG_INI_PATH, THEME_STR, "version_text_color"), "#AAAAAA");
+            tsl::Color onTextColor = RGB888(parseValueFromIniSection(THEME_CONFIG_INI_PATH, THEME_STR, "on_text_color"), "#00FFDD");
+            tsl::Color offTextColor = RGB888(parseValueFromIniSection(THEME_CONFIG_INI_PATH, THEME_STR, "off_text_color"), "#AAAAAA");
             
-            std::tuple<float,float,float> dynamicLogoRGB1 = hexToRGB444Floats(parseValueFromIniSection(themeConfigIniPath, themeSection, "dynamic_logo_color_1"), "#00E669");
-            std::tuple<float,float,float> dynamicLogoRGB2 = hexToRGB444Floats(parseValueFromIniSection(themeConfigIniPath, themeSection, "dynamic_logo_color_2"), "#8080EA");
+            std::tuple<float,float,float> dynamicLogoRGB1 = hexToRGB444Floats(parseValueFromIniSection(THEME_CONFIG_INI_PATH, THEME_STR, "dynamic_logo_color_1"), "#00E669");
+            std::tuple<float,float,float> dynamicLogoRGB2 = hexToRGB444Floats(parseValueFromIniSection(THEME_CONFIG_INI_PATH, THEME_STR, "dynamic_logo_color_2"), "#8080EA");
             
             std::string firstHalf, secondHalf;
             //tsl::Color handColor = RGB888("#F7253E");
@@ -2981,7 +2983,7 @@ namespace tsl {
                     
                     
                     // Convert the float to std::string
-                    //std::string powerConsumptionStr = std::to_string(powerConsumption);
+                    //std::string powerConsumptiCAPITAL_ON_STR = std::to_string(powerConsumption);
                     
                     // Use the '+' operator to concatenate the strings
                     
@@ -3199,11 +3201,11 @@ namespace tsl {
          */
         class HeaderOverlayFrame : public Element {
         public:
-            std::string backgroundAlphaStr = parseValueFromIniSection(themeConfigIniPath, themeSection, "bg_alpha");
+            std::string backgroundAlphaStr = parseValueFromIniSection(THEME_CONFIG_INI_PATH, THEME_STR, "bg_alpha");
             size_t defaultBackgroundAlpha = (!backgroundAlphaStr.empty()) ? std::stoi(backgroundAlphaStr) : 13;
-            tsl::Color defaultBackgroundColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "bg_color"), blackColor, defaultBackgroundAlpha);
+            tsl::Color defaultBackgroundColor = RGB888(parseValueFromIniSection(THEME_CONFIG_INI_PATH, THEME_STR, "bg_color"), blackColor, defaultBackgroundAlpha);
             
-            tsl::Color defaultTextColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "text_color"));
+            tsl::Color defaultTextColor = RGB888(parseValueFromIniSection(THEME_CONFIG_INI_PATH, THEME_STR, "text_color"));
             
             HeaderOverlayFrame(u16 headerHeight = 175) : Element(), m_headerHeight(headerHeight) {}
             virtual ~HeaderOverlayFrame() {
@@ -3343,7 +3345,7 @@ namespace tsl {
                     delete item;
             }
             
-            Color trackBarColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "trackbar_color"), "#555555");
+            Color trackBarColor = RGB888(parseValueFromIniSection(THEME_CONFIG_INI_PATH, THEME_STR, "trackbar_color"), "#555555");
             float scrollbarHeight;
             float scrollbarOffset;
             int offset;
@@ -3694,24 +3696,24 @@ namespace tsl {
          */
         class ListItem : public Element {
         public:
-            std::string seperatorAlphaStr = parseValueFromIniSection(themeConfigIniPath, themeSection, "seperator_alpha");
+            std::string seperatorAlphaStr = parseValueFromIniSection(THEME_CONFIG_INI_PATH, THEME_STR, "seperator_alpha");
             size_t seperatorAlpha = (!seperatorAlphaStr.empty()) ? std::stoi(seperatorAlphaStr) : 7;
             
-            tsl::Color seperatorColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "seperator_color"), "#777777", seperatorAlpha);
+            tsl::Color seperatorColor = RGB888(parseValueFromIniSection(THEME_CONFIG_INI_PATH, THEME_STR, "seperator_color"), "#777777", seperatorAlpha);
             
-            tsl::Color defaultTextColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "text_color")); ; // CUSTOM MODIFICATION
-            tsl::Color selectedTextColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "selection_text_color"));
-            tsl::Color inprogressTextColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "inprogress_text_color"));
+            tsl::Color defaultTextColor = RGB888(parseValueFromIniSection(THEME_CONFIG_INI_PATH, THEME_STR, "text_color")); ; // CUSTOM MODIFICATION
+            tsl::Color selectedTextColor = RGB888(parseValueFromIniSection(THEME_CONFIG_INI_PATH, THEME_STR, "selection_text_color"));
+            tsl::Color inprogressTextColor = RGB888(parseValueFromIniSection(THEME_CONFIG_INI_PATH, THEME_STR, "inprogress_text_color"));
 
-            tsl::Color invalidTextColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "invalid_text_color"), "#FF0000");
-            tsl::Color onTextColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "on_text_color"), "#00FFDD");
-            tsl::Color offTextColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "off_text_color"), "#AAAAAA");
+            tsl::Color invalidTextColor = RGB888(parseValueFromIniSection(THEME_CONFIG_INI_PATH, THEME_STR, "invalid_text_color"), "#FF0000");
+            tsl::Color onTextColor = RGB888(parseValueFromIniSection(THEME_CONFIG_INI_PATH, THEME_STR, "on_text_color"), "#00FFDD");
+            tsl::Color offTextColor = RGB888(parseValueFromIniSection(THEME_CONFIG_INI_PATH, THEME_STR, "off_text_color"), "#AAAAAA");
             
-            tsl::Color clickTextColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "click_text_color"));
+            tsl::Color clickTextColor = RGB888(parseValueFromIniSection(THEME_CONFIG_INI_PATH, THEME_STR, "click_text_color"));
 
-            std::string clickAlphaStr = parseValueFromIniSection(themeConfigIniPath, themeSection, "click_alpha");
+            std::string clickAlphaStr = parseValueFromIniSection(THEME_CONFIG_INI_PATH, THEME_STR, "click_alpha");
             size_t clickAlpha = (!clickAlphaStr.empty()) ? std::stoi(clickAlphaStr) : 7;
-            Color clickColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "click_color"), "#F7253E", clickAlpha);
+            Color clickColor = RGB888(parseValueFromIniSection(THEME_CONFIG_INI_PATH, THEME_STR, "click_color"), "#F7253E", clickAlpha);
 
             std::chrono::system_clock::time_point timeIn;// = std::chrono::system_clock::now();
             std::chrono::duration<long int, std::ratio<1, 1000000000>> t;
@@ -4002,7 +4004,7 @@ namespace tsl {
         
         class CategoryHeader : public Element {
         public:
-            tsl::Color defaultTextColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "text_color"));
+            tsl::Color defaultTextColor = RGB888(parseValueFromIniSection(THEME_CONFIG_INI_PATH, THEME_STR, "text_color"));
             
             CategoryHeader(const std::string &title, bool hasSeparator = false) : m_text(title), m_hasSeparator(hasSeparator) {}
             virtual ~CategoryHeader() {}
@@ -4057,8 +4059,8 @@ namespace tsl {
          */
         class TrackBar : public Element {
         public:
-            Color defaultTextColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "text_color"));
-            Color trackBarColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "trackbar_color"), "#555555");
+            Color defaultTextColor = RGB888(parseValueFromIniSection(THEME_CONFIG_INI_PATH, THEME_STR, "text_color"));
+            Color trackBarColor = RGB888(parseValueFromIniSection(THEME_CONFIG_INI_PATH, THEME_STR, "trackbar_color"), "#555555");
             std::chrono::duration<long int, std::ratio<1, 1000000000>> t;
             Color highlightColor = {0xf,0xf,0xf,0xf};
             //alf progress;
@@ -4351,7 +4353,7 @@ namespace tsl {
             u16 trackBarWidth, stepWidth, currentDescIndex;
             u32 descWidth, descHeight;
             
-            tsl::Color offTextColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "off_text_color"), "#AAAAAA");
+            tsl::Color offTextColor = RGB888(parseValueFromIniSection(THEME_CONFIG_INI_PATH, THEME_STR, "off_text_color"), "#AAAAAA");
             
             /**
              * @brief Constructor
@@ -4814,7 +4816,7 @@ namespace tsl {
             auto bottomElement = currentGui->getBottomElement(); // Backend is still not implemented/working yet
             
 
-            static ssize_t counter = 0;
+            //static ssize_t counter = 0;
             if (runningInterpreter.load()) {
                 if (keysDown & (HidNpadButton_AnyUp))
                     currentFocus -> shakeHighlight(FocusDirection::Up);
@@ -4824,20 +4826,20 @@ namespace tsl {
                     currentFocus -> shakeHighlight(FocusDirection::Left);
                 else if (keysDown & (HidNpadButton_AnyRight))
                     currentFocus -> shakeHighlight(FocusDirection::Right);
-                else {
-                    if (shakingProgress.load()) {
-                        if (counter%4 == 0)
-                            currentFocus -> shakeHighlight(FocusDirection::Up);
-                        else if (counter%4  == 1)
-                            currentFocus -> shakeHighlight(FocusDirection::Right);
-                        else if (counter%4  == 2)
-                            currentFocus -> shakeHighlight(FocusDirection::Down);
-                        else if (counter%4  == 3)
-                            currentFocus -> shakeHighlight(FocusDirection::Left);
-                        counter++;
-                        if (counter >= 4) counter = 0; // Reset the counter after a full cycle to prevent overflow
-                    }
-                }
+                //else {
+                //    if (shakingProgress.load()) {
+                //        if (counter%4 == 0)
+                //            currentFocus -> shakeHighlight(FocusDirection::Up);
+                //        else if (counter%4  == 1)
+                //            currentFocus -> shakeHighlight(FocusDirection::Right);
+                //        else if (counter%4  == 2)
+                //            currentFocus -> shakeHighlight(FocusDirection::Down);
+                //        else if (counter%4  == 3)
+                //            currentFocus -> shakeHighlight(FocusDirection::Left);
+                //        counter++;
+                //        if (counter >= 4) counter = 0; // Reset the counter after a full cycle to prevent overflow
+                //    }
+                //}
             }
 
             // Handle input when no element is focused
@@ -5213,28 +5215,28 @@ namespace tsl {
         static void parseOverlaySettings() {
             hlp::ini::IniData parsedConfig = hlp::ini::readOverlaySettings(ULTRAHAND_CONFIG_FILE);
             
-            u64 decodedKeys = hlp::comboStringToKeys(parsedConfig[projectName]["key_combo"]); // CUSTOM MODIFICATION
+            u64 decodedKeys = hlp::comboStringToKeys(parsedConfig[PROJECT_NAME]["key_combo"]); // CUSTOM MODIFICATION
             if (decodedKeys)
                 tsl::cfg::launchCombo = decodedKeys;
             
-            datetimeFormat = removeQuotes(parsedConfig[projectName]["datetime_format"]); // read datetime_format
+            datetimeFormat = removeQuotes(parsedConfig[PROJECT_NAME]["datetime_format"]); // read datetime_format
             if (datetimeFormat.empty()) {
                 datetimeFormat = removeQuotes(DEFAULT_DT_FORMAT);
             }
             
-            hideClock = removeQuotes(parsedConfig[projectName]["hide_clock"]);
+            hideClock = removeQuotes(parsedConfig[PROJECT_NAME]["hide_clock"]);
             if (hideClock.empty())
                 hideClock = "false";
             
-            hideBattery = removeQuotes(parsedConfig[projectName]["hide_battery"]);
+            hideBattery = removeQuotes(parsedConfig[PROJECT_NAME]["hide_battery"]);
             if (hideBattery.empty())
                 hideBattery = "false";
             
-            hidePCBTemp = removeQuotes(parsedConfig[projectName]["hide_pcb_temp"]);
+            hidePCBTemp = removeQuotes(parsedConfig[PROJECT_NAME]["hide_pcb_temp"]);
             if (hidePCBTemp.empty())
                 hidePCBTemp = "false";
             
-            hideSOCTemp = removeQuotes(parsedConfig[projectName]["hide_soc_temp"]);
+            hideSOCTemp = removeQuotes(parsedConfig[PROJECT_NAME]["hide_soc_temp"]);
             if (hideSOCTemp.empty())
                 hideSOCTemp = "false";
             
@@ -5253,7 +5255,7 @@ namespace tsl {
                 }}
             }, TESLA_CONFIG_FILE);
             hlp::ini::updateOverlaySettings({
-                { projectName, { // CUSTOM MODIFICATION
+                { PROJECT_NAME, { // CUSTOM MODIFICATION
                     { "key_combo", tsl::hlp::keysToComboString(keys) }
                 }}
             }, ULTRAHAND_CONFIG_FILE);
@@ -5325,25 +5327,28 @@ namespace tsl {
                     if (hidGetTouchScreenStates(&shData->touchState, 1) == 0)
                         shData->touchState = { 0 };
                     
-                    if (((shData->keysHeld & tsl::cfg::launchCombo) == tsl::cfg::launchCombo) && shData->keysDown & tsl::cfg::launchCombo) {
-                        //useCombo2 = "ZL+ZR+DDOWN";
+                    if (updateMenuCombos) {  // CUSTOM MODIFICATION
+                        if ((shData->keysHeld & tsl::cfg::launchCombo2) == tsl::cfg::launchCombo2) {
+                            tsl::cfg::launchCombo = tsl::cfg::launchCombo2;
+                            const std::string teslaComboStr = "L+DDOWN+RS";
+                            setIniFileValue(SETTINGS_CONFIG_INI_PATH, PROJECT_NAME, "key_combo", teslaComboStr);
+                            setIniFileValue(TESLA_CONFIG_INI_PATH, "tesla", "key_combo", teslaComboStr);
+                            eventFire(&shData->comboEvent);
+                            updateMenuCombos = false;
+                        }
+                        
+                    }
+
+                    if ((((shData->keysHeld & tsl::cfg::launchCombo) == tsl::cfg::launchCombo) && shData->keysDown & tsl::cfg::launchCombo)) {
+                        updateMenuCombos = false;
+                        //updateMenuCombos = "ZL+ZR+DDOWN";
                         if (shData->overlayOpen) {
                             tsl::Overlay::get()->hide();
                             shData->overlayOpen = false;
                         }
                         else
                             eventFire(&shData->comboEvent);
-                    } else if (((shData->keysHeld & tsl::cfg::launchCombo2) == tsl::cfg::launchCombo2) && shData->keysDown & tsl::cfg::launchCombo2 && useCombo2) {  // CUSTOM MODIFICATION
-                        tsl::cfg::launchCombo = hlp::comboStringToKeys("L+DDOWN+RS");
-                        //updateCombo(tsl::cfg::launchCombo);
-                        updateMenuCombos = true;
-                        useCombo2 = false;
-                        if (shData->overlayOpen) {
-                            tsl::Overlay::get()->hide();
-                            shData->overlayOpen = false;
-                        }
-                        else
-                            eventFire(&shData->comboEvent);
+
                     }
                     
                     shData->keysDownPending |= shData->keysDown;
@@ -5462,21 +5467,23 @@ namespace tsl {
             }
         }
         
-        std::string settingsConfigPath = "sdmc:/config/ultrahand/config.ini";
-        std::string teslaSettingsConfigIniPath = "sdmc:/config/tesla/config.ini";
-        std::map<std::string, std::map<std::string, std::string>> settingsData = getParsedDataFromIniFile(settingsConfigPath);
-        std::string inOverlayString;
-        
-        if (settingsData.count(projectName) > 0 && settingsData[projectName].count("in_overlay") > 0) {
-            inOverlayString = settingsData[projectName]["in_overlay"];
-        } else {
-            inOverlayString = "false"; // Assign default value if the keys are not present
-        }
+        //std::string SETTINGS_CONFIG_INI_PATH = "sdmc:/config/ultrahand/config.ini"; // global vars in ultra.hpp
+        //std::string TESLA_CONFIG_INI_PATH = "sdmc:/config/tesla/config.ini";
+        std::map<std::string, std::map<std::string, std::string>> settingsData = getParsedDataFromIniFile(SETTINGS_CONFIG_INI_PATH);
+        std::string inOverlayStrVal;
         
         bool inOverlay = false;
-        if (inOverlayString == "true") {
+        if (settingsData.count(PROJECT_NAME) > 0 && settingsData[PROJECT_NAME].count("in_overlay") > 0) {
+            inOverlayStrVal = settingsData[PROJECT_NAME]["in_overlay"];
+        } else {
+            inOverlayStrVal = "true"; // Assign default value if the keys are not present
             inOverlay = true;
-            setIniFileValue(settingsConfigPath, projectName, "in_overlay", "false");
+        }
+        
+        
+        if (inOverlayStrVal == "true") {
+            inOverlay = true;
+            setIniFileValue(SETTINGS_CONFIG_INI_PATH, PROJECT_NAME, "in_overlay", "false");
         }
         
         if (inOverlay && skipCombo) {
@@ -5516,11 +5523,7 @@ namespace tsl {
                 if (overlay->shouldClose())
                     shData.running = false;
                 
-                if (updateMenuCombos) { // CUSTOM MODIFICATION
-                    setIniFileValue(settingsConfigPath, projectName, "key_combo", "L+DDOWN+RS");
-                    setIniFileValue(teslaSettingsConfigIniPath, "tesla", "key_combo", "L+DDOWN+RS");
-                    updateMenuCombos = false;
-                }
+
             }
             
             overlay->clearScreen();
