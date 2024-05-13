@@ -43,7 +43,7 @@
 
 ### Mod Functions
 
-- **mod_funcs.hpp**: Modular arithmetic functions, facilitating computations involving modular arithmetic operations.
+- **mod_funcs.hpp**: Functions for manipulating game mods, facilitating operations and management tasks related to modifications in gaming environments.
 
 ### Path Functions
 
