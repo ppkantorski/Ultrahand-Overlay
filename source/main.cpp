@@ -59,7 +59,7 @@ static size_t nestedMenuCount = 0;
 
 // Command mode globals
 static const std::vector<std::string> commandSystems = {DEFAULT_STR, ERISTA_STR, MARIKO_STR};
-static const std::vector<std::string> commandModes = {DEFAULT_STR, TOGGLE_STR, OPTION_STR, FORWARDER_STR};
+static const std::vector<std::string> commandModes = {DEFAULT_STR, TOGGLE_STR, OPTION_STR, FORWARDER_STR, TEXT_STR, TABLE_STR};
 static const std::vector<std::string> commandGroupings = {DEFAULT_STR, "split", "split2", "split3", "split4"};
 static const std::string modePattern = ";mode=";
 static const std::string groupingPattern = ";grouping=";
@@ -901,7 +901,7 @@ public:
             return handleRunningInterpreter(keysHeld);
         }
         if (lastRunningInterpreter) {
-            while (!interpreterThreadExit.load()) {svcSleepThread(50'000'000);}
+            while (!interpreterThreadExit.load(std::memory_order_acquire)) {svcSleepThread(50'000'000);}
 
             resetPercentages();
 
@@ -1228,7 +1228,7 @@ public:
             return handleRunningInterpreter(keysHeld);
         }
         if (lastRunningInterpreter) {
-            while (!interpreterThreadExit.load()) {svcSleepThread(50'000'000);}
+            while (!interpreterThreadExit.load(std::memory_order_acquire)) {svcSleepThread(50'000'000);}
             
             resetPercentages();
             
@@ -1488,7 +1488,7 @@ public:
             return handleRunningInterpreter(keysHeld);
         }
         if (lastRunningInterpreter) {
-            while (!interpreterThreadExit.load()) {svcSleepThread(50'000'000);}
+            while (!interpreterThreadExit.load(std::memory_order_acquire)) {svcSleepThread(50'000'000);}
             
             resetPercentages();
             
@@ -1614,7 +1614,7 @@ public:
         
         std::string listString, listStringOn, listStringOff;
         //std::vector<std::string> listData, listDataOn, listDataOff;
-        std::string jsCAPITAL_ON_STRing, jsCAPITAL_ON_STRingOn, jsCAPITAL_ON_STRingOff;
+        std::string jsonString, jsonStringOn, jsonStringOff;
         std::string commandName;
         
         bool inEristaSection = false;
@@ -1733,19 +1733,19 @@ public:
                     } else if (commandName == "json_source") {
                         sourceType = JSON_STR;
                         if (currentSection == GLOBAL_STR) {
-                            jsCAPITAL_ON_STRing = removeQuotes(cmd[1]); // convert string to jsonData
+                            jsonString = removeQuotes(cmd[1]); // convert string to jsonData
                             
                             if (cmd.size() > 2)
                                 jsonKey = cmd[2]; //json display key
                         } else if (currentSection == ON_STR) {
-                            jsCAPITAL_ON_STRingOn = removeQuotes(cmd[1]); // convert string to jsonData
+                            jsonStringOn = removeQuotes(cmd[1]); // convert string to jsonData
                             sourceTypeOn = JSON_STR;
                             
                             if (cmd.size() > 2)
                                 jsonKeyOn = cmd[2]; //json display key
                             
                         } else if (currentSection == OFF_STR) {
-                            jsCAPITAL_ON_STRingOff = removeQuotes(cmd[1]); // convert string to jsonData
+                            jsonStringOff = removeQuotes(cmd[1]); // convert string to jsonData
                             sourceTypeOff = JSON_STR;
                             
                             if (cmd.size() > 2)
@@ -1768,9 +1768,9 @@ public:
             else if (sourceType == LIST_STR)
                 selectedItemsList = stringToList(listString);
             else if ((sourceType == JSON_STR) || (sourceType == JSON_FILE_STR)) {
-                populateSelectedItemsList(sourceType, (sourceType == JSON_STR) ? jsCAPITAL_ON_STRing : jsonPath, jsonKey, selectedItemsList);
+                populateSelectedItemsList(sourceType, (sourceType == JSON_STR) ? jsonString : jsonPath, jsonKey, selectedItemsList);
                 jsonPath = "";
-                jsCAPITAL_ON_STRing = "";
+                jsonString = "";
             }
         } else if (commandMode == TOGGLE_STR) {
             if (sourceTypeOn == FILE_STR)
@@ -1778,9 +1778,9 @@ public:
             else if (sourceTypeOn == LIST_STR)
                 selectedItemsListOn = stringToList(listStringOn);
             else if ((sourceTypeOn == JSON_STR) || (sourceTypeOn == JSON_FILE_STR)) {
-                populateSelectedItemsList(sourceTypeOn, (sourceTypeOn == JSON_STR) ? jsCAPITAL_ON_STRingOn : jsonPathOn, jsonKeyOn, selectedItemsListOn);
+                populateSelectedItemsList(sourceTypeOn, (sourceTypeOn == JSON_STR) ? jsonStringOn : jsonPathOn, jsonKeyOn, selectedItemsListOn);
                 jsonPathOn = "";
-                jsCAPITAL_ON_STRingOn = "";
+                jsonStringOn = "";
                 
             }
             
@@ -1789,9 +1789,9 @@ public:
             else if (sourceTypeOff == LIST_STR)
                 selectedItemsListOff = stringToList(listStringOff);
             else if ((sourceTypeOff == JSON_STR) || (sourceTypeOff == JSON_FILE_STR)) {
-                populateSelectedItemsList(sourceTypeOff, (sourceTypeOff == JSON_STR) ? jsCAPITAL_ON_STRingOff : jsonPathOff, jsonKeyOff, selectedItemsListOff);
+                populateSelectedItemsList(sourceTypeOff, (sourceTypeOff == JSON_STR) ? jsonStringOff : jsonPathOff, jsonKeyOff, selectedItemsListOff);
                 jsonPathOff = "";
-                jsCAPITAL_ON_STRingOff = "";
+                jsonStringOff = "";
             }
             
             
@@ -2032,7 +2032,7 @@ public:
             return handleRunningInterpreter(keysHeld);
         }
         if (lastRunningInterpreter) {
-            while (!interpreterThreadExit.load()) {svcSleepThread(50'000'000);}
+            while (!interpreterThreadExit.load(std::memory_order_acquire)) {svcSleepThread(50'000'000);}
             
             resetPercentages();
             
@@ -2396,7 +2396,10 @@ public:
                                 commandsOn.push_back(cmd);
                             else if (currentSection == OFF_STR)
                                 commandsOff.push_back(cmd);
+                        } else if (commandMode == TABLE_STR) {
+                            
                         }
+
 
                         if (cmd.size() > 1) { // Pre-process advanced commands
                             if (commandName == "file_source") {
@@ -2695,7 +2698,7 @@ public:
             return handleRunningInterpreter(keysHeld);
         }
         if (lastRunningInterpreter) {
-            while (!interpreterThreadExit.load()) {svcSleepThread(50'000'000);}
+            while (!interpreterThreadExit.load(std::memory_order_acquire)) {svcSleepThread(50'000'000);}
             
             resetPercentages();
             
@@ -3757,7 +3760,6 @@ public:
                             
                             // Extract the command grouping
                             if (commandMode == TOGGLE_STR) {
-
                                 if (commandName.find("on:") == 0)
                                     currentSection = ON_STR;
                                 else if (commandName.find("off:") == 0)
@@ -3772,6 +3774,7 @@ public:
                                 else if (currentSection == OFF_STR)
                                     commandsOff.push_back(cmd);
                             }
+
                             if (cmd.size() > 1) { // Pre-process advanced commands
                                 if (commandName == "file_source") {
                                     if (currentSection == GLOBAL_STR) {
@@ -4047,7 +4050,7 @@ public:
             return handleRunningInterpreter(keysHeld);
         
         if (lastRunningInterpreter) {
-            while (!interpreterThreadExit.load()) {svcSleepThread(50'000'000);}
+            while (!interpreterThreadExit.load(std::memory_order_acquire)) {svcSleepThread(50'000'000);}
             
             resetPercentages();
             
