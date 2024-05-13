@@ -45,7 +45,7 @@ static bool inPackageMenu = false;
 static bool inSubPackageMenu = false;
 static bool inScriptMenu = false;
 static bool inSelectionMenu = false;
-//static bool defaultMenuLoaded = true;
+//static bool currentMenuLoaded = true;
 static bool freshSpawn = true;
 //static bool refreshGui = false; (moved)
 static bool reloadMenu = false;
@@ -65,7 +65,7 @@ static const std::string modePattern = ";mode=";
 static const std::string groupingPattern = ";grouping=";
 static const std::string systemPattern = ";system=";
 
-static std::string defaultMenu = OVERLAYS_STR;
+static std::string currentMenu = OVERLAYS_STR;
 static std::string lastPage = LEFT_STR;
 static std::string lastPackage = "";
 static std::string lastMenu = "";
@@ -569,7 +569,7 @@ public:
                     };
                     runningInterpreter.store(true, std::memory_order_release);
                     enqueueInterpreterCommands(std::move(interpreterCommands), "", "");
-                    startInterpreterThread();
+                    //startInterpreterThread();
 
                     listItemPtr->setValue(INPROGRESS_SYMBOL);
 
@@ -613,7 +613,7 @@ public:
                     };
                     runningInterpreter.store(true, std::memory_order_release);
                     enqueueInterpreterCommands(std::move(interpreterCommands), "", "");
-                    startInterpreterThread();
+                    //startInterpreterThread();
                     //runningInterpreter.store(true, std::memory_order_release);
                     //lastRunningInterpreter = true;
                     listItemPtr->setValue(INPROGRESS_SYMBOL);
@@ -901,13 +901,13 @@ public:
             return handleRunningInterpreter(keysHeld);
         }
         if (lastRunningInterpreter) {
-            while (!interpreterThreadExit.load(std::memory_order_acquire)) {svcSleepThread(50'000'000);}
+            //while (!interpreterThreadExit.load(std::memory_order_acquire)) {svcSleepThread(50'000'000);}
 
             resetPercentages();
 
             isDownloadCommand = false;
             lastSelectedListItem->setValue(commandSuccess ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
-            closeInterpreterThread();
+            //closeInterpreterThread();
             lastRunningInterpreter = false;
             return true;
         }
@@ -1228,13 +1228,13 @@ public:
             return handleRunningInterpreter(keysHeld);
         }
         if (lastRunningInterpreter) {
-            while (!interpreterThreadExit.load(std::memory_order_acquire)) {svcSleepThread(50'000'000);}
+            //while (!interpreterThreadExit.load(std::memory_order_acquire)) {svcSleepThread(50'000'000);}
             
             resetPercentages();
             
             isDownloadCommand = false;
             lastSelectedListItem->setValue(commandSuccess ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
-            closeInterpreterThread();
+            //closeInterpreterThread();
             lastRunningInterpreter = false;
             return true;
         }
@@ -1488,13 +1488,13 @@ public:
             return handleRunningInterpreter(keysHeld);
         }
         if (lastRunningInterpreter) {
-            while (!interpreterThreadExit.load(std::memory_order_acquire)) {svcSleepThread(50'000'000);}
+            //while (!interpreterThreadExit.load(std::memory_order_acquire)) {svcSleepThread(50'000'000);}
             
             resetPercentages();
             
             isDownloadCommand = false;
             lastSelectedListItem->setValue(commandSuccess ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
-            closeInterpreterThread();
+            //closeInterpreterThread();
             lastRunningInterpreter = false;
             return true;
         }
@@ -1965,7 +1965,7 @@ public:
                         isDownloadCommand = false;
                         runningInterpreter.store(true, std::memory_order_release);
                         enqueueInterpreterCommands(getSourceReplacement(commands, selectedItem, i, filePath), filePath, specificKey);
-                        startInterpreterThread();
+                        //startInterpreterThread();
                         
                         listItemPtr->setValue(INPROGRESS_SYMBOL);
 
@@ -2032,13 +2032,13 @@ public:
             return handleRunningInterpreter(keysHeld);
         }
         if (lastRunningInterpreter) {
-            while (!interpreterThreadExit.load(std::memory_order_acquire)) {svcSleepThread(50'000'000);}
+            //while (!interpreterThreadExit.load(std::memory_order_acquire)) {svcSleepThread(50'000'000);}
             
             resetPercentages();
             
             isDownloadCommand = false;
             lastSelectedListItem->setValue(commandSuccess ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
-            closeInterpreterThread();
+            //closeInterpreterThread();
             lastRunningInterpreter = false;
             return true;
         }
@@ -2199,6 +2199,7 @@ public:
         
         std::string optionName;
         std::vector<std::vector<std::string>> commands, commandsOn, commandsOff;
+        std::vector<std::vector<std::string>> tableData;
         //std::vector<std::string> listData, listDataOn, listDataOff;
         
         std::string footer;
@@ -2233,6 +2234,7 @@ public:
             
             commandsOn.clear();
             commandsOff.clear();
+            tableData.clear();
             
             
             if (drawLocation.empty() || (currentPage == drawLocation) || (optionName.front() == '@')) {
@@ -2397,7 +2399,7 @@ public:
                             else if (currentSection == OFF_STR)
                                 commandsOff.push_back(cmd);
                         } else if (commandMode == TABLE_STR) {
-                            
+                            tableData.push_back(cmd);
                         }
 
 
@@ -2603,7 +2605,7 @@ public:
                                     isDownloadCommand = false;
                                     runningInterpreter.store(true, std::memory_order_release);
                                     enqueueInterpreterCommands(getSourceReplacement(commands, selectedItem, i, packagePath), packagePath, keyName);
-                                    startInterpreterThread();
+                                    //startInterpreterThread();
 
                                     listItemPtr->setValue(INPROGRESS_SYMBOL);
 
@@ -2656,6 +2658,8 @@ public:
 
                             });
                             list->addItem(toggleListItem.release());
+                        } else if (commandMode == TABLE_STR) {
+                            addTable(list, tableData);
                         }
                     }
                 }
@@ -2698,13 +2702,13 @@ public:
             return handleRunningInterpreter(keysHeld);
         }
         if (lastRunningInterpreter) {
-            while (!interpreterThreadExit.load(std::memory_order_acquire)) {svcSleepThread(50'000'000);}
+            //while (!interpreterThreadExit.load(std::memory_order_acquire)) {svcSleepThread(50'000'000);}
             
             resetPercentages();
             
             isDownloadCommand = false;
             lastSelectedListItem->setValue(commandSuccess ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
-            closeInterpreterThread();
+            //closeInterpreterThread();
             lastRunningInterpreter = false;
             return true;
         }
@@ -3086,7 +3090,7 @@ public:
         initializeTheme();
         copyTeslaKeyComboToUltrahand();
         
-        menuMode = defaultMenu.c_str();
+        menuMode = currentMenu.c_str();
         
         versionLabel = std::string(APP_VERSION) + "   (" + extractTitle(loaderInfo) + " " + (cleanVersionLabels == TRUE_STR ? "" : "v") + cleanVersionLabel(loaderInfo) + ")";
         //versionLabel = (cleanVersionLabels == TRUE_STR) ? std::string(APP_VERSION) : (std::string(APP_VERSION) + "   (" + extractTitle(loaderInfo) + " v" + cleanVersionLabel(loaderInfo) + ")");
@@ -3102,7 +3106,7 @@ public:
         
         // Overlays menu
         if (menuMode == OVERLAYS_STR) {
-            //closeInterpreterThread();
+            closeInterpreterThread();
 
             list->addItem(new tsl::elm::CategoryHeader(!inHiddenMode ? OVERLAYS : HIDDEN_OVERLAYS));
             
@@ -3360,7 +3364,7 @@ public:
         
         // Packages menu
         if (menuMode == PACKAGES_STR ) {
-            //startInterpreterThread();
+            
 
             if (dropdownSection.empty()) {
                 // Create the directory if it doesn't exist
@@ -3605,6 +3609,7 @@ public:
                 std::string jsonKey, jsonKeyOn, jsonKeyOff;
                 
                 std::vector<std::vector<std::string>> commands, commandsOn, commandsOff;
+                std::vector<std::vector<std::string>> tableData;
                 
                 
                 auto toggleListItem = std::make_unique<tsl::elm::ToggleListItem>("", true, "", "");
@@ -3773,6 +3778,8 @@ public:
                                     commandsOn.push_back(cmd);
                                 else if (currentSection == OFF_STR)
                                     commandsOff.push_back(cmd);
+                            } else if (commandMode == TABLE_STR) {
+                                tableData.push_back(cmd);
                             }
 
                             if (cmd.size() > 1) { // Pre-process advanced commands
@@ -3914,7 +3921,7 @@ public:
                                             isDownloadCommand = false;
                                             runningInterpreter.store(true, std::memory_order_release);
                                             enqueueInterpreterCommands(getSourceReplacement(commands, selectedItem, i, PACKAGE_PATH), PACKAGE_PATH, keyName);
-                                            startInterpreterThread();
+                                            //startInterpreterThread();
 
                                             listItemPtr->setValue(INPROGRESS_SYMBOL);
 
@@ -3956,7 +3963,7 @@ public:
                                             isDownloadCommand = false;
                                             runningInterpreter.store(true, std::memory_order_release);
                                             enqueueInterpreterCommands(getSourceReplacement(commands, selectedItem, i, PACKAGE_PATH), PACKAGE_PATH, keyName);
-                                            startInterpreterThread();
+                                            //startInterpreterThread();
                                             
                                             listItemPtr->setValue(INPROGRESS_SYMBOL);
 
@@ -4050,13 +4057,13 @@ public:
             return handleRunningInterpreter(keysHeld);
         
         if (lastRunningInterpreter) {
-            while (!interpreterThreadExit.load(std::memory_order_acquire)) {svcSleepThread(50'000'000);}
+            ////while (!interpreterThreadExit.load(std::memory_order_acquire)) {svcSleepThread(50'000'000);}
             
             resetPercentages();
             
             isDownloadCommand = false;
             lastSelectedListItem->setValue(commandSuccess ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
-            closeInterpreterThread();
+            //closeInterpreterThread();
             lastRunningInterpreter = false;
             return true;
         }
@@ -4114,22 +4121,24 @@ public:
 
                 if ((keysHeld & KEY_DRIGHT) && !(keysHeld & (KEY_DLEFT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR)) && !stillTouching) {
                     if (menuMode != PACKAGES_STR) {
-                        defaultMenu = PACKAGES_STR;
+                        currentMenu = PACKAGES_STR;
                         selectedListItem.reset();
                         lastSelectedListItem.reset();
                         tsl::pop();
                         tsl::changeTo<MainMenu>();
+                        startInterpreterThread();
                         simulatedNextPageComplete = true;
                         return true;
                     }
                 }
                 if ((keysHeld & KEY_DLEFT) && !(keysHeld & (KEY_DRIGHT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR)) && !stillTouching) {
                     if (menuMode != OVERLAYS_STR) {
-                        defaultMenu = OVERLAYS_STR;
+                        currentMenu = OVERLAYS_STR;
                         selectedListItem.reset();
                         lastSelectedListItem.reset();
                         tsl::pop();
                         tsl::changeTo<MainMenu>();
+                        closeInterpreterThread();
                         simulatedNextPageComplete = true;
                         return true;
                     }
@@ -4153,6 +4162,7 @@ public:
 
                 if ((keysHeld & SYSTEM_SETTINGS_KEY) && !stillTouching) {
                     tsl::changeTo<UltrahandSettingsMenu>();
+                    startInterpreterThread();
                     simulatedMenuComplete = true;
                     return true;
                 }
