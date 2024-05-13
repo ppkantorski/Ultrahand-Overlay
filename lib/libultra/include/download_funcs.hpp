@@ -254,7 +254,7 @@ bool unzipFile(const std::string& zipFilePath, const std::string& toDestination)
             success = false;
             continue;
         }
-
+        
         while ((bytesRead = zzip_file_read(file.get(), buffer, UNZIP_BUFFER_SIZE)) > 0) {
             if (abortUnzip.load(std::memory_order_acquire)) {
                 logMessage("Aborting unzip operation during file extraction.");
