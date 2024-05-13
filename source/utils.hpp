@@ -237,11 +237,12 @@ void drawTable(std::unique_ptr<tsl::elm::List>& list, std::string sectionString,
     
     list->addItem(new tsl::elm::CustomDrawer([lineHeight, xOffset, fontSize, sectionString, infoString,
         infoTextColor, onTextColor](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
-        
+
         renderer->drawString(sectionString.c_str(), false, x + 12, y + lineHeight, fontSize, infoTextColor);
         renderer->drawString(infoString.c_str(), false, x + xOffset, y + lineHeight, fontSize, onTextColor);
     }), fontSize * numEntries +3);
 }
+
 
 void addHelpInfo(std::unique_ptr<tsl::elm::List>& list) {
     
@@ -1510,13 +1511,13 @@ void clearInterpreterFlags(bool state = false) {
 
 
 void backgroundInterpreter(void*) {
-    while (!interpreterThreadExit.load()) {
+    while (!interpreterThreadExit.load(std::memory_order_acquire)) {
         std::tuple<std::vector<std::vector<std::string>>, std::string, std::string> args;
 
         {
             std::unique_lock<std::mutex> lock(queueMutex);
-            queueCondition.wait(lock, [] { return !interpreterQueue.empty() || interpreterThreadExit.load(); });
-            if (interpreterThreadExit.load()) {
+            queueCondition.wait(lock, [] { return !interpreterQueue.empty() || interpreterThreadExit.load(std::memory_order_acquire); });
+            if (interpreterThreadExit.load(std::memory_order_acquire)) {
                 logMessage("Exiting Thread...");
                 break;
             }
