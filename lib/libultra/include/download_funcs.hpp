@@ -140,6 +140,7 @@ bool downloadFile(const std::string& url, const std::string& toDestination) {
     if (result != CURLE_OK) {
         logMessage("Error downloading file: " + std::string(curl_easy_strerror(result)));
         deleteFileOrDirectory(destination);
+        downloadPercentage.store(-1, std::memory_order_release);
         return false;
     }
 
@@ -147,12 +148,13 @@ bool downloadFile(const std::string& url, const std::string& toDestination) {
     if (!checkFile || checkFile.peek() == std::ifstream::traits_type::eof()) {
         logMessage("Error downloading file: Empty file");
         deleteFileOrDirectory(destination);
+        downloadPercentage.store(-1, std::memory_order_release);
         return false;
     }
     checkFile.close();
 
-    if (downloadPercentage.load(std::memory_order_acquire) == -1 || downloadPercentage.load(std::memory_order_acquire) == 0)
-        downloadPercentage.store(100, std::memory_order_release);
+    //if (downloadPercentage.load(std::memory_order_acquire) == -1 || downloadPercentage.load(std::memory_order_acquire) == 0)
+    downloadPercentage.store(100, std::memory_order_release);
     logMessage("Download Complete!");
     return true;
 }
@@ -161,7 +163,9 @@ bool downloadFile(const std::string& url, const std::string& toDestination) {
 // Define a custom deleter for the unique_ptr to properly close the ZZIP_DIR handle
 struct ZzipDirDeleter {
     void operator()(ZZIP_DIR* dir) const {
-        zzip_dir_close(dir);
+        if (dir) {
+            zzip_dir_close(dir);
+        }
     }
 };
 
@@ -208,7 +212,7 @@ bool unzipFile(const std::string& zipFilePath, const std::string& toDestination)
 
     bool success = true;
     //const zzip_ssize_t bufferSize = 4096*3;
-    unzipPercentage.store(0, std::memory_order_release); // Initialize percentage
+    
     zzip_ssize_t currentUncompressedSize = 0;
 
     std::string fileName, extractedFilePath;
@@ -218,7 +222,7 @@ bool unzipFile(const std::string& zipFilePath, const std::string& toDestination)
     char buffer[UNZIP_BUFFER_SIZE];
     zzip_ssize_t bytesRead;
 
-
+    unzipPercentage.store(0, std::memory_order_release); // Initialize percentage
     // Second pass: Extract files and update progress
     while (zzip_dir_read(dir.get(), &entry)) {
         //if (abortUnzip.load(std::memory_order_acquire)) {
@@ -273,6 +277,8 @@ bool unzipFile(const std::string& zipFilePath, const std::string& toDestination)
     if (success) {
         unzipPercentage.store(100, std::memory_order_release); // Ensure it's set to 100% on successful extraction
         logMessage("Extraction Complete!");
+    } else {
+        unzipPercentage.store(-1, std::memory_order_release);
     }
 
     return success;
