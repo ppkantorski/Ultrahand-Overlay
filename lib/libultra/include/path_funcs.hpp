@@ -53,34 +53,32 @@ void createSingleDirectory(const std::string& directoryPath) {
  * @param directoryPath The path of the directory to be created.
  */
 void createDirectory(const std::string& directoryPath) {
-    std::string path = directoryPath;
-    
     std::string volume = "sdmc:/";
+    std::string path = directoryPath;
+
     // Remove leading "sdmc:/" if present
-    if (path.substr(0, 6) == volume)
-        path = path.substr(6);
-    
+    if (path.compare(0, volume.size(), volume) == 0) {
+        path = path.substr(volume.size());
+    }
+
     std::string parentPath = volume;
-    size_t pos = path.find('/');
-    
+    size_t pos = 0, nextPos;
+
     // Iterate through the path and create each directory level if it doesn't exist
-    while (pos != std::string::npos) {
-        std::string token = path.substr(0, pos);
-        if (!token.empty()) {
-            parentPath += token + "/";
+    while ((nextPos = path.find('/', pos)) != std::string::npos) {
+        if (nextPos != pos) {
+            parentPath += path.substr(pos, nextPos - pos) + "/";
             createSingleDirectory(parentPath); // Create the parent directory
         }
-        path.erase(0, pos + 1);
-        pos = path.find('/');
+        pos = nextPos + 1;
     }
-    
+
     // Create the final directory level if it doesn't exist
-    if (!path.empty()) {
-        parentPath += path;
+    if (pos < path.size()) {
+        parentPath += path.substr(pos);
         createSingleDirectory(parentPath); // Create the final directory
     }
 }
-
 
 
 
