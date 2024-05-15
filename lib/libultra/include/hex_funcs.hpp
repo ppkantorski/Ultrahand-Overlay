@@ -151,10 +151,11 @@ std::vector<std::string> findHexDataOffsets(const std::string& filePath, const s
         file.close();
         return offsets; // Ensure hexData has an even length
     }
+    std::string byteString;
     for (size_t i = 0; i < hexData.length(); i += 2) {
-        std::string byteString = hexData.substr(i, 2);
-        unsigned char byte = static_cast<unsigned char>(std::stoi(byteString, nullptr, 16));
-        binaryData.push_back(byte);
+        byteString = hexData.substr(i, 2);
+        //unsigned char byte = static_cast<unsigned char>(std::stoi(byteString, nullptr, 16));
+        binaryData.push_back(static_cast<unsigned char>(std::stoi(byteString, nullptr, 16)));
     }
 
     // Read the file in chunks to find the offsets where the hex data is located
@@ -211,8 +212,9 @@ void hexEditByOffset(const std::string& filePath, const std::string& offsetStr, 
 
     // Convert the hex string to binary data
     std::vector<unsigned char> binaryData(hexData.length() / 2);
+    std::string byteString;
     for (size_t i = 0, j = 0; i < hexData.length(); i += 2, ++j) {
-        std::string byteString = hexData.substr(i, 2);
+        byteString = hexData.substr(i, 2);
         binaryData[j] = static_cast<unsigned char>(std::stoi(byteString, nullptr, 16));
     }
 
