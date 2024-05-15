@@ -54,6 +54,8 @@ bool pchtxt2ips(const std::string& pchtxtPath, const std::string& outputFolder) 
 
     std::string addressStr, valueStr;
     
+    std::istringstream iss;
+
     while (std::getline(pchtxtFile, line)) {
         ++lineNum;
         if (line.empty() || line.front() == '@') {
@@ -63,7 +65,9 @@ bool pchtxt2ips(const std::string& pchtxtPath, const std::string& outputFolder) 
             continue;  // Skip empty lines and lines starting with '@'
         }
 
-        std::istringstream iss(line);
+        iss.clear();
+        iss.str(line);
+        
         addressStr = "";
         valueStr = "";
         if (!(iss >> addressStr >> valueStr)) {
