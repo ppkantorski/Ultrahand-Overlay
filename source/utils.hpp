@@ -65,7 +65,7 @@ bool usingMariko = util::IsMariko();
 
 
 void initializeTheme(std::string themeIniPath = THEME_CONFIG_INI_PATH) {
-    tsl::hlp::ini::IniData themesData;
+    tsl::hlp::ini::IniData themeData;
     bool initialize = false;
 
     // Prepare a map of default settings
@@ -103,14 +103,14 @@ void initializeTheme(std::string themeIniPath = THEME_CONFIG_INI_PATH) {
     };
 
     if (isFileOrDirectory(themeIniPath)) {
-        themesData = getParsedDataFromIniFile(themeIniPath);
+        themeData = getParsedDataFromIniFile(themeIniPath);
 
-        if (themesData.count(THEME_STR) > 0) {
-            auto& themedSection = themesData[THEME_STR];
+        if (themeData.count(THEME_STR) > 0) {
+            auto& themeSection = themeData[THEME_STR];
 
             // Iterate through each default setting and apply if not already set
             for (const auto& [key, value] : defaultSettings) {
-                if (themedSection.count(key) == 0) {
+                if (themeSection.count(key) == 0) {
                     setIniFileValue(themeIniPath, THEME_STR, key, value);
                 }
             }
@@ -238,8 +238,8 @@ void drawTable(std::unique_ptr<tsl::elm::List>& list, std::string sectionString,
     list->addItem(new tsl::elm::CustomDrawer([lineHeight, xOffset, fontSize, sectionString, infoString,
         infoTextColor, onTextColor](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
 
-        renderer->drawString(sectionString.c_str(), false, x + 12, y + lineHeight, fontSize, infoTextColor);
-        renderer->drawString(infoString.c_str(), false, x + xOffset, y + lineHeight, fontSize, onTextColor);
+        renderer->drawString(sectionString.c_str(), false, x + 12, y + lineHeight, fontSize, tsl::gfx::Renderer::a(infoTextColor));
+        renderer->drawString(infoString.c_str(), false, x + xOffset, y + lineHeight, fontSize, tsl::gfx::Renderer::a(onTextColor));
     }), fontSize * numEntries +3);
 }
 
@@ -1503,6 +1503,7 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
 
 
 
+
 // Thread information structure
 Thread interpreterThread;
 std::queue<std::tuple<std::vector<std::vector<std::string>>, std::string, std::string>> interpreterQueue;
@@ -1518,12 +1519,17 @@ void clearInterpreterFlags(bool state = false) {
     abortCommand.store(state, std::memory_order_release);
 }
 
+void resetPercentages() {
+    downloadPercentage.store(-1, std::memory_order_release);
+    unzipPercentage.store(-1, std::memory_order_release);
+    copyPercentage.store(-1, std::memory_order_release);
+}
 
 
 void backgroundInterpreter(void*) {
+    std::tuple<std::vector<std::vector<std::string>>, std::string, std::string> args;
     while (!interpreterThreadExit.load(std::memory_order_acquire)) {
-        std::tuple<std::vector<std::vector<std::string>>, std::string, std::string> args;
-
+        
         {
             std::unique_lock<std::mutex> lock(queueMutex);
             queueCondition.wait(lock, [] { return !interpreterQueue.empty() || interpreterThreadExit.load(std::memory_order_acquire); });
@@ -1535,23 +1541,26 @@ void backgroundInterpreter(void*) {
                 args = std::move(interpreterQueue.front());
                 interpreterQueue.pop();
             }
-            svcSleepThread(10'000'000);
+            //svcSleepThread(10'000'000);
         } // Release the lock before processing the command
 
         if (!std::get<0>(args).empty()) {
-            logMessage("Start of interpreter");
+            //logMessage("Start of interpreter");
             // Clear flags and perform any cleanup if necessary
             clearInterpreterFlags();
+            resetPercentages();
             threadFailure.store(false, std::memory_order_release);
             
             runningInterpreter.store(true, std::memory_order_release);
             interpretAndExecuteCommands(std::move(std::get<0>(args)), std::move(std::get<1>(args)), std::move(std::get<2>(args)));
 
-            runningInterpreter.store(false, std::memory_order_release);
             // Clear flags and perform any cleanup if necessary
             clearInterpreterFlags();
-            //interpreterThreadExit.store(true, std::memory_order_release);
-            logMessage("End of interpreter");
+            resetPercentages();
+
+            runningInterpreter.store(false, std::memory_order_release);
+            interpreterThreadExit.store(true, std::memory_order_release);
+            //logMessage("End of interpreter");
             //break;
         }
         //logMessage("looping...");
@@ -1601,8 +1610,3 @@ void enqueueInterpreterCommands(std::vector<std::vector<std::string>>&& commands
 }
 
 
-void resetPercentages() {
-    downloadPercentage.store(-1, std::memory_order_release);
-    unzipPercentage.store(-1, std::memory_order_release);
-    copyPercentage.store(-1, std::memory_order_release);
-}
