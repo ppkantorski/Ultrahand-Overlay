@@ -27,7 +27,17 @@
 #include <dirent.h>
 #include "debug_funcs.hpp"
 
+// Function to remove any non-alphanumeric characters from a string
+std::string replaceNonAlphanumericWithUnderscore(const std::string& input) {
+    std::string result;
+    result.reserve(input.size());  // Pre-allocate memory to avoid reallocations
 
+    for (char c : input) {
+        result += (isalnum(static_cast<unsigned char>(c)) ? c : '_');
+    }
+
+    return result;
+}
 
 // Function to remove invalid characters from file names
 std::string cleanFileName(const std::string& fileName) {
