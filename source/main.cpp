@@ -72,7 +72,7 @@ static std::string lastPackage = "";
 static std::string lastMenu = "";
 static std::string lastMenuMode = "";
 static std::string lastKeyName = "";
-static std::string hideUserGuide = FALSE_STR;
+static bool hideUserGuide = false;
 
 static std::unordered_map<std::string, std::string> selectedFooterDict;
 
@@ -811,14 +811,14 @@ public:
             
         } else if (dropdownSelection == "miscMenu") {
             list->addItem(new tsl::elm::CategoryHeader(MENU_ITEMS));
-            hideUserGuide = parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, PROJECT_NAME, "hide_user_guide");
+            hideUserGuide = (parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, PROJECT_NAME, "hide_user_guide") == TRUE_STR);
             
             auto toggleListItem = std::make_unique<tsl::elm::ToggleListItem>(USER_GUIDE, false, ON, OFF);
-            toggleListItem->setState((hideUserGuide == FALSE_STR));
+            toggleListItem->setState((!hideUserGuide));
             toggleListItem->setStateChangedListener([listItemRaw = toggleListItem.get()](bool state) {
                 tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemRaw, tsl::FocusDirection::None);
                 setIniFileValue(SETTINGS_CONFIG_INI_PATH, PROJECT_NAME, "hide_user_guide", state ? FALSE_STR : TRUE_STR);
-                if ((hideUserGuide == FALSE_STR) != state)
+                if ((!hideUserGuide) != state)
                     reloadMenu = true;
             });
             list->addItem(toggleListItem.release());
@@ -4039,7 +4039,7 @@ public:
                     }
                 }
                 
-                if (hideUserGuide != TRUE_STR && dropdownSection.empty())
+                if (!hideUserGuide && dropdownSection.empty())
                     addHelpInfo(list);
             }
         }
