@@ -73,6 +73,8 @@ static std::atomic<bool> threadFailure(false);
 static std::atomic<bool> runningInterpreter(false);
 static std::atomic<bool> shakingProgress(true);
 
+static bool isHidden = false;
+
 /**
  * @brief Shutdown modes for the Ultrahand-Overlay project.
  *
@@ -1258,7 +1260,7 @@ namespace tsl {
             clickTextColor = getColor("click_text_color");
         }
     }
-    
+
 
     
     
@@ -3031,7 +3033,12 @@ namespace tsl {
                     
                     // Draw the second half of the string in red color
                     renderer->drawString(secondHalf.c_str(), false, x, y+offset, fontSize, a(logoColor2));
-                    
+                    //for (char letter : secondHalf) {
+                    //    letterWidth = calculateStringWidth(std::string(1, letter), fontSize);
+                    //    x += letterWidth;
+                    //}
+                    if (!(hideBattery && hidePCBTemp && hideSOCTemp && hideClock))
+                        renderer->drawRect(252, 24, 1, 49, a(seperatorColor));
                     
                     // Time drawing implementation
                     //struct timespec currentTime;
@@ -3054,12 +3061,14 @@ namespace tsl {
                     
                     // check in 1s intervals
                     if ((currentTime.tv_sec - timeOut) >= 1) {
-                        if (!hidePCBTemp)
-                            thermalstatusGetDetailsPCB(&PCB_temperature);
-                        if (!hideSOCTemp)
-                            thermalstatusGetDetailsSOC(&SOC_temperature);
-                        if (!hideBattery)
-                            powerGetDetails(&batteryCharge, &isCharging);
+                        if (!isHidden) {
+                            if (!hidePCBTemp)
+                                thermalstatusGetDetailsPCB(&PCB_temperature);
+                            if (!hideSOCTemp)
+                                thermalstatusGetDetailsSOC(&SOC_temperature);
+                            if (!hideBattery)
+                                powerGetDetails(&batteryCharge, &isCharging);
+                        }
                         //thermalstatusGetDetails(&SOC_temperature, "internal");
                         //thermalstatusGetDetails(&PCB_temperature, "external");
                         
@@ -4703,7 +4712,7 @@ namespace tsl {
                 this->m_fadeInAnimationPlaying = true;
                 //this->m_animationCounter = 0;
             }
-            
+            isHidden = false;
             this->onShow();
             
             if (auto& currGui = this->getCurrentGui(); currGui != nullptr) // TESTING DISABLED (EFFECTS NEED TO BE VERIFIED)
@@ -4722,9 +4731,8 @@ namespace tsl {
             }
             else {
                 this->m_fadeOutAnimationPlaying = true;
-                //this->m_animationCounter = 5;
             }
-            
+            isHidden = true;
             this->onHide();
         }
         
@@ -4903,13 +4911,22 @@ namespace tsl {
 
             //static ssize_t counter = 0;
             if (runningInterpreter.load()) {
-                if (keysDown & (HidNpadButton_AnyUp))
+                //if (keysDown & (HidNpadButton_AnyUp))
+                //    currentFocus -> shakeHighlight(FocusDirection::Up);
+                //else if (keysDown & (HidNpadButton_AnyDown))
+                //    currentFocus -> shakeHighlight(FocusDirection::Down);
+                //else if (keysDown & (HidNpadButton_AnyLeft))
+                //    currentFocus -> shakeHighlight(FocusDirection::Left);
+                //else if (keysDown & (HidNpadButton_AnyRight))
+                //    currentFocus -> shakeHighlight(FocusDirection::Right);
+
+                if (keysHeld & HidNpadButton_AnyUp && keysDown & HidNpadButton_AnyUp && !(keysHeld & (KEY_DLEFT | KEY_DRIGHT | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR)))
                     currentFocus -> shakeHighlight(FocusDirection::Up);
-                else if (keysDown & (HidNpadButton_AnyDown))
+                else if (keysHeld & HidNpadButton_AnyDown && keysDown & HidNpadButton_AnyDown && !(keysHeld & (KEY_DLEFT | KEY_DRIGHT | KEY_DUP | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR)))
                     currentFocus -> shakeHighlight(FocusDirection::Down);
-                else if (keysDown & (HidNpadButton_AnyLeft))
+                else if (keysHeld & HidNpadButton_AnyLeft && keysDown & HidNpadButton_AnyLeft && !(keysHeld & (KEY_DRIGHT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR)))
                     currentFocus -> shakeHighlight(FocusDirection::Left);
-                else if (keysDown & (HidNpadButton_AnyRight))
+                else if (keysHeld & HidNpadButton_AnyRight && keysDown & HidNpadButton_AnyRight && !(keysHeld & (KEY_DLEFT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR)))
                     currentFocus -> shakeHighlight(FocusDirection::Right);
                 //else {
                 //    if (shakingProgress.load()) {
@@ -5310,11 +5327,8 @@ namespace tsl {
             }
             
             hideClock = (removeQuotes(parsedConfig[PROJECT_NAME]["hide_clock"]) != FALSE_STR);
-            
             hideBattery = (removeQuotes(parsedConfig[PROJECT_NAME]["hide_battery"]) != FALSE_STR);
-            
             hidePCBTemp = (removeQuotes(parsedConfig[PROJECT_NAME]["hide_pcb_temp"]) != FALSE_STR);
-            
             hideSOCTemp = (removeQuotes(parsedConfig[PROJECT_NAME]["hide_soc_temp"]) != FALSE_STR);
             
         }
@@ -5535,15 +5549,18 @@ namespace tsl {
         
         // CUSTOM SECTION START
         // Argument parsing
-        bool skipCombo = false;
-        for (u8 arg = 0; arg < argc; arg++) {
-            if (strcasecmp(argv[arg], "--skipCombo") == 0) {
-                //eventFire(&shData.comboEvent);
-                //overlay->disableNextAnimation();
-                skipCombo = true;
-                break;
-            }
-        }
+        //bool skipCombo = false;
+        //for (u8 arg = 0; arg < argc; arg++) {
+        //    if ((strcasecmp(argv[arg], "--skipCombo") == 0)) {
+        //        //logMessage("argv[0]: " +std::string(argv[0]));
+        //        //logMessage("argv[1]: " +std::string(argv[1]));
+        //        //eventFire(&shData.comboEvent);
+        //        //overlay->disableNextAnimation();
+        //        skipCombo = true;
+        //        //etIniFileValue(SETTINGS_CONFIG_INI_PATH, PROJECT_NAME, IN_OVERLAY_STR, FALSE_STR);
+        //    }
+        //    //std::memset(argv[arg], 0, std::strlen(argv[arg]));
+        //}
         
         //std::string SETTINGS_CONFIG_INI_PATH = "sdmc:/config/ultrahand/config.ini"; // global vars in ultra.hpp
         //std::string TESLA_CONFIG_INI_PATH = "sdmc:/config/tesla/config.ini";
@@ -5562,16 +5579,16 @@ namespace tsl {
         
         if (inOverlay) {
             setIniFileValue(SETTINGS_CONFIG_INI_PATH, PROJECT_NAME, IN_OVERLAY_STR, FALSE_STR);
-        }
-        
-        if (inOverlay) {
             eventFire(&shData.comboEvent);
-            overlay->disableNextAnimation();
+            //overlay->disableNextAnimation();
         }
 
-        if ((skipCombo)) {
-            overlay->disableNextAnimation();
-        }
+        //if (!isHidden)
+        overlay->disableNextAnimation();
+
+        //if ((skipCombo)) {
+        //    overlay->disableNextAnimation();
+        //}
 
 
         //if (inOverlay) {
