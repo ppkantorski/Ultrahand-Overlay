@@ -68,10 +68,10 @@ static const std::string SYSTEM_PATTERN = ";system=";
 
 // Table option patterns
 static const std::string HEADER_PATTERN = ";header=";
+static const std::string ALIGNMENT_PATTERN = ";alignment=";
 static const std::string GAP_PATTERN =";gap=";
 static const std::string OFFSET_PATTERN = ";offset=";
 static const std::string SPACING_PATTERN = ";spacing=";
-static const std::string ALIGNMENT_PATTERN = ";alignment=";
 
 static std::string currentMenu = OVERLAYS_STR;
 static std::string lastPage = LEFT_STR;
@@ -1856,7 +1856,7 @@ public:
         bool toggleStateOn;
         
         if (selectedItemsList.empty()){
-            listItem = std::make_unique<tsl::elm::ListItem>("Empty");
+            listItem = std::make_unique<tsl::elm::ListItem>(EMPTY);
             list->addItem(listItem.release());
         }
 
