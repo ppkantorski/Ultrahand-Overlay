@@ -29,8 +29,8 @@
 const std::string BOOT_PACKAGE_FILENAME = "boot_package.ini";
 const std::string PACKAGE_FILENAME = "package.ini";
 const std::string CONFIG_FILENAME = "config.ini";
-const std::string PROJECT_NAME = "ultrahand";
-const std::string CAPITAL_PROJECT_NAME = "Ultrahand";
+const std::string ULTRAHAND_PROJECT_NAME = "ultrahand";
+const std::string CAPITAL_ULTRAHAND_PROJECT_NAME = "Ultrahand";
 const std::string ROOT_PATH = "sdmc:/";
 const std::string SETTINGS_PATH = "sdmc:/config/ultrahand/";
 const std::string SETTINGS_CONFIG_INI_PATH = "sdmc:/config/ultrahand/config.ini";
@@ -45,6 +45,8 @@ const std::string OVERLAYS_INI_FILEPATH = "sdmc:/config/ultrahand/overlays.ini";
 const std::string PACKAGES_INI_FILEPATH = "sdmc:/config/ultrahand/packages.ini";
 const std::string ULTRAHAND_REPO_URL = "https://github.com/ppkantorski/Ultrahand-Overlay/";
 
+const std::string TESLA_COMBO_STR = "L+DDOWN+RS";
+const std::string ULTRAHAND_COMBO_STR = "ZL+ZR+DDOWN";
 const std::string TESLA_STR = "tesla";
 const std::string ERISTA_STR = "erista";
 const std::string MARIKO_STR = "mariko";
@@ -69,6 +71,7 @@ const std::string FOOTER_STR = "footer";
 const std::string TOGGLE_STR = "toggle";
 const std::string LEFT_STR = "left";
 const std::string RIGHT_STR = "right";
+const std::string CENTER_STR = "center";
 const std::string HIDE_STR = "hide";
 const std::string STAR_STR = "star";
 const std::string PRIORITY_STR = "priority";
