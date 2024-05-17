@@ -60,6 +60,7 @@
     "ON_MAIN_MENU": "在所有插件列表中",
     "ON_A_COMMAND": "在插件包的命令中",
     "ON_OVERLAY_PACKAGE": "在单个插件或者插件包中",
+    "EMPTY": "空",
     "SUNDAY": "周日",
     "MONDAY": "周一",
     "TUESDAY": "周二",
