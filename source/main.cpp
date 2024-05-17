@@ -886,6 +886,21 @@ public:
             });
             list->addItem(toggleListItem.release());
             
+            list->addItem(new tsl::elm::CategoryHeader(EFFECTS));
+
+            progressAnimation = (parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "progress_animation") == TRUE_STR);
+            
+            toggleListItem = std::make_unique<tsl::elm::ToggleListItem>(PROGRESS_ANIMATION, false, ON, OFF);
+            toggleListItem->setState((progressAnimation));
+            toggleListItem->setStateChangedListener([listItemRaw = toggleListItem.get()](bool state) {
+                tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemRaw, tsl::FocusDirection::None);
+                setIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "progress_animation", state ? TRUE_STR : FALSE_STR);
+                progressAnimation = state;
+            });
+            list->addItem(toggleListItem.release());
+            
+
+
         } else
             list->addItem(new tsl::elm::ListItem(FAILED_TO_OPEN + ": " + settingsIniPath));
         
