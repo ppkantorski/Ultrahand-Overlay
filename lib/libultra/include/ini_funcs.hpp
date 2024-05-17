@@ -381,6 +381,10 @@ void cleanIniFormatting(const std::string& filePath) {
 void setIniFile(const std::string& fileToEdit, const std::string& desiredSection, const std::string& desiredKey, const std::string& desiredValue, const std::string& desiredNewKey = "", const std::string& comment = "") {
     std::ios::sync_with_stdio(false);  // Disable synchronization between C++ and C I/O.
     
+    if (!isFile(fileToEdit)) {
+        createDirectory(getParentDirFromPath(fileToEdit));
+    }
+    
     std::ifstream configFile(fileToEdit);
     std::stringstream buffer;  // Use stringstream to buffer the output.
     
