@@ -28,16 +28,11 @@
 #include "debug_funcs.hpp"
 
 // Function to remove any non-alphanumeric characters from a string
-std::string replaceNonAlphanumericWithUnderscore(const std::string& input) {
-    std::string result;
-    result.reserve(input.size());  // Pre-allocate memory to avoid reallocations
-
-    for (char c : input) {
-        result += (isalnum(static_cast<unsigned char>(c)) ? c : '_');
-    }
-
-    return result;
-}
+//std::string replaceSingleQuote(const std::string& str) {
+//    std::string result = str;
+//    std::replace(result.begin(), result.end(), '\'', '_');
+//    return result;
+//}
 
 // Function to remove invalid characters from file names
 std::string cleanFileName(const std::string& fileName) {
@@ -267,6 +262,23 @@ bool isDirectory(const std::string& path) {
     return false;
 }
 
+
+
+/**
+ * @brief Checks if a path points to a file.
+ *
+ * This function checks if the specified path points to a file.
+ *
+ * @param path The path to check.
+ * @return True if the path is a file, false otherwise.
+ */
+bool isFile(const std::string& path) {
+    struct stat pathStat;
+    if (stat(path.c_str(), &pathStat) == 0) {
+        return S_ISREG(pathStat.st_mode);
+    }
+    return false;
+}
 
 
 /**
