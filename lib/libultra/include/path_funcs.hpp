@@ -110,7 +110,23 @@ void createTextFile(const std::string& filePath, const std::string& content) {
  */
 void deleteFileOrDirectory(const std::string& pathToDelete) {
     std::vector<std::string> stack;
-    stack.push_back(pathToDelete + (pathToDelete.back() == '/' ? "" : "/")); // Normalize the path
+    logMessage("pathToDelete: "+pathToDelete);
+
+    bool pathIsFile = pathToDelete.back() != '/';
+    if (pathIsFile) {
+        if (isFile(pathToDelete)) {
+            if (remove(pathToDelete.c_str()) == 0) {
+                //logMessage("File deleted: " + currentPath);
+            } else {
+                logMessage("Failed to delete file: " + pathToDelete);
+            }
+        } else {
+            //logMessage("File does not exist: " + pathToDelete);
+        }
+        return;
+    }
+
+    stack.push_back(pathToDelete);
     struct stat pathStat;
     std::string currentPath, filePath;
     bool isEmpty;
@@ -188,7 +204,6 @@ void deleteFileOrDirectoryByPattern(const std::string& pathPattern) {
 }
 
 
-
 void moveDirectory(const std::string& sourcePath, const std::string& destinationPath) {
     // Check if source directory exists
     struct stat sourceInfo;
@@ -203,42 +218,66 @@ void moveDirectory(const std::string& sourcePath, const std::string& destination
         return;
     }
 
-    DIR* dir = opendir(sourcePath.c_str());
-    if (!dir) {
-        logMessage("Failed to open source directory: " + sourcePath);
-        return;
+    std::vector<std::pair<std::string, std::string>> stack;
+    std::vector<std::string> directoriesToRemove;
+
+    stack.push_back({sourcePath, destinationPath});
+
+    while (!stack.empty()) {
+        auto [currentSource, currentDestination] = stack.back();
+        stack.pop_back();
+
+        DIR* dir = opendir(currentSource.c_str());
+        if (!dir) {
+            logMessage("Failed to open source directory: " + currentSource);
+            continue;
+        }
+
+        dirent* entry;
+        std::string name, fullPathSrc, fullPathDst;
+
+        while ((entry = readdir(dir)) != nullptr) {
+            name = entry->d_name;
+            if (name == "." || name == "..") continue;
+
+            // Ensure no double slashes in paths
+            fullPathSrc = currentSource + (currentSource.back() == '/' ? "" : "/") + name;
+            fullPathDst = currentDestination + (currentDestination.back() == '/' ? "" : "/") + name;
+
+            if (isDirectory(fullPathSrc)) {
+                // Ensure directory paths end with '/'
+                fullPathSrc += '/';
+                fullPathDst += '/';
+
+                // Create the destination directory if it doesn't exist
+                if (mkdir(fullPathDst.c_str(), 0777) != 0 && errno != EEXIST) {
+                    logMessage("Failed to create destination directory: " + fullPathDst);
+                    continue;
+                }
+                // Push the directory pair to the stack
+                stack.push_back({fullPathSrc, fullPathDst});
+                directoriesToRemove.push_back(fullPathSrc);
+            } else {
+                // Remove file if it exists in the destination
+                remove(fullPathDst.c_str());
+
+                // Move file
+                if (rename(fullPathSrc.c_str(), fullPathDst.c_str()) != 0) {
+                    logMessage("Failed to move: " + fullPathSrc);
+                }
+            }
+        }
+        closedir(dir);
     }
 
-    //struct stat fileInfo;
-
-    //std::unique_ptr<DIR, DirCloser> dirHolder(dir);
-    dirent* entry;
-
-    std::string name, fullPathSrc, fullPathDst;
-
-    while ((entry = readdir(dir)) != nullptr) {
-        name = entry->d_name;
-        if (name == "." || name == "..") continue;
-
-        fullPathSrc = sourcePath + '/' + name;
-        fullPathDst = destinationPath + '/' + name;
-
-        // Check if file already exists in destination
-        //f (stat(fullPathDst.c_str(), &fileInfo) == 0) {
-        //   logMessage("Overwriting destination: " + fullPathDst);
-        //   remove(fullPathDst.c_str());
-        //
-
-        remove(fullPathDst.c_str()); // remove file if exists
-
-        // Move file or directory
-        if (rename(fullPathSrc.c_str(), fullPathDst.c_str()) != 0) {
-            logMessage("Failed to move: " + fullPathSrc);
+    // Delete the directories in reverse order (deepest first)
+    for (auto it = directoriesToRemove.rbegin(); it != directoriesToRemove.rend(); ++it) {
+        if (rmdir(it->c_str()) != 0) {
+            logMessage("Failed to delete source directory: " + *it);
         }
     }
-    closedir(dir);
 
-    // Delete the source directory
+    // Delete the root source directory
     if (rmdir(sourcePath.c_str()) != 0) {
         logMessage("Failed to delete source directory: " + sourcePath);
     }
@@ -258,12 +297,14 @@ void moveFile(const std::string& sourcePath, const std::string& destinationPath)
             createDirectory(destinationPath);
         // Destination is a directory, construct full destination path
         std::string destFile = destinationPath + getFileName(sourcePath);
+        logMessage("destFile: "+destFile);
         remove(destFile.c_str());
         if (rename(sourcePath.c_str(), destFile.c_str()) != 0) {
             logMessage("Failed to move file to directory: " + sourcePath);
         }
     } else {
         // Destination is a file path, directly rename the file
+        logMessage("Removing "+destinationPath);
         remove(destinationPath.c_str());
         if (rename(sourcePath.c_str(), destinationPath.c_str()) != 0) {
             logMessage("Failed to move file: " + sourcePath);
