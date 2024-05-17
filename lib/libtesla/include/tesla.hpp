@@ -75,6 +75,8 @@ static std::atomic<bool> shakingProgress(true);
 
 static std::atomic<bool> isHidden(true);
 
+static bool progressAnimation = (parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "progress_animation") == TRUE_STR);
+
 /**
  * @brief Shutdown modes for the Ultrahand-Overlay project.
  *
@@ -245,6 +247,8 @@ static std::string APP_SETTINGS;
 static std::string ON_MAIN_MENU;
 static std::string ON_A_COMMAND;
 static std::string ON_OVERLAY_PACKAGE;
+static std::string EFFECTS;
+static std::string PROGRESS_ANIMATION;
 static std::string EMPTY;
 
 static std::string SUNDAY;
@@ -352,6 +356,8 @@ void reinitializeLangVars() {
     ON_MAIN_MENU = "on Main Menu";
     ON_A_COMMAND = "on a command";
     ON_OVERLAY_PACKAGE = "on overlay/package";
+    EFFECTS = "Effects";
+    PROGRESS_ANIMATION = "Progress Animation";
     EMPTY = "Empty";
 
     SUNDAY = "Sunday";
@@ -475,6 +481,8 @@ void parseLanguage(std::string langFile) {
         {"ON_MAIN_MENU", &ON_MAIN_MENU},
         {"ON_A_COMMAND", &ON_A_COMMAND},
         {"ON_OVERLAY_PACKAGE", &ON_OVERLAY_PACKAGE},
+        {"EFFECTS", &EFFECTS},
+        {"PROGRESS_ANIMATION", &PROGRESS_ANIMATION},
         {"EMPTY", &EMPTY},
         {"SUNDAY", &SUNDAY},
         {"MONDAY", &MONDAY},
@@ -4925,7 +4933,7 @@ namespace tsl {
             auto bottomElement = currentGui->getBottomElement(); // Backend is still not implemented/working yet
             
 
-            //static ssize_t counter = 0;
+            static ssize_t counter = 0;
             if (runningInterpreter.load()) {
                 //if (keysDown & (HidNpadButton_AnyUp))
                 //    currentFocus -> shakeHighlight(FocusDirection::Up);
@@ -4944,20 +4952,20 @@ namespace tsl {
                     currentFocus -> shakeHighlight(FocusDirection::Left);
                 else if (keysHeld & HidNpadButton_AnyRight && keysDown & HidNpadButton_AnyRight && !(keysHeld & (KEY_DLEFT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR)))
                     currentFocus -> shakeHighlight(FocusDirection::Right);
-                //else {
-                //    if (shakingProgress.load()) {
-                //        if (counter%4 == 0)
-                //            currentFocus -> shakeHighlight(FocusDirection::Up);
-                //        else if (counter%4  == 1)
-                //            currentFocus -> shakeHighlight(FocusDirection::Right);
-                //        else if (counter%4  == 2)
-                //            currentFocus -> shakeHighlight(FocusDirection::Down);
-                //        else if (counter%4  == 3)
-                //            currentFocus -> shakeHighlight(FocusDirection::Left);
-                //        counter++;
-                //        if (counter >= 4) counter = 0; // Reset the counter after a full cycle to prevent overflow
-                //    }
-                //}
+                else {
+                    if (progressAnimation) {
+                        if (counter%4 == 0)
+                            currentFocus -> shakeHighlight(FocusDirection::Up);
+                        else if (counter%4  == 1)
+                            currentFocus -> shakeHighlight(FocusDirection::Right);
+                        else if (counter%4  == 2)
+                            currentFocus -> shakeHighlight(FocusDirection::Down);
+                        else if (counter%4  == 3)
+                            currentFocus -> shakeHighlight(FocusDirection::Left);
+                        counter++;
+                        if (counter >= 4) counter = 0; // Reset the counter after a full cycle to prevent overflow
+                    }
+                }
             }
 
             // Handle input when no element is focused
