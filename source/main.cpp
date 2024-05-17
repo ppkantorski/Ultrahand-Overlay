@@ -62,9 +62,16 @@ static size_t nestedMenuCount = 0;
 static const std::vector<std::string> commandSystems = {DEFAULT_STR, ERISTA_STR, MARIKO_STR};
 static const std::vector<std::string> commandModes = {DEFAULT_STR, TOGGLE_STR, OPTION_STR, FORWARDER_STR, TEXT_STR, TABLE_STR};
 static const std::vector<std::string> commandGroupings = {DEFAULT_STR, "split", "split2", "split3", "split4"};
-static const std::string modePattern = ";mode=";
-static const std::string groupingPattern = ";grouping=";
-static const std::string systemPattern = ";system=";
+static const std::string MODE_PATTERN = ";mode=";
+static const std::string GROUPING_PATTERN = ";grouping=";
+static const std::string SYSTEM_PATTERN = ";system=";
+
+// Table option patterns
+static const std::string HEADER_PATTERN = ";header=";
+static const std::string GAP_PATTERN =";gap=";
+static const std::string OFFSET_PATTERN = ";offset=";
+static const std::string SPACING_PATTERN = ";spacing=";
+static const std::string ALIGNMENT_PATTERN = ";alignment=";
 
 static std::string currentMenu = OVERLAYS_STR;
 static std::string lastPage = LEFT_STR;
@@ -273,8 +280,8 @@ public:
             
             std::string fileContent = getFileContents(SETTINGS_CONFIG_INI_PATH);
             
-            std::string defaultLang = parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, PROJECT_NAME, DEFAULT_LANG_STR);
-            std::string keyCombo = trim(parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, PROJECT_NAME, KEY_COMBO_STR));
+            std::string defaultLang = parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, DEFAULT_LANG_STR);
+            std::string keyCombo = trim(parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, KEY_COMBO_STR));
             
             
             if (defaultLang.empty())
@@ -360,7 +367,7 @@ public:
             
             list->addItem(new tsl::elm::CategoryHeader(UI_SETTINGS));
             
-            std::string currentTheme = parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, PROJECT_NAME, "current_theme");
+            std::string currentTheme = parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "current_theme");
             if (currentTheme.empty() || currentTheme == DEFAULT_STR)
                 currentTheme = DEFAULT;
             listItem = std::make_unique<tsl::elm::ListItem>(THEME);
@@ -436,7 +443,7 @@ public:
             
             list->addItem(new tsl::elm::CategoryHeader(KEY_COMBO));
             
-            std::string defaultCombo = trim(parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, PROJECT_NAME, KEY_COMBO_STR));
+            std::string defaultCombo = trim(parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, KEY_COMBO_STR));
             
             std::unique_ptr<tsl::elm::ListItem> listItem;
             for (const auto& combo : defaultCombos) {
@@ -462,7 +469,7 @@ public:
                     if (keys & KEY_A) {
                         shiftItemFocus(listItemPtr);
                         if (combo != defaultCombo) {
-                            setIniFileValue(SETTINGS_CONFIG_INI_PATH, PROJECT_NAME, KEY_COMBO_STR, combo);
+                            setIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, KEY_COMBO_STR, combo);
                             setIniFileValue(TESLA_CONFIG_INI_PATH, TESLA_STR, KEY_COMBO_STR, combo);
                             reloadMenu = true;
                         }
@@ -486,7 +493,7 @@ public:
             
             list->addItem(new tsl::elm::CategoryHeader(LANGUAGE));
             
-            std::string defaulLang = parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, PROJECT_NAME, DEFAULT_LANG_STR);
+            std::string defaulLang = parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, DEFAULT_LANG_STR);
             
             std::string langFile;
             bool skipLang;
@@ -522,7 +529,7 @@ public:
                     if (keys & KEY_A) {
                         shiftItemFocus(listItemPtr);
                         //if (defaultLangMode != defaulLang) {
-                        setIniFileValue(SETTINGS_CONFIG_INI_PATH, PROJECT_NAME, DEFAULT_LANG_STR, defaultLangMode);
+                        setIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, DEFAULT_LANG_STR, defaultLangMode);
                         reloadMenu = true;
                         reloadMenu2 = true;
                         
@@ -651,7 +658,7 @@ public:
             
             list->addItem(new tsl::elm::CategoryHeader(THEME));
             
-            std::string currentTheme = parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, PROJECT_NAME, "current_theme");
+            std::string currentTheme = parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "current_theme");
             
             if (currentTheme.empty())
                 currentTheme = DEFAULT_STR;
@@ -682,7 +689,7 @@ public:
                     shiftItemFocus(listItemPtr);
 
                     //if (defaultLangMode != defaultLang) {
-                    setIniFileValue(SETTINGS_CONFIG_INI_PATH, PROJECT_NAME, "current_theme", DEFAULT_STR);
+                    setIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "current_theme", DEFAULT_STR);
                     deleteFileOrDirectory(THEME_CONFIG_INI_PATH);
                     
                     if (isFileOrDirectory(defaultTheme))
@@ -740,7 +747,7 @@ public:
                     if (keys & KEY_A) {
                         shiftItemFocus(listItemPtr);
                         //if (defaultLangMode != defaultLang) {
-                        setIniFileValue(SETTINGS_CONFIG_INI_PATH, PROJECT_NAME, "current_theme", themeName);
+                        setIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "current_theme", themeName);
                         deleteFileOrDirectory(THEME_CONFIG_INI_PATH);
                         copyFileOrDirectory(themeFile, THEME_CONFIG_INI_PATH);
                         
@@ -772,7 +779,7 @@ public:
             toggleListItem->setState((!hideClock));
             toggleListItem->setStateChangedListener([listItemRaw = toggleListItem.get()](bool state) {
                 tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemRaw, tsl::FocusDirection::None);
-                setIniFileValue(SETTINGS_CONFIG_INI_PATH, PROJECT_NAME, "hide_clock", state ? FALSE_STR : TRUE_STR);
+                setIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_clock", state ? FALSE_STR : TRUE_STR);
                 reinitializeWidgetVars();
                 redrawWidget = true;
             });
@@ -782,7 +789,7 @@ public:
             toggleListItem->setState((!hideSOCTemp));
             toggleListItem->setStateChangedListener([listItemRaw = toggleListItem.get()](bool state) {
                 tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemRaw, tsl::FocusDirection::None);
-                setIniFileValue(SETTINGS_CONFIG_INI_PATH, PROJECT_NAME, "hide_soc_temp", state ? FALSE_STR : TRUE_STR);
+                setIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_soc_temp", state ? FALSE_STR : TRUE_STR);
                 reinitializeWidgetVars();
                 redrawWidget = true;
             });
@@ -792,7 +799,7 @@ public:
             toggleListItem->setState((!hidePCBTemp));
             toggleListItem->setStateChangedListener([listItemRaw = toggleListItem.get()](bool state) {
                 tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemRaw, tsl::FocusDirection::None);
-                setIniFileValue(SETTINGS_CONFIG_INI_PATH, PROJECT_NAME, "hide_pcb_temp", state ? FALSE_STR : TRUE_STR);
+                setIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_pcb_temp", state ? FALSE_STR : TRUE_STR);
                 reinitializeWidgetVars();
                 redrawWidget = true;
             });
@@ -802,7 +809,7 @@ public:
             toggleListItem->setState((!hideBattery));
             toggleListItem->setStateChangedListener([listItemRaw = toggleListItem.get()](bool state) {
                 tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemRaw, tsl::FocusDirection::None);
-                setIniFileValue(SETTINGS_CONFIG_INI_PATH, PROJECT_NAME, "hide_battery", state ? FALSE_STR : TRUE_STR);
+                setIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_battery", state ? FALSE_STR : TRUE_STR);
                 reinitializeWidgetVars();
                 redrawWidget = true;
             });
@@ -811,13 +818,13 @@ public:
             
         } else if (dropdownSelection == "miscMenu") {
             list->addItem(new tsl::elm::CategoryHeader(MENU_ITEMS));
-            hideUserGuide = (parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, PROJECT_NAME, "hide_user_guide") == TRUE_STR);
+            hideUserGuide = (parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_user_guide") == TRUE_STR);
             
             auto toggleListItem = std::make_unique<tsl::elm::ToggleListItem>(USER_GUIDE, false, ON, OFF);
             toggleListItem->setState((!hideUserGuide));
             toggleListItem->setStateChangedListener([listItemRaw = toggleListItem.get()](bool state) {
                 tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemRaw, tsl::FocusDirection::None);
-                setIniFileValue(SETTINGS_CONFIG_INI_PATH, PROJECT_NAME, "hide_user_guide", state ? FALSE_STR : TRUE_STR);
+                setIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_user_guide", state ? FALSE_STR : TRUE_STR);
                 if ((!hideUserGuide) != state)
                     reloadMenu = true;
             });
@@ -825,9 +832,9 @@ public:
             
             
             
-            cleanVersionLabels = (parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, PROJECT_NAME, "clean_version_labels") == TRUE_STR);
-            hideOverlayVersions = (parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, PROJECT_NAME, "hide_overlay_versions") == TRUE_STR);
-            hidePackageVersions = (parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, PROJECT_NAME, "hide_package_versions") == TRUE_STR);
+            cleanVersionLabels = (parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "clean_version_labels") == TRUE_STR);
+            hideOverlayVersions = (parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_overlay_versions") == TRUE_STR);
+            hidePackageVersions = (parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_package_versions") == TRUE_STR);
             
             //if (cleanVersionLabels.empty())
             //    cleanVersionLabels = FALSE_STR;
@@ -838,14 +845,14 @@ public:
             
             list->addItem(new tsl::elm::CategoryHeader(VERSION_LABELS));
             
-            std::string defaulLang = parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, PROJECT_NAME, DEFAULT_LANG_STR);
+            std::string defaulLang = parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, DEFAULT_LANG_STR);
             
             
             toggleListItem = std::make_unique<tsl::elm::ToggleListItem>(CLEAN_LABELS, false, ON, OFF);
             toggleListItem->setState((cleanVersionLabels));
             toggleListItem->setStateChangedListener([listItemRaw = toggleListItem.get()](bool state) {
                 tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemRaw, tsl::FocusDirection::None);
-                setIniFileValue(SETTINGS_CONFIG_INI_PATH, PROJECT_NAME, "clean_version_labels", state ? TRUE_STR : FALSE_STR);
+                setIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "clean_version_labels", state ? TRUE_STR : FALSE_STR);
                 if ((cleanVersionLabels) != state) {
                     versionLabel = APP_VERSION + std::string("   (") + extractTitle(loaderInfo) +
                         (!cleanVersionLabels ? " " : " v") + cleanVersionLabel(loaderInfo) + std::string(")");
@@ -863,7 +870,7 @@ public:
             toggleListItem->setState((!hideOverlayVersions));
             toggleListItem->setStateChangedListener([listItemRaw = toggleListItem.get()](bool state) {
                 tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemRaw, tsl::FocusDirection::None);
-                setIniFileValue(SETTINGS_CONFIG_INI_PATH, PROJECT_NAME, "hide_overlay_versions", state ? FALSE_STR : TRUE_STR);
+                setIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_overlay_versions", state ? FALSE_STR : TRUE_STR);
                 if ((!hideOverlayVersions) != state)
                     reloadMenu = true;
             });
@@ -873,7 +880,7 @@ public:
             toggleListItem->setState((!hidePackageVersions));
             toggleListItem->setStateChangedListener([listItemRaw = toggleListItem.get()](bool state) {
                 tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemRaw, tsl::FocusDirection::None);
-                setIniFileValue(SETTINGS_CONFIG_INI_PATH, PROJECT_NAME, "hide_package_versions", state ? FALSE_STR : TRUE_STR);
+                setIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_package_versions", state ? FALSE_STR : TRUE_STR);
                 if ((!hidePackageVersions) != state)
                     reloadMenu = true;
             });
@@ -883,7 +890,7 @@ public:
             list->addItem(new tsl::elm::ListItem(FAILED_TO_OPEN + ": " + settingsIniPath));
         
 
-        auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(CAPITAL_PROJECT_NAME, versionLabel);
+        auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel);
         rootFrame->setContent(list.release());
 
         return rootFrame.release();
@@ -1210,7 +1217,7 @@ public:
         //tsl::elm::OverlayFrame *rootFrame = new tsl::elm::OverlayFrame("Ultrahand", versionLabel);
         
         //auto rootFrame = new tsl::elm::OverlayFrame("Ultrahand", versionLabel);
-        auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(CAPITAL_PROJECT_NAME, versionLabel);
+        auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel);
         rootFrame->setContent(list.release());
         
         return rootFrame.release();
@@ -1468,7 +1475,7 @@ public:
 
         //tsl::elm::OverlayFrame *rootFrame = new tsl::elm::OverlayFrame(packageName, "Ultrahand Script");
         auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(packageName, packageHeader.version != "" ? packageHeader.version +
-            "   (" + CAPITAL_PROJECT_NAME + " Script)" : CAPITAL_PROJECT_NAME + " Script");
+            "   (" + CAPITAL_ULTRAHAND_PROJECT_NAME + " Script)" : CAPITAL_ULTRAHAND_PROJECT_NAME + " Script");
         rootFrame->setContent(list.release());
         //rootFrame->setContent(list);
 
@@ -1656,16 +1663,16 @@ public:
             if ((inEristaSection && !inMarikoSection && usingErista) || (!inEristaSection && inMarikoSection && usingMariko) || (!inEristaSection && !inMarikoSection)) {
                 
                 
-                if (commandName.find(systemPattern) == 0) {// Extract the command system
-                    commandSystem = commandName.substr(systemPattern.length());
+                if (commandName.find(SYSTEM_PATTERN) == 0) {// Extract the command system
+                    commandSystem = commandName.substr(SYSTEM_PATTERN.length());
                     if (std::find(commandSystems.begin(), commandSystems.end(), commandSystem) == commandSystems.end())
                         commandSystem = commandSystems[0]; // reset to default if commandMode is unknown
-                } else if (commandName.find(modePattern) == 0) { // Extract the command mode
-                    commandMode = commandName.substr(modePattern.length());
+                } else if (commandName.find(MODE_PATTERN) == 0) { // Extract the command mode
+                    commandMode = commandName.substr(MODE_PATTERN.length());
                     if (std::find(commandModes.begin(), commandModes.end(), commandMode) == commandModes.end())
                         commandMode = commandModes[0]; // reset to default if commandMode is unknown
-                } else if (commandName.find(groupingPattern) == 0) {// Extract the command grouping
-                    commandGrouping = commandName.substr(groupingPattern.length());
+                } else if (commandName.find(GROUPING_PATTERN) == 0) {// Extract the command grouping
+                    commandGrouping = commandName.substr(GROUPING_PATTERN.length());
                     if (std::find(commandGroupings.begin(), commandGroupings.end(), commandGrouping) == commandGroupings.end())
                         commandGrouping = commandGroupings[0]; // reset to default if commandMode is unknown
                 }
@@ -2207,6 +2214,7 @@ public:
         std::string optionName;
         std::vector<std::vector<std::string>> commands, commandsOn, commandsOff;
         std::vector<std::vector<std::string>> tableData;
+        
         //std::vector<std::string> listData, listDataOn, listDataOff;
         
         std::string footer;
@@ -2216,6 +2224,10 @@ public:
         bool inEristaSection;
         bool inMarikoSection;
         
+        bool hideTableHeader;
+        size_t tableGap, tableColumnOffset, tableSpacing;
+        std::string tableAlignment;
+
         
         for (size_t i = 0; i < options.size(); ++i) {
             auto& option = options[i];
@@ -2225,6 +2237,11 @@ public:
             
             footer = "";
             useSelection = false;
+            hideTableHeader = false;
+            tableGap = 3;
+            tableColumnOffset = 160;
+            tableSpacing = 0;
+            tableAlignment = RIGHT_STR;
             
             commandFooter = NULL_STR;
             commandSystem = DEFAULT_STR;
@@ -2237,11 +2254,11 @@ public:
             sourceType = DEFAULT_STR;
             sourceTypeOn = DEFAULT_STR;
             sourceTypeOff = DEFAULT_STR;
+
             
-            
+            tableData.clear();
             commandsOn.clear();
             commandsOff.clear();
-            tableData.clear();
             
             
             if (drawLocation.empty() || (currentPage == drawLocation) || (optionName.front() == '@')) {
@@ -2326,7 +2343,7 @@ public:
                         
                         
                         continue;
-                    } else if (i == 0) {
+                    } else if (i == 0 && optionName.front() != '$') {
                         // Add a section break with small text to indicate the "Commands" section
                         list->addItem(new tsl::elm::CategoryHeader(COMMANDS));
                         skipSection = false;
@@ -2369,12 +2386,13 @@ public:
                     
                     if ((inEristaSection && !inMarikoSection && usingErista) || (!inEristaSection && inMarikoSection && usingMariko) || (!inEristaSection && !inMarikoSection)) {
 
-                        if (commandName.find(systemPattern) == 0) {// Extract the command system
-                            commandSystem = commandName.substr(systemPattern.length());
+                        if (commandName.find(SYSTEM_PATTERN) == 0) {// Extract the command system
+                            commandSystem = commandName.substr(SYSTEM_PATTERN.length());
                             if (std::find(commandSystems.begin(), commandSystems.end(), commandSystem) == commandSystems.end())
                                 commandSystem = commandSystems[0]; // reset to default if commandSystem is unknown
-                        } else if (commandName.find(modePattern) == 0) { // Extract the command mode
-                            commandMode = commandName.substr(modePattern.length());
+                            continue;
+                        } else if (commandName.find(MODE_PATTERN) == 0) { // Extract the command mode
+                            commandMode = commandName.substr(MODE_PATTERN.length());
                             if (commandMode.find(TOGGLE_STR) != std::string::npos) {
                                 delimiterPos = commandMode.find('?');
                                 if (delimiterPos != std::string::npos) {
@@ -2382,12 +2400,30 @@ public:
                                 }
                                 commandMode = TOGGLE_STR;
                             }
-                            else if (std::find(commandModes.begin(), commandModes.end(), commandMode) == commandModes.end())
+                            else if (std::find(commandModes.begin(), commandModes.end(), commandMode) == commandModes.end()) {
                                 commandMode = commandModes[0]; // reset to default if commandMode is unknown
-                        } else if (commandName.find(groupingPattern) == 0) {// Extract the command grouping
-                            commandGrouping = commandName.substr(groupingPattern.length());
+                            }
+                            continue;
+                        } else if (commandName.find(GROUPING_PATTERN) == 0) {// Extract the command grouping
+                            commandGrouping = commandName.substr(GROUPING_PATTERN.length());
                             if (std::find(commandGroupings.begin(), commandGroupings.end(), commandGrouping) == commandGroupings.end())
                                 commandGrouping = commandGroupings[0]; // reset to default if commandMode is unknown
+                            continue;
+                        } else if (commandName.find(HEADER_PATTERN) == 0) {// Extract the command grouping
+                            hideTableHeader = (commandName.substr(HEADER_PATTERN.length()) == FALSE_STR);
+                            continue;
+                        } else if (commandName.find(GAP_PATTERN) == 0) {// Extract the command grouping
+                            tableGap = std::stoi(commandName.substr(GAP_PATTERN.length()));
+                            continue;
+                        } else if (commandName.find(OFFSET_PATTERN) == 0) {// Extract the command grouping
+                            tableColumnOffset = std::stoi(commandName.substr(OFFSET_PATTERN.length()));
+                            continue;
+                        } else if (commandName.find(SPACING_PATTERN) == 0) {// Extract the command grouping
+                            tableSpacing = std::stoi(commandName.substr(SPACING_PATTERN.length()));
+                            continue;
+                        } else if (commandName.find(ALIGNMENT_PATTERN) == 0) {// Extract the command grouping
+                            tableAlignment = commandName.substr(ALIGNMENT_PATTERN.length());
+                            continue;
                         }
                         
                         // Extract the command grouping
@@ -2407,7 +2443,9 @@ public:
                                 commandsOff.push_back(cmd);
                         } else if (commandMode == TABLE_STR) {
                             tableData.push_back(cmd);
+                            continue;
                         }
+
 
 
                         if (cmd.size() > 1) { // Pre-process advanced commands
@@ -2453,7 +2491,6 @@ public:
                     setIniFileValue(packageConfigIniPath, optionName, GROUPING_STR, commandGrouping);
                     setIniFileValue(packageConfigIniPath, optionName, FOOTER_STR, NULL_STR);
                 }
-
                 
                 
                 // Get Option name and footer
@@ -2485,6 +2522,17 @@ public:
                 }
                 
                 if (!skipSection && !skipSystem) { // for skipping the drawing of sections
+                    // For handling table mode
+                    if (optionName.front() == '$') { 
+                        if (!hideTableHeader) {
+                            optionName = optionName.substr(1);
+                            list->addItem(new tsl::elm::CategoryHeader(optionName));
+                        } else
+                            hideTableHeader = false;
+                        addTable(list, tableData, this->packagePath, tableColumnOffset, tableGap, tableSpacing, tableAlignment);
+                        continue;
+                    }
+
                     if (useSelection) { // For wildcard commands (dropdown menus)
                         
                         if ((footer == DROPDOWN_SYMBOL) || (footer.empty()))
@@ -2665,8 +2713,6 @@ public:
 
                             });
                             list->addItem(toggleListItem.release());
-                        } else if (commandMode == TABLE_STR) {
-                            addTable(list, tableData);
                         }
                     }
                 }
@@ -2981,11 +3027,11 @@ public:
      * @return A pointer to the GUI element representing the main menu overlay.
      */
     virtual tsl::elm::Element* createUI() override {
-        if (parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, PROJECT_NAME, IN_HIDDEN_OVERLAY_STR) == TRUE_STR) {
+        if (parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_OVERLAY_STR) == TRUE_STR) {
             inMainMenu = false;
             inHiddenMode = true;
             hiddenMenuMode = OVERLAYS_STR;
-            setIniFileValue(SETTINGS_CONFIG_INI_PATH, PROJECT_NAME, IN_HIDDEN_OVERLAY_STR, FALSE_STR);
+            setIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_OVERLAY_STR, FALSE_STR);
         }
 
         if (!inHiddenMode)
@@ -3008,22 +3054,22 @@ public:
         if (isFileOrDirectory(SETTINGS_CONFIG_INI_PATH)) {
             std::string section;
             auto settingsData = getParsedDataFromIniFile(SETTINGS_CONFIG_INI_PATH);
-            if (settingsData.count(PROJECT_NAME) > 0) {
-                auto& ultrahandSection = settingsData[PROJECT_NAME];
+            if (settingsData.count(ULTRAHAND_PROJECT_NAME) > 0) {
+                auto& ultrahandSection = settingsData[ULTRAHAND_PROJECT_NAME];
         
                 // Handle each setting by checking existence and updating accordingly
                 section = "hide_user_guide";
                 if (ultrahandSection.count(section) > 0) {
                     hideUserGuide = (ultrahandSection[section] == TRUE_STR);
                 } else {
-                    setIniFileValue(SETTINGS_CONFIG_INI_PATH, PROJECT_NAME, section, FALSE_STR);
+                    setIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, section, FALSE_STR);
                 }
                 
                 section = "clean_version_labels";
                 if (ultrahandSection.count(section) > 0) {
                     cleanVersionLabels = (ultrahandSection[section] == TRUE_STR);
                 } else {
-                    setIniFileValue(SETTINGS_CONFIG_INI_PATH, PROJECT_NAME, section, FALSE_STR);
+                    setIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, section, FALSE_STR);
                     cleanVersionLabels = false;
                 }
         
@@ -3032,7 +3078,7 @@ public:
                 if (ultrahandSection.count(section) > 0) {
                     hideOverlayVersions = (ultrahandSection[section] == TRUE_STR);
                 } else {
-                    setIniFileValue(SETTINGS_CONFIG_INI_PATH, PROJECT_NAME, section, FALSE_STR);
+                    setIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, section, FALSE_STR);
                     hideOverlayVersions = false;
                 }
                 
@@ -3040,7 +3086,7 @@ public:
                 if (ultrahandSection.count(section) > 0) {
                     hidePackageVersions = (ultrahandSection[section] == TRUE_STR);
                 } else {
-                    setIniFileValue(SETTINGS_CONFIG_INI_PATH, PROJECT_NAME, section, FALSE_STR);
+                    setIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, section, FALSE_STR);
                     hidePackageVersions = false;
                 }
                 
@@ -3048,42 +3094,45 @@ public:
                 if (ultrahandSection.count(section) > 0) {
                     defaultLang = ultrahandSection[section];
                 } else {
-                    setIniFileValue(SETTINGS_CONFIG_INI_PATH, PROJECT_NAME, section, defaultLang);
+                    setIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, section, defaultLang);
                 }
         
                 // Ensure default values are set if the settings are missing
                 section = "datetime_format";
                 if (ultrahandSection.count(section) == 0) {
-                    setIniFileValue(SETTINGS_CONFIG_INI_PATH, PROJECT_NAME, section, DEFAULT_DT_FORMAT);
+                    setIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, section, DEFAULT_DT_FORMAT);
                 }
         
                 // Directly check and set default values
                 section = "hide_clock";
                 if (ultrahandSection.count(section) == 0) {
-                    setIniFileValue(SETTINGS_CONFIG_INI_PATH, PROJECT_NAME, section, FALSE_STR);
+                    setIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, section, FALSE_STR);
                 }
                 section = "hide_battery";
                 if (ultrahandSection.count(section) == 0) {
-                    setIniFileValue(SETTINGS_CONFIG_INI_PATH, PROJECT_NAME, section, TRUE_STR);
+                    setIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, section, TRUE_STR);
                 }
                 section = "hide_pcb_temp";
                 if (ultrahandSection.count(section) == 0) {
-                    setIniFileValue(SETTINGS_CONFIG_INI_PATH, PROJECT_NAME, section, TRUE_STR);
+                    setIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, section, TRUE_STR);
                 }
                 section = "hide_soc_temp";
                 if (ultrahandSection.count(section) == 0) {
-                    setIniFileValue(SETTINGS_CONFIG_INI_PATH, PROJECT_NAME, section, TRUE_STR);
+                    setIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, section, TRUE_STR);
                 }
 
                 section = IN_OVERLAY_STR;
                 settingsLoaded = ultrahandSection.count(section) > 0;
             }
             settingsData.clear();
+        } else {
+            updateMenuCombos = true;
         }
         
         if (!settingsLoaded) { // Write data if settings are not loaded
-            setIniFileValue(SETTINGS_CONFIG_INI_PATH, PROJECT_NAME, DEFAULT_LANG_STR, defaultLang);
-            setIniFileValue(SETTINGS_CONFIG_INI_PATH, PROJECT_NAME, IN_OVERLAY_STR, FALSE_STR);
+            setIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, DEFAULT_LANG_STR, defaultLang);
+            setIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_OVERLAY_STR, FALSE_STR);
+            initializingSpawn = true;
         }
         
         
@@ -3183,7 +3232,7 @@ public:
                         setIniFileValue(OVERLAYS_INI_FILEPATH, overlayFileName, LAUNCH_ARGS_STR, "''");
                         const auto& [result, overlayName, overlayVersion] = getOverlayInfo(OVERLAY_PATH + overlayFileName);
                         if (result != ResultSuccess) continue;
-                        overlayList.insert("0020"+replaceNonAlphanumericWithUnderscore(overlayName)+":" + overlayFileName);
+                        overlayList.insert("0020"+(overlayName)+":" + overlayFileName);
                     } else {
                         const std::string& priority = getValueOrDefault(it->second, PRIORITY_STR, "20", formatPriorityString, 1);
                         const std::string& starred = getValueOrDefault(it->second, STAR_STR, FALSE_STR);
@@ -3194,7 +3243,7 @@ public:
                         const auto& [result, overlayName, overlayVersion] = getOverlayInfo(OVERLAY_PATH + overlayFileName);
                         if (result != ResultSuccess) continue;
                         
-                        const std::string& baseOverlayInfo = priority + replaceNonAlphanumericWithUnderscore(overlayName) + ":" + overlayName + ":" + overlayVersion + ":" + overlayFileName;
+                        const std::string& baseOverlayInfo = priority + (overlayName) + ":" + overlayName + ":" + overlayVersion + ":" + overlayFileName;
                         const std::string& fullOverlayInfo = (starred == TRUE_STR) ? "-1:" + baseOverlayInfo : baseOverlayInfo;
                 
                         if (hide == FALSE_STR) {
@@ -3295,10 +3344,10 @@ public:
                                 std::string overlayLaunchArgs = removeQuotes(parseValueFromIniSection(OVERLAYS_INI_FILEPATH, overlayFileName, LAUNCH_ARGS_STR));
                                 
                                 if (inHiddenMode) {
-                                    setIniFileValue(SETTINGS_CONFIG_INI_PATH, PROJECT_NAME, IN_HIDDEN_OVERLAY_STR, TRUE_STR);
+                                    setIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_OVERLAY_STR, TRUE_STR);
                                 }
                                 
-                                setIniFileValue(SETTINGS_CONFIG_INI_PATH, PROJECT_NAME, IN_OVERLAY_STR, TRUE_STR); // this is handled within tesla.hpp
+                                setIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_OVERLAY_STR, TRUE_STR); // this is handled within tesla.hpp
                                 if (useOverlayLaunchArgs == TRUE_STR)
                                     tsl::setNextOverlay(overlayFile, overlayLaunchArgs);
                                 else
@@ -3418,7 +3467,7 @@ public:
                         setIniFileValue(PACKAGES_INI_FILEPATH, packageName, PRIORITY_STR, "20");
                         setIniFileValue(PACKAGES_INI_FILEPATH, packageName, STAR_STR, FALSE_STR);
                         setIniFileValue(PACKAGES_INI_FILEPATH, packageName, HIDE_STR, FALSE_STR);
-                        packageList.insert("0020" + replaceNonAlphanumericWithUnderscore(packageName) +":" + packageName);
+                        packageList.insert("0020" + (packageName) +":" + packageName);
                     } else {
                         // Process existing package data
                         priority = (packageIt->second.find(PRIORITY_STR) != packageIt->second.end()) ? 
@@ -3427,8 +3476,8 @@ public:
                                   packageIt->second[STAR_STR] : FALSE_STR;
                         hide = (packageIt->second.find(HIDE_STR) != packageIt->second.end()) ? 
                                packageIt->second[HIDE_STR] : FALSE_STR;
-                
-                        const std::string& basePackageInfo = priority + replaceNonAlphanumericWithUnderscore(packageName) +":" + packageName;
+                        
+                        const std::string& basePackageInfo = priority + (packageName) +":" + packageName;
                         const std::string& fullPackageInfo = (starred == TRUE_STR) ? "-1:" + basePackageInfo : basePackageInfo;
                 
                         if (hide == FALSE_STR) {
@@ -3697,7 +3746,7 @@ public:
                             lastSection = optionName;
                             skipSection = false;
                             continue;
-                        } else if (i == 0) { // Add a section break with small text to indicate the "Commands" section
+                        } else if (i == 0 && optionName.front() != '$') { // Add a section break with small text to indicate the "Commands" section
                             list->addItem(new tsl::elm::CategoryHeader(COMMANDS));
                             skipSection = false;
                             lastSection = "Commands";
@@ -3763,12 +3812,12 @@ public:
                         
                         if ((inEristaSection && !inMarikoSection && usingErista) || (!inEristaSection && inMarikoSection && usingMariko) || (!inEristaSection && !inMarikoSection)) {
                             // Extract the command mode
-                            if (commandName.find(systemPattern) == 0) {// Extract the command system
-                                commandSystem = commandName.substr(systemPattern.length());
+                            if (commandName.find(SYSTEM_PATTERN) == 0) {// Extract the command system
+                                commandSystem = commandName.substr(SYSTEM_PATTERN.length());
                                 if (std::find(commandSystems.begin(), commandSystems.end(), commandSystem) == commandSystems.end())
                                     commandSystem = commandSystems[0]; // reset to default if commandSystem is unknown
-                            } else if (commandName.find(modePattern) == 0) {
-                                commandMode = commandName.substr(modePattern.length());
+                            } else if (commandName.find(MODE_PATTERN) == 0) {
+                                commandMode = commandName.substr(MODE_PATTERN.length());
                                 if (commandMode.find(TOGGLE_STR) != std::string::npos) {
                                     delimiterPos = commandMode.find('?');
                                     if (delimiterPos != std::string::npos) {
@@ -3779,8 +3828,8 @@ public:
                                 else if (std::find(commandModes.begin(), commandModes.end(), commandMode) == commandModes.end())
                                     commandMode = commandModes[0]; // reset to default if commandMode is unknown
 
-                            } else if (commandName.find(groupingPattern) == 0) {// Extract the command grouping
-                                commandGrouping = commandName.substr(groupingPattern.length());
+                            } else if (commandName.find(GROUPING_PATTERN) == 0) {// Extract the command grouping
+                                commandGrouping = commandName.substr(GROUPING_PATTERN.length());
                                 if (std::find(commandGroupings.begin(), commandGroupings.end(), commandGrouping) == commandGroupings.end())
                                     commandGrouping = commandGroupings[0]; // reset to default if commandMode is unknown
                             }
@@ -4044,7 +4093,7 @@ public:
             }
         }
         if (initializingSpawn) {
-            updateMenuCombos = true;
+            
             initializingSpawn = false;
             list.reset();
             return createUI(); 
@@ -4053,7 +4102,7 @@ public:
         filesList.clear();
 
         //tsl::elm::OverlayFrame *rootFrame = new tsl::elm::OverlayFrame("Ultrahand", versionLabel, menuMode+hiddenMenuMode+dropdownSection);
-        auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(CAPITAL_PROJECT_NAME, versionLabel, menuMode+hiddenMenuMode+dropdownSection);
+        auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel, menuMode+hiddenMenuMode+dropdownSection);
 
         rootFrame->setContent(list.release());
         
@@ -4210,11 +4259,11 @@ public:
                 }
 
                 if ((keysHeld & KEY_B) && !stillTouching) {
-                    if (parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, PROJECT_NAME, IN_HIDDEN_OVERLAY_STR) == FALSE_STR) {
+                    if (parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_OVERLAY_STR) == FALSE_STR) {
                         inMainMenu = true;
                         inHiddenMode = false;
                         hiddenMenuMode = "";
-                        setIniFileValue(SETTINGS_CONFIG_INI_PATH, PROJECT_NAME, IN_HIDDEN_OVERLAY_STR, "");
+                        setIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_OVERLAY_STR, "");
                         tsl::pop();
                         returningToMain = true;
                         tsl::changeTo<MainMenu>();
@@ -4291,6 +4340,7 @@ public:
         ASSERT_FATAL(nifmInitialize(NifmServiceType_User));
         ASSERT_FATAL(smInitialize());
         tsl::initializeThemeVars();
+        initializeCurl();
     }
     
     /**
@@ -4301,6 +4351,7 @@ public:
      * properly shut down services to avoid memory leaks.
      */
     virtual void exitServices() override {
+        cleanupCurl();
         closeInterpreterThread(); // shouldn't be running, but run close anyways
         socketExit();
         nifmExit();
@@ -4317,7 +4368,9 @@ public:
      * This function is called when the overlay transitions from an invisible state to a visible state.
      * It can be used to perform actions or updates specific to the overlay's visibility.
      */
-    virtual void onShow() override {} 
+    virtual void onShow() override {
+        //logMessage("onShow isHidden: "+std::to_string(isHidden.load()));
+    } 
     
     /**
      * @brief Performs actions when the overlay becomes visible.
@@ -4325,7 +4378,9 @@ public:
      * This function is called when the overlay transitions from an invisible state to a visible state.
      * It can be used to perform actions or updates specific to the overlay's visibility.
      */
-    virtual void onHide() override {} 
+    virtual void onHide() override {
+        //logMessage("onHide isHidden: "+std::to_string(isHidden.load()));
+    } 
     
     /**
      * @brief Loads the initial graphical user interface (GUI) for the overlay.
