@@ -77,7 +77,19 @@ extern "C" int progressCallback(void *ptr, curl_off_t totalToDownload, curl_off_
 }
 
 
+// Global initialization function
+void initializeCurl() {
+    CURLcode res = curl_global_init(CURL_GLOBAL_DEFAULT);
+    if (res != CURLE_OK) {
+        logMessage("curl_global_init() failed: " + std::string(curl_easy_strerror(res)));
+        // Handle error appropriately, possibly exit the program
+    }
+}
 
+// Global cleanup function
+void cleanupCurl() {
+    curl_global_cleanup();
+}
 
 /**
  * @brief Downloads a file from a URL to a specified destination.
@@ -86,6 +98,7 @@ extern "C" int progressCallback(void *ptr, curl_off_t totalToDownload, curl_off_
  * @param toDestination The destination path where the file should be saved.
  * @return True if the download was successful, false otherwise.
  */
+// Your downloadFile function
 bool downloadFile(const std::string& url, const std::string& toDestination) {
     abortDownload.store(false);
 
@@ -130,7 +143,7 @@ bool downloadFile(const std::string& url, const std::string& toDestination) {
     curl_easy_setopt(curl.get(), CURLOPT_XFERINFODATA, &downloadPercentage);
     curl_easy_setopt(curl.get(), CURLOPT_USERAGENT, userAgent.c_str());
     curl_easy_setopt(curl.get(), CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_2TLS); // Enable HTTP/2
-    //curl_easy_setopt(curl.get(), CURLOPT_SSLVERSION, CURL_SSLVERSION_TLSv1_2); // Force TLS 1.2
+    curl_easy_setopt(curl.get(), CURLOPT_SSLVERSION, CURL_SSLVERSION_TLSv1_2); // Force TLS 1.2
     curl_easy_setopt(curl.get(), CURLOPT_FOLLOWLOCATION, 1L);
     curl_easy_setopt(curl.get(), CURLOPT_BUFFERSIZE, DOWNLOAD_BUFFER_SIZE); // Increase buffer size
 
@@ -153,7 +166,6 @@ bool downloadFile(const std::string& url, const std::string& toDestination) {
     }
     checkFile.close();
 
-    //if (downloadPercentage.load(std::memory_order_acquire) == -1 || downloadPercentage.load(std::memory_order_acquire) == 0)
     downloadPercentage.store(100, std::memory_order_release);
     logMessage("Download Complete!");
     return true;
@@ -186,42 +198,42 @@ struct ZzipFileDeleter {
  */
 bool unzipFile(const std::string& zipFilePath, const std::string& toDestination) {
     abortUnzip.store(false, std::memory_order_release); // Reset abort flag
-    
+
     std::unique_ptr<ZZIP_DIR, ZzipDirDeleter> dir(zzip_dir_open(zipFilePath.c_str(), nullptr));
     if (!dir) {
         logMessage("Error opening zip file: " + zipFilePath);
         return false;
     }
-    
+
     ZZIP_DIRENT entry;
     zzip_ssize_t totalUncompressedSize = 0;
-    
+
     // First pass: Calculate the total size of all files
     while (zzip_dir_read(dir.get(), &entry)) {
         if (entry.d_name[0] != '\0' && entry.st_size > 0) {
             totalUncompressedSize += entry.st_size;
         }
     }
-    
+
     // Close and reopen the directory for extraction
     dir.reset(zzip_dir_open(zipFilePath.c_str(), nullptr));
     if (!dir) {
         logMessage("Failed to reopen zip file: " + zipFilePath);
         return false;
     }
-    
+
     bool success = true;
     //const zzip_ssize_t bufferSize = 4096*3;
     
     zzip_ssize_t currentUncompressedSize = 0;
-    
+
     std::string fileName, extractedFilePath;
     std::string directoryPath;
     //int progress;
-    
+
     char buffer[UNZIP_BUFFER_SIZE];
     zzip_ssize_t bytesRead;
-    
+
     unzipPercentage.store(0, std::memory_order_release); // Initialize percentage
     
     std::unique_ptr<ZZIP_FILE, ZzipFileDeleter> file;
