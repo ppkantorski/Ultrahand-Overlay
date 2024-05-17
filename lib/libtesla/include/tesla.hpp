@@ -71,6 +71,11 @@
 // Define an atomic bool for interpreter completion
 static std::atomic<bool> threadFailure(false);
 static std::atomic<bool> runningInterpreter(false);
+static std::atomic<bool> shakingProgress(true);
+
+static std::atomic<bool> isHidden(true);
+
+static bool progressAnimation = (parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "progress_animation") == TRUE_STR);
 
 /**
  * @brief Shutdown modes for the Ultrahand-Overlay project.
@@ -123,8 +128,8 @@ constexpr u64 ALL_KEYS_MASK =
 
 
 
-static bool useCombo2 = false;
-static bool updateMenuCombos = false;
+bool updateMenuCombos = false;
+
 /**
  * @brief Ultrahand-Overlay Input Macros
  *
@@ -242,6 +247,9 @@ static std::string APP_SETTINGS;
 static std::string ON_MAIN_MENU;
 static std::string ON_A_COMMAND;
 static std::string ON_OVERLAY_PACKAGE;
+static std::string EFFECTS;
+static std::string PROGRESS_ANIMATION;
+static std::string EMPTY;
 
 static std::string SUNDAY;
 static std::string MONDAY;
@@ -340,7 +348,7 @@ void reinitializeLangVars() {
     SHUTDOWN = "Shutdown";
     GAP_1 = "     ";
     GAP_2 = "  ";
-    USERGUIDE_OFFSET = "162";
+    USERGUIDE_OFFSET = "166";
     SETTINGS_MENU = "Settings Menu";
     SCRIPT_OVERLAY = "Script Overlay";
     STAR_FAVORITE = "Star/Favorite";
@@ -348,7 +356,10 @@ void reinitializeLangVars() {
     ON_MAIN_MENU = "on Main Menu";
     ON_A_COMMAND = "on a command";
     ON_OVERLAY_PACKAGE = "on overlay/package";
-    
+    EFFECTS = "Effects";
+    PROGRESS_ANIMATION = "Progress Animation";
+    EMPTY = "Empty";
+
     SUNDAY = "Sunday";
     MONDAY = "Monday";
     TUESDAY = "Tuesday";
@@ -470,6 +481,9 @@ void parseLanguage(std::string langFile) {
         {"ON_MAIN_MENU", &ON_MAIN_MENU},
         {"ON_A_COMMAND", &ON_A_COMMAND},
         {"ON_OVERLAY_PACKAGE", &ON_OVERLAY_PACKAGE},
+        {"EFFECTS", &EFFECTS},
+        {"PROGRESS_ANIMATION", &PROGRESS_ANIMATION},
+        {"EMPTY", &EMPTY},
         {"SUNDAY", &SUNDAY},
         {"MONDAY", &MONDAY},
         {"TUESDAY", &TUESDAY},
@@ -675,6 +689,23 @@ static std::unordered_map<wchar_t, float> characterWidths = {
     {L'9', 0.66}
 };
 
+static std::unordered_map<wchar_t, float> numericCharacterWidths = {
+    {L'0', 0.66},
+    {L'1', 0.57},
+    {L'2', 0.66},
+    {L'3', 0.66},
+    {L'4', 0.66},
+    {L'5', 0.66},
+    {L'6', 0.66},
+    {L'7', 0.66},
+    {L'8', 0.66},
+    {L'9', 0.66}
+};
+
+bool isNumericCharacter(char c) {
+    return std::isdigit(static_cast<unsigned char>(c));
+}
+
 bool isValidHexColor(const std::string& hexColor) {
     // Check if the string is a valid hexadecimal color of the format "#RRGGBB"
     if (hexColor.size() != 6) {
@@ -689,6 +720,49 @@ bool isValidHexColor(const std::string& hexColor) {
     
     return true;
 }
+
+
+float calculateStringWidth(const std::string& str, int fontSize, bool fixedWidthNumbers = true) {
+    
+    float totalWidth = 0;
+    float letterWidth;
+    
+    for (char letter : str) {
+        // Lookup the width of the current character
+        if (!fixedWidthNumbers && isNumericCharacter(letter))
+            letterWidth = numericCharacterWidths[letter];
+        else
+            letterWidth = characterWidths[letter];
+        if (letterWidth == 0) {
+            //letterWidth = 0.33; // default width
+            letterWidth = std::stof(DEFAULT_CHAR_WIDTH);
+        }
+        
+        // Accumulate the width
+        totalWidth += letterWidth;
+    }
+    
+    // Adjust the total width based on the font size
+    return (totalWidth * fontSize);
+}
+
+float calculateAmplitude(float x, float peakDurationFactor = 0.25) {
+    const float phasePeriod = 360*peakDurationFactor;  // One full phase period
+    
+    // Calculate the phase within the full period
+    int phase = static_cast<int>((x) * (180.0 / M_PI)) % static_cast<int>(phasePeriod);
+    
+    // Check if the phase is odd
+    if (phase % 2 == 1) {
+        return 1.0f;  // Flat amplitude (maximum positive)
+    } else {
+        // Calculate the sinusoidal amplitude for the remaining period
+        return (std::cos((-x) * (180.0 / M_PI)) + 1) / 2;
+    }
+}
+        
+
+
 
 // Variables for touch commands
 static bool simulatedBack = false;
@@ -721,40 +795,54 @@ static uint32_t batteryCharge;
 static bool isCharging;
 //static bool validPower;
 
+constexpr auto min_delay = std::chrono::seconds(3); // Minimum delay between checks
+
 bool powerGetDetails(uint32_t *batteryCharge, bool *isCharging) {
+    static auto last_call = std::chrono::steady_clock::now();
+    auto now = std::chrono::steady_clock::now();
+   
+
     PsmChargerType charger = PsmChargerType_Unconnected;
     bool hwReadsSucceeded = false;
-    bool use_cache = false;
-    Result rc = 0;
-    
+
     *isCharging = false;
     *batteryCharge = 0;
-    
+
     if (powerInitialized) {
-        if (powerCacheInitialized) {
-            rc = psmWaitStateChangeEvent(&powerSession, 0);
-            
-            if (R_FAILED(rc)) use_cache = true;
-        }
-        
-        rc = psmGetBatteryChargePercentage(batteryCharge);
-        hwReadsSucceeded = R_SUCCEEDED(rc);
-        if (use_cache) {
+        // Only proceed with new hardware read if sufficient time has elapsed
+        if (now - last_call > min_delay || !powerCacheInitialized) {
+            Result rc = psmGetBatteryChargePercentage(batteryCharge);
+            hwReadsSucceeded = R_SUCCEEDED(rc);
+
+            if (hwReadsSucceeded) {
+                rc = psmGetChargerType(&charger);
+                hwReadsSucceeded &= R_SUCCEEDED(rc);
+                *isCharging = (charger != PsmChargerType_Unconnected);
+            }
+
+            if (hwReadsSucceeded) {
+                // Update cache
+                powerCacheCharge = *batteryCharge;
+                powerCacheIsCharging = *isCharging;
+                powerCacheInitialized = true;
+                last_call = now;  // Update last call time after successful hardware read
+            } else if (powerCacheInitialized) {
+                // Use cached values if current read fails
+                *batteryCharge = powerCacheCharge;
+                *isCharging = powerCacheIsCharging;
+                hwReadsSucceeded = true; // Report success when falling back to cache
+            }
+        } else {
+            // Use cached values if not enough time has passed
+            *batteryCharge = powerCacheCharge;
             *isCharging = powerCacheIsCharging;
+            hwReadsSucceeded = true; // Report success when using cache
         }
-        else {
-            rc = psmGetChargerType(&charger);
-            hwReadsSucceeded &= R_SUCCEEDED(rc);
-            *isCharging = (charger != PsmChargerType_Unconnected);
-        }
-        
-        powerCacheCharge = *batteryCharge;
-        powerCacheIsCharging = *isCharging;
-        powerCacheInitialized = true;
     }
-    
+
     return hwReadsSucceeded;
 }
+
 
 void powerInit(void) {
     uint32_t charge = 0;
@@ -814,7 +902,6 @@ Result tsGetTemperatureWithTsSession(TsSession* ITs, float* temperature) {
 
 
 bool thermalstatusInit(void) {
-    
     tcCheck = tcInitialize();
     tsCheck = tsInitialize();
     if (R_SUCCEEDED(tsCheck)) {
@@ -831,6 +918,16 @@ void thermalstatusExit(void) {
 }
 
 bool thermalstatusGetDetailsPCB(s32* temperature) {
+    static std::chrono::steady_clock::time_point last_call;
+    auto now = std::chrono::steady_clock::now();
+
+    // Throttle the function to not execute more often than every 3 seconds
+    if (std::chrono::duration_cast<std::chrono::seconds>(now - last_call) < min_delay) {
+        return false;
+    }
+
+    last_call = now;
+
     TsSession ts_session;
     Result rc = tsOpenTsSession(g_tsSrv, &ts_session, TsDeviceCode_LocationInternal);
     if (R_SUCCEEDED(rc)) {
@@ -841,10 +938,21 @@ bool thermalstatusGetDetailsPCB(s32* temperature) {
         tsSessionClose(&ts_session);
         return true;
     }
+    
     return false;
 }
 
 bool thermalstatusGetDetailsSOC(s32* temperature) {
+    static std::chrono::steady_clock::time_point last_call;
+    auto now = std::chrono::steady_clock::now();
+
+    // Throttle the function to not execute more often than every 3 seconds
+    if (std::chrono::duration_cast<std::chrono::seconds>(now - last_call) < min_delay) {
+        return false;
+    }
+
+    last_call = now;
+
     TsSession ts_session;
     Result rc = tsOpenTsSession(g_tsSrv, &ts_session, TsDeviceCode_LocationExternal);
     if (R_SUCCEEDED(rc)) {
@@ -854,7 +962,7 @@ bool thermalstatusGetDetailsSOC(s32* temperature) {
         }
         tsSessionClose(&ts_session);
         return true;
-    }
+    } 
     return false;
 }
 
@@ -917,26 +1025,29 @@ static std::string datetimeFormat = removeQuotes(DEFAULT_DT_FORMAT);
 
 
 // Widget settings
-static std::string hideClock, hideBattery, hidePCBTemp, hideSOCTemp;
+//static std::string hideClock, hideBattery, hidePCBTemp, hideSOCTemp;
+static bool hideClock, hideBattery, hidePCBTemp, hideSOCTemp;
 
 void reinitializeWidgetVars() {
-    hideClock = parseValueFromIniSection(settingsConfigIniPath, projectName, "hide_clock");
-    hideBattery = parseValueFromIniSection(settingsConfigIniPath, projectName, "hide_battery");
-    hideSOCTemp = parseValueFromIniSection(settingsConfigIniPath, projectName, "hide_soc_temp");
-    hidePCBTemp = parseValueFromIniSection(settingsConfigIniPath, projectName, "hide_pcb_temp");
+    hideClock = (parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_clock") != FALSE_STR);
+    hideBattery = (parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_battery") != FALSE_STR);
+    hideSOCTemp = (parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_soc_temp") != FALSE_STR);
+    hidePCBTemp = (parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_pcb_temp") != FALSE_STR);
 }
 
-static std::string cleanVersionLabels, hideOverlayVersions, hidePackageVersions;
+static bool cleanVersionLabels, hideOverlayVersions, hidePackageVersions;
 
 static std::string loaderInfo = envGetLoaderInfo();
 static std::string versionLabel;
 
 void reinitializeVersionLabels() {
-    cleanVersionLabels = parseValueFromIniSection(settingsConfigIniPath, projectName, "clean_version_labels");
-    hideOverlayVersions = parseValueFromIniSection(settingsConfigIniPath, projectName, "hide_overlay_versions");
-    hidePackageVersions = parseValueFromIniSection(settingsConfigIniPath, projectName, "hide_package_versions");
-    versionLabel = std::string(APP_VERSION) + "   (" + extractTitle(loaderInfo) + " " + (cleanVersionLabels == trueStr ? "" : "v") + cleanVersionLabel(loaderInfo) + ")";
+    cleanVersionLabels = (parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "clean_version_labels") != FALSE_STR);
+    hideOverlayVersions = (parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_overlay_versions") != FALSE_STR);
+    hidePackageVersions = (parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_package_versions") != FALSE_STR);
+    versionLabel = std::string(APP_VERSION) + "   (" + extractTitle(loaderInfo) + " " + (cleanVersionLabels ? "" : "v") + cleanVersionLabel(loaderInfo) + ")";
+    //versionLabel = (cleanVersionLabels == TRUE_STR) ? std::string(APP_VERSION) : (std::string(APP_VERSION) + "   (" + extractTitle(loaderInfo) + " v" + cleanVersionLabel(loaderInfo) + ")");
 }
+
 
 
 
@@ -1061,47 +1172,39 @@ namespace tsl {
         return Color(r, g, b, a);
     }
     
-    Color RGB888(std::string hexColor, std::string defaultHexColor = whiteColor, size_t alpha = 15) {
-        // Remove the '#' character if it's present
-        if (!hexColor.empty() && hexColor[0] == '#') {
-            hexColor = hexColor.substr(1);
+    Color RGB888(const std::string& hexColor, const std::string& defaultHexColor = whiteColor, size_t alpha = 15) {
+        std::string validHex = hexColor.empty() || hexColor[0] != '#' ? hexColor : hexColor.substr(1);
+        
+        if (!isValidHexColor(validHex)) {
+            validHex = defaultHexColor;
         }
         
-        if (isValidHexColor(hexColor)) {
-            //std::string r = hexColor.substr(0, 2); // Extract the first two characters (red component)
-            //std::string g = hexColor.substr(2, 2); // Extract the next two characters (green component)
-            //std::string b = hexColor.substr(4, 2); // Extract the last two characters (blue component)
-            
-            // Convert the RGBA8888 strings to RGBA4444
-            uint8_t redValue = std::stoi(hexColor.substr(0, 2), nullptr, 16) >> 4;   // Right-shift by 4 bits
-            uint8_t greenValue = std::stoi(hexColor.substr(2, 2), nullptr, 16) >> 4; // Right-shift by 4 bits
-            uint8_t blueValue = std::stoi(hexColor.substr(4, 2), nullptr, 16) >> 4;  // Right-shift by 4 bits
-            
-            // Create a Color with the extracted RGB values
-            
-            return Color(redValue, greenValue, blueValue, alpha);
-        }
-        return RGB888(defaultHexColor);
-    }
-    std::tuple<float, float, float> hexToRGB444Floats(std::string hexColor, std::string defaultHexColor = whiteColor) {
-        // Remove the '#' character if it's present
-        if (!hexColor.empty() && hexColor[0] == '#') {
-            hexColor = hexColor.substr(1);
-        }
+        // Assuming validHex is a correct hex string after removing '#' if needed and checking validity.
+        uint8_t redValue = std::stoi(validHex.substr(0, 2), nullptr, 16) >> 4; // Right-shift to convert from 8-bit to 4-bit
+        uint8_t greenValue = std::stoi(validHex.substr(2, 2), nullptr, 16) >> 4;
+        uint8_t blueValue = std::stoi(validHex.substr(4, 2), nullptr, 16) >> 4;
         
-        if (isValidHexColor(hexColor)) {
-            unsigned int hexValue = std::stoul(hexColor, nullptr, 16);
-            
-            // Extract red, green, blue components from RGB888 to RGB444
-            float red = static_cast<float>((hexValue >> 16) & 0xFF) / 255.0f * 15.0f;
-            float green = static_cast<float>((hexValue >> 8) & 0xFF) / 255.0f * 15.0f;
-            float blue = static_cast<float>((hexValue) & 0xFF) / 255.0f * 15.0f;
-            
-            return std::make_tuple(red, green, blue);
-        }
-        return hexToRGB444Floats(defaultHexColor);
+        return Color(redValue, greenValue, blueValue, alpha);
     }
+
+    std::tuple<float, float, float> hexToRGB444Floats(const std::string& hexColor, const std::string& defaultHexColor = whiteColor) {
+        std::string validHex = (hexColor.size() > 0 && hexColor[0] == '#') ? hexColor.substr(1) : hexColor;
     
+        if (!isValidHexColor(validHex)) {
+            return hexToRGB444Floats(defaultHexColor); // Recurse with default color if invalid
+        }
+        
+        // Convert hex string directly to an unsigned int
+        unsigned int hexValue = std::stoul(validHex, nullptr, 16);
+        
+        // Extract and scale the RGB components from 8-bit (0-255) to 4-bit float scale (0-15)
+        float red = ((hexValue >> 16) & 0xFF) / 255.0f * 15.0f;
+        float green = ((hexValue >> 8) & 0xFF) / 255.0f * 15.0f;
+        float blue = (hexValue & 0xFF) / 255.0f * 15.0f;
+        
+        return std::make_tuple(red, green, blue);
+    }
+
     
     
     namespace style {
@@ -1124,9 +1227,117 @@ namespace tsl {
     }
 
 
+    // Theme color variable definitions
+    static bool disableColorfulLogo = false;
+    static Color logoColor1 = RGB888(whiteColor);
+    static Color logoColor2 = RGB888("#F7253E");
+    static size_t defaultBackgroundAlpha = 13;
     
-    //std::string highlightColor1Str = parseValueFromIniSection(themeConfigIniPath, themeSection, "highlight_color_1"); // format "X,X,X"
-    //std::string highlightColor2Str = parseValueFromIniSection(themeConfigIniPath, themeSection, "highlight_color_2"); // format "X,X,X"
+    static Color defaultBackgroundColor = RGB888(blackColor, blackColor, defaultBackgroundAlpha);
+    static Color defaultTextColor = RGB888(whiteColor);
+    static Color clockColor = RGB888(whiteColor);
+    static Color batteryColor = RGB888(whiteColor);
+    static Color versionTextColor = RGB888("#AAAAAA");
+    static Color onTextColor = RGB888("#00FFDD");
+    static Color offTextColor = RGB888("#AAAAAA");
+    
+    static std::tuple<float,float,float> dynamicLogoRGB1 = hexToRGB444Floats("#00E669");
+    static std::tuple<float,float,float> dynamicLogoRGB2 = hexToRGB444Floats("#8080EA");
+
+    static bool disableSelectionBG = true;
+    static bool invertBGClickColor = false;
+    static Color selectionBGColor = RGB888(blackColor);
+    static Color highlightColor1 = RGB888("#2288CC");
+    static Color highlightColor2 = RGB888("#88FFFF");
+    static Color highlightColor3 = RGB888("#FFFF45");
+    static Color highlightColor4 = RGB888("#F7253E");
+
+    static Color highlightColor = tsl::style::color::ColorHighlight;
+    
+    static size_t clickAlpha = 7;
+
+    static Color clickColor = RGB888("#F7253E", "#F7253E", clickAlpha);
+    static Color trackBarColor = RGB888("#555555");
+
+    static size_t seperatorAlpha = 7;
+    
+    static Color seperatorColor = RGB888("#777777", "#777777", seperatorAlpha);
+    static Color selectedTextColor = RGB888(whiteColor);
+    static Color inprogressTextColor = RGB888(whiteColor);
+    static Color invalidTextColor = RGB888("#FF0000");
+    static Color clickTextColor = RGB888(whiteColor);
+
+    void initializeThemeVars() { // NOTE: This needs to be called once in your application.
+        // Fetch all theme settings at once from the INI file
+        auto themeData = getParsedDataFromIniFile(THEME_CONFIG_INI_PATH);
+        if (themeData.count(THEME_STR) > 0) {
+            auto& themeSection = themeData[THEME_STR];
+            
+
+            // Fetch and process each theme setting using a helper to simplify fetching and fallback
+            auto getValue = [&](const std::string& key, const std::string& defaultValue = "") {
+                return themeSection.count(key) ? themeSection[key] : defaultValue;
+            };
+            
+            // Convert hex color to Color and manage default values and conversion
+            auto getColor = [&](const std::string& key, const std::string& defaultHex = whiteColor, size_t alpha = 15) {
+                std::string hexColor = getValue(key, defaultHex);
+                return RGB888(hexColor, defaultHex, alpha);
+            };
+            
+            std::string disableColorfulLogoStr = getValue("disable_colorful_logo");
+            disableColorfulLogo = (disableColorfulLogoStr == TRUE_STR);
+            
+            logoColor1 = getColor("logo_color_1");
+            logoColor2 = getColor("logo_color_2", "#F7253E");
+            
+            std::string backgroundAlphaStr = getValue("bg_alpha");
+            defaultBackgroundAlpha = !backgroundAlphaStr.empty() ? std::stoi(backgroundAlphaStr) : 13;
+            
+            defaultBackgroundColor = getColor("bg_color", blackColor, defaultBackgroundAlpha);
+            defaultTextColor = getColor("text_color");
+            clockColor = getColor("clock_color");
+            batteryColor = getColor("battery_color");
+            
+            versionTextColor = getColor("version_text_color", "#AAAAAA");
+            onTextColor = getColor("on_text_color", "#00FFDD");
+            offTextColor = getColor("off_text_color", "#AAAAAA");
+            
+            dynamicLogoRGB1 = hexToRGB444Floats(getValue("dynamic_logo_color_1", "#00E669"));
+            dynamicLogoRGB2 = hexToRGB444Floats(getValue("dynamic_logo_color_2", "#8080EA"));
+            
+            std::string disableSelectionBGStr = getValue("disable_selection_bg");
+            disableSelectionBG = (disableSelectionBGStr == TRUE_STR && disableSelectionBGStr != FALSE_STR);
+            
+            invertBGClickColor = (getValue("invert_bg_click_color") == TRUE_STR);
+            selectionBGColor = getColor("selection_bg_color", blackColor);
+            
+            highlightColor1 = getColor("highlight_color_1", "#2288CC");
+            highlightColor2 = getColor("highlight_color_2", "#88FFFF");
+            highlightColor3 = getColor("highlight_color_3", "#FFFF45");
+            highlightColor4 = getColor("highlight_color_4", "#F7253E");
+            
+            std::string clickAlphaStr = getValue("click_alpha");
+            clickAlpha = (!clickAlphaStr.empty()) ? std::stoi(clickAlphaStr) : 7;
+            clickColor = getColor("click_color", "#F7253E", clickAlpha);
+            
+            trackBarColor = getColor("trackbar_color", "#555555");
+            
+            std::string seperatorAlphaStr = getValue("seperator_alpha");
+            seperatorAlpha = (!seperatorAlphaStr.empty()) ? std::stoi(seperatorAlphaStr) : 7;
+            seperatorColor = getColor("seperator_color", "#777777", seperatorAlpha);
+            
+            selectedTextColor = getColor("selection_text_color");
+            inprogressTextColor = getColor("inprogress_text_color");
+            
+            invalidTextColor = getColor("invalid_text_color", "#FF0000");
+            
+            clickTextColor = getColor("click_text_color");
+        }
+    }
+
+
+    
     
     // Declarations
     
@@ -1187,8 +1398,10 @@ namespace tsl {
             { HidNpadButton_L, "L", "\uE0A4" }, { HidNpadButton_R, "R", "\uE0A5" },
             { HidNpadButton_ZL, "ZL", "\uE0A6" }, { HidNpadButton_ZR, "ZR", "\uE0A7" },
             { HidNpadButton_AnySL, "SL", "\uE0A8" }, { HidNpadButton_AnySR, "SR", "\uE0A9" },
-            { HidNpadButton_Left, "DLEFT", "\uE07B" }, { HidNpadButton_Up, "DUP", "\uE079" }, { HidNpadButton_Right, "DRIGHT", "\uE07C" }, { HidNpadButton_Down, "DDOWN", "\uE07A" },
-            { HidNpadButton_A, "A", "\uE0A0" }, { HidNpadButton_B, "B", "\uE0A1" }, { HidNpadButton_X, "X", "\uE0A2" }, { HidNpadButton_Y, "Y", "\uE0A3" },
+            { HidNpadButton_Left, "DLEFT", "\uE07B" }, { HidNpadButton_Up, "DUP", "\uE079" },
+            { HidNpadButton_Right, "DRIGHT", "\uE07C" }, { HidNpadButton_Down, "DDOWN", "\uE07A" },
+            { HidNpadButton_A, "A", "\uE0A0" }, { HidNpadButton_B, "B", "\uE0A1" },
+            { HidNpadButton_X, "X", "\uE0A2" }, { HidNpadButton_Y, "Y", "\uE0A3" },
             { HidNpadButton_StickL, "LS", "\uE08A" }, { HidNpadButton_StickR, "RS", "\uE08B" },
             { HidNpadButton_Minus, "MINUS", "\uE0B6" }, { HidNpadButton_Plus, "PLUS", "\uE0B5" }
         }};
@@ -1330,7 +1543,7 @@ namespace tsl {
              * @brief Tesla config file
              */
             //static const char* TESLA_CONFIG_FILE = "/config/tesla/config.ini"; // CUSTOM MODIFICATION
-            //static const char* ULTRAHAND_CONFIG_FILE = settingsConfigIniPath; // CUSTOM MODIFICATION
+            //static const char* ULTRAHAND_CONFIG_FILE = SETTINGS_CONFIG_INI_PATH; // CUSTOM MODIFICATION
             
             /**
              * @brief Parses an INI string
@@ -1789,90 +2002,84 @@ namespace tsl {
                 float maxX = x;
                 float currX = x;
                 float currY = y;
-                
-                
+            
                 static std::unordered_map<u64, Glyph> s_glyphCache;
-                
-                do {
+                u32 currCharacter;
+                ssize_t codepointWidth;
+                u64 key;
+                Glyph *glyph = nullptr;
+                auto it = s_glyphCache.end();
+                Color tmpColor = {0xF, 0xF, 0xF, 0xF};
+                uint8_t bmpColor;
+            
+                while (*string != '\0') {
                     if (maxWidth > 0 && maxWidth < (currX - x))
                         break;
-                    
-                    u32 currCharacter;
-                    ssize_t codepointWidth = decode_utf8(&currCharacter, reinterpret_cast<const u8*>(string));
-                    
+            
+                    codepointWidth = decode_utf8(&currCharacter, reinterpret_cast<const u8*>(string));
                     if (codepointWidth <= 0)
                         break;
-                    
+            
                     string += codepointWidth;
-                    
+            
                     if (currCharacter == '\n') {
                         maxX = std::max(currX, maxX);
-                        
                         currX = x;
                         currY += fontSize;
-                        
                         continue;
                     }
-                    
-                    u64 key = (static_cast<u64>(currCharacter) << 32) | static_cast<u64>(monospace) << 31 | static_cast<u64>(std::bit_cast<u32>(fontSize));
-                    
-                    Glyph *glyph = nullptr;
-                    
-                    auto it = s_glyphCache.find(key);
+            
+                    key = (static_cast<u64>(currCharacter) << 32) | static_cast<u64>(monospace) << 31 | static_cast<u64>(std::bit_cast<u32>(fontSize));
+                    it = s_glyphCache.find(key);
                     if (it == s_glyphCache.end()) {
                         /* Cache glyph */
                         glyph = &s_glyphCache.emplace(key, Glyph()).first->second;
-                        
+            
                         if (stbtt_FindGlyphIndex(&this->m_extFont, currCharacter))
                             glyph->currFont = &this->m_extFont;
                         else if(this->m_hasLocalFont && stbtt_FindGlyphIndex(&this->m_stdFont, currCharacter)==0)
                             glyph->currFont = &this->m_localFont;
                         else
                             glyph->currFont = &this->m_stdFont;
-                        
+            
                         glyph->currFontSize = stbtt_ScaleForPixelHeight(glyph->currFont, fontSize);
-                        
+            
                         stbtt_GetCodepointBitmapBoxSubpixel(glyph->currFont, currCharacter, glyph->currFontSize, glyph->currFontSize,
                                                             0, 0, &glyph->bounds[0], &glyph->bounds[1], &glyph->bounds[2], &glyph->bounds[3]);
-                                                            
+            
                         int yAdvance = 0;
                         stbtt_GetCodepointHMetrics(glyph->currFont, monospace ? 'W' : currCharacter, &glyph->xAdvance, &yAdvance);
-                        
+            
                         glyph->glyphBmp = stbtt_GetCodepointBitmap(glyph->currFont, glyph->currFontSize, glyph->currFontSize, currCharacter, &glyph->width, &glyph->height, nullptr, nullptr);
                     } else {
                         /* Use cached glyph */
                         glyph = &it->second;
                     }
-                    
+            
                     if (glyph->glyphBmp != nullptr && !std::iswspace(currCharacter) && fontSize > 0 && color.a != 0x0) {
-                        Color tmpColor = {0xF,0xF,0xF,0xF};
-                        uint8_t bmpColor;
-                        
-                        auto x = currX + glyph->bounds[0];
-                        auto y = currY + glyph->bounds[1];
-                        
+                        auto xPos = currX + glyph->bounds[0];
+                        auto yPos = currY + glyph->bounds[1];
+            
                         for (s32 bmpY = 0; bmpY < glyph->height; bmpY++) {
                             for (s32 bmpX = 0; bmpX < glyph->width; bmpX++) {
                                 bmpColor = glyph->glyphBmp[glyph->width * bmpY + bmpX] >> 4;
                                 if (bmpColor == 0xF) {
-                                    this->setPixel(x + bmpX, y + bmpY, color);
+                                    this->setPixel(xPos + bmpX, yPos + bmpY, color);
                                 } else if (bmpColor != 0x0) {
                                     tmpColor = color;
                                     tmpColor.a = bmpColor * (float(tmpColor.a) / 0xF);
-                                    this->setPixelBlendDst(x + bmpX, y + bmpY, tmpColor);
+                                    this->setPixelBlendDst(xPos + bmpX, yPos + bmpY, tmpColor);
                                 }
                             }
                         }
-                        
                     }
-                    
+            
                     currX += static_cast<s32>(glyph->xAdvance * glyph->currFontSize);
-                    
-                } while (*string != '\0');
-                
+                }
+            
                 maxX = std::max(currX, maxX);
-                
                 return { maxX - x, currY - y };
+            
             }
             
             /**
@@ -1884,41 +2091,35 @@ namespace tsl {
             std::string limitStringLength(std::string string, bool monospace, float fontSize, s32 maxLength) {
                 if (string.size() < 2)
                     return string;
-                
+            
                 s32 currX = 0;
                 ssize_t strPos = 0;
                 ssize_t codepointWidth;
-                
+                std::string subString;
+            
                 do {
                     u32 currCharacter;
                     codepointWidth = decode_utf8(&currCharacter, reinterpret_cast<const u8*>(&string[strPos]));
-                    
+            
                     if (codepointWidth <= 0)
                         break;
-                    
+            
                     strPos += codepointWidth;
-                    
-                    stbtt_fontinfo *currFont = nullptr;
-                    
-                    if (stbtt_FindGlyphIndex(&this->m_extFont, currCharacter))
-                        currFont = &this->m_extFont;
-                    else if(this->m_hasLocalFont && stbtt_FindGlyphIndex(&this->m_stdFont, currCharacter)==0)
-                        currFont = &this->m_localFont;
-                    else
-                        currFont = &this->m_stdFont;
-                    
-                    float currFontSize = stbtt_ScaleForPixelHeight(currFont, fontSize);
-                    
-                    int xAdvance = 0, yAdvance = 0;
-                    stbtt_GetCodepointHMetrics(currFont, monospace ? 'W' : currCharacter, &xAdvance, &yAdvance);
-                    
-                    currX += static_cast<s32>(xAdvance * currFontSize);
-                    
+            
+                    // Get the substring up to the current position
+                    subString = string.substr(0, strPos);
+            
+                    // Calculate the width of the substring
+                    currX = calculateStringWidth(subString, fontSize, monospace);
+            
                 } while (string[strPos] != '\0' && string[strPos] != '\n' && currX < maxLength);
-                
-                string = string.substr(0, strPos - codepointWidth) + "…";
+            
+                // If the length exceeds maxLength, truncate the string and add ellipsis
+                if (currX >= maxLength) {
+                    string = subString.substr(0, strPos - codepointWidth) + "…";
+                }
+            
                 string.shrink_to_fit();
-                
                 return string;
             }
             
@@ -2213,21 +2414,6 @@ namespace tsl {
             Element() {}
             virtual ~Element() { }
             
-            std::string disableSelectionBGStr = parseValueFromIniSection(themeConfigIniPath, themeSection, "disable_selection_bg");
-            bool disableSelectionBG = (!disableSelectionBGStr.empty() && disableSelectionBGStr != "false");
-            
-            bool invertBGClickColor = (parseValueFromIniSection(themeConfigIniPath, themeSection, "invert_bg_click_color") == "true");
-            Color selectionBGColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "selection_bg_color"), blackColor);
-            
-            Color highlightColor1 = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "highlight_color_1"), "#2288CC");
-            Color highlightColor2 = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "highlight_color_2"), "#88FFFF");
-            Color highlightColor3 = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "highlight_color_3"), "#FFFF45");
-            Color highlightColor4 = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "highlight_color_4"), "#F7253E");
-            Color highlightColor = {0xf,0xf,0xf,0xf};
-            
-            std::string clickAlphaStr = parseValueFromIniSection(themeConfigIniPath, themeSection, "click_alpha");
-            size_t clickAlpha = (!clickAlphaStr.empty()) ? std::stoi(clickAlphaStr) : 7;
-            Color clickColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "click_color"), "#F7253E", clickAlpha);
             
             std::chrono::duration<long int, std::ratio<1, 1000000000>> t;
             //double timeCounter;
@@ -2389,7 +2575,7 @@ namespace tsl {
                         animColor.g = saturation;
                         animColor.b = saturation;
                     }
-                    renderer->drawRect(ELEMENT_BOUNDS(this), (animColor));
+                    renderer->drawRect(ELEMENT_BOUNDS(this), a(animColor));
                 } else {
                     clickColor1 = highlightColor1;
                     clickColor2 = clickColor;
@@ -2447,15 +2633,15 @@ namespace tsl {
                     //renderer->drawRect(this->getX() + x + this->getWidth(), this->getY() + y, 4, this->getHeight(), highlightColor);
                     
                     
-                    renderer->drawRect(this->getX() + x + 2, this->getY() + y - 4, this->getWidth() - 5 +2 +4, 5, highlightColor);
-                    renderer->drawRect(this->getX() + x + 2, this->getY() + y + this->getHeight(), this->getWidth() - 5 +2 +4, 5, highlightColor);
-                    renderer->drawRect(this->getX() + x -2, this->getY() + y + 2 - 2, 5, this->getHeight()-3 +4, highlightColor);
-                    renderer->drawRect(this->getX() + x + this->getWidth()+2, this->getY() + y + 2 -2, 5, this->getHeight()-3 +4, highlightColor);
+                    renderer->drawRect(this->getX() + x + 2, this->getY() + y - 4, this->getWidth() - 5 +2 +4, 5, a(highlightColor));
+                    renderer->drawRect(this->getX() + x + 2, this->getY() + y + this->getHeight(), this->getWidth() - 5 +2 +4, 5, a(highlightColor));
+                    renderer->drawRect(this->getX() + x -2, this->getY() + y + 2 - 2, 5, this->getHeight()-3 +4, a(highlightColor));
+                    renderer->drawRect(this->getX() + x + this->getWidth()+2, this->getY() + y + 2 -2, 5, this->getHeight()-3 +4, a(highlightColor));
                     
-                    renderer->drawCircle(this->getX() + x, this->getY() + y + this->getHeight() + 2, 2.5, true, highlightColor);
-                    renderer->drawCircle(this->getX() + x, this->getY() + y - 2, 2.5, true, highlightColor);
-                    renderer->drawCircle(this->getX() + x + this->getWidth() +4, this->getY() + y + this->getHeight() + 2, 2.5, true, highlightColor);
-                    renderer->drawCircle(this->getX() + x + this->getWidth() +4, this->getY() + y - 2, 2.5, true, highlightColor);
+                    renderer->drawCircle(this->getX() + x, this->getY() + y + this->getHeight() + 2, 2.5, true, a(highlightColor));
+                    renderer->drawCircle(this->getX() + x, this->getY() + y - 2, 2.5, true, a(highlightColor));
+                    renderer->drawCircle(this->getX() + x + this->getWidth() +4, this->getY() + y + this->getHeight() + 2, 2.5, true, a(highlightColor));
+                    renderer->drawCircle(this->getX() + x + this->getWidth() +4, this->getY() + y - 2, 2.5, true, a(highlightColor));
                     
                 }
             }
@@ -2468,7 +2654,7 @@ namespace tsl {
              */
             virtual void drawFocusBackground(gfx::Renderer *renderer) {
                 if (!disableSelectionBG)
-                    renderer->drawRect(ELEMENT_BOUNDS(this), selectionBGColor); // CUSTOM MODIFICATION 
+                    renderer->drawRect(ELEMENT_BOUNDS(this), a(selectionBGColor)); // CUSTOM MODIFICATION 
                 
                 if (this->m_clickAnimationProgress > 0) {
                     this->drawClickAnimation(renderer);
@@ -2545,15 +2731,15 @@ namespace tsl {
                 }
                 if ((disableSelectionBG && this->m_clickAnimationProgress == 0) || !disableSelectionBG) {
                     
-                    renderer->drawRect(this->getX() + x + 2, this->getY() + y - 4, this->getWidth() - 5 +2 +4, 5, highlightColor);
-                    renderer->drawRect(this->getX() + x + 2, this->getY() + y + this->getHeight(), this->getWidth() - 5 +2 +4, 5, highlightColor);
-                    renderer->drawRect(this->getX() + x -2, this->getY() + y + 2 - 2, 5, this->getHeight()-3 +4, highlightColor);
-                    renderer->drawRect(this->getX() + x + this->getWidth()+2, this->getY() + y + 2 -2, 5, this->getHeight()-3 +4, highlightColor);
+                    renderer->drawRect(this->getX() + x + 2, this->getY() + y - 4, this->getWidth() - 5 +2 +4, 5, a(highlightColor));
+                    renderer->drawRect(this->getX() + x + 2, this->getY() + y + this->getHeight(), this->getWidth() - 5 +2 +4, 5, a(highlightColor));
+                    renderer->drawRect(this->getX() + x -2, this->getY() + y + 2 - 2, 5, this->getHeight()-3 +4, a(highlightColor));
+                    renderer->drawRect(this->getX() + x + this->getWidth()+2, this->getY() + y + 2 -2, 5, this->getHeight()-3 +4, a(highlightColor));
                     
-                    renderer->drawCircle(this->getX() + x, this->getY() + y + this->getHeight() + 2, 2.5, true, highlightColor);
-                    renderer->drawCircle(this->getX() + x, this->getY() + y - 2, 2.5, true, highlightColor);
-                    renderer->drawCircle(this->getX() + x + this->getWidth() + 4, this->getY() + y + this->getHeight() + 2, 2.5, true, highlightColor);
-                    renderer->drawCircle(this->getX() + x + this->getWidth() + 4, this->getY() + y - 2, 2.5, true, highlightColor);
+                    renderer->drawCircle(this->getX() + x, this->getY() + y + this->getHeight() + 2, 2.5, true, a(highlightColor));
+                    renderer->drawCircle(this->getX() + x, this->getY() + y - 2, 2.5, true, a(highlightColor));
+                    renderer->drawCircle(this->getX() + x + this->getWidth() + 4, this->getY() + y + this->getHeight() + 2, 2.5, true, a(highlightColor));
+                    renderer->drawCircle(this->getX() + x + this->getWidth() + 4, this->getY() + y - 2, 2.5, true, a(highlightColor));
                 }
                 //renderer->drawRect(ELEMENT_BOUNDS(this), a(0xF000)); // This has been moved here (needs to be toggleable)
             }
@@ -2752,42 +2938,6 @@ namespace tsl {
         // CUSTOM SECTION START
         
         
-        float calculateStringWidth(const std::string& str, int fontSize) {
-            
-            float totalWidth = 0;
-            float letterWidth;
-            
-            for (char letter : str) {
-                // Lookup the width of the current character
-                letterWidth = characterWidths[letter];
-                if (letterWidth == 0) {
-                    //letterWidth = 0.33; // default width
-                    letterWidth = std::stof(DEFAULT_CHAR_WIDTH);
-                }
-                
-                // Accumulate the width
-                totalWidth += letterWidth;
-            }
-            
-            // Adjust the total width based on the font size
-            return (totalWidth * fontSize);
-        }
-        
-        float calculateAmplitude2(float x, float peakDurationFactor = 0.25) {
-            const float phasePeriod = 360*peakDurationFactor;  // One full phase period
-            
-            // Calculate the phase within the full period
-            int phase = static_cast<int>((x) * (180.0 / 3.1415927)) % static_cast<int>(phasePeriod);
-            
-            // Check if the phase is odd
-            if (phase % 2 == 1) {
-                return 1.0f;  // Flat amplitude (maximum positive)
-            } else {
-                // Calculate the sinusoidal amplitude for the remaining period
-                return (std::cos((-x) * (180.0 / 3.1415927)) + 1) / 2;
-            }
-        }
-        
         // CUSTOM SECTION END
         
         /**
@@ -2809,28 +2959,6 @@ namespace tsl {
             std::string m_pageLeftName; // CUSTOM MODIFICATION
             std::string m_pageRightName; // CUSTOM MODIFICATION
             
-            std::string disableColorfulLogoStr = parseValueFromIniSection(themeConfigIniPath, themeSection, "disable_colorful_logo");
-            bool disableColorfulLogo = (!disableColorfulLogoStr.empty() && disableColorfulLogoStr == "true");
-            tsl::Color logoColor1 = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "logo_color_1"), whiteColor);
-            tsl::Color logoColor2 = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "logo_color_2"), "#F7253E");
-            
-            
-            std::string backgroundAlphaStr = parseValueFromIniSection(themeConfigIniPath, themeSection, "bg_alpha");
-            size_t defaultBackgroundAlpha = (!backgroundAlphaStr.empty()) ? std::stoi(backgroundAlphaStr) : 13;
-            
-            tsl::Color defaultBackgroundColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "bg_color"), blackColor, defaultBackgroundAlpha);
-            
-            tsl::Color defaultTextColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "text_color"));
-            tsl::Color clockColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "clock_color"));
-            tsl::Color batteryColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "battery_color"));
-            tsl::Color highlightColor = {0xF, 0xF, 0xF, 0xF};
-            
-            tsl::Color versionTextColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "version_text_color"), "#AAAAAA");
-            tsl::Color onTextColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "on_text_color"), "#00FFDD");
-            tsl::Color offTextColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "off_text_color"), "#AAAAAA");
-            
-            std::tuple<float,float,float> dynamicLogoRGB1 = hexToRGB444Floats(parseValueFromIniSection(themeConfigIniPath, themeSection, "dynamic_logo_color_1"), "#00E669");
-            std::tuple<float,float,float> dynamicLogoRGB2 = hexToRGB444Floats(parseValueFromIniSection(themeConfigIniPath, themeSection, "dynamic_logo_color_2"), "#8080EA");
             
             std::string firstHalf, secondHalf;
             //tsl::Color handColor = RGB888("#F7253E");
@@ -2844,14 +2972,15 @@ namespace tsl {
             float x, y;
             int offset, y_offset;
             int fontSize;
-            char timeStr[20]; // Allocate a buffer to store the time string
-            char PCB_temperatureStr[10];
-            char SOC_temperatureStr[10];
+
             // Convert the C-style string to an std::string
             std::string chargeStringSTD;
             std::string PCB_temperatureStringSTD;
             std::string SOC_temperatureStringSTD;
             std::string menuBottomLine;
+            char timeStr[20]; // Allocate a buffer to store the time string
+            char PCB_temperatureStr[10];
+            char SOC_temperatureStr[10];
             
             
     OverlayFrame(const std::string& title, const std::string& subtitle, const std::string& menuMode = "", const std::string& colorSelection = "", const std::string& pageLeftName = "", const std::string& pageRightName = "")
@@ -2864,7 +2993,7 @@ namespace tsl {
             
             // CUSTOM SECTION START
             virtual void draw(gfx::Renderer *renderer) override {
-                renderer->fillScreen(defaultBackgroundColor);
+                renderer->fillScreen(a(defaultBackgroundColor));
                 //renderer->fillScreen(tsl::style::color::ColorFrameBackground);
                 //renderer->drawRect(tsl::cfg::FramebufferWidth - 1, 0, 1, tsl::cfg::FramebufferHeight, a(0xF222)); // CUSTOM MODIFICATION, not sure why this call was even necessary after comparisons.
                 
@@ -2902,7 +3031,7 @@ namespace tsl {
                             };
                             
                             // Call the renderer->drawString function
-                            renderer->drawString(std::string(1, letter).c_str(), false, x, y + offset, fontSize, highlightColor);
+                            renderer->drawString(std::string(1, letter).c_str(), false, x, y + offset, fontSize, a(highlightColor));
                             
                             // Manually calculate the width of the current letter
                             letterWidth = calculateStringWidth(std::string(1, letter), fontSize);
@@ -2915,7 +3044,7 @@ namespace tsl {
                         }
                     } else {
                         for (char letter : firstHalf) {
-                            renderer->drawString(std::string(1, letter).c_str(), false, x, y + offset, fontSize, logoColor1);
+                            renderer->drawString(std::string(1, letter).c_str(), false, x, y + offset, fontSize, a(logoColor1));
                             
                             // Manually calculate the width of the current letter
                             letterWidth = calculateStringWidth(std::string(1, letter), fontSize);
@@ -2930,38 +3059,43 @@ namespace tsl {
                     
                     
                     // Draw the second half of the string in red color
-                    renderer->drawString(secondHalf.c_str(), false, x, y+offset, fontSize, logoColor2);
-                    
+                    renderer->drawString(secondHalf.c_str(), false, x, y+offset, fontSize, a(logoColor2));
+                    //for (char letter : secondHalf) {
+                    //    letterWidth = calculateStringWidth(std::string(1, letter), fontSize);
+                    //    x += letterWidth;
+                    //}
+                    if (!(hideBattery && hidePCBTemp && hideSOCTemp && hideClock))
+                        renderer->drawRect(252, 24, 1, 49, a(seperatorColor));
                     
                     // Time drawing implementation
                     //struct timespec currentTime;
                     clock_gettime(CLOCK_REALTIME, &currentTime);
                     
                     y_offset = 45;
-                    if ((hideBattery == "true" && hidePCBTemp == "true" && hideSOCTemp == "true") || (hideClock == "true"))
+                    if ((hideBattery && hidePCBTemp && hideSOCTemp) || (hideClock))
                         y_offset += 10;
                     
-                    if (hideClock != "true") {// Use the 'timeStr' to display the time
+                    if (!hideClock) {// Use the 'timeStr' to display the time
                         
                         // Convert the current time to a human-readable string
-                        
-                        //strftime(timeStr, sizeof(timeStr), "%r", localtime(&currentTime.tv_sec));
                         strftime(timeStr, sizeof(timeStr), datetimeFormat.c_str(), localtime(&currentTime.tv_sec));
                         
                         localizeTimeStr(timeStr); // for language localizations
                         
-                        renderer->drawString(timeStr, false, tsl::cfg::FramebufferWidth - calculateStringWidth(timeStr, 20) - 20, y_offset, 20, clockColor);
+                        renderer->drawString(timeStr, false, tsl::cfg::FramebufferWidth - calculateStringWidth(timeStr, 20) - 20, y_offset, 20, a(clockColor));
                         y_offset += 22;
                     }
                     
                     // check in 1s intervals
                     if ((currentTime.tv_sec - timeOut) >= 1) {
-                        if (hidePCBTemp != "true")
-                            thermalstatusGetDetailsPCB(&PCB_temperature);
-                        if (hideSOCTemp != "true")
-                            thermalstatusGetDetailsSOC(&SOC_temperature);
-                        if (hideBattery != "true")
-                            powerGetDetails(&batteryCharge, &isCharging);
+                        if (!isHidden.load()) {
+                            if (!hidePCBTemp)
+                                thermalstatusGetDetailsPCB(&PCB_temperature);
+                            if (!hideSOCTemp)
+                                thermalstatusGetDetailsSOC(&SOC_temperature);
+                            if (!hideBattery)
+                                powerGetDetails(&batteryCharge, &isCharging);
+                        }
                         //thermalstatusGetDetails(&SOC_temperature, "internal");
                         //thermalstatusGetDetails(&PCB_temperature, "external");
                         
@@ -2971,8 +3105,6 @@ namespace tsl {
                     
                     
                     snprintf(PCB_temperatureStr, sizeof(PCB_temperatureStr)-1, "%d°C", PCB_temperature);
-                    
-                    //char SOC_temperatureStr[10];
                     snprintf(SOC_temperatureStr, sizeof(SOC_temperatureStr)-1, "%d°C", SOC_temperature);
                     
                     batteryCharge = (batteryCharge > 100) ? 100 : batteryCharge;
@@ -2980,40 +3112,42 @@ namespace tsl {
                     
                     
                     // Convert the float to std::string
-                    //std::string powerConsumptionStr = std::to_string(powerConsumption);
+                    //std::string powerConsumptiCAPITAL_ON_STR = std::to_string(powerConsumption);
                     
                     // Use the '+' operator to concatenate the strings
                     
-                    if (hideBattery != "true" && batteryCharge > 0) {
+                    if (!hideBattery && batteryCharge > 0) {
                         chargeStringSTD = chargeString;
                         //PCB_temperatureStringSTD += " ";
                         // Use the 'timeStr' to display the time
                         if (powerCacheIsCharging)
-                            renderer->drawString(chargeStringSTD.c_str(), false, tsl::cfg::FramebufferWidth - calculateStringWidth(chargeStringSTD, 20) - 19, y_offset, 20, tsl::Color(0x0, 0xF, 0x0, 0xF));
+                            renderer->drawString(chargeStringSTD.c_str(), false, tsl::cfg::FramebufferWidth - calculateStringWidth(chargeStringSTD, 20) - 19, y_offset, 20, a(tsl::Color(0x0, 0xF, 0x0, 0xF)));
                         else {
                             if (batteryCharge < 20) {
-                                renderer->drawString(chargeStringSTD.c_str(), false, tsl::cfg::FramebufferWidth - calculateStringWidth(chargeStringSTD, 20) - 19, y_offset, 20, tsl::Color(0xF, 0x0, 0x0, 0xF));
+                                renderer->drawString(chargeStringSTD.c_str(), false, tsl::cfg::FramebufferWidth - calculateStringWidth(chargeStringSTD, 20) - 19, y_offset, 20, a(tsl::Color(0xF, 0x0, 0x0, 0xF)));
                             } else {
-                                renderer->drawString(chargeStringSTD.c_str(), false, tsl::cfg::FramebufferWidth - calculateStringWidth(chargeStringSTD, 20) - 19, y_offset, 20, batteryColor);
+                                renderer->drawString(chargeStringSTD.c_str(), false, tsl::cfg::FramebufferWidth - calculateStringWidth(chargeStringSTD, 20) - 19, y_offset, 20, a(batteryColor));
                             }
                         }
                     }
-                    //if (hidePCBTemp != "true" && hideBattery != "true")
+                    //if (hidePCBTemp != TRUE_STR && hideBattery != TRUE_STR)
                     //     SOC_temperatureStringSTD += " ";
                     
                     offset = 0;
-                    if (hidePCBTemp != "true") {
+                    if (!hidePCBTemp) {
                         PCB_temperatureStringSTD = PCB_temperatureStr;
                         if (PCB_temperature > 0) {
                             offset += 2;
-                            renderer->drawString(PCB_temperatureStringSTD.c_str(), false, tsl::cfg::FramebufferWidth + offset - calculateStringWidth(PCB_temperatureStringSTD, 20) - calculateStringWidth(chargeStringSTD, 20) - 20, y_offset, 20, tsl::GradientColor(PCB_temperature));
+                            renderer->drawString(PCB_temperatureStringSTD.c_str(), false, tsl::cfg::FramebufferWidth + offset - calculateStringWidth(PCB_temperatureStringSTD, 20) -
+                                calculateStringWidth(chargeStringSTD, 20) - 20, y_offset, 20, a(tsl::GradientColor(PCB_temperature)));
                         }
                     }
-                    if (hideSOCTemp != "true") {
+                    if (!hideSOCTemp) {
                         SOC_temperatureStringSTD = SOC_temperatureStr;
                         if (SOC_temperature > 0) {
                             offset += 2;
-                            renderer->drawString(SOC_temperatureStringSTD.c_str(), false, tsl::cfg::FramebufferWidth + offset -  calculateStringWidth(SOC_temperatureStringSTD, 20) - calculateStringWidth(PCB_temperatureStringSTD, 20) - calculateStringWidth(chargeStringSTD, 20) - 20, y_offset, 20, tsl::GradientColor(SOC_temperature));
+                            renderer->drawString(SOC_temperatureStringSTD.c_str(), false, tsl::cfg::FramebufferWidth + offset -  calculateStringWidth(SOC_temperatureStringSTD, 20) -
+                                calculateStringWidth(PCB_temperatureStringSTD, 20) - calculateStringWidth(chargeStringSTD, 20) - 20, y_offset, 20, a(tsl::GradientColor(SOC_temperature)));
                         }
                     }
                 } else {
@@ -3024,93 +3158,95 @@ namespace tsl {
                     y = 50;
                     fontSize = 32;
                     if (this->m_subtitle.find("Ultrahand Package") != std::string::npos) {
-                        std::string& title = this->m_title;
-                        titleColor = Color(0x0, 0xF, 0x0, 0xF);
+                        const std::string& title = this->m_title;
+                        titleColor = Color(0x0, 0xF, 0x0, 0xF); // Default to green
+                    
+                        // Function to draw the title
+                        auto drawTitle = [&](const Color& color) {
+                            renderer->drawString(title.c_str(), false, x, y, fontSize, a(color));
+                        };
+                    
                         if (this->m_colorSelection == "" || this->m_colorSelection == "green") {
                             titleColor = Color(0x0, 0xF, 0x0, 0xF);
-                            renderer->drawString(title.c_str(), false, x, y, fontSize, titleColor);
+                            drawTitle(titleColor);
                         } else if (this->m_colorSelection == "red") {
-                            //titleColor = a(Color(0xF, 0x0, 0x0, 0xF));
                             titleColor = RGB888("#F7253E");
-                            renderer->drawString(title.c_str(), false, x, y, fontSize, titleColor);
+                            drawTitle(titleColor);
                         } else if (this->m_colorSelection == "blue") {
                             titleColor = Color(0x7, 0x7, 0xF, 0xF);
-                            renderer->drawString(title.c_str(), false, x, y, fontSize, titleColor);
+                            drawTitle(titleColor);
                         } else if (this->m_colorSelection == "yellow") {
                             titleColor = Color(0xF, 0xF, 0x0, 0xF);
-                            renderer->drawString(title.c_str(), false, x, y, fontSize, titleColor);
+                            drawTitle(titleColor);
                         } else if (this->m_colorSelection == "orange") {
                             titleColor = Color(0xFF, 0xA5, 0x00, 0xFF);
-                            renderer->drawString(title.c_str(), false, x, y, fontSize, titleColor);
+                            drawTitle(titleColor);
                         } else if (this->m_colorSelection == "pink") {
                             titleColor = Color(0xFF, 0x69, 0xB4, 0xFF);
-                            renderer->drawString(title.c_str(), false, x, y, fontSize, titleColor);
+                            drawTitle(titleColor);
                         } else if (this->m_colorSelection == "purple") {
                             titleColor = Color(0x80, 0x00, 0x80, 0xFF);
-                            renderer->drawString(title.c_str(), false, x, y, fontSize, titleColor);
+                            drawTitle(titleColor);
                         } else if (this->m_colorSelection == "white") {
                             titleColor = Color(0xF, 0xF, 0xF, 0xF);
-                            renderer->drawString(title.c_str(), false, x, y, fontSize, titleColor);
+                            drawTitle(titleColor);
                         } else if (this->m_colorSelection == "ultra") {
                             for (char letter : title) {
                                 // Calculate the progress for each letter based on the counter
-                                progress = calculateAmplitude2(counter - x * 0.0001F);
-                                
+                                progress = calculateAmplitude(counter - x * 0.0001F);
+                    
                                 // Calculate the corresponding highlight color for each letter
                                 highlightColor = {
-                                    static_cast<u8>((0xA - 0xF) * (3 - 1.5*progress) + 0xF),
-                                    static_cast<u8>((0xA - 0xF) * 1.5*progress + 0xF),
+                                    static_cast<u8>((0xA - 0xF) * (3 - 1.5 * progress) + 0xF),
+                                    static_cast<u8>((0xA - 0xF) * 1.5 * progress + 0xF),
                                     static_cast<u8>((0xA - 0xF) * (1.25 - progress) + 0xF),
                                     0xF
                                 };
-                                
+                    
                                 // Draw each character with its corresponding highlight color
-                                renderer->drawString(std::string(1, letter).c_str(), false, x, y, fontSize, highlightColor);
-                                
+                                renderer->drawString(std::string(1, letter).c_str(), false, x, y, fontSize, a(highlightColor));
+                    
                                 // Manually calculate the width of the current letter
                                 letterWidth = calculateStringWidth(std::string(1, letter), fontSize);
-                                
+                    
                                 // Adjust the x-coordinate for the next character's position
                                 x += letterWidth;
-                                
+                    
                                 // Update the counter for the next character
                                 counter -= 0.00004F;
                             }
                         } else if (this->m_colorSelection.size() == 7 && this->m_colorSelection[0] == '#') {
                             // Check if m_colorSelection is a valid hexadecimal color
-                            //std::string hexColor = this->m_colorSelection.substr(1);
                             if (isValidHexColor(this->m_colorSelection.substr(1))) {
                                 titleColor = RGB888(this->m_colorSelection.substr(1));
-                                renderer->drawString(title.c_str(), false, x, y, fontSize, titleColor);
+                                drawTitle(titleColor);
                             } else {
                                 // Invalid hexadecimal color, handle the error accordingly
-                                // You can log an error message or use a default color
-                                renderer->drawString(title.c_str(), false, x, y, fontSize, titleColor);
+                                drawTitle(titleColor); // Using the default titleColor
                             }
                         } else { // for unknown colors
-                            renderer->drawString(title.c_str(), false, x, y, fontSize, titleColor);
+                            drawTitle(titleColor); // Using the default titleColor
                         }
                     } else if (this->m_subtitle.find("Ultrahand Script") != std::string::npos) {
-                        renderer->drawString(this->m_title.c_str(), false, 20, 50, 32, Color(0xFF, 0x33, 0x3F, 0xFF));
+                        renderer->drawString(this->m_title.c_str(), false, 20, 50, 32, a(Color(0xFF, 0x33, 0x3F, 0xFF)));
                     } else {
-                        renderer->drawString(this->m_title.c_str(), false, 20, 50, 30, defaultTextColor);
+                        renderer->drawString(this->m_title.c_str(), false, 20, 50, 30, a(defaultTextColor));
                     }
+
                 }
                 
                 
                 if (this->m_title == "Ultrahand") {
-                    renderer->drawString(versionLabel.c_str(), false, 20, y+25, 15, versionTextColor);
+                    renderer->drawString(versionLabel.c_str(), false, 20, y+25, 15, a(versionTextColor));
                 } else
-                    renderer->drawString(this->m_subtitle.c_str(), false, 20, y+20, 15, versionTextColor);
+                    renderer->drawString(this->m_subtitle.c_str(), false, 20, y+20, 15, a(versionTextColor));
                 
-                renderer->drawRect(15, tsl::cfg::FramebufferHeight - 73, tsl::cfg::FramebufferWidth - 30, 1, defaultTextColor);
+                renderer->drawRect(15, tsl::cfg::FramebufferHeight - 73, tsl::cfg::FramebufferWidth - 30, 1, a(defaultTextColor));
                 
                 menuBottomLine = "\uE0E1"+GAP_2+BACK+GAP_1+"\uE0E0"+GAP_2+OK+GAP_1;
                 if (this->m_menuMode == "packages") {
-                    //menuBottomLine = "\uE0E1"+GAP_2+"Close"+GAP_1+"\uE0E0"+GAP_2+OK+GAP_1+"\uE0ED"+GAP_2+OVERLAYS;
                     menuBottomLine += "\uE0ED"+GAP_2+OVERLAYS;
                 } else if (this->m_menuMode == "overlays") {
-                    //menuBottomLine = "\uE0E1"+GAP_2+"Close"+GAP_1+"\uE0E0"+GAP_2+OK+GAP_1+"\uE0ED"+GAP_2+PACKAGES;
                     menuBottomLine += "\uE0EE"+GAP_2+PACKAGES;
                 }
                 
@@ -3120,7 +3256,7 @@ namespace tsl {
                     menuBottomLine += "\uE0EE"+GAP_2 + this->m_pageRightName;
                 }
                 
-                renderer->drawString(menuBottomLine.c_str(), false, 30, 693, 23, defaultTextColor);
+                renderer->drawString(menuBottomLine.c_str(), false, 30, 693, 23, a(defaultTextColor));
                 
                 if (this->m_contentElement != nullptr)
                     this->m_contentElement->frame(renderer);
@@ -3200,11 +3336,6 @@ namespace tsl {
          */
         class HeaderOverlayFrame : public Element {
         public:
-            std::string backgroundAlphaStr = parseValueFromIniSection(themeConfigIniPath, themeSection, "bg_alpha");
-            size_t defaultBackgroundAlpha = (!backgroundAlphaStr.empty()) ? std::stoi(backgroundAlphaStr) : 13;
-            tsl::Color defaultBackgroundColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "bg_color"), blackColor, defaultBackgroundAlpha);
-            
-            tsl::Color defaultTextColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "text_color"));
             
             HeaderOverlayFrame(u16 headerHeight = 175) : Element(), m_headerHeight(headerHeight) {}
             virtual ~HeaderOverlayFrame() {
@@ -3216,13 +3347,13 @@ namespace tsl {
             }
             
             virtual void draw(gfx::Renderer *renderer) override {
-                renderer->fillScreen(defaultBackgroundColor);
+                renderer->fillScreen(a(defaultBackgroundColor));
                 //renderer->fillScreen(tsl::style::color::ColorFrameBackground);
                 renderer->drawRect(tsl::cfg::FramebufferWidth - 1, 0, 1, tsl::cfg::FramebufferHeight, a(0xF222));
                 
-                renderer->drawRect(15, tsl::cfg::FramebufferHeight - 73, tsl::cfg::FramebufferWidth - 30, 1, defaultTextColor);
+                renderer->drawRect(15, tsl::cfg::FramebufferHeight - 73, tsl::cfg::FramebufferWidth - 30, 1, a(defaultTextColor));
                 
-                renderer->drawString(("\uE0E1  "+BACK+"     \uE0E0  "+OK).c_str(), false, 30, 693, 23, defaultTextColor); // CUSTOM MODIFICATION
+                renderer->drawString(("\uE0E1  "+BACK+"     \uE0E0  "+OK).c_str(), false, 30, 693, 23, a(defaultTextColor)); // CUSTOM MODIFICATION
                 
                 if (this->m_header != nullptr)
                     this->m_header->frame(renderer);
@@ -3318,7 +3449,7 @@ namespace tsl {
             virtual ~DebugRectangle() {}
             
             virtual void draw(gfx::Renderer *renderer) override {
-                renderer->drawRect(ELEMENT_BOUNDS(this), this->m_color);
+                renderer->drawRect(ELEMENT_BOUNDS(this), a(this->m_color));
             }
             
             virtual void layout(u16 parentX, u16 parentY, u16 parentWidth, u16 parentHeight) override {}
@@ -3344,7 +3475,6 @@ namespace tsl {
                     delete item;
             }
             
-            Color trackBarColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "trackbar_color"), "#555555");
             float scrollbarHeight;
             float scrollbarOffset;
             int offset;
@@ -3434,12 +3564,12 @@ namespace tsl {
                     scrollbarOffset += 8;
 
                     offset = 11;
-                    renderer->drawRect(this->getRightBound() + 10+offset, this->getY() + scrollbarOffset, 5, scrollbarHeight, trackBarColor);
-                    renderer->drawCircle(this->getRightBound() + 12+offset, this->getY() + scrollbarOffset, 2, true, trackBarColor);
-                    renderer->drawCircle(this->getRightBound() + 12+offset, (this->getY() + scrollbarOffset + (this->getY() + scrollbarOffset + this->getY() + scrollbarOffset + scrollbarHeight)/2)/2, 2, true, trackBarColor);
-                    renderer->drawCircle(this->getRightBound() + 12+offset, (this->getY() + scrollbarOffset + this->getY() + scrollbarOffset + scrollbarHeight)/2, 2, true, trackBarColor);
-                    renderer->drawCircle(this->getRightBound() + 12+offset, (this->getY() + scrollbarOffset + scrollbarHeight + (this->getY() + scrollbarOffset + this->getY() + scrollbarOffset + scrollbarHeight)/2)/2, 2, true, trackBarColor);
-                    renderer->drawCircle(this->getRightBound() + 12+offset, this->getY() + scrollbarOffset + scrollbarHeight, 2, true, trackBarColor);
+                    renderer->drawRect(this->getRightBound() + 10+offset, this->getY() + scrollbarOffset, 5, scrollbarHeight, a(trackBarColor));
+                    renderer->drawCircle(this->getRightBound() + 12+offset, this->getY() + scrollbarOffset, 2, true, a(trackBarColor));
+                    renderer->drawCircle(this->getRightBound() + 12+offset, (this->getY() + scrollbarOffset + (this->getY() + scrollbarOffset + this->getY() + scrollbarOffset + scrollbarHeight)/2)/2, 2, true, a(trackBarColor));
+                    renderer->drawCircle(this->getRightBound() + 12+offset, (this->getY() + scrollbarOffset + this->getY() + scrollbarOffset + scrollbarHeight)/2, 2, true, a(trackBarColor));
+                    renderer->drawCircle(this->getRightBound() + 12+offset, (this->getY() + scrollbarOffset + scrollbarHeight + (this->getY() + scrollbarOffset + this->getY() + scrollbarOffset + scrollbarHeight)/2)/2, 2, true, a(trackBarColor));
+                    renderer->drawCircle(this->getRightBound() + 12+offset, this->getY() + scrollbarOffset + scrollbarHeight, 2, true, a(trackBarColor));
                     
                     prevOffset = this->m_offset;
                     
@@ -3695,24 +3825,6 @@ namespace tsl {
          */
         class ListItem : public Element {
         public:
-            std::string seperatorAlphaStr = parseValueFromIniSection(themeConfigIniPath, themeSection, "seperator_alpha");
-            size_t seperatorAlpha = (!seperatorAlphaStr.empty()) ? std::stoi(seperatorAlphaStr) : 7;
-            
-            tsl::Color seperatorColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "seperator_color"), "#777777", seperatorAlpha);
-            
-            tsl::Color defaultTextColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "text_color")); ; // CUSTOM MODIFICATION
-            tsl::Color selectedTextColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "selection_text_color"));
-            tsl::Color inprogressTextColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "inprogress_text_color"));
-
-            tsl::Color invalidTextColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "invalid_text_color"), "#FF0000");
-            tsl::Color onTextColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "on_text_color"), "#00FFDD");
-            tsl::Color offTextColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "off_text_color"), "#AAAAAA");
-            
-            tsl::Color clickTextColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "click_text_color"));
-
-            std::string clickAlphaStr = parseValueFromIniSection(themeConfigIniPath, themeSection, "click_alpha");
-            size_t clickAlpha = (!clickAlphaStr.empty()) ? std::stoi(clickAlphaStr) : 7;
-            Color clickColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "click_color"), "#F7253E", clickAlpha);
 
             std::chrono::system_clock::time_point timeIn;// = std::chrono::system_clock::now();
             std::chrono::duration<long int, std::ratio<1, 1000000000>> t;
@@ -3732,7 +3844,7 @@ namespace tsl {
                 bool useClickTextColor = false;
                 if (this->m_touched && Element::getInputMode() == InputMode::Touch) {
                     if (touchInBounds) {
-                        renderer->drawRect(ELEMENT_BOUNDS(this), clickColor);
+                        renderer->drawRect(ELEMENT_BOUNDS(this), a(clickColor));
                         useClickTextColor = true;
                     }
                     //renderer->drawRect(ELEMENT_BOUNDS(this), tsl::style::color::ColorClickAnimation);
@@ -3740,24 +3852,24 @@ namespace tsl {
                 
                 if (this->m_maxWidth == 0) {
                     if (this->m_value.length() > 0) {
-                        std::tie(width, height) = renderer->drawString(this->m_value.c_str(), false, 0, 0, 20, tsl::style::color::ColorTransparent);
+                        std::tie(width, height) = renderer->drawString(this->m_value.c_str(), false, 0, 0, 20, a(tsl::style::color::ColorTransparent));
                         this->m_maxWidth = this->getWidth() - width - 70;
                     } else {
                         this->m_maxWidth = this->getWidth() - 40;
                     }
                     
-                    std::tie(width, height) = renderer->drawString(this->m_text.c_str(), false, 0, 0, 23, tsl::style::color::ColorTransparent);
-                    this->m_trunctuated = width > this->m_maxWidth;
+                    std::tie(width, height) = renderer->drawString(this->m_text.c_str(), false, 0, 0, 23, a(tsl::style::color::ColorTransparent));
+                    this->m_trunctuated = width > this->m_maxWidth+10;
                     
                     if (this->m_trunctuated) {
                         this->m_scrollText = this->m_text + "        ";
-                        std::tie(width, height) = renderer->drawString(this->m_scrollText.c_str(), false, 0, 0, 23, tsl::style::color::ColorTransparent);
+                        std::tie(width, height) = renderer->drawString(this->m_scrollText.c_str(), false, 0, 0, 23, a(tsl::style::color::ColorTransparent));
                         this->m_scrollText += this->m_text;
                         this->m_textWidth = width;
                         if (this->m_value.length() > 0) {
-                            this->m_ellipsisText = renderer->limitStringLength(this->m_text, false, 23, this->m_maxWidth);
+                            this->m_ellipsisText = renderer->limitStringLength(this->m_text, false, 23, this->m_maxWidth+10);
                         } else {
-                            this->m_ellipsisText = renderer->limitStringLength(this->m_text, false, 24, this->m_maxWidth);
+                            this->m_ellipsisText = renderer->limitStringLength(this->m_text, false, 23, this->m_maxWidth+10);
                         }
                     } else {
                         this->m_textWidth = width;
@@ -3768,14 +3880,14 @@ namespace tsl {
                 //renderer->drawRect(this->getX()+4, this->getTopBound(), this->getWidth()-4, 1, a(0x0000));
                 
                 //renderer->drawRect(this->getX()+5, this->getTopBound(), this->getWidth()-5+10, 1, tsl::style::color::ColorFrame);
-                renderer->drawRect(this->getX()+5-2, this->getTopBound(), this->getWidth()-5+10, 1, seperatorColor);
+                renderer->drawRect(this->getX()+5-2, this->getTopBound(), this->getWidth()-5+10, 1, a(seperatorColor));
                 
                 if (this->m_trunctuated) {
                     if (this->m_focused) {
                         renderer->enableScissoring(this->getX()+7, 97, this->m_maxWidth + 40 - 10+4, tsl::cfg::FramebufferHeight-73-97);
                         //renderer->enableScissoring(this->getX(), this->getY(), this->m_maxWidth + 40, this->getHeight());
                         //renderer->drawString(this->m_scrollText.c_str(), false, this->getX() + 20.0 - std::round(this->m_scrollOffset*10000.0)/10000.0, this->getY() + 45, 23, defaultTextColor);
-                        renderer->drawString(this->m_scrollText.c_str(), false, this->getX() + 20.0-2 - this->m_scrollOffset, this->getY() + 45, 23, selectedTextColor);
+                        renderer->drawString(this->m_scrollText.c_str(), false, this->getX() + 20.0-2 - this->m_scrollOffset, this->getY() + 44.9, 23, a(selectedTextColor));
                         renderer->disableScissoring();
                         t = std::chrono::system_clock::now() - this->timeIn;
                         if (t >= 2000ms) {
@@ -3791,13 +3903,13 @@ namespace tsl {
                             }
                         } // CUSTOM MODIFICATION END
                     } else {
-                        renderer->drawString(this->m_ellipsisText.c_str(), false, this->getX() + 20-2, this->getY() + 45, 23, !useClickTextColor ? defaultTextColor : clickTextColor);
+                        renderer->drawString(this->m_ellipsisText.c_str(), false, this->getX() + 20-2, this->getY() + 45, 23, !useClickTextColor ? defaultTextColor : a(clickTextColor));
                     }
                 } else {
                     if (this->m_focused) {
-                        renderer->drawString(this->m_text.c_str(), false, this->getX() + 20-2, this->getY() + 45, 23, !useClickTextColor ? selectedTextColor : clickTextColor);
+                        renderer->drawString(this->m_text.c_str(), false, this->getX() + 20-2, this->getY() + 45, 23, !useClickTextColor ? selectedTextColor : a(clickTextColor));
                     } else {
-                        renderer->drawString(this->m_text.c_str(), false, this->getX() + 20-2, this->getY() + 45, 23, !useClickTextColor ? defaultTextColor : clickTextColor);
+                        renderer->drawString(this->m_text.c_str(), false, this->getX() + 20-2, this->getY() + 45, 23, !useClickTextColor ? defaultTextColor : a(clickTextColor));
                     }
                 }
                 
@@ -3805,15 +3917,15 @@ namespace tsl {
                 // CUSTOM SECTION START (modification for submenu footer color)
                 if (this->m_value == DROPDOWN_SYMBOL || this->m_value == OPTION_SYMBOL) {
                     if (this->m_focused)
-                        renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +2, this->getY() + 45, 20, !useClickTextColor ? (this->m_faint ? offTextColor : selectedTextColor) : clickTextColor);
+                        renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +2, this->getY() + 45, 20, !useClickTextColor ? (this->m_faint ? offTextColor : selectedTextColor) : a(clickTextColor));
                     else
-                        renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +2, this->getY() + 45, 20, !useClickTextColor ? (this->m_faint ? offTextColor : defaultTextColor) : clickTextColor);
+                        renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +2, this->getY() + 45, 20, !useClickTextColor ? (this->m_faint ? offTextColor : defaultTextColor) : a(clickTextColor));
                 } else if (runningInterpreter.load(std::memory_order_acquire) && ((((this->m_value).find(DOWNLOAD_SYMBOL) != std::string::npos) || ((this->m_value).find(UNZIP_SYMBOL) != std::string::npos) || ((this->m_value).find(COPY_SYMBOL) != std::string::npos)) || this->m_value == INPROGRESS_SYMBOL)) {
-                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +2, this->getY() + 45, 20, (this->m_faint ? offTextColor : inprogressTextColor));
+                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +2, this->getY() + 45, 20, (this->m_faint ? offTextColor : a(inprogressTextColor)));
                 } else if (this->m_value == CROSSMARK_SYMBOL) {
-                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +2, this->getY() + 45, 20, (this->m_faint ? offTextColor : invalidTextColor));
+                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +2, this->getY() + 45, 20, (this->m_faint ? offTextColor : a(invalidTextColor)));
                 } else {
-                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +2, this->getY() + 45, 20, (this->m_faint ? offTextColor : onTextColor));
+                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +2, this->getY() + 45, 20, (this->m_faint ? offTextColor : a(onTextColor)));
                 }
                 // CUSTOM SECTION END 
             }
@@ -3823,11 +3935,12 @@ namespace tsl {
             }
             
             virtual bool onClick(u64 keys) override {
+
                 if (keys & HidNpadButton_A)
                     this->triggerClickAnimation();
                 else if (keys & (HidNpadButton_AnyUp | HidNpadButton_AnyDown | HidNpadButton_AnyLeft | HidNpadButton_AnyRight))
                     this->m_clickAnimationProgress = 0;
-                
+
                 return Element::onClick(keys);
             }
             
@@ -3982,10 +4095,7 @@ namespace tsl {
             virtual void setState(bool state) {
                 this->m_state = state;
                 
-                if (state)
-                    this->setValue(this->m_onValue, false);
-                else
-                    this->setValue(this->m_offValue, true);
+                this->setValue(state ? this->m_onValue : this->m_offValue, !state);
             }
             
             /**
@@ -4006,14 +4116,14 @@ namespace tsl {
         
         class CategoryHeader : public Element {
         public:
-            tsl::Color defaultTextColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "text_color"));
+            
             
             CategoryHeader(const std::string &title, bool hasSeparator = false) : m_text(title), m_hasSeparator(hasSeparator) {}
             virtual ~CategoryHeader() {}
             
             virtual void draw(gfx::Renderer *renderer) override {
-                renderer->drawRect(this->getX() - 2, this->getBottomBound() - 30, 5, 23, defaultTextColor);
-                renderer->drawString(this->m_text.c_str(), false, this->getX() + 13, this->getBottomBound() - 12, 15, defaultTextColor);
+                renderer->drawRect(this->getX() - 2, this->getBottomBound() - 30, 5, 23, a(defaultTextColor));
+                renderer->drawString(this->m_text.c_str(), false, this->getX() + 13, this->getBottomBound() - 12, 15, a(defaultTextColor));
                 
                 //if (this->m_hasSeparator)
                 //    renderer->drawRect(this->getX(), this->getBottomBound(), this->getWidth(), 1, tsl::style::color::ColorFrame); // CUSTOM MODIFICATION
@@ -4061,8 +4171,6 @@ namespace tsl {
          */
         class TrackBar : public Element {
         public:
-            Color defaultTextColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "text_color"));
-            Color trackBarColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "trackbar_color"), "#555555");
             std::chrono::duration<long int, std::ratio<1, 1000000000>> t;
             Color highlightColor = {0xf,0xf,0xf,0xf};
             //alf progress;
@@ -4142,17 +4250,17 @@ namespace tsl {
                 //renderer->drawRect(this->getX(), this->getY(), this->getWidth(), 1, tsl::style::color::ColorFrame);
                 //renderer->drawRect(this->getX(), this->getBottomBound(), this->getWidth(), 1, tsl::style::color::ColorFrame);
                 
-                renderer->drawString(this->m_icon, false, this->getX() + 15, this->getY() + 50, 23, defaultTextColor);
+                renderer->drawString(this->m_icon, false, this->getX() + 15, this->getY() + 50, 23, a(defaultTextColor));
                 
                 //u16 handlePos = (this->getWidth() - 95) * static_cast<half>(this->m_value) / 100;
                 u16 handlePos = (this->getWidth() - 95) * (this->m_value) / 100;
-                renderer->drawCircle(this->getX() + 60, this->getY() + 42, 2, true, tsl::style::color::ColorHighlight);
-                renderer->drawCircle(this->getX() + 60 + this->getWidth() - 95, this->getY() + 42, 2, true, tsl::style::color::ColorFrame);
+                renderer->drawCircle(this->getX() + 60, this->getY() + 42, 2, true, a(tsl::style::color::ColorHighlight));
+                renderer->drawCircle(this->getX() + 60 + this->getWidth() - 95, this->getY() + 42, 2, true, a(tsl::style::color::ColorFrame));
                 //renderer->drawRect(this->getX() + 60 + handlePos, this->getY() + 40, this->getWidth() - 95 - handlePos, 5, tsl::style::color::ColorFrame);
-                renderer->drawRect(this->getX() + 60, this->getY() + 40, handlePos, 5, tsl::style::color::ColorHighlight);
+                renderer->drawRect(this->getX() + 60, this->getY() + 40, handlePos, 5, a(tsl::style::color::ColorHighlight));
                 
-                renderer->drawCircle(this->getX() + 62 + handlePos, this->getY() + 42, 18, true, trackBarColor);
-                renderer->drawCircle(this->getX() + 62 + handlePos, this->getY() + 42, 18, false, tsl::style::color::ColorFrame);
+                renderer->drawCircle(this->getX() + 62 + handlePos, this->getY() + 42, 18, true, a(trackBarColor));
+                renderer->drawCircle(this->getX() + 62 + handlePos, this->getY() + 42, 18, false, a(tsl::style::color::ColorFrame));
             }
             
             virtual void layout(u16 parentX, u16 parentY, u16 parentWidth, u16 parentHeight) override {
@@ -4212,7 +4320,7 @@ namespace tsl {
                 }
                 
                 for (u8 i = 16; i <= 19; i++) {
-                    renderer->drawCircle(this->getX() + 62 + x + handlePos, this->getY() + 42 + y, i, false, highlightColor);
+                    renderer->drawCircle(this->getX() + 62 + x + handlePos, this->getY() + 42 + y, i, false, a(highlightColor));
                 }
             }
             
@@ -4355,7 +4463,6 @@ namespace tsl {
             u16 trackBarWidth, stepWidth, currentDescIndex;
             u32 descWidth, descHeight;
             
-            tsl::Color offTextColor = RGB888(parseValueFromIniSection(themeConfigIniPath, themeSection, "off_text_color"), "#AAAAAA");
             
             /**
              * @brief Constructor
@@ -4374,13 +4481,13 @@ namespace tsl {
                 stepWidth = trackBarWidth / (this->m_numSteps - 1);
                 
                 for (u8 i = 0; i < this->m_numSteps; i++) {
-                    renderer->drawRect(this->getX() + 60 + stepWidth * i, this->getY() + 50, 1, 10, tsl::style::color::ColorFrame);
+                    renderer->drawRect(this->getX() + 60 + stepWidth * i, this->getY() + 50, 1, 10, a(tsl::style::color::ColorFrame));
                 }
                 
                 currentDescIndex = std::clamp(this->m_value / (100 / (this->m_numSteps - 1)), 0, this->m_numSteps - 1);
                 
-                std::tie(descWidth, descHeight) = renderer->drawString(this->m_stepDescriptions[currentDescIndex].c_str(), false, 0, 0, 15, tsl::style::color::ColorTransparent);
-                renderer->drawString(this->m_stepDescriptions[currentDescIndex].c_str(), false, ((this->getX() + 60) + (this->getWidth() - 95) / 2) - (descWidth / 2), this->getY() + 20, 15, offTextColor);
+                std::tie(descWidth, descHeight) = renderer->drawString(this->m_stepDescriptions[currentDescIndex].c_str(), false, 0, 0, 15, a(tsl::style::color::ColorTransparent));
+                renderer->drawString(this->m_stepDescriptions[currentDescIndex].c_str(), false, ((this->getX() + 60) + (this->getWidth() - 95) / 2) - (descWidth / 2), this->getY() + 20, 15, a(offTextColor));
                 
                 StepTrackBar::draw(renderer);
             }
@@ -4624,6 +4731,8 @@ namespace tsl {
          *
          */
         void show() {
+            
+
             if (this->m_disableNextAnimation) {
                 this->m_animationCounter = 5;
                 this->m_disableNextAnimation = false;
@@ -4632,10 +4741,11 @@ namespace tsl {
                 this->m_fadeInAnimationPlaying = true;
                 this->m_animationCounter = 0;
             }
-            
+
+            isHidden.store(false);
             this->onShow();
             
-            if (auto& currGui = this->getCurrentGui(); currGui != nullptr)
+            if (auto& currGui = this->getCurrentGui(); currGui != nullptr) // TESTING DISABLED (EFFECTS NEED TO BE VERIFIED)
                 currGui->restoreFocus();
         }
         
@@ -4644,6 +4754,7 @@ namespace tsl {
          *
          */
         void hide() {
+            
             if (this->m_disableNextAnimation) {
                 this->m_animationCounter = 0;
                 this->m_disableNextAnimation = false;
@@ -4652,7 +4763,7 @@ namespace tsl {
                 this->m_fadeOutAnimationPlaying = true;
                 this->m_animationCounter = 5;
             }
-            
+            isHidden.store(true);
             this->onHide();
         }
         
@@ -4701,7 +4812,7 @@ namespace tsl {
         std::stack<GuiPtr, std::list<GuiPtr>> m_guiStack;
         static inline Overlay *s_overlayInstance = nullptr;
         
-        bool m_fadeInAnimationPlaying = true, m_fadeOutAnimationPlaying = false;
+        bool m_fadeInAnimationPlaying = false, m_fadeOutAnimationPlaying = false;
         u8 m_animationCounter = 0;
         
         bool m_shouldHide = false;
@@ -4753,8 +4864,9 @@ namespace tsl {
             if (this->m_fadeInAnimationPlaying) {
                 this->m_animationCounter++;
                 
-                if (this->m_animationCounter >= 5)
+                if (this->m_animationCounter >= 5) {
                     this->m_fadeInAnimationPlaying = false;
+                }
             }
             
             if (this->m_fadeOutAnimationPlaying) {
@@ -4768,6 +4880,8 @@ namespace tsl {
             
             gfx::Renderer::setOpacity(0.2 * this->m_animationCounter);
         }
+
+
         
         /**
          * @brief Main loop
@@ -4798,6 +4912,7 @@ namespace tsl {
          * @return Whether or not the input has been consumed
          */
         void handleInput(u64 keysDown, u64 keysHeld, bool touchDetected, const HidTouchState &touchPos, HidAnalogStickState joyStickPosLeft, HidAnalogStickState joyStickPosRight) {
+
             // Static variables to maintain state between function calls
             static HidTouchState initialTouchPos = { 0 };
             static HidTouchState oldTouchPos = { 0 };
@@ -4818,15 +4933,50 @@ namespace tsl {
             auto bottomElement = currentGui->getBottomElement(); // Backend is still not implemented/working yet
             
 
+            static ssize_t counter = 0;
+            if (runningInterpreter.load()) {
+                //if (keysDown & (HidNpadButton_AnyUp))
+                //    currentFocus -> shakeHighlight(FocusDirection::Up);
+                //else if (keysDown & (HidNpadButton_AnyDown))
+                //    currentFocus -> shakeHighlight(FocusDirection::Down);
+                //else if (keysDown & (HidNpadButton_AnyLeft))
+                //    currentFocus -> shakeHighlight(FocusDirection::Left);
+                //else if (keysDown & (HidNpadButton_AnyRight))
+                //    currentFocus -> shakeHighlight(FocusDirection::Right);
+
+                if (keysHeld & HidNpadButton_AnyUp && keysDown & HidNpadButton_AnyUp && !(keysHeld & (KEY_DLEFT | KEY_DRIGHT | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR)))
+                    currentFocus -> shakeHighlight(FocusDirection::Up);
+                else if (keysHeld & HidNpadButton_AnyDown && keysDown & HidNpadButton_AnyDown && !(keysHeld & (KEY_DLEFT | KEY_DRIGHT | KEY_DUP | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR)))
+                    currentFocus -> shakeHighlight(FocusDirection::Down);
+                else if (keysHeld & HidNpadButton_AnyLeft && keysDown & HidNpadButton_AnyLeft && !(keysHeld & (KEY_DRIGHT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR)))
+                    currentFocus -> shakeHighlight(FocusDirection::Left);
+                else if (keysHeld & HidNpadButton_AnyRight && keysDown & HidNpadButton_AnyRight && !(keysHeld & (KEY_DLEFT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR)))
+                    currentFocus -> shakeHighlight(FocusDirection::Right);
+                else {
+                    if (progressAnimation) {
+                        if (counter%4 == 0)
+                            currentFocus -> shakeHighlight(FocusDirection::Up);
+                        else if (counter%4  == 1)
+                            currentFocus -> shakeHighlight(FocusDirection::Right);
+                        else if (counter%4  == 2)
+                            currentFocus -> shakeHighlight(FocusDirection::Down);
+                        else if (counter%4  == 3)
+                            currentFocus -> shakeHighlight(FocusDirection::Left);
+                        counter++;
+                        if (counter >= 4) counter = 0; // Reset the counter after a full cycle to prevent overflow
+                    }
+                }
+            }
+
             // Handle input when no element is focused
             if (currentFocus == nullptr  && !simulatedBack && simulatedBackComplete && !stillTouching && !runningInterpreter.load(std::memory_order_acquire)) {
                 // Check for back button press
-                if (keysDown & HidNpadButton_B) {
-                    // Handle back button press
-                    if (!currentGui->handleInput(HidNpadButton_B, 0,{},{},{}))
-                        this->goBack();
-                    return;
-                }
+                //if (keysDown & HidNpadButton_B) {
+                //    // Handle back button press
+                //    if (!currentGui->handleInput(HidNpadButton_B, 0,{},{},{}))
+                //        this->goBack();
+                //    return;
+                //}
                 
                 // If there is no top element, return early
                 if (topElement == nullptr)
@@ -4842,7 +4992,7 @@ namespace tsl {
             }
 
             // If nothing is highlighted AND the menu is fully loaded/drawn, set focus to topElement
-            if (!touchDetected && (!oldTouchDetected || (oldTouchEvent == elm::TouchEvent::Scroll)) && currentFocus == nullptr) {
+            if (currentFocus == nullptr && !touchDetected && (!oldTouchDetected || (oldTouchEvent == elm::TouchEvent::Scroll))) {
                 if (!simulatedBack && simulatedBackComplete ) {
                     //f (lastTouchedElement != nullptr) {
                     //   currentGui->removeFocus();
@@ -4887,13 +5037,13 @@ namespace tsl {
                 if ((((keysHeld & HidNpadButton_AnyUp) != 0) + ((keysHeld & HidNpadButton_AnyDown) != 0) + ((keysHeld & HidNpadButton_AnyLeft) != 0) + ((keysHeld & HidNpadButton_AnyRight) != 0)) == 1) {
                     if ((repeatTick == 0 || repeatTick > 20) && (repeatTick % 4) == 0) {
                         // Request focus based on arrow key direction
-                        if (keysHeld & HidNpadButton_AnyUp)
+                        if (keysHeld & HidNpadButton_AnyUp && !(keysHeld & (KEY_DLEFT | KEY_DRIGHT | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR)))
                             currentGui->requestFocus(currentGui->getTopElement(), FocusDirection::Up, shouldShake); // Request focus on the top element when double-clicking up
-                        else if (keysHeld & HidNpadButton_AnyDown)
+                        else if (keysHeld & HidNpadButton_AnyDown && !(keysHeld & (KEY_DLEFT | KEY_DRIGHT | KEY_DUP | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR)))
                             currentGui->requestFocus(currentFocus->getParent(), FocusDirection::Down, shouldShake);
-                        else if (keysHeld & HidNpadButton_AnyLeft)
+                        else if (keysHeld & HidNpadButton_AnyLeft && !(keysHeld & (KEY_DRIGHT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR)))
                             currentGui->requestFocus(currentFocus->getParent(), FocusDirection::Left, shouldShake);
-                        else if (keysHeld & HidNpadButton_AnyRight)
+                        else if (keysHeld & HidNpadButton_AnyRight && !(keysHeld & (KEY_DLEFT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR)))
                             currentGui->requestFocus(currentFocus->getParent(), FocusDirection::Right, shouldShake);
                         
                         shouldShake = currentGui->getFocusedElement() != currentFocus;
@@ -4901,8 +5051,8 @@ namespace tsl {
                     repeatTick++;
                 } else {
                     // Handle back button press
-                    if (keysDown & HidNpadButton_B)
-                        this->goBack();
+                    //if (keysDown & HidNpadButton_B)
+                    //    this->goBack();
                     repeatTick = 0;
                     shouldShake = true;
                 }
@@ -5035,8 +5185,8 @@ namespace tsl {
                             simulatedNextPage = true;
                         }
                     }
-                    if (oldTouchPos.x > 0U && oldTouchPos.x <= cfg::FramebufferWidth && oldTouchPos.y > 0U && oldTouchPos.y <= 73U) {
-                        if (initialTouchPos.x > 0U && initialTouchPos.x <= cfg::FramebufferWidth && initialTouchPos.y > 0U && initialTouchPos.y <= 73U) {
+                    if (oldTouchPos.x > 0U && oldTouchPos.x <= 252 && oldTouchPos.y > 0U && oldTouchPos.y <= 73U) {
+                        if (initialTouchPos.x > 0U && initialTouchPos.x <= 252 && initialTouchPos.y > 0U && initialTouchPos.y <= 73U) {
                             simulatedMenuComplete = false;
                             simulatedMenu = true;
                         }
@@ -5191,30 +5341,19 @@ namespace tsl {
         static void parseOverlaySettings() {
             hlp::ini::IniData parsedConfig = hlp::ini::readOverlaySettings(ULTRAHAND_CONFIG_FILE);
             
-            u64 decodedKeys = hlp::comboStringToKeys(parsedConfig[projectName]["key_combo"]); // CUSTOM MODIFICATION
+            u64 decodedKeys = hlp::comboStringToKeys(parsedConfig[ULTRAHAND_PROJECT_NAME][KEY_COMBO_STR]); // CUSTOM MODIFICATION
             if (decodedKeys)
                 tsl::cfg::launchCombo = decodedKeys;
             
-            datetimeFormat = removeQuotes(parsedConfig[projectName]["datetime_format"]); // read datetime_format
+            datetimeFormat = removeQuotes(parsedConfig[ULTRAHAND_PROJECT_NAME]["datetime_format"]); // read datetime_format
             if (datetimeFormat.empty()) {
                 datetimeFormat = removeQuotes(DEFAULT_DT_FORMAT);
             }
             
-            hideClock = removeQuotes(parsedConfig[projectName]["hide_clock"]);
-            if (hideClock.empty())
-                hideClock = "false";
-            
-            hideBattery = removeQuotes(parsedConfig[projectName]["hide_battery"]);
-            if (hideBattery.empty())
-                hideBattery = "false";
-            
-            hidePCBTemp = removeQuotes(parsedConfig[projectName]["hide_pcb_temp"]);
-            if (hidePCBTemp.empty())
-                hidePCBTemp = "false";
-            
-            hideSOCTemp = removeQuotes(parsedConfig[projectName]["hide_soc_temp"]);
-            if (hideSOCTemp.empty())
-                hideSOCTemp = "false";
+            hideClock = (removeQuotes(parsedConfig[ULTRAHAND_PROJECT_NAME]["hide_clock"]) != FALSE_STR);
+            hideBattery = (removeQuotes(parsedConfig[ULTRAHAND_PROJECT_NAME]["hide_battery"]) != FALSE_STR);
+            hidePCBTemp = (removeQuotes(parsedConfig[ULTRAHAND_PROJECT_NAME]["hide_pcb_temp"]) != FALSE_STR);
+            hideSOCTemp = (removeQuotes(parsedConfig[ULTRAHAND_PROJECT_NAME]["hide_soc_temp"]) != FALSE_STR);
             
         }
 
@@ -5226,13 +5365,13 @@ namespace tsl {
         [[maybe_unused]] static void updateCombo(u64 keys) {
             tsl::cfg::launchCombo = keys;
             hlp::ini::updateOverlaySettings({
-                { "tesla", { // CUSTOM MODIFICATION
-                    { "key_combo", tsl::hlp::keysToComboString(keys) }
+                { TESLA_STR, { // CUSTOM MODIFICATION
+                    { KEY_COMBO_STR, tsl::hlp::keysToComboString(keys) }
                 }}
             }, TESLA_CONFIG_FILE);
             hlp::ini::updateOverlaySettings({
-                { projectName, { // CUSTOM MODIFICATION
-                    { "key_combo", tsl::hlp::keysToComboString(keys) }
+                { ULTRAHAND_PROJECT_NAME, { // CUSTOM MODIFICATION
+                    { KEY_COMBO_STR, tsl::hlp::keysToComboString(keys) }
                 }}
             }, ULTRAHAND_CONFIG_FILE);
         }
@@ -5303,25 +5442,32 @@ namespace tsl {
                     if (hidGetTouchScreenStates(&shData->touchState, 1) == 0)
                         shData->touchState = { 0 };
                     
-                    if (((shData->keysHeld & tsl::cfg::launchCombo) == tsl::cfg::launchCombo) && shData->keysDown & tsl::cfg::launchCombo) {
-                        //useCombo2 = "ZL+ZR+DDOWN";
+                    if (updateMenuCombos) {  // CUSTOM MODIFICATION
+                        if ((shData->keysHeld & tsl::cfg::launchCombo2) == tsl::cfg::launchCombo2) {
+                            tsl::cfg::launchCombo = tsl::cfg::launchCombo2;
+                            setIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, KEY_COMBO_STR, TESLA_COMBO_STR);
+                            setIniFileValue(TESLA_CONFIG_INI_PATH, TESLA_STR, KEY_COMBO_STR, TESLA_COMBO_STR);
+                            eventFire(&shData->comboEvent);
+                            updateMenuCombos = false;
+                        }
+                        
+                    }
+
+                    if ((((shData->keysHeld & tsl::cfg::launchCombo) == tsl::cfg::launchCombo) && shData->keysDown & tsl::cfg::launchCombo)) {
+                        if (updateMenuCombos) {
+                            setIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, KEY_COMBO_STR, ULTRAHAND_COMBO_STR);
+                            setIniFileValue(TESLA_CONFIG_INI_PATH, TESLA_STR, KEY_COMBO_STR, ULTRAHAND_COMBO_STR);
+                            updateMenuCombos = false;
+                        }
+                        
+                        //updateMenuCombos = "ZL+ZR+DDOWN";
                         if (shData->overlayOpen) {
                             tsl::Overlay::get()->hide();
                             shData->overlayOpen = false;
                         }
-                        else
+                        else {
                             eventFire(&shData->comboEvent);
-                    } else if (((shData->keysHeld & tsl::cfg::launchCombo2) == tsl::cfg::launchCombo2) && shData->keysDown & tsl::cfg::launchCombo2 && useCombo2) {  // CUSTOM MODIFICATION
-                        tsl::cfg::launchCombo = hlp::comboStringToKeys("L+DDOWN+RS");
-                        //updateCombo(tsl::cfg::launchCombo);
-                        updateMenuCombos = true;
-                        useCombo2 = false;
-                        if (shData->overlayOpen) {
-                            tsl::Overlay::get()->hide();
-                            shData->overlayOpen = false;
                         }
-                        else
-                            eventFire(&shData->comboEvent);
                     }
                     
                     shData->keysDownPending |= shData->keysDown;
@@ -5431,37 +5577,57 @@ namespace tsl {
         
         // CUSTOM SECTION START
         // Argument parsing
-        bool skipCombo = false;
-        for (u8 arg = 0; arg < argc; arg++) {
-            if (strcasecmp(argv[arg], "--skipCombo") == 0) {
-                //eventFire(&shData.comboEvent);
-                //overlay->disableNextAnimation();
-                skipCombo = true;
-            }
-        }
+        //bool skipCombo = false;
+        //for (u8 arg = 0; arg < argc; arg++) {
+        //    if ((strcasecmp(argv[arg], "--skipCombo") == 0)) {
+        //        //logMessage("argv[0]: " +std::string(argv[0]));
+        //        //logMessage("argv[1]: " +std::string(argv[1]));
+        //        //eventFire(&shData.comboEvent);
+        //        //overlay->disableNextAnimation();
+        //        skipCombo = true;
+        //        //etIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_OVERLAY_STR, FALSE_STR);
+        //    }
+        //    //std::memset(argv[arg], 0, std::strlen(argv[arg]));
+        //}
         
-        std::string settingsConfigPath = "sdmc:/config/ultrahand/config.ini";
-        std::string teslaSettingsConfigIniPath = "sdmc:/config/tesla/config.ini";
-        std::map<std::string, std::map<std::string, std::string>> settingsData = getParsedDataFromIniFile(settingsConfigPath);
-        std::string inOverlayString;
+        //std::string SETTINGS_CONFIG_INI_PATH = "sdmc:/config/ultrahand/config.ini"; // global vars in ultra.hpp
+        //std::string TESLA_CONFIG_INI_PATH = "sdmc:/config/tesla/config.ini";
+        //std::map<std::string, std::map<std::string, std::string>> settingsData = getParsedDataFromIniFile(SETTINGS_CONFIG_INI_PATH);
+        //std::string inOverlayStrVal = ;
         
-        if (settingsData.count(projectName) > 0 && settingsData[projectName].count("in_overlay") > 0) {
-            inOverlayString = settingsData[projectName]["in_overlay"];
-        } else {
-            inOverlayString = "false"; // Assign default value if the keys are not present
-        }
+        bool inOverlay = (parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_OVERLAY_STR) != FALSE_STR);
+        //if (settingsData.count(ULTRAHAND_PROJECT_NAME) > 0 && settingsData[ULTRAHAND_PROJECT_NAME].count(IN_OVERLAY_STR) > 0) {
+        //    inOverlayStrVal = settingsData[ULTRAHAND_PROJECT_NAME][IN_OVERLAY_STR];
+        //} else {
+        //    inOverlayStrVal = TRUE_STR; // Assign default value if the keys are not present
+        //    inOverlay = true;
+        //}
+        //settingsData.clear();
         
-        bool inOverlay = false;
-        if (inOverlayString == "true") {
-            inOverlay = true;
-            setIniFileValue(settingsConfigPath, projectName, "in_overlay", "false");
-        }
         
-        if (inOverlay && skipCombo) {
+        
+        if (inOverlay) {
+            setIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_OVERLAY_STR, FALSE_STR);
             eventFire(&shData.comboEvent);
-            overlay->disableNextAnimation();
+            //overlay->disableNextAnimation();
         }
+
+        overlay->disableNextAnimation();
+        
+        
+        //if ((skipCombo)) {
+        //    overlay->disableNextAnimation();
+        //}
+
+
+        //if (inOverlay) {
+        //    logMessage("In Overlay/");
+        //    overlay->disableNextAnimation();
+        //} else
+        //    logMessage("Not in overlay");
+
         // CUSTOM SECTION END
+
         
         
         while (shData.running) {
@@ -5476,10 +5642,8 @@ namespace tsl {
             overlay->show();
             overlay->clearScreen();
             
-            
             while (shData.running) {
                 overlay->loop();
-                
                 {
                     std::scoped_lock lock(shData.dataMutex);
                     if (!overlay->fadeAnimationPlaying()) {
@@ -5488,17 +5652,18 @@ namespace tsl {
                     shData.keysDownPending = 0;
                 }
                 
-                if (overlay->shouldHide())
+                if (overlay->shouldHide()) {
                     break;
+                }
                 
                 if (overlay->shouldClose())
                     shData.running = false;
                 
-                if (updateMenuCombos) { // CUSTOM MODIFICATION
-                    setIniFileValue(settingsConfigPath, projectName, "key_combo", "L+DDOWN+RS");
-                    setIniFileValue(teslaSettingsConfigIniPath, "tesla", "key_combo", "L+DDOWN+RS");
-                    updateMenuCombos = false;
-                }
+                //if (updateMenuCombos) { // CUSTOM MODIFICATION
+                //    setIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, KEY_COMBO_STR, "L+DDOWN+RS");
+                //    setIniFileValue(TESLA_CONFIG_INI_PATH, "tesla", KEY_COMBO_STR, "L+DDOWN+RS");
+                //    updateMenuCombos = false;
+                //}
             }
             
             overlay->clearScreen();
@@ -5507,6 +5672,7 @@ namespace tsl {
             hlp::requestForeground(false);
             
             shData.overlayOpen = false;
+
             eventClear(&shData.comboEvent);
         }
         
@@ -5566,6 +5732,8 @@ extern "C" {
             ASSERT_FATAL(hidsysInitialize());                       // Focus control
             ASSERT_FATAL(setsysInitialize());                       // Settings querying
             
+
+
             ASSERT_FATAL(timeInitialize()); // CUSTOM MODIFICATION
             __libnx_init_time();            // CUSTOM MODIFICATION
             timeExit(); // CUSTOM MODIFICATION

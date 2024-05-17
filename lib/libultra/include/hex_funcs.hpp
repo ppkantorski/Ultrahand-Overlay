@@ -151,10 +151,11 @@ std::vector<std::string> findHexDataOffsets(const std::string& filePath, const s
         file.close();
         return offsets; // Ensure hexData has an even length
     }
+    std::string byteString;
     for (size_t i = 0; i < hexData.length(); i += 2) {
-        std::string byteString = hexData.substr(i, 2);
-        unsigned char byte = static_cast<unsigned char>(std::stoi(byteString, nullptr, 16));
-        binaryData.push_back(byte);
+        byteString = hexData.substr(i, 2);
+        //unsigned char byte = static_cast<unsigned char>(std::stoi(byteString, nullptr, 16));
+        binaryData.push_back(static_cast<unsigned char>(std::stoi(byteString, nullptr, 16)));
     }
 
     // Read the file in chunks to find the offsets where the hex data is located
@@ -177,53 +178,7 @@ std::vector<std::string> findHexDataOffsets(const std::string& filePath, const s
     return offsets;
 }
 
-/**
- * @brief Finds the offsets of hexadecimal data in a file.
- *
- * This function searches for occurrences of hexadecimal data in a binary file
- * and returns the file offsets where the data is found.
- *
- * @param filePath The path to the binary file.
- * @param hexData The hexadecimal data to search for.
- * @return A vector of strings containing the file offsets where the data is found.
- */
-//std::vector<std::string> findHexDataOffsetsF(FILE* file, const std::string& hexData) {
-//    std::vector<std::string> offsets;
-//    
-//    
-//    if (!file) {
-//        //std::cerr << "Failed to open the file." << std::endl;
-//        return offsets;
-//    }
-//    
-//    //size_t fileSize = fileStatus.st_size;
-//    
-//    // Convert the hex data string to binary data
-//    std::vector<unsigned char> binaryData; // Changed to use unsigned char
-//    for (size_t i = 0; i < hexData.length(); i += 2) {
-//        std::string byteString = hexData.substr(i, 2);
-//        unsigned char byte = static_cast<unsigned char>(std::stoi(byteString, nullptr, 16)); // Changed to use unsigned char
-//        binaryData.push_back(byte);
-//    }
-//    
-//    // Read the file in chunks to find the offsets where the hex data is located
-//    //const size_t bufferSize = 131072;
-//    std::vector<unsigned char> buffer(hexBufferSize); // Changed to use unsigned char
-//    std::streampos offset = 0;
-//    size_t bytesRead = 0; // Changed to size_t
-//    std::streampos currentOffset;
-//    while ((bytesRead = fread(buffer.data(), sizeof(unsigned char), hexBufferSize, file)) > 0) { // Changed to use unsigned char and size_t
-//        for (size_t i = 0; i < bytesRead; i++) {
-//            if (std::memcmp(buffer.data() + i, binaryData.data(), binaryData.size()) == 0) {
-//                currentOffset = static_cast<std::streampos>(offset) + static_cast<std::streamoff>(i);
-//                offsets.push_back(std::to_string(currentOffset));
-//            }
-//        }
-//        offset += bytesRead;
-//    }
-//    
-//    return offsets;
-//}
+
 
 /**
  * @brief Edits hexadecimal data in a file at a specified offset.
@@ -236,79 +191,43 @@ std::vector<std::string> findHexDataOffsets(const std::string& filePath, const s
  * @param hexData The hexadecimal data to replace at the offset.
  */
 void hexEditByOffset(const std::string& filePath, const std::string& offsetStr, const std::string& hexData) {
-    // Convert the offset string to std::streampos
     std::streampos offset = std::stoll(offsetStr);
-    
-    // Open the file for reading and writing in binary mode
-    std::ifstream file(filePath, std::ios::binary);
+
+    // Open the file for both reading and writing in binary mode
+    std::fstream file(filePath, std::ios::binary | std::ios::in | std::ios::out);
     if (!file.is_open()) {
         logMessage("Failed to open the file.");
         return;
     }
-    
-    // Get the file size
-    struct stat fileStatus;
-    if (stat(filePath.c_str(), &fileStatus) != 0) {
-        logMessage("Failed to retrieve file size.");
-        file.close();
-        return;
-    }
-    std::streampos fileSize = static_cast<std::streampos>(fileStatus.st_size);
-    
-    // Move the file pointer to the specified offset
+
+    // Retrieve the file size
+    file.seekg(0, std::ios::end);
+    std::streampos fileSize = file.tellg();
+    file.seekg(0, std::ios::beg);
+
     if (offset >= fileSize) {
         logMessage("Offset exceeds file size.");
-        file.close();
         return;
     }
-    file.seekg(offset);
-    
-    // Convert the hex data string to binary data
-    std::vector<unsigned char> binaryData; // Changed to use unsigned char
+
+    // Convert the hex string to binary data
+    std::vector<unsigned char> binaryData(hexData.length() / 2);
     std::string byteString;
-    unsigned char byte;
-    for (size_t i = 0; i < hexData.length(); i += 2) {
+    for (size_t i = 0, j = 0; i < hexData.length(); i += 2, ++j) {
         byteString = hexData.substr(i, 2);
-        byte = static_cast<unsigned char>(std::stoi(byteString, nullptr, 16)); // Changed to use unsigned char
-        binaryData.push_back(byte);
-    }
-    
-    // Calculate the number of bytes to be replaced
-    size_t bytesToReplace = binaryData.size();
-    
-    // Read the existing data from the file
-    std::vector<unsigned char> existingData(bytesToReplace); // Changed to use unsigned char
-    file.read(reinterpret_cast<char*>(existingData.data()), bytesToReplace);
-    if (static_cast<size_t>(file.gcount()) != bytesToReplace) {
-        logMessage("Failed to read existing data from the file.");
-        file.close();
-        return;
-    }
-    
-    // Close the file before writing
-    file.close();
-
-    // Reopen the file for writing in binary mode
-    std::ofstream outFile(filePath, std::ios::binary | std::ios::in | std::ios::out);
-    if (!outFile.is_open()) {
-        logMessage("Failed to reopen the file for writing.");
-        return;
+        binaryData[j] = static_cast<unsigned char>(std::stoi(byteString, nullptr, 16));
     }
 
-    // Move the file pointer back to the offset
-    outFile.seekp(offset);
-    
-    // Write the replacement binary data to the file
-    outFile.write(reinterpret_cast<char*>(binaryData.data()), bytesToReplace);
-    if (!outFile) {
+    // Move to the specified offset
+    file.seekg(offset);
+
+    // Write the binary data directly to the file at the offset
+    file.seekp(offset);
+    file.write(reinterpret_cast<const char*>(binaryData.data()), binaryData.size());
+    if (!file) {
         logMessage("Failed to write data to the file.");
-        outFile.close();
         return;
     }
-
-    // Close the file
-    outFile.close();
-    //logMessage("Hex editing completed.");
 }
 
 /**
@@ -365,8 +284,8 @@ void hexEditByCustomOffset(const std::string& filePath, const std::string& custo
     
     if (hexSum != -1) {
         // Calculate the total offset to seek in the file
-        int sum = hexSum + std::stoi(offsetStr);
-        hexEditByOffset(filePath, std::to_string(sum), hexDataReplacement);
+        //int sum = hexSum + std::stoi(offsetStr);
+        hexEditByOffset(filePath, std::to_string(hexSum + std::stoi(offsetStr)), hexDataReplacement);
     } else {
         logMessage("Failed to find " + customAsciiPattern + ".");
     }
@@ -397,19 +316,16 @@ void hexEditFindReplace(const std::string& filePath, const std::string& hexDataT
             // Convert the occurrence string to an integer
             if (occurrence > 0 && occurrence <= offsetStrs.size()) {
                 // Replace the specified occurrence/index
-                std::string offsetStr = offsetStrs[occurrence - 1];
+                //std::string offsetStr = offsetStrs[occurrence - 1];
                 //logMessage("offsetStr: "+offsetStr);
                 //logMessage("hexDataReplacement: "+hexDataReplacement);
-                hexEditByOffset(filePath, offsetStr, hexDataReplacement);
+                hexEditByOffset(filePath, offsetStrs[occurrence - 1], hexDataReplacement);
             } else {
                 // Invalid occurrence/index specified
-                //std::cout << "Invalid occurrence/index specified." << std::endl;
+                logMessage("Invalid hex occurrence/index specified.");
             }
         }
         //std::cout << "Hex data replaced successfully." << std::endl;
-    }
-    else {
-        //std::cout << "Hex data to replace not found." << std::endl;
     }
 }
 
@@ -425,29 +341,18 @@ void hexEditFindReplace(const std::string& filePath, const std::string& hexDataT
  * @param occurrence The occurrence/index of the data to replace (default is "0" to replace all occurrences).
  */
 std::string parseHexDataAtCustomOffset(const std::string& filePath, const std::string& customAsciiPattern, const std::string& offsetStr, size_t length, size_t occurrence = 0) {
-    
-    // Create a cache key based on filePath and customAsciiPattern
     std::string cacheKey = filePath + '?' + customAsciiPattern + '?' + std::to_string(occurrence);
-    
     int hexSum = -1;
-    
-    // Check if the result is already cached
+
     auto cachedResult = hexSumCache.find(cacheKey);
     if (cachedResult != hexSumCache.end()) {
-        hexSum = std::stoi(cachedResult->second); // load sum from cache
-    }
-    
-    if (hexSum == -1) {
-        // Convert custom ASCII pattern to a custom hex pattern
-        std::string customHexPattern = asciiToHex(customAsciiPattern);
+        hexSum = std::stoi(cachedResult->second);
+    } else {
+        std::string customHexPattern = asciiToHex(customAsciiPattern); // Function should cache its results if expensive
+        std::vector<std::string> offsets = findHexDataOffsets(filePath, customHexPattern); // Consider optimizing this search
         
-        // Find hex data offsets in the file
-        std::vector<std::string> offsets = findHexDataOffsets(filePath, customHexPattern);
-        
-        if (!offsets.empty()) {
+        if (!offsets.empty() && offsets.size() > occurrence) {
             hexSum = std::stoi(offsets[occurrence]);
-            
-            // Convert 'hexSum' to a string and add it to the cache
             hexSumCache[cacheKey] = std::to_string(hexSum);
         } else {
             logMessage("Offset not found.");
@@ -455,146 +360,41 @@ std::string parseHexDataAtCustomOffset(const std::string& filePath, const std::s
         }
     }
     
-    // Calculate the total offset to seek in the file
-    std::streampos sum = hexSum + std::stoll(offsetStr);
-    
-    
-    // Open the file for reading in binary mode
+    std::streampos totalOffset = hexSum + std::stoll(offsetStr);
+    std::vector<char> hexBuffer(length);
+    std::vector<char> hexStream(length * 2);
+
     std::ifstream file(filePath, std::ios::binary);
-    if (!file.is_open()) {
+    if (!file) {
         logMessage("Failed to open the file.");
         return "";
     }
     
-    // Seek to the specified offset
-    file.seekg(sum);
+    file.seekg(totalOffset);
     if (!file) {
         logMessage("Error seeking to offset.");
-        file.close();
         return "";
     }
-    
-    // Read the specified number of bytes
-    char hexBuffer[length];
-    char hexDigits[] = "0123456789ABCDEF";
-    char* hexStream = new char[length * 2];  // Allocate memory for the result
-    
-    file.read(hexBuffer, length);
+
+    file.read(hexBuffer.data(), length);
     if (file.gcount() == static_cast<std::streamsize>(length)) {
+        const char hexDigits[] = "0123456789ABCDEF";
         for (size_t i = 0; i < length; ++i) {
             hexStream[i * 2] = hexDigits[(hexBuffer[i] >> 4) & 0xF];
             hexStream[i * 2 + 1] = hexDigits[hexBuffer[i] & 0xF];
         }
     } else {
-        if (file.eof()) {
-            logMessage("End of file reached.");
-        } else {
-            logMessage("Error reading data from file.");
-        }
-        file.close();
-        delete[] hexStream;
+        logMessage("Error reading data from file or end of file reached.");
         return "";
     }
-    
-    // Close the file
+
     file.close();
-    
-    // Convert lowercase hex to uppercase and return the result
-    std::string result(hexStream, length * 2);
+    std::string result(hexStream.begin(), hexStream.end());
     std::transform(result.begin(), result.end(), result.begin(), ::toupper);
-    
-    delete[] hexStream;
-    
+
     return result;
 }
 
-
-/**
- * @brief Finds and replaces hexadecimal data in a file.
- *
- * This function searches for occurrences of hexadecimal data in a binary file
- * and replaces them with a specified hexadecimal replacement data.
- *
- * @param filePath The path to the binary file.
- * @param hexDataToReplace The hexadecimal data to search for and replace.
- * @param hexDataReplacement The hexadecimal data to replace with.
- * @param occurrence The occurrence/index of the data to replace (default is "0" to replace all occurrences).
- */
-//std::string parseHexDataAtCustomOffsetF(FILE*& file, const std::string& filePath, const std::string& customAsciiPattern, const std::string& offsetStr, size_t length, size_t occurrence = 0) {
-//    
-//    // Create a cache key based on filePath and customAsciiPattern
-//    std::string cacheKey = filePath + '?' + customAsciiPattern + '?' + std::to_string(occurrence);
-//    
-//    int hexSum = -1;
-//    
-//    // Check if the result is already cached
-//    auto cachedResult = hexSumCache.find(cacheKey);
-//    if (cachedResult != hexSumCache.end()) {
-//        hexSum = std::stoi(cachedResult->second); // load sum from cache
-//    }
-//    
-//    if (hexSum == -1) {
-//        // Convert custom ASCII pattern to a custom hex pattern
-//        std::string customHexPattern = asciiToHex(customAsciiPattern);
-//        
-//        // Find hex data offsets in the file
-//        std::vector<std::string> offsets = findHexDataOffsetsF(file, customHexPattern);
-//        
-//        if (!offsets.empty()) {
-//            hexSum = std::stoi(offsets[occurrence]);
-//            
-//            // Convert 'hexSum' to a string and add it to the cache
-//            hexSumCache[cacheKey] = std::to_string(hexSum);
-//        } else {
-//            logMessage("Offset not found.");
-//            return "";
-//        }
-//    }
-//    
-//    // Calculate the total offset to seek in the file
-//    int sum = hexSum + std::stoi(offsetStr);
-//    
-//    
-//    // Open the file for reading in binary mode
-//    //FILE* file = fopen(filePath.c_str(), "rb");
-//    if (!file) {
-//        logMessage("Failed to open the file.");
-//        return "";
-//    }
-//    
-//    // Seek to the specified offset
-//    if (fseek(file, sum, SEEK_SET) != 0) {
-//        logMessage("Error seeking to offset.");
-//        //fclose(file);
-//        return "";
-//    }
-//    
-//    char hexBuffer[length];
-//    char hexDigits[] = "0123456789ABCDEF";
-//    char* hexStream = new char[length * 2];  // Allocate memory for the result
-//    
-//    size_t bytesRead = fread(hexBuffer, 1, length, file);
-//    if (bytesRead == length) {
-//        for (size_t i = 0; i < length; ++i) {
-//            hexStream[i * 2] = hexDigits[(hexBuffer[i] >> 4) & 0xF];
-//            hexStream[i * 2 + 1] = hexDigits[hexBuffer[i] & 0xF];
-//        }
-//    } else if (feof(file)) {
-//        logMessage("End of file reached.");
-//    } else if (ferror(file)) {
-//        logMessage("Error reading data from file: " + std::to_string(errno));
-//    }
-//    
-//    
-//    
-//    // Convert lowercase hex to uppercase and return the result
-//    std::string result(hexStream, length * 2);
-//    std::transform(result.begin(), result.end(), result.begin(), ::toupper);
-//    
-//    delete[] hexStream;
-//    
-//    return result;
-//}
 
 
 /**
