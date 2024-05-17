@@ -245,6 +245,7 @@ static std::string APP_SETTINGS;
 static std::string ON_MAIN_MENU;
 static std::string ON_A_COMMAND;
 static std::string ON_OVERLAY_PACKAGE;
+static std::string EMPTY;
 
 static std::string SUNDAY;
 static std::string MONDAY;
@@ -351,7 +352,8 @@ void reinitializeLangVars() {
     ON_MAIN_MENU = "on Main Menu";
     ON_A_COMMAND = "on a command";
     ON_OVERLAY_PACKAGE = "on overlay/package";
-    
+    EMPTY = "Empty";
+
     SUNDAY = "Sunday";
     MONDAY = "Monday";
     TUESDAY = "Tuesday";
@@ -473,6 +475,7 @@ void parseLanguage(std::string langFile) {
         {"ON_MAIN_MENU", &ON_MAIN_MENU},
         {"ON_A_COMMAND", &ON_A_COMMAND},
         {"ON_OVERLAY_PACKAGE", &ON_OVERLAY_PACKAGE},
+        {"EMPTY", &EMPTY},
         {"SUNDAY", &SUNDAY},
         {"MONDAY", &MONDAY},
         {"TUESDAY", &TUESDAY},
