@@ -254,29 +254,29 @@ void drawTable(std::unique_ptr<tsl::elm::List>& list, std::string sectionString,
 
     list->addItem(new tsl::elm::CustomDrawer([yOffset, lineHeight, columnOffset, fontSize, sectionString, infoString,
         sectionTextColor, infoTextColor, newlineGap, alignment, xMax, splitString](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
-
+        
         // Split infoString by newline characters
         std::vector<std::string> sectionLines = splitString(sectionString, '\n');
-
+        
         // Split infoString by newline characters
         std::vector<std::string> infoLines = splitString(infoString, '\n');
-
+        
         // Draw sectionString
         //renderer->drawString(sectionString.c_str(), false, x + 12, y + yOffset, fontSize, tsl::gfx::Renderer::a(infoTextColor));
-
+        
         // Draw each line of infoString
         for (size_t i = 0; i < sectionLines.size(); ++i) {
             const std::string& line = sectionLines[i];
             
             renderer->drawString(line.c_str(), false, x + 12, y + yOffset + (i * lineHeight) + (i*newlineGap), fontSize, tsl::gfx::Renderer::a(sectionTextColor));
         }
-
+        
         // Draw each line of infoString
         for (size_t i = 0; i < infoLines.size(); ++i) {
             const std::string& line = infoLines[i];
             float infoStringWidth = calculateStringWidth(line, fontSize, false);
             int infoX;
-
+            
             if (alignment == RIGHT_STR) {
                 infoX = xMax - infoStringWidth;
             } else if (alignment == CENTER_STR) {
