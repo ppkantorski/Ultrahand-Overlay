@@ -75,7 +75,7 @@ static std::atomic<bool> shakingProgress(true);
 
 static std::atomic<bool> isHidden(true);
 
-static bool progressAnimation = (parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "progress_animation") == TRUE_STR);
+bool progressAnimation = false;
 
 /**
  * @brief Shutdown modes for the Ultrahand-Overlay project.

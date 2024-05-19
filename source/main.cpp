@@ -888,7 +888,7 @@ public:
             
             list->addItem(new tsl::elm::CategoryHeader(EFFECTS));
 
-            progressAnimation = (parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "progress_animation") == TRUE_STR);
+            
             
             toggleListItem = std::make_unique<tsl::elm::ToggleListItem>(PROGRESS_ANIMATION, false, ON, OFF);
             toggleListItem->setState((progressAnimation));
@@ -3104,7 +3104,16 @@ public:
                     setIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, section, FALSE_STR);
                     hidePackageVersions = false;
                 }
+
+                section = "progress_animation";
+                if (ultrahandSection.count(section) > 0) {
+                    progressAnimation = (ultrahandSection[section] == TRUE_STR);
+                } else {
+                    setIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, section, FALSE_STR);
+                    progressAnimation = false;
+                }
                 
+
                 section = DEFAULT_LANG_STR;
                 if (ultrahandSection.count(section) > 0) {
                     defaultLang = ultrahandSection[section];
