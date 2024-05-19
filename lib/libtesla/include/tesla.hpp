@@ -3842,43 +3842,69 @@ namespace tsl {
             }
             
             virtual Element* requestFocus(Element *oldFocus, FocusDirection direction) override {
-                if (this->m_clearList || !this->m_itemsToAdd.empty())
-                    return nullptr;
-            
                 Element *newFocus = nullptr;
-                size_t itemCount = this->m_items.size();
-            
+                
+                if (this->m_clearList || this->m_itemsToAdd.size() > 0)
+                    return nullptr;
+                
                 if (direction == FocusDirection::None) {
-                    size_t i = (oldFocus == nullptr) ? 0 : this->m_focusedIndex;
-            
-                    for (; i < itemCount; ++i) {
+                    i = 0;
+                    
+                    if (oldFocus == nullptr) {
+                        s32 elementHeight = 0;
+                        while (elementHeight < this->m_offset && i < this->m_items.size() - 1) {
+                            i++;
+                            elementHeight += this->m_items[i]->getHeight();
+                        }
+                    }
+                    
+                    for (; i < this->m_items.size(); i++) {
                         newFocus = this->m_items[i]->requestFocus(oldFocus, direction);
+                        
                         if (newFocus != nullptr) {
                             this->m_focusedIndex = i;
+                            
                             this->updateScrollOffset();
                             return newFocus;
                         }
                     }
-                } else if (direction == FocusDirection::Down) {
-                    for (size_t i = this->m_focusedIndex + 1; i < itemCount; ++i) {
-                        newFocus = this->m_items[i]->requestFocus(oldFocus, direction);
-                        if (newFocus != nullptr && newFocus != oldFocus) {
-                            this->m_focusedIndex = i;
-                            this->updateScrollOffset();
-                            return newFocus;
+                } else {
+                    if (direction == FocusDirection::Down) {
+                        
+                        for (u16 i = this->m_focusedIndex + 1; i < this->m_items.size(); i++) {
+                            newFocus = this->m_items[i]->requestFocus(oldFocus, direction);
+                            
+                            if (newFocus != nullptr && newFocus != oldFocus) {
+                                this->m_focusedIndex = i;
+                                
+                                this->updateScrollOffset();
+                                return newFocus;
+                            }
                         }
-                    }
-                } else if (direction == FocusDirection::Up) {
-                    for (size_t i = this->m_focusedIndex; i-- > 0;) {
-                        newFocus = this->m_items[i]->requestFocus(oldFocus, direction);
-                        if (newFocus != nullptr && newFocus != oldFocus) {
-                            this->m_focusedIndex = i;
-                            this->updateScrollOffset();
-                            return newFocus;
+                        
+                        return oldFocus;
+                    } else if (direction == FocusDirection::Up) {
+                        if (this->m_focusedIndex > 0) {
+                            
+                            for (u16 i = this->m_focusedIndex - 1; i >= 0; i--) {
+                                if (i > this->m_items.size() || this->m_items[i] == nullptr)
+                                    return oldFocus;
+                                else
+                                    newFocus = this->m_items[i]->requestFocus(oldFocus, direction);
+                                
+                                if (newFocus != nullptr && newFocus != oldFocus) {
+                                    this->m_focusedIndex = i;
+                                    
+                                    this->updateScrollOffset();
+                                    return newFocus;
+                                }
+                            }
                         }
+                        
+                        return oldFocus;
                     }
                 }
-            
+                
                 return oldFocus;
             }
 
