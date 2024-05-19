@@ -67,6 +67,7 @@ static const std::string GROUPING_PATTERN = ";grouping=";
 static const std::string SYSTEM_PATTERN = ";system=";
 
 // Table option patterns
+static const std::string BACKGROUND_PATTERN = ";background="; // true or false
 static const std::string HEADER_PATTERN = ";header=";
 static const std::string ALIGNMENT_PATTERN = ";alignment=";
 static const std::string GAP_PATTERN =";gap=";
@@ -75,7 +76,8 @@ static const std::string SPACING_PATTERN = ";spacing=";
 
 static std::string currentMenu = OVERLAYS_STR;
 static std::string lastPage = LEFT_STR;
-static std::string lastPackage = "";
+static std::string lastPackagePath;
+static std::string lastPackageName;
 static std::string lastMenu = "";
 static std::string lastMenuMode = "";
 static std::string lastKeyName = "";
@@ -2145,6 +2147,7 @@ private:
     std::string filePath, specificKey, pathPattern, pathPatternOn, pathPatternOff, itemName, parentDirName, lastParentDirName;
     bool usingPages = false;
     std::string packageName;
+    size_t nestedLayer = 0;
 public:
     /**
      * @brief Constructs a `PackageMenu` instance for a specific sub-menu path.
@@ -2153,8 +2156,8 @@ public:
      *
      * @param path The path to the sub-menu.
      */
-    PackageMenu(const std::string& path, const std::string& sectionName = "", const std::string& page = LEFT_STR, const std::string& _packageName = PACKAGE_FILENAME) :
-        packagePath(path), dropdownSection(sectionName), currentPage(page), packageName(_packageName) {}
+    PackageMenu(const std::string& path, const std::string& sectionName = "", const std::string& page = LEFT_STR, const std::string& _packageName = PACKAGE_FILENAME, const size_t& _nestedlayer = 0) :
+        packagePath(path), dropdownSection(sectionName), currentPage(page), packageName(_packageName), nestedLayer(_nestedlayer) {}
     /**
      * @brief Destroys the `PackageMenu` instance.
      *
@@ -2239,8 +2242,8 @@ public:
         bool inEristaSection;
         bool inMarikoSection;
         
-        bool hideTableHeader;
-        size_t tableGap, tableColumnOffset, tableSpacing;
+        bool hideTableHeader, hideTableBackground;
+        size_t tableStartGap, tableEndGap, tableColumnOffset, tableSpacing;
         std::string tableAlignment;
 
         
@@ -2253,7 +2256,9 @@ public:
             footer = "";
             useSelection = false;
             hideTableHeader = false;
-            tableGap = 3;
+            hideTableBackground = false;
+            tableStartGap = 26;
+            tableEndGap = 3;
             tableColumnOffset = 160;
             tableSpacing = 0;
             tableAlignment = RIGHT_STR;
@@ -2424,11 +2429,14 @@ public:
                             if (std::find(commandGroupings.begin(), commandGroupings.end(), commandGrouping) == commandGroupings.end())
                                 commandGrouping = commandGroupings[0]; // reset to default if commandMode is unknown
                             continue;
+                        } else if (commandName.find(BACKGROUND_PATTERN) == 0) {// Extract the command grouping
+                            hideTableBackground = (commandName.substr(BACKGROUND_PATTERN.length()) == FALSE_STR);
+                            continue;
                         } else if (commandName.find(HEADER_PATTERN) == 0) {// Extract the command grouping
                             hideTableHeader = (commandName.substr(HEADER_PATTERN.length()) == FALSE_STR);
                             continue;
                         } else if (commandName.find(GAP_PATTERN) == 0) {// Extract the command grouping
-                            tableGap = std::stoi(commandName.substr(GAP_PATTERN.length()));
+                            tableEndGap = std::stoi(commandName.substr(GAP_PATTERN.length()));
                             continue;
                         } else if (commandName.find(OFFSET_PATTERN) == 0) {// Extract the command grouping
                             tableColumnOffset = std::stoi(commandName.substr(OFFSET_PATTERN.length()));
@@ -2544,7 +2552,7 @@ public:
                             list->addItem(new tsl::elm::CategoryHeader(optionName));
                         } else
                             hideTableHeader = false;
-                        addTable(list, tableData, this->packagePath, tableColumnOffset, tableGap, tableSpacing, tableAlignment);
+                        addTable(list, tableData, this->packagePath, tableColumnOffset, tableStartGap, tableEndGap, tableSpacing, tableAlignment, hideTableBackground);
                         continue;
                     }
 
@@ -2567,7 +2575,7 @@ public:
                             const std::string& forwarderPackagePath = getParentDirFromPath(packageSource);
                             const std::string& forwarderPackageIniName = getNameFromPath(packageSource);
 
-                            listItem->setClickListener([commands, keyName = option.first, &packagePath = this->packagePath, forwarderPackagePath, forwarderPackageIniName](s64 keys) mutable {
+                            listItem->setClickListener([commands, keyName = option.first, &packagePath = this->packagePath, forwarderPackagePath, forwarderPackageIniName, &nestedLayer=this->nestedLayer](s64 keys) mutable {
 
 
                                 if (simulatedSelect && !simulatedSelectComplete) {
@@ -2578,7 +2586,9 @@ public:
                                 if (keys & KEY_A) {
                                     interpretAndExecuteCommands(std::move(commands), packagePath, keyName); // Now correctly moved
                                     nestedMenuCount++;
-                                    tsl::changeTo<PackageMenu>(forwarderPackagePath, "", LEFT_STR, forwarderPackageIniName);
+                                    lastPackagePath = forwarderPackagePath;
+                                    lastPackageName = forwarderPackageIniName;
+                                    tsl::changeTo<PackageMenu>(forwarderPackagePath, "", LEFT_STR, forwarderPackageIniName, nestedLayer+1);
                                     simulatedSelectComplete = true;
                                     return true;
                                 }
@@ -2781,12 +2791,17 @@ public:
             return true;
         }
 
+        if (nestedMenuCount == 0 && nestedLayer == 0) {
+            lastPackagePath = packagePath;
+            lastPackageName = PACKAGE_FILENAME;
+        }
+
         // Your existing logic for handling other inputs
         if (refreshGui && !returningToPackage && !stillTouching) {
             refreshGui = false;
             
             if (inPackageMenu) {
-                lastPackage = packagePath;
+                lastPackagePath = packagePath;
                 inSubPackageMenu = false;
                 inPackageMenu = false;
                 if (lastPage == RIGHT_STR) {
@@ -2798,12 +2813,12 @@ public:
                 lastPage = LEFT_STR;
                 selectedListItem.reset();
                 lastSelectedListItem.reset();
-                tsl::changeTo<PackageMenu>(lastPackage);
+                tsl::changeTo<PackageMenu>(lastPackagePath);
                 //lastPage == LEFT_STR;
             }
 
             if (inSubPackageMenu) {
-                lastPackage = packagePath;
+                lastPackagePath = packagePath;
                 inSubPackageMenu = false;
                 inPackageMenu = false;
                 if (lastPage == RIGHT_STR) {
@@ -2817,7 +2832,7 @@ public:
                 lastPage = LEFT_STR;
                 selectedListItem.reset();
                 lastSelectedListItem.reset();
-                tsl::changeTo<PackageMenu>(lastPackage);
+                tsl::changeTo<PackageMenu>(lastPackagePath);
             }
             
         }
@@ -2845,26 +2860,27 @@ public:
             if (currentPage == LEFT_STR) {
                 if ((keysHeld & KEY_DRIGHT) && !(keysHeld & (KEY_DLEFT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR)) && !stillTouching) {
                     lastPage = RIGHT_STR;
-                    lastPackage = packagePath;
+                    //lastPackage = packagePath;
                     selectedListItem.reset();
                     lastSelectedListItem.reset();
                     tsl::goBack();
-                    tsl::changeTo<PackageMenu>(lastPackage, dropdownSection, RIGHT_STR);
+                    tsl::changeTo<PackageMenu>(lastPackagePath, dropdownSection, RIGHT_STR, lastPackageName);
                     simulatedNextPageComplete = true;
                     return true;
                 }
             } else if (currentPage == RIGHT_STR) {
                 if ((keysHeld & KEY_DLEFT) && !(keysHeld & (KEY_DRIGHT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR)) && !stillTouching) {
                     lastPage = LEFT_STR;
-                    lastPackage = packagePath;
+                    //lastPackage = packagePath;
                     selectedListItem.reset();
                     lastSelectedListItem.reset();
                     tsl::goBack();
-                    tsl::changeTo<PackageMenu>(lastPackage, dropdownSection, LEFT_STR);
+                    tsl::changeTo<PackageMenu>(lastPackagePath, dropdownSection, LEFT_STR, lastPackageName);
                     simulatedNextPageComplete = true;
                     return true;
                 }
             } 
+
         }
         
         if (!returningToPackage && inPackageMenu) {
@@ -3610,7 +3626,8 @@ public:
                                         bootOptions.clear();
                                     }
                                 }
-                                
+                                lastPackagePath = packageFilePath;
+                                lastPackageName = PACKAGE_FILENAME;
                                 tsl::changeTo<PackageMenu>(packageFilePath, "");
                                 simulatedSelectComplete = true;
                                 return true;
