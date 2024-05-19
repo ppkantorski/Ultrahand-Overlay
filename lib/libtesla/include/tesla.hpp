@@ -703,6 +703,53 @@ static std::unordered_map<wchar_t, float> numericCharacterWidths = {
     {L'9', 0.66}
 };
 
+// Predefined hexMap
+const std::array<int, 256> hexMap = [] {
+    std::array<int, 256> map = {0};
+    map['0'] = 0; map['1'] = 1; map['2'] = 2; map['3'] = 3; map['4'] = 4;
+    map['5'] = 5; map['6'] = 6; map['7'] = 7; map['8'] = 8; map['9'] = 9;
+    map['A'] = 10; map['B'] = 11; map['C'] = 12; map['D'] = 13; map['E'] = 14; map['F'] = 15;
+    map['a'] = 10; map['b'] = 11; map['c'] = 12; map['d'] = 13; map['e'] = 14; map['f'] = 15;
+    return map;
+}();
+
+
+// Prepare a map of default settings
+std::map<std::string, std::string> defaultThemeSettingsMap = {
+    {"clock_color", whiteColor},
+    {"bg_alpha", "13"},
+    {"bg_color", blackColor},
+    {"seperator_alpha", "7"},
+    {"seperator_color", "#777777"},
+    {"battery_color", "#ffff45"},
+    {"text_color", whiteColor},
+    {"table_bg_color", "#303030"},
+    {"table_section_text_color", "#e9ff40"},
+    {"table_info_text_color", whiteColor},
+    {"version_text_color", "#AAAAAA"},
+    {"on_text_color", "#00FFDD"},
+    {"off_text_color", "#AAAAAA"},
+    {"invalid_text_color", "#FF0000"},
+    {"inprogress_text_color", "#FFFF45"},
+    {"selection_text_color", whiteColor},
+    {"selection_bg_color", blackColor},
+    {"trackbar_color", "#555555"},
+    {"highlight_color_1", "#2288CC"},
+    {"highlight_color_2", "#88FFFF"},
+    {"highlight_color_3", "#FFFF45"},
+    {"highlight_color_4", "#F7253E"},
+    {"click_text_color", whiteColor},
+    {"click_alpha", "7"},
+    {"click_color", "#F7253E"},
+    {"invert_bg_click_color", FALSE_STR},
+    {"disable_selection_bg", FALSE_STR},
+    {"disable_colorful_logo", FALSE_STR},
+    {"logo_color_1", whiteColor},
+    {"logo_color_2", "#FF0000"},
+    {"dynamic_logo_color_1", "#00E669"},
+    {"dynamic_logo_color_2", "#8080EA"}
+};
+
 inline bool isNumericCharacter(char c) {
     return std::isdigit(c);
 }
@@ -1182,7 +1229,8 @@ namespace tsl {
         
         return Color(r, g, b, a);
     }
-    
+
+
     Color RGB888(const std::string& hexColor, const std::string& defaultHexColor = whiteColor, size_t alpha = 15) {
         std::string validHex = hexColor.empty() || hexColor[0] != '#' ? hexColor : hexColor.substr(1);
         
@@ -1190,29 +1238,37 @@ namespace tsl {
             validHex = defaultHexColor;
         }
         
-        // Assuming validHex is a correct hex string after removing '#' if needed and checking validity.
-        uint8_t redValue = std::stoi(validHex.substr(0, 2), nullptr, 16) >> 4; // Right-shift to convert from 8-bit to 4-bit
-        uint8_t greenValue = std::stoi(validHex.substr(2, 2), nullptr, 16) >> 4;
-        uint8_t blueValue = std::stoi(validHex.substr(4, 2), nullptr, 16) >> 4;
+        // Convert hex to RGB values
+        uint8_t redValue = (hexMap[static_cast<unsigned char>(validHex[0])] << 4) | hexMap[static_cast<unsigned char>(validHex[1])];
+        uint8_t greenValue = (hexMap[static_cast<unsigned char>(validHex[2])] << 4) | hexMap[static_cast<unsigned char>(validHex[3])];
+        uint8_t blueValue = (hexMap[static_cast<unsigned char>(validHex[4])] << 4) | hexMap[static_cast<unsigned char>(validHex[5])];
         
-        return Color(redValue, greenValue, blueValue, alpha);
+        return Color(redValue >> 4, greenValue >> 4, blueValue >> 4, alpha);
     }
 
-    std::tuple<float, float, float> hexToRGB444Floats(const std::string& hexColor, const std::string& defaultHexColor = whiteColor) {
-        std::string validHex = (hexColor.size() > 0 && hexColor[0] == '#') ? hexColor.substr(1) : hexColor;
+
+    std::tuple<float, float, float> hexToRGB444Floats(const std::string& hexColor, const std::string& defaultHexColor = "#FFFFFF") {
+        const char* validHex = hexColor.c_str();
+        if (validHex[0] == '#') validHex++;
     
         if (!isValidHexColor(validHex)) {
-            return hexToRGB444Floats(defaultHexColor); // Recurse with default color if invalid
+            validHex = defaultHexColor.c_str();
+            if (validHex[0] == '#') validHex++;
         }
-        
-        // Convert hex string directly to an unsigned int
-        unsigned int hexValue = std::stoul(validHex, nullptr, 16);
-        
+    
+        // Manually parse the hex string to an integer value
+        unsigned int hexValue = (hexMap[static_cast<unsigned char>(validHex[0])] << 20) |
+                                (hexMap[static_cast<unsigned char>(validHex[1])] << 16) |
+                                (hexMap[static_cast<unsigned char>(validHex[2])] << 12) |
+                                (hexMap[static_cast<unsigned char>(validHex[3])] << 8)  |
+                                (hexMap[static_cast<unsigned char>(validHex[4])] << 4)  |
+                                hexMap[static_cast<unsigned char>(validHex[5])];
+    
         // Extract and scale the RGB components from 8-bit (0-255) to 4-bit float scale (0-15)
         float red = ((hexValue >> 16) & 0xFF) / 255.0f * 15.0f;
         float green = ((hexValue >> 8) & 0xFF) / 255.0f * 15.0f;
         float blue = (hexValue & 0xFF) / 255.0f * 15.0f;
-        
+    
         return std::make_tuple(red, green, blue);
     }
 
@@ -1247,7 +1303,7 @@ namespace tsl {
     static Color defaultBackgroundColor = RGB888(blackColor, blackColor, defaultBackgroundAlpha);
     static Color defaultTextColor = RGB888(whiteColor);
     static Color clockColor = RGB888(whiteColor);
-    static Color batteryColor = RGB888(whiteColor);
+    static Color batteryColor = RGB888("#ffff45");
     static Color versionTextColor = RGB888("#AAAAAA");
     static Color onTextColor = RGB888("#00FFDD");
     static Color offTextColor = RGB888("#AAAAAA");
@@ -1255,7 +1311,7 @@ namespace tsl {
     static std::tuple<float,float,float> dynamicLogoRGB1 = hexToRGB444Floats("#00E669");
     static std::tuple<float,float,float> dynamicLogoRGB2 = hexToRGB444Floats("#8080EA");
 
-    static bool disableSelectionBG = true;
+    static bool disableSelectionBG = false;
     static bool invertBGClickColor = false;
     static Color selectionBGColor = RGB888(blackColor);
     static Color highlightColor1 = RGB888("#2288CC");
@@ -1278,82 +1334,77 @@ namespace tsl {
     static Color invalidTextColor = RGB888("#FF0000");
     static Color clickTextColor = RGB888(whiteColor);
 
-    static Color tableBGColor = RGB888(blackColor);
-    static Color sectionTextColor = RGB888(whiteColor);
-    static Color infoTextColor = RGB888("#00FFDD");
-
+    static Color tableBGColor = RGB888("#303030");
+    static Color sectionTextColor = RGB888("#e9ff40");
+    static Color infoTextColor = RGB888(whiteColor);
+    
     void initializeThemeVars() { // NOTE: This needs to be called once in your application.
         // Fetch all theme settings at once from the INI file
         auto themeData = getParsedDataFromIniFile(THEME_CONFIG_INI_PATH);
         if (themeData.count(THEME_STR) > 0) {
             auto& themeSection = themeData[THEME_STR];
-            
-
+    
             // Fetch and process each theme setting using a helper to simplify fetching and fallback
-            auto getValue = [&](const std::string& key, const std::string& defaultValue = "") {
-                return themeSection.count(key) ? themeSection[key] : defaultValue;
+            auto getValue = [&](const std::string& key) {
+                return themeSection.count(key) ? themeSection[key] : defaultThemeSettingsMap[key];
             };
-            
+    
             // Convert hex color to Color and manage default values and conversion
-            auto getColor = [&](const std::string& key, const std::string& defaultHex = whiteColor, size_t alpha = 15) {
-                std::string hexColor = getValue(key, defaultHex);
-                return RGB888(hexColor, defaultHex, alpha);
+            auto getColor = [&](const std::string& key, size_t alpha = 15) {
+                std::string hexColor = getValue(key);
+                return RGB888(hexColor, hexColor, alpha);
             };
-            
-            std::string disableColorfulLogoStr = getValue("disable_colorful_logo");
-            disableColorfulLogo = (disableColorfulLogoStr == TRUE_STR);
-            
+    
+            auto getAlpha = [&](const std::string& key) {
+                std::string alphaStr = getValue(key);
+                return !alphaStr.empty() ? std::stoi(alphaStr) : std::stoi(defaultThemeSettingsMap[key]);
+            };
+    
+            disableColorfulLogo = (getValue("disable_colorful_logo") == TRUE_STR);
+    
             logoColor1 = getColor("logo_color_1");
-            logoColor2 = getColor("logo_color_2", "#F7253E");
-            
-            std::string backgroundAlphaStr = getValue("bg_alpha");
-            defaultBackgroundAlpha = !backgroundAlphaStr.empty() ? std::stoi(backgroundAlphaStr) : 13;
-            
-            defaultBackgroundColor = getColor("bg_color", blackColor, defaultBackgroundAlpha);
+            logoColor2 = getColor("logo_color_2");
+    
+            defaultBackgroundAlpha = getAlpha("bg_alpha");
+            defaultBackgroundColor = getColor("bg_color", defaultBackgroundAlpha);
             defaultTextColor = getColor("text_color");
             clockColor = getColor("clock_color");
             batteryColor = getColor("battery_color");
-            
-            versionTextColor = getColor("version_text_color", "#AAAAAA");
-            onTextColor = getColor("on_text_color", "#00FFDD");
-            offTextColor = getColor("off_text_color", "#AAAAAA");
-            
-            dynamicLogoRGB1 = hexToRGB444Floats(getValue("dynamic_logo_color_1", "#00E669"));
-            dynamicLogoRGB2 = hexToRGB444Floats(getValue("dynamic_logo_color_2", "#8080EA"));
-            
-            std::string disableSelectionBGStr = getValue("disable_selection_bg");
-            disableSelectionBG = (disableSelectionBGStr == TRUE_STR && disableSelectionBGStr != FALSE_STR);
-            
+    
+            versionTextColor = getColor("version_text_color");
+            onTextColor = getColor("on_text_color");
+            offTextColor = getColor("off_text_color");
+    
+            dynamicLogoRGB1 = hexToRGB444Floats(getValue("dynamic_logo_color_1"));
+            dynamicLogoRGB2 = hexToRGB444Floats(getValue("dynamic_logo_color_2"));
+    
+            disableSelectionBG = (getValue("disable_selection_bg") == TRUE_STR);
             invertBGClickColor = (getValue("invert_bg_click_color") == TRUE_STR);
-            selectionBGColor = getColor("selection_bg_color", blackColor);
-            
-            highlightColor1 = getColor("highlight_color_1", "#2288CC");
-            highlightColor2 = getColor("highlight_color_2", "#88FFFF");
-            highlightColor3 = getColor("highlight_color_3", "#FFFF45");
-            highlightColor4 = getColor("highlight_color_4", "#F7253E");
-            
-            std::string clickAlphaStr = getValue("click_alpha");
-            clickAlpha = (!clickAlphaStr.empty()) ? std::stoi(clickAlphaStr) : 7;
-            clickColor = getColor("click_color", "#F7253E", clickAlpha);
-            
-            trackBarColor = getColor("trackbar_color", "#555555");
-            
-            std::string seperatorAlphaStr = getValue("seperator_alpha");
-            seperatorAlpha = (!seperatorAlphaStr.empty()) ? std::stoi(seperatorAlphaStr) : 7;
-            seperatorColor = getColor("seperator_color", "#777777", seperatorAlpha);
-            
+            selectionBGColor = getColor("selection_bg_color");
+    
+            highlightColor1 = getColor("highlight_color_1");
+            highlightColor2 = getColor("highlight_color_2");
+            highlightColor3 = getColor("highlight_color_3");
+            highlightColor4 = getColor("highlight_color_4");
+    
+            clickAlpha = getAlpha("click_alpha");
+            clickColor = getColor("click_color", clickAlpha);
+            trackBarColor = getColor("trackbar_color");
+    
+            seperatorAlpha = getAlpha("seperator_alpha");
+            seperatorColor = getColor("seperator_color", seperatorAlpha);
+    
             selectedTextColor = getColor("selection_text_color");
             inprogressTextColor = getColor("inprogress_text_color");
-            
-            invalidTextColor = getColor("invalid_text_color", "#FF0000");
-            
+            invalidTextColor = getColor("invalid_text_color");
             clickTextColor = getColor("click_text_color");
-
-            tableBGColor = getColor( "table_bg_color", blackColor);
-            sectionTextColor = getColor("table_section_text_color", whiteColor);
-            infoTextColor = getColor("table_info_text_color", "#00FFDD");
+    
+            tableBGColor = getColor("table_bg_color");
+            sectionTextColor = getColor("table_section_text_color");
+            infoTextColor = getColor("table_info_text_color");
         }
     }
+    
 
 
     
@@ -2009,62 +2060,62 @@ namespace tsl {
             }
 
             
-            inline void drawRoundedRectBorder(float x, float y, float w, float h, float radius, float thickness, Color color) {
-                // Draw the top horizontal border
-                for (s32 t = 0; t < thickness; ++t) {
-                    for (s32 i = radius; i < w - radius; ++i) {
-                        this->setPixelBlendDst(x + i, y + t, color);                // Top border
-                        this->setPixelBlendDst(x + i, y + h - 1 - t, color); // Bottom border
-                    }
-                }
-            
-                // Draw the bottom horizontal border
-                for (s32 t = 0; t < thickness; ++t) {
-                    for (s32 i = radius; i < w - radius; ++i) {
-                        this->setPixelBlendDst(x + i, y + h - thickness + t, color); // Corrected Bottom border
-                    }
-                }
-            
-                // Draw the left vertical border
-                for (s32 t = 0; t < thickness; ++t) {
-                    for (s32 i = radius; i < h - radius; ++i) {
-                        this->setPixelBlendDst(x + t, y + i, color);                // Left border
-                        this->setPixelBlendDst(x + w - 1 - t, y + i, color); // Right border
-                    }
-                }
-            
-                // Draw the right vertical border
-                for (s32 t = 0; t < thickness; ++t) {
-                    for (s32 i = radius; i < h - radius; ++i) {
-                        this->setPixelBlendDst(x + w - 1 - t, y + i, color); // Right border
-                    }
-                }
-            
-                // Draw the rounded corners
-                for (s32 t = 0; t < thickness; ++t) {
-                    for (s32 i = 0; i < radius; ++i) {
-                        for (s32 j = 0; j < radius; ++j) {
-                            if ((i * i + j * j) <= (radius * radius)) {
-                                // Top-left corner
-                                this->setPixelBlendDst(x + radius - i, y + radius - j - t, color);
-                                this->setPixelBlendDst(x + radius - i - t, y + radius - j, color);
-                                
-                                // Top-right corner
-                                this->setPixelBlendDst(x + w - radius + i, y + radius - j - t, color);
-                                this->setPixelBlendDst(x + w - radius + i + t, y + radius - j, color);
-            
-                                // Bottom-left corner
-                                this->setPixelBlendDst(x + radius - i, y + h - radius + j + t, color);
-                                this->setPixelBlendDst(x + radius - i - t, y + h - radius + j, color);
-            
-                                // Bottom-right corner
-                                this->setPixelBlendDst(x + w - radius + i, y + h - radius + j + t, color);
-                                this->setPixelBlendDst(x + w - radius + i + t, y + h - radius + j, color);
-                            }
-                        }
-                    }
-                }
-            }
+            //inline void drawRoundedRectBorder(float x, float y, float w, float h, float radius, float thickness, Color color) {
+            //    // Draw the top horizontal border
+            //    for (s32 t = 0; t < thickness; ++t) {
+            //        for (s32 i = radius; i < w - radius; ++i) {
+            //            this->setPixelBlendDst(x + i, y + t, color);                // Top border
+            //            this->setPixelBlendDst(x + i, y + h - 1 - t, color); // Bottom border
+            //        }
+            //    }
+            //
+            //    // Draw the bottom horizontal border
+            //    for (s32 t = 0; t < thickness; ++t) {
+            //        for (s32 i = radius; i < w - radius; ++i) {
+            //            this->setPixelBlendDst(x + i, y + h - thickness + t, color); // Corrected Bottom border
+            //        }
+            //    }
+            //
+            //    // Draw the left vertical border
+            //    for (s32 t = 0; t < thickness; ++t) {
+            //        for (s32 i = radius; i < h - radius; ++i) {
+            //            this->setPixelBlendDst(x + t, y + i, color);                // Left border
+            //            this->setPixelBlendDst(x + w - 1 - t, y + i, color); // Right border
+            //        }
+            //    }
+            //
+            //    // Draw the right vertical border
+            //    for (s32 t = 0; t < thickness; ++t) {
+            //        for (s32 i = radius; i < h - radius; ++i) {
+            //            this->setPixelBlendDst(x + w - 1 - t, y + i, color); // Right border
+            //        }
+            //    }
+            //
+            //    // Draw the rounded corners
+            //    for (s32 t = 0; t < thickness; ++t) {
+            //        for (s32 i = 0; i < radius; ++i) {
+            //            for (s32 j = 0; j < radius; ++j) {
+            //                if ((i * i + j * j) <= (radius * radius)) {
+            //                    // Top-left corner
+            //                    this->setPixelBlendDst(x + radius - i, y + radius - j - t, color);
+            //                    this->setPixelBlendDst(x + radius - i - t, y + radius - j, color);
+            //                    
+            //                    // Top-right corner
+            //                    this->setPixelBlendDst(x + w - radius + i, y + radius - j - t, color);
+            //                    this->setPixelBlendDst(x + w - radius + i + t, y + radius - j, color);
+            //
+            //                    // Bottom-left corner
+            //                    this->setPixelBlendDst(x + radius - i, y + h - radius + j + t, color);
+            //                    this->setPixelBlendDst(x + radius - i - t, y + h - radius + j, color);
+            //
+            //                    // Bottom-right corner
+            //                    this->setPixelBlendDst(x + w - radius + i, y + h - radius + j + t, color);
+            //                    this->setPixelBlendDst(x + w - radius + i + t, y + h - radius + j, color);
+            //                }
+            //            }
+            //        }
+            //    }
+            //}
 
             /**
              * @brief Draws a RGBA8888 bitmap from memory
@@ -3085,7 +3136,7 @@ namespace tsl {
             virtual ~TableDrawer() {}
 
             virtual void draw(gfx::Renderer* renderer) override {
-                
+
                 renderer->enableScissoring(0, 97, tsl::cfg::FramebufferWidth, tsl::cfg::FramebufferHeight - 73 - 97 - 4);
         
                 if (!hideTableBackground)
@@ -3225,7 +3276,7 @@ namespace tsl {
                     renderer->drawString(secondHalf.c_str(), false, x, y + offset, fontSize, a(logoColor2));
             
                     if (!(hideBattery && hidePCBTemp && hideSOCTemp && hideClock)) {
-                        renderer->drawRect(252, 24, 1, 49, a(seperatorColor));
+                        renderer->drawRect(252, 23, 1, 49, a(seperatorColor));
                     }
             
                     struct timespec currentTimeSpec;
