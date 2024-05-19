@@ -577,6 +577,7 @@ public:
                 if ((keys & KEY_A)) {
                     isDownloadCommand = true;
                     std::vector<std::vector<std::string>> interpreterCommands = {
+                        {"try:"},
                         {"delete", "/config/ultrahand/downloads/ovlmenu.ovl"},
                         {"download", ULTRAHAND_REPO_URL + "releases/latest/download/ovlmenu.ovl", DOWNLOADS_PATH},
                         {"move", "/config/ultrahand/downloads/ovlmenu.ovl", "/switch/.overlays/ovlmenu.ovl"}
@@ -618,11 +619,11 @@ public:
                 if ((keys & KEY_A)) {
                     isDownloadCommand = true;
                     std::vector<std::vector<std::string>> interpreterCommands = {
+                        {"try:"},
                         {"delete", "/config/ultrahand/downloads/ovlmenu.ovl"},
                         {"download", ULTRAHAND_REPO_URL + "releases/latest/download/lang.zip", DOWNLOADS_PATH},
                         {"unzip", "/config/ultrahand/downloads/lang.zip", "/config/ultrahand/downloads/lang/"},
                         {"delete", "/config/ultrahand/downloads/lang.zip"},
-                        {"delete", LANG_PATH},
                         {"move", "/config/ultrahand/downloads/lang/", LANG_PATH}
                     };
                     runningInterpreter.store(true, std::memory_order_release);
