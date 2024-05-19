@@ -184,114 +184,115 @@ const std::string whiteColor = "#FFFFFF";
 const std::string blackColor = "#000000";
 
 
-float M_PI = 3.14159265358979323846;
+constexpr float M_PI = 3.14159265358979323846;
+constexpr float RAD_TO_DEG = 180.0f / M_PI;
 
-static std::string DEFAULT_CHAR_WIDTH;
-static std::string UNAVAILABLE_SELECTION;
-static std::string OVERLAYS; //defined in libTesla now
-static std::string OVERLAY;
-static std::string HIDDEN_OVERLAYS;
-static std::string PACKAGES; //defined in libTesla now
-static std::string PACKAGE;
-static std::string HIDDEN_PACKAGES;
-static std::string HIDDEN;
-static std::string HIDE_OVERLAY;
-static std::string HIDE_PACKAGE;
-static std::string LAUNCH_ARGUMENTS;
-static std::string COMMANDS;
-static std::string SETTINGS;
-static std::string MAIN_SETTINGS;
-static std::string UI_SETTINGS;
-static std::string WIDGET;
-static std::string CLOCK;
-static std::string BATTERY;
-static std::string SOC_TEMPERATURE;
-static std::string PCB_TEMPERATURE;
-static std::string MISCELLANEOUS;
-static std::string MENU_ITEMS;
-static std::string USER_GUIDE;
-static std::string VERSION_LABELS;
-static std::string KEY_COMBO;
-static std::string LANGUAGE;
-static std::string OVERLAY_INFO;
-static std::string SOFTWARE_UPDATE;
-static std::string UPDATE_ULTRAHAND;
-static std::string UPDATE_LANGUAGES;
-static std::string THEME;
-static std::string DEFAULT;
-static std::string ROOT_PACKAGE;
-static std::string SORT_PRIORITY;
-static std::string FAILED_TO_OPEN;
-static std::string CLEAN_LABELS;
-static std::string OVERLAY_LABELS;
-static std::string PACKAGE_LABELS;
-static std::string ON;
-static std::string OFF;
-static std::string PACKAGE_INFO;
-static std::string TITLE;
-static std::string VERSION;
-static std::string CREATOR;
-static std::string ABOUT;
-static std::string CREDITS;
-static std::string OK;
-static std::string BACK;
-static std::string REBOOT;
-static std::string SHUTDOWN;
-static std::string GAP_1;
-static std::string GAP_2;
-static std::string USERGUIDE_OFFSET;
-static std::string SETTINGS_MENU;
-static std::string SCRIPT_OVERLAY;
-static std::string STAR_FAVORITE;
-static std::string APP_SETTINGS;
-static std::string ON_MAIN_MENU;
-static std::string ON_A_COMMAND;
-static std::string ON_OVERLAY_PACKAGE;
-static std::string EFFECTS;
-static std::string PROGRESS_ANIMATION;
-static std::string EMPTY;
+static std::string DEFAULT_CHAR_WIDTH = "0.33";
+static std::string UNAVAILABLE_SELECTION = "Not available";
+static std::string OVERLAYS = "Overlays"; //defined in libTesla now
+static std::string OVERLAY = "Overlay";
+static std::string HIDDEN_OVERLAYS = "Hidden Overlays";
+static std::string PACKAGES = "Packages"; //defined in libTesla now
+static std::string PACKAGE = "Package";
+static std::string HIDDEN_PACKAGES = "Hidden Packages";
+static std::string HIDDEN = "Hidden";
+static std::string HIDE_OVERLAY = "Hide Overlay";
+static std::string HIDE_PACKAGE = "Hide Package";
+static std::string LAUNCH_ARGUMENTS = "Launch Arguments";
+static std::string COMMANDS = "Commands";
+static std::string SETTINGS = "Settings";
+static std::string MAIN_SETTINGS = "Main Settings";
+static std::string UI_SETTINGS = "UI Settings";
+static std::string WIDGET = "Widget";
+static std::string CLOCK = "Clock";
+static std::string BATTERY = "Battery";
+static std::string SOC_TEMPERATURE = "SOC Temperature";
+static std::string PCB_TEMPERATURE = "PCB Temperature";
+static std::string MISCELLANEOUS = "Miscellaneous";
+static std::string MENU_ITEMS = "Menu Items";
+static std::string USER_GUIDE = "User Guide";
+static std::string VERSION_LABELS = "Version Labels";
+static std::string KEY_COMBO = "Key Combo";
+static std::string LANGUAGE = "Language";
+static std::string OVERLAY_INFO = "Overlay Info";
+static std::string SOFTWARE_UPDATE = "Software Update";
+static std::string UPDATE_ULTRAHAND = "Update Ultrahand";
+static std::string UPDATE_LANGUAGES = "Update Languages";
+static std::string THEME = "Theme";
+static std::string DEFAULT = "default";
+static std::string ROOT_PACKAGE = "Root Package";
+static std::string SORT_PRIORITY = "Sort Priority";
+static std::string FAILED_TO_OPEN = "Failed to open file";
+static std::string CLEAN_LABELS = "Clean Versions";
+static std::string OVERLAY_LABELS = "Overlay Versions";
+static std::string PACKAGE_LABELS = "Package Versions";
+static std::string ON = "On";
+static std::string OFF = "Off";
+static std::string PACKAGE_INFO = "Package Info";
+static std::string TITLE = "Title";
+static std::string VERSION = "Version";
+static std::string CREATOR = "Creator(s)";
+static std::string ABOUT = "About";
+static std::string CREDITS = "Credits";
+static std::string OK = "OK";
+static std::string BACK = "Back";
+static std::string REBOOT = "Reboot";
+static std::string SHUTDOWN = "Shutdown";
+static std::string GAP_1 = "     ";
+static std::string GAP_2 = "  ";
+static std::string USERGUIDE_OFFSET = "166";
+static std::string SETTINGS_MENU = "Settings Menu";
+static std::string SCRIPT_OVERLAY = "Script Overlay";
+static std::string STAR_FAVORITE = "Star/Favorite";
+static std::string APP_SETTINGS = "App Settings";
+static std::string ON_MAIN_MENU = "on Main Menu";
+static std::string ON_A_COMMAND = "on a command";
+static std::string ON_OVERLAY_PACKAGE = "on overlay/package";
+static std::string EFFECTS = "Effects";
+static std::string PROGRESS_ANIMATION = "Progress Animation";
+static std::string EMPTY = "Empty";
 
-static std::string SUNDAY;
-static std::string MONDAY;
-static std::string TUESDAY;
-static std::string WEDNESDAY;
-static std::string THURSDAY;
-static std::string FRIDAY;
-static std::string SATURDAY;
+static std::string SUNDAY = "Sunday";
+static std::string MONDAY = "Monday";
+static std::string TUESDAY = "Tuesday";
+static std::string WEDNESDAY = "Wednesday";
+static std::string THURSDAY = "Thursday";
+static std::string FRIDAY = "Friday";
+static std::string SATURDAY = "Saturday";
 
-static std::string JANUARY;
-static std::string FEBRUARY;
-static std::string MARCH;
-static std::string APRIL;
-static std::string MAY;
-static std::string JUNE;
-static std::string JULY;
-static std::string AUGUST;
-static std::string SEPTEMBER;
-static std::string OCTOBER;
-static std::string NOVEMBER;
-static std::string DECEMBER;
+static std::string JANUARY = "January";
+static std::string FEBRUARY = "February";
+static std::string MARCH = "March";
+static std::string APRIL = "April";
+static std::string MAY = "May";
+static std::string JUNE = "June";
+static std::string JULY = "July";
+static std::string AUGUST = "August";
+static std::string SEPTEMBER = "September";
+static std::string OCTOBER = "October";
+static std::string NOVEMBER = "November";
+static std::string DECEMBER = "December";
 
-static std::string SUN;
-static std::string MON;
-static std::string TUE;
-static std::string WED;
-static std::string THU;
-static std::string FRI;
-static std::string SAT;
+static std::string SUN = "Sun";
+static std::string MON = "Mon";
+static std::string TUE = "Tue";
+static std::string WED = "Wed";
+static std::string THU = "Thu";
+static std::string FRI = "Fri";
+static std::string SAT = "Sat";
 
-static std::string JAN;
-static std::string FEB;
-static std::string MAR;
-static std::string APR;
-static std::string MAY_ABBR;
-static std::string JUN;
-static std::string JUL;
-static std::string AUG;
-static std::string SEP;
-static std::string OCT;
-static std::string NOV;
-static std::string DEC;
+static std::string JAN = "Jan";
+static std::string FEB = "Feb";
+static std::string MAR = "Mar";
+static std::string APR = "Apr";
+static std::string MAY_ABBR = "May";
+static std::string JUN = "Jun";
+static std::string JUL = "Jul";
+static std::string AUG = "Aug";
+static std::string SEP = "Sep";
+static std::string OCT = "Oct";
+static std::string NOV = "Nov";
+static std::string DEC = "Dec";
 
 // Constant string definitions (English)
 void reinitializeLangVars() {
@@ -702,11 +703,58 @@ static std::unordered_map<wchar_t, float> numericCharacterWidths = {
     {L'9', 0.66}
 };
 
-bool isNumericCharacter(char c) {
-    return std::isdigit(static_cast<unsigned char>(c));
+// Predefined hexMap
+const std::array<int, 256> hexMap = [] {
+    std::array<int, 256> map = {0};
+    map['0'] = 0; map['1'] = 1; map['2'] = 2; map['3'] = 3; map['4'] = 4;
+    map['5'] = 5; map['6'] = 6; map['7'] = 7; map['8'] = 8; map['9'] = 9;
+    map['A'] = 10; map['B'] = 11; map['C'] = 12; map['D'] = 13; map['E'] = 14; map['F'] = 15;
+    map['a'] = 10; map['b'] = 11; map['c'] = 12; map['d'] = 13; map['e'] = 14; map['f'] = 15;
+    return map;
+}();
+
+
+// Prepare a map of default settings
+std::map<std::string, std::string> defaultThemeSettingsMap = {
+    {"clock_color", whiteColor},
+    {"bg_alpha", "13"},
+    {"bg_color", blackColor},
+    {"seperator_alpha", "7"},
+    {"seperator_color", "#777777"},
+    {"battery_color", "#ffff45"},
+    {"text_color", whiteColor},
+    {"table_bg_color", "#303030"},
+    {"table_section_text_color", "#e9ff40"},
+    {"table_info_text_color", whiteColor},
+    {"version_text_color", "#AAAAAA"},
+    {"on_text_color", "#00FFDD"},
+    {"off_text_color", "#AAAAAA"},
+    {"invalid_text_color", "#FF0000"},
+    {"inprogress_text_color", "#FFFF45"},
+    {"selection_text_color", whiteColor},
+    {"selection_bg_color", blackColor},
+    {"trackbar_color", "#555555"},
+    {"highlight_color_1", "#2288CC"},
+    {"highlight_color_2", "#88FFFF"},
+    {"highlight_color_3", "#FFFF45"},
+    {"highlight_color_4", "#F7253E"},
+    {"click_text_color", whiteColor},
+    {"click_alpha", "7"},
+    {"click_color", "#F7253E"},
+    {"invert_bg_click_color", FALSE_STR},
+    {"disable_selection_bg", FALSE_STR},
+    {"disable_colorful_logo", FALSE_STR},
+    {"logo_color_1", whiteColor},
+    {"logo_color_2", "#FF0000"},
+    {"dynamic_logo_color_1", "#00E669"},
+    {"dynamic_logo_color_2", "#8080EA"}
+};
+
+inline bool isNumericCharacter(char c) {
+    return std::isdigit(c);
 }
 
-bool isValidHexColor(const std::string& hexColor) {
+inline bool isValidHexColor(const std::string& hexColor) {
     // Check if the string is a valid hexadecimal color of the format "#RRGGBB"
     if (hexColor.size() != 6) {
         return false; // Must be exactly 6 characters long
@@ -722,7 +770,7 @@ bool isValidHexColor(const std::string& hexColor) {
 }
 
 
-float calculateStringWidth(const std::string& str, int fontSize, bool fixedWidthNumbers = true) {
+inline float calculateStringWidth(const std::string& str, int fontSize, bool fixedWidthNumbers = true) {
     
     float totalWidth = 0;
     float letterWidth;
@@ -746,18 +794,27 @@ float calculateStringWidth(const std::string& str, int fontSize, bool fixedWidth
     return (totalWidth * fontSize);
 }
 
-float calculateAmplitude(float x, float peakDurationFactor = 0.25) {
-    const float phasePeriod = 360*peakDurationFactor;  // One full phase period
-    
-    // Calculate the phase within the full period
-    int phase = static_cast<int>((x) * (180.0 / M_PI)) % static_cast<int>(phasePeriod);
-    
-    // Check if the phase is odd
-    if (phase % 2 == 1) {
+inline float calculateCharacterWidth(char character, bool fixedWidthNumbers) {
+    if (!fixedWidthNumbers && isNumericCharacter(character)) {
+        return numericCharacterWidths[character];
+    } else {
+        return characterWidths[character];
+    }
+}
+
+
+inline float calculateAmplitude(float x, float peakDurationFactor = 0.25f) {
+    const float phasePeriod = 360.0f * peakDurationFactor;  // One full phase period
+
+    // Convert x from radians to degrees and calculate phase within the period
+    int phase = static_cast<int>(x * RAD_TO_DEG) % static_cast<int>(phasePeriod);
+
+    // Check if the phase is odd using bitwise operation
+    if (phase & 1) {
         return 1.0f;  // Flat amplitude (maximum positive)
     } else {
         // Calculate the sinusoidal amplitude for the remaining period
-        return (std::cos((-x) * (180.0 / M_PI)) + 1) / 2;
+        return (std::cos(x) + 1.0f) / 2.0f;  // Cosine function expects radians
     }
 }
         
@@ -1045,7 +1102,7 @@ void reinitializeVersionLabels() {
     hideOverlayVersions = (parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_overlay_versions") != FALSE_STR);
     hidePackageVersions = (parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_package_versions") != FALSE_STR);
     versionLabel = std::string(APP_VERSION) + "   (" + extractTitle(loaderInfo) + " " + (cleanVersionLabels ? "" : "v") + cleanVersionLabel(loaderInfo) + ")";
-    //versionLabel = (cleanVersionLabels == TRUE_STR) ? std::string(APP_VERSION) : (std::string(APP_VERSION) + "   (" + extractTitle(loaderInfo) + " v" + cleanVersionLabel(loaderInfo) + ")");
+    //versionLabel = (cleanVersionLabels) ? std::string(APP_VERSION) : (std::string(APP_VERSION) + "   (" + extractTitle(loaderInfo) + " v" + cleanVersionLabel(loaderInfo) + ")");
 }
 
 
@@ -1068,6 +1125,7 @@ void reinitializeVersionLabels() {
 #pragma GCC diagnostic pop
 
 #define ELEMENT_BOUNDS(elem) elem->getX()+4, elem->getY(), elem->getWidth()+4, elem->getHeight()
+#define ELEMENT_BOUNDS_2(elem) elem->getX()+4, elem->getY()+4, elem->getWidth(), elem->getHeight()+10
 
 #define ASSERT_EXIT(x) if (R_FAILED(x)) std::exit(1)
 #define ASSERT_FATAL(x) if (Result res = x; R_FAILED(res)) fatalThrow(res)
@@ -1171,7 +1229,8 @@ namespace tsl {
         
         return Color(r, g, b, a);
     }
-    
+
+
     Color RGB888(const std::string& hexColor, const std::string& defaultHexColor = whiteColor, size_t alpha = 15) {
         std::string validHex = hexColor.empty() || hexColor[0] != '#' ? hexColor : hexColor.substr(1);
         
@@ -1179,29 +1238,37 @@ namespace tsl {
             validHex = defaultHexColor;
         }
         
-        // Assuming validHex is a correct hex string after removing '#' if needed and checking validity.
-        uint8_t redValue = std::stoi(validHex.substr(0, 2), nullptr, 16) >> 4; // Right-shift to convert from 8-bit to 4-bit
-        uint8_t greenValue = std::stoi(validHex.substr(2, 2), nullptr, 16) >> 4;
-        uint8_t blueValue = std::stoi(validHex.substr(4, 2), nullptr, 16) >> 4;
+        // Convert hex to RGB values
+        uint8_t redValue = (hexMap[static_cast<unsigned char>(validHex[0])] << 4) | hexMap[static_cast<unsigned char>(validHex[1])];
+        uint8_t greenValue = (hexMap[static_cast<unsigned char>(validHex[2])] << 4) | hexMap[static_cast<unsigned char>(validHex[3])];
+        uint8_t blueValue = (hexMap[static_cast<unsigned char>(validHex[4])] << 4) | hexMap[static_cast<unsigned char>(validHex[5])];
         
-        return Color(redValue, greenValue, blueValue, alpha);
+        return Color(redValue >> 4, greenValue >> 4, blueValue >> 4, alpha);
     }
 
-    std::tuple<float, float, float> hexToRGB444Floats(const std::string& hexColor, const std::string& defaultHexColor = whiteColor) {
-        std::string validHex = (hexColor.size() > 0 && hexColor[0] == '#') ? hexColor.substr(1) : hexColor;
+
+    std::tuple<float, float, float> hexToRGB444Floats(const std::string& hexColor, const std::string& defaultHexColor = "#FFFFFF") {
+        const char* validHex = hexColor.c_str();
+        if (validHex[0] == '#') validHex++;
     
         if (!isValidHexColor(validHex)) {
-            return hexToRGB444Floats(defaultHexColor); // Recurse with default color if invalid
+            validHex = defaultHexColor.c_str();
+            if (validHex[0] == '#') validHex++;
         }
-        
-        // Convert hex string directly to an unsigned int
-        unsigned int hexValue = std::stoul(validHex, nullptr, 16);
-        
+    
+        // Manually parse the hex string to an integer value
+        unsigned int hexValue = (hexMap[static_cast<unsigned char>(validHex[0])] << 20) |
+                                (hexMap[static_cast<unsigned char>(validHex[1])] << 16) |
+                                (hexMap[static_cast<unsigned char>(validHex[2])] << 12) |
+                                (hexMap[static_cast<unsigned char>(validHex[3])] << 8)  |
+                                (hexMap[static_cast<unsigned char>(validHex[4])] << 4)  |
+                                hexMap[static_cast<unsigned char>(validHex[5])];
+    
         // Extract and scale the RGB components from 8-bit (0-255) to 4-bit float scale (0-15)
         float red = ((hexValue >> 16) & 0xFF) / 255.0f * 15.0f;
         float green = ((hexValue >> 8) & 0xFF) / 255.0f * 15.0f;
         float blue = (hexValue & 0xFF) / 255.0f * 15.0f;
-        
+    
         return std::make_tuple(red, green, blue);
     }
 
@@ -1236,7 +1303,7 @@ namespace tsl {
     static Color defaultBackgroundColor = RGB888(blackColor, blackColor, defaultBackgroundAlpha);
     static Color defaultTextColor = RGB888(whiteColor);
     static Color clockColor = RGB888(whiteColor);
-    static Color batteryColor = RGB888(whiteColor);
+    static Color batteryColor = RGB888("#ffff45");
     static Color versionTextColor = RGB888("#AAAAAA");
     static Color onTextColor = RGB888("#00FFDD");
     static Color offTextColor = RGB888("#AAAAAA");
@@ -1244,7 +1311,7 @@ namespace tsl {
     static std::tuple<float,float,float> dynamicLogoRGB1 = hexToRGB444Floats("#00E669");
     static std::tuple<float,float,float> dynamicLogoRGB2 = hexToRGB444Floats("#8080EA");
 
-    static bool disableSelectionBG = true;
+    static bool disableSelectionBG = false;
     static bool invertBGClickColor = false;
     static Color selectionBGColor = RGB888(blackColor);
     static Color highlightColor1 = RGB888("#2288CC");
@@ -1267,74 +1334,77 @@ namespace tsl {
     static Color invalidTextColor = RGB888("#FF0000");
     static Color clickTextColor = RGB888(whiteColor);
 
+    static Color tableBGColor = RGB888("#303030");
+    static Color sectionTextColor = RGB888("#e9ff40");
+    static Color infoTextColor = RGB888(whiteColor);
+    
     void initializeThemeVars() { // NOTE: This needs to be called once in your application.
         // Fetch all theme settings at once from the INI file
         auto themeData = getParsedDataFromIniFile(THEME_CONFIG_INI_PATH);
         if (themeData.count(THEME_STR) > 0) {
             auto& themeSection = themeData[THEME_STR];
-            
-
+    
             // Fetch and process each theme setting using a helper to simplify fetching and fallback
-            auto getValue = [&](const std::string& key, const std::string& defaultValue = "") {
-                return themeSection.count(key) ? themeSection[key] : defaultValue;
+            auto getValue = [&](const std::string& key) {
+                return themeSection.count(key) ? themeSection[key] : defaultThemeSettingsMap[key];
             };
-            
+    
             // Convert hex color to Color and manage default values and conversion
-            auto getColor = [&](const std::string& key, const std::string& defaultHex = whiteColor, size_t alpha = 15) {
-                std::string hexColor = getValue(key, defaultHex);
-                return RGB888(hexColor, defaultHex, alpha);
+            auto getColor = [&](const std::string& key, size_t alpha = 15) {
+                std::string hexColor = getValue(key);
+                return RGB888(hexColor, hexColor, alpha);
             };
-            
-            std::string disableColorfulLogoStr = getValue("disable_colorful_logo");
-            disableColorfulLogo = (disableColorfulLogoStr == TRUE_STR);
-            
+    
+            auto getAlpha = [&](const std::string& key) {
+                std::string alphaStr = getValue(key);
+                return !alphaStr.empty() ? std::stoi(alphaStr) : std::stoi(defaultThemeSettingsMap[key]);
+            };
+    
+            disableColorfulLogo = (getValue("disable_colorful_logo") == TRUE_STR);
+    
             logoColor1 = getColor("logo_color_1");
-            logoColor2 = getColor("logo_color_2", "#F7253E");
-            
-            std::string backgroundAlphaStr = getValue("bg_alpha");
-            defaultBackgroundAlpha = !backgroundAlphaStr.empty() ? std::stoi(backgroundAlphaStr) : 13;
-            
-            defaultBackgroundColor = getColor("bg_color", blackColor, defaultBackgroundAlpha);
+            logoColor2 = getColor("logo_color_2");
+    
+            defaultBackgroundAlpha = getAlpha("bg_alpha");
+            defaultBackgroundColor = getColor("bg_color", defaultBackgroundAlpha);
             defaultTextColor = getColor("text_color");
             clockColor = getColor("clock_color");
             batteryColor = getColor("battery_color");
-            
-            versionTextColor = getColor("version_text_color", "#AAAAAA");
-            onTextColor = getColor("on_text_color", "#00FFDD");
-            offTextColor = getColor("off_text_color", "#AAAAAA");
-            
-            dynamicLogoRGB1 = hexToRGB444Floats(getValue("dynamic_logo_color_1", "#00E669"));
-            dynamicLogoRGB2 = hexToRGB444Floats(getValue("dynamic_logo_color_2", "#8080EA"));
-            
-            std::string disableSelectionBGStr = getValue("disable_selection_bg");
-            disableSelectionBG = (disableSelectionBGStr == TRUE_STR && disableSelectionBGStr != FALSE_STR);
-            
+    
+            versionTextColor = getColor("version_text_color");
+            onTextColor = getColor("on_text_color");
+            offTextColor = getColor("off_text_color");
+    
+            dynamicLogoRGB1 = hexToRGB444Floats(getValue("dynamic_logo_color_1"));
+            dynamicLogoRGB2 = hexToRGB444Floats(getValue("dynamic_logo_color_2"));
+    
+            disableSelectionBG = (getValue("disable_selection_bg") == TRUE_STR);
             invertBGClickColor = (getValue("invert_bg_click_color") == TRUE_STR);
-            selectionBGColor = getColor("selection_bg_color", blackColor);
-            
-            highlightColor1 = getColor("highlight_color_1", "#2288CC");
-            highlightColor2 = getColor("highlight_color_2", "#88FFFF");
-            highlightColor3 = getColor("highlight_color_3", "#FFFF45");
-            highlightColor4 = getColor("highlight_color_4", "#F7253E");
-            
-            std::string clickAlphaStr = getValue("click_alpha");
-            clickAlpha = (!clickAlphaStr.empty()) ? std::stoi(clickAlphaStr) : 7;
-            clickColor = getColor("click_color", "#F7253E", clickAlpha);
-            
-            trackBarColor = getColor("trackbar_color", "#555555");
-            
-            std::string seperatorAlphaStr = getValue("seperator_alpha");
-            seperatorAlpha = (!seperatorAlphaStr.empty()) ? std::stoi(seperatorAlphaStr) : 7;
-            seperatorColor = getColor("seperator_color", "#777777", seperatorAlpha);
-            
+            selectionBGColor = getColor("selection_bg_color");
+    
+            highlightColor1 = getColor("highlight_color_1");
+            highlightColor2 = getColor("highlight_color_2");
+            highlightColor3 = getColor("highlight_color_3");
+            highlightColor4 = getColor("highlight_color_4");
+    
+            clickAlpha = getAlpha("click_alpha");
+            clickColor = getColor("click_color", clickAlpha);
+            trackBarColor = getColor("trackbar_color");
+    
+            seperatorAlpha = getAlpha("seperator_alpha");
+            seperatorColor = getColor("seperator_color", seperatorAlpha);
+    
             selectedTextColor = getColor("selection_text_color");
             inprogressTextColor = getColor("inprogress_text_color");
-            
-            invalidTextColor = getColor("invalid_text_color", "#FF0000");
-            
+            invalidTextColor = getColor("invalid_text_color");
             clickTextColor = getColor("click_text_color");
+    
+            tableBGColor = getColor("table_bg_color");
+            sectionTextColor = getColor("table_section_text_color");
+            infoTextColor = getColor("table_info_text_color");
         }
     }
+    
 
 
     
@@ -1789,14 +1859,16 @@ namespace tsl {
              * @param color Color
              */
             inline void setPixel(s32 x, s32 y, Color color) {
-                if (x < 0 || y < 0 || x >= cfg::FramebufferWidth || y >= cfg::FramebufferHeight)
-                    return;
-                
-                u32 offset = this->getPixelOffset(x, y);
-                
-                if (offset != UINT32_MAX)
-                    static_cast<Color*>(this->getCurrentFramebuffer())[offset] = color;
+                if ((unsigned)x < cfg::FramebufferWidth && (unsigned)y < cfg::FramebufferHeight) {
+                    u32 offset = this->getPixelOffset(x, y);
+                    if (offset != UINT32_MAX) {
+                        Color* framebuffer = static_cast<Color*>(this->getCurrentFramebuffer());
+                        framebuffer[offset] = color;
+                    }
+                }
             }
+
+
             
             /**
              * @brief Blends two colors
@@ -1807,9 +1879,8 @@ namespace tsl {
              * @return Blended color
              */
             inline u8 blendColor(u8 src, u8 dst, u8 alpha) {
-                u8 oneMinusAlpha = 0x0F - alpha;
-                
-                return (dst * alpha + src * oneMinusAlpha) / float(0xF);
+                // Use fixed-point arithmetic to avoid float division
+                return (dst * alpha + src * (0x0F - alpha)) >> 4;
             }
             
             /**
@@ -1822,21 +1893,20 @@ namespace tsl {
             inline void setPixelBlendSrc(s32 x, s32 y, Color color) {
                 if (x < 0 || y < 0 || x >= cfg::FramebufferWidth || y >= cfg::FramebufferHeight)
                     return;
-                
+            
                 u32 offset = this->getPixelOffset(x, y);
-                
                 if (offset == UINT32_MAX)
                     return;
-                
-                Color src((static_cast<u16*>(this->getCurrentFramebuffer()))[offset]);
-                Color dst(color);
+            
+                u16* framebuffer = static_cast<u16*>(this->getCurrentFramebuffer());
+                Color src(framebuffer[offset]);
+            
                 Color end(0);
-                
-                end.r = this->blendColor(src.r, dst.r, dst.a);
-                end.g = this->blendColor(src.g, dst.g, dst.a);
-                end.b = this->blendColor(src.b, dst.b, dst.a);
+                end.r = blendColor(src.r, color.r, color.a);
+                end.g = blendColor(src.g, color.g, color.a);
+                end.b = blendColor(src.b, color.b, color.a);
                 end.a = src.a;
-                
+            
                 this->setPixel(x, y, end);
             }
             
@@ -1850,21 +1920,20 @@ namespace tsl {
             inline void setPixelBlendDst(s32 x, s32 y, Color color) {
                 if (x < 0 || y < 0 || x >= cfg::FramebufferWidth || y >= cfg::FramebufferHeight)
                     return;
-                
+            
                 u32 offset = this->getPixelOffset(x, y);
-                
                 if (offset == UINT32_MAX)
                     return;
-                
-                Color src((static_cast<u16*>(this->getCurrentFramebuffer()))[offset]);
-                Color dst(color);
+            
+                u16* framebuffer = static_cast<u16*>(this->getCurrentFramebuffer());
+                Color src(framebuffer[offset]);
+            
                 Color end(0);
-                
-                end.r = this->blendColor(src.r, dst.r, dst.a);
-                end.g = this->blendColor(src.g, dst.g, dst.a);
-                end.b = this->blendColor(src.b, dst.b, dst.a);
-                end.a = std::min(dst.a + src.a, 0xF);
-                
+                end.r = blendColor(src.r, color.r, color.a);
+                end.g = blendColor(src.g, color.g, color.a);
+                end.b = blendColor(src.b, color.b, color.a);
+                end.a = std::min(color.a + src.a, 0xF);
+            
                 this->setPixel(x, y, end);
             }
             
@@ -1878,9 +1947,13 @@ namespace tsl {
              * @param color Color
              */
             inline void drawRect(float x, float y, float w, float h, Color color) {
-                for (s32 x1 = x; x1 < (x + w); x1++)
-                    for (s32 y1 = y; y1 < (y + h); y1++)
+                s32 x_end = static_cast<s32>(x + w);
+                s32 y_end = static_cast<s32>(y + h);
+                for (s32 x1 = static_cast<s32>(x); x1 < x_end; ++x1) {
+                    for (s32 y1 = static_cast<s32>(y); y1 < y_end; ++y1) {
                         this->setPixelBlendDst(x1, y1, color);
+                    }
+                }
             }
             
             void drawCircle(s32 centerX, s32 centerY, u16 radius, bool filled, Color color) {
@@ -1889,38 +1962,17 @@ namespace tsl {
                 s32 radiusError = 0;
                 s32 xChange = 1 - (radius << 1);
                 s32 yChange = 0;
-                
-                s32 y0;
-                s32 y1;
-                s32 x0;
-                
+            
                 while (x >= y) {
-                    if(filled) {
+                    if (filled) {
                         for (s32 i = centerX - x; i <= centerX + x; i++) {
-                            y0 = centerY + y;
-                            y1 = centerY - y;
-                            x0 = i;
-                            
-                            this->setPixelBlendDst(x0, y0, color);
-                            this->setPixelBlendDst(x0, y1, color);
+                            this->setPixelBlendDst(i, centerY + y, color);
+                            this->setPixelBlendDst(i, centerY - y, color);
                         }
-                        
+            
                         for (s32 i = centerX - y; i <= centerX + y; i++) {
-                            y0 = centerY + x;
-                            y1 = centerY - x;
-                            x0 = i;
-                            
-                            this->setPixelBlendDst(x0, y0, color);
-                            this->setPixelBlendDst(x0, y1, color);
-                        }
-                        
-                        y++;
-                        radiusError += yChange;
-                        yChange += 2;
-                        if (((radiusError << 1) + xChange) > 0) {
-                            x--;
-                            radiusError += xChange;
-                            xChange += 2;
+                            this->setPixelBlendDst(i, centerY + x, color);
+                            this->setPixelBlendDst(i, centerY - x, color);
                         }
                     } else {
                         this->setPixelBlendDst(centerX + x, centerY + y, color);
@@ -1931,18 +1983,140 @@ namespace tsl {
                         this->setPixelBlendDst(centerX - y, centerY - x, color);
                         this->setPixelBlendDst(centerX + y, centerY - x, color);
                         this->setPixelBlendDst(centerX + x, centerY - y, color);
-                        
-                        if(radiusError <= 0) {
-                            y++;
-                            radiusError += 2 * y + 1;
-                        } else {
-                            x--;
-                            radiusError -= 2 * x + 1;
+                    }
+            
+                    y++;
+                    radiusError += yChange;
+                    yChange += 2;
+            
+                    if (((radiusError << 1) + xChange) > 0) {
+                        x--;
+                        radiusError += xChange;
+                        xChange += 2;
+                    }
+                }
+            }
+
+            /**
+             * @brief Draws a rounded rectangle of given sizes and corner radius
+             *
+             * @param x X pos
+             * @param y Y pos
+             * @param w Width
+             * @param h Height
+             * @param radius Corner radius
+             * @param color Color
+             */
+            inline void drawRoundedRect(float x, float y, float w, float h, float radius, Color color) {
+                s32 x_start = static_cast<s32>(x + radius);
+                s32 x_end = static_cast<s32>(x + w - radius);
+                s32 y_start = static_cast<s32>(y + radius);
+                s32 y_end = static_cast<s32>(y + h - radius);
+                
+                // Draw the central rectangle excluding the corners
+                for (s32 y1 = y_start; y1 < y_end; ++y1) {
+                    for (s32 x1 = x_start; x1 < x_end; ++x1) {
+                        this->setPixelBlendDst(x1, y1, color);
+                    }
+                }
+            
+                // Draw the top and bottom rectangles excluding the corners
+                for (s32 y1 = static_cast<s32>(y); y1 < y_start; ++y1) {
+                    for (s32 x1 = x_start; x1 < x_end; ++x1) {
+                        this->setPixelBlendDst(x1, y1, color);
+                    }
+                }
+                for (s32 y1 = y_end; y1 < static_cast<s32>(y + h); ++y1) {
+                    for (s32 x1 = x_start; x1 < x_end; ++x1) {
+                        this->setPixelBlendDst(x1, y1, color);
+                    }
+                }
+            
+                // Draw the left and right rectangles excluding the corners
+                for (s32 y1 = y_start; y1 < y_end; ++y1) {
+                    for (s32 x1 = static_cast<s32>(x); x1 < x_start; ++x1) {
+                        this->setPixelBlendDst(x1, y1, color);
+                    }
+                    for (s32 x1 = x_end; x1 < static_cast<s32>(x + w); ++x1) {
+                        this->setPixelBlendDst(x1, y1, color);
+                    }
+                }
+                
+                // Draw the rounded corners
+                s32 cornerX, cornerY ;
+                s32 radiusSquared = radius * radius;
+                for (s32 x1 = 0; x1 < radius; ++x1) {
+                    for (s32 y1 = 0; y1 < radius; ++y1) {
+                        if ((x1 * x1 + y1 * y1) <= radiusSquared) {
+                            cornerX = static_cast<s32>(x + radius - x1);
+                            cornerY = static_cast<s32>(y + radius - y1);
+                            this->setPixelBlendDst(cornerX, cornerY, color);  // Top-left corner
+                            this->setPixelBlendDst(static_cast<s32>(x + w - radius + x1), cornerY, color);  // Top-right corner
+                            this->setPixelBlendDst(cornerX, static_cast<s32>(y + h - radius + y1), color);  // Bottom-left corner
+                            this->setPixelBlendDst(static_cast<s32>(x + w - radius + x1), static_cast<s32>(y + h - radius + y1), color);  // Bottom-right corner
                         }
                     }
                 }
             }
+
             
+            //inline void drawRoundedRectBorder(float x, float y, float w, float h, float radius, float thickness, Color color) {
+            //    // Draw the top horizontal border
+            //    for (s32 t = 0; t < thickness; ++t) {
+            //        for (s32 i = radius; i < w - radius; ++i) {
+            //            this->setPixelBlendDst(x + i, y + t, color);                // Top border
+            //            this->setPixelBlendDst(x + i, y + h - 1 - t, color); // Bottom border
+            //        }
+            //    }
+            //
+            //    // Draw the bottom horizontal border
+            //    for (s32 t = 0; t < thickness; ++t) {
+            //        for (s32 i = radius; i < w - radius; ++i) {
+            //            this->setPixelBlendDst(x + i, y + h - thickness + t, color); // Corrected Bottom border
+            //        }
+            //    }
+            //
+            //    // Draw the left vertical border
+            //    for (s32 t = 0; t < thickness; ++t) {
+            //        for (s32 i = radius; i < h - radius; ++i) {
+            //            this->setPixelBlendDst(x + t, y + i, color);                // Left border
+            //            this->setPixelBlendDst(x + w - 1 - t, y + i, color); // Right border
+            //        }
+            //    }
+            //
+            //    // Draw the right vertical border
+            //    for (s32 t = 0; t < thickness; ++t) {
+            //        for (s32 i = radius; i < h - radius; ++i) {
+            //            this->setPixelBlendDst(x + w - 1 - t, y + i, color); // Right border
+            //        }
+            //    }
+            //
+            //    // Draw the rounded corners
+            //    for (s32 t = 0; t < thickness; ++t) {
+            //        for (s32 i = 0; i < radius; ++i) {
+            //            for (s32 j = 0; j < radius; ++j) {
+            //                if ((i * i + j * j) <= (radius * radius)) {
+            //                    // Top-left corner
+            //                    this->setPixelBlendDst(x + radius - i, y + radius - j - t, color);
+            //                    this->setPixelBlendDst(x + radius - i - t, y + radius - j, color);
+            //                    
+            //                    // Top-right corner
+            //                    this->setPixelBlendDst(x + w - radius + i, y + radius - j - t, color);
+            //                    this->setPixelBlendDst(x + w - radius + i + t, y + radius - j, color);
+            //
+            //                    // Bottom-left corner
+            //                    this->setPixelBlendDst(x + radius - i, y + h - radius + j + t, color);
+            //                    this->setPixelBlendDst(x + radius - i - t, y + h - radius + j, color);
+            //
+            //                    // Bottom-right corner
+            //                    this->setPixelBlendDst(x + w - radius + i, y + h - radius + j + t, color);
+            //                    this->setPixelBlendDst(x + w - radius + i + t, y + h - radius + j, color);
+            //                }
+            //            }
+            //        }
+            //    }
+            //}
+
             /**
              * @brief Draws a RGBA8888 bitmap from memory
              *
@@ -2007,10 +2181,14 @@ namespace tsl {
                 u32 currCharacter;
                 ssize_t codepointWidth;
                 u64 key;
-                Glyph *glyph = nullptr;
+                Glyph* glyph = nullptr;
                 auto it = s_glyphCache.end();
-                Color tmpColor = {0xF, 0xF, 0xF, 0xF};
+                Color tmpColor = { 0xF, 0xF, 0xF, 0xF };
                 uint8_t bmpColor;
+            
+                float xPos, yPos;
+                int yAdvance = 0;
+                float scaledFontSize;
             
                 while (*string != '\0') {
                     if (maxWidth > 0 && maxWidth < (currX - x))
@@ -2029,7 +2207,7 @@ namespace tsl {
                         continue;
                     }
             
-                    key = (static_cast<u64>(currCharacter) << 32) | static_cast<u64>(monospace) << 31 | static_cast<u64>(std::bit_cast<u32>(fontSize));
+                    key = (static_cast<u64>(currCharacter) << 32) | (static_cast<u64>(monospace) << 31) | (static_cast<u64>(std::bit_cast<u32>(fontSize)));
                     it = s_glyphCache.find(key);
                     if (it == s_glyphCache.end()) {
                         /* Cache glyph */
@@ -2037,37 +2215,38 @@ namespace tsl {
             
                         if (stbtt_FindGlyphIndex(&this->m_extFont, currCharacter))
                             glyph->currFont = &this->m_extFont;
-                        else if(this->m_hasLocalFont && stbtt_FindGlyphIndex(&this->m_stdFont, currCharacter)==0)
+                        else if (this->m_hasLocalFont && stbtt_FindGlyphIndex(&this->m_stdFont, currCharacter) == 0)
                             glyph->currFont = &this->m_localFont;
                         else
                             glyph->currFont = &this->m_stdFont;
             
-                        glyph->currFontSize = stbtt_ScaleForPixelHeight(glyph->currFont, fontSize);
+                        scaledFontSize = stbtt_ScaleForPixelHeight(glyph->currFont, fontSize);
+                        glyph->currFontSize = scaledFontSize;
             
-                        stbtt_GetCodepointBitmapBoxSubpixel(glyph->currFont, currCharacter, glyph->currFontSize, glyph->currFontSize,
-                                                            0, 0, &glyph->bounds[0], &glyph->bounds[1], &glyph->bounds[2], &glyph->bounds[3]);
+                        stbtt_GetCodepointBitmapBoxSubpixel(glyph->currFont, currCharacter, scaledFontSize, scaledFontSize,
+                            0, 0, &glyph->bounds[0], &glyph->bounds[1], &glyph->bounds[2], &glyph->bounds[3]);
             
-                        int yAdvance = 0;
+                        yAdvance = 0;
                         stbtt_GetCodepointHMetrics(glyph->currFont, monospace ? 'W' : currCharacter, &glyph->xAdvance, &yAdvance);
             
-                        glyph->glyphBmp = stbtt_GetCodepointBitmap(glyph->currFont, glyph->currFontSize, glyph->currFontSize, currCharacter, &glyph->width, &glyph->height, nullptr, nullptr);
+                        glyph->glyphBmp = stbtt_GetCodepointBitmap(glyph->currFont, scaledFontSize, scaledFontSize, currCharacter, &glyph->width, &glyph->height, nullptr, nullptr);
                     } else {
                         /* Use cached glyph */
                         glyph = &it->second;
                     }
             
                     if (glyph->glyphBmp != nullptr && !std::iswspace(currCharacter) && fontSize > 0 && color.a != 0x0) {
-                        auto xPos = currX + glyph->bounds[0];
-                        auto yPos = currY + glyph->bounds[1];
+                        xPos = currX + glyph->bounds[0];
+                        yPos = currY + glyph->bounds[1];
             
-                        for (s32 bmpY = 0; bmpY < glyph->height; bmpY++) {
-                            for (s32 bmpX = 0; bmpX < glyph->width; bmpX++) {
+                        for (s32 bmpY = 0; bmpY < glyph->height; ++bmpY) {
+                            for (s32 bmpX = 0; bmpX < glyph->width; ++bmpX) {
                                 bmpColor = glyph->glyphBmp[glyph->width * bmpY + bmpX] >> 4;
                                 if (bmpColor == 0xF) {
                                     this->setPixel(xPos + bmpX, yPos + bmpY, color);
                                 } else if (bmpColor != 0x0) {
                                     tmpColor = color;
-                                    tmpColor.a = bmpColor * (float(tmpColor.a) / 0xF);
+                                    tmpColor.a = static_cast<uint8_t>(bmpColor * (tmpColor.a / 0xF));
                                     this->setPixelBlendDst(xPos + bmpX, yPos + bmpY, tmpColor);
                                 }
                             }
@@ -2078,9 +2257,10 @@ namespace tsl {
                 }
             
                 maxX = std::max(currX, maxX);
-                return { maxX - x, currY - y };
-            
+                return { static_cast<u32>(maxX - x), static_cast<u32>(currY - y) };
             }
+            
+            
             
             /**
              * @brief Limit a strings length and end it with "…"
@@ -2088,40 +2268,40 @@ namespace tsl {
              * @param string String to truncate
              * @param maxLength Maximum length of string
              */
-            std::string limitStringLength(std::string string, bool monospace, float fontSize, s32 maxLength) {
-                if (string.size() < 2)
+            std::string limitStringLength(const std::string& string, bool monospace, float fontSize, s32 maxLength) {
+                if (string.size() < 2) {
                     return string;
-            
-                s32 currX = 0;
-                ssize_t strPos = 0;
-                ssize_t codepointWidth;
-                std::string subString;
-            
-                do {
-                    u32 currCharacter;
-                    codepointWidth = decode_utf8(&currCharacter, reinterpret_cast<const u8*>(&string[strPos]));
-            
-                    if (codepointWidth <= 0)
-                        break;
-            
-                    strPos += codepointWidth;
-            
-                    // Get the substring up to the current position
-                    subString = string.substr(0, strPos);
-            
-                    // Calculate the width of the substring
-                    currX = calculateStringWidth(subString, fontSize, monospace);
-            
-                } while (string[strPos] != '\0' && string[strPos] != '\n' && currX < maxLength);
-            
-                // If the length exceeds maxLength, truncate the string and add ellipsis
-                if (currX >= maxLength) {
-                    string = subString.substr(0, strPos - codepointWidth) + "…";
                 }
             
-                string.shrink_to_fit();
+                float currX = 0.0f;
+                size_t strPos = 0;
+                ssize_t codepointWidth = 0;
+                u32 currCharacter = 0;
+                float charWidth;
+
+                // Iterate through the string and calculate the width incrementally
+                while (strPos < string.size() && currX < maxLength) {
+                    codepointWidth = decode_utf8(&currCharacter, reinterpret_cast<const u8*>(&string[strPos]));
+                    if (codepointWidth <= 0) {
+                        break;
+                    }
+            
+                    // Calculate the width of the current character
+                    charWidth = calculateCharacterWidth(static_cast<char>(currCharacter), monospace) * fontSize;
+                    currX += charWidth;
+            
+                    if (currX >= maxLength) {
+                        // If the length exceeds maxLength, truncate the string and add ellipsis
+                        return string.substr(0, strPos) + "…";
+                    }
+            
+                    strPos += codepointWidth;
+                }
+            
                 return string;
             }
+
+
             
         private:
             Renderer() {}
@@ -2236,22 +2416,32 @@ namespace tsl {
              * @return Offset
              */
             u32 getPixelOffset(s32 x, s32 y) {
+                // Check for scissoring boundaries
                 if (!this->m_scissoringStack.empty()) {
-                    auto& currScissorConfig = this->m_scissoringStack.top();
-                    if (x < currScissorConfig.x ||
-                        y < currScissorConfig.y ||
-                        x > currScissorConfig.x + currScissorConfig.w ||
-                        y > currScissorConfig.y + currScissorConfig.h)
-                            return UINT32_MAX;
+                    const auto& currScissorConfig = this->m_scissoringStack.top();
+                    if (x < currScissorConfig.x || y < currScissorConfig.y || 
+                        x >= currScissorConfig.x + currScissorConfig.w || 
+                        y >= currScissorConfig.y + currScissorConfig.h) {
+                        return UINT32_MAX;
+                    }
                 }
-                
-                tmpPos = ((y & 127) / 16) + (x / 32 * 8) + ((y / 16 / 8) * (((cfg::FramebufferWidth / 2) / 16 * 8)));
-                tmpPos *= 16 * 16 * 4;
-                
-                tmpPos += ((y % 16) / 8) * 512 + ((x % 32) / 16) * 256 + ((y % 8) / 2) * 64 + ((x % 16) / 8) * 32 + (y % 2) * 16 + (x % 8) * 2;
-                
+            
+                // Calculate the base offset
+                tmpPos = ((y & 127) / 16) + (x / 32 * 8) + 
+                         ((y / 128) * ((cfg::FramebufferWidth / 2) / 16 * 8));
+                tmpPos *= 1024; // 16 * 16 * 4 = 1024
+            
+                // Calculate the fine offset and add it to the base offset
+                tmpPos += ((y % 16) / 8) * 512 + 
+                          ((x % 32) / 16) * 256 + 
+                          ((y % 8) / 2) * 64 + 
+                          ((x % 16) / 8) * 32 + 
+                          (y % 2) * 16 + 
+                          (x % 8) * 2;
+            
                 return tmpPos / 2;
             }
+
             
             /**
              * @brief Initializes the renderer and layers
@@ -2418,7 +2608,7 @@ namespace tsl {
             std::chrono::duration<long int, std::ratio<1, 1000000000>> t;
             //double timeCounter;
             u8 saturation;
-            Color animColor = tsl::style::color::ColorClickAnimation;
+            //Color animColor = tsl::style::color::ColorClickAnimation;
             float progress;
             Color clickColor1 = {0xf,0xf,0xf,0xf};
             Color clickColor2 = {0xf,0xf,0xf,0xf};
@@ -2564,86 +2754,86 @@ namespace tsl {
              */
             virtual void drawClickAnimation(gfx::Renderer *renderer) {
                 
-                if (!disableSelectionBG) {
-                    saturation = tsl::style::ListItemHighlightSaturation * (float(this->m_clickAnimationProgress) / float(tsl::style::ListItemHighlightLength));
-                    if (invertBGClickColor) {
-                        animColor.r = 15-saturation;
-                        animColor.g = 15-saturation;
-                        animColor.b = 15;
-                    } else {
-                        animColor.r = 0;
-                        animColor.g = saturation;
-                        animColor.b = saturation;
-                    }
-                    renderer->drawRect(ELEMENT_BOUNDS(this), a(animColor));
-                } else {
-                    clickColor1 = highlightColor1;
-                    clickColor2 = clickColor;
-                    
-                    //half progress = half((std::sin(2.0 * M_PI * fmod(std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count(), 1.0)) + 1.0) / 2.0);
-                    progress = (std::sin(2.0 * M_PI * fmod(std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count(), 1.0)) + 1.0) / 2.0;
-                    
-                    if (progress >= 0.5) {
-                        clickColor1 = clickColor;
-                        clickColor2 = highlightColor2;
-                    }
-                    
-                    highlightColor = {
-                        static_cast<u8>((clickColor1.r - clickColor2.r) * progress + clickColor2.r),
-                        static_cast<u8>((clickColor1.g - clickColor2.g) * progress + clickColor2.g),
-                        static_cast<u8>((clickColor1.b - clickColor2.b) * progress + clickColor2.b),
-                        0xF
-                    };
-                    
-                    x = 0;
-                    y = 0;
-                    if (this->m_highlightShaking) {
-                        t = (std::chrono::system_clock::now() - this->m_highlightShakingStartTime);
-                        if (t >= 100ms)
-                            this->m_highlightShaking = false;
-                        else {
-                            amplitude = std::rand() % 5 + 5;
-                            
-                            switch (this->m_highlightShakingDirection) {
-                                case FocusDirection::Up:
-                                    y -= shakeAnimation(t, amplitude);
-                                    break;
-                                case FocusDirection::Down:
-                                    y += shakeAnimation(t, amplitude);
-                                    break;
-                                case FocusDirection::Left:
-                                    x -= shakeAnimation(t, amplitude);
-                                    break;
-                                case FocusDirection::Right:
-                                    x += shakeAnimation(t, amplitude);
-                                    break;
-                                default:
-                                    break;
-                            }
-                            
-                            x = std::clamp(x, -amplitude, amplitude);
-                            y = std::clamp(y, -amplitude, amplitude);
-                        }
-                    }
-                    
-                    
-                    //renderer->drawRect(this->getX() + x - 4, this->getY() + y - 4, this->getWidth() + 8, 4, highlightColor);
-                    //renderer->drawRect(this->getX() + x - 4, this->getY() + y + this->getHeight(), this->getWidth() + 8, 4, highlightColor);
-                    //renderer->drawRect(this->getX() + x - 4, this->getY() + y, 4, this->getHeight(), highlightColor);
-                    //renderer->drawRect(this->getX() + x + this->getWidth(), this->getY() + y, 4, this->getHeight(), highlightColor);
-                    
-                    
-                    renderer->drawRect(this->getX() + x + 2, this->getY() + y - 4, this->getWidth() - 5 +2 +4, 5, a(highlightColor));
-                    renderer->drawRect(this->getX() + x + 2, this->getY() + y + this->getHeight(), this->getWidth() - 5 +2 +4, 5, a(highlightColor));
-                    renderer->drawRect(this->getX() + x -2, this->getY() + y + 2 - 2, 5, this->getHeight()-3 +4, a(highlightColor));
-                    renderer->drawRect(this->getX() + x + this->getWidth()+2, this->getY() + y + 2 -2, 5, this->getHeight()-3 +4, a(highlightColor));
-                    
-                    renderer->drawCircle(this->getX() + x, this->getY() + y + this->getHeight() + 2, 2.5, true, a(highlightColor));
-                    renderer->drawCircle(this->getX() + x, this->getY() + y - 2, 2.5, true, a(highlightColor));
-                    renderer->drawCircle(this->getX() + x + this->getWidth() +4, this->getY() + y + this->getHeight() + 2, 2.5, true, a(highlightColor));
-                    renderer->drawCircle(this->getX() + x + this->getWidth() +4, this->getY() + y - 2, 2.5, true, a(highlightColor));
-                    
+                //if (!disableSelectionBG) {
+                //    saturation = tsl::style::ListItemHighlightSaturation * (float(this->m_clickAnimationProgress) / float(tsl::style::ListItemHighlightLength));
+                //    if (invertBGClickColor) {
+                //        animColor.r = 15-saturation;
+                //        animColor.g = 15-saturation;
+                //        animColor.b = 15;
+                //    } else {
+                //        animColor.r = 0;
+                //        animColor.g = saturation;
+                //        animColor.b = saturation;
+                //    }
+                //    renderer->drawRect(ELEMENT_BOUNDS(this), a(animColor));
+                //} else {
+                clickColor1 = highlightColor1;
+                clickColor2 = clickColor;
+                
+                //half progress = half((std::sin(2.0 * M_PI * fmod(std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count(), 1.0)) + 1.0) / 2.0);
+                progress = (std::sin(2.0 * M_PI * fmod(std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count(), 1.0)) + 1.0) / 2.0;
+                
+                if (progress >= 0.5) {
+                    clickColor1 = clickColor;
+                    clickColor2 = highlightColor2;
                 }
+                
+                highlightColor = {
+                    static_cast<u8>((clickColor1.r - clickColor2.r) * progress + clickColor2.r),
+                    static_cast<u8>((clickColor1.g - clickColor2.g) * progress + clickColor2.g),
+                    static_cast<u8>((clickColor1.b - clickColor2.b) * progress + clickColor2.b),
+                    0xF
+                };
+                
+                x = 0;
+                y = 0;
+                if (this->m_highlightShaking) {
+                    t = (std::chrono::system_clock::now() - this->m_highlightShakingStartTime);
+                    if (t >= 100ms)
+                        this->m_highlightShaking = false;
+                    else {
+                        amplitude = std::rand() % 5 + 5;
+                        
+                        switch (this->m_highlightShakingDirection) {
+                            case FocusDirection::Up:
+                                y -= shakeAnimation(t, amplitude);
+                                break;
+                            case FocusDirection::Down:
+                                y += shakeAnimation(t, amplitude);
+                                break;
+                            case FocusDirection::Left:
+                                x -= shakeAnimation(t, amplitude);
+                                break;
+                            case FocusDirection::Right:
+                                x += shakeAnimation(t, amplitude);
+                                break;
+                            default:
+                                break;
+                        }
+                        
+                        x = std::clamp(x, -amplitude, amplitude);
+                        y = std::clamp(y, -amplitude, amplitude);
+                    }
+                }
+                
+                
+                //renderer->drawRect(this->getX() + x - 4, this->getY() + y - 4, this->getWidth() + 8, 4, highlightColor);
+                //renderer->drawRect(this->getX() + x - 4, this->getY() + y + this->getHeight(), this->getWidth() + 8, 4, highlightColor);
+                //renderer->drawRect(this->getX() + x - 4, this->getY() + y, 4, this->getHeight(), highlightColor);
+                //renderer->drawRect(this->getX() + x + this->getWidth(), this->getY() + y, 4, this->getHeight(), highlightColor);
+                
+                
+                renderer->drawRect(this->getX() + x + 2, this->getY() + y - 4, this->getWidth() - 5 +2 +4, 5, a(highlightColor));
+                renderer->drawRect(this->getX() + x + 2, this->getY() + y + this->getHeight(), this->getWidth() - 5 +2 +4, 5, a(highlightColor));
+                renderer->drawRect(this->getX() + x -2, this->getY() + y + 2 - 2, 5, this->getHeight()-3 +4, a(highlightColor));
+                renderer->drawRect(this->getX() + x + this->getWidth()+2, this->getY() + y + 2 -2, 5, this->getHeight()-3 +4, a(highlightColor));
+                
+                renderer->drawCircle(this->getX() + x, this->getY() + y + this->getHeight() + 2, 2.5, true, a(highlightColor));
+                renderer->drawCircle(this->getX() + x, this->getY() + y - 2, 2.5, true, a(highlightColor));
+                renderer->drawCircle(this->getX() + x + this->getWidth() +4, this->getY() + y + this->getHeight() + 2, 2.5, true, a(highlightColor));
+                renderer->drawCircle(this->getX() + x + this->getWidth() +4, this->getY() + y - 2, 2.5, true, a(highlightColor));
+                    
+                //}
             }
             
             /**
@@ -2729,8 +2919,11 @@ namespace tsl {
                         y = std::clamp(y, -amplitude, amplitude);
                     }
                 }
-                if ((disableSelectionBG && this->m_clickAnimationProgress == 0) || !disableSelectionBG) {
-                    
+                //if ((disableSelectionBG && this->m_clickAnimationProgress == 0) || !disableSelectionBG) {
+                if (this->m_clickAnimationProgress == 0) {
+                    //renderer->drawRoundedRectBorder(ELEMENT_BOUNDS(this), 4, 4, a(highlightColor));
+                    //renderer->drawRoundedRectBorder(this->getX() + x + 2, this->getY() + y - 4, this->getWidth() - 5 + 2 + 4, this->getHeight() + 5, 0, 4, a(highlightColor));
+
                     renderer->drawRect(this->getX() + x + 2, this->getY() + y - 4, this->getWidth() - 5 +2 +4, 5, a(highlightColor));
                     renderer->drawRect(this->getX() + x + 2, this->getY() + y + this->getHeight(), this->getWidth() - 5 +2 +4, 5, a(highlightColor));
                     renderer->drawRect(this->getX() + x -2, this->getY() + y + 2 - 2, 5, this->getHeight()-3 +4, a(highlightColor));
@@ -2918,11 +3111,7 @@ namespace tsl {
             virtual ~CustomDrawer() {}
             
             virtual void draw(gfx::Renderer* renderer) override {
-                //renderer->enableScissoring(ELEMENT_BOUNDS(this));
-                //this->m_renderFunc(renderer, ELEMENT_BOUNDS(this));
-                //renderer->disableScissoring();
-                
-                renderer->enableScissoring(0, 97, tsl::cfg::FramebufferWidth, tsl::cfg::FramebufferHeight-73-97); // CUSTOM MODIFICATION (bug fix with renderer)
+                renderer->enableScissoring(ELEMENT_BOUNDS(this));
                 this->m_renderFunc(renderer, ELEMENT_BOUNDS(this));
                 renderer->disableScissoring();
             }
@@ -2934,6 +3123,48 @@ namespace tsl {
         private:
             std::function<void(gfx::Renderer*, s32 x, s32 y, s32 w, s32 h)> m_renderFunc;
         };
+
+
+        /**
+         * @brief A Element that exposes the renderer directly to draw custom views easily
+         */
+        class TableDrawer : public Element {
+        public:
+            TableDrawer(std::function<void(gfx::Renderer* r, s32 x, s32 y, s32 w, s32 h)> renderFunc, bool _hideTableBackground, size_t _endGap)
+                : Element(), m_renderFunc(renderFunc), hideTableBackground(_hideTableBackground), endGap(_endGap) {}
+        
+            virtual ~TableDrawer() {}
+
+            virtual void draw(gfx::Renderer* renderer) override {
+
+                renderer->enableScissoring(0, 97, tsl::cfg::FramebufferWidth, tsl::cfg::FramebufferHeight - 73 - 97 - 4);
+        
+                if (!hideTableBackground)
+                    renderer->drawRoundedRect(this->getX() + 4, this->getY() + 2,this->getWidth() - 2, this->getHeight() + 18 - endGap, 10.0, a(tableBGColor));
+        
+                m_renderFunc(renderer, this->getX() + 4, this->getY(), this->getWidth() + 4, this->getHeight());
+        
+                renderer->disableScissoring();
+            }
+        
+            virtual void layout(u16 parentX, u16 parentY, u16 parentWidth, u16 parentHeight) override {}
+
+
+            virtual bool onClick(u64 keys) {
+                return false;
+            }
+            
+            virtual Element* requestFocus(Element *oldFocus, FocusDirection direction) override {
+                return nullptr;
+            }
+        
+        private:
+            std::function<void(gfx::Renderer*, s32 x, s32 y, s32 w, s32 h)> m_renderFunc;
+            bool hideTableBackground = false;
+            size_t endGap = 3;
+        };
+
+
         
         // CUSTOM SECTION START
         
@@ -2960,7 +3191,7 @@ namespace tsl {
             std::string m_pageRightName; // CUSTOM MODIFICATION
             
             
-            std::string firstHalf, secondHalf;
+            //std::string firstHalf, secondHalf;
             //tsl::Color handColor = RGB888("#F7253E");
             tsl::Color titleColor = {0xF, 0xF, 0xF, 0xF};
             const double cycleDuration = 1.5;
@@ -2994,166 +3225,109 @@ namespace tsl {
             // CUSTOM SECTION START
             virtual void draw(gfx::Renderer *renderer) override {
                 renderer->fillScreen(a(defaultBackgroundColor));
-                //renderer->fillScreen(tsl::style::color::ColorFrameBackground);
-                //renderer->drawRect(tsl::cfg::FramebufferWidth - 1, 0, 1, tsl::cfg::FramebufferHeight, a(0xF222)); // CUSTOM MODIFICATION, not sure why this call was even necessary after comparisons.
-                
+            
                 y = 50;
                 offset = 0;
-                // Check if m_title is "Ultrahand"
-                if (this->m_title == "Ultrahand" && (this->m_subtitle.find("Ultrahand Package") == std::string::npos) && (this->m_subtitle.find("Ultrahand Script") == std::string::npos)) {
-                    chargeStringSTD = "";
-                    PCB_temperatureStringSTD = "";
-                    SOC_temperatureStringSTD = "";
-                    
-                    firstHalf = "Ultra";
-                    secondHalf = "hand";
+            
+                bool isUltrahand = (this->m_title == CAPITAL_ULTRAHAND_PROJECT_NAME && 
+                                    this->m_subtitle.find("Ultrahand Package") == std::string::npos && 
+                                    this->m_subtitle.find("Ultrahand Script") == std::string::npos);
+                if (isUltrahand) {
+                    chargeStringSTD.clear();
+                    PCB_temperatureStringSTD.clear();
+                    SOC_temperatureStringSTD.clear();
+            
+                    std::string firstHalf = "Ultra";
+                    std::string secondHalf = "hand";
                     
                     x = 20;
                     fontSize = 42;
                     offset = 6;
                     
                     countOffset = 0;
+                    auto currentTime = std::chrono::system_clock::now();
+                    auto currentTimeCount = std::chrono::duration<double>(currentTime.time_since_epoch()).count();
                     
                     if (!disableColorfulLogo) {
+                        float progress;
                         for (char letter : firstHalf) {
-                            
-                            // Calculate the progress for each letter based on the counter
-                            //progress = calculateAmplitude(counter - x * 0.001F);
-                            counter = (2 * M_PI * (fmod(std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count(), cycleDuration) + countOffset) / 1.5);
-                            
+                            counter = (2 * M_PI * (fmod(currentTimeCount, cycleDuration) + countOffset) / 1.5);
                             progress = std::sin(counter); // -1 to 1
                             
                             highlightColor = {
-                                static_cast<u8>((std::get<0>(dynamicLogoRGB2) - std::get<0>(dynamicLogoRGB1)) * (progress + 1.) / 2. + std::get<0>(dynamicLogoRGB1)),
-                                static_cast<u8>((std::get<1>(dynamicLogoRGB2) - std::get<1>(dynamicLogoRGB1)) * (progress + 1.) / 2. + std::get<1>(dynamicLogoRGB1)),
-                                static_cast<u8>((std::get<2>(dynamicLogoRGB2) - std::get<2>(dynamicLogoRGB1)) * (progress + 1.) / 2. + std::get<2>(dynamicLogoRGB1)),
+                                static_cast<u8>((std::get<0>(dynamicLogoRGB2) - std::get<0>(dynamicLogoRGB1)) * (progress + 1.0) / 2.0 + std::get<0>(dynamicLogoRGB1)),
+                                static_cast<u8>((std::get<1>(dynamicLogoRGB2) - std::get<1>(dynamicLogoRGB1)) * (progress + 1.0) / 2.0 + std::get<1>(dynamicLogoRGB1)),
+                                static_cast<u8>((std::get<2>(dynamicLogoRGB2) - std::get<2>(dynamicLogoRGB1)) * (progress + 1.0) / 2.0 + std::get<2>(dynamicLogoRGB1)),
                                 15
                             };
                             
-                            // Call the renderer->drawString function
                             renderer->drawString(std::string(1, letter).c_str(), false, x, y + offset, fontSize, a(highlightColor));
-                            
-                            // Manually calculate the width of the current letter
-                            letterWidth = calculateStringWidth(std::string(1, letter), fontSize);
-                            
-                            // Adjust the x-coordinate for the next character's position
-                            x += letterWidth;
-                            
-                            // Update the counter for the next character
+                            x += calculateStringWidth(std::string(1, letter), fontSize);
                             countOffset -= 0.2F;
                         }
                     } else {
                         for (char letter : firstHalf) {
                             renderer->drawString(std::string(1, letter).c_str(), false, x, y + offset, fontSize, a(logoColor1));
-                            
-                            // Manually calculate the width of the current letter
-                            letterWidth = calculateStringWidth(std::string(1, letter), fontSize);
-                            
-                            // Adjust the x-coordinate for the next character's position
-                            x += letterWidth;
-                            
-                            // Update the counter for the next character
+                            x += calculateStringWidth(std::string(1, letter), fontSize);
                             countOffset -= 0.2F;
                         }
                     }
                     
-                    
-                    // Draw the second half of the string in red color
-                    renderer->drawString(secondHalf.c_str(), false, x, y+offset, fontSize, a(logoColor2));
-                    //for (char letter : secondHalf) {
-                    //    letterWidth = calculateStringWidth(std::string(1, letter), fontSize);
-                    //    x += letterWidth;
-                    //}
-                    if (!(hideBattery && hidePCBTemp && hideSOCTemp && hideClock))
-                        renderer->drawRect(252, 24, 1, 49, a(seperatorColor));
-                    
-                    // Time drawing implementation
-                    //struct timespec currentTime;
-                    clock_gettime(CLOCK_REALTIME, &currentTime);
-                    
+                    renderer->drawString(secondHalf.c_str(), false, x, y + offset, fontSize, a(logoColor2));
+            
+                    if (!(hideBattery && hidePCBTemp && hideSOCTemp && hideClock)) {
+                        renderer->drawRect(252, 23, 1, 49, a(seperatorColor));
+                    }
+            
+                    struct timespec currentTimeSpec;
+                    clock_gettime(CLOCK_REALTIME, &currentTimeSpec);
+            
                     y_offset = 45;
-                    if ((hideBattery && hidePCBTemp && hideSOCTemp) || (hideClock))
+                    if ((hideBattery && hidePCBTemp && hideSOCTemp) || hideClock) {
                         y_offset += 10;
-                    
-                    if (!hideClock) {// Use the 'timeStr' to display the time
-                        
-                        // Convert the current time to a human-readable string
-                        strftime(timeStr, sizeof(timeStr), datetimeFormat.c_str(), localtime(&currentTime.tv_sec));
-                        
-                        localizeTimeStr(timeStr); // for language localizations
-                        
+                    }
+            
+                    if (!hideClock) {
+                        strftime(timeStr, sizeof(timeStr), datetimeFormat.c_str(), localtime(&currentTimeSpec.tv_sec));
+                        localizeTimeStr(timeStr);
                         renderer->drawString(timeStr, false, tsl::cfg::FramebufferWidth - calculateStringWidth(timeStr, 20) - 20, y_offset, 20, a(clockColor));
                         y_offset += 22;
                     }
-                    
-                    // check in 1s intervals
-                    if ((currentTime.tv_sec - timeOut) >= 1) {
+            
+                    if ((currentTimeSpec.tv_sec - timeOut) >= 1) {
                         if (!isHidden.load()) {
-                            if (!hidePCBTemp)
-                                thermalstatusGetDetailsPCB(&PCB_temperature);
-                            if (!hideSOCTemp)
-                                thermalstatusGetDetailsSOC(&SOC_temperature);
-                            if (!hideBattery)
-                                powerGetDetails(&batteryCharge, &isCharging);
+                            if (!hidePCBTemp) thermalstatusGetDetailsPCB(&PCB_temperature);
+                            if (!hideSOCTemp) thermalstatusGetDetailsSOC(&SOC_temperature);
+                            if (!hideBattery) powerGetDetails(&batteryCharge, &isCharging);
                         }
-                        //thermalstatusGetDetails(&SOC_temperature, "internal");
-                        //thermalstatusGetDetails(&PCB_temperature, "external");
-                        
-                        timeOut = int(currentTime.tv_sec);
+                        timeOut = int(currentTimeSpec.tv_sec);
                     }
-                    
-                    
-                    
-                    snprintf(PCB_temperatureStr, sizeof(PCB_temperatureStr)-1, "%d°C", PCB_temperature);
-                    snprintf(SOC_temperatureStr, sizeof(SOC_temperatureStr)-1, "%d°C", SOC_temperature);
-                    
-                    batteryCharge = (batteryCharge > 100) ? 100 : batteryCharge;
+            
+                    snprintf(PCB_temperatureStr, sizeof(PCB_temperatureStr) - 1, "%d°C", PCB_temperature);
+                    snprintf(SOC_temperatureStr, sizeof(SOC_temperatureStr) - 1, "%d°C", SOC_temperature);
+                    batteryCharge = std::min(batteryCharge, 100U);
                     sprintf(chargeString, "%d%%", batteryCharge);
-                    
-                    
-                    // Convert the float to std::string
-                    //std::string powerConsumptiCAPITAL_ON_STR = std::to_string(powerConsumption);
-                    
-                    // Use the '+' operator to concatenate the strings
-                    
+            
                     if (!hideBattery && batteryCharge > 0) {
                         chargeStringSTD = chargeString;
-                        //PCB_temperatureStringSTD += " ";
-                        // Use the 'timeStr' to display the time
-                        if (powerCacheIsCharging)
-                            renderer->drawString(chargeStringSTD.c_str(), false, tsl::cfg::FramebufferWidth - calculateStringWidth(chargeStringSTD, 20) - 19, y_offset, 20, a(tsl::Color(0x0, 0xF, 0x0, 0xF)));
-                        else {
-                            if (batteryCharge < 20) {
-                                renderer->drawString(chargeStringSTD.c_str(), false, tsl::cfg::FramebufferWidth - calculateStringWidth(chargeStringSTD, 20) - 19, y_offset, 20, a(tsl::Color(0xF, 0x0, 0x0, 0xF)));
-                            } else {
-                                renderer->drawString(chargeStringSTD.c_str(), false, tsl::cfg::FramebufferWidth - calculateStringWidth(chargeStringSTD, 20) - 19, y_offset, 20, a(batteryColor));
-                            }
-                        }
+                        Color batteryColorToUse = isCharging ? tsl::Color(0x0, 0xF, 0x0, 0xF) : 
+                                                (batteryCharge < 20 ? tsl::Color(0xF, 0x0, 0x0, 0xF) : batteryColor);
+                        renderer->drawString(chargeStringSTD.c_str(), false, tsl::cfg::FramebufferWidth - calculateStringWidth(chargeStringSTD, 20) - 19, y_offset, 20, a(batteryColorToUse));
                     }
-                    //if (hidePCBTemp != TRUE_STR && hideBattery != TRUE_STR)
-                    //     SOC_temperatureStringSTD += " ";
-                    
+            
                     offset = 0;
-                    if (!hidePCBTemp) {
+                    if (!hidePCBTemp && PCB_temperature > 0) {
                         PCB_temperatureStringSTD = PCB_temperatureStr;
-                        if (PCB_temperature > 0) {
-                            offset += 2;
-                            renderer->drawString(PCB_temperatureStringSTD.c_str(), false, tsl::cfg::FramebufferWidth + offset - calculateStringWidth(PCB_temperatureStringSTD, 20) -
-                                calculateStringWidth(chargeStringSTD, 20) - 20, y_offset, 20, a(tsl::GradientColor(PCB_temperature)));
-                        }
+                        offset += 2;
+                        renderer->drawString(PCB_temperatureStringSTD.c_str(), false, tsl::cfg::FramebufferWidth + offset - calculateStringWidth(PCB_temperatureStringSTD, 20) - calculateStringWidth(chargeStringSTD, 20) - 20, y_offset, 20, a(tsl::GradientColor(PCB_temperature)));
                     }
-                    if (!hideSOCTemp) {
+                    if (!hideSOCTemp && SOC_temperature > 0) {
                         SOC_temperatureStringSTD = SOC_temperatureStr;
-                        if (SOC_temperature > 0) {
-                            offset += 2;
-                            renderer->drawString(SOC_temperatureStringSTD.c_str(), false, tsl::cfg::FramebufferWidth + offset -  calculateStringWidth(SOC_temperatureStringSTD, 20) -
-                                calculateStringWidth(PCB_temperatureStringSTD, 20) - calculateStringWidth(chargeStringSTD, 20) - 20, y_offset, 20, a(tsl::GradientColor(SOC_temperature)));
-                        }
+                        offset += 2;
+                        renderer->drawString(SOC_temperatureStringSTD.c_str(), false, tsl::cfg::FramebufferWidth + offset - calculateStringWidth(SOC_temperatureStringSTD, 20) - calculateStringWidth(PCB_temperatureStringSTD, 20) - calculateStringWidth(chargeStringSTD, 20) - 20, y_offset, 20, a(tsl::GradientColor(SOC_temperature)));
                     }
                 } else {
-                    //static float counter = 0;
-                    //progress;
-                    //letterWidth;
+
                     x = 20;
                     y = 50;
                     fontSize = 32;
@@ -3236,7 +3410,7 @@ namespace tsl {
                 }
                 
                 
-                if (this->m_title == "Ultrahand") {
+                if (this->m_title == CAPITAL_ULTRAHAND_PROJECT_NAME) {
                     renderer->drawString(versionLabel.c_str(), false, 20, y+25, 15, a(versionTextColor));
                 } else
                     renderer->drawString(this->m_subtitle.c_str(), false, 20, y+20, 15, a(versionTextColor));
@@ -3484,104 +3658,92 @@ namespace tsl {
             u16 i;
             
             virtual void draw(gfx::Renderer *renderer) override {
-                
-                
                 if (this->m_clearList) {
-                    for (auto& item : this->m_items)
+                    for (auto& item : this->m_items) {
                         delete item;
-                    
+                    }
                     this->m_items.clear();
                     this->m_offset = 0;
                     this->m_focusedIndex = 0;
                     this->invalidate();
                     this->m_clearList = false;
                 }
-                
-                for (auto [index, element] : this->m_itemsToAdd) {
-                    element->invalidate();
-                    if (index >= 0 && (this->m_items.size() > static_cast<size_t>(index))) {
-                        const auto& it = this->m_items.cbegin() + static_cast<size_t>(index);
-                        this->m_items.insert(it, element);
-                    } else {
-                        this->m_items.push_back(element);
+
+                if (!this->m_itemsToAdd.empty()) {
+                    for (auto [index, element] : this->m_itemsToAdd) {
+                        element->invalidate();
+                        if (index >= 0 && (this->m_items.size() > static_cast<size_t>(index))) {
+                            this->m_items.insert(this->m_items.cbegin() + static_cast<size_t>(index), element);
+                        } else {
+                            this->m_items.push_back(element);
+                        }
                     }
+                    this->m_itemsToAdd.clear();
                     this->invalidate();
                     this->updateScrollOffset();
                 }
-                this->m_itemsToAdd.clear();
-                
-                for (auto element : this->m_itemsToRemove) {
-                    for (auto it = m_items.cbegin(); it != m_items.cend(); ++it) {
-                        if (*it == element) {
+
+                if (!this->m_itemsToRemove.empty()) {
+                    for (auto element : this->m_itemsToRemove) {
+                        auto it = std::find(this->m_items.cbegin(), this->m_items.cend(), element);
+                        if (it != this->m_items.cend()) {
                             this->m_items.erase(it);
-                            if (this->m_focusedIndex >= (it - this->m_items.cbegin())) {
+                            if (this->m_focusedIndex >= static_cast<size_t>(it - this->m_items.cbegin())) {
                                 this->m_focusedIndex--;
                             }
-                            this->invalidate();
-                            this->updateScrollOffset();
                             delete element;
-                            break;
                         }
                     }
+                    this->m_itemsToRemove.clear();
+                    this->invalidate();
+                    this->updateScrollOffset();
                 }
-                this->m_itemsToRemove.clear();
-                
-                renderer->enableScissoring(this->getLeftBound(), this->getTopBound() , this->getWidth(), this->getHeight() + 4);
-                
+
+                renderer->enableScissoring(this->getLeftBound(), this->getTopBound(), this->getWidth(), this->getHeight() + 4);
+
                 for (auto &entry : this->m_items) {
                     if (entry->getBottomBound() > this->getTopBound() && entry->getTopBound() < this->getBottomBound()) {
                         entry->frame(renderer);
                     }
                 }
-                
+
                 renderer->disableScissoring();
-                
+
                 if (this->m_listHeight > this->getHeight()) {
-                    
-                    float viewHeight = static_cast<float>(this->getHeight() -16);
-                    float totalHeight = static_cast<float>(this->m_listHeight +16);
-                    
-                    // Calculate the height of the scrollbar to represent the portion of the content that is viewable.
+                    float viewHeight = static_cast<float>(this->getHeight() - 16);
+                    float totalHeight = static_cast<float>(this->m_listHeight + 16);
+
                     scrollbarHeight = (viewHeight * viewHeight) / totalHeight;
                     if (scrollbarHeight > viewHeight) {
-                        scrollbarHeight = viewHeight; // Ensures the scrollbar is not larger than the container.
+                        scrollbarHeight = viewHeight;
                     }
-                    
-                    // Calculate the maximum scrollable height.
+
                     int maxScrollableHeight = totalHeight - viewHeight;
-                    if (maxScrollableHeight < 1) maxScrollableHeight = 1; // Prevent division by zero.
-                    
-                    // Calculate the scrollbar offset, adjusting the range it covers by decreasing it by 3 units.
+                    if (maxScrollableHeight < 1) maxScrollableHeight = 1;
+
                     scrollbarOffset = (static_cast<double>(this->m_offset) / maxScrollableHeight) * (viewHeight - scrollbarHeight);
-                    
-                    
-                    // Ensure the scrollbar does not go outside the viewable area. Adjust the condition to stop 3 units earlier.
                     if (scrollbarOffset + scrollbarHeight > viewHeight) {
                         scrollbarOffset = viewHeight - scrollbarHeight;
                     }
-
-                    // Increase the starting position of the scrollbar by 8 units as previously defined.
                     scrollbarOffset += 8;
 
-                    offset = 11;
-                    renderer->drawRect(this->getRightBound() + 10+offset, this->getY() + scrollbarOffset, 5, scrollbarHeight, a(trackBarColor));
-                    renderer->drawCircle(this->getRightBound() + 12+offset, this->getY() + scrollbarOffset, 2, true, a(trackBarColor));
-                    renderer->drawCircle(this->getRightBound() + 12+offset, (this->getY() + scrollbarOffset + (this->getY() + scrollbarOffset + this->getY() + scrollbarOffset + scrollbarHeight)/2)/2, 2, true, a(trackBarColor));
-                    renderer->drawCircle(this->getRightBound() + 12+offset, (this->getY() + scrollbarOffset + this->getY() + scrollbarOffset + scrollbarHeight)/2, 2, true, a(trackBarColor));
-                    renderer->drawCircle(this->getRightBound() + 12+offset, (this->getY() + scrollbarOffset + scrollbarHeight + (this->getY() + scrollbarOffset + this->getY() + scrollbarOffset + scrollbarHeight)/2)/2, 2, true, a(trackBarColor));
-                    renderer->drawCircle(this->getRightBound() + 12+offset, this->getY() + scrollbarOffset + scrollbarHeight, 2, true, a(trackBarColor));
-                    
-                    prevOffset = this->m_offset;
-                    
-                    if (Element::getInputMode() == InputMode::Controller)
+                    int offset = 11;
+                    renderer->drawRect(this->getRightBound() + 10 + offset, this->getY() + scrollbarOffset, 5, scrollbarHeight, a(trackBarColor));
+                    renderer->drawCircle(this->getRightBound() + 12 + offset, this->getY() + scrollbarOffset, 2, true, a(trackBarColor));
+                    renderer->drawCircle(this->getRightBound() + 12 + offset, this->getY() + scrollbarOffset + scrollbarHeight, 2, true, a(trackBarColor));
+
+                    float prevOffset = this->m_offset;
+
+                    if (Element::getInputMode() == InputMode::Controller) {
                         this->m_offset += ((this->m_nextOffset) - this->m_offset) * 0.1F;
-                    else if (Element::getInputMode() == InputMode::TouchScroll)
+                    } else if (Element::getInputMode() == InputMode::TouchScroll) {
                         this->m_offset += ((this->m_nextOffset) - this->m_offset);
-                    
-                    if (static_cast<u32>(prevOffset) != static_cast<u32>(this->m_offset))
+                    }
+
+                    if (static_cast<u32>(prevOffset) != static_cast<u32>(this->m_offset)) {
                         this->invalidate();
+                    }
                 }
-                
             }
             
             virtual void layout(u16 parentX, u16 parentY, u16 parentWidth, u16 parentHeight) override {
@@ -3745,6 +3907,8 @@ namespace tsl {
                 
                 return oldFocus;
             }
+
+
             
             /**
              * @brief Gets the item at the index in the list
@@ -3793,7 +3957,84 @@ namespace tsl {
             std::vector<std::pair<ssize_t, Element *>> m_itemsToAdd;
             
         private:
+            void clearItems() {
+                for (auto& item : this->m_items) {
+                    delete item;
+                }
+                this->m_items.clear();
+                this->m_offset = 0;
+                this->m_focusedIndex = 0;
+                this->invalidate();
+                this->m_clearList = false;
+            }
             
+            void addPendingItems() {
+                for (auto [index, element] : this->m_itemsToAdd) {
+                    element->invalidate();
+                    if (index >= 0 && (this->m_items.size() > static_cast<size_t>(index))) {
+                        this->m_items.insert(this->m_items.cbegin() + static_cast<size_t>(index), element);
+                    } else {
+                        this->m_items.push_back(element);
+                    }
+                }
+                this->m_itemsToAdd.clear();
+                this->invalidate();
+                this->updateScrollOffset();
+            }
+            
+            void removePendingItems() {
+                for (auto element : this->m_itemsToRemove) {
+                    auto it = std::find(this->m_items.cbegin(), this->m_items.cend(), element);
+                    if (it != this->m_items.cend()) {
+                        this->m_items.erase(it);
+                        if (this->m_focusedIndex >= static_cast<size_t>(it - this->m_items.cbegin())) {
+                            this->m_focusedIndex--;
+                        }
+                        delete element;
+                    }
+                }
+                this->m_itemsToRemove.clear();
+                this->invalidate();
+                this->updateScrollOffset();
+            }
+            
+            void drawScrollbar(gfx::Renderer *renderer) {
+                float viewHeight = static_cast<float>(this->getHeight() - 16);
+                float totalHeight = static_cast<float>(this->m_listHeight + 16);
+            
+                scrollbarHeight = (viewHeight * viewHeight) / totalHeight;
+                if (scrollbarHeight > viewHeight) {
+                    scrollbarHeight = viewHeight;
+                }
+            
+                int maxScrollableHeight = totalHeight - viewHeight;
+                if (maxScrollableHeight < 1) maxScrollableHeight = 1;
+            
+                scrollbarOffset = (static_cast<double>(this->m_offset) / maxScrollableHeight) * (viewHeight - scrollbarHeight);
+                if (scrollbarOffset + scrollbarHeight > viewHeight) {
+                    scrollbarOffset = viewHeight - scrollbarHeight;
+                }
+                scrollbarOffset += 8;
+            
+                int offset = 11;
+                renderer->drawRect(this->getRightBound() + 10 + offset, this->getY() + scrollbarOffset, 5, scrollbarHeight, a(trackBarColor));
+                renderer->drawCircle(this->getRightBound() + 12 + offset, this->getY() + scrollbarOffset, 2, true, a(trackBarColor));
+                //renderer->drawCircle(this->getRightBound() + 12 + offset, (this->getY() + scrollbarOffset + scrollbarHeight) / 2, 2, true, a(trackBarColor));
+                renderer->drawCircle(this->getRightBound() + 12 + offset, this->getY() + scrollbarOffset + scrollbarHeight, 2, true, a(trackBarColor));
+            
+                float prevOffset = this->m_offset;
+            
+                if (Element::getInputMode() == InputMode::Controller) {
+                    this->m_offset += ((this->m_nextOffset) - this->m_offset) * 0.1F;
+                } else if (Element::getInputMode() == InputMode::TouchScroll) {
+                    this->m_offset += ((this->m_nextOffset) - this->m_offset);
+                }
+            
+                if (static_cast<u32>(prevOffset) != static_cast<u32>(this->m_offset)) {
+                    this->invalidate();
+                }
+            }
+
             virtual void updateScrollOffset() {
                 if (this->getInputMode() != InputMode::Controller)
                     return;
@@ -3825,9 +4066,7 @@ namespace tsl {
          */
         class ListItem : public Element {
         public:
-
-            std::chrono::system_clock::time_point timeIn;// = std::chrono::system_clock::now();
-            std::chrono::duration<long int, std::ratio<1, 1000000000>> t;
+            //std::chrono::duration<long int, std::ratio<1, 1000000000>> t;
             u32 width, height;
             
             /**
@@ -3841,6 +4080,7 @@ namespace tsl {
             virtual ~ListItem() {}
             
             virtual void draw(gfx::Renderer *renderer) override {
+                static float lastBottomBound;
                 bool useClickTextColor = false;
                 if (this->m_touched && Element::getInputMode() == InputMode::Touch) {
                     if (touchInBounds) {
@@ -3876,30 +4116,24 @@ namespace tsl {
                     }
                 }
                 
-                //renderer->drawRect(this->getX(), this->getY(), this->getWidth(), 1, tsl::style::color::ColorFrame);
-                //renderer->drawRect(this->getX()+4, this->getTopBound(), this->getWidth()-4, 1, a(0x0000));
-                
-                //renderer->drawRect(this->getX()+5, this->getTopBound(), this->getWidth()-5+10, 1, tsl::style::color::ColorFrame);
-                renderer->drawRect(this->getX()+5-2, this->getTopBound(), this->getWidth()-5+10, 1, a(seperatorColor));
+                if (lastBottomBound !=  this->getTopBound())
+                    renderer->drawRect(this->getX()+5-2, this->getTopBound(), this->getWidth()-5+10, 1, a(seperatorColor));
+                renderer->drawRect(this->getX()+5-2, this->getBottomBound(), this->getWidth()-5+10, 1, a(seperatorColor));
+                lastBottomBound = this->getBottomBound();
                 
                 if (this->m_trunctuated) {
                     if (this->m_focused) {
                         renderer->enableScissoring(this->getX()+7, 97, this->m_maxWidth + 40 - 10+4, tsl::cfg::FramebufferHeight-73-97);
-                        //renderer->enableScissoring(this->getX(), this->getY(), this->m_maxWidth + 40, this->getHeight());
-                        //renderer->drawString(this->m_scrollText.c_str(), false, this->getX() + 20.0 - std::round(this->m_scrollOffset*10000.0)/10000.0, this->getY() + 45, 23, defaultTextColor);
                         renderer->drawString(this->m_scrollText.c_str(), false, this->getX() + 20.0-2 - this->m_scrollOffset, this->getY() + 44.9, 23, a(selectedTextColor));
                         renderer->disableScissoring();
-                        t = std::chrono::system_clock::now() - this->timeIn;
-                        if (t >= 2000ms) {
+                        //t = std::chrono::system_clock::now() - this->timeIn;
+                        if (std::chrono::system_clock::now() - this->timeIn >= 2000ms) {
                             if (this->m_scrollOffset >= this->m_textWidth) {
                                 this->m_scrollOffset = 0;
                                 this->timeIn = std::chrono::system_clock::now();
                             } else {
                                 // Calculate the increment based on the desired scroll rate
-                                //this->m_scrollOffset = (1.0-0.9) * this->m_scrollOffset + 0.9 * (0.1 * std::chrono::duration_cast<std::chrono::milliseconds>(t - 2000ms).count());
-                                //this->m_scrollOffset = (half(0.1) * std::chrono::duration_cast<std::chrono::milliseconds>(t - 2000ms).count());
-                                this->m_scrollOffset = ((0.1) * std::chrono::duration_cast<std::chrono::milliseconds>(t - 2000ms).count());
-                                //this->m_scrollOffset = (customRound(0.10 * std::chrono::duration_cast<std::chrono::milliseconds>((t) - 2000ms).count() * 10000.0) / 10000.0);
+                                this->m_scrollOffset = ((0.1) * std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - this->timeIn - 2000ms).count());
                             }
                         } // CUSTOM MODIFICATION END
                     } else {
@@ -3920,7 +4154,9 @@ namespace tsl {
                         renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +2, this->getY() + 45, 20, !useClickTextColor ? (this->m_faint ? offTextColor : selectedTextColor) : a(clickTextColor));
                     else
                         renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +2, this->getY() + 45, 20, !useClickTextColor ? (this->m_faint ? offTextColor : defaultTextColor) : a(clickTextColor));
-                } else if (runningInterpreter.load(std::memory_order_acquire) && ((((this->m_value).find(DOWNLOAD_SYMBOL) != std::string::npos) || ((this->m_value).find(UNZIP_SYMBOL) != std::string::npos) || ((this->m_value).find(COPY_SYMBOL) != std::string::npos)) || this->m_value == INPROGRESS_SYMBOL)) {
+                } else if (runningInterpreter.load(std::memory_order_acquire) &&
+                    ((((this->m_value).find(DOWNLOAD_SYMBOL) != std::string::npos) || ((this->m_value).find(UNZIP_SYMBOL) != std::string::npos) || ((this->m_value).find(COPY_SYMBOL) != std::string::npos)) || this->m_value == INPROGRESS_SYMBOL)) {
+                    
                     renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +2, this->getY() + 45, 20, (this->m_faint ? offTextColor : a(inprogressTextColor)));
                 } else if (this->m_value == CROSSMARK_SYMBOL) {
                     renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 + 10 +2, this->getY() + 45, 20, (this->m_faint ? offTextColor : a(invalidTextColor)));
@@ -4019,6 +4255,7 @@ namespace tsl {
             }
             
         protected:
+            std::chrono::system_clock::time_point timeIn;// = std::chrono::system_clock::now();
             std::string m_text;
             std::string m_value = "";
             std::string m_scrollText = "";
@@ -4912,7 +5149,6 @@ namespace tsl {
          * @return Whether or not the input has been consumed
          */
         void handleInput(u64 keysDown, u64 keysHeld, bool touchDetected, const HidTouchState &touchPos, HidAnalogStickState joyStickPosLeft, HidAnalogStickState joyStickPosRight) {
-
             // Static variables to maintain state between function calls
             static HidTouchState initialTouchPos = { 0 };
             static HidTouchState oldTouchPos = { 0 };
@@ -4920,119 +5156,86 @@ namespace tsl {
             static elm::TouchEvent touchEvent;
             static elm::TouchEvent oldTouchEvent;
             static u32 repeatTick = 0;
-            
+            static ssize_t counter = 0;
+        
             auto& currentGui = this->getCurrentGui();
-            
+        
             // Return early if current GUI is not available
-            if (currentGui == nullptr)
+            if (!currentGui)
                 return;
-            
+        
             // Retrieve current focus and top/bottom elements of the GUI
             auto currentFocus = currentGui->getFocusedElement();
             auto topElement = currentGui->getTopElement();
-            auto bottomElement = currentGui->getBottomElement(); // Backend is still not implemented/working yet
-            
-
-            static ssize_t counter = 0;
+            auto bottomElement = currentGui->getBottomElement();
+        
             if (runningInterpreter.load()) {
-                //if (keysDown & (HidNpadButton_AnyUp))
-                //    currentFocus -> shakeHighlight(FocusDirection::Up);
-                //else if (keysDown & (HidNpadButton_AnyDown))
-                //    currentFocus -> shakeHighlight(FocusDirection::Down);
-                //else if (keysDown & (HidNpadButton_AnyLeft))
-                //    currentFocus -> shakeHighlight(FocusDirection::Left);
-                //else if (keysDown & (HidNpadButton_AnyRight))
-                //    currentFocus -> shakeHighlight(FocusDirection::Right);
-
                 if (keysHeld & HidNpadButton_AnyUp && keysDown & HidNpadButton_AnyUp && !(keysHeld & (KEY_DLEFT | KEY_DRIGHT | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR)))
-                    currentFocus -> shakeHighlight(FocusDirection::Up);
+                    currentFocus->shakeHighlight(FocusDirection::Up);
                 else if (keysHeld & HidNpadButton_AnyDown && keysDown & HidNpadButton_AnyDown && !(keysHeld & (KEY_DLEFT | KEY_DRIGHT | KEY_DUP | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR)))
-                    currentFocus -> shakeHighlight(FocusDirection::Down);
+                    currentFocus->shakeHighlight(FocusDirection::Down);
                 else if (keysHeld & HidNpadButton_AnyLeft && keysDown & HidNpadButton_AnyLeft && !(keysHeld & (KEY_DRIGHT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR)))
-                    currentFocus -> shakeHighlight(FocusDirection::Left);
+                    currentFocus->shakeHighlight(FocusDirection::Left);
                 else if (keysHeld & HidNpadButton_AnyRight && keysDown & HidNpadButton_AnyRight && !(keysHeld & (KEY_DLEFT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR)))
-                    currentFocus -> shakeHighlight(FocusDirection::Right);
-                else {
-                    if (progressAnimation) {
-                        if (counter%4 == 0)
-                            currentFocus -> shakeHighlight(FocusDirection::Up);
-                        else if (counter%4  == 1)
-                            currentFocus -> shakeHighlight(FocusDirection::Right);
-                        else if (counter%4  == 2)
-                            currentFocus -> shakeHighlight(FocusDirection::Down);
-                        else if (counter%4  == 3)
-                            currentFocus -> shakeHighlight(FocusDirection::Left);
-                        counter++;
-                        if (counter >= 4) counter = 0; // Reset the counter after a full cycle to prevent overflow
-                    }
+                    currentFocus->shakeHighlight(FocusDirection::Right);
+                else if (progressAnimation) {
+                    if (counter % 4 == 0) currentFocus->shakeHighlight(FocusDirection::Up);
+                    else if (counter % 4 == 1) currentFocus->shakeHighlight(FocusDirection::Right);
+                    else if (counter % 4 == 2) currentFocus->shakeHighlight(FocusDirection::Down);
+                    else if (counter % 4 == 3) currentFocus->shakeHighlight(FocusDirection::Left);
+                    counter = (counter + 1) % 4; // Reset the counter after a full cycle to prevent overflow
                 }
             }
-
+        
             // Handle input when no element is focused
-            if (currentFocus == nullptr  && !simulatedBack && simulatedBackComplete && !stillTouching && !runningInterpreter.load(std::memory_order_acquire)) {
-                // Check for back button press
-                //if (keysDown & HidNpadButton_B) {
-                //    // Handle back button press
-                //    if (!currentGui->handleInput(HidNpadButton_B, 0,{},{},{}))
-                //        this->goBack();
-                //    return;
-                //}
-                
-                // If there is no top element, return early
-                if (topElement == nullptr)
+            if (!currentFocus && !simulatedBack && simulatedBackComplete && !stillTouching && !runningInterpreter.load(std::memory_order_acquire)) {
+                if (!topElement)
                     return;
-                else if (currentGui != nullptr) {
-                    // Set focus to top element if initial focus is not set or arrow keys are pressed
-                    if (!currentGui->initialFocusSet() || keysDown & (HidNpadButton_AnyUp | HidNpadButton_AnyDown | HidNpadButton_AnyLeft | HidNpadButton_AnyRight)) {
-                        currentGui->requestFocus(topElement, FocusDirection::None);
-                        currentGui->markInitialFocusSet();
-                        repeatTick = 1;
-                    }
+        
+                if (!currentGui->initialFocusSet() || keysDown & (HidNpadButton_AnyUp | HidNpadButton_AnyDown | HidNpadButton_AnyLeft | HidNpadButton_AnyRight)) {
+                    currentGui->requestFocus(topElement, FocusDirection::None);
+                    currentGui->markInitialFocusSet();
+                    repeatTick = 1;
                 }
             }
-
+        
             // If nothing is highlighted AND the menu is fully loaded/drawn, set focus to topElement
-            if (currentFocus == nullptr && !touchDetected && (!oldTouchDetected || (oldTouchEvent == elm::TouchEvent::Scroll))) {
-                if (!simulatedBack && simulatedBackComplete ) {
-                    //f (lastTouchedElement != nullptr) {
-                    //   currentGui->removeFocus();
-                    //   currentGui->requestFocus(lastTouchedElement, FocusDirection::None);
-                    //
-
-                    if (topElement != nullptr) {
+            if (!currentFocus && !touchDetected && (!oldTouchDetected || oldTouchEvent == elm::TouchEvent::Scroll)) {
+                if (!simulatedBack && simulatedBackComplete) {
+                    if (topElement) {
                         currentGui->removeFocus();
                         currentGui->requestFocus(topElement, FocusDirection::None);
                     }
                 }
             }
-            
+        
             bool handled = false;
-            elm::Element *parentElement = currentFocus;
-            
+            elm::Element* parentElement = currentFocus;
+        
             // Propagate click events upwards through the hierarchy
-            while (!handled && parentElement != nullptr) {
+            while (!handled && parentElement) {
                 handled = parentElement->onClick(keysDown);
                 parentElement = parentElement->getParent();
             }
-            
+        
             parentElement = currentFocus;
             // Propagate input events upwards through the hierarchy
-            while (!handled && parentElement != nullptr) {
+            while (!handled && parentElement) {
                 handled = parentElement->handleInput(keysDown, keysHeld, touchPos, joyStickPosLeft, joyStickPosRight);
                 parentElement = parentElement->getParent();
             }
-            
+        
             // Return early if the GUI has changed
             if (currentGui != this->getCurrentGui())
                 return;
-            
+        
             // Handle input events for the current GUI
-            handled = handled | currentGui->handleInput(keysDown, keysHeld, touchPos, joyStickPosLeft, joyStickPosRight);
-            
+            handled |= currentGui->handleInput(keysDown, keysHeld, touchPos, joyStickPosLeft, joyStickPosRight);
+        
             // Handle arrow key navigation when no touch input is detected
-            if (!touchDetected && !oldTouchDetected && !handled && currentFocus != nullptr && !stillTouching && !runningInterpreter.load(std::memory_order_acquire)) {
+            if (!touchDetected && !oldTouchDetected && !handled && currentFocus && !stillTouching && !runningInterpreter.load(std::memory_order_acquire)) {
                 static bool shouldShake = true;
-                
+        
                 // Check for single arrow key press
                 if ((((keysHeld & HidNpadButton_AnyUp) != 0) + ((keysHeld & HidNpadButton_AnyDown) != 0) + ((keysHeld & HidNpadButton_AnyLeft) != 0) + ((keysHeld & HidNpadButton_AnyRight) != 0)) == 1) {
                     if ((repeatTick == 0 || repeatTick > 20) && (repeatTick % 4) == 0) {
@@ -5045,54 +5248,51 @@ namespace tsl {
                             currentGui->requestFocus(currentFocus->getParent(), FocusDirection::Left, shouldShake);
                         else if (keysHeld & HidNpadButton_AnyRight && !(keysHeld & (KEY_DLEFT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR)))
                             currentGui->requestFocus(currentFocus->getParent(), FocusDirection::Right, shouldShake);
-                        
+        
                         shouldShake = currentGui->getFocusedElement() != currentFocus;
                     }
                     repeatTick++;
                 } else {
-                    // Handle back button press
-                    //if (keysDown & HidNpadButton_B)
-                    //    this->goBack();
                     repeatTick = 0;
                     shouldShake = true;
                 }
             }
-
+        
             // If the up button is pressed, shift focus to the top element
             if (!touchDetected && (keysDown & HidNpadButton_L) && !(keysHeld & (KEY_DLEFT | KEY_DRIGHT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_R | KEY_ZL | KEY_ZR)) && !runningInterpreter.load(std::memory_order_acquire)) {
                 topElement = currentGui->getTopElement();
-                if (topElement != nullptr) {
+                if (topElement) {
                     currentGui->requestFocus(topElement, FocusDirection::None);
                 }
             }
-
+        
             // If the down button is pressed, shift focus to the bottom element
             if (!touchDetected && (keysDown & HidNpadButton_R) && !(keysHeld & (KEY_DLEFT | KEY_DRIGHT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_ZL | KEY_ZR)) && !runningInterpreter.load(std::memory_order_acquire)) {
                 bottomElement = currentGui->getBottomElement();
-                if (bottomElement != nullptr) {
+                if (bottomElement) {
                     currentGui->requestFocus(bottomElement, FocusDirection::None);
                 }
             }
-            
+        
             // Handle touch release event
             if (!touchDetected && oldTouchDetected) {
-                if (currentGui != nullptr && topElement != nullptr) {
+                if (currentGui && topElement) {
                     topElement->onTouch(elm::TouchEvent::Release, oldTouchPos.x, oldTouchPos.y, oldTouchPos.x, oldTouchPos.y, initialTouchPos.x, initialTouchPos.y);
                 }
             }
-            
+        
             // Handle touch input
             if (touchDetected) {
                 if (!interruptedTouch)
-                    interruptedTouch = ((keysHeld & ALL_KEYS_MASK) != 0);
-
+                    interruptedTouch = (keysHeld & ALL_KEYS_MASK) != 0;
+        
                 // Calculate touch distance
                 u32 xDistance = std::abs(static_cast<s32>(initialTouchPos.x) - static_cast<s32>(touchPos.x));
                 u32 yDistance = std::abs(static_cast<s32>(initialTouchPos.y) - static_cast<s32>(touchPos.y));
-                
+        
                 xDistance *= xDistance;
                 yDistance *= yDistance;
-                
+        
                 // Determine touch event type (scroll or hold)
                 if ((xDistance + yDistance) > 1000) {
                     elm::Element::setInputMode(InputMode::TouchScroll);
@@ -5101,7 +5301,7 @@ namespace tsl {
                     if (touchEvent != elm::TouchEvent::Scroll)
                         touchEvent = elm::TouchEvent::Hold;
                 }
-
+        
                 // Handle touch input initiation
                 if (!oldTouchDetected) {
                     initialTouchPos = touchPos;
@@ -5116,50 +5316,23 @@ namespace tsl {
                     }
                     touchEvent = elm::TouchEvent::Touch;
                 }
-                
+        
                 // Call onTouch method for the top element to handle touch event
-                if (currentGui != nullptr && topElement != nullptr) {
-                    if (!runningInterpreter.load(std::memory_order_acquire)) {
-                        topElement->onTouch(touchEvent, touchPos.x, touchPos.y, oldTouchPos.x, oldTouchPos.y, initialTouchPos.x, initialTouchPos.y);
-                        //if (currentFocus != nullptr && touchEvent != elm::TouchEvent::Scroll)
-                        //    currentGui->requestFocus(currentFocus, FocusDirection::None);
-                        //else
-                        if (touchPos.x > 0U && touchPos.x <= cfg::FramebufferWidth && touchPos.y > 73U && touchPos.y <= cfg::FramebufferHeight - 73U)
-                            currentGui->removeFocus();
-                    }
-                    //// Check if the top element contains the touch position
-                    //if (topElement->inBounds(touchPos.x, touchPos.y)) {
-                    //    // Request focus for the top element
-                    //    currentGui->requestFocus(topElement, FocusDirection::None);
-                    //} else {
-                    //    // Iterate through elements to find the touched element
-                    //    for (auto &element : currentGui->getTopElement()->getChildren()) {
-                    //        if (element->inBounds(touchPos.x, touchPos.y)) {
-                    //            // Determine the direction to move
-                    //            FocusDirection direction = (element->getY() < touchPos.y) ? FocusDirection::Down : FocusDirection::Up;
-                    //
-                    //            // Request focus for the touched element in the specified direction
-                    //            currentGui->requestFocus(element, direction);
-                    //            // Set the top element to the touched element
-                    //            topElement = element;
-                    //            break;
-                    //        }
-                    //    }
-                    //}
+                if (currentGui && topElement && !runningInterpreter.load(std::memory_order_acquire)) {
+                    topElement->onTouch(touchEvent, touchPos.x, touchPos.y, oldTouchPos.x, oldTouchPos.y, initialTouchPos.x, initialTouchPos.y);
+        
+                    if (touchPos.x > 0U && touchPos.x <= cfg::FramebufferWidth && touchPos.y > 73U && touchPos.y <= cfg::FramebufferHeight - 73U)
+                        currentGui->removeFocus();
                 }
-
-
-
-
+        
                 // Update old touch position
                 oldTouchPos = touchPos;
-                
+        
                 // Hide overlay when touching out of bounds
                 if (touchPos.x >= cfg::FramebufferWidth) {
                     if (tsl::elm::Element::getInputMode() == tsl::InputMode::Touch) {
                         oldTouchPos = { 0 };
                         initialTouchPos = { 0 };
-                        
                         this->hide();
                     }
                 }
@@ -5167,35 +5340,27 @@ namespace tsl {
             } else {
                 if (!interruptedTouch && !runningInterpreter.load(std::memory_order_acquire)) {
                     // Check touch button locations for specific actions
-                    if (oldTouchPos.x < 150U && oldTouchPos.y > cfg::FramebufferHeight - 73U) {
-                        if (initialTouchPos.x < 150U && initialTouchPos.y > cfg::FramebufferHeight - 73U) {
-                            simulatedBackComplete = false;
-                            simulatedBack = true;
-                        }
+                    if (oldTouchPos.x < 150U && oldTouchPos.y > cfg::FramebufferHeight - 73U && initialTouchPos.x < 150U && initialTouchPos.y > cfg::FramebufferHeight - 73U) {
+                        simulatedBackComplete = false;
+                        simulatedBack = true;
                     }
-                    if (oldTouchPos.x >= 150U && oldTouchPos.x < 260U && oldTouchPos.y > cfg::FramebufferHeight - 73U) {
-                        if (initialTouchPos.x >= 150U && initialTouchPos.x < 260U && initialTouchPos.y > cfg::FramebufferHeight - 73U) {
-                            simulatedSelectComplete = false;
-                            simulatedSelect = true;
-                        }
+                    if (oldTouchPos.x >= 150U && oldTouchPos.x < 260U && oldTouchPos.y > cfg::FramebufferHeight - 73U && initialTouchPos.x >= 150U && initialTouchPos.x < 260U && initialTouchPos.y > cfg::FramebufferHeight - 73U) {
+                        simulatedSelectComplete = false;
+                        simulatedSelect = true;
                     }
-                    if (oldTouchPos.x >= 260U && oldTouchPos.x <= cfg::FramebufferWidth && oldTouchPos.y > cfg::FramebufferHeight - 73U) {
-                        if (initialTouchPos.x >= 260U && initialTouchPos.x <= cfg::FramebufferWidth && initialTouchPos.y > cfg::FramebufferHeight - 73U) {
-                            simulatedNextPageComplete = false;
-                            simulatedNextPage = true;
-                        }
+                    if (oldTouchPos.x >= 260U && oldTouchPos.x <= cfg::FramebufferWidth && oldTouchPos.y > cfg::FramebufferHeight - 73U && initialTouchPos.x >= 260U && initialTouchPos.x <= cfg::FramebufferWidth && initialTouchPos.y > cfg::FramebufferHeight - 73U) {
+                        simulatedNextPageComplete = false;
+                        simulatedNextPage = true;
                     }
-                    if (oldTouchPos.x > 0U && oldTouchPos.x <= 252 && oldTouchPos.y > 0U && oldTouchPos.y <= 73U) {
-                        if (initialTouchPos.x > 0U && initialTouchPos.x <= 252 && initialTouchPos.y > 0U && initialTouchPos.y <= 73U) {
-                            simulatedMenuComplete = false;
-                            simulatedMenu = true;
-                        }
+                    if (oldTouchPos.x > 0U && oldTouchPos.x <= 252 && oldTouchPos.y > 0U && oldTouchPos.y <= 73U && initialTouchPos.x > 0U && initialTouchPos.x <= 252 && initialTouchPos.y > 0U && initialTouchPos.y <= 73U) {
+                        simulatedMenuComplete = false;
+                        simulatedMenu = true;
                     }
                 }
-                
+        
                 // Set input mode to controller when touch input ends
                 elm::Element::setInputMode(InputMode::Controller);
-                
+        
                 // Reset touch-related variables
                 oldTouchPos = { 0 };
                 initialTouchPos = { 0 };
@@ -5203,11 +5368,11 @@ namespace tsl {
                 stillTouching = false;
                 interruptedTouch = false;
             }
-            
-
+        
             oldTouchDetected = touchDetected;
             oldTouchEvent = touchEvent;
         }
+
 
 
         /**
@@ -5577,18 +5742,20 @@ namespace tsl {
         
         // CUSTOM SECTION START
         // Argument parsing
-        //bool skipCombo = false;
-        //for (u8 arg = 0; arg < argc; arg++) {
-        //    if ((strcasecmp(argv[arg], "--skipCombo") == 0)) {
-        //        //logMessage("argv[0]: " +std::string(argv[0]));
-        //        //logMessage("argv[1]: " +std::string(argv[1]));
-        //        //eventFire(&shData.comboEvent);
-        //        //overlay->disableNextAnimation();
-        //        skipCombo = true;
-        //        //etIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_OVERLAY_STR, FALSE_STR);
-        //    }
-        //    //std::memset(argv[arg], 0, std::strlen(argv[arg]));
-        //}
+        bool skipCombo = false;
+        for (u8 arg = 0; arg < argc; arg++) {
+            //logMessage("argv[arg]: "+std::string(argv[arg]));
+            if ((strcasecmp(argv[arg], "--skipCombo") == 0)) {
+                //logMessage("argv[0]: " +std::string(argv[0]));
+                //logMessage("argv[1]: " +std::string(argv[1]));
+                //eventFire(&shData.comboEvent);
+                //overlay->disableNextAnimation();
+                skipCombo = true;
+                break;
+                //etIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_OVERLAY_STR, FALSE_STR);
+            }
+            //std::memset(argv[arg], 0, std::strlen(argv[arg]));
+        }
         
         //std::string SETTINGS_CONFIG_INI_PATH = "sdmc:/config/ultrahand/config.ini"; // global vars in ultra.hpp
         //std::string TESLA_CONFIG_INI_PATH = "sdmc:/config/tesla/config.ini";
@@ -5606,7 +5773,7 @@ namespace tsl {
         
         
         
-        if (inOverlay) {
+        if (inOverlay && skipCombo) {
             setIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_OVERLAY_STR, FALSE_STR);
             eventFire(&shData.comboEvent);
             //overlay->disableNextAnimation();

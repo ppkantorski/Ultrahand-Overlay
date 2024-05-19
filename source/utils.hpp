@@ -68,41 +68,6 @@ void initializeTheme(std::string themeIniPath = THEME_CONFIG_INI_PATH) {
     tsl::hlp::ini::IniData themeData;
     bool initialize = false;
 
-    // Prepare a map of default settings
-    std::map<std::string, std::string> defaultSettings = {
-        {"clock_color", whiteColor},
-        {"bg_alpha", "13"},
-        {"bg_color", blackColor},
-        {"seperator_alpha", "7"},
-        {"seperator_color", "#777777"},
-        {"battery_color", whiteColor},
-        {"text_color", whiteColor},
-        {"table_section_text_color", whiteColor},
-        {"table_info_text_color", "#00FFDD"},
-        {"version_text_color", "#AAAAAA"},
-        {"on_text_color", "#00FFDD"},
-        {"off_text_color", "#AAAAAA"},
-        {"invalid_text_color", "#FF0000"},
-        {"inprogress_text_color", "#FFFF45"},
-        {"selection_text_color", whiteColor},
-        {"selection_bg_color", blackColor},
-        {"trackbar_color", "#555555"},
-        {"highlight_color_1", "#2288CC"},
-        {"highlight_color_2", "#88FFFF"},
-        {"highlight_color_3", "#FFFF45"},
-        {"highlight_color_4", "#F7253E"},
-        {"click_text_color", whiteColor},
-        {"click_alpha", "7"},
-        {"click_color", "#F7253E"},
-        {"invert_bg_click_color", FALSE_STR},
-        {"disable_selection_bg", TRUE_STR},
-        {"disable_colorful_logo", FALSE_STR},
-        {"logo_color_1", whiteColor},
-        {"logo_color_2", "#FF0000"},
-        {"dynamic_logo_color_1", "#00E669"},
-        {"dynamic_logo_color_2", "#8080EA"}
-    };
-
     if (isFileOrDirectory(themeIniPath)) {
         themeData = getParsedDataFromIniFile(themeIniPath);
 
@@ -110,7 +75,7 @@ void initializeTheme(std::string themeIniPath = THEME_CONFIG_INI_PATH) {
             auto& themeSection = themeData[THEME_STR];
 
             // Iterate through each default setting and apply if not already set
-            for (const auto& [key, value] : defaultSettings) {
+            for (const auto& [key, value] : defaultThemeSettingsMap) {
                 if (themeSection.count(key) == 0) {
                     setIniFileValue(themeIniPath, THEME_STR, key, value);
                 }
@@ -124,7 +89,7 @@ void initializeTheme(std::string themeIniPath = THEME_CONFIG_INI_PATH) {
 
     // If the file does not exist or the theme section is missing, initialize with all default values
     if (initialize) {
-        for (const auto& [key, value] : defaultSettings) {
+        for (const auto& [key, value] : defaultThemeSettingsMap) {
             setIniFileValue(themeIniPath, THEME_STR, key, value);
         }
     }
@@ -200,29 +165,29 @@ std::tuple<Result, std::string, std::string> getOverlayInfo(const std::string& f
     if (!file) {
         return {ResultParseError, "", ""};
     }
-
+    
     NroHeader nroHeader;
     NroAssetHeader assetHeader;
     NacpStruct nacp;
-
+    
     // Read NRO header
     file.seekg(sizeof(NroStart), std::ios::beg);
     if (!file.read(reinterpret_cast<char*>(&nroHeader), sizeof(NroHeader))) {
         return {ResultParseError, "", ""};
     }
-
+    
     // Read asset header
     file.seekg(nroHeader.size, std::ios::beg);
     if (!file.read(reinterpret_cast<char*>(&assetHeader), sizeof(NroAssetHeader))) {
         return {ResultParseError, "", ""};
     }
-
+    
     // Read NACP struct
     file.seekg(nroHeader.size + assetHeader.nacp.offset, std::ios::beg);
     if (!file.read(reinterpret_cast<char*>(&nacp), sizeof(NacpStruct))) {
         return {ResultParseError, "", ""};
     }
-
+    
     // Assuming nacp.lang[0].name and nacp.display_version are null-terminated
     return {
         ResultSuccess,
@@ -231,71 +196,59 @@ std::tuple<Result, std::string, std::string> getOverlayInfo(const std::string& f
     };
 }
 
-void drawTable(std::unique_ptr<tsl::elm::List>& list, std::string sectionString, std::string infoString,
-    const size_t& numEntries, const size_t& columnOffset = 120, const size_t& endGap = 3, const size_t& newlineGap = 0, const std::string& alignment = LEFT_STR) {
+void drawTable(std::unique_ptr<tsl::elm::List>& list, const std::vector<std::string>& sectionLines, const std::vector<std::string>& infoLines,
+    const size_t& columnOffset = 120, const size_t& startGap = 26, const size_t& endGap = 3, const size_t& newlineGap = 0, const std::string& alignment = LEFT_STR, const bool& hideTableBackground = false) {
 
-    tsl::Color sectionTextColor = tsl::RGB888(parseValueFromIniSection(THEME_CONFIG_INI_PATH, THEME_STR, "table_section_text_color"), whiteColor);
-    tsl::Color infoTextColor = tsl::RGB888(parseValueFromIniSection(THEME_CONFIG_INI_PATH, THEME_STR, "table_info_text_color"), "#00FFDD");
-
-    size_t yOffset = 20;  // Adjust the line height as needed
     size_t lineHeight = 16;
-    size_t fontSize = 16;    // Adjust the font size as needed
-    size_t xMax = tsl::cfg::FramebufferWidth - 97;
+    size_t fontSize = 16;
+    size_t xMax = tsl::cfg::FramebufferWidth - 95;
 
-    auto splitString = [](const std::string& str, char delimiter) -> std::vector<std::string> {
-        std::vector<std::string> tokens;
-        std::stringstream ss(str);
-        std::string token;
-        while (std::getline(ss, token, delimiter)) {
-            tokens.push_back(token);
+    auto sectionTextColor = tsl::gfx::Renderer::a(tsl::sectionTextColor);
+    auto infoTextColor = tsl::gfx::Renderer::a(tsl::infoTextColor);
+
+    size_t totalHeight = lineHeight * sectionLines.size() + newlineGap * (sectionLines.size() - 1) + endGap;
+
+    // Precompute all y-offsets for sections and info lines
+    std::vector<s32> yOffsets(sectionLines.size());
+    for (size_t i = 0; i < sectionLines.size(); ++i) {
+        yOffsets[i] = startGap + (i * (lineHeight + newlineGap));
+    }
+
+    // Precompute all x-offsets for info lines based on alignment
+    std::vector<int> infoXOffsets(infoLines.size());
+    float infoStringWidth;
+    for (size_t i = 0; i < infoLines.size(); ++i) {
+        if (alignment == LEFT_STR) {
+            infoXOffsets[i] = columnOffset;
+        } else if (alignment == RIGHT_STR) {
+            infoStringWidth = calculateStringWidth(infoLines[i], fontSize, false);
+            infoXOffsets[i] = xMax - infoStringWidth;
+        } else if (alignment == CENTER_STR) {
+            infoStringWidth = calculateStringWidth(infoLines[i], fontSize, false);
+            infoXOffsets[i] = columnOffset + (xMax - infoStringWidth) / 2;
         }
-        return tokens;
-    };
+    }
 
-    list->addItem(new tsl::elm::CustomDrawer([yOffset, lineHeight, columnOffset, fontSize, sectionString, infoString,
-        sectionTextColor, infoTextColor, newlineGap, alignment, xMax, splitString](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
-        
-        // Split infoString by newline characters
-        std::vector<std::string> sectionLines = splitString(sectionString, '\n');
-        
-        // Split infoString by newline characters
-        std::vector<std::string> infoLines = splitString(infoString, '\n');
-        
-        // Draw sectionString
-        //renderer->drawString(sectionString.c_str(), false, x + 12, y + yOffset, fontSize, tsl::gfx::Renderer::a(infoTextColor));
-        
-        // Draw each line of infoString
+    list->addItem(new tsl::elm::TableDrawer([=](tsl::gfx::Renderer* renderer, s32 x, s32 y, s32 w, s32 h) {
         for (size_t i = 0; i < sectionLines.size(); ++i) {
-            const std::string& line = sectionLines[i];
-            
-            renderer->drawString(line.c_str(), false, x + 12, y + yOffset + (i * lineHeight) + (i*newlineGap), fontSize, tsl::gfx::Renderer::a(sectionTextColor));
+            renderer->drawString(sectionLines[i].c_str(), false, x + 12, y + yOffsets[i], fontSize, sectionTextColor);
+        //}
+        //for (size_t i = 0; i < infoLines.size(); ++i) {
+            renderer->drawString(infoLines[i].c_str(), false, x + infoXOffsets[i], y + yOffsets[i], fontSize, infoTextColor);
         }
-        
-        // Draw each line of infoString
-        for (size_t i = 0; i < infoLines.size(); ++i) {
-            const std::string& line = infoLines[i];
-            float infoStringWidth = calculateStringWidth(line, fontSize, false);
-            int infoX;
-            
-            if (alignment == RIGHT_STR) {
-                infoX = xMax - infoStringWidth;
-            } else if (alignment == CENTER_STR) {
-                infoX = columnOffset + (xMax - infoStringWidth) / 2;
-            } else {  // Default to LEFT_STR
-                infoX = columnOffset;
-            }
-            
-            renderer->drawString(line.c_str(), false, x + infoX, y + yOffset + (i * lineHeight) + (i*newlineGap), fontSize, tsl::gfx::Renderer::a(infoTextColor));
-        }
-    }), lineHeight * numEntries + newlineGap * numEntries + endGap);
+    }, hideTableBackground, endGap), totalHeight);
 }
+
+
+
 
 void applyPlaceholderReplacement(std::vector<std::string>& cmd, std::string hexPath, std::string iniPath, std::string listString, std::string jsonString, std::string jsonPath);
 
 void addTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::vector<std::string>>& tableData,
-    const std::string& packagePath, const size_t& columnOffset=160, const size_t& tableGap=0, const size_t& tableSpacing=0, const std::string& tableAlignment=RIGHT_STR) {
+    const std::string& packagePath, const size_t& columnOffset=160, const size_t& tableStartGap=26, const size_t& tableEndGap=3, const size_t& tableSpacing=0, const std::string& tableAlignment=RIGHT_STR, const bool& hideTableBackground = false) {
 
-    std::string sectionString, infoString;
+    //std::string sectionString, infoString;
+    std::vector<std::string> sectionLines, infoLines;
 
     std::string hexPath, iniPath, listString, jsonString, jsonPath;
 
@@ -303,7 +256,7 @@ void addTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::vector<std
 
     bool inEristaSection = false;
     bool inMarikoSection = false;
-    size_t tableSize = 0;
+    //size_t tableSize = 0;
     //size_t newlineGap = 10;
 
     for (auto& commands : tableData) {
@@ -369,9 +322,11 @@ void addTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::vector<std
                     hexPath = preprocessPath(cmd[1], packagePath);
                 }
             } else {
-                sectionString += cmd[0] + "\n";
-                infoString += cmd[2] + "\n";
-                tableSize++;
+                sectionLines.push_back(cmd[0]);
+                infoLines.push_back(cmd[2]);
+                //sectionString += cmd[0] + "\n";
+                //infoString += cmd[2] + "\n";
+                //tableSize++;
             }
         }
     }
@@ -379,51 +334,34 @@ void addTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::vector<std
     // seperate sectionString and info string.  the sections will be on the left side of the "=", the info will be on the right side of the "=" within the string.  the end of an entry will be met with a newline (except for the very last entry). 
     // sectionString and infoString will each have equal newlines (denoting )
 
-    drawTable(list, sectionString, infoString, tableSize, columnOffset, tableGap, tableSpacing, tableAlignment);
+    drawTable(list, sectionLines, infoLines, columnOffset, tableStartGap, tableEndGap, tableSpacing, tableAlignment, hideTableBackground);
 }
 
 
 void addHelpInfo(std::unique_ptr<tsl::elm::List>& list) {
-    
     // Add a section break with small text to indicate the "Commands" section
     list->addItem(new tsl::elm::CategoryHeader(USER_GUIDE));
-    
-    //constexpr int maxLineLength = 28;  // Adjust the maximum line length as needed
-    //constexpr int lineHeight = 20;  // Adjust the line height as needed
-    int xOffset = std::stoi(USERGUIDE_OFFSET);    // Adjust the horizontal offset as needed
-    //constexpr int fontSize = 16;    // Adjust the font size as needed
-    int numEntries = 4;   // Adjust the number of entries as needed
-    
-    
-    std::string sectionString = "";
-    std::string infoString = "";
-    
-    sectionString += SETTINGS_MENU+"\n";
-    infoString += "\uE0B5 ("+ON_MAIN_MENU+")\n";
-    
-    sectionString += SCRIPT_OVERLAY+"\n";
-    infoString += "\uE0B6 ("+ON_A_COMMAND+")\n";
-    
-    sectionString += STAR_FAVORITE+"\n";
-    infoString += "\uE0E2 ("+ON_OVERLAY_PACKAGE+")\n";
-    
-    sectionString += APP_SETTINGS+"\n";
-    infoString += "\uE0E3 ("+ON_OVERLAY_PACKAGE+")\n";
-    
-    // Remove trailing newline character
-    if ((sectionString != "") && (sectionString.back() == '\n'))
-        sectionString = sectionString.substr(0, sectionString.size() - 1);
-    if ((infoString != "") && (infoString.back() == '\n'))
-        infoString = infoString.substr(0, infoString.size() - 1);
-    
-    
-    if ((sectionString != "") && (infoString != "")) {
-        drawTable(list, sectionString, infoString, numEntries, xOffset);
-        //list->addItem(new tsl::elm::CustomDrawer([lineHeight, xOffset, fontSize, sectionString, infoString, infoTextColor, onTextColor](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
-        //    renderer->drawString(sectionString.c_str(), false, x + 12, y + lineHeight, fontSize, infoTextColor);
-        //    renderer->drawString(infoString.c_str(), false, x + xOffset+ 12, y + lineHeight, fontSize, onTextColor);
-        //}), fontSize * numEntries +2);
-    }
+
+    // Adjust the horizontal offset as needed
+    int xOffset = std::stoi(USERGUIDE_OFFSET);
+
+    // Define the section lines and info lines directly
+    const std::vector<std::string> sectionLines = {
+        SETTINGS_MENU,
+        SCRIPT_OVERLAY,
+        STAR_FAVORITE,
+        APP_SETTINGS
+    };
+
+    const std::vector<std::string> infoLines = {
+        "\uE0B5 (" + ON_MAIN_MENU + ")",
+        "\uE0B6 (" + ON_A_COMMAND + ")",
+        "\uE0E2 (" + ON_OVERLAY_PACKAGE + ")",
+        "\uE0E3 (" + ON_OVERLAY_PACKAGE + ")"
+    };
+
+    // Draw the table with the defined lines
+    drawTable(list, sectionLines, infoLines, xOffset, 26, 12, 3);
 }
 
 
@@ -431,119 +369,79 @@ void addHelpInfo(std::unique_ptr<tsl::elm::List>& list) {
 void addPackageInfo(std::unique_ptr<tsl::elm::List>& list, auto& packageHeader, std::string type = PACKAGE_STR) {
     // Add a section break with small text to indicate the "Commands" section
     list->addItem(new tsl::elm::CategoryHeader(type == PACKAGE_STR ? PACKAGE_INFO : OVERLAY_INFO));
-    
-    //tsl::Color infoTextColor = tsl::RGB888(parseValueFromIniSection(THEME_CONFIG_INI_PATH, THEME_STR, "table_section_text_color"), whiteColor);
-    
+
     int maxLineLength = 28;  // Adjust the maximum line length as needed
-    //constexpr int lineHeight = 20;  // Adjust the line height as needed
     int xOffset = 120;    // Adjust the horizontal offset as needed
-    //constexpr int fontSize = 16;    // Adjust the font size as needed
-    int numEntries = 0;   // Adjust the number of entries as needed
-    
-    size_t startPos, endPos, spacePos;
-    std::string line;
-    
-    std::string packageSectionString = "";
-    std::string packageInfoString = "";
-    if (packageHeader.title != "") {
-        packageSectionString += TITLE+"\n";
-        packageInfoString += (packageHeader.title+"\n").c_str();
-        numEntries++;
-    }
-    if (packageHeader.version != "") {
-        packageSectionString += VERSION+"\n";
-        packageInfoString += (packageHeader.version+"\n").c_str();
-        numEntries++;
-    }
-    if (packageHeader.creator != "") {
-        packageSectionString += CREATOR+"\n";
-        packageInfoString += (packageHeader.creator+"\n").c_str();
-        numEntries++;
-    }
-    if (packageHeader.about != "") {
-        std::string aboutHeaderText = ABOUT+"\n";
-        std::string::size_type aboutHeaderLength = aboutHeaderText.length();
-        std::string aboutText = packageHeader.about;
+    //int numEntries = 0;   // Count of the number of entries
+
+    std::vector<std::string> sectionLines;
+    std::vector<std::string> infoLines;
+
+    // Helper function to add text with wrapping
+    auto addWrappedText = [&](const std::string& header, const std::string& text) {
+        sectionLines.push_back(header);
+        std::string::size_type aboutHeaderLength = header.length();
         
-        packageSectionString += aboutHeaderText;
-        
-        // Split the about text into multiple lines with proper word wrapping
-        startPos = 0;
-        spacePos = 0;
-        
-        
-        while (startPos < aboutText.length()) {
-            endPos = std::min(startPos + maxLineLength, aboutText.length());
-            line = aboutText.substr(startPos, endPos - startPos);
+        size_t startPos = 0;
+        size_t spacePos = 0;
+
+        size_t endPos;
+        std::string line;
+
+        while (startPos < text.length()) {
+            endPos = std::min(startPos + maxLineLength, text.length());
+            line = text.substr(startPos, endPos - startPos);
             
             // Check if the current line ends with a space; if not, find the last space in the line
-            if (endPos < aboutText.length() && aboutText[endPos] != ' ') {
+            if (endPos < text.length() && text[endPos] != ' ') {
                 spacePos = line.find_last_of(' ');
                 if (spacePos != std::string::npos) {
                     endPos = startPos + spacePos;
-                    line = aboutText.substr(startPos, endPos - startPos);
+                    line = text.substr(startPos, endPos - startPos);
                 }
             }
-            
-            packageInfoString += line + '\n';
+
+            infoLines.push_back(line);
             startPos = endPos + 1;
-            numEntries++;
-            
+            //numEntries++;
+
             // Add corresponding newline to the packageSectionString
-            if (startPos < aboutText.length())
-                packageSectionString += std::string(aboutHeaderLength, ' ') + '\n';
+            if (startPos < text.length())
+                sectionLines.push_back(std::string(aboutHeaderLength, ' '));
         }
+    };
+
+    // Adding package header info
+    if (!packageHeader.title.empty()) {
+        sectionLines.push_back(TITLE);
+        infoLines.push_back(packageHeader.title);
+        //numEntries++;
     }
-    if (packageHeader.credits != "") {
-        std::string creditsHeaderText = CREDITS+"\n";
-        std::string::size_type creditsHeaderLength = creditsHeaderText.length();
-        std::string creditsText = packageHeader.credits;
-        
-        packageSectionString += creditsHeaderText;
-        
-        // Split the credits text into multiple lines with proper word wrapping
-        startPos = 0;
-        spacePos = 0;
-        
-        while (startPos < creditsText.length()) {
-            endPos = std::min(startPos + maxLineLength, creditsText.length());
-            line = creditsText.substr(startPos, endPos - startPos);
-            
-            // Check if the current line ends with a space; if not, find the last space in the line
-            if (endPos < creditsText.length() && creditsText[endPos] != ' ') {
-                spacePos = line.find_last_of(' ');
-                if (spacePos != std::string::npos) {
-                    endPos = startPos + spacePos;
-                    line = creditsText.substr(startPos, endPos - startPos);
-                }
-            }
-            
-            packageInfoString += line + '\n';
-            startPos = endPos + 1;
-            numEntries++;
-            
-            // Add corresponding newline to the packageSectionString
-            if (startPos < creditsText.length())
-                packageSectionString += std::string(creditsHeaderLength, ' ') + '\n';
-        }
+
+    if (!packageHeader.version.empty()) {
+        sectionLines.push_back(VERSION);
+        infoLines.push_back(packageHeader.version);
+        //numEntries++;
     }
-    
-    
-    // Remove trailing newline character
-    if ((packageSectionString != "") && (packageSectionString.back() == '\n'))
-        packageSectionString = packageSectionString.substr(0, packageSectionString.size() - 1);
-    if ((packageInfoString != "") && (packageInfoString.back() == '\n'))
-        packageInfoString = packageInfoString.substr(0, packageInfoString.size() - 1);
-    
-    
-    if ((packageSectionString != "") && (packageInfoString != "")) {
-        drawTable(list, packageSectionString, packageInfoString, numEntries, xOffset);
-        //list->addItem(new tsl::elm::CustomDrawer([lineHeight, xOffset, fontSize, packageSectionString, packageInfoString, infoTextColor](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
-        //    renderer->drawString(packageSectionString.c_str(), false, x + 12, y + lineHeight, fontSize, infoTextColor);
-        //    renderer->drawString(packageInfoString.c_str(), false, x + xOffset, y + lineHeight, fontSize, infoTextColor);
-        //}), fontSize * numEntries +2);
+
+    if (!packageHeader.creator.empty()) {
+        sectionLines.push_back(CREATOR);
+        infoLines.push_back(packageHeader.creator);
+        //numEntries++;
     }
+
+    if (!packageHeader.about.empty()) {
+        addWrappedText(ABOUT, packageHeader.about);
+    }
+
+    if (!packageHeader.credits.empty()) {
+        addWrappedText(CREDITS, packageHeader.credits);
+    }
+
+    // Drawing the table with section lines and info lines
+    drawTable(list, sectionLines, infoLines, xOffset, 26, 12, 3);
 }
+
 
 
 
