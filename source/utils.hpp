@@ -68,42 +68,6 @@ void initializeTheme(std::string themeIniPath = THEME_CONFIG_INI_PATH) {
     tsl::hlp::ini::IniData themeData;
     bool initialize = false;
 
-    // Prepare a map of default settings
-    std::map<std::string, std::string> defaultSettings = {
-        {"clock_color", whiteColor},
-        {"bg_alpha", "13"},
-        {"bg_color", blackColor},
-        {"seperator_alpha", "7"},
-        {"seperator_color", "#777777"},
-        {"battery_color", "#ffff45"},
-        {"text_color", whiteColor},
-        {"table_bg_color", "#303030"},
-        {"table_section_text_color", "#e9ff40"},
-        {"table_info_text_color", whiteColor},
-        {"version_text_color", "#AAAAAA"},
-        {"on_text_color", "#00FFDD"},
-        {"off_text_color", "#AAAAAA"},
-        {"invalid_text_color", "#FF0000"},
-        {"inprogress_text_color", "#FFFF45"},
-        {"selection_text_color", whiteColor},
-        {"selection_bg_color", blackColor},
-        {"trackbar_color", "#555555"},
-        {"highlight_color_1", "#2288CC"},
-        {"highlight_color_2", "#88FFFF"},
-        {"highlight_color_3", "#FFFF45"},
-        {"highlight_color_4", "#F7253E"},
-        {"click_text_color", whiteColor},
-        {"click_alpha", "7"},
-        {"click_color", "#F7253E"},
-        {"invert_bg_click_color", FALSE_STR},
-        {"disable_selection_bg", FALSE_STR},
-        {"disable_colorful_logo", FALSE_STR},
-        {"logo_color_1", whiteColor},
-        {"logo_color_2", "#FF0000"},
-        {"dynamic_logo_color_1", "#00E669"},
-        {"dynamic_logo_color_2", "#8080EA"}
-    };
-
     if (isFileOrDirectory(themeIniPath)) {
         themeData = getParsedDataFromIniFile(themeIniPath);
 
@@ -111,7 +75,7 @@ void initializeTheme(std::string themeIniPath = THEME_CONFIG_INI_PATH) {
             auto& themeSection = themeData[THEME_STR];
 
             // Iterate through each default setting and apply if not already set
-            for (const auto& [key, value] : defaultSettings) {
+            for (const auto& [key, value] : defaultThemeSettingsMap) {
                 if (themeSection.count(key) == 0) {
                     setIniFileValue(themeIniPath, THEME_STR, key, value);
                 }
@@ -125,7 +89,7 @@ void initializeTheme(std::string themeIniPath = THEME_CONFIG_INI_PATH) {
 
     // If the file does not exist or the theme section is missing, initialize with all default values
     if (initialize) {
-        for (const auto& [key, value] : defaultSettings) {
+        for (const auto& [key, value] : defaultThemeSettingsMap) {
             setIniFileValue(themeIniPath, THEME_STR, key, value);
         }
     }
