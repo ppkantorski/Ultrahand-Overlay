@@ -38,6 +38,7 @@
     "CLEAN_LABELS": "Clean Versions",
     "OVERLAY_LABELS": "Overlay Versions",
     "PACKAGE_LABELS": "Package Versions",
+    "OPAQUE_SCREENSHOTS": "Opaque Screenshots",
     "ON": "On",
     "OFF": "Off",
     "PACKAGE_INFO": "Package Info",
