@@ -38,6 +38,7 @@
     "CLEAN_LABELS": "刪除插件标签",
     "OVERLAY_LABELS": "插件版本显示",
     "PACKAGE_LABELS": "插件包版本显示",
+    "OPAQUE_SCREENSHOTS": "Opaque Screenshots",
     "ON": "开启",
     "OFF": "关闭",
     "PACKAGE_INFO": "插件包信息",
