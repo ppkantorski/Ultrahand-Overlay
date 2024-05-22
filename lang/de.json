@@ -39,6 +39,7 @@
     "CLEAN_LABELS": "Versionskürzel (v) ausblenden",
     "OVERLAY_LABELS": "Overlay Versionsnr.",
     "PACKAGE_LABELS": "Paket Versionsnr.",
+    "OPAQUE_SCREENSHOTS": "Opaque Screenshots",
     "ON": "AN",
     "OFF": "AUS",
     "PACKAGE_INFO": "Paket-Info",
