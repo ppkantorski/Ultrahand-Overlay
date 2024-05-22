@@ -38,6 +38,7 @@
     "CLEAN_LABELS": "刪除插件標簽",
     "OVERLAY_LABELS": "插件的標簽",
     "PACKAGE_LABELS": "插件包的標簽",
+    "OPAQUE_SCREENSHOTS": "Opaque Screenshots",
     "ON": "啟用",
     "OFF": "停用",
     "PACKAGE_INFO": "插件包信息",

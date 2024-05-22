@@ -38,6 +38,7 @@
     "CLEAN_LABELS": "Étiquettes propres",
     "OVERLAY_LABELS": "Étiquettes de superposition",
     "PACKAGE_LABELS": "Étiquettes de paquet",
+    "OPAQUE_SCREENSHOTS": "Opaque Screenshots",
     "ON": "Activer",
     "OFF": "Désactiver",
     "PACKAGE_INFO": "Informations sur le paquet",

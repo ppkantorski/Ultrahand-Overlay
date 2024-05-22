@@ -38,6 +38,7 @@
     "CLEAN_LABELS": "Аккуратные Версии",
     "OVERLAY_LABELS": "Версии Оверлеев",
     "PACKAGE_LABELS": "Версии Пакетов",
+    "OPAQUE_SCREENSHOTS": "Opaque Screenshots",
     "ON": "Вкл",
     "OFF": "Выкл",
     "PACKAGE_INFO": "Информация",
