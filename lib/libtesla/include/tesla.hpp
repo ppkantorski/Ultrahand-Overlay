@@ -464,6 +464,7 @@ void parseLanguage(std::string langFile) {
         {"CLEAN_VERSIONS", &CLEAN_VERSIONS},
         {"OVERLAY_VERSIONS", &OVERLAY_VERSIONS},
         {"PACKAGE_VERSIONS", &PACKAGE_VERSIONS},
+        {"OPAQUE_SCREENSHOTS", &OPAQUE_SCREENSHOTS},
         {"ON", &ON},
         {"OFF", &OFF},
         {"PACKAGE_INFO", &PACKAGE_INFO},
