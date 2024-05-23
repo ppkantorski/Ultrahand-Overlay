@@ -197,7 +197,7 @@ std::tuple<Result, std::string, std::string> getOverlayInfo(const std::string& f
 }
 
 void drawTable(std::unique_ptr<tsl::elm::List>& list, const std::vector<std::string>& sectionLines, const std::vector<std::string>& infoLines,
-    const size_t& columnOffset = 120, const size_t& startGap = 26, const size_t& endGap = 3, const size_t& newlineGap = 0, const std::string& alignment = LEFT_STR, const bool& hideTableBackground = false) {
+    const size_t& columnOffset = 120, const size_t& startGap = 20, const size_t& endGap = 3, const size_t& newlineGap = 0, const std::string& alignment = LEFT_STR, const bool& hideTableBackground = false) {
 
     size_t lineHeight = 16;
     size_t fontSize = 16;
@@ -216,24 +216,31 @@ void drawTable(std::unique_ptr<tsl::elm::List>& list, const std::vector<std::str
 
     // Precompute all x-offsets for info lines based on alignment
     std::vector<int> infoXOffsets(infoLines.size());
-    float infoStringWidth;
+    std::vector<float> infoStringWidths(infoLines.size());
+
+    // Precompute string widths using the provided renderer instance in the lambda
     for (size_t i = 0; i < infoLines.size(); ++i) {
-        if (alignment == LEFT_STR) {
-            infoXOffsets[i] = columnOffset;
-        } else if (alignment == RIGHT_STR) {
-            infoStringWidth = calculateStringWidth(infoLines[i], fontSize, false);
-            infoXOffsets[i] = xMax - infoStringWidth;
-        } else if (alignment == CENTER_STR) {
-            infoStringWidth = calculateStringWidth(infoLines[i], fontSize, false);
-            infoXOffsets[i] = columnOffset + (xMax - infoStringWidth) / 2;
-        }
+        infoStringWidths[i] = 0.0f;  // Initialize with a default value
     }
 
-    list->addItem(new tsl::elm::TableDrawer([=](tsl::gfx::Renderer* renderer, s32 x, s32 y, s32 w, s32 h) {
+    // Add the TableDrawer item
+    list->addItem(new tsl::elm::TableDrawer([=](tsl::gfx::Renderer* renderer, s32 x, s32 y, s32 w, s32 h) mutable {
+        for (size_t i = 0; i < infoLines.size(); ++i) {
+            if (infoStringWidths[i] == 0.0f) {  // Calculate only if not already calculated
+                infoStringWidths[i] = renderer->calculateStringWidth(infoLines[i], fontSize, false);
+            }
+
+            if (alignment == LEFT_STR) {
+                infoXOffsets[i] = columnOffset;
+            } else if (alignment == RIGHT_STR) {
+                infoXOffsets[i] = xMax - infoStringWidths[i];
+            } else if (alignment == CENTER_STR) {
+                infoXOffsets[i] = columnOffset + (xMax - infoStringWidths[i]) / 2;
+            }
+        }
+
         for (size_t i = 0; i < sectionLines.size(); ++i) {
             renderer->drawString(sectionLines[i].c_str(), false, x + 12, y + yOffsets[i], fontSize, sectionTextColor);
-        //}
-        //for (size_t i = 0; i < infoLines.size(); ++i) {
             renderer->drawString(infoLines[i].c_str(), false, x + infoXOffsets[i], y + yOffsets[i], fontSize, infoTextColor);
         }
     }, hideTableBackground, endGap), totalHeight);
@@ -245,7 +252,7 @@ void drawTable(std::unique_ptr<tsl::elm::List>& list, const std::vector<std::str
 void applyPlaceholderReplacement(std::vector<std::string>& cmd, std::string hexPath, std::string iniPath, std::string listString, std::string jsonString, std::string jsonPath);
 
 void addTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::vector<std::string>>& tableData,
-    const std::string& packagePath, const size_t& columnOffset=160, const size_t& tableStartGap=26, const size_t& tableEndGap=3, const size_t& tableSpacing=0, const std::string& tableAlignment=RIGHT_STR, const bool& hideTableBackground = false) {
+    const std::string& packagePath, const size_t& columnOffset=160, const size_t& tableStartGap=20, const size_t& tableEndGap=3, const size_t& tableSpacing=0, const std::string& tableAlignment=RIGHT_STR, const bool& hideTableBackground = false) {
 
     //std::string sectionString, infoString;
     std::vector<std::string> sectionLines, infoLines;
@@ -361,7 +368,7 @@ void addHelpInfo(std::unique_ptr<tsl::elm::List>& list) {
     };
 
     // Draw the table with the defined lines
-    drawTable(list, sectionLines, infoLines, xOffset, 26, 12, 3);
+    drawTable(list, sectionLines, infoLines, xOffset, 20, 12, 3);
 }
 
 
@@ -439,7 +446,7 @@ void addPackageInfo(std::unique_ptr<tsl::elm::List>& list, auto& packageHeader, 
     }
 
     // Drawing the table with section lines and info lines
-    drawTable(list, sectionLines, infoLines, xOffset, 26, 12, 3);
+    drawTable(list, sectionLines, infoLines, xOffset, 20, 12, 3);
 }
 
 
