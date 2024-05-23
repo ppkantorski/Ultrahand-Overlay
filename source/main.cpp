@@ -483,6 +483,7 @@ public:
                         lastSelectedListItem = listItemPtr;
                         
                         simulatedSelectComplete = true;
+                        lastSelectedListItem->triggerClickAnimation();
                         return true;
                     }
                     return false;
@@ -548,7 +549,7 @@ public:
                         lastSelectedListItem = listItemPtr;
                         
                         simulatedSelectComplete = true;
-                        
+                        lastSelectedListItem->triggerClickAnimation();
                         return true;
                     }
                     
@@ -595,6 +596,7 @@ public:
                     
                     lastRunningInterpreter = true;
                     simulatedSelectComplete = true;
+                    lastSelectedListItem->triggerClickAnimation();
                     return true;
                 }
                 return false;
@@ -640,6 +642,7 @@ public:
                     
                     lastRunningInterpreter = true;
                     simulatedSelectComplete = true;
+                    lastSelectedListItem->triggerClickAnimation();
                     return true;
                 }
                 return false;
@@ -711,6 +714,7 @@ public:
                     lastSelectedListItem = listItemPtr;
                     
                     simulatedSelectComplete = true;
+                    lastSelectedListItem->triggerClickAnimation();
                     return true;
                 }
                 return false;
@@ -767,6 +771,7 @@ public:
                         lastSelectedListItem = listItemPtr;
                         
                         simulatedSelectComplete = true;
+                        lastSelectedListItem->triggerClickAnimation();
                         return true;
                     }
                     return false;
@@ -834,19 +839,12 @@ public:
             list->addItem(toggleListItem.release());
             
             
-            
             cleanVersionLabels = (parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "clean_version_labels") == TRUE_STR);
             hideOverlayVersions = (parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_overlay_versions") == TRUE_STR);
             hidePackageVersions = (parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_package_versions") == TRUE_STR);
             
-            //if (cleanVersionLabels.empty())
-            //    cleanVersionLabels = FALSE_STR;
-            //if (hideOverlayVersions.empty())
-            //    hideOverlayVersions = FALSE_STR;
-            //if (hidePackageVersions.empty())
-            //    hidePackageVersions = FALSE_STR;
             
-            list->addItem(new tsl::elm::CategoryHeader(VERSION_LABELS));
+            //list->addItem(new tsl::elm::CategoryHeader(VERSION_LABELS));
             
             std::string defaulLang = parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, DEFAULT_LANG_STR);
             
@@ -857,8 +855,7 @@ public:
                 tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemRaw, tsl::FocusDirection::None);
                 setIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "clean_version_labels", state ? TRUE_STR : FALSE_STR);
                 if ((cleanVersionLabels) != state) {
-                    versionLabel = APP_VERSION + std::string("   (") + extractTitle(loaderInfo) +
-                        (!cleanVersionLabels ? " " : " v") + cleanVersionLabel(loaderInfo) + std::string(")");
+                    versionLabel = APP_VERSION + std::string("   (") + extractTitle(loaderInfo) + (!cleanVersionLabels ? " " : " v") + cleanVersionLabel(loaderInfo) + std::string(")");
                     //versionLabel = (cleanVersionLabels) ? std::string(APP_VERSION) : (std::string(APP_VERSION) + "   (" + extractTitle(loaderInfo) + " v" + cleanVersionLabel(loaderInfo) + ")");
                     reinitializeVersionLabels();
                     reloadMenu2 = true;
@@ -891,7 +888,14 @@ public:
             
             list->addItem(new tsl::elm::CategoryHeader(EFFECTS));
 
-            
+            toggleListItem = std::make_unique<tsl::elm::ToggleListItem>(OPAQUE_SCREENSHOTS, false, ON, OFF);
+            toggleListItem->setState((useOpaqueScreenshots));
+            toggleListItem->setStateChangedListener([listItemRaw = toggleListItem.get()](bool state) {
+                tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemRaw, tsl::FocusDirection::None);
+                setIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "opaque_screenshots", state ? TRUE_STR : FALSE_STR);
+                useOpaqueScreenshots = state;
+            });
+            list->addItem(toggleListItem.release());
             
             toggleListItem = std::make_unique<tsl::elm::ToggleListItem>(PROGRESS_ANIMATION, false, ON, OFF);
             toggleListItem->setState((progressAnimation));
@@ -1155,6 +1159,7 @@ public:
                     selectedListItem.reset();
                     selectedListItem = listItemPtr;
                     simulatedSelectComplete = true;
+                    lastSelectedListItem->triggerClickAnimation();
                     return true;
                 }
                 return false;
@@ -1220,6 +1225,7 @@ public:
                         lastSelectedListItem.reset();
                         lastSelectedListItem = listItemPtr;
                         simulatedSelectComplete = true;
+                        lastSelectedListItem->triggerClickAnimation();
                         return true;
                     }
                     return false;
@@ -1479,6 +1485,8 @@ public:
                                 listItemPtr->setValue(CROSSMARK_SYMBOL);
 
                             simulatedSelectComplete = true;
+
+                            listItemPtr->triggerClickAnimation();
                             return true;
                         }
                         return false;
@@ -2015,6 +2023,7 @@ public:
 
                         lastRunningInterpreter = true;
                         simulatedSelectComplete = true;
+                        lastSelectedListItem->triggerClickAnimation();
                         return true;
                     }
                     return false;
@@ -2258,7 +2267,7 @@ public:
             useSelection = false;
             hideTableHeader = false;
             hideTableBackground = false;
-            tableStartGap = 26;
+            tableStartGap = 20;
             tableEndGap = 3;
             tableColumnOffset = 160;
             tableSpacing = 0;
@@ -2334,6 +2343,7 @@ public:
                                     lastSelectedListItem.reset();
                                     tsl::changeTo<PackageMenu>(packagePath, optionName, currentPage, packageName);
                                     simulatedSelectComplete = true;
+                                    
                                     return true;
                                 }
                                 return false;
@@ -2697,6 +2707,7 @@ public:
                                     
                                     lastRunningInterpreter = true;
                                     simulatedSelectComplete = true;
+                                    lastSelectedListItem->triggerClickAnimation();
                                     return true;
                                 }  else if (keys & SCRIPT_KEY) {
                                     if (inPackageMenu)
@@ -3083,92 +3094,65 @@ public:
         createDirectory(SETTINGS_PATH);
         
         bool settingsLoaded = false;
+        
+        auto setDefaultValue = [](const auto& ultrahandSection, const std::string& section, const std::string& defaultValue, bool& settingFlag) {
+            if (ultrahandSection.count(section) > 0) {
+                settingFlag = (ultrahandSection.at(section) == TRUE_STR);
+            } else {
+                setIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, section, defaultValue);
+                settingFlag = (defaultValue == TRUE_STR);
+            }
+        };
+        
+        auto setDefaultStrValue = [](const auto& ultrahandSection, const std::string& section, const std::string& defaultValue, std::string& settingValue) {
+            if (ultrahandSection.count(section) > 0) {
+                settingValue = ultrahandSection.at(section);
+            } else {
+                setIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, section, defaultValue);
+            }
+        };
+        
         if (isFileOrDirectory(SETTINGS_CONFIG_INI_PATH)) {
-            std::string section;
             auto settingsData = getParsedDataFromIniFile(SETTINGS_CONFIG_INI_PATH);
             if (settingsData.count(ULTRAHAND_PROJECT_NAME) > 0) {
                 auto& ultrahandSection = settingsData[ULTRAHAND_PROJECT_NAME];
         
-                // Handle each setting by checking existence and updating accordingly
-                section = "hide_user_guide";
-                if (ultrahandSection.count(section) > 0) {
-                    hideUserGuide = (ultrahandSection[section] == TRUE_STR);
-                } else {
-                    setIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, section, FALSE_STR);
-                }
-                
-                section = "clean_version_labels";
-                if (ultrahandSection.count(section) > 0) {
-                    cleanVersionLabels = (ultrahandSection[section] == TRUE_STR);
-                } else {
-                    setIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, section, FALSE_STR);
-                    cleanVersionLabels = false;
+                setDefaultValue(ultrahandSection, "hide_user_guide", FALSE_STR, hideUserGuide);
+                setDefaultValue(ultrahandSection, "clean_version_labels", FALSE_STR, cleanVersionLabels);
+                setDefaultValue(ultrahandSection, "hide_overlay_versions", FALSE_STR, hideOverlayVersions);
+                setDefaultValue(ultrahandSection, "hide_package_versions", FALSE_STR, hidePackageVersions);
+                setDefaultValue(ultrahandSection, "opaque_screenshots", FALSE_STR, useOpaqueScreenshots);
+                setDefaultValue(ultrahandSection, "progress_animation", FALSE_STR, progressAnimation);
+        
+                setDefaultStrValue(ultrahandSection, DEFAULT_LANG_STR, defaultLang, defaultLang);
+        
+                if (ultrahandSection.count("datetime_format") == 0) {
+                    setIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "datetime_format", DEFAULT_DT_FORMAT);
                 }
         
-                // Manage visibility settings with similar pattern
-                section = "hide_overlay_versions";
-                if (ultrahandSection.count(section) > 0) {
-                    hideOverlayVersions = (ultrahandSection[section] == TRUE_STR);
-                } else {
-                    setIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, section, FALSE_STR);
-                    hideOverlayVersions = false;
-                }
-                
-                section = "hide_package_versions";
-                if (ultrahandSection.count(section) > 0) {
-                    hidePackageVersions = (ultrahandSection[section] == TRUE_STR);
-                } else {
-                    setIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, section, FALSE_STR);
-                    hidePackageVersions = false;
-                }
-
-                section = "progress_animation";
-                if (ultrahandSection.count(section) > 0) {
-                    progressAnimation = (ultrahandSection[section] == TRUE_STR);
-                } else {
-                    setIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, section, FALSE_STR);
-                    progressAnimation = false;
-                }
-                
-
-                section = DEFAULT_LANG_STR;
-                if (ultrahandSection.count(section) > 0) {
-                    defaultLang = ultrahandSection[section];
-                } else {
-                    setIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, section, defaultLang);
+                if (ultrahandSection.count("hide_clock") == 0) {
+                    setIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_clock", FALSE_STR);
                 }
         
-                // Ensure default values are set if the settings are missing
-                section = "datetime_format";
-                if (ultrahandSection.count(section) == 0) {
-                    setIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, section, DEFAULT_DT_FORMAT);
+                if (ultrahandSection.count("hide_battery") == 0) {
+                    setIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_battery", TRUE_STR);
                 }
         
-                // Directly check and set default values
-                section = "hide_clock";
-                if (ultrahandSection.count(section) == 0) {
-                    setIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, section, FALSE_STR);
+                if (ultrahandSection.count("hide_pcb_temp") == 0) {
+                    setIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_pcb_temp", TRUE_STR);
                 }
-                section = "hide_battery";
-                if (ultrahandSection.count(section) == 0) {
-                    setIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, section, TRUE_STR);
+        
+                if (ultrahandSection.count("hide_soc_temp") == 0) {
+                    setIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_soc_temp", TRUE_STR);
                 }
-                section = "hide_pcb_temp";
-                if (ultrahandSection.count(section) == 0) {
-                    setIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, section, TRUE_STR);
-                }
-                section = "hide_soc_temp";
-                if (ultrahandSection.count(section) == 0) {
-                    setIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, section, TRUE_STR);
-                }
-
-                section = IN_OVERLAY_STR;
-                settingsLoaded = ultrahandSection.count(section) > 0;
+        
+                settingsLoaded = ultrahandSection.count(IN_OVERLAY_STR) > 0;
             }
             settingsData.clear();
         } else {
             updateMenuCombos = true;
         }
+
         
         if (!settingsLoaded) { // Write data if settings are not loaded
             setIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, DEFAULT_LANG_STR, defaultLang);
@@ -4048,6 +4032,7 @@ public:
                                             
                                             
                                             simulatedSelectComplete = true;
+                                            lastSelectedListItem->triggerClickAnimation();
                                             return true;
                                         } else if (keys & SCRIPT_KEY) {
                                             inMainMenu = false; // Set boolean to true when entering a submenu
@@ -4088,6 +4073,7 @@ public:
                                             
                                             lastRunningInterpreter = true;
                                             simulatedSelectComplete = true;
+                                            lastSelectedListItem->triggerClickAnimation();
                                             return true;
                                         } else if (keys & SCRIPT_KEY) {
                                             inMainMenu = false; // Set boolean to true when entering a submenu
