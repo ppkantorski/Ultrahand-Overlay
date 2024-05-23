@@ -2467,7 +2467,7 @@ namespace tsl {
                 u32 currCharacter;
                 std::string substr;
 
-                while (strPos < string.size() && currX + ellipsisWidth < maxLength) {
+                while (static_cast<std::string::size_type>(strPos) < string.size() && currX + ellipsisWidth < maxLength) {
                     
                     codepointWidth = decode_utf8(&currCharacter, reinterpret_cast<const u8*>(&string[strPos]));
             
