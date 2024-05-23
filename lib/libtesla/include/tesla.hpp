@@ -225,9 +225,9 @@ static std::string DEFAULT = "default";
 static std::string ROOT_PACKAGE = "Root Package";
 static std::string SORT_PRIORITY = "Sort Priority";
 static std::string FAILED_TO_OPEN = "Failed to open file";
-static std::string CLEAN_LABELS = "Clean Versions";
-static std::string OVERLAY_LABELS = "Overlay Versions";
-static std::string PACKAGE_LABELS = "Package Versions";
+static std::string CLEAN_VERSIONS = "Clean Versions";
+static std::string OVERLAY_VERSIONS = "Overlay Versions";
+static std::string PACKAGE_VERSIONS = "Package Versions";
 static std::string OPAQUE_SCREENSHOTS = "Opaque Screenshots";
 static std::string ON = "On";
 static std::string OFF = "Off";
@@ -335,9 +335,9 @@ void reinitializeLangVars() {
     ROOT_PACKAGE = "Root Package";
     SORT_PRIORITY = "Sort Priority";
     FAILED_TO_OPEN = "Failed to open file";
-    CLEAN_LABELS = "Clean Versions";
-    OVERLAY_LABELS = "Overlay Versions";
-    PACKAGE_LABELS = "Package Versions";
+    CLEAN_VERSIONS = "Clean Versions";
+    OVERLAY_VERSIONS = "Overlay Versions";
+    PACKAGE_VERSIONS = "Package Versions";
     OPAQUE_SCREENSHOTS = "Opaque Screenshots";
     ON = "On";
     OFF = "Off";
@@ -461,9 +461,9 @@ void parseLanguage(std::string langFile) {
         {"ROOT_PACKAGE", &ROOT_PACKAGE},
         {"SORT_PRIORITY", &SORT_PRIORITY},
         {"FAILED_TO_OPEN", &FAILED_TO_OPEN},
-        {"CLEAN_LABELS", &CLEAN_LABELS},
-        {"OVERLAY_LABELS", &OVERLAY_LABELS},
-        {"PACKAGE_LABELS", &PACKAGE_LABELS},
+        {"CLEAN_VERSIONS", &CLEAN_VERSIONS},
+        {"OVERLAY_VERSIONS", &OVERLAY_VERSIONS},
+        {"PACKAGE_VERSIONS", &PACKAGE_VERSIONS},
         {"ON", &ON},
         {"OFF", &OFF},
         {"PACKAGE_INFO", &PACKAGE_INFO},
@@ -2463,40 +2463,28 @@ namespace tsl {
                 int ellipsisXAdvance = 0, ellipsisYAdvance = 0;
                 stbtt_GetCodepointHMetrics(ellipsisFont, ellipsisCharacter, &ellipsisXAdvance, &ellipsisYAdvance);
                 ellipsisWidth = static_cast<s32>(ellipsisXAdvance * ellipsisFontSize);
-            
-                do {
-                    u32 currCharacter;
+
+                u32 currCharacter;
+                std::string substr;
+
+                while (strPos < string.size() && currX + ellipsisWidth < maxLength) {
+                    
                     codepointWidth = decode_utf8(&currCharacter, reinterpret_cast<const u8*>(&string[strPos]));
             
                     if (codepointWidth <= 0) {
                         break;
                     }
             
-                    stbtt_fontinfo* currFont = nullptr;
-            
-                    if (stbtt_FindGlyphIndex(&this->m_extFont, currCharacter)) {
-                        currFont = &this->m_extFont;
-                    } else if (this->m_hasLocalFont && stbtt_FindGlyphIndex(&this->m_stdFont, currCharacter) == 0) {
-                        currFont = &this->m_localFont;
-                    } else {
-                        currFont = &this->m_stdFont;
-                    }
-            
-                    float currFontSize = stbtt_ScaleForPixelHeight(currFont, fontSize);
-            
-                    int xAdvance = 0, yAdvance = 0;
-                    stbtt_GetCodepointHMetrics(currFont, monospace ? 'W' : currCharacter, &xAdvance, &yAdvance);
-            
-                    currX += static_cast<s32>(xAdvance * currFontSize);
+                    // Calculate the width of the current substring plus the ellipsis
+                    substr = string.substr(0, strPos + codepointWidth);
+                    currX = calculateStringWidth(substr, fontSize, monospace);
             
                     if (currX + ellipsisWidth >= maxLength) {
-                        // If the length exceeds maxLength, truncate the string and add ellipsis
-                        return string.substr(0, strPos) + "…";
+                        return substr + "…";
                     }
             
                     strPos += codepointWidth;
-            
-                } while (string[strPos] != '\0' && string[strPos] != '\n' && currX < maxLength);
+                }
             
                 return string;
             }
@@ -4305,7 +4293,7 @@ namespace tsl {
                         this->m_scrollText += this->m_text;
                         this->m_textWidth = width;
                         
-                        this->m_ellipsisText = renderer->limitStringLength(this->m_text, false, 23, this->m_maxWidth+8);
+                        this->m_ellipsisText = renderer->limitStringLength(this->m_text, false, 23, this->m_maxWidth+4);
                     } else {
                         this->m_textWidth = width;
                     }
