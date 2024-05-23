@@ -849,7 +849,7 @@ public:
             std::string defaulLang = parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, DEFAULT_LANG_STR);
             
             
-            toggleListItem = std::make_unique<tsl::elm::ToggleListItem>(CLEAN_LABELS, false, ON, OFF);
+            toggleListItem = std::make_unique<tsl::elm::ToggleListItem>(CLEAN_VERSIONS, false, ON, OFF);
             toggleListItem->setState((cleanVersionLabels));
             toggleListItem->setStateChangedListener([listItemRaw = toggleListItem.get()](bool state) {
                 tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemRaw, tsl::FocusDirection::None);
@@ -866,7 +866,7 @@ public:
             list->addItem(toggleListItem.release());
             
             
-            toggleListItem = std::make_unique<tsl::elm::ToggleListItem>(OVERLAY_LABELS, false, ON, OFF);
+            toggleListItem = std::make_unique<tsl::elm::ToggleListItem>(OVERLAY_VERSIONS, false, ON, OFF);
             toggleListItem->setState((!hideOverlayVersions));
             toggleListItem->setStateChangedListener([listItemRaw = toggleListItem.get()](bool state) {
                 tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemRaw, tsl::FocusDirection::None);
@@ -876,7 +876,7 @@ public:
             });
             list->addItem(toggleListItem.release());
             
-            toggleListItem = std::make_unique<tsl::elm::ToggleListItem>(PACKAGE_LABELS, false, ON, OFF);
+            toggleListItem = std::make_unique<tsl::elm::ToggleListItem>(PACKAGE_VERSIONS, false, ON, OFF);
             toggleListItem->setState((!hidePackageVersions));
             toggleListItem->setStateChangedListener([listItemRaw = toggleListItem.get()](bool state) {
                 tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemRaw, tsl::FocusDirection::None);
