@@ -3,7 +3,7 @@
 [![language](https://img.shields.io/badge/language-C++-ba1632?logo=C++.svg)](https://github.com/topics/cpp)
 [![GPLv2 License](https://img.shields.io/badge/license-GPLv2-blue.svg)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html)
 [![Downloads](https://img.shields.io/github/downloads/ppkantorski/Ultrahand-Overlay/total?color=189c11)](https://github.com/ppkantorski/Ultrahand-Overlay/graphs/traffic)
-[![Latest Version](https://img.shields.io/github/v/release/ppkantorski/Ultrahand-Overlay?label=latest%20version&color=6f42c1)](https://github.com/ppkantorski/Ultrahand-Overlay/releases)
+[![Latest Version](https://img.shields.io/github/v/release/ppkantorski/Ultrahand-Overlay?label=latest%20version&color=6f42c1)](https://github.com/ppkantorski/Ultrahand-Overlay/releases/latest)
 
 Create directories, manage files, and customize configurations effortlessly using simple ini files.
 
