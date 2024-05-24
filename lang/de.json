@@ -39,7 +39,7 @@
     "CLEAN_VERSIONS": "Versionskürzel (v) ausblenden",
     "OVERLAY_VERSIONS": "Overlay Versionsnr.",
     "PACKAGE_VERSIONS": "Paket Versionsnr.",
-    "OPAQUE_SCREENSHOTS": "Opaque Screenshots",
+    "OPAQUE_SCREENSHOTS": "Undurchsichtige Screenshots",
     "ON": "AN",
     "OFF": "AUS",
     "PACKAGE_INFO": "Paket-Info",
