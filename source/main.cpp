@@ -60,7 +60,7 @@ static size_t nestedMenuCount = 0;
 
 // Command mode globals
 static const std::vector<std::string> commandSystems = {DEFAULT_STR, ERISTA_STR, MARIKO_STR};
-static const std::vector<std::string> commandModes = {DEFAULT_STR, TOGGLE_STR, OPTION_STR, FORWARDER_STR, TEXT_STR, TABLE_STR};
+static const std::vector<std::string> commandModes = {DEFAULT_STR, SLOT_STR, TOGGLE_STR, OPTION_STR, FORWARDER_STR, TEXT_STR, TABLE_STR};
 static const std::vector<std::string> commandGroupings = {DEFAULT_STR, "split", "split2", "split3", "split4"};
 static const std::string MODE_PATTERN = ";mode=";
 static const std::string GROUPING_PATTERN = ";grouping=";
@@ -78,6 +78,8 @@ static std::string currentMenu = OVERLAYS_STR;
 static std::string lastPage = LEFT_STR;
 static std::string lastPackagePath;
 static std::string lastPackageName;
+static std::string lastPackageMenu;
+
 static std::string lastMenu = "";
 static std::string lastMenuMode = "";
 static std::string lastKeyName = "";
@@ -2166,7 +2168,7 @@ public:
      *
      * @param path The path to the sub-menu.
      */
-    PackageMenu(const std::string& path, const std::string& sectionName = "", const std::string& page = LEFT_STR, const std::string& _packageName = PACKAGE_FILENAME, const size_t& _nestedlayer = 0) :
+    PackageMenu(const std::string& path, const std::string sectionName = "", const std::string& page = LEFT_STR, const std::string& _packageName = PACKAGE_FILENAME, const size_t _nestedlayer = 0) :
         packagePath(path), dropdownSection(sectionName), currentPage(page), packageName(_packageName), nestedLayer(_nestedlayer) {}
     /**
      * @brief Destroys the `PackageMenu` instance.
@@ -2546,6 +2548,11 @@ public:
                         footer = commandFooter;
                     else
                         footer = OPTION_SYMBOL;
+                } else if (commandMode == SLOT_STR) {
+                    if (commandFooter != NULL_STR)
+                        footer = commandFooter;
+                    else
+                        footer = OPTION_SYMBOL;
                 }
 
                 skipSystem = false;
@@ -2586,7 +2593,7 @@ public:
                             const std::string& forwarderPackagePath = getParentDirFromPath(packageSource);
                             const std::string& forwarderPackageIniName = getNameFromPath(packageSource);
 
-                            listItem->setClickListener([commands, keyName = option.first, &packagePath = this->packagePath, forwarderPackagePath, forwarderPackageIniName, &nestedLayer=this->nestedLayer](s64 keys) mutable {
+                            listItem->setClickListener([commands, keyName = option.first, &dropdownSection = this->dropdownSection, &packagePath = this->packagePath, forwarderPackagePath, forwarderPackageIniName, &nestedLayer=this->nestedLayer](s64 keys) mutable {
 
 
                                 if (simulatedSelect && !simulatedSelectComplete) {
@@ -2595,11 +2602,16 @@ public:
                                 }
                                 
                                 if (keys & KEY_A) {
-                                    interpretAndExecuteCommands(std::move(commands), packagePath, keyName); // Now correctly moved
+                                    auto commandsCopy = commands;
+                                    interpretAndExecuteCommands(std::move(commandsCopy), packagePath, keyName); // Now correctly moved
                                     nestedMenuCount++;
                                     lastPackagePath = forwarderPackagePath;
                                     lastPackageName = forwarderPackageIniName;
-                                    tsl::changeTo<PackageMenu>(forwarderPackagePath, "", LEFT_STR, forwarderPackageIniName, nestedLayer+1);
+                                    if (dropdownSection.empty())
+                                        lastPackageMenu = "packageMenu";
+                                    else
+                                        lastPackageMenu = "subPackageMenu";
+                                    tsl::changeTo<PackageMenu>(forwarderPackagePath, "", LEFT_STR, forwarderPackageIniName, nestedMenuCount);
                                     simulatedSelectComplete = true;
                                     return true;
                                 }
@@ -2669,8 +2681,35 @@ public:
                             itemName = dropExtension(itemName);
                         parentDirName = getParentDirNameFromPath(selectedItem);
                         
-                        
-                        if (commandMode == DEFAULT_STR || commandMode == OPTION_STR) { // for handiling toggles
+                        if (commandMode == FORWARDER_STR) {
+                            const std::string& forwarderPackagePath = getParentDirFromPath(packageSource);
+                            const std::string& forwarderPackageIniName = getNameFromPath(packageSource);
+
+                            listItem->setClickListener([commands, keyName = option.first, &dropdownSection = this->dropdownSection, &packagePath = this->packagePath, forwarderPackagePath, forwarderPackageIniName, &nestedLayer=this->nestedLayer](s64 keys) mutable {
+
+
+                                if (simulatedSelect && !simulatedSelectComplete) {
+                                    keys |= KEY_A;
+                                    simulatedSelect = false;
+                                }
+                                
+                                if (keys & KEY_A) {
+                                    auto commandsCopy = commands;
+                                    interpretAndExecuteCommands(std::move(commandsCopy), packagePath, keyName); // Now correctly moved
+                                    nestedMenuCount++;
+                                    lastPackagePath = forwarderPackagePath;
+                                    lastPackageName = forwarderPackageIniName;
+                                    if (dropdownSection.empty())
+                                        lastPackageMenu = "packageMenu";
+                                    else
+                                        lastPackageMenu = "subPackageMenu";
+                                    tsl::changeTo<PackageMenu>(forwarderPackagePath, "", LEFT_STR, forwarderPackageIniName, nestedMenuCount);
+                                    simulatedSelectComplete = true;
+                                    return true;
+                                }
+                                return false;
+                            });
+                        }  else if (commandMode == DEFAULT_STR  || commandMode == SLOT_STR|| commandMode == OPTION_STR) { // for handiling toggles
                             listItem = std::make_unique<tsl::elm::ListItem>(removeTag(optionName));
                             if (commandMode == DEFAULT_STR)
                                 listItem->setValue(footer, true);
@@ -2803,11 +2842,6 @@ public:
             return true;
         }
 
-        if (nestedMenuCount == 0 && nestedLayer == 0) {
-            lastPackagePath = packagePath;
-            lastPackageName = PACKAGE_FILENAME;
-        }
-
         // Your existing logic for handling other inputs
         if (refreshGui && !returningToPackage && !stillTouching) {
             refreshGui = false;
@@ -2876,7 +2910,7 @@ public:
                     selectedListItem.reset();
                     lastSelectedListItem.reset();
                     tsl::goBack();
-                    tsl::changeTo<PackageMenu>(lastPackagePath, dropdownSection, RIGHT_STR, lastPackageName);
+                    tsl::changeTo<PackageMenu>(lastPackagePath, dropdownSection, RIGHT_STR, lastPackageName, nestedMenuCount);
                     simulatedNextPageComplete = true;
                     return true;
                 }
@@ -2887,7 +2921,7 @@ public:
                     selectedListItem.reset();
                     lastSelectedListItem.reset();
                     tsl::goBack();
-                    tsl::changeTo<PackageMenu>(lastPackagePath, dropdownSection, LEFT_STR, lastPackageName);
+                    tsl::changeTo<PackageMenu>(lastPackagePath, dropdownSection, LEFT_STR, lastPackageName, nestedMenuCount);
                     simulatedNextPageComplete = true;
                     return true;
                 }
@@ -2895,7 +2929,7 @@ public:
 
         }
         
-        if (!returningToPackage && inPackageMenu) {
+        if (!returningToPackage && inPackageMenu && nestedMenuCount == nestedLayer) {
             if (simulatedMenu && !simulatedMenuComplete) {
                 simulatedMenu = false;
                 simulatedMenuComplete = true;
@@ -2923,7 +2957,13 @@ public:
                     }
                     if (nestedMenuCount > 0) {
                         nestedMenuCount--;
-                        returningToPackage = true;
+                        //returningToPackage = true;
+                        if (lastPackageMenu == "subPackageMenu") {
+                            returningToSubPackage = true;
+                            //lastPackageMenu = "";
+                        } else {
+                            returningToPackage = true;
+                        }
                     }
                     
                     // Free-up memory
@@ -2951,7 +2991,13 @@ public:
                     }
                     if (nestedMenuCount > 0) {
                         nestedMenuCount--;
-                        returningToPackage = true;
+                        
+                        if (lastPackageMenu == "subPackageMenu") {
+                            returningToSubPackage = true;
+                            //lastPackageMenu = "";
+                        } else {
+                            returningToPackage = true;
+                        }
                     }
                     
                     // Free-up memory
@@ -3007,15 +3053,28 @@ public:
                 }
             }
         }
-        if (returningToPackage && !(keysHeld & KEY_B)){
+        if (returningToPackage && !returningToSubPackage && !(keysHeld & KEY_B)){
+            //lastPackageMenu = "packageMenu";
+            lastPackageMenu = "";
             returningToPackage = false;
             inPackageMenu = true;
+            if (nestedMenuCount == 0 && nestedLayer == 0) {
+                lastPackagePath = packagePath;
+                lastPackageName = PACKAGE_FILENAME;
+            }
         }
         
         if (returningToSubPackage && !(keysHeld & KEY_B)){
+            //lastPackageMenu = "subPackageMenu";
+            lastPackageMenu = "";
+            returningToPackage = false;
             returningToSubPackage = false;
             inSubPackageMenu = true;
             simulatedBackComplete = true;
+            if (nestedMenuCount == 0 && nestedLayer == 0) {
+                lastPackagePath = packagePath;
+                lastPackageName = PACKAGE_FILENAME;
+            }
         }
 
         if (triggerExit.load(std::memory_order_acquire)) {
@@ -3942,6 +4001,11 @@ public:
                             footer = commandFooter;
                         else
                             footer = OPTION_SYMBOL;
+                    } else if (commandMode == SLOT_STR) {
+                        if (commandFooter != NULL_STR)
+                            footer = commandFooter;
+                        else
+                            footer = OPTION_SYMBOL;
                     }
 
                     skipSystem = false;
@@ -3995,7 +4059,7 @@ public:
                             parentDirName = getParentDirNameFromPath(selectedItem);
                             
                             
-                            if (commandMode == DEFAULT_STR || commandMode == OPTION_STR) { // for handiling toggles
+                            if (commandMode == DEFAULT_STR || commandMode == SLOT_STR || commandMode == OPTION_STR) { // for handiling toggles
                                 listItem = std::make_unique<tsl::elm::ListItem>(removeTag(optionName));
                                 listItem->setValue(footer, true);
                                 
@@ -4397,7 +4461,13 @@ public:
      * It can be used to perform actions or updates specific to the overlay's visibility.
      */
     virtual void onShow() override {
+        //playClickVibration();
         //logMessage("onShow isHidden: "+std::to_string(isHidden.load()));
+        //std::string file_path = "sdmc:/config/ultrahand/open.wav";
+        //
+        //if (play_audio(file_path) != 0) {
+        //    logMessage("Failed to play audio.");
+        //}
     } 
     
     /**

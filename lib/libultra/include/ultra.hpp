@@ -83,6 +83,7 @@ const std::string TRUE_STR = "true";
 const std::string FALSE_STR = "false";
 const std::string GLOBAL_STR = "global";
 const std::string DEFAULT_STR = "default";
+const std::string SLOT_STR = "slot";
 const std::string OPTION_STR = "option";
 const std::string FORWARDER_STR = "forwarder";
 const std::string TEXT_STR = "text";
@@ -90,6 +91,7 @@ const std::string TABLE_STR = "table";
 const std::string NULL_STR = "null";
 const std::string THEME_STR = "theme";
 const std::string NOT_AVAILABLE_STR = "Not available";
+
 
 // Include all functional headers used in the libUltra library
 #include "debug_funcs.hpp"
