@@ -833,7 +833,7 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
                     lastArg = modifiedArg;
                 }
                 while (modifiedArg.find("{file_name}") != std::string::npos) {
-                    modifiedArg = replacePlaceholder(modifiedArg, "{file_name}", getNameFromPath(entry));
+                    modifiedArg = replacePlaceholder(modifiedArg, "{file_name}", dropExtension(getNameFromPath(entry)));
                     if (modifiedArg == lastArg)
                         break;
                     lastArg = modifiedArg;
@@ -906,35 +906,89 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
 }
 
 
+std::string getCurrentTimestamp(const std::string& format) {
+    auto now = std::chrono::system_clock::now();
+    auto now_time_t = std::chrono::system_clock::to_time_t(now);
+    std::stringstream ss;
+    ss << std::put_time(std::localtime(&now_time_t), format.c_str());
+    return ss.str();
+}
+
+// Define the replacePlaceholders function outside of applyPlaceholderReplacement
+auto replacePlaceholders = [](std::string& arg, const std::string& placeholder, const std::function<std::string(const std::string&)>& replacer) {
+    std::string lastArg;
+    size_t startPos, endPos;
+    std::string replacement;
+
+    while (arg.find(placeholder) != std::string::npos) {
+        startPos = arg.find(placeholder);
+        endPos = arg.find(")}", startPos);
+        if (endPos != std::string::npos && endPos > startPos) {
+            replacement = replacer(arg.substr(startPos, endPos - startPos + 2));
+            if (replacement.empty()) {
+                if (placeholder.find("{json(") != std::string::npos || placeholder.find("{json_file(") != std::string::npos) {
+                    replacement = UNAVAILABLE_SELECTION;
+                } else {
+                    replacement = NULL_STR;
+                }
+            }
+            arg.replace(startPos, endPos - startPos + 2, replacement);
+            if (arg == lastArg) {
+                if (interpreterLogging) {
+                    logMessage("failed replacement arg: " + arg);
+                }
+                if (placeholder.find("{json(") != std::string::npos || placeholder.find("{json_file(") != std::string::npos) {
+                    arg.replace(startPos, endPos - startPos + 2, UNAVAILABLE_SELECTION);
+                } else {
+                    arg.replace(startPos, endPos - startPos + 2, NULL_STR);
+                }
+                //commandSuccess = false;
+                break;
+            }
+        } else {
+            break;
+        }
+        lastArg = arg;
+    }
+};
+
 void applyPlaceholderReplacement(std::vector<std::string>& cmd, std::string hexPath, std::string iniPath, std::string listString, std::string jsonString, std::string jsonPath) {
     size_t startPos, endPos, listIndex;
     std::string replacement;
 
-    auto replacePlaceholders = [&](std::string& arg, const std::string& placeholder, const std::function<std::string(const std::string&)>& replacer) {
-        std::string lastArg;
-        while (arg.find(placeholder) != std::string::npos) {
-            startPos = arg.find(placeholder);
-            endPos = arg.find(")}", startPos);
-            if (endPos != std::string::npos && endPos > startPos) {
-                replacement = replacer(arg.substr(startPos, endPos - startPos + 2));
-                if (replacement.empty()) {
-                    replacement = UNAVAILABLE_SELECTION;
-                }
-                arg.replace(startPos, endPos - startPos + 2, replacement);
-                if (arg == lastArg) {
-                    if (interpreterLogging) {
-                        logMessage("failed replacement arg: " + arg);
-                    }
-                    arg.replace(startPos, endPos - startPos + 2, UNAVAILABLE_SELECTION);
-                    commandSuccess = false;
-                    break;
-                }
-            } else {
-                break;
-            }
-            lastArg = arg;
-        }
-    };
+    //auto replacePlaceholders = [&](std::string& arg, const std::string& placeholder, const std::function<std::string(const std::string&)>& replacer) {
+    //    std::string lastArg;
+    //    while (arg.find(placeholder) != std::string::npos) {
+    //        startPos = arg.find(placeholder);
+    //        endPos = arg.find(")}", startPos);
+    //        if (endPos != std::string::npos && endPos > startPos) {
+    //            replacement = replacer(arg.substr(startPos, endPos - startPos + 2));
+    //            if (replacement.empty()) {
+    //                if (placeholder.find("{json(") != std::string::npos) {
+    //                    replacement = UNAVAILABLE_SELECTION;
+    //                } else {
+    //                    replacement = NULL_STR;
+    //                }
+    //            }
+    //            arg.replace(startPos, endPos - startPos + 2, replacement);
+    //            if (arg == lastArg) {
+    //                if (interpreterLogging) {
+    //                    logMessage("failed replacement arg: " + arg);
+    //                }
+    //                if (placeholder.find("{json(") != std::string::npos) {
+    //                    arg.replace(startPos, endPos - startPos + 2, UNAVAILABLE_SELECTION);
+    //                } else {
+    //                    arg.replace(startPos, endPos - startPos + 2, NULL_STR);
+    //                }
+    //                commandSuccess = false;
+    //                break;
+    //            }
+    //        } else {
+    //            break;
+    //        }
+    //        lastArg = arg;
+    //    }
+    //};
 
     for (auto& arg : cmd) {
         // Replace hex placeholders
@@ -974,8 +1028,26 @@ void applyPlaceholderReplacement(std::vector<std::string>& cmd, std::string hexP
                 return replaceJsonPlaceholder(placeholder, "json_file", jsonPath);
             });
         }
+
+        // Replace timestamp placeholder with format
+        replacePlaceholders(arg, "{timestamp(", [&](const std::string& placeholder) {
+            size_t startPos = placeholder.find("(") + 1;
+            size_t endPos = placeholder.find(")");
+            if (endPos != std::string::npos) {
+                std::string format = placeholder.substr(startPos, endPos - startPos);
+                return getCurrentTimestamp(removeQuotes(format));
+            } else {
+                // Default format if not specified
+                return getCurrentTimestamp("%Y-%m-%d %H:%M:%S");
+            }
+        });
+
+        // Failed replacement cleanup
+        if (arg == NULL_STR)
+            arg = UNAVAILABLE_SELECTION;
     }
 }
+
 
 
 // forward declarartion
@@ -1132,14 +1204,19 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             std::string sourcePath = preprocessPath(cmd[1], packagePath);
             std::string destinationPath = preprocessPath(cmd[2], packagePath);
             
-            if (sourcePath.find('*') != std::string::npos)
-                copyFileOrDirectoryByPattern(sourcePath, destinationPath); // Delete files or directories by pattern
-            else {
-                long long totalBytesCopied = 0;
-                long long totalSize = getTotalSize(sourcePath);  // Ensure this is calculated if needed.
-                
-                copyFileOrDirectory(sourcePath, destinationPath, &totalBytesCopied, totalSize);
+            if (!isFileOrDirectory(sourcePath)) {
+                commandSuccess = false;
+            } else {
+                if (sourcePath.find('*') != std::string::npos)
+                    copyFileOrDirectoryByPattern(sourcePath, destinationPath); // Delete files or directories by pattern
+                else {
+                    long long totalBytesCopied = 0;
+                    long long totalSize = getTotalSize(sourcePath);  // Ensure this is calculated if needed.
+                    
+                    copyFileOrDirectory(sourcePath, destinationPath, &totalBytesCopied, totalSize);
+                }
             }
+
         }
     } else if (commandName == "del" || commandName == "delete") { // Delete command
         if (cmdSize >= 2) {
@@ -1238,50 +1315,63 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             const std::string& thirdArg = removeQuotes(cmd[3]);
             
             if (commandName == "hex-by-offset") {
-                hexEditByOffset(sourcePath.c_str(), secondArg.c_str(), thirdArg.c_str());
+                if (thirdArg != NULL_STR) {
+                    hexEditByOffset(sourcePath.c_str(), secondArg.c_str(), thirdArg.c_str());
+                }
             } else if (commandName == "hex-by-swap") {
-                if (cmdSize >= 5) {
-                    size_t occurrence = std::stoul(removeQuotes(cmd[4]));
-                    hexEditFindReplace(sourcePath, secondArg, thirdArg, occurrence);
-                } else {
-                    hexEditFindReplace(sourcePath, secondArg, thirdArg);
+                if (thirdArg != NULL_STR) {
+                    if (cmdSize >= 5) {
+                        size_t occurrence = std::stoul(removeQuotes(cmd[4]));
+                        hexEditFindReplace(sourcePath, secondArg, thirdArg, occurrence);
+                    } else {
+                        hexEditFindReplace(sourcePath, secondArg, thirdArg);
+                    }
                 }
             } else if (commandName == "hex-by-string") {
                 std::string hexDataToReplace = asciiToHex(secondArg);
-                std::string hexDataReplacement = asciiToHex(thirdArg);
-                
-                // Fix miss-matched string sizes
-                if (hexDataReplacement.length() < hexDataToReplace.length()) {
-                    hexDataReplacement += std::string(hexDataToReplace.length() - hexDataReplacement.length(), '\0');
-                } else if (hexDataReplacement.length() > hexDataToReplace.length()) {
-                    hexDataToReplace += std::string(hexDataReplacement.length() - hexDataToReplace.length(), '\0');
-                }
-                
-                if (cmdSize >= 5) {
-                    size_t occurrence = std::stoul(removeQuotes(cmd[4]));
-                    hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, occurrence);
-                } else {
-                    hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
+
+                if (thirdArg != NULL_STR) {
+                    std::string hexDataReplacement = asciiToHex(thirdArg);
+                    
+                    // Fix miss-matched string sizes
+                    if (hexDataReplacement.length() < hexDataToReplace.length()) {
+                        hexDataReplacement += std::string(hexDataToReplace.length() - hexDataReplacement.length(), '\0');
+                    } else if (hexDataReplacement.length() > hexDataToReplace.length()) {
+                        hexDataToReplace += std::string(hexDataReplacement.length() - hexDataToReplace.length(), '\0');
+                    }
+                    
+                    if (cmdSize >= 5) {
+                        size_t occurrence = std::stoul(removeQuotes(cmd[4]));
+                        hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, occurrence);
+                    } else {
+                        hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
+                    }
                 }
             } else if (commandName == "hex-by-decimal") {
                 std::string hexDataToReplace = decimalToHex(secondArg);
-                std::string hexDataReplacement = decimalToHex(thirdArg);
-                
-                if (cmdSize >= 5) {
-                    size_t occurrence = std::stoul(removeQuotes(cmd[4]));
-                    hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, occurrence);
-                } else {
-                    hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
+
+                if (thirdArg != NULL_STR) {
+                    std::string hexDataReplacement = decimalToHex(thirdArg);
+                    
+                    if (cmdSize >= 5) {
+                        size_t occurrence = std::stoul(removeQuotes(cmd[4]));
+                        hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, occurrence);
+                    } else {
+                        hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
+                    }
                 }
             } else if (commandName == "hex-by-rdecimal") {
                 std::string hexDataToReplace = decimalToReversedHex(secondArg);
-                std::string hexDataReplacement = decimalToReversedHex(thirdArg);
-                
-                if (cmdSize >= 5) {
-                    size_t occurrence = std::stoul(removeQuotes(cmd[4]));
-                    hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, occurrence);
-                } else {
-                    hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
+
+                if (thirdArg != NULL_STR) {
+                    std::string hexDataReplacement = decimalToReversedHex(thirdArg);
+                    
+                    if (cmdSize >= 5) {
+                        size_t occurrence = std::stoul(removeQuotes(cmd[4]));
+                        hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, occurrence);
+                    } else {
+                        hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
+                    }
                 }
             } else if (commandName == "hex-by-custom-offset" ||
                        commandName == "hex-by-custom-decimal-offset" ||
@@ -1290,14 +1380,17 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                     std::string customPattern = removeQuotes(cmd[2]);
                     std::string offset = removeQuotes(cmd[3]);
                     std::string hexDataReplacement = removeQuotes(cmd[4]);
-                    
-                    if (commandName == "hex-by-custom-decimal-offset") {
-                        hexDataReplacement = decimalToHex(hexDataReplacement);
-                    } else if (commandName == "hex-by-custom-rdecimal-offset") {
-                        hexDataReplacement = decimalToReversedHex(hexDataReplacement);
+
+                    if (hexDataReplacement != NULL_STR) { // early exit for null replacements
+                        
+                        if (commandName == "hex-by-custom-decimal-offset") {
+                            hexDataReplacement = decimalToHex(hexDataReplacement);
+                        } else if (commandName == "hex-by-custom-rdecimal-offset") {
+                            hexDataReplacement = decimalToReversedHex(hexDataReplacement);
+                        }
+                        
+                        hexEditByCustomOffset(sourcePath.c_str(), customPattern.c_str(), offset.c_str(), hexDataReplacement.c_str());
                     }
-                    
-                    hexEditByCustomOffset(sourcePath.c_str(), customPattern.c_str(), offset.c_str(), hexDataReplacement.c_str());
                 }
             }
         }
@@ -1611,4 +1704,178 @@ void enqueueInterpreterCommands(std::vector<std::vector<std::string>>&& commands
     queueCondition.notify_one();
 }
 
+//void playClickVibration() {
+//    // Initialize HID services
+//    if (R_FAILED(hidInitialize())) {
+//        logMessage("Failed to initialize HID services");
+//        return;
+//    }
+//
+//    // Example vibration pattern for a quick click feedback
+//    HidVibrationValue vibrationValue = {
+//        .amp_low = 0.5,
+//        .freq_low = 160.0,
+//        .amp_high = 0.5,
+//        .freq_high = 320.0
+//    };
+//
+//    // Use the correct controller ID
+//    HidVibrationDeviceHandle vibrationDevice;
+//    Result rc = hidGetVibrationDeviceInfo(&vibrationDevice, CONTROLLER_P1_AUTO);
+//    if (R_FAILED(rc)) {
+//        logMessage("Failed to get vibration device info");
+//        hidExit();
+//        return;
+//    }
+//
+//    rc = hidSendVibrationValues(&vibrationDevice, &vibrationValue, 1);
+//    if (R_FAILED(rc)) {
+//        logMessage("Failed to send vibration values");
+//    }
+//
+//    hidExit();
+//}
+//
 
+
+//bool load_wav(const std::string &file_path, int &sample_rate, int &num_channels, std::vector<uint8_t> &audio_data) {
+//    std::ifstream file(file_path, std::ios::binary);
+//    if (!file) {
+//        logMessage("Could not open WAV file: " + file_path);
+//        return false;
+//    }
+//
+//    // Read the WAV header
+//    char buffer[44];
+//    file.read(buffer, 44);
+//
+//    // Parse WAV header (simplified)
+//    sample_rate = *reinterpret_cast<int*>(buffer + 24);
+//    num_channels = *reinterpret_cast<short*>(buffer + 22);
+//
+//    // Check if the format is PCM
+//    if (buffer[20] != 1 || buffer[21] != 0) {
+//        logMessage("Unsupported WAV format");
+//        return false;
+//    }
+//
+//    // Read the audio data
+//    file.seekg(0, std::ios::end);
+//    size_t file_size = file.tellg();
+//    file.seekg(44, std::ios::beg);
+//    size_t data_size = file_size - 44;
+//
+//    audio_data.resize(data_size);
+//    file.read(reinterpret_cast<char*>(audio_data.data()), data_size);
+//
+//    return true;
+//}
+//
+//Result try_open_audio_out(const char* device_name, u32 sample_rate, u32 num_channels, u32& sample_rate_out, u32& channel_count_out, PcmFormat& format, AudioOutState& state) {
+//    Result rc = audoutOpenAudioOut(device_name, nullptr, sample_rate, num_channels, &sample_rate_out, &channel_count_out, &format, &state);
+//    if (R_FAILED(rc)) {
+//        logMessage("Failed to open audio out with result code: " + std::to_string(rc));
+//    }
+//    return rc;
+//}
+//
+//int play_audio(const std::string &file_path) {
+//    int sample_rate, num_channels;
+//    std::vector<uint8_t> audio_data;
+//
+//    if (!load_wav(file_path, sample_rate, num_channels, audio_data)) {
+//        logMessage("Failed to load WAV file");
+//        return 1;
+//    }
+//
+//    logMessage("WAV file loaded successfully");
+//    logMessage("Sample rate: " + std::to_string(sample_rate));
+//    logMessage("Number of channels: " + std::to_string(num_channels));
+//
+//    // Initialize the audio output service
+//    Result rc = audoutInitialize();
+//    if (R_FAILED(rc)) {
+//        logMessage("Failed to initialize audio output, result code: " + std::to_string(rc));
+//        return 1;
+//    }
+//
+//    // List audio outputs to get the device name
+//    char device_names[0x100 * 8] = {0};  // Allow space for up to 8 device names
+//    u32 device_names_count = 0;
+//    rc = audoutListAudioOuts(device_names, 8, &device_names_count);
+//
+//    if (R_FAILED(rc) || device_names_count == 0) {
+//        logMessage("Failed to list audio outputs or no outputs available, result code: " + std::to_string(rc));
+//        audoutExit();
+//        return 1;
+//    }
+//
+//    logMessage("Audio outputs listed successfully, count: " + std::to_string(device_names_count));
+//    logMessage("Device name: " + std::string(device_names));
+//
+//    // Align buffer size to 0x1000 bytes
+//    size_t aligned_buffer_size = (audio_data.size() + 0xFFF) & ~0xFFF;
+//    std::vector<uint8_t> aligned_audio_data(aligned_buffer_size);
+//    memcpy(aligned_audio_data.data(), audio_data.data(), audio_data.size());
+//
+//    AudioOutBuffer source = {};
+//    source.next = nullptr;
+//    source.buffer = aligned_audio_data.data();
+//    source.buffer_size = aligned_buffer_size;
+//    source.data_size = audio_data.size();
+//    source.data_offset = 0;
+//
+//    u32 sample_rate_out;
+//    u32 channel_count_out;
+//    AudioOutState state;
+//
+//    // Try different PCM formats
+//    PcmFormat formats[] = {PcmFormat_Int16, PcmFormat_Int32};
+//    bool success = false;
+//    for (PcmFormat format : formats) {
+//        logMessage("Trying format: " + std::to_string(format));
+//        rc = try_open_audio_out(device_names, sample_rate, num_channels, sample_rate_out, channel_count_out, format, state);
+//        if (R_SUCCEEDED(rc)) {
+//            success = true;
+//            break;
+//        }
+//    }
+//
+//    if (!success) {
+//        logMessage("Failed to open audio out with any supported format.");
+//        audoutExit();
+//        return 1;
+//    }
+//
+//    logMessage("Audio out opened successfully");
+//
+//    rc = audoutStartAudioOut();
+//    if (R_FAILED(rc)) {
+//        logMessage("Failed to start audio out, result code: " + std::to_string(rc));
+//        audoutExit();
+//        return 1;
+//    }
+//
+//    rc = audoutAppendAudioOutBuffer(&source);
+//    if (R_FAILED(rc)) {
+//        logMessage("Failed to play audio buffer, result code: " + std::to_string(rc));
+//        audoutStopAudioOut();
+//        audoutExit();
+//        return 1;
+//    }
+//
+//    AudioOutBuffer* released_buffer = nullptr;
+//    u32 released_count;
+//
+//    rc = audoutWaitPlayFinish(&released_buffer, &released_count, UINT64_MAX);
+//    if (R_FAILED(rc)) {
+//        logMessage("Failed to wait for audio playback, result code: " + std::to_string(rc));
+//    }
+//
+//    audoutStopAudioOut();
+//    audoutExit();
+//
+//    logMessage("Audio playback completed successfully");
+//
+//    return 0;
+//}//
