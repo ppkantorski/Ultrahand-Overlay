@@ -38,7 +38,7 @@
     "CLEAN_VERSIONS": "정리된 라벨",
     "OVERLAY_VERSIONS": "오버레이 라벨",
     "PACKAGE_VERSIONS": "패키지 라벨",
-    "OPAQUE_SCREENSHOTS": "Opaque Screenshots",
+    "OPAQUE_SCREENSHOTS": "불투명한 스크린샷",
     "ON": "켜기",
     "OFF": "끄기",
     "PACKAGE_INFO": "패키지 정보",
