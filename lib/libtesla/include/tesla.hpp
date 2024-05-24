@@ -3886,7 +3886,7 @@ namespace tsl {
                     this->updateScrollOffset();
                 }
 
-                renderer->enableScissoring(this->getLeftBound(), this->getTopBound(), this->getWidth()+2, this->getHeight() + 4);
+                renderer->enableScissoring(this->getLeftBound(), this->getTopBound(), this->getWidth()+2+2, this->getHeight() + 4);
 
                 for (auto &entry : this->m_items) {
                     if (entry->getBottomBound() > this->getTopBound() && entry->getTopBound() < this->getBottomBound()) {
@@ -4351,7 +4351,7 @@ namespace tsl {
             }
             
             virtual void layout(u16 parentX, u16 parentY, u16 parentWidth, u16 parentHeight) override {
-                this->setBoundaries(this->getX()+2, this->getY(), this->getWidth()+8, tsl::style::ListItemDefaultHeight);
+                this->setBoundaries(this->getX()+2+1, this->getY(), this->getWidth()+8+1, tsl::style::ListItemDefaultHeight);
             }
             
             virtual bool onClick(u64 keys) override {
@@ -4543,8 +4543,8 @@ namespace tsl {
             virtual ~CategoryHeader() {}
             
             virtual void draw(gfx::Renderer *renderer) override {
-                renderer->drawRect(this->getX()+1, this->getBottomBound() - 30, 3, 23, a(defaultTextColor));
-                renderer->drawString(this->m_text.c_str(), false, this->getX() + 15, this->getBottomBound() - 12, 15, a(defaultTextColor));
+                renderer->drawRect(this->getX()+1+1, this->getBottomBound() - 30, 3, 23, a(defaultTextColor));
+                renderer->drawString(this->m_text.c_str(), false, this->getX() + 15+1, this->getBottomBound() - 12, 15, a(defaultTextColor));
                 
                 //if (this->m_hasSeparator)
                 //    renderer->drawRect(this->getX(), this->getBottomBound(), this->getWidth(), 1, tsl::style::color::ColorFrame); // CUSTOM MODIFICATION
