@@ -55,8 +55,11 @@ const std::string DEFAULT_LANG_STR = "default_lang";
 const std::string LAUNCH_ARGS_STR = "launch_args";
 const std::string USE_LAUNCH_ARGS_STR = "use_launch_args";
 const std::string LIST_STR = "list";
+const std::string LIST_FILE_STR = "list_file";
 const std::string JSON_STR = "json";
 const std::string JSON_FILE_STR = "json_file";
+const std::string INI_FILE_STR = "ini_file";
+const std::string HEX_FILE_STR = "hex_file";
 const std::string PACKAGE_STR = "package";
 const std::string PACKAGES_STR = "packages";
 const std::string OVERLAY_STR = "overlay";
@@ -92,6 +95,17 @@ const std::string NULL_STR = "null";
 const std::string THEME_STR = "theme";
 const std::string NOT_AVAILABLE_STR = "Not available";
 
+
+// Pre-defined symbols
+const std::string OPTION_SYMBOL = "\u22EF";
+const std::string DROPDOWN_SYMBOL = "\u25B6";
+const std::string CHECKMARK_SYMBOL = "\uE14B";
+const std::string CROSSMARK_SYMBOL = "\uE14C";
+const std::string DOWNLOAD_SYMBOL = "\u2193";
+const std::string UNZIP_SYMBOL = "\u2191"; 
+const std::string COPY_SYMBOL = "\u2192";
+const std::string INPROGRESS_SYMBOL = "\u25CF";
+const std::string STAR_SYMBOL = "\u2605";
 
 // Include all functional headers used in the libUltra library
 #include "debug_funcs.hpp"
