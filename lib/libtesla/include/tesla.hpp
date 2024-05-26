@@ -4327,17 +4327,17 @@ namespace tsl {
                 // CUSTOM SECTION START (modification for submenu footer color)
                 if (this->m_value == DROPDOWN_SYMBOL || this->m_value == OPTION_SYMBOL) {
                     if (this->m_focused)
-                        renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 +2, this->getY() + 45, 20, !useClickTextColor ? (this->m_faint ? offTextColor : selectedTextColor) : a(clickTextColor));
+                        renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 , this->getY() + 45, 20, !useClickTextColor ? (this->m_faint ? offTextColor : selectedTextColor) : a(clickTextColor));
                     else
-                        renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45+2, this->getY() + 45, 20, !useClickTextColor ? (this->m_faint ? offTextColor : defaultTextColor) : a(clickTextColor));
+                        renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45, this->getY() + 45, 20, !useClickTextColor ? (this->m_faint ? offTextColor : defaultTextColor) : a(clickTextColor));
                 } else if (runningInterpreter.load(std::memory_order_acquire) &&
                     ((((this->m_value).find(DOWNLOAD_SYMBOL) != std::string::npos) || ((this->m_value).find(UNZIP_SYMBOL) != std::string::npos) || ((this->m_value).find(COPY_SYMBOL) != std::string::npos)) || this->m_value == INPROGRESS_SYMBOL)) {
                     
-                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45+2, this->getY() + 45, 20, (this->m_faint ? offTextColor : a(inprogressTextColor)));
+                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45, this->getY() + 45, 20, (this->m_faint ? offTextColor : a(inprogressTextColor)));
                 } else if (this->m_value == CROSSMARK_SYMBOL) {
-                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45+2, this->getY() + 45, 20, (this->m_faint ? offTextColor : a(invalidTextColor)));
+                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45, this->getY() + 45, 20, (this->m_faint ? offTextColor : a(invalidTextColor)));
                 } else {
-                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45+2, this->getY() + 45, 20, (this->m_faint ? offTextColor : a(onTextColor)));
+                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45, this->getY() + 45, 20, (this->m_faint ? offTextColor : a(onTextColor)));
                 }
                 // CUSTOM SECTION END 
             }
