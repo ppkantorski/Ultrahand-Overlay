@@ -160,16 +160,7 @@ bool updateMenuCombos = false;
 //std::string highlightColor1Str = "#2288CC";;
 //std::string highlightColor2Str = "#88FFFF";;
 
-// Pre-defined symbols
-static const std::string OPTION_SYMBOL = "\u22EF";
-static const std::string DROPDOWN_SYMBOL = "\u25B6";
-static const std::string CHECKMARK_SYMBOL = "\uE14B";
-static const std::string CROSSMARK_SYMBOL = "\uE14C";
-static const std::string DOWNLOAD_SYMBOL = "\u2193";
-static const std::string UNZIP_SYMBOL = "\u2191"; 
-static const std::string COPY_SYMBOL = "\u2192";
-static const std::string INPROGRESS_SYMBOL = "\u25CF";
-static const std::string STAR_SYMBOL = "\u2605";
+
 
 
 //float customRound(float num) {
@@ -1336,9 +1327,9 @@ namespace tsl {
     static Color clickColor = RGB888("#F7253E", "#F7253E", clickAlpha);
     static Color trackBarColor = RGB888("#555555");
 
-    static size_t seperatorAlpha = 7;
+    static size_t seperatorAlpha = 15;
     
-    static Color seperatorColor = RGB888("#777777", "#777777", seperatorAlpha);
+    static Color seperatorColor = RGB888("#404040", "#404040", seperatorAlpha);
     static Color selectedTextColor = RGB888(whiteColor);
     static Color inprogressTextColor = RGB888(whiteColor);
     static Color invalidTextColor = RGB888("#FF0000");
@@ -3462,7 +3453,7 @@ namespace tsl {
                     renderer->drawString(secondHalf.c_str(), false, x, y + offset, fontSize, a(logoColor2));
             
                     if (!(hideBattery && hidePCBTemp && hideSOCTemp && hideClock)) {
-                        renderer->drawRect(252, 23, 1, 49, a(seperatorColor));
+                        renderer->drawRect(245, 23, 1, 49, a(seperatorColor));
                     }
             
                     struct timespec currentTimeSpec;
@@ -3498,20 +3489,20 @@ namespace tsl {
                         chargeStringSTD = chargeString;
                         Color batteryColorToUse = isCharging ? tsl::Color(0x0, 0xF, 0x0, 0xF) : 
                                                 (batteryCharge < 20 ? tsl::Color(0xF, 0x0, 0x0, 0xF) : batteryColor);
-                        renderer->drawString(chargeStringSTD.c_str(), false, tsl::cfg::FramebufferWidth - renderer->calculateStringWidth(chargeStringSTD, 20) - 21, y_offset, 20, a(batteryColorToUse));
+                        renderer->drawString(chargeStringSTD.c_str(), false, tsl::cfg::FramebufferWidth - renderer->calculateStringWidth(chargeStringSTD, 20) - 20, y_offset, 20, a(batteryColorToUse));
                     }
             
                     offset = 0;
                     if (!hidePCBTemp && PCB_temperature > 0) {
                         PCB_temperatureStringSTD = PCB_temperatureStr;
                         if (!hideBattery)
-                            offset -= 6;
-                        renderer->drawString(PCB_temperatureStringSTD.c_str(), false, tsl::cfg::FramebufferWidth + offset - renderer->calculateStringWidth(PCB_temperatureStringSTD, 20) - renderer->calculateStringWidth(chargeStringSTD, 20) - 21, y_offset, 20, a(tsl::GradientColor(PCB_temperature)));
+                            offset -= 5;
+                        renderer->drawString(PCB_temperatureStringSTD.c_str(), false, tsl::cfg::FramebufferWidth + offset - renderer->calculateStringWidth(PCB_temperatureStringSTD, 20) - renderer->calculateStringWidth(chargeStringSTD, 20) - 20, y_offset, 20, a(tsl::GradientColor(PCB_temperature)));
                     }
                     if (!hideSOCTemp && SOC_temperature > 0) {
                         SOC_temperatureStringSTD = SOC_temperatureStr;
-                        offset -= 6;
-                        renderer->drawString(SOC_temperatureStringSTD.c_str(), false, tsl::cfg::FramebufferWidth + offset - renderer->calculateStringWidth(SOC_temperatureStringSTD, 20) - renderer->calculateStringWidth(PCB_temperatureStringSTD, 20) - renderer->calculateStringWidth(chargeStringSTD, 20) - 21, y_offset, 20, a(tsl::GradientColor(SOC_temperature)));
+                        offset -= 5;
+                        renderer->drawString(SOC_temperatureStringSTD.c_str(), false, tsl::cfg::FramebufferWidth + offset - renderer->calculateStringWidth(SOC_temperatureStringSTD, 20) - renderer->calculateStringWidth(PCB_temperatureStringSTD, 20) - renderer->calculateStringWidth(chargeStringSTD, 20) - 20, y_offset, 20, a(tsl::GradientColor(SOC_temperature)));
                     }
                 } else {
 
@@ -4280,9 +4271,9 @@ namespace tsl {
                 if (this->m_maxWidth == 0) {
                     if (this->m_value.length() > 0) {
                         std::tie(width, height) = renderer->drawString(this->m_value.c_str(), false, 0, 0, 20, a(tsl::style::color::ColorTransparent));
-                        this->m_maxWidth = this->getWidth() - width - 70;
+                        this->m_maxWidth = this->getWidth() - width - 70 +4;
                     } else {
-                        this->m_maxWidth = this->getWidth() - 40;
+                        this->m_maxWidth = this->getWidth() - 40 -10;
                     }
                     
                     std::tie(width, height) = renderer->drawString(this->m_text.c_str(), false, 0, 0, 23, a(tsl::style::color::ColorTransparent));
@@ -4294,7 +4285,7 @@ namespace tsl {
                         this->m_scrollText += this->m_text;
                         this->m_textWidth = width;
                         
-                        this->m_ellipsisText = renderer->limitStringLength(this->m_text, false, 23, this->m_maxWidth+4);
+                        this->m_ellipsisText = renderer->limitStringLength(this->m_text, false, 23, this->m_maxWidth);
                     } else {
                         this->m_textWidth = width;
                     }
@@ -5543,7 +5534,7 @@ namespace tsl {
                         simulatedNextPageComplete = false;
                         simulatedNextPage = true;
                     }
-                    if (oldTouchPos.x > 0U && oldTouchPos.x <= 252 && oldTouchPos.y > 0U && oldTouchPos.y <= 73U && initialTouchPos.x > 0U && initialTouchPos.x <= 252 && initialTouchPos.y > 0U && initialTouchPos.y <= 73U) {
+                    if (oldTouchPos.x > 0U && oldTouchPos.x <= 245 && oldTouchPos.y > 0U && oldTouchPos.y <= 73U && initialTouchPos.x > 0U && initialTouchPos.x <= 245 && initialTouchPos.y > 0U && initialTouchPos.y <= 73U) {
                         simulatedMenuComplete = false;
                         simulatedMenu = true;
                     }
