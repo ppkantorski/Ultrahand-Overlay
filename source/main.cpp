@@ -414,12 +414,12 @@ public:
     virtual tsl::elm::Element* createUI() override {
         inSettingsMenu = dropdownSelection.empty();
         inSubSettingsMenu = !dropdownSelection.empty();
-
+        
         const std::vector<std::string> defaultLanguages = {"en", "es", "fr", "de", "ja", "ko", "it", "nl", "pt", "ru", "zh-cn", "zh-tw"};
-        const std::vector<std::string> defaultCombos = {"ZL+ZR+DDOWN", "ZL+ZR+DRIGHT", "ZL+ZR+DUP", "ZL+ZR+DLEFT", "L+R+DDOWN", "L+R+DRIGHT", "L+R+DUP", "L+R+DLEFT", "ZL+PLUS", "ZR+PLUS", "ZL+ZR+PLUS", "L+R+PLUS", "MINUS+PLUS", "L+DDOWN+RS"};
+        const std::vector<std::string> defaultCombos = {"ZL+ZR+DDOWN", "ZL+ZR+DRIGHT", "ZL+ZR+DUP", "ZL+ZR+DLEFT", "L+R+DDOWN", "L+R+DRIGHT", "L+R+DUP", "L+DDOWN", "R+DDOWN", "L+R+DLEFT", "ZL+ZR+PLUS", "L+R+PLUS", "ZL+PLUS", "ZR+PLUS", "MINUS+PLUS", "L+DDOWN+RS"};
         
         auto list = std::make_unique<tsl::elm::List>();
-
+        
         if (dropdownSelection.empty()) {
             list->addItem(new tsl::elm::CategoryHeader(MAIN_SETTINGS));
             std::string defaultLang = parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, DEFAULT_LANG_STR);
