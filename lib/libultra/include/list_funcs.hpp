@@ -20,6 +20,9 @@
 
 #pragma once
 #include <vector>
+#include <fstream>
+#include <string>
+#include "debug_funcs.hpp"
 
 /**
  * @brief Removes entries from a vector of strings that match a specified entry.
@@ -49,4 +52,41 @@ void filterItemsList(const std::vector<std::string>& filterList, std::vector<std
     for (const auto& entry : filterList) {
         removeEntryFromList(entry, itemsList);
     }
+}
+
+
+// Function to read file into a vector of strings
+std::vector<std::string> readListFromFile(const std::string& filePath) {
+    std::vector<std::string> lines;
+    std::ifstream file(filePath);
+
+    if (!file.is_open()) {
+        logMessage("Unable to open file: " + filePath);
+        return lines; // Return empty vector
+    }
+
+    std::string line;
+    while (std::getline(file, line)) {
+        lines.push_back(std::move(line));
+    }
+
+    return lines;
+}
+
+// Function to get an entry from the list based on the index
+std::string getEntryFromListFile(const std::string& listPath, size_t listIndex) {
+    std::ifstream file(listPath);
+    if (!file.is_open()) {
+        logMessage("Unable to open file: " + listPath);
+        return ""; // Return an empty string if the file cannot be opened
+    }
+
+    std::string line;
+    for (size_t i = 0; i <= listIndex; ++i) {
+        if (!std::getline(file, line)) {
+            return ""; // Return an empty string if the index is out of bounds
+        }
+    }
+
+    return line;
 }
