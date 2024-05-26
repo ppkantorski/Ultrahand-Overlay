@@ -38,7 +38,7 @@
     "CLEAN_VERSIONS": "刪除插件標簽",
     "OVERLAY_VERSIONS": "插件的標簽",
     "PACKAGE_VERSIONS": "插件包的標簽",
-    "OPAQUE_SCREENSHOTS": "Opaque Screenshots",
+    "OPAQUE_SCREENSHOTS": "不透明的截圖",
     "ON": "啟用",
     "OFF": "停用",
     "PACKAGE_INFO": "插件包信息",
