@@ -50,11 +50,6 @@
         "download-entry": "0"
     },
     {
-        "name": "Sys-modules - latest",
-        "ovl-url": "https://api.github.com/repos/WerWolv/ovl-sysmodules/releases?per_page=1&sort=created&order=desc",
-        "download-entry": "0"
-    },
-    {
         "name": "sys-ftpd-light - latest",
         "zip-url": "https://api.github.com/repos/cathery/sys-ftpd/releases/latest",
         "download-entry": "0"
