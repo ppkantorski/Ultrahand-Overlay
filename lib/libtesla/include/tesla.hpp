@@ -611,7 +611,7 @@ void localizeTimeStr(char* timeStr) {
 //// Map of character widths
 static std::unordered_map<wchar_t, float> characterWidths = {
     {L'°', 0.25},
-    {L'%', 0.98}, // not calibrated
+    //{L'%', 0.98}, // not calibrated
     {L':', 0.25}, // not calibrated
     {L' ', 0.3},
     {L'+', 0.75},
@@ -3489,7 +3489,7 @@ namespace tsl {
                         chargeStringSTD = chargeString;
                         Color batteryColorToUse = isCharging ? tsl::Color(0x0, 0xF, 0x0, 0xF) : 
                                                 (batteryCharge < 20 ? tsl::Color(0xF, 0x0, 0x0, 0xF) : batteryColor);
-                        renderer->drawString(chargeStringSTD.c_str(), false, tsl::cfg::FramebufferWidth - renderer->calculateStringWidth(chargeStringSTD, 20) - 20, y_offset, 20, a(batteryColorToUse));
+                        renderer->drawString(chargeStringSTD.c_str(), false, tsl::cfg::FramebufferWidth - renderer->calculateStringWidth(chargeStringSTD, 20) - 22, y_offset, 20, a(batteryColorToUse));
                     }
             
                     offset = 0;
@@ -3497,12 +3497,13 @@ namespace tsl {
                         PCB_temperatureStringSTD = PCB_temperatureStr;
                         if (!hideBattery)
                             offset -= 5;
-                        renderer->drawString(PCB_temperatureStringSTD.c_str(), false, tsl::cfg::FramebufferWidth + offset - renderer->calculateStringWidth(PCB_temperatureStringSTD, 20) - renderer->calculateStringWidth(chargeStringSTD, 20) - 20, y_offset, 20, a(tsl::GradientColor(PCB_temperature)));
+                        renderer->drawString(PCB_temperatureStringSTD.c_str(), false, tsl::cfg::FramebufferWidth + offset - renderer->calculateStringWidth(PCB_temperatureStringSTD, 20) - renderer->calculateStringWidth(chargeStringSTD, 20) - 22, y_offset, 20, a(tsl::GradientColor(PCB_temperature)));
                     }
                     if (!hideSOCTemp && SOC_temperature > 0) {
                         SOC_temperatureStringSTD = SOC_temperatureStr;
-                        offset -= 5;
-                        renderer->drawString(SOC_temperatureStringSTD.c_str(), false, tsl::cfg::FramebufferWidth + offset - renderer->calculateStringWidth(SOC_temperatureStringSTD, 20) - renderer->calculateStringWidth(PCB_temperatureStringSTD, 20) - renderer->calculateStringWidth(chargeStringSTD, 20) - 20, y_offset, 20, a(tsl::GradientColor(SOC_temperature)));
+                        if (!hidePCBTemp || !hideBattery)
+                            offset -= 5;
+                        renderer->drawString(SOC_temperatureStringSTD.c_str(), false, tsl::cfg::FramebufferWidth + offset - renderer->calculateStringWidth(SOC_temperatureStringSTD, 20) - renderer->calculateStringWidth(PCB_temperatureStringSTD, 20) - renderer->calculateStringWidth(chargeStringSTD, 20) - 22, y_offset, 20, a(tsl::GradientColor(SOC_temperature)));
                     }
                 } else {
 
@@ -4326,17 +4327,17 @@ namespace tsl {
                 // CUSTOM SECTION START (modification for submenu footer color)
                 if (this->m_value == DROPDOWN_SYMBOL || this->m_value == OPTION_SYMBOL) {
                     if (this->m_focused)
-                        renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45 +2, this->getY() + 45, 20, !useClickTextColor ? (this->m_faint ? offTextColor : selectedTextColor) : a(clickTextColor));
+                        renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45-1, this->getY() + 45, 20, !useClickTextColor ? (this->m_faint ? offTextColor : selectedTextColor) : a(clickTextColor));
                     else
-                        renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45+2, this->getY() + 45, 20, !useClickTextColor ? (this->m_faint ? offTextColor : defaultTextColor) : a(clickTextColor));
+                        renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45-1, this->getY() + 45, 20, !useClickTextColor ? (this->m_faint ? offTextColor : defaultTextColor) : a(clickTextColor));
                 } else if (runningInterpreter.load(std::memory_order_acquire) &&
                     ((((this->m_value).find(DOWNLOAD_SYMBOL) != std::string::npos) || ((this->m_value).find(UNZIP_SYMBOL) != std::string::npos) || ((this->m_value).find(COPY_SYMBOL) != std::string::npos)) || this->m_value == INPROGRESS_SYMBOL)) {
                     
-                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45+2, this->getY() + 45, 20, (this->m_faint ? offTextColor : a(inprogressTextColor)));
+                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45-1, this->getY() + 45, 20, (this->m_faint ? offTextColor : a(inprogressTextColor)));
                 } else if (this->m_value == CROSSMARK_SYMBOL) {
-                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45+2, this->getY() + 45, 20, (this->m_faint ? offTextColor : a(invalidTextColor)));
+                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45-1, this->getY() + 45, 20, (this->m_faint ? offTextColor : a(invalidTextColor)));
                 } else {
-                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45+2, this->getY() + 45, 20, (this->m_faint ? offTextColor : a(onTextColor)));
+                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45-1, this->getY() + 45, 20, (this->m_faint ? offTextColor : a(onTextColor)));
                 }
                 // CUSTOM SECTION END 
             }
