@@ -44,7 +44,7 @@ static std::atomic<bool> triggerExit(false);
  * - `PACKAGE_FILENAME`: The name of the package file ("package.ini").
  * - `CONFIG_FILENAME`: The name of the configuration file ("config.ini").
  * - `SETTINGS_PATH`: The base path for Ultrahand settings ("sdmc:/config/ultrahand/").
- * - `SETTINGS_CONFIG_INI_PATH`: The full path to the Ultrahand settings configuration file.
+ * - `ULTRAHAND_CONFIG_INI_PATH`: The full path to the Ultrahand settings configuration file.
  * - `PACKAGE_PATH`: The base directory for packages ("sdmc:/switch/.packages/").
  * - `OVERLAY_PATH`: The base directory for overlays ("sdmc:/switch/.overlays/").
  * - `TESLA_CONFIG_INI_PATH`: The full path to the Tesla settings configuration file.
@@ -53,28 +53,17 @@ static std::atomic<bool> triggerExit(false);
  * and directories.
  */
 
-std::unordered_map<std::string, std::string> buttonCharMap = {
-    {"A", "\uE0E0"},
-    {"B", "\uE0E1"},
-    {"X", "\uE0E2"},
-    {"Y", "\uE0E3"},
-    {"L", "\uE0E4"},
-    {"R", "\uE0E5"},
-    {"ZL", "\uE0E6"},
-    {"ZR", "\uE0E7"},
-    {"PLUS", "\uE0B5"},
-    {"MINUS", "\uE0B6"},
-    {"DUP", "\uE0EB"},
-    {"DDOWN", "\uE0EC"},
-    {"DLEFT", "\uE0ED"},
-    {"DRIGHT", "\uE0EE"},
-    {"LS", "\uE0C4"},
-    {"RS", "\uE0C5"},
-    {"LSTICK", "\uE0C4"},
-    {"RSTICK", "\uE0C5"}
-    //{"HOME", "\uE0BF"},
-    //{"CAPTURE", "\uE0C0"}
-};
+
+std::unordered_map<std::string, std::string> createButtonCharMap() {
+    std::unordered_map<std::string, std::string> map;
+    for (const auto& keyInfo : tsl::impl::KEYS_INFO) {
+        map[keyInfo.name] = keyInfo.glyph;
+    }
+    return map;
+}
+
+std::unordered_map<std::string, std::string> buttonCharMap = createButtonCharMap();
+
 
 std::string convertComboToUnicode(const std::string& combo) {
 
@@ -147,7 +136,7 @@ void copyTeslaKeyComboToUltrahand() {
     std::map<std::string, std::map<std::string, std::string>> parsedData;
     
     bool teslaConfigExists = isFileOrDirectory(TESLA_CONFIG_INI_PATH);
-    bool ultrahandConfigExists = isFileOrDirectory(SETTINGS_CONFIG_INI_PATH);
+    bool ultrahandConfigExists = isFileOrDirectory(ULTRAHAND_CONFIG_INI_PATH);
 
     bool initializeTesla = false;
     std::string teslaKeyCombo = keyCombo;
@@ -170,7 +159,7 @@ void copyTeslaKeyComboToUltrahand() {
     
     bool initializeUltrahand = false;
     if (ultrahandConfigExists) {
-        parsedData = getParsedDataFromIniFile(SETTINGS_CONFIG_INI_PATH);
+        parsedData = getParsedDataFromIniFile(ULTRAHAND_CONFIG_INI_PATH);
         if (parsedData.count(ULTRAHAND_PROJECT_NAME) > 0) {
             auto& ultrahandSection = parsedData[ULTRAHAND_PROJECT_NAME];
             if (ultrahandSection.count(KEY_COMBO_STR) > 0) {
@@ -190,7 +179,7 @@ void copyTeslaKeyComboToUltrahand() {
     }
 
     if (initializeUltrahand) {
-        setIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, KEY_COMBO_STR, keyCombo);
+        setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, KEY_COMBO_STR, keyCombo);
     }
 
     tsl::impl::parseOverlaySettings();
@@ -247,38 +236,38 @@ std::tuple<Result, std::string, std::string> getOverlayInfo(const std::string& f
 
 void drawTable(std::unique_ptr<tsl::elm::List>& list, const std::vector<std::string>& sectionLines, const std::vector<std::string>& infoLines,
     const size_t& columnOffset = 120, const size_t& startGap = 20, const size_t& endGap = 3, const size_t& newlineGap = 0, const std::string& alignment = LEFT_STR, const bool& hideTableBackground = false) {
-
+    
     size_t lineHeight = 16;
     size_t fontSize = 16;
     size_t xMax = tsl::cfg::FramebufferWidth - 95;
-
+    
     auto sectionTextColor = tsl::gfx::Renderer::a(tsl::sectionTextColor);
     auto infoTextColor = tsl::gfx::Renderer::a(tsl::infoTextColor);
-
+    
     size_t totalHeight = lineHeight * sectionLines.size() + newlineGap * (sectionLines.size() - 1) + endGap;
-
+    
     // Precompute all y-offsets for sections and info lines
     std::vector<s32> yOffsets(sectionLines.size());
     for (size_t i = 0; i < sectionLines.size(); ++i) {
         yOffsets[i] = startGap + (i * (lineHeight + newlineGap));
     }
-
+    
     // Precompute all x-offsets for info lines based on alignment
     std::vector<int> infoXOffsets(infoLines.size());
     std::vector<float> infoStringWidths(infoLines.size());
-
+    
     // Precompute string widths using the provided renderer instance in the lambda
     for (size_t i = 0; i < infoLines.size(); ++i) {
         infoStringWidths[i] = 0.0f;  // Initialize with a default value
     }
-
+    
     // Add the TableDrawer item
     list->addItem(new tsl::elm::TableDrawer([=](tsl::gfx::Renderer* renderer, s32 x, s32 y, s32 w, s32 h) mutable {
         for (size_t i = 0; i < infoLines.size(); ++i) {
             if (infoStringWidths[i] == 0.0f) {  // Calculate only if not already calculated
                 infoStringWidths[i] = renderer->calculateStringWidth(infoLines[i], fontSize, false);
             }
-
+            
             if (alignment == LEFT_STR) {
                 infoXOffsets[i] = columnOffset;
             } else if (alignment == RIGHT_STR) {
@@ -287,7 +276,7 @@ void drawTable(std::unique_ptr<tsl::elm::List>& list, const std::vector<std::str
                 infoXOffsets[i] = columnOffset + (xMax - infoStringWidths[i]) / 2;
             }
         }
-
+        
         for (size_t i = 0; i < sectionLines.size(); ++i) {
             renderer->drawString(sectionLines[i].c_str(), false, x + 12, y + yOffsets[i], fontSize, sectionTextColor);
             renderer->drawString(infoLines[i].c_str(), false, x + infoXOffsets[i], y + yOffsets[i], fontSize, infoTextColor);
@@ -534,7 +523,7 @@ void addPackageInfo(std::unique_ptr<tsl::elm::List>& list, auto& packageHeader, 
  * @return True if the path contains dangerous combinations, otherwise false.
  */
 bool isDangerousCombination(const std::string& patternPath) {
-    const std::vector<std::string> protectedFolders = {
+    static const std::vector<std::string> protectedFolders = {
         "sdmc:/Nintendo/",
         "sdmc:/emuMMC/",
         "sdmc:/atmosphere/",
@@ -543,120 +532,62 @@ bool isDangerousCombination(const std::string& patternPath) {
         "sdmc:/config/",
         ROOT_PATH
     };
-    const std::vector<std::string> ultraProtectedFolders = {
+    static const std::vector<std::string> ultraProtectedFolders = {
         "sdmc:/Nintendo/",
         "sdmc:/emuMMC/"
     };
-    
-    // List of obviously dangerous patterns
-    const std::vector<std::string> dangerousCombinationPatterns = {
+    static const std::vector<std::string> dangerousCombinationPatterns = {
         "*",         // Deletes all files/directories in the current directory
         "*/"         // Deletes all files/directories in the current directory
     };
-    
-    // List of obviously dangerous patterns
-    const std::vector<std::string> dangerousPatterns = {
+    static const std::vector<std::string> dangerousPatterns = {
         "..",     // Attempts to traverse to parent directories
         "~"       // Represents user's home directory, can be dangerous if misused
     };
-    
-    // Check if the patternPath is an ultra protected folder
-    for (const std::string& ultraProtectedFolder : ultraProtectedFolders) {
-        if (patternPath.find(ultraProtectedFolder) == 0)
-            return true; // Pattern path is an ultra protected folder
+
+    // Check ultra-protected folders
+    for (const auto& folder : ultraProtectedFolders) {
+        if (patternPath.find(folder) == 0) {
+            return true; // Path is an ultra-protected folder
+        }
     }
-    
-    // Check if the patternPath is a protected folder
-    std::string relativePath, pathSegment;
-    std::vector<std::string> pathSegments;
-    
-    for (const std::string& protectedFolder : protectedFolders) {
-        if (patternPath == protectedFolder)
-            return true; // Pattern path is a protected folder
-        
-        // Check if the patternPath starts with a protected folder and includes a dangerous pattern
-        if (patternPath.find(protectedFolder) == 0) {
-            relativePath = patternPath.substr(protectedFolder.size());
-            
-            // Split the relativePath by '/' to handle multiple levels of wildcards
-            pathSegments.clear();
-            pathSegment = "";
-            
-            for (char c : relativePath) {
-                if (c == '/') {
-                    if (!pathSegment.empty()) {
-                        pathSegments.push_back(pathSegment);
-                        pathSegment.clear();
-                    }
-                } else
-                    pathSegment += c;
-            }
-            
-            if (!pathSegment.empty())
-                pathSegments.push_back(pathSegment);
-            
-            for (const std::string& pathSegment : pathSegments) {
-                // Check if the pathSegment includes a dangerous pattern
-                for (const std::string& dangerousPattern : dangerousPatterns) {
-                    if (pathSegment.find(dangerousPattern) != std::string::npos)
-                        return true; // Pattern path includes a dangerous pattern
+
+    // Check protected folders and dangerous patterns
+    for (const auto& folder : protectedFolders) {
+        if (patternPath == folder) {
+            return true; // Path is a protected folder
+        }
+        if (patternPath.find(folder) == 0) {
+            std::string relativePath = patternPath.substr(folder.size());
+            for (const auto& pattern : dangerousPatterns) {
+                if (relativePath.find(pattern) != std::string::npos) {
+                    return true; // Relative path contains a dangerous pattern
                 }
             }
-            pathSegments.clear();
-        }
-        
-        // Check if the patternPath is a combination of a protected folder and a dangerous pattern
-        for (const std::string& dangerousPattern : dangerousCombinationPatterns) {
-            if (patternPath == protectedFolder + dangerousPattern)
-                return true; // Pattern path is a protected folder combined with a dangerous pattern
-        }
-    }
-    
-    // Check if the patternPath is a dangerous pattern
-    if (patternPath.find(ROOT_PATH) == 0) {
-        std::string relativePath = patternPath.substr(6); // Remove ROOT_PATH
-        
-        // Split the relativePath by '/' to handle multiple levels of wildcards
-        std::vector<std::string> pathSegments;
-        std::string pathSegment;
-        
-        for (char c : relativePath) {
-            if (c == '/') {
-                if (!pathSegment.empty()) {
-                    pathSegments.push_back(pathSegment);
-                    pathSegment.clear();
+            for (const auto& pattern : dangerousCombinationPatterns) {
+                if (patternPath == folder + pattern) {
+                    return true; // Path is a protected folder combined with a dangerous pattern
                 }
-            } else
-                pathSegment += c;
-        }
-        
-        if (!pathSegment.empty())
-            pathSegments.push_back(pathSegment);
-        
-        for (const std::string& pathSegment : pathSegments) {
-            // Check if the pathSegment includes a dangerous pattern
-            for (const std::string& dangerousPattern : dangerousPatterns) {
-                if (pathSegment == dangerousPattern)
-                    return true; // Pattern path is a dangerous pattern
             }
         }
-        pathSegments.clear();
     }
-    
-    // Check if the patternPath includes a wildcard at the root level
-    if (patternPath.find(":/") != std::string::npos) {
-        std::string ROOT_PATH = patternPath.substr(0, patternPath.find(":/") + 2);
-        if (ROOT_PATH.find('*') != std::string::npos)
-            return true; // Pattern path includes a wildcard at the root level
-    }
-    
-    // Check if the provided path matches any dangerous patterns
-    for (const std::string& pattern : dangerousPatterns) {
-        if (patternPath.find(pattern) != std::string::npos)
+
+    // Check dangerous patterns in general
+    for (const auto& pattern : dangerousPatterns) {
+        if (patternPath.find(pattern) != std::string::npos) {
             return true; // Path contains a dangerous pattern
+        }
     }
-    
-    return false; // Pattern path is not a protected folder, a dangerous pattern, or includes a wildcard at the root level
+
+    // Check wildcard at root level
+    if (patternPath.find(":/") != std::string::npos) {
+        std::string rootPath = patternPath.substr(0, patternPath.find(":/") + 2);
+        if (rootPath.find('*') != std::string::npos) {
+            return true; // Root path contains a wildcard
+        }
+    }
+
+    return false; // No dangerous combinations found
 }
 
 
@@ -783,7 +714,7 @@ void populateSelectedItemsList(const std::string& sourceType, const std::string&
  * @param replacement The string to replace the placeholder with.
  * @return The input string with placeholders replaced by the replacement string.
  */
-std::string replacePlaceholder(const std::string& input, const std::string& placeholder, const std::string& replacement) {
+inline std::string replacePlaceholder(const std::string& input, const std::string& placeholder, const std::string& replacement) {
     size_t pos = input.find(placeholder);
     if (pos == std::string::npos) {
         return input;  // Returns original string directly if no placeholder is found
@@ -1146,7 +1077,7 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
  */
 void interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& commands, const std::string& packagePath="", const std::string& selectedCommand="") {
 
-    auto settingsData = getParsedDataFromIniFile(SETTINGS_CONFIG_INI_PATH);
+    auto settingsData = getParsedDataFromIniFile(ULTRAHAND_CONFIG_INI_PATH);
     if (settingsData.count(ULTRAHAND_PROJECT_NAME) > 0) {
         auto& ultrahandSection = settingsData[ULTRAHAND_PROJECT_NAME];
         if (settingsData.count(ULTRAHAND_PROJECT_NAME) > 0) {
@@ -1220,12 +1151,12 @@ void interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
             commands.erase(commands.begin()); // Remove processed command
             continue;
         }
-
+        
         if (!commandSuccess && inTrySection){
             commands.erase(commands.begin()); // Remove processed command
             continue;
         }
-
+        
         if ((inEristaSection && !inMarikoSection && usingErista) || (!inEristaSection && inMarikoSection && usingMariko) || (!inEristaSection && !inMarikoSection)) {
             if (!inTrySection || (commandSuccess && inTrySection)) {
 
@@ -1694,14 +1625,14 @@ std::condition_variable queueCondition;
 std::atomic<bool> interpreterThreadExit{false};
 
 
-void clearInterpreterFlags(bool state = false) {
+inline void clearInterpreterFlags(bool state = false) {
     abortDownload.store(state, std::memory_order_release);
     abortUnzip.store(state, std::memory_order_release);
     abortFileOp.store(state, std::memory_order_release);
     abortCommand.store(state, std::memory_order_release);
 }
 
-void resetPercentages() {
+inline void resetPercentages() {
     downloadPercentage.store(-1, std::memory_order_release);
     unzipPercentage.store(-1, std::memory_order_release);
     copyPercentage.store(-1, std::memory_order_release);
@@ -1765,7 +1696,7 @@ void closeInterpreterThread() {
 
 void startInterpreterThread(int stackSize = 0x8000) {
 
-    std::string interpreterHeap = parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "interpreter_heap");
+    std::string interpreterHeap = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "interpreter_heap");
     if (!interpreterHeap.empty())
         stackSize = std::stoi(interpreterHeap, nullptr, 16);  // Convert from base 16
 
