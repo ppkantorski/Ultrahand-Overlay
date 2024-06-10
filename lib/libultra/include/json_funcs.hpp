@@ -172,7 +172,7 @@ std::string replaceJsonPlaceholder(const std::string& arg, const std::string& co
 
 
 // Function to get a string from a JSON object
-const char* getStringFromJson(const json_t* root, const char* key) {
+inline const char* getStringFromJson(const json_t* root, const char* key) {
     const json_t* value = json_object_get(root, key);
     if (value && json_is_string(value)) {
         return json_string_value(value);
