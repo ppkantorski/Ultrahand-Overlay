@@ -32,7 +32,7 @@
  * @param entry The entry to be compared against the elements in `itemsList`.
  * @param itemsList The vector of strings from which matching entries will be removed.
  */
-void removeEntryFromList(const std::string& entry, std::vector<std::string>& itemsList) {
+inline void removeEntryFromList(const std::string& entry, std::vector<std::string>& itemsList) {
     itemsList.erase(std::remove_if(itemsList.begin(), itemsList.end(), [&](const std::string& item) {
         return item.compare(0, entry.length(), entry) == 0;
     }), itemsList.end());
@@ -89,4 +89,33 @@ std::string getEntryFromListFile(const std::string& listPath, size_t listIndex) 
     }
 
     return line;
+}
+
+/**
+ * @brief Splits a string into a vector of strings using a delimiter.
+ *
+ * This function splits the input string into multiple strings using the specified delimiter.
+ *
+ * @param str The input string to split.
+ * @return A vector of strings containing the split values.
+ */
+std::vector<std::string> stringToList(const std::string& str) {
+    std::vector<std::string> result;
+    
+    // Check if the input string starts and ends with '(' and ')' or '[' and ']'
+    if ((str.front() == '(' && str.back() == ')') || (str.front() == '[' && str.back() == ']')) {
+        // Remove the parentheses or brackets
+        std::string values = str.substr(1, str.size() - 2);
+        
+        // Use a stringstream to split the string on commas
+        std::stringstream ss(values);
+        std::string item;
+        
+        while (std::getline(ss, item, ',')) {
+            // Trim leading and trailing spaces from each token
+            result.push_back(removeQuotes(trim(item)));
+        }
+    }
+    
+    return result;
 }
