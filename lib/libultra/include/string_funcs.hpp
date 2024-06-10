@@ -35,7 +35,7 @@
 //}
 
 // Function to remove invalid characters from file names
-std::string cleanFileName(const std::string& fileName) {
+inline std::string cleanFileName(const std::string& fileName) {
     std::string cleanedFileName = fileName;
     cleanedFileName.erase(std::remove_if(cleanedFileName.begin(), cleanedFileName.end(), [](char c) {
         return !(std::isalnum(c) || std::isspace(c) || c == '-' || c == '_');
@@ -44,7 +44,7 @@ std::string cleanFileName(const std::string& fileName) {
 }
 
 // Function to clean directory names by removing invalid characters
-std::string cleanDirectoryName(const std::string& name) {
+inline std::string cleanDirectoryName(const std::string& name) {
     std::string cleanedName = name;
     cleanedName.erase(std::remove_if(cleanedName.begin(), cleanedName.end(), [](char c) {
         return !(std::isalnum(c) || std::isspace(c) || c == '-' || c == '_');
@@ -61,7 +61,7 @@ std::string cleanDirectoryName(const std::string& name) {
  * @param str The input string to trim.
  * @return The trimmed string.
  */
-std::string trim(const std::string& str) {
+inline std::string trim(const std::string& str) {
     size_t first = str.find_first_not_of(" \t\n\r\f\v");
     if (first == std::string::npos)
         return "";
@@ -81,7 +81,7 @@ std::string trim(const std::string& str) {
  * @param str The input string to remove white spaces from.
  * @return The string with white spaces removed.
  */
-std::string removeWhiteSpaces(const std::string& str) {
+inline std::string removeWhiteSpaces(const std::string& str) {
     std::string result;
     result.reserve(str.size()); // Reserve space for the result to avoid reallocations
     
@@ -102,7 +102,7 @@ std::string removeWhiteSpaces(const std::string& str) {
  * @param str The input string to remove quotes from.
  * @return The string with quotes removed.
  */
-std::string removeQuotes(const std::string& str) {
+inline std::string removeQuotes(const std::string& str) {
     if (str.size() >= 2) {
         char frontQuote = str.front();
         char backQuote = str.back();
@@ -122,7 +122,7 @@ std::string removeQuotes(const std::string& str) {
  * @param input The input string to process.
  * @return The string with multiple slashes replaced.
  */
-std::string replaceMultipleSlashes(const std::string& input) {
+inline std::string replaceMultipleSlashes(const std::string& input) {
     std::string output;
     output.reserve(input.size()); // Reserve space for the output string
     
@@ -151,7 +151,7 @@ std::string replaceMultipleSlashes(const std::string& input) {
  * @param pathPattern The input string representing a path pattern.
  * @return The string with the leading slash removed.
  */
-std::string_view removeLeadingSlash(const std::string_view& pathPattern) {
+inline std::string_view removeLeadingSlash(const std::string_view& pathPattern) {
     if (!pathPattern.empty() && pathPattern[0] == '/') {
         return pathPattern.substr(1);
     }
@@ -166,7 +166,7 @@ std::string_view removeLeadingSlash(const std::string_view& pathPattern) {
  * @param pathPattern The input string representing a path pattern.
  * @return The string with the trailing slash removed.
  */
-std::string removeEndingSlash(const std::string& pathPattern) {
+inline std::string removeEndingSlash(const std::string& pathPattern) {
     if (!pathPattern.empty() && pathPattern.back() == '/') {
         return pathPattern.substr(0, pathPattern.length() - 1);
     }
@@ -182,7 +182,7 @@ std::string removeEndingSlash(const std::string& pathPattern) {
  * @param path The input path string to preprocess.
  * @return The preprocessed path string.
  */
-std::string preprocessPath(const std::string& path, const std::string& packagePath = "") {
+inline std::string preprocessPath(const std::string& path, const std::string& packagePath = "") {
     std::string formattedPath = replaceMultipleSlashes(removeQuotes(path));
 
     // Replace "./" at the beginning of the path with the packagePath
@@ -208,7 +208,7 @@ std::string preprocessPath(const std::string& path, const std::string& packagePa
  * @param path The input URL string to preprocess.
  * @return The preprocessed URL string.
  */
-std::string preprocessUrl(const std::string& path) {
+inline std::string preprocessUrl(const std::string& path) {
     std::string formattedPath = removeQuotes(path);
     if ((formattedPath.compare(0, 7, "http://") == 0) || (formattedPath.compare(0, 8, "https://") == 0)) {
         return formattedPath;
@@ -225,7 +225,7 @@ std::string preprocessUrl(const std::string& path) {
  * @param filename The input filename from which to drop the extension.
  * @return The filename without the extension.
  */
-std::string dropExtension(std::string filename) {
+inline std::string dropExtension(std::string filename) {
     size_t lastDotPos = filename.find_last_of(".");
     if (lastDotPos != std::string::npos) {
         filename.resize(lastDotPos); // Resize the string to remove the extension
@@ -242,7 +242,7 @@ std::string dropExtension(std::string filename) {
  * @param prefix The prefix to check for.
  * @return True if the string starts with the prefix, false otherwise.
  */
-bool startsWith(const std::string& str, const std::string& prefix) {
+inline bool startsWith(const std::string& str, const std::string& prefix) {
     return str.compare(0, prefix.length(), prefix) == 0;
 }
 
@@ -254,7 +254,7 @@ bool startsWith(const std::string& str, const std::string& prefix) {
  * @param path The path to check.
  * @return True if the path is a directory, false otherwise.
  */
-bool isDirectory(const std::string& path) {
+inline bool isDirectory(const std::string& path) {
     struct stat pathStat;
     if (stat(path.c_str(), &pathStat) == 0) {
         return S_ISDIR(pathStat.st_mode);
@@ -272,7 +272,7 @@ bool isDirectory(const std::string& path) {
  * @param path The path to check.
  * @return True if the path is a file, false otherwise.
  */
-bool isFile(const std::string& path) {
+inline bool isFile(const std::string& path) {
     struct stat pathStat;
     if (stat(path.c_str(), &pathStat) == 0) {
         return S_ISREG(pathStat.st_mode);
@@ -289,48 +289,14 @@ bool isFile(const std::string& path) {
  * @param path The path to check.
  * @return True if the path points to a file or directory, false otherwise.
  */
-bool isFileOrDirectory(const std::string& path) {
+inline bool isFileOrDirectory(const std::string& path) {
     struct stat buffer;
     return (stat(path.c_str(), &buffer) == 0);
 }
 
 
 
-/**
- * @brief Splits a string into a vector of strings using a delimiter.
- *
- * This function splits the input string into multiple strings using the specified delimiter.
- *
- * @param str The input string to split.
- * @return A vector of strings containing the split values.
- */
-std::vector<std::string> stringToList(const std::string& str) {
-    std::vector<std::string> result;
-    
-    // Check if the input string starts and ends with '(' and ')' or '[' and ']'
-    if ((str.front() == '(' && str.back() == ')') || (str.front() == '[' && str.back() == ']')) {
-        // Remove the parentheses
-        std::string values = str.substr(1, str.size() - 2);
-        
-        // Replace all commas with spaces for easier tokenization
-        std::replace(values.begin(), values.end(), ',', ' ');
-        
-        std::istringstream ss(values);
-        
-        // Use std::copy to directly copy tokens into the result vector
-        std::copy(std::istream_iterator<std::string>(ss),
-                  std::istream_iterator<std::string>(),
-                  std::back_inserter(result));
-        
-        // Remove leading and trailing spaces from each token
-        for (std::string& token : result) {
-            token.erase(token.find_last_not_of(" \t\r\n") + 1);
-            token.erase(0, token.find_first_not_of(" \t\r\n"));
-        }
-    }
-    
-    return result;
-}
+
 
 
 
@@ -343,7 +309,7 @@ std::vector<std::string> stringToList(const std::string& str) {
  * @return The lowercase version of the input string.
  */
 
-std::string stringToLowercase(const std::string& str) {
+inline std::string stringToLowercase(const std::string& str) {
     std::string result = str;
     std::transform(result.begin(), result.end(), result.begin(),
                    [](unsigned char c) { return std::tolower(c); });
@@ -361,7 +327,7 @@ std::string stringToLowercase(const std::string& str) {
  * @param desiredWidth The desired width of the formatted string (default is 4).
  * @return A formatted priority string.
  */
-std::string formatPriorityString(const std::string& priority, int desiredWidth = 4) {
+inline std::string formatPriorityString(const std::string& priority, int desiredWidth = 4) {
     std::string formattedString;
     int priorityLength = priority.length();
     
@@ -386,7 +352,7 @@ std::string formatPriorityString(const std::string& priority, int desiredWidth =
  * @param input The input string from which to remove the tag.
  * @return The input string with everything after the first '?' character removed.
  */
-std::string removeTag(const std::string &input) {
+inline std::string removeTag(const std::string &input) {
     size_t pos = input.find('?');
     if (pos != std::string::npos) {
         return input.substr(0, pos);
@@ -397,7 +363,7 @@ std::string removeTag(const std::string &input) {
 
 
 // This will take a string like "v1.3.5-abasdfasdfa" and output "1.3.5". string could also look like "test-1.3.5-1" or "v1.3.5" and we will only want "1.3.5"
-std::string cleanVersionLabel(const std::string& input) {
+inline std::string cleanVersionLabel(const std::string& input) {
     std::string versionLabel;
     versionLabel.reserve(input.size()); // Reserve space for the output string
 
@@ -418,7 +384,7 @@ std::string cleanVersionLabel(const std::string& input) {
 }
 
 
-std::string extractTitle(const std::string& input) {
+inline std::string extractTitle(const std::string& input) {
     size_t spacePos = input.find(' '); // Find the position of the first space
     
     if (spacePos != std::string::npos) {
@@ -431,7 +397,7 @@ std::string extractTitle(const std::string& input) {
 }
 
 
-std::string removeFilename(const std::string& path) {
+inline std::string removeFilename(const std::string& path) {
     size_t found = path.find_last_of('/');
     if (found != std::string::npos) {
         return path.substr(0, found + 1);
