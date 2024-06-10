@@ -79,6 +79,8 @@ bool progressAnimation = false;
 bool disableTransparency = false;
 bool useOpaqueScreenshots = false;
 
+bool onTrackBar = false;
+
 /**
  * @brief Shutdown modes for the Ultrahand-Overlay project.
  *
@@ -113,10 +115,10 @@ bool useOpaqueScreenshots = false;
 #define KEY_SR HidNpadButton_AnySR
 #define KEY_LSTICK HidNpadButton_StickL
 #define KEY_RSTICK HidNpadButton_StickR
-#define KEY_UP (HidNpadButton_Up | HidNpadButton_StickLUp | HidNpadButton_StickRUp)
-#define KEY_DOWN (HidNpadButton_Down | HidNpadButton_StickLDown | HidNpadButton_StickRDown)
-#define KEY_LEFT (HidNpadButton_Left | HidNpadButton_StickLLeft | HidNpadButton_StickRLeft)
-#define KEY_RIGHT (HidNpadButton_Right | HidNpadButton_StickLRight | HidNpadButton_StickRRight)
+#define KEY_UP HidNpadButton_AnyUp
+#define KEY_DOWN HidNpadButton_AnyDown
+#define KEY_LEFT HidNpadButton_AnyLeft
+#define KEY_RIGHT HidNpadButton_AnyRight
 
 
 // Define a mask with all possible key flags
@@ -161,7 +163,26 @@ bool updateMenuCombos = false;
 //std::string highlightColor2Str = "#88FFFF";;
 
 
-
+//std::chrono::milliseconds interpolateKeyEventInterval(std::chrono::milliseconds duration) {
+//    using namespace std::chrono;
+//
+//    const milliseconds threshold1 = milliseconds(2000);
+//    const milliseconds threshold2 = milliseconds(3000);
+//
+//    const milliseconds interval1 = milliseconds(80);
+//    const milliseconds interval2 = milliseconds(20);
+//    const milliseconds interval3 = milliseconds(10);
+//
+//    if (duration > threshold2) {
+//        return interval3;
+//    } else if (duration > threshold1) {
+//        double factor = double(duration.count() - threshold1.count()) / double(threshold2.count() - threshold1.count());
+//        return milliseconds(static_cast<int>(interval2.count() + factor * (interval3.count() - interval2.count())));
+//    } else {
+//        double factor = double(duration.count()) / double(threshold1.count());
+//        return milliseconds(static_cast<int>(interval1.count() + factor * (interval2.count() - interval1.count())));
+//    }
+//}
 
 //float customRound(float num) {
 //    if (num >= 0) {
@@ -719,6 +740,7 @@ std::map<std::string, std::string> defaultThemeSettingsMap = {
     {"seperator_color", "#404040"},
     {"battery_color", "#ffff45"},
     {"text_color", whiteColor},
+    {"header_text_color", whiteColor},
     {"table_bg_color", "#303030"},
     {"table_bg_alpha", "10"},
     {"table_section_text_color", whiteColor},
@@ -767,38 +789,6 @@ inline bool isValidHexColor(const std::string& hexColor) {
     return true;
 }
 
-//
-//inline float calculateStringWidth2(const std::string& str, int fontSize, bool fixedWidthNumbers = true) {
-//    
-//    float totalWidth = 0;
-//    float letterWidth;
-//    
-//    for (char letter : str) {
-//        // Lookup the width of the current character
-//        if (!fixedWidthNumbers && isNumericCharacter(letter))
-//            letterWidth = numericCharacterWidths[letter];
-//        else
-//            letterWidth = characterWidths[letter];
-//        if (letterWidth == 0) {
-//            //letterWidth = 0.33; // default width
-//            letterWidth = std::stof(DEFAULT_CHAR_WIDTH);
-//        }
-//        
-//        // Accumulate the width
-//        totalWidth += letterWidth;
-//    }
-//    
-//    // Adjust the total width based on the font size
-//    return (totalWidth * fontSize);
-//}
-//
-//inline float calculateCharacterWidth(char character, bool fixedWidthNumbers) {
-//    if (!fixedWidthNumbers && isNumericCharacter(character)) {
-//        return numericCharacterWidths[character];
-//    } else {
-//        return characterWidths[character];
-//    }
-//}
 
 
 inline float calculateAmplitude(float x, float peakDurationFactor = 0.25f) {
@@ -972,7 +962,7 @@ void thermalstatusExit(void) {
     tcExit();
 }
 
-bool thermalstatusGetDetailsPCB(s32* temperature) {
+inline bool thermalstatusGetDetailsPCB(s32* temperature) {
     static std::chrono::steady_clock::time_point last_call;
     auto now = std::chrono::steady_clock::now();
 
@@ -997,7 +987,7 @@ bool thermalstatusGetDetailsPCB(s32* temperature) {
     return false;
 }
 
-bool thermalstatusGetDetailsSOC(s32* temperature) {
+inline bool thermalstatusGetDetailsSOC(s32* temperature) {
     static std::chrono::steady_clock::time_point last_call;
     auto now = std::chrono::steady_clock::now();
 
@@ -1084,10 +1074,10 @@ static std::string datetimeFormat = removeQuotes(DEFAULT_DT_FORMAT);
 static bool hideClock, hideBattery, hidePCBTemp, hideSOCTemp;
 
 void reinitializeWidgetVars() {
-    hideClock = (parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_clock") != FALSE_STR);
-    hideBattery = (parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_battery") != FALSE_STR);
-    hideSOCTemp = (parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_soc_temp") != FALSE_STR);
-    hidePCBTemp = (parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_pcb_temp") != FALSE_STR);
+    hideClock = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_clock") != FALSE_STR);
+    hideBattery = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_battery") != FALSE_STR);
+    hideSOCTemp = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_soc_temp") != FALSE_STR);
+    hidePCBTemp = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_pcb_temp") != FALSE_STR);
 }
 
 static bool cleanVersionLabels, hideOverlayVersions, hidePackageVersions;
@@ -1096,9 +1086,9 @@ static std::string loaderInfo = envGetLoaderInfo();
 static std::string versionLabel;
 
 void reinitializeVersionLabels() {
-    cleanVersionLabels = (parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "clean_version_labels") != FALSE_STR);
-    hideOverlayVersions = (parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_overlay_versions") != FALSE_STR);
-    hidePackageVersions = (parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_package_versions") != FALSE_STR);
+    cleanVersionLabels = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "clean_version_labels") != FALSE_STR);
+    hideOverlayVersions = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_overlay_versions") != FALSE_STR);
+    hidePackageVersions = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_package_versions") != FALSE_STR);
     versionLabel = std::string(APP_VERSION) + "   (" + extractTitle(loaderInfo) + " " + (cleanVersionLabels ? "" : "v") + cleanVersionLabel(loaderInfo) + ")";
     //versionLabel = (cleanVersionLabels) ? std::string(APP_VERSION) : (std::string(APP_VERSION) + "   (" + extractTitle(loaderInfo) + " v" + cleanVersionLabel(loaderInfo) + ")");
 }
@@ -1183,7 +1173,7 @@ namespace tsl {
         
     };
     
-    Color GradientColor(float temperature) {
+    inline Color GradientColor(float temperature) {
         // Ensure temperature is within the range [0, 100]
         temperature = std::max(0.0f, std::min(100.0f, temperature)); // Celsius
         
@@ -1229,7 +1219,7 @@ namespace tsl {
     }
 
 
-    Color RGB888(const std::string& hexColor, const std::string& defaultHexColor = whiteColor, size_t alpha = 15) {
+    inline Color RGB888(const std::string& hexColor, const std::string& defaultHexColor = whiteColor, size_t alpha = 15) {
         std::string validHex = hexColor.empty() || hexColor[0] != '#' ? hexColor : hexColor.substr(1);
         
         if (!isValidHexColor(validHex)) {
@@ -1245,7 +1235,7 @@ namespace tsl {
     }
 
 
-    std::tuple<float, float, float> hexToRGB444Floats(const std::string& hexColor, const std::string& defaultHexColor = "#FFFFFF") {
+    inline std::tuple<float, float, float> hexToRGB444Floats(const std::string& hexColor, const std::string& defaultHexColor = "#FFFFFF") {
         const char* validHex = hexColor.c_str();
         if (validHex[0] == '#') validHex++;
     
@@ -1300,6 +1290,7 @@ namespace tsl {
     
     static Color defaultBackgroundColor = RGB888(blackColor, blackColor, defaultBackgroundAlpha);
     static Color defaultTextColor = RGB888(whiteColor);
+    static Color headerTextColor = RGB888(whiteColor);
     static Color clockColor = RGB888(whiteColor);
     static Color batteryColor = RGB888("#ffff45");
     static Color versionTextColor = RGB888("#AAAAAA");
@@ -1370,6 +1361,7 @@ namespace tsl {
             defaultBackgroundAlpha = getAlpha("bg_alpha");
             defaultBackgroundColor = getColor("bg_color", defaultBackgroundAlpha);
             defaultTextColor = getColor("text_color");
+            headerTextColor = getColor("header_text_color");
             clockColor = getColor("clock_color");
             batteryColor = getColor("battery_color");
     
@@ -1470,14 +1462,14 @@ namespace tsl {
          * Ordered as they should be displayed
          */
         constexpr std::array<KeyInfo, 18> KEYS_INFO = {{
-            { HidNpadButton_L, "L", "\uE0A4" }, { HidNpadButton_R, "R", "\uE0A5" },
-            { HidNpadButton_ZL, "ZL", "\uE0A6" }, { HidNpadButton_ZR, "ZR", "\uE0A7" },
-            { HidNpadButton_AnySL, "SL", "\uE0A8" }, { HidNpadButton_AnySR, "SR", "\uE0A9" },
-            { HidNpadButton_Left, "DLEFT", "\uE07B" }, { HidNpadButton_Up, "DUP", "\uE079" },
-            { HidNpadButton_Right, "DRIGHT", "\uE07C" }, { HidNpadButton_Down, "DDOWN", "\uE07A" },
-            { HidNpadButton_A, "A", "\uE0A0" }, { HidNpadButton_B, "B", "\uE0A1" },
-            { HidNpadButton_X, "X", "\uE0A2" }, { HidNpadButton_Y, "Y", "\uE0A3" },
-            { HidNpadButton_StickL, "LS", "\uE08A" }, { HidNpadButton_StickR, "RS", "\uE08B" },
+            { HidNpadButton_L, "L", "\uE0E4" }, { HidNpadButton_R, "R", "\uE0E5" },
+            { HidNpadButton_ZL, "ZL", "\uE0E6" }, { HidNpadButton_ZR, "ZR", "\uE0E7" },
+            { HidNpadButton_AnySL, "SL", "\uE0E8" }, { HidNpadButton_AnySR, "SR", "\uE0E9" },
+            { HidNpadButton_Left, "DLEFT", "\uE0ED" }, { HidNpadButton_Up, "DUP", "\uE0EB" },
+            { HidNpadButton_Right, "DRIGHT", "\uE0EE" }, { HidNpadButton_Down, "DDOWN", "\uE0EC" },
+            { HidNpadButton_A, "A", "\uE0E0" }, { HidNpadButton_B, "B", "\uE0E1" },
+            { HidNpadButton_X, "X", "\uE0E2" }, { HidNpadButton_Y, "Y", "\uE0E3" },
+            { HidNpadButton_StickL, "LS", "\uE08E" }, { HidNpadButton_StickR, "RS", "\uE08B" },
             { HidNpadButton_Minus, "MINUS", "\uE0B6" }, { HidNpadButton_Plus, "PLUS", "\uE0B5" }
         }};
         
@@ -1595,17 +1587,26 @@ namespace tsl {
         static std::vector<std::string> split(const std::string& str, char delim = ' ') {
             std::vector<std::string> out;
             
-            size_t current, previous = 0;
-            current = str.find(delim);
-            while (current != std::string::npos) {
-                out.push_back(str.substr(previous, current - previous));
-                previous = current + 1;
-                current = str.find(delim, previous);
+            if (str.empty()) {
+                return out;
             }
-            out.push_back(str.substr(previous, current - previous));
             
+            // Reserve space assuming the worst case where every character is a delimiter
+            out.reserve(std::count(str.begin(), str.end(), delim) + 1);
+            
+            size_t start = 0;
+            size_t end = str.find(delim);
+            
+            while (end != std::string::npos) {
+                out.emplace_back(str.substr(start, end - start));
+                start = end + 1;
+                end = str.find(delim, start);
+            }
+            out.emplace_back(str.substr(start));
+        
             return out;
         }
+
         
         namespace ini {
             
@@ -1618,7 +1619,7 @@ namespace tsl {
              * @brief Tesla config file
              */
             //static const char* TESLA_CONFIG_FILE = "/config/tesla/config.ini"; // CUSTOM MODIFICATION
-            //static const char* ULTRAHAND_CONFIG_FILE = SETTINGS_CONFIG_INI_PATH; // CUSTOM MODIFICATION
+            //static const char* ULTRAHAND_CONFIG_FILE = ULTRAHAND_CONFIG_INI_PATH; // CUSTOM MODIFICATION
             
             /**
              * @brief Parses an INI string
@@ -1670,19 +1671,24 @@ namespace tsl {
              * @param iniData Ini data
              * @return Ini string
              */
-            static std::string unparseIni(IniData const &iniData) {
-                std::string string;
+            static std::string unparseIni(const IniData &iniData) {
+                std::ostringstream oss;
                 bool addSectionGap = false;
-                for (auto &section : iniData) {
-                    if (addSectionGap)
-                        string += "\n";
-                    string += "["s + section.first + "]\n"s;
-                    for (auto &keyValue : section.second) {
-                        string += keyValue.first + "="s + keyValue.second + "\n"s;
+
+                for (const auto &section : iniData) {
+                    if (addSectionGap) {
+                        oss << '\n';
                     }
+                    oss << '[' << section.first << "]\n";
+                    for (const auto &keyValue : section.second) {
+                        oss << keyValue.first << '=' << keyValue.second << '\n';
+                    }
+                    addSectionGap = true;
                 }
-                return string;
+
+                return oss.str();
             }
+
             
             /**
              * @brief Read Tesla settings file
@@ -1763,13 +1769,14 @@ namespace tsl {
          * @param value Key string
          * @return Key code
          */
-        static u64 stringToKeyCode(const std::string &value) {
-            for (auto &keyInfo : impl::KEYS_INFO) {
+        static u64 stringToKeyCode(const std::string& value) {
+            for (const auto& keyInfo : impl::KEYS_INFO) {
                 if (strcasecmp(value.c_str(), keyInfo.name) == 0)
                     return keyInfo.key;
             }
             return 0;
         }
+        
         
         /**
          * @brief Decodes a combo string into key codes
@@ -1792,15 +1799,22 @@ namespace tsl {
          * @return Combo string
          */
         static std::string keysToComboString(u64 keys) {
-            std::string str;
-            for (auto &keyInfo : impl::KEYS_INFO) {
+            if (keys == 0) return ""; // Early return for empty input
+        
+            std::ostringstream oss;
+            bool first = true;
+        
+            for (const auto& keyInfo : impl::KEYS_INFO) {
                 if (keys & keyInfo.key) {
-                    if (!str.empty())
-                        str.append("+");
-                    str.append(keyInfo.name);
+                    if (!first) {
+                        oss << "+";
+                    }
+                    oss << keyInfo.name;
+                    first = false;
                 }
             }
-            return str;
+        
+            return oss.str();
         }
         
     }
@@ -1830,7 +1844,7 @@ namespace tsl {
              * @param c Original color
              * @return Color with applied opacity
              */
-            static Color a(const Color &c) {
+            inline static Color a(const Color &c) {
                 u8 alpha = (disableTransparency && useOpaqueScreenshots) ? 0xF : static_cast<u8>(c.a * Renderer::s_opacity);
                 return (c.rgba & 0x0FFF) | (alpha << 12);
             }
@@ -1962,7 +1976,7 @@ namespace tsl {
                 }
             }
             
-            void drawCircle(s32 centerX, s32 centerY, u16 radius, bool filled, Color color) {
+            inline void drawCircle(s32 centerX, s32 centerY, u16 radius, bool filled, Color color) {
                 s32 x = radius;
                 s32 y = 0;
                 s32 radiusError = 0;
@@ -2003,7 +2017,7 @@ namespace tsl {
                 }
             }
 
-            void drawQuarterCircle(s32 centerX, s32 centerY, u16 radius, bool filled, Color color, int quadrant) {
+            inline void drawQuarterCircle(s32 centerX, s32 centerY, u16 radius, bool filled, Color color, int quadrant) {
                 s32 x = radius;
                 s32 y = 0;
                 s32 radiusError = 0;
@@ -2079,7 +2093,7 @@ namespace tsl {
                 }
             }
 
-            void drawBorderedRoundedRect(float x, float y, float width, float height, float thickness, float radius, Color highlightColor) {
+            inline void drawBorderedRoundedRect(float x, float y, float width, float height, float thickness, float radius, Color highlightColor) {
                 float startX = x + 4;
                 float startY = y ;
                 float adjustedWidth = width - 14+2;
@@ -2234,7 +2248,7 @@ namespace tsl {
              * @param h Bitmap height
              * @param bmp Pointer to bitmap data
              */
-            void drawBitmap(s32 x, s32 y, s32 w, s32 h, const u8 *bmp) {
+            inline void drawBitmap(s32 x, s32 y, s32 w, s32 h, const u8 *bmp) {
                 for (s32 y1 = 0; y1 < h; y1++) {
                     for (s32 x1 = 0; x1 < w; x1++) {
                         setPixelBlendSrc(x + x1, y + y1, a({ static_cast<u8>(bmp[0] >> 4), static_cast<u8>(bmp[1] >> 4), static_cast<u8>(bmp[2] >> 4), static_cast<u8>(bmp[3] >> 4) }));
@@ -2335,7 +2349,7 @@ namespace tsl {
              * @param color Text color. Use transparent color to skip drawing and only get the string's dimensions
              * @return Dimensions of drawn string
              */
-            std::pair<u32, u32> drawString(const char* string, bool monospace, float x, float y, float fontSize, Color color, ssize_t maxWidth = 0) {
+            inline std::pair<u32, u32> drawString(const char* string, bool monospace, float x, float y, float fontSize, Color color, ssize_t maxWidth = 0) {
                 float maxX = x;
                 float currX = x;
                 float currY = y;
@@ -2425,6 +2439,7 @@ namespace tsl {
             
             
             
+            
             /**
              * @brief Limit a string's length and end it with "…"
              *
@@ -2433,7 +2448,7 @@ namespace tsl {
              * @param fontSize Size of the font
              * @param maxLength Maximum length of the string in terms of width
              */
-            std::string limitStringLength(std::string string, bool monospace, float fontSize, s32 maxLength) {
+            inline std::string limitStringLength(std::string string, bool monospace, float fontSize, s32 maxLength) {
                 if (string.size() < 2) {
                     return string;
                 }
@@ -2492,7 +2507,7 @@ namespace tsl {
              *
              * @return Renderer
              */
-            static Renderer& get() {
+            inline static Renderer& get() {
                 static Renderer renderer;
                 
                 return renderer;
@@ -2503,7 +2518,7 @@ namespace tsl {
              *
              * @param opacity Opacity
              */
-            static void setOpacity(float opacity) {
+            inline static void setOpacity(float opacity) {
                 opacity = std::clamp(opacity, 0.0F, 1.0F);
                 
                 Renderer::s_opacity = opacity;
@@ -2596,7 +2611,7 @@ namespace tsl {
              * @param y Y Pos
              * @return Offset
              */
-            u32 getPixelOffset(s32 x, s32 y) {
+            inline u32 getPixelOffset(s32 x, s32 y) {
                 // Check for scissoring boundaries
                 if (!this->m_scissoringStack.empty()) {
                     const auto& currScissorConfig = this->m_scissoringStack.top();
@@ -3018,7 +3033,7 @@ namespace tsl {
                 //renderer->drawRect(this->getX() + x + this->getWidth(), this->getY() + y, 4, this->getHeight(), highlightColor);
                 
                 
-                renderer->drawBorderedRoundedRect(this->getX() + x, this->getY() + y, this->getWidth(), this->getHeight(), 5, 5, highlightColor);
+                renderer->drawBorderedRoundedRect(this->getX() + x, this->getY() + y, this->getWidth(), this->getHeight(), 5, 5, a(highlightColor));
                     
                 //}
             }
@@ -3030,8 +3045,8 @@ namespace tsl {
              * @param renderer Renderer
              */
             virtual void drawFocusBackground(gfx::Renderer *renderer) {
-                if (!disableSelectionBG)
-                    renderer->drawRect(ELEMENT_BOUNDS(this), a(selectionBGColor)); // CUSTOM MODIFICATION 
+                //if (!disableSelectionBG)
+                //    renderer->drawRect(ELEMENT_BOUNDS(this), a(selectionBGColor)); // CUSTOM MODIFICATION 
                 
                 if (this->m_clickAnimationProgress > 0) {
                     this->drawClickAnimation(renderer);
@@ -3108,10 +3123,12 @@ namespace tsl {
                 }
                 //if ((disableSelectionBG && this->m_clickAnimationProgress == 0) || !disableSelectionBG) {
                 if (this->m_clickAnimationProgress == 0) {
-                    
-                    renderer->drawBorderedRoundedRect(this->getX() + x, this->getY() + y, this->getWidth(), this->getHeight(), 5, 5, highlightColor);
+                    if (!disableSelectionBG)
+                        renderer->drawRect(this->getX() + x + 4, this->getY() + y, this->getWidth() - 12, this->getHeight(), a(selectionBGColor)); // CUSTOM MODIFICATION 
+                    renderer->drawBorderedRoundedRect(this->getX() + x, this->getY() + y, this->getWidth(), this->getHeight(), 5, 5, a(highlightColor));
                 }
                 //renderer->drawRect(ELEMENT_BOUNDS(this), a(0xF000)); // This has been moved here (needs to be toggleable)
+                onTrackBar = false;
             }
             
             
@@ -3390,9 +3407,9 @@ namespace tsl {
             char PCB_temperatureStr[10];
             char SOC_temperatureStr[10];
             
-            
-    OverlayFrame(const std::string& title, const std::string& subtitle, const std::string& menuMode = "", const std::string& colorSelection = "", const std::string& pageLeftName = "", const std::string& pageRightName = "")
-        : Element(), m_title(title), m_subtitle(subtitle), m_menuMode(menuMode), m_colorSelection(colorSelection), m_pageLeftName(pageLeftName), m_pageRightName(pageRightName) {}
+                
+        OverlayFrame(const std::string& title, const std::string& subtitle, const std::string& menuMode = "", const std::string& colorSelection = "", const std::string& pageLeftName = "", const std::string& pageRightName = "")
+            : Element(), m_title(title), m_subtitle(subtitle), m_menuMode(menuMode), m_colorSelection(colorSelection), m_pageLeftName(pageLeftName), m_pageRightName(pageRightName) {}
 
             virtual ~OverlayFrame() {
                 if (this->m_contentElement != nullptr)
@@ -4020,15 +4037,15 @@ namespace tsl {
                 this->m_clearList = true;
             }
             
-            virtual Element* requestFocus(Element *oldFocus, FocusDirection direction) override {
-                Element *newFocus = nullptr;
-                
-                if (this->m_clearList || this->m_itemsToAdd.size() > 0)
+            virtual Element* requestFocus(Element* oldFocus, FocusDirection direction) override {
+                if (this->m_clearList || !this->m_itemsToAdd.empty())
                     return nullptr;
-                
+            
+                Element* newFocus = nullptr;
+            
                 if (direction == FocusDirection::None) {
-                    i = 0;
-                    
+                    size_t i = 0;
+            
                     if (oldFocus == nullptr) {
                         s32 elementHeight = 0;
                         while (elementHeight < this->m_offset && i < this->m_items.size() - 1) {
@@ -4036,54 +4053,43 @@ namespace tsl {
                             elementHeight += this->m_items[i]->getHeight();
                         }
                     }
-                    
-                    for (; i < this->m_items.size(); i++) {
+            
+                    for (; i < this->m_items.size(); ++i) {
                         newFocus = this->m_items[i]->requestFocus(oldFocus, direction);
-                        
+            
                         if (newFocus != nullptr) {
                             this->m_focusedIndex = i;
-                            
                             this->updateScrollOffset();
                             return newFocus;
                         }
                     }
-                } else {
-                    if (direction == FocusDirection::Down) {
-                        
-                        for (u16 i = this->m_focusedIndex + 1; i < this->m_items.size(); i++) {
+                } else if (direction == FocusDirection::Down) {
+                    for (size_t i = this->m_focusedIndex + 1; i < this->m_items.size(); ++i) {
+                        newFocus = this->m_items[i]->requestFocus(oldFocus, direction);
+            
+                        if (newFocus != nullptr && newFocus != oldFocus) {
+                            this->m_focusedIndex = i;
+                            this->updateScrollOffset();
+                            return newFocus;
+                        }
+                    }
+                } else if (direction == FocusDirection::Up) {
+                    if (this->m_focusedIndex > 0) {
+                        for (ssize_t i = static_cast<ssize_t>(this->m_focusedIndex) - 1; i >= 0; --i) {
+                            if (static_cast<size_t>(i) >= this->m_items.size() || this->m_items[i] == nullptr)
+                                return oldFocus;
+            
                             newFocus = this->m_items[i]->requestFocus(oldFocus, direction);
-                            
+            
                             if (newFocus != nullptr && newFocus != oldFocus) {
-                                this->m_focusedIndex = i;
-                                
+                                this->m_focusedIndex = static_cast<size_t>(i);
                                 this->updateScrollOffset();
                                 return newFocus;
                             }
                         }
-                        
-                        return oldFocus;
-                    } else if (direction == FocusDirection::Up) {
-                        if (this->m_focusedIndex > 0) {
-                            
-                            for (u16 i = this->m_focusedIndex - 1; i >= 0; i--) {
-                                if (i > this->m_items.size() || this->m_items[i] == nullptr)
-                                    return oldFocus;
-                                else
-                                    newFocus = this->m_items[i]->requestFocus(oldFocus, direction);
-                                
-                                if (newFocus != nullptr && newFocus != oldFocus) {
-                                    this->m_focusedIndex = i;
-                                    
-                                    this->updateScrollOffset();
-                                    return newFocus;
-                                }
-                            }
-                        }
-                        
-                        return oldFocus;
                     }
                 }
-                
+            
                 return oldFocus;
             }
 
@@ -4535,8 +4541,8 @@ namespace tsl {
             virtual ~CategoryHeader() {}
             
             virtual void draw(gfx::Renderer *renderer) override {
-                renderer->drawRect(this->getX()+1+1, this->getBottomBound() - 30, 3, 23, a(defaultTextColor));
-                renderer->drawString(this->m_text.c_str(), false, this->getX() + 15+1, this->getBottomBound() - 12, 15, a(defaultTextColor));
+                renderer->drawRect(this->getX()+1+1, this->getBottomBound() - 30, 3, 23, a(headerTextColor));
+                renderer->drawString(this->m_text.c_str(), false, this->getX() + 15+1, this->getBottomBound() - 12, 15, a(headerTextColor));
                 
                 //if (this->m_hasSeparator)
                 //    renderer->drawRect(this->getX(), this->getBottomBound(), this->getWidth(), 1, tsl::style::color::ColorFrame); // CUSTOM MODIFICATION
@@ -4579,25 +4585,37 @@ namespace tsl {
         };
         
         /**
-         * @brief A customizable analog trackbar going from 0% to 100% (like the brightness slider)
+         * @brief A customizable analog trackbar going from minValue to maxValue
          *
          */
         class TrackBar : public Element {
         public:
-            std::chrono::duration<long int, std::ratio<1, 1000000000>> t;
-            Color highlightColor = {0xf,0xf,0xf,0xf};
-            //alf progress;
+            std::chrono::steady_clock::time_point lastUpdate;
+            
+        
+            Color highlightColor = {0xf, 0xf, 0xf, 0xf};
             float progress;
             float counter = 0.0;
             s32 x, y;
             s32 amplitude;
+            u32 descWidth, descHeight;
+            bool usingNamedStepTrackbar = false;
             
-            /**
-             * @brief Constructor
-             *
-             * @param icon Icon shown next to the track bar
-             */
-            TrackBar(const char icon[3]) : m_icon(icon) { }
+            // Ensure the order of initialization matches the order of declaration
+            TrackBar(std::string label, std::string packagePath = "", s16 minValue = 0, s16 maxValue = 100, std::string units = "",
+                     std::function<void(std::vector<std::vector<std::string>>&&, const std::string&, const std::string&)> executeCommands = nullptr,
+                     std::vector<std::vector<std::string>> cmd = {}, const std::string& selCmd = "")
+                : m_label(label), m_packagePath(packagePath), m_minValue(minValue), m_maxValue(maxValue), m_units(units),
+                  interpretAndExecuteCommands(executeCommands), commands(std::move(cmd)), selectedCommand(selCmd) {
+
+                std::string initializedValue = parseValueFromIniSection(m_packagePath + "config.ini", m_label, "value");
+                if (!initializedValue.empty()) {
+                    m_value = static_cast<s16>(std::stoi(initializedValue)); // convert initializedValue to s16
+                }
+                if (m_value > maxValue) m_value = maxValue;
+                else if (m_value < minValue) m_value = minValue;
+                lastUpdate = std::chrono::steady_clock::now();
+            }
             
             virtual ~TrackBar() {}
             
@@ -4606,23 +4624,69 @@ namespace tsl {
             }
             
             virtual bool handleInput(u64 keysDown, u64 keysHeld, const HidTouchState &touchPos, HidAnalogStickState leftJoyStick, HidAnalogStickState rightJoyStick) override {
+                static std::chrono::milliseconds initialInterval{50}; // Initial interval between value changes (67ms)
+                static bool holding = false;
+                static std::chrono::steady_clock::time_point holdStartTime;
+                static u64 prevKeysHeld = 0;
+                u64 keysReleased = prevKeysHeld & ~keysHeld;
+                prevKeysHeld = keysHeld;
+                
+                auto now = std::chrono::steady_clock::now();
+                auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastUpdate);
+                
+                if ((keysReleased & HidNpadButton_AnyLeft) || (keysReleased & HidNpadButton_AnyRight)) {
+                    if (!m_packagePath.empty()) {
+                        setIniFileValue(m_packagePath + "config.ini", m_label, "value", std::to_string(m_value));
+                        if (interpretAndExecuteCommands) {
+                            auto commandsCopy = commands;
+                            interpretAndExecuteCommands(std::move(commandsCopy), m_packagePath, selectedCommand);
+                        }
+                    }
+                    holding = false;
+                    return true;
+                }
+                
                 if (keysHeld & HidNpadButton_AnyLeft && keysHeld & HidNpadButton_AnyRight)
                     return true;
                 
-                if (keysHeld & HidNpadButton_AnyLeft) {
-                    if (this->m_value > 0) {
-                        this->m_value--;
-                        this->m_valueChangedListener(this->m_value);
-                        return true;
+                // Check if the button is being held down
+                if (((keysHeld & HidNpadButton_AnyLeft) || (keysHeld & HidNpadButton_AnyRight)) && !(keysHeld & KEY_R)) {
+                    if (!holding) {
+                        holding = true;
+                        holdStartTime = now;
                     }
-                }
-                
-                if (keysHeld & HidNpadButton_AnyRight) {
-                    if (this->m_value < 100) {
-                        this->m_value++;
-                        this->m_valueChangedListener(this->m_value);
-                        return true;
+                    
+                    auto holdDuration = std::chrono::duration_cast<std::chrono::milliseconds>(now - holdStartTime);
+                    std::chrono::milliseconds currentInterval;
+                    if (holdDuration >= std::chrono::milliseconds(2000)) {
+                        currentInterval = std::chrono::milliseconds(5);
+                    } else if (holdDuration >= std::chrono::milliseconds(1000)) {
+                        currentInterval = std::chrono::milliseconds(20);
+                    } else {
+                        currentInterval = initialInterval;
                     }
+                    
+                    if (elapsed >= currentInterval) {
+                        if (keysHeld & HidNpadButton_AnyLeft) {
+                            if (this->m_value > m_minValue) {
+                                this->m_value--;
+                                this->m_valueChangedListener(this->m_value);
+                                lastUpdate = now;
+                                return true;
+                            }
+                        }
+                        
+                        if (keysHeld & HidNpadButton_AnyRight) {
+                            if (this->m_value < m_maxValue) {
+                                this->m_value++;
+                                this->m_valueChangedListener(this->m_value);
+                                lastUpdate = now;
+                                return true;
+                            }
+                        }
+                    }
+                } else {
+                    holding = false; // Reset holding state if no relevant key is held
                 }
                 
                 return false;
@@ -4630,19 +4694,25 @@ namespace tsl {
             
             virtual bool onTouch(TouchEvent event, s32 currX, s32 currY, s32 prevX, s32 prevY, s32 initialX, s32 initialY) override {
                 if (event == TouchEvent::Release) {
+                    if (!m_packagePath.empty()) {
+                        setIniFileValue(m_packagePath + "config.ini", m_label, "value", std::to_string(m_value));
+                        if (interpretAndExecuteCommands) {
+                            auto commandsCopy = commands;
+                            interpretAndExecuteCommands(std::move(commandsCopy), m_packagePath, selectedCommand);
+                        }
+                    }
                     this->m_interactionLocked = false;
                     return false;
                 }
                 
-                
                 if (!this->m_interactionLocked && this->inBounds(initialX, initialY)) {
                     if (currX > this->getLeftBound() + 50 && currX < this->getRightBound() && currY > this->getTopBound() && currY < this->getBottomBound()) {
-                        s16 newValue = (static_cast<float>(currX - (this->getX() + 60)) / static_cast<float>(this->getWidth() - 95)) * 100;
+                        s16 newValue = m_minValue + ((static_cast<float>(currX - (this->getX() + 60)) / static_cast<float>(this->getWidth() - 95)) * (m_maxValue - m_minValue));
                         
-                        if (newValue < 0) {
-                            newValue = 0;
-                        } else if (newValue > 100) {
-                            newValue = 100;
+                        if (newValue < m_minValue) {
+                            newValue = m_minValue;
+                        } else if (newValue > m_maxValue) {
+                            newValue = m_maxValue;
                         }
                         
                         if (newValue != this->m_value) {
@@ -4652,32 +4722,57 @@ namespace tsl {
                         
                         return true;
                     }
-                }
-                else
+                } else {
                     this->m_interactionLocked = true;
+                }
                 
                 return false;
             }
             
             virtual void draw(gfx::Renderer *renderer) override {
-                //renderer->drawRect(this->getX(), this->getY(), this->getWidth(), 1, tsl::style::color::ColorFrame);
-                //renderer->drawRect(this->getX(), this->getBottomBound(), this->getWidth(), 1, tsl::style::color::ColorFrame);
+                static float lastBottomBound;
+                u16 handlePos = (this->getWidth() - 95) * (this->m_value - m_minValue) / (m_maxValue - m_minValue);
+                renderer->drawRect(this->getX() + 60 + handlePos + 18, this->getY() + 40 + 16+2, this->getWidth() - 95 - handlePos - 16 - 1, 5, tsl::style::color::ColorFrame);
                 
-                renderer->drawString(this->m_icon, false, this->getX() + 15, this->getY() + 50, 23, a(defaultTextColor));
+                if (!this->m_focused) {
+                    renderer->drawRect(this->getX() + 60, this->getY() + 40 + 16+2, handlePos, 5, a(tsl::style::color::ColorHighlight));
+                    renderer->drawCircle(this->getX() + 62 + handlePos, this->getY() + 42 + 16+2, 16, true, a(trackBarColor));
+                    renderer->drawCircle(this->getX() + 62 + handlePos, this->getY() + 42 + 16+2, 16, false, a(tsl::style::color::ColorFrame));
+                }
                 
-                //u16 handlePos = (this->getWidth() - 95) * static_cast<half>(this->m_value) / 100;
-                u16 handlePos = (this->getWidth() - 95) * (this->m_value) / 100;
-                renderer->drawCircle(this->getX() + 60, this->getY() + 42, 2, true, a(tsl::style::color::ColorHighlight));
-                renderer->drawCircle(this->getX() + 60 + this->getWidth() - 95, this->getY() + 42, 2, true, a(tsl::style::color::ColorFrame));
-                //renderer->drawRect(this->getX() + 60 + handlePos, this->getY() + 40, this->getWidth() - 95 - handlePos, 5, tsl::style::color::ColorFrame);
-                renderer->drawRect(this->getX() + 60, this->getY() + 40, handlePos, 5, a(tsl::style::color::ColorHighlight));
+                if (!usingNamedStepTrackbar) {
+                    std::string labelPart = removeTag(this->m_label) + " ";
+                    //std::string valuePart = std::to_string(this->m_value) + this->m_units;
+                    std::string valuePart = this->m_units == "%" ? std::to_string(this->m_value) + this->m_units : std::to_string(this->m_value) + (this->m_units.empty() ? "" : " ") + this->m_units;
+                    
+                    // Measure the width of the combined label and value part
+                    std::string combinedString = labelPart + valuePart;
+                    std::tie(descWidth, descHeight) = renderer->drawString(combinedString.c_str(), false, 0, 0, 16, a(tsl::style::color::ColorTransparent));
+                    
+                    // Calculate the position for the combined label (centered)
+                    int combinedX = ((this->getX() + 60) + (this->getWidth() - 95) / 2) - (descWidth / 2);
+                    
+                    // Measure the width of the label part
+                    int labelWidth;
+                    std::tie(labelWidth, descHeight) = renderer->drawString(labelPart.c_str(), false, 0, 0, 16, a(tsl::style::color::ColorTransparent));
+                    
+                    // Draw the label part
+                    renderer->drawString(labelPart.c_str(), false, combinedX, this->getY() + 14 + 16 + 2, 16, a(defaultTextColor));
+                    
+                    // Draw the value and units part in a different color
+                    renderer->drawString(valuePart.c_str(), false, combinedX + labelWidth, this->getY() + 14 + 16 + 2, 16, a(onTextColor));
+                }
+
+
                 
-                renderer->drawCircle(this->getX() + 62 + handlePos, this->getY() + 42, 18, true, a(trackBarColor));
-                renderer->drawCircle(this->getX() + 62 + handlePos, this->getY() + 42, 18, false, a(tsl::style::color::ColorFrame));
+                if (lastBottomBound != this->getTopBound())
+                    renderer->drawRect(this->getX() + 4+20, this->getTopBound(), this->getWidth() + 6 + 10+20, 1, a(seperatorColor));
+                renderer->drawRect(this->getX() + 4+20, this->getBottomBound(), this->getWidth() + 6 + 10+20, 1, a(seperatorColor));
+                lastBottomBound = this->getBottomBound();
             }
             
             virtual void layout(u16 parentX, u16 parentY, u16 parentWidth, u16 parentHeight) override {
-                this->setBoundaries(this->getX(), this->getY(), this->getWidth(), tsl::style::TrackBarDefaultHeight);
+                this->setBoundaries(this->getX() - 16 , this->getY(), this->getWidth()+20, tsl::style::TrackBarDefaultHeight );
             }
             
             virtual void drawFocusBackground(gfx::Renderer *renderer) {
@@ -4685,32 +4780,36 @@ namespace tsl {
             }
             
             virtual void drawHighlight(gfx::Renderer *renderer) override {
-                //static half counter = half(0);
-                //progress = half((std::sin(counter) + 1.0) / 2.0);
-                //static float counter = 0.0;
-                progress = ((std::sin(counter) + 1.0) / 2.0);
-                highlightColor = {   static_cast<u8>((0x2 - 0x8) * progress + 0x8),
-                                     static_cast<u8>((0x8 - 0xF) * progress + 0xF),
-                                     static_cast<u8>((0xC - 0xF) * progress + 0xF),
-                                     static_cast<u8>((0x6 - 0xD) * progress + 0xD) };
-                                     
-                //counter += half(0.1F);
-                counter += 0.1F;
                 
-                //u16 handlePos = (this->getWidth() - 95) * static_cast<half>(this->m_value) / 100;
-                u16 handlePos = (this->getWidth() - 95) * (this->m_value) / 100;
+                progress = ((std::sin(2.0 * M_PI * fmod(std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count(), 1.0)) + 1.0) / 2.0);
+                if (runningInterpreter.load(std::memory_order_acquire)) {
+                    highlightColor = {
+                        static_cast<u8>((highlightColor3.r - highlightColor4.r) * progress + highlightColor4.r),
+                        static_cast<u8>((highlightColor3.g - highlightColor4.g) * progress + highlightColor4.g),
+                        static_cast<u8>((highlightColor3.b - highlightColor4.b) * progress + highlightColor4.b),
+                        0xF
+                    };
+                } else {
+                    highlightColor = {
+                        static_cast<u8>((highlightColor1.r - highlightColor2.r) * progress + highlightColor2.r),
+                        static_cast<u8>((highlightColor1.g - highlightColor2.g) * progress + highlightColor2.g),
+                        static_cast<u8>((highlightColor1.b - highlightColor2.b) * progress + highlightColor2.b),
+                        0xF
+                    };
+                }
                 
+                u16 handlePos = (this->getWidth() - 95) * (this->m_value - m_minValue) / (m_maxValue - m_minValue);
                 x = 0;
                 y = 0;
                 
-                if (Element::m_highlightShaking) {
-                    t = (std::chrono::system_clock::now() - Element::m_highlightShakingStartTime);
+                if (this->m_highlightShaking) {
+                    t = (std::chrono::system_clock::now() - this->m_highlightShakingStartTime);
                     if (t >= 100ms)
-                        Element::m_highlightShaking = false;
+                        this->m_highlightShaking = false;
                     else {
                         amplitude = std::rand() % 5 + 5;
                         
-                        switch (Element::m_highlightShakingDirection) {
+                        switch (this->m_highlightShakingDirection) {
                             case FocusDirection::Up:
                                 y -= shakeAnimation(t, amplitude);
                                 break;
@@ -4731,45 +4830,41 @@ namespace tsl {
                         y = std::clamp(y, -amplitude, amplitude);
                     }
                 }
-                
-                for (u8 i = 16; i <= 19; i++) {
-                    renderer->drawCircle(this->getX() + 62 + x + handlePos, this->getY() + 42 + y, i, false, a(highlightColor));
+                if (this->m_clickAnimationProgress == 0) {
+                    renderer->drawRect(this->getX() + 60, this->getY() + 40 + 16+2, handlePos, 5, a(tsl::style::color::ColorHighlight));
+                    renderer->drawCircle(this->getX() + 62 + x + handlePos, this->getY() + 42 + y + 16+2, 16, true, a(highlightColor));
+                    renderer->drawCircle(this->getX() + 62 + x + handlePos, this->getY() + 42 + y + 16+2, 11, true, a(trackBarColor));
                 }
+                onTrackBar = true;
             }
             
-            /**
-             * @brief Gets the current value of the trackbar
-             *
-             * @return State
-             */
             virtual inline u8 getProgress() {
                 return this->m_value;
             }
             
-            /**
-             * @brief Sets the current state of the toggle. Updates the Value
-             *
-             * @param state State
-             */
             virtual void setProgress(u8 value) {
                 this->m_value = value;
             }
             
-            /**
-             * @brief Adds a listener that gets called whenever the state of the toggle changes
-             *
-             * @param stateChangedListener Listener with the current state passed in as parameter
-             */
             void setValueChangedListener(std::function<void(u8)> valueChangedListener) {
                 this->m_valueChangedListener = valueChangedListener;
             }
-            
+        
         protected:
-            const char *m_icon = nullptr;
+            std::string m_label;
+            std::string m_packagePath;
             s16 m_value = 0;
+            s16 m_minValue;
+            s16 m_maxValue;
+            std::string m_units;
             bool m_interactionLocked = false;
             
-            std::function<void(u8)> m_valueChangedListener = [](u8){};
+            std::function<void(u8)> m_valueChangedListener = [](u8) {};
+
+            // New member variables to store the function and its parameters
+            std::function<void(std::vector<std::vector<std::string>>&&, const std::string&, const std::string&)> interpretAndExecuteCommands;
+            std::vector<std::vector<std::string>> commands;
+            std::string selectedCommand;
         };
         
         
@@ -4779,31 +4874,69 @@ namespace tsl {
          */
         class StepTrackBar : public TrackBar {
         public:
+
             /**
              * @brief Constructor
              *
              * @param icon Icon shown next to the track bar
              * @param numSteps Number of steps the track bar has
              */
-            StepTrackBar(const char icon[3], size_t numSteps)
-                : TrackBar(icon), m_numSteps(numSteps) { }
+            StepTrackBar(std::string label, std::string packagePath, size_t numSteps, s16 minValue, s16 maxValue, std::string units,
+                std::function<void(std::vector<std::vector<std::string>>&&, const std::string&, const std::string&)> executeCommands = nullptr,
+                std::vector<std::vector<std::string>> cmd = {}, const std::string& selCmd = "")
+                : TrackBar(label, packagePath, minValue, maxValue, units, executeCommands, cmd, selCmd), m_numSteps(numSteps) {
+                    //usingStepTrackbar = true;
+                    if (!m_packagePath.empty()) {
+                        //logMessage("before StepTrackBar initialize value.");
+                        std::string initializedValue = parseValueFromIniSection(m_packagePath + "config.ini", m_label, "value");
+                        if (!initializedValue.empty()) {
+                            m_value = static_cast<s16>(std::stoi(initializedValue)); // convert initializedValue to s16
+                        }
+                        //logMessage("after StepTrackBar initialize value.");
+                    }
+                    lastUpdate = std::chrono::steady_clock::now();
+                }
             
             virtual ~StepTrackBar() {}
             
             virtual bool handleInput(u64 keysDown, u64 keysHeld, const HidTouchState &touchPos, HidAnalogStickState leftJoyStick, HidAnalogStickState rightJoyStick) override {
                 static u32 tick = 0;
+                static bool holding = false;
+                static u64 prevKeysHeld = 0;
+                u64 keysReleased = prevKeysHeld & ~keysHeld;
+                prevKeysHeld = keysHeld;
+            
+                if ((keysReleased & HidNpadButton_AnyLeft) || (keysReleased & HidNpadButton_AnyRight)) {
+                    if (!m_packagePath.empty()) {
+                        setIniFileValue(m_packagePath + "config.ini", m_label, "value", std::to_string(m_value));
+            
+                        if (interpretAndExecuteCommands) {
+                            auto commandsCopy = commands;
+                            interpretAndExecuteCommands(std::move(commandsCopy), m_packagePath, selectedCommand);
+                        }
+                    }
+                    holding = false;
+                    tick = 0;
+                    return true;
+                }
                 
                 if (keysHeld & HidNpadButton_AnyLeft && keysHeld & HidNpadButton_AnyRight) {
                     tick = 0;
                     return true;
                 }
-                
-                if (keysHeld & (HidNpadButton_AnyLeft | HidNpadButton_AnyRight)) {
+            
+                if (keysHeld & (HidNpadButton_AnyLeft | HidNpadButton_AnyRight) && !(keysHeld & KEY_R)) {
+                    if (!holding) {
+                        holding = true;
+                        tick = 0;
+                    }
+            
                     if ((tick == 0 || tick > 20) && (tick % 3) == 0) {
-                        if (keysHeld & HidNpadButton_AnyLeft && this->m_value > 0) {
-                            this->m_value = std::max(this->m_value - (100 / (this->m_numSteps - 1)), 0);
-                        } else if (keysHeld & HidNpadButton_AnyRight && this->m_value < 100) {
-                            this->m_value = std::min(this->m_value + (100 / (this->m_numSteps - 1)), 100);
+                        s16 stepValue = (m_maxValue - m_minValue) / (this->m_numSteps - 1);
+                        if (keysHeld & HidNpadButton_AnyLeft && this->m_value > m_minValue) {
+                            this->m_value = std::max(static_cast<int>(this->m_value - stepValue), static_cast<int>(m_minValue));
+                        } else if (keysHeld & HidNpadButton_AnyRight && this->m_value < m_maxValue) {
+                            this->m_value = std::min(static_cast<int>(this->m_value + stepValue), static_cast<int>(m_maxValue));
                         } else {
                             return false;
                         }
@@ -4812,36 +4945,46 @@ namespace tsl {
                     tick++;
                     return true;
                 } else {
+                    holding = false;
                     tick = 0;
                 }
-                
+            
                 return false;
             }
+            
             
             virtual bool onTouch(TouchEvent event, s32 currX, s32 currY, s32 prevX, s32 prevY, s32 initialX, s32 initialY) override {
                 if (this->inBounds(initialX, initialY)) {
                     if (currY > this->getTopBound() && currY < this->getBottomBound()) {
-                        s16 newValue = (static_cast<float>(currX - (this->getX() + 60)) / static_cast<float>(this->getWidth() - 95)) * 100;
+                        s16 newValue = m_minValue + ((static_cast<float>(currX - (this->getX() + 60)) / static_cast<float>(this->getWidth() - 95)) * (m_maxValue - m_minValue));
                         
-                        if (newValue < 0) {
-                            newValue = 0;
-                        } else if (newValue > 100) {
-                            newValue = 100;
+                        if (newValue < m_minValue) {
+                            newValue = m_minValue;
+                        } else if (newValue > m_maxValue) {
+                            newValue = m_maxValue;
                         } else {
-                            newValue = std::round(newValue / (100.0F / (this->m_numSteps - 1))) * (100.0F / (this->m_numSteps - 1));
+                            float stepSize = static_cast<float>(m_maxValue - m_minValue) / (this->m_numSteps - 1);
+                            newValue = std::round((newValue - m_minValue) / stepSize) * stepSize + m_minValue;
                         }
                         
                         if (newValue != this->m_value) {
                             this->m_value = newValue;
                             this->m_valueChangedListener(this->getProgress());
                         }
-                        
+                        if (!m_packagePath.empty()) {
+                            setIniFileValue(m_packagePath + "config.ini", m_label, "value", std::to_string(m_value));
+                            if (interpretAndExecuteCommands) {
+                                auto commandsCopy = commands;
+                                interpretAndExecuteCommands(std::move(commandsCopy), m_packagePath, selectedCommand);
+                            }
+                        }
                         return true;
                     }
                 }
                 
                 return false;
             }
+
             
             /**
              * @brief Gets the current value of the trackbar
@@ -4864,6 +5007,7 @@ namespace tsl {
             
         protected:
             u8 m_numSteps = 1;
+            
         };
         
         
@@ -4876,37 +5020,68 @@ namespace tsl {
             u16 trackBarWidth, stepWidth, currentDescIndex;
             u32 descWidth, descHeight;
             
-            
             /**
              * @brief Constructor
              *
              * @param icon Icon shown next to the track bar
              * @param stepDescriptions Step names displayed above the track bar
              */
-            NamedStepTrackBar(const char icon[3], std::initializer_list<std::string> stepDescriptions)
-                : StepTrackBar(icon, stepDescriptions.size()), m_stepDescriptions(stepDescriptions.begin(), stepDescriptions.end()) { }
+            NamedStepTrackBar(std::string label, std::string packagePath, std::vector<std::string> stepDescriptions,
+                std::function<void(std::vector<std::vector<std::string>>&&, const std::string&, const std::string&)> executeCommands = nullptr,
+                std::vector<std::vector<std::string>> cmd = {}, const std::string& selCmd = "")
+                : StepTrackBar(label, packagePath, stepDescriptions.size(), 0, stepDescriptions.size()-1, "", executeCommands, cmd, selCmd), m_stepDescriptions(stepDescriptions) {
+                    usingNamedStepTrackbar = true;
+                    //logMessage("on initialization");
+                }
             
             virtual ~NamedStepTrackBar() {}
             
             virtual void draw(gfx::Renderer *renderer) override {
-                
+                //static u16 lastIndex;
+
                 trackBarWidth = this->getWidth() - 95;
                 stepWidth = trackBarWidth / (this->m_numSteps - 1);
                 
+                // Calculate handle position and dimensions
+                u16 handlePos = (this->getWidth() - 95) * (this->m_value) / 100;
+                u16 handleStartX = this->getX() + 62 + handlePos - 20;
+                u16 handleEndX = this->getX() + 62 + handlePos + 20;
+                
+                u16 stepX;
+                // Draw step rectangles, skipping those that intersect with the handle
                 for (u8 i = 0; i < this->m_numSteps; i++) {
-                    renderer->drawRect(this->getX() + 60 + stepWidth * i, this->getY() + 50, 1, 10, a(tsl::style::color::ColorFrame));
+                    stepX = this->getX() + 60 + stepWidth * i;
+                    if (stepX < handleStartX || stepX > handleEndX) {
+                        renderer->drawRect(stepX, this->getY() + 50, 1, 8, a(tsl::style::color::ColorFrame));
+                    }
                 }
                 
-                currentDescIndex = std::clamp(this->m_value / (100 / (this->m_numSteps - 1)), 0, this->m_numSteps - 1);
+                currentDescIndex = this->m_value;
                 
-                std::tie(descWidth, descHeight) = renderer->drawString(this->m_stepDescriptions[currentDescIndex].c_str(), false, 0, 0, 15, a(tsl::style::color::ColorTransparent));
-                renderer->drawString(this->m_stepDescriptions[currentDescIndex].c_str(), false, ((this->getX() + 60) + (this->getWidth() - 95) / 2) - (descWidth / 2), this->getY() + 20, 15, a(offTextColor));
+                std::tie(descWidth, descHeight) = renderer->drawString(this->m_stepDescriptions[currentDescIndex].c_str(), false, 0, 0, 16, a(tsl::style::color::ColorTransparent));
+                renderer->drawString(this->m_stepDescriptions[currentDescIndex].c_str(), false, ((this->getX() + 60) + (this->getWidth() - 95) / 2) - (descWidth / 2), this->getY() + 14 +16 +2, 16, a(defaultTextColor));
                 
+                //if (lastIndex != currentDescIndex) {
+                //    if (!m_packagePath.empty()) {
+                //        setIniFileValue(m_packagePath + "config.ini", m_label, "index", std::to_string(currentDescIndex));
+                //        //setIniFileValue(m_packagePath + "config.ini", m_label, "entry", m_stepDescriptions[currentDescIndex]);
+                //        if (interpretAndExecuteCommands) {
+                //            //logMessage("before interpretAndExecuteCommands.");
+                //            auto commandsCopy = commands;
+                //            interpretAndExecuteCommands(std::move(commandsCopy), m_packagePath, selectedCommand);
+                //            //logMessage("after interpretAndExecuteCommands.");
+                //        }
+                //    }
+                //}
+
+                //lastIndex = currentDescIndex;
+
                 StepTrackBar::draw(renderer);
             }
             
         protected:
             std::vector<std::string> m_stepDescriptions;
+            
         };
         
     }
@@ -5313,7 +5488,6 @@ namespace tsl {
         }
         
 
-
         /**
          * @brief Called once per frame with the latest HID inputs
          *
@@ -5331,231 +5505,207 @@ namespace tsl {
             static bool oldTouchDetected = false;
             static elm::TouchEvent touchEvent;
             static elm::TouchEvent oldTouchEvent;
-            static u32 repeatTick = 0;
             static ssize_t counter = 0;
-            //static bool wasMinusHeld = false; // Add this static variable
-
+            static std::chrono::high_resolution_clock::time_point buttonPressTime;
+            static std::chrono::high_resolution_clock::time_point lastKeyEventTime;
+            static bool singlePressHandled = false;
+            static const auto clickThreshold = std::chrono::milliseconds(340); // Adjust this value as needed
+            static auto keyEventInterval = std::chrono::milliseconds(50); // Interval between key events
+            
             auto& currentGui = this->getCurrentGui();
-        
+            
             // Return early if current GUI is not available
-            if (!currentGui)
-                return;
-        
+            if (!currentGui) return;
+            
             // Retrieve current focus and top/bottom elements of the GUI
             auto currentFocus = currentGui->getFocusedElement();
             auto topElement = currentGui->getTopElement();
             auto bottomElement = currentGui->getBottomElement();
-        
+            
             if (runningInterpreter.load()) {
-                if (keysHeld & HidNpadButton_AnyUp && keysDown & HidNpadButton_AnyUp && !(keysHeld & (KEY_DLEFT | KEY_DRIGHT | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR)))
+                if (keysDown & KEY_UP && !(keysDown & ~KEY_UP & ALL_KEYS_MASK))
                     currentFocus->shakeHighlight(FocusDirection::Up);
-                else if (keysHeld & HidNpadButton_AnyDown && keysDown & HidNpadButton_AnyDown && !(keysHeld & (KEY_DLEFT | KEY_DRIGHT | KEY_DUP | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR)))
+                else if (keysDown & KEY_DOWN && !(keysDown & ~KEY_DOWN & ALL_KEYS_MASK))
                     currentFocus->shakeHighlight(FocusDirection::Down);
-                else if (keysHeld & HidNpadButton_AnyLeft && keysDown & HidNpadButton_AnyLeft && !(keysHeld & (KEY_DRIGHT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR)))
+                else if (keysDown & KEY_LEFT && !(keysDown & ~KEY_LEFT & ALL_KEYS_MASK))
                     currentFocus->shakeHighlight(FocusDirection::Left);
-                else if (keysHeld & HidNpadButton_AnyRight && keysDown & HidNpadButton_AnyRight && !(keysHeld & (KEY_DLEFT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR)))
+                else if (keysDown & KEY_RIGHT && !(keysDown & ~KEY_RIGHT & ALL_KEYS_MASK))
                     currentFocus->shakeHighlight(FocusDirection::Right);
                 else if (progressAnimation) {
-                    if (counter % 4 == 0) currentFocus->shakeHighlight(FocusDirection::Up);
-                    else if (counter % 4 == 1) currentFocus->shakeHighlight(FocusDirection::Right);
-                    else if (counter % 4 == 2) currentFocus->shakeHighlight(FocusDirection::Down);
-                    else if (counter % 4 == 3) currentFocus->shakeHighlight(FocusDirection::Left);
-                    counter = (counter + 1) % 4; // Reset the counter after a full cycle to prevent overflow
+                    currentFocus->shakeHighlight(static_cast<FocusDirection>(counter % 4));
+                    counter = (counter + 1) % 4;
                 }
             }
-
-            //// Debouncing for HidNpadButton_Minus
-            //if (keysHeld & HidNpadButton_Minus && !wasMinusHeld) {
-            //    disableTransparency = !disableTransparency;
-            //}
-            //wasMinusHeld = (keysHeld & HidNpadButton_Minus) != 0;
-        
-            // Handle input when no element is focused
+            
             if (!currentFocus && !simulatedBack && simulatedBackComplete && !stillTouching && !runningInterpreter.load(std::memory_order_acquire)) {
-                if (!topElement)
-                    return;
+                if (!topElement) return;
         
                 if (!currentGui->initialFocusSet() || keysDown & (HidNpadButton_AnyUp | HidNpadButton_AnyDown | HidNpadButton_AnyLeft | HidNpadButton_AnyRight)) {
                     currentGui->requestFocus(topElement, FocusDirection::None);
                     currentGui->markInitialFocusSet();
-                    repeatTick = 1;
                 }
             }
-        
-            // If nothing is highlighted AND the menu is fully loaded/drawn, set focus to topElement
+            
             if (!currentFocus && !touchDetected && (!oldTouchDetected || oldTouchEvent == elm::TouchEvent::Scroll)) {
-                if (!simulatedBack && simulatedBackComplete) {
-                    if (topElement) {
-                        currentGui->removeFocus();
-                        currentGui->requestFocus(topElement, FocusDirection::None);
-                    }
-                }
-            }
-        
-            bool handled = false;
-            elm::Element* parentElement = currentFocus;
-        
-            // Propagate click events upwards through the hierarchy
-            while (!handled && parentElement) {
-                handled = parentElement->onClick(keysDown);
-                parentElement = parentElement->getParent();
-            }
-        
-            parentElement = currentFocus;
-            // Propagate input events upwards through the hierarchy
-            while (!handled && parentElement) {
-                handled = parentElement->handleInput(keysDown, keysHeld, touchPos, joyStickPosLeft, joyStickPosRight);
-                parentElement = parentElement->getParent();
-            }
-        
-            // Return early if the GUI has changed
-            if (currentGui != this->getCurrentGui())
-                return;
-        
-            // Handle input events for the current GUI
-            handled |= currentGui->handleInput(keysDown, keysHeld, touchPos, joyStickPosLeft, joyStickPosRight);
-        
-            // Handle arrow key navigation when no touch input is detected
-            if (!touchDetected && !oldTouchDetected && !handled && currentFocus && !stillTouching && !runningInterpreter.load(std::memory_order_acquire)) {
-                static bool shouldShake = true;
-        
-                // Check for single arrow key press
-                if ((((keysHeld & HidNpadButton_AnyUp) != 0) + ((keysHeld & HidNpadButton_AnyDown) != 0) + ((keysHeld & HidNpadButton_AnyLeft) != 0) + ((keysHeld & HidNpadButton_AnyRight) != 0)) == 1) {
-                    if ((repeatTick == 0 || repeatTick > 20) && (repeatTick % 4) == 0) {
-                        // Request focus based on arrow key direction
-                        if (keysHeld & HidNpadButton_AnyUp && !(keysHeld & (KEY_DLEFT | KEY_DRIGHT | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR)))
-                            currentGui->requestFocus(currentGui->getTopElement(), FocusDirection::Up, shouldShake); // Request focus on the top element when double-clicking up
-                        else if (keysHeld & HidNpadButton_AnyDown && !(keysHeld & (KEY_DLEFT | KEY_DRIGHT | KEY_DUP | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR)))
-                            currentGui->requestFocus(currentFocus->getParent(), FocusDirection::Down, shouldShake);
-                        else if (keysHeld & HidNpadButton_AnyLeft && !(keysHeld & (KEY_DRIGHT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR)))
-                            currentGui->requestFocus(currentFocus->getParent(), FocusDirection::Left, shouldShake);
-                        else if (keysHeld & HidNpadButton_AnyRight && !(keysHeld & (KEY_DLEFT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR)))
-                            currentGui->requestFocus(currentFocus->getParent(), FocusDirection::Right, shouldShake);
-        
-                        shouldShake = currentGui->getFocusedElement() != currentFocus;
-                    }
-                    repeatTick++;
-                } else {
-                    repeatTick = 0;
-                    shouldShake = true;
-                }
-            }
-        
-            // If the up button is pressed, shift focus to the top element
-            if (!touchDetected && (keysDown & HidNpadButton_L) && !(keysHeld & (KEY_DLEFT | KEY_DRIGHT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_R | KEY_ZL | KEY_ZR)) && !runningInterpreter.load(std::memory_order_acquire)) {
-                topElement = currentGui->getTopElement();
-                if (topElement) {
+                if (!simulatedBack && simulatedBackComplete && topElement) {
+                    currentGui->removeFocus();
                     currentGui->requestFocus(topElement, FocusDirection::None);
                 }
             }
+            
+            bool handled = false;
+            elm::Element* parentElement = currentFocus;
+            
+            while (!handled && parentElement) {
+                handled = parentElement->onClick(keysDown) || parentElement->handleInput(keysDown, keysHeld, touchPos, joyStickPosLeft, joyStickPosRight);
+                parentElement = parentElement->getParent();
+            }
+            
+            if (currentGui != this->getCurrentGui()) return;
+            
+            handled |= currentGui->handleInput(keysDown, keysHeld, touchPos, joyStickPosLeft, joyStickPosRight);
+            
+            if (!touchDetected && !oldTouchDetected && !handled && currentFocus && !stillTouching && !runningInterpreter.load(std::memory_order_acquire)) {
+                static bool shouldShake = true;
+                bool singleArrowKeyPress = ((keysHeld & HidNpadButton_AnyUp) != 0) + ((keysHeld & HidNpadButton_AnyDown) != 0) + ((keysHeld & HidNpadButton_AnyLeft) != 0) + ((keysHeld & HidNpadButton_AnyRight) != 0) == 1;
         
-            // If the down button is pressed, shift focus to the bottom element
-            if (!touchDetected && (keysDown & HidNpadButton_R) && !(keysHeld & (KEY_DLEFT | KEY_DRIGHT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_ZL | KEY_ZR)) && !runningInterpreter.load(std::memory_order_acquire)) {
-                bottomElement = currentGui->getBottomElement();
-                if (bottomElement) {
-                    currentGui->requestFocus(bottomElement, FocusDirection::None);
+                if (singleArrowKeyPress) {
+                    auto now = std::chrono::high_resolution_clock::now();
+                    if (keysDown) {
+                        buttonPressTime = now;
+                        lastKeyEventTime = now;
+                        singlePressHandled = false;
+                        // Immediate single press action
+                        if (keysHeld & KEY_UP && !(keysHeld & ~KEY_UP & ALL_KEYS_MASK))
+                            currentGui->requestFocus(currentGui->getTopElement(), FocusDirection::Up, shouldShake); // Request focus on the top element when double-clicking up
+                        else if (keysHeld & KEY_DOWN && !(keysHeld & ~KEY_DOWN & ALL_KEYS_MASK))
+                            currentGui->requestFocus(currentFocus->getParent(), FocusDirection::Down, shouldShake);
+                        else if (keysHeld & KEY_LEFT && !(keysHeld & ~KEY_LEFT & ALL_KEYS_MASK))
+                            currentGui->requestFocus(currentFocus->getParent(), FocusDirection::Left, shouldShake);
+                        else if (keysHeld & KEY_RIGHT && !(keysHeld & ~KEY_RIGHT & ALL_KEYS_MASK))
+                            currentGui->requestFocus(currentFocus->getParent(), FocusDirection::Right, shouldShake);
+                        //shouldShake = currentGui->getFocusedElement() != currentFocus;
+                    }
+                    
+                    auto durationSincePress = std::chrono::duration_cast<std::chrono::milliseconds>(now - buttonPressTime);
+                    auto durationSinceLastEvent = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastKeyEventTime);
+                    
+                    if (!singlePressHandled && durationSincePress >= clickThreshold) {
+                        singlePressHandled = true;
+                    }
+
+                    if (durationSincePress > std::chrono::milliseconds(3000))
+                        keyEventInterval = std::chrono::milliseconds(10);
+                    else if (durationSincePress > std::chrono::milliseconds(2000))
+                        keyEventInterval = std::chrono::milliseconds(20);
+                    else if (durationSincePress > std::chrono::milliseconds(420))
+                        keyEventInterval = std::chrono::milliseconds(50);
+                    else
+                        keyEventInterval = std::chrono::milliseconds(67);
+                    
+                    //keyEventInterval = interpolateKeyEventInterval(durationSincePress);
+
+                    if (singlePressHandled && durationSinceLastEvent >= keyEventInterval) {
+                        lastKeyEventTime = now;
+                        if (keysHeld & KEY_UP && !(keysHeld & ~KEY_UP & ALL_KEYS_MASK))
+                            currentGui->requestFocus(currentGui->getTopElement(), FocusDirection::Up, false);
+                        else if (keysHeld & KEY_DOWN && !(keysHeld & ~KEY_DOWN & ALL_KEYS_MASK))
+                            currentGui->requestFocus(currentFocus->getParent(), FocusDirection::Down, false);
+                        else if (keysHeld & KEY_LEFT && !(keysHeld & ~KEY_LEFT & ALL_KEYS_MASK))
+                            currentGui->requestFocus(currentFocus->getParent(), FocusDirection::Left, false);
+                        else if (keysHeld & KEY_RIGHT && !(keysHeld & ~KEY_RIGHT & ALL_KEYS_MASK))
+                            currentGui->requestFocus(currentFocus->getParent(), FocusDirection::Right, false);
+                        //shouldShake = currentGui->getFocusedElement() != currentFocus;
+                    }
+                } else {
+                    singlePressHandled = false;
                 }
             }
-        
-            // Handle touch release event
-            if (!touchDetected && oldTouchDetected) {
-                if (currentGui && topElement) {
-                    topElement->onTouch(elm::TouchEvent::Release, oldTouchPos.x, oldTouchPos.y, oldTouchPos.x, oldTouchPos.y, initialTouchPos.x, initialTouchPos.y);
-                }
+            
+            if (!touchDetected && (keysDown & KEY_L) && !(keysHeld & ~KEY_L & ALL_KEYS_MASK) && !runningInterpreter.load(std::memory_order_acquire)) {
+                currentGui->requestFocus(topElement, FocusDirection::None);
             }
-        
-            // Handle touch input
+            
+            if (!touchDetected && (keysDown & KEY_R) && !(keysHeld & ~KEY_R & ALL_KEYS_MASK) && !runningInterpreter.load(std::memory_order_acquire)) {
+                currentGui->requestFocus(bottomElement, FocusDirection::None);
+            }
+            
+            if (!touchDetected && oldTouchDetected && currentGui && topElement) {
+                topElement->onTouch(elm::TouchEvent::Release, oldTouchPos.x, oldTouchPos.y, oldTouchPos.x, oldTouchPos.y, initialTouchPos.x, initialTouchPos.y);
+            }
+            
             if (touchDetected) {
-                if (!interruptedTouch)
-                    interruptedTouch = (keysHeld & ALL_KEYS_MASK) != 0;
-        
-                // Calculate touch distance
+                if (!interruptedTouch) interruptedTouch = (keysHeld & ALL_KEYS_MASK) != 0;
+                
                 u32 xDistance = std::abs(static_cast<s32>(initialTouchPos.x) - static_cast<s32>(touchPos.x));
                 u32 yDistance = std::abs(static_cast<s32>(initialTouchPos.y) - static_cast<s32>(touchPos.y));
-        
-                xDistance *= xDistance;
-                yDistance *= yDistance;
-        
-                // Determine touch event type (scroll or hold)
-                if ((xDistance + yDistance) > 1000) {
+                
+                bool isScroll = (xDistance * xDistance + yDistance * yDistance) > 1000;
+                if (isScroll) {
                     elm::Element::setInputMode(InputMode::TouchScroll);
                     touchEvent = elm::TouchEvent::Scroll;
                 } else {
-                    if (touchEvent != elm::TouchEvent::Scroll)
+                    if (touchEvent != elm::TouchEvent::Scroll) {
                         touchEvent = elm::TouchEvent::Hold;
+                    }
                 }
-        
-                // Handle touch input initiation
+                
                 if (!oldTouchDetected) {
                     initialTouchPos = touchPos;
                     elm::Element::setInputMode(InputMode::Touch);
                     if (!runningInterpreter.load(std::memory_order_acquire)) {
-                        if (initialTouchPos.y <= cfg::FramebufferHeight - 73U && initialTouchPos.y > 73U && initialTouchPos.x <= cfg::FramebufferWidth && initialTouchPos.x > 0U) {
-                            touchInBounds = true;
-                            currentGui->removeFocus();
-                        } else {
-                            touchInBounds = false;
-                        }
+                        touchInBounds = (initialTouchPos.y <= cfg::FramebufferHeight - 73U && initialTouchPos.y > 73U && initialTouchPos.x <= cfg::FramebufferWidth-30U && initialTouchPos.x > 40U);
+                        if (touchInBounds) currentGui->removeFocus();
                     }
                     touchEvent = elm::TouchEvent::Touch;
                 }
-        
-                // Call onTouch method for the top element to handle touch event
+                
                 if (currentGui && topElement && !runningInterpreter.load(std::memory_order_acquire)) {
                     topElement->onTouch(touchEvent, touchPos.x, touchPos.y, oldTouchPos.x, oldTouchPos.y, initialTouchPos.x, initialTouchPos.y);
-        
-                    if (touchPos.x > 0U && touchPos.x <= cfg::FramebufferWidth && touchPos.y > 73U && touchPos.y <= cfg::FramebufferHeight - 73U)
+                    if (touchPos.x > 40U && touchPos.x <= cfg::FramebufferWidth-30U && touchPos.y > 73U && touchPos.y <= cfg::FramebufferHeight - 73U) {
                         currentGui->removeFocus();
-                }
-        
-                // Update old touch position
-                oldTouchPos = touchPos;
-        
-                // Hide overlay when touching out of bounds
-                if (touchPos.x >= cfg::FramebufferWidth) {
-                    if (tsl::elm::Element::getInputMode() == tsl::InputMode::Touch) {
-                        oldTouchPos = { 0 };
-                        initialTouchPos = { 0 };
-                        this->hide();
                     }
+                }
+                
+                oldTouchPos = touchPos;
+                if (touchPos.x >= cfg::FramebufferWidth && tsl::elm::Element::getInputMode() == tsl::InputMode::Touch) {
+                    oldTouchPos = { 0 };
+                    initialTouchPos = { 0 };
+                    this->hide();
                 }
                 stillTouching = true;
             } else {
                 if (!interruptedTouch && !runningInterpreter.load(std::memory_order_acquire)) {
-                    // Check touch button locations for specific actions
                     if (oldTouchPos.x < 150U && oldTouchPos.y > cfg::FramebufferHeight - 73U && initialTouchPos.x < 150U && initialTouchPos.y > cfg::FramebufferHeight - 73U) {
                         simulatedBackComplete = false;
                         simulatedBack = true;
-                    }
-                    if (oldTouchPos.x >= 150U && oldTouchPos.x < 260U && oldTouchPos.y > cfg::FramebufferHeight - 73U && initialTouchPos.x >= 150U && initialTouchPos.x < 260U && initialTouchPos.y > cfg::FramebufferHeight - 73U) {
+                    } else if (oldTouchPos.x >= 150U && oldTouchPos.x < 260U && oldTouchPos.y > cfg::FramebufferHeight - 73U && initialTouchPos.x >= 150U && initialTouchPos.x < 260U && initialTouchPos.y > cfg::FramebufferHeight - 73U) {
                         simulatedSelectComplete = false;
                         simulatedSelect = true;
-                    }
-                    if (oldTouchPos.x >= 260U && oldTouchPos.x <= cfg::FramebufferWidth && oldTouchPos.y > cfg::FramebufferHeight - 73U && initialTouchPos.x >= 260U && initialTouchPos.x <= cfg::FramebufferWidth && initialTouchPos.y > cfg::FramebufferHeight - 73U) {
+                    } else if (oldTouchPos.x >= 260U && oldTouchPos.x <= cfg::FramebufferWidth && oldTouchPos.y > cfg::FramebufferHeight - 73U && initialTouchPos.x >= 260U && initialTouchPos.x <= cfg::FramebufferWidth && initialTouchPos.y > cfg::FramebufferHeight - 73U) {
                         simulatedNextPageComplete = false;
                         simulatedNextPage = true;
-                    }
-                    if (oldTouchPos.x > 0U && oldTouchPos.x <= 245 && oldTouchPos.y > 0U && oldTouchPos.y <= 73U && initialTouchPos.x > 0U && initialTouchPos.x <= 245 && initialTouchPos.y > 0U && initialTouchPos.y <= 73U) {
+                    } else if (oldTouchPos.x > 0U && oldTouchPos.x <= 245 && oldTouchPos.y > 0U && oldTouchPos.y <= 73U && initialTouchPos.x > 0U && initialTouchPos.x <= 245 && initialTouchPos.y > 0U && initialTouchPos.y <= 73U) {
                         simulatedMenuComplete = false;
                         simulatedMenu = true;
                     }
                 }
-        
-                // Set input mode to controller when touch input ends
+                
                 elm::Element::setInputMode(InputMode::Controller);
-        
-                // Reset touch-related variables
+                
                 oldTouchPos = { 0 };
                 initialTouchPos = { 0 };
                 touchEvent = elm::TouchEvent::None;
                 stillTouching = false;
                 interruptedTouch = false;
             }
-        
+            
             oldTouchDetected = touchDetected;
             oldTouchEvent = touchEvent;
         }
-
+        
+        
+        
 
 
         /**
@@ -5800,7 +5950,7 @@ namespace tsl {
                     if (updateMenuCombos) {  // CUSTOM MODIFICATION
                         if ((shData->keysHeld & tsl::cfg::launchCombo2) == tsl::cfg::launchCombo2) {
                             tsl::cfg::launchCombo = tsl::cfg::launchCombo2;
-                            setIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, KEY_COMBO_STR, TESLA_COMBO_STR);
+                            setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, KEY_COMBO_STR, TESLA_COMBO_STR);
                             setIniFileValue(TESLA_CONFIG_INI_PATH, TESLA_STR, KEY_COMBO_STR, TESLA_COMBO_STR);
                             eventFire(&shData->comboEvent);
                             updateMenuCombos = false;
@@ -5809,7 +5959,7 @@ namespace tsl {
         
                     if ((((shData->keysHeld & tsl::cfg::launchCombo) == tsl::cfg::launchCombo) && shData->keysDown & tsl::cfg::launchCombo)) {
                         if (updateMenuCombos) {
-                            setIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, KEY_COMBO_STR, ULTRAHAND_COMBO_STR);
+                            setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, KEY_COMBO_STR, ULTRAHAND_COMBO_STR);
                             setIniFileValue(TESLA_CONFIG_INI_PATH, TESLA_STR, KEY_COMBO_STR, ULTRAHAND_COMBO_STR);
                             updateMenuCombos = false;
                         }
@@ -5950,9 +6100,9 @@ namespace tsl {
         }
         
         
-        bool inOverlay = (parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_OVERLAY_STR) != FALSE_STR);
+        bool inOverlay = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_OVERLAY_STR) != FALSE_STR);
         if (inOverlay && skipCombo) {
-            setIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_OVERLAY_STR, FALSE_STR);
+            setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_OVERLAY_STR, FALSE_STR);
             eventFire(&shData.comboEvent);
         }
 
