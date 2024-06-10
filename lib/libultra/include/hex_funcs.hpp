@@ -32,7 +32,8 @@ size_t HEX_BUFFER_SIZE = 4096*4;
 // For improving the speed of hexing consecutively with the same file and asciiPattern.
 static std::unordered_map<std::string, std::string> hexSumCache; // MOVED TO main.cpp
 
-
+// Lookup table for hex characters
+const char hexLookup[] = "0123456789ABCDEF";
 
 /**
  * @brief Converts an ASCII string to a hexadecimal string.
@@ -42,24 +43,18 @@ static std::unordered_map<std::string, std::string> hexSumCache; // MOVED TO mai
  * @param asciiStr The ASCII string to convert.
  * @return The corresponding hexadecimal string.
  */
+
+
+// Function to convert ASCII string to Hex string
 std::string asciiToHex(const std::string& asciiStr) {
     std::string hexStr;
     hexStr.reserve(asciiStr.length() * 2); // Reserve space for the hexadecimal string
-    unsigned char uc;
-    char hexChar[3];
-    for (char c : asciiStr) {
-        uc = static_cast<unsigned char>(c); // Convert char to unsigned char
-        //char hexChar[3]; // Buffer to store the hexadecimal representation (2 characters + null terminator)
-        
-        // Format the unsigned char as a hexadecimal string and append it to the result
-        std::snprintf(hexChar, sizeof(hexChar), "%02X", uc);
-        hexStr += hexChar;
+
+    for (unsigned char c : asciiStr) {
+        hexStr.push_back(hexLookup[c >> 4]); // High nibble
+        hexStr.push_back(hexLookup[c & 0x0F]); // Low nibble
     }
-    
-    if (hexStr.length() % 2 != 0) {
-        hexStr = '0' + hexStr;
-    }
-    
+
     return hexStr;
 }
 
@@ -75,25 +70,25 @@ std::string decimalToHex(const std::string& decimalStr) {
     // Convert decimal string to integer
     int decimalValue = std::stoi(decimalStr);
     
+    // If decimalValue is 0, return "00"
+    if (decimalValue == 0) {
+        return "00";
+    }
+    
     // Convert decimal to hexadecimal
     std::string hexadecimal;
-    
-    int _remainder;
-    char hexChar;
+    hexadecimal.reserve(8); // Reserve space for up to 8 hex digits
     
     while (decimalValue > 0) {
-        _remainder = decimalValue % 16;
-        hexChar = (_remainder < 10) ? ('0' + _remainder) : ('A' + _remainder - 10);
-        hexadecimal += hexChar;
+        int remainder = decimalValue % 16;
+        char hexChar = (remainder < 10) ? ('0' + remainder) : ('A' + remainder - 10);
+        hexadecimal.insert(hexadecimal.begin(), hexChar);  // Insert at the beginning
         decimalValue /= 16;
     }
     
-    // Reverse the hexadecimal string
-    std::reverse(hexadecimal.begin(), hexadecimal.end());
-    
-    // If the length is odd, add a trailing '0'
+    // If the length is odd, add a leading '0'
     if (hexadecimal.length() % 2 != 0) {
-        hexadecimal = '0' + hexadecimal;
+        hexadecimal.insert(hexadecimal.begin(), '0');
     }
     
     return hexadecimal;
