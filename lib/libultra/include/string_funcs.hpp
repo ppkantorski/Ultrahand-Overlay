@@ -297,7 +297,12 @@ inline bool isFileOrDirectory(const std::string& path) {
 
 
 
-
+//inline std::string addQuotesIfNeeded(const std::string& str) {
+//    if (str.find(' ') != std::string::npos) {
+//        return "\"" + str + "\"";
+//    }
+//    return str;
+//}
 
 
 /**
