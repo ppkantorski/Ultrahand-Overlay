@@ -746,7 +746,7 @@ std::map<std::string, std::string> defaultThemeSettingsMap = {
     {"table_bg_alpha", "10"},
     {"table_section_text_color", whiteColor},
     {"table_info_text_color", "#00FFDD"},
-    {"trackbar_slider_color", "#707070"},
+    {"trackbar_slider_color", "#606060"},
     {"trackbar_slider_border_color", "#505050"},
     {"trackbar_malleable_slider_color", "#909090"},
     {"trackbar_full_color", "#00FFDD"},
@@ -1338,7 +1338,7 @@ namespace tsl {
     static Color infoTextColor = RGB888(whiteColor);
 
 
-    static Color trackBarSliderColor = RGB888("#707070");
+    static Color trackBarSliderColor = RGB888("#606060");
     static Color trackBarSliderBorderColor = RGB888("#505050");
     static Color trackBarMalleableSliderColor = RGB888("#909090");
     static Color trackBarFullColor = RGB888("#00FFDD");
@@ -4849,12 +4849,12 @@ namespace tsl {
                         renderer->drawRect(this->getX() + 60, this->getY() + 40 + 16 -1, handlePos, 7, a(trackBarFullColor));
                     }
                     //renderer->drawCircle(this->getX() + 60 + handlePos, this->getY() + 42 + 16, 16, true, a(clickColor));
-                    renderer->drawCircle(this->getX() + 60 + handlePos, this->getY() + 42 + 16, 16, true, a(highlightColor));
+                    renderer->drawCircle(this->getX() + x + 60 + handlePos, this->getY() + y + 42 + 16, 16, true, a(highlightColor));
                     //renderer->drawCircle(this->getX() + 60 + handlePos, this->getY() + 42 + 16, 12, true, a(trackBarSliderBorderColor));
                     if (allowSlide)
-                        renderer->drawCircle(this->getX() + 60 + handlePos, this->getY() + 42 + 16, 12, true, a(trackBarMalleableSliderColor));
+                        renderer->drawCircle(this->getX() + x + 60 + handlePos, this->getY() + y + 42 + 16, 12, true, a(trackBarMalleableSliderColor));
                     else
-                        renderer->drawCircle(this->getX() + 60 + handlePos, this->getY() + 42 + 16, 12, true, a(trackBarSliderColor));
+                        renderer->drawCircle(this->getX() + x + 60 + handlePos, this->getY() + y + 42 + 16, 12, true, a(trackBarSliderColor));
                     
                 }
                 
@@ -4900,7 +4900,7 @@ namespace tsl {
             virtual void drawHighlight(gfx::Renderer *renderer) override {
                 
                 progress = ((std::sin(2.0 * M_PI * fmod(std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count(), 1.0)) + 1.0) / 2.0);
-                if (runningInterpreter.load(std::memory_order_acquire)) {
+                if (allowSlide) {
                     highlightColor = {
                         static_cast<u8>((highlightColor3.r - highlightColor4.r) * progress + highlightColor4.r),
                         static_cast<u8>((highlightColor3.g - highlightColor4.g) * progress + highlightColor4.g),
