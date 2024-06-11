@@ -794,6 +794,7 @@ public:
                     simulatedBack = false;
                 }
                 if ((keysHeld & KEY_B) && !stillTouching) {
+                    allowSlide = false;
                     inSettingsMenu = false;
                     returningToMain = (lastMenu != "hiddenMenuMode");
                     returningToHiddenMain = !returningToMain;
@@ -817,6 +818,7 @@ public:
                 simulatedBack = false;
             }
             if ((keysHeld & KEY_B) && !stillTouching) {
+                allowSlide = false;
                 inSubSettingsMenu = false;
                 returningToSettings = true;
                 tsl::goBack();
@@ -1101,6 +1103,7 @@ public:
                 }
 
                 if ((keysHeld & KEY_B) && !stillTouching) {
+                    allowSlide = false;
                     inSettingsMenu = false;
                     if (lastMenu != "hiddenMenuMode")
                         returningToMain = true;
@@ -1142,6 +1145,7 @@ public:
             }
 
             if ((keysHeld & KEY_B) && !stillTouching) {
+                allowSlide = false;
                 inSubSettingsMenu = false;
                 returningToSettings = true;
                 tsl::goBack();
@@ -1277,6 +1281,7 @@ public:
                 simulatedBack = false;
             }
             if ((keysHeld & KEY_B) && !stillTouching) {
+                allowSlide = false;
                 inScriptMenu = false;
                 returningToPackage = !isFromMainMenu && lastMenu == "packageMenu";
                 returningToSubPackage = !isFromMainMenu && lastMenu == "subPackageMenu";
@@ -1749,6 +1754,8 @@ public:
             }
 
             if ((keysHeld & KEY_B) && !stillTouching) {
+                allowSlide = false;
+
                 inSelectionMenu = false;
 
                 if (lastPackageMenu == "subPackageMenu") {
@@ -2108,14 +2115,7 @@ public:
                 }
                 
                 if (!skipSection && !skipSystem) { // for skipping the drawing of sections
-                    // For handling table mode
-                    //if (optionName.front() == '$') { 
                     if (commandMode == TABLE_STR) {
-                        //if (!hideTableHeader) {
-                        //    optionName = optionName.substr(1);
-                        //    list->addItem(new tsl::elm::CategoryHeader(removeTag(optionName)));
-                        //} else
-                        //    hideTableHeader = false;
                         addTable(list, tableData, this->packagePath, tableColumnOffset, tableStartGap, tableEndGap, tableSpacing, tableAlignment, hideTableBackground);
                         continue;
                     } else if (commandMode == TRACKBAR_STR) {
@@ -2126,21 +2126,19 @@ public:
                         continue;
                     } else if (commandMode == NAMED_STEP_TRACKBAR_STR) {
                         std::vector<std::string> entryList = {};
-                        std::string _commandName;
 
                         for (const auto& cmd : commands) {
                             if (cmd.empty())
                                 continue;
                             
                             if (cmd.size() > 1) {
-                                _commandName = cmd[0];
 
-                                if ((_commandName == "list_source")) {
+                                if ((cmd[0] == "list_source")) {
                                     std::string listString = removeQuotes(cmd[1]);
                                     entryList = stringToList(listString);
                                     break;
                                 }
-                                else if ((_commandName == "list_file_source")) {
+                                else if ((cmd[0] == "list_file_source")) {
                                     std::string listPath = preprocessPath(cmd[1], this->packagePath);
                                     entryList = readListFromFile(listPath);
                                     break;
@@ -2148,9 +2146,6 @@ public:
                             }
                         }
 
-                        //std::initializer_list<std::string> entryList = stringToList(listString)
-                        
-                        //std::initializer_list<std::string> entryList = {"First Name", "Second Name", "Third Name", "Fourth Name", "Fifth Name"};
                         list->addItem(new tsl::elm::NamedStepTrackBar(optionName, this->packagePath, entryList, interpretAndExecuteCommands, commands, option.first));
 
                         continue;
@@ -2491,7 +2486,7 @@ public:
                 }
             }
             if (currentPage == LEFT_STR) {
-                if ((keysHeld & KEY_RIGHT) && !(keysHeld & (KEY_DLEFT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_ZL | KEY_ZR)) && !stillTouching && ((onTrackBar && (!simulatedNextPageComplete || (keysHeld & KEY_R))) || (!onTrackBar))) {
+                if ((keysHeld & KEY_RIGHT) && !(keysHeld & (KEY_DLEFT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR)) && !stillTouching && !allowSlide) {
                     lastPage = RIGHT_STR;
                     //lastPackage = packagePath;
                     selectedListItem.reset();
@@ -2502,7 +2497,7 @@ public:
                     return true;
                 }
             } else if (currentPage == RIGHT_STR) {
-                if ((keysHeld & KEY_LEFT) && !(keysHeld & (KEY_DRIGHT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_ZL | KEY_ZR)) && !stillTouching && ((onTrackBar && (!simulatedNextPageComplete || (keysHeld & KEY_R))) || (!onTrackBar))) {
+                if ((keysHeld & KEY_LEFT) && !(keysHeld & (KEY_DRIGHT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR)) && !stillTouching && !allowSlide) {
                     lastPage = LEFT_STR;
                     //lastPackage = packagePath;
                     selectedListItem.reset();
@@ -2533,7 +2528,7 @@ public:
                     simulatedBack = false;
                 }
                 if ((keysHeld & KEY_B) && !stillTouching) {
-
+                    allowSlide = false;
                     if (nestedMenuCount == 0) {
                         inPackageMenu = false;
                         
@@ -2566,7 +2561,7 @@ public:
                     simulatedBack = false;
                 }
                 if ((keysHeld & KEY_B) && !stillTouching) {
-
+                    allowSlide = false;
                     if (nestedMenuCount == 0) {
                         inPackageMenu = false;
                         //inNestedPackageMenu = false;
@@ -2615,6 +2610,7 @@ public:
                     simulatedBack = false;
                 }
                 if ((keysHeld & KEY_B) && !stillTouching) {
+                    allowSlide = false;
                     inSubPackageMenu = false;
                     returningToPackage = true;
                     lastMenu = "packageMenu";
@@ -2629,6 +2625,7 @@ public:
                     simulatedBack = false;
                 }
                 if ((keysHeld & KEY_B) && !stillTouching) {
+                    allowSlide = false;
                     inSubPackageMenu = false;
                     returningToPackage = true;
                     lastMenu = "packageMenu";
@@ -3788,6 +3785,7 @@ public:
             }
 
             if ((keysHeld & KEY_B) && !stillTouching) {
+                allowSlide = false;
                 returningToMain = true;
                 tsl::goBack();
                 simulatedBackComplete = true;
@@ -3815,7 +3813,7 @@ public:
                     }
                 }
 
-                if ((keysHeld & KEY_RIGHT) && !(keysHeld & (KEY_DLEFT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR)) && !stillTouching && ((onTrackBar && !simulatedNextPageComplete) || !onTrackBar)) {
+                if ((keysHeld & KEY_RIGHT) && !(keysHeld & (KEY_DLEFT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR)) && !stillTouching && !allowSlide) {
                     if (menuMode != PACKAGES_STR) {
                         currentMenu = PACKAGES_STR;
                         selectedListItem.reset();
@@ -3827,7 +3825,7 @@ public:
                         return true;
                     }
                 }
-                if ((keysHeld & KEY_LEFT) && !(keysHeld & (KEY_DRIGHT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR)) && !stillTouching && ((onTrackBar && !simulatedNextPageComplete) || !onTrackBar)) {
+                if ((keysHeld & KEY_LEFT) && !(keysHeld & (KEY_DRIGHT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR)) && !stillTouching && !allowSlide) {
                     if (menuMode != OVERLAYS_STR) {
                         currentMenu = OVERLAYS_STR;
                         selectedListItem.reset();
@@ -3846,6 +3844,7 @@ public:
                 }
 
                 if ((keysHeld & KEY_B) && !stillTouching) {
+                    allowSlide = false;
                     tsl::Overlay::get()->close();
                     simulatedBackComplete = true;
                     return true;
@@ -3907,6 +3906,7 @@ public:
                         return true;
                     }
                     
+                    allowSlide = false;
                     tsl::goBack();
                     simulatedBackComplete = true;
                     return true;
