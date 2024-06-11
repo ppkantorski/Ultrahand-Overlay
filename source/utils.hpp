@@ -236,38 +236,38 @@ std::tuple<Result, std::string, std::string> getOverlayInfo(const std::string& f
 
 void drawTable(std::unique_ptr<tsl::elm::List>& list, const std::vector<std::string>& sectionLines, const std::vector<std::string>& infoLines,
     const size_t& columnOffset = 120, const size_t& startGap = 20, const size_t& endGap = 3, const size_t& newlineGap = 0, const std::string& alignment = LEFT_STR, const bool& hideTableBackground = false) {
-    
+
     size_t lineHeight = 16;
     size_t fontSize = 16;
     size_t xMax = tsl::cfg::FramebufferWidth - 95;
-    
+
     auto sectionTextColor = tsl::gfx::Renderer::a(tsl::sectionTextColor);
     auto infoTextColor = tsl::gfx::Renderer::a(tsl::infoTextColor);
-    
+
     size_t totalHeight = lineHeight * sectionLines.size() + newlineGap * (sectionLines.size() - 1) + endGap;
-    
+
     // Precompute all y-offsets for sections and info lines
     std::vector<s32> yOffsets(sectionLines.size());
     for (size_t i = 0; i < sectionLines.size(); ++i) {
         yOffsets[i] = startGap + (i * (lineHeight + newlineGap));
     }
-    
+
     // Precompute all x-offsets for info lines based on alignment
     std::vector<int> infoXOffsets(infoLines.size());
     std::vector<float> infoStringWidths(infoLines.size());
-    
+
     // Precompute string widths using the provided renderer instance in the lambda
     for (size_t i = 0; i < infoLines.size(); ++i) {
         infoStringWidths[i] = 0.0f;  // Initialize with a default value
     }
-    
+
     // Add the TableDrawer item
     list->addItem(new tsl::elm::TableDrawer([=](tsl::gfx::Renderer* renderer, s32 x, s32 y, s32 w, s32 h) mutable {
         for (size_t i = 0; i < infoLines.size(); ++i) {
             if (infoStringWidths[i] == 0.0f) {  // Calculate only if not already calculated
                 infoStringWidths[i] = renderer->calculateStringWidth(infoLines[i], fontSize, false);
             }
-            
+
             if (alignment == LEFT_STR) {
                 infoXOffsets[i] = columnOffset;
             } else if (alignment == RIGHT_STR) {
@@ -276,7 +276,7 @@ void drawTable(std::unique_ptr<tsl::elm::List>& list, const std::vector<std::str
                 infoXOffsets[i] = columnOffset + (xMax - infoStringWidths[i]) / 2;
             }
         }
-        
+
         for (size_t i = 0; i < sectionLines.size(); ++i) {
             renderer->drawString(sectionLines[i].c_str(), false, x + 12, y + yOffsets[i], fontSize, sectionTextColor);
             renderer->drawString(infoLines[i].c_str(), false, x + infoXOffsets[i], y + yOffsets[i], fontSize, infoTextColor);
@@ -920,36 +920,35 @@ std::string getCurrentTimestamp(const std::string& format) {
 
 // Define the replacePlaceholders function outside of applyPlaceholderReplacement
 auto replacePlaceholders = [](std::string& arg, const std::string& placeholder, const std::function<std::string(const std::string&)>& replacer) {
-    std::string lastArg;
     size_t startPos, endPos;
-    std::string replacement;
+    std::string lastArg, replacement;
 
-    while (arg.find(placeholder) != std::string::npos) {
-        startPos = arg.find(placeholder);
-        endPos = arg.find(")}", startPos);
-        if (endPos != std::string::npos && endPos > startPos) {
-            replacement = replacer(arg.substr(startPos, endPos - startPos + 2));
-            if (replacement.empty()) {
-                if (placeholder.find("{json(") != std::string::npos || placeholder.find("{json_file(") != std::string::npos) {
-                    replacement = UNAVAILABLE_SELECTION;
-                } else {
-                    replacement = NULL_STR;
-                }
-            }
-            arg.replace(startPos, endPos - startPos + 2, replacement);
-            if (arg == lastArg) {
-                if (interpreterLogging) {
-                    logMessage("failed replacement arg: " + arg);
-                }
-                if (placeholder.find("{json(") != std::string::npos || placeholder.find("{json_file(") != std::string::npos) {
-                    arg.replace(startPos, endPos - startPos + 2, UNAVAILABLE_SELECTION);
-                } else {
-                    arg.replace(startPos, endPos - startPos + 2, NULL_STR);
-                }
-                //commandSuccess = false;
+    while ((startPos = arg.find(placeholder)) != std::string::npos) {
+        // Find the innermost placeholder by locating the closest closing ")}" after startPos
+        size_t nestedStartPos = startPos;
+        while (true) {
+            size_t nextStartPos = arg.find(placeholder, nestedStartPos + 1);
+            size_t nextEndPos = arg.find(")}", nestedStartPos);
+            if (nextStartPos != std::string::npos && nextStartPos < nextEndPos) {
+                nestedStartPos = nextStartPos;
+            } else {
+                endPos = nextEndPos;
                 break;
             }
-        } else {
+        }
+
+        if (endPos == std::string::npos || endPos <= startPos) break;
+
+        replacement = replacer(arg.substr(startPos, endPos - startPos + 2));
+        if (replacement.empty()) {
+            replacement = (placeholder.find("{json(") != std::string::npos || placeholder.find("{json_file(") != std::string::npos) ? UNAVAILABLE_SELECTION : NULL_STR;
+        }
+        arg.replace(startPos, endPos - startPos + 2, replacement);
+        if (arg == lastArg) {
+            if (interpreterLogging) {
+                logMessage("failed replacement arg: " + arg);
+            }
+            arg.replace(startPos, endPos - startPos + 2, replacement);
             break;
         }
         lastArg = arg;
@@ -958,104 +957,69 @@ auto replacePlaceholders = [](std::string& arg, const std::string& placeholder, 
 
 void applyPlaceholderReplacement(std::vector<std::string>& cmd, std::string hexPath, std::string iniPath, std::string listString, std::string listPath, std::string jsonString, std::string jsonPath) {
     size_t startPos, endPos, listIndex;
-    std::string replacement;
 
-    //auto replacePlaceholders = [&](std::string& arg, const std::string& placeholder, const std::function<std::string(const std::string&)>& replacer) {
-    //    std::string lastArg;
-    //    while (arg.find(placeholder) != std::string::npos) {
-    //        startPos = arg.find(placeholder);
-    //        endPos = arg.find(")}", startPos);
-    //        if (endPos != std::string::npos && endPos > startPos) {
-    //            replacement = replacer(arg.substr(startPos, endPos - startPos + 2));
-    //            if (replacement.empty()) {
-    //                if (placeholder.find("{json(") != std::string::npos) {
-    //                    replacement = UNAVAILABLE_SELECTION;
-    //                } else {
-    //                    replacement = NULL_STR;
-    //                }
-    //            }
-    //            arg.replace(startPos, endPos - startPos + 2, replacement);
-    //            if (arg == lastArg) {
-    //                if (interpreterLogging) {
-    //                    logMessage("failed replacement arg: " + arg);
-    //                }
-    //                if (placeholder.find("{json(") != std::string::npos) {
-    //                    arg.replace(startPos, endPos - startPos + 2, UNAVAILABLE_SELECTION);
-    //                } else {
-    //                    arg.replace(startPos, endPos - startPos + 2, NULL_STR);
-    //                }
-    //                commandSuccess = false;
-    //                break;
-    //            }
-    //        } else {
-    //            break;
-    //        }
-    //        lastArg = arg;
-    //    }
-    //};
-
-    for (auto& arg : cmd) {
-        // Replace hex placeholders
-        if (!hexPath.empty()) {
-            replacePlaceholders(arg, "{hex_file(", [&](const std::string& placeholder) {
-                return replaceHexPlaceholder(placeholder, hexPath);
-            });
-        }
-        
-        // Replace ini placeholders
-        if (!iniPath.empty()) {
-            replacePlaceholders(arg, "{ini_file(", [&](const std::string& placeholder) {
-                return replaceIniPlaceholder(placeholder, iniPath);
-            });
-        }
-        
-        // Replace list placeholders
-        if (!listString.empty()) {
-            replacePlaceholders(arg, "{list(", [&](const std::string& placeholder) {
-                startPos = placeholder.find('(') + 1;
-                endPos = placeholder.find(')');
-                listIndex = std::stoi(placeholder.substr(startPos, endPos - startPos));
-                return stringToList(listString)[listIndex];
-            });
-        }
-
-        // Replace list placeholders
-        if (!listPath.empty()) {
-            replacePlaceholders(arg, "{list_file(", [&](const std::string& placeholder) {
-                startPos = placeholder.find('(') + 1;
-                endPos = placeholder.find(')');
-                listIndex = std::stoi(placeholder.substr(startPos, endPos - startPos));
-                return getEntryFromListFile(listPath, listIndex);
-            });
-        }
-        
-        // Replace json placeholders
-        if (!jsonString.empty()) {
-            replacePlaceholders(arg, "{json(", [&](const std::string& placeholder) {
-                return replaceJsonPlaceholder(placeholder, JSON_STR, jsonString);
-            });
-        }
-
-        // Replace json_file placeholders
-        if (!jsonPath.empty()) {
-            replacePlaceholders(arg, "{json_file(", [&](const std::string& placeholder) {
-                return replaceJsonPlaceholder(placeholder, JSON_FILE_STR, jsonPath);
-            });
-        }
-
-        // Replace timestamp placeholder with format
-        replacePlaceholders(arg, "{timestamp(", [&](const std::string& placeholder) {
+    std::vector<std::pair<std::string, std::function<std::string(const std::string&)>>> placeholders = {
+        {"{hex_file(", [&](const std::string& placeholder) {
+            return replaceHexPlaceholder(placeholder, hexPath);
+        }},
+        {"{ini_file(", [&](const std::string& placeholder) {
+            return replaceIniPlaceholder(placeholder, iniPath);
+        }},
+        {"{list(", [&](const std::string& placeholder) {
+            startPos = placeholder.find('(') + 1;
+            endPos = placeholder.find(')');
+            listIndex = std::stoi(placeholder.substr(startPos, endPos - startPos));
+            return stringToList(listString)[listIndex];
+        }},
+        {"{list_file(", [&](const std::string& placeholder) {
+            startPos = placeholder.find('(') + 1;
+            endPos = placeholder.find(')');
+            listIndex = std::stoi(placeholder.substr(startPos, endPos - startPos));
+            return getEntryFromListFile(listPath, listIndex);
+        }},
+        {"{json(", [&](const std::string& placeholder) {
+            return replaceJsonPlaceholder(placeholder, JSON_STR, jsonString);
+        }},
+        {"{json_file(", [&](const std::string& placeholder) {
+            return replaceJsonPlaceholder(placeholder, JSON_FILE_STR, jsonPath);
+        }},
+        {"{timestamp(", [&](const std::string& placeholder) {
             size_t startPos = placeholder.find("(") + 1;
             size_t endPos = placeholder.find(")");
-            if (endPos != std::string::npos) {
-                std::string format = placeholder.substr(startPos, endPos - startPos);
-                return getCurrentTimestamp(removeQuotes(format));
-            } else {
-                // Default format if not specified
-                return getCurrentTimestamp("%Y-%m-%d %H:%M:%S");
-            }
-        });
+            std::string format = (endPos != std::string::npos) ? placeholder.substr(startPos, endPos - startPos) : "%Y-%m-%d %H:%M:%S";
+            return getCurrentTimestamp(removeQuotes(format));
+        }},
+        {"{decimal_to_hex(", [&](const std::string& placeholder) {
+            size_t startPos = placeholder.find("(") + 1;
+            size_t endPos = placeholder.find(")");
+            std::string decimalValue = placeholder.substr(startPos, endPos - startPos);
+            return decimalToHex(decimalValue);
+        }},
+        {"{ascii_to_hex(", [&](const std::string& placeholder) {
+            size_t startPos = placeholder.find("(") + 1;
+            size_t endPos = placeholder.find(")");
+            std::string asciiValue = placeholder.substr(startPos, endPos - startPos);
+            return asciiToHex(asciiValue);
+        }},
+        {"{hex_to_rhex(", [&](const std::string& placeholder) {
+            size_t startPos = placeholder.find("(") + 1;
+            size_t endPos = placeholder.find(")");
+            std::string hexValue = placeholder.substr(startPos, endPos - startPos);
+            return hexToReversedHex(hexValue);
+        }},
+        {"{hex_to_decimal(", [&](const std::string& placeholder) {
+            size_t startPos = placeholder.find("(") + 1;
+            size_t endPos = placeholder.find(")");
+            std::string hexValue = placeholder.substr(startPos, endPos - startPos);
+            return hexToDecimal(hexValue);
+        }}
+    };
 
+    for (auto& arg : cmd) {
+        for (const auto& [placeholder, replacer] : placeholders) {
+            replacePlaceholders(arg, placeholder, replacer);
+        }
+        
         // Failed replacement cleanup
         if (arg == NULL_STR)
             arg = UNAVAILABLE_SELECTION;
@@ -1151,12 +1115,12 @@ void interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
             commands.erase(commands.begin()); // Remove processed command
             continue;
         }
-        
+
         if (!commandSuccess && inTrySection){
             commands.erase(commands.begin()); // Remove processed command
             continue;
         }
-        
+
         if ((inEristaSection && !inMarikoSection && usingErista) || (!inEristaSection && inMarikoSection && usingMariko) || (!inEristaSection && !inMarikoSection)) {
             if (!inTrySection || (commandSuccess && inTrySection)) {
 
