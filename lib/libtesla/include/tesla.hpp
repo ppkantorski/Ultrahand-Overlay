@@ -748,7 +748,7 @@ std::map<std::string, std::string> defaultThemeSettingsMap = {
     {"table_info_text_color", "#00FFDD"},
     {"trackbar_slider_color", "#606060"},
     {"trackbar_slider_border_color", "#505050"},
-    {"trackbar_malleable_slider_color", "#909090"},
+    {"trackbar_malleable_slider_color", "#A0A0A0"},
     {"trackbar_full_color", "#00FFDD"},
     {"trackbar_empty_color", "#404040"},
     {"version_text_color", "#AAAAAA"},
@@ -1340,7 +1340,7 @@ namespace tsl {
 
     static Color trackBarSliderColor = RGB888("#606060");
     static Color trackBarSliderBorderColor = RGB888("#505050");
-    static Color trackBarMalleableSliderColor = RGB888("#909090");
+    static Color trackBarMalleableSliderColor = RGB888("#A0A0A0");
     static Color trackBarFullColor = RGB888("#00FFDD");
     static Color trackBarEmptyColor = RGB888("#404040");
 
@@ -4681,16 +4681,20 @@ namespace tsl {
             s32 x, y;
             s32 amplitude;
             u32 descWidth, descHeight;
-            bool usingNamedStepTrackbar = false;
+            
             
             // Ensure the order of initialization matches the order of declaration
             TrackBar(std::string label, std::string packagePath = "", s16 minValue = 0, s16 maxValue = 100, std::string units = "",
                      std::function<void(std::vector<std::vector<std::string>>&&, const std::string&, const std::string&)> executeCommands = nullptr,
-                     std::vector<std::vector<std::string>> cmd = {}, const std::string& selCmd = "")
+                     std::vector<std::vector<std::string>> cmd = {}, const std::string& selCmd = "", bool usingNamedStepTrackbar = false)
                 : m_label(label), m_packagePath(packagePath), m_minValue(minValue), m_maxValue(maxValue), m_units(units),
-                  interpretAndExecuteCommands(executeCommands), commands(std::move(cmd)), selectedCommand(selCmd) {
+                  interpretAndExecuteCommands(executeCommands), commands(std::move(cmd)), selectedCommand(selCmd), m_usingNamedStepTrackbar(usingNamedStepTrackbar){
 
-                std::string initializedValue = parseValueFromIniSection(m_packagePath + "config.ini", m_label, "value");
+                std::string initializedValue;
+                if (!m_usingNamedStepTrackbar) 
+                    initializedValue = parseValueFromIniSection(m_packagePath + "config.ini", m_label, "value");
+                else
+                    initializedValue = parseValueFromIniSection(m_packagePath + "config.ini", m_label, "index");
                 if (!initializedValue.empty()) {
                     m_value = static_cast<s16>(std::stoi(initializedValue)); // convert initializedValue to s16
                 }
@@ -4703,6 +4707,42 @@ namespace tsl {
             
             virtual Element* requestFocus(Element *oldFocus, FocusDirection direction) {
                 return this;
+            }
+            
+            virtual void updateAndExecute() {
+                if (!m_packagePath.empty()) {
+                    if (!m_usingNamedStepTrackbar)
+                        setIniFileValue(m_packagePath + "config.ini", m_label, "value", std::to_string(m_value));
+                    else {
+                        setIniFileValue(m_packagePath + "config.ini", m_label, "index", std::to_string(m_value));
+                        setIniFileValue(m_packagePath + "config.ini", m_label, "value", m_selection);
+                    }
+                    if (interpretAndExecuteCommands) {
+                        auto commandsCopy = commands;
+                        // Replace '{value}' with std::to_string(m_value) in each argument
+                        for (auto& cmd : commandsCopy) {
+                            for (auto& arg : cmd) {
+                                size_t pos = 0;
+                                if (!m_usingNamedStepTrackbar) {
+                                    while ((pos = arg.find("{value}", pos)) != std::string::npos) {
+                                        arg.replace(pos, 7, std::to_string(m_value));
+                                        pos += std::to_string(m_value).length(); // Advance position to avoid infinite loop
+                                    }
+                                } else {
+                                    while ((pos = arg.find("{value}", pos)) != std::string::npos) {
+                                        arg.replace(pos, 7, m_selection);
+                                        pos += m_selection.length(); // Advance position to avoid infinite loop
+                                    }
+                                    while ((pos = arg.find("{index}", pos)) != std::string::npos) {
+                                        arg.replace(pos, 7, std::to_string(m_value));
+                                        pos += std::to_string(m_value).length(); // Advance position to avoid infinite loop
+                                    }
+                                }
+                            }
+                        }
+                        interpretAndExecuteCommands(std::move(commandsCopy), m_packagePath, selectedCommand);
+                    }
+                }
             }
             
             virtual bool handleInput(u64 keysDown, u64 keysHeld, const HidTouchState &touchPos, HidAnalogStickState leftJoyStick, HidAnalogStickState rightJoyStick) override {
@@ -4726,13 +4766,7 @@ namespace tsl {
                 // Allow sliding only if KEY_A has been pressed
                 if (allowSlide) {
                     if ((keysReleased & HidNpadButton_AnyLeft) || (keysReleased & HidNpadButton_AnyRight)) {
-                        if (!m_packagePath.empty()) {
-                            setIniFileValue(m_packagePath + "config.ini", m_label, "value", std::to_string(m_value));
-                            if (interpretAndExecuteCommands) {
-                                auto commandsCopy = commands;
-                                interpretAndExecuteCommands(std::move(commandsCopy), m_packagePath, selectedCommand);
-                            }
-                        }
+                        updateAndExecute();
                         holding = false;
                         return true;
                     }
@@ -4787,13 +4821,7 @@ namespace tsl {
             
             virtual bool onTouch(TouchEvent event, s32 currX, s32 currY, s32 prevX, s32 prevY, s32 initialX, s32 initialY) override {
                 if (event == TouchEvent::Release) {
-                    if (!m_packagePath.empty()) {
-                        setIniFileValue(m_packagePath + "config.ini", m_label, "value", std::to_string(m_value));
-                        if (interpretAndExecuteCommands) {
-                            auto commandsCopy = commands;
-                            interpretAndExecuteCommands(std::move(commandsCopy), m_packagePath, selectedCommand);
-                        }
-                    }
+                    updateAndExecute();
                     this->m_interactionLocked = false;
                     return false;
                 }
@@ -4827,14 +4855,14 @@ namespace tsl {
                 u16 handlePos = (this->getWidth() - 95) * (this->m_value - m_minValue) / (m_maxValue - m_minValue);
                 //renderer->drawRoundedRect(this->getX() + 60 + handlePos + 18, this->getY() + 40 + 16-1, this->getWidth() - 95 - handlePos - 16 - 1, 6, 1, tsl::style::color::ColorFrame);
                 
-                if (!usingNamedStepTrackbar) {
+                if (!m_usingNamedStepTrackbar) {
                     renderer->drawUniformRoundedRect(this->getX() + 60, this->getY() + 40 + 16 -1, this->getWidth() - 95, 7, a(trackBarEmptyColor));
                 } else {
                     renderer->drawRect(this->getX() + 60, this->getY() + 40 + 16 -1, this->getWidth() - 95, 7, a(trackBarEmptyColor));
                 }
 
                 if (!this->m_focused) {
-                    if (!usingNamedStepTrackbar) {
+                    if (!m_usingNamedStepTrackbar) {
                         renderer->drawUniformRoundedRect(this->getX() + 60, this->getY() + 40 + 16 -1, handlePos, 7, a(trackBarFullColor));
                     } else {
                         renderer->drawRect(this->getX() + 60, this->getY() + 40 + 16 -1, handlePos, 7, a(trackBarFullColor));
@@ -4843,7 +4871,7 @@ namespace tsl {
                     renderer->drawCircle(this->getX() + 60 + handlePos, this->getY() + 42 + 16, 13, true, a(trackBarSliderColor));
                     
                 } else {
-                    if (!usingNamedStepTrackbar) {
+                    if (!m_usingNamedStepTrackbar) {
                         renderer->drawUniformRoundedRect(this->getX() + 60, this->getY() + 40 + 16 -1, handlePos, 7, a(trackBarFullColor));
                     } else {
                         renderer->drawRect(this->getX() + 60, this->getY() + 40 + 16 -1, handlePos, 7, a(trackBarFullColor));
@@ -4858,7 +4886,7 @@ namespace tsl {
                     
                 }
                 
-                if (!usingNamedStepTrackbar) {
+                if (!m_usingNamedStepTrackbar) {
                     std::string labelPart = removeTag(this->m_label) + " ";
                     //std::string valuePart = std::to_string(this->m_value) + this->m_units;
                     std::string valuePart = this->m_units == "%" ? std::to_string(this->m_value) + this->m_units : std::to_string(this->m_value) + (this->m_units.empty() ? "" : " ") + this->m_units;
@@ -4973,6 +5001,7 @@ namespace tsl {
         protected:
             std::string m_label;
             std::string m_packagePath;
+            std::string m_selection;
             s16 m_value = 0;
             s16 m_minValue;
             s16 m_maxValue;
@@ -4985,6 +5014,8 @@ namespace tsl {
             std::function<void(std::vector<std::vector<std::string>>&&, const std::string&, const std::string&)> interpretAndExecuteCommands;
             std::vector<std::vector<std::string>> commands;
             std::string selectedCommand;
+
+            bool m_usingNamedStepTrackbar = false;
         };
         
         
@@ -5003,12 +5034,16 @@ namespace tsl {
              */
             StepTrackBar(std::string label, std::string packagePath, size_t numSteps, s16 minValue, s16 maxValue, std::string units,
                 std::function<void(std::vector<std::vector<std::string>>&&, const std::string&, const std::string&)> executeCommands = nullptr,
-                std::vector<std::vector<std::string>> cmd = {}, const std::string& selCmd = "")
-                : TrackBar(label, packagePath, minValue, maxValue, units, executeCommands, cmd, selCmd), m_numSteps(numSteps) {
+                std::vector<std::vector<std::string>> cmd = {}, const std::string& selCmd = "", bool usingNamedStepTrackbar = false)
+                : TrackBar(label, packagePath, minValue, maxValue, units, executeCommands, cmd, selCmd, usingNamedStepTrackbar), m_numSteps(numSteps) {
                     //usingStepTrackbar = true;
                     if (!m_packagePath.empty()) {
                         //logMessage("before StepTrackBar initialize value.");
-                        std::string initializedValue = parseValueFromIniSection(m_packagePath + "config.ini", m_label, "value");
+                        std::string initializedValue;
+                        if (!m_usingNamedStepTrackbar)
+                            initializedValue = parseValueFromIniSection(m_packagePath + "config.ini", m_label, "value");
+                        else
+                            initializedValue = parseValueFromIniSection(m_packagePath + "config.ini", m_label, "index");
                         if (!initializedValue.empty()) {
                             m_value = static_cast<s16>(std::stoi(initializedValue)); // convert initializedValue to s16
                         }
@@ -5036,14 +5071,7 @@ namespace tsl {
 
                 if (allowSlide) {
                     if ((keysReleased & HidNpadButton_AnyLeft) || (keysReleased & HidNpadButton_AnyRight)) {
-                        if (!m_packagePath.empty()) {
-                            setIniFileValue(m_packagePath + "config.ini", m_label, "value", std::to_string(m_value));
-                            
-                            if (interpretAndExecuteCommands) {
-                                auto commandsCopy = commands;
-                                interpretAndExecuteCommands(std::move(commandsCopy), m_packagePath, selectedCommand);
-                            }
-                        }
+                        updateAndExecute();
                         holding = false;
                         tick = 0;
                         return true;
@@ -5101,13 +5129,7 @@ namespace tsl {
                             this->m_value = newValue;
                             this->m_valueChangedListener(this->getProgress());
                         }
-                        if (!m_packagePath.empty()) {
-                            setIniFileValue(m_packagePath + "config.ini", m_label, "value", std::to_string(m_value));
-                            if (interpretAndExecuteCommands) {
-                                auto commandsCopy = commands;
-                                interpretAndExecuteCommands(std::move(commandsCopy), m_packagePath, selectedCommand);
-                            }
-                        }
+                        updateAndExecute();
                         return true;
                     }
                 }
@@ -5159,8 +5181,8 @@ namespace tsl {
             NamedStepTrackBar(std::string label, std::string packagePath, std::vector<std::string> stepDescriptions,
                 std::function<void(std::vector<std::vector<std::string>>&&, const std::string&, const std::string&)> executeCommands = nullptr,
                 std::vector<std::vector<std::string>> cmd = {}, const std::string& selCmd = "")
-                : StepTrackBar(label, packagePath, stepDescriptions.size(), 0, stepDescriptions.size()-1, "", executeCommands, cmd, selCmd), m_stepDescriptions(stepDescriptions) {
-                    usingNamedStepTrackbar = true;
+                : StepTrackBar(label, packagePath, stepDescriptions.size(), 0, stepDescriptions.size()-1, "", executeCommands, cmd, selCmd, true), m_stepDescriptions(stepDescriptions) {
+                    //usingNamedStepTrackbar = true;
                     //logMessage("on initialization");
                 }
             
@@ -5191,8 +5213,10 @@ namespace tsl {
                 
                 // Draw the current step description
                 currentDescIndex = this->m_value;
-                std::tie(descWidth, descHeight) = renderer->drawString(this->m_stepDescriptions[currentDescIndex].c_str(), false, 0, 0, 16, a(tsl::style::color::ColorTransparent));
-                renderer->drawString(this->m_stepDescriptions[currentDescIndex].c_str(), false, ((this->getX() + 60) + (this->getWidth() - 95) / 2) - (descWidth / 2), this->getY() + 14 + 16, 16, a(defaultTextColor));
+                this->m_selection = this->m_stepDescriptions[currentDescIndex];
+
+                std::tie(descWidth, descHeight) = renderer->drawString(this->m_selection.c_str(), false, 0, 0, 16, a(tsl::style::color::ColorTransparent));
+                renderer->drawString(this->m_selection.c_str(), false, ((this->getX() + 60) + (this->getWidth() - 95) / 2) - (descWidth / 2), this->getY() + 14 + 16, 16, a(defaultTextColor));
                 
                 // Draw the parent trackbar
                 StepTrackBar::draw(renderer);
