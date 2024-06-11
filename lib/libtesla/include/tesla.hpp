@@ -4708,7 +4708,7 @@ namespace tsl {
             virtual Element* requestFocus(Element *oldFocus, FocusDirection direction) {
                 return this;
             }
-            
+
             virtual void updateAndExecute() {
                 if (!m_packagePath.empty()) {
                     if (!m_usingNamedStepTrackbar)
@@ -4733,6 +4733,7 @@ namespace tsl {
                                         arg.replace(pos, 7, m_selection);
                                         pos += m_selection.length(); // Advance position to avoid infinite loop
                                     }
+                                    pos = 0;
                                     while ((pos = arg.find("{index}", pos)) != std::string::npos) {
                                         arg.replace(pos, 7, std::to_string(m_value));
                                         pos += std::to_string(m_value).length(); // Advance position to avoid infinite loop
