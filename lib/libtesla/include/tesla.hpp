@@ -80,6 +80,7 @@ bool disableTransparency = false;
 bool useOpaqueScreenshots = false;
 
 bool onTrackBar = false;
+bool allowSlide = false;
 
 /**
  * @brief Shutdown modes for the Ultrahand-Overlay project.
@@ -745,6 +746,10 @@ std::map<std::string, std::string> defaultThemeSettingsMap = {
     {"table_bg_alpha", "10"},
     {"table_section_text_color", whiteColor},
     {"table_info_text_color", "#00FFDD"},
+    {"trackbar_slider_color", "#707070"},
+    {"trackbar_slider_border_color", "#505050"},
+    {"trackbar_full_color", "#00FFDD"},
+    {"trackbar_empty_color", "#404040"},
     {"version_text_color", "#AAAAAA"},
     {"on_text_color", "#00FFDD"},
     {"off_text_color", "#AAAAAA"},
@@ -1264,7 +1269,7 @@ namespace tsl {
     
     namespace style {
         constexpr u32 ListItemDefaultHeight         = 70;       ///< Standard list item height
-        constexpr u32 TrackBarDefaultHeight         = 90;       ///< Standard track bar height
+        constexpr u32 TrackBarDefaultHeight         = 88;       ///< Standard track bar height
         constexpr u8  ListItemHighlightSaturation   = 6;        ///< Maximum saturation of Listitem highlights
         constexpr u8  ListItemHighlightLength       = 22;       ///< Maximum length of Listitem highlights
         
@@ -1330,6 +1335,13 @@ namespace tsl {
     static Color tableBGColor = RGB888("#303030", "#303030", tableBGAlpha);
     static Color sectionTextColor = RGB888("#e9ff40");
     static Color infoTextColor = RGB888(whiteColor);
+
+
+    static Color trackBarSliderColor = RGB888("#707070");
+    static Color trackBarSliderBorderColor = RGB888("#505050");
+    static Color trackBarFullColor = RGB888("#00FFDD");
+    static Color trackBarEmptyColor = RGB888("#404040");
+
     
     void initializeThemeVars() { // NOTE: This needs to be called once in your application.
         // Fetch all theme settings at once from the INI file
@@ -1399,6 +1411,12 @@ namespace tsl {
             tableBGColor = getColor("table_bg_color", tableBGAlpha);
             sectionTextColor = getColor("table_section_text_color");
             infoTextColor = getColor("table_info_text_color");
+
+
+            trackBarSliderColor = getColor("trackbar_slider_color");
+            trackBarSliderBorderColor = getColor("trackbar_slider_border_color");
+            trackBarFullColor = getColor("trackbar_full_color");
+            trackBarEmptyColor = getColor("trackbar_empty_color");
         }
     }
     
@@ -2134,7 +2152,7 @@ namespace tsl {
                 s32 x_end = static_cast<s32>(x + w - radius);
                 s32 y_start = static_cast<s32>(y + radius);
                 s32 y_end = static_cast<s32>(y + h - radius);
-                
+            
                 // Draw the central rectangle excluding the corners
                 for (s32 y1 = y_start; y1 < y_end; ++y1) {
                     for (s32 x1 = x_start; x1 < x_end; ++x1) {
@@ -2163,23 +2181,84 @@ namespace tsl {
                         this->setPixelBlendDst(x1, y1, color);
                     }
                 }
-                
+
                 // Draw the rounded corners
-                s32 cornerX, cornerY ;
                 s32 radiusSquared = radius * radius;
                 for (s32 x1 = 0; x1 < radius; ++x1) {
                     for (s32 y1 = 0; y1 < radius; ++y1) {
                         if ((x1 * x1 + y1 * y1) <= radiusSquared) {
-                            cornerX = static_cast<s32>(x + radius - x1);
-                            cornerY = static_cast<s32>(y + radius - y1);
-                            this->setPixelBlendDst(cornerX, cornerY, color);  // Top-left corner
-                            this->setPixelBlendDst(static_cast<s32>(x + w - radius + x1), cornerY, color);  // Top-right corner
-                            this->setPixelBlendDst(cornerX, static_cast<s32>(y + h - radius + y1), color);  // Bottom-left corner
-                            this->setPixelBlendDst(static_cast<s32>(x + w - radius + x1), static_cast<s32>(y + h - radius + y1), color);  // Bottom-right corner
+                            // Top-left corner
+                            this->setPixelBlendDst(static_cast<s32>(x + radius - x1), static_cast<s32>(y + radius - y1), color);
+                            // Top-right corner
+                            this->setPixelBlendDst(static_cast<s32>(x + w - radius + x1), static_cast<s32>(y + radius - y1), color);
+                            // Bottom-left corner
+                            this->setPixelBlendDst(static_cast<s32>(x + radius - x1), static_cast<s32>(y + h - radius + y1), color);
+                            // Bottom-right corner
+                            this->setPixelBlendDst(static_cast<s32>(x + w - radius + x1), static_cast<s32>(y + h - radius + y1), color);
                         }
                     }
                 }
             }
+
+            
+            inline void drawUniformRoundedRect(float x, float y, float w, float h, Color color) {
+                // Determine the radius as half of the smaller dimension
+                float radius = std::min(w, h) / 2;
+            
+                s32 x_start = static_cast<s32>(x + radius);
+                s32 x_end = static_cast<s32>(x + w - radius);
+                s32 y_start = static_cast<s32>(y + radius);
+                s32 y_end = static_cast<s32>(y + h - radius);
+            
+                // Draw the central rectangle excluding the corners
+                for (s32 y1 = y_start; y1 < y_end; ++y1) {
+                    for (s32 x1 = x_start; x1 < x_end; ++x1) {
+                        this->setPixelBlendDst(x1, y1, color);
+                    }
+                }
+            
+                // Draw the top and bottom rectangles excluding the corners
+                for (s32 y1 = static_cast<s32>(y); y1 < y_start; ++y1) {
+                    for (s32 x1 = x_start; x1 < x_end; ++x1) {
+                        this->setPixelBlendDst(x1, y1, color);
+                    }
+                }
+                for (s32 y1 = y_end; y1 < static_cast<s32>(y + h); ++y1) {
+                    for (s32 x1 = x_start; x1 < x_end; ++x1) {
+                        this->setPixelBlendDst(x1, y1, color);
+                    }
+                }
+            
+                // Draw the left and right rectangles excluding the corners
+                for (s32 y1 = y_start; y1 < y_end; ++y1) {
+                    for (s32 x1 = static_cast<s32>(x); x1 < x_start; ++x1) {
+                        this->setPixelBlendDst(x1, y1, color);
+                    }
+                    for (s32 x1 = x_end; x1 < static_cast<s32>(x + w); ++x1) {
+                        this->setPixelBlendDst(x1, y1, color);
+                    }
+                }
+            
+                // Draw the rounded corners ensuring smooth arcs
+                s32 radiusSquared = radius * radius;
+                for (s32 x1 = 0; x1 < radius; ++x1) {
+                    for (s32 y1 = 0; y1 < radius; ++y1) {
+                        if ((x1 * x1 + y1 * y1) <= radiusSquared) {
+                            // Top-left corner
+                            this->setPixelBlendDst(static_cast<s32>(x + radius - x1), static_cast<s32>(y + radius - y1), color);
+                            // Top-right corner
+                            this->setPixelBlendDst(static_cast<s32>(x + w - radius + x1), static_cast<s32>(y + radius - y1), color);
+                            // Bottom-left corner
+                            this->setPixelBlendDst(static_cast<s32>(x + radius - x1), static_cast<s32>(y + h - radius + y1), color);
+                            // Bottom-right corner
+                            this->setPixelBlendDst(static_cast<s32>(x + w - radius + x1), static_cast<s32>(y + h - radius + y1), color);
+                        }
+                    }
+                }
+            }
+            
+
+
 
             
             //inline void drawRoundedRectBorder(float x, float y, float w, float h, float radius, float thickness, Color color) {
@@ -4628,69 +4707,88 @@ namespace tsl {
                 static bool holding = false;
                 static std::chrono::steady_clock::time_point holdStartTime;
                 static u64 prevKeysHeld = 0;
+                //static bool allowSlide = false; // Flag to allow sliding after KEY_A is pressed
                 u64 keysReleased = prevKeysHeld & ~keysHeld;
                 prevKeysHeld = keysHeld;
-                
+            
                 auto now = std::chrono::steady_clock::now();
                 auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastUpdate);
-                
-                if ((keysReleased & HidNpadButton_AnyLeft) || (keysReleased & HidNpadButton_AnyRight)) {
-                    if (!m_packagePath.empty()) {
-                        setIniFileValue(m_packagePath + "config.ini", m_label, "value", std::to_string(m_value));
-                        if (interpretAndExecuteCommands) {
-                            auto commandsCopy = commands;
-                            interpretAndExecuteCommands(std::move(commandsCopy), m_packagePath, selectedCommand);
-                        }
-                    }
+            
+                // Check if KEY_A is pressed
+                if ((keysReleased & KEY_A) && !allowSlide) {
+                    allowSlide = true;
+                    holding = false; // Reset holding state when KEY_A is pressed
+                    return true;
+                }
+            
+                // Reset allowSlide flag when KEY_A, KEY_UP, or KEY_DOWN are pressed
+                else if (keysReleased & (KEY_A | KEY_UP | KEY_DOWN)) {
+                    allowSlide = false;
                     holding = false;
                     return true;
                 }
-                
-                if (keysHeld & HidNpadButton_AnyLeft && keysHeld & HidNpadButton_AnyRight)
-                    return true;
-                
-                // Check if the button is being held down
-                if (((keysHeld & HidNpadButton_AnyLeft) || (keysHeld & HidNpadButton_AnyRight)) && !(keysHeld & KEY_R)) {
-                    if (!holding) {
-                        holding = true;
-                        holdStartTime = now;
+            
+                // Allow sliding only if KEY_A has been pressed
+                if (allowSlide) {
+                    if ((keysReleased & HidNpadButton_AnyLeft) || (keysReleased & HidNpadButton_AnyRight)) {
+                        if (!m_packagePath.empty()) {
+                            setIniFileValue(m_packagePath + "config.ini", m_label, "value", std::to_string(m_value));
+                            if (interpretAndExecuteCommands) {
+                                auto commandsCopy = commands;
+                                interpretAndExecuteCommands(std::move(commandsCopy), m_packagePath, selectedCommand);
+                            }
+                        }
+                        holding = false;
+                        return true;
                     }
-                    
-                    auto holdDuration = std::chrono::duration_cast<std::chrono::milliseconds>(now - holdStartTime);
-                    std::chrono::milliseconds currentInterval;
-                    if (holdDuration >= std::chrono::milliseconds(2000)) {
-                        currentInterval = std::chrono::milliseconds(5);
-                    } else if (holdDuration >= std::chrono::milliseconds(1000)) {
-                        currentInterval = std::chrono::milliseconds(20);
+            
+                    if (keysHeld & HidNpadButton_AnyLeft && keysHeld & HidNpadButton_AnyRight)
+                        return true;
+            
+                    // Check if the button is being held down
+                    if ((keysHeld & HidNpadButton_AnyLeft) || (keysHeld & HidNpadButton_AnyRight)) {
+                        if (!holding) {
+                            holding = true;
+                            holdStartTime = now;
+                        }
+            
+                        auto holdDuration = std::chrono::duration_cast<std::chrono::milliseconds>(now - holdStartTime);
+                        std::chrono::milliseconds currentInterval;
+                        if (holdDuration >= std::chrono::milliseconds(2000)) {
+                            currentInterval = std::chrono::milliseconds(5);
+                        } else if (holdDuration >= std::chrono::milliseconds(1000)) {
+                            currentInterval = std::chrono::milliseconds(20);
+                        } else {
+                            currentInterval = initialInterval;
+                        }
+            
+                        if (elapsed >= currentInterval) {
+                            if (keysHeld & HidNpadButton_AnyLeft) {
+                                if (this->m_value > m_minValue) {
+                                    this->m_value--;
+                                    this->m_valueChangedListener(this->m_value);
+                                    lastUpdate = now;
+                                    return true;
+                                }
+                            }
+            
+                            if (keysHeld & HidNpadButton_AnyRight) {
+                                if (this->m_value < m_maxValue) {
+                                    this->m_value++;
+                                    this->m_valueChangedListener(this->m_value);
+                                    lastUpdate = now;
+                                    return true;
+                                }
+                            }
+                        }
                     } else {
-                        currentInterval = initialInterval;
+                        holding = false; // Reset holding state if no relevant key is held
                     }
-                    
-                    if (elapsed >= currentInterval) {
-                        if (keysHeld & HidNpadButton_AnyLeft) {
-                            if (this->m_value > m_minValue) {
-                                this->m_value--;
-                                this->m_valueChangedListener(this->m_value);
-                                lastUpdate = now;
-                                return true;
-                            }
-                        }
-                        
-                        if (keysHeld & HidNpadButton_AnyRight) {
-                            if (this->m_value < m_maxValue) {
-                                this->m_value++;
-                                this->m_valueChangedListener(this->m_value);
-                                lastUpdate = now;
-                                return true;
-                            }
-                        }
-                    }
-                } else {
-                    holding = false; // Reset holding state if no relevant key is held
                 }
-                
+            
                 return false;
             }
+            
             
             virtual bool onTouch(TouchEvent event, s32 currX, s32 currY, s32 prevX, s32 prevY, s32 initialX, s32 initialY) override {
                 if (event == TouchEvent::Release) {
@@ -4728,16 +4826,38 @@ namespace tsl {
                 
                 return false;
             }
-            
+
             virtual void draw(gfx::Renderer *renderer) override {
                 static float lastBottomBound;
                 u16 handlePos = (this->getWidth() - 95) * (this->m_value - m_minValue) / (m_maxValue - m_minValue);
-                renderer->drawRect(this->getX() + 60 + handlePos + 18, this->getY() + 40 + 16+2, this->getWidth() - 95 - handlePos - 16 - 1, 5, tsl::style::color::ColorFrame);
+                //renderer->drawRoundedRect(this->getX() + 60 + handlePos + 18, this->getY() + 40 + 16-1, this->getWidth() - 95 - handlePos - 16 - 1, 6, 1, tsl::style::color::ColorFrame);
                 
+                if (!usingNamedStepTrackbar) {
+                    renderer->drawUniformRoundedRect(this->getX() + 60, this->getY() + 40 + 16 -1, this->getWidth() - 95, 7, a(trackBarEmptyColor));
+                } else {
+                    renderer->drawRect(this->getX() + 60, this->getY() + 40 + 16 -1, this->getWidth() - 95, 7, a(trackBarEmptyColor));
+                }
+
                 if (!this->m_focused) {
-                    renderer->drawRect(this->getX() + 60, this->getY() + 40 + 16+2, handlePos, 5, a(tsl::style::color::ColorHighlight));
-                    renderer->drawCircle(this->getX() + 62 + handlePos, this->getY() + 42 + 16+2, 16, true, a(trackBarColor));
-                    renderer->drawCircle(this->getX() + 62 + handlePos, this->getY() + 42 + 16+2, 16, false, a(tsl::style::color::ColorFrame));
+                    if (!usingNamedStepTrackbar) {
+                        renderer->drawUniformRoundedRect(this->getX() + 60, this->getY() + 40 + 16 -1, handlePos, 7, a(trackBarFullColor));
+                    } else {
+                        renderer->drawRect(this->getX() + 60, this->getY() + 40 + 16 -1, handlePos, 7, a(trackBarFullColor));
+                    }
+                    renderer->drawCircle(this->getX() + 60 + handlePos, this->getY() + 42 + 16, 16, true, a(trackBarSliderBorderColor));
+                    renderer->drawCircle(this->getX() + 60 + handlePos, this->getY() + 42 + 16, 13, true, a(trackBarSliderColor));
+                    
+                } else {
+                    if (!usingNamedStepTrackbar) {
+                        renderer->drawUniformRoundedRect(this->getX() + 60, this->getY() + 40 + 16 -1, handlePos, 7, a(trackBarFullColor));
+                    } else {
+                        renderer->drawRect(this->getX() + 60, this->getY() + 40 + 16 -1, handlePos, 7, a(trackBarFullColor));
+                    }
+                    //renderer->drawCircle(this->getX() + 60 + handlePos, this->getY() + 42 + 16, 16, true, a(clickColor));
+                    renderer->drawCircle(this->getX() + 60 + handlePos, this->getY() + 42 + 16, 16, true, a(highlightColor));
+                    //renderer->drawCircle(this->getX() + 60 + handlePos, this->getY() + 42 + 16, 12, true, a(trackBarSliderBorderColor));
+                    renderer->drawCircle(this->getX() + 60 + handlePos, this->getY() + 42 + 16, 12, true, a(trackBarSliderColor));
+                    
                 }
                 
                 if (!usingNamedStepTrackbar) {
@@ -4757,10 +4877,10 @@ namespace tsl {
                     std::tie(labelWidth, descHeight) = renderer->drawString(labelPart.c_str(), false, 0, 0, 16, a(tsl::style::color::ColorTransparent));
                     
                     // Draw the label part
-                    renderer->drawString(labelPart.c_str(), false, combinedX, this->getY() + 14 + 16 + 2, 16, a(defaultTextColor));
+                    renderer->drawString(labelPart.c_str(), false, combinedX, this->getY() + 14 + 16, 16, a(defaultTextColor));
                     
                     // Draw the value and units part in a different color
-                    renderer->drawString(valuePart.c_str(), false, combinedX + labelWidth, this->getY() + 14 + 16 + 2, 16, a(onTextColor));
+                    renderer->drawString(valuePart.c_str(), false, combinedX + labelWidth, this->getY() + 14 + 16, 16, a(onTextColor));
                 }
 
 
@@ -4798,7 +4918,7 @@ namespace tsl {
                     };
                 }
                 
-                u16 handlePos = (this->getWidth() - 95) * (this->m_value - m_minValue) / (m_maxValue - m_minValue);
+                //u16 handlePos = (this->getWidth() - 95) * (this->m_value - m_minValue) / (m_maxValue - m_minValue);
                 x = 0;
                 y = 0;
                 
@@ -4830,11 +4950,13 @@ namespace tsl {
                         y = std::clamp(y, -amplitude, amplitude);
                     }
                 }
-                if (this->m_clickAnimationProgress == 0) {
-                    renderer->drawRect(this->getX() + 60, this->getY() + 40 + 16+2, handlePos, 5, a(tsl::style::color::ColorHighlight));
-                    renderer->drawCircle(this->getX() + 62 + x + handlePos, this->getY() + 42 + y + 16+2, 16, true, a(highlightColor));
-                    renderer->drawCircle(this->getX() + 62 + x + handlePos, this->getY() + 42 + y + 16+2, 11, true, a(trackBarColor));
-                }
+
+                //if (this->m_clickAnimationProgress == 0) {
+                //    renderer->drawRect(this->getX() + 60, this->getY() + 40 + 16+2, handlePos, 5, a(tsl::style::color::ColorHighlight));
+                //    renderer->drawCircle(this->getX() + 62 + x + handlePos, this->getY() + 42 + y + 16+2, 16, true, a(highlightColor));
+                //    renderer->drawCircle(this->getX() + 62 + x + handlePos, this->getY() + 42 + y + 16+2, 11, true, a(trackBarColor));
+                //}
+
                 onTrackBar = true;
             }
             
@@ -4905,48 +5027,65 @@ namespace tsl {
                 static u64 prevKeysHeld = 0;
                 u64 keysReleased = prevKeysHeld & ~keysHeld;
                 prevKeysHeld = keysHeld;
-            
-                if ((keysReleased & HidNpadButton_AnyLeft) || (keysReleased & HidNpadButton_AnyRight)) {
-                    if (!m_packagePath.empty()) {
-                        setIniFileValue(m_packagePath + "config.ini", m_label, "value", std::to_string(m_value));
-            
-                        if (interpretAndExecuteCommands) {
-                            auto commandsCopy = commands;
-                            interpretAndExecuteCommands(std::move(commandsCopy), m_packagePath, selectedCommand);
-                        }
-                    }
-                    holding = false;
-                    tick = 0;
-                    return true;
-                }
                 
-                if (keysHeld & HidNpadButton_AnyLeft && keysHeld & HidNpadButton_AnyRight) {
-                    tick = 0;
+
+                // Check if KEY_A is pressed
+                if ((keysReleased & KEY_A) && !allowSlide) {
+                    allowSlide = true;
+                    holding = false; // Reset holding state when KEY_A is pressed
                     return true;
                 }
             
-                if (keysHeld & (HidNpadButton_AnyLeft | HidNpadButton_AnyRight) && !(keysHeld & KEY_R)) {
-                    if (!holding) {
-                        holding = true;
+                // Reset allowSlide flag when KEY_A, KEY_UP, or KEY_DOWN are pressed
+                else if (keysReleased & (KEY_A | KEY_UP | KEY_DOWN)) {
+                    allowSlide = false;
+                    holding = false;
+                    return true;
+                }
+
+                if (allowSlide) {
+                    if ((keysReleased & HidNpadButton_AnyLeft) || (keysReleased & HidNpadButton_AnyRight)) {
+                        if (!m_packagePath.empty()) {
+                            setIniFileValue(m_packagePath + "config.ini", m_label, "value", std::to_string(m_value));
+                            
+                            if (interpretAndExecuteCommands) {
+                                auto commandsCopy = commands;
+                                interpretAndExecuteCommands(std::move(commandsCopy), m_packagePath, selectedCommand);
+                            }
+                        }
+                        holding = false;
+                        tick = 0;
+                        return true;
+                    }
+                    
+                    if (keysHeld & HidNpadButton_AnyLeft && keysHeld & HidNpadButton_AnyRight) {
+                        tick = 0;
+                        return true;
+                    }
+                    
+                    if (keysHeld & (HidNpadButton_AnyLeft | HidNpadButton_AnyRight) && !(keysHeld & KEY_R)) {
+                        if (!holding) {
+                            holding = true;
+                            tick = 0;
+                        }
+                        
+                        if ((tick == 0 || tick > 20) && (tick % 3) == 0) {
+                            s16 stepValue = (m_maxValue - m_minValue) / (this->m_numSteps - 1);
+                            if (keysHeld & HidNpadButton_AnyLeft && this->m_value > m_minValue) {
+                                this->m_value = std::max(static_cast<int>(this->m_value - stepValue), static_cast<int>(m_minValue));
+                            } else if (keysHeld & HidNpadButton_AnyRight && this->m_value < m_maxValue) {
+                                this->m_value = std::min(static_cast<int>(this->m_value + stepValue), static_cast<int>(m_maxValue));
+                            } else {
+                                return false;
+                            }
+                            this->m_valueChangedListener(this->getProgress());
+                        }
+                        tick++;
+                        return true;
+                    } else {
+                        holding = false;
                         tick = 0;
                     }
-            
-                    if ((tick == 0 || tick > 20) && (tick % 3) == 0) {
-                        s16 stepValue = (m_maxValue - m_minValue) / (this->m_numSteps - 1);
-                        if (keysHeld & HidNpadButton_AnyLeft && this->m_value > m_minValue) {
-                            this->m_value = std::max(static_cast<int>(this->m_value - stepValue), static_cast<int>(m_minValue));
-                        } else if (keysHeld & HidNpadButton_AnyRight && this->m_value < m_maxValue) {
-                            this->m_value = std::min(static_cast<int>(this->m_value + stepValue), static_cast<int>(m_maxValue));
-                        } else {
-                            return false;
-                        }
-                        this->m_valueChangedListener(this->getProgress());
-                    }
-                    tick++;
-                    return true;
-                } else {
-                    holding = false;
-                    tick = 0;
                 }
             
                 return false;
@@ -5037,47 +5176,37 @@ namespace tsl {
             virtual ~NamedStepTrackBar() {}
             
             virtual void draw(gfx::Renderer *renderer) override {
-                //static u16 lastIndex;
-
+                // TrackBar width excluding the handle areas
                 trackBarWidth = this->getWidth() - 95;
-                stepWidth = trackBarWidth / (this->m_numSteps - 1);
                 
-                // Calculate handle position and dimensions
-                u16 handlePos = (this->getWidth() - 95) * (this->m_value) / 100;
-                u16 handleStartX = this->getX() + 62 + handlePos - 20;
-                u16 handleEndX = this->getX() + 62 + handlePos + 20;
+                // Calculate the exact step width
+                stepWidth = static_cast<float>(trackBarWidth) / (this->m_numSteps - 1);
                 
-                u16 stepX;
-                // Draw step rectangles, skipping those that intersect with the handle
+                // Draw step rectangles
                 for (u8 i = 0; i < this->m_numSteps; i++) {
-                    stepX = this->getX() + 60 + stepWidth * i;
-                    if (stepX < handleStartX || stepX > handleEndX) {
-                        renderer->drawRect(stepX, this->getY() + 50, 1, 8, a(tsl::style::color::ColorFrame));
+                    u16 stepX;
+                    if (i == 0) {
+                        // First rectangle at the start
+                        stepX = this->getX() + 60;
+                    } else if (i == this->m_numSteps - 1) {
+                        // Last rectangle at the end
+                        stepX = this->getX() + 60 + trackBarWidth -1;
+                    } else {
+                        // Other rectangles
+                        stepX = static_cast<u16>(this->getX() + 60 + std::round(i * stepWidth));
                     }
+                    renderer->drawRect(stepX, this->getY() + 50 -3, 1, 8, a(tsl::style::color::ColorFrame));
                 }
                 
+                // Draw the current step description
                 currentDescIndex = this->m_value;
-                
                 std::tie(descWidth, descHeight) = renderer->drawString(this->m_stepDescriptions[currentDescIndex].c_str(), false, 0, 0, 16, a(tsl::style::color::ColorTransparent));
-                renderer->drawString(this->m_stepDescriptions[currentDescIndex].c_str(), false, ((this->getX() + 60) + (this->getWidth() - 95) / 2) - (descWidth / 2), this->getY() + 14 +16 +2, 16, a(defaultTextColor));
+                renderer->drawString(this->m_stepDescriptions[currentDescIndex].c_str(), false, ((this->getX() + 60) + (this->getWidth() - 95) / 2) - (descWidth / 2), this->getY() + 14 + 16, 16, a(defaultTextColor));
                 
-                //if (lastIndex != currentDescIndex) {
-                //    if (!m_packagePath.empty()) {
-                //        setIniFileValue(m_packagePath + "config.ini", m_label, "index", std::to_string(currentDescIndex));
-                //        //setIniFileValue(m_packagePath + "config.ini", m_label, "entry", m_stepDescriptions[currentDescIndex]);
-                //        if (interpretAndExecuteCommands) {
-                //            //logMessage("before interpretAndExecuteCommands.");
-                //            auto commandsCopy = commands;
-                //            interpretAndExecuteCommands(std::move(commandsCopy), m_packagePath, selectedCommand);
-                //            //logMessage("after interpretAndExecuteCommands.");
-                //        }
-                //    }
-                //}
-
-                //lastIndex = currentDescIndex;
-
+                // Draw the parent trackbar
                 StepTrackBar::draw(renderer);
             }
+
             
         protected:
             std::vector<std::string> m_stepDescriptions;
@@ -5545,11 +5674,18 @@ namespace tsl {
                     currentGui->markInitialFocusSet();
                 }
             }
-            
+            static bool hasScrolled = false;
+
+
             if (!currentFocus && !touchDetected && (!oldTouchDetected || oldTouchEvent == elm::TouchEvent::Scroll)) {
                 if (!simulatedBack && simulatedBackComplete && topElement) {
-                    currentGui->removeFocus();
-                    currentGui->requestFocus(topElement, FocusDirection::None);
+                    if (oldTouchEvent == elm::TouchEvent::Scroll) {
+                        hasScrolled = true;
+                    }
+                    if (!hasScrolled) {
+                        currentGui->removeFocus();
+                        currentGui->requestFocus(topElement, FocusDirection::None);
+                    }
                 }
             }
             
@@ -5565,60 +5701,76 @@ namespace tsl {
             
             handled |= currentGui->handleInput(keysDown, keysHeld, touchPos, joyStickPosLeft, joyStickPosRight);
             
-            if (!touchDetected && !oldTouchDetected && !handled && currentFocus && !stillTouching && !runningInterpreter.load(std::memory_order_acquire)) {
-                static bool shouldShake = true;
+
+            if (hasScrolled) {
                 bool singleArrowKeyPress = ((keysHeld & HidNpadButton_AnyUp) != 0) + ((keysHeld & HidNpadButton_AnyDown) != 0) + ((keysHeld & HidNpadButton_AnyLeft) != 0) + ((keysHeld & HidNpadButton_AnyRight) != 0) == 1;
-        
+                    
+                
                 if (singleArrowKeyPress) {
                     auto now = std::chrono::high_resolution_clock::now();
-                    if (keysDown) {
-                        buttonPressTime = now;
-                        lastKeyEventTime = now;
+                    buttonPressTime = now;
+                    lastKeyEventTime = now;
+                    hasScrolled = false;
+                }
+            } else {
+
+                if (!touchDetected && !oldTouchDetected && !handled && currentFocus && !stillTouching && !runningInterpreter.load(std::memory_order_acquire)) {
+                    static bool shouldShake = true;
+                    bool singleArrowKeyPress = ((keysHeld & HidNpadButton_AnyUp) != 0) + ((keysHeld & HidNpadButton_AnyDown) != 0) + ((keysHeld & HidNpadButton_AnyLeft) != 0) + ((keysHeld & HidNpadButton_AnyRight) != 0) == 1;
+                    
+                    if (singleArrowKeyPress) {
+                        
+    
+                        auto now = std::chrono::high_resolution_clock::now();
+                        if (keysDown) {
+                            buttonPressTime = now;
+                            lastKeyEventTime = now;
+                            singlePressHandled = false;
+                            // Immediate single press action
+                            if (keysHeld & KEY_UP && !(keysHeld & ~KEY_UP & ALL_KEYS_MASK))
+                                currentGui->requestFocus(currentGui->getTopElement(), FocusDirection::Up, shouldShake); // Request focus on the top element when double-clicking up
+                            else if (keysHeld & KEY_DOWN && !(keysHeld & ~KEY_DOWN & ALL_KEYS_MASK))
+                                currentGui->requestFocus(currentFocus->getParent(), FocusDirection::Down, shouldShake);
+                            else if (keysHeld & KEY_LEFT && !(keysHeld & ~KEY_LEFT & ALL_KEYS_MASK))
+                                currentGui->requestFocus(currentFocus->getParent(), FocusDirection::Left, shouldShake);
+                            else if (keysHeld & KEY_RIGHT && !(keysHeld & ~KEY_RIGHT & ALL_KEYS_MASK))
+                                currentGui->requestFocus(currentFocus->getParent(), FocusDirection::Right, shouldShake);
+                            //shouldShake = currentGui->getFocusedElement() != currentFocus;
+                        }
+                        
+                        auto durationSincePress = std::chrono::duration_cast<std::chrono::milliseconds>(now - buttonPressTime);
+                        auto durationSinceLastEvent = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastKeyEventTime);
+                        
+                        if (!singlePressHandled && durationSincePress >= clickThreshold) {
+                            singlePressHandled = true;
+                        }
+    
+                        if (durationSincePress > std::chrono::milliseconds(3000))
+                            keyEventInterval = std::chrono::milliseconds(10);
+                        else if (durationSincePress > std::chrono::milliseconds(2000))
+                            keyEventInterval = std::chrono::milliseconds(20);
+                        else if (durationSincePress > std::chrono::milliseconds(420))
+                            keyEventInterval = std::chrono::milliseconds(50);
+                        else
+                            keyEventInterval = std::chrono::milliseconds(67);
+                        
+                        //keyEventInterval = interpolateKeyEventInterval(durationSincePress);
+    
+                        if (singlePressHandled && durationSinceLastEvent >= keyEventInterval) {
+                            lastKeyEventTime = now;
+                            if (keysHeld & KEY_UP && !(keysHeld & ~KEY_UP & ALL_KEYS_MASK))
+                                currentGui->requestFocus(currentGui->getTopElement(), FocusDirection::Up, false);
+                            else if (keysHeld & KEY_DOWN && !(keysHeld & ~KEY_DOWN & ALL_KEYS_MASK))
+                                currentGui->requestFocus(currentFocus->getParent(), FocusDirection::Down, false);
+                            else if (keysHeld & KEY_LEFT && !(keysHeld & ~KEY_LEFT & ALL_KEYS_MASK))
+                                currentGui->requestFocus(currentFocus->getParent(), FocusDirection::Left, false);
+                            else if (keysHeld & KEY_RIGHT && !(keysHeld & ~KEY_RIGHT & ALL_KEYS_MASK))
+                                currentGui->requestFocus(currentFocus->getParent(), FocusDirection::Right, false);
+                            //shouldShake = currentGui->getFocusedElement() != currentFocus;
+                        }
+                    } else {
                         singlePressHandled = false;
-                        // Immediate single press action
-                        if (keysHeld & KEY_UP && !(keysHeld & ~KEY_UP & ALL_KEYS_MASK))
-                            currentGui->requestFocus(currentGui->getTopElement(), FocusDirection::Up, shouldShake); // Request focus on the top element when double-clicking up
-                        else if (keysHeld & KEY_DOWN && !(keysHeld & ~KEY_DOWN & ALL_KEYS_MASK))
-                            currentGui->requestFocus(currentFocus->getParent(), FocusDirection::Down, shouldShake);
-                        else if (keysHeld & KEY_LEFT && !(keysHeld & ~KEY_LEFT & ALL_KEYS_MASK))
-                            currentGui->requestFocus(currentFocus->getParent(), FocusDirection::Left, shouldShake);
-                        else if (keysHeld & KEY_RIGHT && !(keysHeld & ~KEY_RIGHT & ALL_KEYS_MASK))
-                            currentGui->requestFocus(currentFocus->getParent(), FocusDirection::Right, shouldShake);
-                        //shouldShake = currentGui->getFocusedElement() != currentFocus;
                     }
-                    
-                    auto durationSincePress = std::chrono::duration_cast<std::chrono::milliseconds>(now - buttonPressTime);
-                    auto durationSinceLastEvent = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastKeyEventTime);
-                    
-                    if (!singlePressHandled && durationSincePress >= clickThreshold) {
-                        singlePressHandled = true;
-                    }
-
-                    if (durationSincePress > std::chrono::milliseconds(3000))
-                        keyEventInterval = std::chrono::milliseconds(10);
-                    else if (durationSincePress > std::chrono::milliseconds(2000))
-                        keyEventInterval = std::chrono::milliseconds(20);
-                    else if (durationSincePress > std::chrono::milliseconds(420))
-                        keyEventInterval = std::chrono::milliseconds(50);
-                    else
-                        keyEventInterval = std::chrono::milliseconds(67);
-                    
-                    //keyEventInterval = interpolateKeyEventInterval(durationSincePress);
-
-                    if (singlePressHandled && durationSinceLastEvent >= keyEventInterval) {
-                        lastKeyEventTime = now;
-                        if (keysHeld & KEY_UP && !(keysHeld & ~KEY_UP & ALL_KEYS_MASK))
-                            currentGui->requestFocus(currentGui->getTopElement(), FocusDirection::Up, false);
-                        else if (keysHeld & KEY_DOWN && !(keysHeld & ~KEY_DOWN & ALL_KEYS_MASK))
-                            currentGui->requestFocus(currentFocus->getParent(), FocusDirection::Down, false);
-                        else if (keysHeld & KEY_LEFT && !(keysHeld & ~KEY_LEFT & ALL_KEYS_MASK))
-                            currentGui->requestFocus(currentFocus->getParent(), FocusDirection::Left, false);
-                        else if (keysHeld & KEY_RIGHT && !(keysHeld & ~KEY_RIGHT & ALL_KEYS_MASK))
-                            currentGui->requestFocus(currentFocus->getParent(), FocusDirection::Right, false);
-                        //shouldShake = currentGui->getFocusedElement() != currentFocus;
-                    }
-                } else {
-                    singlePressHandled = false;
                 }
             }
             
