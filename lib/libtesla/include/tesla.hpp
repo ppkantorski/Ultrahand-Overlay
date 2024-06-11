@@ -748,6 +748,7 @@ std::map<std::string, std::string> defaultThemeSettingsMap = {
     {"table_info_text_color", "#00FFDD"},
     {"trackbar_slider_color", "#707070"},
     {"trackbar_slider_border_color", "#505050"},
+    {"trackbar_malleable_slider_color", "#909090"},
     {"trackbar_full_color", "#00FFDD"},
     {"trackbar_empty_color", "#404040"},
     {"version_text_color", "#AAAAAA"},
@@ -1339,6 +1340,7 @@ namespace tsl {
 
     static Color trackBarSliderColor = RGB888("#707070");
     static Color trackBarSliderBorderColor = RGB888("#505050");
+    static Color trackBarMalleableSliderColor = RGB888("#909090");
     static Color trackBarFullColor = RGB888("#00FFDD");
     static Color trackBarEmptyColor = RGB888("#404040");
 
@@ -1415,6 +1417,7 @@ namespace tsl {
 
             trackBarSliderColor = getColor("trackbar_slider_color");
             trackBarSliderBorderColor = getColor("trackbar_slider_border_color");
+            trackBarMalleableSliderColor = getColor("trackbar_malleable_slider_color");
             trackBarFullColor = getColor("trackbar_full_color");
             trackBarEmptyColor = getColor("trackbar_empty_color");
         }
@@ -4714,20 +4717,12 @@ namespace tsl {
                 auto now = std::chrono::steady_clock::now();
                 auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastUpdate);
             
-                // Check if KEY_A is pressed
-                if ((keysReleased & KEY_A) && !allowSlide) {
-                    allowSlide = true;
+                // Check if KEY_A is pressed to toggle allowSlide
+                if ((keysReleased & KEY_A)) {
+                    allowSlide = !allowSlide;
                     holding = false; // Reset holding state when KEY_A is pressed
                     return true;
                 }
-            
-                // Reset allowSlide flag when KEY_A, KEY_UP, or KEY_DOWN are pressed
-                else if (keysReleased & (KEY_A | KEY_UP | KEY_DOWN)) {
-                    allowSlide = false;
-                    holding = false;
-                    return true;
-                }
-            
                 // Allow sliding only if KEY_A has been pressed
                 if (allowSlide) {
                     if ((keysReleased & HidNpadButton_AnyLeft) || (keysReleased & HidNpadButton_AnyRight)) {
@@ -4856,7 +4851,10 @@ namespace tsl {
                     //renderer->drawCircle(this->getX() + 60 + handlePos, this->getY() + 42 + 16, 16, true, a(clickColor));
                     renderer->drawCircle(this->getX() + 60 + handlePos, this->getY() + 42 + 16, 16, true, a(highlightColor));
                     //renderer->drawCircle(this->getX() + 60 + handlePos, this->getY() + 42 + 16, 12, true, a(trackBarSliderBorderColor));
-                    renderer->drawCircle(this->getX() + 60 + handlePos, this->getY() + 42 + 16, 12, true, a(trackBarSliderColor));
+                    if (allowSlide)
+                        renderer->drawCircle(this->getX() + 60 + handlePos, this->getY() + 42 + 16, 12, true, a(trackBarMalleableSliderColor));
+                    else
+                        renderer->drawCircle(this->getX() + 60 + handlePos, this->getY() + 42 + 16, 12, true, a(trackBarSliderColor));
                     
                 }
                 
@@ -5029,17 +5027,10 @@ namespace tsl {
                 prevKeysHeld = keysHeld;
                 
 
-                // Check if KEY_A is pressed
-                if ((keysReleased & KEY_A) && !allowSlide) {
-                    allowSlide = true;
+                // Check if KEY_A is pressed to toggle allowSlide
+                if ((keysReleased & KEY_A)) {
+                    allowSlide = !allowSlide;
                     holding = false; // Reset holding state when KEY_A is pressed
-                    return true;
-                }
-            
-                // Reset allowSlide flag when KEY_A, KEY_UP, or KEY_DOWN are pressed
-                else if (keysReleased & (KEY_A | KEY_UP | KEY_DOWN)) {
-                    allowSlide = false;
-                    holding = false;
                     return true;
                 }
 
