@@ -2188,6 +2188,7 @@ public:
                                         lastPackageMenu = "packageMenu";
                                     else
                                         lastPackageMenu = "subPackageMenu";
+                                    allowSlide = false;
                                     tsl::changeTo<PackageMenu>(forwarderPackagePath, "", LEFT_STR, forwarderPackageIniName, nestedMenuCount);
                                     simulatedSelectComplete = true;
                                     return true;
@@ -2285,6 +2286,7 @@ public:
                                         lastPackageMenu = "packageMenu";
                                     else
                                         lastPackageMenu = "subPackageMenu";
+                                    allowSlide = false;
                                     tsl::changeTo<PackageMenu>(forwarderPackagePath, "", LEFT_STR, forwarderPackageIniName, nestedMenuCount);
                                     simulatedSelectComplete = true;
                                     return true;
@@ -2486,7 +2488,8 @@ public:
                 }
             }
             if (currentPage == LEFT_STR) {
-                if ((keysHeld & KEY_RIGHT) && !(keysHeld & (KEY_DLEFT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR)) && !stillTouching && !allowSlide) {
+                if ((keysHeld & KEY_RIGHT) && !(keysHeld & (KEY_DLEFT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR)) && !stillTouching && ((!allowSlide && onTrackBar) || !onTrackBar)) {
+                    allowSlide = false;
                     lastPage = RIGHT_STR;
                     //lastPackage = packagePath;
                     selectedListItem.reset();
@@ -2497,7 +2500,8 @@ public:
                     return true;
                 }
             } else if (currentPage == RIGHT_STR) {
-                if ((keysHeld & KEY_LEFT) && !(keysHeld & (KEY_DRIGHT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR)) && !stillTouching && !allowSlide) {
+                if ((keysHeld & KEY_LEFT) && !(keysHeld & (KEY_DRIGHT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR)) && !stillTouching && ((!allowSlide && onTrackBar) || !onTrackBar)) {
+                    allowSlide = false;
                     lastPage = LEFT_STR;
                     //lastPackage = packagePath;
                     selectedListItem.reset();
@@ -3537,12 +3541,38 @@ public:
                     
                     if (!skipSection && !skipSystem) {
                         if (commandMode == TABLE_STR) {
-                            //if (!hideTableHeader) {
-                            //    optionName = optionName.substr(1);
-                            //    list->addItem(new tsl::elm::CategoryHeader(removeTag(optionName)));
-                            //} else
-                            //    hideTableHeader = false;
                             addTable(list, tableData, packagePath, tableColumnOffset, tableStartGap, tableEndGap, tableSpacing, tableAlignment, hideTableBackground);
+                            continue;
+                        } else if (commandMode == TRACKBAR_STR) {
+                            list->addItem(new tsl::elm::TrackBar(optionName, packagePath, minValue, maxValue, units, interpretAndExecuteCommands, commands, option.first));
+                            continue;
+                        } else if (commandMode == STEP_TRACKBAR_STR) {
+                            list->addItem(new tsl::elm::StepTrackBar(optionName, packagePath, steps, minValue, maxValue, units, interpretAndExecuteCommands, commands, option.first));
+                            continue;
+                        } else if (commandMode == NAMED_STEP_TRACKBAR_STR) {
+                            std::vector<std::string> entryList = {};
+                            
+                            for (const auto& cmd : commands) {
+                                if (cmd.empty())
+                                    continue;
+                                
+                                if (cmd.size() > 1) {
+                                
+                                    if ((cmd[0] == "list_source")) {
+                                        std::string listString = removeQuotes(cmd[1]);
+                                        entryList = stringToList(listString);
+                                        break;
+                                    }
+                                    else if ((cmd[0] == "list_file_source")) {
+                                        std::string listPath = preprocessPath(cmd[1], packagePath);
+                                        entryList = readListFromFile(listPath);
+                                        break;
+                                    }
+                                }
+                            }
+                            
+                            list->addItem(new tsl::elm::NamedStepTrackBar(optionName, packagePath, entryList, interpretAndExecuteCommands, commands, option.first));
+                            
                             continue;
                         }
 
@@ -3813,7 +3843,8 @@ public:
                     }
                 }
 
-                if ((keysHeld & KEY_RIGHT) && !(keysHeld & (KEY_DLEFT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR)) && !stillTouching && !allowSlide) {
+                if ((keysHeld & KEY_RIGHT) && !(keysHeld & (KEY_DLEFT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR)) && !stillTouching && ((!allowSlide && onTrackBar) || !onTrackBar)) {
+                    allowSlide = false;
                     if (menuMode != PACKAGES_STR) {
                         currentMenu = PACKAGES_STR;
                         selectedListItem.reset();
@@ -3825,7 +3856,8 @@ public:
                         return true;
                     }
                 }
-                if ((keysHeld & KEY_LEFT) && !(keysHeld & (KEY_DRIGHT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR)) && !stillTouching && !allowSlide) {
+                if ((keysHeld & KEY_LEFT) && !(keysHeld & (KEY_DRIGHT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR)) && !stillTouching && ((!allowSlide && onTrackBar) || !onTrackBar)) {
+                    allowSlide = false;
                     if (menuMode != OVERLAYS_STR) {
                         currentMenu = OVERLAYS_STR;
                         selectedListItem.reset();
