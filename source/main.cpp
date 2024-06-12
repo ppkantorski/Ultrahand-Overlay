@@ -68,7 +68,7 @@ static const std::string SYSTEM_PATTERN = ";system=";
 
 // Table option patterns
 static const std::string BACKGROUND_PATTERN = ";background="; // true or false
-static const std::string HEADER_PATTERN = ";header=";
+//static const std::string HEADER_PATTERN = ";header=";
 static const std::string ALIGNMENT_PATTERN = ";alignment=";
 static const std::string GAP_PATTERN =";gap=";
 static const std::string OFFSET_PATTERN = ";offset=";
@@ -125,7 +125,7 @@ struct CommandOptions {
     std::string& sourceTypeOff;
     std::string& defaultToggleState;
     bool& hideTableBackground;
-    bool& hideTableHeader;
+    //bool& hideTableHeader;
     size_t& tableStartGap;
     size_t& tableEndGap;
     size_t& tableColumnOffset;
@@ -204,9 +204,9 @@ void processCommands(CommandOptions& options, CommandData& data) {
             } else if (options.commandName.find(BACKGROUND_PATTERN) == 0) {
                 options.hideTableBackground = (options.commandName.substr(BACKGROUND_PATTERN.length()) == FALSE_STR);
                 continue;
-            } else if (options.commandName.find(HEADER_PATTERN) == 0) {
-                options.hideTableHeader = (options.commandName.substr(HEADER_PATTERN.length()) == FALSE_STR);
-                continue;
+            //} else if (options.commandName.find(HEADER_PATTERN) == 0) {
+            //    options.hideTableHeader = (options.commandName.substr(HEADER_PATTERN.length()) == FALSE_STR);
+            //    continue;
             } else if (options.commandName.find(GAP_PATTERN) == 0) {
                 options.tableEndGap = std::stoi(options.commandName.substr(GAP_PATTERN.length()));
                 continue;
@@ -1904,7 +1904,7 @@ public:
         bool inEristaSection;
         bool inMarikoSection;
         
-        bool hideTableHeader, hideTableBackground;
+        bool hideTableBackground;
         size_t tableStartGap, tableEndGap, tableColumnOffset, tableSpacing;
         std::string tableAlignment;
 
@@ -1912,7 +1912,7 @@ public:
         CommandOptions cmdOptions = {inEristaSection, inMarikoSection, usingErista, usingMariko, commandName, commandSystem,
                                   commandMode, commandGrouping, currentSection, pathPattern, sourceType, pathPatternOn,
                                   sourceTypeOn, pathPatternOff, sourceTypeOff, defaultToggleState, hideTableBackground,
-                                  hideTableHeader, tableStartGap, tableEndGap, tableColumnOffset, tableSpacing,
+                                  tableStartGap, tableEndGap, tableColumnOffset, tableSpacing,
                                   tableAlignment, minValue, maxValue, units, steps, packageSource, packagePath};
         
         CommandData cmdData = {commands, commandsOn, commandsOff, tableData};
@@ -1927,7 +1927,7 @@ public:
             useSelection = false;
 
             // Table settings
-            hideTableHeader = false;
+            //hideTableHeader = false;
             hideTableBackground = false;
             tableStartGap = 20;
             tableEndGap = 3;
@@ -2488,7 +2488,7 @@ public:
                 }
             }
             if (currentPage == LEFT_STR) {
-                if ((keysHeld & KEY_RIGHT) && !(keysHeld & (KEY_DLEFT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR)) && !stillTouching && ((!allowSlide && onTrackBar) || !onTrackBar || simulatedNextPage)) {
+                if ((keysHeld & KEY_RIGHT) && !(keysHeld & ~KEY_RIGHT & ALL_KEYS_MASK) && !stillTouching && ((!allowSlide && onTrackBar) || !onTrackBar || simulatedNextPage)) {
                     simulatedNextPage = false;
                     allowSlide = false;
                     lastPage = RIGHT_STR;
@@ -2501,7 +2501,7 @@ public:
                     return true;
                 }
             } else if (currentPage == RIGHT_STR) {
-                if ((keysHeld & KEY_LEFT) && !(keysHeld & (KEY_DRIGHT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR)) && !stillTouching && ((!allowSlide && onTrackBar) || !onTrackBar || simulatedNextPage)) {
+                if ((keysHeld & KEY_LEFT) && !(keysHeld & ~KEY_LEFT & ALL_KEYS_MASK) && !stillTouching && ((!allowSlide && onTrackBar) || !onTrackBar || simulatedNextPage)) {
                     simulatedNextPage = false;
                     allowSlide = false;
                     lastPage = LEFT_STR;
@@ -3368,7 +3368,7 @@ public:
 
                 std::string packageSource;
 
-                bool hideTableHeader, hideTableBackground;
+                bool hideTableBackground;
                 size_t tableStartGap, tableEndGap, tableColumnOffset, tableSpacing;
                 std::string tableAlignment;
                 
@@ -3382,7 +3382,7 @@ public:
                 CommandOptions cmdOptions = {inEristaSection, inMarikoSection, usingErista, usingMariko, commandName, commandSystem,
                                           commandMode, commandGrouping, currentSection, pathPattern, sourceType, pathPatternOn,
                                           sourceTypeOn, pathPatternOff, sourceTypeOff, defaultToggleState, hideTableBackground,
-                                          hideTableHeader, tableStartGap, tableEndGap, tableColumnOffset, tableSpacing,
+                                          tableStartGap, tableEndGap, tableColumnOffset, tableSpacing,
                                           tableAlignment, minValue, maxValue, units, steps, packageSource, packagePath};
                 
                 CommandData cmdData = {commands, commandsOn, commandsOff, tableData};
@@ -3396,7 +3396,7 @@ public:
                     
                     footer = "";
                     useSelection = false;
-                    hideTableHeader = false;
+                    //hideTableHeader = false;
                     hideTableBackground = false;
                     tableStartGap = 20;
                     tableEndGap = 3;
@@ -3845,7 +3845,7 @@ public:
                     }
                 }
 
-                if ((keysHeld & KEY_RIGHT) && !(keysHeld & (KEY_DLEFT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR)) && !stillTouching && ((!allowSlide && onTrackBar) || !onTrackBar || simulatedNextPage)) {
+                if ((keysHeld & KEY_RIGHT) && !(keysHeld & ~KEY_RIGHT & ALL_KEYS_MASK) && !stillTouching && ((!allowSlide && onTrackBar) || !onTrackBar || simulatedNextPage)) {
                     simulatedNextPage = false;
                     allowSlide = false;
                     if (menuMode != PACKAGES_STR) {
@@ -3859,7 +3859,7 @@ public:
                         return true;
                     }
                 }
-                if ((keysHeld & KEY_LEFT) && !(keysHeld & (KEY_DRIGHT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR)) && !stillTouching && ((!allowSlide && onTrackBar) || !onTrackBar || simulatedNextPage)) {
+                if ((keysHeld & KEY_LEFT) && !(keysHeld & ~KEY_LEFT & ALL_KEYS_MASK) && !stillTouching && ((!allowSlide && onTrackBar) || !onTrackBar || simulatedNextPage)) {
                     simulatedNextPage = false;
                     allowSlide = false;
                     if (menuMode != OVERLAYS_STR) {
