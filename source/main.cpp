@@ -2984,7 +2984,7 @@ public:
                     
                     newOverlayName = overlayName.c_str();
                     if (overlayStarred)
-                        newOverlayName = STAR_SYMBOL+" "+newOverlayName;
+                        newOverlayName = STAR_SYMBOL+"  "+newOverlayName;
                     
                     
                     // Toggle the starred status
@@ -3210,7 +3210,7 @@ public:
                     
                     //packageName = packageName.substr(5);
                     
-                    newPackageName = (packageStarred) ? (STAR_SYMBOL + " " + packageName) : packageName;
+                    newPackageName = (packageStarred) ? (STAR_SYMBOL + "  " + packageName) : packageName;
                     
                     packageFilePath = PACKAGE_PATH + packageName+ "/";
                     
