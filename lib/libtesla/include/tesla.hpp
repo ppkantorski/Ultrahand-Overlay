@@ -742,6 +742,12 @@ std::map<std::string, std::string> defaultThemeSettingsMap = {
     {"battery_color", "#ffff45"},
     {"text_color", whiteColor},
     {"header_text_color", whiteColor},
+    {"header_seperator_color", whiteColor},
+    {"star_color", whiteColor},
+    {"selection_star_color", whiteColor},
+    {"bottom_button_color", whiteColor},
+    {"bottom_text_color", whiteColor},
+    {"bottom_seperator_color", whiteColor},
     {"table_bg_color", "#303030"},
     {"table_bg_alpha", "10"},
     {"table_section_text_color", whiteColor},
@@ -1297,6 +1303,13 @@ namespace tsl {
     static Color defaultBackgroundColor = RGB888(blackColor, blackColor, defaultBackgroundAlpha);
     static Color defaultTextColor = RGB888(whiteColor);
     static Color headerTextColor = RGB888(whiteColor);
+    static Color headerSeperatorColor = RGB888(whiteColor);
+    static Color starColor = RGB888(whiteColor);
+    static Color selectionStarColor = RGB888(whiteColor);
+    static Color buttonColor = RGB888(whiteColor);
+    static Color bottomTextColor = RGB888(whiteColor);
+    static Color botttomSeperatorColor = RGB888(whiteColor);
+
     static Color clockColor = RGB888(whiteColor);
     static Color batteryColor = RGB888("#ffff45");
     static Color versionTextColor = RGB888("#AAAAAA");
@@ -1376,6 +1389,13 @@ namespace tsl {
             defaultBackgroundColor = getColor("bg_color", defaultBackgroundAlpha);
             defaultTextColor = getColor("text_color");
             headerTextColor = getColor("header_text_color");
+            headerSeperatorColor = getColor("header_seperator_color");
+            starColor = getColor("star_color");
+            selectionStarColor = getColor("selection_star_color");
+            buttonColor = getColor("bottom_button_color");
+            bottomTextColor = getColor("bottom_text_color");
+            botttomSeperatorColor = getColor("bottom_seperator_color");
+
             clockColor = getColor("clock_color");
             batteryColor = getColor("battery_color");
     
@@ -2519,8 +2539,53 @@ namespace tsl {
                 return { static_cast<u32>(maxX - x), static_cast<u32>(currY - y) };
             }
             
+            inline void drawStringWithColoredSections(const std::string& text, const std::vector<std::string>& specialSymbols, s32 x, s32 y, u32 fontSize, Color defaultColor, Color specialColor) {
+                size_t startPos = 0;
+                size_t textLength = text.length();
+                u32 segmentWidth, segmentHeight;
+                std::string currentSegment;
             
+                while (startPos < textLength) {
+                    bool specialFound = false;
+                    size_t specialPos = std::string::npos;
+                    std::string foundSymbol;
             
+                    // Find the nearest special symbol
+                    for (const auto& symbol : specialSymbols) {
+                        size_t pos = text.find(symbol, startPos);
+                        if (pos != std::string::npos && (specialPos == std::string::npos || pos < specialPos)) {
+                            specialPos = pos;
+                            foundSymbol = symbol;
+                            specialFound = true;
+                        }
+                    }
+            
+                    if (!specialFound) {
+                        // Draw the remaining text after the last special symbol
+                        drawString(text.substr(startPos).c_str(), false, x, y, fontSize, defaultColor);
+                        break;
+                    }
+            
+                    // Draw the segment before the special character
+                    if (specialPos > startPos) {
+                        std::tie(segmentWidth, segmentHeight) = drawString(text.substr(startPos, specialPos - startPos).c_str(), false, x, y, fontSize, defaultColor);
+                        x += segmentWidth; // Move the x position for the next segment
+                    }
+            
+                    // Draw the special character
+                    std::tie(segmentWidth, segmentHeight) = drawString(foundSymbol.c_str(), false, x, y, fontSize, specialColor);
+                    x += segmentWidth; // Move the x position for the next segment
+            
+                    startPos = specialPos + foundSymbol.length(); // Move past the special character
+                }
+            
+                // Draw any remaining text after the last special character
+                if (startPos < textLength) {
+                    drawString(text.substr(startPos).c_str(), false, x, y, fontSize, defaultColor);
+                }
+            }
+
+
             
             /**
              * @brief Limit a string's length and end it with "…"
@@ -3693,7 +3758,7 @@ namespace tsl {
                 } else
                     renderer->drawString(this->m_subtitle.c_str(), false, 20, y+20, 15, a(versionTextColor));
                 
-                renderer->drawRect(15, tsl::cfg::FramebufferHeight - 73, tsl::cfg::FramebufferWidth - 30, 1, a(defaultTextColor));
+                renderer->drawRect(15, tsl::cfg::FramebufferHeight - 73, tsl::cfg::FramebufferWidth - 30, 1, a(botttomSeperatorColor));
                 
                 menuBottomLine = "\uE0E1"+GAP_2+BACK+GAP_1+"\uE0E0"+GAP_2+OK+GAP_1;
                 if (this->m_menuMode == "packages") {
@@ -3708,7 +3773,10 @@ namespace tsl {
                     menuBottomLine += "\uE0EE"+GAP_2 + this->m_pageRightName;
                 }
                 
-                renderer->drawString(menuBottomLine.c_str(), false, 30, 693, 23, a(defaultTextColor));
+                //renderer->drawString(menuBottomLine.c_str(), false, 30, 693, 23, a(defaultTextColor));
+                // Render the text with special character handling
+                renderer->drawStringWithColoredSections(menuBottomLine.c_str(), {"\uE0E1","\uE0E0","\uE0ED","\uE0EE"}, 30, 693, 23, a(bottomTextColor), a(buttonColor));
+                
                 
                 if (this->m_contentElement != nullptr)
                     this->m_contentElement->frame(renderer);
@@ -4327,6 +4395,7 @@ namespace tsl {
             }
         };
         
+
         /**
          * @brief A item that goes into a list
          *
@@ -4401,14 +4470,14 @@ namespace tsl {
                             }
                         } // CUSTOM MODIFICATION END
                     } else {
-                        renderer->drawString(this->m_ellipsisText.c_str(), false, this->getX() + 20, this->getY() + 45, 23, !useClickTextColor ? defaultTextColor : a(clickTextColor));
+                        renderer->drawString(this->m_ellipsisText.c_str(), false, this->getX() + 20, this->getY() + 45, 23, a(!useClickTextColor ? defaultTextColor : clickTextColor));
                     }
                 } else {
-                    if (this->m_focused) {
-                        renderer->drawString(this->m_text.c_str(), false, this->getX() + 20, this->getY() + 45, 23, !useClickTextColor ? selectedTextColor : a(clickTextColor));
-                    } else {
-                        renderer->drawString(this->m_text.c_str(), false, this->getX() + 20, this->getY() + 45, 23, !useClickTextColor ? defaultTextColor : a(clickTextColor));
-                    }
+                    // Render the text with special character handling
+                    renderer->drawStringWithColoredSections(this->m_text, {STAR_SYMBOL}, this->getX() + 20, this->getY() + 45, 23,
+                        a(this->m_focused ? (!useClickTextColor ? selectedTextColor : clickTextColor) : (!useClickTextColor ? defaultTextColor : clickTextColor)),
+                        a(this->m_focused ? starColor : selectionStarColor)
+                    );
                 }
                 
                 
@@ -4623,7 +4692,7 @@ namespace tsl {
             virtual ~CategoryHeader() {}
             
             virtual void draw(gfx::Renderer *renderer) override {
-                renderer->drawRect(this->getX()+1+1, this->getBottomBound() - 30, 3, 23, a(headerTextColor));
+                renderer->drawRect(this->getX()+1+1, this->getBottomBound() - 30, 3, 23, a(headerSeperatorColor));
                 renderer->drawString(this->m_text.c_str(), false, this->getX() + 15+1, this->getBottomBound() - 12, 15, a(headerTextColor));
                 
                 //if (this->m_hasSeparator)
@@ -4759,7 +4828,7 @@ namespace tsl {
                 auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastUpdate);
             
                 // Check if KEY_A is pressed to toggle allowSlide
-                if ((keysReleased & KEY_A)) {
+                if ((keysDown & KEY_A)) {
                     allowSlide = !allowSlide;
                     holding = false; // Reset holding state when KEY_A is pressed
                     return true;
