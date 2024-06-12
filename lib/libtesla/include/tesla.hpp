@@ -4977,6 +4977,27 @@ namespace tsl {
                     
                     // Draw the value and units part in a different color
                     renderer->drawString(valuePart.c_str(), false, combinedX + labelWidth, this->getY() + 14 + 16, 16, a(onTextColor));
+                } else {
+                    std::string labelPart = removeTag(this->m_label) + " ";
+                    //std::string valuePart = std::to_string(this->m_value) + this->m_units;
+                    std::string valuePart = this->m_selection;
+                    
+                    // Measure the width of the combined label and value part
+                    std::string combinedString = labelPart + valuePart;
+                    std::tie(descWidth, descHeight) = renderer->drawString(combinedString.c_str(), false, 0, 0, 16, a(tsl::style::color::ColorTransparent));
+                    
+                    // Calculate the position for the combined label (centered)
+                    int combinedX = ((this->getX() + 60) + (this->getWidth() - 95) / 2) - (descWidth / 2);
+                    
+                    // Measure the width of the label part
+                    int labelWidth;
+                    std::tie(labelWidth, descHeight) = renderer->drawString(labelPart.c_str(), false, 0, 0, 16, a(tsl::style::color::ColorTransparent));
+                    
+                    // Draw the label part
+                    renderer->drawString(labelPart.c_str(), false, combinedX, this->getY() + 14 + 16, 16, a(defaultTextColor));
+                    
+                    // Draw the value and units part in a different color
+                    renderer->drawString(valuePart.c_str(), false, combinedX + labelWidth, this->getY() + 14 + 16, 16, a(onTextColor));
                 }
 
 
@@ -5285,8 +5306,8 @@ namespace tsl {
                 currentDescIndex = this->m_value;
                 this->m_selection = this->m_stepDescriptions[currentDescIndex];
 
-                std::tie(descWidth, descHeight) = renderer->drawString(this->m_selection.c_str(), false, 0, 0, 16, a(tsl::style::color::ColorTransparent));
-                renderer->drawString(this->m_selection.c_str(), false, ((this->getX() + 60) + (this->getWidth() - 95) / 2) - (descWidth / 2), this->getY() + 14 + 16, 16, a(defaultTextColor));
+                //std::tie(descWidth, descHeight) = renderer->drawString(this->m_selection.c_str(), false, 0, 0, 16, a(tsl::style::color::ColorTransparent));
+                //renderer->drawString(this->m_selection.c_str(), false, ((this->getX() + 60) + (this->getWidth() - 95) / 2) - (descWidth / 2), this->getY() + 14 + 16, 16, a(defaultTextColor));
                 
                 // Draw the parent trackbar
                 StepTrackBar::draw(renderer);
@@ -5840,7 +5861,7 @@ namespace tsl {
                             keyEventInterval = std::chrono::milliseconds(67);
                         
                         //keyEventInterval = interpolateKeyEventInterval(durationSincePress);
-    
+                        
                         if (singlePressHandled && durationSinceLastEvent >= keyEventInterval) {
                             lastKeyEventTime = now;
                             if (keysHeld & KEY_UP && !(keysHeld & ~KEY_UP & ALL_KEYS_MASK))
