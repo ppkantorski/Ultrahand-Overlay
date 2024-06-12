@@ -2476,19 +2476,20 @@ public:
             if (simulatedNextPage && !simulatedNextPageComplete) {
                 if (currentPage == LEFT_STR) {
                     keysHeld |= KEY_DRIGHT;
-                    simulatedNextPage = false;
+                    //simulatedNextPage = false;
                 }
                 else if (currentPage == RIGHT_STR) {
                     keysHeld |= KEY_DLEFT;
-                    simulatedNextPage = false;
+                    //simulatedNextPage = false;
                 }
                 else {
-                    simulatedNextPage = false;
+                    //simulatedNextPage = false;
                     simulatedNextPageComplete = true;
                 }
             }
             if (currentPage == LEFT_STR) {
-                if ((keysHeld & KEY_RIGHT) && !(keysHeld & (KEY_DLEFT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR)) && !stillTouching && ((!allowSlide && onTrackBar) || !onTrackBar)) {
+                if ((keysHeld & KEY_RIGHT) && !(keysHeld & (KEY_DLEFT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR)) && !stillTouching && ((!allowSlide && onTrackBar) || !onTrackBar || simulatedNextPage)) {
+                    simulatedNextPage = false;
                     allowSlide = false;
                     lastPage = RIGHT_STR;
                     //lastPackage = packagePath;
@@ -2500,7 +2501,8 @@ public:
                     return true;
                 }
             } else if (currentPage == RIGHT_STR) {
-                if ((keysHeld & KEY_LEFT) && !(keysHeld & (KEY_DRIGHT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR)) && !stillTouching && ((!allowSlide && onTrackBar) || !onTrackBar)) {
+                if ((keysHeld & KEY_LEFT) && !(keysHeld & (KEY_DRIGHT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR)) && !stillTouching && ((!allowSlide && onTrackBar) || !onTrackBar || simulatedNextPage)) {
+                    simulatedNextPage = false;
                     allowSlide = false;
                     lastPage = LEFT_STR;
                     //lastPackage = packagePath;
@@ -2512,7 +2514,7 @@ public:
                     return true;
                 }
             } 
-
+            simulatedNextPage = false;
         }
         
         if (!returningToPackage && inPackageMenu && nestedMenuCount == nestedLayer) {
@@ -3832,18 +3834,19 @@ public:
                 if (simulatedNextPage && !simulatedNextPageComplete) {
                     if (menuMode != PACKAGES_STR) {
                         keysHeld |= KEY_DRIGHT;
-                        simulatedNextPage = false;
+                        //simulatedNextPage = false;
                     }
                     else if (menuMode != OVERLAYS_STR) {
                         keysHeld |= KEY_DLEFT;
-                        simulatedNextPage = false;
+                        //simulatedNextPage = false;
                     } else {
-                        simulatedNextPage = false;
+                        //simulatedNextPage = false;
                         simulatedNextPageComplete = true;
                     }
                 }
 
-                if ((keysHeld & KEY_RIGHT) && !(keysHeld & (KEY_DLEFT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR)) && !stillTouching && ((!allowSlide && onTrackBar) || !onTrackBar)) {
+                if ((keysHeld & KEY_RIGHT) && !(keysHeld & (KEY_DLEFT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR)) && !stillTouching && ((!allowSlide && onTrackBar) || !onTrackBar || simulatedNextPage)) {
+                    simulatedNextPage = false;
                     allowSlide = false;
                     if (menuMode != PACKAGES_STR) {
                         currentMenu = PACKAGES_STR;
@@ -3856,7 +3859,8 @@ public:
                         return true;
                     }
                 }
-                if ((keysHeld & KEY_LEFT) && !(keysHeld & (KEY_DRIGHT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR)) && !stillTouching && ((!allowSlide && onTrackBar) || !onTrackBar)) {
+                if ((keysHeld & KEY_LEFT) && !(keysHeld & (KEY_DRIGHT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_R | KEY_ZL | KEY_ZR)) && !stillTouching && ((!allowSlide && onTrackBar) || !onTrackBar || simulatedNextPage)) {
+                    simulatedNextPage = false;
                     allowSlide = false;
                     if (menuMode != OVERLAYS_STR) {
                         currentMenu = OVERLAYS_STR;
@@ -3869,6 +3873,7 @@ public:
                         return true;
                     }
                 }
+                simulatedNextPage = false;
 
                 if (simulatedBack && !simulatedBackComplete) {
                     keysHeld |= KEY_B;
