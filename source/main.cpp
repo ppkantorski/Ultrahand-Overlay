@@ -68,7 +68,7 @@ static const std::string SYSTEM_PATTERN = ";system=";
 
 // Table option patterns
 static const std::string BACKGROUND_PATTERN = ";background="; // true or false
-//static const std::string HEADER_PATTERN = ";header=";
+static const std::string HEADER_PATTERN = ";header=";
 static const std::string ALIGNMENT_PATTERN = ";alignment=";
 static const std::string GAP_PATTERN =";gap=";
 static const std::string OFFSET_PATTERN = ";offset=";
@@ -125,7 +125,6 @@ struct CommandOptions {
     std::string& sourceTypeOff;
     std::string& defaultToggleState;
     bool& hideTableBackground;
-    //bool& hideTableHeader;
     size_t& tableStartGap;
     size_t& tableEndGap;
     size_t& tableColumnOffset;
@@ -204,9 +203,6 @@ void processCommands(CommandOptions& options, CommandData& data) {
             } else if (options.commandName.find(BACKGROUND_PATTERN) == 0) {
                 options.hideTableBackground = (options.commandName.substr(BACKGROUND_PATTERN.length()) == FALSE_STR);
                 continue;
-            //} else if (options.commandName.find(HEADER_PATTERN) == 0) {
-            //    options.hideTableHeader = (options.commandName.substr(HEADER_PATTERN.length()) == FALSE_STR);
-            //    continue;
             } else if (options.commandName.find(GAP_PATTERN) == 0) {
                 options.tableEndGap = std::stoi(options.commandName.substr(GAP_PATTERN.length()));
                 continue;
@@ -231,6 +227,8 @@ void processCommands(CommandOptions& options, CommandData& data) {
                 continue;
             } else if (options.commandName.find(STEPS_PATTERN) == 0) {
                 options.steps = std::stoi(options.commandName.substr(STEPS_PATTERN.length()));
+                continue;
+            } else if (options.commandName.find(";") == 0) {
                 continue;
             }
 
@@ -1912,8 +1910,8 @@ public:
         CommandOptions cmdOptions = {inEristaSection, inMarikoSection, usingErista, usingMariko, commandName, commandSystem,
                                   commandMode, commandGrouping, currentSection, pathPattern, sourceType, pathPatternOn,
                                   sourceTypeOn, pathPatternOff, sourceTypeOff, defaultToggleState, hideTableBackground,
-                                  tableStartGap, tableEndGap, tableColumnOffset, tableSpacing,
-                                  tableAlignment, minValue, maxValue, units, steps, packageSource, packagePath};
+                                  tableStartGap, tableEndGap, tableColumnOffset, tableSpacing, tableAlignment,
+                                  minValue, maxValue, units, steps, packageSource, packagePath};
         
         CommandData cmdData = {commands, commandsOn, commandsOff, tableData};
         
@@ -1927,7 +1925,6 @@ public:
             useSelection = false;
 
             // Table settings
-            //hideTableHeader = false;
             hideTableBackground = false;
             tableStartGap = 20;
             tableEndGap = 3;
@@ -3382,8 +3379,8 @@ public:
                 CommandOptions cmdOptions = {inEristaSection, inMarikoSection, usingErista, usingMariko, commandName, commandSystem,
                                           commandMode, commandGrouping, currentSection, pathPattern, sourceType, pathPatternOn,
                                           sourceTypeOn, pathPatternOff, sourceTypeOff, defaultToggleState, hideTableBackground,
-                                          tableStartGap, tableEndGap, tableColumnOffset, tableSpacing,
-                                          tableAlignment, minValue, maxValue, units, steps, packageSource, packagePath};
+                                          tableStartGap, tableEndGap, tableColumnOffset, tableSpacing, tableAlignment,
+                                          minValue, maxValue, units, steps, packageSource, packagePath};
                 
                 CommandData cmdData = {commands, commandsOn, commandsOff, tableData};
 
@@ -3396,7 +3393,6 @@ public:
                     
                     footer = "";
                     useSelection = false;
-                    //hideTableHeader = false;
                     hideTableBackground = false;
                     tableStartGap = 20;
                     tableEndGap = 3;
