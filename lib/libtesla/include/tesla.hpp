@@ -4755,20 +4755,27 @@ namespace tsl {
             // Ensure the order of initialization matches the order of declaration
             TrackBar(std::string label, std::string packagePath = "", s16 minValue = 0, s16 maxValue = 100, std::string units = "",
                      std::function<void(std::vector<std::vector<std::string>>&&, const std::string&, const std::string&)> executeCommands = nullptr,
-                     std::vector<std::vector<std::string>> cmd = {}, const std::string& selCmd = "", bool usingNamedStepTrackbar = false)
+                     std::vector<std::vector<std::string>> cmd = {}, const std::string& selCmd = "", bool usingStepTrackbar = false, bool usingNamedStepTrackbar = false, s16 numSteps = 101)
                 : m_label(label), m_packagePath(packagePath), m_minValue(minValue), m_maxValue(maxValue), m_units(units),
-                  interpretAndExecuteCommands(executeCommands), commands(std::move(cmd)), selectedCommand(selCmd), m_usingNamedStepTrackbar(usingNamedStepTrackbar){
-
-                std::string initializedValue;
-                if (!m_usingNamedStepTrackbar) 
-                    initializedValue = parseValueFromIniSection(m_packagePath + "config.ini", m_label, "value");
-                else
-                    initializedValue = parseValueFromIniSection(m_packagePath + "config.ini", m_label, "index");
-                if (!initializedValue.empty()) {
-                    m_value = static_cast<s16>(std::stoi(initializedValue)); // convert initializedValue to s16
+                  interpretAndExecuteCommands(executeCommands), commands(std::move(cmd)), selectedCommand(selCmd), m_usingStepTrackbar(usingStepTrackbar), m_usingNamedStepTrackbar(usingNamedStepTrackbar), m_numSteps(numSteps){
+                if (!usingStepTrackbar && !usingNamedStepTrackbar) {
+                    m_numSteps = maxValue - minValue;
                 }
-                if (m_value > maxValue) m_value = maxValue;
-                else if (m_value < minValue) m_value = minValue;
+
+                if (!m_packagePath.empty()) {
+                    std::string initialIndex = parseValueFromIniSection(m_packagePath + "config.ini", m_label, "index");
+
+                    if (!initialIndex.empty()) {
+                        m_index = static_cast<s16>(std::stoi(initialIndex)); // convert initializedValue to s16
+                    }
+                }
+
+                if (m_index > m_numSteps -1) m_index = m_numSteps - 1;
+                else if (m_index < 0) m_index = 0;
+
+                m_value = minValue + m_index * (static_cast<float>(maxValue - minValue) / (m_numSteps - 1));
+
+
                 lastUpdate = std::chrono::steady_clock::now();
             }
             
@@ -4780,10 +4787,11 @@ namespace tsl {
 
             virtual void updateAndExecute() {
                 if (!m_packagePath.empty()) {
-                    if (!m_usingNamedStepTrackbar)
+                    if (!m_usingNamedStepTrackbar) {
+                        setIniFileValue(m_packagePath + "config.ini", m_label, "index", std::to_string(m_index));
                         setIniFileValue(m_packagePath + "config.ini", m_label, "value", std::to_string(m_value));
-                    else {
-                        setIniFileValue(m_packagePath + "config.ini", m_label, "index", std::to_string(m_value));
+                    } else {
+                        setIniFileValue(m_packagePath + "config.ini", m_label, "index", std::to_string(m_index));
                         setIniFileValue(m_packagePath + "config.ini", m_label, "value", m_selection);
                     }
                     if (interpretAndExecuteCommands) {
@@ -4864,6 +4872,7 @@ namespace tsl {
                         if (elapsed >= currentInterval) {
                             if (keysHeld & HidNpadButton_AnyLeft) {
                                 if (this->m_value > m_minValue) {
+                                    this->m_index--;
                                     this->m_value--;
                                     this->m_valueChangedListener(this->m_value);
                                     lastUpdate = now;
@@ -4873,6 +4882,7 @@ namespace tsl {
             
                             if (keysHeld & HidNpadButton_AnyRight) {
                                 if (this->m_value < m_maxValue) {
+                                    this->m_index++;
                                     this->m_value++;
                                     this->m_valueChangedListener(this->m_value);
                                     lastUpdate = now;
@@ -4898,16 +4908,22 @@ namespace tsl {
                 
                 if (!this->m_interactionLocked && this->inBounds(initialX, initialY)) {
                     if (currX > this->getLeftBound() + 50 && currX < this->getRightBound() && currY > this->getTopBound() && currY < this->getBottomBound()) {
-                        s16 newValue = m_minValue + ((static_cast<float>(currX - (this->getX() + 60)) / static_cast<float>(this->getWidth() - 95)) * (m_maxValue - m_minValue));
-                        
-                        if (newValue < m_minValue) {
-                            newValue = m_minValue;
-                        } else if (newValue > m_maxValue) {
-                            newValue = m_maxValue;
+                        // Calculate the new index based on the touch position
+                        s16 newIndex = static_cast<s16>((currX - (this->getX() + 60)) / static_cast<float>(this->getWidth() - 95) * (m_numSteps - 1));
+            
+                        // Clamp the index within valid range
+                        if (newIndex < 0) {
+                            newIndex = 0;
+                        } else if (newIndex >= m_numSteps) {
+                            newIndex = m_numSteps - 1;
                         }
+            
+                        // Calculate the new value based on the new index
+                        s16 newValue = m_minValue + newIndex * (static_cast<float>(m_maxValue - m_minValue) / (m_numSteps - 1));
                         
-                        if (newValue != this->m_value) {
+                        if (newValue != this->m_value || newIndex != this->m_index) {
                             this->m_value = newValue;
+                            this->m_index = newIndex;
                             this->m_valueChangedListener(this->getProgress());
                         }
                         
@@ -5106,7 +5122,10 @@ namespace tsl {
             std::vector<std::vector<std::string>> commands;
             std::string selectedCommand;
 
+            bool m_usingStepTrackbar = false;
             bool m_usingNamedStepTrackbar = false;
+            s16 m_numSteps = 2;
+            s16 m_index = 0;
         };
         
         
@@ -5126,21 +5145,25 @@ namespace tsl {
             StepTrackBar(std::string label, std::string packagePath, size_t numSteps, s16 minValue, s16 maxValue, std::string units,
                 std::function<void(std::vector<std::vector<std::string>>&&, const std::string&, const std::string&)> executeCommands = nullptr,
                 std::vector<std::vector<std::string>> cmd = {}, const std::string& selCmd = "", bool usingNamedStepTrackbar = false)
-                : TrackBar(label, packagePath, minValue, maxValue, units, executeCommands, cmd, selCmd, usingNamedStepTrackbar), m_numSteps(numSteps) {
-                    //usingStepTrackbar = true;
-                    if (!m_packagePath.empty()) {
-                        //logMessage("before StepTrackBar initialize value.");
-                        std::string initializedValue;
-                        if (!m_usingNamedStepTrackbar)
-                            initializedValue = parseValueFromIniSection(m_packagePath + "config.ini", m_label, "value");
-                        else
-                            initializedValue = parseValueFromIniSection(m_packagePath + "config.ini", m_label, "index");
-                        if (!initializedValue.empty()) {
-                            m_value = static_cast<s16>(std::stoi(initializedValue)); // convert initializedValue to s16
-                        }
-                        //logMessage("after StepTrackBar initialize value.");
-                    }
-                    lastUpdate = std::chrono::steady_clock::now();
+                : TrackBar(label, packagePath, minValue, maxValue, units, executeCommands, cmd, selCmd, !usingNamedStepTrackbar, usingNamedStepTrackbar, numSteps) {
+                    ////usingStepTrackbar = true;
+                    //if (!m_packagePath.empty()) {
+                    //    //logMessage("before StepTrackBar initialize value.");
+                    //    std::string initializedValue;
+                    //    if (!m_usingNamedStepTrackbar)
+                    //        initializedValue = parseValueFromIniSection(m_packagePath + "config.ini", m_label, "value");
+                    //    else
+                    //        initializedValue = parseValueFromIniSection(m_packagePath + "config.ini", m_label, "index");
+                    //    if (!initializedValue.empty() && isValidNumber(initializedValue)) {
+                    //        m_value = static_cast<s16>(std::stoi(initializedValue)); // convert initializedValue to s16
+                    //    } else {
+                    //        m_value = minValue;
+                    //    }
+                    //    //logMessage("after StepTrackBar initialize value.");
+                    //}
+                    //if (m_value > maxValue) m_value = maxValue;
+                    //else if (m_value < minValue) m_value = minValue;
+                    //lastUpdate = std::chrono::steady_clock::now();
                 }
             
             virtual ~StepTrackBar() {}
@@ -5180,11 +5203,15 @@ namespace tsl {
                         }
                         
                         if ((tick == 0 || tick > 20) && (tick % 3) == 0) {
-                            s16 stepValue = (m_maxValue - m_minValue) / (this->m_numSteps - 1);
-                            if (keysHeld & HidNpadButton_AnyLeft && this->m_value > m_minValue) {
-                                this->m_value = std::max(static_cast<int>(this->m_value - stepValue), static_cast<int>(m_minValue));
-                            } else if (keysHeld & HidNpadButton_AnyRight && this->m_value < m_maxValue) {
-                                this->m_value = std::min(static_cast<int>(this->m_value + stepValue), static_cast<int>(m_maxValue));
+                            float stepSize = static_cast<float>(m_maxValue - m_minValue) / (this->m_numSteps - 1);
+                            if (keysHeld & HidNpadButton_AnyLeft && this->m_index > 0) {
+                                this->m_index--;
+                                this->m_value = static_cast<s16>(std::round(m_minValue + m_index * stepSize));
+                                //this->m_value = static_cast<s16>(std::max(std::round(this->m_value - stepSize), static_cast<float>(m_minValue)));
+                            } else if (keysHeld & HidNpadButton_AnyRight && this->m_index < this->m_numSteps-1) {
+                                this->m_index++;
+                                this->m_value = static_cast<s16>(std::round(m_minValue + m_index * stepSize));
+                                //this->m_value = static_cast<s16>(std::min(std::round(this->m_value + stepSize), static_cast<float>(m_maxValue)));
                             } else {
                                 return false;
                             }
@@ -5202,31 +5229,31 @@ namespace tsl {
             }
             
             
-            virtual bool onTouch(TouchEvent event, s32 currX, s32 currY, s32 prevX, s32 prevY, s32 initialX, s32 initialY) override {
-                if (this->inBounds(initialX, initialY)) {
-                    if (currY > this->getTopBound() && currY < this->getBottomBound()) {
-                        s16 newValue = m_minValue + ((static_cast<float>(currX - (this->getX() + 60)) / static_cast<float>(this->getWidth() - 95)) * (m_maxValue - m_minValue));
-                        
-                        if (newValue < m_minValue) {
-                            newValue = m_minValue;
-                        } else if (newValue > m_maxValue) {
-                            newValue = m_maxValue;
-                        } else {
-                            float stepSize = static_cast<float>(m_maxValue - m_minValue) / (this->m_numSteps - 1);
-                            newValue = std::round((newValue - m_minValue) / stepSize) * stepSize + m_minValue;
-                        }
-                        
-                        if (newValue != this->m_value) {
-                            this->m_value = newValue;
-                            this->m_valueChangedListener(this->getProgress());
-                        }
-                        updateAndExecute();
-                        return true;
-                    }
-                }
-                
-                return false;
-            }
+            //virtual bool onTouch(TouchEvent event, s32 currX, s32 currY, s32 prevX, s32 prevY, s32 initialX, s32 initialY) override {
+            //    if (this->inBounds(initialX, initialY)) {
+            //        if (currY > this->getTopBound() && currY < this->getBottomBound()) {
+            //            s16 newValue = m_minValue + ((static_cast<float>(currX - (this->getX() + 60)) / static_cast<float>(this->getWidth() - 95)) * (m_maxValue - m_minValue));
+            //            
+            //            if (newValue < m_minValue) {
+            //                newValue = m_minValue;
+            //            } else if (newValue > m_maxValue) {
+            //                newValue = m_maxValue;
+            //            } else {
+            //                float stepSize = static_cast<float>(m_maxValue - m_minValue) / (this->m_numSteps - 1);
+            //                newValue = std::round((newValue - m_minValue) / stepSize) * stepSize + m_minValue;
+            //            }
+            //            
+            //            if (newValue != this->m_value) {
+            //                this->m_value = newValue;
+            //                this->m_valueChangedListener(this->getProgress());
+            //            }
+            //            updateAndExecute();
+            //            return true;
+            //        }
+            //    }
+            //    
+            //    return false;
+            //}
 
             
             /**
@@ -5249,7 +5276,7 @@ namespace tsl {
             }
             
         protected:
-            u8 m_numSteps = 1;
+            //u8 m_numSteps = 1;
             
         };
         
