@@ -5861,6 +5861,7 @@ namespace tsl {
             
             if (!touchDetected && (keysDown & KEY_L) && !(keysHeld & ~KEY_L & ALL_KEYS_MASK) && !runningInterpreter.load(std::memory_order_acquire)) {
                 currentGui->requestFocus(topElement, FocusDirection::None);
+                currentGui->requestFocus(topElement, FocusDirection::None);
             }
             
             if (!touchDetected && (keysDown & KEY_R) && !(keysHeld & ~KEY_R & ALL_KEYS_MASK) && !runningInterpreter.load(std::memory_order_acquire)) {
