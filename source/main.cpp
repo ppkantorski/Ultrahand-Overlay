@@ -1936,7 +1936,7 @@ public:
             minValue = 0;
             maxValue = 100;
             units = "";
-            steps = 5;
+            steps = 0;
 
             commandFooter = NULL_STR;
             commandSystem = DEFAULT_STR;
@@ -2119,6 +2119,9 @@ public:
                         list->addItem(new tsl::elm::TrackBar(optionName, this->packagePath, minValue, maxValue, units, interpretAndExecuteCommands, commands, option.first));
                         continue;
                     } else if (commandMode == STEP_TRACKBAR_STR) {
+                        if (steps == 0) { // assign minimum steps
+                            steps = std::abs(maxValue - minValue) +1;
+                        }
                         list->addItem(new tsl::elm::StepTrackBar(optionName, this->packagePath, steps, minValue, maxValue, units, interpretAndExecuteCommands, commands, option.first));
                         continue;
                     } else if (commandMode == NAMED_STEP_TRACKBAR_STR) {
@@ -3404,7 +3407,7 @@ public:
                     maxValue = 100;
 
                     units = "";
-                    steps = 5;
+                    steps = 0;
                     
                     commandFooter = NULL_STR;
                     commandSystem = DEFAULT_STR;
@@ -3545,6 +3548,9 @@ public:
                             list->addItem(new tsl::elm::TrackBar(optionName, packagePath, minValue, maxValue, units, interpretAndExecuteCommands, commands, option.first));
                             continue;
                         } else if (commandMode == STEP_TRACKBAR_STR) {
+                            if (steps == 0) { // assign minimum steps
+                                steps = std::abs(maxValue - minValue) +1;
+                            }
                             list->addItem(new tsl::elm::StepTrackBar(optionName, packagePath, steps, minValue, maxValue, units, interpretAndExecuteCommands, commands, option.first));
                             continue;
                         } else if (commandMode == NAMED_STEP_TRACKBAR_STR) {
