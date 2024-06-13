@@ -68,7 +68,7 @@ static const std::string SYSTEM_PATTERN = ";system=";
 
 // Table option patterns
 static const std::string BACKGROUND_PATTERN = ";background="; // true or false
-static const std::string HEADER_PATTERN = ";header=";
+//static const std::string HEADER_PATTERN = ";header=";
 static const std::string ALIGNMENT_PATTERN = ";alignment=";
 static const std::string GAP_PATTERN =";gap=";
 static const std::string OFFSET_PATTERN = ";offset=";
@@ -80,6 +80,7 @@ static const std::string MAX_VALUE_PATTERN = ";max_value=";
 static const std::string STEPS_PATTERN = ";steps=";
 static const std::string UNITS_PATTERN = ";units=";
 static const std::string UNLOCKED_PATTERN = ";unlocked=";
+static const std::string ON_EVERY_TICK_PATTERN = ";on_every_tick=";
 
 static std::string currentMenu = OVERLAYS_STR;
 static std::string lastPage = LEFT_STR;
@@ -136,6 +137,7 @@ struct CommandOptions {
     std::string& units;
     size_t& steps;
     bool& unlockedTrackbar;
+    bool& onEveryTick;
     std::string& packageSource;
     std::string& packagePath;
 };
@@ -232,6 +234,9 @@ void processCommands(CommandOptions& options, CommandData& data) {
                 continue;
             } else if (options.commandName.find(UNLOCKED_PATTERN) == 0) {
                 options.unlockedTrackbar = (options.commandName.substr(UNLOCKED_PATTERN.length()) == TRUE_STR);
+                continue;
+            } else if (options.commandName.find(ON_EVERY_TICK_PATTERN) == 0) {
+                options.onEveryTick = (options.commandName.substr(ON_EVERY_TICK_PATTERN.length()) == TRUE_STR);
                 continue;
             } else if (options.commandName.find(";") == 0) {
                 continue;
@@ -1900,6 +1905,7 @@ public:
         std::string units;
         size_t steps;
         bool unlockedTrackbar;
+        bool onEveryTick;
 
         std::string footer;
         bool useSelection;
@@ -1917,7 +1923,7 @@ public:
                                   commandMode, commandGrouping, currentSection, pathPattern, sourceType, pathPatternOn,
                                   sourceTypeOn, pathPatternOff, sourceTypeOff, defaultToggleState, hideTableBackground,
                                   tableStartGap, tableEndGap, tableColumnOffset, tableSpacing, tableAlignment,
-                                  minValue, maxValue, units, steps, unlockedTrackbar, packageSource, packagePath};
+                                  minValue, maxValue, units, steps, unlockedTrackbar, onEveryTick, packageSource, packagePath};
         
         CommandData cmdData = {commands, commandsOn, commandsOff, tableData};
         
@@ -1944,6 +1950,7 @@ public:
             units = "";
             steps = 0;
             unlockedTrackbar = false;
+            onEveryTick = false;
 
             commandFooter = NULL_STR;
             commandSystem = DEFAULT_STR;
@@ -2123,13 +2130,13 @@ public:
                         addTable(list, tableData, this->packagePath, tableColumnOffset, tableStartGap, tableEndGap, tableSpacing, tableAlignment, hideTableBackground);
                         continue;
                     } else if (commandMode == TRACKBAR_STR) {
-                        list->addItem(new tsl::elm::TrackBar(optionName, this->packagePath, minValue, maxValue, units, interpretAndExecuteCommands, commands, option.first, false, unlockedTrackbar));
+                        list->addItem(new tsl::elm::TrackBar(optionName, this->packagePath, minValue, maxValue, units, interpretAndExecuteCommands, commands, option.first, false, false, -1, unlockedTrackbar, onEveryTick));
                         continue;
                     } else if (commandMode == STEP_TRACKBAR_STR) {
                         if (steps == 0) { // assign minimum steps
                             steps = std::abs(maxValue - minValue) +1;
                         }
-                        list->addItem(new tsl::elm::StepTrackBar(optionName, this->packagePath, steps, minValue, maxValue, units, interpretAndExecuteCommands, commands, option.first, false, unlockedTrackbar));
+                        list->addItem(new tsl::elm::StepTrackBar(optionName, this->packagePath, steps, minValue, maxValue, units, interpretAndExecuteCommands, commands, option.first, false, unlockedTrackbar, onEveryTick));
                         continue;
                     } else if (commandMode == NAMED_STEP_TRACKBAR_STR) {
                         std::vector<std::string> entryList = {};
@@ -2153,7 +2160,7 @@ public:
                             }
                         }
 
-                        list->addItem(new tsl::elm::NamedStepTrackBar(optionName, this->packagePath, entryList, interpretAndExecuteCommands, commands, option.first, unlockedTrackbar));
+                        list->addItem(new tsl::elm::NamedStepTrackBar(optionName, this->packagePath, entryList, interpretAndExecuteCommands, commands, option.first, unlockedTrackbar, onEveryTick));
 
                         continue;
                     }
@@ -2495,7 +2502,7 @@ public:
                 }
             }
             if (currentPage == LEFT_STR) {
-                if ((keysHeld & KEY_RIGHT) && !(keysHeld & ~KEY_RIGHT & ALL_KEYS_MASK) && !stillTouching && ((!allowSlide && onTrackBar) || !onTrackBar || simulatedNextPage) && !unlockedSlide) {
+                if ((keysHeld & KEY_RIGHT) && !(keysHeld & ~KEY_RIGHT & ALL_KEYS_MASK) && !stillTouching && ((!allowSlide && onTrackBar && !unlockedSlide) || !onTrackBar || simulatedNextPage)) {
                     simulatedNextPage = false;
                     allowSlide = unlockedSlide = false;
                     lastPage = RIGHT_STR;
@@ -2508,7 +2515,7 @@ public:
                     return true;
                 }
             } else if (currentPage == RIGHT_STR) {
-                if ((keysHeld & KEY_LEFT) && !(keysHeld & ~KEY_LEFT & ALL_KEYS_MASK) && !stillTouching && ((!allowSlide && onTrackBar) || !onTrackBar || simulatedNextPage) && !unlockedSlide) {
+                if ((keysHeld & KEY_LEFT) && !(keysHeld & ~KEY_LEFT & ALL_KEYS_MASK) && !stillTouching && ((!allowSlide && onTrackBar && !unlockedSlide) || !onTrackBar || simulatedNextPage)) {
                     simulatedNextPage = false;
                     allowSlide = unlockedSlide = false;
                     lastPage = LEFT_STR;
@@ -3385,6 +3392,7 @@ public:
                 std::string units;
                 size_t steps;
                 bool unlockedTrackbar;
+                bool onEveryTick;
 
 
                 // Pack variables into structs
@@ -3392,7 +3400,7 @@ public:
                                           commandMode, commandGrouping, currentSection, pathPattern, sourceType, pathPatternOn,
                                           sourceTypeOn, pathPatternOff, sourceTypeOff, defaultToggleState, hideTableBackground,
                                           tableStartGap, tableEndGap, tableColumnOffset, tableSpacing, tableAlignment,
-                                          minValue, maxValue, units, steps, unlockedTrackbar, packageSource, packagePath};
+                                          minValue, maxValue, units, steps, unlockedTrackbar, onEveryTick, packageSource, packagePath};
                 
                 CommandData cmdData = {commands, commandsOn, commandsOff, tableData};
 
@@ -3417,6 +3425,7 @@ public:
                     units = "";
                     steps = 0;
                     unlockedTrackbar = false;
+                    onEveryTick = false;
                     
                     commandFooter = NULL_STR;
                     commandSystem = DEFAULT_STR;
@@ -3554,13 +3563,13 @@ public:
                             addTable(list, tableData, packagePath, tableColumnOffset, tableStartGap, tableEndGap, tableSpacing, tableAlignment, hideTableBackground);
                             continue;
                         } else if (commandMode == TRACKBAR_STR) {
-                            list->addItem(new tsl::elm::TrackBar(optionName, packagePath, minValue, maxValue, units, interpretAndExecuteCommands, commands, option.first, false, unlockedTrackbar));
+                            list->addItem(new tsl::elm::TrackBar(optionName, packagePath, minValue, maxValue, units, interpretAndExecuteCommands, commands, option.first, false, false, -1, unlockedTrackbar, onEveryTick));
                             continue;
                         } else if (commandMode == STEP_TRACKBAR_STR) {
                             if (steps == 0) { // assign minimum steps
                                 steps = std::abs(maxValue - minValue) +1;
                             }
-                            list->addItem(new tsl::elm::StepTrackBar(optionName, packagePath, steps, minValue, maxValue, units, interpretAndExecuteCommands, commands, option.first, false, unlockedTrackbar));
+                            list->addItem(new tsl::elm::StepTrackBar(optionName, packagePath, steps, minValue, maxValue, units, interpretAndExecuteCommands, commands, option.first, false, unlockedTrackbar, onEveryTick));
                             continue;
                         } else if (commandMode == NAMED_STEP_TRACKBAR_STR) {
                             std::vector<std::string> entryList = {};
@@ -3584,7 +3593,7 @@ public:
                                 }
                             }
                             
-                            list->addItem(new tsl::elm::NamedStepTrackBar(optionName, packagePath, entryList, interpretAndExecuteCommands, commands, option.first, unlockedTrackbar));
+                            list->addItem(new tsl::elm::NamedStepTrackBar(optionName, packagePath, entryList, interpretAndExecuteCommands, commands, option.first, unlockedTrackbar, onEveryTick));
                             
                             continue;
                         }
@@ -3856,7 +3865,7 @@ public:
                     }
                 }
 
-                if ((keysHeld & KEY_RIGHT) && !(keysHeld & ~KEY_RIGHT & ALL_KEYS_MASK) && !stillTouching && ((!allowSlide && onTrackBar) || !onTrackBar || simulatedNextPage) && !unlockedSlide) {
+                if ((keysHeld & KEY_RIGHT) && !(keysHeld & ~KEY_RIGHT & ALL_KEYS_MASK) && !stillTouching && ((!allowSlide && onTrackBar && !unlockedSlide) || !onTrackBar || simulatedNextPage) ) {
                     simulatedNextPage = false;
                     allowSlide = unlockedSlide = false;
                     if (menuMode != PACKAGES_STR) {
@@ -3870,7 +3879,7 @@ public:
                         return true;
                     }
                 }
-                if ((keysHeld & KEY_LEFT) && !(keysHeld & ~KEY_LEFT & ALL_KEYS_MASK) && !stillTouching && ((!allowSlide && onTrackBar) || !onTrackBar || simulatedNextPage) && !unlockedSlide) {
+                if ((keysHeld & KEY_LEFT) && !(keysHeld & ~KEY_LEFT & ALL_KEYS_MASK) && !stillTouching && ((!allowSlide && onTrackBar && !unlockedSlide) || !onTrackBar || simulatedNextPage)) {
                     simulatedNextPage = false;
                     allowSlide = unlockedSlide = false;
                     if (menuMode != OVERLAYS_STR) {
