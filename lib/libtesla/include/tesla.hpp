@@ -5195,12 +5195,17 @@ namespace tsl {
                 static u64 prevKeysHeld = 0;
                 u64 keysReleased = prevKeysHeld & ~keysHeld;
                 prevKeysHeld = keysHeld;
-                
+                //static bool usingUnlockedTrackbar = m_unlockedTrackbar;
 
                 // Check if KEY_A is pressed to toggle allowSlide
-                if ((keysReleased & KEY_A) && !m_unlockedTrackbar) {
-                    allowSlide = !allowSlide;
-                    holding = false; // Reset holding state when KEY_A is pressed
+                if ((keysDown & KEY_A)) {
+                    if (!m_unlockedTrackbar) {
+                        allowSlide = !allowSlide;
+                        holding = false; // Reset holding state when KEY_A is pressed
+                    //} else {
+                    //    m_unlockedTrackbar = !m_unlockedTrackbar;
+                    //    holding = false; // Reset holding state when KEY_A is pressed
+                    }
                     return true;
                 }
 
