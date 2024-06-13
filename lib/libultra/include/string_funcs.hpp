@@ -296,6 +296,29 @@ inline bool isFileOrDirectory(const std::string& path) {
 
 
 
+// Helper function to check if a string is a valid integer
+inline bool isValidNumber(const std::string& str) {
+    if (str.empty() || ((str[0] != '-') && !std::isdigit(str[0])) || (str[0] == '-' && str.size() == 1)) {
+        return false;
+    }
+    for (size_t i = 1; i < str.size(); ++i) {
+        if (!std::isdigit(str[i])) {
+            return false;
+        }
+    }
+    return true;
+}
+
+
+// Function to slice a string from start to end index
+inline std::string sliceString(const std::string& str, size_t start, size_t end) {
+    if (start < 0) start = 0;
+    if (end > static_cast<size_t>(str.length())) end = str.length();
+    if (start > end) start = end;
+    return str.substr(start, end - start);
+}
+
+
 
 //inline std::string addQuotesIfNeeded(const std::string& str) {
 //    if (str.find(' ') != std::string::npos) {
