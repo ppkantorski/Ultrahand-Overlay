@@ -1562,6 +1562,24 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                 lblSwitchBacklightOn(0);
             else if (togglePattern == OFF_STR)
                 lblSwitchBacklightOff(0);
+            else if (isValidNumber(togglePattern)) {
+                // Initialize the setsys service
+                //setsysInitialize();
+                //
+                //// Prepare the backlight settings structure
+                //SetSysBacklightSettings backlightSettings;
+                //memset(&backlightSettings, 0, sizeof(backlightSettings));
+
+                // Set the desired brightness value (e.g., 0.5 for 50% brightness)
+                //float brightness = std::stof(togglePattern) / 100.0f;
+                //backlightSettings.screen_brightness = brightness;
+
+                // Apply the backlight settings
+                lblSetCurrentBrightnessSetting(std::stof(togglePattern) / 100.0f);
+
+                // Cleanup the setsys service
+                //setsysExit();
+            }
             lblExit();
         }
         
