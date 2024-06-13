@@ -4763,20 +4763,31 @@ namespace tsl {
                     m_numSteps = maxValue - minValue;
                 }
 
+                bool loadedValue = false;
                 if (!m_packagePath.empty()) {
                     std::string initialIndex = parseValueFromIniSection(m_packagePath + "config.ini", m_label, "index");
 
                     if (!initialIndex.empty()) {
                         m_index = static_cast<s16>(std::stoi(initialIndex)); // convert initializedValue to s16
                     }
+                    if (!m_usingNamedStepTrackbar) {
+                        std::string initialValue = parseValueFromIniSection(m_packagePath + "config.ini", m_label, "value");
+                        
+                        if (!initialValue.empty()) {
+                            m_value = static_cast<s16>(std::stoi(initialValue)); // convert initializedValue to s16
+                            loadedValue = true;
+                        }
+                    }
                 }
 
                 if (m_index > m_numSteps -1) m_index = m_numSteps - 1;
                 else if (m_index < 0) m_index = 0;
 
-                m_value = minValue + m_index * (static_cast<float>(maxValue - minValue) / (m_numSteps - 1));
+                if (!loadedValue)
+                    m_value = minValue + m_index * (static_cast<float>(maxValue - minValue) / (m_numSteps - 1));
 
-
+                if (m_value > maxValue) m_value = maxValue;
+                else if (m_value < minValue) m_value = minValue;
 
                 lastUpdate = std::chrono::steady_clock::now();
             }
