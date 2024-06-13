@@ -81,6 +81,7 @@ bool useOpaqueScreenshots = false;
 
 bool onTrackBar = false;
 bool allowSlide = false;
+bool unlockedSlide = false;
 
 /**
  * @brief Shutdown modes for the Ultrahand-Overlay project.
@@ -4755,9 +4756,9 @@ namespace tsl {
             // Ensure the order of initialization matches the order of declaration
             TrackBar(std::string label, std::string packagePath = "", s16 minValue = 0, s16 maxValue = 100, std::string units = "",
                      std::function<void(std::vector<std::vector<std::string>>&&, const std::string&, const std::string&)> executeCommands = nullptr,
-                     std::vector<std::vector<std::string>> cmd = {}, const std::string& selCmd = "", bool usingStepTrackbar = false, bool usingNamedStepTrackbar = false, s16 numSteps = 101)
+                     std::vector<std::vector<std::string>> cmd = {}, const std::string& selCmd = "", bool usingStepTrackbar = false, bool usingNamedStepTrackbar = false, s16 numSteps = 101, bool unlockedTrackbar = false)
                 : m_label(label), m_packagePath(packagePath), m_minValue(minValue), m_maxValue(maxValue), m_units(units),
-                  interpretAndExecuteCommands(executeCommands), commands(std::move(cmd)), selectedCommand(selCmd), m_usingStepTrackbar(usingStepTrackbar), m_usingNamedStepTrackbar(usingNamedStepTrackbar), m_numSteps(numSteps){
+                  interpretAndExecuteCommands(executeCommands), commands(std::move(cmd)), selectedCommand(selCmd), m_usingStepTrackbar(usingStepTrackbar), m_usingNamedStepTrackbar(usingNamedStepTrackbar), m_numSteps(numSteps), m_unlockedTrackbar(unlockedTrackbar){
                 if (!usingStepTrackbar && !usingNamedStepTrackbar) {
                     m_numSteps = maxValue - minValue;
                 }
@@ -4774,6 +4775,7 @@ namespace tsl {
                 else if (m_index < 0) m_index = 0;
 
                 m_value = minValue + m_index * (static_cast<float>(maxValue - minValue) / (m_numSteps - 1));
+
 
 
                 lastUpdate = std::chrono::steady_clock::now();
@@ -4824,7 +4826,7 @@ namespace tsl {
             }
             
             virtual bool handleInput(u64 keysDown, u64 keysHeld, const HidTouchState &touchPos, HidAnalogStickState leftJoyStick, HidAnalogStickState rightJoyStick) override {
-                static std::chrono::milliseconds initialInterval{50}; // Initial interval between value changes (67ms)
+                static std::chrono::milliseconds initialInterval{67}; // Initial interval between value changes (67ms)
                 static bool holding = false;
                 static std::chrono::steady_clock::time_point holdStartTime;
                 static u64 prevKeysHeld = 0;
@@ -4836,13 +4838,15 @@ namespace tsl {
                 auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastUpdate);
             
                 // Check if KEY_A is pressed to toggle allowSlide
-                if ((keysDown & KEY_A)) {
+                if ((keysDown & KEY_A) && !m_unlockedTrackbar) {
                     allowSlide = !allowSlide;
                     holding = false; // Reset holding state when KEY_A is pressed
                     return true;
                 }
+                
+
                 // Allow sliding only if KEY_A has been pressed
-                if (allowSlide) {
+                if (allowSlide || m_unlockedTrackbar) {
                     if ((keysReleased & HidNpadButton_AnyLeft) || (keysReleased & HidNpadButton_AnyRight)) {
                         updateAndExecute();
                         holding = false;
@@ -4861,9 +4865,9 @@ namespace tsl {
             
                         auto holdDuration = std::chrono::duration_cast<std::chrono::milliseconds>(now - holdStartTime);
                         std::chrono::milliseconds currentInterval;
-                        if (holdDuration >= std::chrono::milliseconds(2000)) {
+                        if (holdDuration >= std::chrono::milliseconds(1600)) {
                             currentInterval = std::chrono::milliseconds(5);
-                        } else if (holdDuration >= std::chrono::milliseconds(1000)) {
+                        } else if (holdDuration >= std::chrono::milliseconds(800)) {
                             currentInterval = std::chrono::milliseconds(20);
                         } else {
                             currentInterval = initialInterval;
@@ -4942,47 +4946,48 @@ namespace tsl {
                 //renderer->drawRoundedRect(this->getX() + 60 + handlePos + 18, this->getY() + 40 + 16-1, this->getWidth() - 95 - handlePos - 16 - 1, 6, 1, tsl::style::color::ColorFrame);
                 
                 if (!m_usingNamedStepTrackbar) {
-                    renderer->drawUniformRoundedRect(this->getX() + 60, this->getY() + 40 + 16 -1, this->getWidth() - 95, 7, a(trackBarEmptyColor));
+                    renderer->drawUniformRoundedRect(this->getX() + 59, this->getY() + 40 + 16 -1, this->getWidth() - 95, 7, a(trackBarEmptyColor));
                 } else {
-                    renderer->drawRect(this->getX() + 60, this->getY() + 40 + 16 -1, this->getWidth() - 95, 7, a(trackBarEmptyColor));
+                    renderer->drawRect(this->getX() + 59, this->getY() + 40 + 16 -1, this->getWidth() - 95, 7, a(trackBarEmptyColor));
                 }
 
                 if (!this->m_focused) {
                     if (!m_usingNamedStepTrackbar) {
-                        renderer->drawUniformRoundedRect(this->getX() + 60, this->getY() + 40 + 16 -1, handlePos, 7, a(trackBarFullColor));
+                        renderer->drawUniformRoundedRect(this->getX() + 59, this->getY() + 40 + 16 -1, handlePos, 7, a(trackBarFullColor));
                     } else {
-                        renderer->drawRect(this->getX() + 60, this->getY() + 40 + 16 -1, handlePos, 7, a(trackBarFullColor));
+                        renderer->drawRect(this->getX() + 59, this->getY() + 40 + 16 -1, handlePos, 7, a(trackBarFullColor));
                     }
-                    renderer->drawCircle(this->getX() + 60 + handlePos, this->getY() + 42 + 16, 16, true, a(trackBarSliderBorderColor));
-                    renderer->drawCircle(this->getX() + 60 + handlePos, this->getY() + 42 + 16, 13, true, a(trackBarSliderColor));
+                    renderer->drawCircle(this->getX() + 59 + handlePos, this->getY() + 42 + 16, 16, true, a(trackBarSliderBorderColor));
+                    renderer->drawCircle(this->getX() + 59 + handlePos, this->getY() + 42 + 16, 13, true, a(trackBarSliderColor));
                     
                 } else {
+                    unlockedSlide = m_unlockedTrackbar;
                     if (!m_usingNamedStepTrackbar) {
-                        renderer->drawUniformRoundedRect(this->getX() + 60, this->getY() + 40 + 16 -1, handlePos, 7, a(trackBarFullColor));
+                        renderer->drawUniformRoundedRect(this->getX() + 59, this->getY() + 40 + 16 -1, handlePos, 7, a(trackBarFullColor));
                     } else {
-                        renderer->drawRect(this->getX() + 60, this->getY() + 40 + 16 -1, handlePos, 7, a(trackBarFullColor));
+                        renderer->drawRect(this->getX() + 59, this->getY() + 40 + 16 -1, handlePos, 7, a(trackBarFullColor));
                     }
                     //renderer->drawCircle(this->getX() + 60 + handlePos, this->getY() + 42 + 16, 16, true, a(clickColor));
-                    renderer->drawCircle(this->getX() + x + 60 + handlePos, this->getY() + y + 42 + 16, 16, true, a(highlightColor));
+                    renderer->drawCircle(this->getX() + x + 59 + handlePos, this->getY() + y + 42 + 16, 16, true, a(highlightColor));
                     //renderer->drawCircle(this->getX() + 60 + handlePos, this->getY() + 42 + 16, 12, true, a(trackBarSliderBorderColor));
-                    if (allowSlide)
-                        renderer->drawCircle(this->getX() + x + 60 + handlePos, this->getY() + y + 42 + 16, 12, true, a(trackBarMalleableSliderColor));
+                    if (allowSlide || m_unlockedTrackbar)
+                        renderer->drawCircle(this->getX() + x + 59 + handlePos, this->getY() + y + 42 + 16, 12, true, a(trackBarMalleableSliderColor));
                     else
-                        renderer->drawCircle(this->getX() + x + 60 + handlePos, this->getY() + y + 42 + 16, 12, true, a(trackBarSliderColor));
+                        renderer->drawCircle(this->getX() + x + 59 + handlePos, this->getY() + y + 42 + 16, 12, true, a(trackBarSliderColor));
                     
                 }
                 
                 if (!m_usingNamedStepTrackbar) {
                     std::string labelPart = removeTag(this->m_label) + " ";
                     //std::string valuePart = std::to_string(this->m_value) + this->m_units;
-                    std::string valuePart = this->m_units == "%" ? std::to_string(this->m_value) + this->m_units : std::to_string(this->m_value) + (this->m_units.empty() ? "" : " ") + this->m_units;
+                    std::string valuePart = (this->m_units == "%" || this->m_units == "°C" || this->m_units == "°F") ? std::to_string(this->m_value) + this->m_units : std::to_string(this->m_value) + (this->m_units.empty() ? "" : " ") + this->m_units;
                     
                     // Measure the width of the combined label and value part
                     std::string combinedString = labelPart + valuePart;
                     std::tie(descWidth, descHeight) = renderer->drawString(combinedString.c_str(), false, 0, 0, 16, a(tsl::style::color::ColorTransparent));
                     
                     // Calculate the position for the combined label (centered)
-                    int combinedX = ((this->getX() + 60) + (this->getWidth() - 95) / 2) - (descWidth / 2);
+                    int combinedX = ((this->getX() + 59) + (this->getWidth() - 95) / 2) - (descWidth / 2);
                     
                     // Measure the width of the label part
                     int labelWidth;
@@ -5003,7 +5008,7 @@ namespace tsl {
                     std::tie(descWidth, descHeight) = renderer->drawString(combinedString.c_str(), false, 0, 0, 16, a(tsl::style::color::ColorTransparent));
                     
                     // Calculate the position for the combined label (centered)
-                    int combinedX = ((this->getX() + 60) + (this->getWidth() - 95) / 2) - (descWidth / 2);
+                    int combinedX = ((this->getX() + 59) + (this->getWidth() - 95) / 2) - (descWidth / 2);
                     
                     // Measure the width of the label part
                     int labelWidth;
@@ -5035,7 +5040,7 @@ namespace tsl {
             virtual void drawHighlight(gfx::Renderer *renderer) override {
                 
                 progress = ((std::sin(2.0 * M_PI * fmod(std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count(), 1.0)) + 1.0) / 2.0);
-                if (allowSlide) {
+                if (allowSlide || m_unlockedTrackbar) {
                     highlightColor = {
                         static_cast<u8>((highlightColor3.r - highlightColor4.r) * progress + highlightColor4.r),
                         static_cast<u8>((highlightColor3.g - highlightColor4.g) * progress + highlightColor4.g),
@@ -5126,6 +5131,7 @@ namespace tsl {
             bool m_usingNamedStepTrackbar = false;
             s16 m_numSteps = 2;
             s16 m_index = 0;
+            bool m_unlockedTrackbar = false;
         };
         
         
@@ -5144,8 +5150,8 @@ namespace tsl {
              */
             StepTrackBar(std::string label, std::string packagePath, size_t numSteps, s16 minValue, s16 maxValue, std::string units,
                 std::function<void(std::vector<std::vector<std::string>>&&, const std::string&, const std::string&)> executeCommands = nullptr,
-                std::vector<std::vector<std::string>> cmd = {}, const std::string& selCmd = "", bool usingNamedStepTrackbar = false)
-                : TrackBar(label, packagePath, minValue, maxValue, units, executeCommands, cmd, selCmd, !usingNamedStepTrackbar, usingNamedStepTrackbar, numSteps) {
+                std::vector<std::vector<std::string>> cmd = {}, const std::string& selCmd = "", bool usingNamedStepTrackbar = false, bool unlockedTrackbar = false)
+                : TrackBar(label, packagePath, minValue, maxValue, units, executeCommands, cmd, selCmd, !usingNamedStepTrackbar, usingNamedStepTrackbar, numSteps, unlockedTrackbar) {
                     ////usingStepTrackbar = true;
                     //if (!m_packagePath.empty()) {
                     //    //logMessage("before StepTrackBar initialize value.");
@@ -5177,13 +5183,13 @@ namespace tsl {
                 
 
                 // Check if KEY_A is pressed to toggle allowSlide
-                if ((keysReleased & KEY_A)) {
+                if ((keysReleased & KEY_A) && !m_unlockedTrackbar) {
                     allowSlide = !allowSlide;
                     holding = false; // Reset holding state when KEY_A is pressed
                     return true;
                 }
 
-                if (allowSlide) {
+                if (allowSlide || m_unlockedTrackbar) {
                     if ((keysReleased & HidNpadButton_AnyLeft) || (keysReleased & HidNpadButton_AnyRight)) {
                         updateAndExecute();
                         holding = false;
@@ -5298,8 +5304,8 @@ namespace tsl {
              */
             NamedStepTrackBar(std::string label, std::string packagePath, std::vector<std::string> stepDescriptions,
                 std::function<void(std::vector<std::vector<std::string>>&&, const std::string&, const std::string&)> executeCommands = nullptr,
-                std::vector<std::vector<std::string>> cmd = {}, const std::string& selCmd = "")
-                : StepTrackBar(label, packagePath, stepDescriptions.size(), 0, stepDescriptions.size()-1, "", executeCommands, cmd, selCmd, true), m_stepDescriptions(stepDescriptions) {
+                std::vector<std::vector<std::string>> cmd = {}, const std::string& selCmd = "", bool unlockedTrackbar = false)
+                : StepTrackBar(label, packagePath, stepDescriptions.size(), 0, stepDescriptions.size()-1, "", executeCommands, cmd, selCmd, true, unlockedTrackbar), m_stepDescriptions(stepDescriptions) {
                     //usingNamedStepTrackbar = true;
                     //logMessage("on initialization");
                 }
@@ -5318,13 +5324,13 @@ namespace tsl {
                     u16 stepX;
                     if (i == 0) {
                         // First rectangle at the start
-                        stepX = this->getX() + 60;
+                        stepX = this->getX() + 59;
                     } else if (i == this->m_numSteps - 1) {
                         // Last rectangle at the end
-                        stepX = this->getX() + 60 + trackBarWidth -1;
+                        stepX = this->getX() + 59 + trackBarWidth -1;
                     } else {
                         // Other rectangles
-                        stepX = static_cast<u16>(this->getX() + 60 + std::round(i * stepWidth));
+                        stepX = static_cast<u16>(this->getX() + 59 + std::round(i * stepWidth));
                     }
                     renderer->drawRect(stepX, this->getY() + 50 -3, 1, 8, a(tsl::style::color::ColorFrame));
                 }
@@ -5878,11 +5884,11 @@ namespace tsl {
                             singlePressHandled = true;
                         }
     
-                        if (durationSincePress > std::chrono::milliseconds(3000))
+                        if (durationSincePress > std::chrono::milliseconds(2400))
                             keyEventInterval = std::chrono::milliseconds(10);
-                        else if (durationSincePress > std::chrono::milliseconds(2000))
+                        else if (durationSincePress > std::chrono::milliseconds(1600))
                             keyEventInterval = std::chrono::milliseconds(20);
-                        else if (durationSincePress > std::chrono::milliseconds(420))
+                        else if (durationSincePress > std::chrono::milliseconds(800))
                             keyEventInterval = std::chrono::milliseconds(50);
                         else
                             keyEventInterval = std::chrono::milliseconds(67);
