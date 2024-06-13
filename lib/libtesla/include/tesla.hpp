@@ -4918,11 +4918,13 @@ namespace tsl {
                 if (event == TouchEvent::Release) {
                     updateAndExecute();
                     this->m_interactionLocked = false;
+                    touchInBounds = false;
                     return false;
                 }
                 
                 if (!this->m_interactionLocked && this->inBounds(initialX, initialY)) {
-                    if (currX > this->getLeftBound() + 50 && currX < this->getRightBound() && currY > this->getTopBound() && currY < this->getBottomBound()) {
+                    touchInBounds = (currX > this->getLeftBound() + 50 && currX < this->getRightBound() && currY > this->getTopBound() && currY < this->getBottomBound());
+                    if (touchInBounds) {
                         // Calculate the new index based on the touch position
                         s16 newIndex = static_cast<s16>((currX - (this->getX() + 60)) / static_cast<float>(this->getWidth() - 95) * (m_numSteps - 1));
             
@@ -4969,7 +4971,7 @@ namespace tsl {
                         renderer->drawRect(this->getX() + 59, this->getY() + 40 + 16 -1, handlePos, 7, a(trackBarFullColor));
                     }
                     renderer->drawCircle(this->getX() + 59 + handlePos, this->getY() + 42 + 16, 16, true, a(trackBarSliderBorderColor));
-                    renderer->drawCircle(this->getX() + 59 + handlePos, this->getY() + 42 + 16, 13, true, a(trackBarSliderColor));
+                    renderer->drawCircle(this->getX() + 59 + handlePos, this->getY() + 42 + 16, 13, true, a((m_unlockedTrackbar || touchInBounds) ? trackBarMalleableSliderColor : trackBarSliderColor));
                     
                 } else {
                     unlockedSlide = m_unlockedTrackbar;
@@ -5143,6 +5145,8 @@ namespace tsl {
             s16 m_numSteps = 2;
             s16 m_index = 0;
             bool m_unlockedTrackbar = false;
+
+            bool touchInBounds = false;
         };
         
         
