@@ -924,7 +924,6 @@ auto replacePlaceholders = [](std::string& arg, const std::string& placeholder, 
     std::string lastArg, replacement;
 
     while ((startPos = arg.find(placeholder)) != std::string::npos) {
-        // Find the innermost placeholder by locating the closest closing ")}" after startPos
         size_t nestedStartPos = startPos;
         while (true) {
             size_t nextStartPos = arg.find(placeholder, nestedStartPos + 1);
@@ -956,33 +955,23 @@ auto replacePlaceholders = [](std::string& arg, const std::string& placeholder, 
 };
 
 void applyPlaceholderReplacement(std::vector<std::string>& cmd, std::string hexPath, std::string iniPath, std::string listString, std::string listPath, std::string jsonString, std::string jsonPath) {
-    size_t startPos, endPos, listIndex;
-
     std::vector<std::pair<std::string, std::function<std::string(const std::string&)>>> placeholders = {
-        {"{hex_file(", [&](const std::string& placeholder) {
-            return replaceHexPlaceholder(placeholder, hexPath);
-        }},
-        {"{ini_file(", [&](const std::string& placeholder) {
-            return replaceIniPlaceholder(placeholder, iniPath);
-        }},
+        {"{hex_file(", [&](const std::string& placeholder) { return replaceHexPlaceholder(placeholder, hexPath); }},
+        {"{ini_file(", [&](const std::string& placeholder) { return replaceIniPlaceholder(placeholder, iniPath); }},
         {"{list(", [&](const std::string& placeholder) {
-            startPos = placeholder.find('(') + 1;
-            endPos = placeholder.find(')');
-            listIndex = std::stoi(placeholder.substr(startPos, endPos - startPos));
+            size_t startPos = placeholder.find('(') + 1;
+            size_t endPos = placeholder.find(')');
+            size_t listIndex = std::stoi(placeholder.substr(startPos, endPos - startPos));
             return stringToList(listString)[listIndex];
         }},
         {"{list_file(", [&](const std::string& placeholder) {
-            startPos = placeholder.find('(') + 1;
-            endPos = placeholder.find(')');
-            listIndex = std::stoi(placeholder.substr(startPos, endPos - startPos));
+            size_t startPos = placeholder.find('(') + 1;
+            size_t endPos = placeholder.find(')');
+            size_t listIndex = std::stoi(placeholder.substr(startPos, endPos - startPos));
             return getEntryFromListFile(listPath, listIndex);
         }},
-        {"{json(", [&](const std::string& placeholder) {
-            return replaceJsonPlaceholder(placeholder, JSON_STR, jsonString);
-        }},
-        {"{json_file(", [&](const std::string& placeholder) {
-            return replaceJsonPlaceholder(placeholder, JSON_FILE_STR, jsonPath);
-        }},
+        {"{json(", [&](const std::string& placeholder) { return replaceJsonPlaceholder(placeholder, JSON_STR, jsonString); }},
+        {"{json_file(", [&](const std::string& placeholder) { return replaceJsonPlaceholder(placeholder, JSON_FILE_STR, jsonPath); }},
         {"{timestamp(", [&](const std::string& placeholder) {
             size_t startPos = placeholder.find("(") + 1;
             size_t endPos = placeholder.find(")");
@@ -1012,6 +1001,20 @@ void applyPlaceholderReplacement(std::vector<std::string>& cmd, std::string hexP
             size_t endPos = placeholder.find(")");
             std::string hexValue = placeholder.substr(startPos, endPos - startPos);
             return hexToDecimal(hexValue);
+        }},
+        {"{slice(", [&](const std::string& placeholder) {
+            size_t startPos = placeholder.find('(') + 1;
+            size_t endPos = placeholder.find(')');
+            std::string parameters = placeholder.substr(startPos, endPos - startPos);
+            size_t commaPos = parameters.find(',');
+
+            if (commaPos != std::string::npos) {
+                std::string str = parameters.substr(0, commaPos);
+                size_t sliceStart = std::stoi(parameters.substr(commaPos + 1, parameters.find(',', commaPos + 1) - (commaPos + 1)));
+                size_t sliceEnd = std::stoi(parameters.substr(parameters.find_last_of(',') + 1));
+                return sliceString(str, sliceStart, sliceEnd);
+            }
+            return placeholder;
         }}
     };
 
@@ -1019,10 +1022,9 @@ void applyPlaceholderReplacement(std::vector<std::string>& cmd, std::string hexP
         for (const auto& [placeholder, replacer] : placeholders) {
             replacePlaceholders(arg, placeholder, replacer);
         }
-        
+
         // Failed replacement cleanup
-        if (arg == NULL_STR)
-            arg = UNAVAILABLE_SELECTION;
+        if (arg == NULL_STR) arg = UNAVAILABLE_SELECTION;
     }
 }
 
