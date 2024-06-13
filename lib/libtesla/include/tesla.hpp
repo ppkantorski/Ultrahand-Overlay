@@ -4756,9 +4756,9 @@ namespace tsl {
             // Ensure the order of initialization matches the order of declaration
             TrackBar(std::string label, std::string packagePath = "", s16 minValue = 0, s16 maxValue = 100, std::string units = "",
                      std::function<void(std::vector<std::vector<std::string>>&&, const std::string&, const std::string&)> executeCommands = nullptr,
-                     std::vector<std::vector<std::string>> cmd = {}, const std::string& selCmd = "", bool usingStepTrackbar = false, bool usingNamedStepTrackbar = false, s16 numSteps = -1, bool unlockedTrackbar = false)
+                     std::vector<std::vector<std::string>> cmd = {}, const std::string& selCmd = "", bool usingStepTrackbar = false, bool usingNamedStepTrackbar = false, s16 numSteps = -1, bool unlockedTrackbar = false, bool executeOnEveryTick = false)
                 : m_label(label), m_packagePath(packagePath), m_minValue(minValue), m_maxValue(maxValue), m_units(units),
-                  interpretAndExecuteCommands(executeCommands), commands(std::move(cmd)), selectedCommand(selCmd), m_usingStepTrackbar(usingStepTrackbar), m_usingNamedStepTrackbar(usingNamedStepTrackbar), m_numSteps(numSteps), m_unlockedTrackbar(unlockedTrackbar){
+                  interpretAndExecuteCommands(executeCommands), commands(std::move(cmd)), selectedCommand(selCmd), m_usingStepTrackbar(usingStepTrackbar), m_usingNamedStepTrackbar(usingNamedStepTrackbar), m_numSteps(numSteps), m_unlockedTrackbar(unlockedTrackbar), m_executeOnEveryTick(executeOnEveryTick) {
                 if ((!usingStepTrackbar && !usingNamedStepTrackbar) || numSteps == -1) {
                     m_numSteps = maxValue - minValue;
                 }
@@ -4799,40 +4799,36 @@ namespace tsl {
             }
 
             void updateAndExecute() {
-                if (!m_packagePath.empty()) {
-                    if (!m_usingNamedStepTrackbar) {
-                        setIniFileValue(m_packagePath + "config.ini", m_label, "index", std::to_string(m_index));
-                        setIniFileValue(m_packagePath + "config.ini", m_label, "value", std::to_string(m_value));
-                    } else {
-                        setIniFileValue(m_packagePath + "config.ini", m_label, "index", std::to_string(m_index));
-                        setIniFileValue(m_packagePath + "config.ini", m_label, "value", m_selection);
-                    }
-                    if (interpretAndExecuteCommands) {
-                        auto commandsCopy = commands;
-                        // Replace '{value}' with std::to_string(m_value) in each argument
-                        for (auto& cmd : commandsCopy) {
-                            for (auto& arg : cmd) {
-                                size_t pos = 0;
-                                if (!m_usingNamedStepTrackbar) {
-                                    while ((pos = arg.find("{value}", pos)) != std::string::npos) {
-                                        arg.replace(pos, 7, std::to_string(m_value));
-                                        pos += std::to_string(m_value).length(); // Advance position to avoid infinite loop
-                                    }
-                                } else {
-                                    while ((pos = arg.find("{value}", pos)) != std::string::npos) {
-                                        arg.replace(pos, 7, m_selection);
-                                        pos += m_selection.length(); // Advance position to avoid infinite loop
-                                    }
-                                    pos = 0;
-                                    while ((pos = arg.find("{index}", pos)) != std::string::npos) {
-                                        arg.replace(pos, 7, std::to_string(m_value));
-                                        pos += std::to_string(m_value).length(); // Advance position to avoid infinite loop
-                                    }
+                if (m_packagePath.empty()) {
+                    return;
+                }
+                
+                std::string indexStr = std::to_string(m_index);
+                std::string valueStr = m_usingNamedStepTrackbar ? m_selection : std::to_string(m_value);
+                
+                setIniFileValue(m_packagePath + "config.ini", m_label, "index", indexStr);
+                setIniFileValue(m_packagePath + "config.ini", m_label, "value", valueStr);
+                
+                if (interpretAndExecuteCommands) {
+                    auto commandsCopy = commands;
+                    for (auto& cmd : commandsCopy) {
+                        for (auto& arg : cmd) {
+                            size_t pos = 0;
+                            while ((pos = arg.find("{value}", pos)) != std::string::npos) {
+                                arg.replace(pos, 7, valueStr);
+                                pos += valueStr.length();
+                            }
+                            
+                            if (m_usingNamedStepTrackbar) {
+                                pos = 0;
+                                while ((pos = arg.find("{index}", pos)) != std::string::npos) {
+                                    arg.replace(pos, 7, indexStr);
+                                    pos += indexStr.length();
                                 }
                             }
                         }
-                        interpretAndExecuteCommands(std::move(commandsCopy), m_packagePath, selectedCommand);
                     }
+                    interpretAndExecuteCommands(std::move(commandsCopy), m_packagePath, selectedCommand);
                 }
             }
             
@@ -4859,7 +4855,8 @@ namespace tsl {
                 // Allow sliding only if KEY_A has been pressed
                 if (allowSlide || m_unlockedTrackbar) {
                     if ((keysReleased & HidNpadButton_AnyLeft) || (keysReleased & HidNpadButton_AnyRight)) {
-                        updateAndExecute();
+                        if (!m_executeOnEveryTick)
+                            updateAndExecute();
                         holding = false;
                         return true;
                     }
@@ -4890,6 +4887,9 @@ namespace tsl {
                                     this->m_index--;
                                     this->m_value--;
                                     this->m_valueChangedListener(this->m_value);
+                                    if (m_executeOnEveryTick) {
+                                        updateAndExecute();
+                                    }
                                     lastUpdate = now;
                                     return true;
                                 }
@@ -4900,6 +4900,9 @@ namespace tsl {
                                     this->m_index++;
                                     this->m_value++;
                                     this->m_valueChangedListener(this->m_value);
+                                    if (m_executeOnEveryTick) {
+                                        updateAndExecute();
+                                    }
                                     lastUpdate = now;
                                     return true;
                                 }
@@ -4916,7 +4919,8 @@ namespace tsl {
             
             virtual bool onTouch(TouchEvent event, s32 currX, s32 currY, s32 prevX, s32 prevY, s32 initialX, s32 initialY) override {
                 if (event == TouchEvent::Release) {
-                    updateAndExecute();
+                    if (!m_executeOnEveryTick)
+                        updateAndExecute();
                     this->m_interactionLocked = false;
                     touchInBounds = false;
                     return false;
@@ -4942,6 +4946,9 @@ namespace tsl {
                             this->m_value = newValue;
                             this->m_index = newIndex;
                             this->m_valueChangedListener(this->getProgress());
+                            if (m_executeOnEveryTick) {
+                                updateAndExecute();
+                            }
                         }
                         
                         return true;
@@ -5110,7 +5117,7 @@ namespace tsl {
             s16 m_numSteps = 2;
             s16 m_index = 0;
             bool m_unlockedTrackbar = false;
-
+            bool m_executeOnEveryTick = false;
             bool touchInBounds = false;
         };
         
@@ -5130,8 +5137,8 @@ namespace tsl {
              */
             StepTrackBar(std::string label, std::string packagePath, size_t numSteps, s16 minValue, s16 maxValue, std::string units,
                 std::function<void(std::vector<std::vector<std::string>>&&, const std::string&, const std::string&)> executeCommands = nullptr,
-                std::vector<std::vector<std::string>> cmd = {}, const std::string& selCmd = "", bool usingNamedStepTrackbar = false, bool unlockedTrackbar = false)
-                : TrackBar(label, packagePath, minValue, maxValue, units, executeCommands, cmd, selCmd, !usingNamedStepTrackbar, usingNamedStepTrackbar, numSteps, unlockedTrackbar) {
+                std::vector<std::vector<std::string>> cmd = {}, const std::string& selCmd = "", bool usingNamedStepTrackbar = false, bool unlockedTrackbar = false, bool executeOnEveryTick = false)
+                : TrackBar(label, packagePath, minValue, maxValue, units, executeCommands, cmd, selCmd, !usingNamedStepTrackbar, usingNamedStepTrackbar, numSteps, unlockedTrackbar, executeOnEveryTick) {
                     ////usingStepTrackbar = true;
                     //if (!m_packagePath.empty()) {
                     //    //logMessage("before StepTrackBar initialize value.");
@@ -5176,7 +5183,8 @@ namespace tsl {
 
                 if (allowSlide || m_unlockedTrackbar) {
                     if ((keysReleased & HidNpadButton_AnyLeft) || (keysReleased & HidNpadButton_AnyRight)) {
-                        updateAndExecute();
+                        if (!m_executeOnEveryTick)
+                            updateAndExecute();
                         holding = false;
                         tick = 0;
                         return true;
@@ -5207,6 +5215,8 @@ namespace tsl {
                                 return false;
                             }
                             this->m_valueChangedListener(this->getProgress());
+                            if (m_executeOnEveryTick)
+                                updateAndExecute();
                         }
                         tick++;
                         return true;
@@ -5289,8 +5299,8 @@ namespace tsl {
              */
             NamedStepTrackBar(std::string label, std::string packagePath, std::vector<std::string> stepDescriptions,
                 std::function<void(std::vector<std::vector<std::string>>&&, const std::string&, const std::string&)> executeCommands = nullptr,
-                std::vector<std::vector<std::string>> cmd = {}, const std::string& selCmd = "", bool unlockedTrackbar = false)
-                : StepTrackBar(label, packagePath, stepDescriptions.size(), 0, stepDescriptions.size()-1, "", executeCommands, cmd, selCmd, true, unlockedTrackbar), m_stepDescriptions(stepDescriptions) {
+                std::vector<std::vector<std::string>> cmd = {}, const std::string& selCmd = "", bool unlockedTrackbar = false, bool executeOnEveryTick = false)
+                : StepTrackBar(label, packagePath, stepDescriptions.size(), 0, stepDescriptions.size()-1, "", executeCommands, cmd, selCmd, true, unlockedTrackbar, executeOnEveryTick), m_stepDescriptions(stepDescriptions) {
                     //usingNamedStepTrackbar = true;
                     //logMessage("on initialization");
                 }
