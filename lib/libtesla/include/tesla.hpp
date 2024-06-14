@@ -5000,17 +5000,17 @@ namespace tsl {
                 
                 
                 // Draw track bar background
-                drawBar(renderer, xPos, yPos-2, width, trackBarEmptyColor, !m_usingNamedStepTrackbar);
+                drawBar(renderer, xPos, yPos-3, width, trackBarEmptyColor, !m_usingNamedStepTrackbar);
                 
                 
                 if (!this->m_focused) {
-                    drawBar(renderer, xPos, yPos-2, handlePos, trackBarFullColor, !m_usingNamedStepTrackbar);
+                    drawBar(renderer, xPos, yPos-3, handlePos, trackBarFullColor, !m_usingNamedStepTrackbar);
                     renderer->drawCircle(xPos + handlePos, yPos, 16, true, a(trackBarSliderBorderColor));
                     renderer->drawCircle(xPos + handlePos, yPos, 13, true, a((m_unlockedTrackbar || touchInSliderBounds) ? trackBarSliderMalleableColor : trackBarSliderColor));
                 } else {
                     touchInSliderBounds = false;
                     unlockedSlide = m_unlockedTrackbar;
-                    drawBar(renderer, xPos, yPos-2, handlePos, trackBarFullColor, !m_usingNamedStepTrackbar);
+                    drawBar(renderer, xPos, yPos-3, handlePos, trackBarFullColor, !m_usingNamedStepTrackbar);
                     renderer->drawCircle(xPos + x + handlePos, yPos +y, 16, true, a(highlightColor));
                     renderer->drawCircle(xPos + x + handlePos, yPos +y, 12, true, a((allowSlide || m_unlockedTrackbar) ? trackBarSliderMalleableColor : trackBarSliderColor));
                 }
@@ -5280,7 +5280,7 @@ namespace tsl {
             //    
             //    return false;
             //}
-            
+
             
             /**
              * @brief Gets the current value of the trackbar
@@ -5341,7 +5341,7 @@ namespace tsl {
                 u16 baseY = this->getY() + 47; // 50 - 3
                 // Calculate the halfway point
                 u8 halfNumSteps = (this->m_numSteps - 1) / 2;
-                
+
                 // Draw step rectangles
                 for (u8 i = 0; i < this->m_numSteps; i++) {
                     u16 stepX = baseX + std::round(i * (trackBarWidth / (this->m_numSteps - 1)));
@@ -5358,7 +5358,7 @@ namespace tsl {
                 // Draw the parent trackbar
                 StepTrackBar::draw(renderer);
             }
-            
+
             
         protected:
             std::vector<std::string> m_stepDescriptions;
@@ -5381,7 +5381,7 @@ namespace tsl {
         virtual ~Gui() {
             if (this->m_topElement != nullptr)
                 delete this->m_topElement;
-            
+
             if (this->m_bottomElement != nullptr)
                 delete this->m_bottomElement;
         }
