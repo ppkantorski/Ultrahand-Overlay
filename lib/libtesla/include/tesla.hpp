@@ -735,6 +735,7 @@ const std::array<int, 256> hexMap = [] {
 
 // Prepare a map of default settings
 std::map<std::string, std::string> defaultThemeSettingsMap = {
+    {"default_package_color", "#00FF00"},
     {"clock_color", whiteColor},
     {"bg_alpha", "13"},
     {"bg_color", blackColor},
@@ -1251,12 +1252,12 @@ namespace tsl {
     inline std::tuple<float, float, float> hexToRGB444Floats(const std::string& hexColor, const std::string& defaultHexColor = "#FFFFFF") {
         const char* validHex = hexColor.c_str();
         if (validHex[0] == '#') validHex++;
-    
+        
         if (!isValidHexColor(validHex)) {
             validHex = defaultHexColor.c_str();
             if (validHex[0] == '#') validHex++;
         }
-    
+        
         // Manually parse the hex string to an integer value
         unsigned int hexValue = (hexMap[static_cast<unsigned char>(validHex[0])] << 20) |
                                 (hexMap[static_cast<unsigned char>(validHex[1])] << 16) |
@@ -1264,12 +1265,12 @@ namespace tsl {
                                 (hexMap[static_cast<unsigned char>(validHex[3])] << 8)  |
                                 (hexMap[static_cast<unsigned char>(validHex[4])] << 4)  |
                                 hexMap[static_cast<unsigned char>(validHex[5])];
-    
+        
         // Extract and scale the RGB components from 8-bit (0-255) to 4-bit float scale (0-15)
         float red = ((hexValue >> 16) & 0xFF) / 255.0f * 15.0f;
         float green = ((hexValue >> 8) & 0xFF) / 255.0f * 15.0f;
         float blue = (hexValue & 0xFF) / 255.0f * 15.0f;
-    
+        
         return std::make_tuple(red, green, blue);
     }
 
@@ -1311,6 +1312,7 @@ namespace tsl {
     static Color bottomTextColor = RGB888(whiteColor);
     static Color botttomSeperatorColor = RGB888(whiteColor);
 
+    static Color defaultPackageColor = RGB888("#00FF00");
     static Color clockColor = RGB888(whiteColor);
     static Color batteryColor = RGB888("#ffff45");
     static Color versionTextColor = RGB888("#AAAAAA");
@@ -1364,28 +1366,28 @@ namespace tsl {
         auto themeData = getParsedDataFromIniFile(THEME_CONFIG_INI_PATH);
         if (themeData.count(THEME_STR) > 0) {
             auto& themeSection = themeData[THEME_STR];
-    
+            
             // Fetch and process each theme setting using a helper to simplify fetching and fallback
             auto getValue = [&](const std::string& key) {
                 return themeSection.count(key) ? themeSection[key] : defaultThemeSettingsMap[key];
             };
-    
+            
             // Convert hex color to Color and manage default values and conversion
             auto getColor = [&](const std::string& key, size_t alpha = 15) {
                 std::string hexColor = getValue(key);
                 return RGB888(hexColor, hexColor, alpha);
             };
-    
+            
             auto getAlpha = [&](const std::string& key) {
                 std::string alphaStr = getValue(key);
                 return !alphaStr.empty() ? std::stoi(alphaStr) : std::stoi(defaultThemeSettingsMap[key]);
             };
-    
+            
             disableColorfulLogo = (getValue("disable_colorful_logo") == TRUE_STR);
-    
+            
             logoColor1 = getColor("logo_color_1");
             logoColor2 = getColor("logo_color_2");
-    
+            
             defaultBackgroundAlpha = getAlpha("bg_alpha");
             defaultBackgroundColor = getColor("bg_color", defaultBackgroundAlpha);
             defaultTextColor = getColor("text_color");
@@ -1397,34 +1399,36 @@ namespace tsl {
             bottomTextColor = getColor("bottom_text_color");
             botttomSeperatorColor = getColor("bottom_seperator_color");
 
+            defaultPackageColor = getColor("default_package_color");
+
             clockColor = getColor("clock_color");
             batteryColor = getColor("battery_color");
-    
+            
             versionTextColor = getColor("version_text_color");
             onTextColor = getColor("on_text_color");
             offTextColor = getColor("off_text_color");
-    
+            
             dynamicLogoRGB1 = hexToRGB444Floats(getValue("dynamic_logo_color_1"));
             dynamicLogoRGB2 = hexToRGB444Floats(getValue("dynamic_logo_color_2"));
-    
+            
             disableSelectionBG = (getValue("disable_selection_bg") == TRUE_STR);
             invertBGClickColor = (getValue("invert_bg_click_color") == TRUE_STR);
 
             selectionBGAlpha = getAlpha("selection_bg_alpha");
             selectionBGColor = getColor("selection_bg_color", selectionBGAlpha);
-    
+            
             highlightColor1 = getColor("highlight_color_1");
             highlightColor2 = getColor("highlight_color_2");
             highlightColor3 = getColor("highlight_color_3");
             highlightColor4 = getColor("highlight_color_4");
-    
+            
             clickAlpha = getAlpha("click_alpha");
             clickColor = getColor("click_color", clickAlpha);
             trackBarColor = getColor("trackbar_color");
-    
+            
             seperatorAlpha = getAlpha("seperator_alpha");
             seperatorColor = getColor("seperator_color", seperatorAlpha);
-    
+            
             selectedTextColor = getColor("selection_text_color");
             inprogressTextColor = getColor("inprogress_text_color");
             invalidTextColor = getColor("invalid_text_color");
@@ -3677,14 +3681,14 @@ namespace tsl {
                     fontSize = 32;
                     if (this->m_subtitle.find("Ultrahand Package") != std::string::npos) {
                         const std::string& title = this->m_title;
-                        titleColor = Color(0x0, 0xF, 0x0, 0xF); // Default to green
+                        titleColor = defaultPackageColor; // Default to green
                     
                         // Function to draw the title
                         auto drawTitle = [&](const Color& color) {
                             renderer->drawString(title.c_str(), false, x, y, fontSize, a(color));
                         };
                     
-                        if (this->m_colorSelection == "" || this->m_colorSelection == "green") {
+                        if (this->m_colorSelection == "green") {
                             titleColor = Color(0x0, 0xF, 0x0, 0xF);
                             drawTitle(titleColor);
                         } else if (this->m_colorSelection == "red") {
@@ -4475,7 +4479,7 @@ namespace tsl {
                     }
                 } else {
                     // Render the text with special character handling
-                    renderer->drawStringWithColoredSections(this->m_text, {STAR_SYMBOL}, this->getX() + 20, this->getY() + 45, 23,
+                    renderer->drawStringWithColoredSections(this->m_text, {STAR_SYMBOL+"  "}, this->getX() + 20, this->getY() + 45, 23,
                         a(this->m_focused ? (!useClickTextColor ? selectedTextColor : clickTextColor) : (!useClickTextColor ? defaultTextColor : clickTextColor)),
                         a(this->m_focused ? starColor : selectionStarColor)
                     );
@@ -4974,10 +4978,10 @@ namespace tsl {
             
                 return false;
             }
+
             
-            
-            
-            
+
+
             // Define drawBar function outside the draw method
             void drawBar(gfx::Renderer *renderer, s32 x, s32 y, u16 width, Color color, bool isRounded = true) {
                 if (isRounded) {
@@ -4986,15 +4990,15 @@ namespace tsl {
                     renderer->drawRect(x, y, width, 7, a(color));
                 }
             }
-            
+
             virtual void draw(gfx::Renderer *renderer) override {
                 static float lastBottomBound;
                 u16 handlePos = (this->getWidth() - 95) * (this->m_value - m_minValue) / (m_maxValue - m_minValue);
                 s32 xPos = this->getX() + 59;
                 s32 yPos = this->getY() + 40 + 16 - 1;
                 s32 width = this->getWidth() - 95;
-                
-                
+
+
                 // Draw track bar background
                 drawBar(renderer, xPos, yPos-2, width, trackBarEmptyColor, !m_usingNamedStepTrackbar);
                 
@@ -5033,7 +5037,7 @@ namespace tsl {
                 renderer->drawRect(this->getX() + 4+20, this->getBottomBound(), this->getWidth() + 6 + 10+20, 1, a(seperatorColor));
                 lastBottomBound = this->getBottomBound();
             }
-            
+
             
             virtual void layout(u16 parentX, u16 parentY, u16 parentWidth, u16 parentHeight) override {
                 this->setBoundaries(this->getX() - 16 , this->getY(), this->getWidth()+20, tsl::style::TrackBarDefaultHeight );
