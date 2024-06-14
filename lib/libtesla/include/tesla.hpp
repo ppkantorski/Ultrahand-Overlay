@@ -3754,7 +3754,7 @@ namespace tsl {
                     } else {
                         renderer->drawString(this->m_title.c_str(), false, 20, 50, 30, a(defaultTextColor));
                     }
-                    
+
                 }
                 
                 
@@ -5011,8 +5011,8 @@ namespace tsl {
                     touchInSliderBounds = false;
                     unlockedSlide = m_unlockedTrackbar;
                     drawBar(renderer, xPos, yPos-2, handlePos, trackBarFullColor, !m_usingNamedStepTrackbar);
-                    renderer->drawCircle(xPos + x + handlePos, yPos, 16, true, a(highlightColor));
-                    renderer->drawCircle(xPos + x + handlePos, yPos, 12, true, a((allowSlide || m_unlockedTrackbar) ? trackBarSliderMalleableColor : trackBarSliderColor));
+                    renderer->drawCircle(xPos + x + handlePos, yPos +y, 16, true, a(highlightColor));
+                    renderer->drawCircle(xPos + x + handlePos, yPos +y, 12, true, a((allowSlide || m_unlockedTrackbar) ? trackBarSliderMalleableColor : trackBarSliderColor));
                 }
                 
                 std::string labelPart = removeTag(this->m_label) + " ";
@@ -5431,7 +5431,7 @@ namespace tsl {
         elm::Element* getBottomElement() {
             return this->m_bottomElement;
         }
-        
+
         /**
          * @brief Get the currently focused element
          *
@@ -5491,7 +5491,7 @@ namespace tsl {
         elm::Element *m_focusedElement = nullptr;
         elm::Element *m_topElement = nullptr;
         elm::Element *m_bottomElement = nullptr;
-        
+
         bool m_initialFocusSet = false;
         
         friend class Overlay;
@@ -5510,7 +5510,7 @@ namespace tsl {
         //        findBottomElement(child);
         //    }
         //}
-        
+
         /**
          * @brief Draws the Gui
          *
@@ -5601,7 +5601,7 @@ namespace tsl {
          */
         void show() {
             
-            
+
             if (this->m_disableNextAnimation) {
                 this->m_animationCounter = 5;
                 this->m_disableNextAnimation = false;
@@ -5610,7 +5610,7 @@ namespace tsl {
                 this->m_fadeInAnimationPlaying = true;
                 this->m_animationCounter = 0;
             }
-            
+
             isHidden.store(false);
             this->onShow();
             
@@ -5768,7 +5768,7 @@ namespace tsl {
             renderer.endFrame();
         }
         
-        
+
         /**
          * @brief Called once per frame with the latest HID inputs
          *
@@ -5853,7 +5853,7 @@ namespace tsl {
             
             handled |= currentGui->handleInput(keysDown, keysHeld, touchPos, joyStickPosLeft, joyStickPosRight);
             
-            
+
             if (hasScrolled) {
                 bool singleArrowKeyPress = ((keysHeld & HidNpadButton_AnyUp) != 0) + ((keysHeld & HidNpadButton_AnyDown) != 0) + ((keysHeld & HidNpadButton_AnyLeft) != 0) + ((keysHeld & HidNpadButton_AnyRight) != 0) == 1;
                     
@@ -5865,7 +5865,7 @@ namespace tsl {
                     hasScrolled = false;
                 }
             } else {
-                
+
                 if (!touchDetected && !oldTouchDetected && !handled && currentFocus && !stillTouching && !runningInterpreter.load(std::memory_order_acquire)) {
                     static bool shouldShake = true;
                     bool singleArrowKeyPress = ((keysHeld & HidNpadButton_AnyUp) != 0) + ((keysHeld & HidNpadButton_AnyDown) != 0) + ((keysHeld & HidNpadButton_AnyLeft) != 0) + ((keysHeld & HidNpadButton_AnyRight) != 0) == 1;
@@ -6010,8 +6010,8 @@ namespace tsl {
         
         
         
-        
-        
+
+
         /**
          * @brief Clears the screen
          *
@@ -6041,7 +6041,7 @@ namespace tsl {
             this->m_disableNextAnimation = true;
         }
         
-        
+
         /**
          * @brief Changes to a different Gui
          *
@@ -6055,14 +6055,14 @@ namespace tsl {
             
             // Create the top element of the new Gui
             gui->m_topElement = gui->createUI();
-            
+
             
             // Push the new Gui onto the stack
             this->m_guiStack.push(std::move(gui));
             
             return this->m_guiStack.top();
         }
-        
+
         
         /**
          * @brief Creates a new Gui and changes to it
@@ -6093,7 +6093,7 @@ namespace tsl {
             if (this->m_guiStack.empty())
                 this->close();
         }
-        
+
         void pop() {
             if (!this->m_guiStack.empty())
                 this->m_guiStack.pop();
@@ -6158,7 +6158,7 @@ namespace tsl {
             hideSOCTemp = (removeQuotes(parsedConfig[ULTRAHAND_PROJECT_NAME]["hide_soc_temp"]) != FALSE_STR);
             
         }
-        
+
         /**
          * @brief Update and save launch combo keys
          *
@@ -6203,7 +6203,7 @@ namespace tsl {
             hidsysAcquireCaptureButtonEventHandle(&captureButtonPressEvent, false);
             eventClear(&captureButtonPressEvent);
             hlp::ScopeGuard captureButtonEventGuard([&] { eventClose(&captureButtonPressEvent); });
-            
+
             // Parse Tesla settings
             impl::parseOverlaySettings();
             
@@ -6297,10 +6297,10 @@ namespace tsl {
                             break;
                         case WaiterObject_PowerButton:
                             eventClear(&powerButtonPressEvent);
-                            
+
                             // Perform any necessary cleanup
                             hidExit();
-                            
+
                             // Reinitialize resources
                             ASSERT_FATAL(hidInitialize()); // Reinitialize HID to reset states
                             padInitializeAny(&pad);
@@ -6346,8 +6346,8 @@ namespace tsl {
     static void pop() {
         Overlay::get()->pop();
     }
-    
-    
+
+
     static void setNextOverlay(const std::string& ovlPath, std::string origArgs) {
         
         //std::string args = std::filesystem::path(ovlPath).filename();
@@ -6390,7 +6390,7 @@ namespace tsl {
         tsl::hlp::doWithSmSession([&overlay]{ overlay->initServices(); });
         overlay->initScreen();
         overlay->changeTo(overlay->loadInitialGui());
-        
+
         
         // CUSTOM SECTION START
         // Argument parsing
@@ -6409,7 +6409,7 @@ namespace tsl {
             setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_OVERLAY_STR, FALSE_STR);
             eventFire(&shData.comboEvent);
         }
-        
+
         overlay->disableNextAnimation();
         
         while (shData.running) {
@@ -6448,7 +6448,7 @@ namespace tsl {
             hlp::requestForeground(false);
             
             shData.overlayOpen = false;
-            
+
             eventClear(&shData.comboEvent);
         }
         
@@ -6508,8 +6508,8 @@ extern "C" {
             ASSERT_FATAL(hidsysInitialize());                       // Focus control
             ASSERT_FATAL(setsysInitialize());                       // Settings querying
             
-            
-            
+
+
             ASSERT_FATAL(timeInitialize()); // CUSTOM MODIFICATION
             __libnx_init_time();            // CUSTOM MODIFICATION
             timeExit(); // CUSTOM MODIFICATION
