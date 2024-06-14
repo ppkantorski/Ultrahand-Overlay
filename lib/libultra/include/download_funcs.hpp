@@ -21,6 +21,7 @@
 #include <curl/curl.h>
 #include <zlib.h>
 #include <zzip/zzip.h>
+//#include <minizip/unzip.h>
 #include "string_funcs.hpp"
 #include "get_funcs.hpp"
 #include "path_funcs.hpp"
@@ -299,3 +300,127 @@ bool unzipFile(const std::string& zipFilePath, const std::string& toDestination)
 
     return success;
 }
+
+
+//bool unzipFile(const std::string& zipFilePath, const std::string& toDestination) {
+//    abortUnzip.store(false, std::memory_order_release); // Reset abort flag
+//
+//    unzFile zipfile = unzOpen(zipFilePath.c_str());
+//    if (!zipfile) {
+//        logMessage("Error opening zip file: " + zipFilePath);
+//        return false;
+//    }
+//
+//    unz_global_info globalInfo;
+//    if (unzGetGlobalInfo(zipfile, &globalInfo) != UNZ_OK) {
+//        logMessage("Error getting global info from zip file: " + zipFilePath);
+//        unzClose(zipfile);
+//        return false;
+//    }
+//
+//    z_off_t totalUncompressedSize = 0;
+//
+//    // First pass: Calculate the total size of all files
+//    if (unzGoToFirstFile(zipfile) != UNZ_OK) {
+//        logMessage("Error going to first file in zip: " + zipFilePath);
+//        unzClose(zipfile);
+//        return false;
+//    }
+//    do {
+//        unz_file_info fileInfo;
+//        char fileName[256];
+//        if (unzGetCurrentFileInfo(zipfile, &fileInfo, fileName, sizeof(fileName), nullptr, 0, nullptr, 0) != UNZ_OK) {
+//            logMessage("Error getting file info from zip: " + zipFilePath);
+//            unzClose(zipfile);
+//            return false;
+//        }
+//        if (fileName[0] != '\0' && fileInfo.uncompressed_size > 0) {
+//            totalUncompressedSize += fileInfo.uncompressed_size;
+//        }
+//    } while (unzGoToNextFile(zipfile) == UNZ_OK);
+//
+//    // Second pass: Extract files and update progress
+//    if (unzGoToFirstFile(zipfile) != UNZ_OK) {
+//        logMessage("Error going to first file in zip: " + zipFilePath);
+//        unzClose(zipfile);
+//        return false;
+//    }
+//
+//    bool success = true;
+//    z_off_t currentUncompressedSize = 0;
+//    char buffer[UNZIP_BUFFER_SIZE];
+//
+//    unzipPercentage.store(0, std::memory_order_release); // Initialize percentage
+//
+//    do {
+//        unz_file_info fileInfo;
+//        char fileName[256];
+//        if (unzGetCurrentFileInfo(zipfile, &fileInfo, fileName, sizeof(fileName), nullptr, 0, nullptr, 0) != UNZ_OK) {
+//            logMessage("Error getting file info from zip: " + zipFilePath);
+//            success = false;
+//            break;
+//        }
+//
+//        if (fileName[0] == '\0') continue; // Skip empty entries
+//
+//        std::string extractedFilePath = toDestination + fileName;
+//
+//        // Remove invalid characters
+//        auto it = extractedFilePath.begin() + std::min(extractedFilePath.find("sdmc:/") + 5, extractedFilePath.size());
+//        extractedFilePath.erase(std::remove_if(it, extractedFilePath.end(), [](char c) {
+//            return c == ':' || c == '*' || c == '?' || c == '\"' || c == '<' || c == '>' || c == '|';
+//        }), extractedFilePath.end());
+//
+//        if (!extractedFilePath.empty() && extractedFilePath.back() == '/') continue; // Skip directories
+//
+//        std::string directoryPath = extractedFilePath.substr(0, extractedFilePath.find_last_of('/') + 1);
+//        createDirectory(directoryPath);
+//
+//        if (unzOpenCurrentFile(zipfile) != UNZ_OK) {
+//            logMessage("Error opening file in zip: " + std::string(fileName));
+//            success = false;
+//            continue;
+//        }
+//
+//        std::ofstream outputFile(extractedFilePath, std::ios::binary);
+//        if (!outputFile.is_open()) {
+//            logMessage("Error opening output file: " + extractedFilePath);
+//            unzCloseCurrentFile(zipfile);
+//            success = false;
+//            continue;
+//        }
+//
+//        int bytesRead;
+//        while ((bytesRead = unzReadCurrentFile(zipfile, buffer, UNZIP_BUFFER_SIZE)) > 0) {
+//            if (abortUnzip.load(std::memory_order_acquire)) {
+//                logMessage("Aborting unzip operation during file extraction.");
+//                outputFile.close();
+//                deleteFileOrDirectory(extractedFilePath); // Cleanup partial file
+//                success = false;
+//                break;
+//            }
+//            outputFile.write(buffer, bytesRead);
+//            logMessage("Extracted: " + extractedFilePath);
+//
+//            currentUncompressedSize += bytesRead;
+//
+//            unzipPercentage.store(totalUncompressedSize != 0 ?
+//                static_cast<int>(100.0 * std::min(1.0, static_cast<double>(currentUncompressedSize) / static_cast<double>(totalUncompressedSize))) : 0,
+//                std::memory_order_release);
+//        }
+//        outputFile.close();
+//        unzCloseCurrentFile(zipfile);
+//
+//        if (!success) break; // Exit the outer loop if interrupted during extraction
+//    } while (unzGoToNextFile(zipfile) == UNZ_OK);
+//
+//    if (success) {
+//        unzipPercentage.store(100, std::memory_order_release); // Ensure it's set to 100% on successful extraction
+//        logMessage("Extraction Complete!");
+//    } else {
+//        unzipPercentage.store(-1, std::memory_order_release);
+//    }
+//
+//    unzClose(zipfile);
+//    return success;
+//}
