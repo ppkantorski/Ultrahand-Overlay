@@ -94,6 +94,56 @@ std::string decimalToHex(const std::string& decimalStr) {
     return hexadecimal;
 }
 
+
+/**
+ * @brief Converts a hexadecimal string to a decimal string.
+ *
+ * This function takes a hexadecimal string as input and converts it into a decimal string.
+ *
+ * @param hexStr The hexadecimal string to convert.
+ * @return The corresponding decimal string.
+ */
+std::string hexToDecimal(const std::string& hexStr) {
+    // Convert hexadecimal string to integer
+    int decimalValue = 0;
+    size_t len = hexStr.length();
+
+    // Iterate over each character in the hexadecimal string
+    for (size_t i = 0; i < len; ++i) {
+        char hexChar = hexStr[i];
+        int value;
+
+        // Convert hex character to its decimal value
+        if (hexChar >= '0' && hexChar <= '9') {
+            value = hexChar - '0';
+        } else if (hexChar >= 'A' && hexChar <= 'F') {
+            value = 10 + (hexChar - 'A');
+        } else if (hexChar >= 'a' && hexChar <= 'f') {
+            value = 10 + (hexChar - 'a');
+        } else {
+            //throw std::invalid_argument("Invalid hexadecimal character");
+        }
+
+        // Update the decimal value
+        decimalValue = decimalValue * 16 + value;
+    }
+
+    // Convert the decimal value to a string
+    return std::to_string(decimalValue);
+}
+
+
+
+std::string hexToReversedHex(const std::string& hexadecimal, int order = 2) {
+    // Reverse the hexadecimal string in groups of order
+    std::string reversedHex;
+    for (int i = hexadecimal.length() - order; i >= 0; i -= order) {
+        reversedHex += hexadecimal.substr(i, order);
+    }
+    
+    return reversedHex;
+}
+
 /**
  * @brief Converts a decimal string to a reversed hexadecimal string.
  *
@@ -108,13 +158,15 @@ std::string decimalToReversedHex(const std::string& decimalStr, int order = 2) {
     std::string hexadecimal = decimalToHex(decimalStr);
     
     // Reverse the hexadecimal string in groups of order
-    std::string reversedHex;
-    for (int i = hexadecimal.length() - order; i >= 0; i -= order) {
-        reversedHex += hexadecimal.substr(i, order);
-    }
+    //std::string reversedHex;
+    //for (int i = hexadecimal.length() - order; i >= 0; i -= order) {
+    //    reversedHex += hexadecimal.substr(i, order);
+    //}
     
-    return reversedHex;
+    return hexToReversedHex(hexadecimal);
 }
+
+
 
 /**
  * @brief Finds the offsets of hexadecimal data in a file.
