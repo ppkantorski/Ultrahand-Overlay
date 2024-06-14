@@ -2446,6 +2446,7 @@ public:
             
             if (inPackageMenu) {
                 lastPackagePath = packagePath;
+                lastPage = currentPage;
                 inSubPackageMenu = false;
                 inPackageMenu = false;
                 if (lastPage == RIGHT_STR) {
@@ -2454,15 +2455,16 @@ public:
                     tsl::goBack();
                 }
                 inPackageMenu = true;
-                lastPage = LEFT_STR;
+                
                 selectedListItem.reset();
                 lastSelectedListItem.reset();
-                tsl::changeTo<PackageMenu>(lastPackagePath);
+                tsl::changeTo<PackageMenu>(lastPackagePath, dropdownSection, lastPage, packageName, nestedLayer);
                 //lastPage == LEFT_STR;
             }
 
             if (inSubPackageMenu) {
                 lastPackagePath = packagePath;
+                lastPage = currentPage;
                 inSubPackageMenu = false;
                 inPackageMenu = false;
                 if (lastPage == RIGHT_STR) {
@@ -2473,10 +2475,10 @@ public:
                     tsl::goBack();
                 }
                 inPackageMenu = true;
-                lastPage = LEFT_STR;
+                
                 selectedListItem.reset();
                 lastSelectedListItem.reset();
-                tsl::changeTo<PackageMenu>(lastPackagePath);
+                tsl::changeTo<PackageMenu>(lastPackagePath, dropdownSection, lastPage, packageName, nestedLayer);
             }
             
         }
@@ -3816,7 +3818,7 @@ public:
         if (refreshGui && !stillTouching) {
             refreshGui = false;
             tsl::pop();
-            tsl::changeTo<MainMenu>(hiddenMenuMode);
+            tsl::changeTo<MainMenu>(hiddenMenuMode, dropdownSection);
             return true;
         }
 
