@@ -739,17 +739,17 @@ std::map<std::string, std::string> defaultThemeSettingsMap = {
     {"clock_color", whiteColor},
     {"bg_alpha", "13"},
     {"bg_color", blackColor},
-    {"seperator_alpha", "15"},
-    {"seperator_color", "#404040"},
+    {"separator_alpha", "15"},
+    {"separator_color", "#404040"},
     {"battery_color", "#ffff45"},
     {"text_color", whiteColor},
     {"header_text_color", whiteColor},
-    {"header_seperator_color", whiteColor},
+    {"header_separator_color", whiteColor},
     {"star_color", whiteColor},
     {"selection_star_color", whiteColor},
     {"bottom_button_color", whiteColor},
     {"bottom_text_color", whiteColor},
-    {"bottom_seperator_color", whiteColor},
+    {"bottom_separator_color", whiteColor},
     {"table_bg_color", "#303030"},
     {"table_bg_alpha", "10"},
     {"table_section_text_color", whiteColor},
@@ -1340,9 +1340,9 @@ namespace tsl {
     static Color clickColor = RGB888("#F7253E", "#F7253E", clickAlpha);
     static Color trackBarColor = RGB888("#555555");
 
-    static size_t seperatorAlpha = 15;
+    static size_t separatorAlpha = 15;
     
-    static Color seperatorColor = RGB888("#404040", "#404040", seperatorAlpha);
+    static Color separatorColor = RGB888("#404040", "#404040", separatorAlpha);
     static Color selectedTextColor = RGB888(whiteColor);
     static Color inprogressTextColor = RGB888(whiteColor);
     static Color invalidTextColor = RGB888("#FF0000");
@@ -1392,12 +1392,12 @@ namespace tsl {
             defaultBackgroundColor = getColor("bg_color", defaultBackgroundAlpha);
             defaultTextColor = getColor("text_color");
             headerTextColor = getColor("header_text_color");
-            headerSeperatorColor = getColor("header_seperator_color");
+            headerSeperatorColor = getColor("header_separator_color");
             starColor = getColor("star_color");
             selectionStarColor = getColor("selection_star_color");
             buttonColor = getColor("bottom_button_color");
             bottomTextColor = getColor("bottom_text_color");
-            botttomSeperatorColor = getColor("bottom_seperator_color");
+            botttomSeperatorColor = getColor("bottom_separator_color");
 
             defaultPackageColor = getColor("default_package_color");
 
@@ -1426,8 +1426,8 @@ namespace tsl {
             clickColor = getColor("click_color", clickAlpha);
             trackBarColor = getColor("trackbar_color");
             
-            seperatorAlpha = getAlpha("seperator_alpha");
-            seperatorColor = getColor("seperator_color", seperatorAlpha);
+            separatorAlpha = getAlpha("separator_alpha");
+            separatorColor = getColor("separator_color", separatorAlpha);
             
             selectedTextColor = getColor("selection_text_color");
             inprogressTextColor = getColor("inprogress_text_color");
@@ -3622,7 +3622,7 @@ namespace tsl {
                     renderer->drawString(secondHalf.c_str(), false, x, y + offset, fontSize, a(logoColor2));
                     
                     if (!(hideBattery && hidePCBTemp && hideSOCTemp && hideClock)) {
-                        renderer->drawRect(245, 23, 1, 49, a(seperatorColor));
+                        renderer->drawRect(245, 23, 1, 49, a(separatorColor));
                     }
                     
                     struct timespec currentTimeSpec;
@@ -4455,8 +4455,8 @@ namespace tsl {
                 }
                 
                 if (lastBottomBound !=  this->getTopBound())
-                    renderer->drawRect(this->getX()+4, this->getTopBound(), this->getWidth()+6, 1, a(seperatorColor));
-                renderer->drawRect(this->getX()+4, this->getBottomBound(), this->getWidth()+6, 1, a(seperatorColor));
+                    renderer->drawRect(this->getX()+4, this->getTopBound(), this->getWidth()+6, 1, a(separatorColor));
+                renderer->drawRect(this->getX()+4, this->getBottomBound(), this->getWidth()+6, 1, a(separatorColor));
                 lastBottomBound = this->getBottomBound();
                 
                 if (this->m_trunctuated) {
@@ -5033,8 +5033,8 @@ namespace tsl {
                 renderer->drawString(valuePart.c_str(), false, combinedX + labelWidth, this->getY() + 14 + 16, 16, a(onTextColor));
                 
                 if (lastBottomBound != this->getTopBound())
-                    renderer->drawRect(this->getX() + 4+20, this->getTopBound(), this->getWidth() + 6 + 10+20, 1, a(seperatorColor));
-                renderer->drawRect(this->getX() + 4+20, this->getBottomBound(), this->getWidth() + 6 + 10+20, 1, a(seperatorColor));
+                    renderer->drawRect(this->getX() + 4+20, this->getTopBound(), this->getWidth() + 6 + 10+20, 1, a(separatorColor));
+                renderer->drawRect(this->getX() + 4+20, this->getBottomBound(), this->getWidth() + 6 + 10+20, 1, a(separatorColor));
                 lastBottomBound = this->getBottomBound();
             }
             
