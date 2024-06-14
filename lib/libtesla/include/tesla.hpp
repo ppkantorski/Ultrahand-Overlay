@@ -1277,7 +1277,7 @@ namespace tsl {
     
     namespace style {
         constexpr u32 ListItemDefaultHeight         = 70;       ///< Standard list item height
-        constexpr u32 TrackBarDefaultHeight         = 88;       ///< Standard track bar height
+        constexpr u32 TrackBarDefaultHeight         = 84;       ///< Standard track bar height
         constexpr u8  ListItemHighlightSaturation   = 6;        ///< Maximum saturation of Listitem highlights
         constexpr u8  ListItemHighlightLength       = 22;       ///< Maximum length of Listitem highlights
         
@@ -4608,6 +4608,7 @@ namespace tsl {
             u32 m_textWidth = 0;
         };
         
+
         /**
          * @brief A toggleable list item that changes the state from On to Off when the A button gets pressed
          *
@@ -4736,6 +4737,7 @@ namespace tsl {
             bool m_hasSeparator;
         };
         
+
         /**
          * @brief A customizable analog trackbar going from minValue to maxValue
          *
@@ -4811,9 +4813,10 @@ namespace tsl {
                 
                 if (interpretAndExecuteCommands) {
                     auto commandsCopy = commands;
+                    size_t pos;
                     for (auto& cmd : commandsCopy) {
                         for (auto& arg : cmd) {
-                            size_t pos = 0;
+                            pos = 0;
                             while ((pos = arg.find("{value}", pos)) != std::string::npos) {
                                 arg.replace(pos, 7, valueStr);
                                 pos += valueStr.length();
@@ -4922,43 +4925,44 @@ namespace tsl {
                     if (!m_executeOnEveryTick)
                         updateAndExecute();
                     this->m_interactionLocked = false;
-                    touchInBounds = false;
+                    touchInSliderBounds = false;
                     return false;
                 }
-                
+            
                 if (!this->m_interactionLocked && this->inBounds(initialX, initialY)) {
-                    touchInBounds = (currX > this->getLeftBound() + 50 && currX < this->getRightBound() && currY > this->getTopBound() && currY < this->getBottomBound());
-                    if (touchInBounds) {
-                        // Calculate the new index based on the touch position
-                        s16 newIndex = static_cast<s16>((currX - (this->getX() + 60)) / static_cast<float>(this->getWidth() - 95) * (m_numSteps - 1));
+                    touchInSliderBounds = true; // Always keep touchInSliderBounds true while dragging
+                    // Calculate the new index based on the touch position
+                    s16 newIndex = static_cast<s16>((currX - (this->getX() + 60)) / static_cast<float>(this->getWidth() - 95) * (m_numSteps - 1));
             
-                        // Clamp the index within valid range
-                        if (newIndex < 0) {
-                            newIndex = 0;
-                        } else if (newIndex >= m_numSteps) {
-                            newIndex = m_numSteps - 1;
-                        }
-            
-                        // Calculate the new value based on the new index
-                        s16 newValue = m_minValue + newIndex * (static_cast<float>(m_maxValue - m_minValue) / (m_numSteps - 1));
-                        
-                        if (newValue != this->m_value || newIndex != this->m_index) {
-                            this->m_value = newValue;
-                            this->m_index = newIndex;
-                            this->m_valueChangedListener(this->getProgress());
-                            if (m_executeOnEveryTick) {
-                                updateAndExecute();
-                            }
-                        }
-                        
-                        return true;
+                    // Clamp the index within valid range
+                    if (newIndex < 0) {
+                        newIndex = 0;
+                    } else if (newIndex >= m_numSteps) {
+                        newIndex = m_numSteps - 1;
                     }
+            
+                    // Calculate the new value based on the new index
+                    s16 newValue = m_minValue + newIndex * (static_cast<float>(m_maxValue - m_minValue) / (m_numSteps - 1));
+                    
+                    if (newValue != this->m_value || newIndex != this->m_index) {
+                        this->m_value = newValue;
+                        this->m_index = newIndex;
+                        this->m_valueChangedListener(this->getProgress());
+                        if (m_executeOnEveryTick) {
+                            updateAndExecute();
+                        }
+                    }
+                    
+                    return true;
                 } else {
                     this->m_interactionLocked = true;
                 }
-                
+            
                 return false;
             }
+            
+
+
             // Define drawBar function outside the draw method
             void drawBar(gfx::Renderer *renderer, s32 x, s32 y, u16 width, Color color, bool isRounded = true) {
                 if (isRounded) {
@@ -4976,18 +4980,18 @@ namespace tsl {
                 s32 width = this->getWidth() - 95;
                 
                 // Draw track bar background
-                drawBar(renderer, xPos, yPos, width, trackBarEmptyColor, !m_usingNamedStepTrackbar);
+                drawBar(renderer, xPos, yPos-2, width, trackBarEmptyColor, !m_usingNamedStepTrackbar);
             
             
                 if (!this->m_focused) {
-                    drawBar(renderer, xPos, yPos, handlePos, trackBarFullColor, !m_usingNamedStepTrackbar);
-                    renderer->drawCircle(xPos + handlePos, yPos + 1, 16, true, a(trackBarSliderBorderColor));
-                    renderer->drawCircle(xPos + handlePos, yPos + 1, 13, true, a((m_unlockedTrackbar || touchInBounds) ? trackBarMalleableSliderColor : trackBarSliderColor));
+                    drawBar(renderer, xPos, yPos-2, handlePos, trackBarFullColor, !m_usingNamedStepTrackbar);
+                    renderer->drawCircle(xPos + handlePos, yPos, 16, true, a(trackBarSliderBorderColor));
+                    renderer->drawCircle(xPos + handlePos, yPos, 13, true, a((m_unlockedTrackbar || touchInSliderBounds) ? trackBarMalleableSliderColor : trackBarSliderColor));
                 } else {
                     unlockedSlide = m_unlockedTrackbar;
-                    drawBar(renderer, xPos, yPos, handlePos, trackBarFullColor, !m_usingNamedStepTrackbar);
-                    renderer->drawCircle(xPos + x + handlePos, yPos + 1, 16, true, a(highlightColor));
-                    renderer->drawCircle(xPos + x + handlePos, yPos + 1, 12, true, a((allowSlide || m_unlockedTrackbar) ? trackBarMalleableSliderColor : trackBarSliderColor));
+                    drawBar(renderer, xPos, yPos-2, handlePos, trackBarFullColor, !m_usingNamedStepTrackbar);
+                    renderer->drawCircle(xPos + x + handlePos, yPos, 16, true, a(highlightColor));
+                    renderer->drawCircle(xPos + x + handlePos, yPos, 12, true, a((allowSlide || m_unlockedTrackbar) ? trackBarMalleableSliderColor : trackBarSliderColor));
                 }
             
                 std::string labelPart = removeTag(this->m_label) + " ";
@@ -5118,7 +5122,7 @@ namespace tsl {
             s16 m_index = 0;
             bool m_unlockedTrackbar = false;
             bool m_executeOnEveryTick = false;
-            bool touchInBounds = false;
+            bool touchInSliderBounds = false;
         };
         
         
