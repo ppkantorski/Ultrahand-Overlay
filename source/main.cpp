@@ -3279,7 +3279,7 @@ public:
                                     reloadMenu2 = true;
                                 }
                                 refreshGui = true;
-
+                                
                                 //tsl::changeTo<MainMenu>(hiddenMenuMode);
                                 return true;
                             } else if (keys & SETTINGS_KEY) {
