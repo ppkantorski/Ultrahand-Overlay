@@ -2439,48 +2439,35 @@ public:
             lastRunningInterpreter = false;
             return true;
         }
-
-        // Your existing logic for handling other inputs
+        
         if (refreshGui && !returningToPackage && !stillTouching) {
             refreshGui = false;
             
-            if (inPackageMenu) {
+            // Function to handle the transition and state resetting
+            auto handleMenuTransition = [&] {
                 lastPackagePath = packagePath;
+                std::string lastDropdownSection = dropdownSection;
                 lastPage = currentPage;
+                std::string lastPackageName = packageName;
+                size_t lastNestedLayer = nestedLayer;
+                
                 inSubPackageMenu = false;
                 inPackageMenu = false;
-                if (lastPage == RIGHT_STR) {
-                    tsl::goBack();
-                } else {
-                    tsl::goBack();
-                }
-                inPackageMenu = true;
-                
-                selectedListItem.reset();
-                lastSelectedListItem.reset();
-                tsl::changeTo<PackageMenu>(lastPackagePath, dropdownSection, lastPage, packageName, nestedLayer);
-                //lastPage == LEFT_STR;
-            }
-
-            if (inSubPackageMenu) {
-                lastPackagePath = packagePath;
-                lastPage = currentPage;
-                inSubPackageMenu = false;
-                inPackageMenu = false;
-                if (lastPage == RIGHT_STR) {
-                    tsl::goBack();
-                    tsl::goBack();
-                } else {
-                    tsl::goBack();
-                    tsl::goBack();
-                }
-                inPackageMenu = true;
-                
-                selectedListItem.reset();
-                lastSelectedListItem.reset();
-                tsl::changeTo<PackageMenu>(lastPackagePath, dropdownSection, lastPage, packageName, nestedLayer);
-            }
+                tsl::goBack();
             
+                selectedListItem.reset();
+                lastSelectedListItem.reset();
+                tsl::changeTo<PackageMenu>(lastPackagePath, lastDropdownSection, lastPage, lastPackageName, lastNestedLayer);
+            };
+
+            if (inPackageMenu) {
+                handleMenuTransition();
+                inPackageMenu = true;
+            } 
+            else if (inSubPackageMenu) {
+                handleMenuTransition();
+                inSubPackageMenu = true;
+            }
         }
 
         if (usingPages) {
