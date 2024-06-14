@@ -37,7 +37,7 @@ size_t COPY_BUFFER_SIZE = 4096*4; // Increase buffer size to 128 KB
  *
  * @param directoryPath The path of the directory to be created.
  */
-void createSingleDirectory(const std::string& directoryPath) {
+inline void createSingleDirectory(const std::string& directoryPath) {
     //if (!isDirectory(directoryPath)) {
     mkdir(directoryPath.c_str(), 0777); // Use mode 0777 to allow wide access
     //}

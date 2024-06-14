@@ -44,7 +44,7 @@ static std::atomic<bool> triggerExit(false);
  * - `PACKAGE_FILENAME`: The name of the package file ("package.ini").
  * - `CONFIG_FILENAME`: The name of the configuration file ("config.ini").
  * - `SETTINGS_PATH`: The base path for Ultrahand settings ("sdmc:/config/ultrahand/").
- * - `SETTINGS_CONFIG_INI_PATH`: The full path to the Ultrahand settings configuration file.
+ * - `ULTRAHAND_CONFIG_INI_PATH`: The full path to the Ultrahand settings configuration file.
  * - `PACKAGE_PATH`: The base directory for packages ("sdmc:/switch/.packages/").
  * - `OVERLAY_PATH`: The base directory for overlays ("sdmc:/switch/.overlays/").
  * - `TESLA_CONFIG_INI_PATH`: The full path to the Tesla settings configuration file.
@@ -53,28 +53,17 @@ static std::atomic<bool> triggerExit(false);
  * and directories.
  */
 
-std::unordered_map<std::string, std::string> buttonCharMap = {
-    {"A", "\uE0E0"},
-    {"B", "\uE0E1"},
-    {"X", "\uE0E2"},
-    {"Y", "\uE0E3"},
-    {"L", "\uE0E4"},
-    {"R", "\uE0E5"},
-    {"ZL", "\uE0E6"},
-    {"ZR", "\uE0E7"},
-    {"PLUS", "\uE0B5"},
-    {"MINUS", "\uE0B6"},
-    {"DUP", "\uE0EB"},
-    {"DDOWN", "\uE0EC"},
-    {"DLEFT", "\uE0ED"},
-    {"DRIGHT", "\uE0EE"},
-    {"LS", "\uE0C4"},
-    {"RS", "\uE0C5"},
-    {"LSTICK", "\uE0C4"},
-    {"RSTICK", "\uE0C5"}
-    //{"HOME", "\uE0BF"},
-    //{"CAPTURE", "\uE0C0"}
-};
+
+std::unordered_map<std::string, std::string> createButtonCharMap() {
+    std::unordered_map<std::string, std::string> map;
+    for (const auto& keyInfo : tsl::impl::KEYS_INFO) {
+        map[keyInfo.name] = keyInfo.glyph;
+    }
+    return map;
+}
+
+std::unordered_map<std::string, std::string> buttonCharMap = createButtonCharMap();
+
 
 std::string convertComboToUnicode(const std::string& combo) {
 
@@ -147,7 +136,7 @@ void copyTeslaKeyComboToUltrahand() {
     std::map<std::string, std::map<std::string, std::string>> parsedData;
     
     bool teslaConfigExists = isFileOrDirectory(TESLA_CONFIG_INI_PATH);
-    bool ultrahandConfigExists = isFileOrDirectory(SETTINGS_CONFIG_INI_PATH);
+    bool ultrahandConfigExists = isFileOrDirectory(ULTRAHAND_CONFIG_INI_PATH);
 
     bool initializeTesla = false;
     std::string teslaKeyCombo = keyCombo;
@@ -170,7 +159,7 @@ void copyTeslaKeyComboToUltrahand() {
     
     bool initializeUltrahand = false;
     if (ultrahandConfigExists) {
-        parsedData = getParsedDataFromIniFile(SETTINGS_CONFIG_INI_PATH);
+        parsedData = getParsedDataFromIniFile(ULTRAHAND_CONFIG_INI_PATH);
         if (parsedData.count(ULTRAHAND_PROJECT_NAME) > 0) {
             auto& ultrahandSection = parsedData[ULTRAHAND_PROJECT_NAME];
             if (ultrahandSection.count(KEY_COMBO_STR) > 0) {
@@ -190,7 +179,7 @@ void copyTeslaKeyComboToUltrahand() {
     }
 
     if (initializeUltrahand) {
-        setIniFileValue(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, KEY_COMBO_STR, keyCombo);
+        setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, KEY_COMBO_STR, keyCombo);
     }
 
     tsl::impl::parseOverlaySettings();
@@ -534,7 +523,7 @@ void addPackageInfo(std::unique_ptr<tsl::elm::List>& list, auto& packageHeader, 
  * @return True if the path contains dangerous combinations, otherwise false.
  */
 bool isDangerousCombination(const std::string& patternPath) {
-    const std::vector<std::string> protectedFolders = {
+    static const std::vector<std::string> protectedFolders = {
         "sdmc:/Nintendo/",
         "sdmc:/emuMMC/",
         "sdmc:/atmosphere/",
@@ -543,120 +532,62 @@ bool isDangerousCombination(const std::string& patternPath) {
         "sdmc:/config/",
         ROOT_PATH
     };
-    const std::vector<std::string> ultraProtectedFolders = {
+    static const std::vector<std::string> ultraProtectedFolders = {
         "sdmc:/Nintendo/",
         "sdmc:/emuMMC/"
     };
-    
-    // List of obviously dangerous patterns
-    const std::vector<std::string> dangerousCombinationPatterns = {
+    static const std::vector<std::string> dangerousCombinationPatterns = {
         "*",         // Deletes all files/directories in the current directory
         "*/"         // Deletes all files/directories in the current directory
     };
-    
-    // List of obviously dangerous patterns
-    const std::vector<std::string> dangerousPatterns = {
+    static const std::vector<std::string> dangerousPatterns = {
         "..",     // Attempts to traverse to parent directories
         "~"       // Represents user's home directory, can be dangerous if misused
     };
-    
-    // Check if the patternPath is an ultra protected folder
-    for (const std::string& ultraProtectedFolder : ultraProtectedFolders) {
-        if (patternPath.find(ultraProtectedFolder) == 0)
-            return true; // Pattern path is an ultra protected folder
+
+    // Check ultra-protected folders
+    for (const auto& folder : ultraProtectedFolders) {
+        if (patternPath.find(folder) == 0) {
+            return true; // Path is an ultra-protected folder
+        }
     }
-    
-    // Check if the patternPath is a protected folder
-    std::string relativePath, pathSegment;
-    std::vector<std::string> pathSegments;
-    
-    for (const std::string& protectedFolder : protectedFolders) {
-        if (patternPath == protectedFolder)
-            return true; // Pattern path is a protected folder
-        
-        // Check if the patternPath starts with a protected folder and includes a dangerous pattern
-        if (patternPath.find(protectedFolder) == 0) {
-            relativePath = patternPath.substr(protectedFolder.size());
-            
-            // Split the relativePath by '/' to handle multiple levels of wildcards
-            pathSegments.clear();
-            pathSegment = "";
-            
-            for (char c : relativePath) {
-                if (c == '/') {
-                    if (!pathSegment.empty()) {
-                        pathSegments.push_back(pathSegment);
-                        pathSegment.clear();
-                    }
-                } else
-                    pathSegment += c;
-            }
-            
-            if (!pathSegment.empty())
-                pathSegments.push_back(pathSegment);
-            
-            for (const std::string& pathSegment : pathSegments) {
-                // Check if the pathSegment includes a dangerous pattern
-                for (const std::string& dangerousPattern : dangerousPatterns) {
-                    if (pathSegment.find(dangerousPattern) != std::string::npos)
-                        return true; // Pattern path includes a dangerous pattern
+
+    // Check protected folders and dangerous patterns
+    for (const auto& folder : protectedFolders) {
+        if (patternPath == folder) {
+            return true; // Path is a protected folder
+        }
+        if (patternPath.find(folder) == 0) {
+            std::string relativePath = patternPath.substr(folder.size());
+            for (const auto& pattern : dangerousPatterns) {
+                if (relativePath.find(pattern) != std::string::npos) {
+                    return true; // Relative path contains a dangerous pattern
                 }
             }
-            pathSegments.clear();
-        }
-        
-        // Check if the patternPath is a combination of a protected folder and a dangerous pattern
-        for (const std::string& dangerousPattern : dangerousCombinationPatterns) {
-            if (patternPath == protectedFolder + dangerousPattern)
-                return true; // Pattern path is a protected folder combined with a dangerous pattern
-        }
-    }
-    
-    // Check if the patternPath is a dangerous pattern
-    if (patternPath.find(ROOT_PATH) == 0) {
-        std::string relativePath = patternPath.substr(6); // Remove ROOT_PATH
-        
-        // Split the relativePath by '/' to handle multiple levels of wildcards
-        std::vector<std::string> pathSegments;
-        std::string pathSegment;
-        
-        for (char c : relativePath) {
-            if (c == '/') {
-                if (!pathSegment.empty()) {
-                    pathSegments.push_back(pathSegment);
-                    pathSegment.clear();
+            for (const auto& pattern : dangerousCombinationPatterns) {
+                if (patternPath == folder + pattern) {
+                    return true; // Path is a protected folder combined with a dangerous pattern
                 }
-            } else
-                pathSegment += c;
-        }
-        
-        if (!pathSegment.empty())
-            pathSegments.push_back(pathSegment);
-        
-        for (const std::string& pathSegment : pathSegments) {
-            // Check if the pathSegment includes a dangerous pattern
-            for (const std::string& dangerousPattern : dangerousPatterns) {
-                if (pathSegment == dangerousPattern)
-                    return true; // Pattern path is a dangerous pattern
             }
         }
-        pathSegments.clear();
     }
-    
-    // Check if the patternPath includes a wildcard at the root level
-    if (patternPath.find(":/") != std::string::npos) {
-        std::string ROOT_PATH = patternPath.substr(0, patternPath.find(":/") + 2);
-        if (ROOT_PATH.find('*') != std::string::npos)
-            return true; // Pattern path includes a wildcard at the root level
-    }
-    
-    // Check if the provided path matches any dangerous patterns
-    for (const std::string& pattern : dangerousPatterns) {
-        if (patternPath.find(pattern) != std::string::npos)
+
+    // Check dangerous patterns in general
+    for (const auto& pattern : dangerousPatterns) {
+        if (patternPath.find(pattern) != std::string::npos) {
             return true; // Path contains a dangerous pattern
+        }
     }
-    
-    return false; // Pattern path is not a protected folder, a dangerous pattern, or includes a wildcard at the root level
+
+    // Check wildcard at root level
+    if (patternPath.find(":/") != std::string::npos) {
+        std::string rootPath = patternPath.substr(0, patternPath.find(":/") + 2);
+        if (rootPath.find('*') != std::string::npos) {
+            return true; // Root path contains a wildcard
+        }
+    }
+
+    return false; // No dangerous combinations found
 }
 
 
@@ -783,7 +714,7 @@ void populateSelectedItemsList(const std::string& sourceType, const std::string&
  * @param replacement The string to replace the placeholder with.
  * @return The input string with placeholders replaced by the replacement string.
  */
-std::string replacePlaceholder(const std::string& input, const std::string& placeholder, const std::string& replacement) {
+inline std::string replacePlaceholder(const std::string& input, const std::string& placeholder, const std::string& replacement) {
     size_t pos = input.find(placeholder);
     if (pos == std::string::npos) {
         return input;  // Returns original string directly if no placeholder is found
@@ -989,36 +920,34 @@ std::string getCurrentTimestamp(const std::string& format) {
 
 // Define the replacePlaceholders function outside of applyPlaceholderReplacement
 auto replacePlaceholders = [](std::string& arg, const std::string& placeholder, const std::function<std::string(const std::string&)>& replacer) {
-    std::string lastArg;
     size_t startPos, endPos;
-    std::string replacement;
+    std::string lastArg, replacement;
 
-    while (arg.find(placeholder) != std::string::npos) {
-        startPos = arg.find(placeholder);
-        endPos = arg.find(")}", startPos);
-        if (endPos != std::string::npos && endPos > startPos) {
-            replacement = replacer(arg.substr(startPos, endPos - startPos + 2));
-            if (replacement.empty()) {
-                if (placeholder.find("{json(") != std::string::npos || placeholder.find("{json_file(") != std::string::npos) {
-                    replacement = UNAVAILABLE_SELECTION;
-                } else {
-                    replacement = NULL_STR;
-                }
-            }
-            arg.replace(startPos, endPos - startPos + 2, replacement);
-            if (arg == lastArg) {
-                if (interpreterLogging) {
-                    logMessage("failed replacement arg: " + arg);
-                }
-                if (placeholder.find("{json(") != std::string::npos || placeholder.find("{json_file(") != std::string::npos) {
-                    arg.replace(startPos, endPos - startPos + 2, UNAVAILABLE_SELECTION);
-                } else {
-                    arg.replace(startPos, endPos - startPos + 2, NULL_STR);
-                }
-                //commandSuccess = false;
+    while ((startPos = arg.find(placeholder)) != std::string::npos) {
+        size_t nestedStartPos = startPos;
+        while (true) {
+            size_t nextStartPos = arg.find(placeholder, nestedStartPos + 1);
+            size_t nextEndPos = arg.find(")}", nestedStartPos);
+            if (nextStartPos != std::string::npos && nextStartPos < nextEndPos) {
+                nestedStartPos = nextStartPos;
+            } else {
+                endPos = nextEndPos;
                 break;
             }
-        } else {
+        }
+
+        if (endPos == std::string::npos || endPos <= startPos) break;
+
+        replacement = replacer(arg.substr(startPos, endPos - startPos + 2));
+        if (replacement.empty()) {
+            replacement = (placeholder.find("{json(") != std::string::npos || placeholder.find("{json_file(") != std::string::npos) ? UNAVAILABLE_SELECTION : NULL_STR;
+        }
+        arg.replace(startPos, endPos - startPos + 2, replacement);
+        if (arg == lastArg) {
+            if (interpreterLogging) {
+                logMessage("failed replacement arg: " + arg);
+            }
+            arg.replace(startPos, endPos - startPos + 2, replacement);
             break;
         }
         lastArg = arg;
@@ -1026,108 +955,76 @@ auto replacePlaceholders = [](std::string& arg, const std::string& placeholder, 
 };
 
 void applyPlaceholderReplacement(std::vector<std::string>& cmd, std::string hexPath, std::string iniPath, std::string listString, std::string listPath, std::string jsonString, std::string jsonPath) {
-    size_t startPos, endPos, listIndex;
-    std::string replacement;
-
-    //auto replacePlaceholders = [&](std::string& arg, const std::string& placeholder, const std::function<std::string(const std::string&)>& replacer) {
-    //    std::string lastArg;
-    //    while (arg.find(placeholder) != std::string::npos) {
-    //        startPos = arg.find(placeholder);
-    //        endPos = arg.find(")}", startPos);
-    //        if (endPos != std::string::npos && endPos > startPos) {
-    //            replacement = replacer(arg.substr(startPos, endPos - startPos + 2));
-    //            if (replacement.empty()) {
-    //                if (placeholder.find("{json(") != std::string::npos) {
-    //                    replacement = UNAVAILABLE_SELECTION;
-    //                } else {
-    //                    replacement = NULL_STR;
-    //                }
-    //            }
-    //            arg.replace(startPos, endPos - startPos + 2, replacement);
-    //            if (arg == lastArg) {
-    //                if (interpreterLogging) {
-    //                    logMessage("failed replacement arg: " + arg);
-    //                }
-    //                if (placeholder.find("{json(") != std::string::npos) {
-    //                    arg.replace(startPos, endPos - startPos + 2, UNAVAILABLE_SELECTION);
-    //                } else {
-    //                    arg.replace(startPos, endPos - startPos + 2, NULL_STR);
-    //                }
-    //                commandSuccess = false;
-    //                break;
-    //            }
-    //        } else {
-    //            break;
-    //        }
-    //        lastArg = arg;
-    //    }
-    //};
-
-    for (auto& arg : cmd) {
-        // Replace hex placeholders
-        if (!hexPath.empty()) {
-            replacePlaceholders(arg, "{hex_file(", [&](const std::string& placeholder) {
-                return replaceHexPlaceholder(placeholder, hexPath);
-            });
-        }
-        
-        // Replace ini placeholders
-        if (!iniPath.empty()) {
-            replacePlaceholders(arg, "{ini_file(", [&](const std::string& placeholder) {
-                return replaceIniPlaceholder(placeholder, iniPath);
-            });
-        }
-        
-        // Replace list placeholders
-        if (!listString.empty()) {
-            replacePlaceholders(arg, "{list(", [&](const std::string& placeholder) {
-                startPos = placeholder.find('(') + 1;
-                endPos = placeholder.find(')');
-                listIndex = std::stoi(placeholder.substr(startPos, endPos - startPos));
-                return stringToList(listString)[listIndex];
-            });
-        }
-
-        // Replace list placeholders
-        if (!listPath.empty()) {
-            replacePlaceholders(arg, "{list_file(", [&](const std::string& placeholder) {
-                startPos = placeholder.find('(') + 1;
-                endPos = placeholder.find(')');
-                listIndex = std::stoi(placeholder.substr(startPos, endPos - startPos));
-                return getEntryFromListFile(listPath, listIndex);
-            });
-        }
-        
-        // Replace json placeholders
-        if (!jsonString.empty()) {
-            replacePlaceholders(arg, "{json(", [&](const std::string& placeholder) {
-                return replaceJsonPlaceholder(placeholder, JSON_STR, jsonString);
-            });
-        }
-
-        // Replace json_file placeholders
-        if (!jsonPath.empty()) {
-            replacePlaceholders(arg, "{json_file(", [&](const std::string& placeholder) {
-                return replaceJsonPlaceholder(placeholder, JSON_FILE_STR, jsonPath);
-            });
-        }
-
-        // Replace timestamp placeholder with format
-        replacePlaceholders(arg, "{timestamp(", [&](const std::string& placeholder) {
+    std::vector<std::pair<std::string, std::function<std::string(const std::string&)>>> placeholders = {
+        {"{hex_file(", [&](const std::string& placeholder) { return replaceHexPlaceholder(placeholder, hexPath); }},
+        {"{ini_file(", [&](const std::string& placeholder) { return replaceIniPlaceholder(placeholder, iniPath); }},
+        {"{list(", [&](const std::string& placeholder) {
+            size_t startPos = placeholder.find('(') + 1;
+            size_t endPos = placeholder.find(')');
+            size_t listIndex = std::stoi(placeholder.substr(startPos, endPos - startPos));
+            return stringToList(listString)[listIndex];
+        }},
+        {"{list_file(", [&](const std::string& placeholder) {
+            size_t startPos = placeholder.find('(') + 1;
+            size_t endPos = placeholder.find(')');
+            size_t listIndex = std::stoi(placeholder.substr(startPos, endPos - startPos));
+            return getEntryFromListFile(listPath, listIndex);
+        }},
+        {"{json(", [&](const std::string& placeholder) { return replaceJsonPlaceholder(placeholder, JSON_STR, jsonString); }},
+        {"{json_file(", [&](const std::string& placeholder) { return replaceJsonPlaceholder(placeholder, JSON_FILE_STR, jsonPath); }},
+        {"{timestamp(", [&](const std::string& placeholder) {
             size_t startPos = placeholder.find("(") + 1;
             size_t endPos = placeholder.find(")");
-            if (endPos != std::string::npos) {
-                std::string format = placeholder.substr(startPos, endPos - startPos);
-                return getCurrentTimestamp(removeQuotes(format));
-            } else {
-                // Default format if not specified
-                return getCurrentTimestamp("%Y-%m-%d %H:%M:%S");
+            std::string format = (endPos != std::string::npos) ? placeholder.substr(startPos, endPos - startPos) : "%Y-%m-%d %H:%M:%S";
+            return getCurrentTimestamp(removeQuotes(format));
+        }},
+        {"{decimal_to_hex(", [&](const std::string& placeholder) {
+            size_t startPos = placeholder.find("(") + 1;
+            size_t endPos = placeholder.find(")");
+            std::string decimalValue = placeholder.substr(startPos, endPos - startPos);
+            return decimalToHex(decimalValue);
+        }},
+        {"{ascii_to_hex(", [&](const std::string& placeholder) {
+            size_t startPos = placeholder.find("(") + 1;
+            size_t endPos = placeholder.find(")");
+            std::string asciiValue = placeholder.substr(startPos, endPos - startPos);
+            return asciiToHex(asciiValue);
+        }},
+        {"{hex_to_rhex(", [&](const std::string& placeholder) {
+            size_t startPos = placeholder.find("(") + 1;
+            size_t endPos = placeholder.find(")");
+            std::string hexValue = placeholder.substr(startPos, endPos - startPos);
+            return hexToReversedHex(hexValue);
+        }},
+        {"{hex_to_decimal(", [&](const std::string& placeholder) {
+            size_t startPos = placeholder.find("(") + 1;
+            size_t endPos = placeholder.find(")");
+            std::string hexValue = placeholder.substr(startPos, endPos - startPos);
+            return hexToDecimal(hexValue);
+        }},
+        {"{slice(", [&](const std::string& placeholder) {
+            size_t startPos = placeholder.find('(') + 1;
+            size_t endPos = placeholder.find(')');
+            std::string parameters = placeholder.substr(startPos, endPos - startPos);
+            size_t commaPos = parameters.find(',');
+
+            if (commaPos != std::string::npos) {
+                std::string str = parameters.substr(0, commaPos);
+                size_t sliceStart = std::stoi(parameters.substr(commaPos + 1, parameters.find(',', commaPos + 1) - (commaPos + 1)));
+                size_t sliceEnd = std::stoi(parameters.substr(parameters.find_last_of(',') + 1));
+                return sliceString(str, sliceStart, sliceEnd);
             }
-        });
+            return placeholder;
+        }}
+    };
+
+    for (auto& arg : cmd) {
+        for (const auto& [placeholder, replacer] : placeholders) {
+            replacePlaceholders(arg, placeholder, replacer);
+        }
 
         // Failed replacement cleanup
-        if (arg == NULL_STR)
-            arg = UNAVAILABLE_SELECTION;
+        if (arg == NULL_STR) arg = UNAVAILABLE_SELECTION;
     }
 }
 
@@ -1146,7 +1043,7 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
  */
 void interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& commands, const std::string& packagePath="", const std::string& selectedCommand="") {
 
-    auto settingsData = getParsedDataFromIniFile(SETTINGS_CONFIG_INI_PATH);
+    auto settingsData = getParsedDataFromIniFile(ULTRAHAND_CONFIG_INI_PATH);
     if (settingsData.count(ULTRAHAND_PROJECT_NAME) > 0) {
         auto& ultrahandSection = settingsData[ULTRAHAND_PROJECT_NAME];
         if (settingsData.count(ULTRAHAND_PROJECT_NAME) > 0) {
@@ -1665,6 +1562,24 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                 lblSwitchBacklightOn(0);
             else if (togglePattern == OFF_STR)
                 lblSwitchBacklightOff(0);
+            else if (isValidNumber(togglePattern)) {
+                // Initialize the setsys service
+                //setsysInitialize();
+                //
+                //// Prepare the backlight settings structure
+                //SetSysBacklightSettings backlightSettings;
+                //memset(&backlightSettings, 0, sizeof(backlightSettings));
+
+                // Set the desired brightness value (e.g., 0.5 for 50% brightness)
+                //float brightness = std::stof(togglePattern) / 100.0f;
+                //backlightSettings.screen_brightness = brightness;
+
+                // Apply the backlight settings
+                lblSetCurrentBrightnessSetting(std::stof(togglePattern) / 100.0f);
+
+                // Cleanup the setsys service
+                //setsysExit();
+            }
             lblExit();
         }
         
@@ -1694,14 +1609,14 @@ std::condition_variable queueCondition;
 std::atomic<bool> interpreterThreadExit{false};
 
 
-void clearInterpreterFlags(bool state = false) {
+inline void clearInterpreterFlags(bool state = false) {
     abortDownload.store(state, std::memory_order_release);
     abortUnzip.store(state, std::memory_order_release);
     abortFileOp.store(state, std::memory_order_release);
     abortCommand.store(state, std::memory_order_release);
 }
 
-void resetPercentages() {
+inline void resetPercentages() {
     downloadPercentage.store(-1, std::memory_order_release);
     unzipPercentage.store(-1, std::memory_order_release);
     copyPercentage.store(-1, std::memory_order_release);
@@ -1765,7 +1680,7 @@ void closeInterpreterThread() {
 
 void startInterpreterThread(int stackSize = 0x8000) {
 
-    std::string interpreterHeap = parseValueFromIniSection(SETTINGS_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "interpreter_heap");
+    std::string interpreterHeap = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "interpreter_heap");
     if (!interpreterHeap.empty())
         stackSize = std::stoi(interpreterHeap, nullptr, 16);  // Convert from base 16
 

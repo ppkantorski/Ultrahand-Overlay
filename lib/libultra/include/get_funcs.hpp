@@ -81,7 +81,7 @@ std::string getFileContents(const std::string& filePath) {
  * @param fileName The name of the file.
  * @return The destination path as a string.
  */
-std::string getDestinationPath(const std::string& destinationDir, const std::string& fileName) {
+inline std::string getDestinationPath(const std::string& destinationDir, const std::string& fileName) {
     return destinationDir + "/" + fileName;
 }
 
@@ -91,7 +91,7 @@ std::string getDestinationPath(const std::string& destinationDir, const std::str
  * @param line The string line containing a key-value pair (e.g., "key=value").
  * @return The extracted value as a string. If no value is found, an empty string is returned.
  */
-std::string getValueFromLine(const std::string& line) {
+inline std::string getValueFromLine(const std::string& line) {
     // Find the position of '=' character from the end of the string
     size_t equalsPos = line.rfind('=');
     if (equalsPos != std::string::npos && equalsPos + 1 < line.size()) {
@@ -110,7 +110,7 @@ std::string getValueFromLine(const std::string& line) {
  * @return The extracted name as a string. If the path indicates a directory, it extracts the last directory name.
  * If the path is empty or no name is found, an empty string is returned.
  */
-std::string getNameFromPath(const std::string& path) {
+inline std::string getNameFromPath(const std::string& path) {
     size_t lastNonSlash = path.find_last_not_of('/');
     if (lastNonSlash == std::string::npos) {
         return "";  // All slashes, or empty string effectively
@@ -135,7 +135,7 @@ std::string getNameFromPath(const std::string& path) {
  * @param path The full path to the file.
  * @return The file name extracted from the full path.
  */
-std::string getFileName(const std::string& path) {
+inline std::string getFileName(const std::string& path) {
     // Find the last slash in the path
     size_t pos = path.find_last_of("/");
     if (pos != std::string::npos) {
@@ -193,7 +193,7 @@ std::string getParentDirNameFromPath(const std::string& path, size_t level = 0) 
  * @param path The file path from which to extract the parent directory path.
  * @return The parent directory path.
  */
-std::string getParentDirFromPath(const std::string& path) {
+inline std::string getParentDirFromPath(const std::string& path) {
     size_t lastSlash = path.find_last_of('/');
     if (lastSlash != std::string::npos) {
         return  path.substr(0, lastSlash + 1);
