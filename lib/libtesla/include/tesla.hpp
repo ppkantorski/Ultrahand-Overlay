@@ -4935,7 +4935,6 @@ namespace tsl {
                 //if (!touchInFrameBounds) {
                 //    event = TouchEvent::Release;
                 //}
-
                 if (event == TouchEvent::Release) {
                     if (!m_executeOnEveryTick)
                         updateAndExecute();
@@ -4975,10 +4974,10 @@ namespace tsl {
             
                 return false;
             }
-
             
-
-
+            
+            
+            
             // Define drawBar function outside the draw method
             void drawBar(gfx::Renderer *renderer, s32 x, s32 y, u16 width, Color color, bool isRounded = true) {
                 if (isRounded) {
@@ -4987,7 +4986,7 @@ namespace tsl {
                     renderer->drawRect(x, y, width, 7, a(color));
                 }
             }
-
+            
             virtual void draw(gfx::Renderer *renderer) override {
                 static float lastBottomBound;
                 u16 handlePos = (this->getWidth() - 95) * (this->m_value - m_minValue) / (m_maxValue - m_minValue);
@@ -4995,21 +4994,23 @@ namespace tsl {
                 s32 yPos = this->getY() + 40 + 16 - 1;
                 s32 width = this->getWidth() - 95;
                 
+                
                 // Draw track bar background
                 drawBar(renderer, xPos, yPos-2, width, trackBarEmptyColor, !m_usingNamedStepTrackbar);
-            
-            
+                
+                
                 if (!this->m_focused) {
                     drawBar(renderer, xPos, yPos-2, handlePos, trackBarFullColor, !m_usingNamedStepTrackbar);
                     renderer->drawCircle(xPos + handlePos, yPos, 16, true, a(trackBarSliderBorderColor));
                     renderer->drawCircle(xPos + handlePos, yPos, 13, true, a((m_unlockedTrackbar || touchInSliderBounds) ? trackBarMalleableSliderColor : trackBarSliderColor));
                 } else {
+                    touchInSliderBounds = false;
                     unlockedSlide = m_unlockedTrackbar;
                     drawBar(renderer, xPos, yPos-2, handlePos, trackBarFullColor, !m_usingNamedStepTrackbar);
                     renderer->drawCircle(xPos + x + handlePos, yPos, 16, true, a(highlightColor));
                     renderer->drawCircle(xPos + x + handlePos, yPos, 12, true, a((allowSlide || m_unlockedTrackbar) ? trackBarMalleableSliderColor : trackBarSliderColor));
                 }
-            
+                
                 std::string labelPart = removeTag(this->m_label) + " ";
                 //std::string valuePart = m_usingNamedStepTrackbar ? this->m_selection : std::to_string(this->m_value) + (this->m_units.empty() ? "" : " ") + this->m_units;
                 std::string valuePart;
@@ -5019,20 +5020,20 @@ namespace tsl {
                     valuePart = this->m_selection;
                 std::string combinedString = labelPart + valuePart;
                 std::tie(descWidth, descHeight) = renderer->drawString(combinedString.c_str(), false, 0, 0, 16, a(tsl::style::color::ColorTransparent));
-            
+                
                 size_t combinedX = (xPos + width / 2) - (descWidth / 2);
                 size_t labelWidth;
                 std::tie(labelWidth, descHeight) = renderer->drawString(labelPart.c_str(), false, 0, 0, 16, a(tsl::style::color::ColorTransparent));
-            
+                
                 renderer->drawString(labelPart.c_str(), false, combinedX, this->getY() + 14 + 16, 16, a(defaultTextColor));
                 renderer->drawString(valuePart.c_str(), false, combinedX + labelWidth, this->getY() + 14 + 16, 16, a(onTextColor));
-            
+                
                 if (lastBottomBound != this->getTopBound())
                     renderer->drawRect(this->getX() + 4+20, this->getTopBound(), this->getWidth() + 6 + 10+20, 1, a(seperatorColor));
                 renderer->drawRect(this->getX() + 4+20, this->getBottomBound(), this->getWidth() + 6 + 10+20, 1, a(seperatorColor));
                 lastBottomBound = this->getBottomBound();
             }
-
+            
             
             virtual void layout(u16 parentX, u16 parentY, u16 parentWidth, u16 parentHeight) override {
                 this->setBoundaries(this->getX() - 16 , this->getY(), this->getWidth()+20, tsl::style::TrackBarDefaultHeight );
