@@ -1305,12 +1305,12 @@ namespace tsl {
     static Color defaultBackgroundColor = RGB888(blackColor, blackColor, defaultBackgroundAlpha);
     static Color defaultTextColor = RGB888(whiteColor);
     static Color headerTextColor = RGB888(whiteColor);
-    static Color headerSeperatorColor = RGB888(whiteColor);
+    static Color headerSeparatorColor = RGB888(whiteColor);
     static Color starColor = RGB888(whiteColor);
     static Color selectionStarColor = RGB888(whiteColor);
     static Color buttonColor = RGB888(whiteColor);
     static Color bottomTextColor = RGB888(whiteColor);
-    static Color botttomSeperatorColor = RGB888(whiteColor);
+    static Color botttomSeparatorColor = RGB888(whiteColor);
 
     static Color defaultPackageColor = RGB888("#00FF00");
     static Color clockColor = RGB888(whiteColor);
@@ -1392,12 +1392,12 @@ namespace tsl {
             defaultBackgroundColor = getColor("bg_color", defaultBackgroundAlpha);
             defaultTextColor = getColor("text_color");
             headerTextColor = getColor("header_text_color");
-            headerSeperatorColor = getColor("header_separator_color");
+            headerSeparatorColor = getColor("header_separator_color");
             starColor = getColor("star_color");
             selectionStarColor = getColor("selection_star_color");
             buttonColor = getColor("bottom_button_color");
             bottomTextColor = getColor("bottom_text_color");
-            botttomSeperatorColor = getColor("bottom_separator_color");
+            botttomSeparatorColor = getColor("bottom_separator_color");
 
             defaultPackageColor = getColor("default_package_color");
 
@@ -3754,7 +3754,7 @@ namespace tsl {
                     } else {
                         renderer->drawString(this->m_title.c_str(), false, 20, 50, 30, a(defaultTextColor));
                     }
-
+                    
                 }
                 
                 
@@ -3763,7 +3763,7 @@ namespace tsl {
                 } else
                     renderer->drawString(this->m_subtitle.c_str(), false, 20, y+20, 15, a(versionTextColor));
                 
-                renderer->drawRect(15, tsl::cfg::FramebufferHeight - 73, tsl::cfg::FramebufferWidth - 30, 1, a(botttomSeperatorColor));
+                renderer->drawRect(15, tsl::cfg::FramebufferHeight - 73, tsl::cfg::FramebufferWidth - 30, 1, a(botttomSeparatorColor));
                 
                 menuBottomLine = "\uE0E1"+GAP_2+BACK+GAP_1+"\uE0E0"+GAP_2+OK+GAP_1;
                 if (this->m_menuMode == "packages") {
@@ -4698,7 +4698,7 @@ namespace tsl {
             virtual ~CategoryHeader() {}
             
             virtual void draw(gfx::Renderer *renderer) override {
-                renderer->drawRect(this->getX()+1+1, this->getBottomBound() - 30, 3, 23, a(headerSeperatorColor));
+                renderer->drawRect(this->getX()+1+1, this->getBottomBound() - 30, 3, 23, a(headerSeparatorColor));
                 renderer->drawString(this->m_text.c_str(), false, this->getX() + 15+1, this->getBottomBound() - 12, 15, a(headerTextColor));
                 
                 //if (this->m_hasSeparator)
