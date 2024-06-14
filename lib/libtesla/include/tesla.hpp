@@ -4746,7 +4746,6 @@ namespace tsl {
         public:
             std::chrono::steady_clock::time_point lastUpdate;
             
-        
             Color highlightColor = {0xf, 0xf, 0xf, 0xf};
             float progress;
             float counter = 0.0;
@@ -4843,10 +4842,10 @@ namespace tsl {
                 //static bool allowSlide = false; // Flag to allow sliding after KEY_A is pressed
                 u64 keysReleased = prevKeysHeld & ~keysHeld;
                 prevKeysHeld = keysHeld;
-            
+                
                 auto now = std::chrono::steady_clock::now();
                 auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastUpdate);
-            
+                
                 // Check if KEY_A is pressed to toggle allowSlide
                 if ((keysDown & KEY_A) && !m_unlockedTrackbar) {
                     allowSlide = !allowSlide;
@@ -4863,17 +4862,17 @@ namespace tsl {
                         holding = false;
                         return true;
                     }
-            
+                    
                     if (keysHeld & HidNpadButton_AnyLeft && keysHeld & HidNpadButton_AnyRight)
                         return true;
-            
+                    
                     // Check if the button is being held down
                     if ((keysHeld & HidNpadButton_AnyLeft) || (keysHeld & HidNpadButton_AnyRight)) {
                         if (!holding) {
                             holding = true;
                             holdStartTime = now;
                         }
-            
+                        
                         auto holdDuration = std::chrono::duration_cast<std::chrono::milliseconds>(now - holdStartTime);
                         std::chrono::milliseconds currentInterval;
                         if (holdDuration >= std::chrono::milliseconds(1600)) {
@@ -4883,7 +4882,7 @@ namespace tsl {
                         } else {
                             currentInterval = initialInterval;
                         }
-            
+                        
                         if (elapsed >= currentInterval) {
                             if (keysHeld & HidNpadButton_AnyLeft) {
                                 if (this->m_value > m_minValue) {
@@ -4897,7 +4896,7 @@ namespace tsl {
                                     return true;
                                 }
                             }
-            
+                            
                             if (keysHeld & HidNpadButton_AnyRight) {
                                 if (this->m_value < m_maxValue) {
                                     this->m_index++;
@@ -5229,7 +5228,7 @@ namespace tsl {
                         tick = 0;
                     }
                 }
-            
+                
                 return false;
             }
             
@@ -5337,7 +5336,7 @@ namespace tsl {
                 // Draw the parent trackbar
                 StepTrackBar::draw(renderer);
             }
-
+            
             
         protected:
             std::vector<std::string> m_stepDescriptions;
