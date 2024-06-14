@@ -756,7 +756,7 @@ std::map<std::string, std::string> defaultThemeSettingsMap = {
     {"table_info_text_color", "#00FFDD"},
     {"trackbar_slider_color", "#606060"},
     {"trackbar_slider_border_color", "#505050"},
-    {"trackbar_malleable_slider_color", "#A0A0A0"},
+    {"trackbar_slider_malleable_color", "#A0A0A0"},
     {"trackbar_full_color", "#00FFDD"},
     {"trackbar_empty_color", "#404040"},
     {"version_text_color", "#AAAAAA"},
@@ -1356,7 +1356,7 @@ namespace tsl {
 
     static Color trackBarSliderColor = RGB888("#606060");
     static Color trackBarSliderBorderColor = RGB888("#505050");
-    static Color trackBarMalleableSliderColor = RGB888("#A0A0A0");
+    static Color trackBarSliderMalleableColor = RGB888("#A0A0A0");
     static Color trackBarFullColor = RGB888("#00FFDD");
     static Color trackBarEmptyColor = RGB888("#404040");
 
@@ -1442,7 +1442,7 @@ namespace tsl {
 
             trackBarSliderColor = getColor("trackbar_slider_color");
             trackBarSliderBorderColor = getColor("trackbar_slider_border_color");
-            trackBarMalleableSliderColor = getColor("trackbar_malleable_slider_color");
+            trackBarSliderMalleableColor = getColor("trackbar_slider_malleable_color");
             trackBarFullColor = getColor("trackbar_full_color");
             trackBarEmptyColor = getColor("trackbar_empty_color");
         }
@@ -5006,13 +5006,13 @@ namespace tsl {
                 if (!this->m_focused) {
                     drawBar(renderer, xPos, yPos-2, handlePos, trackBarFullColor, !m_usingNamedStepTrackbar);
                     renderer->drawCircle(xPos + handlePos, yPos, 16, true, a(trackBarSliderBorderColor));
-                    renderer->drawCircle(xPos + handlePos, yPos, 13, true, a((m_unlockedTrackbar || touchInSliderBounds) ? trackBarMalleableSliderColor : trackBarSliderColor));
+                    renderer->drawCircle(xPos + handlePos, yPos, 13, true, a((m_unlockedTrackbar || touchInSliderBounds) ? trackBarSliderMalleableColor : trackBarSliderColor));
                 } else {
                     touchInSliderBounds = false;
                     unlockedSlide = m_unlockedTrackbar;
                     drawBar(renderer, xPos, yPos-2, handlePos, trackBarFullColor, !m_usingNamedStepTrackbar);
                     renderer->drawCircle(xPos + x + handlePos, yPos, 16, true, a(highlightColor));
-                    renderer->drawCircle(xPos + x + handlePos, yPos, 12, true, a((allowSlide || m_unlockedTrackbar) ? trackBarMalleableSliderColor : trackBarSliderColor));
+                    renderer->drawCircle(xPos + x + handlePos, yPos, 12, true, a((allowSlide || m_unlockedTrackbar) ? trackBarSliderMalleableColor : trackBarSliderColor));
                 }
                 
                 std::string labelPart = removeTag(this->m_label) + " ";
