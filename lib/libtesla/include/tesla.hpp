@@ -4920,6 +4920,22 @@ namespace tsl {
             
             
             virtual bool onTouch(TouchEvent event, s32 currX, s32 currY, s32 prevX, s32 prevY, s32 initialX, s32 initialY) override {
+                // Calculate the position and radius of the slider circle
+                u16 trackBarWidth = this->getWidth() - 95;
+                u16 handlePos = (trackBarWidth * (this->m_value - m_minValue)) / (m_maxValue - m_minValue);
+                s32 circleCenterX = this->getX() + 59 + handlePos;
+                s32 circleCenterY = this->getY() + 40 + 16 - 1;
+                s32 circleRadius = 16;
+            
+                // Check if the initial touch point is within the bounds of the circle slider
+                bool touchInCircle = (std::abs(initialX - circleCenterX) <= circleRadius) && (std::abs(initialY - circleCenterY) <= circleRadius);
+                
+                // Check if the touch is within the valid framebuffer bounds
+                //bool touchInFrameBounds = (currY <= cfg::FramebufferHeight - 73 && currY > 73 && currX <= cfg::FramebufferWidth - 30 && currX > 40);
+                //if (!touchInFrameBounds) {
+                //    event = TouchEvent::Release;
+                //}
+
                 if (event == TouchEvent::Release) {
                     if (!m_executeOnEveryTick)
                         updateAndExecute();
@@ -4928,18 +4944,18 @@ namespace tsl {
                     return false;
                 }
             
-                if (!this->m_interactionLocked && this->inBounds(initialX, initialY)) {
+                if (!this->m_interactionLocked && (touchInCircle || touchInSliderBounds)) {
                     touchInSliderBounds = true; // Always keep touchInSliderBounds true while dragging
                     // Calculate the new index based on the touch position
-                    s16 newIndex = static_cast<s16>((currX - (this->getX() + 60)) / static_cast<float>(this->getWidth() - 95) * (m_numSteps - 1));
-            
+                    s16 newIndex = static_cast<s16>((currX - (this->getX() + 59)) / static_cast<float>(this->getWidth() - 95) * (m_numSteps - 1));
+                    
                     // Clamp the index within valid range
                     if (newIndex < 0) {
                         newIndex = 0;
                     } else if (newIndex >= m_numSteps) {
                         newIndex = m_numSteps - 1;
                     }
-            
+                    
                     // Calculate the new value based on the new index
                     s16 newValue = m_minValue + newIndex * (static_cast<float>(m_maxValue - m_minValue) / (m_numSteps - 1));
                     
@@ -4959,6 +4975,7 @@ namespace tsl {
             
                 return false;
             }
+
             
 
 
@@ -5303,7 +5320,7 @@ namespace tsl {
             NamedStepTrackBar(std::string label, std::string packagePath, std::vector<std::string> stepDescriptions,
                 std::function<void(std::vector<std::vector<std::string>>&&, const std::string&, const std::string&)> executeCommands = nullptr,
                 std::vector<std::vector<std::string>> cmd = {}, const std::string& selCmd = "", bool unlockedTrackbar = false, bool executeOnEveryTick = false)
-                : StepTrackBar(label, packagePath, stepDescriptions.size(), 0, stepDescriptions.size()-1, "", executeCommands, cmd, selCmd, true, unlockedTrackbar, executeOnEveryTick), m_stepDescriptions(stepDescriptions) {
+                : StepTrackBar(label, packagePath, stepDescriptions.size(), 0, (stepDescriptions.size()-1), "", executeCommands, cmd, selCmd, true, unlockedTrackbar, executeOnEveryTick), m_stepDescriptions(stepDescriptions) {
                     //usingNamedStepTrackbar = true;
                     //logMessage("on initialization");
                 }
@@ -5330,13 +5347,13 @@ namespace tsl {
                 }
                 
                 // Draw the current step description
-                currentDescIndex = this->m_value;
+                currentDescIndex = this->m_index;
                 this->m_selection = this->m_stepDescriptions[currentDescIndex];
                 
                 // Draw the parent trackbar
                 StepTrackBar::draw(renderer);
             }
-            
+
             
         protected:
             std::vector<std::string> m_stepDescriptions;
