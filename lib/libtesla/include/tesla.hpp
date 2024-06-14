@@ -4978,10 +4978,10 @@ namespace tsl {
                 
                 return false;
             }
+
             
-            
-            
-            
+
+
             // Define drawBar function outside the draw method
             void drawBar(gfx::Renderer *renderer, s32 x, s32 y, u16 width, Color color, bool isRounded = true) {
                 if (isRounded) {
@@ -4990,15 +4990,15 @@ namespace tsl {
                     renderer->drawRect(x, y, width, 7, a(color));
                 }
             }
-            
+
             virtual void draw(gfx::Renderer *renderer) override {
                 static float lastBottomBound;
                 u16 handlePos = (this->getWidth() - 95) * (this->m_value - m_minValue) / (m_maxValue - m_minValue);
                 s32 xPos = this->getX() + 59;
                 s32 yPos = this->getY() + 40 + 16 - 1;
                 s32 width = this->getWidth() - 95;
-                
-                
+
+
                 // Draw track bar background
                 drawBar(renderer, xPos, yPos-3, width, trackBarEmptyColor, !m_usingNamedStepTrackbar);
                 
@@ -5037,7 +5037,7 @@ namespace tsl {
                 renderer->drawRect(this->getX() + 4+20, this->getBottomBound(), this->getWidth() + 6 + 10+20, 1, a(separatorColor));
                 lastBottomBound = this->getBottomBound();
             }
-            
+
             
             virtual void layout(u16 parentX, u16 parentY, u16 parentWidth, u16 parentHeight) override {
                 this->setBoundaries(this->getX() - 16 , this->getY(), this->getWidth()+20, tsl::style::TrackBarDefaultHeight );
@@ -5098,13 +5098,13 @@ namespace tsl {
                         y = std::clamp(y, -amplitude, amplitude);
                     }
                 }
-                
+
                 //if (this->m_clickAnimationProgress == 0) {
                 //    renderer->drawRect(this->getX() + 60, this->getY() + 40 + 16+2, handlePos, 5, a(tsl::style::color::ColorHighlight));
                 //    renderer->drawCircle(this->getX() + 62 + x + handlePos, this->getY() + 42 + y + 16+2, 16, true, a(highlightColor));
                 //    renderer->drawCircle(this->getX() + 62 + x + handlePos, this->getY() + 42 + y + 16+2, 11, true, a(trackBarColor));
                 //}
-                
+
                 onTrackBar = true;
             }
             
@@ -5131,12 +5131,12 @@ namespace tsl {
             bool m_interactionLocked = false;
             
             std::function<void(u8)> m_valueChangedListener = [](u8) {};
-            
+
             // New member variables to store the function and its parameters
             std::function<void(std::vector<std::vector<std::string>>&&, const std::string&, const std::string&)> interpretAndExecuteCommands;
             std::vector<std::vector<std::string>> commands;
             std::string selectedCommand;
-            
+
             bool m_usingStepTrackbar = false;
             bool m_usingNamedStepTrackbar = false;
             s16 m_numSteps = 2;
@@ -5153,7 +5153,7 @@ namespace tsl {
          */
         class StepTrackBar : public TrackBar {
         public:
-            
+
             /**
              * @brief Constructor
              *
@@ -5193,7 +5193,7 @@ namespace tsl {
                 u64 keysReleased = prevKeysHeld & ~keysHeld;
                 prevKeysHeld = keysHeld;
                 //static bool usingUnlockedTrackbar = m_unlockedTrackbar;
-                
+
                 // Check if KEY_A is pressed to toggle allowSlide
                 if ((keysDown & KEY_A)) {
                     if (!m_unlockedTrackbar) {
@@ -5205,7 +5205,7 @@ namespace tsl {
                     }
                     return true;
                 }
-                
+
                 if (allowSlide || m_unlockedTrackbar) {
                     if ((keysReleased & HidNpadButton_AnyLeft) || (keysReleased & HidNpadButton_AnyRight)) {
                         if (!m_executeOnEveryTick)
@@ -5338,17 +5338,17 @@ namespace tsl {
                 
                 // Base X and Y coordinates
                 u16 baseX = this->getX() + 59;
-                u16 baseY = this->getY() + 47; // 50 - 3
+                u16 baseY = this->getY() + 44; // 50 - 3
                 // Calculate the halfway point
                 u8 halfNumSteps = (this->m_numSteps - 1) / 2;
-
+                
                 // Draw step rectangles
                 for (u8 i = 0; i < this->m_numSteps; i++) {
                     u16 stepX = baseX + std::round(i * (trackBarWidth / (this->m_numSteps - 1)));
                     if (i > halfNumSteps) {
                         stepX -= 1; // Adjust the last step to avoid overshooting
                     }
-                    renderer->drawRect(stepX, baseY, 1, 8, a(tsl::style::color::ColorFrame));
+                    renderer->drawRect(stepX, baseY, 1, 8, a(trackBarEmptyColor));
                 }
                 
                 // Draw the current step description
@@ -5358,7 +5358,7 @@ namespace tsl {
                 // Draw the parent trackbar
                 StepTrackBar::draw(renderer);
             }
-
+            
             
         protected:
             std::vector<std::string> m_stepDescriptions;
