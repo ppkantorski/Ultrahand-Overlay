@@ -4803,7 +4803,7 @@ namespace tsl {
                 return this;
             }
 
-            void updateAndExecute() {
+            inline void updateAndExecute(bool updateIni = true) {
                 if (m_packagePath.empty()) {
                     return;
                 }
@@ -4811,9 +4811,11 @@ namespace tsl {
                 std::string indexStr = std::to_string(m_index);
                 std::string valueStr = m_usingNamedStepTrackbar ? m_selection : std::to_string(m_value);
                 
-                setIniFileValue(m_packagePath + "config.ini", m_label, "index", indexStr);
-                setIniFileValue(m_packagePath + "config.ini", m_label, "value", valueStr);
-                
+                if (updateIni) {
+                    setIniFileValue(m_packagePath + "config.ini", m_label, "index", indexStr);
+                    setIniFileValue(m_packagePath + "config.ini", m_label, "value", valueStr);
+                }
+
                 if (interpretAndExecuteCommands) {
                     auto commandsCopy = commands;
                     size_t pos;
@@ -4861,8 +4863,8 @@ namespace tsl {
                 // Allow sliding only if KEY_A has been pressed
                 if (allowSlide || m_unlockedTrackbar) {
                     if ((keysReleased & HidNpadButton_AnyLeft) || (keysReleased & HidNpadButton_AnyRight)) {
-                        if (!m_executeOnEveryTick)
-                            updateAndExecute();
+                        //if (!m_executeOnEveryTick)
+                        updateAndExecute();
                         holding = false;
                         return true;
                     }
@@ -4894,7 +4896,7 @@ namespace tsl {
                                     this->m_value--;
                                     this->m_valueChangedListener(this->m_value);
                                     if (m_executeOnEveryTick) {
-                                        updateAndExecute();
+                                        updateAndExecute(false);
                                     }
                                     lastUpdate = now;
                                     return true;
@@ -4907,7 +4909,7 @@ namespace tsl {
                                     this->m_value++;
                                     this->m_valueChangedListener(this->m_value);
                                     if (m_executeOnEveryTick) {
-                                        updateAndExecute();
+                                        updateAndExecute(false);
                                     }
                                     lastUpdate = now;
                                     return true;
@@ -4940,8 +4942,8 @@ namespace tsl {
                 //    event = TouchEvent::Release;
                 //}
                 if (event == TouchEvent::Release) {
-                    if (!m_executeOnEveryTick)
-                        updateAndExecute();
+                    //if (!m_executeOnEveryTick)
+                    updateAndExecute();
                     this->m_interactionLocked = false;
                     touchInSliderBounds = false;
                     return false;
@@ -4967,7 +4969,7 @@ namespace tsl {
                         this->m_index = newIndex;
                         this->m_valueChangedListener(this->getProgress());
                         if (m_executeOnEveryTick) {
-                            updateAndExecute();
+                            updateAndExecute(false);
                         }
                     }
                     
@@ -4983,7 +4985,7 @@ namespace tsl {
 
 
             // Define drawBar function outside the draw method
-            void drawBar(gfx::Renderer *renderer, s32 x, s32 y, u16 width, Color color, bool isRounded = true) {
+            inline void drawBar(gfx::Renderer *renderer, s32 x, s32 y, u16 width, Color color, bool isRounded = true) {
                 if (isRounded) {
                     renderer->drawUniformRoundedRect(x, y, width, 7, a(color));
                 } else {
@@ -5193,7 +5195,7 @@ namespace tsl {
                 u64 keysReleased = prevKeysHeld & ~keysHeld;
                 prevKeysHeld = keysHeld;
                 //static bool usingUnlockedTrackbar = m_unlockedTrackbar;
-
+                
                 // Check if KEY_A is pressed to toggle allowSlide
                 if ((keysDown & KEY_A)) {
                     if (!m_unlockedTrackbar) {
@@ -5205,11 +5207,11 @@ namespace tsl {
                     }
                     return true;
                 }
-
+                
                 if (allowSlide || m_unlockedTrackbar) {
                     if ((keysReleased & HidNpadButton_AnyLeft) || (keysReleased & HidNpadButton_AnyRight)) {
-                        if (!m_executeOnEveryTick)
-                            updateAndExecute();
+                        //if (!m_executeOnEveryTick)
+                        updateAndExecute();
                         holding = false;
                         tick = 0;
                         return true;
@@ -5241,7 +5243,7 @@ namespace tsl {
                             }
                             this->m_valueChangedListener(this->getProgress());
                             if (m_executeOnEveryTick)
-                                updateAndExecute();
+                                updateAndExecute(false);
                         }
                         tick++;
                         return true;
@@ -5341,7 +5343,7 @@ namespace tsl {
                 u16 baseY = this->getY() + 44; // 50 - 3
                 // Calculate the halfway point
                 u8 halfNumSteps = (this->m_numSteps - 1) / 2;
-                
+
                 // Draw step rectangles
                 for (u8 i = 0; i < this->m_numSteps; i++) {
                     u16 stepX = baseX + std::round(i * (trackBarWidth / (this->m_numSteps - 1)));
@@ -5358,7 +5360,7 @@ namespace tsl {
                 // Draw the parent trackbar
                 StepTrackBar::draw(renderer);
             }
-            
+
             
         protected:
             std::vector<std::string> m_stepDescriptions;
