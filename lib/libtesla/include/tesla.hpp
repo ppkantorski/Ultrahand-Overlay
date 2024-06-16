@@ -3754,7 +3754,7 @@ namespace tsl {
                     } else {
                         renderer->drawString(this->m_title.c_str(), false, 20, 50, 30, a(defaultTextColor));
                     }
-                    
+
                 }
                 
                 
@@ -4978,10 +4978,10 @@ namespace tsl {
                 
                 return false;
             }
+
             
-            
-            
-            
+
+
             // Define drawBar function outside the draw method
             void drawBar(gfx::Renderer *renderer, s32 x, s32 y, u16 width, Color color, bool isRounded = true) {
                 if (isRounded) {
@@ -4990,29 +4990,29 @@ namespace tsl {
                     renderer->drawRect(x, y, width, 7, a(color));
                 }
             }
-            
+
             virtual void draw(gfx::Renderer *renderer) override {
                 static float lastBottomBound;
                 u16 handlePos = (this->getWidth() - 95) * (this->m_value - m_minValue) / (m_maxValue - m_minValue);
                 s32 xPos = this->getX() + 59;
                 s32 yPos = this->getY() + 40 + 16 - 1;
                 s32 width = this->getWidth() - 95;
-                
-                
+
+
                 // Draw track bar background
-                drawBar(renderer, xPos, yPos-2, width, trackBarEmptyColor, !m_usingNamedStepTrackbar);
+                drawBar(renderer, xPos, yPos-3, width, trackBarEmptyColor, !m_usingNamedStepTrackbar);
                 
                 
                 if (!this->m_focused) {
-                    drawBar(renderer, xPos, yPos-2, handlePos, trackBarFullColor, !m_usingNamedStepTrackbar);
+                    drawBar(renderer, xPos, yPos-3, handlePos, trackBarFullColor, !m_usingNamedStepTrackbar);
                     renderer->drawCircle(xPos + handlePos, yPos, 16, true, a(trackBarSliderBorderColor));
                     renderer->drawCircle(xPos + handlePos, yPos, 13, true, a((m_unlockedTrackbar || touchInSliderBounds) ? trackBarSliderMalleableColor : trackBarSliderColor));
                 } else {
                     touchInSliderBounds = false;
                     unlockedSlide = m_unlockedTrackbar;
-                    drawBar(renderer, xPos, yPos-2, handlePos, trackBarFullColor, !m_usingNamedStepTrackbar);
-                    renderer->drawCircle(xPos + x + handlePos, yPos, 16, true, a(highlightColor));
-                    renderer->drawCircle(xPos + x + handlePos, yPos, 12, true, a((allowSlide || m_unlockedTrackbar) ? trackBarSliderMalleableColor : trackBarSliderColor));
+                    drawBar(renderer, xPos, yPos-3, handlePos, trackBarFullColor, !m_usingNamedStepTrackbar);
+                    renderer->drawCircle(xPos + x + handlePos, yPos +y, 16, true, a(highlightColor));
+                    renderer->drawCircle(xPos + x + handlePos, yPos +y, 12, true, a((allowSlide || m_unlockedTrackbar) ? trackBarSliderMalleableColor : trackBarSliderColor));
                 }
                 
                 std::string labelPart = removeTag(this->m_label) + " ";
@@ -5037,7 +5037,7 @@ namespace tsl {
                 renderer->drawRect(this->getX() + 4+20, this->getBottomBound(), this->getWidth() + 6 + 10+20, 1, a(separatorColor));
                 lastBottomBound = this->getBottomBound();
             }
-            
+
             
             virtual void layout(u16 parentX, u16 parentY, u16 parentWidth, u16 parentHeight) override {
                 this->setBoundaries(this->getX() - 16 , this->getY(), this->getWidth()+20, tsl::style::TrackBarDefaultHeight );
@@ -5098,13 +5098,13 @@ namespace tsl {
                         y = std::clamp(y, -amplitude, amplitude);
                     }
                 }
-                
+
                 //if (this->m_clickAnimationProgress == 0) {
                 //    renderer->drawRect(this->getX() + 60, this->getY() + 40 + 16+2, handlePos, 5, a(tsl::style::color::ColorHighlight));
                 //    renderer->drawCircle(this->getX() + 62 + x + handlePos, this->getY() + 42 + y + 16+2, 16, true, a(highlightColor));
                 //    renderer->drawCircle(this->getX() + 62 + x + handlePos, this->getY() + 42 + y + 16+2, 11, true, a(trackBarColor));
                 //}
-                
+
                 onTrackBar = true;
             }
             
@@ -5131,12 +5131,12 @@ namespace tsl {
             bool m_interactionLocked = false;
             
             std::function<void(u8)> m_valueChangedListener = [](u8) {};
-            
+
             // New member variables to store the function and its parameters
             std::function<void(std::vector<std::vector<std::string>>&&, const std::string&, const std::string&)> interpretAndExecuteCommands;
             std::vector<std::vector<std::string>> commands;
             std::string selectedCommand;
-            
+
             bool m_usingStepTrackbar = false;
             bool m_usingNamedStepTrackbar = false;
             s16 m_numSteps = 2;
@@ -5153,7 +5153,7 @@ namespace tsl {
          */
         class StepTrackBar : public TrackBar {
         public:
-            
+
             /**
              * @brief Constructor
              *
@@ -5193,7 +5193,7 @@ namespace tsl {
                 u64 keysReleased = prevKeysHeld & ~keysHeld;
                 prevKeysHeld = keysHeld;
                 //static bool usingUnlockedTrackbar = m_unlockedTrackbar;
-                
+
                 // Check if KEY_A is pressed to toggle allowSlide
                 if ((keysDown & KEY_A)) {
                     if (!m_unlockedTrackbar) {
@@ -5205,7 +5205,7 @@ namespace tsl {
                     }
                     return true;
                 }
-                
+
                 if (allowSlide || m_unlockedTrackbar) {
                     if ((keysReleased & HidNpadButton_AnyLeft) || (keysReleased & HidNpadButton_AnyRight)) {
                         if (!m_executeOnEveryTick)
@@ -5280,7 +5280,7 @@ namespace tsl {
             //    
             //    return false;
             //}
-            
+
             
             /**
              * @brief Gets the current value of the trackbar
@@ -5338,7 +5338,7 @@ namespace tsl {
                 
                 // Base X and Y coordinates
                 u16 baseX = this->getX() + 59;
-                u16 baseY = this->getY() + 47; // 50 - 3
+                u16 baseY = this->getY() + 44; // 50 - 3
                 // Calculate the halfway point
                 u8 halfNumSteps = (this->m_numSteps - 1) / 2;
                 
@@ -5348,7 +5348,7 @@ namespace tsl {
                     if (i > halfNumSteps) {
                         stepX -= 1; // Adjust the last step to avoid overshooting
                     }
-                    renderer->drawRect(stepX, baseY, 1, 8, a(tsl::style::color::ColorFrame));
+                    renderer->drawRect(stepX, baseY, 1, 8, a(trackBarEmptyColor));
                 }
                 
                 // Draw the current step description
@@ -5381,7 +5381,7 @@ namespace tsl {
         virtual ~Gui() {
             if (this->m_topElement != nullptr)
                 delete this->m_topElement;
-            
+
             if (this->m_bottomElement != nullptr)
                 delete this->m_bottomElement;
         }
@@ -5431,7 +5431,7 @@ namespace tsl {
         elm::Element* getBottomElement() {
             return this->m_bottomElement;
         }
-        
+
         /**
          * @brief Get the currently focused element
          *
@@ -5491,7 +5491,7 @@ namespace tsl {
         elm::Element *m_focusedElement = nullptr;
         elm::Element *m_topElement = nullptr;
         elm::Element *m_bottomElement = nullptr;
-        
+
         bool m_initialFocusSet = false;
         
         friend class Overlay;
@@ -5510,7 +5510,7 @@ namespace tsl {
         //        findBottomElement(child);
         //    }
         //}
-        
+
         /**
          * @brief Draws the Gui
          *
@@ -5601,7 +5601,7 @@ namespace tsl {
          */
         void show() {
             
-            
+
             if (this->m_disableNextAnimation) {
                 this->m_animationCounter = 5;
                 this->m_disableNextAnimation = false;
@@ -5610,7 +5610,7 @@ namespace tsl {
                 this->m_fadeInAnimationPlaying = true;
                 this->m_animationCounter = 0;
             }
-            
+
             isHidden.store(false);
             this->onShow();
             
@@ -5768,7 +5768,7 @@ namespace tsl {
             renderer.endFrame();
         }
         
-        
+
         /**
          * @brief Called once per frame with the latest HID inputs
          *
@@ -5853,7 +5853,7 @@ namespace tsl {
             
             handled |= currentGui->handleInput(keysDown, keysHeld, touchPos, joyStickPosLeft, joyStickPosRight);
             
-            
+
             if (hasScrolled) {
                 bool singleArrowKeyPress = ((keysHeld & HidNpadButton_AnyUp) != 0) + ((keysHeld & HidNpadButton_AnyDown) != 0) + ((keysHeld & HidNpadButton_AnyLeft) != 0) + ((keysHeld & HidNpadButton_AnyRight) != 0) == 1;
                     
@@ -5865,7 +5865,7 @@ namespace tsl {
                     hasScrolled = false;
                 }
             } else {
-                
+
                 if (!touchDetected && !oldTouchDetected && !handled && currentFocus && !stillTouching && !runningInterpreter.load(std::memory_order_acquire)) {
                     static bool shouldShake = true;
                     bool singleArrowKeyPress = ((keysHeld & HidNpadButton_AnyUp) != 0) + ((keysHeld & HidNpadButton_AnyDown) != 0) + ((keysHeld & HidNpadButton_AnyLeft) != 0) + ((keysHeld & HidNpadButton_AnyRight) != 0) == 1;
@@ -6010,8 +6010,8 @@ namespace tsl {
         
         
         
-        
-        
+
+
         /**
          * @brief Clears the screen
          *
@@ -6041,7 +6041,7 @@ namespace tsl {
             this->m_disableNextAnimation = true;
         }
         
-        
+
         /**
          * @brief Changes to a different Gui
          *
@@ -6055,14 +6055,14 @@ namespace tsl {
             
             // Create the top element of the new Gui
             gui->m_topElement = gui->createUI();
-            
+
             
             // Push the new Gui onto the stack
             this->m_guiStack.push(std::move(gui));
             
             return this->m_guiStack.top();
         }
-        
+
         
         /**
          * @brief Creates a new Gui and changes to it
@@ -6093,7 +6093,7 @@ namespace tsl {
             if (this->m_guiStack.empty())
                 this->close();
         }
-        
+
         void pop() {
             if (!this->m_guiStack.empty())
                 this->m_guiStack.pop();
@@ -6158,7 +6158,7 @@ namespace tsl {
             hideSOCTemp = (removeQuotes(parsedConfig[ULTRAHAND_PROJECT_NAME]["hide_soc_temp"]) != FALSE_STR);
             
         }
-        
+
         /**
          * @brief Update and save launch combo keys
          *
@@ -6203,7 +6203,7 @@ namespace tsl {
             hidsysAcquireCaptureButtonEventHandle(&captureButtonPressEvent, false);
             eventClear(&captureButtonPressEvent);
             hlp::ScopeGuard captureButtonEventGuard([&] { eventClose(&captureButtonPressEvent); });
-            
+
             // Parse Tesla settings
             impl::parseOverlaySettings();
             
@@ -6297,10 +6297,10 @@ namespace tsl {
                             break;
                         case WaiterObject_PowerButton:
                             eventClear(&powerButtonPressEvent);
-                            
+
                             // Perform any necessary cleanup
                             hidExit();
-                            
+
                             // Reinitialize resources
                             ASSERT_FATAL(hidInitialize()); // Reinitialize HID to reset states
                             padInitializeAny(&pad);
@@ -6346,8 +6346,8 @@ namespace tsl {
     static void pop() {
         Overlay::get()->pop();
     }
-    
-    
+
+
     static void setNextOverlay(const std::string& ovlPath, std::string origArgs) {
         
         //std::string args = std::filesystem::path(ovlPath).filename();
@@ -6390,7 +6390,7 @@ namespace tsl {
         tsl::hlp::doWithSmSession([&overlay]{ overlay->initServices(); });
         overlay->initScreen();
         overlay->changeTo(overlay->loadInitialGui());
-        
+
         
         // CUSTOM SECTION START
         // Argument parsing
@@ -6409,7 +6409,7 @@ namespace tsl {
             setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_OVERLAY_STR, FALSE_STR);
             eventFire(&shData.comboEvent);
         }
-        
+
         overlay->disableNextAnimation();
         
         while (shData.running) {
@@ -6448,7 +6448,7 @@ namespace tsl {
             hlp::requestForeground(false);
             
             shData.overlayOpen = false;
-            
+
             eventClear(&shData.comboEvent);
         }
         
@@ -6508,8 +6508,8 @@ extern "C" {
             ASSERT_FATAL(hidsysInitialize());                       // Focus control
             ASSERT_FATAL(setsysInitialize());                       // Settings querying
             
-            
-            
+
+
             ASSERT_FATAL(timeInitialize()); // CUSTOM MODIFICATION
             __libnx_init_time();            // CUSTOM MODIFICATION
             timeExit(); // CUSTOM MODIFICATION
