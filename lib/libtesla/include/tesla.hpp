@@ -64,7 +64,9 @@
 //#include <filesystem> // Comment out filesystem
 
 // CUSTOM SECTION START
-
+float backWidth;
+float selectWidth;
+static bool inMainMenu = false;
 
 //static std::unordered_map<std::string, std::string> hexSumCache;
 
@@ -824,6 +826,10 @@ inline float calculateAmplitude(float x, float peakDurationFactor = 0.25f) {
 
 
 // Variables for touch commands
+static bool touchingBack = false;
+static bool touchingSelect = false;
+static bool touchingNextPage = false;
+static bool touchingMenu = false;
 static bool simulatedBack = false;
 static bool simulatedBackComplete = true;
 static bool simulatedSelect = false;
@@ -2164,7 +2170,6 @@ namespace tsl {
                 this->drawQuarterCircle(x + width-11+2, startY + height, radius, true, highlightColor, 4); // Lower-right
             }
 
-
             /**
              * @brief Draws a rounded rectangle of given sizes and corner radius
              *
@@ -2176,57 +2181,50 @@ namespace tsl {
              * @param color Color
              */
             inline void drawRoundedRect(float x, float y, float w, float h, float radius, Color color) {
-                s32 x_start = static_cast<s32>(x + radius);
-                s32 x_end = static_cast<s32>(x + w - radius);
-                s32 y_start = static_cast<s32>(y + radius);
-                s32 y_end = static_cast<s32>(y + h - radius);
-                
-                // Draw the central rectangle excluding the corners
-                for (s32 y1 = y_start; y1 < y_end; ++y1) {
-                    for (s32 x1 = x_start; x1 < x_end; ++x1) {
-                        this->setPixelBlendDst(x1, y1, color);
-                    }
-                }
-                
-                // Draw the top and bottom rectangles excluding the corners
-                for (s32 y1 = static_cast<s32>(y); y1 < y_start; ++y1) {
-                    for (s32 x1 = x_start; x1 < x_end; ++x1) {
-                        this->setPixelBlendDst(x1, y1, color);
-                    }
-                }
-                for (s32 y1 = y_end; y1 < static_cast<s32>(y + h); ++y1) {
-                    for (s32 x1 = x_start; x1 < x_end; ++x1) {
-                        this->setPixelBlendDst(x1, y1, color);
-                    }
-                }
-                
-                // Draw the left and right rectangles excluding the corners
-                for (s32 y1 = y_start; y1 < y_end; ++y1) {
-                    for (s32 x1 = static_cast<s32>(x); x1 < x_start; ++x1) {
-                        this->setPixelBlendDst(x1, y1, color);
-                    }
-                    for (s32 x1 = x_end; x1 < static_cast<s32>(x + w); ++x1) {
-                        this->setPixelBlendDst(x1, y1, color);
-                    }
-                }
-
-                // Draw the rounded corners
                 s32 radiusSquared = radius * radius;
-                for (s32 x1 = 0; x1 < radius; ++x1) {
-                    for (s32 y1 = 0; y1 < radius; ++y1) {
-                        if ((x1 * x1 + y1 * y1) <= radiusSquared) {
-                            // Top-left corner
-                            this->setPixelBlendDst(static_cast<s32>(x + radius - x1), static_cast<s32>(y + radius - y1), color);
-                            // Top-right corner
-                            this->setPixelBlendDst(static_cast<s32>(x + w - radius + x1), static_cast<s32>(y + radius - y1), color);
-                            // Bottom-left corner
-                            this->setPixelBlendDst(static_cast<s32>(x + radius - x1), static_cast<s32>(y + h - radius + y1), color);
-                            // Bottom-right corner
-                            this->setPixelBlendDst(static_cast<s32>(x + w - radius + x1), static_cast<s32>(y + h - radius + y1), color);
+            
+                for (s32 y1 = static_cast<s32>(y); y1 < static_cast<s32>(y + h); ++y1) {
+                    for (s32 x1 = static_cast<s32>(x); x1 < static_cast<s32>(x + w); ++x1) {
+                        s32 dx = 0, dy = 0;
+            
+                        // Top-left corner
+                        if (x1 < x + radius && y1 < y + radius) {
+                            dx = static_cast<s32>(x + radius) - x1;
+                            dy = static_cast<s32>(y + radius) - y1;
+                        }
+                        // Top-right corner
+                        else if (x1 >= x + w - radius && y1 < y + radius) {
+                            dx = x1 - static_cast<s32>(x + w - radius);
+                            dy = static_cast<s32>(y + radius) - y1;
+                        }
+                        // Bottom-left corner
+                        else if (x1 < x + radius && y1 >= y + h - radius) {
+                            dx = static_cast<s32>(x + radius) - x1;
+                            dy = y1 - static_cast<s32>(y + h - radius);
+                        }
+                        // Bottom-right corner
+                        else if (x1 >= x + w - radius && y1 >= y + h - radius) {
+                            dx = x1 - static_cast<s32>(x + w - radius);
+                            dy = y1 - static_cast<s32>(y + h - radius);
+                        }
+            
+                        // If within the rounded corner area, check if the pixel is within the radius
+                        if (dx * dx + dy * dy <= radiusSquared) {
+                            this->setPixelBlendDst(x1, y1, color);
+                        } else if (dx == 0 && dy == 0) {
+                            this->setPixelBlendDst(x1, y1, color);
+                        } else if (x1 >= x + radius && x1 < x + w - radius) {
+                            this->setPixelBlendDst(x1, y1, color);
+                        } else if (y1 >= y + radius && y1 < y + h - radius) {
+                            this->setPixelBlendDst(x1, y1, color);
                         }
                     }
                 }
             }
+
+
+
+            
 
             
             inline void drawUniformRoundedRect(float x, float y, float w, float h, Color color) {
@@ -3572,6 +3570,7 @@ namespace tsl {
             virtual void draw(gfx::Renderer *renderer) override {
                 renderer->fillScreen(a(defaultBackgroundColor));
                 
+
                 y = 50;
                 offset = 0;
                 
@@ -3579,6 +3578,10 @@ namespace tsl {
                                     this->m_subtitle.find("Ultrahand Package") == std::string::npos && 
                                     this->m_subtitle.find("Ultrahand Script") == std::string::npos);
                 if (isUltrahand) {
+                    if (touchingMenu && inMainMenu) {
+                        renderer->drawRoundedRect(0.0f, 12.0f, 245.0f, 73.0f, 6.0f, a(clickColor));
+                    }
+
                     chargeStringSTD.clear();
                     PCB_temperatureStringSTD.clear();
                     SOC_temperatureStringSTD.clear();
@@ -3757,7 +3760,6 @@ namespace tsl {
 
                 }
                 
-                
                 if (this->m_title == CAPITAL_ULTRAHAND_PROJECT_NAME) {
                     renderer->drawString(versionLabel.c_str(), false, 20, y+25, 15, a(versionTextColor));
                 } else
@@ -3765,6 +3767,27 @@ namespace tsl {
                 
                 renderer->drawRect(15, tsl::cfg::FramebufferHeight - 73, tsl::cfg::FramebufferWidth - 30, 1, a(botttomSeparatorColor));
                 
+                backWidth = renderer->calculateStringWidth(BACK, 23);
+                if (touchingBack) {
+                    renderer->drawRoundedRect(0.0f, static_cast<float>(cfg::FramebufferHeight - 73), 
+                                              backWidth+86.0f, 73.0f, 6.0f, a(clickColor));
+                }
+
+                selectWidth = renderer->calculateStringWidth(OK, 23);
+                if (touchingSelect) {
+                    renderer->drawRoundedRect(backWidth+86.0f, static_cast<float>(cfg::FramebufferHeight - 73), 
+                                              selectWidth+68.0f, 73.0f, 6.0f, a(clickColor));
+                }
+                
+                if (inMainMenu || !(this->m_pageLeftName).empty() || !(this->m_pageRightName).empty()) {
+                    if (touchingNextPage) {
+                        renderer->drawRoundedRect(backWidth+86.0f + selectWidth+68.0f, static_cast<float>(cfg::FramebufferHeight - 73), 
+                                                  static_cast<float>(cfg::FramebufferWidth - (backWidth+86.0f + selectWidth+68.0f)), 73.0f, 6.0f, a(clickColor));
+                    }
+                }
+
+
+
                 menuBottomLine = "\uE0E1"+GAP_2+BACK+GAP_1+"\uE0E0"+GAP_2+OK+GAP_1;
                 if (this->m_menuMode == "packages") {
                     menuBottomLine += "\uE0ED"+GAP_2+OVERLAYS;
@@ -4852,10 +4875,16 @@ namespace tsl {
                 auto now = std::chrono::steady_clock::now();
                 auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastUpdate);
                 
+                if (simulatedSelect && !simulatedSelectComplete) {
+                    keysDown |= KEY_A;
+                    simulatedSelect = false;
+                }
+
                 // Check if KEY_A is pressed to toggle allowSlide
                 if ((keysDown & KEY_A) && !m_unlockedTrackbar) {
                     allowSlide = !allowSlide;
                     holding = false; // Reset holding state when KEY_A is pressed
+                    simulatedSelectComplete = true;
                     return true;
                 }
                 
@@ -5195,7 +5224,12 @@ namespace tsl {
                 u64 keysReleased = prevKeysHeld & ~keysHeld;
                 prevKeysHeld = keysHeld;
                 //static bool usingUnlockedTrackbar = m_unlockedTrackbar;
-                
+
+                if (simulatedSelect && !simulatedSelectComplete) {
+                    keysDown |= KEY_A;
+                    simulatedSelect = false;
+                }
+
                 // Check if KEY_A is pressed to toggle allowSlide
                 if ((keysDown & KEY_A)) {
                     if (!m_unlockedTrackbar) {
@@ -5205,9 +5239,10 @@ namespace tsl {
                     //    m_unlockedTrackbar = !m_unlockedTrackbar;
                     //    holding = false; // Reset holding state when KEY_A is pressed
                     }
+                    simulatedSelectComplete = true;
                     return true;
                 }
-                
+
                 if (allowSlide || m_unlockedTrackbar) {
                     if ((keysReleased & HidNpadButton_AnyLeft) || (keysReleased & HidNpadButton_AnyRight)) {
                         //if (!m_executeOnEveryTick)
@@ -5858,7 +5893,7 @@ namespace tsl {
 
             if (hasScrolled) {
                 bool singleArrowKeyPress = ((keysHeld & HidNpadButton_AnyUp) != 0) + ((keysHeld & HidNpadButton_AnyDown) != 0) + ((keysHeld & HidNpadButton_AnyLeft) != 0) + ((keysHeld & HidNpadButton_AnyRight) != 0) == 1;
-                    
+                
                 
                 if (singleArrowKeyPress) {
                     auto now = std::chrono::high_resolution_clock::now();
@@ -5939,7 +5974,13 @@ namespace tsl {
             if (!touchDetected && oldTouchDetected && currentGui && topElement) {
                 topElement->onTouch(elm::TouchEvent::Release, oldTouchPos.x, oldTouchPos.y, oldTouchPos.x, oldTouchPos.y, initialTouchPos.x, initialTouchPos.y);
             }
+
+            touchingBack = (touchPos.x < backWidth+86.0f && touchPos.y > cfg::FramebufferHeight - 73U) && (initialTouchPos.x < backWidth+86.0f&& initialTouchPos.y > cfg::FramebufferHeight - 73U);
+            touchingSelect = (touchPos.x >= backWidth+86.0f && touchPos.x < (backWidth+86.0f + selectWidth+68.0f) && touchPos.y > cfg::FramebufferHeight - 73U) && (initialTouchPos.x >=  backWidth+86.0f && initialTouchPos.x < (backWidth+86.0f + selectWidth+68.0f) && initialTouchPos.y > cfg::FramebufferHeight - 73U);
+            touchingNextPage = (touchPos.x >= (backWidth+86.0f + selectWidth+68.0f) && touchPos.x <= cfg::FramebufferWidth && touchPos.y > cfg::FramebufferHeight - 73U) && (initialTouchPos.x >= (backWidth+86.0f + selectWidth+68.0f) && initialTouchPos.x <= cfg::FramebufferWidth && initialTouchPos.y > cfg::FramebufferHeight - 73U);
+            touchingMenu = (touchPos.x > 0U && touchPos.x <= 245 && touchPos.y > 10U && touchPos.y <= 83U) && (initialTouchPos.x > 0U && initialTouchPos.x <= 245 && initialTouchPos.y > 10U && initialTouchPos.y <= 83U);
             
+
             if (touchDetected) {
                 if (!interruptedTouch) interruptedTouch = (keysHeld & ALL_KEYS_MASK) != 0;
                 
@@ -5971,6 +6012,7 @@ namespace tsl {
                     if (touchPos.x > 40U && touchPos.x <= cfg::FramebufferWidth-30U && touchPos.y > 73U && touchPos.y <= cfg::FramebufferHeight - 73U) {
                         currentGui->removeFocus();
                     }
+                    
                 }
                 
                 oldTouchPos = touchPos;
