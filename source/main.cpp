@@ -38,7 +38,7 @@ static bool returningToHiddenMain = false;
 static bool returningToSettings = false;
 static bool returningToPackage = false;
 static bool returningToSubPackage = false;
-static bool inMainMenu = false;
+//static bool inMainMenu = false; // moved to libtesla
 static bool inHiddenMode = false;
 static bool inSettingsMenu = false;
 static bool inSubSettingsMenu = false;
@@ -48,7 +48,7 @@ static bool inScriptMenu = false;
 static bool inSelectionMenu = false;
 //static bool currentMenuLoaded = true;
 static bool freshSpawn = true;
-//static bool refreshGui = false; (moved)
+//static bool refreshGui = false; //moved to libtesla
 static bool reloadMenu = false;
 static bool reloadMenu2 = false;
 static bool reloadMenu3 = false;
@@ -971,6 +971,7 @@ public:
                     simulatedSelect = false;
                 }
                 if (keys & KEY_A) {
+                    inMainMenu = false;
                     tsl::changeTo<SettingsMenu>(entryName, entryMode, overlayName, PRIORITY_STR);
                     selectedListItem.reset();
                     selectedListItem = listItemPtr;
@@ -2442,7 +2443,7 @@ public:
         
         if (refreshGui && !returningToPackage && !stillTouching) {
             refreshGui = false;
-            
+
             // Function to handle the transition and state resetting
             auto handleMenuTransition = [&] {
                 lastPackagePath = packagePath;
@@ -2705,7 +2706,8 @@ public:
      *
      * Initializes a new instance of the `MainMenu` class with the necessary parameters.
      */
-    MainMenu(const std::string& hiddenMenuMode = "", const std::string& sectionName = "") : hiddenMenuMode(hiddenMenuMode), dropdownSection(sectionName) {}
+    MainMenu(const std::string& hiddenMenuMode = "", const std::string& sectionName = "") : hiddenMenuMode(hiddenMenuMode), dropdownSection(sectionName) {
+    }
     /**
      * @brief Destroys the `MainMenu` instance.
      *
@@ -2729,8 +2731,10 @@ public:
             setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_OVERLAY_STR, FALSE_STR);
         }
 
-        if (!inHiddenMode)
+        if (!inHiddenMode && dropdownSection.empty())
             inMainMenu = true;
+        else
+            inMainMenu = false;
         
         tsl::hlp::ini::IniData settingsData, packageConfigData;
         std::string packagePath, pathReplace, pathReplaceOn, pathReplaceOff;
@@ -3279,7 +3283,7 @@ public:
                                     reloadMenu2 = true;
                                 }
                                 refreshGui = true;
-                                
+
                                 //tsl::changeTo<MainMenu>(hiddenMenuMode);
                                 return true;
                             } else if (keys & SETTINGS_KEY) {
@@ -3902,6 +3906,7 @@ public:
                 }
 
                 if ((keysHeld & SYSTEM_SETTINGS_KEY) && !stillTouching) {
+                    inMainMenu = false;
                     tsl::changeTo<UltrahandSettingsMenu>();
                     //if (menuMode != PACKAGES_STR) startInterpreterThread();
                     
