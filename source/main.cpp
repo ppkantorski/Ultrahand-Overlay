@@ -1800,7 +1800,9 @@ public:
     }
 };
 
-
+// For persistent versions and colors across nested packages (when not specified)
+std::string packageRootLayerVersion;
+std::string packageRootLayerColor;
 
 /**
  * @brief The `PackageMenu` class handles sub-menu overlay functionality.
@@ -1833,6 +1835,8 @@ public:
     ~PackageMenu() {
         if (returningToMain) {
             clearMemory();
+            packageRootLayerVersion = "";
+            packageRootLayerColor = "";
         }
     }
     
@@ -2372,7 +2376,7 @@ public:
                                     else if (defaultToggleState == OFF_STR)
                                         footer = CAPITAL_OFF_STR;
                                 }
-
+                                
                                 toggleStateOn = (footer == CAPITAL_ON_STR);
                             }
                             
@@ -2380,12 +2384,12 @@ public:
                             
                             toggleListItem->setStateChangedListener([i, commandsOn, commandsOff, keyName = option.first, &packagePath = this->packagePath,
                                 &pathPatternOn = this->pathPatternOn, &pathPatternOff = this->pathPatternOff, listItemRaw = toggleListItem.get()](bool state) {
-
+                                
                                 tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemRaw, tsl::FocusDirection::None);
                                 interpretAndExecuteCommands(state ? getSourceReplacement(commandsOn, preprocessPath(pathPatternOn, packagePath), i, packagePath) :
                                     getSourceReplacement(commandsOff, preprocessPath(pathPatternOff, packagePath), i, packagePath), packagePath, keyName);
                                 setIniFileValue((packagePath + CONFIG_FILENAME).c_str(), keyName.c_str(), FOOTER_STR, state ? CAPITAL_ON_STR : CAPITAL_OFF_STR);
-
+                                
                             });
                             list->addItem(toggleListItem.release());
                         }
@@ -2395,8 +2399,18 @@ public:
         }
         
         options.clear();
-
-
+        
+        if (nestedLayer == 0) {
+            if (!packageHeader.version.empty())
+                packageRootLayerVersion = packageHeader.version;
+            if (!packageHeader.color.empty())
+                packageRootLayerColor = packageHeader.color;
+        }
+        if (packageHeader.version.empty())
+            packageHeader.version = packageRootLayerVersion;
+        if (packageHeader.color.empty())
+            packageHeader.color = packageRootLayerColor;
+        
         std::unique_ptr<tsl::elm::OverlayFrame> rootFrame = std::make_unique<tsl::elm::OverlayFrame>(
             getNameFromPath(packagePath),
             packageHeader.version != "" ? packageHeader.version + "   (Ultrahand Package)" : "Ultrahand Package",
@@ -2405,9 +2419,9 @@ public:
             (usingPages && currentPage == RIGHT_STR) ? pageLeftName : "",
             (usingPages && currentPage == LEFT_STR) ? pageRightName : ""
         );
-
+        
         rootFrame->setContent(list.release());
-
+        
         return rootFrame.release();
     }
     
@@ -2443,7 +2457,7 @@ public:
         
         if (refreshGui && !returningToPackage && !stillTouching) {
             refreshGui = false;
-
+            
             // Function to handle the transition and state resetting
             auto handleMenuTransition = [&] {
                 lastPackagePath = packagePath;
@@ -2460,7 +2474,7 @@ public:
                 lastSelectedListItem.reset();
                 tsl::changeTo<PackageMenu>(lastPackagePath, lastDropdownSection, lastPage, lastPackageName, lastNestedLayer);
             };
-
+            
             if (inPackageMenu) {
                 handleMenuTransition();
                 inPackageMenu = true;
@@ -2470,13 +2484,13 @@ public:
                 inSubPackageMenu = true;
             }
         }
-
+        
         if (usingPages) {
             if (simulatedMenu && !simulatedMenuComplete) {
                 simulatedMenu = false;
                 simulatedMenuComplete = true;
             }
-
+            
             if (simulatedNextPage && !simulatedNextPageComplete) {
                 if (currentPage == LEFT_STR) {
                     keysHeld |= KEY_DRIGHT;
@@ -2526,12 +2540,12 @@ public:
                 simulatedMenu = false;
                 simulatedMenuComplete = true;
             }
-
+            
             if (simulatedNextPage && !simulatedNextPageComplete) {
                 simulatedNextPage = false;
                 simulatedNextPageComplete = true;
             }
-
+            
             if (!usingPages || (usingPages && lastPage == LEFT_STR)) {
                 if (simulatedBack && !simulatedBackComplete) {
                     keysHeld |= KEY_B;
@@ -2560,7 +2574,7 @@ public:
                     
                     // Free-up memory
                     clearMemory();
-
+                    
                     tsl::goBack();
                     simulatedBackComplete = true;
                     return true;
@@ -2608,12 +2622,12 @@ public:
                 simulatedMenu = false;
                 simulatedMenuComplete = true;
             }
-
+            
             if (simulatedNextPage && !simulatedNextPageComplete) {
                 simulatedNextPage = false;
                 simulatedNextPageComplete = true;
             }
-
+            
             if (!usingPages || (usingPages && lastPage == LEFT_STR)) {
                 if (simulatedBack && !simulatedBackComplete) {
                     keysHeld |= KEY_B;
@@ -2641,7 +2655,7 @@ public:
                     lastMenu = "packageMenu";
                     //tsl::goBack();
                     tsl::goBack();
-
+                    
                     simulatedBackComplete = true;
                     return true;
                 }
@@ -2670,7 +2684,7 @@ public:
                 lastPackageName = PACKAGE_FILENAME;
             }
         }
-
+        
         if (triggerExit.load(std::memory_order_acquire)) {
             triggerExit.store(false, std::memory_order_release);
             tsl::Overlay::get()->close();
