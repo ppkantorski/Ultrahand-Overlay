@@ -957,7 +957,7 @@ Result tsOpenTsSession(Service* &serviceSession, TsSession* out, TsDeviceCode de
     );
 }
 
-void tsCloseTsSession(TsSession* in) {
+inline void tsCloseTsSession(TsSession* in) {
     serviceClose(&in->s);
 }
 
@@ -966,7 +966,7 @@ Result tsGetTemperatureWithTsSession(TsSession* ITs, float* temperature) {
 }
 
 
-bool thermalstatusInit(void) {
+inline bool thermalstatusInit(void) {
     tcCheck = tcInitialize();
     tsCheck = tsInitialize();
     if (R_SUCCEEDED(tsCheck)) {
@@ -977,7 +977,7 @@ bool thermalstatusInit(void) {
     return true;
 }
 
-void thermalstatusExit(void) {
+inline void thermalstatusExit(void) {
     tsExit();
     tcExit();
 }
@@ -3421,7 +3421,7 @@ namespace tsl {
              * @param a Amplitude
              * @return Damped sine wave output
              */
-            int shakeAnimation(std::chrono::system_clock::duration t, float a) {
+            inline int shakeAnimation(std::chrono::system_clock::duration t, float a) {
                 float w = 0.2F;
                 float tau = 0.05F;
                 
