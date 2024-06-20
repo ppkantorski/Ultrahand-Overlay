@@ -4717,13 +4717,16 @@ namespace tsl {
         public:
             
             
-            CategoryHeader(const std::string &title, bool hasSeparator = false) : m_text(title), m_hasSeparator(hasSeparator) {}
+            CategoryHeader(const std::string &title, bool hasSeparator = true) : m_text(title), m_hasSeparator(hasSeparator) {}
             virtual ~CategoryHeader() {}
             
             virtual void draw(gfx::Renderer *renderer) override {
-                renderer->drawRect(this->getX()+1+1, this->getBottomBound() - 30, 3, 23, a(headerSeparatorColor));
-                renderer->drawString(this->m_text.c_str(), false, this->getX() + 15+1, this->getBottomBound() - 12, 15, a(headerTextColor));
-                
+                if (this->m_hasSeparator) {
+                    renderer->drawRect(this->getX()+1+1, this->getBottomBound() - 30, 3, 23, a(headerSeparatorColor));
+                    renderer->drawString(this->m_text.c_str(), false, this->getX() + 15+1, this->getBottomBound() - 12, 15, a(headerTextColor));
+                } else {
+                    renderer->drawString(this->m_text.c_str(), false, this->getX(), this->getBottomBound() - 12, 15, a(headerTextColor));
+                }
                 //if (this->m_hasSeparator)
                 //    renderer->drawRect(this->getX(), this->getBottomBound(), this->getWidth(), 1, tsl::style::color::ColorFrame); // CUSTOM MODIFICATION
             }
@@ -4736,11 +4739,12 @@ namespace tsl {
                         return;
                     }
                 }
-                if (!m_hasSeparator) { // CUSTOM MODIFICATION
-                    this->setBoundaries(this->getX(), this->getY()-4, this->getWidth(), tsl::style::ListItemDefaultHeight *0.90); // CUSTOM MODIFICATION
-                } else {
-                    this->setBoundaries(this->getX(), this->getY()-4, this->getWidth(), tsl::style::ListItemDefaultHeight / 2); // CUSTOM MODIFICATION
-                }
+                this->setBoundaries(this->getX(), this->getY()-4, this->getWidth(), tsl::style::ListItemDefaultHeight *0.90);
+                //if (m_hasSeparator) { // CUSTOM MODIFICATION
+                //    this->setBoundaries(this->getX(), this->getY()-4, this->getWidth(), tsl::style::ListItemDefaultHeight *0.90); // CUSTOM MODIFICATION
+                //} else {
+                //    this->setBoundaries(this->getX(), this->getY()-4, this->getWidth(), tsl::style::ListItemDefaultHeight / 2); // CUSTOM MODIFICATION
+                //}
             }
             
             virtual bool onClick(u64 keys) {
