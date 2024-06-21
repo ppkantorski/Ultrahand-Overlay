@@ -756,6 +756,7 @@ std::map<std::string, std::string> defaultThemeSettingsMap = {
     {"table_bg_alpha", "10"},
     {"table_section_text_color", whiteColor},
     {"table_info_text_color", "#00FFDD"},
+    {"warning_text_color", "#FF7777"},
     {"trackbar_slider_color", "#606060"},
     {"trackbar_slider_border_color", "#505050"},
     {"trackbar_slider_malleable_color", "#A0A0A0"},
@@ -776,7 +777,7 @@ std::map<std::string, std::string> defaultThemeSettingsMap = {
     {"highlight_color_4", "#F7253E"},
     {"click_text_color", whiteColor},
     {"click_alpha", "7"},
-    {"click_color", "#F7253E"},
+    {"click_color", "#3E25F7"},
     {"invert_bg_click_color", FALSE_STR},
     {"disable_selection_bg", FALSE_STR},
     {"disable_colorful_logo", FALSE_STR},
@@ -1239,7 +1240,7 @@ namespace tsl {
     }
 
 
-    inline Color RGB888(const std::string& hexColor, const std::string& defaultHexColor = whiteColor, size_t alpha = 15) {
+    inline Color RGB888(const std::string& hexColor, size_t alpha = 15, const std::string& defaultHexColor = whiteColor) {
         std::string validHex = hexColor.empty() || hexColor[0] != '#' ? hexColor : hexColor.substr(1);
         
         if (!isValidHexColor(validHex)) {
@@ -1308,7 +1309,7 @@ namespace tsl {
     static Color logoColor2 = RGB888("#F7253E");
     static size_t defaultBackgroundAlpha = 13;
     
-    static Color defaultBackgroundColor = RGB888(blackColor, blackColor, defaultBackgroundAlpha);
+    static Color defaultBackgroundColor = RGB888(blackColor, defaultBackgroundAlpha);
     static Color defaultTextColor = RGB888(whiteColor);
     static Color headerTextColor = RGB888(whiteColor);
     static Color headerSeparatorColor = RGB888(whiteColor);
@@ -1332,7 +1333,7 @@ namespace tsl {
     static bool invertBGClickColor = false;
 
     static size_t selectionBGAlpha = 7;
-    static Color selectionBGColor = RGB888(blackColor, blackColor, selectionBGAlpha);
+    static Color selectionBGColor = RGB888(blackColor, selectionBGAlpha);
 
     static Color highlightColor1 = RGB888("#2288CC");
     static Color highlightColor2 = RGB888("#88FFFF");
@@ -1343,21 +1344,22 @@ namespace tsl {
     
     static size_t clickAlpha = 7;
 
-    static Color clickColor = RGB888("#F7253E", "#F7253E", clickAlpha);
+    static Color clickColor = RGB888("#3E25F7", clickAlpha);
     static Color trackBarColor = RGB888("#555555");
 
     static size_t separatorAlpha = 15;
     
-    static Color separatorColor = RGB888("#404040", "#404040", separatorAlpha);
+    static Color separatorColor = RGB888("#404040", separatorAlpha);
     static Color selectedTextColor = RGB888(whiteColor);
     static Color inprogressTextColor = RGB888(whiteColor);
     static Color invalidTextColor = RGB888("#FF0000");
     static Color clickTextColor = RGB888(whiteColor);
 
     static size_t tableBGAlpha = 7;
-    static Color tableBGColor = RGB888("#303030", "#303030", tableBGAlpha);
+    static Color tableBGColor = RGB888("#303030", tableBGAlpha);
     static Color sectionTextColor = RGB888("#e9ff40");
     static Color infoTextColor = RGB888(whiteColor);
+    static Color warningTextColor = RGB888("#FF7777");
 
 
     static Color trackBarSliderColor = RGB888("#606060");
@@ -1381,7 +1383,7 @@ namespace tsl {
             // Convert hex color to Color and manage default values and conversion
             auto getColor = [&](const std::string& key, size_t alpha = 15) {
                 std::string hexColor = getValue(key);
-                return RGB888(hexColor, hexColor, alpha);
+                return RGB888(hexColor, alpha);
             };
             
             auto getAlpha = [&](const std::string& key) {
@@ -1444,6 +1446,7 @@ namespace tsl {
             tableBGColor = getColor("table_bg_color", tableBGAlpha);
             sectionTextColor = getColor("table_section_text_color");
             infoTextColor = getColor("table_info_text_color");
+            warningTextColor = getColor("warning_text_color");
 
 
             trackBarSliderColor = getColor("trackbar_slider_color");
@@ -3101,7 +3104,7 @@ namespace tsl {
             virtual void drawClickAnimation(gfx::Renderer *renderer) {
                 saturation = tsl::style::ListItemHighlightSaturation * (float(this->m_clickAnimationProgress) / float(tsl::style::ListItemHighlightLength));
 
-                Color animColor = RGB888(whiteColor);
+                Color animColor = {0xF,0xF,0xF,0xF};
                 if (invertBGClickColor) {
                     animColor.r = 15-saturation;
                     animColor.g = 15-saturation;
@@ -3537,7 +3540,7 @@ namespace tsl {
             
             //std::string firstHalf, secondHalf;
             //tsl::Color handColor = RGB888("#F7253E");
-            tsl::Color titleColor = {0xF, 0xF, 0xF, 0xF};
+            tsl::Color titleColor = {0xF,0xF,0xF,0xF};
             const double cycleDuration = 1.5;
             float counter = 0;
             float countOffset;
@@ -5068,8 +5071,8 @@ namespace tsl {
                 renderer->drawString(valuePart.c_str(), false, combinedX + labelWidth, this->getY() + 14 + 16, 16, a(onTextColor));
                 
                 if (lastBottomBound != this->getTopBound())
-                    renderer->drawRect(this->getX() + 4+20, this->getTopBound(), this->getWidth() + 6 + 10+20, 1, a(separatorColor));
-                renderer->drawRect(this->getX() + 4+20, this->getBottomBound(), this->getWidth() + 6 + 10+20, 1, a(separatorColor));
+                    renderer->drawRect(this->getX() + 4+20-1, this->getTopBound(), this->getWidth() + 6 + 10+20, 1, a(separatorColor));
+                renderer->drawRect(this->getX() + 4+20-1, this->getBottomBound(), this->getWidth() + 6 + 10+20, 1, a(separatorColor));
                 lastBottomBound = this->getBottomBound();
             }
 
