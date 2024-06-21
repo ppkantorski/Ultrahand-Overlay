@@ -73,7 +73,8 @@ static const std::string ALIGNMENT_PATTERN = ";alignment=";
 static const std::string GAP_PATTERN =";gap=";
 static const std::string OFFSET_PATTERN = ";offset=";
 static const std::string SPACING_PATTERN = ";spacing=";
-static const std::string COLOR_MODE_PATTERN = ";color_mode=";
+static const std::string INFO_TEXT_COLOR_PATTERN = ";info_text_color=";
+static const std::string SECTION_TEXT_COLOR_PATTERN = ";section_text_color=";
 
 // Trackbar option patterns
 static const std::string MIN_VALUE_PATTERN = ";min_value=";
@@ -132,7 +133,8 @@ struct CommandOptions {
     size_t& tableEndGap;
     size_t& tableColumnOffset;
     size_t& tableSpacing;
-    std::string& tableColorMode;
+    std::string& tableSectionTextColor;
+    std::string& tableInfoTextColor;
     std::string& tableAlignment;
     s16& minValue;
     s16& maxValue;
@@ -218,8 +220,11 @@ void processCommands(CommandOptions& options, CommandData& data) {
             } else if (options.commandName.find(SPACING_PATTERN) == 0) {
                 options.tableSpacing = std::stoi(options.commandName.substr(SPACING_PATTERN.length()));
                 continue;
-            } else if (options.commandName.find(COLOR_MODE_PATTERN) == 0) {
-                options.tableColorMode = options.commandName.substr(COLOR_MODE_PATTERN.length());
+            } else if (options.commandName.find(SECTION_TEXT_COLOR_PATTERN) == 0) {
+                options.tableSectionTextColor = options.commandName.substr(SECTION_TEXT_COLOR_PATTERN.length());
+                continue;
+            } else if (options.commandName.find(INFO_TEXT_COLOR_PATTERN) == 0) {
+                options.tableInfoTextColor = options.commandName.substr(INFO_TEXT_COLOR_PATTERN.length());
                 continue;
             } else if (options.commandName.find(ALIGNMENT_PATTERN) == 0) {
                 options.tableAlignment = options.commandName.substr(ALIGNMENT_PATTERN.length());
@@ -1926,13 +1931,13 @@ public:
         
         bool hideTableBackground;
         size_t tableStartGap, tableEndGap, tableColumnOffset, tableSpacing;
-        std::string tableColorMode, tableAlignment;
+        std::string tableSectionTextColor, tableInfoTextColor, tableAlignment;
 
         // Pack variables into structs
         CommandOptions cmdOptions = {inEristaSection, inMarikoSection, usingErista, usingMariko, commandName, commandSystem,
                                   commandMode, commandGrouping, currentSection, pathPattern, sourceType, pathPatternOn,
                                   sourceTypeOn, pathPatternOff, sourceTypeOff, defaultToggleState, hideTableBackground,
-                                  tableStartGap, tableEndGap, tableColumnOffset, tableSpacing, tableColorMode, tableAlignment,
+                                  tableStartGap, tableEndGap, tableColumnOffset, tableSpacing, tableSectionTextColor, tableInfoTextColor, tableAlignment,
                                   minValue, maxValue, units, steps, unlockedTrackbar, onEveryTick, packageSource, packagePath};
         
         CommandData cmdData = {commands, commandsOn, commandsOff, tableData};
@@ -1952,7 +1957,8 @@ public:
             tableEndGap = 3;
             tableColumnOffset = 160;
             tableSpacing = 0;
-            tableColorMode = DEFAULT_STR;
+            tableSectionTextColor = DEFAULT_STR;
+            tableInfoTextColor = DEFAULT_STR;
             tableAlignment = RIGHT_STR;
             
             // Trackbar settings
@@ -2138,7 +2144,7 @@ public:
                 
                 if (!skipSection && !skipSystem) { // for skipping the drawing of sections
                     if (commandMode == TABLE_STR) {
-                        addTable(list, tableData, this->packagePath, tableColumnOffset, tableStartGap, tableEndGap, tableSpacing, tableColorMode, tableAlignment, hideTableBackground);
+                        addTable(list, tableData, this->packagePath, tableColumnOffset, tableStartGap, tableEndGap, tableSpacing, tableSectionTextColor, tableInfoTextColor, tableAlignment, hideTableBackground);
                         continue;
                     } else if (commandMode == TRACKBAR_STR) {
                         list->addItem(new tsl::elm::TrackBar(optionName, this->packagePath, minValue, maxValue, units, interpretAndExecuteCommands, commands, option.first, false, false, -1, unlockedTrackbar, onEveryTick));
@@ -2863,6 +2869,8 @@ public:
         
         // Overlays menu
         if (menuMode == OVERLAYS_STR) {
+            inOverlaysPage = true;
+            inPackagesPage = false;
             //closeInterpreterThread();
 
             list->addItem(new tsl::elm::CategoryHeader(!inHiddenMode ? OVERLAYS : HIDDEN_OVERLAYS));
@@ -3124,7 +3132,8 @@ public:
         
         // Packages menu
         if (menuMode == PACKAGES_STR ) {
-            
+            inOverlaysPage = false;
+            inPackagesPage = true;
 
             if (dropdownSection.empty()) {
                 // Create the directory if it doesn't exist
@@ -3397,7 +3406,7 @@ public:
 
                 bool hideTableBackground;
                 size_t tableStartGap, tableEndGap, tableColumnOffset, tableSpacing;
-                std::string tableColorMode, tableAlignment;
+                std::string tableSectionTextColor, tableInfoTextColor, tableAlignment;
                 
                 s16 minValue;
                 s16 maxValue;
@@ -3412,7 +3421,7 @@ public:
                 CommandOptions cmdOptions = {inEristaSection, inMarikoSection, usingErista, usingMariko, commandName, commandSystem,
                                           commandMode, commandGrouping, currentSection, pathPattern, sourceType, pathPatternOn,
                                           sourceTypeOn, pathPatternOff, sourceTypeOff, defaultToggleState, hideTableBackground,
-                                          tableStartGap, tableEndGap, tableColumnOffset, tableSpacing, tableColorMode, tableAlignment,
+                                          tableStartGap, tableEndGap, tableColumnOffset, tableSpacing, tableSectionTextColor, tableInfoTextColor, tableAlignment,
                                           minValue, maxValue, units, steps, unlockedTrackbar, onEveryTick, packageSource, packagePath};
                 
                 CommandData cmdData = {commands, commandsOn, commandsOff, tableData};
@@ -3431,7 +3440,8 @@ public:
                     tableEndGap = 3;
                     tableColumnOffset = 160;
                     tableSpacing = 0;
-                    tableColorMode = DEFAULT_STR;
+                    tableSectionTextColor = DEFAULT_STR;
+                    tableInfoTextColor = DEFAULT_STR;
                     tableAlignment = RIGHT_STR;
                     
                     minValue = 0;
@@ -3574,7 +3584,7 @@ public:
                     
                     if (!skipSection && !skipSystem) {
                         if (commandMode == TABLE_STR) {
-                            addTable(list, tableData, packagePath, tableColumnOffset, tableStartGap, tableEndGap, tableSpacing, tableColorMode, tableAlignment, hideTableBackground);
+                            addTable(list, tableData, packagePath, tableColumnOffset, tableStartGap, tableEndGap, tableSpacing, tableSectionTextColor, tableInfoTextColor, tableAlignment, hideTableBackground);
                             continue;
                         } else if (commandMode == TRACKBAR_STR) {
                             list->addItem(new tsl::elm::TrackBar(optionName, packagePath, minValue, maxValue, units, interpretAndExecuteCommands, commands, option.first, false, false, -1, unlockedTrackbar, onEveryTick));
