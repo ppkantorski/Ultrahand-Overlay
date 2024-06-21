@@ -1901,7 +1901,7 @@ namespace tsl {
              * @return Color with applied opacity
              */
             inline static Color a(const Color &c) {
-                u8 alpha = (disableTransparency && useOpaqueScreenshots) ? 0xF : static_cast<u8>(c.a * Renderer::s_opacity);
+                u8 alpha = (disableTransparency && useOpaqueScreenshots) ? 0xF : static_cast<u8>(std::min(static_cast<u8>(c.a), static_cast<u8>(0xF * Renderer::s_opacity)));
                 return (c.rgba & 0x0FFF) | (alpha << 12);
             }
             
@@ -2288,66 +2288,6 @@ namespace tsl {
             }
             
 
-
-
-            
-            //inline void drawRoundedRectBorder(float x, float y, float w, float h, float radius, float thickness, Color color) {
-            //    // Draw the top horizontal border
-            //    for (s32 t = 0; t < thickness; ++t) {
-            //        for (s32 i = radius; i < w - radius; ++i) {
-            //            this->setPixelBlendDst(x + i, y + t, color);                // Top border
-            //            this->setPixelBlendDst(x + i, y + h - 1 - t, color); // Bottom border
-            //        }
-            //    }
-            //
-            //    // Draw the bottom horizontal border
-            //    for (s32 t = 0; t < thickness; ++t) {
-            //        for (s32 i = radius; i < w - radius; ++i) {
-            //            this->setPixelBlendDst(x + i, y + h - thickness + t, color); // Corrected Bottom border
-            //        }
-            //    }
-            //
-            //    // Draw the left vertical border
-            //    for (s32 t = 0; t < thickness; ++t) {
-            //        for (s32 i = radius; i < h - radius; ++i) {
-            //            this->setPixelBlendDst(x + t, y + i, color);                // Left border
-            //            this->setPixelBlendDst(x + w - 1 - t, y + i, color); // Right border
-            //        }
-            //    }
-            //
-            //    // Draw the right vertical border
-            //    for (s32 t = 0; t < thickness; ++t) {
-            //        for (s32 i = radius; i < h - radius; ++i) {
-            //            this->setPixelBlendDst(x + w - 1 - t, y + i, color); // Right border
-            //        }
-            //    }
-            //
-            //    // Draw the rounded corners
-            //    for (s32 t = 0; t < thickness; ++t) {
-            //        for (s32 i = 0; i < radius; ++i) {
-            //            for (s32 j = 0; j < radius; ++j) {
-            //                if ((i * i + j * j) <= (radius * radius)) {
-            //                    // Top-left corner
-            //                    this->setPixelBlendDst(x + radius - i, y + radius - j - t, color);
-            //                    this->setPixelBlendDst(x + radius - i - t, y + radius - j, color);
-            //                    
-            //                    // Top-right corner
-            //                    this->setPixelBlendDst(x + w - radius + i, y + radius - j - t, color);
-            //                    this->setPixelBlendDst(x + w - radius + i + t, y + radius - j, color);
-            //
-            //                    // Bottom-left corner
-            //                    this->setPixelBlendDst(x + radius - i, y + h - radius + j + t, color);
-            //                    this->setPixelBlendDst(x + radius - i - t, y + h - radius + j, color);
-            //
-            //                    // Bottom-right corner
-            //                    this->setPixelBlendDst(x + w - radius + i, y + h - radius + j + t, color);
-            //                    this->setPixelBlendDst(x + w - radius + i + t, y + h - radius + j, color);
-            //                }
-            //            }
-            //        }
-            //    }
-            //}
-
             /**
              * @brief Draws a RGBA8888 bitmap from memory
              *
@@ -2446,7 +2386,6 @@ namespace tsl {
                 return totalWidth;
             }
 
-
             /**
              * @brief Draws a string
              *
@@ -2532,7 +2471,8 @@ namespace tsl {
                                     this->setPixel(xPos + bmpX, yPos + bmpY, color);
                                 } else if (bmpColor != 0x0) {
                                     tmpColor = color;
-                                    tmpColor.a = static_cast<uint8_t>(bmpColor * (tmpColor.a / 0xF));
+                                    tmpColor.a = bmpColor;
+                                    //tmpColor.a = static_cast<uint8_t>(bmpColor * (tmpColor.a / 0xF));
                                     this->setPixelBlendDst(xPos + bmpX, yPos + bmpY, tmpColor);
                                 }
                             }
@@ -2545,6 +2485,7 @@ namespace tsl {
                 maxX = std::max(currX, maxX);
                 return { static_cast<u32>(maxX - x), static_cast<u32>(currY - y) };
             }
+            
             
             inline void drawStringWithColoredSections(const std::string& text, const std::vector<std::string>& specialSymbols, s32 x, s32 y, u32 fontSize, Color defaultColor, Color specialColor) {
                 size_t startPos = 0;
@@ -5658,7 +5599,7 @@ namespace tsl {
             
 
             if (this->m_disableNextAnimation) {
-                this->m_animationCounter = 5;
+                this->m_animationCounter = MAX_ANIMATION_COUNTER;
                 this->m_disableNextAnimation = false;
             }
             else {
@@ -5685,7 +5626,7 @@ namespace tsl {
             }
             else {
                 this->m_fadeOutAnimationPlaying = true;
-                this->m_animationCounter = 5;
+                this->m_animationCounter = MAX_ANIMATION_COUNTER;
             }
             isHidden.store(true);
             this->onHide();
@@ -5738,7 +5679,8 @@ namespace tsl {
         
         bool m_fadeInAnimationPlaying = false, m_fadeOutAnimationPlaying = false;
         u8 m_animationCounter = 0;
-        
+        const int MAX_ANIMATION_COUNTER = 5; // Define the maximum animation counter value
+
         bool m_shouldHide = false;
         bool m_shouldClose = false;
         
@@ -5780,29 +5722,52 @@ namespace tsl {
             return this->m_shouldClose;
         }
         
+
+        /**
+         * @brief Quadratic ease-in-out function
+         *
+         * @param t Normalized time (0 to 1)
+         * @return Eased value
+         */
+        float calculateEaseInOut(float t) {
+            if (t < 0.5) {
+                return 2 * t * t;
+            } else {
+                return -1 + (4 - 2 * t) * t;
+            }
+        }
+
         /**
          * @brief Handles fade in and fade out animations of the Overlay
          *
          */
         void animationLoop() {
+            
+        
             if (this->m_fadeInAnimationPlaying) {
-                this->m_animationCounter++;
+                if (this->m_animationCounter < MAX_ANIMATION_COUNTER) {
+                    this->m_animationCounter++;
+                }
                 
-                if (this->m_animationCounter >= 5) {
+                if (this->m_animationCounter >= MAX_ANIMATION_COUNTER) {
                     this->m_fadeInAnimationPlaying = false;
                 }
             }
             
             if (this->m_fadeOutAnimationPlaying) {
-                this->m_animationCounter--;
+                if (this->m_animationCounter > 0) {
+                    this->m_animationCounter--;
+                }
                 
                 if (this->m_animationCounter == 0) {
                     this->m_fadeOutAnimationPlaying = false;
                     this->m_shouldHide = true;
                 }
             }
-            
-            gfx::Renderer::setOpacity(0.2 * this->m_animationCounter);
+        
+            // Calculate and set the opacity using an easing function
+            float opacity = calculateEaseInOut(static_cast<float>(this->m_animationCounter) / MAX_ANIMATION_COUNTER);
+            gfx::Renderer::setOpacity(opacity);
         }
 
 
