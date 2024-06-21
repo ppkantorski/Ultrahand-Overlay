@@ -64,9 +64,10 @@
 //#include <filesystem> // Comment out filesystem
 
 // CUSTOM SECTION START
-float backWidth;
-float selectWidth;
+float backWidth, selectWidth, nextPageWidth;
 static bool inMainMenu = false;
+static bool inOverlaysPage = false;
+static bool inPackagesPage = false;
 
 //static std::unordered_map<std::string, std::string> hexSumCache;
 
@@ -3772,8 +3773,8 @@ namespace tsl {
                 
                 backWidth = renderer->calculateStringWidth(BACK, 23);
                 if (touchingBack) {
-                    renderer->drawRoundedRect(0.0f, static_cast<float>(cfg::FramebufferHeight - 73), 
-                                              backWidth+86.0f, 73.0f, 6.0f, a(clickColor));
+                    renderer->drawRoundedRect(18.0f, static_cast<float>(cfg::FramebufferHeight - 73), 
+                                              backWidth+68.0f, 73.0f, 6.0f, a(clickColor));
                 }
 
                 selectWidth = renderer->calculateStringWidth(OK, 23);
@@ -3782,10 +3783,20 @@ namespace tsl {
                                               selectWidth+68.0f, 73.0f, 6.0f, a(clickColor));
                 }
                 
+                if (!(this->m_pageLeftName).empty())
+                    nextPageWidth = renderer->calculateStringWidth(this->m_pageLeftName, 23);
+                else if (!(this->m_pageRightName).empty())
+                    nextPageWidth = renderer->calculateStringWidth(this->m_pageRightName, 23);
+                else if (inMainMenu)
+                    if (inOverlaysPage)
+                        nextPageWidth = renderer->calculateStringWidth(PACKAGES,23);
+                    else if (inPackagesPage)
+                        nextPageWidth = renderer->calculateStringWidth(OVERLAYS,23);
+
                 if (inMainMenu || !(this->m_pageLeftName).empty() || !(this->m_pageRightName).empty()) {
                     if (touchingNextPage) {
-                        renderer->drawRoundedRect(backWidth+86.0f + selectWidth+68.0f, static_cast<float>(cfg::FramebufferHeight - 73), 
-                                                  static_cast<float>(cfg::FramebufferWidth - (backWidth+86.0f + selectWidth+68.0f)), 73.0f, 6.0f, a(clickColor));
+                        renderer->drawRoundedRect(18.0f + backWidth+68.0f + selectWidth+68.0f, static_cast<float>(cfg::FramebufferHeight - 73), 
+                                                  nextPageWidth+70.0f, 73.0f, 6.0f, a(clickColor));
                     }
                 }
 
@@ -5982,9 +5993,9 @@ namespace tsl {
                 topElement->onTouch(elm::TouchEvent::Release, oldTouchPos.x, oldTouchPos.y, oldTouchPos.x, oldTouchPos.y, initialTouchPos.x, initialTouchPos.y);
             }
 
-            touchingBack = (touchPos.x < backWidth+86.0f && touchPos.y > cfg::FramebufferHeight - 73U) && (initialTouchPos.x < backWidth+86.0f&& initialTouchPos.y > cfg::FramebufferHeight - 73U);
+            touchingBack = (touchPos.x >= 20.0f && touchPos.x < backWidth+86.0f && touchPos.y > cfg::FramebufferHeight - 73U) && (initialTouchPos.x >= 20.0f && initialTouchPos.x < backWidth+86.0f&& initialTouchPos.y > cfg::FramebufferHeight - 73U);
             touchingSelect = (touchPos.x >= backWidth+86.0f && touchPos.x < (backWidth+86.0f + selectWidth+68.0f) && touchPos.y > cfg::FramebufferHeight - 73U) && (initialTouchPos.x >=  backWidth+86.0f && initialTouchPos.x < (backWidth+86.0f + selectWidth+68.0f) && initialTouchPos.y > cfg::FramebufferHeight - 73U);
-            touchingNextPage = (touchPos.x >= (backWidth+86.0f + selectWidth+68.0f) && touchPos.x <= cfg::FramebufferWidth && touchPos.y > cfg::FramebufferHeight - 73U) && (initialTouchPos.x >= (backWidth+86.0f + selectWidth+68.0f) && initialTouchPos.x <= cfg::FramebufferWidth && initialTouchPos.y > cfg::FramebufferHeight - 73U);
+            touchingNextPage = (touchPos.x >= (backWidth+86.0f + selectWidth+68.0f) && (touchPos.x <= backWidth+86.0f + selectWidth+68.0f +nextPageWidth+70.0f) && touchPos.y > cfg::FramebufferHeight - 73U) && (initialTouchPos.x >= (backWidth+86.0f + selectWidth+68.0f) && (initialTouchPos.x <= backWidth+86.0f + selectWidth+68.0f +nextPageWidth+70.0f) && initialTouchPos.y > cfg::FramebufferHeight - 73U);
             touchingMenu = (touchPos.x > 0U && touchPos.x <= 245 && touchPos.y > 10U && touchPos.y <= 83U) && (initialTouchPos.x > 0U && initialTouchPos.x <= 245 && initialTouchPos.y > 10U && initialTouchPos.y <= 83U);
             
 
@@ -6031,16 +6042,16 @@ namespace tsl {
                 stillTouching = true;
             } else {
                 if (!interruptedTouch && !runningInterpreter.load(std::memory_order_acquire)) {
-                    if (oldTouchPos.x < 150U && oldTouchPos.y > cfg::FramebufferHeight - 73U && initialTouchPos.x < 150U && initialTouchPos.y > cfg::FramebufferHeight - 73U) {
+                    if ((oldTouchPos.x >= 20.0f && oldTouchPos.x < backWidth+86.0f && oldTouchPos.y > cfg::FramebufferHeight - 73U) && (initialTouchPos.x >= 20.0f && initialTouchPos.x < backWidth+86.0f&& initialTouchPos.y > cfg::FramebufferHeight - 73U)) {
                         simulatedBackComplete = false;
                         simulatedBack = true;
-                    } else if (oldTouchPos.x >= 150U && oldTouchPos.x < 260U && oldTouchPos.y > cfg::FramebufferHeight - 73U && initialTouchPos.x >= 150U && initialTouchPos.x < 260U && initialTouchPos.y > cfg::FramebufferHeight - 73U) {
+                    } else if ((oldTouchPos.x >= backWidth+86.0f && oldTouchPos.x < (backWidth+86.0f + selectWidth+68.0f) && oldTouchPos.y > cfg::FramebufferHeight - 73U) && (initialTouchPos.x >=  backWidth+86.0f && initialTouchPos.x < (backWidth+86.0f + selectWidth+68.0f) && initialTouchPos.y > cfg::FramebufferHeight - 73U)) {
                         simulatedSelectComplete = false;
                         simulatedSelect = true;
-                    } else if (oldTouchPos.x >= 260U && oldTouchPos.x <= cfg::FramebufferWidth && oldTouchPos.y > cfg::FramebufferHeight - 73U && initialTouchPos.x >= 260U && initialTouchPos.x <= cfg::FramebufferWidth && initialTouchPos.y > cfg::FramebufferHeight - 73U) {
+                    } else if ((oldTouchPos.x >= (backWidth+86.0f + selectWidth+68.0f) && (oldTouchPos.x <= backWidth+86.0f + selectWidth+68.0f +nextPageWidth+70.0f) && oldTouchPos.y > cfg::FramebufferHeight - 73U) && (initialTouchPos.x >= (backWidth+86.0f + selectWidth+68.0f) && (initialTouchPos.x <= backWidth+86.0f + selectWidth+68.0f +nextPageWidth+70.0f) && initialTouchPos.y > cfg::FramebufferHeight - 73U)) {
                         simulatedNextPageComplete = false;
                         simulatedNextPage = true;
-                    } else if (oldTouchPos.x > 0U && oldTouchPos.x <= 245 && oldTouchPos.y > 0U && oldTouchPos.y <= 73U && initialTouchPos.x > 0U && initialTouchPos.x <= 245 && initialTouchPos.y > 0U && initialTouchPos.y <= 73U) {
+                    } else if ((oldTouchPos.x > 0U && oldTouchPos.x <= 245 && oldTouchPos.y > 10U && oldTouchPos.y <= 83U) && (initialTouchPos.x > 0U && initialTouchPos.x <= 245 && initialTouchPos.y > 10U && initialTouchPos.y <= 83U)) {
                         simulatedMenuComplete = false;
                         simulatedMenu = true;
                     }
