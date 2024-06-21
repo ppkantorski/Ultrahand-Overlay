@@ -3779,7 +3779,7 @@ namespace tsl {
 
                 selectWidth = renderer->calculateStringWidth(OK, 23);
                 if (touchingSelect) {
-                    renderer->drawRoundedRect(backWidth+86.0f, static_cast<float>(cfg::FramebufferHeight - 73), 
+                    renderer->drawRoundedRect(18.0f + backWidth+68.0f, static_cast<float>(cfg::FramebufferHeight - 73), 
                                               selectWidth+68.0f, 73.0f, 6.0f, a(clickColor));
                 }
                 
