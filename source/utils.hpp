@@ -235,7 +235,8 @@ std::tuple<Result, std::string, std::string> getOverlayInfo(const std::string& f
 }
 
 void drawTable(std::unique_ptr<tsl::elm::List>& list, const std::vector<std::string>& sectionLines, const std::vector<std::string>& infoLines,
-    const size_t& columnOffset = 120, const size_t& startGap = 20, const size_t& endGap = 3, const size_t& newlineGap = 0, const std::string& alignment = LEFT_STR, const bool& hideTableBackground = false) {
+    const size_t& columnOffset = 120, const size_t& startGap = 20, const size_t& endGap = 3, const size_t& newlineGap = 0,
+    const std::string& tableSectionTextColor = DEFAULT_STR, const std::string& tableInfoTextColor = DEFAULT_STR, const std::string& alignment = LEFT_STR, const bool& hideTableBackground = false) {
 
     size_t lineHeight = 16;
     size_t fontSize = 16;
@@ -243,6 +244,24 @@ void drawTable(std::unique_ptr<tsl::elm::List>& list, const std::vector<std::str
 
     auto sectionTextColor = tsl::gfx::Renderer::a(tsl::sectionTextColor);
     auto infoTextColor = tsl::gfx::Renderer::a(tsl::infoTextColor);
+    auto alternateSectionTextColor = tsl::gfx::Renderer::a(tsl::warningTextColor);
+    auto alternateInfoTextColor = tsl::gfx::Renderer::a(tsl::warningTextColor);
+
+    if (tableSectionTextColor != DEFAULT_STR) {
+        if (tableSectionTextColor == "warning") {
+            alternateSectionTextColor = tsl::warningTextColor;
+        } else {
+            alternateSectionTextColor = tsl::RGB888(tableSectionTextColor);
+        }
+    }
+
+    if (tableInfoTextColor != DEFAULT_STR) {
+        if (tableInfoTextColor == "warning") {
+            alternateInfoTextColor = tsl::warningTextColor;
+        } else {
+            alternateInfoTextColor = tsl::RGB888(tableInfoTextColor);
+        }
+    }
 
     size_t totalHeight = lineHeight * sectionLines.size() + newlineGap * (sectionLines.size() - 1) + endGap;
 
@@ -278,8 +297,8 @@ void drawTable(std::unique_ptr<tsl::elm::List>& list, const std::vector<std::str
         }
 
         for (size_t i = 0; i < sectionLines.size(); ++i) {
-            renderer->drawString(sectionLines[i].c_str(), false, x + 12, y + yOffsets[i], fontSize, sectionTextColor);
-            renderer->drawString(infoLines[i].c_str(), false, x + infoXOffsets[i], y + yOffsets[i], fontSize, infoTextColor);
+            renderer->drawString(sectionLines[i].c_str(), false, x + 12, y + yOffsets[i], fontSize, renderer->a((tableSectionTextColor == DEFAULT_STR) ? sectionTextColor : alternateSectionTextColor));
+            renderer->drawString(infoLines[i].c_str(), false, x + infoXOffsets[i], y + yOffsets[i], fontSize, renderer->a((tableInfoTextColor == DEFAULT_STR) ? infoTextColor : alternateInfoTextColor));
         }
     }, hideTableBackground, endGap), totalHeight);
 }
@@ -290,7 +309,7 @@ void drawTable(std::unique_ptr<tsl::elm::List>& list, const std::vector<std::str
 void applyPlaceholderReplacement(std::vector<std::string>& cmd, std::string hexPath, std::string iniPath, std::string listString, std::string listPath, std::string jsonString, std::string jsonPath);
 
 void addTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::vector<std::string>>& tableData,
-    const std::string& packagePath, const size_t& columnOffset=160, const size_t& tableStartGap=20, const size_t& tableEndGap=3, const size_t& tableSpacing=0, const std::string& tableAlignment=RIGHT_STR, const bool& hideTableBackground = false) {
+    const std::string& packagePath, const size_t& columnOffset=160, const size_t& tableStartGap=20, const size_t& tableEndGap=3, const size_t& tableSpacing=0, const std::string& tableSectionTextColor=DEFAULT_STR, const std::string& tableInfoTextColor=DEFAULT_STR, const std::string& tableAlignment=RIGHT_STR, const bool& hideTableBackground = false) {
 
     //std::string sectionString, infoString;
     std::vector<std::string> sectionLines, infoLines;
@@ -383,7 +402,7 @@ void addTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::vector<std
     // seperate sectionString and info string.  the sections will be on the left side of the "=", the info will be on the right side of the "=" within the string.  the end of an entry will be met with a newline (except for the very last entry). 
     // sectionString and infoString will each have equal newlines (denoting )
 
-    drawTable(list, sectionLines, infoLines, columnOffset, tableStartGap, tableEndGap, tableSpacing, tableAlignment, hideTableBackground);
+    drawTable(list, sectionLines, infoLines, columnOffset, tableStartGap, tableEndGap, tableSpacing, tableSectionTextColor, tableInfoTextColor, tableAlignment, hideTableBackground);
 }
 
 

@@ -38,7 +38,7 @@ static bool returningToHiddenMain = false;
 static bool returningToSettings = false;
 static bool returningToPackage = false;
 static bool returningToSubPackage = false;
-static bool inMainMenu = false;
+//static bool inMainMenu = false; // moved to libtesla
 static bool inHiddenMode = false;
 static bool inSettingsMenu = false;
 static bool inSubSettingsMenu = false;
@@ -48,7 +48,7 @@ static bool inScriptMenu = false;
 static bool inSelectionMenu = false;
 //static bool currentMenuLoaded = true;
 static bool freshSpawn = true;
-//static bool refreshGui = false; (moved)
+//static bool refreshGui = false; //moved to libtesla
 static bool reloadMenu = false;
 static bool reloadMenu2 = false;
 static bool reloadMenu3 = false;
@@ -73,6 +73,8 @@ static const std::string ALIGNMENT_PATTERN = ";alignment=";
 static const std::string GAP_PATTERN =";gap=";
 static const std::string OFFSET_PATTERN = ";offset=";
 static const std::string SPACING_PATTERN = ";spacing=";
+static const std::string INFO_TEXT_COLOR_PATTERN = ";info_text_color=";
+static const std::string SECTION_TEXT_COLOR_PATTERN = ";section_text_color=";
 
 // Trackbar option patterns
 static const std::string MIN_VALUE_PATTERN = ";min_value=";
@@ -131,6 +133,8 @@ struct CommandOptions {
     size_t& tableEndGap;
     size_t& tableColumnOffset;
     size_t& tableSpacing;
+    std::string& tableSectionTextColor;
+    std::string& tableInfoTextColor;
     std::string& tableAlignment;
     s16& minValue;
     s16& maxValue;
@@ -215,6 +219,12 @@ void processCommands(CommandOptions& options, CommandData& data) {
                 continue;
             } else if (options.commandName.find(SPACING_PATTERN) == 0) {
                 options.tableSpacing = std::stoi(options.commandName.substr(SPACING_PATTERN.length()));
+                continue;
+            } else if (options.commandName.find(SECTION_TEXT_COLOR_PATTERN) == 0) {
+                options.tableSectionTextColor = options.commandName.substr(SECTION_TEXT_COLOR_PATTERN.length());
+                continue;
+            } else if (options.commandName.find(INFO_TEXT_COLOR_PATTERN) == 0) {
+                options.tableInfoTextColor = options.commandName.substr(INFO_TEXT_COLOR_PATTERN.length());
                 continue;
             } else if (options.commandName.find(ALIGNMENT_PATTERN) == 0) {
                 options.tableAlignment = options.commandName.substr(ALIGNMENT_PATTERN.length());
@@ -971,6 +981,7 @@ public:
                     simulatedSelect = false;
                 }
                 if (keys & KEY_A) {
+                    inMainMenu = false;
                     tsl::changeTo<SettingsMenu>(entryName, entryMode, overlayName, PRIORITY_STR);
                     selectedListItem.reset();
                     selectedListItem = listItemPtr;
@@ -1799,7 +1810,9 @@ public:
     }
 };
 
-
+// For persistent versions and colors across nested packages (when not specified)
+std::string packageRootLayerVersion;
+std::string packageRootLayerColor;
 
 /**
  * @brief The `PackageMenu` class handles sub-menu overlay functionality.
@@ -1832,6 +1845,8 @@ public:
     ~PackageMenu() {
         if (returningToMain) {
             clearMemory();
+            packageRootLayerVersion = "";
+            packageRootLayerColor = "";
         }
     }
     
@@ -1916,13 +1931,13 @@ public:
         
         bool hideTableBackground;
         size_t tableStartGap, tableEndGap, tableColumnOffset, tableSpacing;
-        std::string tableAlignment;
+        std::string tableSectionTextColor, tableInfoTextColor, tableAlignment;
 
         // Pack variables into structs
         CommandOptions cmdOptions = {inEristaSection, inMarikoSection, usingErista, usingMariko, commandName, commandSystem,
                                   commandMode, commandGrouping, currentSection, pathPattern, sourceType, pathPatternOn,
                                   sourceTypeOn, pathPatternOff, sourceTypeOff, defaultToggleState, hideTableBackground,
-                                  tableStartGap, tableEndGap, tableColumnOffset, tableSpacing, tableAlignment,
+                                  tableStartGap, tableEndGap, tableColumnOffset, tableSpacing, tableSectionTextColor, tableInfoTextColor, tableAlignment,
                                   minValue, maxValue, units, steps, unlockedTrackbar, onEveryTick, packageSource, packagePath};
         
         CommandData cmdData = {commands, commandsOn, commandsOff, tableData};
@@ -1942,6 +1957,8 @@ public:
             tableEndGap = 3;
             tableColumnOffset = 160;
             tableSpacing = 0;
+            tableSectionTextColor = DEFAULT_STR;
+            tableInfoTextColor = DEFAULT_STR;
             tableAlignment = RIGHT_STR;
             
             // Trackbar settings
@@ -2127,7 +2144,7 @@ public:
                 
                 if (!skipSection && !skipSystem) { // for skipping the drawing of sections
                     if (commandMode == TABLE_STR) {
-                        addTable(list, tableData, this->packagePath, tableColumnOffset, tableStartGap, tableEndGap, tableSpacing, tableAlignment, hideTableBackground);
+                        addTable(list, tableData, this->packagePath, tableColumnOffset, tableStartGap, tableEndGap, tableSpacing, tableSectionTextColor, tableInfoTextColor, tableAlignment, hideTableBackground);
                         continue;
                     } else if (commandMode == TRACKBAR_STR) {
                         list->addItem(new tsl::elm::TrackBar(optionName, this->packagePath, minValue, maxValue, units, interpretAndExecuteCommands, commands, option.first, false, false, -1, unlockedTrackbar, onEveryTick));
@@ -2371,7 +2388,7 @@ public:
                                     else if (defaultToggleState == OFF_STR)
                                         footer = CAPITAL_OFF_STR;
                                 }
-
+                                
                                 toggleStateOn = (footer == CAPITAL_ON_STR);
                             }
                             
@@ -2379,12 +2396,12 @@ public:
                             
                             toggleListItem->setStateChangedListener([i, commandsOn, commandsOff, keyName = option.first, &packagePath = this->packagePath,
                                 &pathPatternOn = this->pathPatternOn, &pathPatternOff = this->pathPatternOff, listItemRaw = toggleListItem.get()](bool state) {
-
+                                
                                 tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemRaw, tsl::FocusDirection::None);
                                 interpretAndExecuteCommands(state ? getSourceReplacement(commandsOn, preprocessPath(pathPatternOn, packagePath), i, packagePath) :
                                     getSourceReplacement(commandsOff, preprocessPath(pathPatternOff, packagePath), i, packagePath), packagePath, keyName);
                                 setIniFileValue((packagePath + CONFIG_FILENAME).c_str(), keyName.c_str(), FOOTER_STR, state ? CAPITAL_ON_STR : CAPITAL_OFF_STR);
-
+                                
                             });
                             list->addItem(toggleListItem.release());
                         }
@@ -2394,8 +2411,18 @@ public:
         }
         
         options.clear();
-
-
+        
+        if (nestedLayer == 0) {
+            if (!packageHeader.version.empty())
+                packageRootLayerVersion = packageHeader.version;
+            if (!packageHeader.color.empty())
+                packageRootLayerColor = packageHeader.color;
+        }
+        if (packageHeader.version.empty())
+            packageHeader.version = packageRootLayerVersion;
+        if (packageHeader.color.empty())
+            packageHeader.color = packageRootLayerColor;
+        
         std::unique_ptr<tsl::elm::OverlayFrame> rootFrame = std::make_unique<tsl::elm::OverlayFrame>(
             getNameFromPath(packagePath),
             packageHeader.version != "" ? packageHeader.version + "   (Ultrahand Package)" : "Ultrahand Package",
@@ -2404,9 +2431,9 @@ public:
             (usingPages && currentPage == RIGHT_STR) ? pageLeftName : "",
             (usingPages && currentPage == LEFT_STR) ? pageRightName : ""
         );
-
+        
         rootFrame->setContent(list.release());
-
+        
         return rootFrame.release();
     }
     
@@ -2459,7 +2486,7 @@ public:
                 lastSelectedListItem.reset();
                 tsl::changeTo<PackageMenu>(lastPackagePath, lastDropdownSection, lastPage, lastPackageName, lastNestedLayer);
             };
-
+            
             if (inPackageMenu) {
                 handleMenuTransition();
                 inPackageMenu = true;
@@ -2469,13 +2496,13 @@ public:
                 inSubPackageMenu = true;
             }
         }
-
+        
         if (usingPages) {
             if (simulatedMenu && !simulatedMenuComplete) {
                 simulatedMenu = false;
                 simulatedMenuComplete = true;
             }
-
+            
             if (simulatedNextPage && !simulatedNextPageComplete) {
                 if (currentPage == LEFT_STR) {
                     keysHeld |= KEY_DRIGHT;
@@ -2525,12 +2552,12 @@ public:
                 simulatedMenu = false;
                 simulatedMenuComplete = true;
             }
-
+            
             if (simulatedNextPage && !simulatedNextPageComplete) {
                 simulatedNextPage = false;
                 simulatedNextPageComplete = true;
             }
-
+            
             if (!usingPages || (usingPages && lastPage == LEFT_STR)) {
                 if (simulatedBack && !simulatedBackComplete) {
                     keysHeld |= KEY_B;
@@ -2559,7 +2586,7 @@ public:
                     
                     // Free-up memory
                     clearMemory();
-
+                    
                     tsl::goBack();
                     simulatedBackComplete = true;
                     return true;
@@ -2607,12 +2634,12 @@ public:
                 simulatedMenu = false;
                 simulatedMenuComplete = true;
             }
-
+            
             if (simulatedNextPage && !simulatedNextPageComplete) {
                 simulatedNextPage = false;
                 simulatedNextPageComplete = true;
             }
-
+            
             if (!usingPages || (usingPages && lastPage == LEFT_STR)) {
                 if (simulatedBack && !simulatedBackComplete) {
                     keysHeld |= KEY_B;
@@ -2640,7 +2667,7 @@ public:
                     lastMenu = "packageMenu";
                     //tsl::goBack();
                     tsl::goBack();
-
+                    
                     simulatedBackComplete = true;
                     return true;
                 }
@@ -2669,7 +2696,7 @@ public:
                 lastPackageName = PACKAGE_FILENAME;
             }
         }
-
+        
         if (triggerExit.load(std::memory_order_acquire)) {
             triggerExit.store(false, std::memory_order_release);
             tsl::Overlay::get()->close();
@@ -2705,7 +2732,8 @@ public:
      *
      * Initializes a new instance of the `MainMenu` class with the necessary parameters.
      */
-    MainMenu(const std::string& hiddenMenuMode = "", const std::string& sectionName = "") : hiddenMenuMode(hiddenMenuMode), dropdownSection(sectionName) {}
+    MainMenu(const std::string& hiddenMenuMode = "", const std::string& sectionName = "") : hiddenMenuMode(hiddenMenuMode), dropdownSection(sectionName) {
+    }
     /**
      * @brief Destroys the `MainMenu` instance.
      *
@@ -2729,8 +2757,10 @@ public:
             setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_OVERLAY_STR, FALSE_STR);
         }
 
-        if (!inHiddenMode)
+        if (!inHiddenMode && dropdownSection.empty())
             inMainMenu = true;
+        else
+            inMainMenu = false;
         
         tsl::hlp::ini::IniData settingsData, packageConfigData;
         std::string packagePath, pathReplace, pathReplaceOn, pathReplaceOff;
@@ -2839,6 +2869,8 @@ public:
         
         // Overlays menu
         if (menuMode == OVERLAYS_STR) {
+            inOverlaysPage = true;
+            inPackagesPage = false;
             //closeInterpreterThread();
 
             list->addItem(new tsl::elm::CategoryHeader(!inHiddenMode ? OVERLAYS : HIDDEN_OVERLAYS));
@@ -3100,7 +3132,8 @@ public:
         
         // Packages menu
         if (menuMode == PACKAGES_STR ) {
-            
+            inOverlaysPage = false;
+            inPackagesPage = true;
 
             if (dropdownSection.empty()) {
                 // Create the directory if it doesn't exist
@@ -3279,7 +3312,7 @@ public:
                                     reloadMenu2 = true;
                                 }
                                 refreshGui = true;
-                                
+
                                 //tsl::changeTo<MainMenu>(hiddenMenuMode);
                                 return true;
                             } else if (keys & SETTINGS_KEY) {
@@ -3373,7 +3406,7 @@ public:
 
                 bool hideTableBackground;
                 size_t tableStartGap, tableEndGap, tableColumnOffset, tableSpacing;
-                std::string tableAlignment;
+                std::string tableSectionTextColor, tableInfoTextColor, tableAlignment;
                 
                 s16 minValue;
                 s16 maxValue;
@@ -3388,7 +3421,7 @@ public:
                 CommandOptions cmdOptions = {inEristaSection, inMarikoSection, usingErista, usingMariko, commandName, commandSystem,
                                           commandMode, commandGrouping, currentSection, pathPattern, sourceType, pathPatternOn,
                                           sourceTypeOn, pathPatternOff, sourceTypeOff, defaultToggleState, hideTableBackground,
-                                          tableStartGap, tableEndGap, tableColumnOffset, tableSpacing, tableAlignment,
+                                          tableStartGap, tableEndGap, tableColumnOffset, tableSpacing, tableSectionTextColor, tableInfoTextColor, tableAlignment,
                                           minValue, maxValue, units, steps, unlockedTrackbar, onEveryTick, packageSource, packagePath};
                 
                 CommandData cmdData = {commands, commandsOn, commandsOff, tableData};
@@ -3407,6 +3440,8 @@ public:
                     tableEndGap = 3;
                     tableColumnOffset = 160;
                     tableSpacing = 0;
+                    tableSectionTextColor = DEFAULT_STR;
+                    tableInfoTextColor = DEFAULT_STR;
                     tableAlignment = RIGHT_STR;
                     
                     minValue = 0;
@@ -3549,7 +3584,7 @@ public:
                     
                     if (!skipSection && !skipSystem) {
                         if (commandMode == TABLE_STR) {
-                            addTable(list, tableData, packagePath, tableColumnOffset, tableStartGap, tableEndGap, tableSpacing, tableAlignment, hideTableBackground);
+                            addTable(list, tableData, packagePath, tableColumnOffset, tableStartGap, tableEndGap, tableSpacing, tableSectionTextColor, tableInfoTextColor, tableAlignment, hideTableBackground);
                             continue;
                         } else if (commandMode == TRACKBAR_STR) {
                             list->addItem(new tsl::elm::TrackBar(optionName, packagePath, minValue, maxValue, units, interpretAndExecuteCommands, commands, option.first, false, false, -1, unlockedTrackbar, onEveryTick));
@@ -3902,6 +3937,7 @@ public:
                 }
 
                 if ((keysHeld & SYSTEM_SETTINGS_KEY) && !stillTouching) {
+                    inMainMenu = false;
                     tsl::changeTo<UltrahandSettingsMenu>();
                     //if (menuMode != PACKAGES_STR) startInterpreterThread();
                     
