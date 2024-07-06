@@ -70,7 +70,11 @@ inline std::string trim(const std::string& str) {
     return str.substr(first, last - first + 1);
 }
 
-
+// Function to trim newline characters from the end of a string
+inline std::string trimNewline(const std::string &str) {
+    size_t end = str.find_last_not_of("\n");
+    return (end == std::string::npos) ? "" : str.substr(0, end + 1);
+}
 
 /**
  * @brief Removes all white spaces from a string.
