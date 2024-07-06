@@ -572,6 +572,7 @@ public:
         inSettingsMenu = dropdownSelection.empty();
         inSubSettingsMenu = !dropdownSelection.empty();
         
+        const std::vector<std::string> defaultLanguagesRepresentation = {ENGLISH, SPANISH, FRENCH, GERMAN, JAPANESE, KOREAN, ITALIAN, DUTCH, PORTUGUESE, RUSSIAN, SIMPLIFIED_CHINESE, TRADITIONAL_CHINESE};
         const std::vector<std::string> defaultLanguages = {"en", "es", "fr", "de", "ja", "ko", "it", "nl", "pt", "ru", "zh-cn", "zh-tw"};
         const std::vector<std::string> defaultCombos = {"ZL+ZR+DDOWN", "ZL+ZR+DRIGHT", "ZL+ZR+DUP", "ZL+ZR+DLEFT", "L+R+DDOWN", "L+R+DRIGHT", "L+R+DUP", "L+R+DLEFT", "L+DDOWN", "R+DDOWN", "ZL+ZR+PLUS", "L+R+PLUS", "ZL+PLUS", "ZR+PLUS", "MINUS+PLUS", "LS+RS", "L+DDOWN+RS"};
         
@@ -604,10 +605,12 @@ public:
         } else if (dropdownSelection == "languageMenu") {
             list->addItem(new tsl::elm::CategoryHeader(LANGUAGE));
             std::string defaulLang = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, DEFAULT_LANG_STR);
+            size_t index = 0;
             for (const auto& defaultLangMode : defaultLanguages) {
                 std::string langFile = LANG_PATH + defaultLangMode + ".json";
                 if (defaultLangMode != "en" && !isFileOrDirectory(langFile)) continue;
-                auto listItem = std::make_unique<tsl::elm::ListItem>(defaultLangMode);
+                auto listItem = std::make_unique<tsl::elm::ListItem>(defaultLanguagesRepresentation[index]);
+                listItem->setValue(defaultLangMode);
                 if (defaultLangMode == defaulLang) {
                     listItem->setValue(CHECKMARK_SYMBOL);
                     lastSelectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){});
@@ -636,6 +639,7 @@ public:
                     return false;
                 });
                 list->addItem(listItem.release());
+                index++;
             }
         } else if (dropdownSelection == "softwareUpdateMenu") {
             list->addItem(new tsl::elm::CategoryHeader(SOFTWARE_UPDATE));
