@@ -206,6 +206,18 @@ const std::string blackColor = "#000000";
 constexpr float M_PI = 3.14159265358979323846;
 constexpr float RAD_TO_DEG = 180.0f / M_PI;
 
+static std::string ENGLISH = "English";
+static std::string SPANISH = "Spanish";
+static std::string FRENCH = "French";
+static std::string GERMAN = "German";
+static std::string JAPANESE = "Japanese";
+static std::string KOREAN = "Korean";
+static std::string ITALIAN = "Italian";
+static std::string DUTCH = "Dutch";
+static std::string PORTUGUESE = "Portuguese";
+static std::string RUSSIAN = "Russian";
+static std::string SIMPLIFIED_CHINESE = "Simplified Chinese";
+static std::string TRADITIONAL_CHINESE = "Traditional Chinese";
 static std::string DEFAULT_CHAR_WIDTH = "0.33";
 static std::string UNAVAILABLE_SELECTION = "Not available";
 static std::string OVERLAYS = "Overlays"; //defined in libTesla now
@@ -316,6 +328,18 @@ static std::string DEC = "Dec";
 
 // Constant string definitions (English)
 void reinitializeLangVars() {
+    ENGLISH = "English";
+    SPANISH = "Spanish";
+    FRENCH = "French";
+    GERMAN = "German";
+    JAPANESE = "Japanese";
+    KOREAN = "Korean";
+    ITALIAN = "Italian";
+    DUTCH = "Dutch";
+    PORTUGUESE = "Portuguese";
+    RUSSIAN = "Russian";
+    SIMPLIFIED_CHINESE = "Simplified Chinese";
+    TRADITIONAL_CHINESE = "Traditional Chinese";
     DEFAULT_CHAR_WIDTH = "0.33";
     UNAVAILABLE_SELECTION = "Not available";
     OVERLAYS = "Overlays"; //defined in libTesla now
@@ -442,6 +466,18 @@ void parseLanguage(std::string langFile) {
         return;
     
     std::map<std::string, std::string*> configMap = {
+        {"ENGLISH", &ENGLISH},
+        {"SPANISH", &SPANISH},
+        {"FRENCH", &FRENCH},
+        {"GERMAN", &GERMAN},
+        {"JAPANESE", &JAPANESE},
+        {"KOREAN", &KOREAN},
+        {"ITALIAN", &ITALIAN},
+        {"DUTCH", &DUTCH},
+        {"PORTUGUESE", &PORTUGUESE},
+        {"RUSSIAN", &RUSSIAN},
+        {"SIMPLIFIED_CHINESE", &SIMPLIFIED_CHINESE},
+        {"TRADITIONAL_CHINESE", &TRADITIONAL_CHINESE},
         {"DEFAULT_CHAR_WIDTH", &DEFAULT_CHAR_WIDTH},
         {"UNAVAILABLE_SELECTION", &UNAVAILABLE_SELECTION},
         {"OVERLAYS", &OVERLAYS},
