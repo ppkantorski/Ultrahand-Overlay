@@ -277,13 +277,13 @@ void processCommands(CommandOptions& options, CommandData& data) {
             if (cmd.size() > 1) {
                 if (options.commandName == "file_source") {
                     if (options.currentSection == GLOBAL_STR) {
-                        options.pathPattern = cmd[1];
+                        options.pathPattern = preprocessPath(cmd[1], options.packagePath);
                         options.sourceType = FILE_STR;
                     } else if (options.currentSection == ON_STR) {
-                        options.pathPatternOn = cmd[1];
+                        options.pathPatternOn = preprocessPath(cmd[1], options.packagePath);
                         options.sourceTypeOn = FILE_STR;
                     } else if (options.currentSection == OFF_STR) {
-                        options.pathPatternOff = cmd[1];
+                        options.pathPatternOff = preprocessPath(cmd[1], options.packagePath);
                         options.sourceTypeOff = FILE_STR;
                     }
                 } else if (options.commandName == "package_source") {
@@ -573,7 +573,7 @@ public:
         inSubSettingsMenu = !dropdownSelection.empty();
         
         const std::vector<std::string> defaultLanguages = {"en", "es", "fr", "de", "ja", "ko", "it", "nl", "pt", "ru", "zh-cn", "zh-tw"};
-        const std::vector<std::string> defaultCombos = {"ZL+ZR+DDOWN", "ZL+ZR+DRIGHT", "ZL+ZR+DUP", "ZL+ZR+DLEFT", "L+R+DDOWN", "L+R+DRIGHT", "L+R+DUP", "L+R+DLEFT", "L+DDOWN", "R+DDOWN", "ZL+ZR+PLUS", "L+R+PLUS", "ZL+PLUS", "ZR+PLUS", "MINUS+PLUS", "L+DDOWN+RS"};
+        const std::vector<std::string> defaultCombos = {"ZL+ZR+DDOWN", "ZL+ZR+DRIGHT", "ZL+ZR+DUP", "ZL+ZR+DLEFT", "L+R+DDOWN", "L+R+DRIGHT", "L+R+DUP", "L+R+DLEFT", "L+DDOWN", "R+DDOWN", "ZL+ZR+PLUS", "L+R+PLUS", "ZL+PLUS", "ZR+PLUS", "MINUS+PLUS", "LS+RS", "L+DDOWN+RS"};
         
         auto list = std::make_unique<tsl::elm::List>();
         
@@ -1341,6 +1341,10 @@ private:
     
     std::string lastSelectedListItemFooter = "";
 
+    // For handling on/off file_source toggle states
+    std::unordered_map<int, std::string> currentSelectedItems;
+    std::unordered_map<int, bool> isInitialized;
+
     // Variables moved from createUI to class scope
     std::vector<std::string> filesList, filesListOn, filesListOff;
     std::vector<std::string> filterList, filterListOn, filterListOff;
@@ -1418,23 +1422,26 @@ public:
                 if (cmd.size() > 1) {
                     if (commandName == "filter") {
                         if (currentSection == GLOBAL_STR)
-                            filterList.push_back(std::move(cmd[1]));
+                            filterList.push_back(std::move(preprocessPath(cmd[1], filePath)));
                         else if (currentSection == ON_STR)
-                            filterListOn.push_back(std::move(cmd[1]));
+                            filterListOn.push_back(std::move(preprocessPath(cmd[1], filePath)));
                         else if (currentSection == OFF_STR)
-                            filterListOff.push_back(std::move(cmd[1]));
+                            filterListOff.push_back(std::move(preprocessPath(cmd[1], filePath)));
                     } else if (commandName == "file_source") {
                         sourceType = FILE_STR;
                         if (currentSection == GLOBAL_STR) {
-                            pathPattern = cmd[1];
-                            filesList = getFilesListByWildcards(pathPattern);
+                            pathPattern = preprocessPath(cmd[1], filePath);
+                            std::vector<std::string> newFiles = getFilesListByWildcards(pathPattern);
+                            filesList.insert(filesList.end(), newFiles.begin(), newFiles.end()); // Append new files
                         } else if (currentSection == ON_STR) {
-                            pathPatternOn = cmd[1];
-                            filesListOn = getFilesListByWildcards(pathPatternOn);
+                            pathPatternOn = preprocessPath(cmd[1], filePath);
+                            std::vector<std::string> newFilesOn = getFilesListByWildcards(pathPatternOn);
+                            filesListOn.insert(filesListOn.end(), newFilesOn.begin(), newFilesOn.end()); // Append new files
                             sourceTypeOn = FILE_STR;
                         } else if (currentSection == OFF_STR) {
-                            pathPatternOff = cmd[1];
-                            filesListOff = getFilesListByWildcards(pathPatternOff);
+                            pathPatternOff = preprocessPath(cmd[1], filePath);
+                            std::vector<std::string> newFilesOff = getFilesListByWildcards(pathPatternOff);
+                            filesListOff.insert(filesListOff.end(), newFilesOff.begin(), newFilesOff.end()); // Append new files
                             sourceTypeOff = FILE_STR;
                         }
                     } else if (commandName == "json_file_source") {
@@ -1524,6 +1531,7 @@ public:
                 jsonPath.clear();
                 jsonString.clear();
             }
+
         } else if (commandMode == TOGGLE_STR) {
             if (sourceTypeOn == FILE_STR)
                 selectedItemsListOn = std::move(filesListOn);
@@ -1555,17 +1563,18 @@ public:
             selectedItemsList.insert(selectedItemsList.end(), selectedItemsListOn.begin(), selectedItemsListOn.end());
             selectedItemsList.insert(selectedItemsList.end(), selectedItemsListOff.begin(), selectedItemsListOff.end());
 
-            if (sourceType == FILE_STR && (commandGrouping == "split" || commandGrouping == "split2" || commandGrouping == "split3" || commandGrouping == "split4")) {
-                std::sort(selectedItemsList.begin(), selectedItemsList.end(), [](const std::string& a, const std::string& b) {
-                    const std::string& parentDirA = getParentDirNameFromPath(a);
-                    const std::string& parentDirB = getParentDirNameFromPath(b);
-                    return (parentDirA != parentDirB) ? (parentDirA < parentDirB) : (getNameFromPath(a) < getNameFromPath(b));
-                });
-            } else {
-                std::sort(selectedItemsList.begin(), selectedItemsList.end(), [](const std::string& a, const std::string& b) {
-                    return getNameFromPath(a) < getNameFromPath(b);
-                });
-            }
+        }
+
+        if ((sourceType == FILE_STR) && (commandGrouping == "split2" || commandGrouping == "split4")) {
+            std::sort(selectedItemsList.begin(), selectedItemsList.end(), [](const std::string& a, const std::string& b) {
+                const std::string& parentDirA = getParentDirNameFromPath(a);
+                const std::string& parentDirB = getParentDirNameFromPath(b);
+                return (parentDirA != parentDirB) ? (parentDirA < parentDirB) : (getNameFromPath(a) < getNameFromPath(b));
+            });
+        } else {
+            std::sort(selectedItemsList.begin(), selectedItemsList.end(), [](const std::string& a, const std::string& b) {
+                return getNameFromPath(a) < getNameFromPath(b);
+            });
         }
 
         filterItemsList(filterList, selectedItemsList);
@@ -1582,6 +1591,8 @@ public:
         //bool toggleStateOn;
 
         if (selectedItemsList.empty()) {
+            if (commandGrouping != DEFAULT_STR)
+                list->addItem(new tsl::elm::CategoryHeader(removeTag(specificKey.substr(1))));
             listItem = std::make_unique<tsl::elm::ListItem>(EMPTY);
             list->addItem(listItem.release());
         }
@@ -1721,12 +1732,35 @@ public:
                 bool toggleStateOn = std::find(selectedItemsListOn.begin(), selectedItemsListOn.end(), selectedItem) != selectedItemsListOn.end();
                 toggleListItem->setState(toggleStateOn);
 
-                toggleListItem->setStateChangedListener([&commandsOn = this->commandsOn, &commandsOff = this->commandsOff, &filePath = this->filePath,
-                    &specificKey = this->specificKey, i, selectedItem, listItemRaw = toggleListItem.get()](bool state) {
-
+                toggleListItem->setStateChangedListener([this, i, selectedItem, listItemRaw = toggleListItem.get(), sourceType = sourceType](bool state) {
+                
+                    // Initialize currentSelectedItem for this index if it does not exist
+                    if (isInitialized.find(i) == isInitialized.end() || !isInitialized[i]) {
+                        currentSelectedItems[i] = selectedItem;
+                        isInitialized[i] = true;
+                    }
+                    
                     tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemRaw, tsl::FocusDirection::None);
-                    interpretAndExecuteCommands(getSourceReplacement(!state ? commandsOn : commandsOff, selectedItem, i, filePath), filePath, specificKey);
+
+                    auto modifiedCmds = getSourceReplacement(!state ? commandsOn : commandsOff, currentSelectedItems[i], i, filePath);
+                    auto modifiedCmdsCopy = modifiedCmds;
+                    interpretAndExecuteCommands(std::move(modifiedCmdsCopy), filePath, specificKey);
+                
+                    if (sourceType == FILE_STR) {
+                        // Find the move command and extract the destination path
+                        for (const auto& cmd : modifiedCmds) {
+                            if (cmd.size() > 2 && cmd[0] == "move") {
+                                // Extract the destination directory from the move command
+                                std::string moveToDir = cmd[2];
+                                // Update currentSelectedItem for this index to be the move to directory
+                                currentSelectedItems[i] = moveToDir;
+                                break; // Assuming there's only one move command at the end
+                            }
+                        }
+                    }
                 });
+
+
                 list->addItem(toggleListItem.release());
             }
         }
@@ -4048,6 +4082,23 @@ public:
         ASSERT_FATAL(smInitialize());
         tsl::initializeThemeVars();
         initializeCurl();
+
+        // read commands from root package's boot_package.ini
+        if (isFileOrDirectory(PACKAGE_PATH+BOOT_PACKAGE_FILENAME)) {
+            std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> bootOptions = loadOptionsFromIni(PACKAGE_PATH+BOOT_PACKAGE_FILENAME, true);
+            if (bootOptions.size() > 0) {
+                std::string bootOptionName;
+                for (auto& bootOption:bootOptions) {
+                    bootOptionName = bootOption.first;
+                    auto& bootCommands = bootOption.second;
+                    if (bootOptionName == "boot") {
+                        interpretAndExecuteCommands(std::move(bootCommands), PACKAGE_PATH, bootOptionName); // Execute modified
+                        break;
+                    }
+                }
+                bootOptions.clear();
+            }
+        }
     }
     
     /**
