@@ -1565,16 +1565,18 @@ public:
 
         }
 
-        if ((sourceType == FILE_STR) && (commandGrouping == "split2" || commandGrouping == "split4")) {
-            std::sort(selectedItemsList.begin(), selectedItemsList.end(), [](const std::string& a, const std::string& b) {
-                const std::string& parentDirA = getParentDirNameFromPath(a);
-                const std::string& parentDirB = getParentDirNameFromPath(b);
-                return (parentDirA != parentDirB) ? (parentDirA < parentDirB) : (getNameFromPath(a) < getNameFromPath(b));
-            });
-        } else {
-            std::sort(selectedItemsList.begin(), selectedItemsList.end(), [](const std::string& a, const std::string& b) {
-                return getNameFromPath(a) < getNameFromPath(b);
-            });
+        if (sourceType == FILE_STR) {
+            if ( (commandGrouping == "split2" || commandGrouping == "split4")) {
+                std::sort(selectedItemsList.begin(), selectedItemsList.end(), [](const std::string& a, const std::string& b) {
+                    const std::string& parentDirA = getParentDirNameFromPath(a);
+                    const std::string& parentDirB = getParentDirNameFromPath(b);
+                    return (parentDirA != parentDirB) ? (parentDirA < parentDirB) : (getNameFromPath(a) < getNameFromPath(b));
+                });
+            } else {
+                std::sort(selectedItemsList.begin(), selectedItemsList.end(), [](const std::string& a, const std::string& b) {
+                    return getNameFromPath(a) < getNameFromPath(b);
+                });
+            }
         }
 
         filterItemsList(filterList, selectedItemsList);
