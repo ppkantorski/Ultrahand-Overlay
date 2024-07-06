@@ -421,6 +421,7 @@ private:
     std::string languagesVersion = APP_VERSION;
     int MAX_PRIORITY = 20;
     std::string comboLabel;
+    std::string lastSelectedListItemFooter = "";
 
     void addToggleListItem(std::unique_ptr<tsl::elm::List>& list, const std::string& title, bool state, const std::string& key) {
         auto toggleListItem = std::make_unique<tsl::elm::ToggleListItem>(title, state, ON, OFF);
@@ -612,10 +613,11 @@ public:
                 auto listItem = std::make_unique<tsl::elm::ListItem>(defaultLanguagesRepresentation[index]);
                 listItem->setValue(defaultLangMode);
                 if (defaultLangMode == defaulLang) {
+                    lastSelectedListItemFooter = defaultLangMode;
                     listItem->setValue(CHECKMARK_SYMBOL);
                     lastSelectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){});
                 }
-                listItem->setClickListener([skipLang = !isFileOrDirectory(langFile), defaultLangMode, defaulLang, langFile,
+                listItem->setClickListener([this, skipLang = !isFileOrDirectory(langFile), defaultLangMode, defaulLang, langFile,
                     listItemPtr = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){})](uint64_t keys) {
                     if (runningInterpreter.load(std::memory_order_acquire)) return false;
                     if (simulatedSelect && !simulatedSelectComplete) {
@@ -628,12 +630,13 @@ public:
                         reloadMenu = reloadMenu2 = true;
                         parseLanguage(langFile);
                         if (skipLang) reinitializeLangVars();
-                        lastSelectedListItem->setValue("");
+                        lastSelectedListItem->setValue(lastSelectedListItemFooter);
                         selectedListItem->setValue(defaultLangMode);
                         listItemPtr->setValue(CHECKMARK_SYMBOL);
                         lastSelectedListItem = listItemPtr;
                         simulatedSelectComplete = true;
                         lastSelectedListItem->triggerClickAnimation();
+                        lastSelectedListItemFooter = defaultLangMode;
                         return true;
                     }
                     return false;
