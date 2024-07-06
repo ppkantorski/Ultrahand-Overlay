@@ -77,10 +77,18 @@ CXXFLAGS := $(CFLAGS) -std=c++20 -Wno-dangling-else
 ASFLAGS := $(ARCH)
 LDFLAGS += -specs=$(DEVKITPRO)/libnx/switch.specs $(ARCH) -Wl,-Map,$(notdir $*.map)
 
-LIBS := -lcurl -lz -lzzip -lmbedtls -lmbedx509 -lmbedcrypto -ljansson -lnx 
+LIBS := -lcurl -lz -lzzip -lmbedtls -lmbedx509 -lmbedcrypto -ljansson -lnx
 
 CXXFLAGS += -fno-exceptions -ffunction-sections -fdata-sections -fno-rtti
 LDFLAGS += -Wl,--gc-sections -Wl,--as-needed
+
+# For Ensuring Parallel LTRANS Jobs w/ GCC, make -j6
+CXXFLAGS += -flto -fuse-linker-plugin -flto=6
+LDFLAGS += -flto=6
+
+# For Ensuring Parallel LTRANS Jobs w/ Clang, make -j6
+#CXXFLAGS += -flto -flto-jobs=6
+#LDFLAGS += -flto-jobs=6
 
 #---------------------------------------------------------------------------------
 # list of directories containing libraries, this must be the top level containing
