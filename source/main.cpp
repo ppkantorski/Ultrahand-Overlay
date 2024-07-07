@@ -1385,6 +1385,7 @@ public:
         bool inEristaSection = false;
         bool inMarikoSection = false;
         std::string currentSection = GLOBAL_STR;
+        std::string iniFilePath;
 
         for (const auto& cmd : commands) {
             std::string commandName = cmd[0];
@@ -1430,26 +1431,31 @@ public:
                 }
 
                 if (cmd.size() > 1) {
-                    if (commandName == "filter") {
+                    if (commandName == "ini_file") {
+                        iniFilePath = preprocessPath(cmd[1], filePath);
+                        continue;
+                    } else if (commandName == "filter") {
                         if (currentSection == GLOBAL_STR)
-                            filterList.push_back(std::move(preprocessPath(cmd[1], filePath)));
+                            filterList.push_back(std::move(preprocessPath(replaceIniPlaceholder(cmd[1],iniFilePath), filePath)));
                         else if (currentSection == ON_STR)
-                            filterListOn.push_back(std::move(preprocessPath(cmd[1], filePath)));
+                            filterListOn.push_back(std::move(preprocessPath(replaceIniPlaceholder(cmd[1],iniFilePath), filePath)));
                         else if (currentSection == OFF_STR)
-                            filterListOff.push_back(std::move(preprocessPath(cmd[1], filePath)));
+                            filterListOff.push_back(std::move(preprocessPath(replaceIniPlaceholder(cmd[1],iniFilePath), filePath)));
                     } else if (commandName == "file_source") {
                         sourceType = FILE_STR;
                         if (currentSection == GLOBAL_STR) {
-                            pathPattern = preprocessPath(cmd[1], filePath);
+                            logMessage("cmd[1]: "+cmd[1]);
+                            pathPattern = preprocessPath(replaceIniPlaceholder(cmd[1],iniFilePath), filePath);
+                            logMessage("pathPattern: "+pathPattern);
                             std::vector<std::string> newFiles = getFilesListByWildcards(pathPattern);
                             filesList.insert(filesList.end(), newFiles.begin(), newFiles.end()); // Append new files
                         } else if (currentSection == ON_STR) {
-                            pathPatternOn = preprocessPath(cmd[1], filePath);
+                            pathPatternOn = preprocessPath(replaceIniPlaceholder(cmd[1],iniFilePath), filePath);
                             std::vector<std::string> newFilesOn = getFilesListByWildcards(pathPatternOn);
                             filesListOn.insert(filesListOn.end(), newFilesOn.begin(), newFilesOn.end()); // Append new files
                             sourceTypeOn = FILE_STR;
                         } else if (currentSection == OFF_STR) {
-                            pathPatternOff = preprocessPath(cmd[1], filePath);
+                            pathPatternOff = preprocessPath(replaceIniPlaceholder(cmd[1],iniFilePath), filePath);
                             std::vector<std::string> newFilesOff = getFilesListByWildcards(pathPatternOff);
                             filesListOff.insert(filesListOff.end(), newFilesOff.begin(), newFilesOff.end()); // Append new files
                             sourceTypeOff = FILE_STR;
@@ -1457,16 +1463,16 @@ public:
                     } else if (commandName == "json_file_source") {
                         sourceType = JSON_FILE_STR;
                         if (currentSection == GLOBAL_STR) {
-                            jsonPath = preprocessPath(cmd[1], filePath);
+                            jsonPath = preprocessPath(replaceIniPlaceholder(cmd[1],iniFilePath), filePath);
                             if (cmd.size() > 2)
                                 jsonKey = cmd[2];
                         } else if (currentSection == ON_STR) {
-                            jsonPathOn = preprocessPath(cmd[1], filePath);
+                            jsonPathOn = preprocessPath(replaceIniPlaceholder(cmd[1],iniFilePath), filePath);
                             sourceTypeOn = JSON_FILE_STR;
                             if (cmd.size() > 2)
                                 jsonKeyOn = cmd[2];
                         } else if (currentSection == OFF_STR) {
-                            jsonPathOff = preprocessPath(cmd[1], filePath);
+                            jsonPathOff = preprocessPath(replaceIniPlaceholder(cmd[1],iniFilePath), filePath);
                             sourceTypeOff = JSON_FILE_STR;
                             if (cmd.size() > 2)
                                 jsonKeyOff = cmd[2];
@@ -1474,12 +1480,12 @@ public:
                     } else if (commandName == "list_file_source") {
                         sourceType = LIST_FILE_STR;
                         if (currentSection == GLOBAL_STR) {
-                            listPath = preprocessPath(cmd[1], filePath);
+                            listPath = preprocessPath(replaceIniPlaceholder(cmd[1],iniFilePath), filePath);
                         } else if (currentSection == ON_STR) {
-                            listPathOn = preprocessPath(cmd[1], filePath);
+                            listPathOn = preprocessPath(replaceIniPlaceholder(cmd[1],iniFilePath), filePath);
                             sourceTypeOn = LIST_FILE_STR;
                         } else if (currentSection == OFF_STR) {
-                            listPathOff = preprocessPath(cmd[1], filePath);
+                            listPathOff = preprocessPath(replaceIniPlaceholder(cmd[1],iniFilePath), filePath);
                             sourceTypeOff = LIST_FILE_STR;
                         }
                     } else if (commandName == "list_source") {
