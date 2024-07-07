@@ -867,6 +867,7 @@ public:
 
         if (triggerExit.load(std::memory_order_acquire)) {
             triggerExit.store(false, std::memory_order_release);
+            tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
             tsl::Overlay::get()->close();
         }
 
@@ -1189,6 +1190,7 @@ public:
 
         if (triggerExit.load(std::memory_order_acquire)) {
             triggerExit.store(false, std::memory_order_release);
+            tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
             tsl::Overlay::get()->close();
         }
         
@@ -1320,6 +1322,7 @@ public:
 
         if (triggerExit.load(std::memory_order_acquire)) {
             triggerExit.store(false, std::memory_order_release);
+            tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
             tsl::Overlay::get()->close();
         }
 
@@ -1846,6 +1849,7 @@ public:
 
         if (triggerExit.load(std::memory_order_acquire)) {
             triggerExit.store(false, std::memory_order_release);
+            tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
             tsl::Overlay::get()->close();
         }
 
@@ -2742,6 +2746,7 @@ public:
         
         if (triggerExit.load(std::memory_order_acquire)) {
             triggerExit.store(false, std::memory_order_release);
+            tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
             tsl::Overlay::get()->close();
         }
         
@@ -3913,8 +3918,10 @@ public:
         }
         
         if (inMainMenu && !inHiddenMode && dropdownSection.empty()){
-            if (isDownloaded) // for handling software updates
+            if (isDownloaded) { // for handling software updates
+                tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
                 tsl::Overlay::get()->close();
+            }
             
             if (!freshSpawn && !returningToMain && !returningToHiddenMain) {
                 
@@ -3969,6 +3976,7 @@ public:
 
                 if ((keysHeld & KEY_B) && !stillTouching) {
                     allowSlide = unlockedSlide = false;
+                    tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
                     tsl::Overlay::get()->close();
                     simulatedBackComplete = true;
                     return true;
@@ -4058,6 +4066,7 @@ public:
 
         if (triggerExit.load(std::memory_order_acquire)) {
             triggerExit.store(false, std::memory_order_release);
+            tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
             tsl::Overlay::get()->close();
         }
         
@@ -4093,7 +4102,7 @@ public:
         initializeCurl();
 
         // read commands from root package's boot_package.ini
-        if (isFileOrDirectory(PACKAGE_PATH+BOOT_PACKAGE_FILENAME)) {
+        if (firstBoot && isFileOrDirectory(PACKAGE_PATH+BOOT_PACKAGE_FILENAME)) {
             std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> bootOptions = loadOptionsFromIni(PACKAGE_PATH+BOOT_PACKAGE_FILENAME, true);
             if (bootOptions.size() > 0) {
                 std::string bootOptionName;
