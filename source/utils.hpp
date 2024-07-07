@@ -813,7 +813,6 @@ inline std::string replacePlaceholder(const std::string& input, const std::strin
 
 
 
-// `{hex_file(customAsciiPattern, offsetStr, length)}`
 std::string replaceIniPlaceholder(const std::string& arg, const std::string& iniPath) {
     const std::string searchString = "{ini_file(";
     size_t startPos = arg.find(searchString);
@@ -826,7 +825,7 @@ std::string replaceIniPlaceholder(const std::string& arg, const std::string& ini
         return arg;
     }
 
-    std::string replacement = arg;  // Now we copy arg because we need to modify it
+    std::string replacement = arg;  // Copy arg because we need to modify it
 
     std::string placeholderContent = replacement.substr(startPos + searchString.length(), endPos - startPos - searchString.length());
     size_t commaPos = placeholderContent.find(',');
@@ -835,7 +834,8 @@ std::string replaceIniPlaceholder(const std::string& arg, const std::string& ini
         std::string iniKey = removeQuotes(trim(placeholderContent.substr(commaPos + 1)));
 
         std::string parsedResult = parseValueFromIniSection(iniPath, iniSection, iniKey);
-        replacement.replace(startPos, endPos - startPos + searchString.length() + 2, parsedResult);
+        // Replace the placeholder with the parsed result and keep the remaining string intact
+        replacement = replacement.substr(0, startPos) + parsedResult + replacement.substr(endPos + 2);
     }
 
     return replacement;
