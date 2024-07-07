@@ -86,6 +86,9 @@ LDFLAGS += -Wl,--gc-sections -Wl,--as-needed
 CXXFLAGS += -flto -fuse-linker-plugin -flto=6
 LDFLAGS += -flto=6
 
+# Add -z notext to LDFLAGS to allow dynamic relocations in read-only segments
+LDFLAGS += -z notext
+
 # For Ensuring Parallel LTRANS Jobs w/ Clang, make -j6
 #CXXFLAGS += -flto -flto-jobs=6
 #LDFLAGS += -flto-jobs=6
