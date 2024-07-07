@@ -69,6 +69,8 @@ static bool inMainMenu = false;
 static bool inOverlaysPage = false;
 static bool inPackagesPage = false;
 
+static bool firstBoot = true; // for detecting first boot
+
 //static std::unordered_map<std::string, std::string> hexSumCache;
 
 // Define an atomic bool for interpreter completion
@@ -6412,11 +6414,15 @@ namespace tsl {
 
 
     static void setNextOverlay(const std::string& ovlPath, std::string origArgs) {
-        
-        //std::string args = std::filesystem::path(ovlPath).filename();
+        // std::string args = std::filesystem::path(ovlPath).filename();
         std::string args = getNameFromPath(ovlPath); // CUSTOM MODIFICATION
-        args += " " + origArgs + " --skipCombo";
-        
+        args += " " + origArgs;
+    
+        // Check if "--skipCombo" is already in origArgs
+        if (origArgs.find("--skipCombo") == std::string::npos) {
+            args += " --skipCombo";
+        }
+    
         envSetNextLoad(ovlPath.c_str(), args.c_str());
     }
     
@@ -6461,6 +6467,8 @@ namespace tsl {
         for (u8 arg = 0; arg < argc; arg++) {
             if ((strcasecmp(argv[arg], "--skipCombo") == 0)) {
                 skipCombo = true;
+                //logMessage("Skip combo is present.");
+                firstBoot = false;
                 break;
             }
             //std::memset(argv[arg], 0, std::strlen(argv[arg]));
