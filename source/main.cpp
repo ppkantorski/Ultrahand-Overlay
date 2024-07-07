@@ -1491,27 +1491,27 @@ public:
                     } else if (commandName == "list_source") {
                         sourceType = LIST_STR;
                         if (currentSection == GLOBAL_STR) {
-                            listString = removeQuotes(cmd[1]);
+                            listString = removeQuotes(replaceIniPlaceholder(cmd[1],iniFilePath));
                         } else if (currentSection == ON_STR) {
-                            listStringOn = removeQuotes(cmd[1]);
+                            listStringOn = removeQuotes(replaceIniPlaceholder(cmd[1],iniFilePath));
                             sourceTypeOn = LIST_STR;
                         } else if (currentSection == OFF_STR) {
-                            listStringOff = removeQuotes(cmd[1]);
+                            listStringOff = removeQuotes(replaceIniPlaceholder(cmd[1],iniFilePath));
                             sourceTypeOff = LIST_STR;
                         }
                     } else if (commandName == "json_source") {
                         sourceType = JSON_STR;
                         if (currentSection == GLOBAL_STR) {
-                            jsonString = removeQuotes(cmd[1]);
+                            jsonString = removeQuotes(replaceIniPlaceholder(cmd[1],iniFilePath));
                             if (cmd.size() > 2)
                                 jsonKey = cmd[2];
                         } else if (currentSection == ON_STR) {
-                            jsonStringOn = removeQuotes(cmd[1]);
+                            jsonStringOn = removeQuotes(replaceIniPlaceholder(cmd[1],iniFilePath));
                             sourceTypeOn = JSON_STR;
                             if (cmd.size() > 2)
                                 jsonKeyOn = cmd[2];
                         } else if (currentSection == OFF_STR) {
-                            jsonStringOff = removeQuotes(cmd[1]);
+                            jsonStringOff = removeQuotes(replaceIniPlaceholder(cmd[1],iniFilePath));
                             sourceTypeOff = JSON_STR;
                             if (cmd.size() > 2)
                                 jsonKeyOff = cmd[2];
