@@ -6442,6 +6442,19 @@ namespace tsl {
     static inline int loop(int argc, char** argv) {
         static_assert(std::is_base_of_v<tsl::Overlay, TOverlay>, "tsl::loop expects a type derived from tsl::Overlay");
         
+        // CUSTOM SECTION START
+        // Argument parsing
+        bool skipCombo = false;
+        for (u8 arg = 0; arg < argc; arg++) {
+            if ((strcasecmp(argv[arg], "--skipCombo") == 0)) {
+                skipCombo = true;
+                //logMessage("Skip combo is present.");
+                firstBoot = false;
+                break;
+            }
+            //std::memset(argv[arg], 0, std::strlen(argv[arg]));
+        }
+
         impl::SharedThreadData shData;
         
         shData.running = true;
@@ -6461,18 +6474,6 @@ namespace tsl {
         overlay->changeTo(overlay->loadInitialGui());
 
         
-        // CUSTOM SECTION START
-        // Argument parsing
-        bool skipCombo = false;
-        for (u8 arg = 0; arg < argc; arg++) {
-            if ((strcasecmp(argv[arg], "--skipCombo") == 0)) {
-                skipCombo = true;
-                //logMessage("Skip combo is present.");
-                firstBoot = false;
-                break;
-            }
-            //std::memset(argv[arg], 0, std::strlen(argv[arg]));
-        }
         
         
         bool inOverlay = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_OVERLAY_STR) != FALSE_STR);
