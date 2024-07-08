@@ -6559,7 +6559,7 @@ extern "C" {
     
     u32 __nx_applet_type = AppletType_None;
     u32 __nx_fs_num_sessions = 1;
-    u32  __nx_nv_transfermem_size = 0x16000;
+    u32  __nx_nv_transfermem_size = 0x13000;
     ViLayerFlags __nx_vi_stray_layer_flags = (ViLayerFlags)0;
     
     /**
