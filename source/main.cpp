@@ -2022,7 +2022,7 @@ public:
             unlockedTrackbar = false;
             onEveryTick = false;
 
-            commandFooter = NULL_STR;
+            commandFooter = "";
             commandSystem = DEFAULT_STR;
             commandMode = DEFAULT_STR;
             commandGrouping = DEFAULT_STR;
@@ -2158,7 +2158,7 @@ public:
                     setIniFileValue(packageConfigIniPath, optionName, SYSTEM_STR, commandSystem);
                     setIniFileValue(packageConfigIniPath, optionName, MODE_STR, commandMode);
                     setIniFileValue(packageConfigIniPath, optionName, GROUPING_STR, commandGrouping);
-                    setIniFileValue(packageConfigIniPath, optionName, FOOTER_STR, NULL_STR);
+                    //setIniFileValue(packageConfigIniPath, optionName, FOOTER_STR, NULL_STR);
                 }
                 
                 
@@ -2175,18 +2175,19 @@ public:
                     }
                 }
                 
-                if (commandMode == OPTION_STR || (commandMode == TOGGLE_STR && !useSelection)) {
+                if ((commandMode == OPTION_STR) || (commandMode == SLOT_STR) || (commandMode == TOGGLE_STR && !useSelection)) {
                     // override loading of the command footer
-                    if (commandFooter != NULL_STR)
-                        footer = commandFooter;
-                    else
-                        footer = OPTION_SYMBOL;
-                } else if (commandMode == SLOT_STR) {
-                    if (commandFooter != NULL_STR)
+                    if (!commandFooter.empty())
                         footer = commandFooter;
                     else
                         footer = OPTION_SYMBOL;
                 }
+                //else if (commandMode == SLOT_STR) {
+                //    if (!commandFooter.empty())
+                //        footer = commandFooter;
+                //    else
+                //        footer = OPTION_SYMBOL;
+                //}
 
                 skipSystem = false;
                 if (commandSystem == ERISTA_STR && !usingErista) {
@@ -2247,7 +2248,7 @@ public:
                                 listItem->setValue(footer, true);
                         }
                         
-                        if (footer == UNAVAILABLE_SELECTION || footer == NOT_AVAILABLE_STR)
+                        if (footer == UNAVAILABLE_SELECTION || footer == NOT_AVAILABLE_STR || footer == NULL_STR)
                             listItem->setValue(UNAVAILABLE_SELECTION, true);
 
                         if (commandMode == FORWARDER_STR) {
@@ -2294,7 +2295,7 @@ public:
                                 }
 
                                 if ((keys & KEY_A)) {
-                                    if (footer != UNAVAILABLE_SELECTION && footer != NOT_AVAILABLE_STR) {
+                                    if (footer != UNAVAILABLE_SELECTION && footer != NOT_AVAILABLE_STR && footer != NULL_STR) {
                                         if (inPackageMenu)
                                             inPackageMenu = false;
                                         if (inSubPackageMenu)
@@ -3430,7 +3431,7 @@ public:
                 
                 std::string commandName;
                 
-                std::string commandFooter = NULL_STR;
+                std::string commandFooter = "";
                 std::string commandSystem = DEFAULT_STR;
                 std::string commandMode = DEFAULT_STR;
                 std::string commandGrouping = DEFAULT_STR;
@@ -3505,7 +3506,7 @@ public:
                     unlockedTrackbar = false;
                     onEveryTick = false;
                     
-                    commandFooter = NULL_STR;
+                    commandFooter = "";
                     commandSystem = DEFAULT_STR;
                     commandMode = DEFAULT_STR;
                     commandGrouping = DEFAULT_STR;
@@ -3599,7 +3600,7 @@ public:
                         setIniFileValue(packageConfigIniPath, optionName, SYSTEM_STR, commandSystem);
                         setIniFileValue(packageConfigIniPath, optionName, MODE_STR, commandMode);
                         setIniFileValue(packageConfigIniPath, optionName, GROUPING_STR, commandGrouping);
-                        setIniFileValue(packageConfigIniPath, optionName, FOOTER_STR, NULL_STR);
+                        //setIniFileValue(packageConfigIniPath, optionName, FOOTER_STR, NULL_STR);
                     }
                     
                     
@@ -3616,18 +3617,19 @@ public:
                         }
                     }
                     
-                    if (commandMode == OPTION_STR || (commandMode == TOGGLE_STR && !useSelection)) {
+                    if ((commandMode == OPTION_STR) || (commandMode == SLOT_STR) || (commandMode == TOGGLE_STR && !useSelection)) {
                         // override loading of the command footer
-                        if (commandFooter != NULL_STR)
-                            footer = commandFooter;
-                        else
-                            footer = OPTION_SYMBOL;
-                    } else if (commandMode == SLOT_STR) {
-                        if (commandFooter != NULL_STR)
+                        if (!commandFooter.empty())
                             footer = commandFooter;
                         else
                             footer = OPTION_SYMBOL;
                     }
+                    //else if (commandMode == SLOT_STR) {
+                    //    if (commandFooter != NULL_STR)
+                    //        footer = commandFooter;
+                    //    else
+                    //        footer = OPTION_SYMBOL;
+                    //}
 
                     skipSystem = false;
                     if (commandSystem == ERISTA_STR && !usingErista) {
