@@ -1039,6 +1039,7 @@ auto replacePlaceholders = [](std::string& arg, const std::string& placeholder, 
             if (interpreterLogging) {
                 logMessage("failed replacement arg: " + arg);
             }
+            replacement = (placeholder.find("{json(") != std::string::npos || placeholder.find("{json_file(") != std::string::npos) ? UNAVAILABLE_SELECTION : NULL_STR;
             arg.replace(startPos, endPos - startPos + 2, replacement);
             break;
         }
