@@ -44,6 +44,14 @@ Ultrahand Overlay currently offers the following features:
 - Hex Edit Files:
   - Perform hexadecimal editing of files on your SD card. Edit the binary data directly, allowing for precise control over your data. Ultrahand's Hex Edit Files feature enables you to analyze, modify, and customize files in their raw form.
 
+- Convert Mod Files:
+  - Convert `pchtxt` mods into `ips` or `cheats` format.
+
+- System Commands:
+  - There are a variety of system commands that users can utilize.  These include functions to shutdown, reboot, reboot directly into Hekate entries/modes, manipulate the screen's backlight, and turn off all bluetooth controllers.
+
+- Run Commmands On Boot:
+  - Users can also utilize their own `/switch/.packages/boot_package.ini` file (with a command section `boot`) to run a series of commands once upon device boot-up.
 
 ## Getting Started
 

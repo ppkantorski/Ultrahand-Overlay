@@ -349,7 +349,10 @@ void drawTable(std::unique_ptr<tsl::elm::List>& list, const std::vector<std::str
     list->addItem(new tsl::elm::TableDrawer([=](tsl::gfx::Renderer* renderer, s32 x, s32 y, s32 w, s32 h) mutable {
         for (size_t i = 0; i < infoLines.size(); ++i) {
             if (infoStringWidths[i] == 0.0f) {  // Calculate only if not already calculated
-                infoStringWidths[i] = renderer->calculateStringWidth(infoLines[i], fontSize, false);
+                if (infoLines[i] != NULL_STR)
+                    infoStringWidths[i] = renderer->calculateStringWidth(infoLines[i], fontSize, false);
+                else
+                    infoStringWidths[i] = renderer->calculateStringWidth(UNAVAILABLE_SELECTION, fontSize, false);
             }
 
             if (alignment == LEFT_STR) {
@@ -1032,13 +1035,14 @@ auto replacePlaceholders = [](std::string& arg, const std::string& placeholder, 
 
         replacement = replacer(arg.substr(startPos, endPos - startPos + 2));
         if (replacement.empty()) {
-            replacement = (placeholder.find("{json(") != std::string::npos || placeholder.find("{json_file(") != std::string::npos) ? UNAVAILABLE_SELECTION : NULL_STR;
+            replacement = NULL_STR;
         }
         arg.replace(startPos, endPos - startPos + 2, replacement);
         if (arg == lastArg) {
             if (interpreterLogging) {
                 logMessage("failed replacement arg: " + arg);
             }
+            replacement = NULL_STR;
             arg.replace(startPos, endPos - startPos + 2, replacement);
             break;
         }

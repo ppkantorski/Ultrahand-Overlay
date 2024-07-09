@@ -285,6 +285,12 @@ std::vector<std::string> getFilesListFromDirectory(const std::string& directoryP
     return fileList;
 }
 
+// Helper function to check if a path is a directory
+bool isDirectoryCached(const struct dirent* entry, const std::string& fullPath) {
+    struct stat st;
+    if (stat(fullPath.c_str(), &st) != 0) return false;
+    return S_ISDIR(st.st_mode);
+}
 
 // Recursive function to handle wildcard directories and file patterns
 void handleDirectory(const std::string& basePath, const std::vector<std::string>& parts, size_t partIndex, std::vector<std::string>& results, bool directoryOnly) {
@@ -297,19 +303,18 @@ void handleDirectory(const std::string& basePath, const std::vector<std::string>
     struct dirent* entry;
     std::string entryName, fullPath;
 
-    bool isCurrentDir, match;
     while ((entry = readdir(dir.get())) != nullptr) {
         entryName = entry->d_name;
         if (entryName == "." || entryName == "..") continue;
 
         fullPath = basePath + (basePath.back() == '/' ? "" : "/") + entryName;
-        isCurrentDir = isDirectoryCached(entry, fullPath);
+        bool isCurrentDir = isDirectoryCached(entry, fullPath);
 
-        match = fnmatch(parts[partIndex].c_str(), entryName.c_str(), FNM_NOESCAPE) == 0;
+        bool match = fnmatch(parts[partIndex].c_str(), entryName.c_str(), FNM_NOESCAPE) == 0;
         if (!match) continue; // Only process matches
 
         if (isCurrentDir && partIndex < parts.size() - 1) {
-            handleDirectory(fullPath, parts, partIndex + 1, results, directoryOnly && (partIndex + 1 == parts.size() - 1));
+            handleDirectory(fullPath, parts, partIndex + 1, results, directoryOnly);
         }
 
         if (match && partIndex == parts.size() - 1 && (directoryOnly ? isCurrentDir : true)) {
@@ -317,7 +322,6 @@ void handleDirectory(const std::string& basePath, const std::vector<std::string>
         }
     }
 }
-
 
 /**
  * @brief Gets a list of files and folders based on a wildcard pattern.
@@ -345,12 +349,7 @@ std::vector<std::string> getFilesListByWildcards(const std::string& pathPattern)
     }
 
     handleDirectory(basePath, parts, 0, results, directoryOnly);
-    //logMessage("pathPattern: "+pathPattern);
-    //for (const auto& file : results) {
-    //    logMessage("Found: " + file);
-    //}
+
     return results;
 }
-
-
 
