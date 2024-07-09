@@ -47,6 +47,9 @@ Ultrahand Overlay currently offers the following features:
 - Convert Mod Files:
   - Convert `pchtxt` mods into `ips` or cheats format.
 
+- System Commands:
+  - There are a variety of system commands that users can utilize.  These include functions to shutdown, reboot, reboot directly into Hekate entries, manipulate the screen's backlight, and turn off all bluetooth controllers.
+
 ## Getting Started
 
 ### Usage
