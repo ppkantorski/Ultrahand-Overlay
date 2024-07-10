@@ -72,7 +72,6 @@ def format_filename(file_name, dt_format):
         return formatted_str
     except ValueError:
         # If timestamp parsing fails, return the original filename without modification
-        #log_message(f"Error parsing timestamp from {file_name}, using original name.")
         return base_name  # Return the base name without the extension
 
 def clear_screen():
@@ -94,6 +93,7 @@ def main():
     initial_loop = True
     was_last_message = False
     while True:
+        start_time = time.time()
         try:
             ftp = connect_ftp()
             current_files = list_files(ftp, FTP_PATH)
@@ -126,7 +126,9 @@ def main():
             connection_success = False
         
         initial_loop = False
-        time.sleep(CHECK_RATE)
+        elapsed_time = time.time() - start_time
+        sleep_time = max(0, CHECK_RATE - elapsed_time)
+        time.sleep(sleep_time)
 
 if __name__ == "__main__":
     main()
