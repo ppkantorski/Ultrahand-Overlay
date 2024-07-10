@@ -62,7 +62,9 @@ def download_file(ftp, remote_file, local_file):
 def main():
     os.system("clear")
     print(f"{TITLE} v{VERSION} by {AUTHOR}\n")
-    log_message("Service has been initialized.")
+    time.sleep(1)
+    log_message("Logging service has been initialized.")
+    time.sleep(1)
     connection_success = False
     initial_loop = True;
     while True:
