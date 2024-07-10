@@ -23,14 +23,14 @@ The script reads configuration details from a `config.ini` file located in the s
 
 ```ini
 [FTP]
-FTP_SERVER = 
+FTP_SERVER = <SWITCH_SERVER_IP>
 FTP_PORT = 5000
 FTP_USER = root
 FTP_PASS = 
 FTP_PATH = /emuMMC/RAW1/Nintendo/Album/
 
 [LOCAL]
-OUTPUT_PATH = 
+OUTPUT_PATH = <SCREENSHOT_OUTPUT_FOLDER>
 CHECK_RATE = 20
 ```
 
