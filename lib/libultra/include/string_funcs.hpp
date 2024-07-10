@@ -393,6 +393,22 @@ inline std::string removeTag(const std::string &input) {
 }
 
 
+inline std::string getFirstLongEntry(const std::string& input, size_t minLength = 8) {
+    std::istringstream iss(input);
+    std::string word;
+
+    // Split the input string based on spaces and get the first word
+    if (iss >> word) {
+        // Check if the first word's length is greater than the specified length
+        if (word.length() > minLength) {
+            return word;
+        }
+    }
+    
+    // Return an empty string if the first word is not longer than minLength
+    return input;
+}
+
 
 // This will take a string like "v1.3.5-abasdfasdfa" and output "1.3.5". string could also look like "test-1.3.5-1" or "v1.3.5" and we will only want "1.3.5"
 inline std::string cleanVersionLabel(const std::string& input) {
