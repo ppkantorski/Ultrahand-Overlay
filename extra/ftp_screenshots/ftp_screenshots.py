@@ -76,22 +76,26 @@ def main():
     time.sleep(1)
     connection_success = False
     initial_loop = True
+    was_last_message = False
     while True:
         try:
             ftp = connect_ftp()
             current_files = list_files(ftp, FTP_PATH)
-            if connection_success:
+            if connection_success and was_last_message:
                 delete_line()
             log_message(f"FTP Connection to {FTP_SERVER} successful.")
             connection_success = True
+            was_last_message = True
             for file in current_files:
                 local_file_path = os.path.join(OUTPUT_PATH, os.path.basename(file))
                 if not os.path.exists(local_file_path):
                     try:
                         download_file(ftp, file, local_file_path)
                         log_message(f"Downloaded: {file}")
+                        was_last_message = False
                     except Exception as e:
                         log_message(f"Error downloading {file}: {e}")
+                        was_last_message = False
             
             ftp.quit()
         except Exception as e:
