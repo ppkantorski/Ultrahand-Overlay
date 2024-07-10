@@ -143,7 +143,7 @@ bool pchtxt2cheat(const std::string &pchtxtPath, std::string cheatName = "", std
             return false;
         }
     }
-    logMessage("Cheat name determined: " + cheatName);
+    //-logMessage("Cheat name determined: " + cheatName);
 
     std::string pchtxt((std::istreambuf_iterator<char>(pchtxtFile)), std::istreambuf_iterator<char>());
     size_t nsobidPos = pchtxt.find("@nsobid-");
@@ -154,14 +154,14 @@ bool pchtxt2cheat(const std::string &pchtxtPath, std::string cheatName = "", std
 
     std::string bid = pchtxt.substr(nsobidPos + 8, 40);
     std::string bidShort = bid.substr(0, 16);
-    logMessage("BID extracted: " + bidShort);
+    //logMessage("BID extracted: " + bidShort);
 
     std::string tid = findTitleID(pchtxt);
     if (tid.empty()) {
         logMessage("Error: Could not find TID in pchtxt file, the file is likely invalid.");
         return false;
     }
-    logMessage("TID extracted: " + tid);
+    //logMessage("TID extracted: " + tid);
 
     std::string cheatFilePath;
 
@@ -172,7 +172,7 @@ bool pchtxt2cheat(const std::string &pchtxtPath, std::string cheatName = "", std
     } else {
         cheatFilePath = outCheatPath;
     }
-    logMessage("Cheat file path: " + cheatFilePath);
+    //logMessage("Cheat file path: " + cheatFilePath);
 
     std::ifstream existingCheatFile(cheatFilePath);
     bool cheatNameExists = false;
@@ -193,7 +193,7 @@ bool pchtxt2cheat(const std::string &pchtxtPath, std::string cheatName = "", std
         return false;
     }
 
-    logMessage("Writing to " + cheatFilePath);
+    //logMessage("Writing to " + cheatFilePath);
 
     if (!cheatNameExists) {
         outCheatFile << "[" << cheatName << "]\n";
@@ -211,23 +211,23 @@ bool pchtxt2cheat(const std::string &pchtxtPath, std::string cheatName = "", std
         if (line.find("@flag offset_shift ") == 0) {
             std::string offsetStr = line.substr(19);
             offset = (offsetStr.find("0x") == 0 ? std::strtol(offsetStr.c_str(), nullptr, 16) : std::strtol(offsetStr.c_str(), nullptr, 10)) - 0x100;
-            logMessage("Offset shift found: " + std::to_string(offset));
+            //logMessage("Offset shift found: " + std::to_string(offset));
             continue;
         }
 
         if (line.find("@enabled") == 0) {
-            logMessage("Found @enabled, starting cheat processing");
+            //logMessage("Found @enabled, starting cheat processing");
             continue;
         }
 
         if (line.find("@stop") == 0) {
-            logMessage("Found @stop, ending cheat processing");
+            //logMessage("Found @stop, ending cheat processing");
             break;
         }
 
         size_t spacePos = line.find(' ');
         if (spacePos == std::string::npos) {
-            logMessage("Skipping malformed line: " + line);
+            //logMessage("Skipping malformed line: " + line);
             continue;
         }
 
@@ -235,7 +235,7 @@ bool pchtxt2cheat(const std::string &pchtxtPath, std::string cheatName = "", std
         std::string valStr = line.substr(spacePos + 1);
 
         if (addrStr.find_first_not_of("0123456789abcdefABCDEF") != std::string::npos || valStr.find_first_not_of("0123456789abcdefABCDEF") != std::string::npos) {
-            logMessage("Skipping invalid line: " + line);
+            //logMessage("Skipping invalid line: " + line);
             continue;
         }
 
@@ -252,22 +252,33 @@ bool pchtxt2cheat(const std::string &pchtxtPath, std::string cheatName = "", std
     }
 
     outCheatFile.close();
-    logMessage("Finished writing cheat file.");
+    //logMessage("Finished writing cheat file.");
     return true;
 }
 
-// Helper functions to convert values to big-endian format
+// Corrected helper function to convert values to big-endian format
 uint32_t toBigEndian(uint32_t value) {
-    return ((value >> 24) & 0x000000FF) |
-           ((value >>  8) & 0x0000FF00) |
-           ((value <<  8) & 0x00FF0000) |
-           ((value << 24) & 0xFF000000);
+    return ((value & 0x000000FF) << 24) |
+           ((value & 0x0000FF00) << 8)  |
+           ((value & 0x00FF0000) >> 8)  |
+           ((value & 0xFF000000) >> 24);
 }
 
 uint16_t toBigEndian(uint16_t value) {
-    return ((value >> 8) & 0x00FF) |
-           ((value << 8) & 0xFF00);
+    return ((value & 0x00FF) << 8) |
+           ((value & 0xFF00) >> 8);
 }
+
+// Helper function to convert a vector of bytes to a hex string for logging
+#include <iomanip> // Include this header for std::setw and std::setfill
+std::string hexToString(const std::vector<uint8_t>& bytes) {
+    std::ostringstream oss;
+    for (uint8_t byte : bytes) {
+        oss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(byte);
+    }
+    return oss.str();
+}
+
 
 /**
  * @brief Converts a .pchtxt file to an IPS file using fstream.
@@ -290,6 +301,7 @@ bool pchtxt2ips(const std::string& pchtxtPath, const std::string& outputFolder) 
     std::string line;
     uint32_t lineNum = 0;
     std::string nsobid;
+    int offset = 0; // Default offset
 
     uint32_t address;
     uint8_t byte;
@@ -305,6 +317,10 @@ bool pchtxt2ips(const std::string& pchtxtPath, const std::string& outputFolder) 
             if (line.find("@nsobid-") == 0) {
                 nsobid = line.substr(8);
             }
+            if (line.find("@flag offset_shift ") == 0) {
+                std::string offsetStr = line.substr(19);
+                offset = (offsetStr.find("0x") == 0 ? std::strtol(offsetStr.c_str(), nullptr, 16) : std::strtol(offsetStr.c_str(), nullptr, 10));
+            }
             continue;  // Skip empty lines and lines starting with '@'
         }
 
@@ -318,7 +334,7 @@ bool pchtxt2ips(const std::string& pchtxtPath, const std::string& outputFolder) 
         }
 
         char* endPtr;
-        address = std::strtoul(addressStr.c_str(), &endPtr, 16);
+        address = std::strtoul(addressStr.c_str(), &endPtr, 16) + offset; // Adjust address by offset
         if (*endPtr != '\0') {
             continue;
         }
@@ -359,13 +375,16 @@ bool pchtxt2ips(const std::string& pchtxtPath, const std::string& outputFolder) 
 
     uint16_t valueLength;
     for (const auto& patch : patches) {
-        address = toBigEndian(patch.first);  // Convert address to big-endian
-        ipsFile.write(reinterpret_cast<const char*>(&address), sizeof(address));  // Write address
+        uint32_t bigEndianAddress = toBigEndian(patch.first);  // Convert address to big-endian
+        //logMessage("Writing address: " + std::to_string(patch.first) + " as big-endian: " + std::to_string(bigEndianAddress)); // Log the address
+        ipsFile.write(reinterpret_cast<const char*>(&bigEndianAddress), sizeof(bigEndianAddress));  // Write address
 
         valueLength = toBigEndian(static_cast<uint16_t>(patch.second.size()));  // Convert length to big-endian
+        //logMessage("Writing length: " + std::to_string(patch.second.size()) + " as big-endian: " + std::to_string(valueLength)); // Log the length
         ipsFile.write(reinterpret_cast<const char*>(&valueLength), sizeof(valueLength));  // Write length of value
 
         ipsFile.write(reinterpret_cast<const char*>(patch.second.data()), patch.second.size());  // Write value
+        //logMessage("Writing value: " + hexToString(patch.second)); // Log the value
     }
 
     ipsFile.write(IPS32_FOOT_MAGIC.c_str(), IPS32_FOOT_MAGIC.size());

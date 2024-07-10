@@ -44,7 +44,7 @@ Ultrahand Overlay currently offers the following features:
 - Hex Edit Files:
   - Perform hexadecimal editing of files on your SD card. Edit the binary data directly, allowing for precise control over your data. Ultrahand's Hex Edit Files feature enables you to analyze, modify, and customize files in their raw form.
 
-- Convert Mod Files:
+- Convert Mods:
   - Convert `pchtxt` mods into `ips` or `cheats` format.
 
 - System Commands:
