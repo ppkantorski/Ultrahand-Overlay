@@ -4,7 +4,7 @@ import time
 import configparser
 from datetime import datetime
 
-TITLE = "Nintendo Switch Screenshots Logger"
+TITLE = "Switch FTP Screenshots"
 VERSION = "0.1.1"
 AUTHOR = "ppkantorski"
 
@@ -59,14 +59,20 @@ def download_file(ftp, remote_file, local_file):
     with open(local_file, 'wb') as f:
         ftp.retrbinary(f'RETR {remote_file}', f.write)
 
+def clear_screen():
+    if os.name == 'nt':  # For Windows
+        os.system('cls')
+    else:  # For macOS and Linux
+        os.system('clear')
+
 def main():
-    os.system("clear")
+    clear_screen()
     print(f"{TITLE} v{VERSION} by {AUTHOR}\n")
     time.sleep(1)
-    log_message("Logging service has been initialized.")
+    log_message("Screenshots mirroring service has been initialized.")
     time.sleep(1)
     connection_success = False
-    initial_loop = True;
+    initial_loop = True
     while True:
         try:
             ftp = connect_ftp()
@@ -91,7 +97,7 @@ def main():
             log_message(f"Error connecting to FTP server: {e}")
             connection_success = False
         
-        initial_loop = False;
+        initial_loop = False
         time.sleep(CHECK_RATE)
 
 if __name__ == "__main__":
