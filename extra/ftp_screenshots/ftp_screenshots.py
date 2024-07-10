@@ -72,7 +72,7 @@ def format_filename(file_name, dt_format):
         return formatted_str
     except ValueError:
         # If timestamp parsing fails, return the original filename without modification
-        log_message(f"Error parsing timestamp from {file_name}, using original name.")
+        #log_message(f"Error parsing timestamp from {file_name}, using original name.")
         return base_name  # Return the base name without the extension
 
 def clear_screen():
