@@ -3084,6 +3084,7 @@ public:
                     //logMessage(overlayFile);
                     if (isFileOrDirectory(overlayFile)) {
                         listItem = std::make_unique<tsl::elm::ListItem>(newOverlayName);
+                        overlayVersion = getFirstLongEntry(overlayVersion);
                         if (cleanVersionLabels)
                             overlayVersion = cleanVersionLabel(overlayVersion);
                         if (!hideOverlayVersions)
