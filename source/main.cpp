@@ -317,8 +317,8 @@ inline void clearMemory() {
     lastSelectedListItem.reset();
 }
 
-void shiftItemFocus(auto& listItemPtr) {
-    tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemPtr.get(), tsl::FocusDirection::None);
+void shiftItemFocus(auto& listItem) {
+    tsl::Overlay::get()->getCurrentGui()->requestFocus(listItem, tsl::FocusDirection::None);
 }
 
 void updateIniData(const std::map<std::string, std::map<std::string, std::string>>& packageConfigData,
@@ -451,7 +451,7 @@ private:
     void addListItem(std::unique_ptr<tsl::elm::List>& list, const std::string& title, const std::string& value, const std::string& targetMenu) {
         auto listItem = std::make_unique<tsl::elm::ListItem>(title);
         listItem->setValue(value);
-        listItem->setClickListener([listItemPtr = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){}), targetMenu](uint64_t keys) {
+        listItem->setClickListener([listItemRaw = listItem.get(), targetMenu](uint64_t keys) {
             if (runningInterpreter.load(std::memory_order_acquire))
                 return false;
 
@@ -460,9 +460,9 @@ private:
                 simulatedSelect = false;
             }
             if (keys & KEY_A) {
-                shiftItemFocus(listItemPtr);
                 tsl::changeTo<UltrahandSettingsMenu>(targetMenu);
-                selectedListItem = listItemPtr;
+                //selectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItemRaw, [](auto*) {});
+                shiftItemFocus(listItemRaw);
                 simulatedSelectComplete = true;
                 return true;
             }
@@ -481,8 +481,8 @@ private:
                 listItem->setValue(CHECKMARK_SYMBOL);
                 lastSelectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){});
             }
-            listItem->setClickListener([item, mappedItem, defaultItem, iniKey, targetMenu,
-                listItemPtr = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){})](uint64_t keys) {
+            listItem->setClickListener([item, mappedItem, defaultItem, iniKey, targetMenu, listItemRaw = listItem.get()](uint64_t keys) {
+                //listItemPtr = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){})](uint64_t keys) {
                 if (runningInterpreter.load(std::memory_order_acquire))
                     return false;
     
@@ -491,7 +491,7 @@ private:
                     simulatedSelect = false;
                 }
                 if (keys & KEY_A) {
-                    shiftItemFocus(listItemPtr);
+                    
                     if (item != defaultItem) {
                         setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, iniKey, item);
                         if (targetMenu == "keyComboMenu")
@@ -500,8 +500,9 @@ private:
                     }
                     lastSelectedListItem->setValue("");
                     selectedListItem->setValue(mappedItem);
-                    listItemPtr->setValue(CHECKMARK_SYMBOL);
-                    lastSelectedListItem = listItemPtr;
+                    listItemRaw->setValue(CHECKMARK_SYMBOL);
+                    lastSelectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItemRaw, [](auto*) {});
+                    shiftItemFocus(listItemRaw);
                     simulatedSelectComplete = true;
                     lastSelectedListItem->triggerClickAnimation();
     
@@ -516,7 +517,7 @@ private:
 
     void addUpdateButton(std::unique_ptr<tsl::elm::List>& list, const std::string& title, const std::string& downloadUrl, const std::string& targetPath, const std::string& movePath) {
         auto listItem = std::make_unique<tsl::elm::ListItem>(title);
-        listItem->setClickListener([listItemPtr = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){}), downloadUrl, targetPath, movePath](uint64_t keys) {
+        listItem->setClickListener([listItemRaw = listItem.get(), downloadUrl, targetPath, movePath](uint64_t keys) {
             if (runningInterpreter.load(std::memory_order_acquire)) {
                 return false;
             }
@@ -550,9 +551,9 @@ private:
                 enqueueInterpreterCommands(std::move(interpreterCommands), "", "");
                 startInterpreterThread();
 
-                listItemPtr->setValue(INPROGRESS_SYMBOL);
-                shiftItemFocus(listItemPtr);
-                lastSelectedListItem = listItemPtr;
+                listItemRaw->setValue(INPROGRESS_SYMBOL);
+                lastSelectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItemRaw, [](auto*) {});
+                shiftItemFocus(listItemRaw);
                 lastRunningInterpreter = true;
                 simulatedSelectComplete = true;
                 lastSelectedListItem->triggerClickAnimation();
@@ -617,23 +618,23 @@ public:
                     listItem->setValue(CHECKMARK_SYMBOL);
                     lastSelectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){});
                 }
-                listItem->setClickListener([this, skipLang = !isFileOrDirectory(langFile), defaultLangMode, defaulLang, langFile,
-                    listItemPtr = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){})](uint64_t keys) {
+                listItem->setClickListener([this, skipLang = !isFileOrDirectory(langFile), defaultLangMode, defaulLang, langFile, listItemRaw = listItem.get()](uint64_t keys) {
+                    //listItemPtr = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){})](uint64_t keys) {
                     if (runningInterpreter.load(std::memory_order_acquire)) return false;
                     if (simulatedSelect && !simulatedSelectComplete) {
                         keys |= KEY_A;
                         simulatedSelect = false;
                     }
                     if (keys & KEY_A) {
-                        shiftItemFocus(listItemPtr);
                         setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, DEFAULT_LANG_STR, defaultLangMode);
                         reloadMenu = reloadMenu2 = true;
                         parseLanguage(langFile);
                         if (skipLang) reinitializeLangVars();
                         lastSelectedListItem->setValue(lastSelectedListItemFooter);
                         selectedListItem->setValue(defaultLangMode);
-                        listItemPtr->setValue(CHECKMARK_SYMBOL);
-                        lastSelectedListItem = listItemPtr;
+                        listItemRaw->setValue(CHECKMARK_SYMBOL);
+                        lastSelectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItemRaw, [](auto*){});
+                        shiftItemFocus(listItemRaw);
                         simulatedSelectComplete = true;
                         lastSelectedListItem->triggerClickAnimation();
                         lastSelectedListItemFooter = defaultLangMode;
@@ -667,14 +668,13 @@ public:
                 listItem->setValue(CHECKMARK_SYMBOL);
                 lastSelectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){});
             }
-            listItem->setClickListener([defaultTheme = THEMES_PATH + "default.ini", listItemPtr = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){})](uint64_t keys) {
+            listItem->setClickListener([defaultTheme = THEMES_PATH + "default.ini", listItemRaw = listItem.get()](uint64_t keys) {
                 if (runningInterpreter.load(std::memory_order_acquire)) return false;
                 if (simulatedSelect && !simulatedSelectComplete) {
                     keys |= KEY_A;
                     simulatedSelect = false;
                 }
                 if (keys & KEY_A) {
-                    shiftItemFocus(listItemPtr);
                     setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "current_theme", DEFAULT_STR);
                     deleteFileOrDirectory(THEME_CONFIG_INI_PATH);
                     if (isFileOrDirectory(defaultTheme)) copyFileOrDirectory(defaultTheme, THEME_CONFIG_INI_PATH);
@@ -683,8 +683,9 @@ public:
                     reloadMenu = reloadMenu2 = true;
                     lastSelectedListItem->setValue("");
                     selectedListItem->setValue(DEFAULT);
-                    listItemPtr->setValue(CHECKMARK_SYMBOL);
-                    lastSelectedListItem = listItemPtr;
+                    listItemRaw->setValue(CHECKMARK_SYMBOL);
+                    lastSelectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItemRaw, [](auto*){});
+                    shiftItemFocus(listItemRaw);
                     simulatedSelectComplete = true;
                     lastSelectedListItem->triggerClickAnimation();
                     return true;
@@ -703,14 +704,13 @@ public:
                     listItem->setValue(CHECKMARK_SYMBOL);
                     lastSelectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){});
                 }
-                listItem->setClickListener([themeName, themeFile, listItemPtr = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){})](uint64_t keys) {
+                listItem->setClickListener([themeName, themeFile, listItemRaw = listItem.get()](uint64_t keys) {
                     if (runningInterpreter.load(std::memory_order_acquire)) return false;
                     if (simulatedSelect && !simulatedSelectComplete) {
                         keys |= KEY_A;
                         simulatedSelect = false;
                     }
                     if (keys & KEY_A) {
-                        shiftItemFocus(listItemPtr);
                         setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "current_theme", themeName);
                         deleteFileOrDirectory(THEME_CONFIG_INI_PATH);
                         copyFileOrDirectory(themeFile, THEME_CONFIG_INI_PATH);
@@ -719,8 +719,9 @@ public:
                         reloadMenu = reloadMenu2 = true;
                         lastSelectedListItem->setValue("");
                         selectedListItem->setValue(themeName);
-                        listItemPtr->setValue(CHECKMARK_SYMBOL);
-                        lastSelectedListItem = listItemPtr;
+                        listItemRaw->setValue(CHECKMARK_SYMBOL);
+                        lastSelectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItemRaw, [](auto*){});
+                        shiftItemFocus(listItemRaw);
                         simulatedSelectComplete = true;
                         lastSelectedListItem->triggerClickAnimation();
                         return true;
@@ -979,7 +980,7 @@ public:
             // Envolke selectionOverlay in optionMode
             
             listItem->setClickListener([&entryName = this->entryName, &entryMode = this->entryMode, &overlayName = this->overlayName,
-                listItemPtr = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){})](uint64_t keys) { // Add 'command' to the capture list
+                listItemRaw = listItem.get()](uint64_t keys) { // Add 'command' to the capture list
                 
                 if (runningInterpreter.load(std::memory_order_acquire))
                     return false;
@@ -992,7 +993,7 @@ public:
                     inMainMenu = false;
                     tsl::changeTo<SettingsMenu>(entryName, entryMode, overlayName, PRIORITY_STR);
                     selectedListItem.reset();
-                    selectedListItem = listItemPtr;
+                    selectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItemRaw, [](auto*){});
                     simulatedSelectComplete = true;
                     lastSelectedListItem->triggerClickAnimation();
                     return true;
@@ -1040,7 +1041,7 @@ public:
                 }
                 
                 listItem->setClickListener([&settingsIniPath = this->settingsIniPath, &entryName = this->entryName, iStr, priorityValue,
-                    listItemPtr = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){})](uint64_t keys) { // Add 'this', 'i', and 'listItem' to the capture list
+                    listItemRaw = listItem.get()](uint64_t keys) { // Add 'this', 'i', and 'listItem' to the capture list
                     
                     if (runningInterpreter.load(std::memory_order_acquire))
                         return false;
@@ -1050,15 +1051,15 @@ public:
                         simulatedSelect = false;
                     }
                     if (keys & KEY_A) {
-                        shiftItemFocus(listItemPtr);
                         if (iStr != priorityValue)
                             reloadMenu = true;
                         setIniFileValue(settingsIniPath, entryName, PRIORITY_STR, iStr);
                         lastSelectedListItem->setValue("");
                         selectedListItem->setValue(iStr);
-                        listItemPtr->setValue(CHECKMARK_SYMBOL);
+                        listItemRaw->setValue(CHECKMARK_SYMBOL);
                         lastSelectedListItem.reset();
-                        lastSelectedListItem = listItemPtr;
+                        lastSelectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItemRaw, [](auto*){});
+                        shiftItemFocus(listItemRaw);
                         simulatedSelectComplete = true;
                         lastSelectedListItem->triggerClickAnimation();
                         return true;
@@ -1206,9 +1207,9 @@ private:
 
     void addListItem(std::unique_ptr<tsl::elm::List>& list, const std::string& line) {
         auto listItem = std::make_unique<tsl::elm::ListItem>(line);
-        std::shared_ptr<tsl::elm::ListItem> listItemPtr = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){});
+        //std::shared_ptr<tsl::elm::ListItem> listItemPtr = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){});
 
-        listItem->setClickListener([this, listItemPtr, line](uint64_t keys) {
+        listItem->setClickListener([this, listItemRaw = listItem.get(), line](uint64_t keys) {
             if (runningInterpreter.load(std::memory_order_acquire)) return false;
             if (simulatedSelect && !simulatedSelectComplete) {
                 keys |= KEY_A;
@@ -1236,9 +1237,9 @@ private:
                 commandVec.emplace_back(std::move(commandParts));
                 interpretAndExecuteCommands(std::move(commandVec), filePath, specificKey);
 
-                listItemPtr->setValue(commandSuccess ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
+                listItemRaw->setValue(commandSuccess ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
                 simulatedSelectComplete = true;
-                listItemPtr->triggerClickAnimation();
+                listItemRaw->triggerClickAnimation();
                 return true;
             }
             return false;
@@ -1704,8 +1705,8 @@ public:
                 }
 
                 listItem->setClickListener([&commands = this->commands, &filePath = this->filePath, &specificKey = this->specificKey, &commandMode = this->commandMode,
-                    &specifiedFooterKey = this->specifiedFooterKey, &lastSelectedListItemFooter = this->lastSelectedListItemFooter, i, footer, selectedItem,
-                    listItemPtr = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*) {})](uint64_t keys) {
+                    &specifiedFooterKey = this->specifiedFooterKey, &lastSelectedListItemFooter = this->lastSelectedListItemFooter, i, footer, selectedItem, listItemRaw = listItem.get()](uint64_t keys) {
+                    //listItemPtr = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*) {})](uint64_t keys) {
 
                     if (runningInterpreter.load(std::memory_order_acquire)) {
                         return false;
@@ -1722,18 +1723,19 @@ public:
                         enqueueInterpreterCommands(getSourceReplacement(commands, selectedItem, i, filePath), filePath, specificKey);
                         startInterpreterThread();
 
-                        listItemPtr->setValue(INPROGRESS_SYMBOL);
+                        listItemRaw->setValue(INPROGRESS_SYMBOL);
 
-                        shiftItemFocus(listItemPtr);
+                        
                         if (commandMode == OPTION_STR) {
-                            selectedFooterDict[specifiedFooterKey] = listItemPtr->getText();
+                            selectedFooterDict[specifiedFooterKey] = listItemRaw->getText();
                             if (lastSelectedListItem)
                                 lastSelectedListItem->setValue(lastSelectedListItemFooter, true);
                             lastSelectedListItemFooter = footer;
                         }
 
                         lastSelectedListItem.reset();
-                        lastSelectedListItem = listItemPtr;
+                        lastSelectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItemRaw, [](auto*) {});
+                        shiftItemFocus(listItemRaw);
 
                         lastRunningInterpreter = true;
                         simulatedSelectComplete = true;
@@ -2283,8 +2285,8 @@ public:
                         } else {
                             
                             //std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(option.second, pathReplace);
-                            listItem->setClickListener([commands, keyName = option.first, &dropdownSection = this->dropdownSection, &packagePath = this->packagePath,  &packageName = this->packageName, footer, lastSection,
-                                listItemPtr = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){})](uint64_t keys) {
+                            listItem->setClickListener([commands, keyName = option.first, &dropdownSection = this->dropdownSection, &packagePath = this->packagePath,  &packageName = this->packageName, footer, lastSection, listItemRaw = listItem.get()](uint64_t keys) {
+                                //listItemPtr = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){})](uint64_t keys) {
                                 
                                 if (runningInterpreter.load(std::memory_order_acquire))
                                     return false;
@@ -2307,7 +2309,7 @@ public:
                                             lastPackageMenu = "subPackageMenu";
                                         
                                         selectedListItem.reset();
-                                        selectedListItem = listItemPtr;
+                                        selectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItemRaw, [](auto*) {});
                                         
                                         std::string newKey = "";
                                         if (inPackageMenu) {
@@ -2386,8 +2388,8 @@ public:
                                 listItem->setValue(footer);
                             
                             
-                            listItem->setClickListener([i, commands, keyName = option.first, &packagePath = this->packagePath, &packageName = this->packageName, selectedItem,
-                                listItemPtr = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){})](uint64_t keys) { // Add 'command' to the capture list
+                            listItem->setClickListener([i, commands, keyName = option.first, &packagePath = this->packagePath, &packageName = this->packageName, selectedItem, listItemRaw = listItem.get()](uint64_t keys) {
+                                //listItemPtr = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){})](uint64_t keys) { // Add 'command' to the capture list
                                 //static bool lastRunningInterpreter = false;
                                 
                                 if (runningInterpreter.load(std::memory_order_acquire)) {
@@ -2406,12 +2408,11 @@ public:
                                     enqueueInterpreterCommands(getSourceReplacement(commands, selectedItem, i, packagePath), packagePath, keyName);
                                     startInterpreterThread();
 
-                                    listItemPtr->setValue(INPROGRESS_SYMBOL);
-
-
-                                    shiftItemFocus(listItemPtr);
+                                    listItemRaw->setValue(INPROGRESS_SYMBOL);
+                                    
                                     lastSelectedListItem.reset();
-                                    lastSelectedListItem = listItemPtr;
+                                    lastSelectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItemRaw, [](auto*) {});
+                                    shiftItemFocus(listItemRaw);
                                     
                                     lastRunningInterpreter = true;
                                     simulatedSelectComplete = true;
@@ -3727,8 +3728,8 @@ public:
                                 
                                 if (sourceType == JSON_STR) { // For JSON wildcards
                                     
-                                    listItem->setClickListener([i, commands, keyName = option.first, selectedItem,
-                                        listItemPtr = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){})](uint64_t keys) { // Add 'command' to the capture list
+                                    listItem->setClickListener([i, commands, keyName = option.first, selectedItem, listItemRaw = listItem.get()](uint64_t keys) {
+                                        //listItemPtr = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){})](uint64_t keys) { // Add 'command' to the capture list
                                         //static bool lastRunningInterpreter = false;
 
                                         if (runningInterpreter.load(std::memory_order_acquire))
@@ -3746,13 +3747,11 @@ public:
                                             enqueueInterpreterCommands(getSourceReplacement(commands, selectedItem, i, PACKAGE_PATH), PACKAGE_PATH, keyName);
                                             startInterpreterThread();
 
-                                            listItemPtr->setValue(INPROGRESS_SYMBOL);
-
-                                            shiftItemFocus(listItemPtr);
+                                            listItemRaw->setValue(INPROGRESS_SYMBOL);
 
                                             lastSelectedListItem.reset();
-                                            lastSelectedListItem = listItemPtr;
-                                            
+                                            lastSelectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItemRaw, [](auto*) {});
+                                            shiftItemFocus(listItemRaw);
 
                                             lastRunningInterpreter = true;
                                             
@@ -3771,8 +3770,8 @@ public:
                                     list->addItem(listItem.release());
                                 } else {
                                     
-                                    listItem->setClickListener([i, commands, keyName = option.first, selectedItem,
-                                        listItemPtr = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){})](uint64_t keys) { // Add 'command' to the capture list
+                                    listItem->setClickListener([i, commands, keyName = option.first, selectedItem, listItemRaw = listItem.get()](uint64_t keys) {
+                                        //listItemPtr = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){})](uint64_t keys) { // Add 'command' to the capture list
                                         
                                         if (runningInterpreter.load(std::memory_order_acquire))
                                             return false;
@@ -3789,13 +3788,11 @@ public:
                                             enqueueInterpreterCommands(getSourceReplacement(commands, selectedItem, i, PACKAGE_PATH), PACKAGE_PATH, keyName);
                                             startInterpreterThread();
                                             
-                                            listItemPtr->setValue(INPROGRESS_SYMBOL);
-
-                                            shiftItemFocus(listItemPtr);
+                                            listItemRaw->setValue(INPROGRESS_SYMBOL);
 
                                             lastSelectedListItem.reset();
-                                            lastSelectedListItem = listItemPtr;
-                                            
+                                            lastSelectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItemRaw, [](auto*) {});
+                                            shiftItemFocus(listItemRaw);
                                             
                                             lastRunningInterpreter = true;
                                             simulatedSelectComplete = true;
