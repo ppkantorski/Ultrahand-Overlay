@@ -23,7 +23,7 @@ The script reads configuration details from a `config.ini` file located in the s
 
 ```ini
 [FTP]
-FTP_SERVER = 192.168.6.193
+FTP_SERVER = 
 FTP_PORT = 5000
 FTP_USER = root
 FTP_PASS = 
