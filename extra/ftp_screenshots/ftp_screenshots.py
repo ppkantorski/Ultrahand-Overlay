@@ -5,7 +5,7 @@ import configparser
 from datetime import datetime
 
 TITLE = "Switch FTP Screenshots"
-VERSION = "0.1.1"
+VERSION = "0.1.2"
 AUTHOR = "ppkantorski"
 
 # Determine the directory where the script is located
@@ -27,7 +27,8 @@ FTP_PATH = config.get('FTP', 'FTP_PATH')
 
 # Local directory to save files
 OUTPUT_PATH = config.get('LOCAL', 'OUTPUT_PATH')
-CHECK_RATE = int(config.get('LOCAL', 'CHECK_RATE'))
+CHECK_RATE = int(config.get('SETTINGS', 'CHECK_RATE'))
+DT_FORMAT = config.get('SETTINGS', 'DT_FORMAT')
 
 def log_message(message):
     print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {message}")
@@ -59,6 +60,21 @@ def download_file(ftp, remote_file, local_file):
     with open(local_file, 'wb') as f:
         ftp.retrbinary(f'RETR {remote_file}', f.write)
 
+def format_filename(file_name, dt_format):
+    # Extract timestamp part from the filename (without extension)
+    base_name, extension = os.path.splitext(file_name)
+    try:
+        timestamp_str = base_name.split('-')[0]
+        # Parse timestamp into a datetime object
+        timestamp_dt = datetime.strptime(timestamp_str, '%Y%m%d%H%M%S%f')
+        # Format datetime object into the desired string format
+        formatted_str = timestamp_dt.strftime(dt_format)
+        return formatted_str
+    except ValueError:
+        # If timestamp parsing fails, return the original filename without modification
+        log_message(f"Error parsing timestamp from {file_name}, using original name.")
+        return base_name  # Return the base name without the extension
+
 def clear_screen():
     if os.name == 'nt':  # For Windows
         os.system('cls')
@@ -87,7 +103,12 @@ def main():
             connection_success = True
             was_last_message = True
             for file in current_files:
-                local_file_path = os.path.join(OUTPUT_PATH, os.path.basename(file))
+                file_name = os.path.basename(file)
+                if DT_FORMAT:
+                    formatted_name = format_filename(file_name, DT_FORMAT)
+                    local_file_path = os.path.join(OUTPUT_PATH, formatted_name + os.path.splitext(file_name)[1])
+                else:
+                    local_file_path = os.path.join(OUTPUT_PATH, file_name)
                 if not os.path.exists(local_file_path):
                     try:
                         download_file(ftp, file, local_file_path)
