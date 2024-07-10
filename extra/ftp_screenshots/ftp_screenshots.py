@@ -65,6 +65,9 @@ def clear_screen():
     else:  # For macOS and Linux
         os.system('clear')
 
+def delete_line():
+    print("\033[F\033[K", end='')  # Move cursor up one line and clear the line
+
 def main():
     clear_screen()
     print(f"{TITLE} v{VERSION} by {AUTHOR}\n")
@@ -78,7 +81,7 @@ def main():
             ftp = connect_ftp()
             current_files = list_files(ftp, FTP_PATH)
             if connection_success:
-                print("\033[F\033[K", end='')  # Move cursor up one line and clear the line
+                delete_line()
             log_message(f"FTP Connection to {FTP_SERVER} successful.")
             connection_success = True
             for file in current_files:
@@ -93,7 +96,7 @@ def main():
             ftp.quit()
         except Exception as e:
             if not connection_success and not initial_loop:
-                print("\033[F\033[K", end='')  # Move cursor up one line and clear the line
+                delete_line()
             log_message(f"Error connecting to FTP server: {e}")
             connection_success = False
         
