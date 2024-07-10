@@ -461,8 +461,7 @@ private:
             }
             if (keys & KEY_A) {
                 tsl::changeTo<UltrahandSettingsMenu>(targetMenu);
-                //selectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItemRaw, [](auto*) {});
-                shiftItemFocus(listItemRaw);
+                selectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItemRaw, [](auto*) {});
                 simulatedSelectComplete = true;
                 return true;
             }
