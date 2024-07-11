@@ -182,7 +182,6 @@ def ftp_screenshots():
                     try:
                         download_file(ftp, file, local_file_path)
                         log_message(f"Downloaded: {file}")
-                        #if not initial_loop:
                         notify_new_file(formatted_name, local_file_path)
                         was_last_message = False
                     except Exception as e:
@@ -216,7 +215,7 @@ def reload_config():
     OUTPUT_PATH = config.get('LOCAL', 'OUTPUT_PATH')
     CHECK_RATE = int(config.get('SETTINGS', 'CHECK_RATE'))
     DT_FORMAT = config.get('SETTINGS', 'DT_FORMAT')
-    AUTO_START = config.getboolean('SETTINGS', 'AUTO_START')
+    AUTO_START = config.get('SETTINGS', 'AUTO_START')
 
 class ConfigDialog(QtWidgets.QDialog):
     def __init__(self, parent=None):
@@ -239,6 +238,7 @@ class ConfigDialog(QtWidgets.QDialog):
             for key, value in config.items(section):
                 item_label = key
                 line_edit = QtWidgets.QLineEdit(value)
+                line_edit.setAlignment(QtCore.Qt.AlignRight)  # Align text to the right
                 self.config_items[f"{section}.{key}"] = line_edit
                 if key == 'auto_start':
                     continue
