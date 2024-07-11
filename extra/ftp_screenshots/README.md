@@ -54,4 +54,4 @@ dt_format = %Y-%m-%d_%H-%M-%S
     - Install necessary packages using pip if not already installed:
       ```pip install configparser```
 3. Run the script:
-    - `python3 switch_screenshots.py`
+    - `python3 make.py`
