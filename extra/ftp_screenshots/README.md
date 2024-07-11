@@ -37,13 +37,14 @@ check_rate = 20
 dt_format = %Y-%m-%d_%H-%M-%S
 ```
 
-- `FTP_SERVER`: IP address of the FTP server.
-- `FTP_PORT`: Port number of the FTP server.
-- `FTP_USER`: Username for FTP login.
-- `FTP_PASS`: Password for FTP login (leave empty if no password).
-- `FTP_PATH`: Path on the FTP server to monitor for new files.
-- `OUTPUT_PATH`: Local directory where files will be saved.
-- `CHECK_RATE`: Time interval (in seconds) to wait between checks.
+- `ftp_server`: IP address of the FTP server.
+- `ftp_port`: Port number of the FTP server.
+- `ftp_user`: Username for FTP login.
+- `ftp_pass`: Password for FTP login (leave empty if no password).
+- `output_path`: Local directory where files will be saved.
+- `auto_start`: Variable for auto start (`True`/`False`)
+- `check_rate`: Time interval (in seconds) to wait between checks.
+- `dt_format`: Format of image file name.
 
 ## Usage
 
