@@ -31,7 +31,10 @@ FTP_PATH = /emuMMC/RAW1/Nintendo/Album/
 
 [LOCAL]
 OUTPUT_PATH = <SCREENSHOT_OUTPUT_FOLDER>
+
+[SETTINGS]
 CHECK_RATE = 20
+DT_FORMAT = %%Y-%%m-%%d_%%H-%%M-%%S
 ```
 
 - `FTP_SERVER`: IP address of the FTP server.
