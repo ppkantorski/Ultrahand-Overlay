@@ -6,15 +6,14 @@ import configparser
 from datetime import datetime
 from PyQt5 import QtWidgets, QtGui, QtCore
 import threading
+from plyer import notification
 
 TITLE = "Switch FTP Screenshots"
-VERSION = "0.1.4"
+VERSION = "0.1.5"
 AUTHOR = "ppkantorski"
 
 # Determine the directory where the script is located
 if getattr(sys, 'frozen', False):
-    # If the application is run as a bundle, the PyInstaller bootloader
-    # sets the app's path into the _MEIPASS attribute.
     script_dir = sys._MEIPASS
 else:
     script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -63,6 +62,29 @@ stop_event = threading.Event()
 
 def log_message(message):
     print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {message}")
+
+
+def notify_new_file(file_name):
+    message = f"New file {file_name} has been added."
+    if sys.platform == 'darwin':  # macOS
+        from Foundation import NSUserNotification, NSUserNotificationCenter
+        notification = NSUserNotification.alloc().init()
+        notification.setTitle_("FTP Screenshots")
+        notification.setInformativeText_(message)
+        notification.setSoundName_("NSUserNotificationDefaultSoundName")
+        NSUserNotificationCenter.defaultUserNotificationCenter().deliverNotification_(notification)
+    else:
+        try:
+            notification.notify(
+                title="FTP Screenshots",
+                message=message,
+                app_name=TITLE,
+                app_icon=os.path.join(script_dir, "icon.png"),  # path to your app icon
+                timeout=10  # Notification will disappear after 10 seconds
+            )
+            log_message(f"Notification sent for new file: {file_name}")
+        except Exception as e:
+            log_message(f"Failed to send notification: {e}")
 
 def connect_ftp():
     ftp = ftplib.FTP()
@@ -136,6 +158,8 @@ def ftp_screenshots():
                     try:
                         download_file(ftp, file, local_file_path)
                         log_message(f"Downloaded: {file}")
+                        #if not initial_loop:
+                        notify_new_file(local_file_path)
                         was_last_message = False
                     except Exception as e:
                         log_message(f"Error downloading {file}: {e}")
