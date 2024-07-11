@@ -5,7 +5,7 @@ import configparser
 from datetime import datetime
 
 TITLE = "Switch FTP Screenshots"
-VERSION = "0.1.2"
+VERSION = "0.1.3"
 AUTHOR = "ppkantorski"
 
 # Determine the directory where the script is located
@@ -35,7 +35,7 @@ def log_message(message):
 
 def connect_ftp():
     ftp = ftplib.FTP()
-    ftp.connect(FTP_SERVER, FTP_PORT)
+    ftp.connect(FTP_SERVER, FTP_PORT, timeout=10)  # Set timeout for connection
     ftp.login(FTP_USER, FTP_PASS)
     return ftp
 
@@ -61,27 +61,23 @@ def download_file(ftp, remote_file, local_file):
         ftp.retrbinary(f'RETR {remote_file}', f.write)
 
 def format_filename(file_name, dt_format):
-    # Extract timestamp part from the filename (without extension)
     base_name, extension = os.path.splitext(file_name)
     try:
         timestamp_str = base_name.split('-')[0]
-        # Parse timestamp into a datetime object
         timestamp_dt = datetime.strptime(timestamp_str, '%Y%m%d%H%M%S%f')
-        # Format datetime object into the desired string format
         formatted_str = timestamp_dt.strftime(dt_format)
         return formatted_str
     except ValueError:
-        # If timestamp parsing fails, return the original filename without modification
-        return base_name  # Return the base name without the extension
+        return base_name
 
 def clear_screen():
-    if os.name == 'nt':  # For Windows
+    if os.name == 'nt':
         os.system('cls')
-    else:  # For macOS and Linux
+    else:
         os.system('clear')
 
 def delete_line():
-    print("\033[F\033[K", end='')  # Move cursor up one line and clear the line
+    print("\033[F\033[K", end='')
 
 def main():
     clear_screen()
@@ -117,12 +113,14 @@ def main():
                     except Exception as e:
                         log_message(f"Error downloading {file}: {e}")
                         was_last_message = False
-            
             ftp.quit()
-        except Exception as e:
+        except ftplib.all_errors as e:
             if not connection_success and not initial_loop:
                 delete_line()
             log_message(f"Error connecting to FTP server: {e}")
+            connection_success = False
+        except Exception as e:
+            log_message(f"Unexpected error: {e}")
             connection_success = False
         
         initial_loop = False
