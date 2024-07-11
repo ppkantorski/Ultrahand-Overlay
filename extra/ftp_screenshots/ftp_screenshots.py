@@ -149,9 +149,10 @@ def ftp_screenshots():
             was_last_message = True
             for file in current_files:
                 file_name = os.path.basename(file)
+                formatted_name = file_name
                 if DT_FORMAT:
-                    formatted_name = format_filename(file_name, DT_FORMAT)
-                    local_file_path = os.path.join(OUTPUT_PATH, formatted_name + os.path.splitext(file_name)[1])
+                    formatted_name = format_filename(file_name, DT_FORMAT) + os.path.splitext(file_name)[1]
+                    local_file_path = os.path.join(OUTPUT_PATH, formatted_name)
                 else:
                     local_file_path = os.path.join(OUTPUT_PATH, file_name)
                 if not os.path.exists(local_file_path):
@@ -159,7 +160,7 @@ def ftp_screenshots():
                         download_file(ftp, file, local_file_path)
                         log_message(f"Downloaded: {file}")
                         #if not initial_loop:
-                        notify_new_file(local_file_path)
+                        notify_new_file(formatted_name)
                         was_last_message = False
                     except Exception as e:
                         log_message(f"Error downloading {file}: {e}")
