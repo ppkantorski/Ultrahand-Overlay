@@ -8,6 +8,7 @@ from PyQt5 import QtWidgets, QtGui, QtCore
 import threading
 from plyer import notification
 
+
 TITLE = "Switch FTP Screenshots"
 VERSION = "0.1.5"
 AUTHOR = "ppkantorski"
@@ -45,17 +46,17 @@ config = configparser.ConfigParser(interpolation=None)  # Disable interpolation
 config.read(config_path)
 
 # FTP server details
-FTP_SERVER = config.get('FTP', 'FTP_SERVER')
-FTP_PORT = config.getint('FTP', 'FTP_PORT')
-FTP_USER = config.get('FTP', 'FTP_USER')
-FTP_PASS = config.get('FTP', 'FTP_PASS')
+FTP_SERVER = config.get('FTP', 'ftp_server')
+FTP_PORT = config.getint('FTP', 'ftp_port')
+FTP_USER = config.get('FTP', 'ftp_user')
+FTP_PASS = config.get('FTP', 'ftp_pass')
 FTP_PATH = "/emuMMC/RAW1/Nintendo/Album/"
 
 # Local directory to save files
-OUTPUT_PATH = config.get('LOCAL', 'OUTPUT_PATH')
-CHECK_RATE = int(config.get('SETTINGS', 'CHECK_RATE'))
-DT_FORMAT = config.get('SETTINGS', 'DT_FORMAT')
-AUTO_START = config.getboolean('SETTINGS', 'AUTO_START')
+OUTPUT_PATH = config.get('LOCAL', 'output_path')
+CHECK_RATE = int(config.get('SETTINGS', 'check_rate'))
+DT_FORMAT = config.get('SETTINGS', 'dt_format')
+AUTO_START = config.getboolean('SETTINGS', 'auto_start')
 
 running = False
 stop_event = threading.Event()
@@ -63,16 +64,38 @@ stop_event = threading.Event()
 def log_message(message):
     print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {message}")
 
+if sys.platform == 'darwin':  # macOS specific imports
+    from Foundation import NSObject, NSUserNotification, NSUserNotificationCenter, NSUserNotificationDefaultSoundName
 
-def notify_new_file(file_name):
+    class NotificationDelegate(NSObject):
+        def userNotificationCenter_didActivateNotification_(self, center, notification):
+            userInfo = notification.userInfo()
+            log_message(f"Notification clicked. User info: {userInfo}")
+            if userInfo:
+                file_path = userInfo.get('file_path')
+                log_message(f"Attempting to open file path: {file_path}")
+                if file_path:
+                    os.system(f'open "{file_path}"')
+
+# Explicitly keep a reference to the delegate to prevent garbage collection
+notification_delegate = None
+
+def notify_new_file(file_name, local_file_path=""):
+    global notification_delegate
     message = f"New file {file_name} has been added."
     if sys.platform == 'darwin':  # macOS
-        from Foundation import NSUserNotification, NSUserNotificationCenter
         notification = NSUserNotification.alloc().init()
-        notification.setTitle_("FTP Screenshots")
+        notification.setTitle_(TITLE)
         notification.setInformativeText_(message)
-        notification.setSoundName_("NSUserNotificationDefaultSoundName")
-        NSUserNotificationCenter.defaultUserNotificationCenter().deliverNotification_(notification)
+        notification.setSoundName_(NSUserNotificationDefaultSoundName)
+        notification.setUserInfo_({'file_path': local_file_path})
+        
+        center = NSUserNotificationCenter.defaultUserNotificationCenter()
+        notification_delegate = NotificationDelegate.alloc().init()
+        center.setDelegate_(notification_delegate)
+        log_message("Delegate set for notification center")
+        center.deliverNotification_(notification)
+        log_message(f"Notification sent for new file: {file_name} with path: {local_file_path}")
     else:
         try:
             notification.notify(
@@ -160,7 +183,7 @@ def ftp_screenshots():
                         download_file(ftp, file, local_file_path)
                         log_message(f"Downloaded: {file}")
                         #if not initial_loop:
-                        notify_new_file(formatted_name)
+                        notify_new_file(formatted_name, local_file_path)
                         was_last_message = False
                     except Exception as e:
                         log_message(f"Error downloading {file}: {e}")
