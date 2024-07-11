@@ -23,18 +23,18 @@ The script reads configuration details from a `config.ini` file located in the s
 
 ```ini
 [FTP]
-FTP_SERVER = <SWITCH_SERVER_IP>
-FTP_PORT = 5000
-FTP_USER = root
-FTP_PASS = 
-FTP_PATH = /emuMMC/RAW1/Nintendo/Album/
+ftp_server = X.X.X.X
+ftp_port = 5000
+ftp_user = root
+ftp_pass = 
 
 [LOCAL]
-OUTPUT_PATH = <SCREENSHOT_OUTPUT_FOLDER>
+output_path = /your/desired/pics/folder/
 
 [SETTINGS]
-CHECK_RATE = 20
-DT_FORMAT = %%Y-%%m-%%d_%%H-%%M-%%S
+auto_start = False
+check_rate = 20
+dt_format = %Y-%m-%d_%H-%M-%S
 ```
 
 - `FTP_SERVER`: IP address of the FTP server.
