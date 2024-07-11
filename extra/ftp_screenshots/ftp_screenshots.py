@@ -25,10 +25,10 @@ config_path = os.path.join(script_dir, 'config.ini')
 # Ensure the config.ini file exists, create a default one if not
 if not os.path.exists(config_path):
     default_config = """[FTP]
-FTP_SERVER = X.X.X.X
-FTP_PORT = 5000
-FTP_USER = root
-FTP_PASS = 
+SERVER = X.X.X.X
+PORT = 5000
+USER = root
+PASS = 
 
 [LOCAL]
 OUTPUT_PATH = /path/to/save/files/
@@ -46,11 +46,11 @@ config = configparser.ConfigParser(interpolation=None)  # Disable interpolation
 config.read(config_path)
 
 # FTP server details
-FTP_SERVER = config.get('FTP', 'ftp_server')
-FTP_PORT = config.getint('FTP', 'ftp_port')
-FTP_USER = config.get('FTP', 'ftp_user')
-FTP_PASS = config.get('FTP', 'ftp_pass')
-FTP_PATH = "/emuMMC/RAW1/Nintendo/Album/"
+SERVER = config.get('FTP', 'server')
+PORT = config.getint('FTP', 'port')
+USER = config.get('FTP', 'user')
+PASS = config.get('FTP', 'pass')
+PATH = "/emuMMC/RAW1/Nintendo/Album/"
 
 # Local directory to save files
 OUTPUT_PATH = config.get('LOCAL', 'output_path')
@@ -111,8 +111,8 @@ def notify_new_file(file_name, local_file_path=""):
 
 def connect_ftp():
     ftp = ftplib.FTP()
-    ftp.connect(FTP_SERVER, FTP_PORT, timeout=10)  # Set timeout for connection
-    ftp.login(FTP_USER, FTP_PASS)
+    ftp.connect(SERVER, PORT, timeout=10)  # Set timeout for connection
+    ftp.login(USER, PASS)
     return ftp
 
 def list_files(ftp, path):
@@ -155,7 +155,7 @@ def clear_screen():
 def delete_line():
     print("\033[F\033[K", end='')
 
-def ftp_screenshots():
+def screenshots():
     global running
     connection_success = False
     initial_loop = True
@@ -164,10 +164,10 @@ def ftp_screenshots():
         start_time = time.time()
         try:
             ftp = connect_ftp()
-            current_files = list_files(ftp, FTP_PATH)
+            current_files = list_files(ftp, PATH)
             if connection_success and was_last_message:
                 delete_line()
-            log_message(f"FTP Connection to {FTP_SERVER} successful.")
+            log_message(f"FTP Connection to {SERVER} successful.")
             connection_success = True
             was_last_message = True
             for file in current_files:
@@ -205,13 +205,13 @@ def ftp_screenshots():
     log_message(f"FTP screenshots service has been stopped.")
 
 def reload_config():
-    global FTP_SERVER, FTP_PORT, FTP_USER, FTP_PASS, FTP_PATH, OUTPUT_PATH, CHECK_RATE, DT_FORMAT, AUTO_START
+    global SERVER, PORT, USER, PASS, PATH, OUTPUT_PATH, CHECK_RATE, DT_FORMAT, AUTO_START
     config.read(config_path)
-    FTP_SERVER = config.get('FTP', 'FTP_SERVER')
-    FTP_PORT = config.getint('FTP', 'FTP_PORT')
-    FTP_USER = config.get('FTP', 'FTP_USER')
-    FTP_PASS = config.get('FTP', 'FTP_PASS')
-    #FTP_PATH = config.get('FTP', 'FTP_PATH')
+    SERVER = config.get('FTP', 'SERVER')
+    PORT = config.getint('FTP', 'PORT')
+    USER = config.get('FTP', 'USER')
+    PASS = config.get('FTP', 'PASS')
+    #PATH = config.get('FTP', 'PATH')
     OUTPUT_PATH = config.get('LOCAL', 'OUTPUT_PATH')
     CHECK_RATE = int(config.get('SETTINGS', 'CHECK_RATE'))
     DT_FORMAT = config.get('SETTINGS', 'DT_FORMAT')
@@ -316,7 +316,7 @@ class SystemTrayApp(QtWidgets.QSystemTrayIcon):
         if not running:
             running = True
             stop_event.clear()
-            threading.Thread(target=ftp_screenshots, daemon=True).start()
+            threading.Thread(target=screenshots, daemon=True).start()
             self.start_action.setText("\u25A0 Stop Screenshots Capture")
         else:
             log_message("FTP Screenshots Capture is already running")
