@@ -2993,7 +2993,7 @@ public:
                         setIniFileValue(OVERLAYS_INI_FILEPATH, overlayFileName, STAR_STR, FALSE_STR);
                         setIniFileValue(OVERLAYS_INI_FILEPATH, overlayFileName, HIDE_STR, FALSE_STR);
                         setIniFileValue(OVERLAYS_INI_FILEPATH, overlayFileName, USE_LAUNCH_ARGS_STR, FALSE_STR);
-                        setIniFileValue(OVERLAYS_INI_FILEPATH, overlayFileName, LAUNCH_ARGS_STR, "''");
+                        setIniFileValue(OVERLAYS_INI_FILEPATH, overlayFileName, LAUNCH_ARGS_STR, "");
                         const auto& [result, overlayName, overlayVersion] = getOverlayInfo(OVERLAY_PATH + overlayFileName);
                         if (result != ResultSuccess) continue;
                         overlayList.insert("0020"+(overlayName)+":" + overlayFileName);
@@ -3002,7 +3002,7 @@ public:
                         const std::string& starred = getValueOrDefault(it->second, STAR_STR, FALSE_STR);
                         const std::string& hide = getValueOrDefault(it->second, HIDE_STR, FALSE_STR);
                         const std::string& useLaunchArgs = getValueOrDefault(it->second, USE_LAUNCH_ARGS_STR, FALSE_STR);
-                        const std::string& launchArgs = getValueOrDefault(it->second, LAUNCH_ARGS_STR, "''");
+                        const std::string& launchArgs = getValueOrDefault(it->second, LAUNCH_ARGS_STR, "");
                         
                         const auto& [result, overlayName, overlayVersion] = getOverlayInfo(OVERLAY_PATH + overlayFileName);
                         if (result != ResultSuccess) continue;
