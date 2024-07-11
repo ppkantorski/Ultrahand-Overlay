@@ -23,10 +23,10 @@ The script reads configuration details from a `config.ini` file located in the s
 
 ```ini
 [FTP]
-ftp_server = X.X.X.X
-ftp_port = 5000
-ftp_user = root
-ftp_pass = 
+server = X.X.X.X
+port = 5000
+user = root
+pass = 
 
 [LOCAL]
 output_path = /your/desired/pics/folder/
