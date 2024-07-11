@@ -291,7 +291,7 @@ class SystemTrayApp(QtWidgets.QSystemTrayIcon):
         self.menu.addSeparator()
         self.config_action = self.menu.addAction("Configure...")
         self.menu.addSeparator()
-        self.exit_action = self.menu.addAction("Exit")
+        self.exit_action = self.menu.addAction("Quit")
 
         self.start_action.triggered.connect(self.toggle_capture)
         self.auto_start_action.triggered.connect(self.toggle_auto_start)
