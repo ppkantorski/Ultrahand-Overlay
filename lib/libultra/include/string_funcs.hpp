@@ -393,22 +393,48 @@ inline std::string removeTag(const std::string &input) {
 }
 
 
+inline std::string getFirstLongEntry(const std::string& input, size_t minLength = 8) {
+    std::istringstream iss(input);
+    std::string word;
+
+    // Split the input string based on spaces and get the first word
+    if (iss >> word) {
+        // Check if the first word's length is greater than the specified length
+        if (word.length() > minLength) {
+            return word;
+        }
+    }
+    
+    // Return an empty string if the first word is not longer than minLength
+    return input;
+}
+
 
 // This will take a string like "v1.3.5-abasdfasdfa" and output "1.3.5". string could also look like "test-1.3.5-1" or "v1.3.5" and we will only want "1.3.5"
 inline std::string cleanVersionLabel(const std::string& input) {
     std::string versionLabel;
+    std::string prefix; // To store the preceding characters
     versionLabel.reserve(input.size()); // Reserve space for the output string
 
     bool foundDigit = false;
     for (char c : input) {
         if (std::isdigit(c) || c == '.') {
-            versionLabel += c;
-            if (std::isdigit(c)) {
-                foundDigit = true;
+            if (!foundDigit) {
+                // Include the prefix in the version label before adding digits
+                if (!prefix.empty() && prefix.back() != 'v') {
+                    versionLabel += prefix;
+                }
+                prefix.clear();
             }
-        } else if (foundDigit) {
-            // Stop at the first non-digit character after encountering digits
-            break;
+            versionLabel += c;
+            foundDigit = true;
+        } else {
+            if (!foundDigit) {
+                prefix += c; // Add to prefix until a digit is found
+            } else {
+                // Stop at the first non-digit character after encountering digits
+                break;
+            }
         }
     }
 

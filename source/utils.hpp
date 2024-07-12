@@ -1805,6 +1805,9 @@ void startInterpreterThread(int stackSize = 0x8000) {
     int result = threadCreate(&interpreterThread, backgroundInterpreter, nullptr, nullptr, stackSize, 0x2B, -2);
     if (result != 0) {
         commandSuccess = false;
+        clearInterpreterFlags();
+        runningInterpreter.store(false, std::memory_order_release);
+        interpreterThreadExit.store(true, std::memory_order_release);
         logMessage("Failed to create interpreter thread.");
         return;
     }
