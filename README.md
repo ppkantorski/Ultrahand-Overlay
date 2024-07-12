@@ -14,7 +14,7 @@ Ultrahand Overlay is a [Tesla Menu](https://github.com/WerWolv/Tesla-Menu) repla
 With Ultrahand, you have the flexibility to customize and shape your file management system according to your needs, empowering you with greater control over your system configurations.
 
 ## Screenshots
-![Slideshow](https://gbatemp.net/attachments/ezgif-4-024e7852d3-gif.400949/)
+![Slideshow](.pics/slideshow.gif)
 
 ## Features
 
