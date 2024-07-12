@@ -1,4 +1,0 @@
-pyinstaller
-pyobjc
-plyer
-pyqt5
