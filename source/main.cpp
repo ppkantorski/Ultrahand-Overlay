@@ -1752,7 +1752,6 @@ public:
                 toggleListItem->setState(toggleStateOn);
 
                 toggleListItem->setStateChangedListener([this, i, selectedItem, listItemRaw = toggleListItem.get(), sourceType = sourceType](bool state) {
-                
                     // Initialize currentSelectedItem for this index if it does not exist
                     if (isInitialized.find(i) == isInitialized.end() || !isInitialized[i]) {
                         currentSelectedItems[i] = selectedItem;
@@ -1760,26 +1759,70 @@ public:
                     }
                     
                     tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemRaw, tsl::FocusDirection::None);
-
+                    
                     auto modifiedCmds = getSourceReplacement(!state ? commandsOn : commandsOff, currentSelectedItems[i], i, filePath);
                     auto modifiedCmdsCopy = modifiedCmds;
                     interpretAndExecuteCommands(std::move(modifiedCmdsCopy), filePath, specificKey);
-                
+                    
                     if (sourceType == FILE_STR) {
-                        // Find the move command and extract the destination path
+                        // Reset variables
+                        std::string selectedFileName;
+                        std::string updatedFileSource;
+                        
+                        // Extract the destination directory from the move command
                         for (const auto& cmd : modifiedCmds) {
-                            if (cmd.size() > 2 && cmd[0] == "move") {
-                                // Extract the destination directory from the move command
-                                std::string moveToDir = cmd[2];
-                                // Update currentSelectedItem for this index to be the move to directory
-                                currentSelectedItems[i] = moveToDir;
+                            if (cmd.size() > 1 && cmd[0] == "file_name") {
+                                selectedFileName = cmd[1];
+                                //logMessage("Selected file name: " + selectedFileName);
                                 break; // Assuming there's only one move command at the end
                             }
                         }
+                        
+                        if (!selectedFileName.empty()) {
+                            for (const auto& arg : !state ? commandsOff : commandsOn) {
+                                if (arg.size() > 1 && arg[0] == "file_source") {
+                                    updatedFileSource = arg[1];
+                                    break;
+                                }
+                            }
+                            
+                            //logMessage("Original file source: " + updatedFileSource);
+                            
+                            // Replace the filename / folder name wildcard placeholder (rightmost) within updatedFileSource with the selectedFileName
+                            size_t pos = updatedFileSource.rfind('*');
+                            if (pos != std::string::npos) {
+                                std::string prefix = updatedFileSource.substr(0, pos);
+                                std::string suffix = updatedFileSource.substr(pos + 1);
+                                
+                                // Check if suffix contains a file extension
+                                size_t extPos = selectedFileName.find('.');
+                                if (extPos != std::string::npos) {
+                                    // It's a file, include the file extension
+                                    updatedFileSource = prefix + selectedFileName + suffix;
+                                } else {
+                                    // It's a folder, exclude the file extension if present in the suffix
+                                    size_t extSuffixPos = suffix.find('.');
+                                    if (extSuffixPos != std::string::npos) {
+                                        updatedFileSource = prefix + selectedFileName + suffix.substr(extSuffixPos);
+                                    } else {
+                                        updatedFileSource = prefix + selectedFileName + suffix;
+                                    }
+                                }
+                                currentSelectedItems[i] = updatedFileSource;
+                                
+                                // Debug logging
+                                //logMessage("Updated file source for index " + std::to_string(i) + ": " + updatedFileSource);
+                            } else {
+                                //logMessage("Wildcard '*' not found in file source.");
+                            }
+                        } else {
+                            //logMessage("Selected file name is empty.");
+                        }
                     }
                 });
-
-
+                
+                
+                
                 list->addItem(toggleListItem.release());
             }
         }
