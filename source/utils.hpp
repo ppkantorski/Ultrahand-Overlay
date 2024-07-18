@@ -73,7 +73,7 @@ void powerOffAllControllers() {
     Result rc;
     static s32 g_connected_count = 0;
     static BtdrvAddress g_addresses[8] = {};
-
+    
     // Initialize Bluetooth manager
     rc = btmInitialize();
     if (R_FAILED(rc)) {
@@ -81,7 +81,7 @@ void powerOffAllControllers() {
         //LogLine("Error btmInitialize: %u - %X\n", rc, rc);
         return;
     }
-
+    
     if (hosversionAtLeast(13, 0, 0)) {
         BtmConnectedDeviceV13 connected_devices[8];
         rc = btmGetDeviceCondition(BtmProfile_None, connected_devices, 8, &g_connected_count);
@@ -106,7 +106,7 @@ void powerOffAllControllers() {
             //LogLine("Error btmLegacyGetDeviceCondition: %u - %X\n", rc, rc);
         }
     }
-
+    
     if (R_SUCCEEDED(rc)) {
         //LogLine("Disconnecting controllers. Count: %u\n", g_connected_count);
         for (int i = 0; i != g_connected_count; ++i) {
@@ -122,7 +122,7 @@ void powerOffAllControllers() {
     } else {
         commandSuccess = false;
     }
-
+    
     // Exit Bluetooth manager
     btmExit();
 }
@@ -622,8 +622,8 @@ bool isDangerousCombination(const std::string& patternPath) {
         ROOT_PATH
     };
     static const std::vector<std::string> ultraProtectedFolders = {
-        "sdmc:/Nintendo/",
-        "sdmc:/emuMMC/"
+        "sdmc:/Nintendo/Contents/",
+        "sdmc:/emuMMC/Nintendo/Contents/"
     };
     static const std::vector<std::string> dangerousCombinationPatterns = {
         "*",         // Deletes all files/directories in the current directory
@@ -860,7 +860,14 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
     
     std::vector<std::string> modifiedCmd;
     std::string modifiedArg, lastArg, replacement, commandName;
+
+    std::string fileName = (isDirectory(entry) ? getNameFromPath(entry) : dropExtension(getNameFromPath(entry)));
     
+    //if (isFileOrDirectory(entry)) {
+    // Insert file_name command at the beginning (for handling sourced toggles)
+    //}
+    bool usingFileSource = false;
+
     for (const auto& cmd : commands) {
         if (cmd.empty())
             continue;
@@ -887,7 +894,10 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
         if ((inEristaSection && !inMarikoSection && usingErista) || (!inEristaSection && inMarikoSection && usingMariko) || (!inEristaSection && !inMarikoSection)) {
             
             if (cmd.size() > 1) {
-                if ((commandName == "list_source") && listString.empty())
+                if (commandName == "file_source") {
+                    usingFileSource = true;
+                }
+                else if ((commandName == "list_source") && listString.empty())
                     listString = removeQuotes(cmd[1]);
                 else if ((commandName == "list_file_source") && listPath.empty())
                     listPath = preprocessPath(cmd[1], packagePath);
@@ -902,6 +912,7 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
                 modifiedArg = arg; // Working with a copy for modifications
                 lastArg = ""; // Initialize lastArg for each argument
                 
+
                 while (modifiedArg.find("{file_source}") != std::string::npos) {
                     modifiedArg = replacePlaceholder(modifiedArg, "{file_source}", entry);
                     if (modifiedArg == lastArg)
@@ -909,12 +920,6 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
                     lastArg = modifiedArg;
                 }
                 while (modifiedArg.find("{file_name}") != std::string::npos) {
-                    std::string fileName;
-                    if (isDirectory(entry)) {
-                        fileName = getNameFromPath(entry); // Use the name of the folder itself
-                    } else {
-                        fileName = dropExtension(getNameFromPath(entry)); // Drop the extension for files
-                    }
                     modifiedArg = replacePlaceholder(modifiedArg, "{file_name}", fileName);
                     if (modifiedArg == lastArg)
                         break;
@@ -999,6 +1004,10 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
             }
             
             modifiedCommands.emplace_back(std::move(modifiedCmd)); // Move modified command to the result vector
+        }
+        // Add the file_name command at the front if file_source was used
+        if (usingFileSource) {
+            modifiedCommands.insert(modifiedCommands.begin(), {"file_name", fileName});
         }
     }
     return modifiedCommands;
@@ -1280,32 +1289,93 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             createDirectory(sourcePath);
         }
     } else if (commandName == "cp" || commandName == "copy") { // Copy command
-        if (cmdSize >= 3) {
-            std::string sourcePath = preprocessPath(cmd[1], packagePath);
-            std::string destinationPath = preprocessPath(cmd[2], packagePath);
-            
-            if (!isFileOrDirectory(sourcePath)) {
-                commandSuccess = false;
+        std::string sourceListPath, destinationListPath;
+        std::string logSource, logDestination;
+        std::string sourcePath, destinationPath;
+    
+        // Parse the command arguments
+        for (size_t i = 1; i < cmd.size(); ++i) {
+            if (cmd[i] == "-src" && i + 1 < cmd.size()) {
+                sourceListPath = preprocessPath(cmd[++i], packagePath);
+            } else if (cmd[i] == "-dest" && i + 1 < cmd.size()) {
+                destinationListPath = preprocessPath(cmd[++i], packagePath);
+            } else if (cmd[i] == "-log_src" && i + 1 < cmd.size()) {
+                logSource = preprocessPath(cmd[++i], packagePath);
+            } else if (cmd[i] == "-log_dest" && i + 1 < cmd.size()) {
+                logDestination = preprocessPath(cmd[++i], packagePath);
+            } else if (sourcePath.empty()) {
+                sourcePath = preprocessPath(cmd[i], packagePath);
+            } else if (destinationPath.empty()) {
+                destinationPath = preprocessPath(cmd[i], packagePath);
+            }
+        }
+
+        if (!sourceListPath.empty() && !destinationListPath.empty()) {
+            std::vector<std::string> sourceFilesList = readListFromFile(sourceListPath);
+            std::vector<std::string> destinationFilesList = readListFromFile(destinationListPath);
+            for (size_t i = 0; i < sourceFilesList.size(); ++i) {
+                sourcePath = preprocessPath(sourceFilesList[i]);
+                destinationPath = preprocessPath(destinationFilesList[i]);
+                long long totalBytesCopied = 0;
+                long long totalSize = getTotalSize(sourcePath);  // Ensure this is calculated if needed.
+                copyFileOrDirectory(sourcePath, destinationPath, &totalBytesCopied, totalSize);
+            }
+        } else {
+            // Ensure source and destination paths are set
+            if (sourcePath.empty() || destinationPath.empty()) {
+                logMessage("Source and destination paths must be specified.");
             } else {
-                if (sourcePath.find('*') != std::string::npos)
-                    copyFileOrDirectoryByPattern(sourcePath, destinationPath); // Delete files or directories by pattern
-                else {
-                    long long totalBytesCopied = 0;
-                    long long totalSize = getTotalSize(sourcePath);  // Ensure this is calculated if needed.
-                    
-                    copyFileOrDirectory(sourcePath, destinationPath, &totalBytesCopied, totalSize);
+                // Perform the copy operation
+                if (!isFileOrDirectory(sourcePath)) {
+                    logMessage("Source file or directory doesn't exist: " + sourcePath);
+                } else {
+                    if (sourcePath.find('*') != std::string::npos) {
+                        copyFileOrDirectoryByPattern(sourcePath, destinationPath, logSource, logDestination); // Copy files by pattern
+                    } else {
+                        long long totalBytesCopied = 0;
+                        long long totalSize = getTotalSize(sourcePath);  // Ensure this is calculated if needed.
+                        copyFileOrDirectory(sourcePath, destinationPath, &totalBytesCopied, totalSize, logSource, logDestination);
+                    }
                 }
             }
-
         }
+        
+
     } else if (commandName == "del" || commandName == "delete") { // Delete command
-        if (cmdSize >= 2) {
-            std::string sourcePath = preprocessPath(cmd[1], packagePath);
-            if (!isDangerousCombination(sourcePath)) {
-                if (sourcePath.find('*') != std::string::npos)
-                    deleteFileOrDirectoryByPattern(sourcePath); // Delete files or directories by pattern
-                else
-                    deleteFileOrDirectory(sourcePath);
+        std::string sourceListPath;
+        std::string logSource;
+        std::string sourcePath;
+        
+        // Parse the command arguments
+        for (size_t i = 1; i < cmd.size(); ++i) {
+            if (cmd[i] == "-src" && i + 1 < cmd.size()) {
+                sourceListPath = preprocessPath(cmd[++i], packagePath);
+            } else if (cmd[i] == "-log_src" && i + 1 < cmd.size()) {
+                logSource = preprocessPath(cmd[++i], packagePath);
+            } else if (sourcePath.empty()) {
+                sourcePath = preprocessPath(cmd[i], packagePath);
+            }
+        }
+
+        if (!sourceListPath.empty()) {
+            std::vector<std::string> sourceFilesList = readListFromFile(sourceListPath);
+            for (size_t i = 0; i < sourceFilesList.size(); ++i) {
+                sourcePath = preprocessPath(sourceFilesList[i]);
+                deleteFileOrDirectory(sourcePath);
+            }
+        } else {
+
+            // Ensure source path is set
+            if (sourcePath.empty()) {
+                logMessage("Source path must be specified.");
+            } else {
+                // Perform the delete operation
+                if (!isDangerousCombination(sourcePath)) {
+                    if (sourcePath.find('*') != std::string::npos)
+                        deleteFileOrDirectoryByPattern(sourcePath, logSource); // Delete files by pattern
+                    else
+                        deleteFileOrDirectory(sourcePath, logSource); // Delete single file or directory
+                }
             }
         }
     } else if (commandName.substr(0, 7) == "mirror_") {
@@ -1332,16 +1402,54 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
 
         }
     } else if (commandName == "mv" || commandName == "move" || commandName == "rename" ) { // Rename command
-        if (cmdSize >= 3) {
-            std::string sourcePath = preprocessPath(cmd[1], packagePath);
-            std::string destinationPath = preprocessPath(cmd[2], packagePath);
-            if (!isDangerousCombination(sourcePath)) {
-                if (sourcePath.find('*') != std::string::npos)
-                    moveFilesOrDirectoriesByPattern(sourcePath, destinationPath); // Move files by pattern
-                else
-                    moveFileOrDirectory(sourcePath, destinationPath); // Move single file or directory
+        std::string logSource, logDestination;
+        std::string sourcePath, destinationPath;
+        std::string sourceListPath, destinationListPath;
+        
+        // Parse the command arguments
+        for (size_t i = 1; i < cmd.size(); ++i) {
+            if (cmd[i] == "-src" && i + 1 < cmd.size()) {
+                sourceListPath = preprocessPath(cmd[++i], packagePath);
+            } else if (cmd[i] == "-dest" && i + 1 < cmd.size()) {
+                destinationListPath = preprocessPath(cmd[++i], packagePath);
+            } else if (cmd[i] == "-log_src" && i + 1 < cmd.size()) {
+                logSource = preprocessPath(cmd[++i], packagePath);
+            } else if (cmd[i] == "-log_dest" && i + 1 < cmd.size()) {
+                logDestination = preprocessPath(cmd[++i], packagePath);
+            } else if (sourcePath.empty()) {
+                sourcePath = preprocessPath(cmd[i], packagePath);
+            } else if (destinationPath.empty()) {
+                destinationPath = preprocessPath(cmd[i], packagePath);
             }
         }
+
+        if (!sourceListPath.empty() && !destinationListPath.empty()) {
+            std::vector<std::string> sourceFilesList = readListFromFile(sourceListPath);
+            std::vector<std::string> destinationFilesList = readListFromFile(destinationListPath);
+            if (sourceFilesList.size() != destinationFilesList.size()) {
+                logMessage("Source and destination lists must have the same number of entries.");
+            } else {
+                for (size_t i = 0; i < sourceFilesList.size(); ++i) {
+                    sourcePath = preprocessPath(sourceFilesList[i]);
+                    destinationPath = preprocessPath(destinationFilesList[i]);
+                    moveFileOrDirectory(sourcePath, destinationPath);
+                }
+            }
+        } else {
+            // Ensure source and destination paths are set
+            if (sourcePath.empty() || destinationPath.empty()) {
+                logMessage("Source and destination paths must be specified.");
+            } else {
+                // Perform the move operation
+                if (!isDangerousCombination(sourcePath)) {
+                    if (sourcePath.find('*') != std::string::npos)
+                        moveFilesOrDirectoriesByPattern(sourcePath, destinationPath, logSource, logDestination); // Move files by pattern
+                    else
+                        moveFileOrDirectory(sourcePath, destinationPath, logSource, logDestination); // Move single file or directory
+                }
+            }
+        }
+
     } else if (commandName == "add-ini-section") {
         if (cmdSize >= 2) {
             std::string sourcePath = preprocessPath(cmd[1], packagePath);
