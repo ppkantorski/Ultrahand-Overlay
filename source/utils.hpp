@@ -367,7 +367,7 @@ void drawTable(std::unique_ptr<tsl::elm::List>& list, const std::vector<std::str
         for (size_t i = 0; i < sectionLines.size(); ++i) {
             renderer->drawString(sectionLines[i].c_str(), false, x + 12, y + yOffsets[i], fontSize, renderer->a((tableSectionTextColor == DEFAULT_STR) ? sectionTextColor : alternateSectionTextColor));
             // Check if infoLines[i] is "null" and replace it with UNAVAILABLE_SELECTION if true
-            std::string infoText = (infoLines[i].find(NULL_STR) == std::string::npos) ? UNAVAILABLE_SELECTION : infoLines[i];
+            std::string infoText = (infoLines[i].find(NULL_STR) != std::string::npos) ? UNAVAILABLE_SELECTION : infoLines[i];
             renderer->drawString(infoText.c_str(), false, x + infoXOffsets[i], y + yOffsets[i], fontSize, renderer->a((tableInfoTextColor == DEFAULT_STR) ? infoTextColor : alternateInfoTextColor));
         }
     }, hideTableBackground, endGap), totalHeight);
@@ -548,7 +548,7 @@ void addPackageInfo(std::unique_ptr<tsl::elm::List>& list, auto& packageHeader, 
                 sectionLines.push_back(std::string(aboutHeaderLength, ' '));
         }
     };
-    
+
     // Adding package header info
     if (!packageHeader.title.empty()) {
         sectionLines.push_back(TITLE);
