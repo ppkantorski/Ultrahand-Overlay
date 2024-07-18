@@ -1885,7 +1885,7 @@ public:
                     if (it != packageConfigData.end()) {
                         auto& optionSection = it->second;
                         auto footerIt = optionSection.find(FOOTER_STR);
-                        if (footerIt != optionSection.end() && footerIt->second != NULL_STR) {
+                        if (footerIt != optionSection.end() && (footerIt->second.find(NULL_STR) == std::string::npos)) {
                             selectedListItem->setValue(footerIt->second);
                         }
                     }
@@ -2292,7 +2292,7 @@ public:
                                 listItem->setValue(footer, true);
                         }
                         
-                        if (footer == UNAVAILABLE_SELECTION || footer == NOT_AVAILABLE_STR || footer == NULL_STR)
+                        if (footer == UNAVAILABLE_SELECTION || footer == NOT_AVAILABLE_STR || (footer.find(NULL_STR) != std::string::npos))
                             listItem->setValue(UNAVAILABLE_SELECTION, true);
 
                         if (commandMode == FORWARDER_STR) {
@@ -2339,7 +2339,7 @@ public:
                                 }
 
                                 if ((keys & KEY_A)) {
-                                    if (footer != UNAVAILABLE_SELECTION && footer != NOT_AVAILABLE_STR && footer != NULL_STR) {
+                                    if (footer != UNAVAILABLE_SELECTION && footer != NOT_AVAILABLE_STR && (footer.find(NULL_STR) == std::string::npos)) {
                                         if (inPackageMenu)
                                             inPackageMenu = false;
                                         if (inSubPackageMenu)
