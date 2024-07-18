@@ -616,6 +616,7 @@ bool isDangerousCombination(const std::string& patternPath) {
     static const std::vector<std::string> protectedFolders = {
         "sdmc:/Nintendo/",
         "sdmc:/emuMMC/",
+        "sdmc:/emuMMC/RAW1/",
         "sdmc:/atmosphere/",
         "sdmc:/bootloader/",
         "sdmc:/switch/",
@@ -624,7 +625,9 @@ bool isDangerousCombination(const std::string& patternPath) {
     };
     static const std::vector<std::string> ultraProtectedFolders = {
         "sdmc:/Nintendo/Contents/",
-        "sdmc:/emuMMC/Nintendo/Contents/"
+        "sdmc:/Nintendo/save/",
+        "sdmc:/emuMMC/RAW1/Nintendo/Contents/",
+        "sdmc:/emuMMC/RAW1/Nintendo/save/"
     };
     static const std::vector<std::string> dangerousCombinationPatterns = {
         "*",         // Deletes all files/directories in the current directory
@@ -649,14 +652,25 @@ bool isDangerousCombination(const std::string& patternPath) {
         }
         if (patternPath.find(folder) == 0) {
             std::string relativePath = patternPath.substr(folder.size());
+
+            // Check for dangerous patterns in the relative path
             for (const auto& pattern : dangerousPatterns) {
                 if (relativePath.find(pattern) != std::string::npos) {
                     return true; // Relative path contains a dangerous pattern
                 }
             }
-            for (const auto& pattern : dangerousCombinationPatterns) {
-                if (patternPath == folder + pattern) {
-                    return true; // Path is a protected folder combined with a dangerous pattern
+
+            // Check for dangerous combination patterns in the relative path
+            for (const auto& combination : dangerousCombinationPatterns) {
+                if (relativePath.find(combination) != std::string::npos) {
+                    return true; // Relative path contains a dangerous combination pattern
+                }
+            }
+
+            // Check for wildcard patterns that could affect ultra-protected folders
+            for (const auto& ultraFolder : ultraProtectedFolders) {
+                if (patternPath.find(ultraFolder.substr(folder.size())) == 0) {
+                    return true; // Path with wildcard could affect an ultra-protected folder
                 }
             }
         }
