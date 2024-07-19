@@ -1,4 +1,4 @@
-# Mod Master
+# Mod Master (now deprecated, replaced with Mod Alchemist)
 
 The Mod Master package provides various modifications and enhancements for your device.
 
