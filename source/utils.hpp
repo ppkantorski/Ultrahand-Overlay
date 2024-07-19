@@ -1653,7 +1653,13 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             lblExit();
         }
     } else if (commandName == "refresh") {
-        refreshGui = true;
+        if (cmd.size() == 1)
+            refreshGui = true;
+        else if (cmd.size() > 1) {
+            std::string refreshPattern = removeQuotes(cmd[1]);
+            if (refreshPattern == "theme")
+                tsl::initializeThemeVars();
+        }
     } else if (commandName == "logging") {
         interpreterLogging = !interpreterLogging;
     } else if (commandName == "clear") {
