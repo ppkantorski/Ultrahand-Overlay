@@ -1387,7 +1387,7 @@ public:
         std::string currentSection = GLOBAL_STR;
         std::string iniFilePath;
 
-        for (const auto& cmd : commands) {
+        for (auto& cmd : commands) {
             std::string commandName = cmd[0];
 
             if (stringToLowercase(commandName) == "erista:") {
@@ -1431,31 +1431,34 @@ public:
                 }
 
                 if (cmd.size() > 1) {
+                    if (!iniFilePath.empty())
+                        cmd[1] = replaceIniPlaceholder(cmd[1],iniFilePath);
+
                     if (commandName == "ini_file") {
                         iniFilePath = preprocessPath(cmd[1], filePath);
                         continue;
                     } else if (commandName == "filter") {
                         if (currentSection == GLOBAL_STR)
-                            filterList.push_back(std::move(preprocessPath(replaceIniPlaceholder(cmd[1],iniFilePath), filePath)));
+                            filterList.push_back(std::move(preprocessPath(cmd[1], filePath)));
                         else if (currentSection == ON_STR)
-                            filterListOn.push_back(std::move(preprocessPath(replaceIniPlaceholder(cmd[1],iniFilePath), filePath)));
+                            filterListOn.push_back(std::move(preprocessPath(cmd[1], filePath)));
                         else if (currentSection == OFF_STR)
-                            filterListOff.push_back(std::move(preprocessPath(replaceIniPlaceholder(cmd[1],iniFilePath), filePath)));
+                            filterListOff.push_back(std::move(preprocessPath(cmd[1], filePath)));
                     } else if (commandName == "file_source") {
                         sourceType = FILE_STR;
                         if (currentSection == GLOBAL_STR) {
                             logMessage("cmd[1]: "+cmd[1]);
-                            pathPattern = preprocessPath(replaceIniPlaceholder(cmd[1],iniFilePath), filePath);
+                            pathPattern = preprocessPath(cmd[1], filePath);
                             logMessage("pathPattern: "+pathPattern);
                             std::vector<std::string> newFiles = getFilesListByWildcards(pathPattern);
                             filesList.insert(filesList.end(), newFiles.begin(), newFiles.end()); // Append new files
                         } else if (currentSection == ON_STR) {
-                            pathPatternOn = preprocessPath(replaceIniPlaceholder(cmd[1],iniFilePath), filePath);
+                            pathPatternOn = preprocessPath(cmd[1], filePath);
                             std::vector<std::string> newFilesOn = getFilesListByWildcards(pathPatternOn);
                             filesListOn.insert(filesListOn.end(), newFilesOn.begin(), newFilesOn.end()); // Append new files
                             sourceTypeOn = FILE_STR;
                         } else if (currentSection == OFF_STR) {
-                            pathPatternOff = preprocessPath(replaceIniPlaceholder(cmd[1],iniFilePath), filePath);
+                            pathPatternOff = preprocessPath(cmd[1], filePath);
                             std::vector<std::string> newFilesOff = getFilesListByWildcards(pathPatternOff);
                             filesListOff.insert(filesListOff.end(), newFilesOff.begin(), newFilesOff.end()); // Append new files
                             sourceTypeOff = FILE_STR;
@@ -1463,16 +1466,16 @@ public:
                     } else if (commandName == "json_file_source") {
                         sourceType = JSON_FILE_STR;
                         if (currentSection == GLOBAL_STR) {
-                            jsonPath = preprocessPath(replaceIniPlaceholder(cmd[1],iniFilePath), filePath);
+                            jsonPath = preprocessPath(cmd[1], filePath);
                             if (cmd.size() > 2)
                                 jsonKey = cmd[2];
                         } else if (currentSection == ON_STR) {
-                            jsonPathOn = preprocessPath(replaceIniPlaceholder(cmd[1],iniFilePath), filePath);
+                            jsonPathOn = preprocessPath(cmd[1], filePath);
                             sourceTypeOn = JSON_FILE_STR;
                             if (cmd.size() > 2)
                                 jsonKeyOn = cmd[2];
                         } else if (currentSection == OFF_STR) {
-                            jsonPathOff = preprocessPath(replaceIniPlaceholder(cmd[1],iniFilePath), filePath);
+                            jsonPathOff = preprocessPath(cmd[1], filePath);
                             sourceTypeOff = JSON_FILE_STR;
                             if (cmd.size() > 2)
                                 jsonKeyOff = cmd[2];
@@ -1480,41 +1483,41 @@ public:
                     } else if (commandName == "list_file_source") {
                         sourceType = LIST_FILE_STR;
                         if (currentSection == GLOBAL_STR) {
-                            listPath = preprocessPath(replaceIniPlaceholder(cmd[1],iniFilePath), filePath);
+                            listPath = preprocessPath(cmd[1], filePath);
                         } else if (currentSection == ON_STR) {
-                            listPathOn = preprocessPath(replaceIniPlaceholder(cmd[1],iniFilePath), filePath);
+                            listPathOn = preprocessPath(cmd[1], filePath);
                             sourceTypeOn = LIST_FILE_STR;
                         } else if (currentSection == OFF_STR) {
-                            listPathOff = preprocessPath(replaceIniPlaceholder(cmd[1],iniFilePath), filePath);
+                            listPathOff = preprocessPath(cmd[1], filePath);
                             sourceTypeOff = LIST_FILE_STR;
                         }
                     } else if (commandName == "list_source") {
                         sourceType = LIST_STR;
                         if (currentSection == GLOBAL_STR) {
-                            listString = removeQuotes(replaceIniPlaceholder(cmd[1],iniFilePath));
+                            listString = removeQuotes(cmd[1]);
                         } else if (currentSection == ON_STR) {
-                            listStringOn = removeQuotes(replaceIniPlaceholder(cmd[1],iniFilePath));
+                            listStringOn = removeQuotes(cmd[1]);
                             sourceTypeOn = LIST_STR;
                         } else if (currentSection == OFF_STR) {
-                            listStringOff = removeQuotes(replaceIniPlaceholder(cmd[1],iniFilePath));
+                            listStringOff = removeQuotes(cmd[1]);
                             sourceTypeOff = LIST_STR;
                         }
                     } else if (commandName == "json_source") {
                         sourceType = JSON_STR;
                         if (currentSection == GLOBAL_STR) {
-                            jsonString = removeQuotes(replaceIniPlaceholder(cmd[1],iniFilePath));
+                            jsonString = removeQuotes(cmd[1]);
                             if (cmd.size() > 2)
-                                jsonKey = cmd[2];
+                                jsonKey = removeQuotes(cmd[2]);
                         } else if (currentSection == ON_STR) {
-                            jsonStringOn = removeQuotes(replaceIniPlaceholder(cmd[1],iniFilePath));
+                            jsonStringOn = removeQuotes(cmd[1]);
                             sourceTypeOn = JSON_STR;
                             if (cmd.size() > 2)
-                                jsonKeyOn = cmd[2];
+                                jsonKeyOn = removeQuotes(cmd[2]);
                         } else if (currentSection == OFF_STR) {
-                            jsonStringOff = removeQuotes(replaceIniPlaceholder(cmd[1],iniFilePath));
+                            jsonStringOff = removeQuotes(cmd[1]);
                             sourceTypeOff = JSON_STR;
                             if (cmd.size() > 2)
-                                jsonKeyOff = cmd[2];
+                                jsonKeyOff = removeQuotes(cmd[2]);
                         }
                     }
                 }
@@ -2245,13 +2248,13 @@ public:
                         addTable(list, tableData, this->packagePath, tableColumnOffset, tableStartGap, tableEndGap, tableSpacing, tableSectionTextColor, tableInfoTextColor, tableAlignment, hideTableBackground);
                         continue;
                     } else if (commandMode == TRACKBAR_STR) {
-                        list->addItem(new tsl::elm::TrackBar(optionName, this->packagePath, minValue, maxValue, units, interpretAndExecuteCommands, commands, option.first, false, false, -1, unlockedTrackbar, onEveryTick));
+                        list->addItem(new tsl::elm::TrackBar(optionName, this->packagePath, minValue, maxValue, units, interpretAndExecuteCommands, getSourceReplacement, commands, option.first, false, false, -1, unlockedTrackbar, onEveryTick));
                         continue;
                     } else if (commandMode == STEP_TRACKBAR_STR) {
                         if (steps == 0) { // assign minimum steps
                             steps = std::abs(maxValue - minValue) +1;
                         }
-                        list->addItem(new tsl::elm::StepTrackBar(optionName, this->packagePath, steps, minValue, maxValue, units, interpretAndExecuteCommands, commands, option.first, false, unlockedTrackbar, onEveryTick));
+                        list->addItem(new tsl::elm::StepTrackBar(optionName, this->packagePath, steps, minValue, maxValue, units, interpretAndExecuteCommands, getSourceReplacement, commands, option.first, false, unlockedTrackbar, onEveryTick));
                         continue;
                     } else if (commandMode == NAMED_STEP_TRACKBAR_STR) {
                         std::vector<std::string> entryList = {};
@@ -2268,14 +2271,28 @@ public:
                                     break;
                                 }
                                 else if ((cmd[0] == "list_file_source")) {
-                                    std::string listPath = preprocessPath(cmd[1], this->packagePath);
+                                    std::string listPath = preprocessPath(cmd[1], packagePath);
                                     entryList = readListFromFile(listPath);
                                     break;
+                                }
+                                else if (cmd.size() > 2) {
+                                    if (cmd[0] == "json_source") {
+                                        std::string jsonString = removeQuotes(cmd[1]);
+                                        std::string jsonKey = removeQuotes(cmd[2]);
+                                        populateSelectedItemsList(JSON_STR, jsonString, jsonKey, entryList);
+                                        break;
+                                    }
+                                    else if (cmd[0] == "json_file_source") {
+                                        std::string jsonPath = preprocessPath(cmd[1], packagePath);
+                                        std::string jsonKey = removeQuotes(cmd[2]);
+                                        populateSelectedItemsList(JSON_FILE_STR, jsonPath, jsonKey, entryList);
+                                        break;
+                                    }
                                 }
                             }
                         }
 
-                        list->addItem(new tsl::elm::NamedStepTrackBar(optionName, this->packagePath, entryList, interpretAndExecuteCommands, commands, option.first, unlockedTrackbar, onEveryTick));
+                        list->addItem(new tsl::elm::NamedStepTrackBar(optionName, this->packagePath, entryList, interpretAndExecuteCommands, getSourceReplacement, commands, option.first, unlockedTrackbar, onEveryTick));
 
                         continue;
                     }
@@ -3687,13 +3704,13 @@ public:
                             addTable(list, tableData, packagePath, tableColumnOffset, tableStartGap, tableEndGap, tableSpacing, tableSectionTextColor, tableInfoTextColor, tableAlignment, hideTableBackground);
                             continue;
                         } else if (commandMode == TRACKBAR_STR) {
-                            list->addItem(new tsl::elm::TrackBar(optionName, packagePath, minValue, maxValue, units, interpretAndExecuteCommands, commands, option.first, false, false, -1, unlockedTrackbar, onEveryTick));
+                            list->addItem(new tsl::elm::TrackBar(optionName, packagePath, minValue, maxValue, units, interpretAndExecuteCommands, getSourceReplacement, commands, option.first, false, false, -1, unlockedTrackbar, onEveryTick));
                             continue;
                         } else if (commandMode == STEP_TRACKBAR_STR) {
                             if (steps == 0) { // assign minimum steps
                                 steps = std::abs(maxValue - minValue) +1;
                             }
-                            list->addItem(new tsl::elm::StepTrackBar(optionName, packagePath, steps, minValue, maxValue, units, interpretAndExecuteCommands, commands, option.first, false, unlockedTrackbar, onEveryTick));
+                            list->addItem(new tsl::elm::StepTrackBar(optionName, packagePath, steps, minValue, maxValue, units, interpretAndExecuteCommands, getSourceReplacement, commands, option.first, false, unlockedTrackbar, onEveryTick));
                             continue;
                         } else if (commandMode == NAMED_STEP_TRACKBAR_STR) {
                             std::vector<std::string> entryList = {};
@@ -3714,10 +3731,24 @@ public:
                                         entryList = readListFromFile(listPath);
                                         break;
                                     }
+                                    else if (cmd.size() > 2) {
+                                        if (cmd[0] == "json_source") {
+                                            std::string jsonString = removeQuotes(cmd[1]);
+                                            std::string jsonKey = removeQuotes(cmd[2]);
+                                            populateSelectedItemsList(JSON_STR, jsonString, jsonKey, entryList);
+                                            break;
+                                        }
+                                        else if (cmd[0] == "json_file_source") {
+                                            std::string jsonPath = preprocessPath(cmd[1], packagePath);
+                                            std::string jsonKey = removeQuotes(cmd[2]);
+                                            populateSelectedItemsList(JSON_FILE_STR, jsonPath, jsonKey, entryList);
+                                            break;
+                                        }
+                                    }
                                 }
                             }
                             
-                            list->addItem(new tsl::elm::NamedStepTrackBar(optionName, packagePath, entryList, interpretAndExecuteCommands, commands, option.first, unlockedTrackbar, onEveryTick));
+                            list->addItem(new tsl::elm::NamedStepTrackBar(optionName, packagePath, entryList, interpretAndExecuteCommands, getSourceReplacement, commands, option.first, unlockedTrackbar, onEveryTick));
                             
                             continue;
                         }
