@@ -1544,6 +1544,85 @@ void handleIniCommands(const std::vector<std::string>& cmd, const std::string& p
     }
 }
 
+void handleHexEdit(const std::string& sourcePath, const std::string& secondArg, const std::string& thirdArg, const std::string& commandName, const std::vector<std::string>& cmd) {
+    if (commandName == "hex-by-offset") {
+        hexEditByOffset(sourcePath.c_str(), secondArg.c_str(), thirdArg.c_str());
+    } else if (commandName == "hex-by-swap") {
+        if (cmd.size() >= 5) {
+            size_t occurrence = std::stoul(removeQuotes(cmd[4]));
+            hexEditFindReplace(sourcePath, secondArg, thirdArg, occurrence);
+        } else {
+            hexEditFindReplace(sourcePath, secondArg, thirdArg);
+        }
+    } else if (commandName == "hex-by-string") {
+        std::string hexDataToReplace = asciiToHex(secondArg);
+        std::string hexDataReplacement = asciiToHex(thirdArg);
+        if (hexDataReplacement.length() < hexDataToReplace.length()) {
+            hexDataReplacement += std::string(hexDataToReplace.length() - hexDataReplacement.length(), '\0');
+        } else if (hexDataReplacement.length() > hexDataToReplace.length()) {
+            hexDataToReplace += std::string(hexDataReplacement.length() - hexDataToReplace.length(), '\0');
+        }
+        if (cmd.size() >= 5) {
+            size_t occurrence = std::stoul(removeQuotes(cmd[4]));
+            hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, occurrence);
+        } else {
+            hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
+        }
+    } else if (commandName == "hex-by-decimal") {
+        std::string hexDataToReplace = decimalToHex(secondArg);
+        std::string hexDataReplacement = decimalToHex(thirdArg);
+        if (cmd.size() >= 5) {
+            size_t occurrence = std::stoul(removeQuotes(cmd[4]));
+            hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, occurrence);
+        } else {
+            hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
+        }
+    } else if (commandName == "hex-by-rdecimal") {
+        std::string hexDataToReplace = decimalToReversedHex(secondArg);
+        std::string hexDataReplacement = decimalToReversedHex(thirdArg);
+        if (cmd.size() >= 5) {
+            size_t occurrence = std::stoul(removeQuotes(cmd[4]));
+            hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, occurrence);
+        } else {
+            hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
+        }
+    }
+}
+
+void handleHexByCustom(const std::string& sourcePath, const std::string& customPattern, const std::string& offset, std::string hexDataReplacement, const std::string& commandName) {
+    if (hexDataReplacement != NULL_STR) {
+        if (commandName == "hex-by-custom-decimal-offset") {
+            hexDataReplacement = decimalToHex(hexDataReplacement);
+        } else if (commandName == "hex-by-custom-rdecimal-offset") {
+            hexDataReplacement = decimalToReversedHex(hexDataReplacement);
+        }
+        hexEditByCustomOffset(sourcePath.c_str(), customPattern.c_str(), offset.c_str(), hexDataReplacement.c_str());
+    }
+}
+
+
+void rebootToHekateConfig(Payload::HekateConfigList& configList, const std::string& option, bool isIni) {
+    int rebootIndex = -1;  // Initialize rebootIndex to -1, indicating no match found
+    auto configIterator = configList.begin();
+
+    if (std::all_of(option.begin(), option.end(), ::isdigit)) {
+        rebootIndex = std::stoi(option);
+        std::advance(configIterator, rebootIndex);
+    } else {
+        for (auto it = configList.begin(); it != configList.end(); ++it) {
+            if (it->name == option) {
+                rebootIndex = std::distance(configList.begin(), it);
+                configIterator = it;  // Update the iterator to the matching element
+                break;
+            }
+        }
+    }
+
+    if (rebootIndex != -1) {
+        Payload::RebootToHekateConfig(*configIterator, isIni);
+    }
+}
+
 // Main processCommand function
 void processCommand(const std::vector<std::string>& cmd, const std::string& packagePath = "", const std::string& selectedCommand = "") {
     const std::string& commandName = cmd[0];
@@ -1566,7 +1645,22 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             setIniFileValue((packagePath + CONFIG_FILENAME).c_str(), selectedCommand.c_str(), FOOTER_STR, desiredValue.c_str());
         }
     } else if (commandName.substr(0, 7) == "hex-by-") {
-        // Handle hex-by-* commands
+        if (cmd.size() >= 4) {
+            std::string sourcePath = preprocessPath(cmd[1], packagePath);
+            const std::string& secondArg = removeQuotes(cmd[2]);
+            const std::string& thirdArg = removeQuotes(cmd[3]);
+
+            if (commandName == "hex-by-custom-offset" || commandName == "hex-by-custom-decimal-offset" || commandName == "hex-by-custom-rdecimal-offset") {
+                if (cmd.size() >= 5) {
+                    std::string customPattern = removeQuotes(cmd[2]);
+                    std::string offset = removeQuotes(cmd[3]);
+                    std::string hexDataReplacement = removeQuotes(cmd[4]);
+                    handleHexByCustom(sourcePath, customPattern, offset, hexDataReplacement, commandName);
+                }
+            } else {
+                handleHexEdit(sourcePath, secondArg, thirdArg, commandName, cmd);
+            }
+        }
     } else if (commandName == "download") {
         if (cmd.size() >= 3) {
             std::string fileUrl = preprocessUrl(cmd[1]);
@@ -1623,8 +1717,46 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                 bootOptions.clear();
             }
         }
-    } else if (commandName == "reboot") {
-        // Handle reboot commands
+    } else if (commandName == "reboot") { // credits to Studious Pancake for the Payload and utils methods
+        if (util::IsErista() || util::SupportsMarikoRebootToConfig()) {
+            std::string rebootOption;
+            if (cmd.size() >= 2) {
+                rebootOption = removeQuotes(cmd[1]);
+                if (cmd.size() >= 3) {
+                    std::string option = removeQuotes(cmd[2]);
+                    if (rebootOption == "boot") {
+                        Payload::HekateConfigList bootConfigList = Payload::LoadHekateConfigList();
+                        rebootToHekateConfig(bootConfigList, option, false);
+                    } else if (rebootOption == "ini") {
+                        Payload::HekateConfigList iniConfigList = Payload::LoadIniConfigList();
+                        rebootToHekateConfig(iniConfigList, option, true);
+                    }
+                }
+                if (rebootOption == "UMS") {
+                    Payload::RebootToHekateUMS(Payload::UmsTarget_Sd);
+                } else if (rebootOption == "HEKATE" || rebootOption == "hekate") {
+                    Payload::RebootToHekateMenu();
+                } else if (isFileOrDirectory(rebootOption)) {
+                    std::string fileName = getNameFromPath(rebootOption);
+                    if (util::IsErista()) {
+                        Payload::PayloadConfig reboot_payload = {fileName, rebootOption};
+                        Payload::RebootToPayload(reboot_payload);
+                    } else {
+                        setIniFileValue("/bootloader/ini/" + fileName + ".ini", fileName, "payload", rebootOption);
+                        Payload::HekateConfigList iniConfigList = Payload::LoadIniConfigList();
+                        rebootToHekateConfig(iniConfigList, fileName, true);
+                    }
+                }
+            }
+            if (rebootOption.empty()) {
+                Payload::RebootToHekate();
+            }
+        }
+
+        i2cExit();
+        splExit();
+        fsdevUnmountAll();
+        spsmShutdown(SpsmShutdownMode_Reboot);
     } else if (commandName == "shutdown") {
         if (cmd.size() >= 2) {
             std::string selection = removeQuotes(cmd[1]);
