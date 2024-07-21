@@ -2258,38 +2258,66 @@ public:
                         continue;
                     } else if (commandMode == NAMED_STEP_TRACKBAR_STR) {
                         std::vector<std::string> entryList = {};
-
-                        for (const auto& cmd : commands) {
-                            if (cmd.empty())
+                        
+                        bool inEristaSection = false;
+                        bool inMarikoSection = false;
+                        
+                        for (auto it = commands.begin(); it != commands.end(); /* no increment here */) {
+                            auto& cmd = *it;
+                            if (cmd.empty()) {
+                                it = commands.erase(it);
                                 continue;
+                            }
                             
+                            std::string commandName = cmd[0];
+                            
+                            if (commandName == "erista:") {
+                                inEristaSection = true;
+                                inMarikoSection = false;
+                                it = commands.erase(it);
+                                continue;
+                            }
+                            else if (commandName == "mariko:") {
+                                inEristaSection = false;
+                                inMarikoSection = true;
+                                it = commands.erase(it);
+                                continue;
+                            }
+                        
+                            if ((inEristaSection && usingMariko) || (inMarikoSection && usingErista)) {
+                                it = commands.erase(it);
+                                continue;
+                            }
+                        
                             if (cmd.size() > 1) {
-
-                                if ((cmd[0] == "list_source")) {
+                                if (cmd[0] == "list_source") {
                                     std::string listString = removeQuotes(cmd[1]);
                                     entryList = stringToList(listString);
                                     break;
                                 }
-                                else if ((cmd[0] == "list_file_source")) {
+                                else if (cmd[0] == "list_file_source") {
                                     std::string listPath = preprocessPath(cmd[1], packagePath);
                                     entryList = readListFromFile(listPath);
                                     break;
                                 }
-                                else if (cmd.size() > 2) {
-                                    if (cmd[0] == "json_source") {
-                                        std::string jsonString = removeQuotes(cmd[1]);
-                                        std::string jsonKey = removeQuotes(cmd[2]);
-                                        populateSelectedItemsList(JSON_STR, jsonString, jsonKey, entryList);
-                                        break;
-                                    }
-                                    else if (cmd[0] == "json_file_source") {
-                                        std::string jsonPath = preprocessPath(cmd[1], packagePath);
-                                        std::string jsonKey = removeQuotes(cmd[2]);
-                                        populateSelectedItemsList(JSON_FILE_STR, jsonPath, jsonKey, entryList);
-                                        break;
-                                    }
+                            }
+                        
+                            if (cmd.size() > 2) {
+                                if (cmd[0] == "json_source") {
+                                    std::string jsonString = removeQuotes(cmd[1]);
+                                    std::string jsonKey = removeQuotes(cmd[2]);
+                                    populateSelectedItemsList(JSON_STR, jsonString, jsonKey, entryList);
+                                    break;
+                                }
+                                else if (cmd[0] == "json_file_source") {
+                                    std::string jsonPath = preprocessPath(cmd[1], packagePath);
+                                    std::string jsonKey = removeQuotes(cmd[2]);
+                                    populateSelectedItemsList(JSON_FILE_STR, jsonPath, jsonKey, entryList);
+                                    break;
                                 }
                             }
+                            
+                            ++it;
                         }
 
                         list->addItem(new tsl::elm::NamedStepTrackBar(optionName, this->packagePath, entryList, interpretAndExecuteCommands, getSourceReplacement, commands, option.first, unlockedTrackbar, onEveryTick));
