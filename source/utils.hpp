@@ -718,7 +718,8 @@ std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadO
     if (!configFile && makeConfig) {
         std::ofstream configFileOut(configIniPath);
         if (configFileOut) {
-            configFileOut << "[Reboot]\nreboot\n\n[Shutdown]\nshutdown\n";
+            //configFileOut << "[Reboot]\nreboot\n\n[Shutdown]\nshutdown\n";
+            configFileOut << "[*Reboot To]\nini_file_source /bootloader/hekate_ipl.ini\nfilter config\nreboot boot {ini_file_source(*)}\n\n[Shutdown]\nshutdown\n";
             //configFileOut << "[*Reboot]\n[HOS Reboot]\nreboot\n[Hekate Reboot]\nreboot HEKATE\n[UMS Reboot]\nreboot UMS\n\n[Commands]\n[Shutdown]\nshutdown";
             configFileOut.close();
         }
