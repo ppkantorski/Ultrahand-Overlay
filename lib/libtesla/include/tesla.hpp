@@ -4823,7 +4823,7 @@ namespace tsl {
             virtual Element* requestFocus(Element *oldFocus, FocusDirection direction) {
                 return this;
             }
-
+            
             inline void updateAndExecute(bool updateIni = true) {
                 if (m_packagePath.empty()) {
                     return;
