@@ -1458,7 +1458,7 @@ void parseCommandArguments(const std::vector<std::string>& cmd, const std::strin
             logSource = preprocessPath(cmd[++i], packagePath);
         } else if (cmd[i] == "-log_dest" && i + 1 < cmd.size()) {
             logDestination = preprocessPath(cmd[++i], packagePath);
-        } else if (cmd[i] == "-copy_filter" && i + 1 < cmd.size()) {
+        } else if ((cmd[i] == "-copy_filter" || cmd[i] == "-cp_filter") && i + 1 < cmd.size()) {
             copyFilterListPath = preprocessPath(cmd[++i], packagePath);
         } else if (sourcePath.empty()) {
             sourcePath = preprocessPath(cmd[i], packagePath);
