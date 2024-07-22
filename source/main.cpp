@@ -1362,6 +1362,7 @@ private:
     std::string jsonPath, jsonPathOn, jsonPathOff;
     std::string jsonKey, jsonKeyOn, jsonKeyOff;
     std::string listPath, listPathOn, listPathOff;
+    std::string iniPath, iniPathOn, iniPathOff;
     std::string listString, listStringOn, listStringOff;
     std::string jsonString, jsonStringOn, jsonStringOff;
 
@@ -1432,7 +1433,7 @@ public:
 
                 if (cmd.size() > 1) {
                     if (!iniFilePath.empty())
-                        cmd[1] = replaceIniPlaceholder(cmd[1],iniFilePath);
+                        cmd[1] = replaceIniPlaceholder(cmd[1], INI_FILE_STR, iniFilePath);
 
                     if (commandName == "ini_file") {
                         iniFilePath = preprocessPath(cmd[1], filePath);
@@ -1502,6 +1503,17 @@ public:
                             listStringOff = removeQuotes(cmd[1]);
                             sourceTypeOff = LIST_STR;
                         }
+                    } else if (commandName == "ini_file_source") {
+                        sourceType = INI_FILE_STR;
+                        if (currentSection == GLOBAL_STR) {
+                            iniPath = preprocessPath(cmd[1], filePath);
+                        } else if (currentSection == ON_STR) {
+                            iniPathOn = preprocessPath(cmd[1], filePath);
+                            sourceTypeOn = INI_FILE_STR;
+                        } else if (currentSection == OFF_STR) {
+                            iniPathOff = preprocessPath(cmd[1], filePath);
+                            sourceTypeOff = INI_FILE_STR;
+                        }
                     } else if (commandName == "json_source") {
                         sourceType = JSON_STR;
                         if (currentSection == GLOBAL_STR) {
@@ -1545,6 +1557,8 @@ public:
                 selectedItemsList = std::move(filesList);
             else if (sourceType == LIST_STR || sourceType == LIST_FILE_STR)
                 selectedItemsList = (sourceType == LIST_STR) ? stringToList(listString) : readListFromFile(listPath);
+            else if (sourceType == INI_FILE_STR)
+                selectedItemsList = getIniSections(iniPath);
             else if (sourceType == JSON_STR || sourceType == JSON_FILE_STR) {
                 populateSelectedItemsList(sourceType, (sourceType == JSON_STR) ? jsonString : jsonPath, jsonKey, selectedItemsList);
                 jsonPath.clear();
@@ -1556,6 +1570,8 @@ public:
                 selectedItemsListOn = std::move(filesListOn);
             else if (sourceTypeOn == LIST_STR || sourceTypeOn == LIST_FILE_STR)
                 selectedItemsListOn = (sourceTypeOn == LIST_STR) ? stringToList(listStringOn) : readListFromFile(listPathOn);
+            else if (sourceTypeOn == INI_FILE_STR)
+                selectedItemsListOn = getIniSections(iniPathOn);
             else if (sourceTypeOn == JSON_STR || sourceTypeOn == JSON_FILE_STR) {
                 populateSelectedItemsList(sourceTypeOn, (sourceTypeOn == JSON_STR) ? jsonStringOn : jsonPathOn, jsonKeyOn, selectedItemsListOn);
                 jsonPathOn.clear();
@@ -1566,6 +1582,8 @@ public:
                 selectedItemsListOff = std::move(filesListOff);
             else if (sourceTypeOff == LIST_STR || sourceTypeOff == LIST_FILE_STR)
                 selectedItemsListOff = (sourceTypeOff == LIST_STR) ? stringToList(listStringOff) : readListFromFile(listPathOff);
+            else if (sourceTypeOff == INI_FILE_STR)
+                selectedItemsListOff = getIniSections(iniPathOff);
             else if (sourceTypeOff == JSON_STR || sourceTypeOff == JSON_FILE_STR) {
                 populateSelectedItemsList(sourceTypeOff, (sourceTypeOff == JSON_STR) ? jsonStringOff : jsonPathOff, jsonKeyOff, selectedItemsListOff);
                 jsonPathOff.clear();
@@ -1832,6 +1850,10 @@ public:
 
         auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(getNameFromPath(filePath),
             packageHeader.version != "" ? packageHeader.version + "   (Ultrahand Package)" : "Ultrahand Package", "", packageHeader.color);
+
+        if (filePath == PACKAGE_PATH)
+            rootFrame = std::make_unique<tsl::elm::OverlayFrame>(CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel);
+
         rootFrame->setContent(list.release());
 
         return rootFrame.release();
@@ -1876,10 +1898,14 @@ public:
 
                 inSelectionMenu = false;
 
-                if (lastPackageMenu == "subPackageMenu") {
-                    returningToSubPackage = true;
+                if (filePath == PACKAGE_PATH) {
+                    returningToMain = true;
                 } else {
-                    returningToPackage = true;
+                    if (lastPackageMenu == "subPackageMenu") {
+                        returningToSubPackage = true;
+                    } else {
+                        returningToPackage = true;
+                    }
                 }
 
                 if (commandMode == OPTION_STR && isFileOrDirectory(packageConfigIniPath)) {
@@ -2122,6 +2148,13 @@ public:
                                 drawLocation = RIGHT_STR;
                             }
                         } else if (optionName.front() == '*') {
+                            if (i == 0) {
+                                // Add a section break with small text to indicate the "Commands" section
+                                list->addItem(new tsl::elm::CategoryHeader(COMMANDS));
+                                skipSection = false;
+                                lastSection = "Commands";
+                            }
+
                             // Create reference to PackageMenu with dropdownSection set to optionName
                             listItem = std::make_unique<tsl::elm::ListItem>(removeTag(optionName.substr(1)), DROPDOWN_SYMBOL);
                             
@@ -2298,6 +2331,11 @@ public:
                                 else if (cmd[0] == "list_file_source") {
                                     std::string listPath = preprocessPath(cmd[1], packagePath);
                                     entryList = readListFromFile(listPath);
+                                    break;
+                                }
+                                else if (cmd[0] == "ini_file_source") {
+                                    std::string iniPath = preprocessPath(cmd[1], packagePath);
+                                    entryList = getIniSections(iniPath);
                                     break;
                                 }
                             }
@@ -3647,7 +3685,7 @@ public:
                         }
                     }
                     
-                    if (optionName.front() == '*') {
+                    if (commands.size() == 0 && optionName.front() == '*') {
                         // Create reference to PackageMenu with dropdownSection set to optionName
                         listItem = std::make_unique<tsl::elm::ListItem>(removeTag(optionName.substr(1)), DROPDOWN_SYMBOL);
                         
@@ -3757,6 +3795,11 @@ public:
                                     else if ((cmd[0] == "list_file_source")) {
                                         std::string listPath = preprocessPath(cmd[1], packagePath);
                                         entryList = readListFromFile(listPath);
+                                        break;
+                                    }
+                                    else if (cmd[0] == "ini_file_source") {
+                                        std::string iniPath = preprocessPath(cmd[1], packagePath);
+                                        entryList = getIniSections(iniPath);
                                         break;
                                     }
                                     else if (cmd.size() > 2) {
