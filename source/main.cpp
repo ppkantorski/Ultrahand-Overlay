@@ -1558,7 +1558,7 @@ public:
             else if (sourceType == LIST_STR || sourceType == LIST_FILE_STR)
                 selectedItemsList = (sourceType == LIST_STR) ? stringToList(listString) : readListFromFile(listPath);
             else if (sourceType == INI_FILE_STR)
-                selectedItemsList = getIniSections(iniPath);
+                selectedItemsList = parseSectionsFromIni(iniPath);
             else if (sourceType == JSON_STR || sourceType == JSON_FILE_STR) {
                 populateSelectedItemsList(sourceType, (sourceType == JSON_STR) ? jsonString : jsonPath, jsonKey, selectedItemsList);
                 jsonPath.clear();
@@ -1571,7 +1571,7 @@ public:
             else if (sourceTypeOn == LIST_STR || sourceTypeOn == LIST_FILE_STR)
                 selectedItemsListOn = (sourceTypeOn == LIST_STR) ? stringToList(listStringOn) : readListFromFile(listPathOn);
             else if (sourceTypeOn == INI_FILE_STR)
-                selectedItemsListOn = getIniSections(iniPathOn);
+                selectedItemsListOn = parseSectionsFromIni(iniPathOn);
             else if (sourceTypeOn == JSON_STR || sourceTypeOn == JSON_FILE_STR) {
                 populateSelectedItemsList(sourceTypeOn, (sourceTypeOn == JSON_STR) ? jsonStringOn : jsonPathOn, jsonKeyOn, selectedItemsListOn);
                 jsonPathOn.clear();
@@ -1583,7 +1583,7 @@ public:
             else if (sourceTypeOff == LIST_STR || sourceTypeOff == LIST_FILE_STR)
                 selectedItemsListOff = (sourceTypeOff == LIST_STR) ? stringToList(listStringOff) : readListFromFile(listPathOff);
             else if (sourceTypeOff == INI_FILE_STR)
-                selectedItemsListOff = getIniSections(iniPathOff);
+                selectedItemsListOff = parseSectionsFromIni(iniPathOff);
             else if (sourceTypeOff == JSON_STR || sourceTypeOff == JSON_FILE_STR) {
                 populateSelectedItemsList(sourceTypeOff, (sourceTypeOff == JSON_STR) ? jsonStringOff : jsonPathOff, jsonKeyOff, selectedItemsListOff);
                 jsonPathOff.clear();
@@ -2335,7 +2335,7 @@ public:
                                 }
                                 else if (cmd[0] == "ini_file_source") {
                                     std::string iniPath = preprocessPath(cmd[1], packagePath);
-                                    entryList = getIniSections(iniPath);
+                                    entryList = parseSectionsFromIni(iniPath);
                                     break;
                                 }
                             }
@@ -2948,6 +2948,7 @@ public:
         std::string filePath, specificKey, pathPattern, pathPatternOn, pathPatternOff, itemName, parentDirName, lastParentDirName;
         std::vector<std::string> filesList, filesListOn, filesListOff, filterList, filterListOn, filterListOff;
         
+        bool toPackages = false;
         bool skipSystem = false;
         lastMenuMode = hiddenMenuMode;
         
@@ -3008,6 +3009,10 @@ public:
                 if (ultrahandSection.count("hide_soc_temp") == 0) {
                     setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_soc_temp", TRUE_STR);
                 }
+
+                if (ultrahandSection.count("to_packages") > 0) {
+                    toPackages = (trim(ultrahandSection["to_packages"]) == TRUE_STR);
+                }
                 
                 settingsLoaded = ultrahandSection.count(IN_OVERLAY_STR) > 0;
             }
@@ -3034,6 +3039,11 @@ public:
         initializeTheme();
         copyTeslaKeyComboToUltrahand();
         
+        if (toPackages) {
+            setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "to_packages", FALSE_STR); // this is handled within tesla.hpp
+            currentMenu = PACKAGES_STR;
+        }
+
         menuMode = currentMenu.c_str();
         
         versionLabel = std::string(APP_VERSION) + "   (" + extractTitle(loaderInfo) + " " + (cleanVersionLabels ? "" : "v") + cleanVersionLabel(loaderInfo) + ")";
@@ -3799,7 +3809,7 @@ public:
                                     }
                                     else if (cmd[0] == "ini_file_source") {
                                         std::string iniPath = preprocessPath(cmd[1], packagePath);
-                                        entryList = getIniSections(iniPath);
+                                        entryList = parseSectionsFromIni(iniPath);
                                         break;
                                     }
                                     else if (cmd.size() > 2) {
