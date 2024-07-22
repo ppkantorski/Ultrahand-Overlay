@@ -1439,18 +1439,22 @@ public:
                         iniFilePath = preprocessPath(cmd[1], filePath);
                         continue;
                     } else if (commandName == "filter") {
+                        std::string filterEntry = removeQuotes(cmd[1]);
+                        if (sourceType == FILE_STR)
+                            filterEntry = preprocessPath(filterEntry, filePath);
+
                         if (currentSection == GLOBAL_STR)
-                            filterList.push_back(std::move(preprocessPath(cmd[1], filePath)));
+                            filterList.push_back(std::move(filterEntry));
                         else if (currentSection == ON_STR)
-                            filterListOn.push_back(std::move(preprocessPath(cmd[1], filePath)));
+                            filterListOn.push_back(std::move(filterEntry));
                         else if (currentSection == OFF_STR)
-                            filterListOff.push_back(std::move(preprocessPath(cmd[1], filePath)));
+                            filterListOff.push_back(std::move(filterEntry));
                     } else if (commandName == "file_source") {
                         sourceType = FILE_STR;
                         if (currentSection == GLOBAL_STR) {
-                            logMessage("cmd[1]: "+cmd[1]);
+                            //logMessage("cmd[1]: "+cmd[1]);
                             pathPattern = preprocessPath(cmd[1], filePath);
-                            logMessage("pathPattern: "+pathPattern);
+                            //logMessage("pathPattern: "+pathPattern);
                             std::vector<std::string> newFiles = getFilesListByWildcards(pathPattern);
                             filesList.insert(filesList.end(), newFiles.begin(), newFiles.end()); // Append new files
                         } else if (currentSection == ON_STR) {
@@ -1536,22 +1540,22 @@ public:
             }
         }
     }
-
+    
     virtual tsl::elm::Element* createUI() override {
         inSelectionMenu = true;
         PackageHeader packageHeader = getPackageHeaderFromIni(filePath + PACKAGE_FILENAME);
-
+        
         auto list = std::make_unique<tsl::elm::List>();
         packageConfigIniPath = filePath + CONFIG_FILENAME;
-
+        
         commandSystem = commandSystems[0];
         commandMode = commandModes[0];
         commandGrouping = commandGroupings[0];
-
+        
         processSelectionCommands();
-
+        
         std::vector<std::string> selectedItemsList, selectedItemsListOn, selectedItemsListOff;
-
+        
         if (commandMode == DEFAULT_STR || commandMode == OPTION_STR) {
             if (sourceType == FILE_STR)
                 selectedItemsList = std::move(filesList);
