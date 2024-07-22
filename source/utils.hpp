@@ -37,7 +37,8 @@ static std::atomic<bool> triggerExit(false);
 
 bool isDownloadCommand = false;
 bool commandSuccess = false;
-bool refreshGui = false;
+bool refreshPage = false;
+bool refreshPackage = false;
 bool interpreterLogging = false;
 
 bool usingErista = util::IsErista();
@@ -1330,7 +1331,8 @@ void interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
 
     // Overwrite globals
     commandSuccess = true;
-    refreshGui = false;
+    refreshPage = false;
+    refreshPackage = false;
     interpreterLogging = false;
 
     while (!commands.empty()) {
@@ -1424,7 +1426,7 @@ void interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
 
 
 // Helper function to parse command arguments
-void parseCommandArguments(const std::vector<std::string>& cmd, const std::string& packagePath, std::string& sourceListPath, std::string& destinationListPath, std::string& logSource, std::string& logDestination, std::string& sourcePath, std::string& destinationPath) {
+void parseCommandArguments(const std::vector<std::string>& cmd, const std::string& packagePath, std::string& sourceListPath, std::string& destinationListPath, std::string& logSource, std::string& logDestination, std::string& sourcePath, std::string& destinationPath, std::string& copyFilterListPath) {
     for (size_t i = 1; i < cmd.size(); ++i) {
         if (cmd[i] == "-src" && i + 1 < cmd.size()) {
             sourceListPath = preprocessPath(cmd[++i], packagePath);
@@ -1434,6 +1436,8 @@ void parseCommandArguments(const std::vector<std::string>& cmd, const std::strin
             logSource = preprocessPath(cmd[++i], packagePath);
         } else if (cmd[i] == "-log_dest" && i + 1 < cmd.size()) {
             logDestination = preprocessPath(cmd[++i], packagePath);
+        } else if (cmd[i] == "-copy_filter" && i + 1 < cmd.size()) {
+            copyFilterListPath = preprocessPath(cmd[++i], packagePath);
         } else if (sourcePath.empty()) {
             sourcePath = preprocessPath(cmd[i], packagePath);
         } else if (destinationPath.empty()) {
@@ -1443,32 +1447,6 @@ void parseCommandArguments(const std::vector<std::string>& cmd, const std::strin
 }
 
 
-// Helper function for commands involving source and destination paths
-void handleSourceDestinationPaths(const std::string& sourcePath, const std::string& destinationPath, const std::string& logSource, const std::string& logDestination, std::function<void(const std::string&, const std::string&, const std::string&, const std::string&)> operation) {
-    if (sourcePath.empty() || destinationPath.empty()) {
-        logMessage("Source and destination paths must be specified.");
-    } else if (!isFileOrDirectory(sourcePath)) {
-        logMessage("Source file or directory doesn't exist: " + sourcePath);
-    } else if (sourcePath.find('*') != std::string::npos) {
-        operation(sourcePath, destinationPath, logSource, logDestination); // Operation by pattern
-    } else {
-        operation(sourcePath, destinationPath, logSource, logDestination); // Single operation
-    }
-}
-
-// Helper function for commands involving source paths
-void handleSourcePath(const std::string& sourcePath, const std::string& logSource, std::function<void(const std::string&, const std::string&)> operation) {
-    if (sourcePath.empty()) {
-        logMessage("Source path must be specified.");
-    } else if (!isDangerousCombination(sourcePath)) {
-        if (sourcePath.find('*') != std::string::npos) {
-            operation(sourcePath, logSource); // Operation by pattern
-        } else {
-            operation(sourcePath, logSource); // Single operation
-        }
-    }
-}
-
 void handleMakeDirCommand(const std::vector<std::string>& cmd, const std::string& packagePath) {
     if (cmd.size() >= 2) {
         std::string sourcePath = preprocessPath(cmd[1], packagePath);
@@ -1477,42 +1455,64 @@ void handleMakeDirCommand(const std::vector<std::string>& cmd, const std::string
 }
 
 void handleCopyCommand(const std::vector<std::string>& cmd, const std::string& packagePath) {
-    std::string sourceListPath, destinationListPath, logSource, logDestination, sourcePath, destinationPath;
-    parseCommandArguments(cmd, packagePath, sourceListPath, destinationListPath, logSource, logDestination, sourcePath, destinationPath);
+    std::string sourceListPath, destinationListPath, logSource, logDestination, sourcePath, destinationPath, copyFilterListPath;
+    parseCommandArguments(cmd, packagePath, sourceListPath, destinationListPath, logSource, logDestination, sourcePath, destinationPath, copyFilterListPath);
 
     if (!sourceListPath.empty() && !destinationListPath.empty()) {
-        auto sourceFilesList = readListFromFile(sourceListPath);
-        auto destinationFilesList = readListFromFile(destinationListPath);
+        std::vector<std::string> sourceFilesList = readListFromFile(sourceListPath);
+        std::vector<std::string> destinationFilesList = readListFromFile(destinationListPath);
         for (size_t i = 0; i < sourceFilesList.size(); ++i) {
             sourcePath = preprocessPath(sourceFilesList[i]);
             destinationPath = preprocessPath(destinationFilesList[i]);
             long long totalBytesCopied = 0;
-            long long totalSize = getTotalSize(sourcePath);
+            long long totalSize = getTotalSize(sourcePath);  // Ensure this is calculated if needed.
             copyFileOrDirectory(sourcePath, destinationPath, &totalBytesCopied, totalSize);
         }
     } else {
-        handleSourceDestinationPaths(sourcePath, destinationPath, logSource, logDestination, [](const std::string& src, const std::string& dest, const std::string& logSrc, const std::string& logDest) {
-            long long totalBytesCopied = 0;
-            long long totalSize = getTotalSize(src);
-            copyFileOrDirectory(src, dest, &totalBytesCopied, totalSize, logSrc, logDest);
-        });
+        // Ensure source and destination paths are set
+        if (sourcePath.empty() || destinationPath.empty()) {
+            logMessage("Source and destination paths must be specified.");
+        } else {
+            // Perform the copy operation
+            if (!isFileOrDirectory(sourcePath)) {
+                logMessage("Source file or directory doesn't exist: " + sourcePath);
+            } else {
+                if (sourcePath.find('*') != std::string::npos) {
+                    copyFileOrDirectoryByPattern(sourcePath, destinationPath, logSource, logDestination); // Copy files by pattern
+                } else {
+                    long long totalBytesCopied = 0;
+                    long long totalSize = getTotalSize(sourcePath);  // Ensure this is calculated if needed.
+                    copyFileOrDirectory(sourcePath, destinationPath, &totalBytesCopied, totalSize, logSource, logDestination);
+                }
+            }
+        }
     }
 }
 
 void handleDeleteCommand(const std::vector<std::string>& cmd, const std::string& packagePath) {
-    std::string sourceListPath, logSource, sourcePath, destinationListPath, logDestination, destinationPath;
-    parseCommandArguments(cmd, packagePath, sourceListPath, destinationListPath, logSource, logDestination, sourcePath, destinationPath);
+    std::string sourceListPath, destinationListPath, logSource, logDestination, sourcePath, destinationPath, copyFilterListPath;
+    parseCommandArguments(cmd, packagePath, sourceListPath, destinationListPath, logSource, logDestination, sourcePath, destinationPath, copyFilterListPath);
 
     if (!sourceListPath.empty()) {
-        auto sourceFilesList = readListFromFile(sourceListPath);
-        for (const auto& filePath : sourceFilesList) {
-            sourcePath = preprocessPath(filePath);
+        std::vector<std::string> sourceFilesList = readListFromFile(sourceListPath);
+        for (size_t i = 0; i < sourceFilesList.size(); ++i) {
+            sourcePath = preprocessPath(sourceFilesList[i]);
             deleteFileOrDirectory(sourcePath);
         }
     } else {
-        handleSourcePath(sourcePath, logSource, [](const std::string& src, const std::string& logSrc) {
-            deleteFileOrDirectory(src, logSrc);
-        });
+
+        // Ensure source path is set
+        if (sourcePath.empty()) {
+            logMessage("Source path must be specified.");
+        } else {
+            // Perform the delete operation
+            if (!isDangerousCombination(sourcePath)) {
+                if (sourcePath.find('*') != std::string::npos)
+                    deleteFileOrDirectoryByPattern(sourcePath, logSource); // Delete files by pattern
+                else
+                    deleteFileOrDirectory(sourcePath, logSource); // Delete single file or directory
+            }
+        }
     }
 }
 
@@ -1535,25 +1535,44 @@ void handleMirrorCommand(const std::vector<std::string>& cmd, const std::string&
 }
 
 void handleMoveCommand(const std::vector<std::string>& cmd, const std::string& packagePath) {
-    std::string sourceListPath, destinationListPath, logSource, logDestination, sourcePath, destinationPath;
-    parseCommandArguments(cmd, packagePath, sourceListPath, destinationListPath, logSource, logDestination, sourcePath, destinationPath);
+    std::string sourceListPath, destinationListPath, logSource, logDestination, sourcePath, destinationPath, copyFilterListPath;
+    parseCommandArguments(cmd, packagePath, sourceListPath, destinationListPath, logSource, logDestination, sourcePath, destinationPath, copyFilterListPath);
 
     if (!sourceListPath.empty() && !destinationListPath.empty()) {
-        auto sourceFilesList = readListFromFile(sourceListPath);
-        auto destinationFilesList = readListFromFile(destinationListPath);
+        std::vector<std::string> sourceFilesList = readListFromFile(sourceListPath);
+        std::vector<std::string> destinationFilesList = readListFromFile(destinationListPath);
         if (sourceFilesList.size() != destinationFilesList.size()) {
             logMessage("Source and destination lists must have the same number of entries.");
         } else {
+            std::unordered_set<std::string> copyFilterSet;
+            if (!copyFilterListPath.empty())
+                copyFilterSet = readSetFromFile(copyFilterListPath);
+
             for (size_t i = 0; i < sourceFilesList.size(); ++i) {
                 sourcePath = preprocessPath(sourceFilesList[i]);
                 destinationPath = preprocessPath(destinationFilesList[i]);
-                moveFileOrDirectory(sourcePath, destinationPath);
+                if (copyFilterSet.find(sourcePath) != copyFilterSet.end()) {
+                    long long totalBytesCopied = 0;
+                    long long totalSize = getTotalSize(sourcePath);  // Ensure this is calculated if needed.
+                    copyFileOrDirectory(sourcePath, destinationPath, &totalBytesCopied, totalSize);
+                } else {
+                    moveFileOrDirectory(sourcePath, destinationPath, "", "");
+                }
             }
         }
     } else {
-        handleSourceDestinationPaths(sourcePath, destinationPath, logSource, logDestination, [](const std::string& src, const std::string& dest, const std::string& logSrc, const std::string& logDest) {
-            moveFileOrDirectory(src, dest, logSrc, logDest);
-        });
+        // Ensure source and destination paths are set
+        if (sourcePath.empty() || destinationPath.empty()) {
+            logMessage("Source and destination paths must be specified.");
+        } else {
+            // Perform the move operation
+            if (!isDangerousCombination(sourcePath)) {
+                if (sourcePath.find('*') != std::string::npos)
+                    moveFilesOrDirectoriesByPattern(sourcePath, destinationPath, logSource, logDestination); // Move files by pattern
+                else
+                    moveFileOrDirectory(sourcePath, destinationPath, logSource, logDestination); // Move single file or directory
+            }
+        }
     }
 }
 
@@ -1694,6 +1713,16 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
         if (cmd.size() >= 2) {
             std::string desiredValue = removeQuotes(cmd[1]);
             setIniFileValue((packagePath + CONFIG_FILENAME).c_str(), selectedCommand.c_str(), FOOTER_STR, desiredValue.c_str());
+        }
+    } else if (commandName == "compare") {
+        if (cmd.size() >= 4) {
+            std::string path1 = preprocessPath(cmd[1], packagePath);
+            std::string path2 = preprocessPath(cmd[2], packagePath);
+            std::string outputPath = preprocessPath(cmd[3], packagePath);
+            if (path1.find('*') != std::string::npos)
+                compareWildcardFilesLists(path1, path2, outputPath);
+            else
+                compareFilesLists(path1, path2, outputPath);
         }
     } else if (commandName.substr(0, 7) == "hex-by-") {
         if (cmd.size() >= 4) {
@@ -1849,11 +1878,14 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
         }
     } else if (commandName == "refresh") {
         if (cmd.size() == 1)
-            refreshGui = true;
+            refreshPage = true;
         else if (cmd.size() > 1) {
             std::string refreshPattern = removeQuotes(cmd[1]);
             if (refreshPattern == "theme")
                 tsl::initializeThemeVars();
+            else if (refreshPattern == "package") {
+                refreshPackage = true;
+            }
         }
     } else if (commandName == "logging") {
         interpreterLogging = !interpreterLogging;
