@@ -871,7 +871,7 @@ std::string replaceIniPlaceholder(const std::string& arg, const std::string& com
             size_t entryIndex = std::stoi(placeholderContent);
 
             // Return list of section names and use entryIndex to get the specific entry
-            std::vector<std::string> sectionNames = getIniSections(iniPath);
+            std::vector<std::string> sectionNames = parseSectionsFromIni(iniPath);
             if (entryIndex < sectionNames.size()) {
                 std::string sectionName = sectionNames[entryIndex];
                 replacement = replacement.substr(0, startPos) + sectionName + replacement.substr(endPos + 2);
@@ -1098,7 +1098,7 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
                             modifiedArg = replacePlaceholder(modifiedArg, "*", std::to_string(entryIndex));
                         }
 
-                        //replacement = getIniSections(iniPath)[entryIndex];
+                        //replacement = parseSectionsFromIni(iniPath)[entryIndex];
                         replacement = replaceIniPlaceholder(modifiedArg, "ini_file_source", iniPath);
                         if (replacement.empty()) {
                             replacement = NULL_STR;
@@ -1821,7 +1821,16 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
         }
     } else if (commandName == "exit") {
         //triggerExit.store(true, std::memory_order_release);
-        setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_OVERLAY_STR, TRUE_STR); // this is handled within tesla.hpp
+        if (cmd.size() >= 2) {
+            std::string selection = removeQuotes(cmd[1]);
+            if (selection == "overlays") {
+                setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_OVERLAY_STR, TRUE_STR); // this is handled within tesla.hpp
+            } else if (selection == "packages") {
+                setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "to_packages", TRUE_STR); // this is handled within tesla.hpp
+                setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_OVERLAY_STR, TRUE_STR); // this is handled within tesla.hpp
+            }
+        }
+        //setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_OVERLAY_STR, TRUE_STR); // this is handled within tesla.hpp
         tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
         tsl::Overlay::get()->close();
         return;
