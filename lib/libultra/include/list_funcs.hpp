@@ -187,6 +187,8 @@ void processFileLines(const std::string& filePath, const std::function<void(cons
 }
 
 void compareWildcardFilesLists(const std::string& wildcardPatternFilePath, const std::string& txtFilePath, const std::string& outputTxtFilePath) {
+    //logMessage("Comparing wildcard files with: " + txtFilePath);
+    
     // Get the list of files matching the wildcard pattern
     std::vector<std::string> wildcardFiles = getFilesListByWildcards(wildcardPatternFilePath);
 
@@ -195,6 +197,11 @@ void compareWildcardFilesLists(const std::string& wildcardPatternFilePath, const
 
     // Remove txtFilePath from the wildcardFileSet if it exists
     wildcardFileSet.erase(txtFilePath);
+    
+    // Log the wildcard file set
+    //for (const auto& file : wildcardFileSet) {
+    //    logMessage("Wildcard File: " + file);
+    //}
     
     // Set to store duplicates
     std::unordered_set<std::string> duplicateFiles;
@@ -206,7 +213,11 @@ void compareWildcardFilesLists(const std::string& wildcardPatternFilePath, const
         }
     });
 
+    // Log duplicates
+    //for (const auto& duplicate : duplicateFiles) {
+    //    logMessage("Duplicate File: " + duplicate);
+    //}
+
     // Write the duplicates to the output file
     writeSetToFile(duplicateFiles, outputTxtFilePath);
 }
-
