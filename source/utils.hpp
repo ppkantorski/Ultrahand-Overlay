@@ -1267,6 +1267,28 @@ void applyPlaceholderReplacement(std::vector<std::string>& cmd, std::string hexP
                 return sliceString(str, sliceStart, sliceEnd);
             }
             return placeholder;
+        }},
+        {"{split(", [&](const std::string& placeholder) {
+            size_t startPos = placeholder.find('(') + 1;
+            size_t endPos = placeholder.find(')');
+            std::string parameters = placeholder.substr(startPos, endPos - startPos);
+            
+            size_t firstCommaPos = parameters.find(',');
+            size_t lastCommaPos = parameters.find_last_of(',');
+        
+            if (firstCommaPos != std::string::npos && lastCommaPos != std::string::npos && firstCommaPos != lastCommaPos) {
+                std::string str = parameters.substr(0, firstCommaPos);
+                std::string delimiter = parameters.substr(firstCommaPos + 1, lastCommaPos - firstCommaPos - 1);
+                size_t index = std::stoi(parameters.substr(lastCommaPos + 1));
+        
+                std::string result = splitString(removeQuotes(trim(str)), removeQuotes(trim(delimiter)), index);
+                if (result.empty()) {
+                    return removeQuotes(trim(str));
+                } else {
+                    return result;
+                }
+            }
+            return placeholder;
         }}
     };
 
