@@ -48,7 +48,7 @@ static bool inScriptMenu = false;
 static bool inSelectionMenu = false;
 //static bool currentMenuLoaded = true;
 static bool freshSpawn = true;
-//static bool refreshGui = false; //moved to libtesla
+//static bool refreshPage = false; //moved to libtesla
 static bool reloadMenu = false;
 static bool reloadMenu2 = false;
 static bool reloadMenu3 = false;
@@ -1540,22 +1540,22 @@ public:
             }
         }
     }
-    
+
     virtual tsl::elm::Element* createUI() override {
         inSelectionMenu = true;
         PackageHeader packageHeader = getPackageHeaderFromIni(filePath + PACKAGE_FILENAME);
-        
+
         auto list = std::make_unique<tsl::elm::List>();
         packageConfigIniPath = filePath + CONFIG_FILENAME;
-        
+
         commandSystem = commandSystems[0];
         commandMode = commandModes[0];
         commandGrouping = commandGroupings[0];
-        
+
         processSelectionCommands();
-        
+
         std::vector<std::string> selectedItemsList, selectedItemsListOn, selectedItemsListOff;
-        
+
         if (commandMode == DEFAULT_STR || commandMode == OPTION_STR) {
             if (sourceType == FILE_STR)
                 selectedItemsList = std::move(filesList);
@@ -1875,10 +1875,14 @@ public:
             return true;
         }
 
-        if (refreshGui && !stillTouching) {
+        if (refreshPage && !stillTouching) {
             tsl::goBack();
             tsl::changeTo<SelectionOverlay>(filePath, specificKey, commands, specifiedFooterKey);
-            refreshGui = false;
+            refreshPage = false;
+        }
+
+        if (refreshPackage && !stillTouching) {
+            tsl::goBack();
         }
 
         if (inSelectionMenu) {
@@ -2651,33 +2655,54 @@ public:
             return true;
         }
         
-        if (refreshGui && !returningToPackage && !stillTouching) {
-            refreshGui = false;
-            
-            // Function to handle the transition and state resetting
-            auto handleMenuTransition = [&] {
-                lastPackagePath = packagePath;
-                std::string lastDropdownSection = dropdownSection;
-                lastPage = currentPage;
-                std::string lastPackageName = packageName;
-                size_t lastNestedLayer = nestedLayer;
+        if (!returningToPackage && !stillTouching) {
+            if (refreshPage) {
+                refreshPage = false;
                 
-                inSubPackageMenu = false;
-                inPackageMenu = false;
-                tsl::goBack();
-            
-                selectedListItem.reset();
-                lastSelectedListItem.reset();
-                tsl::changeTo<PackageMenu>(lastPackagePath, lastDropdownSection, lastPage, lastPackageName, lastNestedLayer);
-            };
-            
-            if (inPackageMenu) {
-                handleMenuTransition();
-                inPackageMenu = true;
-            } 
-            else if (inSubPackageMenu) {
-                handleMenuTransition();
-                inSubPackageMenu = true;
+                // Function to handle the transition and state resetting
+                auto handleMenuTransition = [&] {
+                    lastPackagePath = packagePath;
+                    std::string lastDropdownSection = dropdownSection;
+                    lastPage = currentPage;
+                    std::string lastPackageName = packageName;
+                    size_t lastNestedLayer = nestedLayer;
+                    
+                    inSubPackageMenu = false;
+                    inPackageMenu = false;
+                    tsl::goBack();
+                
+                    selectedListItem.reset();
+                    lastSelectedListItem.reset();
+                    tsl::changeTo<PackageMenu>(lastPackagePath, lastDropdownSection, lastPage, lastPackageName, lastNestedLayer);
+                };
+                
+                if (inPackageMenu) {
+                    handleMenuTransition();
+                    inPackageMenu = true;
+                } 
+                else if (inSubPackageMenu) {
+                    handleMenuTransition();
+                    inSubPackageMenu = true;
+                }
+            }
+            if (refreshPackage) {
+                if (nestedMenuCount == nestedLayer) {
+                    lastPackagePath = packagePath;
+                    lastPage = currentPage;
+                    lastPackageName = PACKAGE_FILENAME;
+                    
+                    while (nestedMenuCount > 0) {
+                        tsl::goBack();
+                        nestedMenuCount--;
+                    }
+
+                    tsl::goBack();
+                    tsl::changeTo<PackageMenu>(lastPackagePath, "");
+                    inPackageMenu = true;
+                    inSubPackageMenu = false;
+                    refreshPackage = false;
+
+                }
             }
         }
         
@@ -3275,7 +3300,7 @@ public:
                                     inHiddenMode = true;
                                     reloadMenu2 = true;
                                 }
-                                refreshGui = true;
+                                refreshPage = true;
 
                                 return true;
                             } else if (keys & SETTINGS_KEY) {
@@ -3507,7 +3532,7 @@ public:
                                     inHiddenMode = true;
                                     reloadMenu2 = true;
                                 }
-                                refreshGui = true;
+                                refreshPage = true;
 
                                 //tsl::changeTo<MainMenu>(hiddenMenuMode);
                                 return true;
@@ -4049,8 +4074,8 @@ public:
             return true;
         }
 
-        if (refreshGui && !stillTouching) {
-            refreshGui = false;
+        if (refreshPage && !stillTouching) {
+            refreshPage = false;
             tsl::pop();
             tsl::changeTo<MainMenu>(hiddenMenuMode, dropdownSection);
             return true;
