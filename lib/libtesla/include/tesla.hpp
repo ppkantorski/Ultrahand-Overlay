@@ -4836,7 +4836,7 @@ namespace tsl {
                     setIniFileValue(m_packagePath + "config.ini", m_label, "index", indexStr);
                     setIniFileValue(m_packagePath + "config.ini", m_label, "value", valueStr);
                 }
-
+                
                 if (interpretAndExecuteCommands) {
                     auto modifiedCmds = getSourceReplacement(commands, valueStr, m_index, m_packagePath);
                     size_t pos;
@@ -4857,7 +4857,7 @@ namespace tsl {
                             }
                         }
                     }
-
+                    
                     interpretAndExecuteCommands(std::move(modifiedCmds), m_packagePath, selectedCommand);
                 }
             }
