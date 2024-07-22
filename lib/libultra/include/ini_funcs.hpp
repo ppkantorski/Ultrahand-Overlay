@@ -738,3 +738,18 @@ void removeIniKey(const std::string& filePath, const std::string& sectionName, c
         // Handle the error accordingly
     }
 }
+
+
+// Helper functions
+std::vector<std::string> getIniSections(const std::string& iniPath) {
+    std::ifstream file(iniPath);
+    std::vector<std::string> sections;
+    std::string line;
+    while (std::getline(file, line)) {
+        line = trim(line);
+        if (!line.empty() && line[0] == '[' && line.back() == ']') {
+            sections.push_back(line.substr(1, line.size() - 2));  // Extract section name without brackets
+        }
+    }
+    return sections;
+}
