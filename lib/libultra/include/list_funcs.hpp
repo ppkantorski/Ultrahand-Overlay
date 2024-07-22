@@ -23,6 +23,7 @@
 #include <fstream>
 #include <string>
 #include "debug_funcs.hpp"
+#include <unordered_set>
 
 /**
  * @brief Removes entries from a vector of strings that match a specified entry.
@@ -119,3 +120,93 @@ std::vector<std::string> stringToList(const std::string& str) {
     
     return result;
 }
+
+
+// Function to read file into a set of strings
+std::unordered_set<std::string> readSetFromFile(const std::string& filePath) {
+    std::unordered_set<std::string> lines;
+    std::ifstream file(filePath);
+
+    if (!file.is_open()) {
+        logMessage("Unable to open file: " + filePath);
+        return lines; // Return empty set
+    }
+
+    std::string line;
+    while (std::getline(file, line)) {
+        lines.insert(std::move(line));
+    }
+
+    return lines;
+}
+
+// Function to write a set to a file
+void writeSetToFile(const std::unordered_set<std::string>& fileSet, const std::string& filePath) {
+    std::ofstream file(filePath);
+
+    if (file.is_open()) {
+        for (const auto& entry : fileSet) {
+            file << entry << '\n';
+        }
+        file.close();
+    } else {
+        logMessage("Failed to open file: " + filePath);
+    }
+}
+
+// Function to compare two file lists and save duplicates to an output file
+void compareFilesLists(const std::string& txtFilePath1, const std::string& txtFilePath2, const std::string& outputTxtFilePath) {
+    // Read files into sets
+    std::unordered_set<std::string> fileSet1 = readSetFromFile(txtFilePath1);
+    std::unordered_set<std::string> fileSet2 = readSetFromFile(txtFilePath2);
+    std::unordered_set<std::string> duplicateFiles;
+
+    // Find intersection (common elements) between the two sets
+    for (const auto& entry : fileSet1) {
+        if (fileSet2.find(entry) != fileSet2.end()) {
+            duplicateFiles.insert(entry);
+        }
+    }
+
+    // Write the duplicates to the output file
+    writeSetToFile(duplicateFiles, outputTxtFilePath);
+}
+
+// Helper function to read a text file and process each line with a callback
+void processFileLines(const std::string& filePath, const std::function<void(const std::string&)>& callback) {
+    std::ifstream file(filePath);
+    if (!file.is_open()) {
+        logMessage("Unable to open file: " + filePath);
+        return;
+    }
+
+    std::string line;
+    while (std::getline(file, line)) {
+        callback(line);
+    }
+}
+
+void compareWildcardFilesLists(const std::string& wildcardPatternFilePath, const std::string& txtFilePath, const std::string& outputTxtFilePath) {
+    // Get the list of files matching the wildcard pattern
+    std::vector<std::string> wildcardFiles = getFilesListByWildcards(wildcardPatternFilePath);
+
+    // Convert the wildcard files to a set for efficient comparison
+    std::unordered_set<std::string> wildcardFileSet(wildcardFiles.begin(), wildcardFiles.end());
+
+    // Remove txtFilePath from the wildcardFileSet if it exists
+    wildcardFileSet.erase(txtFilePath);
+    
+    // Set to store duplicates
+    std::unordered_set<std::string> duplicateFiles;
+
+    // Stream through the text file and check for duplicates
+    processFileLines(txtFilePath, [&](const std::string& entry) {
+        if (wildcardFileSet.find(entry) != wildcardFileSet.end()) {
+            duplicateFiles.insert(entry);
+        }
+    });
+
+    // Write the duplicates to the output file
+    writeSetToFile(duplicateFiles, outputTxtFilePath);
+}
+
