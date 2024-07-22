@@ -4781,9 +4781,10 @@ namespace tsl {
             // Ensure the order of initialization matches the order of declaration
             TrackBar(std::string label, std::string packagePath = "", s16 minValue = 0, s16 maxValue = 100, std::string units = "",
                      std::function<void(std::vector<std::vector<std::string>>&&, const std::string&, const std::string&)> executeCommands = nullptr,
+                     std::function<std::vector<std::vector<std::string>>(const std::vector<std::vector<std::string>>&, const std::string&, size_t, const std::string&)> sourceReplacementFunc = nullptr,
                      std::vector<std::vector<std::string>> cmd = {}, const std::string& selCmd = "", bool usingStepTrackbar = false, bool usingNamedStepTrackbar = false, s16 numSteps = -1, bool unlockedTrackbar = false, bool executeOnEveryTick = false)
                 : m_label(label), m_packagePath(packagePath), m_minValue(minValue), m_maxValue(maxValue), m_units(units),
-                  interpretAndExecuteCommands(executeCommands), commands(std::move(cmd)), selectedCommand(selCmd), m_usingStepTrackbar(usingStepTrackbar), m_usingNamedStepTrackbar(usingNamedStepTrackbar), m_numSteps(numSteps), m_unlockedTrackbar(unlockedTrackbar), m_executeOnEveryTick(executeOnEveryTick) {
+                  interpretAndExecuteCommands(executeCommands), getSourceReplacement(sourceReplacementFunc), commands(std::move(cmd)), selectedCommand(selCmd), m_usingStepTrackbar(usingStepTrackbar), m_usingNamedStepTrackbar(usingNamedStepTrackbar), m_numSteps(numSteps), m_unlockedTrackbar(unlockedTrackbar), m_executeOnEveryTick(executeOnEveryTick) {
                 if ((!usingStepTrackbar && !usingNamedStepTrackbar) || numSteps == -1) {
                     m_numSteps = maxValue - minValue;
                 }
@@ -4822,7 +4823,7 @@ namespace tsl {
             virtual Element* requestFocus(Element *oldFocus, FocusDirection direction) {
                 return this;
             }
-
+            
             inline void updateAndExecute(bool updateIni = true) {
                 if (m_packagePath.empty()) {
                     return;
@@ -4835,11 +4836,11 @@ namespace tsl {
                     setIniFileValue(m_packagePath + "config.ini", m_label, "index", indexStr);
                     setIniFileValue(m_packagePath + "config.ini", m_label, "value", valueStr);
                 }
-
+                
                 if (interpretAndExecuteCommands) {
-                    auto commandsCopy = commands;
+                    auto modifiedCmds = getSourceReplacement(commands, valueStr, m_index, m_packagePath);
                     size_t pos;
-                    for (auto& cmd : commandsCopy) {
+                    for (auto& cmd : modifiedCmds) {
                         for (auto& arg : cmd) {
                             pos = 0;
                             while ((pos = arg.find("{value}", pos)) != std::string::npos) {
@@ -4856,7 +4857,8 @@ namespace tsl {
                             }
                         }
                     }
-                    interpretAndExecuteCommands(std::move(commandsCopy), m_packagePath, selectedCommand);
+                    
+                    interpretAndExecuteCommands(std::move(modifiedCmds), m_packagePath, selectedCommand);
                 }
             }
             
@@ -5162,6 +5164,7 @@ namespace tsl {
 
             // New member variables to store the function and its parameters
             std::function<void(std::vector<std::vector<std::string>>&&, const std::string&, const std::string&)> interpretAndExecuteCommands;
+            std::function<std::vector<std::vector<std::string>>(const std::vector<std::vector<std::string>>&, const std::string&, size_t, const std::string&)> getSourceReplacement;
             std::vector<std::vector<std::string>> commands;
             std::string selectedCommand;
 
@@ -5190,8 +5193,9 @@ namespace tsl {
              */
             StepTrackBar(std::string label, std::string packagePath, size_t numSteps, s16 minValue, s16 maxValue, std::string units,
                 std::function<void(std::vector<std::vector<std::string>>&&, const std::string&, const std::string&)> executeCommands = nullptr,
+                std::function<std::vector<std::vector<std::string>>(const std::vector<std::vector<std::string>>&, const std::string&, size_t, const std::string&)> sourceReplacementFunc = nullptr,
                 std::vector<std::vector<std::string>> cmd = {}, const std::string& selCmd = "", bool usingNamedStepTrackbar = false, bool unlockedTrackbar = false, bool executeOnEveryTick = false)
-                : TrackBar(label, packagePath, minValue, maxValue, units, executeCommands, cmd, selCmd, !usingNamedStepTrackbar, usingNamedStepTrackbar, numSteps, unlockedTrackbar, executeOnEveryTick) {
+                : TrackBar(label, packagePath, minValue, maxValue, units, executeCommands, sourceReplacementFunc, cmd, selCmd, !usingNamedStepTrackbar, usingNamedStepTrackbar, numSteps, unlockedTrackbar, executeOnEveryTick) {
                     ////usingStepTrackbar = true;
                     //if (!m_packagePath.empty()) {
                     //    //logMessage("before StepTrackBar initialize value.");
@@ -5358,8 +5362,9 @@ namespace tsl {
              */
             NamedStepTrackBar(std::string label, std::string packagePath, std::vector<std::string> stepDescriptions,
                 std::function<void(std::vector<std::vector<std::string>>&&, const std::string&, const std::string&)> executeCommands = nullptr,
+                std::function<std::vector<std::vector<std::string>>(const std::vector<std::vector<std::string>>&, const std::string&, size_t, const std::string&)> sourceReplacementFunc = nullptr,
                 std::vector<std::vector<std::string>> cmd = {}, const std::string& selCmd = "", bool unlockedTrackbar = false, bool executeOnEveryTick = false)
-                : StepTrackBar(label, packagePath, stepDescriptions.size(), 0, (stepDescriptions.size()-1), "", executeCommands, cmd, selCmd, true, unlockedTrackbar, executeOnEveryTick), m_stepDescriptions(stepDescriptions) {
+                : StepTrackBar(label, packagePath, stepDescriptions.size(), 0, (stepDescriptions.size()-1), "", executeCommands, sourceReplacementFunc, cmd, selCmd, true, unlockedTrackbar, executeOnEveryTick), m_stepDescriptions(stepDescriptions) {
                     //usingNamedStepTrackbar = true;
                     //logMessage("on initialization");
                 }

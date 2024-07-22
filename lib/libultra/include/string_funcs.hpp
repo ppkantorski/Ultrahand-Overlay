@@ -464,6 +464,25 @@ inline std::string removeFilename(const std::string& path) {
 }
 
 
+// Function to split a string by a delimiter and return a specific index
+inline std::string splitString(const std::string& str, const std::string& delimiter, size_t index) {
+    std::vector<std::string> tokens;
+    size_t start = 0;
+    size_t end = str.find(delimiter);
+    while (end != std::string::npos) {
+        tokens.push_back(str.substr(start, end - start));
+        start = end + delimiter.length();
+        end = str.find(delimiter, start);
+    }
+    tokens.push_back(str.substr(start));
+
+    if (index < tokens.size()) {
+        return tokens[index];
+    } else {
+        return ""; // Return empty string if index is out of bounds
+    }
+}
+
 
 //std::string padToEqualLength(const std::string& str, size_t len) {
 //    if (str.length() < len)
