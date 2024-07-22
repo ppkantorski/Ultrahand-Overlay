@@ -1594,11 +1594,14 @@ public:
                 jsonStringOff.clear();
             }
 
-            filterItemsList(filterListOn, selectedItemsListOn);
-            filterListOn.clear();
+            if (sourceType == FILE_STR) {
+                filterItemsList(filterListOn, selectedItemsListOn);
+                filterListOn.clear();
 
-            filterItemsList(filterListOff, selectedItemsListOff);
-            filterListOff.clear();
+                filterItemsList(filterListOff, selectedItemsListOff);
+                filterListOff.clear();
+            }
+
 
             selectedItemsList.reserve(selectedItemsListOn.size() + selectedItemsListOff.size());
             selectedItemsList.insert(selectedItemsList.end(), selectedItemsListOn.begin(), selectedItemsListOn.end());
@@ -1620,8 +1623,10 @@ public:
             }
         }
 
-        filterItemsList(filterList, selectedItemsList);
-        filterList.clear();
+        if (sourceType == FILE_STR) {
+            filterItemsList(filterList, selectedItemsList);
+            filterList.clear();
+        }
 
         if (commandGrouping == DEFAULT_STR)
             list->addItem(new tsl::elm::CategoryHeader(removeTag(specificKey.substr(1))));
@@ -1692,6 +1697,17 @@ public:
                     if (lastGroupingName.empty() || (lastGroupingName != groupingName)) {
                         list->addItem(new tsl::elm::CategoryHeader(groupingName));
                         lastGroupingName = groupingName.c_str();
+                    }
+                }
+            } else {
+                if (commandMode == TOGGLE_STR) {
+                    if (std::find(filterListOn.begin(), filterListOn.end(), itemName) != filterListOn.end() ||
+                        std::find(filterListOff.begin(), filterListOff.end(), itemName) != filterListOff.end()) {
+                        continue;
+                    }
+                } else {
+                    if (std::find(filterList.begin(), filterList.end(), itemName) != filterList.end()) {
+                        continue;
                     }
                 }
             }
