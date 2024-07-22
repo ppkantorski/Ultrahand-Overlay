@@ -837,8 +837,9 @@ inline std::string replacePlaceholder(const std::string& input, const std::strin
 
 
 
-std::string replaceIniPlaceholder(const std::string& arg, const std::string& iniPath) {
-    const std::string searchString = "{ini_file(";
+std::string replaceIniPlaceholder(const std::string& arg, const std::string& commandName, const std::string& iniPath) {
+
+    const std::string searchString = "{" + commandName + "(";
     size_t startPos = arg.find(searchString);
     if (startPos == std::string::npos) {
         return arg;
@@ -851,7 +852,11 @@ std::string replaceIniPlaceholder(const std::string& arg, const std::string& ini
 
     std::string replacement = arg;  // Copy arg because we need to modify it
 
+
+
     std::string placeholderContent = replacement.substr(startPos + searchString.length(), endPos - startPos - searchString.length());
+    placeholderContent = trim(placeholderContent);
+
     size_t commaPos = placeholderContent.find(',');
     if (commaPos != std::string::npos) {
         std::string iniSection = removeQuotes(trim(placeholderContent.substr(0, commaPos)));
@@ -860,7 +865,27 @@ std::string replaceIniPlaceholder(const std::string& arg, const std::string& ini
         std::string parsedResult = parseValueFromIniSection(iniPath, iniSection, iniKey);
         // Replace the placeholder with the parsed result and keep the remaining string intact
         replacement = replacement.substr(0, startPos) + parsedResult + replacement.substr(endPos + 2);
+    } else {
+        // Check if the content is an integer
+        if (std::all_of(placeholderContent.begin(), placeholderContent.end(), ::isdigit)) {
+            size_t entryIndex = std::stoi(placeholderContent);
+
+            // Return list of section names and use entryIndex to get the specific entry
+            std::vector<std::string> sectionNames = getIniSections(iniPath);
+            if (entryIndex < sectionNames.size()) {
+                std::string sectionName = sectionNames[entryIndex];
+                replacement = replacement.substr(0, startPos) + sectionName + replacement.substr(endPos + 2);
+            } else {
+                // Handle the case where entryIndex is out of range
+                replacement = replacement.substr(0, startPos) + NULL_STR + replacement.substr(endPos + 2);
+            }
+        } else {
+            // Handle the case where the placeholder content is not a valid index
+            replacement = replacement.substr(0, startPos) + NULL_STR + replacement.substr(endPos + 2);
+        }
     }
+
+
 
     return replacement;
 }
@@ -951,6 +976,7 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
     //std::vector<std::string> listData;
     std::string listString, listPath;
     std::string jsonString, jsonPath;
+    std::string iniPath;
     size_t startPos, endPos;
     
     std::vector<std::string> modifiedCmd;
@@ -996,6 +1022,8 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
                     listString = removeQuotes(cmd[1]);
                 else if ((commandName == "list_file_source") && listPath.empty())
                     listPath = preprocessPath(cmd[1], packagePath);
+                else if ((commandName == "ini_file_source") && iniPath.empty())
+                    iniPath = preprocessPath(cmd[1], packagePath);
                 else if ((commandName == "json_source") && jsonString.empty())
                     jsonString = cmd[1];
                 else if ((commandName == "json_file_source") && jsonPath.empty())
@@ -1049,6 +1077,29 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
                     endPos = modifiedArg.find(")}");
                     if (endPos != std::string::npos && endPos > startPos) {
                         replacement = getEntryFromListFile(listPath, entryIndex);
+                        if (replacement.empty()) {
+                            replacement = NULL_STR;
+                            modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
+                            break;
+                        }
+                        modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
+                    }
+                    if (modifiedArg == lastArg)
+                        break;
+                    lastArg = modifiedArg;
+                }
+                while (modifiedArg.find("{ini_file_source(") != std::string::npos) {
+                    modifiedArg = replacePlaceholder(modifiedArg, "*", std::to_string(entryIndex));
+                    startPos = modifiedArg.find("{ini_file_source(");
+                    endPos = modifiedArg.find(")}");
+                    if (endPos != std::string::npos && endPos > startPos) {
+                        std::string placeholderContent = modifiedArg.substr(startPos + std::string("{ini_file_source(").length(), endPos - startPos - std::string("{ini_file_source(").length());
+                        if (placeholderContent == "*") {
+                            modifiedArg = replacePlaceholder(modifiedArg, "*", std::to_string(entryIndex));
+                        }
+
+                        //replacement = getIniSections(iniPath)[entryIndex];
+                        replacement = replaceIniPlaceholder(modifiedArg, "ini_file_source", iniPath);
                         if (replacement.empty()) {
                             replacement = NULL_STR;
                             modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
@@ -1157,7 +1208,7 @@ auto replacePlaceholders = [](std::string& arg, const std::string& placeholder, 
 void applyPlaceholderReplacement(std::vector<std::string>& cmd, std::string hexPath, std::string iniPath, std::string listString, std::string listPath, std::string jsonString, std::string jsonPath) {
     std::vector<std::pair<std::string, std::function<std::string(const std::string&)>>> placeholders = {
         {"{hex_file(", [&](const std::string& placeholder) { return replaceHexPlaceholder(placeholder, hexPath); }},
-        {"{ini_file(", [&](const std::string& placeholder) { return replaceIniPlaceholder(placeholder, iniPath); }},
+        {"{ini_file(", [&](const std::string& placeholder) { return replaceIniPlaceholder(placeholder, INI_FILE_STR, iniPath); }},
         {"{list(", [&](const std::string& placeholder) {
             size_t startPos = placeholder.find('(') + 1;
             size_t endPos = placeholder.find(')');
@@ -1769,7 +1820,10 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             spsmShutdown(SpsmShutdownMode_Normal);
         }
     } else if (commandName == "exit") {
-        triggerExit.store(true, std::memory_order_release);
+        //triggerExit.store(true, std::memory_order_release);
+        setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_OVERLAY_STR, TRUE_STR); // this is handled within tesla.hpp
+        tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
+        tsl::Overlay::get()->close();
         return;
     } else if (commandName == "backlight") {
         if (cmd.size() >= 2) {
