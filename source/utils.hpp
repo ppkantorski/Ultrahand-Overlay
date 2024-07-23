@@ -1494,7 +1494,7 @@ void handleCopyCommand(const std::vector<std::string>& cmd, const std::string& p
         for (size_t i = 0; i < sourceFilesList.size(); ++i) {
             sourcePath = preprocessPath(sourceFilesList[i]);
             destinationPath = preprocessPath(destinationFilesList[i]);
-            if (filterListPath.empty() || (!filterListPath.empty() && filterSet.find(sourcePath) == filterSet.end()))
+            if (filterListPath.empty() || (!filterListPath.empty() && filterSet.find(sourcePath) == filterSet.end())) {
                 long long totalBytesCopied = 0;
                 long long totalSize = getTotalSize(sourcePath);  // Ensure this is calculated if needed.
                 copyFileOrDirectory(sourcePath, destinationPath, &totalBytesCopied, totalSize);
