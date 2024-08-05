@@ -4477,7 +4477,7 @@ namespace tsl {
                 
                 if (this->m_trunctuated) {
                     if (this->m_focused) {
-                        renderer->enableScissoring(this->getX()+6, 97, this->m_maxWidth + 40 - 10+6 -10, tsl::cfg::FramebufferHeight-73-97);
+                        renderer->enableScissoring(this->getX()+6, 97, this->m_maxWidth + 40 - 6, tsl::cfg::FramebufferHeight-73-97);
                         renderer->drawString(this->m_scrollText.c_str(), false, this->getX() + 20 - this->m_scrollOffset, this->getY() + 45, 23, a(selectedTextColor));
                         renderer->disableScissoring();
                         //t = std::chrono::system_clock::now() - this->timeIn;
@@ -5918,7 +5918,7 @@ namespace tsl {
             
 
             if (hasScrolled) {
-                bool singleArrowKeyPress = ((keysHeld & HidNpadButton_AnyUp) != 0) + ((keysHeld & HidNpadButton_AnyDown) != 0) + ((keysHeld & HidNpadButton_AnyLeft) != 0) + ((keysHeld & HidNpadButton_AnyRight) != 0) == 1;
+                bool singleArrowKeyPress = ((keysHeld & KEY_UP) != 0) + ((keysHeld & KEY_DOWN) != 0) + ((keysHeld & KEY_LEFT) != 0) + ((keysHeld & KEY_RIGHT) != 0) == 1;
                 
                 
                 if (singleArrowKeyPress) {
@@ -5931,7 +5931,7 @@ namespace tsl {
 
                 if (!touchDetected && !oldTouchDetected && !handled && currentFocus && !stillTouching && !runningInterpreter.load(std::memory_order_acquire)) {
                     static bool shouldShake = true;
-                    bool singleArrowKeyPress = ((keysHeld & HidNpadButton_AnyUp) != 0) + ((keysHeld & HidNpadButton_AnyDown) != 0) + ((keysHeld & HidNpadButton_AnyLeft) != 0) + ((keysHeld & HidNpadButton_AnyRight) != 0) == 1;
+                    bool singleArrowKeyPress = ((keysHeld & KEY_UP) != 0) + ((keysHeld & KEY_DOWN) != 0) + ((keysHeld & KEY_LEFT) != 0) + ((keysHeld & KEY_RIGHT) != 0) == 1;
                     
                     if (singleArrowKeyPress) {
                         
@@ -5951,6 +5951,8 @@ namespace tsl {
                                 currentGui->requestFocus(currentFocus->getParent(), FocusDirection::Right, shouldShake);
                             //shouldShake = currentGui->getFocusedElement() != currentFocus;
                         }
+                        if (keysHeld & ~KEY_DOWN & ~KEY_UP & ~KEY_LEFT & ~KEY_RIGHT & ALL_KEYS_MASK) // reset
+                            buttonPressTime = now;
                         
                         auto durationSincePress = std::chrono::duration_cast<std::chrono::milliseconds>(now - buttonPressTime);
                         auto durationSinceLastEvent = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastKeyEventTime);
