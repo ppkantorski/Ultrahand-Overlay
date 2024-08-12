@@ -3176,6 +3176,7 @@ public:
                         setIniFileValue(OVERLAYS_INI_FILEPATH, overlayFileName, USE_LAUNCH_ARGS_STR, FALSE_STR);
                         setIniFileValue(OVERLAYS_INI_FILEPATH, overlayFileName, LAUNCH_ARGS_STR, "");
                         setIniFileValue(OVERLAYS_INI_FILEPATH, overlayFileName, "custom_name", "");
+                        setIniFileValue(OVERLAYS_INI_FILEPATH, overlayFileName, "custom_version", "");
                         const auto& [result, overlayName, overlayVersion] = getOverlayInfo(OVERLAY_PATH + overlayFileName);
                         if (result != ResultSuccess) continue;
                         overlayList.insert("0020"+(overlayName)+":" + overlayFileName);
@@ -3186,8 +3187,9 @@ public:
                         const std::string& useLaunchArgs = getValueOrDefault(it->second, USE_LAUNCH_ARGS_STR, FALSE_STR);
                         const std::string& launchArgs = getValueOrDefault(it->second, LAUNCH_ARGS_STR, "");
                         const std::string& customName = getValueOrDefault(it->second, "custom_name", "");
+                        const std::string& customVersion = getValueOrDefault(it->second, "custom_version", "");
                         
-                        std::string assignedOverlayName;
+                        std::string assignedOverlayName, assignedOverlayVersion;
 
                         const auto& [result, overlayName, overlayVersion] = getOverlayInfo(OVERLAY_PATH + overlayFileName);
                         if (result != ResultSuccess) continue;
@@ -3196,10 +3198,15 @@ public:
                             assignedOverlayName = customName;
                         } else
                             assignedOverlayName = overlayName;
+
+                        if (!customVersion.empty()){
+                            assignedOverlayVersion = customVersion;
+                        } else
+                            assignedOverlayVersion = overlayVersion;
                         
-                        const std::string& baseOverlayInfo = priority + (assignedOverlayName) + ":" + assignedOverlayName + ":" + overlayVersion + ":" + overlayFileName;
+                        const std::string& baseOverlayInfo = priority + (assignedOverlayName) + ":" + assignedOverlayName + ":" + assignedOverlayVersion + ":" + overlayFileName;
                         const std::string& fullOverlayInfo = (starred == TRUE_STR) ? "-1:" + baseOverlayInfo : baseOverlayInfo;
-                
+                        
                         if (hide == FALSE_STR) {
                             overlayList.insert(fullOverlayInfo);
                         } else {
