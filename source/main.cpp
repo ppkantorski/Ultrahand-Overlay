@@ -3175,6 +3175,7 @@ public:
                         setIniFileValue(OVERLAYS_INI_FILEPATH, overlayFileName, HIDE_STR, FALSE_STR);
                         setIniFileValue(OVERLAYS_INI_FILEPATH, overlayFileName, USE_LAUNCH_ARGS_STR, FALSE_STR);
                         setIniFileValue(OVERLAYS_INI_FILEPATH, overlayFileName, LAUNCH_ARGS_STR, "");
+                        setIniFileValue(OVERLAYS_INI_FILEPATH, overlayFileName, "custom_name", "");
                         const auto& [result, overlayName, overlayVersion] = getOverlayInfo(OVERLAY_PATH + overlayFileName);
                         if (result != ResultSuccess) continue;
                         overlayList.insert("0020"+(overlayName)+":" + overlayFileName);
@@ -3184,11 +3185,19 @@ public:
                         const std::string& hide = getValueOrDefault(it->second, HIDE_STR, FALSE_STR);
                         const std::string& useLaunchArgs = getValueOrDefault(it->second, USE_LAUNCH_ARGS_STR, FALSE_STR);
                         const std::string& launchArgs = getValueOrDefault(it->second, LAUNCH_ARGS_STR, "");
+                        const std::string& customName = getValueOrDefault(it->second, "custom_name", "");
                         
+                        std::string assignedOverlayName;
+
                         const auto& [result, overlayName, overlayVersion] = getOverlayInfo(OVERLAY_PATH + overlayFileName);
                         if (result != ResultSuccess) continue;
+
+                        if (!customName.empty()){
+                            assignedOverlayName = customName;
+                        } else
+                            assignedOverlayName = overlayName;
                         
-                        const std::string& baseOverlayInfo = priority + (overlayName) + ":" + overlayName + ":" + overlayVersion + ":" + overlayFileName;
+                        const std::string& baseOverlayInfo = priority + (assignedOverlayName) + ":" + assignedOverlayName + ":" + overlayVersion + ":" + overlayFileName;
                         const std::string& fullOverlayInfo = (starred == TRUE_STR) ? "-1:" + baseOverlayInfo : baseOverlayInfo;
                 
                         if (hide == FALSE_STR) {
