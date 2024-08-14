@@ -971,8 +971,20 @@ std::string replaceJsonPlaceholder(const std::string& arg, const std::string& co
     return replacement; // Return the modified string
 }
 
+// Helper function to replace placeholders
+std::string replaceAllPlaceholders(const std::string& source, const std::string& placeholder, const std::string& replacement) {
+    std::string modifiedArg = source;
+    std::string lastArg;
+    while (modifiedArg.find(placeholder) != std::string::npos) {
+        modifiedArg = replacePlaceholder(modifiedArg, placeholder, replacement);
+        if (modifiedArg == lastArg)
+            break;
+        lastArg = modifiedArg;
+    }
+    return modifiedArg;
+}
 
-// this will modify `commands`
+// Optimized getSourceReplacement function
 std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std::vector<std::string>>& commands,
     const std::string& entry, size_t entryIndex, const std::string& packagePath = "") {
     
@@ -980,31 +992,19 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
     bool inMarikoSection = false;
     
     std::vector<std::vector<std::string>> modifiedCommands;
-    //std::vector<std::string> listData;
-    std::string listString, listPath;
-    std::string jsonString, jsonPath;
-    std::string iniPath;
-    size_t startPos, endPos;
-    
-    std::vector<std::string> modifiedCmd;
-    std::string modifiedArg, lastArg, replacement, commandName;
+    std::string listString, listPath, jsonString, jsonPath, iniPath;
+    bool usingFileSource = false;
 
     std::string fileName = (isDirectory(entry) ? getNameFromPath(entry) : dropExtension(getNameFromPath(entry)));
-    
-    //if (isFileOrDirectory(entry)) {
-    // Insert file_name command at the beginning (for handling sourced toggles)
-    //}
-    bool usingFileSource = false;
 
     for (const auto& cmd : commands) {
         if (cmd.empty())
             continue;
         
-        modifiedCmd.clear();
-        
-        modifiedCmd.reserve(cmd.size()); // Reserve memory for efficiency
+        std::vector<std::string> modifiedCmd;
+        modifiedCmd.reserve(cmd.size());
 
-        commandName = cmd[0];
+        std::string commandName = cmd[0];
 
         if (commandName == "download")
             isDownloadCommand = true;
@@ -1019,150 +1019,94 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
             continue;
         }
         
-        if ((inEristaSection && !inMarikoSection && usingErista) || (!inEristaSection && inMarikoSection && usingMariko) || (!inEristaSection && !inMarikoSection)) {
-            
-            if (cmd.size() > 1) {
+        if ((inEristaSection && usingErista) || (inMarikoSection && usingMariko) || (!inEristaSection && !inMarikoSection)) {
+            for (const auto& arg : cmd) {
+                std::string modifiedArg = arg;
+
                 if (commandName == "file_source") {
                     usingFileSource = true;
                 }
-                else if ((commandName == "list_source") && listString.empty())
+                else if (commandName == "list_source" && listString.empty())
                     listString = removeQuotes(cmd[1]);
-                else if ((commandName == "list_file_source") && listPath.empty())
+                else if (commandName == "list_file_source" && listPath.empty())
                     listPath = preprocessPath(cmd[1], packagePath);
-                else if ((commandName == "ini_file_source") && iniPath.empty())
+                else if (commandName == "ini_file_source" && iniPath.empty())
                     iniPath = preprocessPath(cmd[1], packagePath);
-                else if ((commandName == "json_source") && jsonString.empty())
+                else if (commandName == "json_source" && jsonString.empty())
                     jsonString = cmd[1];
-                else if ((commandName == "json_file_source") && jsonPath.empty())
+                else if (commandName == "json_file_source" && jsonPath.empty())
                     jsonPath = preprocessPath(cmd[1], packagePath);
-            }
-            
-            
-            for (const auto& arg : cmd) {
-                modifiedArg = arg; // Working with a copy for modifications
-                lastArg = ""; // Initialize lastArg for each argument
                 
+                modifiedArg = replaceAllPlaceholders(modifiedArg, "{file_source}", entry);
+                modifiedArg = replaceAllPlaceholders(modifiedArg, "{file_name}", fileName);
+                modifiedArg = replaceAllPlaceholders(modifiedArg, "{folder_name}", removeQuotes(getParentDirNameFromPath(entry)));
+                
+                if (modifiedArg.find("{list_source(") != std::string::npos) {
+                    modifiedArg = replacePlaceholder(modifiedArg, "*", std::to_string(entryIndex));
+                    size_t startPos = modifiedArg.find("{list_source(");
+                    size_t endPos = modifiedArg.find(")}");
+                    if (endPos != std::string::npos && endPos > startPos) {
+                        std::string replacement = stringToList(listString)[entryIndex];
+                        replacement = replacement.empty() ? NULL_STR : replacement;
+                        modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
+                    }
+                }
 
-                while (modifiedArg.find("{file_source}") != std::string::npos) {
-                    modifiedArg = replacePlaceholder(modifiedArg, "{file_source}", entry);
-                    if (modifiedArg == lastArg)
-                        break;
-                    lastArg = modifiedArg;
-                }
-                while (modifiedArg.find("{file_name}") != std::string::npos) {
-                    modifiedArg = replacePlaceholder(modifiedArg, "{file_name}", fileName);
-                    if (modifiedArg == lastArg)
-                        break;
-                    lastArg = modifiedArg;
-                }
-                while (modifiedArg.find("{folder_name}") != std::string::npos) {
-                    modifiedArg = replacePlaceholder(modifiedArg, "{folder_name}", removeQuotes(getParentDirNameFromPath(entry)));
-                    if (modifiedArg == lastArg)
-                        break;
-                    lastArg = modifiedArg;
-                }
-                while (modifiedArg.find("{list_source(") != std::string::npos) {
+                if (modifiedArg.find("{list_file_source(") != std::string::npos) {
                     modifiedArg = replacePlaceholder(modifiedArg, "*", std::to_string(entryIndex));
-                    startPos = modifiedArg.find("{list_source(");
-                    endPos = modifiedArg.find(")}");
+                    size_t startPos = modifiedArg.find("{list_file_source(");
+                    size_t endPos = modifiedArg.find(")}");
                     if (endPos != std::string::npos && endPos > startPos) {
-                        replacement = stringToList(listString)[entryIndex];
-                        if (replacement.empty()) {
-                            replacement = NULL_STR;
-                            modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
-                            break;
-                        }
+                        std::string replacement = getEntryFromListFile(listPath, entryIndex);
+                        replacement = replacement.empty() ? NULL_STR : replacement;
                         modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
                     }
-                    if (modifiedArg == lastArg)
-                        break;
-                    lastArg = modifiedArg;
                 }
-                while (modifiedArg.find("{list_file_source(") != std::string::npos) {
-                    modifiedArg = replacePlaceholder(modifiedArg, "*", std::to_string(entryIndex));
-                    startPos = modifiedArg.find("{list_file_source(");
-                    endPos = modifiedArg.find(")}");
-                    if (endPos != std::string::npos && endPos > startPos) {
-                        replacement = getEntryFromListFile(listPath, entryIndex);
-                        if (replacement.empty()) {
-                            replacement = NULL_STR;
-                            modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
-                            break;
-                        }
-                        modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
-                    }
-                    if (modifiedArg == lastArg)
-                        break;
-                    lastArg = modifiedArg;
-                }
-                while (modifiedArg.find("{ini_file_source(") != std::string::npos) {
-                    modifiedArg = replacePlaceholder(modifiedArg, "*", std::to_string(entryIndex));
-                    startPos = modifiedArg.find("{ini_file_source(");
-                    endPos = modifiedArg.find(")}");
-                    if (endPos != std::string::npos && endPos > startPos) {
-                        std::string placeholderContent = modifiedArg.substr(startPos + std::string("{ini_file_source(").length(), endPos - startPos - std::string("{ini_file_source(").length());
-                        if (placeholderContent == "*") {
-                            modifiedArg = replacePlaceholder(modifiedArg, "*", std::to_string(entryIndex));
-                        }
 
-                        //replacement = parseSectionsFromIni(iniPath)[entryIndex];
-                        replacement = replaceIniPlaceholder(modifiedArg, "ini_file_source", iniPath);
-                        if (replacement.empty()) {
-                            replacement = NULL_STR;
-                            modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
-                            break;
-                        }
-                        modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
-                    }
-                    if (modifiedArg == lastArg)
-                        break;
-                    lastArg = modifiedArg;
-                }
-                while (modifiedArg.find("{json_source(") != std::string::npos) {
+                if (modifiedArg.find("{ini_file_source(") != std::string::npos) {
                     modifiedArg = replacePlaceholder(modifiedArg, "*", std::to_string(entryIndex));
-                    startPos = modifiedArg.find("{json_source(");
-                    endPos = modifiedArg.find(")}");
+                    size_t startPos = modifiedArg.find("{ini_file_source(");
+                    size_t endPos = modifiedArg.find(")}");
                     if (endPos != std::string::npos && endPos > startPos) {
-                        replacement = replaceJsonPlaceholder(modifiedArg.substr(startPos, endPos - startPos + 2), "json_source", jsonString);
-                        if (replacement.empty()) {
-                            replacement = NULL_STR;
-                            modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
-                            break;
-                        }
+                        std::string replacement = replaceIniPlaceholder(modifiedArg, "ini_file_source", iniPath);
+                        replacement = replacement.empty() ? NULL_STR : replacement;
                         modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
                     }
-                    if (modifiedArg == lastArg)
-                        break;
-                    lastArg = modifiedArg;
                 }
-                while (modifiedArg.find("{json_file_source(") != std::string::npos) {
+
+                if (modifiedArg.find("{json_source(") != std::string::npos) {
                     modifiedArg = replacePlaceholder(modifiedArg, "*", std::to_string(entryIndex));
-                    startPos = modifiedArg.find("{json_file_source(");
-                    endPos = modifiedArg.find(")}");
+                    size_t startPos = modifiedArg.find("{json_source(");
+                    size_t endPos = modifiedArg.find(")}");
                     if (endPos != std::string::npos && endPos > startPos) {
-                        replacement = replaceJsonPlaceholder(modifiedArg.substr(startPos, endPos - startPos + 2), "json_file_source", jsonPath);
-                        if (replacement.empty()) {
-                            replacement = NULL_STR;
-                            modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
-                            break;
-                        }
+                        std::string replacement = replaceJsonPlaceholder(modifiedArg.substr(startPos, endPos - startPos + 2), "json_source", jsonString);
+                        replacement = replacement.empty() ? NULL_STR : replacement;
                         modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
                     }
-                    if (modifiedArg == lastArg)
-                        break;
-                    lastArg = modifiedArg;
+                }
+
+                if (modifiedArg.find("{json_file_source(") != std::string::npos) {
+                    modifiedArg = replacePlaceholder(modifiedArg, "*", std::to_string(entryIndex));
+                    size_t startPos = modifiedArg.find("{json_file_source(");
+                    size_t endPos = modifiedArg.find(")}");
+                    if (endPos != std::string::npos && endPos > startPos) {
+                        std::string replacement = replaceJsonPlaceholder(modifiedArg.substr(startPos, endPos - startPos + 2), "json_file_source", jsonPath);
+                        replacement = replacement.empty() ? NULL_STR : replacement;
+                        modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
+                    }
                 }
                 
-                modifiedCmd.push_back(std::move(modifiedArg)); // Move modified arg to the modified command vector
+                modifiedCmd.push_back(std::move(modifiedArg));
             }
-            
-            modifiedCommands.emplace_back(std::move(modifiedCmd)); // Move modified command to the result vector
-        }
-        // Add the file_name command at the front if file_source was used
-        if (usingFileSource) {
-            modifiedCommands.insert(modifiedCommands.begin(), {"file_name", fileName});
+
+            modifiedCommands.emplace_back(std::move(modifiedCmd));
         }
     }
+
+    if (usingFileSource) {
+        modifiedCommands.insert(modifiedCommands.begin(), {"file_name", fileName});
+    }
+
     return modifiedCommands;
 }
 
