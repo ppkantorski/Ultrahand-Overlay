@@ -880,7 +880,7 @@ public:
 
 class SettingsMenu : public tsl::Gui {
 private:
-    std::string entryName, entryMode, overlayName, dropdownSelection, settingsIniPath;
+    std::string entryName, entryMode, overlayName, packageName, dropdownSelection, settingsIniPath;
     bool isInSection, inQuotes, isFromMainMenu;
     int MAX_PRIORITY = 20;
 public:
@@ -892,8 +892,8 @@ public:
      * @param file The file path associated with the overlay.
      * @param key The specific key related to the overlay (optional).
      */
-    SettingsMenu(const std::string& name, const std::string& mode, const std::string& overlayName="", const std::string& selection = "") :
-        entryName(name), entryMode(mode), overlayName(overlayName), dropdownSelection(selection) {}
+    SettingsMenu(const std::string& name, const std::string& mode, const std::string& overlayName="", const std::string& packageName="", const std::string& selection = "") :
+        entryName(name), entryMode(mode), overlayName(overlayName), packageName(packageName), dropdownSelection(selection) {}
     
     /**
      * @brief Destroys the `SettingsMenu` instance.
@@ -915,8 +915,10 @@ public:
         if (entryMode == OVERLAY_STR) {
             settingsIniPath = OVERLAYS_INI_FILEPATH;
             header = overlayName;
-        } else if (entryMode == PACKAGE_STR)
+        } else if (entryMode == PACKAGE_STR) {
             settingsIniPath = PACKAGES_INI_FILEPATH;
+            header = packageName;
+        }
         
         if (dropdownSelection.empty())
             inSettingsMenu = true;
@@ -990,7 +992,7 @@ public:
                 }
                 if (keys & KEY_A) {
                     inMainMenu = false;
-                    tsl::changeTo<SettingsMenu>(entryName, entryMode, overlayName, PRIORITY_STR);
+                    tsl::changeTo<SettingsMenu>(entryName, entryMode, overlayName, "", PRIORITY_STR);
                     selectedListItem.reset();
                     selectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItemRaw, [](auto*){});
                     simulatedSelectComplete = true;
@@ -1330,6 +1332,13 @@ public:
     }
 };
 
+
+
+// For persistent versions and colors across nested packages (when not specified)
+std::string packageRootLayerTitle;
+std::string packageRootLayerVersion;
+std::string packageRootLayerColor;
+bool overrideTitle = false, overrideVersion = false;
 
 
 /**
@@ -1867,9 +1876,33 @@ public:
                 list->addItem(toggleListItem.release());
             }
         }
+        
+        
+        if (!packageRootLayerTitle.empty())
+            overrideTitle = true;
+        if (!packageRootLayerVersion.empty())
+            overrideVersion = true;
 
-        auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(getNameFromPath(filePath),
-            packageHeader.version != "" ? packageHeader.version + "   (Ultrahand Package)" : "Ultrahand Package", "", packageHeader.color);
+        if (!packageHeader.title.empty() && packageRootLayerTitle.empty())
+            packageRootLayerTitle = packageHeader.title;
+        if (!packageHeader.version.empty() && packageRootLayerVersion.empty())
+            packageRootLayerVersion = packageHeader.version;
+        if (!packageHeader.color.empty() && packageRootLayerColor.empty())
+            packageRootLayerColor = packageHeader.color;
+
+        if (packageHeader.title.empty() || overrideTitle)
+            packageHeader.title = packageRootLayerTitle;
+        if (packageHeader.version.empty() || overrideVersion)
+            packageHeader.version = packageRootLayerVersion;
+        if (packageHeader.color.empty())
+            packageHeader.color = packageRootLayerColor;
+        
+
+        auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(
+            (!packageHeader.title.empty()) ? packageHeader.title : (!packageRootLayerTitle.empty() ? packageRootLayerTitle : getNameFromPath(filePath)),
+            packageHeader.version != "" ? (!packageRootLayerVersion.empty() ? packageRootLayerVersion : packageHeader.version) + "   (Ultrahand Package)" : "Ultrahand Package",
+            "",
+            packageHeader.color);
 
         if (filePath == PACKAGE_PATH)
             rootFrame = std::make_unique<tsl::elm::OverlayFrame>(CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel);
@@ -2510,9 +2543,6 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
 
 
 
-// For persistent versions and colors across nested packages (when not specified)
-std::string packageRootLayerVersion;
-std::string packageRootLayerColor;
 
 /**
  * @brief The `PackageMenu` class handles sub-menu overlay functionality.
@@ -2527,6 +2557,7 @@ private:
     bool usingPages = false;
     std::string packageName;
     size_t nestedLayer = 0;
+
 public:
     /**
      * @brief Constructs a `PackageMenu` instance for a specific sub-menu path.
@@ -2545,8 +2576,11 @@ public:
     ~PackageMenu() {
         if (returningToMain) {
             clearMemory();
+            packageRootLayerTitle = "";
             packageRootLayerVersion = "";
             packageRootLayerColor = "";
+            overrideTitle = false;
+            overrideVersion = false;
         }
     }
     
@@ -2583,21 +2617,32 @@ public:
             this->packagePath, this->currentPage, this->packageName, this->dropdownSection, this->nestedLayer,
             this->pathPattern, this->pathPatternOn, this->pathPatternOff, this->usingPages);
         
+        
 
         if (nestedLayer == 0) {
-            if (!packageHeader.version.empty())
+
+            if (!packageRootLayerTitle.empty())
+                overrideTitle = true;
+            if (!packageRootLayerVersion.empty())
+                overrideVersion = true;
+
+            if (!packageHeader.title.empty() && packageRootLayerTitle.empty())
+                packageRootLayerTitle = packageHeader.title;
+            if (!packageHeader.version.empty() && packageRootLayerVersion.empty())
                 packageRootLayerVersion = packageHeader.version;
-            if (!packageHeader.color.empty())
+            if (!packageHeader.color.empty() && packageRootLayerColor.empty())
                 packageRootLayerColor = packageHeader.color;
         }
-        if (packageHeader.version.empty())
+        if (packageHeader.title.empty() || overrideTitle)
+            packageHeader.title = packageRootLayerTitle;
+        if (packageHeader.version.empty() || overrideVersion)
             packageHeader.version = packageRootLayerVersion;
         if (packageHeader.color.empty())
             packageHeader.color = packageRootLayerColor;
         
         std::unique_ptr<tsl::elm::OverlayFrame> rootFrame = std::make_unique<tsl::elm::OverlayFrame>(
-            getNameFromPath(packagePath),
-            packageHeader.version != "" ? packageHeader.version + "   (Ultrahand Package)" : "Ultrahand Package",
+            (!packageHeader.title.empty()) ? packageHeader.title : (!packageRootLayerTitle.empty() ? packageRootLayerTitle : getNameFromPath(packagePath)),
+            packageHeader.version != "" ? (!packageRootLayerVersion.empty() ? packageRootLayerVersion : packageHeader.version) + "   (Ultrahand Package)" : "Ultrahand Package",
             "",
             packageHeader.color,
             (usingPages && currentPage == RIGHT_STR) ? pageLeftName : "",
@@ -3391,6 +3436,8 @@ public:
                     subdirectories.end()
                 );
 
+                PackageHeader packageHeader;
+
                 for (const auto& packageName: subdirectories) {
                     auto packageIt = packagesIniData.find(packageName);
                     if (packageIt == packagesIniData.end()) {
@@ -3398,6 +3445,8 @@ public:
                         setIniFileValue(PACKAGES_INI_FILEPATH, packageName, PRIORITY_STR, "20");
                         setIniFileValue(PACKAGES_INI_FILEPATH, packageName, STAR_STR, FALSE_STR);
                         setIniFileValue(PACKAGES_INI_FILEPATH, packageName, HIDE_STR, FALSE_STR);
+                        setIniFileValue(PACKAGES_INI_FILEPATH, packageName, "custom_name", "");
+                        setIniFileValue(PACKAGES_INI_FILEPATH, packageName, "custom_version", "");
                         packageList.insert("0020" + (packageName) +":" + packageName);
                     } else {
                         // Process existing package data
@@ -3408,9 +3457,34 @@ public:
                         hide = (packageIt->second.find(HIDE_STR) != packageIt->second.end()) ? 
                                packageIt->second[HIDE_STR] : FALSE_STR;
                         
-                        const std::string& basePackageInfo = priority + (packageName) +":" + packageName;
+                        const std::string& customName = getValueOrDefault(packageIt->second, "custom_name", "");
+                        const std::string& customVersion = getValueOrDefault(packageIt->second, "custom_version", "");
+
+                        packageHeader = getPackageHeaderFromIni(PACKAGE_PATH + packageName+ "/" +PACKAGE_FILENAME);
+                        
+                        if (cleanVersionLabels)
+                            packageHeader.version = removeQuotes(cleanVersionLabel(packageHeader.version));
+                        
+                        //packageHeader.clear(); // free memory
+
+                        std::string assignedPackageName, assignedPackageVersion;
+
+                        if (!customName.empty()){
+                            assignedPackageName = customName;
+                        } else {
+                            if (packageHeader.title.empty())
+                                assignedPackageName = packageName;
+                            else
+                                assignedPackageName = packageHeader.title;
+                        }
+
+                        if (!customVersion.empty()){
+                            assignedPackageVersion = customVersion;
+                        } else
+                            assignedPackageVersion = packageHeader.version;
+
+                        const std::string& basePackageInfo = priority + ":" + assignedPackageName + ":" + assignedPackageVersion + ":" + packageName;
                         const std::string& fullPackageInfo = (starred == TRUE_STR) ? "-1:" + basePackageInfo : basePackageInfo;
-                
                         if (hide == FALSE_STR) {
                             packageList.insert(fullPackageInfo);
                         } else {
@@ -3428,14 +3502,14 @@ public:
                 }
                 
                 std::string taintedPackageName;
-                std::string packageName;
+                std::string packageName, packageVersion;
                 bool packageStarred;
                 std::string newPackageName;
                 std::string packageFilePath;
                 bool newStarred;
-                PackageHeader packageHeader;
                 
-                size_t lastUnderscorePos;
+                
+                size_t lastColonPos, secondLastColonPos, thirdLastColonPos;
 
                 bool firstItem = true;
                 for (const auto& taintedPackageName : packageList) {
@@ -3445,24 +3519,47 @@ public:
                     }
 
                     
-                   // packageName = taintedPackageName.c_str();
+                    // packageName = taintedPackageName.c_str();
+                    std::string tempPackageName = taintedPackageName;
+
                     packageStarred = false;
-                    
-                    if ((taintedPackageName.length() >= 2) && (taintedPackageName.substr(0, 3) == "-1:")) {
-                        // strip first two characters
-                        //packageName = packageName.substr(3);
+                    // Check if the package is starred
+                    if (tempPackageName.length() >= 3 && tempPackageName.substr(0, 3) == "-1:") {
                         packageStarred = true;
+                        // Remove the "-1:" prefix
+                        tempPackageName = tempPackageName.substr(3);
+                    }
+                
+                    // Find the position of the last colon
+                    lastColonPos = tempPackageName.rfind(':');
+                    if (lastColonPos != std::string::npos) {
+                        // Extract the version part after the last colon
+                        packageName = tempPackageName.substr(lastColonPos + 1);
+                
+                        // Remove the version part from tempPackageName
+                        tempPackageName = tempPackageName.substr(0, lastColonPos);
+                
+                        // Now, find the position of the second-to-last colon
+                        secondLastColonPos = tempPackageName.rfind(':');
+                        if (secondLastColonPos != std::string::npos) {
+                            // Extract the name part between the two colons
+                            packageVersion = tempPackageName.substr(secondLastColonPos + 1);
+
+                            // Remove the version part from tempPackageName
+                            tempPackageName = tempPackageName.substr(0, secondLastColonPos);
+
+                            // Now, find the position of the second-to-last colon
+                            thirdLastColonPos = tempPackageName.rfind(':');
+                            if (thirdLastColonPos != std::string::npos) {
+                                newPackageName = tempPackageName.substr(thirdLastColonPos + 1);
+                            }
+                        }
                     }
 
-                    lastUnderscorePos = taintedPackageName.rfind(':');
-                    if (lastUnderscorePos != std::string::npos) {
-                        // Extract overlayFileName starting from the character after the last underscore
-                        packageName = taintedPackageName.substr(lastUnderscorePos + 1);
-                    }
                     
                     //packageName = packageName.substr(5);
                     
-                    newPackageName = (packageStarred) ? (STAR_SYMBOL + "  " + packageName) : packageName;
+                    //newPackageName = (packageStarred) ? (STAR_SYMBOL + "  " + newPackageName) : newPackageName;
                     
                     packageFilePath = PACKAGE_PATH + packageName+ "/";
                     
@@ -3471,18 +3568,18 @@ public:
                     
                     
                     if (isFileOrDirectory(packageFilePath)) {
-                        packageHeader = getPackageHeaderFromIni(packageFilePath+PACKAGE_FILENAME);
+                        //packageHeader = getPackageHeaderFromIni(packageFilePath+PACKAGE_FILENAME);
                         
-                        listItem = std::make_unique<tsl::elm::ListItem>(newPackageName);
-                        if (cleanVersionLabels)
-                            packageHeader.version = removeQuotes(cleanVersionLabel(packageHeader.version));
+                        listItem = std::make_unique<tsl::elm::ListItem>((packageStarred) ? (STAR_SYMBOL + "  " + newPackageName) : newPackageName);
+                        //if (cleanVersionLabels)
+                        //    packageHeader.version = removeQuotes(cleanVersionLabel(packageHeader.version));
                         if (!hidePackageVersions)
-                           listItem->setValue(packageHeader.version, true);
+                           listItem->setValue(packageVersion, true);
                         
-                        packageHeader.clear(); // free memory
+                        //packageHeader.clear(); // free memory
                         
                         // Add a click listener to load the overlay when clicked upon
-                        listItem->setClickListener([&hiddenMenuMode = this->hiddenMenuMode, packageFilePath, newStarred, packageName](s64 keys) {
+                        listItem->setClickListener([&hiddenMenuMode = this->hiddenMenuMode, packageFilePath, newStarred, packageName, newPackageName, packageVersion](s64 keys) {
                             if (runningInterpreter.load(std::memory_order_acquire)) {
                                 return false;
                             }
@@ -3514,6 +3611,10 @@ public:
                                 }
                                 lastPackagePath = packageFilePath;
                                 lastPackageName = PACKAGE_FILENAME;
+
+                                packageRootLayerTitle = newPackageName;
+                                packageRootLayerVersion = packageVersion;
+
                                 tsl::changeTo<PackageMenu>(packageFilePath, "");
                                 simulatedSelectComplete = true;
                                 return true;
@@ -3541,7 +3642,7 @@ public:
                                     inHiddenMode = false;
                                 }
                                 
-                                tsl::changeTo<SettingsMenu>(packageName, PACKAGE_STR);
+                                tsl::changeTo<SettingsMenu>(packageName, PACKAGE_STR, "", newPackageName);
                                 return true;
                             }
                             return false;
