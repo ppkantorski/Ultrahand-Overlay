@@ -31,6 +31,9 @@
 size_t DOWNLOAD_BUFFER_SIZE = 4096*4;
 size_t UNZIP_BUFFER_SIZE = 4096*4;
 
+// Path to the CA certificate
+const std::string cacertPath = "sdmc:/config/ultrahand/cacert.pem";
+const std::string cacertURL = "https://curl.se/ca/cacert.pem";
 
 // Shared atomic flag to indicate whether to abort the download operation
 static std::atomic<bool> abortDownload(false);
@@ -102,12 +105,12 @@ void cleanupCurl() {
 // Your downloadFile function
 bool downloadFile(const std::string& url, const std::string& toDestination) {
     abortDownload.store(false);
-
+    
     if (url.find_first_of("{}") != std::string::npos) {
         logMessage("Invalid URL: " + url);
         return false;
     }
-
+    
     std::string destination = toDestination;
     if (destination.back() == '/') {
         createDirectory(destination);
@@ -121,21 +124,21 @@ bool downloadFile(const std::string& url, const std::string& toDestination) {
     } else {
         createDirectory(destination.substr(0, destination.find_last_of('/')));
     }
-
+    
     std::ofstream file(destination, std::ios::binary);
     if (!file.is_open()) {
         logMessage("Error opening file: " + destination);
         return false;
     }
-
+    
     std::unique_ptr<CURL, CurlDeleter> curl(curl_easy_init());
     if (!curl) {
         logMessage("Error initializing curl.");
         return false;
     }
-
+    
     downloadPercentage.store(0, std::memory_order_release);
-
+    
     curl_easy_setopt(curl.get(), CURLOPT_URL, url.c_str());
     curl_easy_setopt(curl.get(), CURLOPT_WRITEFUNCTION, writeCallback);
     curl_easy_setopt(curl.get(), CURLOPT_WRITEDATA, &file);
@@ -145,24 +148,24 @@ bool downloadFile(const std::string& url, const std::string& toDestination) {
     curl_easy_setopt(curl.get(), CURLOPT_USERAGENT, userAgent.c_str());
     curl_easy_setopt(curl.get(), CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_2TLS); // Enable HTTP/2
     curl_easy_setopt(curl.get(), CURLOPT_SSLVERSION, CURL_SSLVERSION_TLSv1_2); // Force TLS 1.2
-
+    
     // Disable SSL verification for testing purposes
-    curl_easy_setopt(curl.get(), CURLOPT_SSL_VERIFYPEER, 0L);
-    curl_easy_setopt(curl.get(), CURLOPT_SSL_VERIFYHOST, 0L);
+    //curl_easy_setopt(curl.get(), CURLOPT_SSL_VERIFYPEER, 0L);
+    //curl_easy_setopt(curl.get(), CURLOPT_SSL_VERIFYHOST, 0L);
     
     curl_easy_setopt(curl.get(), CURLOPT_FOLLOWLOCATION, 1L);
     curl_easy_setopt(curl.get(), CURLOPT_BUFFERSIZE, DOWNLOAD_BUFFER_SIZE); // Increase buffer size
-
+    
     CURLcode result = curl_easy_perform(curl.get());
     file.close();
-
+    
     if (result != CURLE_OK) {
         logMessage("Error downloading file: " + std::string(curl_easy_strerror(result)));
         deleteFileOrDirectory(destination);
         downloadPercentage.store(-1, std::memory_order_release);
         return false;
     }
-
+    
     std::ifstream checkFile(destination);
     if (!checkFile || checkFile.peek() == std::ifstream::traits_type::eof()) {
         logMessage("Error downloading file: Empty file");
@@ -171,7 +174,7 @@ bool downloadFile(const std::string& url, const std::string& toDestination) {
         return false;
     }
     checkFile.close();
-
+    
     downloadPercentage.store(100, std::memory_order_release);
     logMessage("Download Complete!");
     return true;
