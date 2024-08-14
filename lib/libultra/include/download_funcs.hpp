@@ -145,6 +145,11 @@ bool downloadFile(const std::string& url, const std::string& toDestination) {
     curl_easy_setopt(curl.get(), CURLOPT_USERAGENT, userAgent.c_str());
     curl_easy_setopt(curl.get(), CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_2TLS); // Enable HTTP/2
     curl_easy_setopt(curl.get(), CURLOPT_SSLVERSION, CURL_SSLVERSION_TLSv1_2); // Force TLS 1.2
+
+    // Disable SSL verification for testing purposes
+    curl_easy_setopt(curl.get(), CURLOPT_SSL_VERIFYPEER, 0L);
+    curl_easy_setopt(curl.get(), CURLOPT_SSL_VERIFYHOST, 0L);
+    
     curl_easy_setopt(curl.get(), CURLOPT_FOLLOWLOCATION, 1L);
     curl_easy_setopt(curl.get(), CURLOPT_BUFFERSIZE, DOWNLOAD_BUFFER_SIZE); // Increase buffer size
 
