@@ -4503,20 +4503,33 @@ namespace tsl {
                 
                 
                 // CUSTOM SECTION START (modification for submenu footer color)
+                //const std::string& value = this->m_value;
+                int xPosition = this->getX() + this->m_maxWidth + 45 - 1;
+                int yPosition = this->getY() + 45;
+                int fontSize = 20;
+                //bool isFaint = ;
+                //bool isFocused = this->m_focused;
+
+                // Determine text color
+                auto textColor = offTextColor;
                 if (this->m_value == DROPDOWN_SYMBOL || this->m_value == OPTION_SYMBOL) {
-                    if (this->m_focused)
-                        renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45-1, this->getY() + 45, 20, !useClickTextColor ? (this->m_faint ? offTextColor : selectedTextColor) : a(clickTextColor));
-                    else
-                        renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45-1, this->getY() + 45, 20, !useClickTextColor ? (this->m_faint ? offTextColor : defaultTextColor) : a(clickTextColor));
+                    textColor = this->m_focused
+                        ? (!useClickTextColor ? (this->m_faint ? offTextColor : selectedTextColor) : a(clickTextColor))
+                        : (!useClickTextColor ? (this->m_faint ? offTextColor : defaultTextColor) : a(clickTextColor));
                 } else if (runningInterpreter.load(std::memory_order_acquire) &&
-                    ((((this->m_value).find(DOWNLOAD_SYMBOL) != std::string::npos) || ((this->m_value).find(UNZIP_SYMBOL) != std::string::npos) || ((this->m_value).find(COPY_SYMBOL) != std::string::npos)) || this->m_value == INPROGRESS_SYMBOL)) {
-                    
-                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45-1, this->getY() + 45, 20, (this->m_faint ? offTextColor : a(inprogressTextColor)));
+                    (this->m_value.find(DOWNLOAD_SYMBOL) != std::string::npos ||
+                     this->m_value.find(UNZIP_SYMBOL) != std::string::npos ||
+                     this->m_value.find(COPY_SYMBOL) != std::string::npos ||
+                     this->m_value == INPROGRESS_SYMBOL)) {
+                    textColor = this->m_faint ? offTextColor : a(inprogressTextColor);
                 } else if (this->m_value == CROSSMARK_SYMBOL) {
-                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45-1, this->getY() + 45, 20, (this->m_faint ? offTextColor : a(invalidTextColor)));
+                    textColor = this->m_faint ? offTextColor : a(invalidTextColor);
                 } else {
-                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45-1, this->getY() + 45, 20, (this->m_faint ? offTextColor : a(onTextColor)));
+                    textColor = this->m_faint ? offTextColor : a(onTextColor);
                 }
+
+                // Draw the string with the determined text color
+                renderer->drawString(this->m_value.c_str(), false, xPosition, yPosition, fontSize, textColor);
                 // CUSTOM SECTION END 
             }
             
