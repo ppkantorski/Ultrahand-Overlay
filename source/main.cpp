@@ -68,6 +68,7 @@ static const std::string SYSTEM_PATTERN = ";system=";
 
 // Table option patterns
 static const std::string BACKGROUND_PATTERN = ";background="; // true or false
+static const std::string HEADER_INDENT_PATTERN = ";header_indent=";
 //static const std::string HEADER_PATTERN = ";header=";
 static const std::string ALIGNMENT_PATTERN = ";alignment=";
 static const std::string GAP_PATTERN =";gap=";
@@ -111,188 +112,188 @@ const static auto SETTINGS_KEY = KEY_Y;
 const static auto STAR_KEY = KEY_X;
 
 
-struct CommandOptions {
-    bool& inEristaSection;
-    bool& inMarikoSection;
-    bool& usingErista;
-    bool& usingMariko;
-    std::string& commandName;
-    std::string& commandSystem;
-    std::string& commandMode;
-    std::string& commandGrouping;
-    std::string& currentSection;
-    std::string& pathPattern;
-    std::string& sourceType;
-    std::string& pathPatternOn;
-    std::string& sourceTypeOn;
-    std::string& pathPatternOff;
-    std::string& sourceTypeOff;
-    std::string& defaultToggleState;
-    bool& hideTableBackground;
-    size_t& tableStartGap;
-    size_t& tableEndGap;
-    size_t& tableColumnOffset;
-    size_t& tableSpacing;
-    std::string& tableSectionTextColor;
-    std::string& tableInfoTextColor;
-    std::string& tableAlignment;
-    s16& minValue;
-    s16& maxValue;
-    std::string& units;
-    size_t& steps;
-    bool& unlockedTrackbar;
-    bool& onEveryTick;
-    std::string& packageSource;
-    std::string& packagePath;
-};
+//struct CommandOptions {
+//    bool& inEristaSection;
+//    bool& inMarikoSection;
+//    bool& usingErista;
+//    bool& usingMariko;
+//    std::string& commandName;
+//    std::string& commandSystem;
+//    std::string& commandMode;
+//    std::string& commandGrouping;
+//    std::string& currentSection;
+//    std::string& pathPattern;
+//    std::string& sourceType;
+//    std::string& pathPatternOn;
+//    std::string& sourceTypeOn;
+//    std::string& pathPatternOff;
+//    std::string& sourceTypeOff;
+//    std::string& defaultToggleState;
+//    bool& hideTableBackground;
+//    size_t& tableStartGap;
+//    size_t& tableEndGap;
+//    size_t& tableColumnOffset;
+//    size_t& tableSpacing;
+//    std::string& tableSectionTextColor;
+//    std::string& tableInfoTextColor;
+//    std::string& tableAlignment;
+//    s16& minValue;
+//    s16& maxValue;
+//    std::string& units;
+//    size_t& steps;
+//    bool& unlockedTrackbar;
+//    bool& onEveryTick;
+//    std::string& packageSource;
+//    std::string& packagePath;
+//};
+//
+//struct CommandData {
+//    std::vector<std::vector<std::string>>& commands;
+//    std::vector<std::vector<std::string>>& commandsOn;
+//    std::vector<std::vector<std::string>>& commandsOff;
+//    std::vector<std::vector<std::string>>& tableData;
+//};
 
-struct CommandData {
-    std::vector<std::vector<std::string>>& commands;
-    std::vector<std::vector<std::string>>& commandsOn;
-    std::vector<std::vector<std::string>>& commandsOff;
-    std::vector<std::vector<std::string>>& tableData;
-};
 
 
-
-void processCommands(CommandOptions& options, CommandData& data) {
-    options.inEristaSection = false;
-    options.inMarikoSection = false;
-    size_t delimiterPos;
-
-    // Remove all empty command strings
-    data.commands.erase(std::remove_if(data.commands.begin(), data.commands.end(),
-        [](const std::vector<std::string>& vec) {
-            return vec.empty();
-        }),
-        data.commands.end());
-
-    // Initial processing of commands
-    for (const auto& cmd : data.commands) {
-        options.commandName = cmd[0];
-
-        std::string commandNameLower = stringToLowercase(options.commandName);
-        if (commandNameLower == "erista:") {
-            options.inEristaSection = true;
-            options.inMarikoSection = false;
-            continue;
-        } else if (commandNameLower == "mariko:") {
-            options.inEristaSection = false;
-            options.inMarikoSection = true;
-            continue;
-        }
-
-        if ((options.inEristaSection && !options.inMarikoSection && options.usingErista) || 
-            (!options.inEristaSection && options.inMarikoSection && options.usingMariko) || 
-            (!options.inEristaSection && !options.inMarikoSection)) {
-
-            if (options.commandName.find(SYSTEM_PATTERN) == 0) {
-                options.commandSystem = options.commandName.substr(SYSTEM_PATTERN.length());
-                if (std::find(commandSystems.begin(), commandSystems.end(), options.commandSystem) == commandSystems.end())
-                    options.commandSystem = commandSystems[0];
-                continue;
-            } else if (options.commandName.find(MODE_PATTERN) == 0) {
-                options.commandMode = options.commandName.substr(MODE_PATTERN.length());
-                if (options.commandMode.find(TOGGLE_STR) != std::string::npos) {
-                    delimiterPos = options.commandMode.find('?');
-                    if (delimiterPos != std::string::npos) {
-                        options.defaultToggleState = options.commandMode.substr(delimiterPos + 1);
-                    }
-                    options.commandMode = TOGGLE_STR;
-                } else if (std::find(commandModes.begin(), commandModes.end(), options.commandMode) == commandModes.end()) {
-                    options.commandMode = commandModes[0];
-                }
-                continue;
-            } else if (options.commandName.find(GROUPING_PATTERN) == 0) {
-                options.commandGrouping = options.commandName.substr(GROUPING_PATTERN.length());
-                if (std::find(commandGroupings.begin(), commandGroupings.end(), options.commandGrouping) == commandGroupings.end())
-                    options.commandGrouping = commandGroupings[0];
-                continue;
-            } else if (options.commandName.find(BACKGROUND_PATTERN) == 0) {
-                options.hideTableBackground = (options.commandName.substr(BACKGROUND_PATTERN.length()) == FALSE_STR);
-                continue;
-            } else if (options.commandName.find(GAP_PATTERN) == 0) {
-                options.tableEndGap = std::stoi(options.commandName.substr(GAP_PATTERN.length()));
-                continue;
-            } else if (options.commandName.find(OFFSET_PATTERN) == 0) {
-                options.tableColumnOffset = std::stoi(options.commandName.substr(OFFSET_PATTERN.length()));
-                continue;
-            } else if (options.commandName.find(SPACING_PATTERN) == 0) {
-                options.tableSpacing = std::stoi(options.commandName.substr(SPACING_PATTERN.length()));
-                continue;
-            } else if (options.commandName.find(SECTION_TEXT_COLOR_PATTERN) == 0) {
-                options.tableSectionTextColor = options.commandName.substr(SECTION_TEXT_COLOR_PATTERN.length());
-                continue;
-            } else if (options.commandName.find(INFO_TEXT_COLOR_PATTERN) == 0) {
-                options.tableInfoTextColor = options.commandName.substr(INFO_TEXT_COLOR_PATTERN.length());
-                continue;
-            } else if (options.commandName.find(ALIGNMENT_PATTERN) == 0) {
-                options.tableAlignment = options.commandName.substr(ALIGNMENT_PATTERN.length());
-                continue;
-
-            } else if (options.commandName.find(MIN_VALUE_PATTERN) == 0) {
-                options.minValue = std::stoi(options.commandName.substr(MIN_VALUE_PATTERN.length()));
-                continue;
-            } else if (options.commandName.find(MAX_VALUE_PATTERN) == 0) {
-                options.maxValue = std::stoi(options.commandName.substr(MAX_VALUE_PATTERN.length()));
-                continue;
-            } else if (options.commandName.find(UNITS_PATTERN) == 0) {
-                options.units = removeQuotes(options.commandName.substr(UNITS_PATTERN.length()));
-                continue;
-            } else if (options.commandName.find(STEPS_PATTERN) == 0) {
-                options.steps = std::stoi(options.commandName.substr(STEPS_PATTERN.length()));
-                continue;
-            } else if (options.commandName.find(UNLOCKED_PATTERN) == 0) {
-                options.unlockedTrackbar = (options.commandName.substr(UNLOCKED_PATTERN.length()) == TRUE_STR);
-                continue;
-            } else if (options.commandName.find(ON_EVERY_TICK_PATTERN) == 0) {
-                options.onEveryTick = (options.commandName.substr(ON_EVERY_TICK_PATTERN.length()) == TRUE_STR);
-                continue;
-            } else if (options.commandName.find(";") == 0) {
-                continue;
-            }
-
-            if (options.commandMode == TOGGLE_STR) {
-                if (options.commandName.find("on:") == 0)
-                    options.currentSection = ON_STR;
-                else if (options.commandName.find("off:") == 0)
-                    options.currentSection = OFF_STR;
-
-                if (options.currentSection == GLOBAL_STR) {
-                    data.commandsOn.push_back(cmd);
-                    data.commandsOff.push_back(cmd);
-                } else if (options.currentSection == ON_STR) {
-                    data.commandsOn.push_back(cmd);
-                } else if (options.currentSection == OFF_STR) {
-                    data.commandsOff.push_back(cmd);
-                }
-            } else if (options.commandMode == TABLE_STR) {
-                data.tableData.push_back(cmd);
-                continue;
-            } else if (options.commandMode == TRACKBAR_STR || options.commandMode == STEP_TRACKBAR_STR || options.commandMode == NAMED_STEP_TRACKBAR_STR) {
-                //data.commands.push_back(cmd);
-                continue;
-            }
-
-            if (cmd.size() > 1) {
-                if (options.commandName == "file_source") {
-                    if (options.currentSection == GLOBAL_STR) {
-                        options.pathPattern = preprocessPath(cmd[1], options.packagePath);
-                        options.sourceType = FILE_STR;
-                    } else if (options.currentSection == ON_STR) {
-                        options.pathPatternOn = preprocessPath(cmd[1], options.packagePath);
-                        options.sourceTypeOn = FILE_STR;
-                    } else if (options.currentSection == OFF_STR) {
-                        options.pathPatternOff = preprocessPath(cmd[1], options.packagePath);
-                        options.sourceTypeOff = FILE_STR;
-                    }
-                } else if (options.commandName == "package_source") {
-                    options.packageSource = preprocessPath(cmd[1], options.packagePath);
-                }
-            }
-        }
-    }
-}
+//void processCommands(CommandOptions& options, CommandData& data) {
+//    options.inEristaSection = false;
+//    options.inMarikoSection = false;
+//    size_t delimiterPos;
+//
+//    // Remove all empty command strings
+//    data.commands.erase(std::remove_if(data.commands.begin(), data.commands.end(),
+//        [](const std::vector<std::string>& vec) {
+//            return vec.empty();
+//        }),
+//        data.commands.end());
+//
+//    // Initial processing of commands
+//    for (const auto& cmd : data.commands) {
+//        options.commandName = cmd[0];
+//
+//        std::string commandNameLower = stringToLowercase(options.commandName);
+//        if (commandNameLower == "erista:") {
+//            options.inEristaSection = true;
+//            options.inMarikoSection = false;
+//            continue;
+//        } else if (commandNameLower == "mariko:") {
+//            options.inEristaSection = false;
+//            options.inMarikoSection = true;
+//            continue;
+//        }
+//
+//        if ((options.inEristaSection && !options.inMarikoSection && options.usingErista) || 
+//            (!options.inEristaSection && options.inMarikoSection && options.usingMariko) || 
+//            (!options.inEristaSection && !options.inMarikoSection)) {
+//
+//            if (options.commandName.find(SYSTEM_PATTERN) == 0) {
+//                options.commandSystem = options.commandName.substr(SYSTEM_PATTERN.length());
+//                if (std::find(commandSystems.begin(), commandSystems.end(), options.commandSystem) == commandSystems.end())
+//                    options.commandSystem = commandSystems[0];
+//                continue;
+//            } else if (options.commandName.find(MODE_PATTERN) == 0) {
+//                options.commandMode = options.commandName.substr(MODE_PATTERN.length());
+//                if (options.commandMode.find(TOGGLE_STR) != std::string::npos) {
+//                    delimiterPos = options.commandMode.find('?');
+//                    if (delimiterPos != std::string::npos) {
+//                        options.defaultToggleState = options.commandMode.substr(delimiterPos + 1);
+//                    }
+//                    options.commandMode = TOGGLE_STR;
+//                } else if (std::find(commandModes.begin(), commandModes.end(), options.commandMode) == commandModes.end()) {
+//                    options.commandMode = commandModes[0];
+//                }
+//                continue;
+//            } else if (options.commandName.find(GROUPING_PATTERN) == 0) {
+//                options.commandGrouping = options.commandName.substr(GROUPING_PATTERN.length());
+//                if (std::find(commandGroupings.begin(), commandGroupings.end(), options.commandGrouping) == commandGroupings.end())
+//                    options.commandGrouping = commandGroupings[0];
+//                continue;
+//            } else if (options.commandName.find(BACKGROUND_PATTERN) == 0) {
+//                options.hideTableBackground = (options.commandName.substr(BACKGROUND_PATTERN.length()) == FALSE_STR);
+//                continue;
+//            } else if (options.commandName.find(GAP_PATTERN) == 0) {
+//                options.tableEndGap = std::stoi(options.commandName.substr(GAP_PATTERN.length()));
+//                continue;
+//            } else if (options.commandName.find(OFFSET_PATTERN) == 0) {
+//                options.tableColumnOffset = std::stoi(options.commandName.substr(OFFSET_PATTERN.length()));
+//                continue;
+//            } else if (options.commandName.find(SPACING_PATTERN) == 0) {
+//                options.tableSpacing = std::stoi(options.commandName.substr(SPACING_PATTERN.length()));
+//                continue;
+//            } else if (options.commandName.find(SECTION_TEXT_COLOR_PATTERN) == 0) {
+//                options.tableSectionTextColor = options.commandName.substr(SECTION_TEXT_COLOR_PATTERN.length());
+//                continue;
+//            } else if (options.commandName.find(INFO_TEXT_COLOR_PATTERN) == 0) {
+//                options.tableInfoTextColor = options.commandName.substr(INFO_TEXT_COLOR_PATTERN.length());
+//                continue;
+//            } else if (options.commandName.find(ALIGNMENT_PATTERN) == 0) {
+//                options.tableAlignment = options.commandName.substr(ALIGNMENT_PATTERN.length());
+//                continue;
+//
+//            } else if (options.commandName.find(MIN_VALUE_PATTERN) == 0) {
+//                options.minValue = std::stoi(options.commandName.substr(MIN_VALUE_PATTERN.length()));
+//                continue;
+//            } else if (options.commandName.find(MAX_VALUE_PATTERN) == 0) {
+//                options.maxValue = std::stoi(options.commandName.substr(MAX_VALUE_PATTERN.length()));
+//                continue;
+//            } else if (options.commandName.find(UNITS_PATTERN) == 0) {
+//                options.units = removeQuotes(options.commandName.substr(UNITS_PATTERN.length()));
+//                continue;
+//            } else if (options.commandName.find(STEPS_PATTERN) == 0) {
+//                options.steps = std::stoi(options.commandName.substr(STEPS_PATTERN.length()));
+//                continue;
+//            } else if (options.commandName.find(UNLOCKED_PATTERN) == 0) {
+//                options.unlockedTrackbar = (options.commandName.substr(UNLOCKED_PATTERN.length()) == TRUE_STR);
+//                continue;
+//            } else if (options.commandName.find(ON_EVERY_TICK_PATTERN) == 0) {
+//                options.onEveryTick = (options.commandName.substr(ON_EVERY_TICK_PATTERN.length()) == TRUE_STR);
+//                continue;
+//            } else if (options.commandName.find(";") == 0) {
+//                continue;
+//            }
+//
+//            if (options.commandMode == TOGGLE_STR) {
+//                if (options.commandName.find("on:") == 0)
+//                    options.currentSection = ON_STR;
+//                else if (options.commandName.find("off:") == 0)
+//                    options.currentSection = OFF_STR;
+//
+//                if (options.currentSection == GLOBAL_STR) {
+//                    data.commandsOn.push_back(cmd);
+//                    data.commandsOff.push_back(cmd);
+//                } else if (options.currentSection == ON_STR) {
+//                    data.commandsOn.push_back(cmd);
+//                } else if (options.currentSection == OFF_STR) {
+//                    data.commandsOff.push_back(cmd);
+//                }
+//            } else if (options.commandMode == TABLE_STR) {
+//                data.tableData.push_back(cmd);
+//                continue;
+//            } else if (options.commandMode == TRACKBAR_STR || options.commandMode == STEP_TRACKBAR_STR || options.commandMode == NAMED_STEP_TRACKBAR_STR) {
+//                //data.commands.push_back(cmd);
+//                continue;
+//            }
+//
+//            if (cmd.size() > 1) {
+//                if (options.commandName == "file_source") {
+//                    if (options.currentSection == GLOBAL_STR) {
+//                        options.pathPattern = preprocessPath(cmd[1], options.packagePath);
+//                        options.sourceType = FILE_STR;
+//                    } else if (options.currentSection == ON_STR) {
+//                        options.pathPatternOn = preprocessPath(cmd[1], options.packagePath);
+//                        options.sourceTypeOn = FILE_STR;
+//                    } else if (options.currentSection == OFF_STR) {
+//                        options.pathPatternOff = preprocessPath(cmd[1], options.packagePath);
+//                        options.sourceTypeOff = FILE_STR;
+//                    }
+//                } else if (options.commandName == "package_source") {
+//                    options.packageSource = preprocessPath(cmd[1], options.packagePath);
+//                }
+//            }
+//        }
+//    }
+//}
 
 
 
@@ -2051,17 +2052,17 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
     bool inEristaSection;
     bool inMarikoSection;
     
-    bool hideTableBackground;
+    bool hideTableBackground, useHeaderIndent;
     size_t tableStartGap, tableEndGap, tableColumnOffset, tableSpacing;
     std::string tableSectionTextColor, tableInfoTextColor, tableAlignment;
     // Pack variables into structs
-    CommandOptions cmdOptions = {inEristaSection, inMarikoSection, usingErista, usingMariko, commandName, commandSystem,
-                              commandMode, commandGrouping, currentSection, pathPattern, sourceType, pathPatternOn,
-                              sourceTypeOn, pathPatternOff, sourceTypeOff, defaultToggleState, hideTableBackground,
-                              tableStartGap, tableEndGap, tableColumnOffset, tableSpacing, tableSectionTextColor, tableInfoTextColor, tableAlignment,
-                              minValue, maxValue, units, steps, unlockedTrackbar, onEveryTick, packageSource, packagePath};
-    
-    CommandData cmdData = {commands, commandsOn, commandsOff, tableData};
+    //CommandOptions cmdOptions = {inEristaSection, inMarikoSection, usingErista, usingMariko, commandName, commandSystem,
+    //                          commandMode, commandGrouping, currentSection, pathPattern, sourceType, pathPatternOn,
+    //                          sourceTypeOn, pathPatternOff, sourceTypeOff, defaultToggleState, hideTableBackground,
+    //                          tableStartGap, tableEndGap, tableColumnOffset, tableSpacing, tableSectionTextColor, tableInfoTextColor, tableAlignment,
+    //                          minValue, maxValue, units, steps, unlockedTrackbar, onEveryTick, packageSource, packagePath};
+    //
+    //CommandData cmdData = {commands, commandsOn, commandsOff, tableData};
     
     for (size_t i = 0; i < options.size(); ++i) {
         auto& option = options[i];
@@ -2073,6 +2074,7 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
         useSelection = false;
         // Table settings
         hideTableBackground = false;
+        useHeaderIndent = false;
         tableStartGap = 20;
         tableEndGap = 3;
         tableColumnOffset = 160;
@@ -2221,7 +2223,149 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
             }
             
             // Call the function
-            processCommands(cmdOptions, cmdData);
+            //processCommands(cmdOptions, cmdData);
+
+
+            inEristaSection = false;
+            inMarikoSection = false;
+            size_t delimiterPos;
+            
+            // Remove all empty command strings
+            commands.erase(std::remove_if(commands.begin(), commands.end(),
+                [](const std::vector<std::string>& vec) {
+                    return vec.empty();
+                }),
+                commands.end());
+        
+            // Initial processing of commands
+            for (const auto& cmd : commands) {
+                commandName = cmd[0];
+        
+                std::string commandNameLower = stringToLowercase(commandName);
+                if (commandNameLower == "erista:") {
+                    inEristaSection = true;
+                    inMarikoSection = false;
+                    continue;
+                } else if (commandNameLower == "mariko:") {
+                    inEristaSection = false;
+                    inMarikoSection = true;
+                    continue;
+                }
+        
+                if ((inEristaSection && !inMarikoSection && usingErista) || 
+                    (!inEristaSection && inMarikoSection && usingMariko) || 
+                    (!inEristaSection && !inMarikoSection)) {
+        
+                    if (commandName.find(SYSTEM_PATTERN) == 0) {
+                        commandSystem = commandName.substr(SYSTEM_PATTERN.length());
+                        if (std::find(commandSystems.begin(), commandSystems.end(), commandSystem) == commandSystems.end())
+                            commandSystem = commandSystems[0];
+                        continue;
+                    } else if (commandName.find(MODE_PATTERN) == 0) {
+                        commandMode = commandName.substr(MODE_PATTERN.length());
+                        if (commandMode.find(TOGGLE_STR) != std::string::npos) {
+                            delimiterPos = commandMode.find('?');
+                            if (delimiterPos != std::string::npos) {
+                                defaultToggleState = commandMode.substr(delimiterPos + 1);
+                            }
+                            commandMode = TOGGLE_STR;
+                        } else if (std::find(commandModes.begin(), commandModes.end(), commandMode) == commandModes.end()) {
+                            commandMode = commandModes[0];
+                        }
+                        continue;
+                    } else if (commandName.find(GROUPING_PATTERN) == 0) {
+                        commandGrouping = commandName.substr(GROUPING_PATTERN.length());
+                        if (std::find(commandGroupings.begin(), commandGroupings.end(), commandGrouping) == commandGroupings.end())
+                            commandGrouping = commandGroupings[0];
+                        continue;
+                    } else if (commandName.find(BACKGROUND_PATTERN) == 0) {
+                        hideTableBackground = (commandName.substr(BACKGROUND_PATTERN.length()) == FALSE_STR);
+                        continue;
+                    } else if (commandName.find(HEADER_INDENT_PATTERN) == 0) {
+                        useHeaderIndent = (commandName.substr(HEADER_INDENT_PATTERN.length()) == TRUE_STR);
+                        continue;
+                    } else if (commandName.find(GAP_PATTERN) == 0) {
+                        tableEndGap = std::stoi(commandName.substr(GAP_PATTERN.length()));
+                        continue;
+                    } else if (commandName.find(OFFSET_PATTERN) == 0) {
+                        tableColumnOffset = std::stoi(commandName.substr(OFFSET_PATTERN.length()));
+                        continue;
+                    } else if (commandName.find(SPACING_PATTERN) == 0) {
+                        tableSpacing = std::stoi(commandName.substr(SPACING_PATTERN.length()));
+                        continue;
+                    } else if (commandName.find(SECTION_TEXT_COLOR_PATTERN) == 0) {
+                        tableSectionTextColor = commandName.substr(SECTION_TEXT_COLOR_PATTERN.length());
+                        continue;
+                    } else if (commandName.find(INFO_TEXT_COLOR_PATTERN) == 0) {
+                        tableInfoTextColor = commandName.substr(INFO_TEXT_COLOR_PATTERN.length());
+                        continue;
+                    } else if (commandName.find(ALIGNMENT_PATTERN) == 0) {
+                        tableAlignment = commandName.substr(ALIGNMENT_PATTERN.length());
+                        continue;
+        
+                    } else if (commandName.find(MIN_VALUE_PATTERN) == 0) {
+                        minValue = std::stoi(commandName.substr(MIN_VALUE_PATTERN.length()));
+                        continue;
+                    } else if (commandName.find(MAX_VALUE_PATTERN) == 0) {
+                        maxValue = std::stoi(commandName.substr(MAX_VALUE_PATTERN.length()));
+                        continue;
+                    } else if (commandName.find(UNITS_PATTERN) == 0) {
+                        units = removeQuotes(commandName.substr(UNITS_PATTERN.length()));
+                        continue;
+                    } else if (commandName.find(STEPS_PATTERN) == 0) {
+                        steps = std::stoi(commandName.substr(STEPS_PATTERN.length()));
+                        continue;
+                    } else if (commandName.find(UNLOCKED_PATTERN) == 0) {
+                        unlockedTrackbar = (commandName.substr(UNLOCKED_PATTERN.length()) == TRUE_STR);
+                        continue;
+                    } else if (commandName.find(ON_EVERY_TICK_PATTERN) == 0) {
+                        onEveryTick = (commandName.substr(ON_EVERY_TICK_PATTERN.length()) == TRUE_STR);
+                        continue;
+                    } else if (commandName.find(";") == 0) {
+                        continue;
+                    }
+        
+                    if (commandMode == TOGGLE_STR) {
+                        if (commandName.find("on:") == 0)
+                            currentSection = ON_STR;
+                        else if (commandName.find("off:") == 0)
+                            currentSection = OFF_STR;
+        
+                        if (currentSection == GLOBAL_STR) {
+                            commandsOn.push_back(cmd);
+                            commandsOff.push_back(cmd);
+                        } else if (currentSection == ON_STR) {
+                            commandsOn.push_back(cmd);
+                        } else if (currentSection == OFF_STR) {
+                            commandsOff.push_back(cmd);
+                        }
+                    } else if (commandMode == TABLE_STR) {
+                        tableData.push_back(cmd);
+                        continue;
+                    } else if (commandMode == TRACKBAR_STR || commandMode == STEP_TRACKBAR_STR || commandMode == NAMED_STEP_TRACKBAR_STR) {
+                        //commands.push_back(cmd);
+                        continue;
+                    }
+        
+                    if (cmd.size() > 1) {
+                        if (commandName == "file_source") {
+                            if (currentSection == GLOBAL_STR) {
+                                pathPattern = preprocessPath(cmd[1], packagePath);
+                                sourceType = FILE_STR;
+                            } else if (currentSection == ON_STR) {
+                                pathPatternOn = preprocessPath(cmd[1], packagePath);
+                                sourceTypeOn = FILE_STR;
+                            } else if (currentSection == OFF_STR) {
+                                pathPatternOff = preprocessPath(cmd[1], packagePath);
+                                sourceTypeOff = FILE_STR;
+                            }
+                        } else if (commandName == "package_source") {
+                            packageSource = preprocessPath(cmd[1], packagePath);
+                        }
+                    }
+                }
+            }
+
             
             if (isFileOrDirectory(packageConfigIniPath)) {
                 packageConfigData = getParsedDataFromIniFile(packageConfigIniPath);
@@ -2269,7 +2413,7 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
             
             if (!skipSection && !skipSystem) { // for skipping the drawing of sections
                 if (commandMode == TABLE_STR) {
-                    addTable(list, tableData, packagePath, tableColumnOffset, tableStartGap, tableEndGap, tableSpacing, tableSectionTextColor, tableInfoTextColor, tableAlignment, hideTableBackground);
+                    addTable(list, tableData, packagePath, tableColumnOffset, tableStartGap, tableEndGap, tableSpacing, tableSectionTextColor, tableInfoTextColor, tableAlignment, hideTableBackground, useHeaderIndent);
                     continue;
                 } else if (commandMode == TRACKBAR_STR) {
                     list->addItem(new tsl::elm::TrackBar(optionName, packagePath, minValue, maxValue, units, interpretAndExecuteCommands, getSourceReplacement, commands, option.first, false, false, -1, unlockedTrackbar, onEveryTick));
