@@ -161,7 +161,7 @@ bool updateMenuCombos = false;
 #define touchInput &touchPos
 #define JoystickPosition HidAnalogStickState
 
-
+std::string convertComboToUnicode(const std::string& combo);
 
 // For improving the speed of hexing consecutively with the same file and asciiPattern.
 //static std::unordered_map<std::string, std::string> hexSumCache;
@@ -4447,6 +4447,9 @@ namespace tsl {
                     //renderer->drawRect(ELEMENT_BOUNDS(this), tsl::style::color::ColorClickAnimation);
                 }
                 
+                this->m_text = convertComboToUnicode(this->m_text);
+                this->m_value = convertComboToUnicode(this->m_value);
+
                 if (this->m_maxWidth == 0) {
                     if (this->m_value.length() > 0) {
                         std::tie(width, height) = renderer->drawString(this->m_value.c_str(), false, 0, 0, 20, a(tsl::style::color::ColorTransparent));
@@ -4456,7 +4459,7 @@ namespace tsl {
                     }
                     
                     std::tie(width, height) = renderer->drawString(this->m_text.c_str(), false, 0, 0, 23, a(tsl::style::color::ColorTransparent));
-                    this->m_trunctuated = width > this->m_maxWidth+10;
+                    this->m_trunctuated = width > this->m_maxWidth+20;
                     
                     if (this->m_trunctuated) {
                         this->m_scrollText = this->m_text + "        ";
@@ -4477,8 +4480,11 @@ namespace tsl {
                 
                 if (this->m_trunctuated) {
                     if (this->m_focused) {
-                        renderer->enableScissoring(this->getX()+6, 97, this->m_maxWidth + 40 - 10+6 -10, tsl::cfg::FramebufferHeight-73-97);
-                        renderer->drawString(this->m_scrollText.c_str(), false, this->getX() + 20 - this->m_scrollOffset, this->getY() + 45, 23, a(selectedTextColor));
+                        if (this->m_value.length() > 0)
+                            renderer->enableScissoring(this->getX()+6, 97, this->m_maxWidth + 40 - 6-4, tsl::cfg::FramebufferHeight-73-97);
+                        else
+                            renderer->enableScissoring(this->getX()+6, 97, this->m_maxWidth + 40 - 6, tsl::cfg::FramebufferHeight-73-97);
+                        renderer->drawString(this->m_scrollText.c_str(), false, this->getX() + 20-1 - this->m_scrollOffset, this->getY() + 45, 23, a(selectedTextColor));
                         renderer->disableScissoring();
                         //t = std::chrono::system_clock::now() - this->timeIn;
                         if (std::chrono::system_clock::now() - this->timeIn >= 2000ms) {
@@ -4491,11 +4497,11 @@ namespace tsl {
                             }
                         } // CUSTOM MODIFICATION END
                     } else {
-                        renderer->drawString(this->m_ellipsisText.c_str(), false, this->getX() + 20, this->getY() + 45, 23, a(!useClickTextColor ? defaultTextColor : clickTextColor));
+                        renderer->drawString(this->m_ellipsisText.c_str(), false, this->getX() + 20-1, this->getY() + 45, 23, a(!useClickTextColor ? defaultTextColor : clickTextColor));
                     }
                 } else {
                     // Render the text with special character handling
-                    renderer->drawStringWithColoredSections(this->m_text, {STAR_SYMBOL+"  "}, this->getX() + 20, this->getY() + 45, 23,
+                    renderer->drawStringWithColoredSections(this->m_text, {STAR_SYMBOL+"  "}, this->getX() + 20-1, this->getY() + 45, 23,
                         a(this->m_focused ? (!useClickTextColor ? selectedTextColor : clickTextColor) : (!useClickTextColor ? defaultTextColor : clickTextColor)),
                         a(this->m_focused ? starColor : selectionStarColor)
                     );
@@ -4503,20 +4509,33 @@ namespace tsl {
                 
                 
                 // CUSTOM SECTION START (modification for submenu footer color)
+                //const std::string& value = this->m_value;
+                int xPosition = this->getX() + this->m_maxWidth + 45 - 1;
+                int yPosition = this->getY() + 45;
+                int fontSize = 20;
+                //bool isFaint = ;
+                //bool isFocused = this->m_focused;
+
+                // Determine text color
+                auto textColor = offTextColor;
                 if (this->m_value == DROPDOWN_SYMBOL || this->m_value == OPTION_SYMBOL) {
-                    if (this->m_focused)
-                        renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45-1, this->getY() + 45, 20, !useClickTextColor ? (this->m_faint ? offTextColor : selectedTextColor) : a(clickTextColor));
-                    else
-                        renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45-1, this->getY() + 45, 20, !useClickTextColor ? (this->m_faint ? offTextColor : defaultTextColor) : a(clickTextColor));
+                    textColor = this->m_focused
+                        ? (!useClickTextColor ? (this->m_faint ? offTextColor : selectedTextColor) : a(clickTextColor))
+                        : (!useClickTextColor ? (this->m_faint ? offTextColor : defaultTextColor) : a(clickTextColor));
                 } else if (runningInterpreter.load(std::memory_order_acquire) &&
-                    ((((this->m_value).find(DOWNLOAD_SYMBOL) != std::string::npos) || ((this->m_value).find(UNZIP_SYMBOL) != std::string::npos) || ((this->m_value).find(COPY_SYMBOL) != std::string::npos)) || this->m_value == INPROGRESS_SYMBOL)) {
-                    
-                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45-1, this->getY() + 45, 20, (this->m_faint ? offTextColor : a(inprogressTextColor)));
+                    (this->m_value.find(DOWNLOAD_SYMBOL) != std::string::npos ||
+                     this->m_value.find(UNZIP_SYMBOL) != std::string::npos ||
+                     this->m_value.find(COPY_SYMBOL) != std::string::npos ||
+                     this->m_value == INPROGRESS_SYMBOL)) {
+                    textColor = this->m_faint ? offTextColor : a(inprogressTextColor);
                 } else if (this->m_value == CROSSMARK_SYMBOL) {
-                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45-1, this->getY() + 45, 20, (this->m_faint ? offTextColor : a(invalidTextColor)));
+                    textColor = this->m_faint ? offTextColor : a(invalidTextColor);
                 } else {
-                    renderer->drawString(this->m_value.c_str(), false, this->getX() + this->m_maxWidth + 45-1, this->getY() + 45, 20, (this->m_faint ? offTextColor : a(onTextColor)));
+                    textColor = this->m_faint ? offTextColor : a(onTextColor);
                 }
+
+                // Draw the string with the determined text color
+                renderer->drawString(this->m_value.c_str(), false, xPosition, yPosition, fontSize, textColor);
                 // CUSTOM SECTION END 
             }
             
@@ -5832,6 +5851,7 @@ namespace tsl {
         }
         
 
+
         /**
          * @brief Called once per frame with the latest HID inputs
          *
@@ -5918,7 +5938,7 @@ namespace tsl {
             
 
             if (hasScrolled) {
-                bool singleArrowKeyPress = ((keysHeld & HidNpadButton_AnyUp) != 0) + ((keysHeld & HidNpadButton_AnyDown) != 0) + ((keysHeld & HidNpadButton_AnyLeft) != 0) + ((keysHeld & HidNpadButton_AnyRight) != 0) == 1;
+                bool singleArrowKeyPress = ((keysHeld & KEY_UP) != 0) + ((keysHeld & KEY_DOWN) != 0) + ((keysHeld & KEY_LEFT) != 0) + ((keysHeld & KEY_RIGHT) != 0) == 1;
                 
                 
                 if (singleArrowKeyPress) {
@@ -5931,7 +5951,7 @@ namespace tsl {
 
                 if (!touchDetected && !oldTouchDetected && !handled && currentFocus && !stillTouching && !runningInterpreter.load(std::memory_order_acquire)) {
                     static bool shouldShake = true;
-                    bool singleArrowKeyPress = ((keysHeld & HidNpadButton_AnyUp) != 0) + ((keysHeld & HidNpadButton_AnyDown) != 0) + ((keysHeld & HidNpadButton_AnyLeft) != 0) + ((keysHeld & HidNpadButton_AnyRight) != 0) == 1;
+                    bool singleArrowKeyPress = ((keysHeld & KEY_UP) != 0) + ((keysHeld & KEY_DOWN) != 0) + ((keysHeld & KEY_LEFT) != 0) + ((keysHeld & KEY_RIGHT) != 0) == 1;
                     
                     if (singleArrowKeyPress) {
                         
@@ -5951,6 +5971,8 @@ namespace tsl {
                                 currentGui->requestFocus(currentFocus->getParent(), FocusDirection::Right, shouldShake);
                             //shouldShake = currentGui->getFocusedElement() != currentFocus;
                         }
+                        if (keysHeld & ~KEY_DOWN & ~KEY_UP & ~KEY_LEFT & ~KEY_RIGHT & ALL_KEYS_MASK) // reset
+                            buttonPressTime = now;
                         
                         auto durationSincePress = std::chrono::duration_cast<std::chrono::milliseconds>(now - buttonPressTime);
                         auto durationSinceLastEvent = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastKeyEventTime);
@@ -6543,6 +6565,55 @@ namespace tsl {
     }
 
 }
+
+std::unordered_map<std::string, std::string> createButtonCharMap() {
+    std::unordered_map<std::string, std::string> map;
+    for (const auto& keyInfo : tsl::impl::KEYS_INFO) {
+        map[keyInfo.name] = keyInfo.glyph;
+    }
+    return map;
+}
+
+std::unordered_map<std::string, std::string> buttonCharMap = createButtonCharMap();
+
+
+std::string convertComboToUnicode(const std::string& combo) {
+    // Check if there is a '+' in the input string
+    if (combo.find('+') == std::string::npos) {
+        // If no '+' is found, check if the entire combo is a single key that maps to Unicode
+        auto it = buttonCharMap.find(trim(combo));  // Trim the input in case of leading/trailing spaces
+        if (it != buttonCharMap.end()) {
+            return it->second;
+        }
+        // If no mapping is found, return the original string
+        return combo;
+    }
+    
+    std::istringstream iss(combo);
+    std::string token;
+    std::string unicodeCombo;
+    bool modified = false;
+
+    while (std::getline(iss, token, '+')) {
+        std::string trimmedToken = trim(token);
+        auto it = buttonCharMap.find(trimmedToken);
+
+        if (it != buttonCharMap.end()) {
+            unicodeCombo += it->second + "+";
+            modified = true;
+        } else {
+            unicodeCombo += trimmedToken + "+";
+        }
+    }
+
+    if (!unicodeCombo.empty()) {
+        unicodeCombo.pop_back();  // Remove the trailing '+'
+    }
+
+    // If no modification was made, return the original combo
+    return modified ? unicodeCombo : combo;
+}
+
 
 
 #ifdef TESLA_INIT_IMPL

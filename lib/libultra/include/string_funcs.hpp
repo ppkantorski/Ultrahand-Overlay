@@ -64,11 +64,12 @@ inline std::string cleanDirectoryName(const std::string& name) {
 inline std::string trim(const std::string& str) {
     size_t first = str.find_first_not_of(" \t\n\r\f\v");
     if (first == std::string::npos)
-        return "";
+        return {};  // Use {} to avoid an extra constructor call
 
     size_t last = str.find_last_not_of(" \t\n\r\f\v");
     return str.substr(first, last - first + 1);
 }
+
 
 // Function to trim newline characters from the end of a string
 inline std::string trimNewline(const std::string &str) {
@@ -437,7 +438,7 @@ inline std::string cleanVersionLabel(const std::string& input) {
             }
         }
     }
-
+    
     return versionLabel;
 }
 
@@ -482,6 +483,8 @@ inline std::string splitString(const std::string& str, const std::string& delimi
         return ""; // Return empty string if index is out of bounds
     }
 }
+
+
 
 
 //std::string padToEqualLength(const std::string& str, size_t len) {

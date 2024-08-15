@@ -128,33 +128,33 @@ void powerOffAllControllers() {
     btmExit();
 }
 
-std::unordered_map<std::string, std::string> createButtonCharMap() {
-    std::unordered_map<std::string, std::string> map;
-    for (const auto& keyInfo : tsl::impl::KEYS_INFO) {
-        map[keyInfo.name] = keyInfo.glyph;
-    }
-    return map;
-}
-
-std::unordered_map<std::string, std::string> buttonCharMap = createButtonCharMap();
-
-
-std::string convertComboToUnicode(const std::string& combo) {
-
-    std::istringstream iss(combo);
-    std::string token;
-    std::string unicodeCombo;
-
-    while (std::getline(iss, token, '+')) {
-        unicodeCombo += buttonCharMap[trim(token)] + "+";
-    }
-
-    if (!unicodeCombo.empty()) {
-        unicodeCombo.pop_back();  // Remove the trailing '+'
-    }
-
-    return unicodeCombo;
-}
+//std::unordered_map<std::string, std::string> createButtonCharMap() {
+//    std::unordered_map<std::string, std::string> map;
+//    for (const auto& keyInfo : tsl::impl::KEYS_INFO) {
+//        map[keyInfo.name] = keyInfo.glyph;
+//    }
+//    return map;
+//}
+//
+//std::unordered_map<std::string, std::string> buttonCharMap = createButtonCharMap();
+//
+//
+//std::string convertComboToUnicode(const std::string& combo) {
+//
+//    std::istringstream iss(combo);
+//    std::string token;
+//    std::string unicodeCombo;
+//
+//    while (std::getline(iss, token, '+')) {
+//        unicodeCombo += buttonCharMap[trim(token)] + "+";
+//    }
+//
+//    if (!unicodeCombo.empty()) {
+//        unicodeCombo.pop_back();  // Remove the trailing '+'
+//    }
+//
+//    return unicodeCombo;
+//}
 
 
 
@@ -188,6 +188,10 @@ void initializeTheme(std::string themeIniPath = THEME_CONFIG_INI_PATH) {
         for (const auto& [key, value] : defaultThemeSettingsMap) {
             setIniFileValue(themeIniPath, THEME_STR, key, value);
         }
+    }
+
+    if (!isFileOrDirectory(THEMES_PATH)) {
+        createDirectory(THEMES_PATH);
     }
 }
 
@@ -302,7 +306,7 @@ std::tuple<Result, std::string, std::string> getOverlayInfo(const std::string& f
 
 void drawTable(std::unique_ptr<tsl::elm::List>& list, const std::vector<std::string>& sectionLines, const std::vector<std::string>& infoLines,
     const size_t& columnOffset = 120, const size_t& startGap = 20, const size_t& endGap = 3, const size_t& newlineGap = 0,
-    const std::string& tableSectionTextColor = DEFAULT_STR, const std::string& tableInfoTextColor = DEFAULT_STR, const std::string& alignment = LEFT_STR, const bool& hideTableBackground = false) {
+    const std::string& tableSectionTextColor = DEFAULT_STR, const std::string& tableInfoTextColor = DEFAULT_STR, const std::string& alignment = LEFT_STR, const bool& hideTableBackground = false, const bool& useHeaderIndent = false) {
 
     size_t lineHeight = 16;
     size_t fontSize = 16;
@@ -316,6 +320,14 @@ void drawTable(std::unique_ptr<tsl::elm::List>& list, const std::vector<std::str
     if (tableSectionTextColor != DEFAULT_STR) {
         if (tableSectionTextColor == "warning") {
             alternateSectionTextColor = tsl::warningTextColor;
+        } else if (tableSectionTextColor == "text") {
+            alternateSectionTextColor = tsl::defaultTextColor;
+        } else if (tableSectionTextColor == "on_value") {
+            alternateSectionTextColor = tsl::onTextColor;
+        } else if (tableSectionTextColor == "off_value") {
+            alternateSectionTextColor = tsl::offTextColor;
+        } else if (tableSectionTextColor == "header") {
+            alternateSectionTextColor = tsl::headerTextColor;
         } else {
             alternateSectionTextColor = tsl::RGB888(tableSectionTextColor);
         }
@@ -324,6 +336,14 @@ void drawTable(std::unique_ptr<tsl::elm::List>& list, const std::vector<std::str
     if (tableInfoTextColor != DEFAULT_STR) {
         if (tableInfoTextColor == "warning") {
             alternateInfoTextColor = tsl::warningTextColor;
+        } else if (tableSectionTextColor == "text") {
+            alternateInfoTextColor = tsl::defaultTextColor;
+        } else if (tableSectionTextColor == "on_value") {
+            alternateInfoTextColor = tsl::onTextColor;
+        } else if (tableSectionTextColor == "off_value") {
+            alternateInfoTextColor = tsl::offTextColor;
+        } else if (tableSectionTextColor == "header") {
+            alternateInfoTextColor = tsl::headerTextColor;
         } else {
             alternateInfoTextColor = tsl::RGB888(tableInfoTextColor);
         }
@@ -364,6 +384,8 @@ void drawTable(std::unique_ptr<tsl::elm::List>& list, const std::vector<std::str
                 infoXOffsets[i] = columnOffset + (xMax - infoStringWidths[i]) / 2;
             }
         }
+        if (useHeaderIndent)
+            renderer->drawRect(x-2, y+2, 3, 23, renderer->a(tsl::headerSeparatorColor));
 
         for (size_t i = 0; i < sectionLines.size(); ++i) {
             renderer->drawString(sectionLines[i].c_str(), false, x + 12, y + yOffsets[i], fontSize, renderer->a((tableSectionTextColor == DEFAULT_STR) ? sectionTextColor : alternateSectionTextColor));
@@ -380,7 +402,8 @@ void drawTable(std::unique_ptr<tsl::elm::List>& list, const std::vector<std::str
 void applyPlaceholderReplacement(std::vector<std::string>& cmd, std::string hexPath, std::string iniPath, std::string listString, std::string listPath, std::string jsonString, std::string jsonPath);
 
 void addTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::vector<std::string>>& tableData,
-    const std::string& packagePath, const size_t& columnOffset=160, const size_t& tableStartGap=20, const size_t& tableEndGap=3, const size_t& tableSpacing=0, const std::string& tableSectionTextColor=DEFAULT_STR, const std::string& tableInfoTextColor=DEFAULT_STR, const std::string& tableAlignment=RIGHT_STR, const bool& hideTableBackground = false) {
+    const std::string& packagePath, const size_t& columnOffset=160, const size_t& tableStartGap=20, const size_t& tableEndGap=3, const size_t& tableSpacing=0,
+    const std::string& tableSectionTextColor=DEFAULT_STR, const std::string& tableInfoTextColor=DEFAULT_STR, const std::string& tableAlignment=RIGHT_STR, const bool& hideTableBackground = false, const bool& useHeaderIndent = false) {
 
     //std::string sectionString, infoString;
     std::vector<std::string> sectionLines, infoLines;
@@ -473,7 +496,7 @@ void addTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::vector<std
     // seperate sectionString and info string.  the sections will be on the left side of the "=", the info will be on the right side of the "=" within the string.  the end of an entry will be met with a newline (except for the very last entry). 
     // sectionString and infoString will each have equal newlines (denoting )
 
-    drawTable(list, sectionLines, infoLines, columnOffset, tableStartGap, tableEndGap, tableSpacing, tableSectionTextColor, tableInfoTextColor, tableAlignment, hideTableBackground);
+    drawTable(list, sectionLines, infoLines, columnOffset, tableStartGap, tableEndGap, tableSpacing, tableSectionTextColor, tableInfoTextColor, tableAlignment, hideTableBackground, useHeaderIndent);
 }
 
 
@@ -719,7 +742,8 @@ std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadO
         std::ofstream configFileOut(configIniPath);
         if (configFileOut) {
             //configFileOut << "[Reboot]\nreboot\n\n[Shutdown]\nshutdown\n";
-            configFileOut << "[*Reboot To]\nini_file_source /bootloader/hekate_ipl.ini\nfilter config\nreboot boot '{ini_file_source(*)}'\n\n[Shutdown]\nshutdown\n";
+            //configFileOut << "[*Reboot To]\nini_file_source /bootloader/hekate_ipl.ini\nfilter config\nreboot boot '{ini_file_source(*)}'\n\n[Shutdown]\nshutdown\n";
+            configFileOut << "[*Reboot To]\n[*Boot Entry]\nini_file_source /bootloader/hekate_ipl.ini\nfilter config\nreboot boot '{ini_file_source(*)}'\n[Hekate]\nreboot HEKATE\n[Hekate UMS]\nreboot UMS\n\n[Commands]\n[Shutdown]\nshutdown\n";
             //configFileOut << "[*Reboot]\n[HOS Reboot]\nreboot\n[Hekate Reboot]\nreboot HEKATE\n[UMS Reboot]\nreboot UMS\n\n[Commands]\n[Shutdown]\nshutdown";
             configFileOut.close();
         }
@@ -966,8 +990,20 @@ std::string replaceJsonPlaceholder(const std::string& arg, const std::string& co
     return replacement; // Return the modified string
 }
 
+// Helper function to replace placeholders
+std::string replaceAllPlaceholders(const std::string& source, const std::string& placeholder, const std::string& replacement) {
+    std::string modifiedArg = source;
+    std::string lastArg;
+    while (modifiedArg.find(placeholder) != std::string::npos) {
+        modifiedArg = replacePlaceholder(modifiedArg, placeholder, replacement);
+        if (modifiedArg == lastArg)
+            break;
+        lastArg = modifiedArg;
+    }
+    return modifiedArg;
+}
 
-// this will modify `commands`
+// Optimized getSourceReplacement function
 std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std::vector<std::string>>& commands,
     const std::string& entry, size_t entryIndex, const std::string& packagePath = "") {
     
@@ -975,31 +1011,19 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
     bool inMarikoSection = false;
     
     std::vector<std::vector<std::string>> modifiedCommands;
-    //std::vector<std::string> listData;
-    std::string listString, listPath;
-    std::string jsonString, jsonPath;
-    std::string iniPath;
-    size_t startPos, endPos;
-    
-    std::vector<std::string> modifiedCmd;
-    std::string modifiedArg, lastArg, replacement, commandName;
+    std::string listString, listPath, jsonString, jsonPath, iniPath;
+    bool usingFileSource = false;
 
     std::string fileName = (isDirectory(entry) ? getNameFromPath(entry) : dropExtension(getNameFromPath(entry)));
-    
-    //if (isFileOrDirectory(entry)) {
-    // Insert file_name command at the beginning (for handling sourced toggles)
-    //}
-    bool usingFileSource = false;
 
     for (const auto& cmd : commands) {
         if (cmd.empty())
             continue;
         
-        modifiedCmd.clear();
-        
-        modifiedCmd.reserve(cmd.size()); // Reserve memory for efficiency
+        std::vector<std::string> modifiedCmd;
+        modifiedCmd.reserve(cmd.size());
 
-        commandName = cmd[0];
+        std::string commandName = cmd[0];
 
         if (commandName == "download")
             isDownloadCommand = true;
@@ -1014,150 +1038,94 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
             continue;
         }
         
-        if ((inEristaSection && !inMarikoSection && usingErista) || (!inEristaSection && inMarikoSection && usingMariko) || (!inEristaSection && !inMarikoSection)) {
-            
-            if (cmd.size() > 1) {
+        if ((inEristaSection && usingErista) || (inMarikoSection && usingMariko) || (!inEristaSection && !inMarikoSection)) {
+            for (const auto& arg : cmd) {
+                std::string modifiedArg = arg;
+
                 if (commandName == "file_source") {
                     usingFileSource = true;
                 }
-                else if ((commandName == "list_source") && listString.empty())
+                else if (commandName == "list_source" && listString.empty())
                     listString = removeQuotes(cmd[1]);
-                else if ((commandName == "list_file_source") && listPath.empty())
+                else if (commandName == "list_file_source" && listPath.empty())
                     listPath = preprocessPath(cmd[1], packagePath);
-                else if ((commandName == "ini_file_source") && iniPath.empty())
+                else if (commandName == "ini_file_source" && iniPath.empty())
                     iniPath = preprocessPath(cmd[1], packagePath);
-                else if ((commandName == "json_source") && jsonString.empty())
+                else if (commandName == "json_source" && jsonString.empty())
                     jsonString = cmd[1];
-                else if ((commandName == "json_file_source") && jsonPath.empty())
+                else if (commandName == "json_file_source" && jsonPath.empty())
                     jsonPath = preprocessPath(cmd[1], packagePath);
-            }
-            
-            
-            for (const auto& arg : cmd) {
-                modifiedArg = arg; // Working with a copy for modifications
-                lastArg = ""; // Initialize lastArg for each argument
                 
+                modifiedArg = replaceAllPlaceholders(modifiedArg, "{file_source}", entry);
+                modifiedArg = replaceAllPlaceholders(modifiedArg, "{file_name}", fileName);
+                modifiedArg = replaceAllPlaceholders(modifiedArg, "{folder_name}", removeQuotes(getParentDirNameFromPath(entry)));
+                
+                if (modifiedArg.find("{list_source(") != std::string::npos) {
+                    modifiedArg = replacePlaceholder(modifiedArg, "*", std::to_string(entryIndex));
+                    size_t startPos = modifiedArg.find("{list_source(");
+                    size_t endPos = modifiedArg.find(")}");
+                    if (endPos != std::string::npos && endPos > startPos) {
+                        std::string replacement = stringToList(listString)[entryIndex];
+                        replacement = replacement.empty() ? NULL_STR : replacement;
+                        modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
+                    }
+                }
 
-                while (modifiedArg.find("{file_source}") != std::string::npos) {
-                    modifiedArg = replacePlaceholder(modifiedArg, "{file_source}", entry);
-                    if (modifiedArg == lastArg)
-                        break;
-                    lastArg = modifiedArg;
-                }
-                while (modifiedArg.find("{file_name}") != std::string::npos) {
-                    modifiedArg = replacePlaceholder(modifiedArg, "{file_name}", fileName);
-                    if (modifiedArg == lastArg)
-                        break;
-                    lastArg = modifiedArg;
-                }
-                while (modifiedArg.find("{folder_name}") != std::string::npos) {
-                    modifiedArg = replacePlaceholder(modifiedArg, "{folder_name}", removeQuotes(getParentDirNameFromPath(entry)));
-                    if (modifiedArg == lastArg)
-                        break;
-                    lastArg = modifiedArg;
-                }
-                while (modifiedArg.find("{list_source(") != std::string::npos) {
+                if (modifiedArg.find("{list_file_source(") != std::string::npos) {
                     modifiedArg = replacePlaceholder(modifiedArg, "*", std::to_string(entryIndex));
-                    startPos = modifiedArg.find("{list_source(");
-                    endPos = modifiedArg.find(")}");
+                    size_t startPos = modifiedArg.find("{list_file_source(");
+                    size_t endPos = modifiedArg.find(")}");
                     if (endPos != std::string::npos && endPos > startPos) {
-                        replacement = stringToList(listString)[entryIndex];
-                        if (replacement.empty()) {
-                            replacement = NULL_STR;
-                            modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
-                            break;
-                        }
+                        std::string replacement = getEntryFromListFile(listPath, entryIndex);
+                        replacement = replacement.empty() ? NULL_STR : replacement;
                         modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
                     }
-                    if (modifiedArg == lastArg)
-                        break;
-                    lastArg = modifiedArg;
                 }
-                while (modifiedArg.find("{list_file_source(") != std::string::npos) {
-                    modifiedArg = replacePlaceholder(modifiedArg, "*", std::to_string(entryIndex));
-                    startPos = modifiedArg.find("{list_file_source(");
-                    endPos = modifiedArg.find(")}");
-                    if (endPos != std::string::npos && endPos > startPos) {
-                        replacement = getEntryFromListFile(listPath, entryIndex);
-                        if (replacement.empty()) {
-                            replacement = NULL_STR;
-                            modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
-                            break;
-                        }
-                        modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
-                    }
-                    if (modifiedArg == lastArg)
-                        break;
-                    lastArg = modifiedArg;
-                }
-                while (modifiedArg.find("{ini_file_source(") != std::string::npos) {
-                    modifiedArg = replacePlaceholder(modifiedArg, "*", std::to_string(entryIndex));
-                    startPos = modifiedArg.find("{ini_file_source(");
-                    endPos = modifiedArg.find(")}");
-                    if (endPos != std::string::npos && endPos > startPos) {
-                        std::string placeholderContent = modifiedArg.substr(startPos + std::string("{ini_file_source(").length(), endPos - startPos - std::string("{ini_file_source(").length());
-                        if (placeholderContent == "*") {
-                            modifiedArg = replacePlaceholder(modifiedArg, "*", std::to_string(entryIndex));
-                        }
 
-                        //replacement = parseSectionsFromIni(iniPath)[entryIndex];
-                        replacement = replaceIniPlaceholder(modifiedArg, "ini_file_source", iniPath);
-                        if (replacement.empty()) {
-                            replacement = NULL_STR;
-                            modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
-                            break;
-                        }
-                        modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
-                    }
-                    if (modifiedArg == lastArg)
-                        break;
-                    lastArg = modifiedArg;
-                }
-                while (modifiedArg.find("{json_source(") != std::string::npos) {
+                if (modifiedArg.find("{ini_file_source(") != std::string::npos) {
                     modifiedArg = replacePlaceholder(modifiedArg, "*", std::to_string(entryIndex));
-                    startPos = modifiedArg.find("{json_source(");
-                    endPos = modifiedArg.find(")}");
+                    size_t startPos = modifiedArg.find("{ini_file_source(");
+                    size_t endPos = modifiedArg.find(")}");
                     if (endPos != std::string::npos && endPos > startPos) {
-                        replacement = replaceJsonPlaceholder(modifiedArg.substr(startPos, endPos - startPos + 2), "json_source", jsonString);
-                        if (replacement.empty()) {
-                            replacement = NULL_STR;
-                            modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
-                            break;
-                        }
+                        std::string replacement = replaceIniPlaceholder(modifiedArg, "ini_file_source", iniPath);
+                        replacement = replacement.empty() ? NULL_STR : replacement;
                         modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
                     }
-                    if (modifiedArg == lastArg)
-                        break;
-                    lastArg = modifiedArg;
                 }
-                while (modifiedArg.find("{json_file_source(") != std::string::npos) {
+
+                if (modifiedArg.find("{json_source(") != std::string::npos) {
                     modifiedArg = replacePlaceholder(modifiedArg, "*", std::to_string(entryIndex));
-                    startPos = modifiedArg.find("{json_file_source(");
-                    endPos = modifiedArg.find(")}");
+                    size_t startPos = modifiedArg.find("{json_source(");
+                    size_t endPos = modifiedArg.find(")}");
                     if (endPos != std::string::npos && endPos > startPos) {
-                        replacement = replaceJsonPlaceholder(modifiedArg.substr(startPos, endPos - startPos + 2), "json_file_source", jsonPath);
-                        if (replacement.empty()) {
-                            replacement = NULL_STR;
-                            modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
-                            break;
-                        }
+                        std::string replacement = replaceJsonPlaceholder(modifiedArg.substr(startPos, endPos - startPos + 2), "json_source", jsonString);
+                        replacement = replacement.empty() ? NULL_STR : replacement;
                         modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
                     }
-                    if (modifiedArg == lastArg)
-                        break;
-                    lastArg = modifiedArg;
+                }
+
+                if (modifiedArg.find("{json_file_source(") != std::string::npos) {
+                    modifiedArg = replacePlaceholder(modifiedArg, "*", std::to_string(entryIndex));
+                    size_t startPos = modifiedArg.find("{json_file_source(");
+                    size_t endPos = modifiedArg.find(")}");
+                    if (endPos != std::string::npos && endPos > startPos) {
+                        std::string replacement = replaceJsonPlaceholder(modifiedArg.substr(startPos, endPos - startPos + 2), "json_file_source", jsonPath);
+                        replacement = replacement.empty() ? NULL_STR : replacement;
+                        modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
+                    }
                 }
                 
-                modifiedCmd.push_back(std::move(modifiedArg)); // Move modified arg to the modified command vector
+                modifiedCmd.push_back(std::move(modifiedArg));
             }
-            
-            modifiedCommands.emplace_back(std::move(modifiedCmd)); // Move modified command to the result vector
-        }
-        // Add the file_name command at the front if file_source was used
-        if (usingFileSource) {
-            modifiedCommands.insert(modifiedCommands.begin(), {"file_name", fileName});
+
+            modifiedCommands.emplace_back(std::move(modifiedCmd));
         }
     }
+
+    if (usingFileSource) {
+        modifiedCommands.insert(modifiedCommands.begin(), {"file_name", fileName});
+    }
+
     return modifiedCommands;
 }
 

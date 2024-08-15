@@ -44,6 +44,8 @@ const std::string OVERLAY_PATH = "sdmc:/switch/.overlays/";
 const std::string OVERLAYS_INI_FILEPATH = "sdmc:/config/ultrahand/overlays.ini";
 const std::string PACKAGES_INI_FILEPATH = "sdmc:/config/ultrahand/packages.ini";
 const std::string ULTRAHAND_REPO_URL = "https://github.com/ppkantorski/Ultrahand-Overlay/";
+const std::string INCLUDED_THEME_FOLDER_URL = "https://raw.githubusercontent.com/ppkantorski/Ultrahand-Overlay/main/themes/";
+const std::string LATEST_RELEASE_INFO_URL = "https://api.github.com/repos/ppkantorski/Ultrahand-Overlay/releases/latest";
 
 const std::string TESLA_COMBO_STR = "L+DDOWN+RS";
 const std::string ULTRAHAND_COMBO_STR = "ZL+ZR+DDOWN";
