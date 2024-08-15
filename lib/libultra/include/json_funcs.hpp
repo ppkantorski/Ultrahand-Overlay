@@ -128,35 +128,18 @@ std::string getStringFromJsonFile(const std::string& filePath, const std::string
         return "";
     }
 
-    // Log the entire JSON object for debugging
-    char* jsonString = json_dumps(root, JSON_INDENT(2));
-    if (jsonString) {
-        //logMessage("Loaded JSON: " + std::string(jsonString));
-        free(jsonString);
-    } else {
-        logMessage("Error dumping JSON to string.");
-    }
-
     // Retrieve the string value associated with the key
     json_t* jsonKey = json_object_get(root, key.c_str());
-    if (!jsonKey) {
-        logMessage("Key not found in JSON: " + key);
-        json_decref(root);
-        return "";
-    }
-
-    if (!json_is_string(jsonKey)) {
-        logMessage("Value for key '" + key + "' is not a string");
-        json_decref(root);
-        return "";
-    }
-
-    const char* value = json_string_value(jsonKey);
+    const char* value = json_is_string(jsonKey) ? json_string_value(jsonKey) : nullptr;
 
     // Clean up JSON object
     json_decref(root);
-    //logMessage("Value for key '" + key + "': " + std::string(value));
 
-    // Return the string value
-    return std::string(value);
+    // Check if the value was found and return it
+    if (value) {
+        return std::string(value);
+    } else {
+        logMessage("Key not found or not a string in JSON: " + key);
+        return "";
+    }
 }
