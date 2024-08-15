@@ -2583,11 +2583,16 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                                 simulatedSelectComplete = true;
                                 return true;
                             } else if (keys & SCRIPT_KEY) {
+                                bool isFromMainMenu = (packagePath == PACKAGE_PATH);
+                                //if (inMainMenu) {
+                                //    isFromMainMenu = true;
+                                //    inMainMenu = false;
+                                //}
                                 if (inPackageMenu)
                                     inPackageMenu = false;
                                 if (inSubPackageMenu)
                                     inSubPackageMenu = false;
-                                tsl::changeTo<ScriptOverlay>(packagePath, keyName, false, packageName);
+                                tsl::changeTo<ScriptOverlay>(packagePath, keyName, isFromMainMenu, packageName);
                                 return true;
                             }
                             return false;
@@ -2637,11 +2642,16 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                                 lastSelectedListItem->triggerClickAnimation();
                                 return true;
                             }  else if (keys & SCRIPT_KEY) {
+                                bool isFromMainMenu = (packagePath == PACKAGE_PATH);
+                                //if (inMainMenu) {
+                                //    isFromMainMenu = true;
+                                //    inMainMenu = false;
+                                //}
                                 if (inPackageMenu)
                                     inPackageMenu = false;
                                 if (inSubPackageMenu)
                                     inSubPackageMenu = false;
-                                tsl::changeTo<ScriptOverlay>(packagePath, keyName, false, packageName);
+                                tsl::changeTo<ScriptOverlay>(packagePath, keyName, isFromMainMenu, packageName);
                                 return true;
                             }
                             return false;
@@ -3829,7 +3839,7 @@ public:
             
             if (!inHiddenMode) {
                 packagePath = PACKAGE_PATH;
-                std::string packageName = getNameFromPath(PACKAGE_PATH);
+                std::string packageName = "package.ini";
                 std::string pageLeftName = "";
                 std::string pageRightName = "";
                 std::string currentPage = "left";
