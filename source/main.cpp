@@ -2424,7 +2424,6 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
             }
             
             
-
             // Get Option name and footer
             if (optionName.front() == '*') { 
                 useSelection = true;
