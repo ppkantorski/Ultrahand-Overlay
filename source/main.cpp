@@ -2183,7 +2183,7 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                         }
                         commandFooter = parseValueFromIniSection(packageConfigIniPath, optionName, FOOTER_STR);
                         // override loading of the command footer
-                        if (!commandFooter.empty()){
+                        if (!commandFooter.empty() && commandFooter != NULL_STR){
                             footer = commandFooter;
                             listItem = std::make_unique<tsl::elm::ListItem>(removeTag(optionName.substr(1)));
                             listItem->setValue(footer);
@@ -2449,7 +2449,7 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
             }
 
             // override loading of the command footer
-            if (!commandFooter.empty())
+            if (!commandFooter.empty() && commandFooter != NULL_STR)
                 footer = commandFooter;
 
             skipSystem = false;
