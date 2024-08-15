@@ -6580,7 +6580,12 @@ std::unordered_map<std::string, std::string> buttonCharMap = createButtonCharMap
 std::string convertComboToUnicode(const std::string& combo) {
     // Check if there is a '+' in the input string
     if (combo.find('+') == std::string::npos) {
-        // If no '+' is found, return the original string
+        // If no '+' is found, check if the entire combo is a single key that maps to Unicode
+        auto it = buttonCharMap.find(trim(combo));  // Trim the input in case of leading/trailing spaces
+        if (it != buttonCharMap.end()) {
+            return it->second;
+        }
+        // If no mapping is found, return the original string
         return combo;
     }
     
