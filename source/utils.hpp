@@ -128,33 +128,33 @@ void powerOffAllControllers() {
     btmExit();
 }
 
-std::unordered_map<std::string, std::string> createButtonCharMap() {
-    std::unordered_map<std::string, std::string> map;
-    for (const auto& keyInfo : tsl::impl::KEYS_INFO) {
-        map[keyInfo.name] = keyInfo.glyph;
-    }
-    return map;
-}
-
-std::unordered_map<std::string, std::string> buttonCharMap = createButtonCharMap();
-
-
-std::string convertComboToUnicode(const std::string& combo) {
-
-    std::istringstream iss(combo);
-    std::string token;
-    std::string unicodeCombo;
-
-    while (std::getline(iss, token, '+')) {
-        unicodeCombo += buttonCharMap[trim(token)] + "+";
-    }
-
-    if (!unicodeCombo.empty()) {
-        unicodeCombo.pop_back();  // Remove the trailing '+'
-    }
-
-    return unicodeCombo;
-}
+//std::unordered_map<std::string, std::string> createButtonCharMap() {
+//    std::unordered_map<std::string, std::string> map;
+//    for (const auto& keyInfo : tsl::impl::KEYS_INFO) {
+//        map[keyInfo.name] = keyInfo.glyph;
+//    }
+//    return map;
+//}
+//
+//std::unordered_map<std::string, std::string> buttonCharMap = createButtonCharMap();
+//
+//
+//std::string convertComboToUnicode(const std::string& combo) {
+//
+//    std::istringstream iss(combo);
+//    std::string token;
+//    std::string unicodeCombo;
+//
+//    while (std::getline(iss, token, '+')) {
+//        unicodeCombo += buttonCharMap[trim(token)] + "+";
+//    }
+//
+//    if (!unicodeCombo.empty()) {
+//        unicodeCombo.pop_back();  // Remove the trailing '+'
+//    }
+//
+//    return unicodeCombo;
+//}
 
 
 
