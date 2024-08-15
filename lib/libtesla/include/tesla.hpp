@@ -4477,7 +4477,10 @@ namespace tsl {
                 
                 if (this->m_trunctuated) {
                     if (this->m_focused) {
-                        renderer->enableScissoring(this->getX()+6, 97, this->m_maxWidth + 40 - 6, tsl::cfg::FramebufferHeight-73-97);
+                        if (this->m_value.length() > 0)
+                            renderer->enableScissoring(this->getX()+6, 97, this->m_maxWidth + 40 - 6-4, tsl::cfg::FramebufferHeight-73-97);
+                        else
+                            renderer->enableScissoring(this->getX()+6, 97, this->m_maxWidth + 40 - 6, tsl::cfg::FramebufferHeight-73-97);
                         renderer->drawString(this->m_scrollText.c_str(), false, this->getX() + 20 - this->m_scrollOffset, this->getY() + 45, 23, a(selectedTextColor));
                         renderer->disableScissoring();
                         //t = std::chrono::system_clock::now() - this->timeIn;
