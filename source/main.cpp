@@ -461,6 +461,16 @@ private:
                 simulatedSelect = false;
             }
             if (keys & KEY_A) {
+
+                if (targetMenu == "softwareUpdateMenu") {
+                    std::vector<std::vector<std::string>> interpreterCommands = {
+                        {"try:"},
+                        {"download", LATEST_RELEASE_INFO_URL, SETTINGS_PATH+"release.json"},
+                    };
+                    interpretAndExecuteCommands(std::move(interpreterCommands), "", "");
+                }
+
+
                 tsl::changeTo<UltrahandSettingsMenu>(targetMenu);
                 selectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItemRaw, [](auto*) {});
                 simulatedSelectComplete = true;
@@ -516,8 +526,10 @@ private:
     }
 
 
-    void addUpdateButton(std::unique_ptr<tsl::elm::List>& list, const std::string& title, const std::string& downloadUrl, const std::string& targetPath, const std::string& movePath) {
+    void addUpdateButton(std::unique_ptr<tsl::elm::List>& list, const std::string& title, const std::string& downloadUrl, const std::string& targetPath, const std::string& movePath, const std::string& versionLabel) {
         auto listItem = std::make_unique<tsl::elm::ListItem>(title);
+        listItem->setValue(versionLabel, true);
+
         listItem->setClickListener([listItemRaw = listItem.get(), downloadUrl, targetPath, movePath](uint64_t keys) {
             if (runningInterpreter.load(std::memory_order_acquire)) {
                 return false;
@@ -530,7 +542,6 @@ private:
             std::vector<std::vector<std::string>> interpreterCommands;
             if (keys & KEY_A) {
                 isDownloadCommand = true;
-                
                 
                 interpreterCommands = {
                     {"try:"},
@@ -646,9 +657,11 @@ public:
                 index++;
             }
         } else if (dropdownSelection == "softwareUpdateMenu") {
+            std::string versionLabel = cleanVersionLabel(getStringFromJsonFile((SETTINGS_PATH+"release.json").c_str(), "tag_name"));
+
             list->addItem(new tsl::elm::CategoryHeader(SOFTWARE_UPDATE));
-            addUpdateButton(list, UPDATE_ULTRAHAND, ULTRAHAND_REPO_URL + "releases/latest/download/ovlmenu.ovl", "/config/ultrahand/downloads/ovlmenu.ovl", "/switch/.overlays/ovlmenu.ovl");
-            addUpdateButton(list, UPDATE_LANGUAGES, ULTRAHAND_REPO_URL + "releases/latest/download/lang.zip", "/config/ultrahand/downloads/lang.zip", LANG_PATH);
+            addUpdateButton(list, UPDATE_ULTRAHAND, ULTRAHAND_REPO_URL + "releases/latest/download/ovlmenu.ovl", "/config/ultrahand/downloads/ovlmenu.ovl", "/switch/.overlays/ovlmenu.ovl", versionLabel);
+            addUpdateButton(list, UPDATE_LANGUAGES, ULTRAHAND_REPO_URL + "releases/latest/download/lang.zip", "/config/ultrahand/downloads/lang.zip", LANG_PATH, versionLabel);
 
             PackageHeader overlayHeader;
             overlayHeader.title = "Ultrahand Overlay";
