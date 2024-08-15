@@ -109,3 +109,54 @@ inline const char* getStringFromJson(const json_t* root, const char* key) {
     }
 }
 
+
+/**
+ * @brief Loads a JSON file from the specified path and retrieves a string value for a given key.
+ *
+ * This function combines the functionality of loading a JSON file and retrieving a string value associated
+ * with a given key in a single step.
+ *
+ * @param filePath The path to the JSON file.
+ * @param key The key whose associated string value is to be retrieved.
+ * @return A string containing the value associated with the given key, or an empty string if the key is not found.
+ */
+std::string getStringFromJsonFile(const std::string& filePath, const std::string& key) {
+    // Load JSON from file
+    json_t* root = readJsonFromFile(filePath);
+    if (!root) {
+        logMessage("Failed to load JSON file from path: " + filePath);
+        return "";
+    }
+
+    // Log the entire JSON object for debugging
+    char* jsonString = json_dumps(root, JSON_INDENT(2));
+    if (jsonString) {
+        //logMessage("Loaded JSON: " + std::string(jsonString));
+        free(jsonString);
+    } else {
+        logMessage("Error dumping JSON to string.");
+    }
+
+    // Retrieve the string value associated with the key
+    json_t* jsonKey = json_object_get(root, key.c_str());
+    if (!jsonKey) {
+        logMessage("Key not found in JSON: " + key);
+        json_decref(root);
+        return "";
+    }
+
+    if (!json_is_string(jsonKey)) {
+        logMessage("Value for key '" + key + "' is not a string");
+        json_decref(root);
+        return "";
+    }
+
+    const char* value = json_string_value(jsonKey);
+
+    // Clean up JSON object
+    json_decref(root);
+    //logMessage("Value for key '" + key + "': " + std::string(value));
+
+    // Return the string value
+    return std::string(value);
+}
