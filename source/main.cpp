@@ -68,7 +68,7 @@ static const std::string SYSTEM_PATTERN = ";system=";
 
 // Table option patterns
 static const std::string BACKGROUND_PATTERN = ";background="; // true or false
-static const std::string HEADER_INDENT_PATTERN = ";header_indent=";
+static const std::string HEADER_INDENT_PATTERN = ";header_indent="; // true or false
 //static const std::string HEADER_PATTERN = ";header=";
 static const std::string ALIGNMENT_PATTERN = ";alignment=";
 static const std::string GAP_PATTERN =";gap=";
@@ -473,8 +473,9 @@ private:
 
     void handleSelection(std::unique_ptr<tsl::elm::List>& list, const std::vector<std::string>& items, const std::string& defaultItem, const std::string& iniKey, const std::string& targetMenu) {
         for (const auto& item : items) {
-            auto mappedItem = convertComboToUnicode(item);
-            if (mappedItem.empty()) mappedItem = item;
+            //auto mappedItem = convertComboToUnicode(item); // moved to ListItem class in libTesla
+            //if (mappedItem.empty()) mappedItem = item;
+            auto mappedItem = item;
     
             auto listItem = std::make_unique<tsl::elm::ListItem>(mappedItem);
             if (item == defaultItem) {
