@@ -463,13 +463,16 @@ private:
             if (keys & KEY_A) {
 
                 if (targetMenu == "softwareUpdateMenu") {
-                    std::vector<std::vector<std::string>> interpreterCommands = {
-                        {"try:"},
-                        {"download", LATEST_RELEASE_INFO_URL, SETTINGS_PATH+"release.json"},
-                    };
-                    interpretAndExecuteCommands(std::move(interpreterCommands), "", "");
+                    executeCommands({
+                        {"download", LATEST_RELEASE_INFO_URL, SETTINGS_PATH + "release.json"}
+                    });
+                } else if (targetMenu == "themeMenu") {
+                    if (!isFileOrDirectory(THEMES_PATH+"ultra.ini")) {
+                        executeCommands({
+                            {"download", INCLUDED_THEME_URL, THEMES_PATH}
+                        });
+                    }
                 }
-
 
                 tsl::changeTo<UltrahandSettingsMenu>(targetMenu);
                 selectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItemRaw, [](auto*) {});
@@ -552,7 +555,7 @@ private:
                 if (movePath == LANG_PATH) { // for language update commands
                     interpreterCommands.push_back({"unzip", targetPath, movePath});
                 } else {
-                    interpreterCommands.push_back({"download", INCLUDED_THEME_URL, THEMES_PATH});
+                    //interpreterCommands.push_back({"download", INCLUDED_THEME_URL, THEMES_PATH});
                     interpreterCommands.push_back({"move", targetPath, movePath});
                 }
                 
