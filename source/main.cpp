@@ -529,23 +529,22 @@ private:
             if (keys & KEY_A) {
                 isDownloadCommand = true;
                 
-
-                if (movePath == LANG_PATH) {
-                    interpreterCommands = {
-                        {"try:"},
-                        {"delete", targetPath},
-                        {"download", downloadUrl, DOWNLOADS_PATH},
-                        {"unzip", targetPath, movePath},
-                        {"delete", targetPath}
-                    };
+                
+                interpreterCommands = {
+                    {"try:"},
+                    {"delete", targetPath},
+                    {"download", downloadUrl, DOWNLOADS_PATH},
+                };
+                
+                if (movePath == LANG_PATH) { // for language update commands
+                    interpreterCommands.push_back({"unzip", targetPath, movePath});
                 } else {
-                    interpreterCommands = {
-                        {"try:"},
-                        {"delete", targetPath},
-                        {"download", downloadUrl, DOWNLOADS_PATH},
-                        {"move", targetPath, movePath}
-                    };
+                    interpreterCommands.push_back({"download", INCLUDED_THEME_URL, THEMES_PATH});
+                    interpreterCommands.push_back({"move", targetPath, movePath});
                 }
+                
+                interpreterCommands.push_back({"delete", targetPath});
+
                 runningInterpreter.store(true, std::memory_order_release);
                 enqueueInterpreterCommands(std::move(interpreterCommands), "", "");
                 startInterpreterThread();
@@ -2249,8 +2248,8 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
             } else {
                 pos = optionName.find(" - ");
                 if (pos != std::string::npos) {
-                    footer = optionName.substr(pos + 2); // Assign the part after "&&" as the footer
-                    optionName = optionName.substr(0, pos); // Strip the "&&" and everything after it
+                    footer = optionName.substr(pos + 2); // Assign the part after " - " as the footer
+                    optionName = optionName.substr(0, pos); // Strip the " - " and everything after it
                 }
             }
             
@@ -2353,9 +2352,12 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                     continue;
                 }
                 if (useSelection) { // For wildcard commands (dropdown menus)
-                    
-                    if ((footer == DROPDOWN_SYMBOL) || (footer.empty()))
+
+                    if ((footer == DROPDOWN_SYMBOL) || (footer.empty())) {
+                        if (!commandFooter.empty())
+                            footer = commandFooter;
                         listItem = std::make_unique<tsl::elm::ListItem>(removeTag(optionName), footer);
+                    }
                     else {
                         listItem = std::make_unique<tsl::elm::ListItem>(removeTag(optionName));
                         if (commandMode == OPTION_STR)
@@ -2367,6 +2369,7 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                     if (footer == UNAVAILABLE_SELECTION || footer == NOT_AVAILABLE_STR || (footer.find(NULL_STR) != std::string::npos))
                         listItem->setValue(UNAVAILABLE_SELECTION, true);
                     if (commandMode == FORWARDER_STR) {
+
                         const std::string& forwarderPackagePath = getParentDirFromPath(packageSource);
                         const std::string& forwarderPackageIniName = getNameFromPath(packageSource);
                         listItem->setClickListener([commands, keyName = option.first, dropdownSection, packagePath, forwarderPackagePath, forwarderPackageIniName, nestedLayer](s64 keys) mutable {
