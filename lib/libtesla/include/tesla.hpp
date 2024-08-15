@@ -4497,7 +4497,7 @@ namespace tsl {
                             }
                         } // CUSTOM MODIFICATION END
                     } else {
-                        renderer->drawString(this->m_ellipsisText.c_str(), false, this->getX() + 20, this->getY() + 45, 23, a(!useClickTextColor ? defaultTextColor : clickTextColor));
+                        renderer->drawString(this->m_ellipsisText.c_str(), false, this->getX() + 20-1, this->getY() + 45, 23, a(!useClickTextColor ? defaultTextColor : clickTextColor));
                     }
                 } else {
                     // Render the text with special character handling
