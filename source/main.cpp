@@ -669,7 +669,7 @@ public:
                 deleteFileOrDirectory(SETTINGS_PATH+"latest_release.json");
             
             versionLabel = cleanVersionLabel(getStringFromJsonFile((SETTINGS_PATH+"release.json").c_str(), "tag_name"));
-            
+
             if (!versionLabel.empty() && versionLabel != "0")
                 setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "latest_version", versionLabel);
             else {
@@ -2178,8 +2178,17 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                             skipSection = false;
                             lastSection = "Commands";
                         }
-                        // Create reference to PackageMenu with dropdownSection set to optionName
-                        listItem = std::make_unique<tsl::elm::ListItem>(removeTag(optionName.substr(1)), DROPDOWN_SYMBOL);
+                        commandFooter = parseValueFromIniSection(packageConfigIniPath, optionName, FOOTER_STR);
+                        // override loading of the command footer
+                        if (!commandFooter.empty()){
+                            footer = commandFooter;
+                            listItem = std::make_unique<tsl::elm::ListItem>(removeTag(optionName.substr(1)));
+                            listItem->setValue(footer);
+                        } else {
+                            footer = DROPDOWN_SYMBOL;
+                            // Create reference to PackageMenu with dropdownSection set to optionName
+                            listItem = std::make_unique<tsl::elm::ListItem>(removeTag(optionName.substr(1)), footer);
+                        }
                         
                         if (packageMenuMode)
                             listItem->setClickListener([packagePath, currentPage, packageName, optionName](s64 keys) {
@@ -2415,6 +2424,7 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
             }
             
             
+
             // Get Option name and footer
             if (optionName.front() == '*') { 
                 useSelection = true;
@@ -2430,11 +2440,16 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
             
             if ((commandMode == OPTION_STR) || (commandMode == SLOT_STR) || (commandMode == TOGGLE_STR && !useSelection)) {
                 // override loading of the command footer
-                if (!commandFooter.empty())
-                    footer = commandFooter;
-                else
-                    footer = OPTION_SYMBOL;
+                //if (!commandFooter.empty())
+                //    footer = commandFooter;
+                //else
+                footer = OPTION_SYMBOL;
             }
+
+            // override loading of the command footer
+            if (!commandFooter.empty())
+                footer = commandFooter;
+
             skipSystem = false;
             if (commandSystem == ERISTA_STR && !usingErista) {
                 skipSystem = true;
@@ -2528,13 +2543,14 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                 }
                 if (useSelection) { // For wildcard commands (dropdown menus)
 
-                    if ((footer == DROPDOWN_SYMBOL) || (footer.empty())) {
-                        if (!commandFooter.empty())
-                            footer = commandFooter;
+                    if ((footer == DROPDOWN_SYMBOL) || (footer.empty()) || footer == commandFooter) {
+                        //if (!commandFooter.empty())
+                        //    footer = commandFooter;
                         listItem = std::make_unique<tsl::elm::ListItem>(removeTag(optionName), footer);
                     }
                     else {
                         listItem = std::make_unique<tsl::elm::ListItem>(removeTag(optionName));
+
                         if (commandMode == OPTION_STR)
                             listItem->setValue(footer);
                         else
@@ -2571,7 +2587,11 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                             return false;
                         });
                     } else {
-                        
+                        //if (!commandFooter.empty()) {
+                        //    listItem->setValue(commandFooter, true);
+                        //    //listItem = std::make_unique<tsl::elm::ListItem>(removeTag(optionName), footer);
+                        //}
+                        //listItem->setValue("TEST", true);
                         //std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(option.second, pathReplace);
                         listItem->setClickListener([commands, keyName = option.first, dropdownSection, packagePath,  packageName, footer, lastSection, listItemRaw = listItem.get()](uint64_t keys) {
                             //listItemPtr = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){})](uint64_t keys) {
