@@ -464,14 +464,17 @@ private:
 
                 if (targetMenu == "softwareUpdateMenu") {
                     executeCommands({
-                        {"try:"},
                         {"download", LATEST_RELEASE_INFO_URL, SETTINGS_PATH + "latest_release.json"}
                     });
                 } else if (targetMenu == "themeMenu") {
                     if (!isFileOrDirectory(THEMES_PATH+"ultra.ini")) {
                         executeCommands({
-                            {"try:"},
-                            {"download", INCLUDED_THEME_URL, THEMES_PATH}
+                            {"download", INCLUDED_THEME_FOLDER_URL+"ultra.ini", THEMES_PATH}
+                        });
+                    }
+                    if (!isFileOrDirectory(THEMES_PATH+"classic.ini")) {
+                        executeCommands({
+                            {"download", INCLUDED_THEME_FOLDER_URL+"classic.ini", THEMES_PATH}
                         });
                     }
                 }
