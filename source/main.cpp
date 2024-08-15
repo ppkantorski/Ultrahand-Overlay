@@ -662,13 +662,15 @@ public:
                 index++;
             }
         } else if (dropdownSelection == "softwareUpdateMenu") {
-            std::string versionLabel = cleanVersionLabel(getStringFromJsonFile((SETTINGS_PATH+"latest_release.json").c_str(), "tag_name"));
+            std::string versionLabel = trim(cleanVersionLabel(getStringFromJsonFile((SETTINGS_PATH+"latest_release.json").c_str(), "tag_name")));
             if (!versionLabel.empty() && versionLabel != "0")
-                moveFileOrDirectory(SETTINGS_PATH+"latest_release.json", SETTINGS_PATH+"release.json");
-            else
-                deleteFileOrDirectory(SETTINGS_PATH+"latest_release.json");
+                setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "latest_version", versionLabel);
             
-            versionLabel = cleanVersionLabel(getStringFromJsonFile((SETTINGS_PATH+"release.json").c_str(), "tag_name"));
+            if (versionLabel.empty())
+                versionLabel = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "latest_version");
+
+            //versionLabel = cleanVersionLabel(getStringFromJsonFile((SETTINGS_PATH+"release.json").c_str(), "tag_name"));
+
 
             list->addItem(new tsl::elm::CategoryHeader(SOFTWARE_UPDATE));
             addUpdateButton(list, UPDATE_ULTRAHAND, ULTRAHAND_REPO_URL + "releases/latest/download/ovlmenu.ovl", "/config/ultrahand/downloads/ovlmenu.ovl", "/switch/.overlays/ovlmenu.ovl", versionLabel);
