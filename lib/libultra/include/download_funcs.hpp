@@ -126,7 +126,7 @@ bool downloadFile(const std::string& url, const std::string& toDestination) {
     }
 
 
-    std::string tempFilePath = createHiddenFilePath(destination) + ".tmp";
+    std::string tempFilePath = DOWNLOADS_PATH + getFileName(destination) + ".tmp";
 
     std::ofstream file(tempFilePath, std::ios::binary);
     if (!file.is_open()) {
