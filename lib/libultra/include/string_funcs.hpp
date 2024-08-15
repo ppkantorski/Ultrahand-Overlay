@@ -64,11 +64,12 @@ inline std::string cleanDirectoryName(const std::string& name) {
 inline std::string trim(const std::string& str) {
     size_t first = str.find_first_not_of(" \t\n\r\f\v");
     if (first == std::string::npos)
-        return "";
+        return {};  // Use {} to avoid an extra constructor call
 
     size_t last = str.find_last_not_of(" \t\n\r\f\v");
     return str.substr(first, last - first + 1);
 }
+
 
 // Function to trim newline characters from the end of a string
 inline std::string trimNewline(const std::string &str) {
@@ -437,7 +438,7 @@ inline std::string cleanVersionLabel(const std::string& input) {
             }
         }
     }
-
+    
     return versionLabel;
 }
 
@@ -481,6 +482,23 @@ inline std::string splitString(const std::string& str, const std::string& delimi
     } else {
         return ""; // Return empty string if index is out of bounds
     }
+}
+
+std::string createHiddenFilePath(const std::string& originalPath) {
+    // Find the position of the last '/'
+    size_t lastSlash = originalPath.find_last_of('/');
+
+    // Extract the directory and filename
+    std::string directory = (lastSlash == std::string::npos) ? "" : originalPath.substr(0, lastSlash);
+    std::string filename = (lastSlash == std::string::npos) ? originalPath : originalPath.substr(lastSlash + 1);
+
+    // Add '.' to the start of the filename to make it hidden
+    std::string hiddenFilename = "." + filename;
+
+    // Combine the directory with the hidden filename
+    std::string hiddenFilePath = directory.empty() ? hiddenFilename : directory + "/" + hiddenFilename;
+
+    return hiddenFilePath;
 }
 
 
