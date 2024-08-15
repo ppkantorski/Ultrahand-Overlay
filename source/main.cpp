@@ -464,11 +464,13 @@ private:
 
                 if (targetMenu == "softwareUpdateMenu") {
                     executeCommands({
-                        {"download", LATEST_RELEASE_INFO_URL, SETTINGS_PATH + "release.json"}
+                        {"try:"},
+                        {"download", LATEST_RELEASE_INFO_URL, SETTINGS_PATH + "latest_release.json"}
                     });
                 } else if (targetMenu == "themeMenu") {
                     if (!isFileOrDirectory(THEMES_PATH+"ultra.ini")) {
                         executeCommands({
+                            {"try:"},
                             {"download", INCLUDED_THEME_URL, THEMES_PATH}
                         });
                     }
@@ -660,7 +662,13 @@ public:
                 index++;
             }
         } else if (dropdownSelection == "softwareUpdateMenu") {
-            std::string versionLabel = cleanVersionLabel(getStringFromJsonFile((SETTINGS_PATH+"release.json").c_str(), "tag_name"));
+            std::string versionLabel = cleanVersionLabel(getStringFromJsonFile((SETTINGS_PATH+"latest_release.json").c_str(), "tag_name"));
+            if (!versionLabel.empty() && versionLabel != "0")
+                moveFileOrDirectory(SETTINGS_PATH+"latest_release.json", SETTINGS_PATH+"release.json");
+            else
+                deleteFileOrDirectory(SETTINGS_PATH+"latest_release.json");
+            
+            versionLabel = cleanVersionLabel(getStringFromJsonFile((SETTINGS_PATH+"release.json").c_str(), "tag_name"));
 
             list->addItem(new tsl::elm::CategoryHeader(SOFTWARE_UPDATE));
             addUpdateButton(list, UPDATE_ULTRAHAND, ULTRAHAND_REPO_URL + "releases/latest/download/ovlmenu.ovl", "/config/ultrahand/downloads/ovlmenu.ovl", "/switch/.overlays/ovlmenu.ovl", versionLabel);
