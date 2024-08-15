@@ -668,7 +668,7 @@ public:
             else {
                 versionLabel = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "latest_version");
             }
-            deleteFileOrDirectory(SETTINGS_PATH+"latest_release.json");
+            //deleteFileOrDirectory(SETTINGS_PATH+"latest_release.json");
 
             //versionLabel = cleanVersionLabel(getStringFromJsonFile((SETTINGS_PATH+"release.json").c_str(), "tag_name"));
 
