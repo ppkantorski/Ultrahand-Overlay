@@ -4456,7 +4456,7 @@ namespace tsl {
                     }
                     
                     std::tie(width, height) = renderer->drawString(this->m_text.c_str(), false, 0, 0, 23, a(tsl::style::color::ColorTransparent));
-                    this->m_trunctuated = width > this->m_maxWidth+10;
+                    this->m_trunctuated = width > this->m_maxWidth+20;
                     
                     if (this->m_trunctuated) {
                         this->m_scrollText = this->m_text + "        ";
@@ -5844,7 +5844,7 @@ namespace tsl {
             renderer.endFrame();
         }
         
-        
+
 
         /**
          * @brief Called once per frame with the latest HID inputs
