@@ -484,22 +484,7 @@ inline std::string splitString(const std::string& str, const std::string& delimi
     }
 }
 
-std::string createHiddenFilePath(const std::string& originalPath) {
-    // Find the position of the last '/'
-    size_t lastSlash = originalPath.find_last_of('/');
 
-    // Extract the directory and filename
-    std::string directory = (lastSlash == std::string::npos) ? "" : originalPath.substr(0, lastSlash);
-    std::string filename = (lastSlash == std::string::npos) ? originalPath : originalPath.substr(lastSlash + 1);
-
-    // Add '.' to the start of the filename to make it hidden
-    std::string hiddenFilename = "." + filename;
-
-    // Combine the directory with the hidden filename
-    std::string hiddenFilePath = directory.empty() ? hiddenFilename : directory + "/" + hiddenFilename;
-
-    return hiddenFilePath;
-}
 
 
 //std::string padToEqualLength(const std::string& str, size_t len) {
