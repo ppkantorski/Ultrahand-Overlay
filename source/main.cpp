@@ -662,12 +662,13 @@ public:
                 index++;
             }
         } else if (dropdownSelection == "softwareUpdateMenu") {
-            std::string versionLabel = trim(cleanVersionLabel(getStringFromJsonFile((SETTINGS_PATH+"latest_release.json").c_str(), "tag_name")));
+            std::string versionLabel = cleanVersionLabel(getStringFromJsonFile((SETTINGS_PATH+"latest_release.json").c_str(), "tag_name"));
             if (!versionLabel.empty() && versionLabel != "0")
                 setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "latest_version", versionLabel);
-            
-            if (versionLabel.empty())
+            else {
                 versionLabel = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "latest_version");
+            }
+            deleteFileOrDirectory(SETTINGS_PATH+"latest_release.json");
 
             //versionLabel = cleanVersionLabel(getStringFromJsonFile((SETTINGS_PATH+"release.json").c_str(), "tag_name"));
 
