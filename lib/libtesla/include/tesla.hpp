@@ -161,7 +161,7 @@ bool updateMenuCombos = false;
 #define touchInput &touchPos
 #define JoystickPosition HidAnalogStickState
 
-
+std::string convertComboToUnicode(const std::string& combo);
 
 // For improving the speed of hexing consecutively with the same file and asciiPattern.
 //static std::unordered_map<std::string, std::string> hexSumCache;
@@ -4447,6 +4447,9 @@ namespace tsl {
                     //renderer->drawRect(ELEMENT_BOUNDS(this), tsl::style::color::ColorClickAnimation);
                 }
                 
+                this->m_text = convertComboToUnicode(this->m_text);
+                this->m_value = convertComboToUnicode(this->m_value);
+
                 if (this->m_maxWidth == 0) {
                     if (this->m_value.length() > 0) {
                         std::tie(width, height) = renderer->drawString(this->m_value.c_str(), false, 0, 0, 20, a(tsl::style::color::ColorTransparent));
@@ -6562,6 +6565,50 @@ namespace tsl {
     }
 
 }
+
+std::unordered_map<std::string, std::string> createButtonCharMap() {
+    std::unordered_map<std::string, std::string> map;
+    for (const auto& keyInfo : tsl::impl::KEYS_INFO) {
+        map[keyInfo.name] = keyInfo.glyph;
+    }
+    return map;
+}
+
+std::unordered_map<std::string, std::string> buttonCharMap = createButtonCharMap();
+
+
+std::string convertComboToUnicode(const std::string& combo) {
+    // Check if there is a '+' in the input string
+    if (combo.find('+') == std::string::npos) {
+        // If no '+' is found, return the original string
+        return combo;
+    }
+    
+    std::istringstream iss(combo);
+    std::string token;
+    std::string unicodeCombo;
+    bool modified = false;
+
+    while (std::getline(iss, token, '+')) {
+        std::string trimmedToken = trim(token);
+        auto it = buttonCharMap.find(trimmedToken);
+
+        if (it != buttonCharMap.end()) {
+            unicodeCombo += it->second + "+";
+            modified = true;
+        } else {
+            unicodeCombo += trimmedToken + "+";
+        }
+    }
+
+    if (!unicodeCombo.empty()) {
+        unicodeCombo.pop_back();  // Remove the trailing '+'
+    }
+
+    // If no modification was made, return the original combo
+    return modified ? unicodeCombo : combo;
+}
+
 
 
 #ifdef TESLA_INIT_IMPL
