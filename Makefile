@@ -55,7 +55,7 @@ include $(DEVKITPRO)/libnx/switch_rules
 #---------------------------------------------------------------------------------
 APP_TITLE	:= Ultrahand
 APP_AUTHOR	:= ppkantorski
-APP_VERSION	:= 1.6.9
+APP_VERSION	:= 1.7.0
 TARGET	    := ovlmenu
 BUILD	    := build
 SOURCES	    := source common 
@@ -65,14 +65,14 @@ NO_ICON	    := 1
 #---------------------------------------------------------------------------------
 # options for code generation
 #---------------------------------------------------------------------------------
-ARCH := -march=armv8-a+crc+crypto -mtune=cortex-a57 -mtp=soft -fPIE
+ARCH := -march=armv8-a+simd+crc+crypto -mtune=cortex-a57 -mtp=soft -fPIE
 
 CFLAGS := -Wall -Os -ffunction-sections -fdata-sections -flto\
 			$(ARCH) $(DEFINES)
 
 CFLAGS += $(INCLUDE) -D__SWITCH__ -DAPP_VERSION="\"$(APP_VERSION)\"" -D_FORTIFY_SOURCE=2
 
-CXXFLAGS := $(CFLAGS) -std=c++20 -Wno-dangling-else
+CXXFLAGS := $(CFLAGS) -std=c++20 -Wno-dangling-else -ffast-math
 
 ASFLAGS := $(ARCH)
 LDFLAGS += -specs=$(DEVKITPRO)/libnx/switch.specs $(ARCH) -Wl,-Map,$(notdir $*.map)
@@ -87,7 +87,7 @@ CXXFLAGS += -flto -fuse-linker-plugin -flto=6
 LDFLAGS += -flto=6
 
 # Add -z notext to LDFLAGS to allow dynamic relocations in read-only segments
-LDFLAGS += -z notext
+#LDFLAGS += -z notext
 
 # For Ensuring Parallel LTRANS Jobs w/ Clang, make -j6
 #CXXFLAGS += -flto -flto-jobs=6
