@@ -1,296 +1,1221 @@
 /********************************************************************************
- * File: main.cpp
+ * Custom Fork Information
+ * 
+ * File: tesla.hpp
  * Author: ppkantorski
  * Description: 
- *   This file contains the main program logic for the Ultrahand Overlay project,
- *   an overlay executor designed for versatile crafting and management of overlays.
- *   It defines various functions, menu structures, and interaction logic to
- *   facilitate the seamless execution and customization of overlays within the project.
- * 
- *   Key Features:
- *   - Dynamic overlay loading and execution.
- *   - Integration with menu systems and submenus.
- *   - Configuration options through INI files.
- *   - Toggles for enabling/disabling specific commands.
- * 
+ *   This file serves as the core logic for the Ultrahand Overlay project's custom fork
+ *   of libtesla, an overlay executor. Within this file, you will find a collection of
+ *   functions, menu structures, and interaction logic designed to facilitate the
+ *   smooth execution and flexible customization of overlays within the project.
+ *
  *   For the latest updates and contributions, visit the project's GitHub repository.
  *   (GitHub Repository: https://github.com/ppkantorski/Ultrahand-Overlay)
- * 
+ *
  *   Note: Please be aware that this notice cannot be altered or removed. It is a part
  *   of the project's documentation and must remain intact.
  *
- *  Licensed under GPLv2
  *  Copyright (c) 2024 ppkantorski
  ********************************************************************************/
 
-#define NDEBUG
-#define STBTT_STATIC
-#define TESLA_INIT_IMPL
+/**
+ * Copyright (C) 2020 werwolv
+ *
+ * This file is part of libtesla.
+ *
+ * libtesla is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * libtesla is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with libtesla.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+
+#pragma once
 
 #include <ultra.hpp>
-#include <tesla.hpp>
-#include <utils.hpp>
-#include <set>
 
-// Overlay booleans
-static bool returningToMain = false;
-static bool returningToHiddenMain = false;
-static bool returningToSettings = false;
-static bool returningToPackage = false;
-static bool returningToSubPackage = false;
-//static bool inMainMenu = false; // moved to libtesla
-static bool inHiddenMode = false;
-static bool inSettingsMenu = false;
-static bool inSubSettingsMenu = false;
-static bool inPackageMenu = false;
-static bool inSubPackageMenu = false;
-static bool inScriptMenu = false;
-static bool inSelectionMenu = false;
-//static bool currentMenuLoaded = true;
-static bool freshSpawn = true;
-//static bool refreshPage = false; //moved to libtesla
-static bool reloadMenu = false;
-static bool reloadMenu2 = false;
-static bool reloadMenu3 = false;
-static bool isDownloaded = false;
+#include <switch.h>
 
-static bool redrawWidget = false;
+#include <arm_neon.h>
 
-static size_t nestedMenuCount = 0;
+#include <stdlib.h>
+#include <strings.h>
+#include <math.h>
 
-// Command mode globals
-static const std::vector<std::string> commandSystems = {DEFAULT_STR, ERISTA_STR, MARIKO_STR};
-static const std::vector<std::string> commandModes = {DEFAULT_STR, SLOT_STR, TOGGLE_STR, OPTION_STR, FORWARDER_STR, TEXT_STR, TABLE_STR, TRACKBAR_STR, STEP_TRACKBAR_STR, NAMED_STEP_TRACKBAR_STR};
-static const std::vector<std::string> commandGroupings = {DEFAULT_STR, "split", "split2", "split3", "split4"};
-static const std::string MODE_PATTERN = ";mode=";
-static const std::string GROUPING_PATTERN = ";grouping=";
-static const std::string SYSTEM_PATTERN = ";system=";
+#include <algorithm>
+#include <cstring>
+#include <cwctype>
+#include <string>
+#include <functional>
+#include <type_traits>
+#include <mutex>
+#include <memory>
+#include <chrono>
+#include <list>
+#include <stack>
+#include <map>
 
-// Table option patterns
-static const std::string BACKGROUND_PATTERN = ";background="; // true or false
-static const std::string HEADER_INDENT_PATTERN = ";header_indent="; // true or false
-//static const std::string HEADER_PATTERN = ";header=";
-static const std::string ALIGNMENT_PATTERN = ";alignment=";
-static const std::string GAP_PATTERN =";gap=";
-static const std::string OFFSET_PATTERN = ";offset=";
-static const std::string SPACING_PATTERN = ";spacing=";
-static const std::string INFO_TEXT_COLOR_PATTERN = ";info_text_color=";
-static const std::string SECTION_TEXT_COLOR_PATTERN = ";section_text_color=";
 
-// Trackbar option patterns
-static const std::string MIN_VALUE_PATTERN = ";min_value=";
-static const std::string MAX_VALUE_PATTERN = ";max_value=";
-static const std::string STEPS_PATTERN = ";steps=";
-static const std::string UNITS_PATTERN = ";units=";
-static const std::string UNLOCKED_PATTERN = ";unlocked=";
-static const std::string ON_EVERY_TICK_PATTERN = ";on_every_tick=";
+//static bool debugFPS = true;
 
-static std::string currentMenu = OVERLAYS_STR;
-static std::string lastPage = LEFT_STR;
-static std::string lastPackagePath;
-static std::string lastPackageName;
-static std::string lastPackageMenu;
-
-static std::string lastMenu = "";
-static std::string lastMenuMode = "";
-static std::string lastKeyName = "";
-static bool hideUserGuide = false;
-
-static std::unordered_map<std::string, std::string> selectedFooterDict;
-
-static std::shared_ptr<tsl::elm::ListItem> selectedListItem;
-static std::shared_ptr<tsl::elm::ListItem> lastSelectedListItem;
-
-static bool lastRunningInterpreter = false;
+uint64_t RAM_Used_system_u = 0;
+uint64_t RAM_Total_system_u = 0;
 
 
 
-// Command key defintitions
-const static auto SCRIPT_KEY = KEY_MINUS;
-const static auto SYSTEM_SETTINGS_KEY = KEY_PLUS;
-const static auto SETTINGS_KEY = KEY_Y;
-const static auto STAR_KEY = KEY_X;
+//#include <filesystem> // Comment out filesystem
+
+// CUSTOM SECTION START
+float backWidth, selectWidth, nextPageWidth;
+static bool inMainMenu = false;
+static bool inOverlaysPage = false;
+static bool inPackagesPage = false;
+
+static bool firstBoot = true; // for detecting first boot
+
+//static std::unordered_map<std::string, std::string> hexSumCache;
+
+// Define an atomic bool for interpreter completion
+static std::atomic<bool> threadFailure(false);
+static std::atomic<bool> runningInterpreter(false);
+static std::atomic<bool> shakingProgress(true);
+
+static std::atomic<bool> isHidden(true);
+
+bool progressAnimation = false;
+bool disableTransparency = false;
+//bool useCustomWallpaper = false;
+bool useMemoryExpansion = false;
+bool useOpaqueScreenshots = false;
+
+bool onTrackBar = false;
+bool allowSlide = false;
+bool unlockedSlide = false;
+
+/**
+ * @brief Shutdown modes for the Ultrahand-Overlay project.
+ *
+ * These macros define the shutdown modes used in the Ultrahand-Overlay project:
+ * - `SpsmShutdownMode_Normal`: Normal shutdown mode.
+ * - `SpsmShutdownMode_Reboot`: Reboot mode.
+ */
+#define SpsmShutdownMode_Normal 0
+#define SpsmShutdownMode_Reboot 1
+
+/**
+ * @brief Key mapping macros for button keys.
+ *
+ * These macros define button keys for the Ultrahand-Overlay project to simplify key mappings.
+ * For example, `KEY_A` represents the `HidNpadButton_A` key.
+ */
+#define KEY_A HidNpadButton_A
+#define KEY_B HidNpadButton_B
+#define KEY_X HidNpadButton_X
+#define KEY_Y HidNpadButton_Y
+#define KEY_L HidNpadButton_L
+#define KEY_R HidNpadButton_R
+#define KEY_ZL HidNpadButton_ZL
+#define KEY_ZR HidNpadButton_ZR
+#define KEY_PLUS HidNpadButton_Plus
+#define KEY_MINUS HidNpadButton_Minus
+#define KEY_DUP HidNpadButton_Up
+#define KEY_DDOWN HidNpadButton_Down
+#define KEY_DLEFT HidNpadButton_Left
+#define KEY_DRIGHT HidNpadButton_Right
+#define KEY_SL HidNpadButton_AnySL
+#define KEY_SR HidNpadButton_AnySR
+#define KEY_LSTICK HidNpadButton_StickL
+#define KEY_RSTICK HidNpadButton_StickR
+#define KEY_UP HidNpadButton_AnyUp
+#define KEY_DOWN HidNpadButton_AnyDown
+#define KEY_LEFT HidNpadButton_AnyLeft
+#define KEY_RIGHT HidNpadButton_AnyRight
 
 
-//struct CommandOptions {
-//    bool& inEristaSection;
-//    bool& inMarikoSection;
-//    bool& usingErista;
-//    bool& usingMariko;
-//    std::string& commandName;
-//    std::string& commandSystem;
-//    std::string& commandMode;
-//    std::string& commandGrouping;
-//    std::string& currentSection;
-//    std::string& pathPattern;
-//    std::string& sourceType;
-//    std::string& pathPatternOn;
-//    std::string& sourceTypeOn;
-//    std::string& pathPatternOff;
-//    std::string& sourceTypeOff;
-//    std::string& defaultToggleState;
-//    bool& hideTableBackground;
-//    size_t& tableStartGap;
-//    size_t& tableEndGap;
-//    size_t& tableColumnOffset;
-//    size_t& tableSpacing;
-//    std::string& tableSectionTextColor;
-//    std::string& tableInfoTextColor;
-//    std::string& tableAlignment;
-//    s16& minValue;
-//    s16& maxValue;
-//    std::string& units;
-//    size_t& steps;
-//    bool& unlockedTrackbar;
-//    bool& onEveryTick;
-//    std::string& packageSource;
-//    std::string& packagePath;
+// Define a mask with all possible key flags
+constexpr u64 ALL_KEYS_MASK = 
+    KEY_A | KEY_B | KEY_X | KEY_Y |
+    KEY_DUP | KEY_DDOWN | KEY_DLEFT | KEY_DRIGHT |
+    KEY_L | KEY_R | KEY_ZL | KEY_ZR |
+    KEY_SL | KEY_SR |
+    KEY_LSTICK | KEY_RSTICK |
+    KEY_PLUS | KEY_MINUS;
+
+
+
+bool updateMenuCombos = false;
+
+/**
+ * @brief Ultrahand-Overlay Input Macros
+ *
+ * This block of code defines macros for handling input in the Ultrahand-Overlay project.
+ * These macros simplify the mapping of input events to corresponding button keys and
+ * provide aliases for touch and joystick positions.
+ *
+ * The macros included in this block are:
+ *
+ * - `touchPosition`: An alias for a constant `HidTouchState` pointer.
+ * - `touchInput`: An alias for `&touchPos`, representing touch input.
+ * - `JoystickPosition`: An alias for `HidAnalogStickState`, representing joystick input.
+ *
+ * These macros are utilized within the Ultrahand-Overlay project to manage and interpret
+ * user input, including touch and joystick events.
+ */
+#define touchPosition const HidTouchState
+#define touchInput &touchPos
+#define JoystickPosition HidAnalogStickState
+
+std::string convertComboToUnicode(const std::string& combo);
+
+// For improving the speed of hexing consecutively with the same file and asciiPattern.
+//static std::unordered_map<std::string, std::string> hexSumCache;
+
+//std::string highlightColor1Str = "#2288CC";;
+//std::string highlightColor2Str = "#88FFFF";;
+
+
+//std::chrono::milliseconds interpolateKeyEventInterval(std::chrono::milliseconds duration) {
+//    using namespace std::chrono;
+//
+//    const milliseconds threshold1 = milliseconds(2000);
+//    const milliseconds threshold2 = milliseconds(3000);
+//
+//    const milliseconds interval1 = milliseconds(80);
+//    const milliseconds interval2 = milliseconds(20);
+//    const milliseconds interval3 = milliseconds(10);
+//
+//    if (duration > threshold2) {
+//        return interval3;
+//    } else if (duration > threshold1) {
+//        double factor = double(duration.count() - threshold1.count()) / double(threshold2.count() - threshold1.count());
+//        return milliseconds(static_cast<int>(interval2.count() + factor * (interval3.count() - interval2.count())));
+//    } else {
+//        double factor = double(duration.count()) / double(threshold1.count());
+//        return milliseconds(static_cast<int>(interval1.count() + factor * (interval2.count() - interval1.count())));
+//    }
+//}
+
+//float customRound(float num) {
+//    if (num >= 0) {
+//        return floor(num + 0.5);
+//    } else {
+//        return ceil(num - 0.5);
+//    }
+//}
+
+// English string definitions
+
+const std::string whiteColor = "#FFFFFF";
+const std::string blackColor = "#000000";
+
+constexpr float M_PI = 3.14159265358979323846;
+constexpr float RAD_TO_DEG = 180.0f / M_PI;
+
+static std::string ENGLISH = "English";
+static std::string SPANISH = "Spanish";
+static std::string FRENCH = "French";
+static std::string GERMAN = "German";
+static std::string JAPANESE = "Japanese";
+static std::string KOREAN = "Korean";
+static std::string ITALIAN = "Italian";
+static std::string DUTCH = "Dutch";
+static std::string PORTUGUESE = "Portuguese";
+static std::string RUSSIAN = "Russian";
+static std::string POLISH = "Polish";
+static std::string SIMPLIFIED_CHINESE = "Simplified Chinese";
+static std::string TRADITIONAL_CHINESE = "Traditional Chinese";
+static std::string DEFAULT_CHAR_WIDTH = "0.33";
+static std::string UNAVAILABLE_SELECTION = "Not available";
+static std::string OVERLAYS = "Overlays"; //defined in libTesla now
+static std::string OVERLAY = "Overlay";
+static std::string HIDDEN_OVERLAYS = "Hidden Overlays";
+static std::string PACKAGES = "Packages"; //defined in libTesla now
+static std::string PACKAGE = "Package";
+static std::string HIDDEN_PACKAGES = "Hidden Packages";
+static std::string HIDDEN = "Hidden";
+static std::string HIDE_OVERLAY = "Hide Overlay";
+static std::string HIDE_PACKAGE = "Hide Package";
+static std::string LAUNCH_ARGUMENTS = "Launch Arguments";
+static std::string COMMANDS = "Commands";
+static std::string SETTINGS = "Settings";
+static std::string MAIN_SETTINGS = "Main Settings";
+static std::string UI_SETTINGS = "UI Settings";
+static std::string WIDGET = "Widget";
+static std::string CLOCK = "Clock";
+static std::string BATTERY = "Battery";
+static std::string SOC_TEMPERATURE = "SOC Temperature";
+static std::string PCB_TEMPERATURE = "PCB Temperature";
+static std::string MISCELLANEOUS = "Miscellaneous";
+static std::string MENU_ITEMS = "Menu Items";
+static std::string USER_GUIDE = "User Guide";
+static std::string VERSION_LABELS = "Version Labels";
+static std::string KEY_COMBO = "Key Combo";
+static std::string LANGUAGE = "Language";
+static std::string OVERLAY_INFO = "Overlay Info";
+static std::string SOFTWARE_UPDATE = "Software Update";
+static std::string UPDATE_ULTRAHAND = "Update Ultrahand";
+static std::string UPDATE_LANGUAGES = "Update Languages";
+static std::string SYSTEM = "System";
+static std::string NOTICE = "Notice";
+static std::string UTILIZES = "Utilizes";
+static std::string FREE = "free";
+static std::string MEMORY_EXPANSION = "Memory Expansion";
+static std::string REBOOT_REQUIRED = "*Reboot required.";
+static std::string WALLPAPER = "Wallpaper";
+static std::string THEME = "Theme";
+static std::string DEFAULT = "default";
+static std::string ROOT_PACKAGE = "Root Package";
+static std::string SORT_PRIORITY = "Sort Priority";
+static std::string FAILED_TO_OPEN = "Failed to open file";
+static std::string CLEAN_VERSIONS = "Clean Versions";
+static std::string OVERLAY_VERSIONS = "Overlay Versions";
+static std::string PACKAGE_VERSIONS = "Package Versions";
+static std::string OPAQUE_SCREENSHOTS = "Opaque Screenshots";
+static std::string ON = "On";
+static std::string OFF = "Off";
+static std::string PACKAGE_INFO = "Package Info";
+static std::string TITLE = "Title";
+static std::string VERSION = "Version";
+static std::string CREATOR = "Creator(s)";
+static std::string ABOUT = "About";
+static std::string CREDITS = "Credits";
+static std::string OK = "OK";
+static std::string BACK = "Back";
+static std::string REBOOT = "Reboot";
+static std::string SHUTDOWN = "Shutdown";
+static std::string GAP_1 = "     ";
+static std::string GAP_2 = "  ";
+static std::string USERGUIDE_OFFSET = "170";
+static std::string SETTINGS_MENU = "Settings Menu";
+static std::string SCRIPT_OVERLAY = "Script Overlay";
+static std::string STAR_FAVORITE = "Star/Favorite";
+static std::string APP_SETTINGS = "App Settings";
+static std::string ON_MAIN_MENU = "on Main Menu";
+static std::string ON_A_COMMAND = "on a command";
+static std::string ON_OVERLAY_PACKAGE = "on overlay/package";
+static std::string EFFECTS = "Effects";
+static std::string PROGRESS_ANIMATION = "Progress Animation";
+static std::string EMPTY = "Empty";
+
+static std::string SUNDAY = "Sunday";
+static std::string MONDAY = "Monday";
+static std::string TUESDAY = "Tuesday";
+static std::string WEDNESDAY = "Wednesday";
+static std::string THURSDAY = "Thursday";
+static std::string FRIDAY = "Friday";
+static std::string SATURDAY = "Saturday";
+
+static std::string JANUARY = "January";
+static std::string FEBRUARY = "February";
+static std::string MARCH = "March";
+static std::string APRIL = "April";
+static std::string MAY = "May";
+static std::string JUNE = "June";
+static std::string JULY = "July";
+static std::string AUGUST = "August";
+static std::string SEPTEMBER = "September";
+static std::string OCTOBER = "October";
+static std::string NOVEMBER = "November";
+static std::string DECEMBER = "December";
+
+static std::string SUN = "Sun";
+static std::string MON = "Mon";
+static std::string TUE = "Tue";
+static std::string WED = "Wed";
+static std::string THU = "Thu";
+static std::string FRI = "Fri";
+static std::string SAT = "Sat";
+
+static std::string JAN = "Jan";
+static std::string FEB = "Feb";
+static std::string MAR = "Mar";
+static std::string APR = "Apr";
+static std::string MAY_ABBR = "May";
+static std::string JUN = "Jun";
+static std::string JUL = "Jul";
+static std::string AUG = "Aug";
+static std::string SEP = "Sep";
+static std::string OCT = "Oct";
+static std::string NOV = "Nov";
+static std::string DEC = "Dec";
+
+// Constant string definitions (English)
+void reinitializeLangVars() {
+    ENGLISH = "English";
+    SPANISH = "Spanish";
+    FRENCH = "French";
+    GERMAN = "German";
+    JAPANESE = "Japanese";
+    KOREAN = "Korean";
+    ITALIAN = "Italian";
+    DUTCH = "Dutch";
+    PORTUGUESE = "Portuguese";
+    RUSSIAN = "Russian";
+    POLISH = "Polish";
+    SIMPLIFIED_CHINESE = "Simplified Chinese";
+    TRADITIONAL_CHINESE = "Traditional Chinese";
+    DEFAULT_CHAR_WIDTH = "0.33";
+    UNAVAILABLE_SELECTION = "Not available";
+    OVERLAYS = "Overlays"; //defined in libTesla now
+    OVERLAY = "Overlay";
+    HIDDEN_OVERLAYS = "Hidden Overlays";
+    PACKAGES = "Packages"; //defined in libTesla now
+    PACKAGE = "Package";
+    HIDDEN_PACKAGES = "Hidden Packages";
+    HIDDEN = "Hidden";
+    HIDE_OVERLAY = "Hide Overlay";
+    HIDE_PACKAGE = "Hide Package";
+    LAUNCH_ARGUMENTS = "Launch Arguments";
+    COMMANDS = "Commands";
+    SETTINGS = "Settings";
+    MAIN_SETTINGS = "Main Settings";
+    UI_SETTINGS = "UI Settings";
+    WIDGET = "Widget";
+    CLOCK = "Clock";
+    BATTERY = "Battery";
+    SOC_TEMPERATURE = "SOC Temperature";
+    PCB_TEMPERATURE = "PCB Temperature";
+    MISCELLANEOUS = "Miscellaneous";
+    MENU_ITEMS = "Menu Items";
+    USER_GUIDE = "User Guide";
+    VERSION_LABELS = "Version Labels";
+    KEY_COMBO = "Key Combo";
+    LANGUAGE = "Language";
+    OVERLAY_INFO = "Overlay Info";
+    SOFTWARE_UPDATE = "Software Update";
+    UPDATE_ULTRAHAND = "Update Ultrahand";
+    UPDATE_LANGUAGES = "Update Languages";
+    SYSTEM = "System";
+    NOTICE = "Notice";
+    UTILIZES = "Utilizes";
+    FREE = "free";
+    MEMORY_EXPANSION = "Memory Expansion";
+    REBOOT_REQUIRED = "*Reboot required.";
+    WALLPAPER = "Wallpaper";
+    THEME = "Theme";
+    DEFAULT = "default";
+    ROOT_PACKAGE = "Root Package";
+    SORT_PRIORITY = "Sort Priority";
+    FAILED_TO_OPEN = "Failed to open file";
+    CLEAN_VERSIONS = "Clean Versions";
+    OVERLAY_VERSIONS = "Overlay Versions";
+    PACKAGE_VERSIONS = "Package Versions";
+    OPAQUE_SCREENSHOTS = "Opaque Screenshots";
+    ON = "On";
+    OFF = "Off";
+    PACKAGE_INFO = "Package Info";
+    TITLE = "Title";
+    VERSION = "Version";
+    CREATOR = "Creator(s)";
+    ABOUT = "About";
+    CREDITS = "Credits";
+    OK = "OK";
+    BACK = "Back";
+    REBOOT = "Reboot";
+    SHUTDOWN = "Shutdown";
+    GAP_1 = "     ";
+    GAP_2 = "  ";
+    USERGUIDE_OFFSET = "170";
+    SETTINGS_MENU = "Settings Menu";
+    SCRIPT_OVERLAY = "Script Overlay";
+    STAR_FAVORITE = "Star/Favorite";
+    APP_SETTINGS = "App Settings";
+    ON_MAIN_MENU = "on Main Menu";
+    ON_A_COMMAND = "on a command";
+    ON_OVERLAY_PACKAGE = "on overlay/package";
+    EFFECTS = "Effects";
+    PROGRESS_ANIMATION = "Progress Animation";
+    EMPTY = "Empty";
+
+    SUNDAY = "Sunday";
+    MONDAY = "Monday";
+    TUESDAY = "Tuesday";
+    WEDNESDAY = "Wednesday";
+    THURSDAY = "Thursday";
+    FRIDAY = "Friday";
+    SATURDAY = "Saturday";
+    
+    JANUARY = "January";
+    FEBRUARY = "February";
+    MARCH = "March";
+    APRIL = "April";
+    MAY = "May";
+    JUNE = "June";
+    JULY = "July";
+    AUGUST = "August";
+    SEPTEMBER = "September";
+    OCTOBER = "October";
+    NOVEMBER = "November";
+    DECEMBER = "December";
+    
+    SUN = "Sun";
+    MON = "Mon";
+    TUE = "Tue";
+    WED = "Wed";
+    THU = "Thu";
+    FRI = "Fri";
+    SAT = "Sat";
+    
+    JAN = "Jan";
+    FEB = "Feb";
+    MAR = "Mar";
+    APR = "Apr";
+    MAY_ABBR = "May";
+    JUN = "Jun";
+    JUL = "Jul";
+    AUG = "Aug";
+    SEP = "Sep";
+    OCT = "Oct";
+    NOV = "Nov";
+    DEC = "Dec";
+}
+
+
+
+
+// Define the updateIfNotEmpty function
+void updateIfNotEmpty(std::string& constant, const char* jsonKey, json_t* jsonData) {
+    std::string newValue = getStringFromJson(jsonData, jsonKey);
+    if (!newValue.empty()) {
+        constant = newValue;
+    }
+}
+
+void parseLanguage(std::string langFile) {
+    json_t* langData = readJsonFromFile(langFile);
+    if (!langData)
+        return;
+    
+    std::map<std::string, std::string*> configMap = {
+        {"ENGLISH", &ENGLISH},
+        {"SPANISH", &SPANISH},
+        {"FRENCH", &FRENCH},
+        {"GERMAN", &GERMAN},
+        {"JAPANESE", &JAPANESE},
+        {"KOREAN", &KOREAN},
+        {"ITALIAN", &ITALIAN},
+        {"DUTCH", &DUTCH},
+        {"PORTUGUESE", &PORTUGUESE},
+        {"RUSSIAN", &RUSSIAN},
+        {"SIMPLIFIED_CHINESE", &SIMPLIFIED_CHINESE},
+        {"TRADITIONAL_CHINESE", &TRADITIONAL_CHINESE},
+        {"DEFAULT_CHAR_WIDTH", &DEFAULT_CHAR_WIDTH},
+        {"UNAVAILABLE_SELECTION", &UNAVAILABLE_SELECTION},
+        {"OVERLAYS", &OVERLAYS},
+        {"OVERLAY", &OVERLAY},
+        {"HIDDEN_OVERLAYS", &HIDDEN_OVERLAYS},
+        {"PACKAGES", &PACKAGES},
+        {"PACKAGE", &PACKAGE},
+        {"HIDDEN_PACKAGES", &HIDDEN_PACKAGES},
+        {"HIDDEN", &HIDDEN},
+        {"HIDE_PACKAGE", &HIDE_PACKAGE},
+        {"HIDE_OVERLAY", &HIDE_OVERLAY},
+        {"LAUNCH_ARGUMENTS", &LAUNCH_ARGUMENTS},
+        {"COMMANDS", &COMMANDS},
+        {"SETTINGS", &SETTINGS},
+        {"MAIN_SETTINGS", &MAIN_SETTINGS},
+        {"UI_SETTINGS", &UI_SETTINGS},
+        {"WIDGET", &WIDGET},
+        {"CLOCK", &CLOCK},
+        {"BATTERY", &BATTERY},
+        {"SOC_TEMPERATURE", &SOC_TEMPERATURE},
+        {"PCB_TEMPERATURE", &PCB_TEMPERATURE},
+        {"MISCELLANEOUS", &MISCELLANEOUS},
+        {"MENU_ITEMS", &MENU_ITEMS},
+        {"USER_GUIDE", &USER_GUIDE},
+        {"VERSION_LABELS", &VERSION_LABELS},
+        {"KEY_COMBO", &KEY_COMBO},
+        {"LANGUAGE", &LANGUAGE},
+        {"OVERLAY_INFO", &OVERLAY_INFO},
+        {"SOFTWARE_UPDATE", &SOFTWARE_UPDATE},
+        {"UPDATE_ULTRAHAND", &UPDATE_ULTRAHAND},
+        {"UPDATE_LANGUAGES", &UPDATE_LANGUAGES},
+        {"SYSTEM", &SYSTEM},
+        {"NOTICE", &NOTICE},
+        {"UTILIZES", &UTILIZES},
+        {"FREE", &FREE},
+        {"MEMORY_EXPANSION", &MEMORY_EXPANSION},
+        {"REBOOT_REQUIRED", &REBOOT_REQUIRED},
+        {"WALLPAPER", &WALLPAPER},
+        {"THEME", &THEME},
+        {"DEFAULT", &DEFAULT},
+        {"ROOT_PACKAGE", &ROOT_PACKAGE},
+        {"SORT_PRIORITY", &SORT_PRIORITY},
+        {"FAILED_TO_OPEN", &FAILED_TO_OPEN},
+        {"CLEAN_VERSIONS", &CLEAN_VERSIONS},
+        {"OVERLAY_VERSIONS", &OVERLAY_VERSIONS},
+        {"PACKAGE_VERSIONS", &PACKAGE_VERSIONS},
+        {"OPAQUE_SCREENSHOTS", &OPAQUE_SCREENSHOTS},
+        {"ON", &ON},
+        {"OFF", &OFF},
+        {"PACKAGE_INFO", &PACKAGE_INFO},
+        {"TITLE", &TITLE},
+        {"VERSION", &VERSION},
+        {"CREATOR", &CREATOR},
+        {"ABOUT", &ABOUT},
+        {"CREDITS", &CREDITS},
+        {"OK", &OK},
+        {"BACK", &BACK},
+        {"REBOOT", &REBOOT},
+        {"SHUTDOWN", &SHUTDOWN},
+        {"GAP_1", &GAP_1},
+        {"GAP_2", &GAP_2},
+        {"USERGUIDE_OFFSET", &USERGUIDE_OFFSET},
+        {"SETTINGS_MENU", &SETTINGS_MENU},
+        {"SCRIPT_OVERLAY", &SCRIPT_OVERLAY},
+        {"STAR_FAVORITE", &STAR_FAVORITE},
+        {"APP_SETTINGS", &APP_SETTINGS},
+        {"ON_MAIN_MENU", &ON_MAIN_MENU},
+        {"ON_A_COMMAND", &ON_A_COMMAND},
+        {"ON_OVERLAY_PACKAGE", &ON_OVERLAY_PACKAGE},
+        {"EFFECTS", &EFFECTS},
+        {"PROGRESS_ANIMATION", &PROGRESS_ANIMATION},
+        {"EMPTY", &EMPTY},
+        {"SUNDAY", &SUNDAY},
+        {"MONDAY", &MONDAY},
+        {"TUESDAY", &TUESDAY},
+        {"WEDNESDAY", &WEDNESDAY},
+        {"THURSDAY", &THURSDAY},
+        {"FRIDAY", &FRIDAY},
+        {"SATURDAY", &SATURDAY},
+        {"JANUARY", &JANUARY},
+        {"FEBRUARY", &FEBRUARY},
+        {"MARCH", &MARCH},
+        {"APRIL", &APRIL},
+        {"MAY", &MAY},
+        {"JUNE", &JUNE},
+        {"JULY", &JULY},
+        {"AUGUST", &AUGUST},
+        {"SEPTEMBER", &SEPTEMBER},
+        {"OCTOBER", &OCTOBER},
+        {"NOVEMBER", &NOVEMBER},
+        {"DECEMBER", &DECEMBER},
+        {"SUN", &SUN},
+        {"MON", &MON},
+        {"TUE", &TUE},
+        {"WED", &WED},
+        {"THU", &THU},
+        {"FRI", &FRI},
+        {"SAT", &SAT},
+        {"JAN", &JAN},
+        {"FEB", &FEB},
+        {"MAR", &MAR},
+        {"APR", &APR},
+        {"MAY_ABBR", &MAY_ABBR},
+        {"JUN", &JUN},
+        {"JUL", &JUL},
+        {"AUG", &AUG},
+        {"SEP", &SEP},
+        {"OCT", &OCT},
+        {"NOV", &NOV},
+        {"DEC", &DEC}
+    };
+
+    // Iterate over the map to update global variables
+    for (auto& kv : configMap) {
+        updateIfNotEmpty(*kv.second, kv.first.c_str(), langData);
+    }
+
+    // Free langData
+    if (langData != nullptr) {
+        json_decref(langData);
+        langData = nullptr;
+    }
+}
+
+
+void localizeTimeStr(char* timeStr) {
+    // Define mappings for day and month names
+    std::vector<std::pair<std::string, std::string>> dayMappings = {
+        {"Sun", SUN},
+        {"Mon", MON},
+        {"Tue", TUE},
+        {"Wed", WED},
+        {"Thu", THU},
+        {"Fri", FRI},
+        {"Sat", SAT},
+        {"Sunday", SUNDAY},
+        {"Monday", MONDAY},
+        {"Tuesday", TUESDAY},
+        {"Wednesday", WEDNESDAY},
+        {"Thursday", THURSDAY},
+        {"Friday", FRIDAY},
+        {"Saturday", SATURDAY}
+    };
+    
+    std::vector<std::pair<std::string, std::string>> monthMappings = {
+        {"Jan", JAN},
+        {"Feb", FEB},
+        {"Mar", MAR},
+        {"Apr", APR},
+        {"May", MAY_ABBR},
+        {"Jun", JUN},
+        {"Jul", JUL},
+        {"Aug", AUG},
+        {"Sep", SEP},
+        {"Oct", OCT},
+        {"Nov", NOV},
+        {"Dec", DEC},
+        {"January", JANUARY},
+        {"February", FEBRUARY},
+        {"March", MARCH},
+        {"April", APRIL},
+        {"May", MAY},
+        {"June", JUNE},
+        {"July", JULY},
+        {"August", AUGUST},
+        {"September", SEPTEMBER},
+        {"October", OCTOBER},
+        {"November", NOVEMBER},
+        {"December", DECEMBER}
+    };
+    
+    std::string timeStrCopy = timeStr; // Convert the char array to a string for processing
+    
+    // Replace abbreviated day names with their all-capital versions
+    size_t pos;
+    for (const auto &dayMapping : dayMappings) {
+        pos = timeStrCopy.find(dayMapping.first);
+        while (pos != std::string::npos) {
+            timeStrCopy.replace(pos, dayMapping.first.length(), dayMapping.second);
+            pos = timeStrCopy.find(dayMapping.first, pos + dayMapping.second.length());
+        }
+    }
+    
+    // Replace abbreviated month names with their all-capital versions
+    for (const auto &monthMapping : monthMappings) {
+        pos = timeStrCopy.find(monthMapping.first);
+        while (pos != std::string::npos) {
+            timeStrCopy.replace(pos, monthMapping.first.length(), monthMapping.second);
+            pos = timeStrCopy.find(monthMapping.first, pos + monthMapping.second.length());
+        }
+    }
+    
+    // Copy the modified string back to the character array
+    strcpy(timeStr, timeStrCopy.c_str());
+}
+
+
+
+
+//// Map of character widths
+static std::unordered_map<wchar_t, float> characterWidths = {
+    {L'°', 0.25},
+    //{L'%', 0.98}, // not calibrated
+    {L':', 0.25}, // not calibrated
+    {L' ', 0.3},
+    {L'+', 0.75},
+    {L'-', 0.36},
+    {L'_', 0.47},
+    {L'&', 0.74},
+    {L'(', 0.25},
+    {L')', 0.25},
+    {L'[', 0.3635},
+    {L']', 0.3635},
+    {L'A', 0.78},
+    {L'B', 0.644},
+    {L'C', 0.76},
+    {L'D', 0.8},
+    {L'E', 0.6},
+    {L'F', 0.6},
+    {L'G', 0.8},
+    {L'H', 0.72},
+    {L'I', 0.26},
+    {L'J', 0.48},
+    {L'K', 0.68},
+    {L'L', 0.46},
+    {L'M', 0.98},
+    {L'N', 0.82},
+    {L'O', 0.92},
+    {L'P', 0.6},
+    {L'Q', 0.9},
+    {L'R', 0.6},
+    {L'S', 0.56},
+    {L'T', 0.64},
+    {L'U', 0.80},
+    {L'V', 0.76},
+    {L'W', 1.14},
+    {L'X', 0.66},
+    {L'Y', 0.66},
+    {L'Z', 0.74},
+    {L'a', 0.6},
+    {L'b', 0.66},
+    {L'c', 0.56},
+    {L'd', 0.66},
+    {L'e', 0.6},
+    {L'f', 0.28},
+    {L'g', 0.6},
+    {L'h', 0.6},
+    {L'i', 0.25},
+    {L'j', 0.36},
+    {L'k', 0.56},
+    {L'l', 0.28},
+    {L'm', 0.94},
+    {L'n', 0.582},
+    {L'o', 0.656},
+    {L'p', 0.66},
+    {L'q', 0.68},
+    {L'r', 0.36},
+    {L's', 0.5},
+    {L't', 0.37},
+    {L'u', 0.6},
+    {L'v', 0.50},
+    {L'w', 0.87},
+    {L'x', 0.54},
+    {L'y', 0.53},
+    {L'z', 0.5},
+    {L'0', 0.66},
+    {L'1', 0.66},
+    {L'2', 0.66},
+    {L'3', 0.66},
+    {L'4', 0.66},
+    {L'5', 0.66},
+    {L'6', 0.66},
+    {L'7', 0.66},
+    {L'8', 0.66},
+    {L'9', 0.66}
+};
+
+//static std::unordered_map<wchar_t, float> numericCharacterWidths = {
+//    {L'0', 0.66},
+//    {L'1', 0.57},
+//    {L'2', 0.66},
+//    {L'3', 0.66},
+//    {L'4', 0.66},
+//    {L'5', 0.66},
+//    {L'6', 0.66},
+//    {L'7', 0.66},
+//    {L'8', 0.66},
+//    {L'9', 0.66}
 //};
-//
-//struct CommandData {
-//    std::vector<std::vector<std::string>>& commands;
-//    std::vector<std::vector<std::string>>& commandsOn;
-//    std::vector<std::vector<std::string>>& commandsOff;
-//    std::vector<std::vector<std::string>>& tableData;
-//};
+
+// Predefined hexMap
+const std::array<int, 256> hexMap = [] {
+    std::array<int, 256> map = {0};
+    map['0'] = 0; map['1'] = 1; map['2'] = 2; map['3'] = 3; map['4'] = 4;
+    map['5'] = 5; map['6'] = 6; map['7'] = 7; map['8'] = 8; map['9'] = 9;
+    map['A'] = 10; map['B'] = 11; map['C'] = 12; map['D'] = 13; map['E'] = 14; map['F'] = 15;
+    map['a'] = 10; map['b'] = 11; map['c'] = 12; map['d'] = 13; map['e'] = 14; map['f'] = 15;
+    return map;
+}();
+
+
+// Prepare a map of default settings
+std::map<std::string, std::string> defaultThemeSettingsMap = {
+    {"default_package_color", "#00FF00"},
+    {"clock_color", whiteColor},
+    {"bg_alpha", "13"},
+    {"bg_color", blackColor},
+    {"separator_alpha", "15"},
+    {"separator_color", "#404040"},
+    {"battery_color", "#ffff45"},
+    {"text_color", whiteColor},
+    {"header_text_color", whiteColor},
+    {"header_separator_color", whiteColor},
+    {"star_color", whiteColor},
+    {"selection_star_color", whiteColor},
+    {"bottom_button_color", whiteColor},
+    {"bottom_text_color", whiteColor},
+    {"bottom_separator_color", whiteColor},
+    {"table_bg_color", "#303030"},
+    {"table_bg_alpha", "10"},
+    {"table_section_text_color", whiteColor},
+    {"table_info_text_color", "#00FFDD"},
+    {"warning_text_color", "#FF7777"},
+    {"trackbar_slider_color", "#606060"},
+    {"trackbar_slider_border_color", "#505050"},
+    {"trackbar_slider_malleable_color", "#A0A0A0"},
+    {"trackbar_full_color", "#00FFDD"},
+    {"trackbar_empty_color", "#404040"},
+    {"version_text_color", "#AAAAAA"},
+    {"on_text_color", "#00FFDD"},
+    {"off_text_color", "#AAAAAA"},
+    {"invalid_text_color", "#FF0000"},
+    {"inprogress_text_color", "#FFFF45"},
+    {"selection_text_color", whiteColor},
+    {"selection_bg_color", blackColor},
+    {"selection_bg_alpha", "13"},
+    {"trackbar_color", "#555555"},
+    {"highlight_color_1", "#2288CC"},
+    {"highlight_color_2", "#88FFFF"},
+    {"highlight_color_3", "#FFFF45"},
+    {"highlight_color_4", "#F7253E"},
+    {"click_text_color", whiteColor},
+    {"click_alpha", "7"},
+    {"click_color", "#3E25F7"},
+    {"invert_bg_click_color", FALSE_STR},
+    {"disable_selection_bg", FALSE_STR},
+    {"disable_colorful_logo", FALSE_STR},
+    {"logo_color_1", whiteColor},
+    {"logo_color_2", "#FF0000"},
+    {"dynamic_logo_color_1", "#00E669"},
+    {"dynamic_logo_color_2", "#8080EA"}
+};
+
+inline bool isNumericCharacter(char c) {
+    return std::isdigit(c);
+}
+
+inline bool isValidHexColor(const std::string& hexColor) {
+    // Check if the string is a valid hexadecimal color of the format "#RRGGBB"
+    if (hexColor.size() != 6) {
+        return false; // Must be exactly 6 characters long
+    }
+    
+    for (char c : hexColor) {
+        if (!isxdigit(c)) {
+            return false; // Must contain only hexadecimal digits (0-9, A-F, a-f)
+        }
+    }
+    
+    return true;
+}
 
 
 
-//void processCommands(CommandOptions& options, CommandData& data) {
-//    options.inEristaSection = false;
-//    options.inMarikoSection = false;
-//    size_t delimiterPos;
+inline float calculateAmplitude(float x, float peakDurationFactor = 0.25f) {
+    const float phasePeriod = 360.0f * peakDurationFactor;  // One full phase period
+
+    // Convert x from radians to degrees and calculate phase within the period
+    int phase = static_cast<int>(x * RAD_TO_DEG) % static_cast<int>(phasePeriod);
+
+    // Check if the phase is odd using bitwise operation
+    if (phase & 1) {
+        return 1.0f;  // Flat amplitude (maximum positive)
+    } else {
+        // Calculate the sinusoidal amplitude for the remaining period
+        return (std::cos(x) + 1.0f) / 2.0f;  // Cosine function expects radians
+    }
+}
+        
+
+
+// Function to load the RGBA file into memory
+std::vector<u8> loadBitmapFile(const std::string& filePath, s32 width, s32 height) {
+    // Calculate the size of the bitmap in bytes
+    size_t dataSize = width * height * 4; // 4 bytes per pixel (RGBA8888)
+    std::vector<u8> bitmapData(dataSize);
+
+    // Open the file in binary mode
+    std::ifstream file(filePath, std::ios::binary);
+    if (!file) {
+        //std::cerr << "Failed to open file: " << filePath << std::endl;
+        return {};
+    }
+
+    // Read the file content into the bitmapData buffer
+    file.read(reinterpret_cast<char*>(bitmapData.data()), dataSize);
+    if (!file) {
+        //std::cerr << "Failed to read file: " << filePath << std::endl;
+        return {};
+    }
+
+    // Preprocess the bitmap data by shifting the color values
+    for (size_t i = 0; i < dataSize; i += 4) {
+        // Shift the color values to reduce precision (if needed)
+        bitmapData[i] >>= 4;   // Red
+        bitmapData[i + 1] >>= 4; // Green
+        bitmapData[i + 2] >>= 4; // Blue
+        bitmapData[i + 3] >>= 4; // Alpha
+    }
+
+    return bitmapData;
+}
+
+//std::vector<u8> preprocessBitmap(const std::vector<u8>& bitmapData, s32 width, s32 height, s32 screenW, s32 screenH) {
+//    std::vector<u8> preprocessedData(screenW * screenH * 4); // 4 bytes per pixel
 //
-//    // Remove all empty command strings
-//    data.commands.erase(std::remove_if(data.commands.begin(), data.commands.end(),
-//        [](const std::vector<std::string>& vec) {
-//            return vec.empty();
-//        }),
-//        data.commands.end());
+//    s32 scaleX = (width << 8) / screenW;
+//    s32 scaleY = (height << 8) / screenH;
+//    s32 srcRowOffset = width * 4;
 //
-//    // Initial processing of commands
-//    for (const auto& cmd : data.commands) {
-//        options.commandName = cmd[0];
+//    for (s32 y1 = 0; y1 < screenH; ++y1) {
+//        s32 srcY = (y1 * scaleY) >> 8;
+//        const u8 *srcRow = bitmapData.data() + (srcY * srcRowOffset);
 //
-//        std::string commandNameLower = stringToLowercase(options.commandName);
-//        if (commandNameLower == "erista:") {
-//            options.inEristaSection = true;
-//            options.inMarikoSection = false;
-//            continue;
-//        } else if (commandNameLower == "mariko:") {
-//            options.inEristaSection = false;
-//            options.inMarikoSection = true;
-//            continue;
+//        for (s32 x1 = 0; x1 < screenW; ++x1) {
+//            s32 srcX = (x1 * scaleX) >> 8;
+//            const u8 *srcPixel = srcRow + (srcX * 4);
+//
+//            u8 *destPixel = preprocessedData.data() + ((y1 * screenW + x1) * 4);
+//            destPixel[0] = srcPixel[0]; // Red
+//            destPixel[1] = srcPixel[1]; // Green
+//            destPixel[2] = srcPixel[2]; // Blue
+//            destPixel[3] = srcPixel[3]; // Alpha
 //        }
+//    }
 //
-//        if ((options.inEristaSection && !options.inMarikoSection && options.usingErista) || 
-//            (!options.inEristaSection && options.inMarikoSection && options.usingMariko) || 
-//            (!options.inEristaSection && !options.inMarikoSection)) {
+//    return preprocessedData;
+//}
+
+static std::atomic<bool> refreshWallpaper(false);
+static std::vector<u8> wallpaperData;
+std::mutex wallpaperMutex; // Mutex to protect wallpaperData
+static bool inPlot = false;
+
+//static uint8x16x4_t pixelData;
+
+// Global variables for FPS calculation
+//double lastTimeCount = 0.0;
+//int frameCount = 0;
+//float fps = 0.0f;
+//double elapsedTime = 0.0;
+
+
+// Variables for touch commands
+static bool touchingBack = false;
+static bool touchingSelect = false;
+static bool touchingNextPage = false;
+static bool touchingMenu = false;
+static bool simulatedBack = false;
+static bool simulatedBackComplete = true;
+static bool simulatedSelect = false;
+static bool simulatedSelectComplete = true;
+static bool simulatedNextPage = false;
+static bool simulatedNextPageComplete = true;
+static bool simulatedMenu = false;
+static bool simulatedMenuComplete = true;
+static bool stillTouching = false;
+static bool interruptedTouch = false;
+static bool touchInBounds = false;
+
+
+// Battery implementation
+static bool powerInitialized = false;
+static bool powerCacheInitialized;
+static uint32_t powerCacheCharge;
+//static float powerConsumption;
+static bool powerCacheIsCharging;
+static PsmSession powerSession;
+
+// Define variables to store previous battery charge and time
+static uint32_t prevBatteryCharge = 0;
+//static uint64_t timeOut = 0;
+static char chargeString[6];  // Need space for the null terminator and the percentage sign
+
+static uint32_t batteryCharge;
+static bool isCharging;
+//static bool validPower;
+
+constexpr auto min_delay = std::chrono::seconds(3); // Minimum delay between checks
+
+bool powerGetDetails(uint32_t *batteryCharge, bool *isCharging) {
+    static auto last_call = std::chrono::steady_clock::now();
+
+    // Ensure power system is initialized
+    if (!powerInitialized) {
+        return false;
+    }
+
+    // Get the current time
+    auto now = std::chrono::steady_clock::now();
+
+    // Check if enough time has elapsed or if cache is not initialized
+    bool useCache = (now - last_call <= min_delay) && powerCacheInitialized;
+    if (!useCache) {
+        PsmChargerType charger = PsmChargerType_Unconnected;
+        Result rc = psmGetBatteryChargePercentage(batteryCharge);
+        bool hwReadsSucceeded = R_SUCCEEDED(rc);
+
+        if (hwReadsSucceeded) {
+            rc = psmGetChargerType(&charger);
+            hwReadsSucceeded &= R_SUCCEEDED(rc);
+            *isCharging = (charger != PsmChargerType_Unconnected);
+
+            if (hwReadsSucceeded) {
+                // Update cache
+                powerCacheCharge = *batteryCharge;
+                powerCacheIsCharging = *isCharging;
+                powerCacheInitialized = true;
+                last_call = now; // Update last call time after successful hardware read
+                return true;
+            }
+        }
+
+        // Use cached values if the hardware read fails
+        if (powerCacheInitialized) {
+            *batteryCharge = powerCacheCharge;
+            *isCharging = powerCacheIsCharging;
+            return hwReadsSucceeded; // Return false if hardware read failed but cache is valid
+        }
+
+        // Return false if cache is not initialized and hardware read failed
+        return false;
+    }
+
+    // Use cached values if not enough time has passed
+    *batteryCharge = powerCacheCharge;
+    *isCharging = powerCacheIsCharging;
+    return true; // Return true as cache is used
+}
+
+
+
+void powerInit(void) {
+    uint32_t charge = 0;
+    isCharging = 0;
+    
+    powerCacheInitialized = false;
+    powerCacheCharge = 0;
+    powerCacheIsCharging = false;
+    
+    if (!powerInitialized) {
+        Result rc = psmInitialize();
+        if (R_SUCCEEDED(rc)) {
+            rc = psmBindStateChangeEvent(&powerSession, 1, 1, 1);
+            
+            if (R_FAILED(rc)) psmExit();
+            if (R_SUCCEEDED(rc)) {
+                powerInitialized = true;
+                powerGetDetails(&charge, &isCharging);
+                
+                // Initialize prevBatteryCharge here with a non-zero value if needed.
+                prevBatteryCharge = charge;
+            }
+        }
+    }
+}
+
+void powerExit(void) {
+    if (powerInitialized) {
+        psmUnbindStateChangeEvent(&powerSession);
+        psmExit();
+        powerInitialized = false;
+        powerCacheInitialized = false;
+    }
+}
+
+
+// Temperature Implementation
+static s32 PCB_temperature, SOC_temperature;
+static Service* g_tsSrv;
+Result tsCheck = 1;
+Result tcCheck = 1;
+
+Result tsOpenTsSession(Service* &serviceSession, TsSession* out, TsDeviceCode device_code) {
+    return serviceDispatchIn(serviceSession, 4, device_code,
+        .out_num_objects = 1,
+        .out_objects = &out->s,
+    );
+}
+
+inline void tsCloseTsSession(TsSession* in) {
+    serviceClose(&in->s);
+}
+
+Result tsGetTemperatureWithTsSession(TsSession* ITs, float* temperature) {
+    return serviceDispatchOut(&ITs->s, 4, *temperature);
+}
+
+
+inline bool thermalstatusInit(void) {
+    tcCheck = tcInitialize();
+    tsCheck = tsInitialize();
+    if (R_SUCCEEDED(tsCheck)) {
+        g_tsSrv = tsGetServiceSession();
+    } else
+        return false;
+    
+    return true;
+}
+
+inline void thermalstatusExit(void) {
+    tsExit();
+    tcExit();
+}
+
+inline bool throttle(std::chrono::steady_clock::time_point& last_call) {
+    auto now = std::chrono::steady_clock::now();
+    if (std::chrono::duration_cast<std::chrono::seconds>(now - last_call) < min_delay) {
+        return false;
+    }
+    last_call = now;
+    return true;
+}
+
+inline bool getTemperature(s32* temperature, TsDeviceCode device_code) {
+    static std::chrono::steady_clock::time_point last_call_pcb;
+    static std::chrono::steady_clock::time_point last_call_soc;
+
+    // Choose the appropriate throttle variable based on the device code
+    std::chrono::steady_clock::time_point& last_call = 
+        (device_code == TsDeviceCode_LocationInternal) ? last_call_pcb : last_call_soc;
+
+    if (!throttle(last_call)) {
+        return false;
+    }
+
+    TsSession ts_session;
+    Result rc = tsOpenTsSession(g_tsSrv, &ts_session, device_code);
+    if (R_SUCCEEDED(rc)) {
+        float temp_float;
+        if (R_SUCCEEDED(tsGetTemperatureWithTsSession(&ts_session, &temp_float))) {
+            *temperature = static_cast<s32>(temp_float);
+        }
+        tsSessionClose(&ts_session);
+        return true;
+    }
+    
+    return false;
+}
+
+inline bool thermalstatusGetDetailsPCB(s32* temperature) {
+    return getTemperature(temperature, TsDeviceCode_LocationInternal);
+}
+
+inline bool thermalstatusGetDetailsSOC(s32* temperature) {
+    return getTemperature(temperature, TsDeviceCode_LocationExternal);
+}
+
+
+
+//s32 SOC_temperature, PCB_temperature;
+//static TsSession g_tsInternalSession, g_tsExternalSession;
 //
-//            if (options.commandName.find(SYSTEM_PATTERN) == 0) {
-//                options.commandSystem = options.commandName.substr(SYSTEM_PATTERN.length());
-//                if (std::find(commandSystems.begin(), commandSystems.end(), options.commandSystem) == commandSystems.end())
-//                    options.commandSystem = commandSystems[0];
-//                continue;
-//            } else if (options.commandName.find(MODE_PATTERN) == 0) {
-//                options.commandMode = options.commandName.substr(MODE_PATTERN.length());
-//                if (options.commandMode.find(TOGGLE_STR) != std::string::npos) {
-//                    delimiterPos = options.commandMode.find('?');
-//                    if (delimiterPos != std::string::npos) {
-//                        options.defaultToggleState = options.commandMode.substr(delimiterPos + 1);
-//                    }
-//                    options.commandMode = TOGGLE_STR;
-//                } else if (std::find(commandModes.begin(), commandModes.end(), options.commandMode) == commandModes.end()) {
-//                    options.commandMode = commandModes[0];
-//                }
-//                continue;
-//            } else if (options.commandName.find(GROUPING_PATTERN) == 0) {
-//                options.commandGrouping = options.commandName.substr(GROUPING_PATTERN.length());
-//                if (std::find(commandGroupings.begin(), commandGroupings.end(), options.commandGrouping) == commandGroupings.end())
-//                    options.commandGrouping = commandGroupings[0];
-//                continue;
-//            } else if (options.commandName.find(BACKGROUND_PATTERN) == 0) {
-//                options.hideTableBackground = (options.commandName.substr(BACKGROUND_PATTERN.length()) == FALSE_STR);
-//                continue;
-//            } else if (options.commandName.find(GAP_PATTERN) == 0) {
-//                options.tableEndGap = std::stoi(options.commandName.substr(GAP_PATTERN.length()));
-//                continue;
-//            } else if (options.commandName.find(OFFSET_PATTERN) == 0) {
-//                options.tableColumnOffset = std::stoi(options.commandName.substr(OFFSET_PATTERN.length()));
-//                continue;
-//            } else if (options.commandName.find(SPACING_PATTERN) == 0) {
-//                options.tableSpacing = std::stoi(options.commandName.substr(SPACING_PATTERN.length()));
-//                continue;
-//            } else if (options.commandName.find(SECTION_TEXT_COLOR_PATTERN) == 0) {
-//                options.tableSectionTextColor = options.commandName.substr(SECTION_TEXT_COLOR_PATTERN.length());
-//                continue;
-//            } else if (options.commandName.find(INFO_TEXT_COLOR_PATTERN) == 0) {
-//                options.tableInfoTextColor = options.commandName.substr(INFO_TEXT_COLOR_PATTERN.length());
-//                continue;
-//            } else if (options.commandName.find(ALIGNMENT_PATTERN) == 0) {
-//                options.tableAlignment = options.commandName.substr(ALIGNMENT_PATTERN.length());
-//                continue;
 //
-//            } else if (options.commandName.find(MIN_VALUE_PATTERN) == 0) {
-//                options.minValue = std::stoi(options.commandName.substr(MIN_VALUE_PATTERN.length()));
-//                continue;
-//            } else if (options.commandName.find(MAX_VALUE_PATTERN) == 0) {
-//                options.maxValue = std::stoi(options.commandName.substr(MAX_VALUE_PATTERN.length()));
-//                continue;
-//            } else if (options.commandName.find(UNITS_PATTERN) == 0) {
-//                options.units = removeQuotes(options.commandName.substr(UNITS_PATTERN.length()));
-//                continue;
-//            } else if (options.commandName.find(STEPS_PATTERN) == 0) {
-//                options.steps = std::stoi(options.commandName.substr(STEPS_PATTERN.length()));
-//                continue;
-//            } else if (options.commandName.find(UNLOCKED_PATTERN) == 0) {
-//                options.unlockedTrackbar = (options.commandName.substr(UNLOCKED_PATTERN.length()) == TRUE_STR);
-//                continue;
-//            } else if (options.commandName.find(ON_EVERY_TICK_PATTERN) == 0) {
-//                options.onEveryTick = (options.commandName.substr(ON_EVERY_TICK_PATTERN.length()) == TRUE_STR);
-//                continue;
-//            } else if (options.commandName.find(";") == 0) {
-//                continue;
-//            }
+//bool thermalstatusInit(void) {
+//    if (R_FAILED(tsInitialize()))
+//        return false;
 //
-//            if (options.commandMode == TOGGLE_STR) {
-//                if (options.commandName.find("on:") == 0)
-//                    options.currentSection = ON_STR;
-//                else if (options.commandName.find("off:") == 0)
-//                    options.currentSection = OFF_STR;
+//    if (hosversionAtLeast(17,0,0) && R_FAILED(tsOpenSession(&g_tsInternalSession, TsDeviceCode_LocationInternal)) && R_FAILED(tsOpenSession(&g_tsExternalSession, TsDeviceCode_LocationExternal)))
+//        return false;
 //
-//                if (options.currentSection == GLOBAL_STR) {
-//                    data.commandsOn.push_back(cmd);
-//                    data.commandsOff.push_back(cmd);
-//                } else if (options.currentSection == ON_STR) {
-//                    data.commandsOn.push_back(cmd);
-//                } else if (options.currentSection == OFF_STR) {
-//                    data.commandsOff.push_back(cmd);
-//                }
-//            } else if (options.commandMode == TABLE_STR) {
-//                data.tableData.push_back(cmd);
-//                continue;
-//            } else if (options.commandMode == TRACKBAR_STR || options.commandMode == STEP_TRACKBAR_STR || options.commandMode == NAMED_STEP_TRACKBAR_STR) {
-//                //data.commands.push_back(cmd);
-//                continue;
-//            }
+//    return true;
+//}
 //
-//            if (cmd.size() > 1) {
-//                if (options.commandName == "file_source") {
-//                    if (options.currentSection == GLOBAL_STR) {
-//                        options.pathPattern = preprocessPath(cmd[1], options.packagePath);
-//                        options.sourceType = FILE_STR;
-//                    } else if (options.currentSection == ON_STR) {
-//                        options.pathPatternOn = preprocessPath(cmd[1], options.packagePath);
-//                        options.sourceTypeOn = FILE_STR;
-//                    } else if (options.currentSection == OFF_STR) {
-//                        options.pathPatternOff = preprocessPath(cmd[1], options.packagePath);
-//                        options.sourceTypeOff = FILE_STR;
-//                    }
-//                } else if (options.commandName == "package_source") {
-//                    options.packageSource = preprocessPath(cmd[1], options.packagePath);
-//                }
-//            }
+//void thermalstatusExit(void) {
+//    if (hosversionAtLeast(17,0,0)) {
+//        tsSessionClose(&g_tsInternalSession);
+//        tsSessionClose(&g_tsExternalSession);
+//    }
+//    tsExit();
+//}
+//
+//bool thermalstatusGetDetails(s32 *temperature, std::string location = "internal") {
+//    if (hosversionAtLeast(17,0,0)) {
+//        float temp_float;
+//        if ((location == "internal") && R_SUCCEEDED(tsSessionGetTemperature(&g_tsInternalSession, &temp_float))) {
+//            *temperature = (int)temp_float;
+//            return true;
+//        } else if ((location == "external") && R_SUCCEEDED(tsSessionGetTemperature(&g_tsExternalSession, &temp_float))) {
+//            *temperature = (int)temp_float;
+//            return true;
+//        } else {
+//            return false;
+//        }
+//    } else {
+//        if (location == "internal") {
+//            return R_SUCCEEDED(tsGetTemperature(TsLocation_Internal, temperature));
+//        } else {
+//            return R_SUCCEEDED(tsGetTemperature(TsLocation_External, temperature));
 //        }
 //    }
 //}
@@ -298,4125 +1223,5943 @@ const static auto STAR_KEY = KEY_X;
 
 
 
+// Time implementation
+struct timespec currentTime;
+static const std::string DEFAULT_DT_FORMAT = "'%a %T'";
+static std::string datetimeFormat = removeQuotes(DEFAULT_DT_FORMAT);
 
 
-template<typename Map, typename Func = std::function<std::string(const std::string&)>, typename... Args>
-std::string getValueOrDefault(const Map& data, const std::string& key, const std::string& defaultValue, Func formatFunc = nullptr, Args... args) {
-    auto it = data.find(key);
-    if (it != data.end()) {
-        return formatFunc ? formatFunc(it->second, args...) : it->second;
+// Widget settings
+//static std::string hideClock, hideBattery, hidePCBTemp, hideSOCTemp;
+static bool hideClock, hideBattery, hidePCBTemp, hideSOCTemp;
+
+void reinitializeWidgetVars() {
+    hideClock = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_clock") != FALSE_STR);
+    hideBattery = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_battery") != FALSE_STR);
+    hideSOCTemp = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_soc_temp") != FALSE_STR);
+    hidePCBTemp = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_pcb_temp") != FALSE_STR);
+}
+
+static bool cleanVersionLabels, hideOverlayVersions, hidePackageVersions;
+
+static std::string loaderInfo = envGetLoaderInfo();
+static std::string loaderTitle = extractTitle(loaderInfo);
+static bool expandedMemory = (loaderTitle == "nx-ovlloader+");
+
+static std::string versionLabel;
+
+void reinitializeVersionLabels() {
+    cleanVersionLabels = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "clean_version_labels") != FALSE_STR);
+    hideOverlayVersions = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_overlay_versions") != FALSE_STR);
+    hidePackageVersions = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_package_versions") != FALSE_STR);
+    versionLabel = std::string(APP_VERSION) + "   (" + loaderTitle + " " + (cleanVersionLabels ? "" : "v") + cleanVersionLabel(loaderInfo) + ")";
+    //versionLabel = (cleanVersionLabels) ? std::string(APP_VERSION) : (std::string(APP_VERSION) + "   (" + extractTitle(loaderInfo) + " v" + cleanVersionLabel(loaderInfo) + ")");
+}
+
+
+
+// Number of renderer threads to use
+const unsigned numThreads = expandedMemory ? 4 : 0;
+std::vector<std::thread> threads(numThreads);
+s32 bmpChunkSize = (720 + numThreads - 1) / numThreads;
+std::atomic<s32> currentRow;
+
+
+// CUSTOM SECTION END
+
+// Define this makro before including tesla.hpp in your main file. If you intend
+// to use the tesla.hpp header in more than one source file, only define it once!
+// #define TESLA_INIT_IMPL
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
+
+#ifdef TESLA_INIT_IMPL
+    #define STB_TRUETYPE_IMPLEMENTATION
+#endif
+#include "stb_truetype.h"
+
+#pragma GCC diagnostic pop
+
+#define ELEMENT_BOUNDS(elem) elem->getX()+4, elem->getY(), elem->getWidth()-8, elem->getHeight()
+#define ELEMENT_BOUNDS_2(elem) elem->getX()+4, elem->getY()+4, elem->getWidth(), elem->getHeight()+10
+
+#define ASSERT_EXIT(x) if (R_FAILED(x)) std::exit(1)
+#define ASSERT_FATAL(x) if (Result res = x; R_FAILED(res)) fatalThrow(res)
+
+#define PACKED __attribute__((packed))
+#define ALWAYS_INLINE inline __attribute__((always_inline))
+
+/// Evaluates an expression that returns a result, and returns the result if it would fail.
+#define TSL_R_TRY(resultExpr)           \
+    ({                                  \
+        const auto result = resultExpr; \
+        if (R_FAILED(result)) {         \
+            return result;              \
+        }                               \
+    })
+
+using namespace std::literals::string_literals;
+using namespace std::literals::chrono_literals;
+
+
+
+
+
+namespace tsl {
+    
+    // Constants
+    
+    namespace cfg {
+        
+        constexpr u32 ScreenWidth = 1920;       ///< Width of the Screen
+        constexpr u32 ScreenHeight = 1080;      ///< Height of the Screen
+        
+        extern u16 LayerWidth;                  ///< Width of the Tesla layer
+        extern u16 LayerHeight;                 ///< Height of the Tesla layer
+        extern u16 LayerPosX;                   ///< X position of the Tesla layer
+        extern u16 LayerPosY;                   ///< Y position of the Tesla layer
+        extern u16 FramebufferWidth;            ///< Width of the framebuffer
+        extern u16 FramebufferHeight;           ///< Height of the framebuffer
+        extern u64 launchCombo;                 ///< Overlay activation key combo
+        extern u64 launchCombo2;                 ///< Overlay activation key combo
+        
     }
-    return defaultValue;
-}
-
-
-inline void clearMemory() {
-    directoryCache.clear();
-    hexSumCache.clear();
-    selectedFooterDict.clear(); // Clears all data from the map, making it empty again
-    selectedListItem.reset();
-    lastSelectedListItem.reset();
-}
-
-void shiftItemFocus(auto& listItem) {
-    tsl::Overlay::get()->getCurrentGui()->requestFocus(listItem, tsl::FocusDirection::None);
-}
-
-void updateIniData(const std::map<std::string, std::map<std::string, std::string>>& packageConfigData,
-                   const std::string& packageConfigIniPath,
-                   const std::string& optionName,
-                   const std::string& key,
-                   std::string& value) {
-    auto optionIt = packageConfigData.find(optionName);
-    if (optionIt != packageConfigData.end()) {
-        auto it = optionIt->second.find(key);
-        if (it != optionIt->second.end()) {
-            value = it->second;  // Update value only if the key exists
+    
+    /**
+     * @brief RGBA4444 Color structure
+     */
+    struct Color {
+        
+        union {
+            struct {
+                u16 r: 4, g: 4, b: 4, a: 4;
+            } PACKED;
+            u16 rgba;
+        };
+        
+        constexpr inline Color(u16 raw): rgba(raw) {}
+        constexpr inline Color(u8 r, u8 g, u8 b, u8 a): r(r), g(g), b(b), a(a) {}
+        
+    };
+    
+    inline Color GradientColor(float temperature) {
+        // Ensure temperature is within the range [0, 100]
+        temperature = std::max(0.0f, std::min(100.0f, temperature)); // Celsius
+        
+        // this is where colors are at their full
+        float blueStart = 35.0f;
+        float greenStart = 45.0f;
+        float yellowStart = 55.0f;
+        float redStart = 65.0f;
+        
+        // Initialize RGB values
+        uint8_t r, g, b, a = 0xFF;
+        
+        if (temperature < blueStart) { // rgb 7, 7, 15 at blueStart
+            r = 7;
+            g = 7;
+            b = 15;
+        } else if (temperature >= blueStart && temperature < greenStart) {
+            // Smooth color blending from (7 7 15) to (0 15 0)
+            float t = (temperature - blueStart) / (greenStart - blueStart);
+            r = static_cast<uint8_t>(7 - 7 * t);
+            g = static_cast<uint8_t>(7 + 8 * t);
+            b = static_cast<uint8_t>(15 - 15 * t);
+        } else if (temperature >= greenStart && temperature < yellowStart) {
+            // Smooth color blending from (0 15 0) to (15 15 0)
+            float t = (temperature - greenStart) / (yellowStart - greenStart);
+            r = static_cast<uint8_t>(15 * t);
+            g = static_cast<uint8_t>(15);
+            b = static_cast<uint8_t>(0);
+        } else if (temperature >= yellowStart && temperature < redStart) {
+            // Smooth color blending from (15 15 0) to (15 0 0)
+            float t = (temperature - yellowStart) / (redStart - yellowStart);
+            r = static_cast<uint8_t>(15);
+            g = static_cast<uint8_t>(15 - 15 * t);
+            b = static_cast<uint8_t>(0);
         } else {
-            setIniFileValue(packageConfigIniPath, optionName, key, value); // Set INI file value if key not found
+            // Full red
+            r = 15;
+            g = 0;
+            b = 0;
         }
+        
+        return Color(r, g, b, a);
     }
-}
 
 
-
-/**
- * @brief Handles updates and checks when the interpreter is running.
- *
- * This function processes the progression of download, unzip, and copy operations,
- * updates the user interface accordingly, and handles the thread failure and abort conditions.
- *
- * @param keysHeld A bitset representing keys that are held down.
- * @param stillTouching Boolean indicating if the touchscreen is being interacted with.
- * @param lastSelectedListItem Reference to the UI element displaying the current status.
- * @param commandSuccess Reference to a boolean tracking the overall command success.
- * @return `true` if the operation needs to abort, `false` otherwise.
- */
-bool handleRunningInterpreter(uint64_t& keysHeld) {
-    static int lastPercentage = -1;
-    static bool inProgress = true;
-    static auto last_call = std::chrono::steady_clock::now();
-    auto now = std::chrono::steady_clock::now();
-    bool shouldAbort = false;
-
-    if (now - last_call < std::chrono::milliseconds(20)) {
-        return false;  // Exit if the minimum interval hasn't passed
-    }
-    last_call = now;  // Update last_call to the current time
-
-    // Helper lambda to update the UI and manage completion state
-    auto updateUI = [&](std::atomic<int>& percentage, const std::string& symbol) {
-        int currentPercentage = percentage.load(std::memory_order_acquire);
-        if (currentPercentage != -1) {
-            if (currentPercentage != lastPercentage) {
-                lastSelectedListItem->setValue(symbol + " " + std::to_string(currentPercentage) + "%");
-                lastPercentage = currentPercentage;
-            }
-            if (currentPercentage == 100) {
-                inProgress = true;  // This seems to be intended to indicate task completion, but setting 'true' here every time might be a mistake?
-                percentage.store(-1, std::memory_order_release);
-            }
-            return true;
+    inline Color RGB888(const std::string& hexColor, size_t alpha = 15, const std::string& defaultHexColor = whiteColor) {
+        std::string validHex = hexColor.empty() || hexColor[0] != '#' ? hexColor : hexColor.substr(1);
+        
+        if (!isValidHexColor(validHex)) {
+            validHex = defaultHexColor;
         }
-        return false;
-    };
-
-    if (!updateUI(downloadPercentage, DOWNLOAD_SYMBOL) &&
-        !updateUI(unzipPercentage, UNZIP_SYMBOL) &&
-        !updateUI(copyPercentage, COPY_SYMBOL) &&
-        lastPercentage == -1 && inProgress) {
-        lastSelectedListItem->setValue(INPROGRESS_SYMBOL);
-        inProgress = false;
+        
+        // Convert hex to RGB values
+        uint8_t redValue = (hexMap[static_cast<unsigned char>(validHex[0])] << 4) | hexMap[static_cast<unsigned char>(validHex[1])];
+        uint8_t greenValue = (hexMap[static_cast<unsigned char>(validHex[2])] << 4) | hexMap[static_cast<unsigned char>(validHex[3])];
+        uint8_t blueValue = (hexMap[static_cast<unsigned char>(validHex[4])] << 4) | hexMap[static_cast<unsigned char>(validHex[5])];
+        
+        return Color(redValue >> 4, greenValue >> 4, blueValue >> 4, alpha);
     }
 
-    if (threadFailure.load(std::memory_order_acquire)) {
-        threadFailure.store(false, std::memory_order_release);
-        commandSuccess = false;
+
+    inline std::tuple<uint8_t, uint8_t, uint8_t> hexToRGB444Floats(const std::string& hexColor, const std::string& defaultHexColor = "#FFFFFF") {
+        const char* validHex = hexColor.c_str();
+        if (validHex[0] == '#') validHex++;
+        
+        if (!isValidHexColor(validHex)) {
+            validHex = defaultHexColor.c_str();
+            if (validHex[0] == '#') validHex++;
+        }
+        
+        // Manually parse the hex string to an integer value
+        unsigned int hexValue = (hexMap[static_cast<unsigned char>(validHex[0])] << 20) |
+                                (hexMap[static_cast<unsigned char>(validHex[1])] << 16) |
+                                (hexMap[static_cast<unsigned char>(validHex[2])] << 12) |
+                                (hexMap[static_cast<unsigned char>(validHex[3])] << 8)  |
+                                (hexMap[static_cast<unsigned char>(validHex[4])] << 4)  |
+                                hexMap[static_cast<unsigned char>(validHex[5])];
+        
+        // Extract and scale the RGB components from 8-bit (0-255) to 4-bit float scale (0-15)
+        uint8_t red = ((hexValue >> 16) & 0xFF) / 255.0f * 15.0f;
+        uint8_t green = ((hexValue >> 8) & 0xFF) / 255.0f * 15.0f;
+        uint8_t blue = (hexValue & 0xFF) / 255.0f * 15.0f;
+        
+        return std::make_tuple(red, green, blue);
     }
 
-    if ((keysHeld & KEY_R) && (keysHeld & ~(KEY_DLEFT | KEY_DRIGHT | KEY_DUP | KEY_DDOWN | KEY_B | KEY_A | KEY_X | KEY_Y | KEY_L | KEY_ZL | KEY_ZR | KEY_R)) == 0 && !stillTouching) {
-        commandSuccess = false;
-        abortDownload.store(true, std::memory_order_release);
-        abortUnzip.store(true, std::memory_order_release);
-        abortFileOp.store(true, std::memory_order_release);
-        abortCommand.store(true, std::memory_order_release);
-        shouldAbort = true;
-    }
-
-    //if (!shouldAbort) {
-    //    svcSleepThread(10'000'000); // 10 ms sleep
-    //}
-
-    return shouldAbort;
-}
-
-
-
-// Forward declaration of the MainMenu class.
-class MainMenu;
-
-class UltrahandSettingsMenu : public tsl::Gui {
-private:
-    std::string entryName, entryMode, overlayName, dropdownSelection, settingsIniPath;
-    bool isInSection = false, inQuotes = false, isFromMainMenu = false;
-    std::string languagesVersion = APP_VERSION;
-    int MAX_PRIORITY = 20;
-    std::string comboLabel;
-    std::string lastSelectedListItemFooter = "";
-
-    void addToggleListItem(std::unique_ptr<tsl::elm::List>& list, const std::string& title, bool state, const std::string& key) {
-        auto toggleListItem = std::make_unique<tsl::elm::ToggleListItem>(title, state, ON, OFF);
-        toggleListItem->setStateChangedListener([listItemRaw = toggleListItem.get(), key](bool state) {
-            tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemRaw, tsl::FocusDirection::None);
-            setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, key, state ? FALSE_STR : TRUE_STR);
-            reinitializeWidgetVars();
-            redrawWidget = true;
-        });
-        list->addItem(toggleListItem.release());
-    }
-
-    // Helper function to add toggle list items
-    void addToggleItem(std::unique_ptr<tsl::elm::List>& list, const std::string& title, bool& stateVar, const std::string& iniKey, const std::function<void()>& onChangeCallback = nullptr) {
-        auto toggleListItem = std::make_unique<tsl::elm::ToggleListItem>(title, stateVar, ON, OFF);
-        toggleListItem->setStateChangedListener([listItemRaw = toggleListItem.get(), &stateVar, iniKey, onChangeCallback](bool state) mutable {
-            tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemRaw, tsl::FocusDirection::None);
-            setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, iniKey, state ? TRUE_STR : FALSE_STR);
-            if (stateVar != state) {
-                stateVar = state;
-                if (onChangeCallback) onChangeCallback();
-            }
-        });
-        list->addItem(toggleListItem.release());
-    }
-
-    void addListItem(std::unique_ptr<tsl::elm::List>& list, const std::string& title, const std::string& value, const std::string& targetMenu) {
-        auto listItem = std::make_unique<tsl::elm::ListItem>(title);
-        listItem->setValue(value);
-        listItem->setClickListener([listItemRaw = listItem.get(), targetMenu](uint64_t keys) {
-            if (runningInterpreter.load(std::memory_order_acquire))
-                return false;
-
-            if (simulatedSelect && !simulatedSelectComplete) {
-                keys |= KEY_A;
-                simulatedSelect = false;
-            }
-            if (keys & KEY_A) {
-
-                if (targetMenu == "softwareUpdateMenu") {
-                    executeCommands({
-                        {"download", LATEST_RELEASE_INFO_URL, SETTINGS_PATH}
-                    });
-                } else if (targetMenu == "themeMenu") {
-                    if (!isFileOrDirectory(THEMES_PATH+"ultra.ini")) {
-                        executeCommands({
-                            {"download", INCLUDED_THEME_FOLDER_URL+"ultra.ini", THEMES_PATH}
-                        });
-                    }
-                    if (!isFileOrDirectory(THEMES_PATH+"classic.ini")) {
-                        executeCommands({
-                            {"download", INCLUDED_THEME_FOLDER_URL+"classic.ini", THEMES_PATH}
-                        });
-                    }
-                }
-
-                tsl::changeTo<UltrahandSettingsMenu>(targetMenu);
-                selectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItemRaw, [](auto*) {});
-                simulatedSelectComplete = true;
-                return true;
-            }
-            return false;
-        });
-        list->addItem(listItem.release());
-    }
-
-    void handleSelection(std::unique_ptr<tsl::elm::List>& list, const std::vector<std::string>& items, const std::string& defaultItem, const std::string& iniKey, const std::string& targetMenu) {
-        for (const auto& item : items) {
-            //auto mappedItem = convertComboToUnicode(item); // moved to ListItem class in libTesla
-            //if (mappedItem.empty()) mappedItem = item;
-            auto mappedItem = item;
     
-            auto listItem = std::make_unique<tsl::elm::ListItem>(mappedItem);
-            if (item == defaultItem) {
-                listItem->setValue(CHECKMARK_SYMBOL);
-                lastSelectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){});
-            }
-            listItem->setClickListener([item, mappedItem, defaultItem, iniKey, targetMenu, listItemRaw = listItem.get()](uint64_t keys) {
-                //listItemPtr = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){})](uint64_t keys) {
-                if (runningInterpreter.load(std::memory_order_acquire))
-                    return false;
     
-                if (simulatedSelect && !simulatedSelectComplete) {
-                    keys |= KEY_A;
-                    simulatedSelect = false;
-                }
-                if (keys & KEY_A) {
-                    
-                    if (item != defaultItem) {
-                        setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, iniKey, item);
-                        if (targetMenu == "keyComboMenu")
-                            setIniFileValue(TESLA_CONFIG_INI_PATH, TESLA_STR, iniKey, item);
-                        reloadMenu = true;
-                    }
-                    lastSelectedListItem->setValue("");
-                    selectedListItem->setValue(mappedItem);
-                    listItemRaw->setValue(CHECKMARK_SYMBOL);
-                    lastSelectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItemRaw, [](auto*) {});
-                    shiftItemFocus(listItemRaw);
-                    simulatedSelectComplete = true;
-                    lastSelectedListItem->triggerClickAnimation();
-    
-                    return true;
-                }
-                return false;
-            });
-            list->addItem(listItem.release());
+    namespace style {
+        constexpr u32 ListItemDefaultHeight         = 70;       ///< Standard list item height
+        constexpr u32 TrackBarDefaultHeight         = 84;       ///< Standard track bar height
+        constexpr u8  ListItemHighlightSaturation   = 7;        ///< Maximum saturation of Listitem highlights
+        constexpr u8  ListItemHighlightLength       = 22;       ///< Maximum length of Listitem highlights
+        
+        namespace color {
+            constexpr Color ColorFrameBackground  = { 0x0, 0x0, 0x0, 0xD };   ///< Overlay frame background color
+            constexpr Color ColorTransparent      = { 0x0, 0x0, 0x0, 0x0 };   ///< Transparent color
+            constexpr Color ColorHighlight        = { 0x0, 0xF, 0xD, 0xF };   ///< Greenish highlight color
+            constexpr Color ColorFrame            = { 0x7, 0x7, 0x7, 0x7 };   ///< Outer boarder color // CUSTOM MODIFICATION
+            constexpr Color ColorHandle           = { 0x5, 0x5, 0x5, 0xF };   ///< Track bar handle color
+            constexpr Color ColorText             = { 0xF, 0xF, 0xF, 0xF };   ///< Standard text color
+            constexpr Color ColorDescription      = { 0xA, 0xA, 0xA, 0xF };   ///< Description text color
+            constexpr Color ColorHeaderBar        = { 0xC, 0xC, 0xC, 0xF };   ///< Category header rectangle color
+            constexpr Color ColorClickAnimation   = { 0x0, 0x2, 0x2, 0xF };   ///< Element click animation color
         }
     }
 
 
-    void addUpdateButton(std::unique_ptr<tsl::elm::List>& list, const std::string& title, const std::string& downloadUrl, const std::string& targetPath, const std::string& movePath, const std::string& versionLabel) {
-        auto listItem = std::make_unique<tsl::elm::ListItem>(title);
-        listItem->setValue(versionLabel, true);
-
-        listItem->setClickListener([listItemRaw = listItem.get(), downloadUrl, targetPath, movePath](uint64_t keys) {
-            if (runningInterpreter.load(std::memory_order_acquire)) {
-                return false;
-            }
-
-            if (simulatedSelect && !simulatedSelectComplete) {
-                keys |= KEY_A;
-                simulatedSelect = false;
-            }
-            std::vector<std::vector<std::string>> interpreterCommands;
-            if (keys & KEY_A) {
-                isDownloadCommand = true;
-                
-                interpreterCommands = {
-                    {"try:"},
-                    {"delete", targetPath},
-                    {"download", downloadUrl, DOWNLOADS_PATH},
-                };
-                
-                if (movePath == LANG_PATH) { // for language update commands
-                    interpreterCommands.push_back({"unzip", targetPath, movePath});
-                } else {
-                    //interpreterCommands.push_back({"download", INCLUDED_THEME_URL, THEMES_PATH});
-                    interpreterCommands.push_back({"move", targetPath, movePath});
-                }
-                
-                interpreterCommands.push_back({"delete", targetPath});
-
-                runningInterpreter.store(true, std::memory_order_release);
-                enqueueInterpreterCommands(std::move(interpreterCommands), "", "");
-                startInterpreterThread();
-
-                listItemRaw->setValue(INPROGRESS_SYMBOL);
-                lastSelectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItemRaw, [](auto*) {});
-                shiftItemFocus(listItemRaw);
-                lastRunningInterpreter = true;
-                simulatedSelectComplete = true;
-                lastSelectedListItem->triggerClickAnimation();
-                return true;
-            }
-            return false;
-        });
-        list->addItem(listItem.release());
-    }
-
-    // Helper function to create toggle list items
-    auto createToggleListItem(std::unique_ptr<tsl::elm::List>& list, const std::string& title, bool& state, const std::string& iniKey, bool invertLogic = false, bool useReloadMenu2 = false) {
-        auto toggleListItem = std::make_unique<tsl::elm::ToggleListItem>(title, invertLogic ? !state : state, ON, OFF);
-        toggleListItem->setStateChangedListener([&, listItemRaw = toggleListItem.get(), iniKey, invertLogic, useReloadMenu2](bool newState) {
-            tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemRaw, tsl::FocusDirection::None);
-            setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, iniKey, newState ? (invertLogic ? FALSE_STR : TRUE_STR) : (invertLogic ? TRUE_STR : FALSE_STR));
-            if ((invertLogic ? !state : state) != newState) {
-                state = invertLogic ? !newState : newState;
-                if (iniKey == "clean_version_labels") {
-                    versionLabel = APP_VERSION + std::string("   (") + loaderTitle + (state ? " v" : " ") + cleanVersionLabel(loaderInfo) + std::string(")");
-                    reinitializeVersionLabels();
-                }
-                else if (iniKey == "memory_expansion") {
-                    if (!isFileOrDirectory(EXPANSION_PATH+"nx-ovlloader.zip"))
-                        downloadFile(NX_OVLLOADER_ZIP_URL, EXPANSION_PATH);
-                    if (!isFileOrDirectory(EXPANSION_PATH+"nx-ovlloader+.zip"))
-                        downloadFile(NX_OVLLOADER_PLUS_ZIP_URL, EXPANSION_PATH);
-
-                    executeCommands({
-                        {"try:"},
-                        {"del", EXPANSION_PATH + (state ? "nx-ovlloader+/" : "nx-ovlloader/")},
-                        {"unzip", EXPANSION_PATH + (state ? "nx-ovlloader+.zip" : "nx-ovlloader.zip"),
-                         EXPANSION_PATH + (state ? "nx-ovlloader+/" : "nx-ovlloader/")},
-                        {"mv", EXPANSION_PATH + (state ? "nx-ovlloader+/" : "nx-ovlloader/"), "/"}
-                    });
-                }
-                reloadMenu = true;
-                if (useReloadMenu2) reloadMenu2 = true;
-            }
-        });
-        list->addItem(toggleListItem.release());
-    };
-
-
+    // Theme color variable definitions
+    static bool disableColorfulLogo = false;
+    static Color logoColor1 = RGB888(whiteColor);
+    static Color logoColor2 = RGB888("#F7253E");
+    static size_t defaultBackgroundAlpha = 13;
     
-public:
-    UltrahandSettingsMenu(const std::string& selection = "") : dropdownSelection(selection) {}
+    static Color defaultBackgroundColor = RGB888(blackColor, defaultBackgroundAlpha);
+    static Color defaultTextColor = RGB888(whiteColor);
+    static Color headerTextColor = RGB888(whiteColor);
+    static Color headerSeparatorColor = RGB888(whiteColor);
+    static Color starColor = RGB888(whiteColor);
+    static Color selectionStarColor = RGB888(whiteColor);
+    static Color buttonColor = RGB888(whiteColor);
+    static Color bottomTextColor = RGB888(whiteColor);
+    static Color botttomSeparatorColor = RGB888(whiteColor);
 
-    ~UltrahandSettingsMenu() {}
+    static Color defaultPackageColor = RGB888("#00FF00");
+    static Color clockColor = RGB888(whiteColor);
+    static Color batteryColor = RGB888("#ffff45");
+    static Color versionTextColor = RGB888("#AAAAAA");
+    static Color onTextColor = RGB888("#00FFDD");
+    static Color offTextColor = RGB888("#AAAAAA");
+    
+    static std::tuple<float,float,float> dynamicLogoRGB1 = hexToRGB444Floats("#00E669");
+    static std::tuple<float,float,float> dynamicLogoRGB2 = hexToRGB444Floats("#8080EA");
 
-    virtual tsl::elm::Element* createUI() override {
-        inSettingsMenu = dropdownSelection.empty();
-        inSubSettingsMenu = !dropdownSelection.empty();
-        
-        const std::vector<std::string> defaultLanguagesRepresentation = {ENGLISH, SPANISH, FRENCH, GERMAN, JAPANESE, KOREAN, ITALIAN, DUTCH, PORTUGUESE, RUSSIAN, POLISH, SIMPLIFIED_CHINESE, TRADITIONAL_CHINESE};
-        const std::vector<std::string> defaultLanguages = {"en", "es", "fr", "de", "ja", "ko", "it", "nl", "pt", "ru", "pl", "zh-cn", "zh-tw"};
-        const std::vector<std::string> defaultCombos = {"ZL+ZR+DDOWN", "ZL+ZR+DRIGHT", "ZL+ZR+DUP", "ZL+ZR+DLEFT", "L+R+DDOWN", "L+R+DRIGHT", "L+R+DUP", "L+R+DLEFT", "L+DDOWN", "R+DDOWN", "ZL+ZR+PLUS", "L+R+PLUS", "ZL+PLUS", "ZR+PLUS", "MINUS+PLUS", "LS+RS", "L+DDOWN+RS"};
-        
-        auto list = std::make_unique<tsl::elm::List>();
-        
-        if (dropdownSelection.empty()) {
-            list->addItem(new tsl::elm::CategoryHeader(MAIN_SETTINGS));
-            std::string defaultLang = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, DEFAULT_LANG_STR);
-            std::string keyCombo = trim(parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, KEY_COMBO_STR));
-            defaultLang = defaultLang.empty() ? "en" : defaultLang;
-            keyCombo = keyCombo.empty() ? "ZL+ZR+DDOWN" : keyCombo;
+    static bool disableSelectionBG = false;
+    static bool invertBGClickColor = false;
 
-            comboLabel = convertComboToUnicode(keyCombo);
-            if (comboLabel.empty()) comboLabel = keyCombo;
-            addListItem(list, KEY_COMBO, comboLabel, "keyComboMenu");
-            addListItem(list, LANGUAGE, defaultLang, "languageMenu");
-            addListItem(list, SOFTWARE_UPDATE, DROPDOWN_SYMBOL, "softwareUpdateMenu");
-            addListItem(list, SYSTEM, DROPDOWN_SYMBOL, "systemMenu");
+    static size_t selectionBGAlpha = 7;
+    static Color selectionBGColor = RGB888(blackColor, selectionBGAlpha);
+
+    static Color highlightColor1 = RGB888("#2288CC");
+    static Color highlightColor2 = RGB888("#88FFFF");
+    static Color highlightColor3 = RGB888("#FFFF45");
+    static Color highlightColor4 = RGB888("#F7253E");
+
+    static Color highlightColor = tsl::style::color::ColorHighlight;
+    
+    static size_t clickAlpha = 7;
+
+    static Color clickColor = RGB888("#3E25F7", clickAlpha);
+    static Color trackBarColor = RGB888("#555555");
+
+    static size_t separatorAlpha = 15;
+    
+    static Color separatorColor = RGB888("#404040", separatorAlpha);
+    static Color selectedTextColor = RGB888(whiteColor);
+    static Color inprogressTextColor = RGB888(whiteColor);
+    static Color invalidTextColor = RGB888("#FF0000");
+    static Color clickTextColor = RGB888(whiteColor);
+
+    static size_t tableBGAlpha = 7;
+    static Color tableBGColor = RGB888("#303030", tableBGAlpha);
+    static Color sectionTextColor = RGB888("#e9ff40");
+    static Color infoTextColor = RGB888(whiteColor);
+    static Color warningTextColor = RGB888("#FF7777");
 
 
-            list->addItem(new tsl::elm::CategoryHeader(UI_SETTINGS));
-
-            if (expandedMemory) {
-                std::string currentWallpaper = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "current_wallpaper");
-                currentWallpaper = (currentWallpaper.empty() || currentWallpaper == OPTION_SYMBOL) ? OPTION_SYMBOL : currentWallpaper;
-                addListItem(list, WALLPAPER, currentWallpaper, "wallpaperMenu");
-            }
-
-            std::string currentTheme = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "current_theme");
-            currentTheme = (currentTheme.empty() || currentTheme == DEFAULT_STR) ? DEFAULT : currentTheme;
-            addListItem(list, THEME, currentTheme, "themeMenu");
-
-            addListItem(list, WIDGET, DROPDOWN_SYMBOL, "widgetMenu");
-            addListItem(list, MISCELLANEOUS, DROPDOWN_SYMBOL, "miscMenu");
-
-        } else if (dropdownSelection == "keyComboMenu") {
-            list->addItem(new tsl::elm::CategoryHeader(KEY_COMBO));
-            std::string defaultCombo = trim(parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, KEY_COMBO_STR));
-            handleSelection(list, defaultCombos, defaultCombo, KEY_COMBO_STR, "keyComboMenu");
-        } else if (dropdownSelection == "languageMenu") {
-            list->addItem(new tsl::elm::CategoryHeader(LANGUAGE));
-            std::string defaulLang = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, DEFAULT_LANG_STR);
-            size_t index = 0;
-            for (const auto& defaultLangMode : defaultLanguages) {
-                std::string langFile = LANG_PATH + defaultLangMode + ".json";
-                if (defaultLangMode != "en" && !isFileOrDirectory(langFile))  {index++; continue;}
-                auto listItem = std::make_unique<tsl::elm::ListItem>(defaultLanguagesRepresentation[index]);
-                listItem->setValue(defaultLangMode);
-                if (defaultLangMode == defaulLang) {
-                    lastSelectedListItemFooter = defaultLangMode;
-                    listItem->setValue(CHECKMARK_SYMBOL);
-                    lastSelectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){});
-                }
-                listItem->setClickListener([this, skipLang = !isFileOrDirectory(langFile), defaultLangMode, defaulLang, langFile, listItemRaw = listItem.get()](uint64_t keys) {
-                    //listItemPtr = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){})](uint64_t keys) {
-                    if (runningInterpreter.load(std::memory_order_acquire)) return false;
-                    if (simulatedSelect && !simulatedSelectComplete) {
-                        keys |= KEY_A;
-                        simulatedSelect = false;
-                    }
-                    if (keys & KEY_A) {
-                        setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, DEFAULT_LANG_STR, defaultLangMode);
-                        reloadMenu = reloadMenu2 = true;
-                        parseLanguage(langFile);
-                        if (skipLang) reinitializeLangVars();
-                        lastSelectedListItem->setValue(lastSelectedListItemFooter);
-                        selectedListItem->setValue(defaultLangMode);
-                        listItemRaw->setValue(CHECKMARK_SYMBOL);
-                        lastSelectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItemRaw, [](auto*){});
-                        shiftItemFocus(listItemRaw);
-                        simulatedSelectComplete = true;
-                        lastSelectedListItem->triggerClickAnimation();
-                        lastSelectedListItemFooter = defaultLangMode;
-                        return true;
-                    }
-                    return false;
-                });
-                list->addItem(listItem.release());
-                index++;
-            }
-        } else if (dropdownSelection == "softwareUpdateMenu") {
-            std::string versionLabel = cleanVersionLabel(parseValueFromIniSection((SETTINGS_PATH+"RELEASE.ini").c_str(), "Release Info", "latest_version"));
-
-            list->addItem(new tsl::elm::CategoryHeader(SOFTWARE_UPDATE));
-            addUpdateButton(list, UPDATE_ULTRAHAND, ULTRAHAND_REPO_URL + "releases/latest/download/ovlmenu.ovl", "/config/ultrahand/downloads/ovlmenu.ovl", "/switch/.overlays/ovlmenu.ovl", versionLabel);
-            addUpdateButton(list, UPDATE_LANGUAGES, ULTRAHAND_REPO_URL + "releases/latest/download/lang.zip", "/config/ultrahand/downloads/lang.zip", LANG_PATH, versionLabel);
-
-            PackageHeader overlayHeader;
-            overlayHeader.title = "Ultrahand Overlay";
-            overlayHeader.version = APP_VERSION;
-            overlayHeader.creator = "ppkantorski";
-            overlayHeader.about = "Ultrahand Overlay is a versatile tool that enables you to create and share custom command-based packages.";
-            overlayHeader.credits = "Special thanks to B3711, ComplexNarrative, Faker_dev, MasaGratoR, meha, WerWolv, HookedBehemoth and many others. <3";
-            addPackageInfo(list, overlayHeader, OVERLAY_STR);
-            overlayHeader.clear();
-
-        } else if (dropdownSelection == "systemMenu") {
-            char ramString[20]; // Buffer to hold the final string
+    static Color trackBarSliderColor = RGB888("#606060");
+    static Color trackBarSliderBorderColor = RGB888("#505050");
+    static Color trackBarSliderMalleableColor = RGB888("#A0A0A0");
+    static Color trackBarFullColor = RGB888("#00FFDD");
+    static Color trackBarEmptyColor = RGB888("#404040");
+    
+    void initializeThemeVars() { // NOTE: This needs to be called once in your application.
+        // Fetch all theme settings at once from the INI file
+        auto themeData = getParsedDataFromIniFile(THEME_CONFIG_INI_PATH);
+        if (themeData.count(THEME_STR) > 0) {
+            auto& themeSection = themeData[THEME_STR];
             
-            // Get system information
-            svcGetSystemInfo(&RAM_Used_system_u, 1, INVALID_HANDLE, 2);
-            svcGetSystemInfo(&RAM_Total_system_u, 0, INVALID_HANDLE, 2);
-            
-            // Convert RAM usage and format string
-            //float ramTotalMB = static_cast<float>(RAM_Total_system_u) / 1024 / 1024;
-            //float ramUsedMB = static_cast<float>(RAM_Used_system_u) / 1024 / 1024;
-            //float ramFreeMB = static_cast<float>(RAM_Total_system_u)/1024/1024 - static_cast<float>(RAM_Used_system_u)/1024/1024 - 8.0f;
-            
-            snprintf(ramString, sizeof(ramString), "%.2f MB %s", static_cast<float>(RAM_Total_system_u)/1024/1024 - static_cast<float>(RAM_Used_system_u)/1024/1024 - 8.0f, FREE.c_str());
-
-            list->addItem(new tsl::elm::CategoryHeader(SYSTEM));
-            std::vector<std::vector<std::string>> tableData = {
-                {NOTICE, "", UTILIZES+" 2 MB ("+ramString+")" } // Each inner vector represents a row in the table.
+            // Fetch and process each theme setting using a helper to simplify fetching and fallback
+            auto getValue = [&](const std::string& key) {
+                return themeSection.count(key) ? themeSection[key] : defaultThemeSettingsMap[key];
             };
-            addTable(list, tableData, "", 166, 14, 14, 0, DEFAULT_STR, DEFAULT_STR, RIGHT_STR, true);
+            
+            // Convert hex color to Color and manage default values and conversion
+            auto getColor = [&](const std::string& key, size_t alpha = 15) {
+                std::string hexColor = getValue(key);
+                return RGB888(hexColor, alpha);
+            };
+            
+            auto getAlpha = [&](const std::string& key) {
+                std::string alphaStr = getValue(key);
+                return !alphaStr.empty() ? std::stoi(alphaStr) : std::stoi(defaultThemeSettingsMap[key]);
+            };
+            
+            disableColorfulLogo = (getValue("disable_colorful_logo") == TRUE_STR);
+            
+            logoColor1 = getColor("logo_color_1");
+            logoColor2 = getColor("logo_color_2");
+            
+            defaultBackgroundAlpha = getAlpha("bg_alpha");
+            defaultBackgroundColor = getColor("bg_color", defaultBackgroundAlpha);
+            defaultTextColor = getColor("text_color");
+            headerTextColor = getColor("header_text_color");
+            headerSeparatorColor = getColor("header_separator_color");
+            starColor = getColor("star_color");
+            selectionStarColor = getColor("selection_star_color");
+            buttonColor = getColor("bottom_button_color");
+            bottomTextColor = getColor("bottom_text_color");
+            botttomSeparatorColor = getColor("bottom_separator_color");
 
-            //tableData = {
-            //    { "", "", "" } // Each inner vector represents a row in the table.
-            //};
-            //addTable(list, tableData, "", 160, 20, 3, 0, DEFAULT_STR, DEFAULT_STR, RIGHT_STR, true);
+            defaultPackageColor = getColor("default_package_color");
 
-            useMemoryExpansion = ((loaderTitle == "nx-ovlloader+") || parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "memory_expansion") == TRUE_STR);
-            createToggleListItem(list, MEMORY_EXPANSION, useMemoryExpansion, "memory_expansion", false, true);
+            clockColor = getColor("clock_color");
+            batteryColor = getColor("battery_color");
+            
+            versionTextColor = getColor("version_text_color");
+            onTextColor = getColor("on_text_color");
+            offTextColor = getColor("off_text_color");
+            
+            dynamicLogoRGB1 = hexToRGB444Floats(getValue("dynamic_logo_color_1"));
+            dynamicLogoRGB2 = hexToRGB444Floats(getValue("dynamic_logo_color_2"));
+            
+            disableSelectionBG = (getValue("disable_selection_bg") == TRUE_STR);
+            invertBGClickColor = (getValue("invert_bg_click_color") == TRUE_STR);
 
-            //tableData = {
-            //    { "", "", "" } // Each inner vector represents a row in the table.
-            //};
-            //addTable(list, tableData, "", 160, 20, 6, 0, DEFAULT_STR, DEFAULT_STR, RIGHT_STR, true);
-        } else if (dropdownSelection == "themeMenu") {
-            list->addItem(new tsl::elm::CategoryHeader(THEME));
-            std::string currentTheme = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "current_theme");
-            currentTheme = currentTheme.empty() ? DEFAULT_STR : currentTheme;
-            auto listItem = std::make_unique<tsl::elm::ListItem>(DEFAULT);
-            if (currentTheme == DEFAULT_STR) {
-                listItem->setValue(CHECKMARK_SYMBOL);
-                lastSelectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){});
+            selectionBGAlpha = getAlpha("selection_bg_alpha");
+            selectionBGColor = getColor("selection_bg_color", selectionBGAlpha);
+            
+            highlightColor1 = getColor("highlight_color_1");
+            highlightColor2 = getColor("highlight_color_2");
+            highlightColor3 = getColor("highlight_color_3");
+            highlightColor4 = getColor("highlight_color_4");
+            
+            clickAlpha = getAlpha("click_alpha");
+            clickColor = getColor("click_color", clickAlpha);
+            trackBarColor = getColor("trackbar_color");
+            
+            separatorAlpha = getAlpha("separator_alpha");
+            separatorColor = getColor("separator_color", separatorAlpha);
+            
+            selectedTextColor = getColor("selection_text_color");
+            inprogressTextColor = getColor("inprogress_text_color");
+            invalidTextColor = getColor("invalid_text_color");
+            clickTextColor = getColor("click_text_color");
+            
+            tableBGAlpha = getAlpha("table_bg_alpha");
+            tableBGColor = getColor("table_bg_color", tableBGAlpha);
+            sectionTextColor = getColor("table_section_text_color");
+            infoTextColor = getColor("table_info_text_color");
+            warningTextColor = getColor("warning_text_color");
+
+
+            trackBarSliderColor = getColor("trackbar_slider_color");
+            trackBarSliderBorderColor = getColor("trackbar_slider_border_color");
+            trackBarSliderMalleableColor = getColor("trackbar_slider_malleable_color");
+            trackBarFullColor = getColor("trackbar_full_color");
+            trackBarEmptyColor = getColor("trackbar_empty_color");
+        }
+    }
+    
+
+
+    
+    
+    // Declarations
+    
+    /**
+     * @brief Direction in which focus moved before landing on
+     *        the currently focused element
+     */
+    enum class FocusDirection {
+        None,                       ///< Focus was placed on the element programatically without user input
+        Up,                         ///< Focus moved upwards
+        Down,                       ///< Focus moved downwards
+        Left,                       ///< Focus moved from left to rigth
+        Right                       ///< Focus moved from right to left
+    };
+    
+    /**
+     * @brief Current input controll mode
+     *
+     */
+    enum class InputMode {
+        Controller,                 ///< Input from controller
+        Touch,                      ///< Touch input
+        TouchScroll                 ///< Moving/scrolling touch input
+    };
+    
+    class Overlay;
+    namespace elm { class Element; }
+    
+    namespace impl {
+        
+        /**
+         * @brief Overlay launch parameters
+         */
+        enum class LaunchFlags : u8 {
+            None = 0,                       ///< Do nothing special at launch
+            CloseOnExit        = BIT(0)     ///< Close the overlay the last Gui gets poped from the stack
+        };
+        
+        [[maybe_unused]] static constexpr LaunchFlags operator|(LaunchFlags lhs, LaunchFlags rhs) {
+            return static_cast<LaunchFlags>(u8(lhs) | u8(rhs));
+        }
+        
+        /**
+         * @brief Combo key mapping
+         */
+        struct KeyInfo {
+            u64 key;
+            const char* name;
+            const char* glyph;
+        };
+        
+        /**
+         * @brief Combo key mappings
+         *
+         * Ordered as they should be displayed
+         */
+        constexpr std::array<KeyInfo, 18> KEYS_INFO = {{
+            { HidNpadButton_L, "L", "\uE0E4" }, { HidNpadButton_R, "R", "\uE0E5" },
+            { HidNpadButton_ZL, "ZL", "\uE0E6" }, { HidNpadButton_ZR, "ZR", "\uE0E7" },
+            { HidNpadButton_AnySL, "SL", "\uE0E8" }, { HidNpadButton_AnySR, "SR", "\uE0E9" },
+            { HidNpadButton_Left, "DLEFT", "\uE0ED" }, { HidNpadButton_Up, "DUP", "\uE0EB" },
+            { HidNpadButton_Right, "DRIGHT", "\uE0EE" }, { HidNpadButton_Down, "DDOWN", "\uE0EC" },
+            { HidNpadButton_A, "A", "\uE0E0" }, { HidNpadButton_B, "B", "\uE0E1" },
+            { HidNpadButton_X, "X", "\uE0E2" }, { HidNpadButton_Y, "Y", "\uE0E3" },
+            { HidNpadButton_StickL, "LS", "\uE08A" }, { HidNpadButton_StickR, "RS", "\uE08B" },
+            { HidNpadButton_Minus, "MINUS", "\uE0B6" }, { HidNpadButton_Plus, "PLUS", "\uE0B5" }
+        }};
+        
+    }
+    
+    [[maybe_unused]] static void goBack();
+
+    [[maybe_unused]] static void pop();
+    
+    [[maybe_unused]] static void setNextOverlay(const std::string& ovlPath, std::string args = "");
+    
+    template<typename TOverlay, impl::LaunchFlags launchFlags = impl::LaunchFlags::CloseOnExit>
+    int loop(int argc, char** argv);
+    
+    // Helpers
+    
+    namespace hlp {
+        
+        /**
+         * @brief Wrapper for service initialization
+         *
+         * @param f wrapped function
+         */
+        template<typename F>
+        static inline void doWithSmSession(F f) {
+            smInitialize();
+            f();
+            smExit();
+        }
+        
+        /**
+         * @brief Wrapper for sd card access using stdio
+         * @note Consider using raw fs calls instead as they are faster and need less space
+         *
+         * @param f wrapped function
+         */
+        template<typename F>
+        static inline void doWithSDCardHandle(F f) {
+            fsdevMountSdmc();
+            f();
+            fsdevUnmountDevice("sdmc");
+        }
+        
+        /**
+         * @brief Guard that will execute a passed function at the end of the current scope
+         *
+         * @param f wrapped function
+         */
+        template<typename F>
+        class ScopeGuard {
+            ScopeGuard(const ScopeGuard&) = delete;
+            ScopeGuard& operator=(const ScopeGuard&) = delete;
+            private:
+                F f;
+                bool canceled = false;
+            public:
+                ALWAYS_INLINE ScopeGuard(F f) : f(std::move(f)) { }
+                ALWAYS_INLINE ~ScopeGuard() { if (!canceled) { f(); } }
+                void dismiss() { canceled = true; }
+        };
+        
+        /**
+         * @brief libnx hid:sys shim that gives or takes away frocus to or from the process with the given aruid
+         *
+         * @param enable Give focus or take focus
+         * @param aruid Aruid of the process to focus/unfocus
+         * @return Result Result
+         */
+        static Result hidsysEnableAppletToGetInput(bool enable, u64 aruid) {
+            const struct {
+                u8 permitInput;
+                u64 appletResourceUserId;
+            } in = { enable != 0, aruid };
+            
+            return serviceDispatchIn(hidsysGetServiceSession(), 503, in);
+        }
+        
+        static Result viAddToLayerStack(ViLayer *layer, ViLayerStack stack) {
+            const struct {
+                u32 stack;
+                u64 layerId;
+            } in = { stack, layer->layer_id };
+            
+            return serviceDispatchIn(viGetSession_IManagerDisplayService(), 6000, in);
+        }
+        
+        /**
+         * @brief Toggles focus between the Tesla overlay and the rest of the system
+         *
+         * @param enabled Focus Tesla?
+         */
+        static void requestForeground(bool enabled) {
+            u64 applicationAruid = 0, appletAruid = 0;
+            
+            for (u64 programId = 0x0100000000001000UL; programId < 0x0100000000001020UL; programId++) {
+                pmdmntGetProcessId(&appletAruid, programId);
+                
+                if (appletAruid != 0)
+                    hidsysEnableAppletToGetInput(!enabled, appletAruid);
             }
-            listItem->setClickListener([defaultTheme = THEMES_PATH + "default.ini", listItemRaw = listItem.get()](uint64_t keys) {
-                if (runningInterpreter.load(std::memory_order_acquire)) return false;
-                if (simulatedSelect && !simulatedSelectComplete) {
-                    keys |= KEY_A;
-                    simulatedSelect = false;
-                }
-                if (keys & KEY_A) {
-                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "current_theme", DEFAULT_STR);
-                    deleteFileOrDirectory(THEME_CONFIG_INI_PATH);
-                    if (isFileOrDirectory(defaultTheme)) copyFileOrDirectory(defaultTheme, THEME_CONFIG_INI_PATH);
-                    else initializeTheme();
-                    tsl::initializeThemeVars();
-                    reloadMenu = reloadMenu2 = true;
-                    lastSelectedListItem->setValue("");
-                    selectedListItem->setValue(DEFAULT);
-                    listItemRaw->setValue(CHECKMARK_SYMBOL);
-                    lastSelectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItemRaw, [](auto*){});
-                    shiftItemFocus(listItemRaw);
-                    simulatedSelectComplete = true;
-                    lastSelectedListItem->triggerClickAnimation();
-                    return true;
-                }
-                return false;
-            });
-            list->addItem(listItem.release());
+            
+            pmdmntGetApplicationProcessId(&applicationAruid);
+            hidsysEnableAppletToGetInput(!enabled, applicationAruid);
+            
+            hidsysEnableAppletToGetInput(true, 0);
+        }
+        
+        /**
+         * @brief Splits a string at the given delimeters
+         *
+         * @param str String to split
+         * @param delim Delimeter
+         * @return Vector containing the split tokens
+         */
+        //static std::vector<std::string> split(const std::string& str, char delim = ' ') {
+        //    std::vector<std::string> out;
+        //    
+        //    if (str.empty()) {
+        //        return out;
+        //    }
+        //    
+        //    // Reserve space assuming the worst case where every character is a delimiter
+        //    out.reserve(std::count(str.begin(), str.end(), delim) + 1);
+        //    
+        //    size_t start = 0;
+        //    size_t end = str.find(delim);
+        //    
+        //    while (end != std::string::npos) {
+        //        out.emplace_back(str.substr(start, end - start));
+        //        start = end + 1;
+        //        end = str.find(delim, start);
+        //    }
+        //    out.emplace_back(str.substr(start));
+        //    
+        //    return out;
+        //}
 
-            std::vector<std::string> themeFilesList = getFilesListByWildcards(THEMES_PATH + "*.ini");
-            std::sort(themeFilesList.begin(), themeFilesList.end());
-            for (const auto& themeFile : themeFilesList) {
-                std::string themeName = dropExtension(getNameFromPath(themeFile));
-                if (themeName == DEFAULT_STR) continue;
-                listItem = std::make_unique<tsl::elm::ListItem>(themeName);
-                if (themeName == currentTheme) {
-                    listItem->setValue(CHECKMARK_SYMBOL);
-                    lastSelectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){});
+        
+        namespace ini {
+            
+            /**
+             * @brief Ini file type
+             */
+            using IniData = std::map<std::string, std::map<std::string, std::string>>;
+            
+            /**
+             * @brief Tesla config file
+             */
+            //static const char* TESLA_CONFIG_FILE = "/config/tesla/config.ini"; // CUSTOM MODIFICATION
+            //static const char* ULTRAHAND_CONFIG_FILE = ULTRAHAND_CONFIG_INI_PATH; // CUSTOM MODIFICATION
+            
+            /**
+             * @brief Parses an INI string
+             *
+             * @param str String to parse
+             * @return Parsed data
+             */
+            //static IniData parseIni(const std::string &str) {
+            //    IniData iniData;
+            //   
+            //    auto lines = split(str, '\n');
+            //   
+            //    std::string lastHeader = "";
+            //    for (auto& line : lines) {
+            //        if (line.empty())
+            //            continue;
+            //   
+            //        if (line[0] == '[' && line[line.size() - 1] == ']') {
+            //            lastHeader = line.substr(1, line.size() - 2);
+            //            iniData.emplace(lastHeader, std::map<std::string, std::string>{});
+            //        }
+            //        else {
+            //            auto keyValuePair = split(line, '=');
+            //            if (keyValuePair.size() == 2) {
+            //                std::string key = trim(keyValuePair[0]);
+            //                std::string value = trim(keyValuePair[1]);
+            //   
+            //                // Remove leading spaces before the equal sign, trailing spaces at the end of the line
+            //                key.erase(key.begin(), std::find_if(key.begin(), key.end(), [](unsigned char ch) {
+            //                    return !std::isspace(ch);
+            //                }));
+            //                key.erase(std::find_if(key.rbegin(), key.rend(), [](unsigned char ch) {
+            //                    return !std::isspace(ch);
+            //                }).base(), key.end());
+            //   
+            //                // No need to remove spaces within the value, so just store it as is
+            //                iniData[lastHeader].emplace(key, value);
+            //            }
+            //        }
+            //    }
+            //   
+            //    return iniData;
+            //} // CUSTOM MODIFICATION END
+            
+            
+            /**
+             * @brief Unparses ini data into a string
+             *
+             * @param iniData Ini data
+             * @return Ini string
+             */
+            static std::string unparseIni(const IniData &iniData) {
+                std::ostringstream oss;
+                bool addSectionGap = false;
+
+                for (const auto &section : iniData) {
+                    if (addSectionGap) {
+                        oss << '\n';
+                    }
+                    oss << '[' << section.first << "]\n";
+                    for (const auto &keyValue : section.second) {
+                        oss << keyValue.first << '=' << keyValue.second << '\n';
+                    }
+                    addSectionGap = true;
                 }
-                listItem->setClickListener([themeName, themeFile, listItemRaw = listItem.get()](uint64_t keys) {
-                    if (runningInterpreter.load(std::memory_order_acquire)) return false;
-                    if (simulatedSelect && !simulatedSelectComplete) {
-                        keys |= KEY_A;
-                        simulatedSelect = false;
-                    }
-                    if (keys & KEY_A) {
-                        setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "current_theme", themeName);
-                        //deleteFileOrDirectory(THEME_CONFIG_INI_PATH);
-                        copyFileOrDirectory(themeFile, THEME_CONFIG_INI_PATH);
-                        initializeTheme();
-                        tsl::initializeThemeVars();
-                        reloadMenu = reloadMenu2 = true;
-                        lastSelectedListItem->setValue("");
-                        selectedListItem->setValue(themeName);
-                        listItemRaw->setValue(CHECKMARK_SYMBOL);
-                        lastSelectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItemRaw, [](auto*){});
-                        shiftItemFocus(listItemRaw);
-                        simulatedSelectComplete = true;
-                        lastSelectedListItem->triggerClickAnimation();
-                        return true;
-                    }
-                    return false;
-                });
-                list->addItem(listItem.release());
+
+                return oss.str();
             }
-        } else if (dropdownSelection == "wallpaperMenu") {
-            list->addItem(new tsl::elm::CategoryHeader(WALLPAPER));
-            std::string currentWallpaper = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "current_wallpaper");
-            currentWallpaper = currentWallpaper.empty() ? OPTION_SYMBOL : currentWallpaper;
 
-            auto listItem = std::make_unique<tsl::elm::ListItem>(OPTION_SYMBOL);
-            if (currentWallpaper == OPTION_SYMBOL) {
-                listItem->setValue(CHECKMARK_SYMBOL);
-                lastSelectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){});
+            
+            /**
+             * @brief Read Tesla settings file
+             *
+             * @return Settings data
+             */
+            static IniData readOverlaySettings(auto& CONFIG_FILE) {
+                /* Open Sd card filesystem. */
+                FsFileSystem fsSdmc;
+                if (R_FAILED(fsOpenSdCardFileSystem(&fsSdmc)))
+                    return {};
+                hlp::ScopeGuard fsGuard([&] { fsFsClose(&fsSdmc); });
+                
+                /* Open config file. */
+                FsFile fileConfig;
+                if (R_FAILED(fsFsOpenFile(&fsSdmc, CONFIG_FILE, FsOpenMode_Read, &fileConfig)))
+                    return {};
+                hlp::ScopeGuard fileGuard([&] { fsFileClose(&fileConfig); });
+                
+                /* Get config file size. */
+                s64 configFileSize;
+                if (R_FAILED(fsFileGetSize(&fileConfig, &configFileSize)))
+                    return {};
+                
+                /* Read and parse config file. */
+                std::string configFileData(configFileSize, '\0');
+                u64 readSize;
+                Result rc = fsFileRead(&fileConfig, 0, configFileData.data(), configFileSize, FsReadOption_None, &readSize);
+                if (R_FAILED(rc) || readSize != static_cast<u64>(configFileSize))
+                    return {};
+                
+                return parseIni(configFileData);
+            }
+            
+            /**
+             * @brief Replace Tesla settings file with new data
+             *
+             * @param iniData new data
+             */
+            static void writeOverlaySettings(IniData const &iniData, auto& CONFIG_FILE) {
+                /* Open Sd card filesystem. */
+                FsFileSystem fsSdmc;
+                if (R_FAILED(fsOpenSdCardFileSystem(&fsSdmc)))
+                    return;
+                hlp::ScopeGuard fsGuard([&] { fsFsClose(&fsSdmc); });
+                
+                /* Open config file. */
+                FsFile fileConfig;
+                if (R_FAILED(fsFsOpenFile(&fsSdmc, CONFIG_FILE, FsOpenMode_Write, &fileConfig)))
+                    return;
+                hlp::ScopeGuard fileGuard([&] { fsFileClose(&fileConfig); });
+                
+                std::string iniString = unparseIni(iniData);
+                
+                fsFileWrite(&fileConfig, 0, iniString.c_str(), iniString.length(), FsWriteOption_Flush);
+            }
+            
+            /**
+             * @brief Merge and save changes into Tesla settings file
+             *
+             * @param changes setting values to add or update
+             */
+            static void updateOverlaySettings(IniData const &changes, auto& CONFIG_FILE) {
+                hlp::ini::IniData iniData = hlp::ini::readOverlaySettings(CONFIG_FILE);
+                for (auto &section : changes) {
+                    for (auto &keyValue : section.second) {
+                        iniData[section.first][keyValue.first] = keyValue.second;
+                    }
+                }
+                writeOverlaySettings(iniData, CONFIG_FILE);
+            }
+            
+        }
+        
+        /**
+         * @brief Decodes a key string into it's key code
+         *
+         * @param value Key string
+         * @return Key code
+         */
+        static u64 stringToKeyCode(const std::string& value) {
+            for (const auto& keyInfo : impl::KEYS_INFO) {
+                if (strcasecmp(value.c_str(), keyInfo.name) == 0)
+                    return keyInfo.key;
+            }
+            return 0;
+        }
+        
+        
+        /**
+         * @brief Decodes a combo string into key codes
+         *
+         * @param value Combo string
+         * @return Key codes
+         */
+        static u64 comboStringToKeys(const std::string &value) {
+            u64 keyCombo = 0x00;
+            for (std::string key : split(removeWhiteSpaces(value), '+')) { // CUSTOM MODIFICATION (bug fix)
+                keyCombo |= hlp::stringToKeyCode(key);
+            }
+            return keyCombo;
+        }
+        
+        /**
+         * @brief Encodes key codes into a combo string
+         *
+         * @param keys Key codes
+         * @return Combo string
+         */
+        static std::string keysToComboString(u64 keys) {
+            if (keys == 0) return ""; // Early return for empty input
+        
+            std::ostringstream oss;
+            bool first = true;
+        
+            for (const auto& keyInfo : impl::KEYS_INFO) {
+                if (keys & keyInfo.key) {
+                    if (!first) {
+                        oss << "+";
+                    }
+                    oss << keyInfo.name;
+                    first = false;
+                }
+            }
+        
+            return oss.str();
+        }
+        
+    }
+    
+    // Renderer
+    
+    namespace gfx {
+        
+        extern "C" u64 __nx_vi_layer_id;
+        
+        //Color src(0);
+        //Color end(0);
+
+        struct ScissoringConfig {
+            s32 x, y, w, h;
+        };
+        
+        /**
+         * @brief Manages the Tesla layer and draws raw data to the screen
+         */
+        class Renderer final {
+        public:
+
+            Renderer& operator=(Renderer&) = delete;
+            
+            friend class tsl::Overlay;
+            
+            /**
+             * @brief Handles opacity of drawn colors for fadeout. Pass all colors through this function in order to apply opacity properly
+             *
+             * @param c Original color
+             * @return Color with applied opacity
+             */
+            inline static Color a(const Color &c) {
+                u8 alpha = (disableTransparency && useOpaqueScreenshots) ? 0xF : static_cast<u8>(std::min(static_cast<u8>(c.a), static_cast<u8>(0xF * Renderer::s_opacity)));
+                return (c.rgba & 0x0FFF) | (alpha << 12);
+            }
+            
+            /**
+             * @brief Enables scissoring, discarding of any draw outside the given boundaries
+             *
+             * @param x x pos
+             * @param y y pos
+             * @param w Width
+             * @param h Height
+             */
+            inline void enableScissoring(s32 x, s32 y, s32 w, s32 h) {
+                this->m_scissoringStack.emplace(x, y, w, h);
+            }
+            
+            /**
+             * @brief Disables scissoring
+             */
+            inline void disableScissoring() {
+                this->m_scissoringStack.pop();
+            }
+            
+            
+            // Drawing functions
+            
+            /**
+             * @brief Draw a single pixel onto the screen
+             *
+             * @param x X pos
+             * @param y Y pos
+             * @param color Color
+             */
+            inline void setPixel(s32 x, s32 y, Color color, u32 offset) {
+                if ((unsigned)x < cfg::FramebufferWidth && (unsigned)y < cfg::FramebufferHeight) {
+                    //u32 offset = this->getPixelOffset(x, y);
+                    if (offset != UINT32_MAX) {
+                        Color* framebuffer = static_cast<Color*>(this->getCurrentFramebuffer());
+                        framebuffer[offset] = color;
+                    }
+                }
             }
 
-            listItem->setClickListener([listItemRaw = listItem.get()](uint64_t keys) {
-                if (runningInterpreter.load(std::memory_order_acquire)) return false;
-                if (simulatedSelect && !simulatedSelectComplete) {
-                    keys |= KEY_A;
-                    simulatedSelect = false;
-                }
-                if (keys & KEY_A) {
-                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "current_wallpaper", "");
-                    deleteFileOrDirectory(WALLPAPER_PATH);
-                    refreshWallpaper.store(true, std::memory_order_release);
-                    //deleteFileOrDirectory(THEME_CONFIG_INI_PATH);
-                    //if (isFileOrDirectory(defaultTheme)) copyFileOrDirectory(defaultTheme, THEME_CONFIG_INI_PATH);
-                    //else initializeTheme();
-                    //tsl::initializeThemeVars();
-                    reloadMenu = reloadMenu2 = true;
-                    lastSelectedListItem->setValue("");
-                    selectedListItem->setValue(OPTION_SYMBOL);
-                    listItemRaw->setValue(CHECKMARK_SYMBOL);
-                    lastSelectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItemRaw, [](auto*){});
-                    shiftItemFocus(listItemRaw);
-                    simulatedSelectComplete = true;
-                    lastSelectedListItem->triggerClickAnimation();
-                    return true;
-                }
-                return false;
-            });
-            list->addItem(listItem.release());
 
-            std::vector<std::string> wallpaperFilesList = getFilesListByWildcards(WALLPAPERS_PATH + "*.rgba");
-            std::sort(wallpaperFilesList.begin(), wallpaperFilesList.end());
-
-            for (const auto& wallpaperFile : wallpaperFilesList) {
-                std::string wallpaperName = dropExtension(getNameFromPath(wallpaperFile));
-                if (wallpaperName == DEFAULT_STR) continue;
-                listItem = std::make_unique<tsl::elm::ListItem>(wallpaperName);
-                if (wallpaperName == currentWallpaper) {
-                    listItem->setValue(CHECKMARK_SYMBOL);
-                    lastSelectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){});
-                }
-                listItem->setClickListener([wallpaperName, wallpaperFile, listItemRaw = listItem.get()](uint64_t keys) {
-                    if (runningInterpreter.load(std::memory_order_acquire)) return false;
-                    if (simulatedSelect && !simulatedSelectComplete) {
-                        keys |= KEY_A;
-                        simulatedSelect = false;
-                    }
-                    if (keys & KEY_A) {
-                        setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "current_wallpaper", wallpaperName);
-                        //deleteFileOrDirectory(THEME_CONFIG_INI_PATH);
-                        copyFileOrDirectory(wallpaperFile, WALLPAPER_PATH);
-                        refreshWallpaper = true;
-                        //clearWallpaperData();
-                        //initializeTheme();
-                        //tsl::initializeThemeVars();
-                        reloadMenu = reloadMenu2 = true;
-                        lastSelectedListItem->setValue("");
-                        selectedListItem->setValue(wallpaperName);
-                        listItemRaw->setValue(CHECKMARK_SYMBOL);
-                        lastSelectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItemRaw, [](auto*){});
-                        shiftItemFocus(listItemRaw);
-                        simulatedSelectComplete = true;
-                        lastSelectedListItem->triggerClickAnimation();
-                        return true;
-                    }
-                    return false;
-                });
-                list->addItem(listItem.release());
+            
+            /**
+             * @brief Blends two colors
+             *
+             * @param src Source color
+             * @param dst Destination color
+             * @param alpha Opacity
+             * @return Blended color
+             */
+            inline u8 blendColor(u8 src, u8 dst, u8 alpha) {
+                return (dst * alpha + src * (0x0F - alpha)) >> 4;
             }
-        } else if (dropdownSelection == "widgetMenu") {
-            list->addItem(new tsl::elm::CategoryHeader(WIDGET));
-            addToggleListItem(list, CLOCK, !hideClock, "hide_clock");
-            addToggleListItem(list, SOC_TEMPERATURE, !hideSOCTemp, "hide_soc_temp");
-            addToggleListItem(list, PCB_TEMPERATURE, !hidePCBTemp, "hide_pcb_temp");
-            addToggleListItem(list, BATTERY, !hideBattery, "hide_battery");
+            
+            /**
+             * @brief Draws a single source blended pixel onto the screen
+             *
+             * @param x X pos
+             * @param y Y pos
+             * @param color Color
+             */
+            inline void setPixelBlendSrc(s32 x, s32 y, Color color) {
+                //if (x < 0 || y < 0 || x >= cfg::FramebufferWidth || y >= cfg::FramebufferHeight)
+                //    return;
+                
+                u32 offset = this->getPixelOffset(x, y);
+                if (offset == UINT32_MAX)
+                    return;
+                
+                u16* framebuffer = static_cast<u16*>(this->getCurrentFramebuffer());
+                //src=framebuffer[offset];
+                Color src(framebuffer[offset]);
+                
+                Color end(0);
+                end.r = blendColor(src.r, color.r, color.a);
+                end.g = blendColor(src.g, color.g, color.a);
+                end.b = blendColor(src.b, color.b, color.a);
+                end.a = src.a;
+            
+                this->setPixel(x, y, end, offset);
+            }
+            
+            /**
+             * @brief Draws a single destination blended pixel onto the screen
+             *
+             * @param x X pos
+             * @param y Y pos
+             * @param color Color
+             */
+            inline void setPixelBlendDst(s32 x, s32 y, Color color) {
+                //if (x < 0 || y < 0 || x >= cfg::FramebufferWidth || y >= cfg::FramebufferHeight)
+                //    return;
+                
+                u32 offset = this->getPixelOffset(x, y);
+                if (offset == UINT32_MAX)
+                    return;
+                
+                u16* framebuffer = static_cast<u16*>(this->getCurrentFramebuffer());
+                //src=framebuffer[offset];
+                Color src(framebuffer[offset]);
+                
+                Color end(0);
+                end.r = blendColor(src.r, color.r, color.a);
+                end.g = blendColor(src.g, color.g, color.a);
+                end.b = blendColor(src.b, color.b, color.a);
+                end.a = color.a + (src.a * (0xF - color.a) / 0xF);
+            
+                this->setPixel(x, y, end, offset);
+            }
+            
+            /**
+             * @brief Draws a rectangle of given sizes
+             *
+             * @param x X pos
+             * @param y Y pos
+             * @param w Width
+             * @param h Height
+             * @param color Color
+             */
+            inline void drawRect(s32 x, s32 y, s32 w, s32 h, Color color) {
+                s32 x_end = x + w;
+                s32 y_end = y + h;
+            
+                for (s32 yi = y; yi < y_end; ++yi) {
+                    for (s32 xi = x; xi < x_end; ++xi) {
+                        this->setPixelBlendDst(xi, yi, color);
+                    }
+                }
+            }
 
-        } else if (dropdownSelection == "miscMenu") {
-            list->addItem(new tsl::elm::CategoryHeader(MENU_ITEMS));
             
-            hideUserGuide = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_user_guide") == TRUE_STR);
-            createToggleListItem(list, USER_GUIDE, hideUserGuide, "hide_user_guide", true);
-            
-            cleanVersionLabels = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "clean_version_labels") == TRUE_STR);
-            createToggleListItem(list, CLEAN_VERSIONS, cleanVersionLabels, "clean_version_labels", false, true);
-            
-            hideOverlayVersions = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_overlay_versions") == TRUE_STR);
-            createToggleListItem(list, OVERLAY_VERSIONS, hideOverlayVersions, "hide_overlay_versions", true);
-            
-            hidePackageVersions = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_package_versions") == TRUE_STR);
-            createToggleListItem(list, PACKAGE_VERSIONS, hidePackageVersions, "hide_package_versions", true);
-            
-            list->addItem(new tsl::elm::CategoryHeader(EFFECTS));
+            inline void drawCircle(s32 centerX, s32 centerY, u16 radius, bool filled, Color color) {
+                s32 x = radius;
+                s32 y = 0;
+                s32 radiusError = 0;
+                s32 xChange = 1 - (radius << 1);
+                s32 yChange = 0;
+                
+                while (x >= y) {
+                    if (filled) {
+                        for (s32 i = centerX - x; i <= centerX + x; i++) {
+                            this->setPixelBlendDst(i, centerY + y, color);
+                            this->setPixelBlendDst(i, centerY - y, color);
+                        }
+                        
+                        for (s32 i = centerX - y; i <= centerX + y; i++) {
+                            this->setPixelBlendDst(i, centerY + x, color);
+                            this->setPixelBlendDst(i, centerY - x, color);
+                        }
+                    } else {
+                        this->setPixelBlendDst(centerX + x, centerY + y, color);
+                        this->setPixelBlendDst(centerX + y, centerY + x, color);
+                        this->setPixelBlendDst(centerX - y, centerY + x, color);
+                        this->setPixelBlendDst(centerX - x, centerY + y, color);
+                        this->setPixelBlendDst(centerX - x, centerY - y, color);
+                        this->setPixelBlendDst(centerX - y, centerY - x, color);
+                        this->setPixelBlendDst(centerX + y, centerY - x, color);
+                        this->setPixelBlendDst(centerX + x, centerY - y, color);
+                    }
+                    
+                    y++;
+                    radiusError += yChange;
+                    yChange += 2;
+                    
+                    if (((radiusError << 1) + xChange) > 0) {
+                        x--;
+                        radiusError += xChange;
+                        xChange += 2;
+                    }
+                }
+            }
 
-            //std::vector<std::vector<std::string>> tableData = {
-            //    { "", "", "" } // Each inner vector represents a row in the table.
-            //};
-            //addTable(list, tableData, "", 160, 20, 3, 0, DEFAULT_STR, DEFAULT_STR, RIGHT_STR, true);
+            inline void drawQuarterCircle(s32 centerX, s32 centerY, u16 radius, bool filled, Color color, int quadrant) {
+                s32 x = radius;
+                s32 y = 0;
+                s32 radiusError = 0;
+                s32 xChange = 1 - (radius << 1);
+                s32 yChange = 0;
+                
+                while (x >= y) {
+                    if (filled) {
+                        switch (quadrant) {
+                            case 1: // Top-right
+                                for (s32 i = centerX; i <= centerX + x; i++) {
+                                    this->setPixelBlendDst(i, centerY - y, color);
+                                }
+                                for (s32 i = centerX; i <= centerX + y; i++) {
+                                    this->setPixelBlendDst(i, centerY - x, color);
+                                }
+                                break;
+                            case 2: // Top-left
+                                for (s32 i = centerX - x; i <= centerX; i++) {
+                                    this->setPixelBlendDst(i, centerY - y, color);
+                                }
+                                for (s32 i = centerX - y; i <= centerX; i++) {
+                                    this->setPixelBlendDst(i, centerY - x, color);
+                                }
+                                break;
+                            case 3: // Bottom-left
+                                for (s32 i = centerX - x; i <= centerX; i++) {
+                                    this->setPixelBlendDst(i, centerY + y, color);
+                                }
+                                for (s32 i = centerX - y; i <= centerX; i++) {
+                                    this->setPixelBlendDst(i, centerY + x, color);
+                                }
+                                break;
+                            case 4: // Bottom-right
+                                for (s32 i = centerX; i <= centerX + x; i++) {
+                                    this->setPixelBlendDst(i, centerY + y, color);
+                                }
+                                for (s32 i = centerX; i <= centerX + y; i++) {
+                                    this->setPixelBlendDst(i, centerY + x, color);
+                                }
+                                break;
+                        }
+                    } else {
+                        switch (quadrant) {
+                            case 1: // Top-right
+                                this->setPixelBlendDst(centerX + x, centerY - y, color);
+                                this->setPixelBlendDst(centerX + y, centerY - x, color);
+                                break;
+                            case 2: // Top-left
+                                this->setPixelBlendDst(centerX - x, centerY - y, color);
+                                this->setPixelBlendDst(centerX - y, centerY - x, color);
+                                break;
+                            case 3: // Bottom-left
+                                this->setPixelBlendDst(centerX - x, centerY + y, color);
+                                this->setPixelBlendDst(centerX - y, centerY + x, color);
+                                break;
+                            case 4: // Bottom-right
+                                this->setPixelBlendDst(centerX + x, centerY + y, color);
+                                this->setPixelBlendDst(centerX + y, centerY + x, color);
+                                break;
+                        }
+                    }
+                    
+                    y++;
+                    radiusError += yChange;
+                    yChange += 2;
+                    
+                    if (((radiusError << 1) + xChange) > 0) {
+                        x--;
+                        radiusError += xChange;
+                        xChange += 2;
+                    }
+                }
+            }
 
-            //if (expandedMemory) {
-            //    useCustomWallpaper = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "custom_wallpaper") == TRUE_STR);
-            //    createToggleListItem("Custom Wallpaper", useCustomWallpaper, "custom_wallpaper", false, true);
+            inline void drawBorderedRoundedRect(s32 x, s32 y, s32 width, s32 height, s32 thickness, s32 radius, Color highlightColor) {
+                s32 startX = x + 4;
+                s32 startY = y;
+                s32 adjustedWidth = width - 12;
+                s32 adjustedHeight = height + 1;
+            
+                // Draw borders
+                this->drawRect(startX, startY - thickness, adjustedWidth, thickness, highlightColor); // Top border
+                this->drawRect(startX, startY + adjustedHeight, adjustedWidth, thickness, highlightColor); // Bottom border
+                this->drawRect(startX - thickness, startY, thickness, adjustedHeight, highlightColor); // Left border
+                this->drawRect(startX + adjustedWidth, startY, thickness, adjustedHeight, highlightColor); // Right border
+            
+                // Draw corners
+                this->drawQuarterCircle(startX, startY, radius, true, highlightColor, 2); // Upper-left
+                this->drawQuarterCircle(startX, startY + height, radius, true, highlightColor, 3); // Lower-left
+                this->drawQuarterCircle(x + width - 9, startY, radius, true, highlightColor, 1); // Upper-right
+                this->drawQuarterCircle(x + width - 9, startY + height, radius, true, highlightColor, 4); // Lower-right
+            }
+
+
+            // Define processChunk as a static member function
+            static void processRoundedRectChunk(Renderer* self, s32 x, s32 y, s32 x_end, s32 y_end, s32 r2, s32 radius, Color color, s32 startRow, s32 endRow) {
+                s32 x_left = x + radius;
+                s32 x_right = x_end - radius;
+                s32 y_top = y + radius;
+                s32 y_bottom = y_end - radius;
+                
+                // Process the rectangle in chunks
+                for (s32 y1 = startRow; y1 < endRow; ++y1) {
+                    for (s32 x1 = x; x1 < x_end; ++x1) {
+                        bool isInCorner = false;
+            
+                        if (x1 < x_left) {
+                            // Left side
+                            if (y1 < y_top) {
+                                // Top-left corner
+                                s32 dx = x_left - x1;
+                                s32 dy = y_top - y1;
+                                if (dx * dx + dy * dy <= r2) {
+                                    isInCorner = true;
+                                }
+                            } else if (y1 >= y_bottom) {
+                                // Bottom-left corner
+                                s32 dx = x_left - x1;
+                                s32 dy = y1 - y_bottom;
+                                if (dx * dx + dy * dy <= r2) {
+                                    isInCorner = true;
+                                }
+                            } else {
+                                // Left side of the rectangle
+                                isInCorner = true;
+                            }
+                        } else if (x1 >= x_right) {
+                            // Right side
+                            if (y1 < y_top) {
+                                // Top-right corner
+                                s32 dx = x1 - x_right;
+                                s32 dy = y_top - y1;
+                                if (dx * dx + dy * dy <= r2) {
+                                    isInCorner = true;
+                                }
+                            } else if (y1 >= y_bottom) {
+                                // Bottom-right corner
+                                s32 dx = x1 - x_right;
+                                s32 dy = y1 - y_bottom;
+                                if (dx * dx + dy * dy <= r2) {
+                                    isInCorner = true;
+                                }
+                            } else {
+                                // Right side of the rectangle
+                                isInCorner = true;
+                            }
+                        } else {
+                            isInCorner = true;
+                            // Center part
+                            //if (y1 < y_top || y1 >= y_bottom) {
+                            //    // Top and Bottom sides
+                            //    isInCorner = true;
+                            //} else {
+                            //    // Center area inside rectangle
+                            //    isInCorner = true;
+                            //}
+                        }
+            
+                        // Set the pixel color if it's in the corner or filled area
+                        if (isInCorner) {
+                            self->setPixelBlendDst(x1, y1, color);
+                        }
+                    }
+                }
+            }
+
+
+
+            /**
+             * @brief Draws a rounded rectangle of given sizes and corner radius
+             *
+             * @param x X pos
+             * @param y Y pos
+             * @param w Width
+             * @param h Height
+             * @param radius Corner radius
+             * @param color Color
+             */
+            inline void drawRoundedRectMultiThreaded(s32& x, s32& y, s32& w, s32& h, s32& radius, Color& color) {
+                s32 x_end = x + w;
+                s32 y_end = y + h;
+                s32 r2 = radius * radius;
+            
+                // Reuse threads and implement work-stealing
+                currentRow = y;
+            
+                auto threadTask = [this, x, y, x_end, y_end, r2, radius, color]() {
+                    s32 startRow;
+                    while (true) {
+                        startRow = currentRow.fetch_add(4);
+                        if (startRow >= y_end) break;
+                        //s32 endRow = std::min(startRow + 4,y_end); // Process one row at a time
+                        processRoundedRectChunk(this, x, y, x_end, y_end, r2, radius, color, startRow, std::min(startRow + 4,y_end));
+                    }
+                };
+            
+                // Launch threads
+                for (unsigned i = 0; i < numThreads; ++i) {
+                    threads[i] = std::thread(threadTask);
+                }
+            
+                // Join threads
+                for (auto& t : threads) {
+                    if (t.joinable()) t.join();
+                }
+            }
+
+
+            inline void drawRoundedRectSingleThreaded(s32& x, s32& y, s32& w, s32& h, s32& radius, Color& color) {
+                s32 x_end = x + w;
+                s32 y_end = y + h;
+                s32 r2 = radius * radius;
+                
+                // Call the processRoundedRectChunk function directly for the entire rectangle
+                processRoundedRectChunk(this, x, y, x_end, y_end, r2, radius, color, y, y_end);
+            }
+
+            std::function<void(s32, s32, s32, s32, s32, Color)> drawRoundedRect;
+            void updateDrawFunction() {
+                if (expandedMemory) {
+                    drawRoundedRect = [this](s32 x, s32 y, s32 w, s32 h, s32 radius, Color color) {
+                        drawRoundedRectMultiThreaded(x, y, w, h, radius, color);
+                    };
+                } else {
+                    drawRoundedRect = [this](s32 x, s32 y, s32 w, s32 h, s32 radius, Color color) {
+                        drawRoundedRectSingleThreaded(x, y, w, h, radius, color);
+                    };
+                }
+            }
+
+            //void drawRoundedRect(s32 x, s32 y, s32 w, s32 h, s32 radius, Color color) {
+            //    drawRoundedRectFunc(x, y, w, h, radius, color);
             //}
 
-            useOpaqueScreenshots = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "opaque_screenshots") == TRUE_STR);
-            createToggleListItem(list, OPAQUE_SCREENSHOTS, useOpaqueScreenshots, "opaque_screenshots");
+            //inline void drawRoundedRect(s32 x, s32 y, s32 w, s32 h, s32 radius, Color color) {
+            //    s32 radiusSquared = radius * radius;
+            //    s32 xMin = x + radius;
+            //    s32 yMin = y + radius;
+            //    s32 xMax = x + w - radius;
+            //    s32 yMax = y + h - radius;
+            //
+            //    for (s32 y1 = y; y1 < y + h; ++y1) {
+            //        for (s32 x1 = x; x1 < x + w; ++x1) {
+            //            // Check if the pixel is inside the rectangle area excluding corners
+            //            if (x1 >= xMin && x1 < xMax && y1 >= yMin && y1 < yMax) {
+            //                this->setPixelBlendDst(x1, y1, color);
+            //            } else {
+            //                s32 dx = 0, dy = 0;
+            //
+            //                // Check corners
+            //                if (x1 < xMin && y1 < yMin) { // Top-left corner
+            //                    dx = xMin - x1;
+            //                    dy = yMin - y1;
+            //                } else if (x1 >= xMax && y1 < yMin) { // Top-right corner
+            //                    dx = x1 - xMax;
+            //                    dy = yMin - y1;
+            //                } else if (x1 < xMin && y1 >= yMax) { // Bottom-left corner
+            //                    dx = xMin - x1;
+            //                    dy = y1 - yMax;
+            //                } else if (x1 >= xMax && y1 >= yMax) { // Bottom-right corner
+            //                    dx = x1 - xMax;
+            //                    dy = y1 - yMax;
+            //                }
+            //
+            //                // Check if the pixel is within the radius of the corner
+            //                if (dx * dx + dy * dy <= radiusSquared) {
+            //                    this->setPixelBlendDst(x1, y1, color);
+            //                }
+            //            }
+            //        }
+            //    }
+            //}
+
             
-            progressAnimation = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "progress_animation") == TRUE_STR);
-            createToggleListItem(list, PROGRESS_ANIMATION, progressAnimation, "progress_animation");
-        
-        } else {
-            list->addItem(new tsl::elm::ListItem(FAILED_TO_OPEN + ": " + settingsIniPath));
-        }
-
-        auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel);
-        rootFrame->setContent(list.release());
-        return rootFrame.release();
-    }
-
-    virtual bool handleInput(u64 keysDown, u64 keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
-        if (runningInterpreter.load(std::memory_order_acquire)) {
-            return handleRunningInterpreter(keysHeld);
-        }
-        if (lastRunningInterpreter) {
-            isDownloadCommand = false;
-            lastSelectedListItem->setValue(commandSuccess ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
-            closeInterpreterThread();
-            lastRunningInterpreter = false;
-            return true;
-        }
-
-        if (refreshWallpaper.load(std::memory_order_acquire) && !inPlot) {
-            std::lock_guard<std::mutex> lock(wallpaperMutex);
-            std::vector<u8>().swap(wallpaperData);
-            //if (isFileOrDirectory(WALLPAPER_PATH))
-            wallpaperData = loadBitmapFile(WALLPAPER_PATH, 448, 720);
-            //else
-            //    wallpaperData.clear();
-            refreshWallpaper.store(false, std::memory_order_release);
-        }
-
-        if (inSettingsMenu && !inSubSettingsMenu) {
-            if (!returningToSettings) {
-                if (reloadMenu3) {
-                    tsl::goBack();
-                    tsl::changeTo<UltrahandSettingsMenu>();
-                    reloadMenu3 = false;
-                }
-                if (simulatedNextPage && !simulatedNextPageComplete) {
-                    simulatedNextPage = false;
-                    simulatedNextPageComplete = true;
-                }
-                if (simulatedMenu && !simulatedMenuComplete) {
-                    simulatedMenu = false;
-                    simulatedMenuComplete = true;
-                }
-                if (simulatedBack && !simulatedBackComplete) {
-                    keysHeld |= KEY_B;
-                    simulatedBack = false;
-                }
-                if ((keysHeld & KEY_B) && !stillTouching) {
-                    allowSlide = unlockedSlide = false;
-                    inSettingsMenu = false;
-                    returningToMain = (lastMenu != "hiddenMenuMode");
-                    returningToHiddenMain = !returningToMain;
-                    lastMenu = "settingsMenu";
-                    tsl::goBack();
-                    if (reloadMenu) {
-                        tsl::changeTo<MainMenu>(lastMenuMode);
-                        reloadMenu = false;
+            
+            inline void drawUniformRoundedRect(s32 x, s32 y, s32 w, s32 h, Color color) {
+                s32 radius = std::min(w, h) / 2;
+                s32 x_start = x + radius;
+                s32 x_end = x + w - radius;
+                s32 y_start = y + radius;
+                s32 y_end = y + h - radius;
+            
+                // Draw the central rectangle excluding the corners
+                for (s32 y1 = y_start; y1 < y_end; ++y1) {
+                    for (s32 x1 = x_start; x1 < x_end; ++x1) {
+                        this->setPixelBlendDst(x1, y1, color);
                     }
-                    simulatedBackComplete = true;
+                }
+            
+                // Draw the top and bottom rectangles excluding the corners
+                for (s32 y1 = y; y1 < y_start; ++y1) {
+                    for (s32 x1 = x_start; x1 < x_end; ++x1) {
+                        this->setPixelBlendDst(x1, y1, color);
+                    }
+                }
+                for (s32 y1 = y_end; y1 < y + h; ++y1) {
+                    for (s32 x1 = x_start; x1 < x_end; ++x1) {
+                        this->setPixelBlendDst(x1, y1, color);
+                    }
+                }
+            
+                // Draw the left and right rectangles excluding the corners
+                for (s32 y1 = y_start; y1 < y_end; ++y1) {
+                    for (s32 x1 = x; x1 < x_start; ++x1) {
+                        this->setPixelBlendDst(x1, y1, color);
+                    }
+                    for (s32 x1 = x_end; x1 < x + w; ++x1) {
+                        this->setPixelBlendDst(x1, y1, color);
+                    }
+                }
+                
+                // Draw the rounded corners ensuring smooth arcs
+                s32 radiusSquared = radius * radius;
+                s32 cornerX = x + radius;
+                s32 cornerY = y + radius;
+            
+                for (s32 x1 = 0; x1 < radius; ++x1) {
+                    for (s32 y1 = 0; y1 < radius; ++y1) {
+                        if ((x1 * x1 + y1 * y1) <= radiusSquared) {
+                            // Top-left corner
+                            this->setPixelBlendDst(cornerX - x1, cornerY - y1, color);
+                            // Top-right corner
+                            this->setPixelBlendDst(x + w - radius + x1, cornerY - y1, color);
+                            // Bottom-left corner
+                            this->setPixelBlendDst(cornerX - x1, y + h - radius + y1, color);
+                            // Bottom-right corner
+                            this->setPixelBlendDst(x + w - radius + x1, y + h - radius + y1, color);
+                        }
+                    }
+                }
+            }
+
+            
+            void processBMPChunk(s32 x, s32 y, s32 screenW, const u8 *preprocessedData, s32 startRow, s32 endRow) {
+                s32 bytesPerRow = screenW * 4;
+                const s32 endX = screenW - 16;
+            
+                for (s32 y1 = startRow; y1 < endRow; ++y1) {
+                    const u8 *rowPtr = preprocessedData + (y1 * bytesPerRow);
+                    s32 x1 = 0;
+            
+                    // Process in chunks of 16 pixels using SIMD
+                    for (; x1 <= endX; x1 += 16) {
+                        uint8x16x4_t pixelData = vld4q_u8(rowPtr + (x1 * 4));
+                        
+                        // Unroll the loop to reduce the number of operations
+                        for (s32 i = 0; i < 16; ++i) {
+                            setPixelBlendSrc(x + x1 + i, y + y1, {
+                                pixelData.val[0][i],
+                                pixelData.val[1][i],
+                                pixelData.val[2][i],
+                                pixelData.val[3][i]
+                            });
+                        }
+                    }
+            
+                    // Handle the remaining pixels (less than 16)
+                    for (s32 xRem = x1; xRem < screenW; ++xRem) {
+                        const u8 *p = rowPtr + (xRem * 4);
+                        setPixelBlendSrc(x + xRem, y + y1, {p[0], p[1], p[2], p[3]});
+                    }
+                }
+            }
+
+
+            /**
+             * @brief Draws a scaled RGBA8888 bitmap from memory
+             *
+             * @param x X start position
+             * @param y Y start position
+             * @param w Bitmap width (original width of the bitmap)
+             * @param h Bitmap height (original height of the bitmap)
+             * @param bmp Pointer to bitmap data
+             * @param screenW Target screen width
+             * @param screenH Target screen height
+             */
+
+            void drawBitmap(s32 x, s32 y, s32 screenW, s32 screenH, const u8 *preprocessedData) {
+                // Number of threads to use
+                //const unsigned numThreads = 3;
+                //std::vector<std::thread> threads(numThreads);
+
+                // Divide rows among threads
+                //s32 chunkSize = (screenH + numThreads - 1) / numThreads;
+                for (unsigned i = 0; i < numThreads; ++i) {
+                    s32 startRow = i * bmpChunkSize;
+                    s32 endRow = std::min(startRow + bmpChunkSize, screenH);
+                    
+                    // Bind the member function and create the thread
+                    threads[i] = std::thread(std::bind(&tsl::gfx::Renderer::processBMPChunk, this, x, y, screenW, preprocessedData, startRow, endRow));
+                }
+            
+                // Join all threads
+                for (auto& t : threads) {
+                    t.join();
+                }
+            }
+
+            
+            /**
+             * @brief Fills the entire layer with a given color
+             *
+             * @param color Color
+             */
+            inline void fillScreen(Color color) {
+                std::fill_n(static_cast<Color*>(this->getCurrentFramebuffer()), this->getFramebufferSize() / sizeof(Color), color);
+            }
+            
+            /**
+             * @brief Clears the layer (With transparency)
+             *
+             */
+            inline void clearScreen() {
+                this->fillScreen({ 0x00, 0x00, 0x00, 0x00 });
+            }
+            
+            struct Glyph {
+                stbtt_fontinfo *currFont;
+                float currFontSize;
+                int bounds[4];
+                int xAdvance;
+                u8 *glyphBmp;
+                int width, height;
+            };
+            
+            inline float calculateStringWidth(const std::string& str, s32 fontSize, bool fixedWidthNumbers = false) {
+                if (str.empty()) {
+                    return 0.0f;
+                }
+                
+                float totalWidth = 0.0f;
+                std::string::size_type strPos = 0;
+                ssize_t codepointWidth;
+                u32 prevCharacter = 0;
+                
+                while (strPos < str.size()) {
+                    u32 currCharacter;
+                    codepointWidth = decode_utf8(&currCharacter, reinterpret_cast<const u8*>(&str[strPos]));
+                    
+                    if (codepointWidth <= 0) {
+                        break;
+                    }
+                    
+                    // Check if the character is in the character width map
+                    auto it = characterWidths.find(static_cast<wchar_t>(currCharacter));
+                    if (it != characterWidths.end()) {
+                        totalWidth += it->second * fontSize;
+                    } else {
+                        stbtt_fontinfo* currFont = nullptr;
+                        
+                        if (stbtt_FindGlyphIndex(&this->m_extFont, currCharacter)) {
+                            currFont = &this->m_extFont;
+                        } else if (this->m_hasLocalFont && stbtt_FindGlyphIndex(&this->m_stdFont, currCharacter) == 0) {
+                            currFont = &this->m_localFont;
+                        } else {
+                            currFont = &this->m_stdFont;
+                        }
+                        
+                        float currFontSize = stbtt_ScaleForPixelHeight(currFont, fontSize);
+                        
+                        int xAdvance = 0, leftBearing = 0;
+                        stbtt_GetCodepointHMetrics(currFont, currCharacter, &xAdvance, &leftBearing);
+                        
+                        // Apply kerning if previous character exists
+                        if (prevCharacter) {
+                            int kernAdvance = stbtt_GetCodepointKernAdvance(currFont, prevCharacter, currCharacter);
+                            totalWidth += kernAdvance * currFontSize;
+                        }
+                        
+                        totalWidth += xAdvance * currFontSize;
+                    }
+                    
+                    strPos += codepointWidth;
+                    prevCharacter = currCharacter;
+                }
+                
+                return totalWidth;
+            }
+
+            /**
+             * @brief Draws a string
+             *
+             * @param string String to draw
+             * @param monospace Draw string in monospace font
+             * @param x X pos
+             * @param y Y pos
+             * @param fontSize Height of the text drawn in pixels
+             * @param color Text color. Use transparent color to skip drawing and only get the string's dimensions
+             * @return Dimensions of drawn string
+             */
+            inline std::pair<u32, u32> drawString(const char* string, bool monospace, s32 x, s32 y, s32 fontSize, Color color, ssize_t maxWidth = 0) {
+                float maxX = x;
+                float currX = x;
+                float currY = y;
+                
+                static std::unordered_map<u64, Glyph> s_glyphCache;
+                u32 currCharacter;
+                ssize_t codepointWidth;
+                u64 key;
+                Glyph* glyph = nullptr;
+                auto it = s_glyphCache.end();
+                Color tmpColor(0);
+                uint8_t bmpColor;
+            
+                u32 offset;
+            
+                float xPos, yPos;
+                int yAdvance = 0;
+                float scaledFontSize;
+            
+                while (*string != '\0') {
+                    if (maxWidth > 0 && maxWidth < (currX - x))
+                        break;
+                    
+                    codepointWidth = decode_utf8(&currCharacter, reinterpret_cast<const u8*>(string));
+                    if (codepointWidth <= 0)
+                        break;
+                    
+                    string += codepointWidth;
+                    
+                    if (currCharacter == '\n') {
+                        maxX = std::max(currX, maxX);
+                        currX = x;
+                        currY += fontSize;
+                        continue;
+                    }
+                    
+                    key = (static_cast<u64>(currCharacter) << 32) | (static_cast<u64>(monospace) << 31) | (static_cast<u64>(std::bit_cast<u32>(fontSize)));
+                    it = s_glyphCache.find(key);
+                    if (it == s_glyphCache.end()) {
+                        glyph = &s_glyphCache.emplace(key, Glyph()).first->second;
+            
+                        if (stbtt_FindGlyphIndex(&this->m_extFont, currCharacter))
+                            glyph->currFont = &this->m_extFont;
+                        else if (this->m_hasLocalFont && stbtt_FindGlyphIndex(&this->m_stdFont, currCharacter) == 0)
+                            glyph->currFont = &this->m_localFont;
+                        else
+                            glyph->currFont = &this->m_stdFont;
+                        
+                        scaledFontSize = stbtt_ScaleForPixelHeight(glyph->currFont, fontSize);
+                        glyph->currFontSize = scaledFontSize;
+                        
+                        stbtt_GetCodepointBitmapBoxSubpixel(glyph->currFont, currCharacter, scaledFontSize, scaledFontSize,
+                            0, 0, &glyph->bounds[0], &glyph->bounds[1], &glyph->bounds[2], &glyph->bounds[3]);
+                        
+                        yAdvance = 0;
+                        stbtt_GetCodepointHMetrics(glyph->currFont, monospace ? 'W' : currCharacter, &glyph->xAdvance, &yAdvance);
+                        
+                        glyph->glyphBmp = stbtt_GetCodepointBitmap(glyph->currFont, scaledFontSize, scaledFontSize, currCharacter, &glyph->width, &glyph->height, nullptr, nullptr);
+                    } else {
+                        glyph = &it->second;
+                    }
+            
+                    if (glyph->glyphBmp != nullptr && !std::iswspace(currCharacter) && fontSize > 0 && color.a != 0x0) {
+                        xPos = currX + glyph->bounds[0];
+                        yPos = currY + glyph->bounds[1];
+                        
+                        for (s32 bmpY = 0; bmpY < glyph->height; ++bmpY) {
+                            for (s32 bmpX = 0; bmpX < glyph->width; ++bmpX) {
+                                bmpColor = glyph->glyphBmp[glyph->width * bmpY + bmpX] >> 4;
+                                if (bmpColor == 0xF) {
+                                    offset = this->getPixelOffset(xPos + bmpX, yPos + bmpY);
+                                    this->setPixel(xPos + bmpX, yPos + bmpY, color, offset);
+                                } else if (bmpColor != 0x0) {
+                                    tmpColor = color;
+                                    tmpColor.a = bmpColor;
+                                    this->setPixelBlendDst(xPos + bmpX, yPos + bmpY, tmpColor);
+                                }
+                            }
+                        }
+                    }
+                    
+                    currX += static_cast<s32>(glyph->xAdvance * glyph->currFontSize);
+                }
+                
+                maxX = std::max(currX, maxX);
+                return { static_cast<u32>(maxX - x), static_cast<u32>(currY - y) };
+            }
+
+            
+            
+            inline void drawStringWithColoredSections(const std::string& text, const std::vector<std::string>& specialSymbols, s32 x, s32 y, u32 fontSize, Color defaultColor, Color specialColor) {
+                size_t startPos = 0;
+                size_t textLength = text.length();
+                u32 segmentWidth, segmentHeight;
+                
+                while (startPos < textLength) {
+                    size_t specialPos = std::string::npos;
+                    size_t foundLength = 0;
+                    const char* foundSymbol = nullptr;
+                    
+                    // Find the nearest special symbol
+                    for (const auto& symbol : specialSymbols) {
+                        size_t pos = text.find(symbol, startPos);
+                        if (pos != std::string::npos && (specialPos == std::string::npos || pos < specialPos)) {
+                            specialPos = pos;
+                            foundLength = symbol.length();
+                            foundSymbol = symbol.c_str();
+                        }
+                    }
+                    
+                    // If no special symbol is found, draw the rest of the text
+                    if (specialPos == std::string::npos) {
+                        drawString(text.substr(startPos).c_str(), false, x, y, fontSize, defaultColor);
+                        break;
+                    }
+                    
+                    // Draw the segment before the special symbol
+                    if (specialPos > startPos) {
+                        std::tie(segmentWidth, segmentHeight) = drawString(text.substr(startPos, specialPos - startPos).c_str(), false, x, y, fontSize, defaultColor);
+                        x += segmentWidth;
+                    }
+                    
+                    // Draw the special symbol
+                    std::tie(segmentWidth, segmentHeight) = drawString(foundSymbol, false, x, y, fontSize, specialColor);
+                    x += segmentWidth;
+                    
+                    // Move startPos past the special symbol
+                    startPos = specialPos + foundLength;
+                }
+                
+                // Draw any remaining text after the last special character
+                if (startPos < textLength) {
+                    drawString(text.substr(startPos).c_str(), false, x, y, fontSize, defaultColor);
+                }
+            }
+
+
+            
+            /**
+             * @brief Limit a string's length and end it with "…"
+             *
+             * @param string String to truncate
+             * @param monospace Whether the font is monospace
+             * @param fontSize Size of the font
+             * @param maxLength Maximum length of the string in terms of width
+             */
+            inline std::string limitStringLength(std::string string, bool monospace, s32 fontSize, s32 maxLength) {
+                if (string.size() < 2) {
+                    return string;
+                }
+                
+                s32 currX = 0;
+                ssize_t strPos = 0;
+                ssize_t codepointWidth;
+                u32 ellipsisCharacter = 0x2026;  // Unicode code point for '…'
+                s32 ellipsisWidth;
+                
+                // Calculate the width of the ellipsis
+                stbtt_fontinfo* ellipsisFont = &this->m_stdFont;
+                if (stbtt_FindGlyphIndex(&this->m_extFont, ellipsisCharacter)) {
+                    ellipsisFont = &this->m_extFont;
+                } else if (this->m_hasLocalFont && stbtt_FindGlyphIndex(&this->m_stdFont, ellipsisCharacter) == 0) {
+                    ellipsisFont = &this->m_localFont;
+                }
+                float ellipsisFontSize = stbtt_ScaleForPixelHeight(ellipsisFont, fontSize);
+                int ellipsisXAdvance = 0, ellipsisYAdvance = 0;
+                stbtt_GetCodepointHMetrics(ellipsisFont, ellipsisCharacter, &ellipsisXAdvance, &ellipsisYAdvance);
+                ellipsisWidth = static_cast<s32>(ellipsisXAdvance * ellipsisFontSize);
+
+                u32 currCharacter;
+                std::string substr;
+
+                while (static_cast<std::string::size_type>(strPos) < string.size() && currX + ellipsisWidth < maxLength) {
+                    
+                    codepointWidth = decode_utf8(&currCharacter, reinterpret_cast<const u8*>(&string[strPos]));
+                    
+                    if (codepointWidth <= 0) {
+                        break;
+                    }
+                    
+                    // Calculate the width of the current substring plus the ellipsis
+                    substr = string.substr(0, strPos + codepointWidth);
+                    currX = calculateStringWidth(substr, fontSize, monospace);
+                    
+                    if (currX + ellipsisWidth >= maxLength) {
+                        return substr + "…";
+                    }
+                    
+                    strPos += codepointWidth;
+                }
+                
+                return string;
+            }
+
+            
+        private:
+            Renderer() {
+                updateDrawFunction();
+            }
+            
+
+            /**
+             * @brief Gets the renderer instance
+             *
+             * @return Renderer
+             */
+            inline static Renderer& get() {
+                static Renderer renderer;
+                
+                return renderer;
+            }
+            
+            /**
+             * @brief Sets the opacity of the layer
+             *
+             * @param opacity Opacity
+             */
+            inline static void setOpacity(float opacity) {
+                opacity = std::clamp(opacity, 0.0F, 1.0F);
+                
+                Renderer::s_opacity = opacity;
+            }
+            
+            bool m_initialized = false;
+            ViDisplay m_display;
+            ViLayer m_layer;
+            Event m_vsyncEvent;
+            
+            NWindow m_window;
+            Framebuffer m_framebuffer;
+            void *m_currentFramebuffer = nullptr;
+            
+            std::stack<ScissoringConfig> m_scissoringStack;
+            
+            stbtt_fontinfo m_stdFont, m_localFont, m_extFont;
+            bool m_hasLocalFont = false;
+            
+            static inline float s_opacity = 1.0F;
+            
+            u32 tmpPos;
+            
+            /**
+             * @brief Get the current framebuffer address
+             *
+             * @return Framebuffer address
+             */
+            inline void* getCurrentFramebuffer() {
+                return this->m_currentFramebuffer;
+            }
+            
+            /**
+             * @brief Get the next framebuffer address
+             *
+             * @return Next framebuffer address
+             */
+            inline void* getNextFramebuffer() {
+                return static_cast<u8*>(this->m_framebuffer.buf) + this->getNextFramebufferSlot() * this->getFramebufferSize();
+            }
+            
+            /**
+             * @brief Get the framebuffer size
+             *
+             * @return Framebuffer size
+             */
+            inline size_t getFramebufferSize() {
+                return this->m_framebuffer.fb_size;
+            }
+            
+            /**
+             * @brief Get the number of framebuffers in use
+             *
+             * @return Number of framebuffers
+             */
+            inline size_t getFramebufferCount() {
+                return this->m_framebuffer.num_fbs;
+            }
+            
+            /**
+             * @brief Get the currently used framebuffer's slot
+             *
+             * @return Slot
+             */
+            inline u8 getCurrentFramebufferSlot() {
+                return this->m_window.cur_slot;
+            }
+            
+            /**
+             * @brief Get the next framebuffer's slot
+             *
+             * @return Next slot
+             */
+            inline u8 getNextFramebufferSlot() {
+                return (this->getCurrentFramebufferSlot() + 1) % this->getFramebufferCount();
+            }
+            
+            /**
+             * @brief Waits for the vsync event
+             *
+             */
+            inline void waitForVSync() {
+                eventWait(&this->m_vsyncEvent, UINT64_MAX);
+            }
+            
+            /**
+             * @brief Decodes a x and y coordinate into a offset into the swizzled framebuffer
+             *
+             * @param x X pos
+             * @param y Y Pos
+             * @return Offset
+             */
+            inline u32 getPixelOffset(s32 x, s32 y) {
+                // Check for scissoring boundaries
+                if (!this->m_scissoringStack.empty()) {
+                    const auto& currScissorConfig = this->m_scissoringStack.top();
+                    if (x < currScissorConfig.x || y < currScissorConfig.y || 
+                        x >= currScissorConfig.x + currScissorConfig.w || 
+                        y >= currScissorConfig.y + currScissorConfig.h) {
+                        return UINT32_MAX;
+                    }
+                }
+            
+                // Calculate the base offset
+                //tmpPos = (((y & 127) / 16) + ((x / 32) * 8) + ((y / 128) * (cfg::FramebufferWidth / 4)))*1024;
+                tmpPos = (((y & 127) / 16) + ((x / 32) * 8) + ((y / 128) * 112))*512 +
+                        ((y % 16) / 8) * 256 + 
+                        ((x % 32) / 16) * 128 + 
+                        ((y % 8) / 2) * 32 + 
+                        ((x % 16) / 8) * 16 + 
+                        (y % 2) * 8 + 
+                        (x % 8);
+                //tmpPos *= 1024; // 16 * 16 * 4 = 1024
+            
+                // Calculate the fine offset and add it to the base offset
+                //tmpPos += ((y % 16) / 8) * 512 + 
+                //          ((x % 32) / 16) * 256 + 
+                //          ((y % 8) / 2) * 64 + 
+                //          ((x % 16) / 8) * 32 + 
+                //          (y % 2) * 16 + 
+                //          (x % 8) * 2;
+            
+                return tmpPos;
+            }
+
+            
+            /**
+             * @brief Initializes the renderer and layers
+             *
+             */
+            void init() {
+                
+                cfg::LayerPosX = 0;
+                cfg::LayerPosY = 0;
+                cfg::FramebufferWidth  = 448;
+                cfg::FramebufferHeight = 720;
+                cfg::LayerWidth  = cfg::ScreenHeight * (float(cfg::FramebufferWidth) / float(cfg::FramebufferHeight));
+                cfg::LayerHeight = cfg::ScreenHeight;
+                
+                if (this->m_initialized)
+                    return;
+                
+                tsl::hlp::doWithSmSession([this]{
+                    ASSERT_FATAL(viInitialize(ViServiceType_Manager));
+                    ASSERT_FATAL(viOpenDefaultDisplay(&this->m_display));
+                    ASSERT_FATAL(viGetDisplayVsyncEvent(&this->m_display, &this->m_vsyncEvent));
+                    ASSERT_FATAL(viCreateManagedLayer(&this->m_display, static_cast<ViLayerFlags>(0), 0, &__nx_vi_layer_id));
+                    ASSERT_FATAL(viCreateLayer(&this->m_display, &this->m_layer));
+                    ASSERT_FATAL(viSetLayerScalingMode(&this->m_layer, ViScalingMode_FitToLayer));
+                    
+                    if (s32 layerZ = 0; R_SUCCEEDED(viGetZOrderCountMax(&this->m_display, &layerZ)) && layerZ > 0)
+                        ASSERT_FATAL(viSetLayerZ(&this->m_layer, layerZ));
+                    
+                    ASSERT_FATAL(tsl::hlp::viAddToLayerStack(&this->m_layer, ViLayerStack_Default));
+                    ASSERT_FATAL(tsl::hlp::viAddToLayerStack(&this->m_layer, ViLayerStack_Screenshot));
+                    ASSERT_FATAL(tsl::hlp::viAddToLayerStack(&this->m_layer, ViLayerStack_Recording));
+                    ASSERT_FATAL(tsl::hlp::viAddToLayerStack(&this->m_layer, ViLayerStack_Arbitrary));
+                    ASSERT_FATAL(tsl::hlp::viAddToLayerStack(&this->m_layer, ViLayerStack_LastFrame));
+                    ASSERT_FATAL(tsl::hlp::viAddToLayerStack(&this->m_layer, ViLayerStack_Null));
+                    ASSERT_FATAL(tsl::hlp::viAddToLayerStack(&this->m_layer, ViLayerStack_ApplicationForDebug));
+                    ASSERT_FATAL(tsl::hlp::viAddToLayerStack(&this->m_layer, ViLayerStack_Lcd));
+                    //ASSERT_FATAL(tsl::hlp::viAddToLayerStack(&this->m_layer, 8));
+                    
+                    ASSERT_FATAL(viSetLayerSize(&this->m_layer, cfg::LayerWidth, cfg::LayerHeight));
+                    ASSERT_FATAL(viSetLayerPosition(&this->m_layer, cfg::LayerPosX, cfg::LayerPosY));
+                    ASSERT_FATAL(nwindowCreateFromLayer(&this->m_window, &this->m_layer));
+                    ASSERT_FATAL(framebufferCreate(&this->m_framebuffer, &this->m_window, cfg::FramebufferWidth, cfg::FramebufferHeight, PIXEL_FORMAT_RGBA_4444, 2));
+                    ASSERT_FATAL(setInitialize());
+                    ASSERT_FATAL(this->initFonts());
+                    setExit();
+                });
+                
+                this->m_initialized = true;
+            }
+            
+            /**
+             * @brief Exits the renderer and layer
+             *
+             */
+            void exit() {
+                if (!this->m_initialized)
+                    return;
+                
+                framebufferClose(&this->m_framebuffer);
+                nwindowClose(&this->m_window);
+                viDestroyManagedLayer(&this->m_layer);
+                viCloseDisplay(&this->m_display);
+                eventClose(&this->m_vsyncEvent);
+                viExit();
+            }
+            
+            /**
+             * @brief Initializes Nintendo's shared fonts. Default and Extended
+             *
+             * @return Result
+             */
+            Result initFonts() {
+                static PlFontData stdFontData, localFontData, extFontData;
+                
+                // Nintendo's default font
+                TSL_R_TRY(plGetSharedFontByType(&stdFontData, PlSharedFontType_Standard));
+                
+                u8 *fontBuffer = reinterpret_cast<u8*>(stdFontData.address);
+                stbtt_InitFont(&this->m_stdFont, fontBuffer, stbtt_GetFontOffsetForIndex(fontBuffer, 0));
+                
+                u64 languageCode;
+                if (R_SUCCEEDED(setGetSystemLanguage(&languageCode))) {
+                    // Check if need localization font
+                    SetLanguage setLanguage;
+                    TSL_R_TRY(setMakeLanguage(languageCode, &setLanguage));
+                    this->m_hasLocalFont = true;
+                    switch (setLanguage) {
+                    case SetLanguage_ZHCN:
+                    case SetLanguage_ZHHANS:
+                        TSL_R_TRY(plGetSharedFontByType(&localFontData, PlSharedFontType_ChineseSimplified));
+                        break;
+                    case SetLanguage_KO:
+                        TSL_R_TRY(plGetSharedFontByType(&localFontData, PlSharedFontType_KO));
+                        break;
+                    case SetLanguage_ZHTW:
+                    case SetLanguage_ZHHANT:
+                        TSL_R_TRY(plGetSharedFontByType(&localFontData, PlSharedFontType_ChineseTraditional));
+                        break;
+                    default:
+                        this->m_hasLocalFont = false;
+                        break;
+                    }
+                    
+                    if (this->m_hasLocalFont) {
+                        fontBuffer = reinterpret_cast<u8*>(localFontData.address);
+                        stbtt_InitFont(&this->m_localFont, fontBuffer, stbtt_GetFontOffsetForIndex(fontBuffer, 0));
+                    }
+                }
+                
+                // Nintendo's extended font containing a bunch of icons
+                TSL_R_TRY(plGetSharedFontByType(&extFontData, PlSharedFontType_NintendoExt));
+                
+                fontBuffer = reinterpret_cast<u8*>(extFontData.address);
+                stbtt_InitFont(&this->m_extFont, fontBuffer, stbtt_GetFontOffsetForIndex(fontBuffer, 0));
+                
+                return 0;
+            }
+            
+            /**
+             * @brief Start a new frame
+             * @warning Don't call this more than once before calling \ref endFrame
+             */
+            inline void startFrame() {
+                this->m_currentFramebuffer = framebufferBegin(&this->m_framebuffer, nullptr);
+            }
+            
+            /**
+             * @brief End the current frame
+             * @warning Don't call this before calling \ref startFrame once
+             */
+            inline void endFrame() {
+                this->waitForVSync();
+                framebufferEnd(&this->m_framebuffer);
+                
+                this->m_currentFramebuffer = nullptr;
+            }
+        };
+        
+    }
+    
+    // Elements
+    
+    namespace elm {
+        
+        enum class TouchEvent {
+            Touch,
+            Hold,
+            Scroll,
+            Release,
+            None
+        };
+        
+        /**
+         * @brief The top level Element of the libtesla UI library
+         * @note When creating your own elements, extend from this or one of it's sub classes
+         */
+        class Element {
+        public:
+            
+            Element() {}
+            virtual ~Element() { }
+            
+            
+            std::chrono::duration<long int, std::ratio<1, 1000000000>> t;
+            //double timeCounter;
+            u8 saturation;
+            //Color animColor = tsl::style::color::ColorClickAnimation;
+            float progress;
+            Color clickColor1 = Color(0);
+            Color clickColor2 = Color(0);
+            
+            s32 x, y;
+            s32 amplitude;
+            std::chrono::steady_clock::time_point m_animationStartTime; // Start time of the animation
+            
+            /**
+             * @brief Handles focus requesting
+             * @note This function should return the element to focus.
+             *       When this element should be focused, return `this`.
+             *       When one of it's child should be focused, return `this->child->requestFocus(oldFocus, direction)`
+             *       When this element is not focusable, return `nullptr`
+             *
+             * @param oldFocus Previously focused element
+             * @param direction Direction in which focus moved. \ref FocusDirection::None is passed for the initial load
+             * @return Element to focus
+             */
+            virtual inline Element* requestFocus(Element *oldFocus, FocusDirection direction) {
+                return nullptr;
+            }
+            
+            /**
+             * @brief Function called when a joycon button got pressed
+             *
+             * @param keys Keys pressed in the last frame
+             * @return true when button press has been consumed
+             * @return false when button press should be passed on to the parent
+             */
+            virtual inline bool onClick(u64 keys) {
+                return m_clickListener(keys);
+            }
+            
+            /**
+             * @brief Called once per frame with the latest HID inputs
+             *
+             * @param keysDown Buttons pressed in the last frame
+             * @param keysHeld Buttons held down longer than one frame
+             * @param touchInput Last touch position
+             * @param leftJoyStick Left joystick position
+             * @param rightJoyStick Right joystick position
+             * @return Weather or not the input has been consumed
+             */
+            virtual inline bool handleInput(u64 keysDown, u64 keysHeld, const HidTouchState &touchPos, HidAnalogStickState joyStickPosLeft, HidAnalogStickState joyStickPosRight) {
+                return false;
+            }
+            
+            /**
+             * @brief Function called when the element got touched
+             * @todo Not yet implemented
+             *
+             * @param x X pos
+             * @param y Y pos
+             * @return true when touch input has been consumed
+             * @return false when touch input should be passed on to the parent
+             */
+            virtual inline bool onTouch(TouchEvent event, s32 currX, s32 currY, s32 prevX, s32 prevY, s32 initialX, s32 initialY) {
+                return false;
+            }
+            
+            /**
+             * @brief Called once per frame to draw the element
+             * @warning Do not call this yourself. Use \ref Element::frame(gfx::Renderer *renderer)
+             *
+             * @param renderer Renderer
+             */
+            virtual void draw(gfx::Renderer *renderer) = 0;
+            
+            /**
+             * @brief Called when the underlying Gui gets created and after calling \ref Gui::invalidate() to calculate positions and boundaries of the element
+             * @warning Do not call this yourself. Use \ref Element::invalidate()
+             *
+             * @param parentX Parent X pos
+             * @param parentY Parent Y pos
+             * @param parentWidth Parent Width
+             * @param parentHeight Parent Height
+             */
+            virtual inline void layout(u16 parentX, u16 parentY, u16 parentWidth, u16 parentHeight) = 0;
+            
+            /**
+             * @brief Draws highlighting and the element itself
+             * @note When drawing children of a element in \ref Element::draw(gfx::Renderer *renderer), use `this->child->frame(renderer)` instead of calling draw directly
+             *
+             * @param renderer
+             */
+            void inline frame(gfx::Renderer *renderer) {
+                
+                if (this->m_focused) {
+                    renderer->enableScissoring(0, 97, tsl::cfg::FramebufferWidth, tsl::cfg::FramebufferHeight-73-97);
+                    this->drawFocusBackground(renderer);
+                    this->drawHighlight(renderer);
+                    renderer->disableScissoring();
+                }
+                
+                this->draw(renderer);
+            }
+            
+            /**
+             * @brief Forces a layout recreation of a element
+             *
+             */
+            void inline invalidate() {
+                const auto& parent = this->getParent();
+                
+                if (parent == nullptr)
+                    this->layout(0, 0, cfg::FramebufferWidth, cfg::FramebufferHeight);
+                else
+                    this->layout(ELEMENT_BOUNDS(parent));
+            }
+            
+            /**
+             * @brief Shake the highlight in the given direction to signal that the focus cannot move there
+             *
+             * @param direction Direction to shake highlight in
+             */
+            void inline shakeHighlight(FocusDirection direction) {
+                this->m_highlightShaking = true;
+                this->m_highlightShakingDirection = direction;
+                this->m_highlightShakingStartTime = std::chrono::steady_clock::now();
+            }
+            
+            /**
+             * @brief Triggers the blue click animation to signal a element has been clicked on
+             *
+             */
+            void inline triggerClickAnimation() {
+                this->m_clickAnimationProgress = tsl::style::ListItemHighlightLength;
+                this->m_animationStartTime = std::chrono::steady_clock::now();
+            }
+
+
+            
+            /**
+             * @brief Resets the click animation progress, canceling the animation
+             */
+            void inline resetClickAnimation() {
+                this->m_clickAnimationProgress = 0;
+            }
+            
+            /**
+             * @brief Draws the blue highlight animation when clicking on a button
+             * @note Override this if you have a element that e.g requires a non-rectangular animation or a different color
+             *
+             * @param renderer Renderer
+             */
+            virtual void drawClickAnimation(gfx::Renderer *renderer) {
+                if (!disableSelectionBG)
+                    renderer->drawRect(this->getX() + x + 4, this->getY() + y, this->getWidth() - 12, this->getHeight(), a(selectionBGColor)); // CUSTOM MODIFICATION 
+
+                saturation = tsl::style::ListItemHighlightSaturation * (float(this->m_clickAnimationProgress) / float(tsl::style::ListItemHighlightLength));
+
+                Color animColor = {0xF,0xF,0xF,0xF};
+                if (invertBGClickColor) {
+                    animColor.r = 15-saturation;
+                    animColor.g = 15-saturation;
+                    animColor.b = 15-saturation;
+                    animColor.a = 15-saturation;
+                } else {
+                    animColor.r = saturation;
+                    animColor.g = saturation;
+                    animColor.b = saturation;
+                    animColor.a = saturation;
+                }
+                renderer->drawRect(ELEMENT_BOUNDS(this), a(animColor));
+                //if (!disableSelectionBG) {
+                //    saturation = tsl::style::ListItemHighlightSaturation * (float(this->m_clickAnimationProgress) / float(tsl::style::ListItemHighlightLength));
+                //    if (invertBGClickColor) {
+                //        animColor.r = 15-saturation;
+                //        animColor.g = 15-saturation;
+                //        animColor.b = 15;
+                //    } else {
+                //        animColor.r = 0;
+                //        animColor.g = saturation;
+                //        animColor.b = saturation;
+                //    }
+                //    renderer->drawRect(ELEMENT_BOUNDS(this), a(animColor));
+                //} else {
+                clickColor1 = highlightColor1;
+                clickColor2 = clickColor;
+                
+                //half progress = half((std::sin(2.0 * M_PI * fmod(std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count(), 1.0)) + 1.0) / 2.0);
+                progress = (std::sin(2.0 * M_PI * fmod(std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count(), 1.0)) + 1.0) / 2.0;
+                
+                if (progress >= 0.5) {
+                    clickColor1 = clickColor;
+                    clickColor2 = highlightColor2;
+                }
+                
+                highlightColor = {
+                    static_cast<u8>((clickColor1.r - clickColor2.r) * progress + clickColor2.r),
+                    static_cast<u8>((clickColor1.g - clickColor2.g) * progress + clickColor2.g),
+                    static_cast<u8>((clickColor1.b - clickColor2.b) * progress + clickColor2.b),
+                    0xF
+                };
+                
+                x = 0;
+                y = 0;
+                if (this->m_highlightShaking) {
+                    t = (std::chrono::steady_clock::now() - this->m_highlightShakingStartTime);
+                    if (t >= 100ms)
+                        this->m_highlightShaking = false;
+                    else {
+                        amplitude = std::rand() % 5 + 5;
+                        
+                        switch (this->m_highlightShakingDirection) {
+                            case FocusDirection::Up:
+                                y -= shakeAnimation(t, amplitude);
+                                break;
+                            case FocusDirection::Down:
+                                y += shakeAnimation(t, amplitude);
+                                break;
+                            case FocusDirection::Left:
+                                x -= shakeAnimation(t, amplitude);
+                                break;
+                            case FocusDirection::Right:
+                                x += shakeAnimation(t, amplitude);
+                                break;
+                            default:
+                                break;
+                        }
+                        
+                        x = std::clamp(x, -amplitude, amplitude);
+                        y = std::clamp(y, -amplitude, amplitude);
+                    }
+                }
+                
+                
+                //renderer->drawRect(this->getX() + x - 4, this->getY() + y - 4, this->getWidth() + 8, 4, highlightColor);
+                //renderer->drawRect(this->getX() + x - 4, this->getY() + y + this->getHeight(), this->getWidth() + 8, 4, highlightColor);
+                //renderer->drawRect(this->getX() + x - 4, this->getY() + y, 4, this->getHeight(), highlightColor);
+                //renderer->drawRect(this->getX() + x + this->getWidth(), this->getY() + y, 4, this->getHeight(), highlightColor);
+                
+                
+                renderer->drawBorderedRoundedRect(this->getX() + x, this->getY() + y, this->getWidth(), this->getHeight(), 5, 5, a(highlightColor));
+                    
+                //}
+            }
+            
+            /**
+             * @brief Draws the back background when a element is highlighted
+             * @note Override this if you have a element that e.g requires a non-rectangular focus
+             *
+             * @param renderer Renderer
+             */
+            virtual void drawFocusBackground(gfx::Renderer *renderer) {
+                //if (!disableSelectionBG)
+                //    renderer->drawRect(ELEMENT_BOUNDS(this), a(selectionBGColor)); // CUSTOM MODIFICATION 
+                
+                if (this->m_clickAnimationProgress > 0) {
+                    this->drawClickAnimation(renderer);
+        
+                    // Calculate time elapsed since the animation started
+                    //auto now = std::chrono::steady_clock::now();
+                    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - this->m_animationStartTime).count();
+        
+                    // Decrease progress based on the elapsed time (1 second = 1000ms)
+                    this->m_clickAnimationProgress = tsl::style::ListItemHighlightLength * (1.0f - (elapsed / 500.0f)); // Progress decreases linearly over 1 second (1000ms)
+        
+                    // Ensure progress does not go below 0
+                    if (this->m_clickAnimationProgress < 0) {
+                        this->m_clickAnimationProgress = 0;
+                    }
+                }
+            }
+            
+            /**
+             * @brief Draws the blue boarder when a element is highlighted
+             * @note Override this if you have a element that e.g requires a non-rectangular focus
+             *
+             * @param renderer Renderer
+             */
+            virtual void drawHighlight(gfx::Renderer *renderer) { // CUSTOM MODIFICATION start
+                
+                //Color highlightColor1 = {0x2, 0x8, 0xC, 0xF};
+                //Color highlightColor2 = {0x8, 0xF, 0xF, 0xF};
+                //highlightColor1Str = "#2288CC";
+                //highlightColor2Str = "#88FFFF";
+                
+                
+                // Get the current time
+                
+                // Calculate the progress for one full sine wave per second
+                //const double cycleDuration = 1.0;  // 1 second for one full sine wave
+                //double timeCounter = 
+                //half progress = half((std::sin(2.0 * M_PI * fmod(std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count(), 1.0)) + 1.0) / 2.0);
+                progress = ((std::sin(2.0 * M_PI * fmod(std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count(), 1.0)) + 1.0) / 2.0);
+                if (runningInterpreter.load(std::memory_order_acquire)) {
+                    highlightColor = {
+                        static_cast<u8>((highlightColor3.r - highlightColor4.r) * progress + highlightColor4.r),
+                        static_cast<u8>((highlightColor3.g - highlightColor4.g) * progress + highlightColor4.g),
+                        static_cast<u8>((highlightColor3.b - highlightColor4.b) * progress + highlightColor4.b),
+                        0xF
+                    };
+                } else {
+                    highlightColor = {
+                        static_cast<u8>((highlightColor1.r - highlightColor2.r) * progress + highlightColor2.r),
+                        static_cast<u8>((highlightColor1.g - highlightColor2.g) * progress + highlightColor2.g),
+                        static_cast<u8>((highlightColor1.b - highlightColor2.b) * progress + highlightColor2.b),
+                        0xF
+                    };
+                }
+                x = 0;
+                y = 0;
+                
+                if (this->m_highlightShaking) {
+                    t = (std::chrono::steady_clock::now() - this->m_highlightShakingStartTime);
+                    if (t >= 100ms)
+                        this->m_highlightShaking = false;
+                    else {
+                        amplitude = std::rand() % 5 + 5;
+                        
+                        switch (this->m_highlightShakingDirection) {
+                            case FocusDirection::Up:
+                                y -= shakeAnimation(t, amplitude);
+                                break;
+                            case FocusDirection::Down:
+                                y += shakeAnimation(t, amplitude);
+                                break;
+                            case FocusDirection::Left:
+                                x -= shakeAnimation(t, amplitude);
+                                break;
+                            case FocusDirection::Right:
+                                x += shakeAnimation(t, amplitude);
+                                break;
+                            default:
+                                break;
+                        }
+                        
+                        x = std::clamp(x, -amplitude, amplitude);
+                        y = std::clamp(y, -amplitude, amplitude);
+                    }
+                }
+                //if ((disableSelectionBG && this->m_clickAnimationProgress == 0) || !disableSelectionBG) {
+                if (this->m_clickAnimationProgress == 0) {
+                    if (!disableSelectionBG)
+                        renderer->drawRect(this->getX() + x + 4, this->getY() + y, this->getWidth() - 12, this->getHeight(), a(selectionBGColor)); // CUSTOM MODIFICATION 
+                    renderer->drawBorderedRoundedRect(this->getX() + x, this->getY() + y, this->getWidth(), this->getHeight(), 5, 5, a(highlightColor));
+                }
+                //renderer->drawRect(ELEMENT_BOUNDS(this), a(0xF000)); // This has been moved here (needs to be toggleable)
+                onTrackBar = false;
+            }
+            
+            
+            
+            
+            /**
+             * @brief Sets the boundaries of this view
+             *
+             * @param x Start X pos
+             * @param y Start Y pos
+             * @param width Width
+             * @param height Height
+             */
+            inline void setBoundaries(s32 x, s32 y, s32 width, s32 height) {
+                this->m_x = x;
+                this->m_y = y;
+                this->m_width = width;
+                this->m_height = height;
+            }
+            
+            /**
+             * @brief Adds a click listener to the element
+             *
+             * @param clickListener Click listener called with keys that were pressed last frame. Callback should return true if keys got consumed
+             */
+            virtual inline void setClickListener(std::function<bool(u64 keys)> clickListener) {
+                this->m_clickListener = clickListener;
+            }
+            
+            /**
+             * @brief Gets the element's X position
+             *
+             * @return X position
+             */
+            inline s32 getX() { return this->m_x; }
+            /**
+             * @brief Gets the element's Y position
+             *
+             * @return Y position
+             */
+            inline s32 getY() { return this->m_y; }
+            /**
+             * @brief Gets the element's Width
+             *
+             * @return Width
+             */
+            inline s32 getWidth() { return this->m_width;  }
+            /**
+             * @brief Gets the element's Height
+             *
+             * @return Height
+             */
+            inline s32 getHeight() { return this->m_height; }
+            
+            inline s32 getTopBound() { return this->getY(); }
+            inline s32 getLeftBound() { return this->getX(); }
+            inline s32 getRightBound() { return this->getX() + this->getWidth(); }
+            inline s32 getBottomBound() { return this->getY() + this->getHeight(); }
+            
+            /**
+             * @brief Check if the coordinates are in the elements bounds
+             *
+             * @return true if coordinates are in bounds, false otherwise
+             */
+            bool inBounds(s32 touchX, s32 touchY) {
+                return touchX >= this->getLeftBound() && touchX <= this->getRightBound() && touchY >= this->getTopBound() && touchY <= this->getBottomBound();
+            }
+            
+            /**
+             * @brief Sets the element's parent
+             * @note This is required to handle focus and button downpassing properly
+             *
+             * @param parent Parent
+             */
+            inline void setParent(Element *parent) { this->m_parent = parent; }
+            
+            /**
+             * @brief Get the element's parent
+             *
+             * @return Parent
+             */
+            inline Element* getParent() { return this->m_parent; }
+            
+
+            virtual inline std::vector<Element*> getChildren() const {
+                return {}; // Return empty vector for simplicity
+            }
+
+            ///**
+            // * @brief Adds a child element to this element
+            // *
+            // * @param child Child element to add
+            // */
+            //void addChild(Element* child) {
+            //    // Set the parent of the child to this element
+            //    child->setParent(this);
+            //    // Add the child to the list of children
+            //    m_children.push_back(child);
+            //}
+            //
+            ///**
+            // * @brief Get the list of child elements
+            // *
+            // * @return Vector of child elements
+            // */
+            //const std::vector<Element*>& getChildren() const { return this->m_children; }
+
+
+            /**
+             * @brief Marks this element as focused or unfocused to draw the highlight
+             *
+             * @param focused Focused
+             */
+            virtual inline void setFocused(bool focused) {
+                this->m_focused = focused;
+                this->m_clickAnimationProgress = 0;
+            }
+            
+            
+            static InputMode getInputMode() { return Element::s_inputMode; }
+            
+            static void setInputMode(InputMode mode) { Element::s_inputMode = mode; }
+            
+        protected:
+            constexpr static inline auto a = &gfx::Renderer::a;
+            bool m_focused = false;
+            u8 m_clickAnimationProgress = 0;
+            
+            // Highlight shake animation
+            bool m_highlightShaking = false;
+            std::chrono::steady_clock::time_point m_highlightShakingStartTime;
+            FocusDirection m_highlightShakingDirection;
+            
+            static inline InputMode s_inputMode;
+            
+            /**
+             * @brief Shake animation callculation based on a damped sine wave
+             *
+             * @param t Passed time
+             * @param a Amplitude
+             * @return Damped sine wave output
+             */
+            inline int shakeAnimation(std::chrono::steady_clock::duration t, float a) {
+                float w = 0.2F;
+                float tau = 0.05F;
+                
+                int t_ = t.count() / 1'000'000;
+                
+                return roundf(a * exp(-(tau * t_) * sin(w * t_)));
+            }
+            
+        private:
+            friend class Gui;
+            
+            s32 m_x = 0, m_y = 0, m_width = 0, m_height = 0;
+            Element *m_parent = nullptr;
+            std::vector<Element*> m_children;
+            std::function<bool(u64 keys)> m_clickListener = [](u64) { return false; };
+            
+        };
+        
+        /**
+         * @brief A Element that exposes the renderer directly to draw custom views easily
+         */
+        class CustomDrawer : public Element {
+        public:
+            /**
+             * @brief Constructor
+             * @note This element should only be used to draw static things the user cannot interact with e.g info text, images, etc.
+             *
+             * @param renderFunc Callback that will be called once every frame to draw this view
+             */
+            CustomDrawer(std::function<void(gfx::Renderer* r, s32 x, s32 y, s32 w, s32 h)> renderFunc) : Element(), m_renderFunc(renderFunc) {}
+            virtual ~CustomDrawer() {}
+            
+            virtual void draw(gfx::Renderer* renderer) override {
+                renderer->enableScissoring(ELEMENT_BOUNDS(this));
+                this->m_renderFunc(renderer, ELEMENT_BOUNDS(this));
+                renderer->disableScissoring();
+            }
+            
+            virtual void layout(u16 parentX, u16 parentY, u16 parentWidth, u16 parentHeight) override {
+                
+            }
+            
+        private:
+            std::function<void(gfx::Renderer*, s32 x, s32 y, s32 w, s32 h)> m_renderFunc;
+        };
+
+
+        /**
+         * @brief A Element that exposes the renderer directly to draw custom views easily
+         */
+        class TableDrawer : public Element {
+        public:
+            TableDrawer(std::function<void(gfx::Renderer* r, s32 x, s32 y, s32 w, s32 h)> renderFunc, bool _hideTableBackground, size_t _endGap)
+                : Element(), m_renderFunc(renderFunc), hideTableBackground(_hideTableBackground), endGap(_endGap) {}
+            
+            virtual ~TableDrawer() {}
+
+            virtual void draw(gfx::Renderer* renderer) override {
+
+                renderer->enableScissoring(0, 97, tsl::cfg::FramebufferWidth, tsl::cfg::FramebufferHeight - 73 - 97 - 4);
+                
+                if (!hideTableBackground)
+                    renderer->drawRoundedRect(this->getX() + 4+2, this->getY()-6, this->getWidth(), this->getHeight() + 20 - endGap+2, 10.0, a(tableBGColor));
+                
+                m_renderFunc(renderer, this->getX() + 4, this->getY(), this->getWidth() + 4, this->getHeight());
+                
+                renderer->disableScissoring();
+            }
+            
+            virtual void layout(u16 parentX, u16 parentY, u16 parentWidth, u16 parentHeight) override {}
+
+
+            virtual bool onClick(u64 keys) {
+                return false;
+            }
+            
+            virtual Element* requestFocus(Element *oldFocus, FocusDirection direction) override {
+                return nullptr;
+            }
+        
+        private:
+            std::function<void(gfx::Renderer*, s32 x, s32 y, s32 w, s32 h)> m_renderFunc;
+            bool hideTableBackground = false;
+            size_t endGap = 3;
+        };
+
+
+        
+        // CUSTOM SECTION START
+        
+        
+        // CUSTOM SECTION END
+        
+        /**
+         * @brief The base frame which can contain another view
+         *
+         */
+        class OverlayFrame : public Element {
+        public:
+            /**
+             * @brief Constructor
+             *
+             * @param title Name of the Overlay drawn bolt at the top
+             * @param subtitle Subtitle drawn bellow the title e.g version number
+             */
+            std::string m_title;
+            std::string m_subtitle;
+            std::string m_menuMode; // CUSTOM MODIFICATION
+            std::string m_colorSelection; // CUSTOM MODIFICATION
+            std::string m_pageLeftName; // CUSTOM MODIFICATION
+            std::string m_pageRightName; // CUSTOM MODIFICATION
+            
+            std::string firstHalf = "Ultra";
+            std::string secondHalf = "hand";
+            //std::string firstHalf, secondHalf;
+            //tsl::Color handColor = RGB888("#F7253E");
+            tsl::Color titleColor = {0xF,0xF,0xF,0xF};
+            const double cycleDuration = 1.5;
+            float counter = 0;
+            float countOffset;
+            double timeInSeconds;
+            float progress;
+            float letterWidth;
+            float x, y;
+            int offset, y_offset;
+            int fontSize;
+
+            // Convert the C-style string to an std::string
+            std::string chargeStringSTD;
+            std::string PCB_temperatureStringSTD;
+            std::string SOC_temperatureStringSTD;
+            std::string menuBottomLine;
+            char timeStr[20]; // Allocate a buffer to store the time string
+            char PCB_temperatureStr[10];
+            char SOC_temperatureStr[10];
+
+            struct timespec currentTimeSpec;
+            //std::string filePath = "sdmc:/config/ultrahand/wallpaper.rgba";
+            //s32 width = 448/2;
+            //s32 height = 720/2;
+            
+        OverlayFrame(const std::string& title, const std::string& subtitle, const std::string& menuMode = "", const std::string& colorSelection = "", const std::string& pageLeftName = "", const std::string& pageRightName = "")
+            : Element(), m_title(title), m_subtitle(subtitle), m_menuMode(menuMode), m_colorSelection(colorSelection), m_pageLeftName(pageLeftName), m_pageRightName(pageRightName) {
+                // Load the bitmap file into memory
+                //if (expandedMemory && useCustomWallpaper && wallpaperData.empty()) {
+                //std::lock_guard<std::mutex> lock(wallpaperMutex);
+                if (expandedMemory) {
+                    std::lock_guard<std::mutex> lock(wallpaperMutex);
+                    if (wallpaperData.empty()) {
+                        if (isFileOrDirectory(WALLPAPER_PATH))
+                            wallpaperData = loadBitmapFile(WALLPAPER_PATH, 448, 720);
+                        else
+                            wallpaperData.clear();
+                        //wallpaperData = loadBitmapFile(WALLPAPER_PATH, 224, 360);
+                        //wallpaperData = preprocessBitmap(wallpaperData, 224, 360, 448, 720); 
+                    }
+                }
+
+            }
+
+            virtual ~OverlayFrame() {
+                if (this->m_contentElement != nullptr)
+                    delete this->m_contentElement;
+                //if (!useCustomWallpaper && !wallpaperData.empty()) {
+                //    wallpaperData.clear();
+                //    //wallpaperData.shrink_to_fit();
+                //}
+            }
+
+            
+            // Function to calculate FPS
+            //void updateFPS(double currentTimeCount) {
+            //    static double lastUpdateTime = currentTimeCount;
+            //
+            //    frameCount++;
+            //    elapsedTime = currentTimeCount - lastUpdateTime;
+            //
+            //    if (elapsedTime >= 1.0) { // Update FPS every second
+            //        fps = frameCount / static_cast<float>(elapsedTime);
+            //        lastUpdateTime = currentTimeCount;
+            //        frameCount = 0;
+            //    }
+            //}
+            
+            // CUSTOM SECTION START
+            virtual void draw(gfx::Renderer *renderer) override {
+                renderer->fillScreen(a(defaultBackgroundColor));
+
+                
+                //if (expandedMemory && useCustomWallpaper && !wallpaperData.empty()) {
+                if (expandedMemory && !refreshWallpaper.load(std::memory_order_acquire)) {
+                    inPlot = true;
+                    std::lock_guard<std::mutex> lock(wallpaperMutex);
+                    
+                    if (!wallpaperData.empty()) {
+                        // Draw the bitmap at position (0, 0) on the screen
+                        renderer->drawBitmap(0, 0, 448, 720, wallpaperData.data());
+                    }
+                    inPlot = false;
+                }
+                
+
+                y = 50;
+                offset = 0;
+                
+                bool isUltrahand = (this->m_title == CAPITAL_ULTRAHAND_PROJECT_NAME && 
+                                    this->m_subtitle.find("Ultrahand Package") == std::string::npos && 
+                                    this->m_subtitle.find("Ultrahand Script") == std::string::npos);
+
+                auto currentTime = std::chrono::steady_clock::now();
+                auto currentTimeCount = std::chrono::duration<double>(currentTime.time_since_epoch()).count();
+
+                if (isUltrahand) {
+                    if (touchingMenu && inMainMenu) {
+                        renderer->drawRoundedRect(0.0f, 12.0f, 245.0f, 73.0f, 6.0f, a(clickColor));
+                    }
+
+                    chargeStringSTD.clear();
+                    PCB_temperatureStringSTD.clear();
+                    SOC_temperatureStringSTD.clear();
+                    
+                    
+                    x = 20;
+                    fontSize = 42;
+                    offset = 6;
+                    
+                    countOffset = 0;
+                    
+
+                    if (!disableColorfulLogo) {
+                        float progress;
+                        for (char letter : firstHalf) {
+                            counter = (2 * M_PI * (fmod(currentTimeCount, cycleDuration) + countOffset) / 1.5);
+                            progress = std::sin(counter); // -1 to 1
+                            
+                            highlightColor = {
+                                static_cast<u8>((std::get<0>(dynamicLogoRGB2) - std::get<0>(dynamicLogoRGB1)) * (progress + 1.0) / 2.0 + std::get<0>(dynamicLogoRGB1)),
+                                static_cast<u8>((std::get<1>(dynamicLogoRGB2) - std::get<1>(dynamicLogoRGB1)) * (progress + 1.0) / 2.0 + std::get<1>(dynamicLogoRGB1)),
+                                static_cast<u8>((std::get<2>(dynamicLogoRGB2) - std::get<2>(dynamicLogoRGB1)) * (progress + 1.0) / 2.0 + std::get<2>(dynamicLogoRGB1)),
+                                15
+                            };
+                            
+                            renderer->drawString(std::string(1, letter).c_str(), false, x, y + offset, fontSize, a(highlightColor));
+                            x += renderer->calculateStringWidth(std::string(1, letter), fontSize);
+                            countOffset -= 0.2F;
+                        }
+                    } else {
+                        for (char letter : firstHalf) {
+                            renderer->drawString(std::string(1, letter).c_str(), false, x, y + offset, fontSize, a(logoColor1));
+                            x += renderer->calculateStringWidth(std::string(1, letter), fontSize);
+                            countOffset -= 0.2F;
+                        }
+                    }
+                    
+                    renderer->drawString(secondHalf.c_str(), false, x, y + offset, fontSize, a(logoColor2));
+                    
+                    if (!(hideBattery && hidePCBTemp && hideSOCTemp && hideClock)) {
+                        renderer->drawRect(245, 23, 1, 49, a(separatorColor));
+                    }
+                    
+                    
+                    y_offset = 45;
+                    if ((hideBattery && hidePCBTemp && hideSOCTemp) || hideClock) {
+                        y_offset += 10;
+                    }
+                    
+                    if (!hideClock) {
+                        clock_gettime(CLOCK_REALTIME, &currentTimeSpec);
+                        strftime(timeStr, sizeof(timeStr), datetimeFormat.c_str(), localtime(&currentTimeSpec.tv_sec));
+                        localizeTimeStr(timeStr);
+                        renderer->drawString(timeStr, false, tsl::cfg::FramebufferWidth - renderer->calculateStringWidth(timeStr, 20) - 20, y_offset, 20, a(clockColor));
+                        y_offset += 22;
+                    }
+                    
+                    //if ((currentTimeSpec.tv_sec - timeOut) >= 1) {
+                    //    if (!isHidden.load()) {
+                    //        if (!hidePCBTemp) thermalstatusGetDetailsPCB(&PCB_temperature);
+                    //        if (!hideSOCTemp) thermalstatusGetDetailsSOC(&SOC_temperature);
+                    //        if (!hideBattery) powerGetDetails(&batteryCharge, &isCharging);
+                    //    }
+                    //    timeOut = int(currentTimeSpec.tv_sec);
+                    //}
+                    if (!isHidden.load()) {
+                        if (!hidePCBTemp) thermalstatusGetDetailsPCB(&PCB_temperature);
+                        if (!hideSOCTemp) thermalstatusGetDetailsSOC(&SOC_temperature);
+                        if (!hideBattery) powerGetDetails(&batteryCharge, &isCharging);
+                    }
+
+
+                    snprintf(PCB_temperatureStr, sizeof(PCB_temperatureStr) - 1, "%d°C", PCB_temperature);
+                    snprintf(SOC_temperatureStr, sizeof(SOC_temperatureStr) - 1, "%d°C", SOC_temperature);
+                    batteryCharge = std::min(batteryCharge, 100U);
+                    sprintf(chargeString, "%d%%", batteryCharge);
+                    
+                    if (!hideBattery && batteryCharge > 0) {
+                        chargeStringSTD = chargeString;
+                        Color batteryColorToUse = isCharging ? tsl::Color(0x0, 0xF, 0x0, 0xF) : 
+                                                (batteryCharge < 20 ? tsl::Color(0xF, 0x0, 0x0, 0xF) : batteryColor);
+                        renderer->drawString(chargeStringSTD.c_str(), false, tsl::cfg::FramebufferWidth - renderer->calculateStringWidth(chargeStringSTD, 20) - 22, y_offset, 20, a(batteryColorToUse));
+                    }
+                    
+                    offset = 0;
+                    if (!hidePCBTemp && PCB_temperature > 0) {
+                        PCB_temperatureStringSTD = PCB_temperatureStr;
+                        if (!hideBattery)
+                            offset -= 5;
+                        renderer->drawString(PCB_temperatureStringSTD.c_str(), false, tsl::cfg::FramebufferWidth + offset - renderer->calculateStringWidth(PCB_temperatureStringSTD, 20) - renderer->calculateStringWidth(chargeStringSTD, 20) - 22, y_offset, 20, a(tsl::GradientColor(PCB_temperature)));
+                    }
+                    if (!hideSOCTemp && SOC_temperature > 0) {
+                        SOC_temperatureStringSTD = SOC_temperatureStr;
+                        if (!hidePCBTemp || !hideBattery)
+                            offset -= 5;
+                        renderer->drawString(SOC_temperatureStringSTD.c_str(), false, tsl::cfg::FramebufferWidth + offset - renderer->calculateStringWidth(SOC_temperatureStringSTD, 20) - renderer->calculateStringWidth(PCB_temperatureStringSTD, 20) - renderer->calculateStringWidth(chargeStringSTD, 20) - 22, y_offset, 20, a(tsl::GradientColor(SOC_temperature)));
+                    }
+                } else {
+                    x = 20;
+                    y = 50;
+                    fontSize = 32;
+                    if (this->m_subtitle.find("Ultrahand Package") != std::string::npos) {
+                        const std::string& title = this->m_title;
+                        titleColor = defaultPackageColor; // Default to green
+                        
+                        // Function to draw the title
+                        auto drawTitle = [&](const Color& color) {
+                            renderer->drawString(title.c_str(), false, x, y, fontSize, a(color));
+                        };
+                        
+                        if (this->m_colorSelection == "green") {
+                            titleColor = Color(0x0, 0xF, 0x0, 0xF);
+                            drawTitle(titleColor);
+                        } else if (this->m_colorSelection == "red") {
+                            titleColor = RGB888("#F7253E");
+                            drawTitle(titleColor);
+                        } else if (this->m_colorSelection == "blue") {
+                            titleColor = Color(0x7, 0x7, 0xF, 0xF);
+                            drawTitle(titleColor);
+                        } else if (this->m_colorSelection == "yellow") {
+                            titleColor = Color(0xF, 0xF, 0x0, 0xF);
+                            drawTitle(titleColor);
+                        } else if (this->m_colorSelection == "orange") {
+                            titleColor = Color(0xFF, 0xA5, 0x00, 0xFF);
+                            drawTitle(titleColor);
+                        } else if (this->m_colorSelection == "pink") {
+                            titleColor = Color(0xFF, 0x69, 0xB4, 0xFF);
+                            drawTitle(titleColor);
+                        } else if (this->m_colorSelection == "purple") {
+                            titleColor = Color(0x80, 0x00, 0x80, 0xFF);
+                            drawTitle(titleColor);
+                        } else if (this->m_colorSelection == "white") {
+                            titleColor = Color(0xF, 0xF, 0xF, 0xF);
+                            drawTitle(titleColor);
+                        } else if (this->m_colorSelection == "ultra") {
+                            for (char letter : title) {
+                                // Calculate the progress for each letter based on the counter
+                                progress = calculateAmplitude(counter - x * 0.0001F);
+                                
+                                // Calculate the corresponding highlight color for each letter
+                                highlightColor = {
+                                    static_cast<u8>((0xA - 0xF) * (3 - 1.5 * progress) + 0xF),
+                                    static_cast<u8>((0xA - 0xF) * 1.5 * progress + 0xF),
+                                    static_cast<u8>((0xA - 0xF) * (1.25 - progress) + 0xF),
+                                    0xF
+                                };
+                                
+                                // Draw each character with its corresponding highlight color
+                                renderer->drawString(std::string(1, letter).c_str(), false, x, y, fontSize, a(highlightColor));
+                                
+                                // Manually calculate the width of the current letter
+                                letterWidth = renderer->calculateStringWidth(std::string(1, letter), fontSize);
+                                
+                                // Adjust the x-coordinate for the next character's position
+                                x += letterWidth;
+                                
+                                // Update the counter for the next character
+                                counter -= 0.00004F;
+                            }
+                        } else if (this->m_colorSelection.size() == 7 && this->m_colorSelection[0] == '#') {
+                            // Check if m_colorSelection is a valid hexadecimal color
+                            if (isValidHexColor(this->m_colorSelection.substr(1))) {
+                                titleColor = RGB888(this->m_colorSelection.substr(1));
+                                drawTitle(titleColor);
+                            } else {
+                                // Invalid hexadecimal color, handle the error accordingly
+                                drawTitle(titleColor); // Using the default titleColor
+                            }
+                        } else { // for unknown colors
+                            drawTitle(titleColor); // Using the default titleColor
+                        }
+                    } else if (this->m_subtitle.find("Ultrahand Script") != std::string::npos) {
+                        renderer->drawString(this->m_title.c_str(), false, 20, 50, 32, a(Color(0xFF, 0x33, 0x3F, 0xFF)));
+                    } else {
+                        renderer->drawString(this->m_title.c_str(), false, 20, 50, 30, a(defaultTextColor));
+                    }
+
+                }
+                
+                if (this->m_title == CAPITAL_ULTRAHAND_PROJECT_NAME) {
+                    renderer->drawString(versionLabel.c_str(), false, 20, y+25, 15, a(versionTextColor));
+                } else
+                    renderer->drawString(this->m_subtitle.c_str(), false, 20, y+20, 15, a(versionTextColor));
+                
+                renderer->drawRect(15, tsl::cfg::FramebufferHeight - 73, tsl::cfg::FramebufferWidth - 30, 1, a(botttomSeparatorColor));
+                
+                backWidth = renderer->calculateStringWidth(BACK, 23);
+                if (touchingBack) {
+                    renderer->drawRoundedRect(18.0f, static_cast<float>(cfg::FramebufferHeight - 73), 
+                                              backWidth+68.0f, 73.0f, 6.0f, a(clickColor));
+                }
+
+                selectWidth = renderer->calculateStringWidth(OK, 23);
+                if (touchingSelect) {
+                    renderer->drawRoundedRect(18.0f + backWidth+68.0f, static_cast<float>(cfg::FramebufferHeight - 73), 
+                                              selectWidth+68.0f, 73.0f, 6.0f, a(clickColor));
+                }
+                
+                if (!(this->m_pageLeftName).empty())
+                    nextPageWidth = renderer->calculateStringWidth(this->m_pageLeftName, 23);
+                else if (!(this->m_pageRightName).empty())
+                    nextPageWidth = renderer->calculateStringWidth(this->m_pageRightName, 23);
+                else if (inMainMenu)
+                    if (inOverlaysPage)
+                        nextPageWidth = renderer->calculateStringWidth(PACKAGES,23);
+                    else if (inPackagesPage)
+                        nextPageWidth = renderer->calculateStringWidth(OVERLAYS,23);
+
+                if (inMainMenu || !(this->m_pageLeftName).empty() || !(this->m_pageRightName).empty()) {
+                    if (touchingNextPage) {
+                        renderer->drawRoundedRect(18.0f + backWidth+68.0f + selectWidth+68.0f, static_cast<float>(cfg::FramebufferHeight - 73), 
+                                                  nextPageWidth+70.0f, 73.0f, 6.0f, a(clickColor));
+                    }
+                }
+
+
+
+                menuBottomLine = "\uE0E1"+GAP_2+BACK+GAP_1+"\uE0E0"+GAP_2+OK+GAP_1;
+                if (this->m_menuMode == "packages") {
+                    menuBottomLine += "\uE0ED"+GAP_2+OVERLAYS;
+                } else if (this->m_menuMode == "overlays") {
+                    menuBottomLine += "\uE0EE"+GAP_2+PACKAGES;
+                }
+                
+                if (!(this->m_pageLeftName).empty()) {
+                    menuBottomLine += "\uE0ED"+GAP_2 + this->m_pageLeftName;
+                } else if (!(this->m_pageRightName).empty()) {
+                    menuBottomLine += "\uE0EE"+GAP_2 + this->m_pageRightName;
+                }
+                
+                //renderer->drawString(menuBottomLine.c_str(), false, 30, 693, 23, a(defaultTextColor));
+                // Render the text with special character handling
+                renderer->drawStringWithColoredSections(menuBottomLine.c_str(), {"\uE0E1","\uE0E0","\uE0ED","\uE0EE"}, 30, 693, 23, a(bottomTextColor), a(buttonColor));
+                
+                //if (debugFPS) {
+                //    // Update FPS
+                //    updateFPS(currentTimeCount);
+                //
+                //    // Convert FPS to string
+                //    std::ostringstream fpsStream;
+                //    fpsStream << std::fixed << std::setprecision(2) << "FPS: " << fps;
+                //    std::string fpsString = fpsStream.str();
+                //    
+                //    // Draw FPS string at the bottom left corner
+                //    renderer->drawString(fpsString.c_str(), false, 20, tsl::cfg::FramebufferHeight - 60, 20, a(tsl::Color(0xFF, 0xFF, 0xFF, 0xFF))); // Adjust position and color as needed
+                //    
+                //    svcGetSystemInfo(&RAM_Used_system_u, 1, INVALID_HANDLE, 2);
+                //    svcGetSystemInfo(&RAM_Total_system_u, 0, INVALID_HANDLE, 2);
+                //    
+                //    float RAM_Total_system_f = (float)RAM_Total_system_u / 1024 / 1024;
+                //    float RAM_Used_system_f = (float)RAM_Used_system_u / 1024 / 1024;
+                //    
+                //    // Convert RAM usage to strings
+                //    std::ostringstream ramStream;
+                //    ramStream << std::fixed << std::setprecision(2)
+                //              << RAM_Total_system_f - RAM_Used_system_f - 8.0 << " MB free (8 MB reserved)";
+                //    std::string ramString = ramStream.str();
+                //    
+                //    
+                //    renderer->drawString(ramString.c_str(), false, 130, tsl::cfg::FramebufferHeight - 60, 20, a(tsl::Color(0xFF, 0xFF, 0xFF, 0xFF))); // Adjust position and color as needed
+                //}
+
+                
+                if (this->m_contentElement != nullptr)
+                    this->m_contentElement->frame(renderer);
+            }
+            // CUSTOM SECTION END
+            
+            virtual inline void layout(u16 parentX, u16 parentY, u16 parentWidth, u16 parentHeight) override {
+                this->setBoundaries(parentX, parentY, parentWidth, parentHeight);
+                
+                if (this->m_contentElement != nullptr) {
+                    this->m_contentElement->setBoundaries(parentX + 35, parentY + 97, parentWidth - 85, parentHeight - 73 - 105); // CUSTOM MODIFICATION (125->105->102)
+                    this->m_contentElement->invalidate();
+                }
+            }
+            
+            virtual inline Element* requestFocus(Element *oldFocus, FocusDirection direction) override {
+                if (this->m_contentElement != nullptr)
+                    return this->m_contentElement->requestFocus(oldFocus, direction);
+                else
+                    return nullptr;
+            }
+            
+            virtual inline bool onTouch(TouchEvent event, s32 currX, s32 currY, s32 prevX, s32 prevY, s32 initialX, s32 initialY) {
+                // Discard touches outside bounds
+                if (!this->m_contentElement->inBounds(currX, currY))
+                    return false;
+                
+                if (this->m_contentElement != nullptr)
+                    return this->m_contentElement->onTouch(event, currX, currY, prevX, prevY, initialX, initialY);
+                else return false;
+            }
+            
+            /**
+             * @brief Sets the content of the frame
+             *
+             * @param content Element
+             */
+            inline void setContent(Element *content) {
+                if (this->m_contentElement != nullptr)
+                    delete this->m_contentElement;
+                
+                this->m_contentElement = content;
+                
+                if (content != nullptr) {
+                    this->m_contentElement->setParent(this);
+                    this->invalidate();
+                }
+            }
+            
+            /**
+             * @brief Changes the title of the menu
+             *
+             * @param title Title to change to
+             */
+            inline void setTitle(const std::string &title) {
+                this->m_title = title;
+            }
+            
+            /**
+             * @brief Changes the subtitle of the menu
+             *
+             * @param title Subtitle to change to
+             */
+            inline void setSubtitle(const std::string &subtitle) {
+                this->m_subtitle = subtitle;
+            }
+            
+        protected:
+            Element *m_contentElement = nullptr;
+            
+            //std::string m_title, m_subtitle;
+        };
+        
+        /**
+         * @brief The base frame which can contain another view with a customizable header
+         *
+         */
+        class HeaderOverlayFrame : public Element {
+        public:
+            
+            HeaderOverlayFrame(u16 headerHeight = 175) : Element(), m_headerHeight(headerHeight) {}
+            virtual ~HeaderOverlayFrame() {
+                if (this->m_contentElement != nullptr)
+                    delete this->m_contentElement;
+                
+                if (this->m_header != nullptr)
+                    delete this->m_header;
+            }
+            
+            virtual void draw(gfx::Renderer *renderer) override {
+                renderer->fillScreen(a(defaultBackgroundColor));
+                //renderer->fillScreen(tsl::style::color::ColorFrameBackground);
+                renderer->drawRect(tsl::cfg::FramebufferWidth - 1, 0, 1, tsl::cfg::FramebufferHeight, a(0xF222));
+                
+                renderer->drawRect(15, tsl::cfg::FramebufferHeight - 73, tsl::cfg::FramebufferWidth - 30, 1, a(defaultTextColor));
+                
+                renderer->drawString(("\uE0E1  "+BACK+"     \uE0E0  "+OK).c_str(), false, 30, 693, 23, a(defaultTextColor)); // CUSTOM MODIFICATION
+                
+                if (this->m_header != nullptr)
+                    this->m_header->frame(renderer);
+                
+                if (this->m_contentElement != nullptr)
+                    this->m_contentElement->frame(renderer);
+            }
+            
+            virtual inline void layout(u16 parentX, u16 parentY, u16 parentWidth, u16 parentHeight) override {
+                this->setBoundaries(parentX, parentY, parentWidth, parentHeight);
+                
+                if (this->m_contentElement != nullptr) {
+                    this->m_contentElement->setBoundaries(parentX + 35, parentY + this->m_headerHeight, parentWidth - 85, parentHeight - 73 - this->m_headerHeight);
+                    this->m_contentElement->invalidate();
+                }
+                
+                if (this->m_header != nullptr) {
+                    this->m_header->setBoundaries(parentX, parentY, parentWidth, this->m_headerHeight);
+                    this->m_header->invalidate();
+                }
+            }
+            
+            virtual inline bool onTouch(TouchEvent event, s32 currX, s32 currY, s32 prevX, s32 prevY, s32 initialX, s32 initialY) {
+                // Discard touches outside bounds
+                if (!this->m_contentElement->inBounds(currX, currY))
+                    return false;
+                
+                if (this->m_contentElement != nullptr)
+                    return this->m_contentElement->onTouch(event, currX, currY, prevX, prevY, initialX, initialY);
+                else return false;
+            }
+            
+            virtual inline Element* requestFocus(Element *oldFocus, FocusDirection direction) override {
+                if (this->m_contentElement != nullptr)
+                    return this->m_contentElement->requestFocus(oldFocus, direction);
+                else
+                    return nullptr;
+            }
+            
+            /**
+             * @brief Sets the content of the frame
+             *
+             * @param content Element
+             */
+            inline void setContent(Element *content) {
+                if (this->m_contentElement != nullptr)
+                    delete this->m_contentElement;
+                
+                this->m_contentElement = content;
+                
+                if (content != nullptr) {
+                    this->m_contentElement->setParent(this);
+                    this->invalidate();
+                }
+            }
+            
+            /**
+             * @brief Sets the header of the frame
+             *
+             * @param header Header custom drawer
+             */
+            inline void setHeader(CustomDrawer *header) {
+                if (this->m_header != nullptr)
+                    delete this->m_header;
+                
+                this->m_header = header;
+                
+                if (header != nullptr) {
+                    this->m_header->setParent(this);
+                    this->invalidate();
+                }
+            }
+            
+        protected:
+            Element *m_contentElement = nullptr;
+            CustomDrawer *m_header = nullptr;
+            
+            u16 m_headerHeight;
+        };
+        
+        /**
+         * @brief Single color rectangle element mainly used for debugging to visualize boundaries
+         *
+         */
+        class DebugRectangle : public Element {
+        public:
+            /**
+             * @brief Constructor
+             *
+             * @param color Color of the rectangle
+             */
+            DebugRectangle(Color color) : Element(), m_color(color) {}
+            virtual ~DebugRectangle() {}
+            
+            virtual void draw(gfx::Renderer *renderer) override {
+                renderer->drawRect(ELEMENT_BOUNDS(this), a(this->m_color));
+            }
+            
+            virtual void layout(u16 parentX, u16 parentY, u16 parentWidth, u16 parentHeight) override {}
+            
+        private:
+            Color m_color;
+        };
+        
+        
+        /**
+         * @brief A List containing list items
+         *
+         */
+        class List : public Element {
+
+        public:
+            /**
+             * @brief Constructor
+             *
+             */
+            List() : Element() {}
+            virtual ~List() {
+                for (auto& item : this->m_items)
+                    delete item;
+            }
+            
+            u32 scrollbarHeight;
+            u32 scrollbarOffset;
+            u32 offset;
+            u32 prevOffset;
+            s32 y;
+            bool handled;
+            u16 i;
+
+            std::chrono::steady_clock::time_point lastUpdateTime;
+            std::chrono::duration<float> elapsed;
+
+            static inline float animationDuration = 10.0f; 
+            InputMode lastInputMode = InputMode::Controller;
+
+            // Function to calculate exponential easing
+            //inline float exponentialEase(float t) {
+            //    return t == 1.0f ? 1.0f : (1 - std::pow(2, -10 * t)) * 1.001f; // Slightly adjust to avoid precision issues
+            //}
+
+            inline float exponentialEase(float t) {
+                return t == 1.0f ? 1.0f : (1.0f - exp2f(-10.0f * t));
+            }
+
+            
+            virtual void draw(gfx::Renderer* renderer) override {
+                // Precompute frequently used values
+                const u32 rightBound = this->getRightBound();
+                const s32 topBound = this->getTopBound();
+                const s32 bottomBound = this->getBottomBound();
+                const s32 width = this->getWidth();
+                const s32 height = this->getHeight();
+                
+            
+                if (this->m_clearList) {
+                    for (auto& item : this->m_items) {
+                        delete item;
+                    }
+                    this->m_items.clear();
+                    this->m_offset = 0;
+                    this->m_focusedIndex = 0;
+                    this->invalidate();
+                    this->m_clearList = false;
+                }
+            
+                if (!this->m_itemsToAdd.empty()) {
+                    for (const auto& [index, element] : this->m_itemsToAdd) {
+                        element->invalidate();
+                        if (index >= 0 && index < static_cast<int>(this->m_items.size())) {
+                            this->m_items.insert(this->m_items.cbegin() + index, element);
+                        } else {
+                            this->m_items.push_back(element);
+                        }
+                    }
+                    this->m_itemsToAdd.clear();
+                    this->invalidate();
+                    this->updateScrollOffset();
+                }
+            
+                if (!this->m_itemsToRemove.empty()) {
+                    for (auto* element : this->m_itemsToRemove) {
+                        auto it = std::find(this->m_items.cbegin(), this->m_items.cend(), element);
+                        if (it != this->m_items.cend()) {
+                            this->m_items.erase(it);
+                            if (this->m_focusedIndex >= static_cast<size_t>(it - this->m_items.cbegin())) {
+                                this->m_focusedIndex--;
+                            }
+                            delete element;
+                        }
+                    }
+                    this->m_itemsToRemove.clear();
+                    this->invalidate();
+                    this->updateScrollOffset();
+                }
+            
+                renderer->enableScissoring(this->getLeftBound(), topBound, width + 4, height + 4);
+            
+                for (auto& entry : this->m_items) {
+                    if (entry->getBottomBound() > topBound && entry->getTopBound() < bottomBound) {
+                        entry->frame(renderer);
+                    }
+                }
+            
+                renderer->disableScissoring();
+
+
+                if (this->m_listHeight > height) {
+                    const u32 viewHeight = height - 12;
+                    const u32 totalHeight = this->m_listHeight + 24;
+                    const u32 maxScrollableHeight = std::max(totalHeight - viewHeight, 1u);
+                    
+                    u32 scrollbarHeight = (viewHeight * viewHeight) / totalHeight;
+                    scrollbarHeight = std::min(scrollbarHeight, viewHeight);
+                    
+                    u32 scrollbarOffset = (this->m_offset / maxScrollableHeight) * (viewHeight - scrollbarHeight);
+                    scrollbarOffset = std::min(scrollbarOffset, viewHeight - scrollbarHeight) + 4;
+            
+                    const u32 offset = 10;
+                    const u32 scrollbarX = rightBound + 10 + offset;
+                    const u32 scrollbarY = this->getY() + scrollbarOffset;
+                    const u32 scrollbarWidth = 5;
+            
+                    renderer->drawRect(scrollbarX, scrollbarY, scrollbarWidth, scrollbarHeight, a(trackBarColor));
+                    renderer->drawCircle(scrollbarX + 2, scrollbarY, 2, true, a(trackBarColor));
+                    renderer->drawCircle(scrollbarX + 2, scrollbarY + scrollbarHeight, 2, true, a(trackBarColor));
+                    
+                    //static float velocity = 0.0f; // Track scrolling speed for momentum
+                    //static float lastOffset = 0.0f;
+                    //static auto lastTouchTime = std::chrono::steady_clock::now();
+                    
+                    //static const std::chrono::duration<float> momentumDuration = std::chrono::seconds(1); // Duration to maintain momentum
+
+                    // Time synchronization for smooth scrolling
+                    auto now = std::chrono::steady_clock::now();
+                    elapsed = now - lastUpdateTime;
+                    lastUpdateTime = now;
+
+                    if (Element::getInputMode()  == InputMode::Controller) {
+
+                        float t = std::min(elapsed.count() / animationDuration, 1.0f);
+                        float easedT = exponentialEase(t);
+                        float scrollAmount = (this->m_nextOffset - this->m_offset) * (easedT - (easedT - 1) / scrollSpeed);
+                        //this->m_offset += scrollAmount;
+                        //float scrollAmount = (this->m_nextOffset - this->m_offset)*0.10;
+                        //// If the scrollAmount is very small, set m_offset directly to m_nextOffset to avoid jitter
+                        if (std::abs(scrollAmount) >= 5e-2f) {
+                            this->m_offset += scrollAmount;
+                        } else {
+                            this->m_offset = this->m_nextOffset;
+                        }
+                    } else if (Element::getInputMode() == InputMode::TouchScroll) {
+                        this->m_offset += ((this->m_nextOffset) - this->m_offset);
+                    }
+                    
+                    if (prevOffset != this->m_offset) {
+                        this->invalidate();
+                    }
+                    prevOffset = this->m_offset;
+                }
+            }
+
+            
+            virtual void layout(u16 parentX, u16 parentY, u16 parentWidth, u16 parentHeight) override {
+                y = this->getY() - this->m_offset;
+                
+                this->m_listHeight = 0;
+                for (auto &entry : this->m_items)
+                    this->m_listHeight += entry->getHeight();
+                
+                this->m_listHeight -= 32;
+                for (auto &entry : this->m_items) {
+                    entry->setBoundaries(this->getX(), y, this->getWidth(), entry->getHeight());
+                    entry->invalidate();
+                    y += entry->getHeight();
+                }
+                y -= 32;
+            }
+            
+            virtual bool onTouch(TouchEvent event, s32 currX, s32 currY, s32 prevX, s32 prevY, s32 initialX, s32 initialY) {
+                handled = false;
+                
+                // Discard touches out of bounds
+                if (!this->inBounds(currX, currY))
+                    return false;
+                
+                // Direct touches to all children
+                for (auto &item : this->m_items)
+                    handled |= item->onTouch(event, currX, currY, prevX, prevY, initialX, initialY);
+                
+                if (handled)
+                    return true;
+                
+                // Handle scrolling
+                if (event != TouchEvent::Release && Element::getInputMode() == InputMode::TouchScroll) {
+                    if (prevX != 0 && prevY != 0)
+                        this->m_nextOffset += (prevY - currY);
+                    
+                    if (this->m_nextOffset < 0)
+                        this->m_nextOffset = 0;
+                    
+                    if (this->m_nextOffset > (this->m_listHeight - this->getHeight()) + 50)
+                        this->m_nextOffset = (this->m_listHeight - this->getHeight() + 50);
+                    
                     return true;
                 }
-            }
-        } else if (inSubSettingsMenu) {
-            if (simulatedNextPage && !simulatedNextPageComplete) {
-                simulatedNextPage = false;
-                simulatedNextPageComplete = true;
-            }
-            if (simulatedBack && !simulatedBackComplete) {
-                keysHeld |= KEY_B;
-                simulatedBack = false;
-            }
-            if ((keysHeld & KEY_B) && !stillTouching) {
-                allowSlide = unlockedSlide = false;
-                inSubSettingsMenu = false;
-                returningToSettings = true;
-                tsl::goBack();
-                if (reloadMenu2) {
-                    tsl::goBack();
-                    tsl::changeTo<UltrahandSettingsMenu>();
-                    reloadMenu2 = false;
-                }
-                simulatedBackComplete = true;
-                return true;
-            }
-        }
-
-        if (returningToSettings && !(keysHeld & KEY_B)) {
-            returningToSettings = false;
-            inSettingsMenu = true;
-            tsl::impl::parseOverlaySettings();
-        }
-
-        if (redrawWidget) reinitializeWidgetVars();
-
-        if (triggerExit.load(std::memory_order_acquire)) {
-            triggerExit.store(false, std::memory_order_release);
-            tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
-            tsl::Overlay::get()->close();
-        }
-
-        return false;
-    }
-};
-
-
-
-
-class SettingsMenu : public tsl::Gui {
-private:
-    std::string entryName, entryMode, overlayName, packageName, dropdownSelection, settingsIniPath;
-    bool isInSection, inQuotes, isFromMainMenu;
-    int MAX_PRIORITY = 20;
-public:
-    /**
-     * @brief Constructs a `SettingsMenu` instance.
-     *
-     * Initializes a new instance of the `SettingsMenu` class with the provided parameters.
-     *
-     * @param file The file path associated with the overlay.
-     * @param key The specific key related to the overlay (optional).
-     */
-    SettingsMenu(const std::string& name, const std::string& mode, const std::string& overlayName="", const std::string& packageName="", const std::string& selection = "") :
-        entryName(name), entryMode(mode), overlayName(overlayName), packageName(packageName), dropdownSelection(selection) {}
-    
-    /**
-     * @brief Destroys the `SettingsMenu` instance.
-     *
-     * Cleans up any resources associated with the `SettingsMenu` instance.
-     */
-    ~SettingsMenu() {}
-    
-    /**
-     * @brief Creates the graphical user interface (GUI) for the configuration overlay.
-     *
-     * This function initializes and sets up the GUI elements for the configuration overlay,
-     * allowing users to modify settings in the INI file.
-     *
-     * @return A pointer to the GUI element representing the configuration overlay.
-     */
-    virtual tsl::elm::Element* createUI() override {
-        std::string header = entryName;
-        if (entryMode == OVERLAY_STR) {
-            settingsIniPath = OVERLAYS_INI_FILEPATH;
-            header = overlayName;
-        } else if (entryMode == PACKAGE_STR) {
-            settingsIniPath = PACKAGES_INI_FILEPATH;
-            header = packageName;
-        }
-        
-        if (dropdownSelection.empty())
-            inSettingsMenu = true;
-        else
-            inSubSettingsMenu = true;
-        
-        auto list = std::make_unique<tsl::elm::List>();
-        //list = std::make_unique<tsl::elm::List>();
-        
-        if (dropdownSelection.empty()) {
-            list->addItem(new tsl::elm::CategoryHeader(header+" "+SETTINGS));
-            
-            
-            std::string fileContent = getFileContents(settingsIniPath);
-            
-            std::string priorityValue = parseValueFromIniSection(settingsIniPath, entryName, PRIORITY_STR);
-            
-            std::string hideOption = parseValueFromIniSection(settingsIniPath, entryName, HIDE_STR);
-            if (hideOption.empty())
-                hideOption = FALSE_STR;
-            
-            
-            bool hide = false;
-            if (hideOption == TRUE_STR)
-                hide = true;
-            
-            std::string useOverlayLaunchArgs = parseValueFromIniSection(settingsIniPath, entryName, USE_LAUNCH_ARGS_STR);
-            
-            
-            // Capitalize entryMode
-            std::string hideLabel = entryMode;
-            
-            
-            if (hideLabel == OVERLAY_STR)
-                hideLabel = HIDE_OVERLAY;
-            else if (hideLabel == PACKAGE_STR)
-                hideLabel = HIDE_PACKAGE;
-            
-            
-            // Envoke toggling
-            auto toggleListItem = std::make_unique<tsl::elm::ToggleListItem>(hideLabel, false, ON, OFF);
-            toggleListItem->setState(hide);
-            toggleListItem->setStateChangedListener([&settingsIniPath = this->settingsIniPath, &entryName = this->entryName, listItemRaw = toggleListItem.get()](bool state) {
-                tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemRaw, tsl::FocusDirection::None);
-                setIniFileValue(settingsIniPath, entryName, HIDE_STR, state ? TRUE_STR : FALSE_STR);
-                if (state)
-                    reloadMenu = true; // this reloads before main menu
-                else {
-                    reloadMenu = true;
-                    reloadMenu2 = true; // this reloads at main menu
-                }
-            });
-            list->addItem(toggleListItem.release());
-            
-            
-            
-            auto listItem = std::make_unique<tsl::elm::ListItem>(SORT_PRIORITY);
-            listItem->setValue(priorityValue);
-            
-            // Envolke selectionOverlay in optionMode
-            
-            listItem->setClickListener([&entryName = this->entryName, &entryMode = this->entryMode, &overlayName = this->overlayName,
-                listItemRaw = listItem.get()](uint64_t keys) { // Add 'command' to the capture list
                 
-                if (runningInterpreter.load(std::memory_order_acquire))
-                    return false;
+                return false;
+            }
+            
+            /**
+             * @brief Adds a new item to the list before the next frame starts
+             *
+             * @param element Element to add
+             * @param index Index in the list where the item should be inserted. -1 or greater list size will insert it at the end
+             * @param height Height of the element. Don't set this parameter for libtesla to try and figure out the size based on the type
+             */
+            inline void addItem(Element *element, u16 height = 0, ssize_t index = -1) {
+                if (element != nullptr) {
+                    if (height != 0)
+                        element->setBoundaries(this->getX(), this->getY(), this->getWidth(), height);
+                    
+                    element->setParent(this);
+                    element->invalidate();
+                    
+                    this->m_itemsToAdd.emplace_back(index, element);
+                }
+            }
+            
+            /**
+             * @brief Removes an item form the list and deletes it
+             * @note Item will only be deleted if it was found in the list
+             *
+             * @param element Element to remove from list. Call \ref Gui::removeFocus before.
+             */
+            virtual void removeItem(Element *element) {
+                if (element != nullptr)
+                    this->m_itemsToRemove.emplace_back(element);
+            }
+            
+            /**
+             * @brief Try to remove an item from the list
+             *
+             * @param index Index of element in list. Call \ref Gui::removeFocus before.
+             */
+            virtual void removeIndex(size_t index) {
+                if (index < this->m_items.size())
+                    removeItem(this->m_items[index]);
+            }
+            
+            /**
+             * @brief Removes all children from the list later on
+             * @warning When clearing a list, make sure none of the its children are focused. Call \ref Gui::removeFocus before.
+             */
+            inline void clear() {
+                this->m_clearList = true;
+            }
+            
+            virtual Element* requestFocus(Element* oldFocus, FocusDirection direction) override {
+                if (this->m_clearList || !this->m_itemsToAdd.empty())
+                    return nullptr;
+                
+                Element* newFocus = nullptr;
+                
+                if (direction == FocusDirection::None) {
+                    size_t i = 0;
+                    
+                    if (oldFocus == nullptr) {
+                        s32 elementHeight = 0;
+                        while (elementHeight < this->m_offset && i < this->m_items.size() - 1) {
+                            i++;
+                            elementHeight += this->m_items[i]->getHeight();
+                        }
+                    }
+                    
+                    for (; i < this->m_items.size(); ++i) {
+                        newFocus = this->m_items[i]->requestFocus(oldFocus, direction);
+                        
+                        if (newFocus != nullptr) {
+                            this->m_focusedIndex = i;
+                            this->updateScrollOffset();
+                            return newFocus;
+                        }
+                    }
+                } else if (direction == FocusDirection::Down) {
+                    for (size_t i = this->m_focusedIndex + 1; i < this->m_items.size(); ++i) {
+                        newFocus = this->m_items[i]->requestFocus(oldFocus, direction);
+                        
+                        if (newFocus != nullptr && newFocus != oldFocus) {
+                            this->m_focusedIndex = i;
+                            this->updateScrollOffset();
+                            return newFocus;
+                        }
+                    }
+                } else if (direction == FocusDirection::Up) {
+                    if (this->m_focusedIndex > 0) {
+                        for (ssize_t i = static_cast<ssize_t>(this->m_focusedIndex) - 1; i >= 0; --i) {
+                            if (static_cast<size_t>(i) >= this->m_items.size() || this->m_items[i] == nullptr)
+                                return oldFocus;
+                            
+                            newFocus = this->m_items[i]->requestFocus(oldFocus, direction);
+                            
+                            if (newFocus != nullptr && newFocus != oldFocus) {
+                                this->m_focusedIndex = static_cast<size_t>(i);
+                                this->updateScrollOffset();
+                                return newFocus;
+                            }
+                        }
+                    }
+                }
+            
+                return oldFocus;
+            }
 
+
+            
+            /**
+             * @brief Gets the item at the index in the list
+             *
+             * @param index Index position in list
+             * @return Element from list. nullptr for if the index is out of bounds
+             */
+            virtual Element* getItemAtIndex(u32 index) {
+                if (this->m_items.size() <= index)
+                    return nullptr;
+                
+                return this->m_items[index];
+            }
+            
+            /**
+             * @brief Gets the index in the list of the element passed in
+             *
+             * @param element Element to check
+             * @return Index in list. -1 for if the element isn't a member of the list
+             */
+            virtual s32 getIndexInList(Element *element) {
+                auto it = std::find(this->m_items.begin(), this->m_items.end(), element);
+                
+                if (it == this->m_items.end())
+                    return -1;
+                
+                return it - this->m_items.begin();
+            }
+            
+            virtual void setFocusedIndex(u32 index) {
+                if (this->m_items.size() > index) {
+                    m_focusedIndex = index;
+                    this->updateScrollOffset();
+                }
+            }
+        
+        protected:
+            std::vector<Element*> m_items;
+            u16 m_focusedIndex = 0;
+            
+            float m_offset = 0, m_nextOffset = 0;
+            s32 m_listHeight = 0;
+            
+            bool m_clearList = false;
+            std::vector<Element *> m_itemsToRemove;
+            std::vector<std::pair<ssize_t, Element *>> m_itemsToAdd;
+        
+            //static inline std::chrono::steady_clock::time_point lastUpdateTime = std::chrono::steady_clock::now();
+            static inline float scrollSpeed = 10.0f;  // Adjust this as needed
+
+            // Adjust these parameters to fine-tune the behavior
+            //static inline constexpr float animationDuration = 3.0f;  // Duration of the animation
+            std::vector<float> prefixSums;
+
+        private:
+            inline void clearItems() {
+                for (auto& item : this->m_items) {
+                    delete item;
+                }
+                this->m_items.clear();
+                this->m_offset = 0;
+                this->m_focusedIndex = 0;
+                this->invalidate();
+                this->m_clearList = false;
+            }
+            
+            inline void addPendingItems() {
+                for (auto [index, element] : this->m_itemsToAdd) {
+                    element->invalidate();
+                    if (index >= 0 && (this->m_items.size() > static_cast<size_t>(index))) {
+                        this->m_items.insert(this->m_items.cbegin() + static_cast<size_t>(index), element);
+                    } else {
+                        this->m_items.push_back(element);
+                    }
+                }
+                this->m_itemsToAdd.clear();
+                this->invalidate();
+                this->updateScrollOffset();
+            }
+            
+            inline void removePendingItems() {
+                for (auto element : this->m_itemsToRemove) {
+                    auto it = std::find(this->m_items.cbegin(), this->m_items.cend(), element);
+                    if (it != this->m_items.cend()) {
+                        this->m_items.erase(it);
+                        if (this->m_focusedIndex >= static_cast<size_t>(it - this->m_items.cbegin())) {
+                            this->m_focusedIndex--;
+                        }
+                        delete element;
+                    }
+                }
+                this->m_itemsToRemove.clear();
+                this->invalidate();
+                this->updateScrollOffset();
+            }
+            
+            inline void drawScrollbar(gfx::Renderer *renderer) {
+                float viewHeight = static_cast<float>(this->getHeight() - 16);
+                float totalHeight = static_cast<float>(this->m_listHeight + 16);
+                
+                scrollbarHeight = (viewHeight * viewHeight) / totalHeight;
+                if (scrollbarHeight > viewHeight) {
+                    scrollbarHeight = viewHeight;
+                }
+                
+                int maxScrollableHeight = totalHeight - viewHeight;
+                if (maxScrollableHeight < 1) maxScrollableHeight = 1;
+                
+                scrollbarOffset = (static_cast<double>(this->m_offset) / maxScrollableHeight) * (viewHeight - scrollbarHeight);
+                if (scrollbarOffset + scrollbarHeight > viewHeight) {
+                    scrollbarOffset = viewHeight - scrollbarHeight;
+                }
+                scrollbarOffset += 8;
+                
+                int offset = 11;
+                renderer->drawRect(this->getRightBound() + 10 + offset, this->getY() + scrollbarOffset, 5, scrollbarHeight, a(trackBarColor));
+                renderer->drawCircle(this->getRightBound() + 12 + offset, this->getY() + scrollbarOffset, 2, true, a(trackBarColor));
+                //renderer->drawCircle(this->getRightBound() + 12 + offset, (this->getY() + scrollbarOffset + scrollbarHeight) / 2, 2, true, a(trackBarColor));
+                renderer->drawCircle(this->getRightBound() + 12 + offset, this->getY() + scrollbarOffset + scrollbarHeight, 2, true, a(trackBarColor));
+                
+                float prevOffset = this->m_offset;
+                
+                if (Element::getInputMode() == InputMode::Controller) {
+                    this->m_offset += ((this->m_nextOffset) - this->m_offset) * 0.1F;
+                } else if (Element::getInputMode() == InputMode::TouchScroll) {
+                    this->m_offset += ((this->m_nextOffset) - this->m_offset);
+                }
+                
+                if (static_cast<u32>(prevOffset) != static_cast<u32>(this->m_offset)) {
+                    this->invalidate();
+                }
+            }
+            
+            
+            // Function to initialize prefix sums
+            inline void initializePrefixSums() {
+                prefixSums.clear();
+                prefixSums.resize(this->m_items.size() + 1, 0.0f);
+            
+                for (size_t i = 1; i < prefixSums.size(); ++i) {
+                    prefixSums[i] = prefixSums[i - 1] + this->m_items[i - 1]->getHeight();
+                }
+            }
+            virtual inline void updateScrollOffset() {
+                if (lastInputMode != InputMode::Controller)
+                    return;
+                
+                if (this->m_listHeight <= this->getHeight()) {
+                    this->m_nextOffset = 0;
+                    this->m_offset = 0;
+                    return;
+                }
+            
+                // Ensure prefixSums is up-to-date
+                if (prefixSums.size() != this->m_items.size() + 1) {
+                    initializePrefixSums();
+                }
+            
+                // Use prefix sum to calculate the next offset
+                this->m_nextOffset = prefixSums[this->m_focusedIndex] - (this->getHeight() / 3);
+            
+                // Ensure the offset is within bounds
+                if (this->m_nextOffset < 0)
+                    this->m_nextOffset = 0;
+                
+                float maxOffset = (this->m_listHeight - this->getHeight()) + 50;
+                if (this->m_nextOffset > maxOffset)
+                    this->m_nextOffset = maxOffset;
+            }
+
+        };
+        
+
+        /**
+         * @brief A item that goes into a list
+         *
+         */
+        class ListItem : public Element {
+        public:
+            //std::chrono::duration<long int, std::ratio<1, 1000000000>> t;
+            u32 width, height;
+            
+            /**
+             * @brief Constructor
+             *
+             * @param text Initial description text
+             */
+            ListItem(const std::string& text, const std::string& value = "")
+                : Element(), m_text(text), m_value(value) {
+            }
+            virtual ~ListItem() {}
+            
+            virtual void draw(gfx::Renderer *renderer) override {
+                static float lastBottomBound;
+                bool useClickTextColor = false;
+                if (this->m_touched && Element::getInputMode() == InputMode::Touch) {
+                    if (touchInBounds) {
+                        renderer->drawRect(ELEMENT_BOUNDS(this), a(clickColor));
+                        useClickTextColor = true;
+                    }
+                    //renderer->drawRect(ELEMENT_BOUNDS(this), tsl::style::color::ColorClickAnimation);
+                }
+                
+                this->m_text = convertComboToUnicode(this->m_text);
+                this->m_value = convertComboToUnicode(this->m_value);
+
+                if (this->m_maxWidth == 0) {
+                    if (this->m_value.length() > 0) {
+                        std::tie(width, height) = renderer->drawString(this->m_value.c_str(), false, 0, 0, 20, a(tsl::style::color::ColorTransparent));
+                        this->m_maxWidth = this->getWidth() - width - 70 +4;
+                    } else {
+                        this->m_maxWidth = this->getWidth() - 40 -10;
+                    }
+                    
+                    std::tie(width, height) = renderer->drawString(this->m_text.c_str(), false, 0, 0, 23, a(tsl::style::color::ColorTransparent));
+                    this->m_trunctuated = width > this->m_maxWidth+20;
+                    
+                    if (this->m_trunctuated) {
+                        this->m_scrollText = this->m_text + "        ";
+                        std::tie(width, height) = renderer->drawString(this->m_scrollText.c_str(), false, 0, 0, 23, a(tsl::style::color::ColorTransparent));
+                        this->m_scrollText += this->m_text;
+                        this->m_textWidth = width;
+                        
+                        this->m_ellipsisText = renderer->limitStringLength(this->m_text, false, 23, this->m_maxWidth);
+                    } else {
+                        this->m_textWidth = width;
+                    }
+                }
+                
+                if (lastBottomBound !=  this->getTopBound())
+                    renderer->drawRect(this->getX()+4, this->getTopBound(), this->getWidth()+6, 1, a(separatorColor));
+                renderer->drawRect(this->getX()+4, this->getBottomBound(), this->getWidth()+6, 1, a(separatorColor));
+                lastBottomBound = this->getBottomBound();
+                
+                if (this->m_trunctuated) {
+                    if (this->m_focused) {
+                        if (this->m_value.length() > 0)
+                            renderer->enableScissoring(this->getX()+6, 97, this->m_maxWidth + 40 - 6-4, tsl::cfg::FramebufferHeight-73-97);
+                        else
+                            renderer->enableScissoring(this->getX()+6, 97, this->m_maxWidth + 40 - 6, tsl::cfg::FramebufferHeight-73-97);
+                        renderer->drawString(this->m_scrollText.c_str(), false, this->getX() + 20-1 - this->m_scrollOffset, this->getY() + 45, 23, a(selectedTextColor));
+                        renderer->disableScissoring();
+                        //t = std::chrono::steady_clock::now() - this->timeIn;
+                        if (std::chrono::steady_clock::now() - this->timeIn >= 2000ms) {
+                            if (this->m_scrollOffset >= this->m_textWidth) {
+                                this->m_scrollOffset = 0;
+                                this->timeIn = std::chrono::steady_clock::now();
+                            } else {
+                                // Calculate the increment based on the desired scroll rate
+                                this->m_scrollOffset = ((0.1) * std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - this->timeIn - 2000ms).count());
+                            }
+                        } // CUSTOM MODIFICATION END
+                    } else {
+                        renderer->drawString(this->m_ellipsisText.c_str(), false, this->getX() + 20-1, this->getY() + 45, 23, a(!useClickTextColor ? defaultTextColor : clickTextColor));
+                    }
+                } else {
+                    // Render the text with special character handling
+                    renderer->drawStringWithColoredSections(this->m_text, {STAR_SYMBOL+"  "}, this->getX() + 20-1, this->getY() + 45, 23,
+                        a(this->m_focused ? (!useClickTextColor ? selectedTextColor : clickTextColor) : (!useClickTextColor ? defaultTextColor : clickTextColor)),
+                        a(this->m_focused ? starColor : selectionStarColor)
+                    );
+                }
+                
+                
+                // CUSTOM SECTION START (modification for submenu footer color)
+                //const std::string& value = this->m_value;
+                int xPosition = this->getX() + this->m_maxWidth + 45 - 1;
+                int yPosition = this->getY() + 45;
+                int fontSize = 20;
+                //bool isFaint = ;
+                //bool isFocused = this->m_focused;
+
+                // Determine text color
+                auto textColor = offTextColor;
+                if (this->m_value == DROPDOWN_SYMBOL || this->m_value == OPTION_SYMBOL) {
+                    textColor = this->m_focused
+                        ? (!useClickTextColor ? (this->m_faint ? offTextColor : selectedTextColor) : a(clickTextColor))
+                        : (!useClickTextColor ? (this->m_faint ? offTextColor : defaultTextColor) : a(clickTextColor));
+                } else if (runningInterpreter.load(std::memory_order_acquire) &&
+                    (this->m_value.find(DOWNLOAD_SYMBOL) != std::string::npos ||
+                     this->m_value.find(UNZIP_SYMBOL) != std::string::npos ||
+                     this->m_value.find(COPY_SYMBOL) != std::string::npos ||
+                     this->m_value == INPROGRESS_SYMBOL)) {
+                    textColor = this->m_faint ? offTextColor : a(inprogressTextColor);
+                } else if (this->m_value == CROSSMARK_SYMBOL) {
+                    textColor = this->m_faint ? offTextColor : a(invalidTextColor);
+                } else {
+                    textColor = this->m_faint ? offTextColor : a(onTextColor);
+                }
+
+                // Draw the string with the determined text color
+                renderer->drawString(this->m_value.c_str(), false, xPosition, yPosition, fontSize, textColor);
+                // CUSTOM SECTION END 
+            }
+            
+            virtual void layout(u16 parentX, u16 parentY, u16 parentWidth, u16 parentHeight) override {
+                this->setBoundaries(this->getX()+2+1, this->getY(), this->getWidth()+8+1, tsl::style::ListItemDefaultHeight);
+            }
+            
+            virtual bool onClick(u64 keys) override {
+
+                if (keys & HidNpadButton_A)
+                    this->triggerClickAnimation();
+                else if (keys & (HidNpadButton_AnyUp | HidNpadButton_AnyDown | HidNpadButton_AnyLeft | HidNpadButton_AnyRight))
+                    this->m_clickAnimationProgress = 0;
+
+                return Element::onClick(keys);
+            }
+            
+            
+            virtual bool onTouch(TouchEvent event, s32 currX, s32 currY, s32 prevX, s32 prevY, s32 initialX, s32 initialY) override {
+                if (event == TouchEvent::Touch)
+                    this->m_touched = this->inBounds(currX, currY);
+                
+                if (event == TouchEvent::Release && this->m_touched) {
+                    this->m_touched = false;
+                    
+                    if (Element::getInputMode() == InputMode::Touch) {
+                        bool handled = this->onClick(HidNpadButton_A);
+                        
+                        this->m_clickAnimationProgress = 0;
+                        return handled;
+                    }
+                }
+                
+                
+                return false;
+            }
+            
+            
+            virtual void setFocused(bool state) override {
+                this->m_scroll = false;
+                this->m_scrollOffset = 0;
+                this->timeIn = std::chrono::steady_clock::now(); // CUSTOM MODIFICATION
+                Element::setFocused(state);
+            }
+            
+            virtual inline Element* requestFocus(Element *oldFocus, FocusDirection direction) override {
+                return this;
+            }
+            
+            /**
+             * @brief Sets the left hand description text of the list item
+             *
+             * @param text Text
+             */
+            inline void setText(const std::string& text) {
+                this->m_text = text;
+                this->m_scrollText = "";
+                this->m_ellipsisText = "";
+                this->m_maxWidth = 0;
+            }
+            
+            /**
+             * @brief Sets the right hand value text of the list item
+             *
+             * @param value Text
+             * @param faint Should the text be drawn in a glowing green or a faint gray
+             */
+            inline void setValue(const std::string& value, bool faint = false) {
+                this->m_value = value;
+                this->m_faint = faint;
+                this->m_maxWidth = 0;
+            }
+            
+            /**
+             * @brief Gets the left hand description text of the list item
+             *
+             * @return Text
+             */
+            inline const std::string& getText() const {
+                return this->m_text;
+            }
+            
+            /**
+             * @brief Gets the right hand value text of the list item
+             *
+             * @return Value
+             */
+            inline const std::string& getValue() {
+                return this->m_value;
+            }
+            
+        protected:
+            std::chrono::steady_clock::time_point timeIn;// = std::chrono::system_clock::now();
+            std::string m_text;
+            std::string m_value = "";
+            std::string m_scrollText = "";
+            std::string m_ellipsisText = "";
+            
+            bool m_scroll = false;
+            bool m_trunctuated = false;
+            bool m_faint = false;
+            
+            bool m_touched = false;
+            
+            u16 m_maxScroll = 0;
+            //half m_scrollOffset = half(0);
+            float m_scrollOffset = 0.0;
+            u32 m_maxWidth = 0;
+            u32 m_textWidth = 0;
+        };
+        
+
+        /**
+         * @brief A toggleable list item that changes the state from On to Off when the A button gets pressed
+         *
+         */
+        class ToggleListItem : public ListItem {
+        public:
+            /**
+             * @brief Constructor
+             *
+             * @param text Initial description text
+             * @param initialState Is the toggle set to On or Off initially
+             * @param onValue Value drawn if the toggle is on
+             * @param offValue Value drawn if the toggle is off
+             */
+            ToggleListItem(const std::string& text, bool initialState, const std::string& onValue = ON, const std::string& offValue = OFF)
+                : ListItem(text), m_state(initialState), m_onValue(onValue), m_offValue(offValue) {
+                    
+                this->setState(this->m_state);
+            }
+            
+            virtual ~ToggleListItem() {}
+            
+            virtual bool onClick(u64 keys) override {
                 if (simulatedSelect && !simulatedSelectComplete) {
                     keys |= KEY_A;
                     simulatedSelect = false;
                 }
-                if (keys & KEY_A) {
-                    inMainMenu = false;
-                    tsl::changeTo<SettingsMenu>(entryName, entryMode, overlayName, "", PRIORITY_STR);
-                    selectedListItem.reset();
-                    selectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItemRaw, [](auto*){});
+
+                if (keys & HidNpadButton_A) {
+                    this->m_state = !this->m_state;
+                    
+                    this->setState(this->m_state);
+                    this->m_stateChangedListener(this->m_state);
+                    
                     simulatedSelectComplete = true;
-                    lastSelectedListItem->triggerClickAnimation();
-                    return true;
+                    return ListItem::onClick(keys);
                 }
+                
                 return false;
-            });
-            list->addItem(listItem.release());
-            
-            if (entryMode == OVERLAY_STR) {
-                // Envoke toggling
-                toggleListItem = std::make_unique<tsl::elm::ToggleListItem>(LAUNCH_ARGUMENTS, false, ON, OFF);
-                toggleListItem->setState((useOverlayLaunchArgs==TRUE_STR));
-                toggleListItem->setStateChangedListener([&settingsIniPath = settingsIniPath, &entryName = entryName, useOverlayLaunchArgs,
-                    listItemRaw = toggleListItem.get()](bool state) {
-
-                    tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemRaw, tsl::FocusDirection::None);
-                    setIniFileValue(settingsIniPath, entryName, USE_LAUNCH_ARGS_STR, state ? TRUE_STR : FALSE_STR);
-                    if ((useOverlayLaunchArgs==TRUE_STR) != state)
-                        reloadMenu = true; // this reloads before main menu
-                    if (!state) {
-                        reloadMenu = true;
-                        reloadMenu2 = true; // this reloads at main menu
-                    }
-                });
-                list->addItem(toggleListItem.release());
             }
             
-            
-        } else if (dropdownSelection == PRIORITY_STR) {
-            list->addItem(new tsl::elm::CategoryHeader(SORT_PRIORITY));
-            
-            std::string priorityValue = parseValueFromIniSection(settingsIniPath, entryName, PRIORITY_STR);
-            
-            std::unique_ptr<tsl::elm::ListItem> listItem;
-
-            std::string iStr;
-            for (int i = 0; i <= MAX_PRIORITY; ++i) { // for i in range 0->20 with 20 being the max value
-                iStr = std::to_string(i);
-                listItem = std::make_unique<tsl::elm::ListItem>(iStr);
-                
-                if (iStr == priorityValue) {
-                    listItem->setValue(CHECKMARK_SYMBOL);
-                    lastSelectedListItem.reset();
-                    lastSelectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){});
-                }
-                
-                listItem->setClickListener([&settingsIniPath = this->settingsIniPath, &entryName = this->entryName, iStr, priorityValue,
-                    listItemRaw = listItem.get()](uint64_t keys) { // Add 'this', 'i', and 'listItem' to the capture list
-                    
-                    if (runningInterpreter.load(std::memory_order_acquire))
-                        return false;
-
-                    if (simulatedSelect && !simulatedSelectComplete) {
-                        keys |= KEY_A;
-                        simulatedSelect = false;
-                    }
-                    if (keys & KEY_A) {
-                        if (iStr != priorityValue)
-                            reloadMenu = true;
-                        setIniFileValue(settingsIniPath, entryName, PRIORITY_STR, iStr);
-                        lastSelectedListItem->setValue("");
-                        selectedListItem->setValue(iStr);
-                        listItemRaw->setValue(CHECKMARK_SYMBOL);
-                        lastSelectedListItem.reset();
-                        lastSelectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItemRaw, [](auto*){});
-                        shiftItemFocus(listItemRaw);
-                        simulatedSelectComplete = true;
-                        lastSelectedListItem->triggerClickAnimation();
-                        return true;
-                    }
-                    return false;
-                });
-                
-                list->addItem(listItem.release());
+            /**
+             * @brief Gets the current state of the toggle
+             *
+             * @return State
+             */
+            virtual inline bool getState() {
+                return this->m_state;
             }
             
-        } else
-            list->addItem(new tsl::elm::ListItem(FAILED_TO_OPEN+": " + settingsIniPath));
-        
-
-        //tsl::elm::OverlayFrame *rootFrame = new tsl::elm::OverlayFrame("Ultrahand", versionLabel);
-        
-        //auto rootFrame = new tsl::elm::OverlayFrame("Ultrahand", versionLabel);
-        auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel);
-        rootFrame->setContent(list.release());
-        
-        return rootFrame.release();
-    }
-    
-    /**
-     * @brief Handles user input for the configuration overlay.
-     *
-     * This function processes user input and responds accordingly within the configuration overlay.
-     * It captures key presses and performs actions based on user interactions.
-     *
-     * @param keysDown   A bitset representing keys that are currently pressed.
-     * @param keysHeld   A bitset representing keys that are held down.
-     * @param touchInput Information about touchscreen input.
-     * @param leftJoyStick Information about the left joystick input.
-     * @param rightJoyStick Information about the right joystick input.
-     * @return `true` if the input was handled within the overlay, `false` otherwise.
-     */
-    virtual bool handleInput(u64 keysDown, u64 keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
-
-        if (runningInterpreter.load(std::memory_order_acquire)) {
-            return handleRunningInterpreter(keysHeld);
-        }
-        if (lastRunningInterpreter) {
-            //while (!interpreterThreadExit.load(std::memory_order_acquire)) {svcSleepThread(50'000'000);}
+            /**
+             * @brief Sets the current state of the toggle. Updates the Value
+             *
+             * @param state State
+             */
+            virtual inline void setState(bool state) {
+                this->m_state = state;
+                
+                this->setValue(state ? this->m_onValue : this->m_offValue, !state);
+            }
             
-            //resetPercentages();
+            /**
+             * @brief Adds a listener that gets called whenever the state of the toggle changes
+             *
+             * @param stateChangedListener Listener with the current state passed in as parameter
+             */
+            void setStateChangedListener(std::function<void(bool)> stateChangedListener) {
+                this->m_stateChangedListener = stateChangedListener;
+            }
             
-            isDownloadCommand = false;
-            lastSelectedListItem->setValue(commandSuccess ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
-            closeInterpreterThread();
-            lastRunningInterpreter = false;
-            return true;
-        }
+        protected:
+            bool m_state = true;
+            std::string m_onValue, m_offValue;
+            
+            std::function<void(bool)> m_stateChangedListener = [](bool){};
+        };
+        
+        class CategoryHeader : public Element {
+        public:
+            
+            
+            CategoryHeader(const std::string &title, bool hasSeparator = true) : m_text(title), m_hasSeparator(hasSeparator) {}
+            virtual ~CategoryHeader() {}
+            
+            virtual void draw(gfx::Renderer *renderer) override {
+                if (this->m_hasSeparator) {
+                    renderer->drawRect(this->getX()+1+1, this->getBottomBound() - 30, 3, 23, a(headerSeparatorColor));
+                    renderer->drawString(this->m_text.c_str(), false, this->getX() + 15+1, this->getBottomBound() - 12, 15, a(headerTextColor));
+                } else {
+                    renderer->drawString(this->m_text.c_str(), false, this->getX(), this->getBottomBound() - 12, 15, a(headerTextColor));
+                }
+                //if (this->m_hasSeparator)
+                //    renderer->drawRect(this->getX(), this->getBottomBound(), this->getWidth(), 1, tsl::style::color::ColorFrame); // CUSTOM MODIFICATION
+            }
+            
+            virtual void layout(u16 parentX, u16 parentY, u16 parentWidth, u16 parentHeight) override {
+                // Check if the CategoryHeader is part of a list and if it's the first entry in it, half it's height
+                if (List *list = static_cast<List*>(this->getParent()); list != nullptr) {
+                    if (list->getIndexInList(this) == 0) {
+                        this->setBoundaries(this->getX(), this->getY()-4, this->getWidth(), tsl::style::ListItemDefaultHeight / 2);
+                        return;
+                    }
+                }
+                this->setBoundaries(this->getX(), this->getY()-4, this->getWidth(), tsl::style::ListItemDefaultHeight *0.90);
+                //if (m_hasSeparator) { // CUSTOM MODIFICATION
+                //    this->setBoundaries(this->getX(), this->getY()-4, this->getWidth(), tsl::style::ListItemDefaultHeight *0.90); // CUSTOM MODIFICATION
+                //} else {
+                //    this->setBoundaries(this->getX(), this->getY()-4, this->getWidth(), tsl::style::ListItemDefaultHeight / 2); // CUSTOM MODIFICATION
+                //}
+            }
+            
+            virtual bool onClick(u64 keys) {
+                return false;
+            }
+            
+            virtual Element* requestFocus(Element *oldFocus, FocusDirection direction) override {
+                return nullptr;
+            }
+            
+            inline void setText(const std::string &text) {
+                this->m_text = text;
+            }
+            
+            inline const std::string& getText() const {
+                return this->m_text;
+            }
+            
+        private:
+            std::string m_text;
+            bool m_hasSeparator;
+        };
+        
 
-        if (inSettingsMenu && !inSubSettingsMenu) {
-            if (!returningToSettings) {
-                if (simulatedNextPage && !simulatedNextPageComplete) {
-                    simulatedNextPage = false;
-                    simulatedNextPageComplete = true;
+        /**
+         * @brief A customizable analog trackbar going from minValue to maxValue
+         *
+         */
+        class TrackBar : public Element {
+        public:
+            std::chrono::steady_clock::time_point lastUpdate;
+            
+            Color highlightColor = {0xf, 0xf, 0xf, 0xf};
+            float progress;
+            float counter = 0.0;
+            s32 x, y;
+            s32 amplitude;
+            u32 descWidth, descHeight;
+            
+            
+            // Ensure the order of initialization matches the order of declaration
+            TrackBar(std::string label, std::string packagePath = "", s16 minValue = 0, s16 maxValue = 100, std::string units = "",
+                     std::function<void(std::vector<std::vector<std::string>>&&, const std::string&, const std::string&)> executeCommands = nullptr,
+                     std::function<std::vector<std::vector<std::string>>(const std::vector<std::vector<std::string>>&, const std::string&, size_t, const std::string&)> sourceReplacementFunc = nullptr,
+                     std::vector<std::vector<std::string>> cmd = {}, const std::string& selCmd = "", bool usingStepTrackbar = false, bool usingNamedStepTrackbar = false, s16 numSteps = -1, bool unlockedTrackbar = false, bool executeOnEveryTick = false)
+                : m_label(label), m_packagePath(packagePath), m_minValue(minValue), m_maxValue(maxValue), m_units(units),
+                  interpretAndExecuteCommands(executeCommands), getSourceReplacement(sourceReplacementFunc), commands(std::move(cmd)), selectedCommand(selCmd), m_usingStepTrackbar(usingStepTrackbar), m_usingNamedStepTrackbar(usingNamedStepTrackbar), m_numSteps(numSteps), m_unlockedTrackbar(unlockedTrackbar), m_executeOnEveryTick(executeOnEveryTick) {
+                if ((!usingStepTrackbar && !usingNamedStepTrackbar) || numSteps == -1) {
+                    m_numSteps = maxValue - minValue;
                 }
 
-                if (simulatedMenu && !simulatedMenuComplete) {
-                    simulatedMenu = false;
-                    simulatedMenuComplete = true;
+                bool loadedValue = false;
+                if (!m_packagePath.empty()) {
+                    std::string initialIndex = parseValueFromIniSection(m_packagePath + "config.ini", m_label, "index");
+
+                    if (!initialIndex.empty()) {
+                        m_index = static_cast<s16>(std::stoi(initialIndex)); // convert initializedValue to s16
+                    }
+                    if (!m_usingNamedStepTrackbar) {
+                        std::string initialValue = parseValueFromIniSection(m_packagePath + "config.ini", m_label, "value");
+                        
+                        if (!initialValue.empty()) {
+                            m_value = static_cast<s16>(std::stoi(initialValue)); // convert initializedValue to s16
+                            loadedValue = true;
+                        }
+                    }
                 }
 
-                if (simulatedBack && !simulatedBackComplete) {
-                    keysHeld |= KEY_B;
-                    simulatedBack = false;
-                }
+                if (m_index > m_numSteps -1) m_index = m_numSteps - 1;
+                else if (m_index < 0) m_index = 0;
 
-                if ((keysHeld & KEY_B) && !stillTouching) {
-                    allowSlide = unlockedSlide = false;
-                    inSettingsMenu = false;
-                    if (lastMenu != "hiddenMenuMode")
-                        returningToMain = true;
-                    else
-                        returningToHiddenMain = true;
-                    
-                    tsl::goBack();
-                    
-                    if (reloadMenu) {
-                        if (lastMenu == "hiddenMenuMode") {
-                            tsl::goBack();
-                            inMainMenu = false;
-                            inHiddenMode = true;
-                        } else
-                            reloadMenu = false;
-                        tsl::changeTo<MainMenu>(lastMenuMode);
+                if (!loadedValue)
+                    m_value = minValue + m_index * (static_cast<float>(maxValue - minValue) / (m_numSteps - 1));
+
+                if (m_value > maxValue) m_value = maxValue;
+                else if (m_value < minValue) m_value = minValue;
+
+                lastUpdate = std::chrono::steady_clock::now();
+            }
+            
+            virtual ~TrackBar() {}
+            
+            virtual Element* requestFocus(Element *oldFocus, FocusDirection direction) {
+                return this;
+            }
+            
+            inline void updateAndExecute(bool updateIni = true) {
+                if (m_packagePath.empty()) {
+                    return;
+                }
+                
+                std::string indexStr = std::to_string(m_index);
+                std::string valueStr = m_usingNamedStepTrackbar ? m_selection : std::to_string(m_value);
+                
+                if (updateIni) {
+                    setIniFileValue(m_packagePath + "config.ini", m_label, "index", indexStr);
+                    setIniFileValue(m_packagePath + "config.ini", m_label, "value", valueStr);
+                }
+                
+                if (interpretAndExecuteCommands) {
+                    auto modifiedCmds = getSourceReplacement(commands, valueStr, m_index, m_packagePath);
+                    size_t pos;
+                    for (auto& cmd : modifiedCmds) {
+                        for (auto& arg : cmd) {
+                            pos = 0;
+                            while ((pos = arg.find("{value}", pos)) != std::string::npos) {
+                                arg.replace(pos, 7, valueStr);
+                                pos += valueStr.length();
+                            }
+                            
+                            if (m_usingNamedStepTrackbar) {
+                                pos = 0;
+                                while ((pos = arg.find("{index}", pos)) != std::string::npos) {
+                                    arg.replace(pos, 7, indexStr);
+                                    pos += indexStr.length();
+                                }
+                            }
+                        }
                     }
                     
-                    lastMenu = "settingsMenu";
-                    simulatedBackComplete = true;
-                    //tsl::Overlay::get()->close();
+                    interpretAndExecuteCommands(std::move(modifiedCmds), m_packagePath, selectedCommand);
+                }
+            }
+            
+            virtual inline bool handleInput(u64 keysDown, u64 keysHeld, const HidTouchState &touchPos, HidAnalogStickState leftJoyStick, HidAnalogStickState rightJoyStick) override {
+                static std::chrono::milliseconds initialInterval{67}; // Initial interval between value changes (67ms)
+                static bool holding = false;
+                static std::chrono::steady_clock::time_point holdStartTime;
+                static u64 prevKeysHeld = 0;
+                //static bool allowSlide = false; // Flag to allow sliding after KEY_A is pressed
+                u64 keysReleased = prevKeysHeld & ~keysHeld;
+                prevKeysHeld = keysHeld;
+                
+                auto now = std::chrono::steady_clock::now();
+                auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastUpdate);
+                
+                if (simulatedSelect && !simulatedSelectComplete) {
+                    keysDown |= KEY_A;
+                    simulatedSelect = false;
+                }
+
+                // Check if KEY_A is pressed to toggle allowSlide
+                if ((keysDown & KEY_A) && !m_unlockedTrackbar) {
+                    allowSlide = !allowSlide;
+                    holding = false; // Reset holding state when KEY_A is pressed
+                    simulatedSelectComplete = true;
                     return true;
                 }
-            }
-        } else if (inSubSettingsMenu) {
-            if (simulatedNextPage && !simulatedNextPageComplete) {
-                simulatedNextPage = false;
-                simulatedNextPageComplete = true;
-            }
-
-            if (simulatedMenu && !simulatedMenuComplete) {
-                simulatedMenu = false;
-                simulatedMenuComplete = true;
-            }
-
-            if (simulatedBack && !simulatedBackComplete) {
-                keysHeld |= KEY_B;
-                simulatedBack = false;
-            }
-
-            if ((keysHeld & KEY_B) && !stillTouching) {
-                allowSlide = unlockedSlide = false;
-                inSubSettingsMenu = false;
-                returningToSettings = true;
-                tsl::goBack();
-                //tsl::Overlay::get()->close();
-                simulatedBackComplete = true;
-                return true;
-            }
-        }
-        
-        
-        if (returningToSettings && !(keysHeld & KEY_B)){
-            returningToSettings = false;
-            inSettingsMenu = true;
-        }
-
-        if (triggerExit.load(std::memory_order_acquire)) {
-            triggerExit.store(false, std::memory_order_release);
-            tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
-            tsl::Overlay::get()->close();
-        }
-        
-        return false;
-    }
-};
-
-
-class ScriptOverlay : public tsl::Gui {
-private:
-    std::string filePath, specificKey, fileName;
-    bool isInSection = false, inQuotes = false, isFromMainMenu = false;
-
-    void addListItem(std::unique_ptr<tsl::elm::List>& list, const std::string& line) {
-        auto listItem = std::make_unique<tsl::elm::ListItem>(line);
-        //std::shared_ptr<tsl::elm::ListItem> listItemPtr = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){});
-
-        listItem->setClickListener([this, listItemRaw = listItem.get(), line](uint64_t keys) {
-            if (runningInterpreter.load(std::memory_order_acquire)) return false;
-            if (simulatedSelect && !simulatedSelectComplete) {
-                keys |= KEY_A;
-                simulatedSelect = false;
-            }
-            if (keys & KEY_A) {
-                std::istringstream iss(line), argIss;
-                std::string part, arg;
-                std::vector<std::vector<std::string>> commandVec;
-                std::vector<std::string> commandParts;
-                bool inQuotes = false;
-
-                while (std::getline(iss, part, '\'')) {
-                    if (!part.empty()) {
-                        if (!inQuotes) {
-                            argIss.clear();
-                            argIss.str(part);
-                            while (argIss >> arg) commandParts.emplace_back(arg);
-                        } else {
-                            commandParts.emplace_back(part);
-                        }
-                    }
-                    inQuotes = !inQuotes;
-                }
-                commandVec.emplace_back(std::move(commandParts));
-                interpretAndExecuteCommands(std::move(commandVec), filePath, specificKey);
-
-                listItemRaw->setValue(commandSuccess ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
-                simulatedSelectComplete = true;
-                listItemRaw->triggerClickAnimation();
-                return true;
-            }
-            return false;
-        });
-        list->addItem(listItem.release());
-    }
-
-public:
-    ScriptOverlay(const std::string& file, const std::string& key = "", bool fromMainMenu = false, const std::string& _fileName = PACKAGE_FILENAME)
-        : filePath(file), specificKey(key), fileName(_fileName), isFromMainMenu(fromMainMenu) {}
-
-    virtual tsl::elm::Element* createUI() override {
-        inScriptMenu = true;
-        std::string packageName = getNameFromPath(filePath);
-        if (packageName == ".packages") packageName = ROOT_PACKAGE;
-
-        auto list = std::make_unique<tsl::elm::List>();
-        const std::string& packageFile = filePath + fileName;
-        const std::string& fileContent = getFileContents(packageFile);
-
-        if (!fileContent.empty()) {
-            std::string line, currentCategory;
-            std::istringstream iss(fileContent);
-
-            while (std::getline(iss, line)) {
-                if (line.empty() || line.find_first_not_of('\n') == std::string::npos) continue;
-
-                if (line.front() == '[' && line.back() == ']') {
-                    currentCategory = line.substr(1, line.size() - 2);
-                    isInSection = specificKey.empty() || currentCategory == specificKey;
-                    if (isInSection) list->addItem(new tsl::elm::CategoryHeader(currentCategory));
-                } else if (isInSection) {
-                    addListItem(list, line);
-                }
-            }
-        } else {
-            list->addItem(new tsl::elm::ListItem(FAILED_TO_OPEN + ": " + packageFile));
-        }
-
-        PackageHeader packageHeader = getPackageHeaderFromIni(packageFile);
-        auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(packageName, packageHeader.version.empty() ? 
-            CAPITAL_ULTRAHAND_PROJECT_NAME + " Script" : packageHeader.version + "   (" + CAPITAL_ULTRAHAND_PROJECT_NAME + " Script)");
-        rootFrame->setContent(list.release());
-        return rootFrame.release();
-    }
-
-    virtual bool handleInput(u64 keysDown, u64 keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
-        if (runningInterpreter.load(std::memory_order_acquire)) return handleRunningInterpreter(keysHeld);
-        if (lastRunningInterpreter) {
-            isDownloadCommand = false;
-            lastSelectedListItem->setValue(commandSuccess ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
-            closeInterpreterThread();
-            lastRunningInterpreter = false;
-            return true;
-        }
-
-        if (inScriptMenu) {
-            if (simulatedNextPage && !simulatedNextPageComplete) {
-                simulatedNextPage = false;
-                simulatedNextPageComplete = true;
-            }
-            if (simulatedMenu && !simulatedMenuComplete) {
-                simulatedMenu = false;
-                simulatedMenuComplete = true;
-            }
-            if (simulatedBack && !simulatedBackComplete) {
-                keysHeld |= KEY_B;
-                simulatedBack = false;
-            }
-            if ((keysHeld & KEY_B) && !stillTouching) {
-                allowSlide = unlockedSlide = false;
-                inScriptMenu = false;
-                returningToPackage = !isFromMainMenu && lastMenu == "packageMenu";
-                returningToSubPackage = !isFromMainMenu && lastMenu == "subPackageMenu";
-                returningToMain = isFromMainMenu;
-                tsl::goBack();
-                simulatedBackComplete = true;
-                return true;
-            }
-        }
-
-        if (triggerExit.load(std::memory_order_acquire)) {
-            triggerExit.store(false, std::memory_order_release);
-            tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
-            tsl::Overlay::get()->close();
-        }
-
-        return false;
-    }
-};
-
-
-
-// For persistent versions and colors across nested packages (when not specified)
-std::string packageRootLayerTitle;
-std::string packageRootLayerVersion;
-std::string packageRootLayerColor;
-bool overrideTitle = false, overrideVersion = false;
-
-
-/**
- * @brief The `SelectionOverlay` class manages the selection overlay functionality.
- *
- * This class handles the selection overlay, allowing users to interact with and select various options.
- * It provides functions for creating the graphical user interface (GUI), handling user input, and executing commands.
- */
-class SelectionOverlay : public tsl::Gui {
-private:
-    std::string filePath, specificKey, pathPattern, pathPatternOn, pathPatternOff, itemName, groupingName, lastGroupingName;
-    std::vector<std::vector<std::string>> commands;
-    std::vector<std::vector<std::string>> commandsOn;
-    std::vector<std::vector<std::string>> commandsOff;
-    std::string specifiedFooterKey;
-    bool toggleState = false;
-    std::string packageConfigIniPath;
-    std::string commandSystem, commandMode, commandGrouping;
-    
-    std::string lastSelectedListItemFooter = "";
-
-    // For handling on/off file_source toggle states
-    std::unordered_map<int, std::string> currentSelectedItems;
-    std::unordered_map<int, bool> isInitialized;
-
-    // Variables moved from createUI to class scope
-    std::vector<std::string> filesList, filesListOn, filesListOff;
-    std::vector<std::string> filterList, filterListOn, filterListOff;
-    std::string sourceType, sourceTypeOn, sourceTypeOff;
-    std::string jsonPath, jsonPathOn, jsonPathOff;
-    std::string jsonKey, jsonKeyOn, jsonKeyOff;
-    std::string listPath, listPathOn, listPathOff;
-    std::string iniPath, iniPathOn, iniPathOff;
-    std::string listString, listStringOn, listStringOff;
-    std::string jsonString, jsonStringOn, jsonStringOff;
-
-public:
-    SelectionOverlay(const std::string& path, const std::string& key = "", const std::vector<std::vector<std::string>>& cmds = {}, const std::string& footerKey = "")
-        : filePath(path), specificKey(key), commands(std::move(cmds)), specifiedFooterKey(footerKey) {
-        lastSelectedListItem.reset();
-    }
-
-    ~SelectionOverlay() {
-        lastSelectedListItem.reset();
-        commands.clear();
-        commandsOn.clear();
-        commandsOff.clear();
-        filesList.clear();
-        filesListOn.clear();
-        filesListOff.clear();
-    }
-
-    void processSelectionCommands() {
-        commands.erase(std::remove_if(commands.begin(), commands.end(),
-            [](const std::vector<std::string>& vec) {
-                return vec.empty();
-            }),
-            commands.end());
-
-        bool inEristaSection = false;
-        bool inMarikoSection = false;
-        std::string currentSection = GLOBAL_STR;
-        std::string iniFilePath;
-
-        for (auto& cmd : commands) {
-            std::string commandName = cmd[0];
-
-            if (stringToLowercase(commandName) == "erista:") {
-                inEristaSection = true;
-                inMarikoSection = false;
-                continue;
-            } else if (stringToLowercase(commandName) == "mariko:") {
-                inEristaSection = false;
-                inMarikoSection = true;
-                continue;
-            }
-
-            if ((inEristaSection && !inMarikoSection && usingErista) || (!inEristaSection && inMarikoSection && usingMariko) || (!inEristaSection && !inMarikoSection)) {
-                if (commandName.find(SYSTEM_PATTERN) == 0) {
-                    commandSystem = commandName.substr(SYSTEM_PATTERN.length());
-                    if (std::find(commandSystems.begin(), commandSystems.end(), commandSystem) == commandSystems.end())
-                        commandSystem = commandSystems[0];
-                } else if (commandName.find(MODE_PATTERN) == 0) {
-                    commandMode = commandName.substr(MODE_PATTERN.length());
-                    if (std::find(commandModes.begin(), commandModes.end(), commandMode) == commandModes.end())
-                        commandMode = commandModes[0];
-                } else if (commandName.find(GROUPING_PATTERN) == 0) {
-                    commandGrouping = commandName.substr(GROUPING_PATTERN.length());
-                    if (std::find(commandGroupings.begin(), commandGroupings.end(), commandGrouping) == commandGroupings.end())
-                        commandGrouping = commandGroupings[0];
-                }
-
-                if (commandMode == TOGGLE_STR) {
-                    if (commandName == "on:")
-                        currentSection = ON_STR;
-                    else if (commandName == "off:")
-                        currentSection = OFF_STR;
-
-                    if (currentSection == GLOBAL_STR) {
-                        commandsOn.push_back(cmd);
-                        commandsOff.push_back(cmd);
-                    } else if (currentSection == ON_STR)
-                        commandsOn.push_back(cmd);
-                    else if (currentSection == OFF_STR)
-                        commandsOff.push_back(cmd);
-                }
-
-                if (cmd.size() > 1) {
-                    if (!iniFilePath.empty())
-                        cmd[1] = replaceIniPlaceholder(cmd[1], INI_FILE_STR, iniFilePath);
-
-                    if (commandName == "ini_file") {
-                        iniFilePath = preprocessPath(cmd[1], filePath);
-                        continue;
-                    } else if (commandName == "filter") {
-                        std::string filterEntry = removeQuotes(cmd[1]);
-                        if (sourceType == FILE_STR)
-                            filterEntry = preprocessPath(filterEntry, filePath);
-
-                        if (currentSection == GLOBAL_STR)
-                            filterList.push_back(std::move(filterEntry));
-                        else if (currentSection == ON_STR)
-                            filterListOn.push_back(std::move(filterEntry));
-                        else if (currentSection == OFF_STR)
-                            filterListOff.push_back(std::move(filterEntry));
-                    } else if (commandName == "file_source") {
-                        sourceType = FILE_STR;
-                        if (currentSection == GLOBAL_STR) {
-                            //logMessage("cmd[1]: "+cmd[1]);
-                            pathPattern = preprocessPath(cmd[1], filePath);
-                            //logMessage("pathPattern: "+pathPattern);
-                            std::vector<std::string> newFiles = getFilesListByWildcards(pathPattern);
-                            filesList.insert(filesList.end(), newFiles.begin(), newFiles.end()); // Append new files
-                        } else if (currentSection == ON_STR) {
-                            pathPatternOn = preprocessPath(cmd[1], filePath);
-                            std::vector<std::string> newFilesOn = getFilesListByWildcards(pathPatternOn);
-                            filesListOn.insert(filesListOn.end(), newFilesOn.begin(), newFilesOn.end()); // Append new files
-                            sourceTypeOn = FILE_STR;
-                        } else if (currentSection == OFF_STR) {
-                            pathPatternOff = preprocessPath(cmd[1], filePath);
-                            std::vector<std::string> newFilesOff = getFilesListByWildcards(pathPatternOff);
-                            filesListOff.insert(filesListOff.end(), newFilesOff.begin(), newFilesOff.end()); // Append new files
-                            sourceTypeOff = FILE_STR;
-                        }
-                    } else if (commandName == "json_file_source") {
-                        sourceType = JSON_FILE_STR;
-                        if (currentSection == GLOBAL_STR) {
-                            jsonPath = preprocessPath(cmd[1], filePath);
-                            if (cmd.size() > 2)
-                                jsonKey = cmd[2];
-                        } else if (currentSection == ON_STR) {
-                            jsonPathOn = preprocessPath(cmd[1], filePath);
-                            sourceTypeOn = JSON_FILE_STR;
-                            if (cmd.size() > 2)
-                                jsonKeyOn = cmd[2];
-                        } else if (currentSection == OFF_STR) {
-                            jsonPathOff = preprocessPath(cmd[1], filePath);
-                            sourceTypeOff = JSON_FILE_STR;
-                            if (cmd.size() > 2)
-                                jsonKeyOff = cmd[2];
-                        }
-                    } else if (commandName == "list_file_source") {
-                        sourceType = LIST_FILE_STR;
-                        if (currentSection == GLOBAL_STR) {
-                            listPath = preprocessPath(cmd[1], filePath);
-                        } else if (currentSection == ON_STR) {
-                            listPathOn = preprocessPath(cmd[1], filePath);
-                            sourceTypeOn = LIST_FILE_STR;
-                        } else if (currentSection == OFF_STR) {
-                            listPathOff = preprocessPath(cmd[1], filePath);
-                            sourceTypeOff = LIST_FILE_STR;
-                        }
-                    } else if (commandName == "list_source") {
-                        sourceType = LIST_STR;
-                        if (currentSection == GLOBAL_STR) {
-                            listString = removeQuotes(cmd[1]);
-                        } else if (currentSection == ON_STR) {
-                            listStringOn = removeQuotes(cmd[1]);
-                            sourceTypeOn = LIST_STR;
-                        } else if (currentSection == OFF_STR) {
-                            listStringOff = removeQuotes(cmd[1]);
-                            sourceTypeOff = LIST_STR;
-                        }
-                    } else if (commandName == "ini_file_source") {
-                        sourceType = INI_FILE_STR;
-                        if (currentSection == GLOBAL_STR) {
-                            iniPath = preprocessPath(cmd[1], filePath);
-                        } else if (currentSection == ON_STR) {
-                            iniPathOn = preprocessPath(cmd[1], filePath);
-                            sourceTypeOn = INI_FILE_STR;
-                        } else if (currentSection == OFF_STR) {
-                            iniPathOff = preprocessPath(cmd[1], filePath);
-                            sourceTypeOff = INI_FILE_STR;
-                        }
-                    } else if (commandName == "json_source") {
-                        sourceType = JSON_STR;
-                        if (currentSection == GLOBAL_STR) {
-                            jsonString = removeQuotes(cmd[1]);
-                            if (cmd.size() > 2)
-                                jsonKey = removeQuotes(cmd[2]);
-                        } else if (currentSection == ON_STR) {
-                            jsonStringOn = removeQuotes(cmd[1]);
-                            sourceTypeOn = JSON_STR;
-                            if (cmd.size() > 2)
-                                jsonKeyOn = removeQuotes(cmd[2]);
-                        } else if (currentSection == OFF_STR) {
-                            jsonStringOff = removeQuotes(cmd[1]);
-                            sourceTypeOff = JSON_STR;
-                            if (cmd.size() > 2)
-                                jsonKeyOff = removeQuotes(cmd[2]);
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    virtual tsl::elm::Element* createUI() override {
-        inSelectionMenu = true;
-        PackageHeader packageHeader = getPackageHeaderFromIni(filePath + PACKAGE_FILENAME);
-
-        auto list = std::make_unique<tsl::elm::List>();
-        packageConfigIniPath = filePath + CONFIG_FILENAME;
-
-        commandSystem = commandSystems[0];
-        commandMode = commandModes[0];
-        commandGrouping = commandGroupings[0];
-
-        processSelectionCommands();
-
-        std::vector<std::string> selectedItemsList, selectedItemsListOn, selectedItemsListOff;
-
-        if (commandMode == DEFAULT_STR || commandMode == OPTION_STR) {
-            if (sourceType == FILE_STR)
-                selectedItemsList = std::move(filesList);
-            else if (sourceType == LIST_STR || sourceType == LIST_FILE_STR)
-                selectedItemsList = (sourceType == LIST_STR) ? stringToList(listString) : readListFromFile(listPath);
-            else if (sourceType == INI_FILE_STR)
-                selectedItemsList = parseSectionsFromIni(iniPath);
-            else if (sourceType == JSON_STR || sourceType == JSON_FILE_STR) {
-                populateSelectedItemsList(sourceType, (sourceType == JSON_STR) ? jsonString : jsonPath, jsonKey, selectedItemsList);
-                jsonPath.clear();
-                jsonString.clear();
-            }
-
-        } else if (commandMode == TOGGLE_STR) {
-            if (sourceTypeOn == FILE_STR)
-                selectedItemsListOn = std::move(filesListOn);
-            else if (sourceTypeOn == LIST_STR || sourceTypeOn == LIST_FILE_STR)
-                selectedItemsListOn = (sourceTypeOn == LIST_STR) ? stringToList(listStringOn) : readListFromFile(listPathOn);
-            else if (sourceTypeOn == INI_FILE_STR)
-                selectedItemsListOn = parseSectionsFromIni(iniPathOn);
-            else if (sourceTypeOn == JSON_STR || sourceTypeOn == JSON_FILE_STR) {
-                populateSelectedItemsList(sourceTypeOn, (sourceTypeOn == JSON_STR) ? jsonStringOn : jsonPathOn, jsonKeyOn, selectedItemsListOn);
-                jsonPathOn.clear();
-                jsonStringOn.clear();
-            }
-
-            if (sourceTypeOff == FILE_STR)
-                selectedItemsListOff = std::move(filesListOff);
-            else if (sourceTypeOff == LIST_STR || sourceTypeOff == LIST_FILE_STR)
-                selectedItemsListOff = (sourceTypeOff == LIST_STR) ? stringToList(listStringOff) : readListFromFile(listPathOff);
-            else if (sourceTypeOff == INI_FILE_STR)
-                selectedItemsListOff = parseSectionsFromIni(iniPathOff);
-            else if (sourceTypeOff == JSON_STR || sourceTypeOff == JSON_FILE_STR) {
-                populateSelectedItemsList(sourceTypeOff, (sourceTypeOff == JSON_STR) ? jsonStringOff : jsonPathOff, jsonKeyOff, selectedItemsListOff);
-                jsonPathOff.clear();
-                jsonStringOff.clear();
-            }
-
-            if (sourceType == FILE_STR) {
-                filterItemsList(filterListOn, selectedItemsListOn);
-                filterListOn.clear();
-
-                filterItemsList(filterListOff, selectedItemsListOff);
-                filterListOff.clear();
-            }
-
-
-            selectedItemsList.reserve(selectedItemsListOn.size() + selectedItemsListOff.size());
-            selectedItemsList.insert(selectedItemsList.end(), selectedItemsListOn.begin(), selectedItemsListOn.end());
-            selectedItemsList.insert(selectedItemsList.end(), selectedItemsListOff.begin(), selectedItemsListOff.end());
-
-        }
-
-        if (sourceType == FILE_STR) {
-            if ( (commandGrouping == "split2" || commandGrouping == "split4")) {
-                std::sort(selectedItemsList.begin(), selectedItemsList.end(), [](const std::string& a, const std::string& b) {
-                    const std::string& parentDirA = getParentDirNameFromPath(a);
-                    const std::string& parentDirB = getParentDirNameFromPath(b);
-                    return (parentDirA != parentDirB) ? (parentDirA < parentDirB) : (getNameFromPath(a) < getNameFromPath(b));
-                });
-            } else {
-                std::sort(selectedItemsList.begin(), selectedItemsList.end(), [](const std::string& a, const std::string& b) {
-                    return getNameFromPath(a) < getNameFromPath(b);
-                });
-            }
-        }
-
-        if (sourceType == FILE_STR) {
-            filterItemsList(filterList, selectedItemsList);
-            filterList.clear();
-        }
-
-        if (commandGrouping == DEFAULT_STR)
-            list->addItem(new tsl::elm::CategoryHeader(removeTag(specificKey.substr(1))));
-
-        std::unique_ptr<tsl::elm::ListItem> listItem;
-        size_t pos;
-        std::string parentDirName;
-        std::string footer;
-        std::string optionName;
-        //bool toggleStateOn;
-
-        if (selectedItemsList.empty()) {
-            if (commandGrouping != DEFAULT_STR)
-                list->addItem(new tsl::elm::CategoryHeader(removeTag(specificKey.substr(1))));
-            listItem = std::make_unique<tsl::elm::ListItem>(EMPTY);
-            list->addItem(listItem.release());
-        }
-
-        for (size_t i = 0; i < selectedItemsList.size(); ++i) {
-            const std::string& selectedItem = selectedItemsList[i];
-
-            itemName = getNameFromPath(selectedItem);
-            if (itemName.front() == '.') // Skip hidden items
-                continue;
-
-            if (!isDirectory(preprocessPath(selectedItem, filePath)))
-                itemName = dropExtension(itemName);
-
-            if (sourceType == FILE_STR) {
-                if (commandGrouping == "split") {
-                    groupingName = removeQuotes(getParentDirNameFromPath(selectedItem));
-
-                    if (lastGroupingName.empty() || (lastGroupingName != groupingName)) {
-                        list->addItem(new tsl::elm::CategoryHeader(groupingName));
-                        lastGroupingName = groupingName.c_str();
-                    }
-                } else if (commandGrouping == "split2") {
-                    groupingName = removeQuotes(getParentDirNameFromPath(selectedItem));
-
-                    pos = groupingName.find(" - ");
-                    if (pos != std::string::npos) {
-                        itemName = groupingName.substr(pos + 3);
-                        groupingName = groupingName.substr(0, pos);
-                    }
-
-                    if (lastGroupingName.empty() || (lastGroupingName != groupingName)) {
-                        list->addItem(new tsl::elm::CategoryHeader(groupingName));
-                        lastGroupingName = groupingName.c_str();
-                    }
-                } else if (commandGrouping == "split3") {
-                    groupingName = removeQuotes(getNameFromPath(selectedItem));
-
-                    pos = groupingName.find(" - ");
-                    if (pos != std::string::npos) {
-                        itemName = groupingName.substr(pos + 3);
-                        groupingName = groupingName.substr(0, pos);
-                    }
-
-                    if (lastGroupingName.empty() || (lastGroupingName != groupingName)) {
-                        list->addItem(new tsl::elm::CategoryHeader(groupingName));
-                        lastGroupingName = groupingName.c_str();
-                    }
-                } else if (commandGrouping == "split4") {
-                    groupingName = removeQuotes(getParentDirNameFromPath(selectedItem, 2));
-                    itemName = trim(removeQuotes(dropExtension(getNameFromPath(selectedItem))));
-                    footer = removeQuotes(getParentDirNameFromPath(selectedItem));
-
-                    if (lastGroupingName.empty() || (lastGroupingName != groupingName)) {
-                        list->addItem(new tsl::elm::CategoryHeader(groupingName));
-                        lastGroupingName = groupingName.c_str();
-                    }
-                }
-            } else {
-                if (commandMode == TOGGLE_STR) {
-                    if (std::find(filterListOn.begin(), filterListOn.end(), itemName) != filterListOn.end() ||
-                        std::find(filterListOff.begin(), filterListOff.end(), itemName) != filterListOff.end()) {
-                        continue;
-                    }
-                } else {
-                    if (std::find(filterList.begin(), filterList.end(), itemName) != filterList.end()) {
-                        continue;
-                    }
-                }
-            }
-
-            if (commandMode == DEFAULT_STR || commandMode == OPTION_STR) {
-                if (sourceType != FILE_STR && commandGrouping != "split2" && commandGrouping != "split3" && commandGrouping != "split4") {
-                    pos = selectedItem.find(" - ");
-                    footer = "";
-                    itemName = selectedItem;
-                    if (pos != std::string::npos) {
-                        footer = selectedItem.substr(pos + 2);
-                        itemName = selectedItem.substr(0, pos);
-                    }
-                } else if (commandGrouping == "split2") {
-                    footer = dropExtension(getNameFromPath(selectedItem));
-                }
-
-                listItem = std::make_unique<tsl::elm::ListItem>(itemName);
-
-                if (commandMode == OPTION_STR) {
-                    if (selectedFooterDict[specifiedFooterKey] == itemName) {
-                        lastSelectedListItem.reset();
-                        lastSelectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*) {});
-                        lastSelectedListItemFooter = footer;
-                        listItem->setValue(CHECKMARK_SYMBOL);
-                    } else {
-                        if (pos != std::string::npos) {
-                            listItem->setValue(footer, true);
-                        } else {
-                            listItem->setValue(footer);
-                        }
-                    }
-                } else {
-                    listItem->setValue(footer, true);
-                }
-
-                listItem->setClickListener([&commands = this->commands, &filePath = this->filePath, &specificKey = this->specificKey, &commandMode = this->commandMode,
-                    &specifiedFooterKey = this->specifiedFooterKey, &lastSelectedListItemFooter = this->lastSelectedListItemFooter, i, footer, selectedItem, listItemRaw = listItem.get()](uint64_t keys) {
-                    //listItemPtr = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*) {})](uint64_t keys) {
-
-                    if (runningInterpreter.load(std::memory_order_acquire)) {
-                        return false;
-                    }
-
-                    if (simulatedSelect && !simulatedSelectComplete) {
-                        keys |= KEY_A;
-                        simulatedSelect = false;
-                    }
-
-                    if ((keys & KEY_A)) {
-                        isDownloadCommand = false;
-                        runningInterpreter.store(true, std::memory_order_release);
-                        enqueueInterpreterCommands(getSourceReplacement(commands, selectedItem, i, filePath), filePath, specificKey);
-                        startInterpreterThread();
-
-                        listItemRaw->setValue(INPROGRESS_SYMBOL);
-
-                        
-                        if (commandMode == OPTION_STR) {
-                            selectedFooterDict[specifiedFooterKey] = listItemRaw->getText();
-                            if (lastSelectedListItem)
-                                lastSelectedListItem->setValue(lastSelectedListItemFooter, true);
-                            lastSelectedListItemFooter = footer;
-                        }
-
-                        lastSelectedListItem.reset();
-                        lastSelectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItemRaw, [](auto*) {});
-                        shiftItemFocus(listItemRaw);
-
-                        lastRunningInterpreter = true;
-                        simulatedSelectComplete = true;
-                        lastSelectedListItem->triggerClickAnimation();
+                
+
+                // Allow sliding only if KEY_A has been pressed
+                if (allowSlide || m_unlockedTrackbar) {
+                    if ((keysReleased & HidNpadButton_AnyLeft) || (keysReleased & HidNpadButton_AnyRight)) {
+                        //if (!m_executeOnEveryTick)
+                        updateAndExecute();
+                        holding = false;
                         return true;
                     }
-                    return false;
-                });
-                list->addItem(listItem.release());
-
-            } else if (commandMode == TOGGLE_STR) {
-                auto toggleListItem = std::make_unique<tsl::elm::ToggleListItem>(itemName, false, ON, OFF);
-
-                bool toggleStateOn = std::find(selectedItemsListOn.begin(), selectedItemsListOn.end(), selectedItem) != selectedItemsListOn.end();
-                toggleListItem->setState(toggleStateOn);
-
-                toggleListItem->setStateChangedListener([this, i, selectedItem, listItemRaw = toggleListItem.get(), sourceType = sourceType](bool state) {
-                    // Initialize currentSelectedItem for this index if it does not exist
-                    if (isInitialized.find(i) == isInitialized.end() || !isInitialized[i]) {
-                        currentSelectedItems[i] = selectedItem;
-                        isInitialized[i] = true;
-                    }
                     
-                    tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemRaw, tsl::FocusDirection::None);
+                    if (keysHeld & HidNpadButton_AnyLeft && keysHeld & HidNpadButton_AnyRight)
+                        return true;
                     
-                    auto modifiedCmds = getSourceReplacement(!state ? commandsOn : commandsOff, currentSelectedItems[i], i, filePath);
-                    //auto modifiedCmdsCopy = modifiedCmds;
-                    interpretAndExecuteCommands(std::move(modifiedCmds), filePath, specificKey);
-                    
-                    if (sourceType == FILE_STR) {
-                        // Reset variables
-                        std::string selectedFileName;
-                        std::string updatedFileSource;
-                        
-                        // Extract the destination directory from the move command
-                        for (const auto& cmd : modifiedCmds) {
-                            if (cmd.size() > 1 && cmd[0] == "file_name") {
-                                selectedFileName = cmd[1];
-                                //logMessage("Selected file name: " + selectedFileName);
-                                break; // Assuming there's only one move command at the end
-                            }
+                    // Check if the button is being held down
+                    if ((keysHeld & HidNpadButton_AnyLeft) || (keysHeld & HidNpadButton_AnyRight)) {
+                        if (!holding) {
+                            holding = true;
+                            holdStartTime = now;
                         }
                         
-                        if (!selectedFileName.empty()) {
-                            for (const auto& arg : !state ? commandsOff : commandsOn) {
-                                if (arg.size() > 1 && arg[0] == "file_source") {
-                                    updatedFileSource = arg[1];
-                                    break;
-                                }
-                            }
-                            
-                            //logMessage("Original file source: " + updatedFileSource);
-                            
-                            // Replace the filename / folder name wildcard placeholder (rightmost) within updatedFileSource with the selectedFileName
-                            size_t pos = updatedFileSource.rfind('*');
-                            if (pos != std::string::npos) {
-                                std::string prefix = updatedFileSource.substr(0, pos);
-                                std::string suffix = updatedFileSource.substr(pos + 1);
-                                
-                                // Check if suffix contains a file extension
-                                size_t extPos = selectedFileName.find('.');
-                                if (extPos != std::string::npos) {
-                                    // It's a file, include the file extension
-                                    updatedFileSource = prefix + selectedFileName + suffix;
-                                } else {
-                                    // It's a folder, exclude the file extension if present in the suffix
-                                    size_t extSuffixPos = suffix.find('.');
-                                    if (extSuffixPos != std::string::npos) {
-                                        updatedFileSource = prefix + selectedFileName + suffix.substr(extSuffixPos);
-                                    } else {
-                                        updatedFileSource = prefix + selectedFileName + suffix;
+                        auto holdDuration = std::chrono::duration_cast<std::chrono::milliseconds>(now - holdStartTime);
+                        std::chrono::milliseconds currentInterval;
+                        if (holdDuration >= std::chrono::milliseconds(1600)) {
+                            currentInterval = std::chrono::milliseconds(5);
+                        } else if (holdDuration >= std::chrono::milliseconds(800)) {
+                            currentInterval = std::chrono::milliseconds(20);
+                        } else {
+                            currentInterval = initialInterval;
+                        }
+                        
+                        if (elapsed >= currentInterval) {
+                            if (keysHeld & HidNpadButton_AnyLeft) {
+                                if (this->m_value > m_minValue) {
+                                    this->m_index--;
+                                    this->m_value--;
+                                    this->m_valueChangedListener(this->m_value);
+                                    if (m_executeOnEveryTick) {
+                                        updateAndExecute(false);
                                     }
+                                    lastUpdate = now;
+                                    return true;
                                 }
-                                currentSelectedItems[i] = updatedFileSource;
-                                
-                                // Debug logging
-                                //logMessage("Updated file source for index " + std::to_string(i) + ": " + updatedFileSource);
-                            } else {
-                                //logMessage("Wildcard '*' not found in file source.");
                             }
-                        } else {
-                            //logMessage("Selected file name is empty.");
-                        }
-                    }
-                });
-                
-                
-                
-                list->addItem(toggleListItem.release());
-            }
-        }
-        
-        
-        if (!packageRootLayerTitle.empty())
-            overrideTitle = true;
-        if (!packageRootLayerVersion.empty())
-            overrideVersion = true;
-
-        if (!packageHeader.title.empty() && packageRootLayerTitle.empty())
-            packageRootLayerTitle = packageHeader.title;
-        if (!packageHeader.version.empty() && packageRootLayerVersion.empty())
-            packageRootLayerVersion = packageHeader.version;
-        if (!packageHeader.color.empty() && packageRootLayerColor.empty())
-            packageRootLayerColor = packageHeader.color;
-
-        if (packageHeader.title.empty() || overrideTitle)
-            packageHeader.title = packageRootLayerTitle;
-        if (packageHeader.version.empty() || overrideVersion)
-            packageHeader.version = packageRootLayerVersion;
-        if (packageHeader.color.empty())
-            packageHeader.color = packageRootLayerColor;
-        
-
-        auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(
-            (!packageHeader.title.empty()) ? packageHeader.title : (!packageRootLayerTitle.empty() ? packageRootLayerTitle : getNameFromPath(filePath)),
-            packageHeader.version != "" ? (!packageRootLayerVersion.empty() ? packageRootLayerVersion : packageHeader.version) + "   (Ultrahand Package)" : "Ultrahand Package",
-            "",
-            packageHeader.color);
-
-        if (filePath == PACKAGE_PATH)
-            rootFrame = std::make_unique<tsl::elm::OverlayFrame>(CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel);
-
-        rootFrame->setContent(list.release());
-
-        return rootFrame.release();
-    }
-
-    virtual bool handleInput(u64 keysDown, u64 keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
-        if (runningInterpreter.load(std::memory_order_acquire)) {
-            return handleRunningInterpreter(keysHeld);
-        }
-        if (lastRunningInterpreter) {
-            isDownloadCommand = false;
-            lastSelectedListItem->setValue(commandSuccess ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
-            closeInterpreterThread();
-            lastRunningInterpreter = false;
-            return true;
-        }
-
-        if (refreshPage && !stillTouching) {
-            tsl::goBack();
-            tsl::changeTo<SelectionOverlay>(filePath, specificKey, commands, specifiedFooterKey);
-            refreshPage = false;
-        }
-
-        if (refreshPackage && !stillTouching) {
-            tsl::goBack();
-        }
-
-        if (inSelectionMenu) {
-            if (simulatedNextPage && !simulatedNextPageComplete) {
-                simulatedNextPage = false;
-                simulatedNextPageComplete = true;
-            }
-
-            if (simulatedMenu && !simulatedMenuComplete) {
-                simulatedMenu = false;
-                simulatedMenuComplete = true;
-            }
-
-            if (simulatedBack && !simulatedBackComplete) {
-                keysHeld |= KEY_B;
-                simulatedBack = false;
-            }
-
-            if ((keysHeld & KEY_B) && !stillTouching) {
-                allowSlide = unlockedSlide = false;
-
-                inSelectionMenu = false;
-
-                if (filePath == PACKAGE_PATH) {
-                    returningToMain = true;
-                } else {
-                    if (lastPackageMenu == "subPackageMenu") {
-                        returningToSubPackage = true;
-                    } else {
-                        returningToPackage = true;
-                    }
-                }
-
-                if (commandMode == OPTION_STR && isFileOrDirectory(packageConfigIniPath)) {
-                    auto packageConfigData = getParsedDataFromIniFile(packageConfigIniPath);
-                    auto it = packageConfigData.find(specificKey);
-                    if (it != packageConfigData.end()) {
-                        auto& optionSection = it->second;
-                        auto footerIt = optionSection.find(FOOTER_STR);
-                        if (footerIt != optionSection.end() && (footerIt->second.find(NULL_STR) == std::string::npos)) {
-                            selectedListItem->setValue(footerIt->second);
-                        }
-                    }
-                }
-
-                tsl::goBack();
-                simulatedBackComplete = true;
-                return true;
-            }
-        }
-
-        if (triggerExit.load(std::memory_order_acquire)) {
-            triggerExit.store(false, std::memory_order_release);
-            tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
-            tsl::Overlay::get()->close();
-        }
-
-        return false;
-    }
-};
-
-
-
-
-
-class PackageMenu;
-
-void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
-                    const std::string& packageIniPath,
-                    const std::string& packageConfigIniPath,
-                    const PackageHeader& packageHeader, std::string& pageLeftName, std::string& pageRightName,
-                    std::string& packagePath, std::string& currentPage, std::string& packageName, std::string& dropdownSection, size_t& nestedLayer,
-                    std::string& pathPattern, std::string& pathPatternOn, std::string& pathPatternOff, bool& usingPages, bool packageMenuMode = true) {
-    tsl::hlp::ini::IniData packageConfigData;
-    std::unique_ptr<tsl::elm::ListItem> listItem;
-    auto toggleListItem = std::make_unique<tsl::elm::ToggleListItem>("", true, "", "");
-    std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> options = loadOptionsFromIni(packageIniPath, true);
-    
-    bool toggleStateOn;
-    
-    bool skipSection = false;
-    bool skipSystem = false;
-    
-    std::string lastSection = "";
-    std::string drawLocation = "";
-    
-    std::string commandName;
-    std::string commandFooter;
-    std::string commandSystem;
-    std::string commandMode;
-    std::string commandGrouping;
-    
-    std::string currentSection;
-    std::string defaultToggleState;
-    std::string sourceType, sourceTypeOn, sourceTypeOff;
-    
-    std::string packageSource;
-    std::string jsonPath, jsonPathOn, jsonPathOff;
-    std::string jsonKey, jsonKeyOn, jsonKeyOff;
-    
-    std::string optionName;
-    std::vector<std::vector<std::string>> commands, commandsOn, commandsOff;
-    std::vector<std::vector<std::string>> tableData;
-    
-    std::string itemName, parentDirName;
-
-    //std::vector<std::string> listData, listDataOn, listDataOff;
-    s16 minValue;
-    s16 maxValue;
-    std::string units;
-    size_t steps;
-    bool unlockedTrackbar;
-    bool onEveryTick;
-    std::string footer;
-    bool useSelection;
-    size_t pos;
-    
-    bool inEristaSection;
-    bool inMarikoSection;
-    
-    bool hideTableBackground, useHeaderIndent;
-    size_t tableStartGap, tableEndGap, tableColumnOffset, tableSpacing;
-    std::string tableSectionTextColor, tableInfoTextColor, tableAlignment;
-    // Pack variables into structs
-    //CommandOptions cmdOptions = {inEristaSection, inMarikoSection, usingErista, usingMariko, commandName, commandSystem,
-    //                          commandMode, commandGrouping, currentSection, pathPattern, sourceType, pathPatternOn,
-    //                          sourceTypeOn, pathPatternOff, sourceTypeOff, defaultToggleState, hideTableBackground,
-    //                          tableStartGap, tableEndGap, tableColumnOffset, tableSpacing, tableSectionTextColor, tableInfoTextColor, tableAlignment,
-    //                          minValue, maxValue, units, steps, unlockedTrackbar, onEveryTick, packageSource, packagePath};
-    //
-    //CommandData cmdData = {commands, commandsOn, commandsOff, tableData};
-    
-    for (size_t i = 0; i < options.size(); ++i) {
-        auto& option = options[i];
-        
-        optionName = option.first;
-        commands = std::move(option.second);
-        
-        footer = "";
-        useSelection = false;
-        // Table settings
-        hideTableBackground = false;
-        useHeaderIndent = false;
-        tableStartGap = 20;
-        tableEndGap = 3;
-        tableColumnOffset = 160;
-        tableSpacing = 0;
-        tableSectionTextColor = DEFAULT_STR;
-        tableInfoTextColor = DEFAULT_STR;
-        tableAlignment = RIGHT_STR;
-        
-        // Trackbar settings
-        minValue = 0;
-        maxValue = 100;
-        units = "";
-        steps = 0;
-        unlockedTrackbar = false;
-        onEveryTick = false;
-        commandFooter = "";
-        commandSystem = DEFAULT_STR;
-        commandMode = DEFAULT_STR;
-        commandGrouping = DEFAULT_STR;
-        
-        defaultToggleState = "";
-        currentSection = GLOBAL_STR;
-        sourceType = DEFAULT_STR;
-        sourceTypeOn = DEFAULT_STR;
-        sourceTypeOff = DEFAULT_STR;
-        
-        tableData.clear();
-        commandsOn.clear();
-        commandsOff.clear();
-        
-        
-        if (drawLocation.empty() || (currentPage == drawLocation) || (optionName.front() == '@')) {
-            
-            // Custom header implementation
-            if (!dropdownSection.empty()) {
-                if (i == 0) {
-                    // Add a section break with small text to indicate the "Commands" section
-                    list->addItem(new tsl::elm::CategoryHeader(removeTag(dropdownSection.substr(1))));
-                    skipSection = true;
-                    lastSection = dropdownSection;
-                }
-                if (removeTag(optionName) == PACKAGE_INFO || removeTag(optionName) == "Package Info") {
-                    if (!skipSection) {
-                        lastSection = optionName;
-                        addPackageInfo(list, packageHeader);
-                    }
-                }
-                if (commands.size() == 0) {
-                    if (optionName == dropdownSection)
-                        skipSection = false;
-                    else
-                        skipSection = true;
-                    continue;
-                }
-            } else {
-                if (commands.size() == 0) {
-                    if (optionName.front() == '@') {
-                        if (drawLocation.empty()) {
-                            pageLeftName = optionName.substr(1);
-                            drawLocation = LEFT_STR;
-                        } else {
-                            pageRightName = optionName.substr(1);
-                            usingPages = true;
-                            drawLocation = RIGHT_STR;
-                        }
-                    } else if (optionName.front() == '*') {
-                        if (i == 0) {
-                            // Add a section break with small text to indicate the "Commands" section
-                            list->addItem(new tsl::elm::CategoryHeader(COMMANDS));
-                            skipSection = false;
-                            lastSection = "Commands";
-                        }
-                        commandFooter = parseValueFromIniSection(packageConfigIniPath, optionName, FOOTER_STR);
-                        // override loading of the command footer
-                        if (!commandFooter.empty() && commandFooter != NULL_STR){
-                            footer = commandFooter;
-                            listItem = std::make_unique<tsl::elm::ListItem>(removeTag(optionName.substr(1)));
-                            listItem->setValue(footer);
-                        } else {
-                            footer = DROPDOWN_SYMBOL;
-                            // Create reference to PackageMenu with dropdownSection set to optionName
-                            listItem = std::make_unique<tsl::elm::ListItem>(removeTag(optionName.substr(1)), footer);
-                        }
-                        
-                        if (packageMenuMode)
-                            listItem->setClickListener([packagePath, currentPage, packageName, optionName](s64 keys) {
-                                
-                                if (runningInterpreter.load(std::memory_order_acquire))
-                                    return false;
-                                if (simulatedSelect && !simulatedSelectComplete) {
-                                    keys |= KEY_A;
-                                    simulatedSelect = false;
-                                }
-                                if (keys & KEY_A) {
-                                    inPackageMenu = false;
-                                    selectedListItem.reset();
-                                    lastSelectedListItem.reset();
-                                    tsl::changeTo<PackageMenu>(packagePath, optionName, currentPage, packageName);
-                                    simulatedSelectComplete = true;
-                                    
-                                    return true;
-                                }
-                                return false;
-                            });
-                        else{
-                            listItem->setClickListener([optionName](s64 keys) {
-                                if (runningInterpreter.load(std::memory_order_acquire))
-                                    return false;
-                                if (simulatedSelect && !simulatedSelectComplete) {
-                                    keys |= KEY_A;
-                                    simulatedSelect = false;
-                                }
-                                if (keys & KEY_A) {
-                                    inPackageMenu = false;
-                                    tsl::changeTo<MainMenu>("", optionName);
-                                    simulatedSelectComplete = true;
-                                    return true;
-                                }
-                                return false;
-                            });
-                        }
-
-                        list->addItem(listItem.release());
-                        
-                        
-                        skipSection = true;
-                    } else {
-                        if (optionName != lastSection) {
                             
-                            if (removeTag(optionName) == PACKAGE_INFO || removeTag(optionName) == "Package Info") {
-                                //logMessage("pre-before adding app info");
-                                if (!skipSection) {
-                                    lastSection = optionName;
-                                    //logMessage("before adding app info");
-                                    addPackageInfo(list, packageHeader);
-                                    //logMessage("after adding app info");
+                            if (keysHeld & HidNpadButton_AnyRight) {
+                                if (this->m_value < m_maxValue) {
+                                    this->m_index++;
+                                    this->m_value++;
+                                    this->m_valueChangedListener(this->m_value);
+                                    if (m_executeOnEveryTick) {
+                                        updateAndExecute(false);
+                                    }
+                                    lastUpdate = now;
+                                    return true;
                                 }
-                            } else {
-                                // Add a section break with small text to indicate the "Commands" section
-                                list->addItem(new tsl::elm::CategoryHeader(removeTag(optionName)));
-                                lastSection = optionName;
                             }
                         }
-                        skipSection = false;
-                    }
-                    
-                    
-                    continue;
-                } else if (i == 0) {
-                    // Add a section break with small text to indicate the "Commands" section
-                    list->addItem(new tsl::elm::CategoryHeader(COMMANDS));
-                    skipSection = false;
-                    lastSection = "Commands";
-                }
-            }
-            
-            // Call the function
-            //processCommands(cmdOptions, cmdData);
-
-
-            inEristaSection = false;
-            inMarikoSection = false;
-            size_t delimiterPos;
-            
-            // Remove all empty command strings
-            commands.erase(std::remove_if(commands.begin(), commands.end(),
-                [](const std::vector<std::string>& vec) {
-                    return vec.empty();
-                }),
-                commands.end());
-        
-            // Initial processing of commands
-            for (const auto& cmd : commands) {
-                commandName = cmd[0];
-        
-                std::string commandNameLower = stringToLowercase(commandName);
-                if (commandNameLower == "erista:") {
-                    inEristaSection = true;
-                    inMarikoSection = false;
-                    continue;
-                } else if (commandNameLower == "mariko:") {
-                    inEristaSection = false;
-                    inMarikoSection = true;
-                    continue;
-                }
-        
-                if ((inEristaSection && !inMarikoSection && usingErista) || 
-                    (!inEristaSection && inMarikoSection && usingMariko) || 
-                    (!inEristaSection && !inMarikoSection)) {
-        
-                    if (commandName.find(SYSTEM_PATTERN) == 0) {
-                        commandSystem = commandName.substr(SYSTEM_PATTERN.length());
-                        if (std::find(commandSystems.begin(), commandSystems.end(), commandSystem) == commandSystems.end())
-                            commandSystem = commandSystems[0];
-                        continue;
-                    } else if (commandName.find(MODE_PATTERN) == 0) {
-                        commandMode = commandName.substr(MODE_PATTERN.length());
-                        if (commandMode.find(TOGGLE_STR) != std::string::npos) {
-                            delimiterPos = commandMode.find('?');
-                            if (delimiterPos != std::string::npos) {
-                                defaultToggleState = commandMode.substr(delimiterPos + 1);
-                            }
-                            commandMode = TOGGLE_STR;
-                        } else if (std::find(commandModes.begin(), commandModes.end(), commandMode) == commandModes.end()) {
-                            commandMode = commandModes[0];
-                        }
-                        continue;
-                    } else if (commandName.find(GROUPING_PATTERN) == 0) {
-                        commandGrouping = commandName.substr(GROUPING_PATTERN.length());
-                        if (std::find(commandGroupings.begin(), commandGroupings.end(), commandGrouping) == commandGroupings.end())
-                            commandGrouping = commandGroupings[0];
-                        continue;
-                    } else if (commandName.find(BACKGROUND_PATTERN) == 0) {
-                        hideTableBackground = (commandName.substr(BACKGROUND_PATTERN.length()) == FALSE_STR);
-                        continue;
-                    } else if (commandName.find(HEADER_INDENT_PATTERN) == 0) {
-                        useHeaderIndent = (commandName.substr(HEADER_INDENT_PATTERN.length()) == TRUE_STR);
-                        continue;
-                    } else if (commandName.find(GAP_PATTERN) == 0) {
-                        tableEndGap = std::stoi(commandName.substr(GAP_PATTERN.length()));
-                        continue;
-                    } else if (commandName.find(OFFSET_PATTERN) == 0) {
-                        tableColumnOffset = std::stoi(commandName.substr(OFFSET_PATTERN.length()));
-                        continue;
-                    } else if (commandName.find(SPACING_PATTERN) == 0) {
-                        tableSpacing = std::stoi(commandName.substr(SPACING_PATTERN.length()));
-                        continue;
-                    } else if (commandName.find(SECTION_TEXT_COLOR_PATTERN) == 0) {
-                        tableSectionTextColor = commandName.substr(SECTION_TEXT_COLOR_PATTERN.length());
-                        continue;
-                    } else if (commandName.find(INFO_TEXT_COLOR_PATTERN) == 0) {
-                        tableInfoTextColor = commandName.substr(INFO_TEXT_COLOR_PATTERN.length());
-                        continue;
-                    } else if (commandName.find(ALIGNMENT_PATTERN) == 0) {
-                        tableAlignment = commandName.substr(ALIGNMENT_PATTERN.length());
-                        continue;
-        
-                    } else if (commandName.find(MIN_VALUE_PATTERN) == 0) {
-                        minValue = std::stoi(commandName.substr(MIN_VALUE_PATTERN.length()));
-                        continue;
-                    } else if (commandName.find(MAX_VALUE_PATTERN) == 0) {
-                        maxValue = std::stoi(commandName.substr(MAX_VALUE_PATTERN.length()));
-                        continue;
-                    } else if (commandName.find(UNITS_PATTERN) == 0) {
-                        units = removeQuotes(commandName.substr(UNITS_PATTERN.length()));
-                        continue;
-                    } else if (commandName.find(STEPS_PATTERN) == 0) {
-                        steps = std::stoi(commandName.substr(STEPS_PATTERN.length()));
-                        continue;
-                    } else if (commandName.find(UNLOCKED_PATTERN) == 0) {
-                        unlockedTrackbar = (commandName.substr(UNLOCKED_PATTERN.length()) == TRUE_STR);
-                        continue;
-                    } else if (commandName.find(ON_EVERY_TICK_PATTERN) == 0) {
-                        onEveryTick = (commandName.substr(ON_EVERY_TICK_PATTERN.length()) == TRUE_STR);
-                        continue;
-                    } else if (commandName.find(";") == 0) {
-                        continue;
-                    }
-        
-                    if (commandMode == TOGGLE_STR) {
-                        if (commandName.find("on:") == 0)
-                            currentSection = ON_STR;
-                        else if (commandName.find("off:") == 0)
-                            currentSection = OFF_STR;
-        
-                        if (currentSection == GLOBAL_STR) {
-                            commandsOn.push_back(cmd);
-                            commandsOff.push_back(cmd);
-                        } else if (currentSection == ON_STR) {
-                            commandsOn.push_back(cmd);
-                        } else if (currentSection == OFF_STR) {
-                            commandsOff.push_back(cmd);
-                        }
-                    } else if (commandMode == TABLE_STR) {
-                        tableData.push_back(cmd);
-                        continue;
-                    } else if (commandMode == TRACKBAR_STR || commandMode == STEP_TRACKBAR_STR || commandMode == NAMED_STEP_TRACKBAR_STR) {
-                        //commands.push_back(cmd);
-                        continue;
-                    }
-        
-                    if (cmd.size() > 1) {
-                        if (commandName == "file_source") {
-                            if (currentSection == GLOBAL_STR) {
-                                pathPattern = preprocessPath(cmd[1], packagePath);
-                                sourceType = FILE_STR;
-                            } else if (currentSection == ON_STR) {
-                                pathPatternOn = preprocessPath(cmd[1], packagePath);
-                                sourceTypeOn = FILE_STR;
-                            } else if (currentSection == OFF_STR) {
-                                pathPatternOff = preprocessPath(cmd[1], packagePath);
-                                sourceTypeOff = FILE_STR;
-                            }
-                        } else if (commandName == "package_source") {
-                            packageSource = preprocessPath(cmd[1], packagePath);
-                        }
+                    } else {
+                        holding = false; // Reset holding state if no relevant key is held
                     }
                 }
-            }
-
-            
-            if (isFileOrDirectory(packageConfigIniPath)) {
-                packageConfigData = getParsedDataFromIniFile(packageConfigIniPath);
-            
-                updateIniData(packageConfigData, packageConfigIniPath, optionName, SYSTEM_STR, commandSystem);
-                updateIniData(packageConfigData, packageConfigIniPath, optionName, MODE_STR, commandMode);
-                updateIniData(packageConfigData, packageConfigIniPath, optionName, GROUPING_STR, commandGrouping);
-                updateIniData(packageConfigData, packageConfigIniPath, optionName, FOOTER_STR, commandFooter);
                 
-                packageConfigData.clear();
-            } else { // write default data if settings are not loaded
-                setIniFileValue(packageConfigIniPath, optionName, SYSTEM_STR, commandSystem);
-                setIniFileValue(packageConfigIniPath, optionName, MODE_STR, commandMode);
-                setIniFileValue(packageConfigIniPath, optionName, GROUPING_STR, commandGrouping);
-                //setIniFileValue(packageConfigIniPath, optionName, FOOTER_STR, NULL_STR);
+                return false;
             }
             
             
-            // Get Option name and footer
-            if (optionName.front() == '*') { 
-                useSelection = true;
-                optionName = optionName.substr(1); // Strip the "*" character on the left
-                footer = DROPDOWN_SYMBOL;
-            } else {
-                pos = optionName.find(" - ");
-                if (pos != std::string::npos) {
-                    footer = optionName.substr(pos + 2); // Assign the part after " - " as the footer
-                    optionName = optionName.substr(0, pos); // Strip the " - " and everything after it
+            virtual bool onTouch(TouchEvent event, s32 currX, s32 currY, s32 prevX, s32 prevY, s32 initialX, s32 initialY) override {
+                // Calculate the position and radius of the slider circle
+                u16 trackBarWidth = this->getWidth() - 95;
+                u16 handlePos = (trackBarWidth * (this->m_value - m_minValue)) / (m_maxValue - m_minValue);
+                s32 circleCenterX = this->getX() + 59 + handlePos;
+                s32 circleCenterY = this->getY() + 40 + 16 - 1;
+                s32 circleRadius = 16;
+                
+                // Check if the initial touch point is within the bounds of the circle slider
+                bool touchInCircle = (std::abs(initialX - circleCenterX) <= circleRadius) && (std::abs(initialY - circleCenterY) <= circleRadius);
+                
+                // Check if the touch is within the valid framebuffer bounds
+                //bool touchInFrameBounds = (currY <= cfg::FramebufferHeight - 73 && currY > 73 && currX <= cfg::FramebufferWidth - 30 && currX > 40);
+                //if (!touchInFrameBounds) {
+                //    event = TouchEvent::Release;
+                //}
+                if (event == TouchEvent::Release) {
+                    //if (!m_executeOnEveryTick)
+                    updateAndExecute();
+                    this->m_interactionLocked = false;
+                    touchInSliderBounds = false;
+                    return false;
+                }
+                
+                if (!this->m_interactionLocked && (touchInCircle || touchInSliderBounds)) {
+                    touchInSliderBounds = true; // Always keep touchInSliderBounds true while dragging
+                    // Calculate the new index based on the touch position
+                    s16 newIndex = static_cast<s16>((currX - (this->getX() + 59)) / static_cast<float>(this->getWidth() - 95) * (m_numSteps - 1));
+                    
+                    // Clamp the index within valid range
+                    if (newIndex < 0) {
+                        newIndex = 0;
+                    } else if (newIndex >= m_numSteps) {
+                        newIndex = m_numSteps - 1;
+                    }
+                    
+                    // Calculate the new value based on the new index
+                    s16 newValue = m_minValue + newIndex * (static_cast<float>(m_maxValue - m_minValue) / (m_numSteps - 1));
+                    
+                    if (newValue != this->m_value || newIndex != this->m_index) {
+                        this->m_value = newValue;
+                        this->m_index = newIndex;
+                        this->m_valueChangedListener(this->getProgress());
+                        if (m_executeOnEveryTick) {
+                            updateAndExecute(false);
+                        }
+                    }
+                    
+                    return true;
+                } else {
+                    this->m_interactionLocked = true;
+                }
+                
+                return false;
+            }
+
+            
+
+
+            // Define drawBar function outside the draw method
+            void drawBar(gfx::Renderer *renderer, s32 x, s32 y, u16 width, Color color, bool isRounded = true) {
+                if (isRounded) {
+                    renderer->drawUniformRoundedRect(x, y, width, 7, a(color));
+                } else {
+                    renderer->drawRect(x, y, width, 7, a(color));
                 }
             }
-            
-            if ((commandMode == OPTION_STR) || (commandMode == SLOT_STR) || (commandMode == TOGGLE_STR && !useSelection)) {
-                // override loading of the command footer
-                //if (!commandFooter.empty())
-                //    footer = commandFooter;
-                //else
-                footer = OPTION_SYMBOL;
-            }
 
-            // override loading of the command footer
-            if (!commandFooter.empty() && commandFooter != NULL_STR)
-                footer = commandFooter;
+            virtual void draw(gfx::Renderer *renderer) override {
+                static float lastBottomBound;
+                u16 handlePos = (this->getWidth() - 95) * (this->m_value - m_minValue) / (m_maxValue - m_minValue);
+                s32 xPos = this->getX() + 59;
+                s32 yPos = this->getY() + 40 + 16 - 1;
+                s32 width = this->getWidth() - 95;
 
-            skipSystem = false;
-            if (commandSystem == ERISTA_STR && !usingErista) {
-                skipSystem = true;
-            } else if (commandSystem == MARIKO_STR && !usingMariko) {
-                skipSystem = true;
-            }
-            
-            if (!skipSection && !skipSystem) { // for skipping the drawing of sections
-                if (commandMode == TABLE_STR) {
-                    addTable(list, tableData, packagePath, tableColumnOffset, tableStartGap, tableEndGap, tableSpacing, tableSectionTextColor, tableInfoTextColor, tableAlignment, hideTableBackground, useHeaderIndent);
-                    continue;
-                } else if (commandMode == TRACKBAR_STR) {
-                    list->addItem(new tsl::elm::TrackBar(optionName, packagePath, minValue, maxValue, units, interpretAndExecuteCommands, getSourceReplacement, commands, option.first, false, false, -1, unlockedTrackbar, onEveryTick));
-                    continue;
-                } else if (commandMode == STEP_TRACKBAR_STR) {
-                    if (steps == 0) { // assign minimum steps
-                        steps = std::abs(maxValue - minValue) +1;
-                    }
-                    list->addItem(new tsl::elm::StepTrackBar(optionName, packagePath, steps, minValue, maxValue, units, interpretAndExecuteCommands, getSourceReplacement, commands, option.first, false, unlockedTrackbar, onEveryTick));
-                    continue;
-                } else if (commandMode == NAMED_STEP_TRACKBAR_STR) {
-                    std::vector<std::string> entryList = {};
-                    
-                    bool inEristaSection = false;
-                    bool inMarikoSection = false;
-                    
-                    for (auto it = commands.begin(); it != commands.end(); /* no increment here */) {
-                        auto& cmd = *it;
-                        if (cmd.empty()) {
-                            it = commands.erase(it);
-                            continue;
-                        }
-                        
-                        std::string commandName = cmd[0];
-                        
-                        if (commandName == "erista:") {
-                            inEristaSection = true;
-                            inMarikoSection = false;
-                            it = commands.erase(it);
-                            continue;
-                        }
-                        else if (commandName == "mariko:") {
-                            inEristaSection = false;
-                            inMarikoSection = true;
-                            it = commands.erase(it);
-                            continue;
-                        }
-                    
-                        if ((inEristaSection && usingMariko) || (inMarikoSection && usingErista)) {
-                            it = commands.erase(it);
-                            continue;
-                        }
-                    
-                        if (cmd.size() > 1) {
-                            if (cmd[0] == "list_source") {
-                                std::string listString = removeQuotes(cmd[1]);
-                                entryList = stringToList(listString);
-                                break;
-                            }
-                            else if (cmd[0] == "list_file_source") {
-                                std::string listPath = preprocessPath(cmd[1], packagePath);
-                                entryList = readListFromFile(listPath);
-                                break;
-                            }
-                            else if (cmd[0] == "ini_file_source") {
-                                std::string iniPath = preprocessPath(cmd[1], packagePath);
-                                entryList = parseSectionsFromIni(iniPath);
-                                break;
-                            }
-                        }
-                    
-                        if (cmd.size() > 2) {
-                            if (cmd[0] == "json_source") {
-                                std::string jsonString = removeQuotes(cmd[1]);
-                                std::string jsonKey = removeQuotes(cmd[2]);
-                                populateSelectedItemsList(JSON_STR, jsonString, jsonKey, entryList);
-                                break;
-                            }
-                            else if (cmd[0] == "json_file_source") {
-                                std::string jsonPath = preprocessPath(cmd[1], packagePath);
-                                std::string jsonKey = removeQuotes(cmd[2]);
-                                populateSelectedItemsList(JSON_FILE_STR, jsonPath, jsonKey, entryList);
-                                break;
-                            }
-                        }
-                        
-                        ++it;
-                    }
-                    list->addItem(new tsl::elm::NamedStepTrackBar(optionName, packagePath, entryList, interpretAndExecuteCommands, getSourceReplacement, commands, option.first, unlockedTrackbar, onEveryTick));
-                    continue;
+
+                // Draw track bar background
+                drawBar(renderer, xPos, yPos-3, width, trackBarEmptyColor, !m_usingNamedStepTrackbar);
+                
+                
+                if (!this->m_focused) {
+                    drawBar(renderer, xPos, yPos-3, handlePos, trackBarFullColor, !m_usingNamedStepTrackbar);
+                    renderer->drawCircle(xPos + handlePos, yPos, 16, true, a(trackBarSliderBorderColor));
+                    renderer->drawCircle(xPos + handlePos, yPos, 13, true, a((m_unlockedTrackbar || touchInSliderBounds) ? trackBarSliderMalleableColor : trackBarSliderColor));
+                } else {
+                    touchInSliderBounds = false;
+                    unlockedSlide = m_unlockedTrackbar;
+                    drawBar(renderer, xPos, yPos-3, handlePos, trackBarFullColor, !m_usingNamedStepTrackbar);
+                    renderer->drawCircle(xPos + x + handlePos, yPos +y, 16, true, a(highlightColor));
+                    renderer->drawCircle(xPos + x + handlePos, yPos +y, 12, true, a((allowSlide || m_unlockedTrackbar) ? trackBarSliderMalleableColor : trackBarSliderColor));
                 }
-                if (useSelection) { // For wildcard commands (dropdown menus)
+                
+                std::string labelPart = removeTag(this->m_label) + " ";
+                //std::string valuePart = m_usingNamedStepTrackbar ? this->m_selection : std::to_string(this->m_value) + (this->m_units.empty() ? "" : " ") + this->m_units;
+                std::string valuePart;
+                if (!m_usingNamedStepTrackbar)
+                    valuePart = (this->m_units == "%" || this->m_units == "°C" || this->m_units == "°F") ? std::to_string(this->m_value) + this->m_units : std::to_string(this->m_value) + (this->m_units.empty() ? "" : " ") + this->m_units;
+                else
+                    valuePart = this->m_selection;
+                std::string combinedString = labelPart + valuePart;
+                std::tie(descWidth, descHeight) = renderer->drawString(combinedString.c_str(), false, 0, 0, 16, a(tsl::style::color::ColorTransparent));
+                
+                size_t combinedX = (xPos + width / 2) - (descWidth / 2);
+                size_t labelWidth;
+                std::tie(labelWidth, descHeight) = renderer->drawString(labelPart.c_str(), false, 0, 0, 16, a(tsl::style::color::ColorTransparent));
+                
 
-                    if ((footer == DROPDOWN_SYMBOL) || (footer.empty()) || footer == commandFooter) {
-                        //if (!commandFooter.empty())
-                        //    footer = commandFooter;
-                        listItem = std::make_unique<tsl::elm::ListItem>(removeTag(optionName), footer);
-                    }
+                renderer->drawString(labelPart.c_str(), false, combinedX, this->getY() + 14 + 16, 16, (!this->m_focused ? a(defaultTextColor) : a(selectedTextColor)));
+                renderer->drawString(valuePart.c_str(), false, combinedX + labelWidth, this->getY() + 14 + 16, 16, a(onTextColor));
+                
+                if (lastBottomBound != this->getTopBound())
+                    renderer->drawRect(this->getX() + 4+20-1, this->getTopBound(), this->getWidth() + 6 + 10+20, 1, a(separatorColor));
+                renderer->drawRect(this->getX() + 4+20-1, this->getBottomBound(), this->getWidth() + 6 + 10+20, 1, a(separatorColor));
+                lastBottomBound = this->getBottomBound();
+            }
+
+            
+            virtual void layout(u16 parentX, u16 parentY, u16 parentWidth, u16 parentHeight) override {
+                this->setBoundaries(this->getX() - 16 , this->getY(), this->getWidth()+20, tsl::style::TrackBarDefaultHeight );
+            }
+            
+            virtual void drawFocusBackground(gfx::Renderer *renderer) {
+                // No background drawn here in HOS
+            }
+            
+            virtual void drawHighlight(gfx::Renderer *renderer) override {
+                
+                progress = ((std::sin(2.0 * M_PI * fmod(std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count(), 1.0)) + 1.0) / 2.0);
+                if (allowSlide || m_unlockedTrackbar) {
+                    highlightColor = {
+                        static_cast<u8>((highlightColor3.r - highlightColor4.r) * progress + highlightColor4.r),
+                        static_cast<u8>((highlightColor3.g - highlightColor4.g) * progress + highlightColor4.g),
+                        static_cast<u8>((highlightColor3.b - highlightColor4.b) * progress + highlightColor4.b),
+                        0xF
+                    };
+                } else {
+                    highlightColor = {
+                        static_cast<u8>((highlightColor1.r - highlightColor2.r) * progress + highlightColor2.r),
+                        static_cast<u8>((highlightColor1.g - highlightColor2.g) * progress + highlightColor2.g),
+                        static_cast<u8>((highlightColor1.b - highlightColor2.b) * progress + highlightColor2.b),
+                        0xF
+                    };
+                }
+                
+                //u16 handlePos = (this->getWidth() - 95) * (this->m_value - m_minValue) / (m_maxValue - m_minValue);
+                x = 0;
+                y = 0;
+                
+                if (this->m_highlightShaking) {
+                    t = (std::chrono::steady_clock::now() - this->m_highlightShakingStartTime);
+                    if (t >= 100ms)
+                        this->m_highlightShaking = false;
                     else {
-                        listItem = std::make_unique<tsl::elm::ListItem>(removeTag(optionName));
-
-                        if (commandMode == OPTION_STR)
-                            listItem->setValue(footer);
-                        else
-                            listItem->setValue(footer, true);
-                    }
-                    
-                    if (footer == UNAVAILABLE_SELECTION || footer == NOT_AVAILABLE_STR || (footer.find(NULL_STR) != std::string::npos))
-                        listItem->setValue(UNAVAILABLE_SELECTION, true);
-                    if (commandMode == FORWARDER_STR) {
-
-                        const std::string& forwarderPackagePath = getParentDirFromPath(packageSource);
-                        const std::string& forwarderPackageIniName = getNameFromPath(packageSource);
-                        listItem->setClickListener([commands, keyName = option.first, dropdownSection, packagePath, forwarderPackagePath, forwarderPackageIniName, nestedLayer](s64 keys) mutable {
-                            if (simulatedSelect && !simulatedSelectComplete) {
-                                keys |= KEY_A;
-                                simulatedSelect = false;
-                            }
-                            
-                            if (keys & KEY_A) {
-                                auto commandsCopy = commands;
-                                interpretAndExecuteCommands(std::move(commandsCopy), packagePath, keyName); // Now correctly moved
-                                nestedMenuCount++;
-                                lastPackagePath = forwarderPackagePath;
-                                lastPackageName = forwarderPackageIniName;
-                                if (dropdownSection.empty())
-                                    lastPackageMenu = "packageMenu";
-                                else
-                                    lastPackageMenu = "subPackageMenu";
-                                allowSlide = unlockedSlide = false;
-                                tsl::changeTo<PackageMenu>(forwarderPackagePath, "", LEFT_STR, forwarderPackageIniName, nestedMenuCount);
-                                simulatedSelectComplete = true;
-                                return true;
-                            }
-                            return false;
-                        });
-                    } else {
-                        //if (!commandFooter.empty()) {
-                        //    listItem->setValue(commandFooter, true);
-                        //    //listItem = std::make_unique<tsl::elm::ListItem>(removeTag(optionName), footer);
-                        //}
-                        //listItem->setValue("TEST", true);
-                        //std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(option.second, pathReplace);
-                        listItem->setClickListener([commands, keyName = option.first, dropdownSection, packagePath,  packageName, footer, lastSection, listItemRaw = listItem.get()](uint64_t keys) {
-                            //listItemPtr = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){})](uint64_t keys) {
-                            
-                            if (runningInterpreter.load(std::memory_order_acquire))
-                                return false;
-                            if (simulatedSelect && !simulatedSelectComplete) {
-                                keys |= KEY_A;
-                                simulatedSelect = false;
-                            }
-                            if ((keys & KEY_A)) {
-                                if (footer != UNAVAILABLE_SELECTION && footer != NOT_AVAILABLE_STR && (footer.find(NULL_STR) == std::string::npos)) {
-                                    if (inPackageMenu)
-                                        inPackageMenu = false;
-                                    if (inSubPackageMenu)
-                                        inSubPackageMenu = false;
-                                    if (dropdownSection.empty())
-                                        lastPackageMenu = "packageMenu";
-                                    else
-                                        lastPackageMenu = "subPackageMenu";
-                                    
-                                    selectedListItem.reset();
-                                    selectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItemRaw, [](auto*) {});
-                                    
-                                    std::string newKey = "";
-                                    if (inPackageMenu) {
-                                        newKey = lastSection + keyName;
-                                        if (selectedFooterDict.find(newKey) == selectedFooterDict.end())
-                                            selectedFooterDict[newKey] = footer;
-                                    } else {
-                                        newKey = "sub_" + lastSection + keyName;
-                                        if (selectedFooterDict.find(newKey) == selectedFooterDict.end())
-                                            selectedFooterDict[newKey] = footer;
-                                    }
-                                    lastSelectedListItem.reset();
-                                    tsl::changeTo<SelectionOverlay>(packagePath, keyName, commands, newKey);
-                                    lastKeyName = keyName;
-                                }
-                                simulatedSelectComplete = true;
-                                return true;
-                            } else if (keys & SCRIPT_KEY) {
-                                bool isFromMainMenu = (packagePath == PACKAGE_PATH);
-                                //if (inMainMenu) {
-                                //    isFromMainMenu = true;
-                                //    inMainMenu = false;
-                                //}
-                                if (inPackageMenu)
-                                    inPackageMenu = false;
-                                if (inSubPackageMenu)
-                                    inSubPackageMenu = false;
-                                tsl::changeTo<ScriptOverlay>(packagePath, keyName, isFromMainMenu, packageName);
-                                return true;
-                            }
-                            return false;
-                        });
-                    }
-                    
-                    list->addItem(listItem.release());
-                } else { // For everything else
-                    
-                    const std::string& selectedItem = optionName;
-                    
-                    // For entries that are paths
-                    itemName = getNameFromPath(selectedItem);
-                    if (!isDirectory(preprocessPath(selectedItem, packagePath)))
-                        itemName = dropExtension(itemName);
-                    parentDirName = getParentDirNameFromPath(selectedItem);
-                    if (commandMode == DEFAULT_STR  || commandMode == SLOT_STR || commandMode == OPTION_STR) { // for handiling toggles
-                        listItem = std::make_unique<tsl::elm::ListItem>(removeTag(optionName));
-                        if (commandMode == DEFAULT_STR)
-                            listItem->setValue(footer, true);
-                        else
-                            listItem->setValue(footer);
+                        amplitude = std::rand() % 5 + 5;
                         
-                        
-                        listItem->setClickListener([i, commands, keyName = option.first, packagePath, packageName, selectedItem, listItemRaw = listItem.get()](uint64_t keys) {
-                            
-                            if (runningInterpreter.load(std::memory_order_acquire)) {
-                                return false;
-                            }
-                            if (simulatedSelect && !simulatedSelectComplete) {
-                                keys |= KEY_A;
-                                simulatedSelect = false;
-                            }
-                            if ((keys & KEY_A)) {
-                                isDownloadCommand = false;
-                                runningInterpreter.store(true, std::memory_order_release);
-                                enqueueInterpreterCommands(getSourceReplacement(commands, selectedItem, i, packagePath), packagePath, keyName);
-                                startInterpreterThread();
-                                listItemRaw->setValue(INPROGRESS_SYMBOL);
-                                
-                                lastSelectedListItem.reset();
-                                lastSelectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItemRaw, [](auto*) {});
-                                shiftItemFocus(listItemRaw);
-                                
-                                lastRunningInterpreter = true;
-                                simulatedSelectComplete = true;
-                                lastSelectedListItem->triggerClickAnimation();
-                                return true;
-                            }  else if (keys & SCRIPT_KEY) {
-                                bool isFromMainMenu = (packagePath == PACKAGE_PATH);
-                                //if (inMainMenu) {
-                                //    isFromMainMenu = true;
-                                //    inMainMenu = false;
-                                //}
-                                if (inPackageMenu)
-                                    inPackageMenu = false;
-                                if (inSubPackageMenu)
-                                    inSubPackageMenu = false;
-                                tsl::changeTo<ScriptOverlay>(packagePath, keyName, isFromMainMenu, packageName);
-                                return true;
-                            }
-                            return false;
-                        });
-                        list->addItem(listItem.release());
-                    } else if (commandMode == TOGGLE_STR) {
-                        
-                        toggleListItem = std::make_unique<tsl::elm::ToggleListItem>(removeTag(optionName), false, ON, OFF);
-                        
-                        // Set the initial state of the toggle item
-                        if (!pathPatternOn.empty())
-                            toggleStateOn = isFileOrDirectory(preprocessPath(pathPatternOn, packagePath));
-                        else {
-                            if ((footer != CAPITAL_ON_STR && footer != CAPITAL_OFF_STR) && !defaultToggleState.empty()) {
-                                if (defaultToggleState == ON_STR)
-                                    footer = CAPITAL_ON_STR;
-                                else if (defaultToggleState == OFF_STR)
-                                    footer = CAPITAL_OFF_STR;
-                            }
-                            
-                            toggleStateOn = (footer == CAPITAL_ON_STR);
+                        switch (this->m_highlightShakingDirection) {
+                            case FocusDirection::Up:
+                                y -= shakeAnimation(t, amplitude);
+                                break;
+                            case FocusDirection::Down:
+                                y += shakeAnimation(t, amplitude);
+                                break;
+                            case FocusDirection::Left:
+                                x -= shakeAnimation(t, amplitude);
+                                break;
+                            case FocusDirection::Right:
+                                x += shakeAnimation(t, amplitude);
+                                break;
+                            default:
+                                break;
                         }
                         
-                        toggleListItem->setState(toggleStateOn);
-                        
-                        toggleListItem->setStateChangedListener([i, commandsOn, commandsOff, keyName = option.first, packagePath,
-                            pathPatternOn, pathPatternOff, listItemRaw = toggleListItem.get()](bool state) {
-                            
-                            tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemRaw, tsl::FocusDirection::None);
-                            interpretAndExecuteCommands(state ? getSourceReplacement(commandsOn, preprocessPath(pathPatternOn, packagePath), i, packagePath) :
-                                getSourceReplacement(commandsOff, preprocessPath(pathPatternOff, packagePath), i, packagePath), packagePath, keyName);
-                            setIniFileValue((packagePath + CONFIG_FILENAME), keyName, FOOTER_STR, state ? CAPITAL_ON_STR : CAPITAL_OFF_STR);
-                            
-                        });
-                        list->addItem(toggleListItem.release());
+                        x = std::clamp(x, -amplitude, amplitude);
+                        y = std::clamp(y, -amplitude, amplitude);
                     }
                 }
-            }
-        }
-    }
-    listItem.release();
-    toggleListItem.release();
-    options.clear();
-    commands.clear();
-    commandsOn.clear();
-    commandsOff.clear();
-    tableData.clear();
-}
 
+                if (!disableSelectionBG)
+                    renderer->drawRect(this->getX() + x +19, this->getY() + y, this->getWidth()-11, this->getHeight(), a(selectionBGColor)); // CUSTOM MODIFICATION 
+                renderer->drawBorderedRoundedRect(this->getX() + x +19, this->getY() + y, this->getWidth()-11, this->getHeight(), 5, 5, a(highlightColor));
 
+                //if (this->m_clickAnimationProgress == 0) {
+                //    renderer->drawRect(this->getX() + 60, this->getY() + 40 + 16+2, handlePos, 5, a(tsl::style::color::ColorHighlight));
+                //    renderer->drawCircle(this->getX() + 62 + x + handlePos, this->getY() + 42 + y + 16+2, 16, true, a(highlightColor));
+                //    renderer->drawCircle(this->getX() + 62 + x + handlePos, this->getY() + 42 + y + 16+2, 11, true, a(trackBarColor));
+                //}
 
-
-
-
-/**
- * @brief The `PackageMenu` class handles sub-menu overlay functionality.
- *
- * This class manages sub-menu overlays, allowing users to interact with specific menu options.
- * It provides functions for creating, updating, and navigating sub-menus, as well as handling user interactions related to sub-menu items.
- */
-class PackageMenu : public tsl::Gui {
-private:
-    std::string packagePath, dropdownSection, currentPage, pathReplace, pathReplaceOn, pathReplaceOff;
-    std::string filePath, specificKey, pathPattern, pathPatternOn, pathPatternOff, itemName, parentDirName, lastParentDirName;
-    bool usingPages = false;
-    std::string packageName;
-    size_t nestedLayer = 0;
-
-public:
-    /**
-     * @brief Constructs a `PackageMenu` instance for a specific sub-menu path.
-     *
-     * Initializes a new instance of the `PackageMenu` class for the given sub-menu path.
-     *
-     * @param path The path to the sub-menu.
-     */
-    PackageMenu(const std::string& path, const std::string sectionName = "", const std::string& page = LEFT_STR, const std::string& _packageName = PACKAGE_FILENAME, const size_t _nestedlayer = 0) :
-        packagePath(path), dropdownSection(sectionName), currentPage(page), packageName(_packageName), nestedLayer(_nestedlayer) {}
-    /**
-     * @brief Destroys the `PackageMenu` instance.
-     *
-     * Cleans up any resources associated with the `PackageMenu` instance.
-     */
-    ~PackageMenu() {
-        if (returningToMain) {
-            clearMemory();
-            packageRootLayerTitle = "";
-            packageRootLayerVersion = "";
-            packageRootLayerColor = "";
-            overrideTitle = false;
-            overrideVersion = false;
-        }
-    }
-    
-
-
-    /**
-     * @brief Creates the graphical user interface (GUI) for the sub-menu overlay.
-     *
-     * This function initializes and sets up the GUI elements for the sub-menu overlay,
-     * allowing users to interact with specific menu options.
-     *
-     * @return A pointer to the GUI element representing the sub-menu overlay.
-     */
-    virtual tsl::elm::Element* createUI() override {
-        if (dropdownSection.empty()){
-            inPackageMenu = true;
-            lastMenu = "packageMenu";
-        } else {
-            inSubPackageMenu = true;
-            lastMenu = "subPackageMenu";
-        }
-        
-        auto list = std::make_unique<tsl::elm::List>();
-
-        std::string packageIniPath = packagePath + packageName;
-        std::string packageConfigIniPath = packagePath + CONFIG_FILENAME;
-
-        PackageHeader packageHeader = getPackageHeaderFromIni(packageIniPath);
-        
-        
-        std::string pageLeftName = "";
-        std::string pageRightName = "";
-        drawCommandsMenu(list, packageIniPath, packageConfigIniPath, packageHeader, pageLeftName, pageRightName,
-            this->packagePath, this->currentPage, this->packageName, this->dropdownSection, this->nestedLayer,
-            this->pathPattern, this->pathPatternOn, this->pathPatternOff, this->usingPages);
-        
-        
-
-        if (nestedLayer == 0) {
-
-            if (!packageRootLayerTitle.empty())
-                overrideTitle = true;
-            if (!packageRootLayerVersion.empty())
-                overrideVersion = true;
-
-            if (!packageHeader.title.empty() && packageRootLayerTitle.empty())
-                packageRootLayerTitle = packageHeader.title;
-            if (!packageHeader.version.empty() && packageRootLayerVersion.empty())
-                packageRootLayerVersion = packageHeader.version;
-            if (!packageHeader.color.empty() && packageRootLayerColor.empty())
-                packageRootLayerColor = packageHeader.color;
-        }
-        if (packageHeader.title.empty() || overrideTitle)
-            packageHeader.title = packageRootLayerTitle;
-        if (packageHeader.version.empty() || overrideVersion)
-            packageHeader.version = packageRootLayerVersion;
-        if (packageHeader.color.empty())
-            packageHeader.color = packageRootLayerColor;
-        
-        std::unique_ptr<tsl::elm::OverlayFrame> rootFrame = std::make_unique<tsl::elm::OverlayFrame>(
-            (!packageHeader.title.empty()) ? packageHeader.title : (!packageRootLayerTitle.empty() ? packageRootLayerTitle : getNameFromPath(packagePath)),
-            packageHeader.version != "" ? (!packageRootLayerVersion.empty() ? packageRootLayerVersion : packageHeader.version) + "   (Ultrahand Package)" : "Ultrahand Package",
-            "",
-            packageHeader.color,
-            (usingPages && currentPage == RIGHT_STR) ? pageLeftName : "",
-            (usingPages && currentPage == LEFT_STR) ? pageRightName : ""
-        );
-        
-        rootFrame->setContent(list.release());
-        
-        return rootFrame.release();
-    }
-    
-    /**
-     * @brief Handles user input for the sub-menu overlay.
-     *
-     * Processes user input and responds accordingly within the sub-menu overlay.
-     * Captures key presses and performs actions based on user interactions.
-     *
-     * @param keysDown A bitset representing keys that are currently pressed.
-     * @param keysHeld A bitset representing keys that are held down.
-     * @param touchInput Information about touchscreen input.
-     * @param leftJoyStick Information about the left joystick input.
-     * @param rightJoyStick Information about the right joystick input.
-     * @return `true` if the input was handled within the overlay, `false` otherwise.
-     */
-    virtual bool handleInput(uint64_t keysDown, uint64_t keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
-        
-        if (runningInterpreter.load(std::memory_order_acquire)) {
-            return handleRunningInterpreter(keysHeld);
-        }
-        if (lastRunningInterpreter) {
-            //while (!interpreterThreadExit.load(std::memory_order_acquire)) {svcSleepThread(50'000'000);}
-            
-            //resetPercentages();
-            
-            isDownloadCommand = false;
-            lastSelectedListItem->setValue(commandSuccess ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
-            closeInterpreterThread();
-            lastRunningInterpreter = false;
-            return true;
-        }
-        
-        if (!returningToPackage && !stillTouching) {
-            if (refreshPage) {
-                refreshPage = false;
-                
-                // Function to handle the transition and state resetting
-                auto handleMenuTransition = [&] {
-                    lastPackagePath = packagePath;
-                    std::string lastDropdownSection = dropdownSection;
-                    lastPage = currentPage;
-                    std::string lastPackageName = packageName;
-                    size_t lastNestedLayer = nestedLayer;
-                    
-                    inSubPackageMenu = false;
-                    inPackageMenu = false;
-                    tsl::goBack();
-                
-                    selectedListItem.reset();
-                    lastSelectedListItem.reset();
-                    tsl::changeTo<PackageMenu>(lastPackagePath, lastDropdownSection, lastPage, lastPackageName, lastNestedLayer);
-                };
-                
-                if (inPackageMenu) {
-                    handleMenuTransition();
-                    inPackageMenu = true;
-                } 
-                else if (inSubPackageMenu) {
-                    handleMenuTransition();
-                    inSubPackageMenu = true;
-                }
-            }
-            if (refreshPackage) {
-                if (nestedMenuCount == nestedLayer) {
-                    lastPackagePath = packagePath;
-                    lastPage = currentPage;
-                    lastPackageName = PACKAGE_FILENAME;
-                    
-                    while (nestedMenuCount > 0) {
-                        tsl::goBack();
-                        nestedMenuCount--;
-                    }
-
-                    tsl::goBack();
-                    tsl::changeTo<PackageMenu>(lastPackagePath, "");
-                    inPackageMenu = true;
-                    inSubPackageMenu = false;
-                    refreshPackage = false;
-
-                }
-            }
-        }
-        
-        if (usingPages) {
-            if (simulatedMenu && !simulatedMenuComplete) {
-                simulatedMenu = false;
-                simulatedMenuComplete = true;
+                onTrackBar = true;
             }
             
-            if (simulatedNextPage && !simulatedNextPageComplete) {
-                if (currentPage == LEFT_STR) {
-                    keysHeld |= KEY_DRIGHT;
-                    //simulatedNextPage = false;
-                }
-                else if (currentPage == RIGHT_STR) {
-                    keysHeld |= KEY_DLEFT;
-                    //simulatedNextPage = false;
-                }
-                else {
-                    //simulatedNextPage = false;
-                    simulatedNextPageComplete = true;
-                }
-            }
-            if (currentPage == LEFT_STR) {
-                if ((keysHeld & KEY_RIGHT) && !(keysHeld & ~KEY_RIGHT & ALL_KEYS_MASK) && !stillTouching && ((!allowSlide && onTrackBar && !unlockedSlide) || !onTrackBar || simulatedNextPage)) {
-                    simulatedNextPage = false;
-                    allowSlide = unlockedSlide = false;
-                    lastPage = RIGHT_STR;
-                    //lastPackage = packagePath;
-                    selectedListItem.reset();
-                    lastSelectedListItem.reset();
-                    tsl::goBack();
-                    tsl::changeTo<PackageMenu>(lastPackagePath, dropdownSection, RIGHT_STR, lastPackageName, nestedMenuCount);
-                    simulatedNextPageComplete = true;
-                    return true;
-                }
-            } else if (currentPage == RIGHT_STR) {
-                if ((keysHeld & KEY_LEFT) && !(keysHeld & ~KEY_LEFT & ALL_KEYS_MASK) && !stillTouching && ((!allowSlide && onTrackBar && !unlockedSlide) || !onTrackBar || simulatedNextPage)) {
-                    simulatedNextPage = false;
-                    allowSlide = unlockedSlide = false;
-                    lastPage = LEFT_STR;
-                    //lastPackage = packagePath;
-                    selectedListItem.reset();
-                    lastSelectedListItem.reset();
-                    tsl::goBack();
-                    tsl::changeTo<PackageMenu>(lastPackagePath, dropdownSection, LEFT_STR, lastPackageName, nestedMenuCount);
-                    simulatedNextPageComplete = true;
-                    return true;
-                }
-            } 
-            simulatedNextPage = false;
-        }
-        
-        if (!returningToPackage && inPackageMenu && nestedMenuCount == nestedLayer) {
-            if (simulatedMenu && !simulatedMenuComplete) {
-                simulatedMenu = false;
-                simulatedMenuComplete = true;
+            virtual inline u8 getProgress() {
+                return this->m_value;
             }
             
-            if (simulatedNextPage && !simulatedNextPageComplete) {
-                simulatedNextPage = false;
-                simulatedNextPageComplete = true;
+            virtual void setProgress(u8 value) {
+                this->m_value = value;
             }
             
-            if (!usingPages || (usingPages && lastPage == LEFT_STR)) {
-                if (simulatedBack && !simulatedBackComplete) {
-                    keysHeld |= KEY_B;
-                    simulatedBack = false;
-                }
-                if ((keysHeld & KEY_B) && !stillTouching) {
-                    allowSlide = unlockedSlide = false;
-                    if (nestedMenuCount == 0) {
-                        inPackageMenu = false;
-                        
-                        if (!inHiddenMode)
-                            returningToMain = true;
-                        else
-                            returningToHiddenMain = true;
-                    }
-                    if (nestedMenuCount > 0) {
-                        nestedMenuCount--;
-                        //returningToPackage = true;
-                        if (lastPackageMenu == "subPackageMenu") {
-                            returningToSubPackage = true;
-                            //lastPackageMenu = "";
-                        } else {
-                            returningToPackage = true;
-                        }
-                    }
-                    
-                    // Free-up memory
-                    clearMemory();
-                    
-                    tsl::goBack();
-                    simulatedBackComplete = true;
-                    return true;
-                }
-            } else if (usingPages && lastPage == RIGHT_STR) {
-                if (simulatedBack && !simulatedBackComplete) {
-                    keysHeld |= KEY_B;
-                    simulatedBack = false;
-                }
-                if ((keysHeld & KEY_B) && !stillTouching) {
-                    allowSlide = unlockedSlide = false;
-                    if (nestedMenuCount == 0) {
-                        inPackageMenu = false;
-                        //inNestedPackageMenu = false;
-                        
-                        if (!inHiddenMode)
-                            returningToMain = true;
-                        else
-                            returningToHiddenMain = true;
-                    }
-                    if (nestedMenuCount > 0) {
-                        nestedMenuCount--;
-                        
-                        if (lastPackageMenu == "subPackageMenu") {
-                            returningToSubPackage = true;
-                            //lastPackageMenu = "";
-                        } else {
-                            returningToPackage = true;
-                        }
-                    }
-                    
-                    // Free-up memory
-                    clearMemory();
-                    
-                    lastPage = LEFT_STR;
-                    tsl::goBack();
-                    simulatedBackComplete = true;
-                    return true;
-                }
+            void setValueChangedListener(std::function<void(u8)> valueChangedListener) {
+                this->m_valueChangedListener = valueChangedListener;
             }
-        }
         
-        if (!returningToSubPackage && inSubPackageMenu) {
-            if (simulatedMenu && !simulatedMenuComplete) {
-                simulatedMenu = false;
-                simulatedMenuComplete = true;
-            }
+        protected:
+            std::string m_label;
+            std::string m_packagePath;
+            std::string m_selection;
+            s16 m_value = 0;
+            s16 m_minValue;
+            s16 m_maxValue;
+            std::string m_units;
+            bool m_interactionLocked = false;
             
-            if (simulatedNextPage && !simulatedNextPageComplete) {
-                simulatedNextPage = false;
-                simulatedNextPageComplete = true;
-            }
-            
-            if (!usingPages || (usingPages && lastPage == LEFT_STR)) {
-                if (simulatedBack && !simulatedBackComplete) {
-                    keysHeld |= KEY_B;
-                    simulatedBack = false;
-                }
-                if ((keysHeld & KEY_B) && !stillTouching) {
-                    allowSlide = unlockedSlide = false;
-                    inSubPackageMenu = false;
-                    returningToPackage = true;
-                    lastMenu = "packageMenu";
-                    tsl::goBack();
-                    
-                    simulatedBackComplete = true;
-                    return true;
-                }
-            } else if (usingPages && lastPage == RIGHT_STR) {
-                if (simulatedBack && !simulatedBackComplete) {
-                    keysHeld |= KEY_B;
-                    simulatedBack = false;
-                }
-                if ((keysHeld & KEY_B) && !stillTouching) {
-                    allowSlide = unlockedSlide = false;
-                    inSubPackageMenu = false;
-                    returningToPackage = true;
-                    lastMenu = "packageMenu";
-                    //tsl::goBack();
-                    tsl::goBack();
-                    
-                    simulatedBackComplete = true;
-                    return true;
-                }
-            }
-        }
-        if (returningToPackage && !returningToSubPackage && !(keysHeld & KEY_B)){
-            //lastPackageMenu = "packageMenu";
-            lastPackageMenu = "";
-            returningToPackage = false;
-            inPackageMenu = true;
-            if (nestedMenuCount == 0 && nestedLayer == 0) {
-                lastPackagePath = packagePath;
-                lastPackageName = PACKAGE_FILENAME;
-            }
-        }
-        
-        if (returningToSubPackage && !(keysHeld & KEY_B)){
-            //lastPackageMenu = "subPackageMenu";
-            lastPackageMenu = "";
-            returningToPackage = false;
-            returningToSubPackage = false;
-            inSubPackageMenu = true;
-            simulatedBackComplete = true;
-            if (nestedMenuCount == 0 && nestedLayer == 0) {
-                lastPackagePath = packagePath;
-                lastPackageName = PACKAGE_FILENAME;
-            }
-        }
-        
-        if (triggerExit.load(std::memory_order_acquire)) {
-            triggerExit.store(false, std::memory_order_release);
-            tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
-            tsl::Overlay::get()->close();
-        }
-        
-        //svcSleepThread(10'000'000);
-        return false;
-    }
-};
+            std::function<void(u8)> m_valueChangedListener = [](u8) {};
 
+            // New member variables to store the function and its parameters
+            std::function<void(std::vector<std::vector<std::string>>&&, const std::string&, const std::string&)> interpretAndExecuteCommands;
+            std::function<std::vector<std::vector<std::string>>(const std::vector<std::vector<std::string>>&, const std::string&, size_t, const std::string&)> getSourceReplacement;
+            std::vector<std::vector<std::string>> commands;
+            std::string selectedCommand;
 
-
-/**
- * @brief The `MainMenu` class handles the main menu overlay functionality.
- *
- * This class manages the main menu overlay, allowing users to navigate and access various submenus.
- * It provides functions for creating, updating, and navigating the main menu, as well as handling user interactions related to menu navigation.
- */
-class MainMenu : public tsl::Gui {
-private:
-    std::string packageIniPath = PACKAGE_PATH + PACKAGE_FILENAME;
-    std::string packageConfigIniPath = PACKAGE_PATH + CONFIG_FILENAME;
-    std::string menuMode, fullPath, optionName, priority, starred, hide;
-    bool useDefaultMenu = false;
-    bool useOverlayLaunchArgs = false;
-    std::string hiddenMenuMode, dropdownSection;
-    bool initializingSpawn = false;
-    std::string defaultLang = "en";
-    
-public:
-    /**
-     * @brief Constructs a `MainMenu` instance.
-     *
-     * Initializes a new instance of the `MainMenu` class with the necessary parameters.
-     */
-    MainMenu(const std::string& hiddenMenuMode = "", const std::string& sectionName = "") : hiddenMenuMode(hiddenMenuMode), dropdownSection(sectionName) {
-    }
-    /**
-     * @brief Destroys the `MainMenu` instance.
-     *
-     * Cleans up any resources associated with the `MainMenu` instance.
-     */
-    ~MainMenu() {}
-    
-    /**
-     * @brief Creates the graphical user interface (GUI) for the main menu overlay.
-     *
-     * This function initializes and sets up the GUI elements for the main menu overlay,
-     * allowing users to navigate and access various submenus.
-     *
-     * @return A pointer to the GUI element representing the main menu overlay.
-     */
-    virtual tsl::elm::Element* createUI() override {
-        if (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_OVERLAY_STR) == TRUE_STR) {
-            inMainMenu = false;
-            inHiddenMode = true;
-            hiddenMenuMode = OVERLAYS_STR;
-            setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_OVERLAY_STR, FALSE_STR);
-        }
-
-        if (!inHiddenMode && dropdownSection.empty())
-            inMainMenu = true;
-        else
-            inMainMenu = false;
-        
-        tsl::hlp::ini::IniData settingsData, packageConfigData;
-        std::string packagePath, pathReplace, pathReplaceOn, pathReplaceOff;
-        std::string filePath, specificKey, pathPattern, pathPatternOn, pathPatternOff, itemName, parentDirName, lastParentDirName;
-        std::vector<std::string> filesList, filesListOn, filesListOff, filterList, filterListOn, filterListOff;
-        
-        bool toPackages = false;
-        //bool skipSystem = false;
-        lastMenuMode = hiddenMenuMode;
-        
-        menuMode = OVERLAYS_STR;
-        
-        createDirectory(PACKAGE_PATH);
-        createDirectory(SETTINGS_PATH);
-        
-        bool settingsLoaded = false;
-        
-        auto setDefaultValue = [](const auto& ultrahandSection, const std::string& section, const std::string& defaultValue, bool& settingFlag) {
-            if (ultrahandSection.count(section) > 0) {
-                settingFlag = (ultrahandSection.at(section) == TRUE_STR);
-            } else {
-                setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, section, defaultValue);
-                settingFlag = (defaultValue == TRUE_STR);
-            }
+            bool m_usingStepTrackbar = false;
+            bool m_usingNamedStepTrackbar = false;
+            s16 m_numSteps = 2;
+            s16 m_index = 0;
+            bool m_unlockedTrackbar = false;
+            bool m_executeOnEveryTick = false;
+            bool touchInSliderBounds = false;
         };
         
-        auto setDefaultStrValue = [](const auto& ultrahandSection, const std::string& section, const std::string& defaultValue, std::string& settingValue) {
-            if (ultrahandSection.count(section) > 0) {
-                settingValue = ultrahandSection.at(section);
-            } else {
-                setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, section, defaultValue);
-            }
-        };
         
-        if (isFileOrDirectory(ULTRAHAND_CONFIG_INI_PATH)) {
-            auto settingsData = getParsedDataFromIniFile(ULTRAHAND_CONFIG_INI_PATH);
-            if (settingsData.count(ULTRAHAND_PROJECT_NAME) > 0) {
-                auto& ultrahandSection = settingsData[ULTRAHAND_PROJECT_NAME];
-                
-                setDefaultValue(ultrahandSection, "hide_user_guide", FALSE_STR, hideUserGuide);
-                setDefaultValue(ultrahandSection, "clean_version_labels", FALSE_STR, cleanVersionLabels);
-                setDefaultValue(ultrahandSection, "hide_overlay_versions", FALSE_STR, hideOverlayVersions);
-                setDefaultValue(ultrahandSection, "hide_package_versions", FALSE_STR, hidePackageVersions);
-                setDefaultValue(ultrahandSection, "memory_expansion", FALSE_STR, useMemoryExpansion);
-                //setDefaultValue(ultrahandSection, "custom_wallpaper", FALSE_STR, useCustomWallpaper);
-                setDefaultValue(ultrahandSection, "opaque_screenshots", TRUE_STR, useOpaqueScreenshots);
-                setDefaultValue(ultrahandSection, "progress_animation", FALSE_STR, progressAnimation);
-                
-                setDefaultStrValue(ultrahandSection, DEFAULT_LANG_STR, defaultLang, defaultLang);
-                
-                if (ultrahandSection.count("datetime_format") == 0) {
-                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "datetime_format", DEFAULT_DT_FORMAT);
-                }
-                
-                if (ultrahandSection.count("hide_clock") == 0) {
-                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_clock", FALSE_STR);
-                }
-                
-                if (ultrahandSection.count("hide_battery") == 0) {
-                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_battery", TRUE_STR);
-                }
-                
-                if (ultrahandSection.count("hide_pcb_temp") == 0) {
-                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_pcb_temp", TRUE_STR);
-                }
-                
-                if (ultrahandSection.count("hide_soc_temp") == 0) {
-                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_soc_temp", TRUE_STR);
-                }
+        /**
+         * @brief A customizable analog trackbar going from 0% to 100% but using discrete steps (Like the volume slider)
+         *
+         */
+        class StepTrackBar : public TrackBar {
+        public:
 
-                if (ultrahandSection.count("to_packages") > 0) {
-                    toPackages = (trim(ultrahandSection["to_packages"]) == TRUE_STR);
-                }
-                
-                settingsLoaded = ultrahandSection.count(IN_OVERLAY_STR) > 0;
-            }
-            settingsData.clear();
-        } else {
-            updateMenuCombos = true;
-        }
-
-        
-        if (!settingsLoaded) { // Write data if settings are not loaded
-            setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, DEFAULT_LANG_STR, defaultLang);
-            setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_OVERLAY_STR, FALSE_STR);
-            initializingSpawn = true;
-        }
-        
-        
-        std::string langFile = LANG_PATH+defaultLang+".json";
-        if (isFileOrDirectory(langFile))
-            parseLanguage(langFile);
-        else
-            reinitializeLangVars();
-        
-        // write default theme
-        initializeTheme();
-        copyTeslaKeyComboToUltrahand();
-        
-        if (toPackages) {
-            setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "to_packages", FALSE_STR); // this is handled within tesla.hpp
-            currentMenu = PACKAGES_STR;
-        }
-
-        menuMode = currentMenu.c_str();
-        
-        versionLabel = std::string(APP_VERSION) + "   (" + loaderTitle + " " + (cleanVersionLabels ? "" : "v") + cleanVersionLabel(loaderInfo) + ")";
-        //versionLabel = (cleanVersionLabels) ? std::string(APP_VERSION) : (std::string(APP_VERSION) + "   (" + extractTitle(loaderInfo) + " v" + cleanVersionLabel(loaderInfo) + ")");
-        
-        auto list = std::make_unique<tsl::elm::List>();
-        //list = std::make_unique<tsl::elm::List>();
-
-        std::unique_ptr<tsl::elm::ListItem> listItem;
-        
-        if (!hiddenMenuMode.empty())
-            menuMode = hiddenMenuMode;
-        
-        
-        // Overlays menu
-        if (menuMode == OVERLAYS_STR) {
-            inOverlaysPage = true;
-            inPackagesPage = false;
-            //closeInterpreterThread();
-
-            list->addItem(new tsl::elm::CategoryHeader(!inHiddenMode ? OVERLAYS : HIDDEN_OVERLAYS));
-            
-            
-            // Load overlay files
-            std::vector<std::string> overlayFiles = getFilesListByWildcards(OVERLAY_PATH+"*.ovl");
-            
-            
-            // Check if the overlays INI file exists
-            std::ifstream overlaysIniFile(OVERLAYS_INI_FILEPATH);
-            if (!overlaysIniFile.is_open()) {
-                // The INI file doesn't exist, so create an empty one.
-                std::ofstream createFile(OVERLAYS_INI_FILEPATH);
-                if (createFile.is_open())
-                    initializingSpawn = true;
-            }
-
-            overlaysIniFile.close(); // Close the file
-
-
-            // load overlayList from OVERLAYS_INI_FILEPATH.  this will be the overlayFilenames
-            std::set<std::string> overlayList;
-            std::set<std::string> hiddenOverlayList;
-            
-            std::string overlayFileName;
-            
-            // Load subdirectories
-            if (!overlayFiles.empty()) {
-                // Load the INI file and parse its content.
-                std::map<std::string, std::map<std::string, std::string>> overlaysIniData = getParsedDataFromIniFile(OVERLAYS_INI_FILEPATH);
-                
-                std::string overlayName, overlayVersion;
-                
-                bool foundOvlmenu = false;  // Flag to indicate if "ovlmenu.ovl" has been found and removed
-                
-                overlayFiles.erase(
-                    std::remove_if(
-                        overlayFiles.begin(), 
-                        overlayFiles.end(),
-                        [&foundOvlmenu](const std::string& file) {
-                            std::string fileName = getNameFromPath(file);
-                            if (!foundOvlmenu && fileName == "ovlmenu.ovl") {
-                                foundOvlmenu = true;  // Mark as found and continue to remove
-                                return true;
-                            }
-                            return fileName.front() == '.';
-                        }
-                    ),
-                    overlayFiles.end()
-                );
-
-                // Assuming the existence of appropriate utility functions and types are defined elsewhere.
-                for (const auto& overlayFile : overlayFiles) {
-                    const std::string& overlayFileName = getNameFromPath(overlayFile);
-                    
-                    //if (overlayFileName == "ovlmenu.ovl" || overlayFileName.front() == '.') {
-                    //    continue;
+            /**
+             * @brief Constructor
+             *
+             * @param icon Icon shown next to the track bar
+             * @param numSteps Number of steps the track bar has
+             */
+            StepTrackBar(std::string label, std::string packagePath, size_t numSteps, s16 minValue, s16 maxValue, std::string units,
+                std::function<void(std::vector<std::vector<std::string>>&&, const std::string&, const std::string&)> executeCommands = nullptr,
+                std::function<std::vector<std::vector<std::string>>(const std::vector<std::vector<std::string>>&, const std::string&, size_t, const std::string&)> sourceReplacementFunc = nullptr,
+                std::vector<std::vector<std::string>> cmd = {}, const std::string& selCmd = "", bool usingNamedStepTrackbar = false, bool unlockedTrackbar = false, bool executeOnEveryTick = false)
+                : TrackBar(label, packagePath, minValue, maxValue, units, executeCommands, sourceReplacementFunc, cmd, selCmd, !usingNamedStepTrackbar, usingNamedStepTrackbar, numSteps, unlockedTrackbar, executeOnEveryTick) {
+                    ////usingStepTrackbar = true;
+                    //if (!m_packagePath.empty()) {
+                    //    //logMessage("before StepTrackBar initialize value.");
+                    //    std::string initializedValue;
+                    //    if (!m_usingNamedStepTrackbar)
+                    //        initializedValue = parseValueFromIniSection(m_packagePath + "config.ini", m_label, "value");
+                    //    else
+                    //        initializedValue = parseValueFromIniSection(m_packagePath + "config.ini", m_label, "index");
+                    //    if (!initializedValue.empty() && isValidNumber(initializedValue)) {
+                    //        m_value = static_cast<s16>(std::stoi(initializedValue)); // convert initializedValue to s16
+                    //    } else {
+                    //        m_value = minValue;
+                    //    }
+                    //    //logMessage("after StepTrackBar initialize value.");
                     //}
-                
-                    auto it = overlaysIniData.find(overlayFileName);
-                    if (it == overlaysIniData.end()) {
-                        // Initialization of new entries
-                        setIniFileValue(OVERLAYS_INI_FILEPATH, overlayFileName, PRIORITY_STR, "20");
-                        setIniFileValue(OVERLAYS_INI_FILEPATH, overlayFileName, STAR_STR, FALSE_STR);
-                        setIniFileValue(OVERLAYS_INI_FILEPATH, overlayFileName, HIDE_STR, FALSE_STR);
-                        setIniFileValue(OVERLAYS_INI_FILEPATH, overlayFileName, USE_LAUNCH_ARGS_STR, FALSE_STR);
-                        setIniFileValue(OVERLAYS_INI_FILEPATH, overlayFileName, LAUNCH_ARGS_STR, "");
-                        setIniFileValue(OVERLAYS_INI_FILEPATH, overlayFileName, "custom_name", "");
-                        setIniFileValue(OVERLAYS_INI_FILEPATH, overlayFileName, "custom_version", "");
-                        const auto& [result, overlayName, overlayVersion] = getOverlayInfo(OVERLAY_PATH + overlayFileName);
-                        if (result != ResultSuccess) continue;
-                        overlayList.insert("0020"+(overlayName)+":" + overlayFileName);
-                    } else {
-                        const std::string& priority = getValueOrDefault(it->second, PRIORITY_STR, "20", formatPriorityString, 1);
-                        const std::string& starred = getValueOrDefault(it->second, STAR_STR, FALSE_STR);
-                        const std::string& hide = getValueOrDefault(it->second, HIDE_STR, FALSE_STR);
-                        const std::string& useLaunchArgs = getValueOrDefault(it->second, USE_LAUNCH_ARGS_STR, FALSE_STR);
-                        const std::string& launchArgs = getValueOrDefault(it->second, LAUNCH_ARGS_STR, "");
-                        const std::string& customName = getValueOrDefault(it->second, "custom_name", "");
-                        const std::string& customVersion = getValueOrDefault(it->second, "custom_version", "");
-                        
-                        std::string assignedOverlayName, assignedOverlayVersion;
+                    //if (m_value > maxValue) m_value = maxValue;
+                    //else if (m_value < minValue) m_value = minValue;
+                    //lastUpdate = std::chrono::steady_clock::now();
+                }
+            
+            virtual ~StepTrackBar() {}
+            
+            virtual inline bool handleInput(u64 keysDown, u64 keysHeld, const HidTouchState &touchPos, HidAnalogStickState leftJoyStick, HidAnalogStickState rightJoyStick) override {
+                static u32 tick = 0;
+                static bool holding = false;
+                static u64 prevKeysHeld = 0;
+                u64 keysReleased = prevKeysHeld & ~keysHeld;
+                prevKeysHeld = keysHeld;
+                //static bool usingUnlockedTrackbar = m_unlockedTrackbar;
 
-                        const auto& [result, overlayName, overlayVersion] = getOverlayInfo(OVERLAY_PATH + overlayFileName);
-                        if (result != ResultSuccess) continue;
-
-                        if (!customName.empty()){
-                            assignedOverlayName = customName;
-                        } else
-                            assignedOverlayName = overlayName;
-
-                        if (!customVersion.empty()){
-                            assignedOverlayVersion = customVersion;
-                        } else
-                            assignedOverlayVersion = overlayVersion;
-                        
-                        const std::string& baseOverlayInfo = priority + (assignedOverlayName) + ":" + assignedOverlayName + ":" + assignedOverlayVersion + ":" + overlayFileName;
-                        const std::string& fullOverlayInfo = (starred == TRUE_STR) ? "-1:" + baseOverlayInfo : baseOverlayInfo;
-                        
-                        if (hide == FALSE_STR) {
-                            overlayList.insert(fullOverlayInfo);
-                        } else {
-                            hiddenOverlayList.insert(fullOverlayInfo);
-                        }
-                    }
+                if (simulatedSelect && !simulatedSelectComplete) {
+                    keysDown |= KEY_A;
+                    simulatedSelect = false;
                 }
 
-
-                
-                overlaysIniData.clear();
-                
-                //std::sort(overlayList.begin(), overlayList.end());
-                //std::sort(hiddenOverlayList.begin(), hiddenOverlayList.end());
-                
-                
-                if (inHiddenMode) {
-                    overlayList = hiddenOverlayList;
-                    hiddenOverlayList.clear();
-                }
-                
-                
-                bool overlayStarred;
-                
-                std::string overlayFile, newOverlayName;
-                size_t lastUnderscorePos, secondLastUnderscorePos, thirdLastUnderscorePos;
-                
-                bool newStarred;
-                
-                for (const auto& taintedOverlayFileName : overlayList) {
-                    overlayFileName = "";
-                    overlayStarred = false;
-                    overlayVersion = "";
-                    overlayName = "";
-                    
-                    // Detect if starred
-                    if ((taintedOverlayFileName.substr(0, 3) == "-1:"))
-                        overlayStarred = true;
-                    
-                    // Find the position of the last underscore
-                    lastUnderscorePos = taintedOverlayFileName.rfind(':');
-                    // Check if an underscore was found
-                    if (lastUnderscorePos != std::string::npos) {
-                        // Extract overlayFileName starting from the character after the last underscore
-                        overlayFileName = taintedOverlayFileName.substr(lastUnderscorePos + 1);
-                        
-                        // Now, find the position of the second-to-last underscore
-                        secondLastUnderscorePos = taintedOverlayFileName.rfind(':', lastUnderscorePos - 1);
-                        
-                        if (secondLastUnderscorePos != std::string::npos) {
-                            // Extract overlayName between the two underscores
-                            overlayVersion = taintedOverlayFileName.substr(secondLastUnderscorePos + 1, lastUnderscorePos - secondLastUnderscorePos - 1);
-                            // Now, find the position of the second-to-last underscore
-                            thirdLastUnderscorePos = taintedOverlayFileName.rfind(':', secondLastUnderscorePos - 1);
-                            if (secondLastUnderscorePos != std::string::npos)
-                                overlayName = taintedOverlayFileName.substr(thirdLastUnderscorePos + 1, secondLastUnderscorePos - thirdLastUnderscorePos - 1);
-                        }
+                // Check if KEY_A is pressed to toggle allowSlide
+                if ((keysDown & KEY_A)) {
+                    if (!m_unlockedTrackbar) {
+                        allowSlide = !allowSlide;
+                        holding = false; // Reset holding state when KEY_A is pressed
+                    //} else {
+                    //    m_unlockedTrackbar = !m_unlockedTrackbar;
+                    //    holding = false; // Reset holding state when KEY_A is pressed
                     }
-                    
-                    
-                    overlayFile = OVERLAY_PATH+overlayFileName;
-                    
-                    newOverlayName = overlayName.c_str();
-                    if (overlayStarred)
-                        newOverlayName = STAR_SYMBOL+"  "+newOverlayName;
-                    
-                    
-                    // Toggle the starred status
-                    newStarred = !overlayStarred;
-                    
-                    
-                    //logMessage(overlayFile);
-                    if (isFileOrDirectory(overlayFile)) {
-                        listItem = std::make_unique<tsl::elm::ListItem>(newOverlayName);
-                        overlayVersion = getFirstLongEntry(overlayVersion);
-                        if (cleanVersionLabels)
-                            overlayVersion = cleanVersionLabel(overlayVersion);
-                        if (!hideOverlayVersions)
-                            listItem->setValue(overlayVersion, true);
-                        
-                        // Add a click listener to load the overlay when clicked upon
-                        listItem->setClickListener([&hiddenMenuMode = this->hiddenMenuMode, overlayFile, newStarred, overlayFileName, overlayName](s64 keys) {
-                            
-                            if (runningInterpreter.load(std::memory_order_acquire))
-                                return false;
-                            
-
-                            if (simulatedSelect && !simulatedSelectComplete) {
-                                keys |= KEY_A;
-                                simulatedSelect = false;
-                            }
-
-                            if (keys & KEY_A) {
-                                
-                                
-                                std::string useOverlayLaunchArgs = parseValueFromIniSection(OVERLAYS_INI_FILEPATH, overlayFileName, USE_LAUNCH_ARGS_STR);
-                                std::string overlayLaunchArgs = removeQuotes(parseValueFromIniSection(OVERLAYS_INI_FILEPATH, overlayFileName, LAUNCH_ARGS_STR));
-                                
-                                if (inHiddenMode) {
-                                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_OVERLAY_STR, TRUE_STR);
-                                }
-                                
-                                setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_OVERLAY_STR, TRUE_STR); // this is handled within tesla.hpp
-                                if (useOverlayLaunchArgs == TRUE_STR)
-                                    tsl::setNextOverlay(overlayFile, overlayLaunchArgs);
-                                else
-                                    tsl::setNextOverlay(overlayFile);
-                                
-                                tsl::Overlay::get()->close();
-                                simulatedSelectComplete = true;
-
-                                return true;
-                            } else if (keys & STAR_KEY) {
-                                
-                                if (!overlayFile.empty()) {
-                                    // Update the INI file with the new value
-                                    setIniFileValue(OVERLAYS_INI_FILEPATH, overlayFileName, STAR_STR, newStarred ? TRUE_STR : FALSE_STR);
-                                    // Now, you can use the newStarred value for further processing if needed
-                                }
-                                if (inHiddenMode) {
-                                    //tsl::goBack();
-                                    inMainMenu = false;
-                                    inHiddenMode = true;
-                                    reloadMenu2 = true;
-                                }
-                                refreshPage = true;
-
-                                return true;
-                            } else if (keys & SETTINGS_KEY) {
-                                if (!inHiddenMode) {
-                                    lastMenu = "";
-                                    inMainMenu = false;
-                                } else {
-                                    lastMenu = "hiddenMenuMode";
-                                    inHiddenMode = false;
-                                }
-                                
-                                tsl::changeTo<SettingsMenu>(overlayFileName, OVERLAY_STR, overlayName);
-                                return true;
-                            }
-                            return false;
-                        });
-                    }
-                    if (listItem != nullptr)
-                        list->addItem(listItem.release());
-                }
-                overlayList.clear();
-                
-                if (!hiddenOverlayList.empty() && !inHiddenMode) {
-                    listItem = std::make_unique<tsl::elm::ListItem>(HIDDEN, DROPDOWN_SYMBOL);
-                    
-                    listItem->setClickListener([](uint64_t keys) {
-                        if (runningInterpreter.load(std::memory_order_acquire))
-                            return false;
-
-                        if (simulatedSelect && !simulatedSelectComplete) {
-                            keys |= KEY_A;
-                            simulatedSelect = false;
-                        }
-
-                        if (keys & KEY_A) {
-                            inMainMenu = false;
-                            inHiddenMode = true;
-                            tsl::changeTo<MainMenu>(OVERLAYS_STR);
-                            simulatedSelectComplete = true;
-                            return true;
-                        }
-                        return false;
-                    });
-                    
-                    list->addItem(listItem.release());
-                }
-            }
-        }
-        
-        
-        // Packages menu
-        if (menuMode == PACKAGES_STR ) {
-            inOverlaysPage = false;
-            inPackagesPage = true;
-
-            if (dropdownSection.empty()) {
-                // Create the directory if it doesn't exist
-                createDirectory(PACKAGE_PATH);
-                
-                
-                std::fstream packagesIniFile(PACKAGES_INI_FILEPATH, std::ios::in);
-                if (!packagesIniFile.is_open()) {
-                    std::ofstream createFile(PACKAGES_INI_FILEPATH); // Create an empty INI file if it doesn't exist
-                    createFile.close();
-                    initializingSpawn = true;
-                } else {
-                    packagesIniFile.close();
-                }
-                
-                std::set<std::string> packageList;
-                std::set<std::string> hiddenPackageList;
-                
-                // Load the INI file and parse its content.
-                std::map<std::string, std::map<std::string, std::string>> packagesIniData = getParsedDataFromIniFile(PACKAGES_INI_FILEPATH);
-                // Load subdirectories
-                std::vector<std::string> subdirectories = getSubdirectories(PACKAGE_PATH);
-                //for (size_t i = 0; i < subdirectories.size(); ++i) {
-
-                // Remove subdirectories starting with a dot
-                subdirectories.erase(
-                    std::remove_if(
-                        subdirectories.begin(), 
-                        subdirectories.end(),
-                        [](const std::string& dirName) {
-                            return dirName.front() == '.';
-                        }
-                    ),
-                    subdirectories.end()
-                );
-
-                PackageHeader packageHeader;
-
-                for (const auto& packageName: subdirectories) {
-                    auto packageIt = packagesIniData.find(packageName);
-                    if (packageIt == packagesIniData.end()) {
-                        // Initialize missing package data
-                        setIniFileValue(PACKAGES_INI_FILEPATH, packageName, PRIORITY_STR, "20");
-                        setIniFileValue(PACKAGES_INI_FILEPATH, packageName, STAR_STR, FALSE_STR);
-                        setIniFileValue(PACKAGES_INI_FILEPATH, packageName, HIDE_STR, FALSE_STR);
-                        setIniFileValue(PACKAGES_INI_FILEPATH, packageName, "custom_name", "");
-                        setIniFileValue(PACKAGES_INI_FILEPATH, packageName, "custom_version", "");
-                        packageList.insert("0020" + (packageName) +":" + packageName);
-                    } else {
-                        // Process existing package data
-                        priority = (packageIt->second.find(PRIORITY_STR) != packageIt->second.end()) ? 
-                                    formatPriorityString(packageIt->second[PRIORITY_STR]) : "0020";
-                        starred = (packageIt->second.find(STAR_STR) != packageIt->second.end()) ? 
-                                  packageIt->second[STAR_STR] : FALSE_STR;
-                        hide = (packageIt->second.find(HIDE_STR) != packageIt->second.end()) ? 
-                               packageIt->second[HIDE_STR] : FALSE_STR;
-                        
-                        const std::string& customName = getValueOrDefault(packageIt->second, "custom_name", "");
-                        const std::string& customVersion = getValueOrDefault(packageIt->second, "custom_version", "");
-
-                        packageHeader = getPackageHeaderFromIni(PACKAGE_PATH + packageName+ "/" +PACKAGE_FILENAME);
-                        
-                        if (cleanVersionLabels)
-                            packageHeader.version = removeQuotes(cleanVersionLabel(packageHeader.version));
-                        
-                        //packageHeader.clear(); // free memory
-
-                        std::string assignedPackageName, assignedPackageVersion;
-
-                        if (!customName.empty()){
-                            assignedPackageName = customName;
-                        } else {
-                            if (packageHeader.title.empty())
-                                assignedPackageName = packageName;
-                            else
-                                assignedPackageName = packageHeader.title;
-                        }
-
-                        if (!customVersion.empty()){
-                            assignedPackageVersion = customVersion;
-                        } else
-                            assignedPackageVersion = packageHeader.version;
-
-                        const std::string& basePackageInfo = priority + ":" + assignedPackageName + ":" + assignedPackageVersion + ":" + packageName;
-                        const std::string& fullPackageInfo = (starred == TRUE_STR) ? "-1:" + basePackageInfo : basePackageInfo;
-                        if (hide == FALSE_STR) {
-                            packageList.insert(fullPackageInfo);
-                        } else {
-                            hiddenPackageList.insert(fullPackageInfo);
-                        }
-                    }
+                    simulatedSelectComplete = true;
+                    return true;
                 }
 
-                packagesIniData.clear();
-                subdirectories.clear();
-                
-                if (inHiddenMode) {
-                    packageList = hiddenPackageList;
-                    hiddenPackageList.clear();
-                }
-                
-                std::string taintedPackageName;
-                std::string packageName, packageVersion;
-                bool packageStarred;
-                std::string newPackageName;
-                std::string packageFilePath;
-                bool newStarred;
-                
-                
-                size_t lastColonPos, secondLastColonPos, thirdLastColonPos;
-
-                bool firstItem = true;
-                for (const auto& taintedPackageName : packageList) {
-                    if (firstItem) {
-                        list->addItem(new tsl::elm::CategoryHeader(!inHiddenMode ? PACKAGES : HIDDEN_PACKAGES));
-                        firstItem = false;
+                if (allowSlide || m_unlockedTrackbar) {
+                    if ((keysReleased & HidNpadButton_AnyLeft) || (keysReleased & HidNpadButton_AnyRight)) {
+                        //if (!m_executeOnEveryTick)
+                        updateAndExecute();
+                        holding = false;
+                        tick = 0;
+                        return true;
                     }
-
                     
-                    // packageName = taintedPackageName.c_str();
-                    std::string tempPackageName = taintedPackageName;
-
-                    packageStarred = false;
-                    // Check if the package is starred
-                    if (tempPackageName.length() >= 3 && tempPackageName.substr(0, 3) == "-1:") {
-                        packageStarred = true;
-                        // Remove the "-1:" prefix
-                        tempPackageName = tempPackageName.substr(3);
+                    if (keysHeld & HidNpadButton_AnyLeft && keysHeld & HidNpadButton_AnyRight) {
+                        tick = 0;
+                        return true;
                     }
-                
-                    // Find the position of the last colon
-                    lastColonPos = tempPackageName.rfind(':');
-                    if (lastColonPos != std::string::npos) {
-                        // Extract the version part after the last colon
-                        packageName = tempPackageName.substr(lastColonPos + 1);
-                
-                        // Remove the version part from tempPackageName
-                        tempPackageName = tempPackageName.substr(0, lastColonPos);
-                
-                        // Now, find the position of the second-to-last colon
-                        secondLastColonPos = tempPackageName.rfind(':');
-                        if (secondLastColonPos != std::string::npos) {
-                            // Extract the name part between the two colons
-                            packageVersion = tempPackageName.substr(secondLastColonPos + 1);
-
-                            // Remove the version part from tempPackageName
-                            tempPackageName = tempPackageName.substr(0, secondLastColonPos);
-
-                            // Now, find the position of the second-to-last colon
-                            thirdLastColonPos = tempPackageName.rfind(':');
-                            if (thirdLastColonPos != std::string::npos) {
-                                newPackageName = tempPackageName.substr(thirdLastColonPos + 1);
-                            }
+                    
+                    if (keysHeld & (HidNpadButton_AnyLeft | HidNpadButton_AnyRight) && !(keysHeld & KEY_R)) {
+                        if (!holding) {
+                            holding = true;
+                            tick = 0;
                         }
-                    }
-
-                    
-                    //packageName = packageName.substr(5);
-                    
-                    //newPackageName = (packageStarred) ? (STAR_SYMBOL + "  " + newPackageName) : newPackageName;
-                    
-                    packageFilePath = PACKAGE_PATH + packageName+ "/";
-                    
-                    // Toggle the starred status
-                    newStarred = !packageStarred;
-                    
-                    
-                    if (isFileOrDirectory(packageFilePath)) {
-                        //packageHeader = getPackageHeaderFromIni(packageFilePath+PACKAGE_FILENAME);
                         
-                        listItem = std::make_unique<tsl::elm::ListItem>((packageStarred) ? (STAR_SYMBOL + "  " + newPackageName) : newPackageName);
-                        //if (cleanVersionLabels)
-                        //    packageHeader.version = removeQuotes(cleanVersionLabel(packageHeader.version));
-                        if (!hidePackageVersions)
-                           listItem->setValue(packageVersion, true);
-                        
-                        //packageHeader.clear(); // free memory
-                        
-                        // Add a click listener to load the overlay when clicked upon
-                        listItem->setClickListener([&hiddenMenuMode = this->hiddenMenuMode, packageFilePath, newStarred, packageName, newPackageName, packageVersion](s64 keys) {
-                            if (runningInterpreter.load(std::memory_order_acquire)) {
+                        if ((tick == 0 || tick > 20) && (tick % 3) == 0) {
+                            float stepSize = static_cast<float>(m_maxValue - m_minValue) / (this->m_numSteps - 1);
+                            if (keysHeld & HidNpadButton_AnyLeft && this->m_index > 0) {
+                                this->m_index--;
+                                this->m_value = static_cast<s16>(std::round(m_minValue + m_index * stepSize));
+                                //this->m_value = static_cast<s16>(std::max(std::round(this->m_value - stepSize), static_cast<float>(m_minValue)));
+                            } else if (keysHeld & HidNpadButton_AnyRight && this->m_index < this->m_numSteps-1) {
+                                this->m_index++;
+                                this->m_value = static_cast<s16>(std::round(m_minValue + m_index * stepSize));
+                                //this->m_value = static_cast<s16>(std::min(std::round(this->m_value + stepSize), static_cast<float>(m_maxValue)));
+                            } else {
                                 return false;
                             }
-                            
-                            if (simulatedSelect && !simulatedSelectComplete) {
-                                keys |= KEY_A;
-                                simulatedSelect = false;
-                            }
-                            
-                            if (keys & KEY_A) {
-                                inMainMenu = false;
-                                
-                                
-                                // read commands from package's boot_package.ini
-                                if (isFileOrDirectory(packageFilePath+BOOT_PACKAGE_FILENAME)) {
-                                    std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> bootOptions = loadOptionsFromIni(packageFilePath+BOOT_PACKAGE_FILENAME);
-                                    if (bootOptions.size() > 0) {
-                                        std::string bootOptionName;
-                                        for (auto& bootOption:bootOptions) {
-                                            bootOptionName = bootOption.first;
-                                            auto& bootCommands = bootOption.second;
-                                            if (bootOptionName == "boot") {
-                                                interpretAndExecuteCommands(std::move(bootCommands), packageFilePath, bootOptionName); // Execute modified
-                                                break;
-                                            }
-                                        }
-                                        bootOptions.clear();
-                                    }
-                                }
-                                lastPackagePath = packageFilePath;
-                                lastPackageName = PACKAGE_FILENAME;
-
-                                packageRootLayerTitle = newPackageName;
-                                packageRootLayerVersion = packageVersion;
-
-                                tsl::changeTo<PackageMenu>(packageFilePath, "");
-                                simulatedSelectComplete = true;
-                                return true;
-                            } else if (keys & STAR_KEY) {
-                                if (!packageName.empty())
-                                    setIniFileValue(PACKAGES_INI_FILEPATH, packageName, STAR_STR, newStarred ? TRUE_STR : FALSE_STR); // Update the INI file with the new value
-                                
-                                if (inHiddenMode) {
-                                    //tsl::goBack();
-                                    inMainMenu = false;
-                                    inHiddenMode = true;
-                                    reloadMenu2 = true;
-                                }
-                                refreshPage = true;
-
-                                //tsl::changeTo<MainMenu>(hiddenMenuMode);
-                                return true;
-                            } else if (keys & SETTINGS_KEY) {
-                                
-                                if (!inHiddenMode) {
-                                    lastMenu = "";
-                                    inMainMenu = false;
-                                } else {
-                                    lastMenu = "hiddenMenuMode";
-                                    inHiddenMode = false;
-                                }
-                                
-                                tsl::changeTo<SettingsMenu>(packageName, PACKAGE_STR, "", newPackageName);
-                                return true;
-                            }
-                            return false;
-                        });
-                        list->addItem(listItem.release());
-                    }
-                }
-                packageList.clear();
-                
-                if (!hiddenPackageList.empty() && !inHiddenMode) {
-                    listItem = std::make_unique<tsl::elm::ListItem>(HIDDEN, DROPDOWN_SYMBOL);
-                    listItem->setClickListener([](uint64_t keys) {
-                        if (runningInterpreter.load(std::memory_order_acquire))
-                            return false;
-                        
-                        if (simulatedSelect && !simulatedSelectComplete) {
-                            keys |= KEY_A;
-                            simulatedSelect = false;
+                            this->m_valueChangedListener(this->getProgress());
+                            if (m_executeOnEveryTick)
+                                updateAndExecute(false);
                         }
-                        
-                        if (keys & KEY_A) {
-                            inMainMenu = false;
-                            inHiddenMode = true;
-                            tsl::changeTo<MainMenu>(PACKAGES_STR);
-                            simulatedSelectComplete = true;
-                            return true;
-                        }
-                        return false;
-                    });
-                    
-                    list->addItem(listItem.release());
-                }
-            }
-            
-            // ********* THIS PART NEEDS TO MIRROR WHAT IS WITHIN SUBMENU *********
-            
-            if (!inHiddenMode) {
-                packagePath = PACKAGE_PATH;
-                std::string packageName = "package.ini";
-                std::string pageLeftName = "";
-                std::string pageRightName = "";
-                std::string currentPage = "left";
-                size_t nestedLayer = 0;
-                std::string pathPattern, pathPatternOn, pathPatternOff;
-                bool usingPages = false;
-
-                PackageHeader packageHeader = getPackageHeaderFromIni(PACKAGE_PATH);
-                drawCommandsMenu(list, packageIniPath, packageConfigIniPath, packageHeader, pageLeftName, pageRightName,
-                    packagePath, currentPage, packageName, this->dropdownSection, nestedLayer,
-                    pathPattern, pathPatternOn, pathPatternOff, usingPages, false);
-
-                if (!hideUserGuide && dropdownSection.empty())
-                    addHelpInfo(list);
-            }
-        }
-        if (initializingSpawn) {
-            
-            initializingSpawn = false;
-            list.reset();
-            return createUI(); 
-        }
-        
-        filesList.clear();
-
-        //tsl::elm::OverlayFrame *rootFrame = new tsl::elm::OverlayFrame("Ultrahand", versionLabel, menuMode+hiddenMenuMode+dropdownSection);
-        auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel, menuMode+hiddenMenuMode+dropdownSection);
-
-        rootFrame->setContent(list.release());
-        
-        return rootFrame.release();
-    }
-    
-    /**
-     * @brief Handles user input for the main menu overlay.
-     *
-     * Processes user input and responds accordingly within the main menu overlay.
-     * Captures key presses and performs actions based on user interactions.
-     *
-     * @param keysDown A bitset representing keys that are currently pressed.
-     * @param keysHeld A bitset representing keys that are held down.
-     * @param touchInput Information about touchscreen input.
-     * @param leftJoyStick Information about the left joystick input.
-     * @param rightJoyStick Information about the right joystick input.
-     * @return `true` if the input was handled within the overlay, `false` otherwise.
-     */
-    virtual bool handleInput(uint64_t keysDown, uint64_t keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
-
-        if (runningInterpreter.load(std::memory_order_acquire))
-            return handleRunningInterpreter(keysHeld);
-        
-        if (lastRunningInterpreter) {
-            ////while (!interpreterThreadExit.load(std::memory_order_acquire)) {svcSleepThread(50'000'000);}
-            
-            //resetPercentages();
-            
-            isDownloadCommand = false;
-            lastSelectedListItem->setValue(commandSuccess ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
-            closeInterpreterThread();
-            lastRunningInterpreter = false;
-            return true;
-        }
-
-
-        if (refreshPage && !stillTouching) {
-            refreshPage = false;
-            tsl::pop();
-            tsl::changeTo<MainMenu>(hiddenMenuMode, dropdownSection);
-            return true;
-        }
-
-        if (!dropdownSection.empty() && !returningToMain) {
-            if (simulatedNextPage && !simulatedNextPageComplete) {
-                simulatedNextPage = false;
-                simulatedNextPageComplete = true;
-            }
-
-            if (simulatedMenu && !simulatedMenuComplete) {
-                simulatedMenu = false;
-                simulatedMenuComplete = true;
-            }
-
-            if (simulatedBack && !simulatedBackComplete) {
-                keysHeld |= KEY_B;
-                simulatedBack = false;
-            }
-
-            if ((keysHeld & KEY_B) && !stillTouching) {
-                allowSlide = unlockedSlide = false;
-                returningToMain = true;
-                tsl::goBack();
-                simulatedBackComplete = true;
-                return true;
-            }
-        }
-        
-        if (inMainMenu && !inHiddenMode && dropdownSection.empty()){
-            if (isDownloaded) { // for handling software updates
-                tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
-                tsl::Overlay::get()->close();
-            }
-            
-            if (!freshSpawn && !returningToMain && !returningToHiddenMain) {
-                
-                if (simulatedNextPage && !simulatedNextPageComplete) {
-                    if (menuMode != PACKAGES_STR) {
-                        keysHeld |= KEY_DRIGHT;
-                        //simulatedNextPage = false;
-                    }
-                    else if (menuMode != OVERLAYS_STR) {
-                        keysHeld |= KEY_DLEFT;
-                        //simulatedNextPage = false;
+                        tick++;
+                        return true;
                     } else {
-                        //simulatedNextPage = false;
-                        simulatedNextPageComplete = true;
+                        holding = false;
+                        tick = 0;
                     }
                 }
-
-                if ((keysHeld & KEY_RIGHT) && !(keysHeld & ~KEY_RIGHT & ALL_KEYS_MASK) && !stillTouching && ((!allowSlide && onTrackBar && !unlockedSlide) || !onTrackBar || simulatedNextPage) ) {
-                    simulatedNextPage = false;
-                    allowSlide = unlockedSlide = false;
-                    if (menuMode != PACKAGES_STR) {
-                        currentMenu = PACKAGES_STR;
-                        selectedListItem.reset();
-                        lastSelectedListItem.reset();
-                        tsl::pop();
-                        tsl::changeTo<MainMenu>();
-                        //startInterpreterThread();
-                        simulatedNextPageComplete = true;
-                        return true;
-                    }
-                }
-                if ((keysHeld & KEY_LEFT) && !(keysHeld & ~KEY_LEFT & ALL_KEYS_MASK) && !stillTouching && ((!allowSlide && onTrackBar && !unlockedSlide) || !onTrackBar || simulatedNextPage)) {
-                    simulatedNextPage = false;
-                    allowSlide = unlockedSlide = false;
-                    if (menuMode != OVERLAYS_STR) {
-                        currentMenu = OVERLAYS_STR;
-                        selectedListItem.reset();
-                        lastSelectedListItem.reset();
-                        tsl::pop();
-                        tsl::changeTo<MainMenu>();
-                        //closeInterpreterThread();
-                        simulatedNextPageComplete = true;
-                        return true;
-                    }
-                }
-                simulatedNextPage = false;
-
-                if (simulatedBack && !simulatedBackComplete) {
-                    keysHeld |= KEY_B;
-                    simulatedBack = false;
-                }
-
-                if ((keysHeld & KEY_B) && !stillTouching) {
-                    allowSlide = unlockedSlide = false;
-                    tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
-                    tsl::Overlay::get()->close();
-                    simulatedBackComplete = true;
-                    return true;
-                }
-
-                if (simulatedMenu && !simulatedMenuComplete) {
-                    keysHeld |= SYSTEM_SETTINGS_KEY;
-                    simulatedMenu = false;
-                }
-
-                if ((keysHeld & SYSTEM_SETTINGS_KEY) && !stillTouching) {
-                    inMainMenu = false;
-                    tsl::changeTo<UltrahandSettingsMenu>();
-                    //if (menuMode != PACKAGES_STR) startInterpreterThread();
-                    
-                    simulatedMenuComplete = true;
-                    return true;
-                }
+                
+                return false;
             }
-        }
-        if (!inMainMenu && inHiddenMode) {
-            if (!returningToHiddenMain && !returningToMain) {
+            
+            
+            //virtual bool onTouch(TouchEvent event, s32 currX, s32 currY, s32 prevX, s32 prevY, s32 initialX, s32 initialY) override {
+            //    if (this->inBounds(initialX, initialY)) {
+            //        if (currY > this->getTopBound() && currY < this->getBottomBound()) {
+            //            s16 newValue = m_minValue + ((static_cast<float>(currX - (this->getX() + 60)) / static_cast<float>(this->getWidth() - 95)) * (m_maxValue - m_minValue));
+            //            
+            //            if (newValue < m_minValue) {
+            //                newValue = m_minValue;
+            //            } else if (newValue > m_maxValue) {
+            //                newValue = m_maxValue;
+            //            } else {
+            //                float stepSize = static_cast<float>(m_maxValue - m_minValue) / (this->m_numSteps - 1);
+            //                newValue = std::round((newValue - m_minValue) / stepSize) * stepSize + m_minValue;
+            //            }
+            //            
+            //            if (newValue != this->m_value) {
+            //                this->m_value = newValue;
+            //                this->m_valueChangedListener(this->getProgress());
+            //            }
+            //            updateAndExecute();
+            //            return true;
+            //        }
+            //    }
+            //    
+            //    return false;
+            //}
 
-                if (simulatedNextPage && !simulatedNextPageComplete) {
-                    simulatedNextPage = false;
-                    simulatedNextPageComplete = true;
-                }
-
-                if (simulatedMenu && !simulatedMenuComplete) {
-                    simulatedMenu = false;
-                    simulatedMenuComplete = true;
-                }
-
-                if (simulatedBack && !simulatedBackComplete) {
-                    keysHeld |= KEY_B;
-                    simulatedBack = false;
-                }
-
-                if ((keysHeld & KEY_B) && !stillTouching) {
-                    if (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_OVERLAY_STR) == FALSE_STR) {
-                        inMainMenu = true;
-                        inHiddenMode = false;
-                        hiddenMenuMode = "";
-                        setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_OVERLAY_STR, "");
-                        tsl::pop();
-                        returningToMain = true;
-                        tsl::changeTo<MainMenu>();
-                        simulatedBackComplete = true;
-                        return true;
-                    }
-
-                    returningToMain = true;
-                    inHiddenMode = false;
-                    
-                    if (reloadMenu2) {
-                        tsl::pop();
-                        tsl::changeTo<MainMenu>();
-                        reloadMenu2 = false;
-                        simulatedBackComplete = true;
-                        return true;
-                    }
-                    
-                    allowSlide = unlockedSlide = false;
-                    tsl::goBack();
-                    simulatedBackComplete = true;
-                    return true;
-                }
+            
+            /**
+             * @brief Gets the current value of the trackbar
+             *
+             * @return State
+             */
+            virtual inline u8 getProgress() override {
+                return this->m_value / (100 / (this->m_numSteps - 1));
             }
-        }
-        
-        if (freshSpawn && !(keysHeld & KEY_B))
-            freshSpawn = false;
-        
-        if (returningToMain && !(keysHeld & KEY_B)){
-            returningToMain = false;
-            inMainMenu = true;
-        }
-        if (returningToHiddenMain && !(keysHeld & KEY_B)){
-            returningToHiddenMain = false;
-            inHiddenMode = true;
-        }
-        
-        if (redrawWidget) {
-            reinitializeWidgetVars();
-            redrawWidget = false;
-        }
-
-        if (triggerExit.load(std::memory_order_acquire)) {
-            triggerExit.store(false, std::memory_order_release);
-            tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
-            tsl::Overlay::get()->close();
-        }
-        
-        //svcSleepThread(10'000'000);
-        return false;
-    }
-};
-
-
-/**
- * @brief The `Overlay` class manages the main overlay functionality.
- *
- * This class is responsible for handling the main overlay, which provides access to various application features and options.
- * It initializes necessary services, handles user input, and manages the transition between different menu modes.
- */
-class Overlay : public tsl::Overlay {
-public:
-    /**
-     * @brief Initializes essential services and resources.
-     *
-     * This function initializes essential services and resources required for the overlay to function properly.
-     * It sets up file system mounts, initializes network services, and performs other necessary tasks.
-     */
-    virtual void initServices() override {
-        fsdevMountSdmc();
-        splInitialize();
-        spsmInitialize();
-        i2cInitialize();
-        ASSERT_FATAL(socketInitializeDefault());
-        ASSERT_FATAL(nifmInitialize(NifmServiceType_User));
-        ASSERT_FATAL(smInitialize());
-        tsl::initializeThemeVars();
-        initializeCurl();
-
-        // read commands from root package's boot_package.ini
-        if (firstBoot && isFileOrDirectory(PACKAGE_PATH+BOOT_PACKAGE_FILENAME)) {
-            std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> bootOptions = loadOptionsFromIni(PACKAGE_PATH+BOOT_PACKAGE_FILENAME);
-            if (bootOptions.size() > 0) {
-                std::string bootOptionName;
-                for (auto& bootOption:bootOptions) {
-                    bootOptionName = bootOption.first;
-                    auto& bootCommands = bootOption.second;
-                    if (bootOptionName == "boot") {
-                        interpretAndExecuteCommands(std::move(bootCommands), PACKAGE_PATH, bootOptionName); // Execute modified
-                        break;
-                    }
-                }
-                bootOptions.clear();
+            
+            /**
+             * @brief Sets the current state of the toggle. Updates the Value
+             *
+             * @param state State
+             */
+            virtual void setProgress(u8 value) override {
+                value = std::min(value, u8(this->m_numSteps - 1));
+                this->m_value = value * (100 / (this->m_numSteps - 1));
             }
-        }
+            
+        //protected:
+            //u8 m_numSteps = 1;
+            
+        };
+        
+        
+        /**
+         * @brief A customizable trackbar with multiple discrete steps with specific names. Name gets displayed above the bar
+         *
+         */
+        class NamedStepTrackBar : public StepTrackBar {
+        public:
+            u16 trackBarWidth, stepWidth, currentDescIndex;
+            u32 descWidth, descHeight;
+            
+            /**
+             * @brief Constructor
+             *
+             * @param icon Icon shown next to the track bar
+             * @param stepDescriptions Step names displayed above the track bar
+             */
+            NamedStepTrackBar(std::string label, std::string packagePath, std::vector<std::string> stepDescriptions,
+                std::function<void(std::vector<std::vector<std::string>>&&, const std::string&, const std::string&)> executeCommands = nullptr,
+                std::function<std::vector<std::vector<std::string>>(const std::vector<std::vector<std::string>>&, const std::string&, size_t, const std::string&)> sourceReplacementFunc = nullptr,
+                std::vector<std::vector<std::string>> cmd = {}, const std::string& selCmd = "", bool unlockedTrackbar = false, bool executeOnEveryTick = false)
+                : StepTrackBar(label, packagePath, stepDescriptions.size(), 0, (stepDescriptions.size()-1), "", executeCommands, sourceReplacementFunc, cmd, selCmd, true, unlockedTrackbar, executeOnEveryTick), m_stepDescriptions(stepDescriptions) {
+                    //usingNamedStepTrackbar = true;
+                    //logMessage("on initialization");
+                }
+            
+            virtual ~NamedStepTrackBar() {}
+                        
+            virtual void draw(gfx::Renderer *renderer) override {
+                // TrackBar width excluding the handle areas
+                u16 trackBarWidth = this->getWidth() - 95;
+            
+                // Base X and Y coordinates
+                u16 baseX = this->getX() + 59;
+                u16 baseY = this->getY() + 44; // 50 - 3
+            
+                // Calculate the spacing between each step
+                float stepSpacing = static_cast<float>(trackBarWidth) / (this->m_numSteps - 1);
+                
+                // Calculate the halfway point index
+                u8 halfNumSteps = (this->m_numSteps - 1) / 2;
+
+                // Draw step rectangles
+                for (u8 i = 0; i < this->m_numSteps; i++) {
+                    u16 stepX = baseX + std::round(i * stepSpacing);
+                    
+                    // Subtract 1 from the X position for steps on the right side of the center
+                    if (i > halfNumSteps) {
+                        stepX -= 1;
+                    }
+
+                    // Adjust the last step to avoid overshooting
+                    if (i == this->m_numSteps - 1) {
+                        stepX = baseX + trackBarWidth -1;
+                    }
+            
+                    renderer->drawRect(stepX, baseY, 1, 8, a(trackBarEmptyColor));
+                }
+            
+                // Draw the current step description
+                currentDescIndex = this->m_index;
+                this->m_selection = this->m_stepDescriptions[currentDescIndex];
+            
+                // Draw the parent trackbar
+                StepTrackBar::draw(renderer);
+            }
+
+            
+        protected:
+            std::vector<std::string> m_stepDescriptions;
+            
+        };
+        
     }
     
-    /**
-     * @brief Exits and cleans up services and resources.
-     *
-     * This function is responsible for exiting and cleaning up services and resources
-     * when the overlay is no longer in use. It should release any allocated resources and
-     * properly shut down services to avoid memory leaks.
-     */
-    virtual void exitServices() override {
-        cleanupCurl();
-        closeInterpreterThread(); // shouldn't be running, but run close anyways
-        socketExit();
-        nifmExit();
-        i2cExit();
-        smExit();
-        spsmExit();
-        splExit();
-        fsdevUnmountAll();
-    }
+    // GUI
     
     /**
-     * @brief Performs actions when the overlay becomes visible.
+     * @brief The top level Gui class
+     * @note The main menu and every sub menu are a separate Gui. Create your own Gui class that extends from this one to create your own menus
      *
-     * This function is called when the overlay transitions from an invisible state to a visible state.
-     * It can be used to perform actions or updates specific to the overlay's visibility.
      */
-    virtual void onShow() override {
-        //playClickVibration();
-        //logMessage("onShow isHidden: "+std::to_string(isHidden.load()));
-        //std::string file_path = "sdmc:/config/ultrahand/open.wav";
+    class Gui {
+    public:
+        Gui() { }
+        
+        virtual ~Gui() {
+            if (this->m_topElement != nullptr)
+                delete this->m_topElement;
+
+            if (this->m_bottomElement != nullptr)
+                delete this->m_bottomElement;
+        }
+        
+        /**
+         * @brief Creates all elements present in this Gui
+         * @note Implement this function and let it return a heap allocated element used as the top level element. This is usually some kind of frame e.g \ref OverlayFrame
+         *
+         * @return Top level element
+         */
+        virtual elm::Element* createUI() = 0;
+        
+        /**
+         * @brief Called once per frame to update values
+         *
+         */
+        virtual void update() {}
+        
+        /**
+         * @brief Called once per frame with the latest HID inputs
+         *
+         * @param keysDown Buttons pressed in the last frame
+         * @param keysHeld Buttons held down longer than one frame
+         * @param touchInput Last touch position
+         * @param leftJoyStick Left joystick position
+         * @param rightJoyStick Right joystick position
+         * @return Weather or not the input has been consumed
+         */
+        virtual inline bool handleInput(u64 keysDown, u64 keysHeld, const HidTouchState &touchPos, HidAnalogStickState leftJoyStick, HidAnalogStickState rightJoyStick) {
+            return false;
+        }
+        
+        /**
+         * @brief Gets the top level element
+         *
+         * @return Top level element
+         */
+        elm::Element* getTopElement() {
+            return this->m_topElement;
+        }
+        
+        /**
+         * @brief Gets the bottom level element
+         *
+         * @return Bottom level element
+         */
+        elm::Element* getBottomElement() {
+            return this->m_bottomElement;
+        }
+
+        /**
+         * @brief Get the currently focused element
+         *
+         * @return Focused element
+         */
+        elm::Element* getFocusedElement() {
+            return this->m_focusedElement;
+        }
+        
+        /**
+         * @brief Requests focus to a element
+         * @note Use this function when focusing a element outside of a element's requestFocus function
+         *
+         * @param element Element to focus
+         * @param direction Focus direction
+         */
+        inline void requestFocus(elm::Element *element, FocusDirection direction, bool shake = true) {
+            elm::Element *oldFocus = this->m_focusedElement;
+            
+            if (element != nullptr) {
+                this->m_focusedElement = element->requestFocus(oldFocus, direction);
+                
+                if (oldFocus != nullptr)
+                    oldFocus->setFocused(false);
+                
+                if (this->m_focusedElement != nullptr) {
+                    this->m_focusedElement->setFocused(true);
+                }
+            }
+            
+            if (shake && oldFocus == this->m_focusedElement && this->m_focusedElement != nullptr)
+                this->m_focusedElement->shakeHighlight(direction);
+        }
+        
+        /**
+         * @brief Removes focus from a element
+         *
+         * @param element Element to remove focus from. Pass nullptr to remove the focus unconditionally
+         */
+        inline void removeFocus(elm::Element* element = nullptr) {
+            if (element == nullptr || element == this->m_focusedElement) {
+                if (this->m_focusedElement != nullptr) {
+                    this->m_focusedElement->setFocused(false);
+                    this->m_focusedElement = nullptr;
+                }
+            }
+        }
+        
+        inline void restoreFocus() {
+            this->m_initialFocusSet = false;
+        }
+        
+    protected:
+        constexpr static inline auto a = &gfx::Renderer::a;
+        
+    private:
+        elm::Element *m_focusedElement = nullptr;
+        elm::Element *m_topElement = nullptr;
+        elm::Element *m_bottomElement = nullptr;
+
+        bool m_initialFocusSet = false;
+        
+        friend class Overlay;
+        friend class gfx::Renderer;
+        
+        //// Function to recursively find the bottom element
+        //void findBottomElement(elm::Element* currentElement) {
+        //    // Base case: if the current element has no children, it is the bottom element
+        //    if (currentElement->getChildren().empty()) {
+        //        m_bottomElement = currentElement;
+        //        return;
+        //    }
         //
-        //if (play_audio(file_path) != 0) {
-        //    logMessage("Failed to play audio.");
+        //    // Recursive case: traverse through all children elements
+        //    for (elm::Element* child : currentElement->getChildren()) {
+        //        findBottomElement(child);
+        //    }
         //}
-    } 
+
+        /**
+         * @brief Draws the Gui
+         *
+         * @param renderer
+         */
+        void draw(gfx::Renderer *renderer) {
+            if (this->m_topElement != nullptr)
+                this->m_topElement->draw(renderer);
+        }
+        
+        inline bool initialFocusSet() {
+            return this->m_initialFocusSet;
+        }
+        
+        inline void markInitialFocusSet() {
+            this->m_initialFocusSet = true;
+        }
+        
+    };
+    
+    
+    // Overlay
     
     /**
-     * @brief Performs actions when the overlay becomes visible.
-     *
-     * This function is called when the overlay transitions from an invisible state to a visible state.
-     * It can be used to perform actions or updates specific to the overlay's visibility.
+     * @brief The top level Overlay class
+     * @note Every Tesla overlay should have exactly one Overlay class initializing services and loading the default Gui
      */
-    virtual void onHide() override {
-        //logMessage("onHide isHidden: "+std::to_string(isHidden.load()));
-    } 
+    class Overlay {
+    protected:
+        /**
+         * @brief Constructor
+         * @note Called once when the Overlay gets loaded
+         */
+        Overlay() {}
+    public:
+        /**
+         * @brief Deconstructor
+         * @note Called once when the Overlay exits
+         *
+         */
+        virtual ~Overlay() {}
+        
+        /**
+         * @brief Initializes services
+         * @note Called once at the start to initializes services. You have a sm session available during this call, no need to initialize sm yourself
+         */
+        virtual void initServices() {}
+        
+        /**
+         * @brief Exits services
+         * @note Make sure to exit all services you initialized in \ref Overlay::initServices() here to prevent leaking handles
+         */
+        virtual void exitServices() {}
+        
+        /**
+         * @brief Called before overlay changes from invisible to visible state
+         *
+         */
+        virtual void onShow() {}
+        
+        /**
+         * @brief Called before overlay changes from visible to invisible state
+         *
+         */
+        virtual void onHide() {}
+        
+        /**
+         * @brief Loads the default Gui
+         * @note This function should return the initial Gui to load using the \ref Gui::initially<T>(Args.. args) function
+         *       e.g `return initially<GuiMain>();`
+         *
+         * @return Default Gui
+         */
+        virtual std::unique_ptr<tsl::Gui> loadInitialGui() = 0;
+        
+        /**
+         * @brief Gets a reference to the current Gui on top of the Gui stack
+         *
+         * @return Current Gui reference
+         */
+        std::unique_ptr<tsl::Gui>& getCurrentGui() {
+            return this->m_guiStack.top();
+        }
+        
+        /**
+         * @brief Shows the Gui
+         *
+         */
+        void show() {
+            
+
+            if (this->m_disableNextAnimation) {
+                this->m_animationCounter = MAX_ANIMATION_COUNTER;
+                this->m_disableNextAnimation = false;
+            }
+            else {
+                this->m_fadeInAnimationPlaying = true;
+                this->m_animationCounter = 0;
+            }
+
+            isHidden.store(false);
+            this->onShow();
+            
+            if (auto& currGui = this->getCurrentGui(); currGui != nullptr) // TESTING DISABLED (EFFECTS NEED TO BE VERIFIED)
+                currGui->restoreFocus();
+        }
+        
+        /**
+         * @brief Hides the Gui
+         *
+         */
+        void hide() {
+            
+            if (this->m_disableNextAnimation) {
+                this->m_animationCounter = 0;
+                this->m_disableNextAnimation = false;
+            }
+            else {
+                this->m_fadeOutAnimationPlaying = true;
+                this->m_animationCounter = MAX_ANIMATION_COUNTER;
+            }
+            isHidden.store(true);
+            this->onHide();
+        }
+        
+        /**
+         * @brief Returns whether fade animation is playing
+         *
+         * @return whether fade animation is playing
+         */
+        bool fadeAnimationPlaying() {
+            return this->m_fadeInAnimationPlaying || this->m_fadeOutAnimationPlaying;
+        }
+        
+        /**
+         * @brief Closes the Gui
+         * @note This makes the Tesla overlay exit and return back to the Tesla-Menu
+         *
+         */
+        void close() {
+            this->m_shouldClose = true;
+        }
+        
+        /**
+         * @brief Gets the Overlay instance
+         *
+         * @return Overlay instance
+         */
+        static inline Overlay* const get() {
+            return Overlay::s_overlayInstance;
+        }
+        
+        /**
+         * @brief Creates the initial Gui of an Overlay and moves the object to the Gui stack
+         *
+         * @tparam T
+         * @tparam Args
+         * @param args
+         * @return constexpr std::unique_ptr<T>
+         */
+        template<typename T, typename ... Args>
+        constexpr inline std::unique_ptr<T> initially(Args&&... args) {
+            return std::make_unique<T>(args...);
+        }
+        
+    private:
+        using GuiPtr = std::unique_ptr<tsl::Gui>;
+        std::stack<GuiPtr, std::list<GuiPtr>> m_guiStack;
+        static inline Overlay *s_overlayInstance = nullptr;
+        
+        bool m_fadeInAnimationPlaying = false, m_fadeOutAnimationPlaying = false;
+        u8 m_animationCounter = 0;
+        const int MAX_ANIMATION_COUNTER = 5; // Define the maximum animation counter value
+
+        bool m_shouldHide = false;
+        bool m_shouldClose = false;
+        
+        bool m_disableNextAnimation = false;
+        
+        bool m_closeOnExit;
+        
+        /**
+         * @brief Initializes the Renderer
+         *
+         */
+        void initScreen() {
+            gfx::Renderer::get().init();
+        }
+        
+        /**
+         * @brief Exits the Renderer
+         *
+         */
+        void exitScreen() {
+            gfx::Renderer::get().exit();
+        }
+        
+        /**
+         * @brief Weather or not the Gui should get hidden
+         *
+         * @return should hide
+         */
+        bool shouldHide() {
+            return this->m_shouldHide;
+        }
+        
+        /**
+         * @brief Weather or not hte Gui should get closed
+         *
+         * @return should close
+         */
+        bool shouldClose() {
+            return this->m_shouldClose;
+        }
+        
+
+        /**
+         * @brief Quadratic ease-in-out function
+         *
+         * @param t Normalized time (0 to 1)
+         * @return Eased value
+         */
+        float calculateEaseInOut(float t) {
+            if (t < 0.5) {
+                return 2 * t * t;
+            } else {
+                return -1 + (4 - 2 * t) * t;
+            }
+        }
+
+        /**
+         * @brief Handles fade in and fade out animations of the Overlay
+         *
+         */
+        void animationLoop() {
+            
+        
+            if (this->m_fadeInAnimationPlaying) {
+                if (this->m_animationCounter < MAX_ANIMATION_COUNTER) {
+                    this->m_animationCounter++;
+                }
+                
+                if (this->m_animationCounter >= MAX_ANIMATION_COUNTER) {
+                    this->m_fadeInAnimationPlaying = false;
+                }
+            }
+            
+            if (this->m_fadeOutAnimationPlaying) {
+                if (this->m_animationCounter > 0) {
+                    this->m_animationCounter--;
+                }
+                
+                if (this->m_animationCounter == 0) {
+                    this->m_fadeOutAnimationPlaying = false;
+                    this->m_shouldHide = true;
+                }
+            }
+        
+            // Calculate and set the opacity using an easing function
+            float opacity = calculateEaseInOut(static_cast<float>(this->m_animationCounter) / MAX_ANIMATION_COUNTER);
+            gfx::Renderer::setOpacity(opacity);
+        }
+
+
+        
+        /**
+         * @brief Main loop
+         *
+         */
+        void loop() {
+            auto& renderer = gfx::Renderer::get();
+            
+            renderer.startFrame();
+            
+            this->animationLoop();
+            this->getCurrentGui()->update();
+            this->getCurrentGui()->draw(&renderer);
+            
+            renderer.endFrame();
+        }
+        
+
+
+        /**
+         * @brief Called once per frame with the latest HID inputs
+         *
+         * @param keysDown Buttons pressed in the last frame
+         * @param keysHeld Buttons held down longer than one frame
+         * @param touchInput Last touch position
+         * @param leftJoyStick Left joystick position
+         * @param rightJoyStick Right joystick position
+         * @return Whether or not the input has been consumed
+         */
+        void handleInput(u64 keysDown, u64 keysHeld, bool touchDetected, const HidTouchState &touchPos, HidAnalogStickState joyStickPosLeft, HidAnalogStickState joyStickPosRight) {
+            // Static variables to maintain state between function calls
+            static HidTouchState initialTouchPos = { 0 };
+            static HidTouchState oldTouchPos = { 0 };
+            static bool oldTouchDetected = false;
+            static elm::TouchEvent touchEvent;
+            static elm::TouchEvent oldTouchEvent;
+            static ssize_t counter = 0;
+            static std::chrono::steady_clock::time_point buttonPressTime;
+            static std::chrono::steady_clock::time_point lastKeyEventTime;
+            static bool singlePressHandled = false;
+            static const auto clickThreshold = std::chrono::milliseconds(340); // Adjust this value as needed
+            static auto keyEventInterval = std::chrono::milliseconds(50); // Interval between key events
+            
+            auto& currentGui = this->getCurrentGui();
+            
+            // Return early if current GUI is not available
+            if (!currentGui) return;
+            
+            // Retrieve current focus and top/bottom elements of the GUI
+            auto currentFocus = currentGui->getFocusedElement();
+            auto topElement = currentGui->getTopElement();
+            auto bottomElement = currentGui->getBottomElement();
+            
+            if (runningInterpreter.load()) {
+                if (keysDown & KEY_UP && !(keysDown & ~KEY_UP & ALL_KEYS_MASK))
+                    currentFocus->shakeHighlight(FocusDirection::Up);
+                else if (keysDown & KEY_DOWN && !(keysDown & ~KEY_DOWN & ALL_KEYS_MASK))
+                    currentFocus->shakeHighlight(FocusDirection::Down);
+                else if (keysDown & KEY_LEFT && !(keysDown & ~KEY_LEFT & ALL_KEYS_MASK))
+                    currentFocus->shakeHighlight(FocusDirection::Left);
+                else if (keysDown & KEY_RIGHT && !(keysDown & ~KEY_RIGHT & ALL_KEYS_MASK))
+                    currentFocus->shakeHighlight(FocusDirection::Right);
+                else if (progressAnimation) {
+                    currentFocus->shakeHighlight(static_cast<FocusDirection>(counter % 4));
+                    counter = (counter + 1) % 4;
+                }
+            }
+            
+            if (!currentFocus && !simulatedBack && simulatedBackComplete && !stillTouching && !runningInterpreter.load(std::memory_order_acquire)) {
+                if (!topElement) return;
+                
+                if (!currentGui->initialFocusSet() || keysDown & (HidNpadButton_AnyUp | HidNpadButton_AnyDown | HidNpadButton_AnyLeft | HidNpadButton_AnyRight)) {
+                    currentGui->requestFocus(topElement, FocusDirection::None);
+                    currentGui->markInitialFocusSet();
+                }
+            }
+            static bool hasScrolled = false;
+
+
+            if (!currentFocus && !touchDetected && (!oldTouchDetected || oldTouchEvent == elm::TouchEvent::Scroll)) {
+                if (!simulatedBack && simulatedBackComplete && topElement) {
+                    if (oldTouchEvent == elm::TouchEvent::Scroll) {
+                        hasScrolled = true;
+                    }
+                    if (!hasScrolled) {
+                        currentGui->removeFocus();
+                        currentGui->requestFocus(topElement, FocusDirection::None);
+                    }
+                }
+            }
+            
+            bool handled = false;
+            elm::Element* parentElement = currentFocus;
+            
+            while (!handled && parentElement) {
+                handled = parentElement->onClick(keysDown) || parentElement->handleInput(keysDown, keysHeld, touchPos, joyStickPosLeft, joyStickPosRight);
+                parentElement = parentElement->getParent();
+            }
+            
+            if (currentGui != this->getCurrentGui()) return;
+            
+            handled |= currentGui->handleInput(keysDown, keysHeld, touchPos, joyStickPosLeft, joyStickPosRight);
+            
+
+            if (hasScrolled) {
+                bool singleArrowKeyPress = ((keysHeld & KEY_UP) != 0) + ((keysHeld & KEY_DOWN) != 0) + ((keysHeld & KEY_LEFT) != 0) + ((keysHeld & KEY_RIGHT) != 0) == 1;
+                
+                
+                if (singleArrowKeyPress) {
+                    auto now = std::chrono::steady_clock::now();
+                    buttonPressTime = now;
+                    lastKeyEventTime = now;
+                    hasScrolled = false;
+                }
+            } else {
+
+                if (!touchDetected && !oldTouchDetected && !handled && currentFocus && !stillTouching && !runningInterpreter.load(std::memory_order_acquire)) {
+                    static bool shouldShake = true;
+                    bool singleArrowKeyPress = ((keysHeld & KEY_UP) != 0) + ((keysHeld & KEY_DOWN) != 0) + ((keysHeld & KEY_LEFT) != 0) + ((keysHeld & KEY_RIGHT) != 0) == 1;
+                    
+                    if (singleArrowKeyPress) {
+                        
+                        auto now = std::chrono::steady_clock::now();
+                        if (keysDown) {
+                            buttonPressTime = now;
+                            lastKeyEventTime = now;
+                            singlePressHandled = false;
+                            // Immediate single press action
+                            if (keysHeld & KEY_UP && !(keysHeld & ~KEY_UP & ALL_KEYS_MASK))
+                                currentGui->requestFocus(currentGui->getTopElement(), FocusDirection::Up, shouldShake); // Request focus on the top element when double-clicking up
+                            else if (keysHeld & KEY_DOWN && !(keysHeld & ~KEY_DOWN & ALL_KEYS_MASK))
+                                currentGui->requestFocus(currentFocus->getParent(), FocusDirection::Down, shouldShake);
+                            else if (keysHeld & KEY_LEFT && !(keysHeld & ~KEY_LEFT & ALL_KEYS_MASK))
+                                currentGui->requestFocus(currentFocus->getParent(), FocusDirection::Left, shouldShake);
+                            else if (keysHeld & KEY_RIGHT && !(keysHeld & ~KEY_RIGHT & ALL_KEYS_MASK))
+                                currentGui->requestFocus(currentFocus->getParent(), FocusDirection::Right, shouldShake);
+                            //shouldShake = currentGui->getFocusedElement() != currentFocus;
+                        }
+                        if (keysHeld & ~KEY_DOWN & ~KEY_UP & ~KEY_LEFT & ~KEY_RIGHT & ALL_KEYS_MASK) // reset
+                            buttonPressTime = now;
+                        
+                        auto durationSincePress = std::chrono::duration_cast<std::chrono::milliseconds>(now - buttonPressTime);
+                        auto durationSinceLastEvent = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastKeyEventTime);
+                        
+                        if (!singlePressHandled && durationSincePress >= clickThreshold) {
+                            singlePressHandled = true;
+                        }
+                        
+                        if (durationSincePress > std::chrono::milliseconds(2400))
+                            keyEventInterval = std::chrono::milliseconds(10);
+                        else if (durationSincePress > std::chrono::milliseconds(1600))
+                            keyEventInterval = std::chrono::milliseconds(20);
+                        else if (durationSincePress > std::chrono::milliseconds(800))
+                            keyEventInterval = std::chrono::milliseconds(50);
+                        else
+                            keyEventInterval = std::chrono::milliseconds(67);
+                        
+                        //keyEventInterval = interpolateKeyEventInterval(durationSincePress);
+                        
+                        if (singlePressHandled && durationSinceLastEvent >= keyEventInterval) {
+                            lastKeyEventTime = now;
+                            if (keysHeld & KEY_UP && !(keysHeld & ~KEY_UP & ALL_KEYS_MASK))
+                                currentGui->requestFocus(currentGui->getTopElement(), FocusDirection::Up, false);
+                            else if (keysHeld & KEY_DOWN && !(keysHeld & ~KEY_DOWN & ALL_KEYS_MASK))
+                                currentGui->requestFocus(currentFocus->getParent(), FocusDirection::Down, false);
+                            else if (keysHeld & KEY_LEFT && !(keysHeld & ~KEY_LEFT & ALL_KEYS_MASK))
+                                currentGui->requestFocus(currentFocus->getParent(), FocusDirection::Left, false);
+                            else if (keysHeld & KEY_RIGHT && !(keysHeld & ~KEY_RIGHT & ALL_KEYS_MASK))
+                                currentGui->requestFocus(currentFocus->getParent(), FocusDirection::Right, false);
+                            //shouldShake = currentGui->getFocusedElement() != currentFocus;
+                        }
+                    } else {
+                        singlePressHandled = false;
+                    }
+                }
+            }
+            
+            if (!touchDetected && (keysDown & KEY_L) && !(keysHeld & ~KEY_L & ALL_KEYS_MASK) && !runningInterpreter.load(std::memory_order_acquire)) {
+                currentGui->requestFocus(topElement, FocusDirection::None);
+                currentGui->requestFocus(topElement, FocusDirection::None);
+            }
+            
+            if (!touchDetected && (keysDown & KEY_R) && !(keysHeld & ~KEY_R & ALL_KEYS_MASK) && !runningInterpreter.load(std::memory_order_acquire)) {
+                currentGui->requestFocus(bottomElement, FocusDirection::None);
+            }
+            
+            if (!touchDetected && oldTouchDetected && currentGui && topElement) {
+                topElement->onTouch(elm::TouchEvent::Release, oldTouchPos.x, oldTouchPos.y, oldTouchPos.x, oldTouchPos.y, initialTouchPos.x, initialTouchPos.y);
+            }
+
+            touchingBack = (touchPos.x >= 20.0f && touchPos.x < backWidth+86.0f && touchPos.y > cfg::FramebufferHeight - 73U) && (initialTouchPos.x >= 20.0f && initialTouchPos.x < backWidth+86.0f&& initialTouchPos.y > cfg::FramebufferHeight - 73U);
+            touchingSelect = (touchPos.x >= backWidth+86.0f && touchPos.x < (backWidth+86.0f + selectWidth+68.0f) && touchPos.y > cfg::FramebufferHeight - 73U) && (initialTouchPos.x >=  backWidth+86.0f && initialTouchPos.x < (backWidth+86.0f + selectWidth+68.0f) && initialTouchPos.y > cfg::FramebufferHeight - 73U);
+            touchingNextPage = (touchPos.x >= (backWidth+86.0f + selectWidth+68.0f) && (touchPos.x <= backWidth+86.0f + selectWidth+68.0f +nextPageWidth+70.0f) && touchPos.y > cfg::FramebufferHeight - 73U) && (initialTouchPos.x >= (backWidth+86.0f + selectWidth+68.0f) && (initialTouchPos.x <= backWidth+86.0f + selectWidth+68.0f +nextPageWidth+70.0f) && initialTouchPos.y > cfg::FramebufferHeight - 73U);
+            touchingMenu = (touchPos.x > 0U && touchPos.x <= 245 && touchPos.y > 10U && touchPos.y <= 83U) && (initialTouchPos.x > 0U && initialTouchPos.x <= 245 && initialTouchPos.y > 10U && initialTouchPos.y <= 83U);
+            
+
+            if (touchDetected) {
+                if (!interruptedTouch) interruptedTouch = (keysHeld & ALL_KEYS_MASK) != 0;
+                
+                u32 xDistance = std::abs(static_cast<s32>(initialTouchPos.x) - static_cast<s32>(touchPos.x));
+                u32 yDistance = std::abs(static_cast<s32>(initialTouchPos.y) - static_cast<s32>(touchPos.y));
+                
+                bool isScroll = (xDistance * xDistance + yDistance * yDistance) > 1000;
+                if (isScroll) {
+                    elm::Element::setInputMode(InputMode::TouchScroll);
+                    touchEvent = elm::TouchEvent::Scroll;
+                } else {
+                    if (touchEvent != elm::TouchEvent::Scroll) {
+                        touchEvent = elm::TouchEvent::Hold;
+                    }
+                }
+                
+                if (!oldTouchDetected) {
+                    initialTouchPos = touchPos;
+                    elm::Element::setInputMode(InputMode::Touch);
+                    if (!runningInterpreter.load(std::memory_order_acquire)) {
+                        touchInBounds = (initialTouchPos.y <= cfg::FramebufferHeight - 73U && initialTouchPos.y > 73U && initialTouchPos.x <= cfg::FramebufferWidth-30U && initialTouchPos.x > 40U);
+                        if (touchInBounds) currentGui->removeFocus();
+                    }
+                    touchEvent = elm::TouchEvent::Touch;
+                }
+                
+                if (currentGui && topElement && !runningInterpreter.load(std::memory_order_acquire)) {
+                    topElement->onTouch(touchEvent, touchPos.x, touchPos.y, oldTouchPos.x, oldTouchPos.y, initialTouchPos.x, initialTouchPos.y);
+                    if (touchPos.x > 40U && touchPos.x <= cfg::FramebufferWidth-30U && touchPos.y > 73U && touchPos.y <= cfg::FramebufferHeight - 73U) {
+                        currentGui->removeFocus();
+                    }
+                    
+                }
+                
+                oldTouchPos = touchPos;
+                if (touchPos.x >= cfg::FramebufferWidth && tsl::elm::Element::getInputMode() == tsl::InputMode::Touch) {
+                    oldTouchPos = { 0 };
+                    initialTouchPos = { 0 };
+                    this->hide();
+                }
+                stillTouching = true;
+            } else {
+                if (!interruptedTouch && !runningInterpreter.load(std::memory_order_acquire)) {
+                    if ((oldTouchPos.x >= 20.0f && oldTouchPos.x < backWidth+86.0f && oldTouchPos.y > cfg::FramebufferHeight - 73U) && (initialTouchPos.x >= 20.0f && initialTouchPos.x < backWidth+86.0f&& initialTouchPos.y > cfg::FramebufferHeight - 73U)) {
+                        simulatedBackComplete = false;
+                        simulatedBack = true;
+                    } else if ((oldTouchPos.x >= backWidth+86.0f && oldTouchPos.x < (backWidth+86.0f + selectWidth+68.0f) && oldTouchPos.y > cfg::FramebufferHeight - 73U) && (initialTouchPos.x >=  backWidth+86.0f && initialTouchPos.x < (backWidth+86.0f + selectWidth+68.0f) && initialTouchPos.y > cfg::FramebufferHeight - 73U)) {
+                        simulatedSelectComplete = false;
+                        simulatedSelect = true;
+                    } else if ((oldTouchPos.x >= (backWidth+86.0f + selectWidth+68.0f) && (oldTouchPos.x <= backWidth+86.0f + selectWidth+68.0f +nextPageWidth+70.0f) && oldTouchPos.y > cfg::FramebufferHeight - 73U) && (initialTouchPos.x >= (backWidth+86.0f + selectWidth+68.0f) && (initialTouchPos.x <= backWidth+86.0f + selectWidth+68.0f +nextPageWidth+70.0f) && initialTouchPos.y > cfg::FramebufferHeight - 73U)) {
+                        simulatedNextPageComplete = false;
+                        simulatedNextPage = true;
+                    } else if ((oldTouchPos.x > 0U && oldTouchPos.x <= 245 && oldTouchPos.y > 10U && oldTouchPos.y <= 83U) && (initialTouchPos.x > 0U && initialTouchPos.x <= 245 && initialTouchPos.y > 10U && initialTouchPos.y <= 83U)) {
+                        simulatedMenuComplete = false;
+                        simulatedMenu = true;
+                    }
+                }
+                
+                elm::Element::setInputMode(InputMode::Controller);
+                
+                oldTouchPos = { 0 };
+                initialTouchPos = { 0 };
+                touchEvent = elm::TouchEvent::None;
+                stillTouching = false;
+                interruptedTouch = false;
+            }
+            
+            oldTouchDetected = touchDetected;
+            oldTouchEvent = touchEvent;
+        }
+        
+        
+        
+
+
+        /**
+         * @brief Clears the screen
+         *
+         */
+        void clearScreen() {
+            auto& renderer = gfx::Renderer::get();
+            
+            renderer.startFrame();
+            renderer.clearScreen();
+            renderer.endFrame();
+        }
+        
+        /**
+         * @brief Reset hide and close flags that were previously set by \ref Overlay::close() or \ref Overlay::hide()
+         *
+         */
+        void resetFlags() {
+            this->m_shouldHide = false;
+            this->m_shouldClose = false;
+        }
+        
+        /**
+         * @brief Disables the next animation that would play
+         *
+         */
+        void disableNextAnimation() {
+            this->m_disableNextAnimation = true;
+        }
+        
+
+        /**
+         * @brief Changes to a different Gui
+         *
+         * @param gui Gui to change to
+         * @return Reference to the Gui
+         */
+        std::unique_ptr<tsl::Gui>& changeTo(std::unique_ptr<tsl::Gui>&& gui) {
+            if (this->m_guiStack.top() != nullptr && this->m_guiStack.top()->m_focusedElement != nullptr)
+                this->m_guiStack.top()->m_focusedElement->resetClickAnimation();
+            
+            
+            // Create the top element of the new Gui
+            gui->m_topElement = gui->createUI();
+
+            
+            // Push the new Gui onto the stack
+            this->m_guiStack.push(std::move(gui));
+            
+            return this->m_guiStack.top();
+        }
+
+        
+        /**
+         * @brief Creates a new Gui and changes to it
+         *
+         * @tparam G Gui to create
+         * @tparam Args Arguments to pass to the Gui
+         * @param args Arguments to pass to the Gui
+         * @return Reference to the newly created Gui
+         */
+        template<typename G, typename ...Args>
+        std::unique_ptr<tsl::Gui>& changeTo(Args&&... args) {
+            return this->changeTo(std::make_unique<G>(std::forward<Args>(args)...));
+        }
+        
+        /**
+         * @brief Pops the top Gui from the stack and goes back to the last one
+         * @note The Overlay gets closes once there are no more Guis on the stack
+         */
+        void goBack() {
+            if (!this->m_closeOnExit && this->m_guiStack.size() == 1) {
+                this->hide();
+                return;
+            }
+            
+            if (!this->m_guiStack.empty())
+                this->m_guiStack.pop();
+            
+            if (this->m_guiStack.empty())
+                this->close();
+        }
+
+        void pop() {
+            if (!this->m_guiStack.empty())
+                this->m_guiStack.pop();
+        }
+        
+        template<typename G, typename ...Args>
+        friend std::unique_ptr<tsl::Gui>& changeTo(Args&&... args);
+        
+        friend void goBack();
+        friend void pop();
+        
+        template<typename, tsl::impl::LaunchFlags>
+        friend int loop(int argc, char** argv);
+        
+        friend class tsl::Gui;
+    };
     
-    /**
-     * @brief Loads the initial graphical user interface (GUI) for the overlay.
-     *
-     * This function is responsible for loading the initial GUI when the overlay is launched.
-     * It returns a unique pointer to the GUI element that will be displayed as the overlay's starting interface.
-     * You can also pass arguments to the constructor of the GUI element if needed.
-     *
-     * @return A unique pointer to the initial GUI element.
-     */
-    virtual std::unique_ptr<tsl::Gui> loadInitialGui() override {
-        return initially<MainMenu>();  // Initial Gui to load. It's possible to pass arguments to its constructor like this
+    
+    namespace impl {
+        static const char* TESLA_CONFIG_FILE = "/config/tesla/config.ini"; // CUSTOM MODIFICATION
+        static const char* ULTRAHAND_CONFIG_FILE = "/config/ultrahand/config.ini"; // CUSTOM MODIFICATION
+        
+        /**
+         * @brief Data shared between the different threads
+         *
+         */
+        struct SharedThreadData {
+            bool running = false;
+            
+            Event comboEvent = { 0 };
+            
+            bool overlayOpen = false;
+            
+            std::mutex dataMutex;
+            u64 keysDown = 0;
+            u64 keysDownPending = 0;
+            u64 keysHeld = 0;
+            HidTouchScreenState touchState = { 0 };
+            HidAnalogStickState joyStickPosLeft = { 0 }, joyStickPosRight = { 0 };
+        };
+        
+        
+        /**
+         * @brief Extract values from Tesla settings file
+         *
+         */
+        static void parseOverlaySettings() {
+            hlp::ini::IniData parsedConfig = hlp::ini::readOverlaySettings(ULTRAHAND_CONFIG_FILE);
+            
+            u64 decodedKeys = hlp::comboStringToKeys(parsedConfig[ULTRAHAND_PROJECT_NAME][KEY_COMBO_STR]); // CUSTOM MODIFICATION
+            if (decodedKeys)
+                tsl::cfg::launchCombo = decodedKeys;
+            
+            datetimeFormat = removeQuotes(parsedConfig[ULTRAHAND_PROJECT_NAME]["datetime_format"]); // read datetime_format
+            if (datetimeFormat.empty()) {
+                datetimeFormat = removeQuotes(DEFAULT_DT_FORMAT);
+            }
+            
+            hideClock = (removeQuotes(parsedConfig[ULTRAHAND_PROJECT_NAME]["hide_clock"]) != FALSE_STR);
+            hideBattery = (removeQuotes(parsedConfig[ULTRAHAND_PROJECT_NAME]["hide_battery"]) != FALSE_STR);
+            hidePCBTemp = (removeQuotes(parsedConfig[ULTRAHAND_PROJECT_NAME]["hide_pcb_temp"]) != FALSE_STR);
+            hideSOCTemp = (removeQuotes(parsedConfig[ULTRAHAND_PROJECT_NAME]["hide_soc_temp"]) != FALSE_STR);
+            
+        }
+
+        /**
+         * @brief Update and save launch combo keys
+         *
+         * @param keys the new combo keys
+         */
+        [[maybe_unused]] static void updateCombo(u64 keys) {
+            tsl::cfg::launchCombo = keys;
+            hlp::ini::updateOverlaySettings({
+                { TESLA_STR, { // CUSTOM MODIFICATION
+                    { KEY_COMBO_STR, tsl::hlp::keysToComboString(keys) }
+                }}
+            }, TESLA_CONFIG_FILE);
+            hlp::ini::updateOverlaySettings({
+                { ULTRAHAND_PROJECT_NAME, { // CUSTOM MODIFICATION
+                    { KEY_COMBO_STR, tsl::hlp::keysToComboString(keys) }
+                }}
+            }, ULTRAHAND_CONFIG_FILE);
+        }
+        
+        /**
+         * @brief Background event polling loop thread
+         *
+         * @param args Used to pass in a pointer to a \ref SharedThreadData struct
+         */
+        static void backgroundEventPoller(void *args) {
+            SharedThreadData *shData = static_cast<SharedThreadData*>(args);
+            
+            // To prevent focus glitchout, close the overlay immediately when the home button gets pressed
+            Event homeButtonPressEvent = {};
+            hidsysAcquireHomeButtonEventHandle(&homeButtonPressEvent, false);
+            eventClear(&homeButtonPressEvent);
+            hlp::ScopeGuard homeButtonEventGuard([&] { eventClose(&homeButtonPressEvent); });
+            
+            // To prevent focus glitchout, close the overlay immediately when the power button gets pressed
+            Event powerButtonPressEvent = {};
+            hidsysAcquireSleepButtonEventHandle(&powerButtonPressEvent, false);
+            eventClear(&powerButtonPressEvent);
+            hlp::ScopeGuard powerButtonEventGuard([&] { eventClose(&powerButtonPressEvent); });
+            
+            // For handling screenshots color alpha
+            Event captureButtonPressEvent = {};
+            hidsysAcquireCaptureButtonEventHandle(&captureButtonPressEvent, false);
+            eventClear(&captureButtonPressEvent);
+            hlp::ScopeGuard captureButtonEventGuard([&] { eventClose(&captureButtonPressEvent); });
+
+            // Parse Tesla settings
+            impl::parseOverlaySettings();
+            
+            // Configure input to take all controllers and up to 8
+            padConfigureInput(8, HidNpadStyleSet_NpadStandard | HidNpadStyleTag_NpadSystemExt);
+            
+            // Initialize pad
+            PadState pad;
+            padInitializeAny(&pad);
+            
+            // Initialize touch screen
+            hidInitializeTouchScreen();
+            
+            // Drop all inputs from the previous overlay
+            padUpdate(&pad);
+            
+            enum WaiterObject {
+                WaiterObject_HomeButton,
+                WaiterObject_PowerButton,
+                WaiterObject_CaptureButton,
+                WaiterObject_Count
+            };
+            
+            // Construct waiter
+            Waiter objects[3] = {
+                [WaiterObject_HomeButton] = waiterForEvent(&homeButtonPressEvent),
+                [WaiterObject_PowerButton] = waiterForEvent(&powerButtonPressEvent),
+                [WaiterObject_CaptureButton] = waiterForEvent(&captureButtonPressEvent),
+            };
+            
+            while (shData->running) {
+                // Scan for input changes
+                padUpdate(&pad);
+                
+                // Read in HID values
+                {
+                    std::scoped_lock lock(shData->dataMutex);
+                    
+                    shData->keysDown = padGetButtonsDown(&pad);
+                    shData->keysHeld = padGetButtons(&pad);
+                    shData->joyStickPosLeft  = padGetStickPos(&pad, 0);
+                    shData->joyStickPosRight = padGetStickPos(&pad, 1);
+                    
+                    // Read in touch positions
+                    if (hidGetTouchScreenStates(&shData->touchState, 1) == 0)
+                        shData->touchState = { 0 };
+                    
+                    if (updateMenuCombos) {  // CUSTOM MODIFICATION
+                        if ((shData->keysHeld & tsl::cfg::launchCombo2) == tsl::cfg::launchCombo2) {
+                            tsl::cfg::launchCombo = tsl::cfg::launchCombo2;
+                            setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, KEY_COMBO_STR, TESLA_COMBO_STR);
+                            setIniFileValue(TESLA_CONFIG_INI_PATH, TESLA_STR, KEY_COMBO_STR, TESLA_COMBO_STR);
+                            eventFire(&shData->comboEvent);
+                            updateMenuCombos = false;
+                        }
+                    }
+                    
+                    if ((((shData->keysHeld & tsl::cfg::launchCombo) == tsl::cfg::launchCombo) && shData->keysDown & tsl::cfg::launchCombo)) {
+                        if (updateMenuCombos) {
+                            setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, KEY_COMBO_STR, ULTRAHAND_COMBO_STR);
+                            setIniFileValue(TESLA_CONFIG_INI_PATH, TESLA_STR, KEY_COMBO_STR, ULTRAHAND_COMBO_STR);
+                            updateMenuCombos = false;
+                        }
+                        
+                        if (shData->overlayOpen) {
+                            tsl::Overlay::get()->hide();
+                            shData->overlayOpen = false;
+                        }
+                        else {
+                            eventFire(&shData->comboEvent);
+                        }
+                    }
+                    
+                    shData->keysDownPending |= shData->keysDown;
+                }
+                
+                //20 ms
+                s32 idx = 0;
+                Result rc = waitObjects(&idx, objects, WaiterObject_Count, 20'000'000ul);
+                if (R_SUCCEEDED(rc)) {
+                    if (idx == WaiterObject_HomeButton || idx == WaiterObject_PowerButton) { // Changed condition to exclude capture button
+                        if (shData->overlayOpen) {
+                            tsl::Overlay::get()->hide();
+                            shData->overlayOpen = false;
+                        }
+                    }
+                    
+                    switch (idx) {
+                        case WaiterObject_HomeButton:
+                            eventClear(&homeButtonPressEvent);
+                            break;
+                        case WaiterObject_PowerButton:
+                            eventClear(&powerButtonPressEvent);
+
+                            // Perform any necessary cleanup
+                            hidExit();
+
+                            // Reinitialize resources
+                            ASSERT_FATAL(hidInitialize()); // Reinitialize HID to reset states
+                            padInitializeAny(&pad);
+                            hidInitializeTouchScreen();
+                            padUpdate(&pad);
+                            
+                            break;
+                        case WaiterObject_CaptureButton:
+                            disableTransparency = true;
+                            eventClear(&captureButtonPressEvent);
+                            svcSleepThread(300'000'000);
+                            disableTransparency = false;
+                            break;
+                    }
+                } else if (rc != KERNELRESULT(TimedOut)) {
+                    ASSERT_FATAL(rc);
+                }
+            }
+        }
     }
-};
+    
+    /**
+     * @brief Creates a new Gui and changes to it
+     *
+     * @tparam G Gui to create
+     * @tparam Args Arguments to pass to the Gui
+     * @param args Arguments to pass to the Gui
+     * @return Reference to the newly created Gui
+     */
+    template<typename G, typename ...Args>
+    std::unique_ptr<tsl::Gui>& changeTo(Args&&... args) {
+        return Overlay::get()->changeTo<G, Args...>(std::forward<Args>(args)...);
+    }
+    
+    /**
+     * @brief Pops the top Gui from the stack and goes back to the last one
+     * @note The Overlay gets closed once there are no more Guis on the stack
+     */
+    static void goBack() {
+        Overlay::get()->goBack();
+    }
+    
+    static void pop() {
+        Overlay::get()->pop();
+    }
 
 
-/**
- * @brief The entry point of the application.
- *
- * This function serves as the entry point for the application. It takes command-line arguments,
- * initializes necessary services, and starts the main loop of the overlay. The `argc` parameter
- * represents the number of command-line arguments, and `argv` is an array of C-style strings
- * containing the actual arguments.
- *
- * @param argc The number of command-line arguments.
- * @param argv An array of C-style strings representing command-line arguments.
- * @return The application's exit code.
- */
-int main(int argc, char* argv[]) {
-    return tsl::loop<Overlay, tsl::impl::LaunchFlags::None>(argc, argv);
+    static void setNextOverlay(const std::string& ovlPath, std::string origArgs) {
+        // std::string args = std::filesystem::path(ovlPath).filename();
+        std::string args = getNameFromPath(ovlPath); // CUSTOM MODIFICATION
+        args += " " + origArgs;
+    
+        // Check if "--skipCombo" is already in origArgs
+        if (origArgs.find("--skipCombo") == std::string::npos) {
+            args += " --skipCombo";
+        }
+    
+        envSetNextLoad(ovlPath.c_str(), args.c_str());
+    }
+    
+    
+    
+    /**
+     * @brief libtesla's main function
+     * @note Call it directly from main passing in argc and argv and returning it e.g `return tsl::loop<OverlayTest>(argc, argv);`
+     *
+     * @tparam TOverlay Your overlay class
+     * @tparam launchFlags \ref LaunchFlags
+     * @param argc argc
+     * @param argv argv
+     * @return int result
+     */
+    template<typename TOverlay, impl::LaunchFlags launchFlags>
+    static inline int loop(int argc, char** argv) {
+        static_assert(std::is_base_of_v<tsl::Overlay, TOverlay>, "tsl::loop expects a type derived from tsl::Overlay");
+        
+        // CUSTOM SECTION START
+        // Argument parsing
+        bool skipCombo = false;
+        for (u8 arg = 0; arg < argc; arg++) {
+            if ((strcasecmp(argv[arg], "--skipCombo") == 0)) {
+                skipCombo = true;
+                //logMessage("Skip combo is present.");
+                firstBoot = false;
+                break;
+            }
+            //std::memset(argv[arg], 0, std::strlen(argv[arg]));
+        }
+
+        impl::SharedThreadData shData;
+        
+        shData.running = true;
+        
+        Thread backgroundThread;
+        threadCreate(&backgroundThread, impl::backgroundEventPoller, &shData, nullptr, 0x1000, 0x2c, -2);
+        threadStart(&backgroundThread);
+        
+        eventCreate(&shData.comboEvent, false);
+        
+        auto& overlay = tsl::Overlay::s_overlayInstance;
+        overlay = new TOverlay();
+        overlay->m_closeOnExit = (u8(launchFlags) & u8(impl::LaunchFlags::CloseOnExit)) == u8(impl::LaunchFlags::CloseOnExit);
+        
+        tsl::hlp::doWithSmSession([&overlay]{ overlay->initServices(); });
+        overlay->initScreen();
+        overlay->changeTo(overlay->loadInitialGui());
+
+        
+        
+        
+        bool inOverlay = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_OVERLAY_STR) != FALSE_STR);
+        if (inOverlay && skipCombo) {
+            setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_OVERLAY_STR, FALSE_STR);
+            eventFire(&shData.comboEvent);
+        }
+
+        overlay->disableNextAnimation();
+        
+        while (shData.running) {
+            
+            eventWait(&shData.comboEvent, UINT64_MAX);
+            eventClear(&shData.comboEvent);
+            shData.overlayOpen = true;
+            
+            
+            hlp::requestForeground(true);
+            
+            overlay->show();
+            overlay->clearScreen();
+            
+            while (shData.running) {
+                overlay->loop();
+                {
+                    std::scoped_lock lock(shData.dataMutex);
+                    if (!overlay->fadeAnimationPlaying()) {
+                        overlay->handleInput(shData.keysDownPending, shData.keysHeld, shData.touchState.count, shData.touchState.touches[0], shData.joyStickPosLeft, shData.joyStickPosRight);
+                    }
+                    shData.keysDownPending = 0;
+                }
+                
+                if (overlay->shouldHide()) {
+                    break;
+                }
+                
+                if (overlay->shouldClose())
+                    shData.running = false;
+            }
+            
+            overlay->clearScreen();
+            overlay->resetFlags();
+            
+            hlp::requestForeground(false);
+            
+            shData.overlayOpen = false;
+
+            eventClear(&shData.comboEvent);
+        }
+        
+        eventClose(&shData.comboEvent);
+        
+        threadWaitForExit(&backgroundThread);
+        threadClose(&backgroundThread);
+        
+        overlay->exitScreen();
+        overlay->exitServices();
+        
+        delete overlay;
+        
+        return 0;
+    }
+
 }
+
+std::unordered_map<std::string, std::string> createButtonCharMap() {
+    std::unordered_map<std::string, std::string> map;
+    for (const auto& keyInfo : tsl::impl::KEYS_INFO) {
+        map[keyInfo.name] = keyInfo.glyph;
+    }
+    return map;
+}
+
+std::unordered_map<std::string, std::string> buttonCharMap = createButtonCharMap();
+
+
+std::string convertComboToUnicode(const std::string& combo) {
+    // Check if there is a '+' in the input string
+    if (combo.find('+') == std::string::npos) {
+        // If no '+' is found, check if the entire combo is a single key that maps to Unicode
+        //auto it = buttonCharMap.find(trim(combo));  // Trim the input in case of leading/trailing spaces
+        //if (it != buttonCharMap.end()) {
+        //    return it->second;
+        //}
+
+        // If no mapping is found, return the original string
+        return combo;
+    }
+
+    std::istringstream iss(combo);
+    std::string token;
+    std::string unicodeCombo;
+    bool modified = false;
+
+    while (std::getline(iss, token, '+')) {
+        std::string trimmedToken = trim(token);
+        auto it = buttonCharMap.find(trimmedToken);
+
+        if (it != buttonCharMap.end()) {
+            unicodeCombo += it->second + "+";
+            modified = true;
+        } else {
+            unicodeCombo += trimmedToken + "+";
+        }
+    }
+
+    if (!unicodeCombo.empty()) {
+        unicodeCombo.pop_back();  // Remove the trailing '+'
+    }
+
+    // If no modification was made, return the original combo
+    return modified ? unicodeCombo : combo;
+}
+
+
+
+#ifdef TESLA_INIT_IMPL
+
+namespace tsl::cfg {
+    
+    u16 LayerWidth  = 0;
+    u16 LayerHeight = 0;
+    u16 LayerPosX   = 0;
+    u16 LayerPosY   = 0;
+    u16 FramebufferWidth  = 0;
+    u16 FramebufferHeight = 0;
+    u64 launchCombo = KEY_ZL | KEY_ZR | KEY_DDOWN;
+    u64 launchCombo2 = KEY_L | KEY_DDOWN | KEY_RSTICK;
+}
+extern "C" void __libnx_init_time(void);
+
+extern "C" {
+    
+    u32 __nx_applet_type = AppletType_None;
+    u32 __nx_fs_num_sessions = 1;
+    u32  __nx_nv_transfermem_size = 0x15000;
+    ViLayerFlags __nx_vi_stray_layer_flags = (ViLayerFlags)0;
+    
+    /**
+     * @brief libtesla service initializing function to override libnx's
+     *
+     */
+    void __appInit(void) {
+        tsl::hlp::doWithSmSession([]{
+            
+            ASSERT_FATAL(fsInitialize());
+            ASSERT_FATAL(hidInitialize());                          // Controller inputs and Touch
+            if (hosversionAtLeast(16,0,0)) {
+                ASSERT_FATAL(plInitialize(PlServiceType_User));     // Font data. Use pl:u for 16.0.0+
+            } else {
+                ASSERT_FATAL(plInitialize(PlServiceType_System));   // Use pl:s for 15.0.1 and below to prevent qlaunch/overlaydisp session exhaustion
+            }
+            ASSERT_FATAL(pmdmntInitialize());                       // PID querying
+            ASSERT_FATAL(hidsysInitialize());                       // Focus control
+            ASSERT_FATAL(setsysInitialize());                       // Settings querying
+            
+
+
+            ASSERT_FATAL(timeInitialize()); // CUSTOM MODIFICATION
+            __libnx_init_time();            // CUSTOM MODIFICATION
+            timeExit(); // CUSTOM MODIFICATION
+            powerInit();
+            thermalstatusInit();
+        });
+    }
+    
+    /**
+     * @brief libtesla service exiting function to override libnx's
+     *
+     */
+    void __appExit(void) {
+        thermalstatusExit();
+        powerExit(); // CUSTOM MODIFICATION
+        fsExit();
+        hidExit();
+        plExit();
+        pmdmntExit();
+        hidsysExit();
+        setsysExit();
+    }
+
+}
+
+#endif
