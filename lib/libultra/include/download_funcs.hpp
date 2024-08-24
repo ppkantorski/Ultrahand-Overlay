@@ -125,7 +125,10 @@ bool downloadFile(const std::string& url, const std::string& toDestination) {
         createDirectory(destination.substr(0, destination.find_last_of('/')));
     }
 
-
+    if (!isDirectory(DOWNLOADS_PATH)) {
+        createDirectory(DOWNLOADS_PATH);
+    }
+    
     std::string tempFilePath = DOWNLOADS_PATH + getFileName(destination) + ".tmp";
 
     std::ofstream file(tempFilePath, std::ios::binary);
