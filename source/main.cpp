@@ -725,17 +725,18 @@ public:
             overlayHeader.clear();
 
         } else if (dropdownSelection == "systemMenu") {
+            char ramString[50]; // Buffer to hold the final string
+            
+            // Get system information
             svcGetSystemInfo(&RAM_Used_system_u, 1, INVALID_HANDLE, 2);
             svcGetSystemInfo(&RAM_Total_system_u, 0, INVALID_HANDLE, 2);
             
-            float RAM_Total_system_f = (float)RAM_Total_system_u / 1024 / 1024;
-            float RAM_Used_system_f = (float)RAM_Used_system_u / 1024 / 1024;
+            // Convert RAM usage and format string
+            //float ramTotalMB = static_cast<float>(RAM_Total_system_u) / 1024 / 1024;
+            //float ramUsedMB = static_cast<float>(RAM_Used_system_u) / 1024 / 1024;
+            //float ramFreeMB = static_cast<float>(RAM_Total_system_u)/1024/1024 - static_cast<float>(RAM_Used_system_u)/1024/1024 - 8.0f;
             
-            // Convert RAM usage to strings
-            std::ostringstream ramStream;
-            ramStream << std::fixed << std::setprecision(2)
-                      << RAM_Total_system_f - RAM_Used_system_f - 8.0 << " MB " +FREE;
-            std::string ramString = ramStream.str();
+            snprintf(ramString, sizeof(ramString), "%.2f MB %s", static_cast<float>(RAM_Total_system_u)/1024/1024 - static_cast<float>(RAM_Used_system_u)/1024/1024 - 8.0f, FREE.c_str());
 
             list->addItem(new tsl::elm::CategoryHeader(SYSTEM));
             std::vector<std::vector<std::string>> tableData = {
