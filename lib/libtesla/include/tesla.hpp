@@ -264,6 +264,7 @@ static std::string SOFTWARE_UPDATE = "Software Update";
 static std::string UPDATE_ULTRAHAND = "Update Ultrahand";
 static std::string UPDATE_LANGUAGES = "Update Languages";
 static std::string SYSTEM = "System";
+static std::string FIRMWARE = "Firmware";
 static std::string NOTICE = "Notice";
 static std::string UTILIZES = "Utilizes";
 static std::string FREE = "free";
@@ -394,6 +395,7 @@ void reinitializeLangVars() {
     UPDATE_ULTRAHAND = "Update Ultrahand";
     UPDATE_LANGUAGES = "Update Languages";
     SYSTEM = "System";
+    FIRMWARE = "Firmware";
     NOTICE = "Notice";
     UTILIZES = "Utilizes";
     FREE = "free";
@@ -539,6 +541,7 @@ void parseLanguage(std::string langFile) {
         {"UPDATE_ULTRAHAND", &UPDATE_ULTRAHAND},
         {"UPDATE_LANGUAGES", &UPDATE_LANGUAGES},
         {"SYSTEM", &SYSTEM},
+        {"FIRMWARE", &FIRMWARE},
         {"NOTICE", &NOTICE},
         {"UTILIZES", &UTILIZES},
         {"FREE", &FREE},
