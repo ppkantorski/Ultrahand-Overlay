@@ -305,7 +305,7 @@ std::tuple<Result, std::string, std::string> getOverlayInfo(const std::string& f
 }
 
 void drawTable(std::unique_ptr<tsl::elm::List>& list, const std::vector<std::string>& sectionLines, const std::vector<std::string>& infoLines,
-    const size_t& columnOffset = 120, const size_t& startGap = 20, const size_t& endGap = 3, const size_t& newlineGap = 0,
+    const size_t& columnOffset = 160, const size_t& startGap = 20, const size_t& endGap = 3, const size_t& newlineGap = 0,
     const std::string& tableSectionTextColor = DEFAULT_STR, const std::string& tableInfoTextColor = DEFAULT_STR, const std::string& alignment = LEFT_STR, const bool& hideTableBackground = false, const bool& useHeaderIndent = false) {
 
     size_t lineHeight = 16;
@@ -379,7 +379,7 @@ void drawTable(std::unique_ptr<tsl::elm::List>& list, const std::vector<std::str
             if (alignment == LEFT_STR) {
                 infoXOffsets[i] = columnOffset;
             } else if (alignment == RIGHT_STR) {
-                infoXOffsets[i] = xMax - infoStringWidths[i];
+                infoXOffsets[i] = xMax - infoStringWidths[i] + (columnOffset- 160);
             } else if (alignment == CENTER_STR) {
                 infoXOffsets[i] = columnOffset + (xMax - infoStringWidths[i]) / 2;
             }
@@ -388,10 +388,10 @@ void drawTable(std::unique_ptr<tsl::elm::List>& list, const std::vector<std::str
             renderer->drawRect(x-2, y+2, 3, 23, renderer->a(tsl::headerSeparatorColor));
 
         for (size_t i = 0; i < sectionLines.size(); ++i) {
-            renderer->drawString(sectionLines[i].c_str(), false, x + 12, y + yOffsets[i], fontSize, renderer->a((tableSectionTextColor == DEFAULT_STR) ? sectionTextColor : alternateSectionTextColor));
+            renderer->drawString(sectionLines[i].c_str(), false, x + 12+1, y + yOffsets[i], fontSize, renderer->a((tableSectionTextColor == DEFAULT_STR) ? sectionTextColor : alternateSectionTextColor));
             // Check if infoLines[i] is "null" and replace it with UNAVAILABLE_SELECTION if true
             std::string infoText = (infoLines[i].find(NULL_STR) != std::string::npos) ? UNAVAILABLE_SELECTION : infoLines[i];
-            renderer->drawString(infoText.c_str(), false, x + infoXOffsets[i], y + yOffsets[i], fontSize, renderer->a((tableInfoTextColor == DEFAULT_STR) ? infoTextColor : alternateInfoTextColor));
+            renderer->drawString(infoText.c_str(), false, x + infoXOffsets[i]+1, y + yOffsets[i], fontSize, renderer->a((tableInfoTextColor == DEFAULT_STR) ? infoTextColor : alternateInfoTextColor));
         }
     }, hideTableBackground, endGap), totalHeight);
 }
@@ -732,25 +732,25 @@ bool isDangerousCombination(const std::string& patternPath) {
  *
  * This function reads and parses options from an INI file, organizing them by section.
  *
- * @param configIniPath The path to the INI file.
+ * @param packageIniPath The path to the INI file.
  * @param makeConfig A flag indicating whether to create a config if it doesn't exist.
  * @return A vector containing pairs of section names and their associated key-value pairs.
  */
-std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadOptionsFromIni(const std::string& configIniPath, bool makeConfig = false) {
-    std::ifstream configFile(configIniPath);
-    if (!configFile && makeConfig) {
-        std::ofstream configFileOut(configIniPath);
-        if (configFileOut) {
+std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadOptionsFromIni(const std::string& packageIniPath, bool makeConfig = false) {
+    std::ifstream packageFile(packageIniPath);
+    if (!packageFile && makeConfig) {
+        std::ofstream packageFileOut(packageIniPath);
+        if (packageFileOut) {
             //configFileOut << "[Reboot]\nreboot\n\n[Shutdown]\nshutdown\n";
             //configFileOut << "[*Reboot To]\nini_file_source /bootloader/hekate_ipl.ini\nfilter config\nreboot boot '{ini_file_source(*)}'\n\n[Shutdown]\nshutdown\n";
-            configFileOut << "[*Reboot To]\n[*Boot Entry]\nini_file_source /bootloader/hekate_ipl.ini\nfilter config\nreboot boot '{ini_file_source(*)}'\n[Hekate]\nreboot HEKATE\n[Hekate UMS]\nreboot UMS\n\n[Commands]\n[Shutdown]\nshutdown\n";
+            packageFileOut << "[*Reboot To]\n[*Boot Entry]\nini_file_source /bootloader/hekate_ipl.ini\nfilter config\nreboot boot '{ini_file_source(*)}'\n[Hekate]\nreboot HEKATE\n[Hekate UMS]\nreboot UMS\n\n[Commands]\n[Shutdown]\nshutdown\n";
             //configFileOut << "[*Reboot]\n[HOS Reboot]\nreboot\n[Hekate Reboot]\nreboot HEKATE\n[UMS Reboot]\nreboot UMS\n\n[Commands]\n[Shutdown]\nshutdown";
-            configFileOut.close();
+            packageFileOut.close();
         }
-        configFile.open(configIniPath);  // Reopen the newly created file
+        packageFile.open(packageIniPath);  // Reopen the newly created file
     }
 
-    if (!configFile) {
+    if (!packageFile) {
         return {}; // If file still cannot be opened, return empty vector
     }
 
@@ -761,7 +761,7 @@ std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadO
     bool isFirstEntry = true, inQuotes = false;
     std::istringstream iss, argIss; // Declare outside the loop
 
-    while (getline(configFile, line)) {
+    while (getline(packageFile, line)) {
         // Properly remove carriage returns and newlines
         line.erase(std::remove(line.begin(), line.end(), '\r'), line.end());
         line.erase(std::remove(line.begin(), line.end(), '\n'), line.end());
@@ -807,27 +807,40 @@ std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadO
 
 // Function to populate selectedItemsListOff from a JSON array based on a key
 void populateSelectedItemsList(const std::string& sourceType, const std::string& jsonStringOrPath, const std::string& jsonKey, std::vector<std::string>& selectedItemsList) {
-    std::unique_ptr<json_t, void(*)(json_t*)> jsonData(nullptr, json_decref);  // Proper deleter for JSON objects
+    // Check for empty JSON source strings
+    if (jsonStringOrPath.empty()) {
+        return;
+    }
 
+    // Use a unique_ptr to manage JSON object with appropriate deleter
+    std::unique_ptr<json_t, void(*)(json_t*)> jsonData(nullptr, json_decref);
+
+    // Convert JSON string or read from file based on the source type
     if (sourceType == JSON_STR) {
         jsonData.reset(stringToJson(jsonStringOrPath));
     } else if (sourceType == JSON_FILE_STR) {
         jsonData.reset(readJsonFromFile(jsonStringOrPath));
     }
 
+    // Early return if jsonData is null or not an array
     if (!jsonData || !json_is_array(jsonData.get())) {
-        return; // Early return if jsonData is null or not an array
+        return;
     }
 
+    // Prepare for efficient insertion
     json_t* jsonArray = jsonData.get();
-    size_t arraySize = json_array_size(jsonArray);
-    selectedItemsList.reserve(arraySize); // Preallocate memory for efficiency
+    const size_t arraySize = json_array_size(jsonArray);
+    selectedItemsList.reserve(arraySize);
 
+    // Store the key as a const char* to avoid repeated c_str() calls
+    const char* jsonKeyCStr = jsonKey.c_str();
+
+    // Iterate over the JSON array
     for (size_t i = 0; i < arraySize; ++i) {
-        json_t* item = json_array_get(jsonArray, i);
+        auto* item = json_array_get(jsonArray, i);
         if (json_is_object(item)) {
-            json_t* keyValue = json_object_get(item, jsonKey.c_str());
-            if (keyValue && json_is_string(keyValue)) {
+            auto* keyValue = json_object_get(item, jsonKeyCStr);
+            if (json_is_string(keyValue)) {
                 const char* value = json_string_value(keyValue);
                 if (value) {
                     selectedItemsList.emplace_back(value);
@@ -1131,8 +1144,8 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
 
 
 std::string getCurrentTimestamp(const std::string& format) {
-    auto now = std::chrono::system_clock::now();
-    auto now_time_t = std::chrono::system_clock::to_time_t(now);
+    //auto now = std::chrono::system_clock::now();
+    auto now_time_t = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
     std::stringstream ss;
     ss << std::put_time(std::localtime(&now_time_t), format.c_str());
     return ss.str();
@@ -1413,6 +1426,7 @@ void interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
 
         commands.erase(commands.begin()); // Remove processed command
     }
+
 }
 
 
