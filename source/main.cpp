@@ -464,7 +464,7 @@ private:
 
                 if (targetMenu == "softwareUpdateMenu") {
                     executeCommands({
-                        {"download", LATEST_RELEASE_INFO_URL, SETTINGS_PATH + "latest_release.json"}
+                        {"download", LATEST_RELEASE_INFO_URL, SETTINGS_PATH}
                     });
                 } else if (targetMenu == "themeMenu") {
                     if (!isFileOrDirectory(THEMES_PATH+"ultra.ini")) {
@@ -583,6 +583,40 @@ private:
         list->addItem(listItem.release());
     }
 
+    // Helper function to create toggle list items
+    auto createToggleListItem(std::unique_ptr<tsl::elm::List>& list, const std::string& title, bool& state, const std::string& iniKey, bool invertLogic = false, bool useReloadMenu2 = false) {
+        auto toggleListItem = std::make_unique<tsl::elm::ToggleListItem>(title, invertLogic ? !state : state, ON, OFF);
+        toggleListItem->setStateChangedListener([&, listItemRaw = toggleListItem.get(), iniKey, invertLogic, useReloadMenu2](bool newState) {
+            tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemRaw, tsl::FocusDirection::None);
+            setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, iniKey, newState ? (invertLogic ? FALSE_STR : TRUE_STR) : (invertLogic ? TRUE_STR : FALSE_STR));
+            if ((invertLogic ? !state : state) != newState) {
+                state = invertLogic ? !newState : newState;
+                if (iniKey == "clean_version_labels") {
+                    versionLabel = APP_VERSION + std::string("   (") + loaderTitle + (state ? " v" : " ") + cleanVersionLabel(loaderInfo) + std::string(")");
+                    reinitializeVersionLabels();
+                }
+                else if (iniKey == "memory_expansion") {
+                    if (!isFileOrDirectory(EXPANSION_PATH+"nx-ovlloader.zip"))
+                        downloadFile(NX_OVLLOADER_ZIP_URL, EXPANSION_PATH);
+                    if (!isFileOrDirectory(EXPANSION_PATH+"nx-ovlloader+.zip"))
+                        downloadFile(NX_OVLLOADER_PLUS_ZIP_URL, EXPANSION_PATH);
+
+                    executeCommands({
+                        {"try:"},
+                        {"del", EXPANSION_PATH + (state ? "nx-ovlloader+/" : "nx-ovlloader/")},
+                        {"unzip", EXPANSION_PATH + (state ? "nx-ovlloader+.zip" : "nx-ovlloader.zip"),
+                         EXPANSION_PATH + (state ? "nx-ovlloader+/" : "nx-ovlloader/")},
+                        {"mv", EXPANSION_PATH + (state ? "nx-ovlloader+/" : "nx-ovlloader/"), "/"}
+                    });
+                }
+                reloadMenu = true;
+                if (useReloadMenu2) reloadMenu2 = true;
+            }
+        });
+        list->addItem(toggleListItem.release());
+    };
+
+
     
 public:
     UltrahandSettingsMenu(const std::string& selection = "") : dropdownSelection(selection) {}
@@ -593,8 +627,8 @@ public:
         inSettingsMenu = dropdownSelection.empty();
         inSubSettingsMenu = !dropdownSelection.empty();
         
-        const std::vector<std::string> defaultLanguagesRepresentation = {ENGLISH, SPANISH, FRENCH, GERMAN, JAPANESE, KOREAN, ITALIAN, DUTCH, PORTUGUESE, RUSSIAN, SIMPLIFIED_CHINESE, TRADITIONAL_CHINESE};
-        const std::vector<std::string> defaultLanguages = {"en", "es", "fr", "de", "ja", "ko", "it", "nl", "pt", "ru", "zh-cn", "zh-tw"};
+        const std::vector<std::string> defaultLanguagesRepresentation = {ENGLISH, SPANISH, FRENCH, GERMAN, JAPANESE, KOREAN, ITALIAN, DUTCH, PORTUGUESE, RUSSIAN, POLISH, SIMPLIFIED_CHINESE, TRADITIONAL_CHINESE};
+        const std::vector<std::string> defaultLanguages = {"en", "es", "fr", "de", "ja", "ko", "it", "nl", "pt", "ru", "pl", "zh-cn", "zh-tw"};
         const std::vector<std::string> defaultCombos = {"ZL+ZR+DDOWN", "ZL+ZR+DRIGHT", "ZL+ZR+DUP", "ZL+ZR+DLEFT", "L+R+DDOWN", "L+R+DRIGHT", "L+R+DUP", "L+R+DLEFT", "L+DDOWN", "R+DDOWN", "ZL+ZR+PLUS", "L+R+PLUS", "ZL+PLUS", "ZR+PLUS", "MINUS+PLUS", "LS+RS", "L+DDOWN+RS"};
         
         auto list = std::make_unique<tsl::elm::List>();
@@ -611,11 +645,21 @@ public:
             addListItem(list, KEY_COMBO, comboLabel, "keyComboMenu");
             addListItem(list, LANGUAGE, defaultLang, "languageMenu");
             addListItem(list, SOFTWARE_UPDATE, DROPDOWN_SYMBOL, "softwareUpdateMenu");
+            addListItem(list, SYSTEM, DROPDOWN_SYMBOL, "systemMenu");
+
 
             list->addItem(new tsl::elm::CategoryHeader(UI_SETTINGS));
+
+            if (expandedMemory) {
+                std::string currentWallpaper = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "current_wallpaper");
+                currentWallpaper = (currentWallpaper.empty() || currentWallpaper == OPTION_SYMBOL) ? OPTION_SYMBOL : currentWallpaper;
+                addListItem(list, WALLPAPER, currentWallpaper, "wallpaperMenu");
+            }
+
             std::string currentTheme = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "current_theme");
             currentTheme = (currentTheme.empty() || currentTheme == DEFAULT_STR) ? DEFAULT : currentTheme;
             addListItem(list, THEME, currentTheme, "themeMenu");
+
             addListItem(list, WIDGET, DROPDOWN_SYMBOL, "widgetMenu");
             addListItem(list, MISCELLANEOUS, DROPDOWN_SYMBOL, "miscMenu");
 
@@ -629,7 +673,7 @@ public:
             size_t index = 0;
             for (const auto& defaultLangMode : defaultLanguages) {
                 std::string langFile = LANG_PATH + defaultLangMode + ".json";
-                if (defaultLangMode != "en" && !isFileOrDirectory(langFile)) continue;
+                if (defaultLangMode != "en" && !isFileOrDirectory(langFile))  {index++; continue;}
                 auto listItem = std::make_unique<tsl::elm::ListItem>(defaultLanguagesRepresentation[index]);
                 listItem->setValue(defaultLangMode);
                 if (defaultLangMode == defaulLang) {
@@ -665,19 +709,7 @@ public:
                 index++;
             }
         } else if (dropdownSelection == "softwareUpdateMenu") {
-            std::string versionLabel = cleanVersionLabel(getStringFromJsonFile((SETTINGS_PATH+"latest_release.json").c_str(), "tag_name"));
-            if (!versionLabel.empty() && versionLabel != "0")
-                moveFileOrDirectory(SETTINGS_PATH+"latest_release.json", SETTINGS_PATH+"release.json");
-            else
-                deleteFileOrDirectory(SETTINGS_PATH+"latest_release.json");
-            
-            versionLabel = cleanVersionLabel(getStringFromJsonFile((SETTINGS_PATH+"release.json").c_str(), "tag_name"));
-
-            if (!versionLabel.empty() && versionLabel != "0")
-                setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "latest_version", versionLabel);
-            else {
-                versionLabel = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "latest_version");
-            }
+            std::string versionLabel = cleanVersionLabel(parseValueFromIniSection((SETTINGS_PATH+"RELEASE.ini").c_str(), "Release Info", "latest_version"));
 
             list->addItem(new tsl::elm::CategoryHeader(SOFTWARE_UPDATE));
             addUpdateButton(list, UPDATE_ULTRAHAND, ULTRAHAND_REPO_URL + "releases/latest/download/ovlmenu.ovl", "/config/ultrahand/downloads/ovlmenu.ovl", "/switch/.overlays/ovlmenu.ovl", versionLabel);
@@ -692,6 +724,37 @@ public:
             addPackageInfo(list, overlayHeader, OVERLAY_STR);
             overlayHeader.clear();
 
+        } else if (dropdownSelection == "systemMenu") {
+            svcGetSystemInfo(&RAM_Used_system_u, 1, INVALID_HANDLE, 2);
+            svcGetSystemInfo(&RAM_Total_system_u, 0, INVALID_HANDLE, 2);
+            
+            float RAM_Total_system_f = (float)RAM_Total_system_u / 1024 / 1024;
+            float RAM_Used_system_f = (float)RAM_Used_system_u / 1024 / 1024;
+            
+            // Convert RAM usage to strings
+            std::ostringstream ramStream;
+            ramStream << std::fixed << std::setprecision(2)
+                      << RAM_Total_system_f - RAM_Used_system_f - 8.0 << " MB " +FREE;
+            std::string ramString = ramStream.str();
+
+            list->addItem(new tsl::elm::CategoryHeader(SYSTEM));
+            std::vector<std::vector<std::string>> tableData = {
+                {NOTICE, "", UTILIZES+" 2 MB ("+ramString+")" } // Each inner vector represents a row in the table.
+            };
+            addTable(list, tableData, "", 166, 14, 14, 0, DEFAULT_STR, DEFAULT_STR, RIGHT_STR, true);
+
+            //tableData = {
+            //    { "", "", "" } // Each inner vector represents a row in the table.
+            //};
+            //addTable(list, tableData, "", 160, 20, 3, 0, DEFAULT_STR, DEFAULT_STR, RIGHT_STR, true);
+
+            useMemoryExpansion = ((loaderTitle == "nx-ovlloader+") || parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "memory_expansion") == TRUE_STR);
+            createToggleListItem(list, MEMORY_EXPANSION, useMemoryExpansion, "memory_expansion", false, true);
+
+            //tableData = {
+            //    { "", "", "" } // Each inner vector represents a row in the table.
+            //};
+            //addTable(list, tableData, "", 160, 20, 6, 0, DEFAULT_STR, DEFAULT_STR, RIGHT_STR, true);
         } else if (dropdownSelection == "themeMenu") {
             list->addItem(new tsl::elm::CategoryHeader(THEME));
             std::string currentTheme = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "current_theme");
@@ -745,13 +808,91 @@ public:
                     }
                     if (keys & KEY_A) {
                         setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "current_theme", themeName);
-                        deleteFileOrDirectory(THEME_CONFIG_INI_PATH);
+                        //deleteFileOrDirectory(THEME_CONFIG_INI_PATH);
                         copyFileOrDirectory(themeFile, THEME_CONFIG_INI_PATH);
                         initializeTheme();
                         tsl::initializeThemeVars();
                         reloadMenu = reloadMenu2 = true;
                         lastSelectedListItem->setValue("");
                         selectedListItem->setValue(themeName);
+                        listItemRaw->setValue(CHECKMARK_SYMBOL);
+                        lastSelectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItemRaw, [](auto*){});
+                        shiftItemFocus(listItemRaw);
+                        simulatedSelectComplete = true;
+                        lastSelectedListItem->triggerClickAnimation();
+                        return true;
+                    }
+                    return false;
+                });
+                list->addItem(listItem.release());
+            }
+        } else if (dropdownSelection == "wallpaperMenu") {
+            list->addItem(new tsl::elm::CategoryHeader(WALLPAPER));
+            std::string currentWallpaper = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "current_wallpaper");
+            currentWallpaper = currentWallpaper.empty() ? OPTION_SYMBOL : currentWallpaper;
+
+            auto listItem = std::make_unique<tsl::elm::ListItem>(OPTION_SYMBOL);
+            if (currentWallpaper == OPTION_SYMBOL) {
+                listItem->setValue(CHECKMARK_SYMBOL);
+                lastSelectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){});
+            }
+
+            listItem->setClickListener([listItemRaw = listItem.get()](uint64_t keys) {
+                if (runningInterpreter.load(std::memory_order_acquire)) return false;
+                if (simulatedSelect && !simulatedSelectComplete) {
+                    keys |= KEY_A;
+                    simulatedSelect = false;
+                }
+                if (keys & KEY_A) {
+                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "current_wallpaper", "");
+                    deleteFileOrDirectory(WALLPAPER_PATH);
+                    refreshWallpaper.store(true, std::memory_order_release);
+                    //deleteFileOrDirectory(THEME_CONFIG_INI_PATH);
+                    //if (isFileOrDirectory(defaultTheme)) copyFileOrDirectory(defaultTheme, THEME_CONFIG_INI_PATH);
+                    //else initializeTheme();
+                    //tsl::initializeThemeVars();
+                    reloadMenu = reloadMenu2 = true;
+                    lastSelectedListItem->setValue("");
+                    selectedListItem->setValue(OPTION_SYMBOL);
+                    listItemRaw->setValue(CHECKMARK_SYMBOL);
+                    lastSelectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItemRaw, [](auto*){});
+                    shiftItemFocus(listItemRaw);
+                    simulatedSelectComplete = true;
+                    lastSelectedListItem->triggerClickAnimation();
+                    return true;
+                }
+                return false;
+            });
+            list->addItem(listItem.release());
+
+            std::vector<std::string> wallpaperFilesList = getFilesListByWildcards(WALLPAPERS_PATH + "*.rgba");
+            std::sort(wallpaperFilesList.begin(), wallpaperFilesList.end());
+
+            for (const auto& wallpaperFile : wallpaperFilesList) {
+                std::string wallpaperName = dropExtension(getNameFromPath(wallpaperFile));
+                if (wallpaperName == DEFAULT_STR) continue;
+                listItem = std::make_unique<tsl::elm::ListItem>(wallpaperName);
+                if (wallpaperName == currentWallpaper) {
+                    listItem->setValue(CHECKMARK_SYMBOL);
+                    lastSelectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){});
+                }
+                listItem->setClickListener([wallpaperName, wallpaperFile, listItemRaw = listItem.get()](uint64_t keys) {
+                    if (runningInterpreter.load(std::memory_order_acquire)) return false;
+                    if (simulatedSelect && !simulatedSelectComplete) {
+                        keys |= KEY_A;
+                        simulatedSelect = false;
+                    }
+                    if (keys & KEY_A) {
+                        setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "current_wallpaper", wallpaperName);
+                        //deleteFileOrDirectory(THEME_CONFIG_INI_PATH);
+                        copyFileOrDirectory(wallpaperFile, WALLPAPER_PATH);
+                        refreshWallpaper = true;
+                        //clearWallpaperData();
+                        //initializeTheme();
+                        //tsl::initializeThemeVars();
+                        reloadMenu = reloadMenu2 = true;
+                        lastSelectedListItem->setValue("");
+                        selectedListItem->setValue(wallpaperName);
                         listItemRaw->setValue(CHECKMARK_SYMBOL);
                         lastSelectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItemRaw, [](auto*){});
                         shiftItemFocus(listItemRaw);
@@ -772,45 +913,36 @@ public:
 
         } else if (dropdownSelection == "miscMenu") {
             list->addItem(new tsl::elm::CategoryHeader(MENU_ITEMS));
-        
-            // Helper function to create toggle list items
-            auto createToggleListItem = [&](const std::string& title, bool& state, const std::string& iniKey, bool invertLogic = false, bool useReloadMenu2 = false) {
-                auto toggleListItem = std::make_unique<tsl::elm::ToggleListItem>(title, invertLogic ? !state : state, ON, OFF);
-                toggleListItem->setStateChangedListener([&, listItemRaw = toggleListItem.get(), iniKey, invertLogic, useReloadMenu2](bool newState) {
-                    tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemRaw, tsl::FocusDirection::None);
-                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, iniKey, newState ? (invertLogic ? FALSE_STR : TRUE_STR) : (invertLogic ? TRUE_STR : FALSE_STR));
-                    if ((invertLogic ? !state : state) != newState) {
-                        state = invertLogic ? !newState : newState;
-                        if (iniKey == "clean_version_labels") {
-                            versionLabel = APP_VERSION + std::string("   (") + extractTitle(loaderInfo) + (state ? " v" : " ") + cleanVersionLabel(loaderInfo) + std::string(")");
-                            reinitializeVersionLabels();
-                        }
-                        reloadMenu = true;
-                        if (useReloadMenu2) reloadMenu2 = true;
-                    }
-                });
-                list->addItem(toggleListItem.release());
-            };
-        
+            
             hideUserGuide = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_user_guide") == TRUE_STR);
-            createToggleListItem(USER_GUIDE, hideUserGuide, "hide_user_guide", true);
-        
+            createToggleListItem(list, USER_GUIDE, hideUserGuide, "hide_user_guide", true);
+            
             cleanVersionLabels = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "clean_version_labels") == TRUE_STR);
-            createToggleListItem(CLEAN_VERSIONS, cleanVersionLabels, "clean_version_labels", false, true);
-        
+            createToggleListItem(list, CLEAN_VERSIONS, cleanVersionLabels, "clean_version_labels", false, true);
+            
             hideOverlayVersions = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_overlay_versions") == TRUE_STR);
-            createToggleListItem(OVERLAY_VERSIONS, hideOverlayVersions, "hide_overlay_versions", true);
-        
+            createToggleListItem(list, OVERLAY_VERSIONS, hideOverlayVersions, "hide_overlay_versions", true);
+            
             hidePackageVersions = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_package_versions") == TRUE_STR);
-            createToggleListItem(PACKAGE_VERSIONS, hidePackageVersions, "hide_package_versions", true);
-        
+            createToggleListItem(list, PACKAGE_VERSIONS, hidePackageVersions, "hide_package_versions", true);
+            
             list->addItem(new tsl::elm::CategoryHeader(EFFECTS));
-        
+
+            //std::vector<std::vector<std::string>> tableData = {
+            //    { "", "", "" } // Each inner vector represents a row in the table.
+            //};
+            //addTable(list, tableData, "", 160, 20, 3, 0, DEFAULT_STR, DEFAULT_STR, RIGHT_STR, true);
+
+            //if (expandedMemory) {
+            //    useCustomWallpaper = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "custom_wallpaper") == TRUE_STR);
+            //    createToggleListItem("Custom Wallpaper", useCustomWallpaper, "custom_wallpaper", false, true);
+            //}
+
             useOpaqueScreenshots = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "opaque_screenshots") == TRUE_STR);
-            createToggleListItem(OPAQUE_SCREENSHOTS, useOpaqueScreenshots, "opaque_screenshots");
-        
+            createToggleListItem(list, OPAQUE_SCREENSHOTS, useOpaqueScreenshots, "opaque_screenshots");
+            
             progressAnimation = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "progress_animation") == TRUE_STR);
-            createToggleListItem(PROGRESS_ANIMATION, progressAnimation, "progress_animation");
+            createToggleListItem(list, PROGRESS_ANIMATION, progressAnimation, "progress_animation");
         
         } else {
             list->addItem(new tsl::elm::ListItem(FAILED_TO_OPEN + ": " + settingsIniPath));
@@ -831,6 +963,16 @@ public:
             closeInterpreterThread();
             lastRunningInterpreter = false;
             return true;
+        }
+
+        if (refreshWallpaper.load(std::memory_order_acquire) && !inPlot) {
+            std::lock_guard<std::mutex> lock(wallpaperMutex);
+            std::vector<u8>().swap(wallpaperData);
+            //if (isFileOrDirectory(WALLPAPER_PATH))
+            wallpaperData = loadBitmapFile(WALLPAPER_PATH, 448, 720);
+            //else
+            //    wallpaperData.clear();
+            refreshWallpaper.store(false, std::memory_order_release);
         }
 
         if (inSettingsMenu && !inSubSettingsMenu) {
@@ -1417,6 +1559,12 @@ public:
 
     ~SelectionOverlay() {
         lastSelectedListItem.reset();
+        commands.clear();
+        commandsOn.clear();
+        commandsOff.clear();
+        filesList.clear();
+        filesListOn.clear();
+        filesListOff.clear();
     }
 
     void processSelectionCommands() {
@@ -1845,8 +1993,8 @@ public:
                     tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemRaw, tsl::FocusDirection::None);
                     
                     auto modifiedCmds = getSourceReplacement(!state ? commandsOn : commandsOff, currentSelectedItems[i], i, filePath);
-                    auto modifiedCmdsCopy = modifiedCmds;
-                    interpretAndExecuteCommands(std::move(modifiedCmdsCopy), filePath, specificKey);
+                    //auto modifiedCmdsCopy = modifiedCmds;
+                    interpretAndExecuteCommands(std::move(modifiedCmds), filePath, specificKey);
                     
                     if (sourceType == FILE_STR) {
                         // Reset variables
@@ -2042,7 +2190,7 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
     tsl::hlp::ini::IniData packageConfigData;
     std::unique_ptr<tsl::elm::ListItem> listItem;
     auto toggleListItem = std::make_unique<tsl::elm::ToggleListItem>("", true, "", "");
-    std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> options = loadOptionsFromIni(packageIniPath);
+    std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> options = loadOptionsFromIni(packageIniPath, true);
     
     bool toggleStateOn;
     
@@ -2735,7 +2883,7 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                             tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemRaw, tsl::FocusDirection::None);
                             interpretAndExecuteCommands(state ? getSourceReplacement(commandsOn, preprocessPath(pathPatternOn, packagePath), i, packagePath) :
                                 getSourceReplacement(commandsOff, preprocessPath(pathPatternOff, packagePath), i, packagePath), packagePath, keyName);
-                            setIniFileValue((packagePath + CONFIG_FILENAME).c_str(), keyName.c_str(), FOOTER_STR, state ? CAPITAL_ON_STR : CAPITAL_OFF_STR);
+                            setIniFileValue((packagePath + CONFIG_FILENAME), keyName, FOOTER_STR, state ? CAPITAL_ON_STR : CAPITAL_OFF_STR);
                             
                         });
                         list->addItem(toggleListItem.release());
@@ -2744,9 +2892,13 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
             }
         }
     }
-    
+    listItem.release();
+    toggleListItem.release();
     options.clear();
-    
+    commands.clear();
+    commandsOn.clear();
+    commandsOff.clear();
+    tableData.clear();
 }
 
 
@@ -3253,6 +3405,8 @@ public:
                 setDefaultValue(ultrahandSection, "clean_version_labels", FALSE_STR, cleanVersionLabels);
                 setDefaultValue(ultrahandSection, "hide_overlay_versions", FALSE_STR, hideOverlayVersions);
                 setDefaultValue(ultrahandSection, "hide_package_versions", FALSE_STR, hidePackageVersions);
+                setDefaultValue(ultrahandSection, "memory_expansion", FALSE_STR, useMemoryExpansion);
+                //setDefaultValue(ultrahandSection, "custom_wallpaper", FALSE_STR, useCustomWallpaper);
                 setDefaultValue(ultrahandSection, "opaque_screenshots", TRUE_STR, useOpaqueScreenshots);
                 setDefaultValue(ultrahandSection, "progress_animation", FALSE_STR, progressAnimation);
                 
@@ -3314,7 +3468,7 @@ public:
 
         menuMode = currentMenu.c_str();
         
-        versionLabel = std::string(APP_VERSION) + "   (" + extractTitle(loaderInfo) + " " + (cleanVersionLabels ? "" : "v") + cleanVersionLabel(loaderInfo) + ")";
+        versionLabel = std::string(APP_VERSION) + "   (" + loaderTitle + " " + (cleanVersionLabels ? "" : "v") + cleanVersionLabel(loaderInfo) + ")";
         //versionLabel = (cleanVersionLabels) ? std::string(APP_VERSION) : (std::string(APP_VERSION) + "   (" + extractTitle(loaderInfo) + " v" + cleanVersionLabel(loaderInfo) + ")");
         
         auto list = std::make_unique<tsl::elm::List>();
@@ -3805,7 +3959,7 @@ public:
                                 
                                 // read commands from package's boot_package.ini
                                 if (isFileOrDirectory(packageFilePath+BOOT_PACKAGE_FILENAME)) {
-                                    std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> bootOptions = loadOptionsFromIni(packageFilePath+BOOT_PACKAGE_FILENAME, true);
+                                    std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> bootOptions = loadOptionsFromIni(packageFilePath+BOOT_PACKAGE_FILENAME);
                                     if (bootOptions.size() > 0) {
                                         std::string bootOptionName;
                                         for (auto& bootOption:bootOptions) {
@@ -3954,6 +4108,7 @@ public:
             lastRunningInterpreter = false;
             return true;
         }
+
 
         if (refreshPage && !stillTouching) {
             refreshPage = false;
@@ -4173,7 +4328,7 @@ public:
 
         // read commands from root package's boot_package.ini
         if (firstBoot && isFileOrDirectory(PACKAGE_PATH+BOOT_PACKAGE_FILENAME)) {
-            std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> bootOptions = loadOptionsFromIni(PACKAGE_PATH+BOOT_PACKAGE_FILENAME, true);
+            std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> bootOptions = loadOptionsFromIni(PACKAGE_PATH+BOOT_PACKAGE_FILENAME);
             if (bootOptions.size() > 0) {
                 std::string bootOptionName;
                 for (auto& bootOption:bootOptions) {
