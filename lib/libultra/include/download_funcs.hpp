@@ -137,6 +137,7 @@ bool downloadFile(const std::string& url, const std::string& toDestination) {
     std::unique_ptr<CURL, CurlDeleter> curl(curl_easy_init());
     if (!curl) {
         logMessage("Error initializing curl.");
+        file.close();
         return false;
     }
 
@@ -174,6 +175,7 @@ bool downloadFile(const std::string& url, const std::string& toDestination) {
         logMessage("Error downloading file: Empty file");
         deleteFileOrDirectory(tempFilePath);
         downloadPercentage.store(-1, std::memory_order_release);
+        checkFile.close();
         return false;
     }
     checkFile.close();
