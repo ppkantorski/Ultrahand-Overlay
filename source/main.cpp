@@ -746,7 +746,7 @@ public:
             // Add firmware info to list
             list->addItem(new tsl::elm::CategoryHeader(SYSTEM));
             std::vector<std::vector<std::string>> tableData = {
-                {"Firmware", "", versionString}
+                {FIRMWARE, "", versionString}
             };
             addTable(list, tableData, "");
     
