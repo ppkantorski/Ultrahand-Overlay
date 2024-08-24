@@ -321,6 +321,10 @@ bool pchtxt2ips(const std::string& pchtxtPath, const std::string& outputFolder) 
                 std::string offsetStr = line.substr(19);
                 offset = (offsetStr.find("0x") == 0 ? std::strtol(offsetStr.c_str(), nullptr, 16) : std::strtol(offsetStr.c_str(), nullptr, 10));
             }
+            if (line.find("@stop") == 0) {
+                //logMessage("Found @stop, ending pchtxt processing");
+                break;
+            }
             continue;  // Skip empty lines and lines starting with '@'
         }
 
