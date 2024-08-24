@@ -725,7 +725,7 @@ public:
             overlayHeader.clear();
 
         } else if (dropdownSelection == "systemMenu") {
-            char ramString[50]; // Buffer to hold the final string
+            char ramString[20]; // Buffer to hold the final string
             
             // Get system information
             svcGetSystemInfo(&RAM_Used_system_u, 1, INVALID_HANDLE, 2);
