@@ -736,19 +736,19 @@ bool isDangerousCombination(const std::string& patternPath) {
  * @param makeConfig A flag indicating whether to create a config if it doesn't exist.
  * @return A vector containing pairs of section names and their associated key-value pairs.
  */
-std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadOptionsFromIni(const std::string& packageIniPath, bool makeConfig = false) {
+std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadOptionsFromIni(const std::string& packageIniPath) { //, bool makeConfig = false) {
     std::ifstream packageFile(packageIniPath);
-    if (!packageFile && makeConfig) {
-        std::ofstream packageFileOut(packageIniPath);
-        if (packageFileOut) {
-            //configFileOut << "[Reboot]\nreboot\n\n[Shutdown]\nshutdown\n";
-            //configFileOut << "[*Reboot To]\nini_file_source /bootloader/hekate_ipl.ini\nfilter config\nreboot boot '{ini_file_source(*)}'\n\n[Shutdown]\nshutdown\n";
-            packageFileOut << "[*Reboot To]\n[*Boot Entry]\nini_file_source /bootloader/hekate_ipl.ini\nfilter config\nreboot boot '{ini_file_source(*)}'\n[Hekate]\nreboot HEKATE\n[Hekate UMS]\nreboot UMS\n\n[Commands]\n[Shutdown]\nshutdown\n";
-            //configFileOut << "[*Reboot]\n[HOS Reboot]\nreboot\n[Hekate Reboot]\nreboot HEKATE\n[UMS Reboot]\nreboot UMS\n\n[Commands]\n[Shutdown]\nshutdown";
-            packageFileOut.close();
-        }
-        packageFile.open(packageIniPath);  // Reopen the newly created file
-    }
+    //if (!packageFile && makeConfig) {
+    //    std::ofstream packageFileOut(packageIniPath);
+    //    if (packageFileOut) {
+    //        //configFileOut << "[Reboot]\nreboot\n\n[Shutdown]\nshutdown\n";
+    //        //configFileOut << "[*Reboot To]\nini_file_source /bootloader/hekate_ipl.ini\nfilter config\nreboot boot '{ini_file_source(*)}'\n\n[Shutdown]\nshutdown\n";
+    //        packageFileOut << "[*Reboot To]\n[*Boot Entry]\nini_file_source /bootloader/hekate_ipl.ini\nfilter config\nreboot boot '{ini_file_source(*)}'\n[Hekate]\nreboot HEKATE\n[Hekate UMS]\nreboot UMS\n\n[Commands]\n[Shutdown]\nshutdown\n";
+    //        //configFileOut << "[*Reboot]\n[HOS Reboot]\nreboot\n[Hekate Reboot]\nreboot HEKATE\n[UMS Reboot]\nreboot UMS\n\n[Commands]\n[Shutdown]\nshutdown";
+    //        packageFileOut.close();
+    //    }
+    //    packageFile.open(packageIniPath);  // Reopen the newly created file
+    //}
 
     if (!packageFile) {
         return {}; // If file still cannot be opened, return empty vector
@@ -1802,7 +1802,7 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
         if (cmd.size() >= 2) {
             std::string bootCommandName = removeQuotes(cmd[1]);
             if (isFileOrDirectory(packagePath + BOOT_PACKAGE_FILENAME)) {
-                auto bootOptions = loadOptionsFromIni(packagePath + BOOT_PACKAGE_FILENAME, true);
+                auto bootOptions = loadOptionsFromIni(packagePath + BOOT_PACKAGE_FILENAME);
                 std::string bootOptionName;
                 bool resetCommandSuccess;
                 for (auto& bootOption : bootOptions) {
