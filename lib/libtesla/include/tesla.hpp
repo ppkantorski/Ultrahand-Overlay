@@ -4496,7 +4496,7 @@ namespace tsl {
                         entry->frame(renderer);
                     }
                 }
-            
+                
                 renderer->disableScissoring();
 
 
@@ -4534,13 +4534,13 @@ namespace tsl {
                     if (Element::getInputMode()  == InputMode::Controller) {
                         static float lastScrollAmount = 0.0f;
                         //static float velocity = 0.0f;
-                        const float smoothingFactor = 0.10f; // Higher value means faster smoothing
-                        const float dampingFactor = 0.25f;   // Value between 0 and 1, closer to 1 is slower damping
+                        const float smoothingFactor = 0.2f; // Higher value means faster smoothing
+                        const float dampingFactor = 0.2f;   // Value between 0 and 1, closer to 1 is slower damping
                     
                         float deltaOffset = this->m_nextOffset - this->m_offset;
                         
                         // Apply a smoothing interpolation to the scroll amount
-                        float scrollAmount = deltaOffset * smoothingFactor + lastScrollAmount * dampingFactor;
+                        float scrollAmount = deltaOffset * smoothingFactor - lastScrollAmount * dampingFactor;
                     
                         // Apply the scroll amount, with a check to prevent jittering
                         if (std::abs(scrollAmount) >= 1e-1f) {
