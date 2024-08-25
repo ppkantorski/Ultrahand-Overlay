@@ -742,13 +742,16 @@ public:
             // Append status
             splGetConfig((SplConfigItem)65007, &packed_version);
             strcat(versionString, (packed_version == 0 ? "|S" : "|E"));
-    
+            
+            std::string hekateVersion = extractVersionFromBinary("sdmc:/bootloader/update.bin");
+
             // Add firmware info to list
             list->addItem(new tsl::elm::CategoryHeader(SYSTEM));
             std::vector<std::vector<std::string>> tableData = {
-                {FIRMWARE, "", versionString}
+                {FIRMWARE, "", versionString},
+                {"Bootloader", "", !hekateVersion.empty() ? "Hekate "+hekateVersion : UNAVAILABLE_SELECTION}
             };
-            addTable(list, tableData, "");
+            addTable(list, tableData, "", 160, 20, 3, 10);
     
             // Get system memory info and format it
             u64 RAM_Used_system_u, RAM_Total_system_u;
