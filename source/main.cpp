@@ -731,7 +731,7 @@ public:
     
             // Get version and format it
             splGetConfig((SplConfigItem)65000, &packed_version);
-            sprintf(versionString, "%d.%d.%d |AMS %d.%d.%d",
+            sprintf(versionString, "%d.%d.%d|AMS %d.%d.%d",
                     (int)((packed_version >> 24) & 0xFF),
                     (int)((packed_version >> 16) & 0xFF),
                     (int)((packed_version >> 8) & 0xFF),
@@ -2211,7 +2211,7 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
     tsl::hlp::ini::IniData packageConfigData;
     std::unique_ptr<tsl::elm::ListItem> listItem;
     auto toggleListItem = std::make_unique<tsl::elm::ToggleListItem>("", true, "", "");
-    std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> options = loadOptionsFromIni(packageIniPath, true);
+    std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> options = loadOptionsFromIni(packageIniPath);
     
     bool toggleStateOn;
     
@@ -3783,6 +3783,26 @@ public:
         
         // Packages menu
         if (menuMode == PACKAGES_STR ) {
+            if (!isFileOrDirectory(PACKAGE_PATH+PACKAGE_FILENAME)) {
+                std::ofstream packageFileOut(PACKAGE_PATH+PACKAGE_FILENAME);
+                if (packageFileOut) {
+                    packageFileOut <<
+                        "[*Reboot To]\n"
+                        "[*Boot Entry]\n"
+                        "ini_file_source /bootloader/hekate_ipl.ini\n"
+                        "filter config\n"
+                        "reboot boot '{ini_file_source(*)}'\n"
+                        "[Hekate]\n"
+                        "reboot HEKATE\n"
+                        "[Hekate UMS]\n"
+                        "reboot UMS\n"
+                        "\n[Commands]\n"
+                        "[Shutdown]\n"
+                        "shutdown\n";
+                    packageFileOut.close();
+                }
+            }
+
             inOverlaysPage = false;
             inPackagesPage = true;
 
