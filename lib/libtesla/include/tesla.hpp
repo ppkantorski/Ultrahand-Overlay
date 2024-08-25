@@ -4426,7 +4426,7 @@ namespace tsl {
             std::chrono::steady_clock::time_point lastUpdateTime;
             std::chrono::duration<float> elapsed;
 
-            static inline float animationDuration = 10.0f; 
+            static inline float animationDuration = 2.0f; 
             InputMode lastInputMode = InputMode::Controller;
 
             // Function to calculate exponential easing
@@ -4527,23 +4527,31 @@ namespace tsl {
                     //static const std::chrono::duration<float> momentumDuration = std::chrono::seconds(1); // Duration to maintain momentum
 
                     // Time synchronization for smooth scrolling
-                    auto now = std::chrono::steady_clock::now();
-                    elapsed = now - lastUpdateTime;
-                    lastUpdateTime = now;
+                    //auto now = std::chrono::steady_clock::now();
+                    //elapsed = now - lastUpdateTime;
+                    //lastUpdateTime = now;
 
                     if (Element::getInputMode()  == InputMode::Controller) {
-
-                        float t = std::min(elapsed.count() / animationDuration, 1.0f);
-                        float easedT = exponentialEase(t);
-                        float scrollAmount = (this->m_nextOffset - this->m_offset) * (easedT - (easedT - 1) / scrollSpeed);
-                        //this->m_offset += scrollAmount;
-                        //float scrollAmount = (this->m_nextOffset - this->m_offset)*0.10;
-                        //// If the scrollAmount is very small, set m_offset directly to m_nextOffset to avoid jitter
-                        if (std::abs(scrollAmount) >= 5e-2f) {
+                        static float lastScrollAmount = 0.0f;
+                        //static float velocity = 0.0f;
+                        const float smoothingFactor = 0.10f; // Higher value means faster smoothing
+                        const float dampingFactor = 0.25f;   // Value between 0 and 1, closer to 1 is slower damping
+                    
+                        float deltaOffset = this->m_nextOffset - this->m_offset;
+                        
+                        // Apply a smoothing interpolation to the scroll amount
+                        float scrollAmount = deltaOffset * smoothingFactor + lastScrollAmount * dampingFactor;
+                    
+                        // Apply the scroll amount, with a check to prevent jittering
+                        if (std::abs(scrollAmount) >= 1e-1f) {
                             this->m_offset += scrollAmount;
+                            lastScrollAmount = scrollAmount;
                         } else {
                             this->m_offset = this->m_nextOffset;
+                            lastScrollAmount = 0.0f;
                         }
+
+
                     } else if (Element::getInputMode() == InputMode::TouchScroll) {
                         this->m_offset += ((this->m_nextOffset) - this->m_offset);
                     }
@@ -4828,7 +4836,7 @@ namespace tsl {
                 //renderer->drawCircle(this->getRightBound() + 12 + offset, (this->getY() + scrollbarOffset + scrollbarHeight) / 2, 2, true, a(trackBarColor));
                 renderer->drawCircle(this->getRightBound() + 12 + offset, this->getY() + scrollbarOffset + scrollbarHeight, 2, true, a(trackBarColor));
                 
-                float prevOffset = this->m_offset;
+                
                 
                 //if (Element::getInputMode() == InputMode::Controller) {
                 //    this->m_offset += ((this->m_nextOffset) - this->m_offset) * 0.1F;
@@ -4836,9 +4844,10 @@ namespace tsl {
                 //    this->m_offset += ((this->m_nextOffset) - this->m_offset);
                 //}
                 
-                if (static_cast<u32>(prevOffset) != static_cast<u32>(this->m_offset)) {
-                    this->invalidate();
-                }
+                //if (static_cast<u32>(prevOffset) != static_cast<u32>(this->m_offset)) {
+                //    this->invalidate();
+                //}
+                //prevOffset = this->m_offset;
             }
             
             
