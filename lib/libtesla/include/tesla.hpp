@@ -4830,11 +4830,11 @@ namespace tsl {
                 
                 float prevOffset = this->m_offset;
                 
-                if (Element::getInputMode() == InputMode::Controller) {
-                    this->m_offset += ((this->m_nextOffset) - this->m_offset) * 0.1F;
-                } else if (Element::getInputMode() == InputMode::TouchScroll) {
-                    this->m_offset += ((this->m_nextOffset) - this->m_offset);
-                }
+                //if (Element::getInputMode() == InputMode::Controller) {
+                //    this->m_offset += ((this->m_nextOffset) - this->m_offset) * 0.1F;
+                //} else if (Element::getInputMode() == InputMode::TouchScroll) {
+                //    this->m_offset += ((this->m_nextOffset) - this->m_offset);
+                //}
                 
                 if (static_cast<u32>(prevOffset) != static_cast<u32>(this->m_offset)) {
                     this->invalidate();
