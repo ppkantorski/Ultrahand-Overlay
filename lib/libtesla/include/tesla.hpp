@@ -70,6 +70,23 @@ uint64_t RAM_Used_system_u = 0;
 uint64_t RAM_Total_system_u = 0;
 
 
+// Define the duration boundaries (for smooth scrolling)
+const auto initialInterval = std::chrono::milliseconds(67);  // Example initial interval
+const auto shortInterval = std::chrono::milliseconds(10);    // Short interval after long hold
+const auto transitionPoint = std::chrono::milliseconds(2000); // Point at which the shortest interval is reached
+
+// Function to interpolate between two durations
+std::chrono::milliseconds interpolateDuration(
+    std::chrono::milliseconds start,
+    std::chrono::milliseconds end,
+    float t
+) {
+    using namespace std::chrono;
+    auto interpolated = start.count() + static_cast<long long>((end.count() - start.count()) * t);
+    return milliseconds(interpolated);
+}
+
+
 
 //#include <filesystem> // Comment out filesystem
 
@@ -1878,21 +1895,21 @@ namespace tsl {
              * @return Ini string
              */
             static std::string unparseIni(const IniData &iniData) {
-                std::ostringstream oss;
+                std::string result;
                 bool addSectionGap = false;
-
+            
                 for (const auto &section : iniData) {
                     if (addSectionGap) {
-                        oss << '\n';
+                        result += '\n';
                     }
-                    oss << '[' << section.first << "]\n";
+                    result += '[' + section.first + "]\n";
                     for (const auto &keyValue : section.second) {
-                        oss << keyValue.first << '=' << keyValue.second << '\n';
+                        result += keyValue.first + '=' + keyValue.second + '\n';
                     }
                     addSectionGap = true;
                 }
-
-                return oss.str();
+            
+                return result;
             }
 
             
@@ -2005,22 +2022,22 @@ namespace tsl {
          * @return Combo string
          */
         static std::string keysToComboString(u64 keys) {
-            if (keys == 0) return ""; // Early return for empty input
+            if (keys == 0) return "";  // Early return for empty input
         
-            std::ostringstream oss;
+            std::string result;
             bool first = true;
         
-            for (const auto& keyInfo : impl::KEYS_INFO) {
+            for (const auto &keyInfo : impl::KEYS_INFO) {
                 if (keys & keyInfo.key) {
                     if (!first) {
-                        oss << "+";
+                        result += "+";
                     }
-                    oss << keyInfo.name;
+                    result += keyInfo.name;
                     first = false;
                 }
             }
         
-            return oss.str();
+            return result;
         }
         
     }
@@ -4530,27 +4547,30 @@ namespace tsl {
                     //auto now = std::chrono::steady_clock::now();
                     //elapsed = now - lastUpdateTime;
                     //lastUpdateTime = now;
-
-                    if (Element::getInputMode()  == InputMode::Controller) {
-                        static float lastScrollAmount = 0.0f;
-                        //static float velocity = 0.0f;
-                        const float smoothingFactor = 0.2f; // Higher value means faster smoothing
-                        const float dampingFactor = 0.2f;   // Value between 0 and 1, closer to 1 is slower damping
+                    if (Element::getInputMode() == InputMode::Controller) {
+                        static float lastOffset = 0.0f;
+                        static float velocity = 0.0f;
+                        const float smoothingFactor = 0.15f;  // Lower value means faster smoothing
+                        const float dampingFactor = 0.3f;   // Closer to 1 means slower damping
                     
+                        // Calculate the difference between the next and current offsets
                         float deltaOffset = this->m_nextOffset - this->m_offset;
-                        
-                        // Apply a smoothing interpolation to the scroll amount
-                        float scrollAmount = deltaOffset * smoothingFactor - lastScrollAmount * dampingFactor;
                     
-                        // Apply the scroll amount, with a check to prevent jittering
-                        if (std::abs(scrollAmount) >= 1e-1f) {
-                            this->m_offset += scrollAmount;
-                            lastScrollAmount = scrollAmount;
-                        } else {
+                        // Apply smoothing to the velocity
+                        velocity = velocity * dampingFactor + deltaOffset * smoothingFactor;
+                    
+                        // Update the offset with the smoothed velocity
+                        this->m_offset += velocity;
+                    
+                        // If the velocity is small, snap to the target offset
+                        if (std::abs(velocity) < 0.01f) {
                             this->m_offset = this->m_nextOffset;
-                            lastScrollAmount = 0.0f;
+                            velocity = 0.0f;
                         }
-
+                    
+                        // Update the last offset for the next frame
+                        lastOffset = this->m_offset;
+                    
 
                     } else if (Element::getInputMode() == InputMode::TouchScroll) {
                         this->m_offset += ((this->m_nextOffset) - this->m_offset);
@@ -5400,14 +5420,17 @@ namespace tsl {
                         }
                         
                         auto holdDuration = std::chrono::duration_cast<std::chrono::milliseconds>(now - holdStartTime);
-                        std::chrono::milliseconds currentInterval;
-                        if (holdDuration >= std::chrono::milliseconds(1600)) {
-                            currentInterval = std::chrono::milliseconds(5);
-                        } else if (holdDuration >= std::chrono::milliseconds(800)) {
-                            currentInterval = std::chrono::milliseconds(20);
-                        } else {
-                            currentInterval = initialInterval;
-                        }
+
+                        // Define the duration boundaries
+                        //const auto initialInterval = std::chrono::milliseconds(67);  // Example initial interval
+                        //const auto shortInterval = std::chrono::milliseconds(10);    // Short interval after long hold
+                        //const auto transitionPoint = std::chrono::milliseconds(2000); // Point at which the shortest interval is reached
+                        
+                        // Calculate transition factor (t) from 0 to 1 based on how far we are from the transition point
+                        float t = std::min(1.0f, static_cast<float>(holdDuration.count()) / transitionPoint.count());
+                        
+                        // Smooth transition between intervals
+                        std::chrono::milliseconds currentInterval = interpolateDuration(initialInterval, shortInterval, t);
                         
                         if (elapsed >= currentInterval) {
                             if (keysHeld & HidNpadButton_AnyLeft) {
@@ -6364,7 +6387,7 @@ namespace tsl {
             static std::chrono::steady_clock::time_point lastKeyEventTime;
             static bool singlePressHandled = false;
             static const auto clickThreshold = std::chrono::milliseconds(340); // Adjust this value as needed
-            static auto keyEventInterval = std::chrono::milliseconds(50); // Interval between key events
+            static auto keyEventInterval = std::chrono::milliseconds(67); // Interval between key events
             
             auto& currentGui = this->getCurrentGui();
             
@@ -6471,14 +6494,17 @@ namespace tsl {
                             singlePressHandled = true;
                         }
                         
-                        if (durationSincePress > std::chrono::milliseconds(2400))
-                            keyEventInterval = std::chrono::milliseconds(10);
-                        else if (durationSincePress > std::chrono::milliseconds(1600))
-                            keyEventInterval = std::chrono::milliseconds(20);
-                        else if (durationSincePress > std::chrono::milliseconds(800))
-                            keyEventInterval = std::chrono::milliseconds(50);
-                        else
-                            keyEventInterval = std::chrono::milliseconds(67);
+
+                        // Define the duration boundaries
+                        //const auto initialInterval = std::chrono::milliseconds(67);  // Example initial interval
+                        //const auto shortInterval = std::chrono::milliseconds(10);    // Short interval after long hold
+                        //const auto transitionPoint = std::chrono::milliseconds(2000); // Point at which the shortest interval is reached
+                        
+                        // Calculate transition factor (t) from 0 to 1 based on how far we are from the transition point
+                        float t = std::min(1.0f, static_cast<float>(durationSincePress.count()) / transitionPoint.count());
+                        
+                        // Smooth transition between intervals
+                        keyEventInterval = interpolateDuration(initialInterval, shortInterval, t);
                         
                         //keyEventInterval = interpolateKeyEventInterval(durationSincePress);
                         
@@ -7068,32 +7094,26 @@ std::unordered_map<std::string, std::string> buttonCharMap = createButtonCharMap
 
 
 std::string convertComboToUnicode(const std::string& combo) {
-    // Check if there is a '+' in the input string
-    if (combo.find('+') == std::string::npos) {
-        // If no '+' is found, check if the entire combo is a single key that maps to Unicode
-        //auto it = buttonCharMap.find(trim(combo));  // Trim the input in case of leading/trailing spaces
-        //if (it != buttonCharMap.end()) {
-        //    return it->second;
-        //}
-
-        // If no mapping is found, return the original string
-        return combo;
-    }
-
-    std::istringstream iss(combo);
-    std::string token;
     std::string unicodeCombo;
     bool modified = false;
+    std::string token;
+    
+    // Manually iterate through the combo string and split by '+'
+    for (size_t i = 0; i <= combo.length(); ++i) {
+        if (i == combo.length() || combo[i] == '+') {
+            std::string trimmedToken = trim(token);
+            auto it = buttonCharMap.find(trimmedToken);
 
-    while (std::getline(iss, token, '+')) {
-        std::string trimmedToken = trim(token);
-        auto it = buttonCharMap.find(trimmedToken);
+            if (it != buttonCharMap.end()) {
+                unicodeCombo += it->second + "+";
+                modified = true;
+            } else {
+                unicodeCombo += trimmedToken + "+";
+            }
 
-        if (it != buttonCharMap.end()) {
-            unicodeCombo += it->second + "+";
-            modified = true;
+            token.clear();  // Reset token
         } else {
-            unicodeCombo += trimmedToken + "+";
+            token += combo[i];
         }
     }
 
@@ -7104,7 +7124,6 @@ std::string convertComboToUnicode(const std::string& combo) {
     // If no modification was made, return the original combo
     return modified ? unicodeCombo : combo;
 }
-
 
 
 #ifdef TESLA_INIT_IMPL
