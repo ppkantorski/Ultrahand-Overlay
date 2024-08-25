@@ -766,8 +766,7 @@ public:
             addTable(list, tableData, "", 166, 44, 44, 0, DEFAULT_STR, DEFAULT_STR, RIGHT_STR, true);
     
             // Add memory expansion toggle
-            bool useMemoryExpansion = 
-                (loaderTitle == "nx-ovlloader+" || parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "memory_expansion") == TRUE_STR);
+            useMemoryExpansion = ((loaderTitle == "nx-ovlloader+") || parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "memory_expansion") == TRUE_STR);
             createToggleListItem(list, MEMORY_EXPANSION, useMemoryExpansion, "memory_expansion", false, true);
     
             // Add reboot required info to list
