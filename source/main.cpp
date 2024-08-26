@@ -638,7 +638,7 @@ public:
             std::string defaultLang = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, DEFAULT_LANG_STR);
             std::string keyCombo = trim(parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, KEY_COMBO_STR));
             defaultLang = defaultLang.empty() ? "en" : defaultLang;
-            keyCombo = keyCombo.empty() ? "ZL+ZR+DDOWN" : keyCombo;
+            keyCombo = keyCombo.empty() ? defaultCombos[0] : keyCombo;
 
             comboLabel = convertComboToUnicode(keyCombo);
             if (comboLabel.empty()) comboLabel = keyCombo;
@@ -816,8 +816,9 @@ public:
             filesList = getFilesListByWildcards(THEMES_PATH + "*.ini");
             std::sort(filesList.begin(), filesList.end());
 
+            std::string themeName;
             for (const auto& themeFile : filesList) {
-                std::string themeName = dropExtension(getNameFromPath(themeFile));
+                themeName = dropExtension(getNameFromPath(themeFile));
                 if (themeName == DEFAULT_STR) continue;
                 listItem = std::make_unique<tsl::elm::ListItem>(themeName);
                 if (themeName == currentTheme) {
@@ -892,8 +893,9 @@ public:
             filesList = getFilesListByWildcards(WALLPAPERS_PATH + "*.rgba");
             std::sort(filesList.begin(), filesList.end());
 
+            std::string wallpaperName;
             for (const auto& wallpaperFile : filesList) {
-                std::string wallpaperName = dropExtension(getNameFromPath(wallpaperFile));
+                wallpaperName = dropExtension(getNameFromPath(wallpaperFile));
                 if (wallpaperName == DEFAULT_STR) continue;
                 listItem = std::make_unique<tsl::elm::ListItem>(wallpaperName);
                 if (wallpaperName == currentWallpaper) {
@@ -1623,19 +1625,21 @@ public:
     }
 
     void processSelectionCommands() {
-        commands.erase(std::remove_if(commands.begin(), commands.end(),
-            [](const std::vector<std::string>& vec) {
-                return vec.empty();
-            }),
-            commands.end());
+        //commands.erase(std::remove_if(commands.begin(), commands.end(),
+        //    [](const std::vector<std::string>& vec) {
+        //        return vec.empty();
+        //    }),
+        //    commands.end());
+        removeEmptyCommands(commands);
 
         bool inEristaSection = false;
         bool inMarikoSection = false;
         std::string currentSection = GLOBAL_STR;
         std::string iniFilePath;
 
+        std::string commandName;
         for (auto& cmd : commands) {
-            std::string commandName = cmd[0];
+            commandName = cmd[0];
 
             if (stringToLowercase(commandName) == "erista:") {
                 inEristaSection = true;
@@ -1856,7 +1860,7 @@ public:
         }
 
         if (sourceType == FILE_STR) {
-            if ( (commandGrouping == "split2" || commandGrouping == "split4")) {
+            if (commandGrouping == "split2" || commandGrouping == "split4") {
                 std::sort(selectedItemsList.begin(), selectedItemsList.end(), [](const std::string& a, const std::string& b) {
                     const std::string& parentDirA = getParentDirNameFromPath(a);
                     const std::string& parentDirB = getParentDirNameFromPath(b);
@@ -2300,7 +2304,8 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
     //                          minValue, maxValue, units, steps, unlockedTrackbar, onEveryTick, packageSource, packagePath};
     //
     //CommandData cmdData = {commands, commandsOn, commandsOff, tableData};
-    
+    std::vector<std::string> entryList;
+
     for (size_t i = 0; i < options.size(); ++i) {
         auto& option = options[i];
         
@@ -2477,17 +2482,19 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
             size_t delimiterPos;
             
             // Remove all empty command strings
-            commands.erase(std::remove_if(commands.begin(), commands.end(),
-                [](const std::vector<std::string>& vec) {
-                    return vec.empty();
-                }),
-                commands.end());
+            //commands.erase(std::remove_if(commands.begin(), commands.end(),
+            //    [](const std::vector<std::string>& vec) {
+            //        return vec.empty();
+            //    }),
+            //    commands.end());
+            removeEmptyCommands(commands);
         
-            // Initial processing of commands
+            // Initial processing of commands (DUPLICATE CODE)
+            std::string commandNameLower;
             for (const auto& cmd : commands) {
                 commandName = cmd[0];
         
-                std::string commandNameLower = stringToLowercase(commandName);
+                commandNameLower = stringToLowercase(commandName);
                 if (commandNameLower == "erista:") {
                     inEristaSection = true;
                     inMarikoSection = false;
@@ -2676,11 +2683,12 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                     list->addItem(new tsl::elm::StepTrackBar(optionName, packagePath, steps, minValue, maxValue, units, interpretAndExecuteCommands, getSourceReplacement, commands, option.first, false, unlockedTrackbar, onEveryTick));
                     continue;
                 } else if (commandMode == NAMED_STEP_TRACKBAR_STR) {
-                    std::vector<std::string> entryList = {};
+                    entryList = {};
                     
                     bool inEristaSection = false;
                     bool inMarikoSection = false;
                     
+                    //std::string commandName;
                     for (auto it = commands.begin(); it != commands.end(); /* no increment here */) {
                         auto& cmd = *it;
                         if (cmd.empty()) {
@@ -2688,7 +2696,7 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                             continue;
                         }
                         
-                        std::string commandName = cmd[0];
+                        commandName = cmd[0];
                         
                         if (commandName == "erista:") {
                             inEristaSection = true;
@@ -2710,33 +2718,33 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                     
                         if (cmd.size() > 1) {
                             if (cmd[0] == "list_source") {
-                                std::string listString = removeQuotes(cmd[1]);
-                                entryList = stringToList(listString);
+                                //std::string listString = removeQuotes(cmd[1]);
+                                entryList = stringToList(removeQuotes(cmd[1]));
                                 break;
                             }
                             else if (cmd[0] == "list_file_source") {
-                                std::string listPath = preprocessPath(cmd[1], packagePath);
-                                entryList = readListFromFile(listPath);
+                                //std::string listPath = preprocessPath(cmd[1], packagePath);
+                                entryList = readListFromFile(preprocessPath(cmd[1], packagePath));
                                 break;
                             }
                             else if (cmd[0] == "ini_file_source") {
-                                std::string iniPath = preprocessPath(cmd[1], packagePath);
-                                entryList = parseSectionsFromIni(iniPath);
+                                //std::string iniPath = preprocessPath(cmd[1], packagePath);
+                                entryList = parseSectionsFromIni(preprocessPath(cmd[1], packagePath));
                                 break;
                             }
                         }
                     
                         if (cmd.size() > 2) {
                             if (cmd[0] == "json_source") {
-                                std::string jsonString = removeQuotes(cmd[1]);
-                                std::string jsonKey = removeQuotes(cmd[2]);
-                                populateSelectedItemsList(JSON_STR, jsonString, jsonKey, entryList);
+                                //std::string jsonString = removeQuotes(cmd[1]);
+                                //std::string jsonKey = removeQuotes(cmd[2]);
+                                populateSelectedItemsList(JSON_STR, removeQuotes(cmd[1]), removeQuotes(cmd[2]), entryList);
                                 break;
                             }
                             else if (cmd[0] == "json_file_source") {
-                                std::string jsonPath = preprocessPath(cmd[1], packagePath);
-                                std::string jsonKey = removeQuotes(cmd[2]);
-                                populateSelectedItemsList(JSON_FILE_STR, jsonPath, jsonKey, entryList);
+                                //std::string jsonPath = preprocessPath(cmd[1], packagePath);
+                                //std::string jsonKey = removeQuotes(cmd[2]);
+                                populateSelectedItemsList(JSON_FILE_STR, preprocessPath(cmd[1], packagePath), removeQuotes(cmd[2]), entryList);
                                 break;
                             }
                         }
@@ -3598,7 +3606,7 @@ public:
                     //if (overlayFileName == "ovlmenu.ovl" || overlayFileName.front() == '.') {
                     //    continue;
                     //}
-                
+                    
                     auto it = overlaysIniData.find(overlayFileName);
                     if (it == overlaysIniData.end()) {
                         // Initialization of new entries
@@ -3836,10 +3844,10 @@ public:
                     packageFileOut.close();
                 }
             }
-            
+
             inOverlaysPage = false;
             inPackagesPage = true;
-            
+
             if (dropdownSection.empty()) {
                 // Create the directory if it doesn't exist
                 createDirectory(PACKAGE_PATH);
@@ -3877,6 +3885,8 @@ public:
 
                 PackageHeader packageHeader;
 
+                std::string assignedPackageName, assignedPackageVersion;
+
                 for (const auto& packageName: subdirectories) {
                     auto packageIt = packagesIniData.find(packageName);
                     if (packageIt == packagesIniData.end()) {
@@ -3906,7 +3916,7 @@ public:
                         
                         //packageHeader.clear(); // free memory
 
-                        std::string assignedPackageName, assignedPackageVersion;
+                        assignedPackageName = assignedPackageVersion = "";
 
                         if (!customName.empty()){
                             assignedPackageName = customName;
@@ -3950,6 +3960,8 @@ public:
                 
                 size_t lastColonPos, secondLastColonPos, thirdLastColonPos;
 
+                std::string tempPackageName;
+
                 bool firstItem = true;
                 for (const auto& taintedPackageName : packageList) {
                     if (firstItem) {
@@ -3959,7 +3971,7 @@ public:
 
                     
                     // packageName = taintedPackageName.c_str();
-                    std::string tempPackageName = taintedPackageName;
+                    tempPackageName = taintedPackageName;
 
                     packageStarred = false;
                     // Check if the package is starred
@@ -4403,7 +4415,8 @@ public:
 
         // read commands from root package's boot_package.ini
         if (firstBoot && isFileOrDirectory(PACKAGE_PATH+BOOT_PACKAGE_FILENAME)) {
-            std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> bootOptions = loadOptionsFromIni(PACKAGE_PATH+BOOT_PACKAGE_FILENAME);
+            //std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> bootOptions = loadOptionsFromIni(PACKAGE_PATH+BOOT_PACKAGE_FILENAME);
+            auto bootOptions = loadOptionsFromIni(PACKAGE_PATH+BOOT_PACKAGE_FILENAME);
             if (bootOptions.size() > 0) {
                 std::string bootOptionName;
                 for (auto& bootOption:bootOptions) {
