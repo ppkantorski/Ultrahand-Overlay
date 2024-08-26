@@ -72,6 +72,8 @@
     "BACK": "返回",
     "REBOOT": "重啟機器",
     "SHUTDOWN": "關閉機器",
+    "TO": "To",
+    "BOOT_ENTRY": "Boot Entry",
     "GAP_1": "     ",
     "GAP_2": "  ",
     "USERGUIDE_OFFSET": "136",
