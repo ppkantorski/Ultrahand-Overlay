@@ -72,6 +72,8 @@
     "BACK": "戻る",
     "REBOOT": "再起動",
     "SHUTDOWN": "シャットダウン",
+    "TO": "To",
+    "BOOT_ENTRY": "Boot Entry",
     "GAP_1": "    ",
     "GAP_2": "  ",
     "USERGUIDE_OFFSET": "190",
