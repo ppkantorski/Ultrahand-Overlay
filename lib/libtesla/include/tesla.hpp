@@ -4443,17 +4443,17 @@ namespace tsl {
             std::chrono::steady_clock::time_point lastUpdateTime;
             std::chrono::duration<float> elapsed;
 
-            static inline float animationDuration = 2.0f; 
-            InputMode lastInputMode = InputMode::Controller;
+            //static inline float animationDuration = 2.0f; 
+            //InputMode lastInputMode = InputMode::Controller;
 
             // Function to calculate exponential easing
             //inline float exponentialEase(float t) {
             //    return t == 1.0f ? 1.0f : (1 - std::pow(2, -10 * t)) * 1.001f; // Slightly adjust to avoid precision issues
             //}
 
-            inline float exponentialEase(float t) {
-                return t == 1.0f ? 1.0f : (1.0f - exp2f(-10.0f * t));
-            }
+            //inline float exponentialEase(float t) {
+            //    return t == 1.0f ? 1.0f : (1.0f - exp2f(-10.0f * t));
+            //}
 
             
             virtual void draw(gfx::Renderer* renderer) override {
@@ -4548,7 +4548,7 @@ namespace tsl {
                     //elapsed = now - lastUpdateTime;
                     //lastUpdateTime = now;
                     if (Element::getInputMode() == InputMode::Controller) {
-                        static float lastOffset = 0.0f;
+                        //static float lastOffset = 0.0f;
                         static float velocity = 0.0f;
                         const float smoothingFactor = 0.15f;  // Lower value means faster smoothing
                         const float dampingFactor = 0.3f;   // Closer to 1 means slower damping
@@ -4563,13 +4563,13 @@ namespace tsl {
                         this->m_offset += velocity;
                     
                         // If the velocity is small, snap to the target offset
-                        if (std::abs(velocity) < 0.01f) {
+                        if (std::abs(velocity) < 0.1f) {
                             this->m_offset = this->m_nextOffset;
                             velocity = 0.0f;
                         }
                     
                         // Update the last offset for the next frame
-                        lastOffset = this->m_offset;
+                        //lastOffset = this->m_offset;
                     
 
                     } else if (Element::getInputMode() == InputMode::TouchScroll) {
@@ -4784,7 +4784,7 @@ namespace tsl {
             std::vector<std::pair<ssize_t, Element *>> m_itemsToAdd;
         
             //static inline std::chrono::steady_clock::time_point lastUpdateTime = std::chrono::steady_clock::now();
-            static inline float scrollSpeed = 10.0f;  // Adjust this as needed
+            //static inline float scrollSpeed = 10.0f;  // Adjust this as needed
 
             // Adjust these parameters to fine-tune the behavior
             //static inline constexpr float animationDuration = 3.0f;  // Duration of the animation
@@ -4881,7 +4881,7 @@ namespace tsl {
                 }
             }
             virtual inline void updateScrollOffset() {
-                if (lastInputMode != InputMode::Controller)
+                if (Element::getInputMode() != InputMode::Controller)
                     return;
                 
                 if (this->m_listHeight <= this->getHeight()) {
