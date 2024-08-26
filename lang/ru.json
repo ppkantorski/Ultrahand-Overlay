@@ -72,6 +72,8 @@
     "BACK": "Назад",
     "REBOOT": "Перезагрузка",
     "SHUTDOWN": "Выключение",
+    "TO": "To",
+    "BOOT_ENTRY": "Boot Entry",
     "GAP_1": "     ",
     "GAP_2": "  ",
     "USERGUIDE_OFFSET": "172",
