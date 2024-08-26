@@ -735,7 +735,7 @@ void localizeTimeStr(char* timeStr) {
 static void applyLangReplacements(std::string& text, bool isValue = false) {
     // Define the maps for replacements
     std::unordered_map<std::string, std::string> replacements;
-    
+
     if (!isValue) {
         replacements = {
             {"Reboot To", REBOOT_TO},
@@ -749,7 +749,7 @@ static void applyLangReplacements(std::string& text, bool isValue = false) {
             {"Off", OFF}
         };
     }
-    
+
     // Perform the direct replacement
     auto it = replacements.find(text);
     if (it != replacements.end()) {
@@ -2868,14 +2868,15 @@ namespace tsl {
                 size_t textLength = text.length();
                 u32 segmentWidth, segmentHeight;
                 
+                size_t specialPos, foundLength, pos;
                 while (startPos < textLength) {
-                    size_t specialPos = std::string::npos;
-                    size_t foundLength = 0;
+                    specialPos = std::string::npos;
+                    foundLength = 0;
                     const char* foundSymbol = nullptr;
                     
                     // Find the nearest special symbol
                     for (const auto& symbol : specialSymbols) {
-                        size_t pos = text.find(symbol, startPos);
+                        pos = text.find(symbol, startPos);
                         if (pos != std::string::npos && (specialPos == std::string::npos || pos < specialPos)) {
                             specialPos = pos;
                             foundLength = symbol.length();
@@ -3913,7 +3914,7 @@ namespace tsl {
                 // Load the bitmap file into memory
                 //if (expandedMemory && useCustomWallpaper && wallpaperData.empty()) {
                 //std::lock_guard<std::mutex> lock(wallpaperMutex);
-                if (expandedMemory) {
+                if (expandedMemory && !inPlot) {
                     std::lock_guard<std::mutex> lock(wallpaperMutex);
                     if (wallpaperData.empty()) {
                         if (isFileOrDirectory(WALLPAPER_PATH))
@@ -4118,31 +4119,31 @@ namespace tsl {
                         } else if (this->m_colorSelection == "white") {
                             titleColor = Color(0xF, 0xF, 0xF, 0xF);
                             drawTitle(titleColor);
-                        } else if (this->m_colorSelection == "ultra") {
-                            for (char letter : title) {
-                                // Calculate the progress for each letter based on the counter
-                                progress = calculateAmplitude(counter - x * 0.0001F);
-                                
-                                // Calculate the corresponding highlight color for each letter
-                                highlightColor = {
-                                    static_cast<u8>((0xA - 0xF) * (3 - 1.5 * progress) + 0xF),
-                                    static_cast<u8>((0xA - 0xF) * 1.5 * progress + 0xF),
-                                    static_cast<u8>((0xA - 0xF) * (1.25 - progress) + 0xF),
-                                    0xF
-                                };
-                                
-                                // Draw each character with its corresponding highlight color
-                                renderer->drawString(std::string(1, letter).c_str(), false, x, y, fontSize, a(highlightColor));
-                                
-                                // Manually calculate the width of the current letter
-                                letterWidth = renderer->calculateStringWidth(std::string(1, letter), fontSize);
-                                
-                                // Adjust the x-coordinate for the next character's position
-                                x += letterWidth;
-                                
-                                // Update the counter for the next character
-                                counter -= 0.00004F;
-                            }
+                        //} else if (this->m_colorSelection == "ultra") {
+                        //    for (char letter : title) {
+                        //        // Calculate the progress for each letter based on the counter
+                        //        progress = calculateAmplitude(counter - x * 0.0001F);
+                        //        
+                        //        // Calculate the corresponding highlight color for each letter
+                        //        highlightColor = {
+                        //            static_cast<u8>((0xA - 0xF) * (3 - 1.5 * progress) + 0xF),
+                        //            static_cast<u8>((0xA - 0xF) * 1.5 * progress + 0xF),
+                        //            static_cast<u8>((0xA - 0xF) * (1.25 - progress) + 0xF),
+                        //            0xF
+                        //        };
+                        //        
+                        //        // Draw each character with its corresponding highlight color
+                        //        renderer->drawString(std::string(1, letter).c_str(), false, x, y, fontSize, a(highlightColor));
+                        //        
+                        //        // Manually calculate the width of the current letter
+                        //        letterWidth = renderer->calculateStringWidth(std::string(1, letter), fontSize);
+                        //        
+                        //        // Adjust the x-coordinate for the next character's position
+                        //        x += letterWidth;
+                        //        
+                        //        // Update the counter for the next character
+                        //        counter -= 0.00004F;
+                        //    }
                         } else if (this->m_colorSelection.size() == 7 && this->m_colorSelection[0] == '#') {
                             // Check if m_colorSelection is a valid hexadecimal color
                             if (isValidHexColor(this->m_colorSelection.substr(1))) {
@@ -5193,7 +5194,6 @@ namespace tsl {
              */
             ToggleListItem(const std::string& text, bool initialState, const std::string& onValue = ON, const std::string& offValue = OFF)
                 : ListItem(text), m_state(initialState), m_onValue(onValue), m_offValue(offValue) {
-                    
                 this->setState(this->m_state);
             }
             
