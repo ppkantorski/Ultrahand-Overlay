@@ -670,6 +670,7 @@ private:
             });
             list->addItem(listItem.release());
         }
+        listItem.release();
     }
 
 
@@ -2925,7 +2926,7 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
 
                         const std::string& forwarderPackagePath = getParentDirFromPath(packageSource);
                         const std::string& forwarderPackageIniName = getNameFromPath(packageSource);
-                        listItem->setClickListener([&commands, keyName = option.first, dropdownSection, packagePath, forwarderPackagePath, forwarderPackageIniName, nestedLayer](s64 keys) mutable {
+                        listItem->setClickListener([commands, keyName = option.first, dropdownSection, packagePath, forwarderPackagePath, forwarderPackageIniName, nestedLayer](s64 keys) mutable {
                             if (simulatedSelect && !simulatedSelectComplete) {
                                 keys |= KEY_A;
                                 simulatedSelect = false;
@@ -2955,7 +2956,7 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                         //}
                         //listItem->setValue("TEST", true);
                         //std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(option.second, pathReplace);
-                        listItem->setClickListener([&commands, keyName = option.first, dropdownSection, packagePath,  packageName, footer, lastSection, listItemRaw = listItem.get()](uint64_t keys) {
+                        listItem->setClickListener([commands, keyName = option.first, dropdownSection, packagePath,  packageName, footer, lastSection, listItemRaw = listItem.get()](uint64_t keys) {
                             //listItemPtr = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){})](uint64_t keys) {
                             
                             if (runningInterpreter.load(std::memory_order_acquire))
@@ -3029,7 +3030,7 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                             listItem->setValue(footer);
                         
                         
-                        listItem->setClickListener([i, &commands, keyName = option.first, packagePath, packageName, selectedItem, listItemRaw = listItem.get()](uint64_t keys) {
+                        listItem->setClickListener([i, commands, keyName = option.first, packagePath, packageName, selectedItem, listItemRaw = listItem.get()](uint64_t keys) {
                             
                             if (runningInterpreter.load(std::memory_order_acquire)) {
                                 return false;
@@ -3089,7 +3090,7 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                         
                         toggleListItem->setState(toggleStateOn);
                         
-                        toggleListItem->setStateChangedListener([i, &commandsOn, &commandsOff, keyName = option.first, packagePath,
+                        toggleListItem->setStateChangedListener([i, commandsOn, commandsOff, keyName = option.first, packagePath,
                             pathPatternOn, pathPatternOff, listItemRaw = toggleListItem.get()](bool state) {
                             
                             tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemRaw, tsl::FocusDirection::None);
