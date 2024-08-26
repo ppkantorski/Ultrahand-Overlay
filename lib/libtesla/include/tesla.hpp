@@ -658,9 +658,21 @@ void parseLanguage(std::string langFile) {
 }
 
 
+// Helper function to apply replacements
+//static void applyTimeStrReplacements(std::string& str, const std::unordered_map<std::string, std::string>& mappings) {
+//    size_t pos;
+//    for (const auto& mapping : mappings) {
+//        pos = str.find(mapping.first);
+//        while (pos != std::string::npos) {
+//            str.replace(pos, mapping.first.length(), mapping.second);
+//            pos = str.find(mapping.first, pos + mapping.second.length());
+//        }
+//    }
+//}
+
 void localizeTimeStr(char* timeStr) {
-    // Define mappings for day and month names
-    std::vector<std::pair<std::string, std::string>> dayMappings = {
+    // Define static unordered_map for day and month mappings
+    std::unordered_map<std::string, std::string> mappings = {
         {"Sun", SUN},
         {"Mon", MON},
         {"Tue", TUE},
@@ -674,10 +686,7 @@ void localizeTimeStr(char* timeStr) {
         {"Wednesday", WEDNESDAY},
         {"Thursday", THURSDAY},
         {"Friday", FRIDAY},
-        {"Saturday", SATURDAY}
-    };
-    
-    std::vector<std::pair<std::string, std::string>> monthMappings = {
+        {"Saturday", SATURDAY},
         {"Jan", JAN},
         {"Feb", FEB},
         {"Mar", MAR},
@@ -703,32 +712,50 @@ void localizeTimeStr(char* timeStr) {
         {"November", NOVEMBER},
         {"December", DECEMBER}
     };
-    
+
     std::string timeStrCopy = timeStr; // Convert the char array to a string for processing
-    
-    // Replace abbreviated day names with their all-capital versions
+
+    // Apply day and month replacements
+    //applyTimeStrReplacements(timeStrCopy, mappings);
+
     size_t pos;
-    for (const auto &dayMapping : dayMappings) {
-        pos = timeStrCopy.find(dayMapping.first);
+    for (const auto& mapping : mappings) {
+        pos = timeStrCopy.find(mapping.first);
         while (pos != std::string::npos) {
-            timeStrCopy.replace(pos, dayMapping.first.length(), dayMapping.second);
-            pos = timeStrCopy.find(dayMapping.first, pos + dayMapping.second.length());
+            timeStrCopy.replace(pos, mapping.first.length(), mapping.second);
+            pos = timeStrCopy.find(mapping.first, pos + mapping.second.length());
         }
     }
-    
-    // Replace abbreviated month names with their all-capital versions
-    for (const auto &monthMapping : monthMappings) {
-        pos = timeStrCopy.find(monthMapping.first);
-        while (pos != std::string::npos) {
-            timeStrCopy.replace(pos, monthMapping.first.length(), monthMapping.second);
-            pos = timeStrCopy.find(monthMapping.first, pos + monthMapping.second.length());
-        }
-    }
-    
+
     // Copy the modified string back to the character array
     strcpy(timeStr, timeStrCopy.c_str());
 }
 
+// Unified function to apply replacements
+static void applyLangReplacements(std::string& text, bool isValue = false) {
+    // Define the maps for replacements
+    std::unordered_map<std::string, std::string> replacements;
+    
+    if (!isValue) {
+        replacements = {
+            {"Reboot To", REBOOT_TO},
+            {"Boot Entry", BOOT_ENTRY},
+            {"Reboot", REBOOT},
+            {"Shutdown", SHUTDOWN}
+        };
+    } else {
+        replacements = {
+            {"On", ON},
+            {"Off", OFF}
+        };
+    }
+    
+    // Perform the direct replacement
+    auto it = replacements.find(text);
+    if (it != replacements.end()) {
+        text = it->second;
+    }
+}
 
 
 
@@ -4932,34 +4959,8 @@ namespace tsl {
              */
             ListItem(const std::string& text, const std::string& value = "")
                 : Element(), m_text(text), m_value(value) {
-                // Define the search-and-replace pairs
-                const std::vector<std::pair<std::string, std::string>> replacements = {
-                    {"Reboot To", REBOOT_TO},
-                    {"Boot Entry", BOOT_ENTRY},
-                    {"Reboot", REBOOT},
-                    {"Shutdown", SHUTDOWN},
-                };
-                
-                // Apply replacements to m_text
-                for (const auto& [search, replace] : replacements) {
-                    size_t pos = m_text.find(search);
-                    if (pos != std::string::npos) {
-                        m_text.replace(pos, search.length(), replace);
-                    }
-                }
-                
-                // Apply replacements to m_value
-                const std::vector<std::pair<std::string, std::string>> valueReplacements = {
-                    {"On", ON},
-                    {"Off", OFF},
-                };
-                
-                for (const auto& [search, replace] : valueReplacements) {
-                    size_t pos = m_value.find(search);
-                    if (pos != std::string::npos) {
-                        m_value.replace(pos, search.length(), replace);
-                    }
-                }
+                applyLangReplacements(this->m_text);
+                applyLangReplacements(this->m_value, true);
             }
             virtual ~ListItem() {}
             
@@ -5258,21 +5259,8 @@ namespace tsl {
             
             
             CategoryHeader(const std::string &title, bool hasSeparator = true) : m_text(title), m_hasSeparator(hasSeparator) {
-                // Define the search-and-replace pairs
-                const std::vector<std::pair<std::string, std::string>> replacements = {
-                    {"Reboot To", REBOOT_TO},
-                    {"Boot Entry", BOOT_ENTRY},
-                    {"Reboot", REBOOT},
-                    {"Shutdown", SHUTDOWN},
-                };
                 
-                // Apply replacements to m_text
-                for (const auto& [search, replace] : replacements) {
-                    size_t pos = m_text.find(search);
-                    if (pos != std::string::npos) {
-                        m_text.replace(pos, search.length(), replace);
-                    }
-                }
+                applyLangReplacements(m_text);
             }
             virtual ~CategoryHeader() {}
             
