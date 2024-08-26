@@ -72,6 +72,8 @@
     "BACK": "Retour",
     "REBOOT": "Redémarrer",
     "SHUTDOWN": "Arrêter",
+    "TO": "To",
+    "BOOT_ENTRY": "Boot Entry",
     "GAP_1": "     ",
     "GAP_2": "  ",
     "USERGUIDE_OFFSET": "154",
