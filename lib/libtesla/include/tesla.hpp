@@ -4926,6 +4926,20 @@ namespace tsl {
              */
             ListItem(const std::string& text, const std::string& value = "")
                 : Element(), m_text(text), m_value(value) {
+                // Find the starting position of the substring to replace
+                size_t pos = this->m_text.find("Reboot");
+                
+                // If the substring is found, replace it
+                if (pos != std::string::npos) {
+                    this->m_text.replace(pos, std::string("Reboot").length(), REBOOT);
+                }
+                // Find the starting position of the substring to replace
+                pos = this->m_text.find("Shutdown");
+                
+                // If the substring is found, replace it
+                if (pos != std::string::npos) {
+                    this->m_text.replace(pos, std::string("Shutdown").length(), SHUTDOWN);
+                }
             }
             virtual ~ListItem() {}
             
@@ -4939,6 +4953,7 @@ namespace tsl {
                     }
                     //renderer->drawRect(ELEMENT_BOUNDS(this), tsl::style::color::ColorClickAnimation);
                 }
+
                 
                 this->m_text = convertComboToUnicode(this->m_text);
                 this->m_value = convertComboToUnicode(this->m_value);
@@ -5222,7 +5237,23 @@ namespace tsl {
         public:
             
             
-            CategoryHeader(const std::string &title, bool hasSeparator = true) : m_text(title), m_hasSeparator(hasSeparator) {}
+            CategoryHeader(const std::string &title, bool hasSeparator = true) : m_text(title), m_hasSeparator(hasSeparator) {
+                // Find the starting position of the substring to replace
+                size_t pos = this->m_text.find("Reboot");
+                
+                // If the substring is found, replace it
+                if (pos != std::string::npos) {
+                    this->m_text.replace(pos, std::string("Reboot").length(), REBOOT);
+                }
+                // Find the starting position of the substring to replace
+                pos = this->m_text.find("Shutdown");
+                
+                // If the substring is found, replace it
+                if (pos != std::string::npos) {
+                    this->m_text.replace(pos, std::string("Shutdown").length(), SHUTDOWN);
+                }
+                
+            }
             virtual ~CategoryHeader() {}
             
             virtual void draw(gfx::Renderer *renderer) override {
