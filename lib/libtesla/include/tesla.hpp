@@ -307,8 +307,10 @@ static std::string ABOUT = "About";
 static std::string CREDITS = "Credits";
 static std::string OK = "OK";
 static std::string BACK = "Back";
+static std::string REBOOT_TO = "Reboot To";
 static std::string REBOOT = "Reboot";
 static std::string SHUTDOWN = "Shutdown";
+static std::string BOOT_ENTRY = "Boot Entry";
 static std::string GAP_1 = "     ";
 static std::string GAP_2 = "  ";
 static std::string USERGUIDE_OFFSET = "170";
@@ -438,8 +440,10 @@ void reinitializeLangVars() {
     CREDITS = "Credits";
     OK = "OK";
     BACK = "Back";
+    REBOOT_TO = "Reboot To";
     REBOOT = "Reboot";
     SHUTDOWN = "Shutdown";
+    BOOT_ENTRY = "Boot Entry";
     GAP_1 = "     ";
     GAP_2 = "  ";
     USERGUIDE_OFFSET = "170";
@@ -584,8 +588,10 @@ void parseLanguage(std::string langFile) {
         {"CREDITS", &CREDITS},
         {"OK", &OK},
         {"BACK", &BACK},
+        {"REBOOT_TO", &REBOOT_TO},
         {"REBOOT", &REBOOT},
         {"SHUTDOWN", &SHUTDOWN},
+        {"BOOT_ENTRY", &BOOT_ENTRY},
         {"GAP_1", &GAP_1},
         {"GAP_2", &GAP_2},
         {"USERGUIDE_OFFSET", &USERGUIDE_OFFSET},
@@ -4926,19 +4932,33 @@ namespace tsl {
              */
             ListItem(const std::string& text, const std::string& value = "")
                 : Element(), m_text(text), m_value(value) {
-                // Find the starting position of the substring to replace
-                size_t pos = this->m_text.find("Reboot");
+                // Define the search-and-replace pairs
+                const std::vector<std::pair<std::string, std::string>> replacements = {
+                    {"Reboot To", REBOOT_TO},
+                    {"Boot Entry", BOOT_ENTRY},
+                    {"Reboot", REBOOT},
+                    {"Shutdown", SHUTDOWN},
+                };
                 
-                // If the substring is found, replace it
-                if (pos != std::string::npos) {
-                    this->m_text.replace(pos, std::string("Reboot").length(), REBOOT);
+                // Apply replacements to m_text
+                for (const auto& [search, replace] : replacements) {
+                    size_t pos = m_text.find(search);
+                    if (pos != std::string::npos) {
+                        m_text.replace(pos, search.length(), replace);
+                    }
                 }
-                // Find the starting position of the substring to replace
-                pos = this->m_text.find("Shutdown");
                 
-                // If the substring is found, replace it
-                if (pos != std::string::npos) {
-                    this->m_text.replace(pos, std::string("Shutdown").length(), SHUTDOWN);
+                // Apply replacements to m_value
+                const std::vector<std::pair<std::string, std::string>> valueReplacements = {
+                    {"On", ON},
+                    {"Off", OFF},
+                };
+                
+                for (const auto& [search, replace] : valueReplacements) {
+                    size_t pos = m_value.find(search);
+                    if (pos != std::string::npos) {
+                        m_value.replace(pos, search.length(), replace);
+                    }
                 }
             }
             virtual ~ListItem() {}
@@ -5238,21 +5258,21 @@ namespace tsl {
             
             
             CategoryHeader(const std::string &title, bool hasSeparator = true) : m_text(title), m_hasSeparator(hasSeparator) {
-                // Find the starting position of the substring to replace
-                size_t pos = this->m_text.find("Reboot");
+                // Define the search-and-replace pairs
+                const std::vector<std::pair<std::string, std::string>> replacements = {
+                    {"Reboot To", REBOOT_TO},
+                    {"Boot Entry", BOOT_ENTRY},
+                    {"Reboot", REBOOT},
+                    {"Shutdown", SHUTDOWN},
+                };
                 
-                // If the substring is found, replace it
-                if (pos != std::string::npos) {
-                    this->m_text.replace(pos, std::string("Reboot").length(), REBOOT);
+                // Apply replacements to m_text
+                for (const auto& [search, replace] : replacements) {
+                    size_t pos = m_text.find(search);
+                    if (pos != std::string::npos) {
+                        m_text.replace(pos, search.length(), replace);
+                    }
                 }
-                // Find the starting position of the substring to replace
-                pos = this->m_text.find("Shutdown");
-                
-                // If the substring is found, replace it
-                if (pos != std::string::npos) {
-                    this->m_text.replace(pos, std::string("Shutdown").length(), SHUTDOWN);
-                }
-                
             }
             virtual ~CategoryHeader() {}
             
