@@ -749,7 +749,7 @@ public:
             list->addItem(new tsl::elm::CategoryHeader(SYSTEM));
             std::vector<std::vector<std::string>> tableData = {
                 {FIRMWARE, "", versionString},
-                {"Bootloader", "", !hekateVersion.empty() ? "Hekate "+hekateVersion : UNAVAILABLE_SELECTION}
+                {"Bootloader", "", !hekateVersion.empty() ? "hekate "+hekateVersion : UNAVAILABLE_SELECTION}
             };
             addTable(list, tableData, "", 166, 20, 3, 10);
     
@@ -1417,27 +1417,34 @@ private:
                 simulatedSelect = false;
             }
             if (keys & KEY_A) {
-                std::istringstream iss(line), argIss;
-                std::string part, arg;
                 std::vector<std::vector<std::string>> commandVec;
                 std::vector<std::string> commandParts;
+                std::string currentPart;
                 bool inQuotes = false;
-
-                while (std::getline(iss, part, '\'')) {
-                    if (!part.empty()) {
+    
+                for (char ch : line) {
+                    if (ch == '\'') {
+                        inQuotes = !inQuotes;
                         if (!inQuotes) {
-                            argIss.clear();
-                            argIss.str(part);
-                            while (argIss >> arg) commandParts.emplace_back(arg);
-                        } else {
-                            commandParts.emplace_back(part);
+                            commandParts.emplace_back(std::move(currentPart));
+                            currentPart.clear();
                         }
+                    } else if (ch == ' ' && !inQuotes) {
+                        if (!currentPart.empty()) {
+                            commandParts.emplace_back(std::move(currentPart));
+                            currentPart.clear();
+                        }
+                    } else {
+                        currentPart += ch;
                     }
-                    inQuotes = !inQuotes;
                 }
+                if (!currentPart.empty()) {
+                    commandParts.emplace_back(std::move(currentPart));
+                }
+    
                 commandVec.emplace_back(std::move(commandParts));
                 interpretAndExecuteCommands(std::move(commandVec), filePath, specificKey);
-
+    
                 listItemRaw->setValue(commandSuccess ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
                 simulatedSelectComplete = true;
                 listItemRaw->triggerClickAnimation();
@@ -1456,30 +1463,54 @@ public:
         inScriptMenu = true;
         std::string packageName = getNameFromPath(filePath);
         if (packageName == ".packages") packageName = ROOT_PACKAGE;
-
+    
         auto list = std::make_unique<tsl::elm::List>();
         const std::string& packageFile = filePath + fileName;
         const std::string& fileContent = getFileContents(packageFile);
-
+    
         if (!fileContent.empty()) {
-            std::string line, currentCategory;
-            std::istringstream iss(fileContent);
-
-            while (std::getline(iss, line)) {
-                if (line.empty() || line.find_first_not_of('\n') == std::string::npos) continue;
-
+            std::string line;
+            std::string currentCategory;
+            bool isInSection = false;
+            size_t startPos = 0;
+            size_t endPos = fileContent.find('\n');
+    
+            while (endPos != std::string::npos) {
+                line = fileContent.substr(startPos, endPos - startPos);
+                startPos = endPos + 1;
+                endPos = fileContent.find('\n', startPos);
+    
+                // Remove leading and trailing whitespaces
+                line.erase(0, line.find_first_not_of(" \t\n\r"));
+                line.erase(line.find_last_not_of(" \t\n\r") + 1);
+    
+                if (line.empty()) continue;
+    
                 if (line.front() == '[' && line.back() == ']') {
                     currentCategory = line.substr(1, line.size() - 2);
                     isInSection = specificKey.empty() || currentCategory == specificKey;
-                    if (isInSection) list->addItem(new tsl::elm::CategoryHeader(currentCategory));
+                    if (isInSection) {
+                        list->addItem(new tsl::elm::CategoryHeader(currentCategory));
+                    }
                 } else if (isInSection) {
+                    addListItem(list, line);
+                }
+            }
+    
+            // Process the last line if fileContent does not end with a newline
+            if (startPos < fileContent.size()) {
+                line = fileContent.substr(startPos);
+                line.erase(0, line.find_first_not_of(" \t\n\r"));
+                line.erase(line.find_last_not_of(" \t\n\r") + 1);
+    
+                if (!line.empty() && isInSection) {
                     addListItem(list, line);
                 }
             }
         } else {
             list->addItem(new tsl::elm::ListItem(FAILED_TO_OPEN + ": " + packageFile));
         }
-
+    
         PackageHeader packageHeader = getPackageHeaderFromIni(packageFile);
         auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(packageName, packageHeader.version.empty() ? 
             CAPITAL_ULTRAHAND_PROJECT_NAME + " Script" : packageHeader.version + "   (" + CAPITAL_ULTRAHAND_PROJECT_NAME + " Script)");
@@ -3795,9 +3826,9 @@ public:
                         "ini_file_source /bootloader/hekate_ipl.ini\n"
                         "filter config\n"
                         "reboot boot '{ini_file_source(*)}'\n"
-                        "[Hekate]\n"
+                        "[hekate]\n"
                         "reboot HEKATE\n"
-                        "[Hekate UMS]\n"
+                        "[hekate UMS]\n"
                         "reboot UMS\n"
                         "\n[Commands]\n"
                         "[Shutdown]\n"
@@ -3805,10 +3836,10 @@ public:
                     packageFileOut.close();
                 }
             }
-
+            
             inOverlaysPage = false;
             inPackagesPage = true;
-
+            
             if (dropdownSection.empty()) {
                 // Create the directory if it doesn't exist
                 createDirectory(PACKAGE_PATH);
