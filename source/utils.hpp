@@ -63,6 +63,16 @@ bool usingMariko = util::IsMariko();
  */
 
 
+// Function to remove all empty command strings
+void removeEmptyCommands(std::vector<std::vector<std::string>>& commands) {
+    commands.erase(std::remove_if(commands.begin(), commands.end(),
+        [](const std::vector<std::string>& vec) {
+            return vec.empty();
+        }),
+        commands.end());
+}
+
+
 /**
  * @brief Shuts off all connected controllers.
  *
