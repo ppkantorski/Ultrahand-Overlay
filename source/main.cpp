@@ -143,8 +143,35 @@ const static auto STAR_KEY = KEY_X;
 //    size_t& steps;
 //    bool& unlockedTrackbar;
 //    bool& onEveryTick;
+//
 //    std::string& packageSource;
 //    std::string& packagePath;
+//    std::string& filePath;
+//    std::string& iniFilePath;
+//    std::vector<std::string>& filesList;
+//    std::vector<std::string>& filesListOn;
+//    std::vector<std::string>& filesListOff;
+//    std::vector<std::string>& filterList;
+//    std::vector<std::string>& filterListOn;
+//    std::vector<std::string>& filterListOff;
+//    std::string& jsonString;
+//    std::string& jsonStringOn;
+//    std::string& jsonStringOff;
+//    std::string& jsonKey;
+//    std::string& jsonKeyOn;
+//    std::string& jsonKeyOff;
+//    std::string& jsonPath;
+//    std::string& jsonPathOn;
+//    std::string& jsonPathOff;
+//    std::string& listPath;
+//    std::string& listPathOn;
+//    std::string& listPathOff;
+//    std::string& listString;
+//    std::string& listStringOn;
+//    std::string& listStringOff;
+//    std::string& iniPath;
+//    std::string& iniPathOn;
+//    std::string& iniPathOff;
 //};
 //
 //struct CommandData {
@@ -153,9 +180,9 @@ const static auto STAR_KEY = KEY_X;
 //    std::vector<std::vector<std::string>>& commandsOff;
 //    std::vector<std::vector<std::string>>& tableData;
 //};
-
-
-
+//
+//
+//
 //void processCommands(CommandOptions& options, CommandData& data) {
 //    options.inEristaSection = false;
 //    options.inMarikoSection = false;
@@ -169,10 +196,13 @@ const static auto STAR_KEY = KEY_X;
 //        data.commands.end());
 //
 //    // Initial processing of commands
-//    for (const auto& cmd : data.commands) {
+//    std::string iniFilePath;
+//    std::string commandNameLower;
+//
+//    for (auto& cmd : data.commands) {
 //        options.commandName = cmd[0];
 //
-//        std::string commandNameLower = stringToLowercase(options.commandName);
+//        commandNameLower = stringToLowercase(options.commandName);
 //        if (commandNameLower == "erista:") {
 //            options.inEristaSection = true;
 //            options.inMarikoSection = false;
@@ -273,6 +303,113 @@ const static auto STAR_KEY = KEY_X;
 //            } else if (options.commandMode == TRACKBAR_STR || options.commandMode == STEP_TRACKBAR_STR || options.commandMode == NAMED_STEP_TRACKBAR_STR) {
 //                //data.commands.push_back(cmd);
 //                continue;
+//            }
+//
+//            if (cmd.size() > 1) {
+//                if (!iniFilePath.empty())
+//                    cmd[1] = replaceIniPlaceholder(cmd[1], INI_FILE_STR, options.iniFilePath);
+//
+//                if (options.commandName == "ini_file") {
+//                    iniFilePath = preprocessPath(cmd[1], options.filePath);
+//                    continue;
+//                } else if (options.commandName == "filter") {
+//                    std::string filterEntry = removeQuotes(cmd[1]);
+//                    if (options.sourceType == FILE_STR)
+//                        filterEntry = preprocessPath(filterEntry, options.filePath);
+//
+//                    if (options.currentSection == GLOBAL_STR)
+//                        options.filterList.push_back(std::move(filterEntry));
+//                    else if (options.currentSection == ON_STR)
+//                        options.filterListOn.push_back(std::move(filterEntry));
+//                    else if (options.currentSection == OFF_STR)
+//                        options.filterListOff.push_back(std::move(filterEntry));
+//                } else if (options.commandName == "file_source") {
+//                    options.sourceType = FILE_STR;
+//                    if (options.currentSection == GLOBAL_STR) {
+//                        //logMessage("cmd[1]: "+cmd[1]);
+//                        options.pathPattern = preprocessPath(cmd[1], options.filePath);
+//                        //logMessage("pathPattern: "+pathPattern);
+//                        std::vector<std::string> newFiles = getFilesListByWildcards(options.pathPattern);
+//                        options.filesList.insert(options.filesList.end(), newFiles.begin(), newFiles.end()); // Append new files
+//                    } else if (options.currentSection == ON_STR) {
+//                        options.pathPatternOn = preprocessPath(cmd[1], options.filePath);
+//                        std::vector<std::string> newFilesOn = getFilesListByWildcards(options.pathPatternOn);
+//                        options.filesListOn.insert(options.filesListOn.end(), newFilesOn.begin(), newFilesOn.end()); // Append new files
+//                        options.sourceTypeOn = FILE_STR;
+//                    } else if (options.currentSection == OFF_STR) {
+//                        options.pathPatternOff = preprocessPath(cmd[1], options.filePath);
+//                        std::vector<std::string> newFilesOff = getFilesListByWildcards(options.pathPatternOff);
+//                        options.filesListOff.insert(options.filesListOff.end(), newFilesOff.begin(), newFilesOff.end()); // Append new files
+//                        options.sourceTypeOff = FILE_STR;
+//                    }
+//                } else if (options.commandName == "json_file_source") {
+//                    options.sourceType = JSON_FILE_STR;
+//                    if (options.currentSection == GLOBAL_STR) {
+//                        options.jsonPath = preprocessPath(cmd[1], options.filePath);
+//                        if (cmd.size() > 2)
+//                            options.jsonKey = cmd[2];
+//                    } else if (options.currentSection == ON_STR) {
+//                        options.jsonPathOn = preprocessPath(cmd[1], options.filePath);
+//                        options.sourceTypeOn = JSON_FILE_STR;
+//                        if (cmd.size() > 2)
+//                            options.jsonKeyOn = cmd[2];
+//                    } else if (options.currentSection == OFF_STR) {
+//                        options.jsonPathOff = preprocessPath(cmd[1], options.filePath);
+//                        options.sourceTypeOff = JSON_FILE_STR;
+//                        if (cmd.size() > 2)
+//                            options.jsonKeyOff = cmd[2];
+//                    }
+//                } else if (options.commandName == "list_file_source") {
+//                    options.sourceType = LIST_FILE_STR;
+//                    if (options.currentSection == GLOBAL_STR) {
+//                        options.listPath = preprocessPath(cmd[1], options.filePath);
+//                    } else if (options.currentSection == ON_STR) {
+//                        options.listPathOn = preprocessPath(cmd[1], options.filePath);
+//                        options.sourceTypeOn = LIST_FILE_STR;
+//                    } else if (options.currentSection == OFF_STR) {
+//                        options.listPathOff = preprocessPath(cmd[1], options.filePath);
+//                        options.sourceTypeOff = LIST_FILE_STR;
+//                    }
+//                } else if (options.commandName == "list_source") {
+//                    options.sourceType = LIST_STR;
+//                    if (options.currentSection == GLOBAL_STR) {
+//                        options.listString = removeQuotes(cmd[1]);
+//                    } else if (options.currentSection == ON_STR) {
+//                        options.listStringOn = removeQuotes(cmd[1]);
+//                        options.sourceTypeOn = LIST_STR;
+//                    } else if (options.currentSection == OFF_STR) {
+//                        options.listStringOff = removeQuotes(cmd[1]);
+//                        options.sourceTypeOff = LIST_STR;
+//                    }
+//                } else if (options.commandName == "ini_file_source") {
+//                    options.sourceType = INI_FILE_STR;
+//                    if (options.currentSection == GLOBAL_STR) {
+//                        options.iniPath = preprocessPath(cmd[1], options.filePath);
+//                    } else if (options.currentSection == ON_STR) {
+//                        options.iniPathOn = preprocessPath(cmd[1], options.filePath);
+//                        options.sourceTypeOn = INI_FILE_STR;
+//                    } else if (options.currentSection == OFF_STR) {
+//                        options.iniPathOff = preprocessPath(cmd[1], options.filePath);
+//                        options.sourceTypeOff = INI_FILE_STR;
+//                    }
+//                } else if (options.commandName == "json_source") {
+//                    options.sourceType = JSON_STR;
+//                    if (options.currentSection == GLOBAL_STR) {
+//                        options.jsonString = removeQuotes(cmd[1]);
+//                        if (cmd.size() > 2)
+//                            options.jsonKey = removeQuotes(cmd[2]);
+//                    } else if (options.currentSection == ON_STR) {
+//                        options.jsonStringOn = removeQuotes(cmd[1]);
+//                        options.sourceTypeOn = JSON_STR;
+//                        if (cmd.size() > 2)
+//                            options.jsonKeyOn = removeQuotes(cmd[2]);
+//                    } else if (options.currentSection == OFF_STR) {
+//                        options.jsonStringOff = removeQuotes(cmd[1]);
+//                        options.sourceTypeOff = JSON_STR;
+//                        if (cmd.size() > 2)
+//                            options.jsonKeyOff = removeQuotes(cmd[2]);
+//                    }
+//                }
 //            }
 //
 //            if (cmd.size() > 1) {
@@ -490,12 +627,14 @@ private:
     }
 
     void handleSelection(std::unique_ptr<tsl::elm::List>& list, const std::vector<std::string>& items, const std::string& defaultItem, const std::string& iniKey, const std::string& targetMenu) {
+        std::unique_ptr<tsl::elm::ListItem> listItem;
+        std::string mappedItem;
         for (const auto& item : items) {
             //auto mappedItem = convertComboToUnicode(item); // moved to ListItem class in libTesla
             //if (mappedItem.empty()) mappedItem = item;
-            auto mappedItem = item;
+            mappedItem = item;
     
-            auto listItem = std::make_unique<tsl::elm::ListItem>(mappedItem);
+            listItem = std::make_unique<tsl::elm::ListItem>(mappedItem);
             if (item == defaultItem) {
                 listItem->setValue(CHECKMARK_SYMBOL);
                 lastSelectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){});
@@ -1638,6 +1777,7 @@ public:
         std::string iniFilePath;
 
         std::string commandName;
+
         for (auto& cmd : commands) {
             commandName = cmd[0];
 
@@ -2297,11 +2437,20 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
     size_t tableStartGap, tableEndGap, tableColumnOffset, tableSpacing;
     std::string tableSectionTextColor, tableInfoTextColor, tableAlignment;
     // Pack variables into structs
+
+    // All empty values
+    //std::string filepath, iniFilePath;
+    //std::vector<std::string> filesList, filesListOn, filesListOff, filterList, filterListOn, filterListOff;
+    //std::string jsonString, jsonStringOn, jsonStringOff, listPath, listPathOn, listPathOff, listString, listStringOn, listStringOff, iniPath, iniPathOn, iniPathOff;
+    //
+    //
     //CommandOptions cmdOptions = {inEristaSection, inMarikoSection, usingErista, usingMariko, commandName, commandSystem,
     //                          commandMode, commandGrouping, currentSection, pathPattern, sourceType, pathPatternOn,
     //                          sourceTypeOn, pathPatternOff, sourceTypeOff, defaultToggleState, hideTableBackground,
     //                          tableStartGap, tableEndGap, tableColumnOffset, tableSpacing, tableSectionTextColor, tableInfoTextColor, tableAlignment,
-    //                          minValue, maxValue, units, steps, unlockedTrackbar, onEveryTick, packageSource, packagePath};
+    //                          minValue, maxValue, units, steps, unlockedTrackbar, onEveryTick, packageSource, packagePath,
+    //                          filepath, iniFilePath, filesList, filesListOn, filesListOff, filterList, filterListOn, filterListOff,
+    //                          jsonString, jsonStringOn, jsonStringOff, jsonKey, jsonKeyOn, jsonKeyOff, jsonPath, jsonPathOn, jsonPathOff, listPath, listPathOn, listPathOff, listString, listStringOn, listStringOff, iniPath, iniPathOn, iniPathOff};
     //
     //CommandData cmdData = {commands, commandsOn, commandsOff, tableData};
     std::vector<std::string> entryList;
@@ -2488,12 +2637,12 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
             //    }),
             //    commands.end());
             removeEmptyCommands(commands);
-        
+            
             // Initial processing of commands (DUPLICATE CODE)
             std::string commandNameLower;
             for (const auto& cmd : commands) {
                 commandName = cmd[0];
-        
+                
                 commandNameLower = stringToLowercase(commandName);
                 if (commandNameLower == "erista:") {
                     inEristaSection = true;
@@ -2504,11 +2653,11 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                     inMarikoSection = true;
                     continue;
                 }
-        
+                
                 if ((inEristaSection && !inMarikoSection && usingErista) || 
                     (!inEristaSection && inMarikoSection && usingMariko) || 
                     (!inEristaSection && !inMarikoSection)) {
-        
+                    
                     if (commandName.find(SYSTEM_PATTERN) == 0) {
                         commandSystem = commandName.substr(SYSTEM_PATTERN.length());
                         if (std::find(commandSystems.begin(), commandSystems.end(), commandSystem) == commandSystems.end())
@@ -2555,7 +2704,7 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                     } else if (commandName.find(ALIGNMENT_PATTERN) == 0) {
                         tableAlignment = commandName.substr(ALIGNMENT_PATTERN.length());
                         continue;
-        
+                    
                     } else if (commandName.find(MIN_VALUE_PATTERN) == 0) {
                         minValue = std::stoi(commandName.substr(MIN_VALUE_PATTERN.length()));
                         continue;
@@ -2577,13 +2726,13 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                     } else if (commandName.find(";") == 0) {
                         continue;
                     }
-        
+                    
                     if (commandMode == TOGGLE_STR) {
                         if (commandName.find("on:") == 0)
                             currentSection = ON_STR;
                         else if (commandName.find("off:") == 0)
                             currentSection = OFF_STR;
-        
+                        
                         if (currentSection == GLOBAL_STR) {
                             commandsOn.push_back(cmd);
                             commandsOff.push_back(cmd);
@@ -2599,7 +2748,7 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                         //commands.push_back(cmd);
                         continue;
                     }
-        
+                    
                     if (cmd.size() > 1) {
                         if (commandName == "file_source") {
                             if (currentSection == GLOBAL_STR) {
@@ -2776,7 +2925,7 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
 
                         const std::string& forwarderPackagePath = getParentDirFromPath(packageSource);
                         const std::string& forwarderPackageIniName = getNameFromPath(packageSource);
-                        listItem->setClickListener([commands, keyName = option.first, dropdownSection, packagePath, forwarderPackagePath, forwarderPackageIniName, nestedLayer](s64 keys) mutable {
+                        listItem->setClickListener([&commands, keyName = option.first, dropdownSection, packagePath, forwarderPackagePath, forwarderPackageIniName, nestedLayer](s64 keys) mutable {
                             if (simulatedSelect && !simulatedSelectComplete) {
                                 keys |= KEY_A;
                                 simulatedSelect = false;
@@ -2806,7 +2955,7 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                         //}
                         //listItem->setValue("TEST", true);
                         //std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(option.second, pathReplace);
-                        listItem->setClickListener([commands, keyName = option.first, dropdownSection, packagePath,  packageName, footer, lastSection, listItemRaw = listItem.get()](uint64_t keys) {
+                        listItem->setClickListener([&commands, keyName = option.first, dropdownSection, packagePath,  packageName, footer, lastSection, listItemRaw = listItem.get()](uint64_t keys) {
                             //listItemPtr = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){})](uint64_t keys) {
                             
                             if (runningInterpreter.load(std::memory_order_acquire))
@@ -2880,7 +3029,7 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                             listItem->setValue(footer);
                         
                         
-                        listItem->setClickListener([i, commands, keyName = option.first, packagePath, packageName, selectedItem, listItemRaw = listItem.get()](uint64_t keys) {
+                        listItem->setClickListener([i, &commands, keyName = option.first, packagePath, packageName, selectedItem, listItemRaw = listItem.get()](uint64_t keys) {
                             
                             if (runningInterpreter.load(std::memory_order_acquire)) {
                                 return false;
@@ -2940,7 +3089,7 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                         
                         toggleListItem->setState(toggleStateOn);
                         
-                        toggleListItem->setStateChangedListener([i, commandsOn, commandsOff, keyName = option.first, packagePath,
+                        toggleListItem->setStateChangedListener([i, &commandsOn, &commandsOff, keyName = option.first, packagePath,
                             pathPatternOn, pathPatternOff, listItemRaw = toggleListItem.get()](bool state) {
                             
                             tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemRaw, tsl::FocusDirection::None);
