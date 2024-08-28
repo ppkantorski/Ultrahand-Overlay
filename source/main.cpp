@@ -879,7 +879,7 @@ public:
             char ramString[20];       // Buffer for RAM info
             
 
-            addHeader(list, SYSTEM+" "+COMMANDS);
+            addHeader(list, COMMANDS);
 
             // Get system memory info and format it
             u64 RAM_Used_system_u, RAM_Total_system_u;
@@ -963,7 +963,7 @@ public:
                 {"Memory", "", memoryData[2]},
                 {"   Vendor", "", memoryData[0]},
                 {"   Model", "", memoryData[1]},
-                {"Storage", "", getSDMCStorageInfo()}
+                {"SD Card", "", getSDMCStorageInfo()}
             };
             addTable(list, tableData, "", 160, 20, 3, 4);
 
