@@ -29,6 +29,7 @@
 #include <queue>
 #include <mutex>
 #include <condition_variable>
+#include <sys/statvfs.h>
 
 
 static std::atomic<bool> abortCommand(false);
@@ -73,6 +74,85 @@ void removeEmptyCommands(std::vector<std::vector<std::string>>& commands) {
 }
 
 
+
+// Function to get the corresponding string for a given packed_version
+std::string getMemoryType(uint64_t packed_version) {
+    // Define an array of strings indexed by packed_version
+    static const char* memoryArray[] = {
+        "Samsung_K4F6E304HB-MGCH_4 GB LPDDR4 3200 Mbps",        // 0
+        "Hynix_H9HCNNNBPUMLHR-NLE_4 GB LPDDR4 3200 Mbps",       // 1
+        "Micron_MT53B512M32D2NP-062 WT:C_4 GB LPDDR4 3200 Mbps",// 2
+        "Hynix_H9HCNNNBKMMLXR-NEE_4 GB LPDDR4X 4266 Mbps",      // 3
+        "Samsung_K4FHE3D4HM-MGCH_6 GB LPDDR4 3200 Mbps",        // 4
+        "Hynix_H9HCNNNBKMMLXR-NEE_4 GB LPDDR4X 4266 Mbps",      // 5
+        "Hynix_H9HCNNNBKMMLXR-NEE_4 GB LPDDR4X 4266 Mbps",      // 6
+        "Samsung_K4FBE3D4HM-MGXX_8 GB LPDDR4 3200 Mbps",        // 7
+        "Samsung_K4U6E3S4AM-MGCJ_4 GB LPDDR4X 3733 Mbps",       // 8
+        "Samsung_K4UBE3D4AM-MGCJ_8 GB LPDDR4X 3733 Mbps",       // 9
+        "Hynix_H9HCNNNBKMMLHR-NME_4 GB LPDDR4X 3733 Mbps",      // 10
+        "Micron_MT53E512M32D2NP-046 WT:E_4 GB LPDDR4X 4266 Mbps",// 11
+        "Samsung_K4U6E3S4AM-MGCJ_4 GB LPDDR4X 3733 Mbps",       // 12
+        "Samsung_K4UBE3D4AM-MGCJ_8 GB LPDDR4X 3733 Mbps",       // 13
+        "Hynix_H9HCNNNBKMMLHR-NME_4 GB LPDDR4X 3733 Mbps",      // 14
+        "Micron_MT53E512M32D2NP-046 WT:E_4 GB LPDDR4X 4266 Mbps",// 15
+        nullptr,                                              // 16 (no entry)
+        "Samsung_K4U6E3S4AA-MGCL_4 GB LPDDR4X 4266 Mbps",       // 17
+        "Samsung_K4UBE3D4AA-MGCL_8 GB LPDDR4X 4266 Mbps",       // 18
+        "Samsung_K4U6E3S4AA-MGCL_4 GB LPDDR4X 4266 Mbps",       // 19
+        "Samsung_K4U6E3S4AB-MGCL_4 GB LPDDR4X 4266 Mbps",       // 20
+        "Samsung_K4U6E3S4AB-MGCL_4 GB LPDDR4X 4266 Mbps",       // 21
+        "Samsung_K4U6E3S4AB-MGCL_4 GB LPDDR4X 4266 Mbps",       // 22
+        "Samsung_K4UBE3D4AA-MGCL_8 GB LPDDR4X 4266 Mbps",       // 23
+        "Samsung_K4U6E3S4AA-MGCL_4 GB LPDDR4X 4266 Mbps",       // 24
+        "Micron_MT53E512M32D2NP-046 WT:F_4 GB LPDDR4X 4266 Mbps",// 25
+        "Micron_MT53E512M32D2NP-046 WT:F_4 GB LPDDR4X 4266 Mbps",// 26
+        "Micron_MT53E512M32D2NP-046 WT:F_4 GB LPDDR4X 4266 Mbps",// 27
+        "Samsung_K4UBE3D4AA-MGCL_8 GB LPDDR4X 4266 Mbps",       // 28
+        "Hynix_H54G46CYRBX267_4 GB LPDDR4X 4266 Mbps",          // 29
+        "Hynix_H54G46CYRBX267_4 GB LPDDR4X 4266 Mbps",          // 30
+        "Hynix_H54G46CYRBX267_4 GB LPDDR4X 4266 Mbps",          // 31
+        "Micron_MT53E512M32D1NP-046 WT:B_4 GB LPDDR4X 4266 Mbps",// 32
+        "Micron_MT53E512M32D1NP-046 WT:B_4 GB LPDDR4X 4266 Mbps",// 33
+        "Micron_MT53E512M32D1NP-046 WT:B_4 GB LPDDR4X 4266 Mbps" // 34
+    };
+
+    if (packed_version < sizeof(memoryArray) / sizeof(memoryArray[0]) && memoryArray[packed_version] != nullptr) {
+        return memoryArray[packed_version];
+    } else {
+        return "Unknown Memory Type";  // Handle the case where the version is not found
+    }
+}
+
+
+std::string getSDMCStorageInfo() {
+    struct statvfs stat;
+
+    // Get filesystem statistics for "sdmc:/"
+    if (statvfs("sdmc:/", &stat) != 0) {
+        // Handle error, could not get filesystem statistics
+        return UNAVAILABLE_SELECTION;
+    }
+
+    // Calculate total and available storage in bytes
+    //uint64_t totalSpace = stat.f_blocks * stat.f_frsize;
+    //uint64_t availableSpace = stat.f_bavail * stat.f_frsize;
+
+    // Convert bytes to GB
+    //double totalSpaceGB = static_cast<double>(totalSpace) / (1024 * 1024 * 1024);
+    //double availableSpaceGB = static_cast<double>(availableSpace) / (1024 * 1024 * 1024);
+
+    // Create a buffer to store the formatted string
+    char buffer[50];
+    snprintf(buffer, sizeof(buffer), "%.2f / %.2f GB",
+        static_cast<float>(stat.f_bavail * stat.f_frsize) / (1024 * 1024 * 1024),
+        static_cast<float>(stat.f_blocks * stat.f_frsize) / (1024 * 1024 * 1024)
+    );
+
+    // Return the formatted string
+    return std::string(buffer);
+}
+
+
 /**
  * @brief Shuts off all connected controllers.
  *
@@ -81,61 +161,61 @@ void removeEmptyCommands(std::vector<std::vector<std::string>>& commands) {
  * the controllers.
  */
 void powerOffAllControllers() {
-    Result rc;
-    static s32 g_connected_count = 0;
-    static BtdrvAddress g_addresses[8] = {};
-    
-    // Initialize Bluetooth manager
-    rc = btmInitialize();
-    if (R_FAILED(rc)) {
-        commandSuccess = false;
-        //LogLine("Error btmInitialize: %u - %X\n", rc, rc);
-        return;
-    }
-    
-    if (hosversionAtLeast(13, 0, 0)) {
-        BtmConnectedDeviceV13 connected_devices[8];
-        rc = btmGetDeviceCondition(BtmProfile_None, connected_devices, 8, &g_connected_count);
-        if (R_SUCCEEDED(rc)) {
-            for (s32 i = 0; i != g_connected_count; ++i) {
-                g_addresses[i] = connected_devices[i].address;
-            }
-        } else {
-            commandSuccess = false;
-            //LogLine("Error btmGetDeviceCondition: %u - %X\n", rc, rc);
-        }
-    } else {
-        BtmDeviceCondition g_device_condition;
-        rc = btmLegacyGetDeviceCondition(&g_device_condition);
-        if (R_SUCCEEDED(rc)) {
-            g_connected_count = g_device_condition.v900.connected_count;
-            for (s32 i = 0; i != g_connected_count; ++i) {
-                g_addresses[i] = g_device_condition.v900.devices[i].address;
-            }
-        } else {
-            commandSuccess = false;
-            //LogLine("Error btmLegacyGetDeviceCondition: %u - %X\n", rc, rc);
-        }
-    }
-    
-    if (R_SUCCEEDED(rc)) {
-        //LogLine("Disconnecting controllers. Count: %u\n", g_connected_count);
-        for (int i = 0; i != g_connected_count; ++i) {
-            Result rc = btmHidDisconnect(g_addresses[i]);
-            if (R_FAILED(rc)) {
-                commandSuccess = false;
-                //LogLine("Error btmHidDisconnect: %u - %X\n", rc, rc);
-            } else {
-                //LogLine("Disconnected Address: %u - %X\n", g_addresses[i], g_addresses[i]);
-            }
-        }
-        //LogLine("All controllers disconnected.\n");
-    } else {
-        commandSuccess = false;
-    }
-    
-    // Exit Bluetooth manager
-    btmExit();
+    //Result rc;
+    //static s32 g_connected_count = 0;
+    //static BtdrvAddress g_addresses[8] = {};
+    //
+    //// Initialize Bluetooth manager
+    //rc = btmInitialize();
+    //if (R_FAILED(rc)) {
+    //    commandSuccess = false;
+    //    //LogLine("Error btmInitialize: %u - %X\n", rc, rc);
+    //    return;
+    //}
+    //
+    //if (hosversionAtLeast(13, 0, 0)) {
+    //    BtmConnectedDeviceV13 connected_devices[8];
+    //    rc = btmGetDeviceCondition(BtmProfile_None, connected_devices, 8, &g_connected_count);
+    //    if (R_SUCCEEDED(rc)) {
+    //        for (s32 i = 0; i != g_connected_count; ++i) {
+    //            g_addresses[i] = connected_devices[i].address;
+    //        }
+    //    } else {
+    //        commandSuccess = false;
+    //        //LogLine("Error btmGetDeviceCondition: %u - %X\n", rc, rc);
+    //    }
+    //} else {
+    //    BtmDeviceCondition g_device_condition;
+    //    rc = btmLegacyGetDeviceCondition(&g_device_condition);
+    //    if (R_SUCCEEDED(rc)) {
+    //        g_connected_count = g_device_condition.v900.connected_count;
+    //        for (s32 i = 0; i != g_connected_count; ++i) {
+    //            g_addresses[i] = g_device_condition.v900.devices[i].address;
+    //        }
+    //    } else {
+    //        commandSuccess = false;
+    //        //LogLine("Error btmLegacyGetDeviceCondition: %u - %X\n", rc, rc);
+    //    }
+    //}
+    //
+    //if (R_SUCCEEDED(rc)) {
+    //    //LogLine("Disconnecting controllers. Count: %u\n", g_connected_count);
+    //    for (int i = 0; i != g_connected_count; ++i) {
+    //        rc = btmHidDisconnect(g_addresses[i]);
+    //        if (R_FAILED(rc)) {
+    //            commandSuccess = false;
+    //            //LogLine("Error btmHidDisconnect: %u - %X\n", rc, rc);
+    //        } else {
+    //            //LogLine("Disconnected Address: %u - %X\n", g_addresses[i], g_addresses[i]);
+    //        }
+    //    }
+    //    //LogLine("All controllers disconnected.\n");
+    //} else {
+    //    commandSuccess = false;
+    //}
+    //
+    //// Exit Bluetooth manager
+    //btmExit();
 }
 
 //std::unordered_map<std::string, std::string> createButtonCharMap() {
@@ -314,6 +394,31 @@ std::tuple<Result, std::string, std::string> getOverlayInfo(const std::string& f
     };
 }
 
+
+//auto returnRootFrame(
+//    std::unique_ptr<tsl::elm::List>& list,  // Use unique_ptr to avoid copying and releasing the list
+//    const std::string& title,               // Use const reference to avoid copying strings
+//    const std::string& subTitle,
+//    const std::string& param1 = "",
+//    const std::string& param2 = "",
+//    const std::string& param3 = "",
+//    const std::string& param4 = ""
+//) {
+//    auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(title, subTitle, param1, param2, param3, param4);
+//    rootFrame->setContent(list.release()); // Take ownership of the list
+//
+//    return rootFrame.release(); // Return unique_ptr directly
+//}
+
+void addHeader(auto& list, const std::string& headerText) {
+    list->addItem(new tsl::elm::CategoryHeader(headerText));
+}
+
+void addBasicListItem(auto& list, const std::string& itemText) {
+    list->addItem(new tsl::elm::ListItem(itemText));
+}
+
+
 void drawTable(std::unique_ptr<tsl::elm::List>& list, const std::vector<std::string>& sectionLines, const std::vector<std::string>& infoLines,
     const size_t& columnOffset = 160, const size_t& startGap = 20, const size_t& endGap = 3, const size_t& newlineGap = 0,
     const std::string& tableSectionTextColor = DEFAULT_STR, const std::string& tableInfoTextColor = DEFAULT_STR, const std::string& alignment = LEFT_STR, const bool& hideTableBackground = false, const bool& useHeaderIndent = false) {
@@ -397,10 +502,12 @@ void drawTable(std::unique_ptr<tsl::elm::List>& list, const std::vector<std::str
         if (useHeaderIndent)
             renderer->drawRect(x-2, y+2, 3, 23, renderer->a(tsl::headerSeparatorColor));
 
+        std::string infoText;
+
         for (size_t i = 0; i < sectionLines.size(); ++i) {
             renderer->drawString(sectionLines[i].c_str(), false, x + 12+1, y + yOffsets[i], fontSize, renderer->a((tableSectionTextColor == DEFAULT_STR) ? sectionTextColor : alternateSectionTextColor));
             // Check if infoLines[i] is "null" and replace it with UNAVAILABLE_SELECTION if true
-            std::string infoText = (infoLines[i].find(NULL_STR) != std::string::npos) ? UNAVAILABLE_SELECTION : infoLines[i];
+            infoText = (infoLines[i].find(NULL_STR) != std::string::npos) ? UNAVAILABLE_SELECTION : infoLines[i];
             renderer->drawString(infoText.c_str(), false, x + infoXOffsets[i]+1, y + yOffsets[i], fontSize, renderer->a((tableInfoTextColor == DEFAULT_STR) ? infoTextColor : alternateInfoTextColor));
         }
     }, hideTableBackground, endGap), totalHeight);
@@ -409,11 +516,12 @@ void drawTable(std::unique_ptr<tsl::elm::List>& list, const std::vector<std::str
 
 
 
-void applyPlaceholderReplacement(std::vector<std::string>& cmd, std::string hexPath, std::string iniPath, std::string listString, std::string listPath, std::string jsonString, std::string jsonPath);
+void applyPlaceholderReplacement(std::vector<std::string>& cmd, const std::string& hexPath, const std::string& iniPath, const std::string& listString, const std::string& listPath, const std::string& jsonString, const std::string& jsonPath);
 
 void addTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::vector<std::string>>& tableData,
     const std::string& packagePath, const size_t& columnOffset=160, const size_t& tableStartGap=20, const size_t& tableEndGap=3, const size_t& tableSpacing=0,
     const std::string& tableSectionTextColor=DEFAULT_STR, const std::string& tableInfoTextColor=DEFAULT_STR, const std::string& tableAlignment=RIGHT_STR, const bool& hideTableBackground = false, const bool& useHeaderIndent = false) {
+    std::string message;
 
     //std::string sectionString, infoString;
     std::vector<std::string> sectionLines, infoLines;
@@ -461,7 +569,7 @@ void addTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::vector<std
             applyPlaceholderReplacement(cmd, hexPath, iniPath, listString, listPath, jsonString, jsonPath);
 
             if (interpreterLogging) {
-                std::string message = "Reading line:";
+                message = "Reading line:";
                 for (const std::string& token : cmd)
                     message += " " + token;
                 logMessage(message);
@@ -512,7 +620,7 @@ void addTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::vector<std
 
 void addHelpInfo(std::unique_ptr<tsl::elm::List>& list) {
     // Add a section break with small text to indicate the "Commands" section
-    list->addItem(new tsl::elm::CategoryHeader(USER_GUIDE));
+    addHeader(list, USER_GUIDE);
 
     // Adjust the horizontal offset as needed
     int xOffset = std::stoi(USERGUIDE_OFFSET);
@@ -540,7 +648,7 @@ void addHelpInfo(std::unique_ptr<tsl::elm::List>& list) {
 
 void addPackageInfo(std::unique_ptr<tsl::elm::List>& list, auto& packageHeader, std::string type = PACKAGE_STR) {
     // Add a section break with small text to indicate the "Commands" section
-    list->addItem(new tsl::elm::CategoryHeader(type == PACKAGE_STR ? PACKAGE_INFO : OVERLAY_INFO));
+    addHeader(list, (type == PACKAGE_STR ? PACKAGE_INFO : OVERLAY_INFO));
 
     int maxLineLength = 28;  // Adjust the maximum line length as needed
     int xOffset = 120;    // Adjust the horizontal offset as needed
@@ -679,13 +787,17 @@ bool isDangerousCombination(const std::string& patternPath) {
         }
     }
 
+    std::string relativePath;
+    size_t slashPos;
+    //bool isDirectlyWithinProtectedFolder;
+
     // Check protected folders and dangerous patterns
     for (const auto& folder : protectedFolders) {
         if (patternPath == folder) {
             return true; // Path is a protected folder
         }
         if (patternPath.find(folder) == 0) {
-            std::string relativePath = patternPath.substr(folder.size());
+            relativePath = patternPath.substr(folder.size());
 
             // Check for dangerous patterns in the relative path
             for (const auto& pattern : dangerousPatterns) {
@@ -695,9 +807,9 @@ bool isDangerousCombination(const std::string& patternPath) {
             }
 
             // Check for dangerous combination patterns in the relative path directly within the protected folder
-            size_t slashPos = relativePath.find('/');
-            bool isDirectlyWithinProtectedFolder = (slashPos == std::string::npos);
-            if (isDirectlyWithinProtectedFolder) {
+            slashPos = relativePath.find('/');
+            //isDirectlyWithinProtectedFolder = (slashPos == std::string::npos);
+            if (slashPos == std::string::npos) {
                 for (const auto& combination : dangerousCombinationPatterns) {
                     if (relativePath.find(combination) != std::string::npos) {
                         return true; // Relative path contains a dangerous combination pattern
@@ -1038,15 +1150,19 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
     bool usingFileSource = false;
 
     std::string fileName = (isDirectory(entry) ? getNameFromPath(entry) : dropExtension(getNameFromPath(entry)));
+    std::vector<std::string> modifiedCmd;
+    std::string commandName;
+    std::string modifiedArg;
+    size_t startPos, endPos;
+    std::string replacement;
 
     for (const auto& cmd : commands) {
         if (cmd.empty())
             continue;
         
-        std::vector<std::string> modifiedCmd;
+        modifiedCmd.clear();
         modifiedCmd.reserve(cmd.size());
-
-        std::string commandName = cmd[0];
+        commandName = cmd[0];
 
         if (commandName == "download")
             isDownloadCommand = true;
@@ -1063,7 +1179,7 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
         
         if ((inEristaSection && usingErista) || (inMarikoSection && usingMariko) || (!inEristaSection && !inMarikoSection)) {
             for (const auto& arg : cmd) {
-                std::string modifiedArg = arg;
+                modifiedArg = arg;
 
                 if (commandName == "file_source") {
                     usingFileSource = true;
@@ -1085,10 +1201,10 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
                 
                 if (modifiedArg.find("{list_source(") != std::string::npos) {
                     modifiedArg = replacePlaceholder(modifiedArg, "*", std::to_string(entryIndex));
-                    size_t startPos = modifiedArg.find("{list_source(");
-                    size_t endPos = modifiedArg.find(")}");
+                    startPos = modifiedArg.find("{list_source(");
+                    endPos = modifiedArg.find(")}");
                     if (endPos != std::string::npos && endPos > startPos) {
-                        std::string replacement = stringToList(listString)[entryIndex];
+                        replacement = stringToList(listString)[entryIndex];
                         replacement = replacement.empty() ? NULL_STR : replacement;
                         modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
                     }
@@ -1096,10 +1212,10 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
 
                 if (modifiedArg.find("{list_file_source(") != std::string::npos) {
                     modifiedArg = replacePlaceholder(modifiedArg, "*", std::to_string(entryIndex));
-                    size_t startPos = modifiedArg.find("{list_file_source(");
-                    size_t endPos = modifiedArg.find(")}");
+                    startPos = modifiedArg.find("{list_file_source(");
+                    endPos = modifiedArg.find(")}");
                     if (endPos != std::string::npos && endPos > startPos) {
-                        std::string replacement = getEntryFromListFile(listPath, entryIndex);
+                        replacement = getEntryFromListFile(listPath, entryIndex);
                         replacement = replacement.empty() ? NULL_STR : replacement;
                         modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
                     }
@@ -1107,10 +1223,10 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
 
                 if (modifiedArg.find("{ini_file_source(") != std::string::npos) {
                     modifiedArg = replacePlaceholder(modifiedArg, "*", std::to_string(entryIndex));
-                    size_t startPos = modifiedArg.find("{ini_file_source(");
-                    size_t endPos = modifiedArg.find(")}");
+                    startPos = modifiedArg.find("{ini_file_source(");
+                    endPos = modifiedArg.find(")}");
                     if (endPos != std::string::npos && endPos > startPos) {
-                        std::string replacement = replaceIniPlaceholder(modifiedArg, "ini_file_source", iniPath);
+                        replacement = replaceIniPlaceholder(modifiedArg, "ini_file_source", iniPath);
                         replacement = replacement.empty() ? NULL_STR : replacement;
                         modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
                     }
@@ -1118,10 +1234,10 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
 
                 if (modifiedArg.find("{json_source(") != std::string::npos) {
                     modifiedArg = replacePlaceholder(modifiedArg, "*", std::to_string(entryIndex));
-                    size_t startPos = modifiedArg.find("{json_source(");
-                    size_t endPos = modifiedArg.find(")}");
+                    startPos = modifiedArg.find("{json_source(");
+                    endPos = modifiedArg.find(")}");
                     if (endPos != std::string::npos && endPos > startPos) {
-                        std::string replacement = replaceJsonPlaceholder(modifiedArg.substr(startPos, endPos - startPos + 2), "json_source", jsonString);
+                        replacement = replaceJsonPlaceholder(modifiedArg.substr(startPos, endPos - startPos + 2), "json_source", jsonString);
                         replacement = replacement.empty() ? NULL_STR : replacement;
                         modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
                     }
@@ -1129,10 +1245,10 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
 
                 if (modifiedArg.find("{json_file_source(") != std::string::npos) {
                     modifiedArg = replacePlaceholder(modifiedArg, "*", std::to_string(entryIndex));
-                    size_t startPos = modifiedArg.find("{json_file_source(");
-                    size_t endPos = modifiedArg.find(")}");
+                    startPos = modifiedArg.find("{json_file_source(");
+                    endPos = modifiedArg.find(")}");
                     if (endPos != std::string::npos && endPos > startPos) {
-                        std::string replacement = replaceJsonPlaceholder(modifiedArg.substr(startPos, endPos - startPos + 2), "json_file_source", jsonPath);
+                        replacement = replaceJsonPlaceholder(modifiedArg.substr(startPos, endPos - startPos + 2), "json_file_source", jsonPath);
                         replacement = replacement.empty() ? NULL_STR : replacement;
                         modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
                     }
@@ -1166,11 +1282,13 @@ auto replacePlaceholders = [](std::string& arg, const std::string& placeholder, 
     size_t startPos, endPos;
     std::string lastArg, replacement;
 
+    size_t nestedStartPos, nextStartPos, nextEndPos;
+
     while ((startPos = arg.find(placeholder)) != std::string::npos) {
-        size_t nestedStartPos = startPos;
+        nestedStartPos = startPos;
         while (true) {
-            size_t nextStartPos = arg.find(placeholder, nestedStartPos + 1);
-            size_t nextEndPos = arg.find(")}", nestedStartPos);
+            nextStartPos = arg.find(placeholder, nestedStartPos + 1);
+            nextEndPos = arg.find(")}", nestedStartPos);
             if (nextStartPos != std::string::npos && nextStartPos < nextEndPos) {
                 nestedStartPos = nextStartPos;
             } else {
@@ -1198,7 +1316,7 @@ auto replacePlaceholders = [](std::string& arg, const std::string& placeholder, 
     }
 };
 
-void applyPlaceholderReplacement(std::vector<std::string>& cmd, std::string hexPath, std::string iniPath, std::string listString, std::string listPath, std::string jsonString, std::string jsonPath) {
+void applyPlaceholderReplacement(std::vector<std::string>& cmd, const std::string& hexPath, const std::string& iniPath, const std::string& listString, const std::string& listPath, const std::string& jsonString, const std::string& jsonPath) {
     std::vector<std::pair<std::string, std::function<std::string(const std::string&)>>> placeholders = {
         {"{hex_file(", [&](const std::string& placeholder) { return replaceHexPlaceholder(placeholder, hexPath); }},
         {"{ini_file(", [&](const std::string& placeholder) { return replaceIniPlaceholder(placeholder, INI_FILE_STR, iniPath); }},
@@ -1273,7 +1391,7 @@ void applyPlaceholderReplacement(std::vector<std::string>& cmd, std::string hexP
                 std::string delimiter = parameters.substr(firstCommaPos + 1, lastCommaPos - firstCommaPos - 1);
                 size_t index = std::stoi(parameters.substr(lastCommaPos + 1));
         
-                std::string result = splitString(removeQuotes(trim(str)), removeQuotes(trim(delimiter)), index);
+                std::string result = splitStringAtIndex(removeQuotes(trim(str)), removeQuotes(trim(delimiter)), index);
                 if (result.empty()) {
                     return removeQuotes(trim(str));
                 } else {
@@ -1334,6 +1452,7 @@ void interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
     }
     settingsData.clear();
 
+    std::string message;
 
     bool inEristaSection = false;
     bool inMarikoSection = false;
@@ -1348,6 +1467,8 @@ void interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
     refreshPage = false;
     refreshPackage = false;
     interpreterLogging = false;
+
+    size_t cmdSize;
 
     while (!commands.empty()) {
 
@@ -1396,13 +1517,13 @@ void interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
                 applyPlaceholderReplacement(cmd, hexPath, iniPath, listString, listPath, jsonString, jsonPath);
 
                 if (interpreterLogging) {
-                    std::string message = "Executing command: ";
+                    message = "Executing command: ";
                     for (const std::string& token : cmd)
                         message += token + " ";
                     logMessage(message);
                 }
 
-                const size_t cmdSize = cmd.size();
+                cmdSize = cmd.size();
 
                 if (commandName == LIST_STR) {
                     if (cmdSize >= 2) {
@@ -1474,6 +1595,7 @@ void handleMakeDirCommand(const std::vector<std::string>& cmd, const std::string
 void handleCopyCommand(const std::vector<std::string>& cmd, const std::string& packagePath) {
     std::string sourceListPath, destinationListPath, logSource, logDestination, sourcePath, destinationPath, copyFilterListPath, filterListPath;
     parseCommandArguments(cmd, packagePath, sourceListPath, destinationListPath, logSource, logDestination, sourcePath, destinationPath, copyFilterListPath, filterListPath);
+    long long totalBytesCopied, totalSize;
 
     if (!sourceListPath.empty() && !destinationListPath.empty()) {
         std::vector<std::string> sourceFilesList = readListFromFile(sourceListPath);
@@ -1483,12 +1605,13 @@ void handleCopyCommand(const std::vector<std::string>& cmd, const std::string& p
         if (!filterListPath.empty())
             filterSet = readSetFromFile(filterListPath);
 
+        
         for (size_t i = 0; i < sourceFilesList.size(); ++i) {
             sourcePath = preprocessPath(sourceFilesList[i]);
             destinationPath = preprocessPath(destinationFilesList[i]);
             if (filterListPath.empty() || (!filterListPath.empty() && filterSet.find(sourcePath) == filterSet.end())) {
-                long long totalBytesCopied = 0;
-                long long totalSize = getTotalSize(sourcePath);  // Ensure this is calculated if needed.
+                totalBytesCopied = 0;
+                totalSize = getTotalSize(sourcePath);  // Ensure this is calculated if needed.
                 copyFileOrDirectory(sourcePath, destinationPath, &totalBytesCopied, totalSize);
             }
         }
@@ -1504,8 +1627,8 @@ void handleCopyCommand(const std::vector<std::string>& cmd, const std::string& p
                 if (sourcePath.find('*') != std::string::npos) {
                     copyFileOrDirectoryByPattern(sourcePath, destinationPath, logSource, logDestination); // Copy files by pattern
                 } else {
-                    long long totalBytesCopied = 0;
-                    long long totalSize = getTotalSize(sourcePath);  // Ensure this is calculated if needed.
+                    totalBytesCopied = 0;
+                    totalSize = getTotalSize(sourcePath);  // Ensure this is calculated if needed.
                     copyFileOrDirectory(sourcePath, destinationPath, &totalBytesCopied, totalSize, logSource, logDestination);
                 }
             }
@@ -1567,6 +1690,8 @@ void handleMoveCommand(const std::vector<std::string>& cmd, const std::string& p
     std::string sourceListPath, destinationListPath, logSource, logDestination, sourcePath, destinationPath, copyFilterListPath, filterListPath;
     parseCommandArguments(cmd, packagePath, sourceListPath, destinationListPath, logSource, logDestination, sourcePath, destinationPath, copyFilterListPath, filterListPath);
 
+    long long totalBytesCopied, totalSize;
+
     if (!sourceListPath.empty() && !destinationListPath.empty()) {
         std::vector<std::string> sourceFilesList = readListFromFile(sourceListPath);
         std::vector<std::string> destinationFilesList = readListFromFile(destinationListPath);
@@ -1586,8 +1711,8 @@ void handleMoveCommand(const std::vector<std::string>& cmd, const std::string& p
                 destinationPath = preprocessPath(destinationFilesList[i]);
                 if (filterListPath.empty() || (!filterListPath.empty() && filterSet.find(sourcePath) == filterSet.end())) {
                     if (!copyFilterListPath.empty() && copyFilterSet.find(sourcePath) != copyFilterSet.end()) {
-                        long long totalBytesCopied = 0;
-                        long long totalSize = getTotalSize(sourcePath);  // Ensure this is calculated if needed.
+                        totalBytesCopied = 0;
+                        totalSize = getTotalSize(sourcePath);  // Ensure this is calculated if needed.
                         copyFileOrDirectory(sourcePath, destinationPath, &totalBytesCopied, totalSize);
                     } else {
                         moveFileOrDirectory(sourcePath, destinationPath, "", "");
