@@ -245,9 +245,9 @@ bool pchtxt2cheat(const std::string &pchtxtPath, std::string cheatName = "", std
         std::string cheatLine = CHEAT_TYPE + " " + addrStr + " " + hexToReversedHex(buffer);
         if (!cheatExists(cheatFilePath, cheatLine)) {
             outCheatFile << cheatLine << "\n";
-            logMessage("Cheat line added: " + cheatLine);
+            //logMessage("Cheat line added: " + cheatLine);
         } else {
-            logMessage("Cheat already exists: " + cheatLine);
+            //logMessage("Cheat already exists: " + cheatLine);
         }
     }
 
