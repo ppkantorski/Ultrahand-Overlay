@@ -2093,9 +2093,10 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             std::string refreshPattern = removeQuotes(cmd[1]);
             if (refreshPattern == "theme")
                 tsl::initializeThemeVars();
-            else if (refreshPattern == "package") {
+            else if (refreshPattern == "package")
                 refreshPackage = true;
-            }
+            else if (refreshPattern == "wallpaper")
+                refreshWallpaper = true;
         }
     } else if (commandName == "logging") {
         interpreterLogging = !interpreterLogging;
