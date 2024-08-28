@@ -858,7 +858,7 @@ public:
             }
             listItem.release();
         } else if (dropdownSelection == "softwareUpdateMenu") {
-            std::string versionLabel = cleanVersionLabel(parseValueFromIniSection((SETTINGS_PATH+"RELEASE.ini").c_str(), "Release Info", "latest_version"));
+            std::string versionLabel = cleanVersionLabel(parseValueFromIniSection((SETTINGS_PATH+"RELEASE.ini"), "Release Info", "latest_version"));
 
             addHeader(list, SOFTWARE_UPDATE);
             addUpdateButton(list, UPDATE_ULTRAHAND, ULTRAHAND_REPO_URL + "releases/latest/download/ovlmenu.ovl", "/config/ultrahand/downloads/ovlmenu.ovl", "/switch/.overlays/ovlmenu.ovl", versionLabel);
@@ -874,17 +874,14 @@ public:
             overlayHeader.clear();
 
         } else if (dropdownSelection == "systemMenu") {
-            u64 packed_version;
-            char versionString[20];  // Buffer for the formatted version string
-            char ramString[20];       // Buffer for RAM info
             
-
             addHeader(list, COMMANDS);
 
             // Get system memory info and format it
             u64 RAM_Used_system_u, RAM_Total_system_u;
             svcGetSystemInfo(&RAM_Used_system_u, 1, INVALID_HANDLE, 2);
             svcGetSystemInfo(&RAM_Total_system_u, 0, INVALID_HANDLE, 2);
+            char ramString[20];       // Buffer for RAM info
             sprintf(ramString, "%.2f MB %s", 
                     static_cast<float>(RAM_Total_system_u)/1024/1024 - 
                     static_cast<float>(RAM_Used_system_u)/1024/1024 - 8.0f, 
@@ -907,37 +904,25 @@ public:
             addTable(list, tableData, "", 160, 28, 6, 0, DEFAULT_STR, DEFAULT_STR, RIGHT_STR, true);
 
             // Get version and format it
-            splGetConfig((SplConfigItem)65000, &packed_version);
-            sprintf(versionString, "%d.%d.%d|AMS %d.%d.%d",
-                    (u8)((packed_version >> 24) & 0xFF),
-                    (u8)((packed_version >> 16) & 0xFF),
-                    (u8)((packed_version >> 8) & 0xFF),
-                    (u8)((packed_version >> 56) & 0xFF),
-                    (u8)((packed_version >> 48) & 0xFF),
-                    (u8)((packed_version >> 40) & 0xFF));
-    
+            // Combine hosVersion and amsVersion into versionString
+            char versionString[20];  // Buffer for the formatted version string
+            snprintf(versionString, sizeof(versionString), "%s|AMS %s", hosVersion, amsVersion);
+
             // Append status
+            u64 packed_version;
             splGetConfig((SplConfigItem)65007, &packed_version);
             strcat(versionString, (packed_version == 0 ? "|S" : "|E"));
             
+
             std::string hekateVersion = extractVersionFromBinary("sdmc:/bootloader/update.bin");
 
             // Add firmware info to list
-            addHeader(list, "Device Info");
-            
-            splGetConfig((SplConfigItem)2, &packed_version);
-
-            std::string memoryType = getMemoryType(packed_version);
-
-            std::vector<std::string> memoryData = {"Unknown","Unknown","Unknown"};
-            if (memoryType != "Unknown Memory Type")
-                memoryData = splitString(memoryType, "_");
-
+            addHeader(list, DEVICE_INFO);
 
             SetSysProductModel model = SetSysProductModel_Invalid;
             setsysGetProductModel(&model);
             
-            std::string modelRev;
+            const char* modelRev;
             if (model == SetSysProductModel_Iowa)
                 modelRev = "Iowa Tegra x1+";
             else if (model == SetSysProductModel_Hoag)
@@ -950,20 +935,21 @@ public:
                 modelRev = "Nx Tegra x1";
             else if (model == SetSysProductModel_Copper)
                 modelRev = "Copper Tegra x1";
-            
+            else
+                modelRev = UNAVAILABLE_SELECTION.c_str();  // Fallback for unknown models
 
             tableData = {
                 {FIRMWARE, "", versionString},
-                {"Bootloader", "", !hekateVersion.empty() ? "hekate "+hekateVersion : "fusee"}
+                {BOOTLOADER, "", !hekateVersion.empty() ? "hekate "+hekateVersion : "fusee"}
             };
             addTable(list, tableData, "", 160, 20, 30, 4);
 
             tableData = {
-                {"Hardware", "", modelRev},
-                {"Memory", "", memoryData[2]},
-                {"   Vendor", "", memoryData[0]},
-                {"   Model", "", memoryData[1]},
-                {"SD Card", "", getSDMCStorageInfo()}
+                {HARDWARE, "", modelRev},
+                {MEMORY, "", memorySize},
+                {"   "+VENDOR, "", memoryVendor},
+                {"   "+MODEL, "", memoryModel},
+                {STORAGE, "", getSDMCStorageInfo()}
             };
             addTable(list, tableData, "", 160, 20, 3, 4);
 
@@ -2114,7 +2100,7 @@ public:
 
                     if (lastGroupingName.empty() || (lastGroupingName != groupingName)) {
                         addHeader(list, groupingName);
-                        lastGroupingName = groupingName.c_str();
+                        lastGroupingName = groupingName;
                     }
                 } else if (commandGrouping == "split2") {
                     groupingName = removeQuotes(getParentDirNameFromPath(selectedItem));
@@ -2127,7 +2113,7 @@ public:
 
                     if (lastGroupingName.empty() || (lastGroupingName != groupingName)) {
                         addHeader(list, groupingName);
-                        lastGroupingName = groupingName.c_str();
+                        lastGroupingName = groupingName;
                     }
                 } else if (commandGrouping == "split3") {
                     groupingName = removeQuotes(getNameFromPath(selectedItem));
@@ -2140,7 +2126,7 @@ public:
 
                     if (lastGroupingName.empty() || (lastGroupingName != groupingName)) {
                         addHeader(list, groupingName);
-                        lastGroupingName = groupingName.c_str();
+                        lastGroupingName = groupingName;
                     }
                 } else if (commandGrouping == "split4") {
                     groupingName = removeQuotes(getParentDirNameFromPath(selectedItem, 2));
@@ -2149,7 +2135,7 @@ public:
 
                     if (lastGroupingName.empty() || (lastGroupingName != groupingName)) {
                         addHeader(list, groupingName);
-                        lastGroupingName = groupingName.c_str();
+                        lastGroupingName = groupingName;
                     }
                 }
             } else {
@@ -2469,8 +2455,8 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
     bool skipSection = false;
     bool skipSystem = false;
     
-    std::string lastSection = "";
-    std::string drawLocation = "";
+    std::string lastSection;
+    std::string drawLocation;
     
     std::string commandName;
     std::string commandFooter;
@@ -3765,7 +3751,7 @@ public:
             currentMenu = PACKAGES_STR;
         }
 
-        menuMode = currentMenu.c_str();
+        menuMode = currentMenu;
         
         versionLabel = std::string(APP_VERSION) + "   (" + loaderTitle + " " + (cleanVersionLabels ? "" : "v") + cleanVersionLabel(loaderInfo) + ")";
         //versionLabel = (cleanVersionLabels) ? std::string(APP_VERSION) : (std::string(APP_VERSION) + "   (" + extractTitle(loaderInfo) + " v" + cleanVersionLabel(loaderInfo) + ")");
@@ -3947,7 +3933,7 @@ public:
                     
                     overlayFile = OVERLAY_PATH+overlayFileName;
                     
-                    newOverlayName = overlayName.c_str();
+                    newOverlayName = overlayName;
                     if (overlayStarred)
                         newOverlayName = STAR_SYMBOL+"  "+newOverlayName;
                     
@@ -4669,6 +4655,8 @@ public:
                 bootOptions.clear();
             }
         }
+        
+        unpackDeviceInfo();
     }
     
     /**
