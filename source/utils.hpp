@@ -45,6 +45,14 @@ bool interpreterLogging = false;
 bool usingErista = util::IsErista();
 bool usingMariko = util::IsMariko();
 
+// Device info globals
+static char amsVersion[12];
+static char hosVersion[12];
+static std::string memoryType;
+static std::string memoryVendor = UNAVAILABLE_SELECTION;
+static std::string memoryModel = UNAVAILABLE_SELECTION;
+static std::string memorySize = UNAVAILABLE_SELECTION;
+
 /**
  * @brief Ultrahand-Overlay Configuration Paths
  *
@@ -74,9 +82,17 @@ void removeEmptyCommands(std::vector<std::vector<std::string>>& commands) {
 }
 
 
+// Define the helper function
+void formatVersion(uint64_t packed_version, int shift1, int shift2, int shift3, char* version_str) {
+    sprintf(version_str, "%d.%d.%d",
+            static_cast<uint8_t>((packed_version >> shift1) & 0xFF),
+            static_cast<uint8_t>((packed_version >> shift2) & 0xFF),
+            static_cast<uint8_t>((packed_version >> shift3) & 0xFF));
+}
+
 
 // Function to get the corresponding string for a given packed_version
-std::string getMemoryType(uint64_t packed_version) {
+const char* getMemoryType(uint64_t packed_version) {
     // Define an array of strings indexed by packed_version
     static const char* memoryArray[] = {
         "Samsung_K4F6E304HB-MGCH_4 GB LPDDR4 3200 Mbps",        // 0
@@ -117,20 +133,34 @@ std::string getMemoryType(uint64_t packed_version) {
     };
 
     if (packed_version < sizeof(memoryArray) / sizeof(memoryArray[0]) && memoryArray[packed_version] != nullptr) {
-        return memoryArray[packed_version];
+        //std::string memoryType = memoryArray[packed_version];
+        
+        //if (modelOnly) {
+        //    // Find the first and second underscores
+        //    size_t firstUnderscore = memoryType.find('_');
+        //    size_t secondUnderscore = memoryType.find('_', firstUnderscore + 1);
+        //    
+        //    // Extract the substring between the two underscores
+        //    if (firstUnderscore != std::string::npos && secondUnderscore != std::string::npos) {
+        //        return memoryType.substr(firstUnderscore + 1, secondUnderscore - firstUnderscore - 1);
+        //    }
+        //}
+
+        return memoryArray[packed_version] ? memoryArray[packed_version] : "";
     } else {
-        return "Unknown Memory Type";  // Handle the case where the version is not found
+        return "";  // Handle the case where the version is not found
     }
 }
 
 
-std::string getSDMCStorageInfo() {
+const char* getSDMCStorageInfo() {
     struct statvfs stat;
+    static char buffer[20]; // Static buffer to retain data across function calls
 
     // Get filesystem statistics for "sdmc:/"
     if (statvfs("sdmc:/", &stat) != 0) {
         // Handle error, could not get filesystem statistics
-        return UNAVAILABLE_SELECTION;
+        return ""; // Returning a fixed error message
     }
 
     // Calculate total and available storage in bytes
@@ -138,18 +168,38 @@ std::string getSDMCStorageInfo() {
     //uint64_t availableSpace = stat.f_bavail * stat.f_frsize;
 
     // Convert bytes to GB
-    //double totalSpaceGB = static_cast<double>(totalSpace) / (1024 * 1024 * 1024);
-    //double availableSpaceGB = static_cast<double>(availableSpace) / (1024 * 1024 * 1024);
+    float totalSpaceGB = (stat.f_blocks * stat.f_frsize) / (1024 * 1024 * 1024);
+    float availableSpaceGB = (stat.f_bavail * stat.f_frsize) / (1024 * 1024 * 1024);
 
-    // Create a buffer to store the formatted string
-    char buffer[50];
-    snprintf(buffer, sizeof(buffer), "%.2f / %.2f GB",
-        static_cast<float>(stat.f_bavail * stat.f_frsize) / (1024 * 1024 * 1024),
-        static_cast<float>(stat.f_blocks * stat.f_frsize) / (1024 * 1024 * 1024)
-    );
+    // Create a formatted string with the available and total storage in GB
+    snprintf(buffer, sizeof(buffer), "%.2f / %.2f GB", availableSpaceGB, totalSpaceGB);
 
     // Return the formatted string
-    return std::string(buffer);
+    return buffer;
+}
+
+
+void unpackDeviceInfo() {
+    u64 packed_version;
+    splGetConfig((SplConfigItem)2, &packed_version);
+    memoryType = getMemoryType(packed_version);
+    //memoryVendor = UNAVAILABLE_SELECTION;
+    //memoryModel = UNAVAILABLE_SELECTION;
+    //memorySize = UNAVAILABLE_SELECTION;
+    
+    if (!memoryType.empty()) {
+        std::vector<std::string> memoryData = splitString(memoryType, "_");
+        if (memoryData.size() > 0) memoryVendor = memoryData[0];
+        if (memoryData.size() > 1) memoryModel = memoryData[1];
+        if (memoryData.size() > 2) memorySize = memoryData[2];
+    }
+    splGetConfig((SplConfigItem)65000, &packed_version);
+    
+    // Format AMS version
+    formatVersion(packed_version, 56, 48, 40, amsVersion);
+    
+    // Format HOS version
+    formatVersion(packed_version, 24, 16, 8, hosVersion);
 }
 
 
@@ -160,63 +210,63 @@ std::string getSDMCStorageInfo() {
  * It checks the firmware version and uses the appropriate function to get the device condition and disconnects
  * the controllers.
  */
-void powerOffAllControllers() {
-    //Result rc;
-    //static s32 g_connected_count = 0;
-    //static BtdrvAddress g_addresses[8] = {};
-    //
-    //// Initialize Bluetooth manager
-    //rc = btmInitialize();
-    //if (R_FAILED(rc)) {
-    //    commandSuccess = false;
-    //    //LogLine("Error btmInitialize: %u - %X\n", rc, rc);
-    //    return;
-    //}
-    //
-    //if (hosversionAtLeast(13, 0, 0)) {
-    //    BtmConnectedDeviceV13 connected_devices[8];
-    //    rc = btmGetDeviceCondition(BtmProfile_None, connected_devices, 8, &g_connected_count);
-    //    if (R_SUCCEEDED(rc)) {
-    //        for (s32 i = 0; i != g_connected_count; ++i) {
-    //            g_addresses[i] = connected_devices[i].address;
-    //        }
-    //    } else {
-    //        commandSuccess = false;
-    //        //LogLine("Error btmGetDeviceCondition: %u - %X\n", rc, rc);
-    //    }
-    //} else {
-    //    BtmDeviceCondition g_device_condition;
-    //    rc = btmLegacyGetDeviceCondition(&g_device_condition);
-    //    if (R_SUCCEEDED(rc)) {
-    //        g_connected_count = g_device_condition.v900.connected_count;
-    //        for (s32 i = 0; i != g_connected_count; ++i) {
-    //            g_addresses[i] = g_device_condition.v900.devices[i].address;
-    //        }
-    //    } else {
-    //        commandSuccess = false;
-    //        //LogLine("Error btmLegacyGetDeviceCondition: %u - %X\n", rc, rc);
-    //    }
-    //}
-    //
-    //if (R_SUCCEEDED(rc)) {
-    //    //LogLine("Disconnecting controllers. Count: %u\n", g_connected_count);
-    //    for (int i = 0; i != g_connected_count; ++i) {
-    //        rc = btmHidDisconnect(g_addresses[i]);
-    //        if (R_FAILED(rc)) {
-    //            commandSuccess = false;
-    //            //LogLine("Error btmHidDisconnect: %u - %X\n", rc, rc);
-    //        } else {
-    //            //LogLine("Disconnected Address: %u - %X\n", g_addresses[i], g_addresses[i]);
-    //        }
-    //    }
-    //    //LogLine("All controllers disconnected.\n");
-    //} else {
-    //    commandSuccess = false;
-    //}
-    //
-    //// Exit Bluetooth manager
-    //btmExit();
-}
+//void powerOffAllControllers() {
+//    Result rc;
+//    static s32 g_connected_count = 0;
+//    static BtdrvAddress g_addresses[8] = {};
+//    
+//    // Initialize Bluetooth manager
+//    rc = btmInitialize();
+//    if (R_FAILED(rc)) {
+//        commandSuccess = false;
+//        //LogLine("Error btmInitialize: %u - %X\n", rc, rc);
+//        return;
+//    }
+//    
+//    if (hosversionAtLeast(13, 0, 0)) {
+//        BtmConnectedDeviceV13 connected_devices[8];
+//        rc = btmGetDeviceCondition(BtmProfile_None, connected_devices, 8, &g_connected_count);
+//        if (R_SUCCEEDED(rc)) {
+//            for (s32 i = 0; i != g_connected_count; ++i) {
+//                g_addresses[i] = connected_devices[i].address;
+//            }
+//        } else {
+//            commandSuccess = false;
+//            //LogLine("Error btmGetDeviceCondition: %u - %X\n", rc, rc);
+//        }
+//    } else {
+//        BtmDeviceCondition g_device_condition;
+//        rc = btmLegacyGetDeviceCondition(&g_device_condition);
+//        if (R_SUCCEEDED(rc)) {
+//            g_connected_count = g_device_condition.v900.connected_count;
+//            for (s32 i = 0; i != g_connected_count; ++i) {
+//                g_addresses[i] = g_device_condition.v900.devices[i].address;
+//            }
+//        } else {
+//            commandSuccess = false;
+//            //LogLine("Error btmLegacyGetDeviceCondition: %u - %X\n", rc, rc);
+//        }
+//    }
+//    
+//    if (R_SUCCEEDED(rc)) {
+//        //LogLine("Disconnecting controllers. Count: %u\n", g_connected_count);
+//        for (int i = 0; i != g_connected_count; ++i) {
+//            rc = btmHidDisconnect(g_addresses[i]);
+//            if (R_FAILED(rc)) {
+//                commandSuccess = false;
+//                //LogLine("Error btmHidDisconnect: %u - %X\n", rc, rc);
+//            } else {
+//                //LogLine("Disconnected Address: %u - %X\n", g_addresses[i], g_addresses[i]);
+//            }
+//        }
+//        //LogLine("All controllers disconnected.\n");
+//    } else {
+//        commandSuccess = false;
+//    }
+//    
+//    // Exit Bluetooth manager
+//    btmExit();
+//}
 
 //std::unordered_map<std::string, std::string> createButtonCharMap() {
 //    std::unordered_map<std::string, std::string> map;
@@ -858,35 +908,19 @@ bool isDangerousCombination(const std::string& patternPath) {
  * @param makeConfig A flag indicating whether to create a config if it doesn't exist.
  * @return A vector containing pairs of section names and their associated key-value pairs.
  */
-std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadOptionsFromIni(const std::string& packageIniPath) { //, bool makeConfig = false) {
+std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadOptionsFromIni(const std::string& packageIniPath) {
     std::ifstream packageFile(packageIniPath);
-    //if (!packageFile && makeConfig) {
-    //    std::ofstream packageFileOut(packageIniPath);
-    //    if (packageFileOut) {
-    //        //configFileOut << "[Reboot]\nreboot\n\n[Shutdown]\nshutdown\n";
-    //        //configFileOut << "[*Reboot To]\nini_file_source /bootloader/hekate_ipl.ini\nfilter config\nreboot boot '{ini_file_source(*)}'\n\n[Shutdown]\nshutdown\n";
-    //        packageFileOut << "[*Reboot To]\n[*Boot Entry]\nini_file_source /bootloader/hekate_ipl.ini\nfilter config\nreboot boot '{ini_file_source(*)}'\n[Hekate]\nreboot HEKATE\n[Hekate UMS]\nreboot UMS\n\n[Commands]\n[Shutdown]\nshutdown\n";
-    //        //configFileOut << "[*Reboot]\n[HOS Reboot]\nreboot\n[Hekate Reboot]\nreboot HEKATE\n[UMS Reboot]\nreboot UMS\n\n[Commands]\n[Shutdown]\nshutdown";
-    //        packageFileOut.close();
-    //    }
-    //    packageFile.open(packageIniPath);  // Reopen the newly created file
-    //}
-
-    if (!packageFile) {
-        return {}; // If file still cannot be opened, return empty vector
-    }
+    
+    if (!packageFile) return {}; // Return empty vector if file can't be opened
 
     std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> options;
-    std::string line, currentSection, part, arg;
+    std::string line, currentSection;
     std::vector<std::vector<std::string>> sectionCommands;
     std::vector<std::string> commandParts;
-    bool isFirstEntry = true, inQuotes = false;
-    std::istringstream iss, argIss; // Declare outside the loop
 
-    while (getline(packageFile, line)) {
-        // Properly remove carriage returns and newlines
+    while (std::getline(packageFile, line)) {
+        // Remove carriage returns and newlines
         line.erase(std::remove(line.begin(), line.end(), '\r'), line.end());
-        line.erase(std::remove(line.begin(), line.end(), '\n'), line.end());
 
         if (line.empty() || line.front() == '#') continue; // Skip empty or comment lines
 
@@ -896,24 +930,25 @@ std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadO
                 sectionCommands.clear();
             }
             currentSection = line.substr(1, line.size() - 2);
-            isFirstEntry = false;
-        } else if (!isFirstEntry) { // Command lines within sections
+        } else if (!currentSection.empty()) { // Command lines within sections
             commandParts.clear();
-            iss.clear(); // Clear any error state
-            iss.str(line); // Set the new line to parse
-            inQuotes = false;
-            while (std::getline(iss, part, '\'')) { // Split on single quotes
+            bool inQuotes = false;
+            std::string part;
+
+            std::istringstream iss(line);
+            while (std::getline(iss, part, '\'')) {
                 if (inQuotes) {
                     commandParts.push_back(part); // Inside quotes, treat as a whole argument
                 } else {
-                    argIss.clear(); // Clear any error state
-                    argIss.str(part); // Set part to parse
+                    std::istringstream argIss(part);
+                    std::string arg;
                     while (argIss >> arg) {
                         commandParts.push_back(arg); // Split part outside quotes by spaces
                     }
                 }
                 inQuotes = !inQuotes; // Toggle the inQuotes flag
             }
+
             sectionCommands.push_back(std::move(commandParts));
         }
     }
@@ -921,9 +956,12 @@ std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadO
     if (!currentSection.empty()) {
         options.emplace_back(std::move(currentSection), std::move(sectionCommands));
     }
+    packageFile.close();
+
 
     return options;
 }
+
 
 
 
@@ -1141,7 +1179,10 @@ std::string replaceAllPlaceholders(const std::string& source, const std::string&
 // Optimized getSourceReplacement function
 std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std::vector<std::string>>& commands,
     const std::string& entry, size_t entryIndex, const std::string& packagePath = "") {
-    
+
+    //std::string memoryVendor = splitStringAtIndex(memoryType, "_", 0);
+    //const std::string memoryModel = splitStringAtIndex(memoryType, "_", 1);
+
     bool inEristaSection = false;
     bool inMarikoSection = false;
     
@@ -1198,7 +1239,11 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
                 modifiedArg = replaceAllPlaceholders(modifiedArg, "{file_source}", entry);
                 modifiedArg = replaceAllPlaceholders(modifiedArg, "{file_name}", fileName);
                 modifiedArg = replaceAllPlaceholders(modifiedArg, "{folder_name}", removeQuotes(getParentDirNameFromPath(entry)));
-                
+                //modifiedArg = replaceAllPlaceholders(modifiedArg, "{ram_vendor}", memoryVendor);
+                modifiedArg = replaceAllPlaceholders(modifiedArg, "{ram_model}", memoryModel);
+                modifiedArg = replaceAllPlaceholders(modifiedArg, "{ams_version}", amsVersion);
+                modifiedArg = replaceAllPlaceholders(modifiedArg, "{hos_version}", hosVersion);
+
                 if (modifiedArg.find("{list_source(") != std::string::npos) {
                     modifiedArg = replacePlaceholder(modifiedArg, "*", std::to_string(entryIndex));
                     startPos = modifiedArg.find("{list_source(");
@@ -1740,21 +1785,21 @@ void handleIniCommands(const std::vector<std::string>& cmd, const std::string& p
     if (cmd[0] == "add-ini-section" && cmd.size() >= 2) {
         std::string sourcePath = preprocessPath(cmd[1], packagePath);
         std::string desiredSection = removeQuotes(cmd[2]);
-        addIniSection(sourcePath.c_str(), desiredSection.c_str());
+        addIniSection(sourcePath, desiredSection);
     } else if (cmd[0] == "rename-ini-section" && cmd.size() >= 3) {
         std::string sourcePath = preprocessPath(cmd[1], packagePath);
         std::string desiredSection = removeQuotes(cmd[2]);
         std::string desiredNewSection = removeQuotes(cmd[3]);
-        renameIniSection(sourcePath.c_str(), desiredSection.c_str(), desiredNewSection.c_str());
+        renameIniSection(sourcePath, desiredSection, desiredNewSection);
     } else if (cmd[0] == "remove-ini-section" && cmd.size() >= 2) {
         std::string sourcePath = preprocessPath(cmd[1], packagePath);
         std::string desiredSection = removeQuotes(cmd[2]);
-        removeIniSection(sourcePath.c_str(), desiredSection.c_str());
+        removeIniSection(sourcePath, desiredSection);
     } else if (cmd[0] == "remove-ini-key" && cmd.size() >= 3) {
         std::string sourcePath = preprocessPath(cmd[1], packagePath);
         std::string desiredSection = removeQuotes(cmd[2]);
         std::string desiredKey = removeQuotes(cmd[3]);
-        removeIniKey(sourcePath.c_str(), desiredSection.c_str(), desiredKey.c_str());
+        removeIniKey(sourcePath, desiredSection, desiredKey);
     } else if ((cmd[0] == "set-ini-val" || cmd[0] == "set-ini-value") && cmd.size() >= 5) {
         std::string sourcePath = preprocessPath(cmd[1], packagePath);
         std::string desiredSection = removeQuotes(cmd[2]);
@@ -1762,7 +1807,7 @@ void handleIniCommands(const std::vector<std::string>& cmd, const std::string& p
         std::string desiredValue = std::accumulate(cmd.begin() + 4, cmd.end(), std::string(""), [](const std::string& a, const std::string& b) -> std::string {
             return a.empty() ? b : a + " " + b;
         });
-        setIniFileValue(sourcePath.c_str(), desiredSection.c_str(), desiredKey.c_str(), desiredValue.c_str());
+        setIniFileValue(sourcePath, desiredSection, desiredKey, desiredValue);
     } else if (cmd[0] == "set-ini-key" && cmd.size() >= 5) {
         std::string sourcePath = preprocessPath(cmd[1], packagePath);
         std::string desiredSection = removeQuotes(cmd[2]);
@@ -1770,13 +1815,13 @@ void handleIniCommands(const std::vector<std::string>& cmd, const std::string& p
         std::string desiredNewKey = std::accumulate(cmd.begin() + 4, cmd.end(), std::string(""), [](const std::string& a, const std::string& b) -> std::string {
             return a.empty() ? b : a + " " + b;
         });
-        setIniFileKey(sourcePath.c_str(), desiredSection.c_str(), desiredKey.c_str(), desiredNewKey.c_str());
+        setIniFileKey(sourcePath, desiredSection, desiredKey, desiredNewKey);
     }
 }
 
 void handleHexEdit(const std::string& sourcePath, const std::string& secondArg, const std::string& thirdArg, const std::string& commandName, const std::vector<std::string>& cmd) {
     if (commandName == "hex-by-offset") {
-        hexEditByOffset(sourcePath.c_str(), secondArg.c_str(), thirdArg.c_str());
+        hexEditByOffset(sourcePath, secondArg, thirdArg);
     } else if (commandName == "hex-by-swap") {
         if (cmd.size() >= 5) {
             size_t occurrence = std::stoul(removeQuotes(cmd[4]));
@@ -1826,7 +1871,7 @@ void handleHexByCustom(const std::string& sourcePath, const std::string& customP
         } else if (commandName == "hex-by-custom-rdecimal-offset") {
             hexDataReplacement = decimalToReversedHex(hexDataReplacement);
         }
-        hexEditByCustomOffset(sourcePath.c_str(), customPattern.c_str(), offset.c_str(), hexDataReplacement.c_str());
+        hexEditByCustomOffset(sourcePath, customPattern, offset, hexDataReplacement);
     }
 }
 
@@ -1872,7 +1917,7 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
     } else if (commandName == "set-footer") {
         if (cmd.size() >= 2) {
             std::string desiredValue = removeQuotes(cmd[1]);
-            setIniFileValue((packagePath + CONFIG_FILENAME).c_str(), selectedCommand.c_str(), FOOTER_STR, desiredValue.c_str());
+            setIniFileValue((packagePath + CONFIG_FILENAME), selectedCommand, FOOTER_STR, desiredValue);
         }
     } else if (commandName == "compare") {
         if (cmd.size() >= 4) {
@@ -1998,12 +2043,17 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
         fsdevUnmountAll();
         spsmShutdown(SpsmShutdownMode_Reboot);
     } else if (commandName == "shutdown") {
-        if (cmd.size() >= 2) {
-            std::string selection = removeQuotes(cmd[1]);
-            if (selection == "controllers") {
-                powerOffAllControllers();
-            }
-        } else {
+        //if (cmd.size() >= 2) {
+        //    std::string selection = removeQuotes(cmd[1]);
+        //    if (selection == "controllers") {
+        //        powerOffAllControllers();
+        //    }
+        //} else {
+        //    splExit();
+        //    fsdevUnmountAll();
+        //    spsmShutdown(SpsmShutdownMode_Normal);
+        //}
+        if (cmd.size() >= 1) {
             splExit();
             fsdevUnmountAll();
             spsmShutdown(SpsmShutdownMode_Normal);
@@ -2094,7 +2144,7 @@ void backgroundInterpreter(void*) {
             std::unique_lock<std::mutex> lock(queueMutex);
             queueCondition.wait(lock, [] { return !interpreterQueue.empty() || interpreterThreadExit.load(std::memory_order_acquire); });
             if (interpreterThreadExit.load(std::memory_order_acquire)) {
-                logMessage("Exiting Thread...");
+                //logMessage("Exiting Thread...");
                 break;
             }
             if (!interpreterQueue.empty()) {
