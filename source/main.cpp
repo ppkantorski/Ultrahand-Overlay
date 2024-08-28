@@ -933,13 +933,37 @@ public:
             if (memoryType != "Unknown Memory Type")
                 memoryData = splitString(memoryType, "_");
 
+
+            SetSysProductModel model = SetSysProductModel_Invalid;
+            setsysGetProductModel(&model);
+            
+            std::string modelRev;
+            if (model == SetSysProductModel_Iowa)
+                modelRev = "Iowa Tegra x1+";
+            else if (model == SetSysProductModel_Hoag)
+                modelRev = "Hoag Tegra x1+";
+            else if (model == SetSysProductModel_Calcio)
+                modelRev = "Calcio Tegra x1+";
+            else if (model == SetSysProductModel_Aula)
+                modelRev = "Aula Tegra x1+";
+            else if (model == SetSysProductModel_Nx)
+                modelRev = "Nx Tegra x1";
+            else if (model == SetSysProductModel_Copper)
+                modelRev = "Copper Tegra x1";
+            
+
             tableData = {
                 {FIRMWARE, "", versionString},
-                {"Bootloader", "", !hekateVersion.empty() ? "hekate "+hekateVersion : "fusee"},
-                {"Storage", "", getSDMCStorageInfo()},
+                {"Bootloader", "", !hekateVersion.empty() ? "hekate "+hekateVersion : "fusee"}
+            };
+            addTable(list, tableData, "", 160, 20, 30, 4);
+
+            tableData = {
+                {"Hardware", "", modelRev},
                 {"Memory", "", memoryData[2]},
                 {"   Vendor", "", memoryData[0]},
-                {"   Model", "", memoryData[1]}
+                {"   Model", "", memoryData[1]},
+                {"Storage", "", getSDMCStorageInfo()}
             };
             addTable(list, tableData, "", 160, 20, 3, 4);
 
