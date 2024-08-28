@@ -22,9 +22,9 @@
 #include <string>   // For std::string
 #include <vector>   // For std::vector
 #include <map>      // For std::map
-#include <sstream>  // For std::istringstream
+//#include <sstream>  // For std::istringstream
 #include <algorithm> // For std::remove_if
-#include <cctype>   // For ::isspace
+//#include <cctype>   // For ::isspace
 #include "get_funcs.hpp"
 #include "path_funcs.hpp"
 
@@ -112,20 +112,23 @@ PackageHeader getPackageHeaderFromIni(const std::string& filePath) {
  */
 static std::vector<std::string> split(const std::string& str, char delim = ' ') {
     std::vector<std::string> out;
-
-    // Reserve an estimated amount of space to reduce reallocations
-    out.reserve(10); // Assuming an average of 10 tokens per string
-
-    std::string_view strv = str;
-    size_t current, previous = 0;
-    current = strv.find(delim);
-
-    while (current != std::string::npos) {
-        out.emplace_back(strv.substr(previous, current - previous));
-        previous = current + 1;
-        current = strv.find(delim, previous);
+    
+    if (str.empty()) {
+        return out;
     }
-    out.emplace_back(strv.substr(previous)); // No need to calculate the length
+    
+    // Reserve space assuming the worst case where every character is a delimiter
+    out.reserve(std::count(str.begin(), str.end(), delim) + 1);
+    
+    size_t start = 0;
+    size_t end = str.find(delim);
+    
+    while (end != std::string::npos) {
+        out.emplace_back(str.substr(start, end - start));
+        start = end + 1;
+        end = str.find(delim, start);
+    }
+    out.emplace_back(str.substr(start));
     
     return out;
 }

@@ -302,7 +302,7 @@ void handleDirectory(const std::string& basePath, const std::vector<std::string>
 
     struct dirent* entry;
     std::string entryName, fullPath;
-
+    
     while ((entry = readdir(dir.get())) != nullptr) {
         entryName = entry->d_name;
         if (entryName == "." || entryName == "..") continue;

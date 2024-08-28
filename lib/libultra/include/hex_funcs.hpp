@@ -121,6 +121,7 @@ std::string hexToDecimal(const std::string& hexStr) {
         } else if (hexChar >= 'a' && hexChar <= 'f') {
             value = 10 + (hexChar - 'a');
         } else {
+            break;
             //throw std::invalid_argument("Invalid hexadecimal character");
         }
 
@@ -496,4 +497,38 @@ std::string replaceHexPlaceholder(const std::string& arg, const std::string& hex
     }
     
     return replacement;
+}
+
+
+
+std::string extractVersionFromBinary(const std::string &filePath) {
+    // Step 1: Read the entire binary file into a vector
+    std::ifstream file(filePath, std::ios::binary | std::ios::ate);
+    if (!file.is_open()) {
+        return "";
+    }
+
+    std::streamsize size = file.tellg();
+    file.seekg(0, std::ios::beg);
+
+    std::vector<uint8_t> buffer(size);
+    if (!file.read(reinterpret_cast<char*>(buffer.data()), size)) {
+        return "";
+    }
+
+    // Step 2: Search for the pattern "v#.#.#"
+    const char* data = reinterpret_cast<const char*>(buffer.data());
+    for (std::streamsize i = 0; i < size; ++i) {
+        if (data[i] == 'v' && i + 5 < size && 
+            std::isdigit(data[i + 1]) && data[i + 2] == '.' && 
+            std::isdigit(data[i + 3]) && data[i + 4] == '.' && 
+            std::isdigit(data[i + 5])) {
+
+            // Extract the version string
+            //std::string version(data + i, 6);
+            return std::string(data + i, 6);
+        }
+    }
+
+    return "";  // Return empty string if no match is found
 }
