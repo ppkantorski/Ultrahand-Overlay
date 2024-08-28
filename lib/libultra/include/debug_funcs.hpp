@@ -34,11 +34,11 @@ std::mutex logMutex;
 void logMessage(const std::string& message) {
     std::time_t currentTime = std::time(nullptr);
     std::tm* timeInfo = std::localtime(&currentTime);
-    char buffer[80];
-    strftime(buffer, 80, "[%Y-%m-%d %H:%M:%S] ", timeInfo);
+    char buffer[30];
+    strftime(buffer, 30, "[%Y-%m-%d %H:%M:%S] ", timeInfo);
     std::string timestamp(buffer);
 
-    std::string logEntry = timestamp + message + "\n";
+    //std::string logEntry = timestamp + message + "\n";
 
     // Open the file with std::ofstream in append mode inside the lock
     {
@@ -46,7 +46,7 @@ void logMessage(const std::string& message) {
 
         std::ofstream file(logFilePath, std::ios::app);
         if (file.is_open()) {
-            file << logEntry;
+            file << timestamp + message + "\n";
         } else {
             // Handle error when file opening fails, such as logging to an alternative output or retrying
             //std::cerr << "Failed to open log file: " << logFilePath << std::endl;
