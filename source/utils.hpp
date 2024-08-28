@@ -1239,7 +1239,7 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
                 modifiedArg = replaceAllPlaceholders(modifiedArg, "{file_source}", entry);
                 modifiedArg = replaceAllPlaceholders(modifiedArg, "{file_name}", fileName);
                 modifiedArg = replaceAllPlaceholders(modifiedArg, "{folder_name}", removeQuotes(getParentDirNameFromPath(entry)));
-                //modifiedArg = replaceAllPlaceholders(modifiedArg, "{ram_vendor}", memoryVendor);
+                modifiedArg = replaceAllPlaceholders(modifiedArg, "{ram_vendor}", memoryVendor);
                 modifiedArg = replaceAllPlaceholders(modifiedArg, "{ram_model}", memoryModel);
                 modifiedArg = replaceAllPlaceholders(modifiedArg, "{ams_version}", amsVersion);
                 modifiedArg = replaceAllPlaceholders(modifiedArg, "{hos_version}", hosVersion);
