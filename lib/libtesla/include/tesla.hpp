@@ -41,9 +41,7 @@
 #pragma once
 
 #include <ultra.hpp>
-
 #include <switch.h>
-
 #include <arm_neon.h>
 
 #include <stdlib.h>
@@ -281,7 +279,14 @@ static std::string SOFTWARE_UPDATE = "Software Update";
 static std::string UPDATE_ULTRAHAND = "Update Ultrahand";
 static std::string UPDATE_LANGUAGES = "Update Languages";
 static std::string SYSTEM = "System";
+static std::string DEVICE_INFO = "Device Info";
 static std::string FIRMWARE = "Firmware";
+static std::string BOOTLOADER = "Bootloader";
+static std::string HARDWARE = "Hardware";
+static std::string MEMORY = "Memory";
+static std::string VENDOR = "Vendor";
+static std::string MODEL = "Model";
+static std::string STORAGE = "Storage";
 static std::string NOTICE = "Notice";
 static std::string UTILIZES = "Utilizes";
 static std::string FREE = "free";
@@ -414,7 +419,14 @@ void reinitializeLangVars() {
     UPDATE_ULTRAHAND = "Update Ultrahand";
     UPDATE_LANGUAGES = "Update Languages";
     SYSTEM = "System";
+    DEVICE_INFO = "Device Info";
     FIRMWARE = "Firmware";
+    BOOTLOADER = "Bootloader";
+    HARDWARE = "Hardware";
+    MEMORY = "Memory";
+    VENDOR = "Vendor";
+    MODEL = "Model";
+    STORAGE = "Storage";
     NOTICE = "Notice";
     UTILIZES = "Utilizes";
     FREE = "free";
@@ -562,7 +574,14 @@ void parseLanguage(const std::string langFile) {
         {"UPDATE_ULTRAHAND", &UPDATE_ULTRAHAND},
         {"UPDATE_LANGUAGES", &UPDATE_LANGUAGES},
         {"SYSTEM", &SYSTEM},
+        {"DEVICE_INFO", &DEVICE_INFO},
         {"FIRMWARE", &FIRMWARE},
+        {"BOOTLOADER", &BOOTLOADER},
+        {"HARDWARE", &HARDWARE},
+        {"MEMORY", &MEMORY},
+        {"VENDOR", &VENDOR},
+        {"MODEL", &MODEL},
+        {"STORAGE", &STORAGE},
         {"NOTICE", &NOTICE},
         {"UTILIZES", &UTILIZES},
         {"FREE", &FREE},
