@@ -186,7 +186,7 @@ bool downloadFile(const std::string& url, const std::string& toDestination) {
     downloadPercentage.store(100, std::memory_order_release);
     moveFile(tempFilePath, destination);
 
-    logMessage("Download Complete!");
+    //logMessage("Download Complete!");
     return true;
 }
 
@@ -296,7 +296,7 @@ bool unzipFile(const std::string& zipFilePath, const std::string& toDestination)
                 break;
             }
             outputFile.write(buffer, bytesRead);
-            logMessage("Extracted: " + extractedFilePath);
+            //logMessage("Extracted: " + extractedFilePath);
 
             currentUncompressedSize += bytesRead;
 
@@ -311,7 +311,7 @@ bool unzipFile(const std::string& zipFilePath, const std::string& toDestination)
 
     if (success) {
         unzipPercentage.store(100, std::memory_order_release); // Ensure it's set to 100% on successful extraction
-        logMessage("Extraction Complete!");
+        //logMessage("Extraction Complete!");
     } else {
         unzipPercentage.store(-1, std::memory_order_release);
     }
