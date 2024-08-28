@@ -525,8 +525,8 @@ std::string extractVersionFromBinary(const std::string &filePath) {
             std::isdigit(data[i + 5])) {
 
             // Extract the version string
-            std::string version(data + i, 6);
-            return version;
+            //std::string version(data + i, 6);
+            return std::string(data + i, 6);
         }
     }
 
