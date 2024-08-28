@@ -1169,11 +1169,8 @@ public:
             return true;
         }
 
-        if (refreshWallpaper.load(std::memory_order_acquire) && !inPlot) {
-            std::lock_guard<std::mutex> lock(wallpaperMutex);
-            std::vector<u8>().swap(wallpaperData);
-            //if (isFileOrDirectory(WALLPAPER_PATH))
-            wallpaperData = loadBitmapFile(WALLPAPER_PATH, 448, 720);
+        if (refreshWallpaper.load(std::memory_order_acquire)) {
+            reloadWallpaper();
             //else
             //    wallpaperData.clear();
             refreshWallpaper.store(false, std::memory_order_release);
