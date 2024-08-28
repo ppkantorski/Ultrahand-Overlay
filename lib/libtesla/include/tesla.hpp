@@ -66,8 +66,8 @@
 
 //static bool debugFPS = true;
 
-uint64_t RAM_Used_system_u = 0;
-uint64_t RAM_Total_system_u = 0;
+//uint64_t RAM_Used_system_u = 0;
+//uint64_t RAM_Total_system_u = 0;
 
 
 // Define the duration boundaries (for smooth scrolling)
@@ -505,19 +505,19 @@ void reinitializeLangVars() {
 
 
 // Define the updateIfNotEmpty function
-void updateIfNotEmpty(std::string& constant, const char* jsonKey, json_t* jsonData) {
+void updateIfNotEmpty(std::string& constant, const char* jsonKey, const json_t* jsonData) {
     std::string newValue = getStringFromJson(jsonData, jsonKey);
     if (!newValue.empty()) {
         constant = newValue;
     }
 }
 
-void parseLanguage(std::string langFile) {
+void parseLanguage(const std::string langFile) {
     json_t* langData = readJsonFromFile(langFile);
     if (!langData)
         return;
     
-    std::map<std::string, std::string*> configMap = {
+    std::unordered_map<std::string, std::string*> configMap = {
         {"ENGLISH", &ENGLISH},
         {"SPANISH", &SPANISH},
         {"FRENCH", &FRENCH},
@@ -759,96 +759,177 @@ static void applyLangReplacements(std::string& text, bool isValue = false) {
 
 
 
-//// Map of character widths
+//// Map of character widths (pre-calibrated)
 static std::unordered_map<wchar_t, float> characterWidths = {
-    {L'°', 0.25},
-    //{L'%', 0.98}, // not calibrated
-    {L':', 0.25}, // not calibrated
-    {L' ', 0.3},
+    {L'<', 0.81},
+    {L'>', 0.81},
+    {L',', 0.25},
+    {L'/', 0.5},
+    {L'\\', 0.5},
+    {L'`', 0.25},
+    {L'\'', 0.186},
+    {L'↑', 1.0},
+    {L'~', 0.31},
+    {L'"', 0.31},
+    {L'!', 0.25},
+    {L'@', 0.87},
+    {L'#', 0.31},
+    {L'$', 0.56},
+    {L'^', 0.5},
+    {L'?', 0.5},
+    {L'°', 0.31},
+    {L'%', 0.87},
+    {L'*', 0.434},
+    {L'=', 0.750},
+    {L':', 0.25},
+    {L';', 0.25},
+    {L' ', 0.31},
+    {L'|', 0.26},
+    {L'.', 0.25},
     {L'+', 0.75},
-    {L'-', 0.36},
-    {L'_', 0.47},
-    {L'&', 0.74},
-    {L'(', 0.25},
-    {L')', 0.25},
+    {L'-', 0.37},
+    {L'_', 0.50},
+    {L'&', 0.75},
+    {L'(', 0.31},
+    {L')', 0.31},
     {L'[', 0.3635},
     {L']', 0.3635},
-    {L'A', 0.78},
-    {L'B', 0.644},
-    {L'C', 0.76},
-    {L'D', 0.8},
-    {L'E', 0.6},
-    {L'F', 0.6},
-    {L'G', 0.8},
-    {L'H', 0.72},
-    {L'I', 0.26},
-    {L'J', 0.48},
-    {L'K', 0.68},
-    {L'L', 0.46},
-    {L'M', 0.98},
-    {L'N', 0.82},
-    {L'O', 0.92},
-    {L'P', 0.6},
-    {L'Q', 0.9},
-    {L'R', 0.6},
+    {L'A', 0.745},
+    {L'B', 0.62},
+    {L'C', 0.745},
+    {L'D', 0.8082},
+    {L'E', 0.56},
+    {L'F', 0.56},
+    {L'G', 0.81},
+    {L'H', 0.685},
+    {L'I', 0.25},
+    {L'J', 0.50},
+    {L'K', 0.62},
+    {L'L', 0.435},
+    {L'M', 0.933},
+    {L'N', 0.81},
+    {L'O', 0.875},
+    {L'P', 0.56},
+    {L'Q', 0.875},
+    {L'R', 0.56},
     {L'S', 0.56},
-    {L'T', 0.64},
-    {L'U', 0.80},
-    {L'V', 0.76},
-    {L'W', 1.14},
-    {L'X', 0.66},
-    {L'Y', 0.66},
-    {L'Z', 0.74},
-    {L'a', 0.6},
-    {L'b', 0.66},
+    {L'T', 0.6198},
+    {L'U', 0.81},
+    {L'V', 0.75},
+    {L'W', 1.12},
+    {L'X', 0.625},
+    {L'Y', 0.625},
+    {L'Z', 0.745},
+    {L'a', 0.56},
+    {L'b', 0.62},
     {L'c', 0.56},
-    {L'd', 0.66},
-    {L'e', 0.6},
-    {L'f', 0.28},
-    {L'g', 0.6},
-    {L'h', 0.6},
-    {L'i', 0.25},
-    {L'j', 0.36},
-    {L'k', 0.56},
-    {L'l', 0.28},
-    {L'm', 0.94},
-    {L'n', 0.582},
-    {L'o', 0.656},
-    {L'p', 0.66},
-    {L'q', 0.68},
-    {L'r', 0.36},
-    {L's', 0.5},
-    {L't', 0.37},
-    {L'u', 0.6},
+    {L'd', 0.625},
+    {L'e', 0.559},
+    {L'f', 0.25},
+    {L'g', 0.56},
+    {L'h', 0.56},
+    {L'i', 0.2485},
+    {L'j', 0.3748},
+    {L'k', 0.5588},
+    {L'l', 0.248},
+    {L'm', 0.935},
+    {L'n', 0.5573},
+    {L'o', 0.62},
+    {L'p', 0.62},
+    {L'q', 0.62},
+    {L'r', 0.3725},
+    {L's', 0.496},
+    {L't', 0.372},
+    {L'u', 0.561},
     {L'v', 0.50},
     {L'w', 0.87},
-    {L'x', 0.54},
-    {L'y', 0.53},
+    {L'x', 0.50},
+    {L'y', 0.50},
     {L'z', 0.5},
-    {L'0', 0.66},
-    {L'1', 0.66},
-    {L'2', 0.66},
-    {L'3', 0.66},
-    {L'4', 0.66},
-    {L'5', 0.66},
-    {L'6', 0.66},
-    {L'7', 0.66},
-    {L'8', 0.66},
-    {L'9', 0.66}
+    {L'0', 0.62},
+    {L'1', 0.6199},
+    {L'2', 0.63},
+    {L'3', 0.62},
+    {L'4', 0.62},
+    {L'5', 0.62},
+    {L'6', 0.62},
+    {L'7', 0.62},
+    {L'8', 0.62},
+    {L'9', 0.62}
 };
 
+static float defaultNumericCharWidth = 0.66;
 //static std::unordered_map<wchar_t, float> numericCharacterWidths = {
-//    {L'0', 0.66},
-//    {L'1', 0.57},
-//    {L'2', 0.66},
-//    {L'3', 0.66},
-//    {L'4', 0.66},
-//    {L'5', 0.66},
-//    {L'6', 0.66},
-//    {L'7', 0.66},
-//    {L'8', 0.66},
-//    {L'9', 0.66}
+//    {L'0', defaultNumericCharWidth},
+//    {L'1', defaultNumericCharWidth},
+//    {L'2', defaultNumericCharWidth},
+//    {L'3', defaultNumericCharWidth},
+//    {L'4', defaultNumericCharWidth},
+//    {L'5', defaultNumericCharWidth},
+//    {L'6', defaultNumericCharWidth},
+//    {L'7', defaultNumericCharWidth},
+//    {L'8', defaultNumericCharWidth},
+//    {L'9', defaultNumericCharWidth}
 //};
+
+
+
+//inline float calculateStringWidth2(const std::string& str, s32 fontSize, bool fixedWidthNumbers = false) {
+//    if (str.empty()) {
+//        return 0.0f;
+//    }
+//    
+//    float totalWidth = 0.0f;
+//    std::string::size_type strPos = 0;
+//    ssize_t codepointWidth;
+//    //u32 prevCharacter = 0;
+//    
+//    //float currFontSize;
+//    //int xAdvance, leftBearing, kernAdvance;
+//    u32 currCharacter;
+//    
+//    bool found;
+//    while (strPos < str.size()) {
+//        found = false;
+//        codepointWidth = decode_utf8(&currCharacter, reinterpret_cast<const u8*>(&str[strPos]));
+//        
+//        if (codepointWidth <= 0) {
+//            break;
+//        }
+//        
+//        // Check if the character is in the character width map
+//        if (!fixedWidthNumbers) {
+//            auto it = characterWidths.find(static_cast<wchar_t>(currCharacter));
+//            if (it != characterWidths.end()) {
+//                totalWidth += it->second * fontSize;
+//                found = true;
+//            }
+//        } else {
+//            auto it = numericCharacterWidths.find(static_cast<wchar_t>(currCharacter));
+//            if (it != numericCharacterWidths.end()) {
+//                totalWidth += it->second * fontSize;
+//                found = true;
+//            } else {
+//                auto it = characterWidths.find(static_cast<wchar_t>(currCharacter));
+//                if (it != characterWidths.end()) {
+//                    totalWidth += it->second * fontSize;
+//                    found = true;
+//                }
+//            }
+//        }
+//        if (!found) {
+//            return 0.0f;
+//        }
+//        
+//        strPos += codepointWidth;
+//        //prevCharacter = currCharacter;
+//    }
+//    
+//    return totalWidth;
+//}
+
+
+
 
 // Predefined hexMap
 const std::array<int, 256> hexMap = [] {
@@ -1195,8 +1276,8 @@ inline bool throttle(std::chrono::steady_clock::time_point& last_call) {
 }
 
 inline bool getTemperature(s32* temperature, TsDeviceCode device_code) {
-    static std::chrono::steady_clock::time_point last_call_pcb;
-    static std::chrono::steady_clock::time_point last_call_soc;
+    static std::chrono::steady_clock::time_point last_call_pcb, last_call_soc;
+    //static std::chrono::steady_clock::time_point last_call_soc;
 
     // Choose the appropriate throttle variable based on the device code
     std::chrono::steady_clock::time_point& last_call = 
@@ -1408,26 +1489,27 @@ namespace tsl {
         
         // Initialize RGB values
         uint8_t r, g, b, a = 0xFF;
-        
+        float t;
+
         if (temperature < blueStart) { // rgb 7, 7, 15 at blueStart
             r = 7;
             g = 7;
             b = 15;
         } else if (temperature >= blueStart && temperature < greenStart) {
             // Smooth color blending from (7 7 15) to (0 15 0)
-            float t = (temperature - blueStart) / (greenStart - blueStart);
+            t = (temperature - blueStart) / (greenStart - blueStart);
             r = static_cast<uint8_t>(7 - 7 * t);
             g = static_cast<uint8_t>(7 + 8 * t);
             b = static_cast<uint8_t>(15 - 15 * t);
         } else if (temperature >= greenStart && temperature < yellowStart) {
             // Smooth color blending from (0 15 0) to (15 15 0)
-            float t = (temperature - greenStart) / (yellowStart - greenStart);
+            t = (temperature - greenStart) / (yellowStart - greenStart);
             r = static_cast<uint8_t>(15 * t);
             g = static_cast<uint8_t>(15);
             b = static_cast<uint8_t>(0);
         } else if (temperature >= yellowStart && temperature < redStart) {
             // Smooth color blending from (15 15 0) to (15 0 0)
-            float t = (temperature - yellowStart) / (redStart - yellowStart);
+            t = (temperature - yellowStart) / (redStart - yellowStart);
             r = static_cast<uint8_t>(15);
             g = static_cast<uint8_t>(15 - 15 * t);
             b = static_cast<uint8_t>(0);
@@ -1583,8 +1665,8 @@ namespace tsl {
             
             // Convert hex color to Color and manage default values and conversion
             auto getColor = [&](const std::string& key, size_t alpha = 15) {
-                std::string hexColor = getValue(key);
-                return RGB888(hexColor, alpha);
+                //std::string hexColor = getValue(key);
+                return RGB888(getValue(key), alpha);
             };
             
             auto getAlpha = [&](const std::string& key) {
@@ -2104,7 +2186,7 @@ namespace tsl {
              * @param c Original color
              * @return Color with applied opacity
              */
-            inline static Color a(const Color &c) {
+            inline static Color a(const Color& c) {
                 u8 alpha = (disableTransparency && useOpaqueScreenshots) ? 0xF : static_cast<u8>(std::min(static_cast<u8>(c.a), static_cast<u8>(0xF * Renderer::s_opacity)));
                 return (c.rgba & 0x0FFF) | (alpha << 12);
             }
@@ -2117,7 +2199,7 @@ namespace tsl {
              * @param w Width
              * @param h Height
              */
-            inline void enableScissoring(s32 x, s32 y, s32 w, s32 h) {
+            inline void enableScissoring(const s32 x, const s32 y, const s32 w, const s32 h) {
                 this->m_scissoringStack.emplace(x, y, w, h);
             }
             
@@ -2138,8 +2220,8 @@ namespace tsl {
              * @param y Y pos
              * @param color Color
              */
-            inline void setPixel(s32 x, s32 y, Color color, u32 offset) {
-                if ((unsigned)x < cfg::FramebufferWidth && (unsigned)y < cfg::FramebufferHeight) {
+            inline void setPixel(const s32 x, const s32 y, const Color& color, const u32 offset) {
+                if (x < cfg::FramebufferWidth && y < cfg::FramebufferHeight) {
                     //u32 offset = this->getPixelOffset(x, y);
                     if (offset != UINT32_MAX) {
                         Color* framebuffer = static_cast<Color*>(this->getCurrentFramebuffer());
@@ -2158,7 +2240,7 @@ namespace tsl {
              * @param alpha Opacity
              * @return Blended color
              */
-            inline u8 blendColor(u8 src, u8 dst, u8 alpha) {
+            inline u8 blendColor(const u8 src, const u8 dst, const u8 alpha) {
                 return (dst * alpha + src * (0x0F - alpha)) >> 4;
             }
             
@@ -2169,7 +2251,7 @@ namespace tsl {
              * @param y Y pos
              * @param color Color
              */
-            inline void setPixelBlendSrc(s32 x, s32 y, Color color) {
+            inline void setPixelBlendSrc(const s32 x, const s32 y, const Color& color) {
                 //if (x < 0 || y < 0 || x >= cfg::FramebufferWidth || y >= cfg::FramebufferHeight)
                 //    return;
                 
@@ -2197,7 +2279,7 @@ namespace tsl {
              * @param y Y pos
              * @param color Color
              */
-            inline void setPixelBlendDst(s32 x, s32 y, Color color) {
+            inline void setPixelBlendDst(const s32 x, const s32 y, const Color& color) {
                 //if (x < 0 || y < 0 || x >= cfg::FramebufferWidth || y >= cfg::FramebufferHeight)
                 //    return;
                 
@@ -2227,7 +2309,7 @@ namespace tsl {
              * @param h Height
              * @param color Color
              */
-            inline void drawRect(s32 x, s32 y, s32 w, s32 h, Color color) {
+            inline void drawRect(const s32 x, const s32 y, const s32 w, const s32 h, const Color& color) {
                 s32 x_end = x + w;
                 s32 y_end = y + h;
             
@@ -2239,7 +2321,7 @@ namespace tsl {
             }
 
             
-            inline void drawCircle(s32 centerX, s32 centerY, u16 radius, bool filled, Color color) {
+            inline void drawCircle(const s32 centerX, const s32 centerY, const u16 radius, const bool filled, const Color& color) {
                 s32 x = radius;
                 s32 y = 0;
                 s32 radiusError = 0;
@@ -2280,7 +2362,7 @@ namespace tsl {
                 }
             }
 
-            inline void drawQuarterCircle(s32 centerX, s32 centerY, u16 radius, bool filled, Color color, int quadrant) {
+            inline void drawQuarterCircle(s32 centerX, s32 centerY, u16 radius, bool filled, const Color& color, int quadrant) {
                 s32 x = radius;
                 s32 y = 0;
                 s32 radiusError = 0;
@@ -2356,18 +2438,18 @@ namespace tsl {
                 }
             }
 
-            inline void drawBorderedRoundedRect(s32 x, s32 y, s32 width, s32 height, s32 thickness, s32 radius, Color highlightColor) {
+            inline void drawBorderedRoundedRect(const s32 x, const s32 y, const s32 width, const s32 height, const s32 thickness, const s32 radius, const Color& highlightColor) {
                 s32 startX = x + 4;
                 s32 startY = y;
                 s32 adjustedWidth = width - 12;
                 s32 adjustedHeight = height + 1;
-            
+                
                 // Draw borders
                 this->drawRect(startX, startY - thickness, adjustedWidth, thickness, highlightColor); // Top border
                 this->drawRect(startX, startY + adjustedHeight, adjustedWidth, thickness, highlightColor); // Bottom border
                 this->drawRect(startX - thickness, startY, thickness, adjustedHeight, highlightColor); // Left border
                 this->drawRect(startX + adjustedWidth, startY, thickness, adjustedHeight, highlightColor); // Right border
-            
+                
                 // Draw corners
                 this->drawQuarterCircle(startX, startY, radius, true, highlightColor, 2); // Upper-left
                 this->drawQuarterCircle(startX, startY + height, radius, true, highlightColor, 3); // Lower-left
@@ -2377,7 +2459,7 @@ namespace tsl {
 
 
             // Define processChunk as a static member function
-            static void processRoundedRectChunk(Renderer* self, s32 x, s32 y, s32 x_end, s32 y_end, s32 r2, s32 radius, Color color, s32 startRow, s32 endRow) {
+            static void processRoundedRectChunk(Renderer* self, const s32 x, const s32 y, const s32 x_end, const s32 y_end, const s32 r2, const s32 radius, const Color& color, const s32 startRow, const s32 endRow) {
                 s32 x_left = x + radius;
                 s32 x_right = x_end - radius;
                 s32 y_top = y + radius;
@@ -2386,7 +2468,7 @@ namespace tsl {
                 // Process the rectangle in chunks
                 for (s32 y1 = startRow; y1 < endRow; ++y1) {
                     for (s32 x1 = x; x1 < x_end; ++x1) {
-                        bool isInCorner = false;
+                        //bool isInCorner = false;
             
                         if (x1 < x_left) {
                             // Left side
@@ -2395,18 +2477,18 @@ namespace tsl {
                                 s32 dx = x_left - x1;
                                 s32 dy = y_top - y1;
                                 if (dx * dx + dy * dy <= r2) {
-                                    isInCorner = true;
+                                    self->setPixelBlendDst(x1, y1, color);
                                 }
                             } else if (y1 >= y_bottom) {
                                 // Bottom-left corner
                                 s32 dx = x_left - x1;
                                 s32 dy = y1 - y_bottom;
                                 if (dx * dx + dy * dy <= r2) {
-                                    isInCorner = true;
+                                    self->setPixelBlendDst(x1, y1, color);
                                 }
                             } else {
                                 // Left side of the rectangle
-                                isInCorner = true;
+                                self->setPixelBlendDst(x1, y1, color);
                             }
                         } else if (x1 >= x_right) {
                             // Right side
@@ -2415,21 +2497,21 @@ namespace tsl {
                                 s32 dx = x1 - x_right;
                                 s32 dy = y_top - y1;
                                 if (dx * dx + dy * dy <= r2) {
-                                    isInCorner = true;
+                                    self->setPixelBlendDst(x1, y1, color);
                                 }
                             } else if (y1 >= y_bottom) {
                                 // Bottom-right corner
                                 s32 dx = x1 - x_right;
                                 s32 dy = y1 - y_bottom;
                                 if (dx * dx + dy * dy <= r2) {
-                                    isInCorner = true;
+                                    self->setPixelBlendDst(x1, y1, color);
                                 }
                             } else {
                                 // Right side of the rectangle
-                                isInCorner = true;
+                                self->setPixelBlendDst(x1, y1, color);
                             }
                         } else {
-                            isInCorner = true;
+                            self->setPixelBlendDst(x1, y1, color);
                             // Center part
                             //if (y1 < y_top || y1 >= y_bottom) {
                             //    // Top and Bottom sides
@@ -2441,9 +2523,9 @@ namespace tsl {
                         }
             
                         // Set the pixel color if it's in the corner or filled area
-                        if (isInCorner) {
-                            self->setPixelBlendDst(x1, y1, color);
-                        }
+                        //if (isInCorner) {
+                        //    self->setPixelBlendDst(x1, y1, color);
+                        //}
                     }
                 }
             }
@@ -2460,7 +2542,7 @@ namespace tsl {
              * @param radius Corner radius
              * @param color Color
              */
-            inline void drawRoundedRectMultiThreaded(s32& x, s32& y, s32& w, s32& h, s32& radius, Color& color) {
+            inline void drawRoundedRectMultiThreaded(const s32 x, const s32 y, const s32 w, const s32 h, const s32 radius, const Color& color) {
                 s32 x_end = x + w;
                 s32 y_end = y + h;
                 s32 r2 = radius * radius;
@@ -2490,7 +2572,7 @@ namespace tsl {
             }
 
 
-            inline void drawRoundedRectSingleThreaded(s32& x, s32& y, s32& w, s32& h, s32& radius, Color& color) {
+            inline void drawRoundedRectSingleThreaded(const s32 x, const s32 y, const s32 w, const s32 h, const s32 radius, const Color& color) {
                 s32 x_end = x + w;
                 s32 y_end = y + h;
                 s32 r2 = radius * radius;
@@ -2500,7 +2582,7 @@ namespace tsl {
             }
 
             std::function<void(s32, s32, s32, s32, s32, Color)> drawRoundedRect;
-            void updateDrawFunction() {
+            inline void updateDrawFunction() {
                 if (expandedMemory) {
                     drawRoundedRect = [this](s32 x, s32 y, s32 w, s32 h, s32 radius, Color color) {
                         drawRoundedRectMultiThreaded(x, y, w, h, radius, color);
@@ -2557,7 +2639,7 @@ namespace tsl {
 
             
             
-            inline void drawUniformRoundedRect(s32 x, s32 y, s32 w, s32 h, Color color) {
+            inline void drawUniformRoundedRect(const s32 x, const s32 y, const s32 w, const s32 h, const Color& color) {
                 s32 radius = std::min(w, h) / 2;
                 s32 x_start = x + radius;
                 s32 x_end = x + w - radius;
@@ -2615,14 +2697,14 @@ namespace tsl {
             }
 
             
-            void processBMPChunk(s32 x, s32 y, s32 screenW, const u8 *preprocessedData, s32 startRow, s32 endRow) {
+            inline void processBMPChunk(const s32 x, const s32 y, const s32 screenW, const u8 *preprocessedData, const s32 startRow, const s32 endRow) {
                 s32 bytesPerRow = screenW * 4;
                 const s32 endX = screenW - 16;
-            
+                
                 for (s32 y1 = startRow; y1 < endRow; ++y1) {
                     const u8 *rowPtr = preprocessedData + (y1 * bytesPerRow);
                     s32 x1 = 0;
-            
+                    
                     // Process in chunks of 16 pixels using SIMD
                     for (; x1 <= endX; x1 += 16) {
                         uint8x16x4_t pixelData = vld4q_u8(rowPtr + (x1 * 4));
@@ -2659,7 +2741,7 @@ namespace tsl {
              * @param screenH Target screen height
              */
 
-            void drawBitmap(s32 x, s32 y, s32 screenW, s32 screenH, const u8 *preprocessedData) {
+            inline void drawBitmap(const s32 x, const s32 y, const s32 screenW, const s32 screenH, const u8 *preprocessedData) {
                 // Number of threads to use
                 //const unsigned numThreads = 3;
                 //std::vector<std::thread> threads(numThreads);
@@ -2686,7 +2768,7 @@ namespace tsl {
              *
              * @param color Color
              */
-            inline void fillScreen(Color color) {
+            inline void fillScreen(const Color& color) {
                 std::fill_n(static_cast<Color*>(this->getCurrentFramebuffer()), this->getFramebufferSize() / sizeof(Color), color);
             }
             
@@ -2707,59 +2789,65 @@ namespace tsl {
                 int width, height;
             };
             
-            inline float calculateStringWidth(const std::string& str, s32 fontSize, bool fixedWidthNumbers = false) {
+            inline float calculateStringWidth(const std::string& str, const s32 fontSize, const bool fixedWidthNumbers = false) {
                 if (str.empty()) {
                     return 0.0f;
                 }
-                
+            
                 float totalWidth = 0.0f;
                 std::string::size_type strPos = 0;
                 ssize_t codepointWidth;
                 u32 prevCharacter = 0;
-                
+                u32 currCharacter = 0;
+                float currFontSize;
+                int xAdvance = 0, leftBearing = 0, kernAdvance = 0;
+            
                 while (strPos < str.size()) {
-                    u32 currCharacter;
                     codepointWidth = decode_utf8(&currCharacter, reinterpret_cast<const u8*>(&str[strPos]));
-                    
+            
                     if (codepointWidth <= 0) {
                         break;
                     }
-                    
-                    // Check if the character is in the character width map
-                    auto it = characterWidths.find(static_cast<wchar_t>(currCharacter));
-                    if (it != characterWidths.end()) {
-                        totalWidth += it->second * fontSize;
+            
+                    if (fixedWidthNumbers && std::isdigit(currCharacter)) {
+                        totalWidth += defaultNumericCharWidth * fontSize;
                     } else {
-                        stbtt_fontinfo* currFont = nullptr;
-                        
-                        if (stbtt_FindGlyphIndex(&this->m_extFont, currCharacter)) {
-                            currFont = &this->m_extFont;
-                        } else if (this->m_hasLocalFont && stbtt_FindGlyphIndex(&this->m_stdFont, currCharacter) == 0) {
-                            currFont = &this->m_localFont;
+                        auto it = characterWidths.find(static_cast<wchar_t>(currCharacter));
+                        if (it != characterWidths.end()) {
+                            totalWidth += it->second * fontSize;
                         } else {
-                            currFont = &this->m_stdFont;
+                            stbtt_fontinfo* currFont = nullptr;
+            
+                            if (stbtt_FindGlyphIndex(&this->m_extFont, currCharacter)) {
+                                currFont = &this->m_extFont;
+                            } else if (this->m_hasLocalFont && stbtt_FindGlyphIndex(&this->m_stdFont, currCharacter) == 0) {
+                                currFont = &this->m_localFont;
+                            } else {
+                                currFont = &this->m_stdFont;
+                            }
+            
+                            currFontSize = stbtt_ScaleForPixelHeight(currFont, fontSize);
+                            stbtt_GetCodepointHMetrics(currFont, currCharacter, &xAdvance, &leftBearing);
+            
+                            if (prevCharacter) {
+                                kernAdvance = stbtt_GetCodepointKernAdvance(currFont, prevCharacter, currCharacter);
+                                totalWidth += kernAdvance * currFontSize;
+                            }
+            
+                            totalWidth += xAdvance * currFontSize;
                         }
-                        
-                        float currFontSize = stbtt_ScaleForPixelHeight(currFont, fontSize);
-                        
-                        int xAdvance = 0, leftBearing = 0;
-                        stbtt_GetCodepointHMetrics(currFont, currCharacter, &xAdvance, &leftBearing);
-                        
-                        // Apply kerning if previous character exists
-                        if (prevCharacter) {
-                            int kernAdvance = stbtt_GetCodepointKernAdvance(currFont, prevCharacter, currCharacter);
-                            totalWidth += kernAdvance * currFontSize;
-                        }
-                        
-                        totalWidth += xAdvance * currFontSize;
                     }
-                    
+            
                     strPos += codepointWidth;
                     prevCharacter = currCharacter;
                 }
-                
+            
                 return totalWidth;
             }
+
+
+
+
 
             /**
              * @brief Draws a string
@@ -2772,7 +2860,7 @@ namespace tsl {
              * @param color Text color. Use transparent color to skip drawing and only get the string's dimensions
              * @return Dimensions of drawn string
              */
-            inline std::pair<u32, u32> drawString(const char* string, bool monospace, s32 x, s32 y, s32 fontSize, Color color, ssize_t maxWidth = 0) {
+            inline std::pair<u32, u32> drawString(const char* string, bool monospace, const s32 x, const s32 y, const s32 fontSize, const Color& color, const ssize_t maxWidth = 0) {
                 float maxX = x;
                 float currX = x;
                 float currY = y;
@@ -2863,16 +2951,17 @@ namespace tsl {
 
             
             
-            inline void drawStringWithColoredSections(const std::string& text, const std::vector<std::string>& specialSymbols, s32 x, s32 y, u32 fontSize, Color defaultColor, Color specialColor) {
+            inline void drawStringWithColoredSections(const std::string& text, const std::vector<std::string>& specialSymbols, s32 x, const s32 y, const u32 fontSize, const Color& defaultColor, const Color& specialColor) {
                 size_t startPos = 0;
                 size_t textLength = text.length();
                 u32 segmentWidth, segmentHeight;
                 
                 size_t specialPos, foundLength, pos;
+                const char* foundSymbol;
                 while (startPos < textLength) {
                     specialPos = std::string::npos;
                     foundLength = 0;
-                    const char* foundSymbol = nullptr;
+                    foundSymbol = nullptr;
                     
                     // Find the nearest special symbol
                     for (const auto& symbol : specialSymbols) {
@@ -2920,7 +3009,7 @@ namespace tsl {
              * @param fontSize Size of the font
              * @param maxLength Maximum length of the string in terms of width
              */
-            inline std::string limitStringLength(std::string string, bool monospace, s32 fontSize, s32 maxLength) {
+            inline std::string limitStringLength(const std::string& string, const bool monospace, const s32 fontSize, const s32 maxLength) {
                 if (string.size() < 2) {
                     return string;
                 }
@@ -3084,7 +3173,7 @@ namespace tsl {
              * @param y Y Pos
              * @return Offset
              */
-            inline u32 getPixelOffset(s32 x, s32 y) {
+            inline u32 getPixelOffset(const s32 x, const s32 y) {
                 // Check for scissoring boundaries
                 if (!this->m_scissoringStack.empty()) {
                     const auto& currScissorConfig = this->m_scissoringStack.top();
@@ -4038,7 +4127,7 @@ namespace tsl {
                         clock_gettime(CLOCK_REALTIME, &currentTimeSpec);
                         strftime(timeStr, sizeof(timeStr), datetimeFormat.c_str(), localtime(&currentTimeSpec.tv_sec));
                         localizeTimeStr(timeStr);
-                        renderer->drawString(timeStr, false, tsl::cfg::FramebufferWidth - renderer->calculateStringWidth(timeStr, 20) - 20, y_offset, 20, a(clockColor));
+                        renderer->drawString(timeStr, false, tsl::cfg::FramebufferWidth - renderer->calculateStringWidth(timeStr, 20, true) - 20, y_offset, 20, a(clockColor));
                         y_offset += 22;
                     }
                     
@@ -4066,7 +4155,7 @@ namespace tsl {
                         chargeStringSTD = chargeString;
                         Color batteryColorToUse = isCharging ? tsl::Color(0x0, 0xF, 0x0, 0xF) : 
                                                 (batteryCharge < 20 ? tsl::Color(0xF, 0x0, 0x0, 0xF) : batteryColor);
-                        renderer->drawString(chargeStringSTD.c_str(), false, tsl::cfg::FramebufferWidth - renderer->calculateStringWidth(chargeStringSTD, 20) - 22, y_offset, 20, a(batteryColorToUse));
+                        renderer->drawString(chargeStringSTD.c_str(), false, tsl::cfg::FramebufferWidth - renderer->calculateStringWidth(chargeStringSTD, 20, true) - 22, y_offset, 20, a(batteryColorToUse));
                     }
                     
                     offset = 0;
@@ -4074,13 +4163,13 @@ namespace tsl {
                         PCB_temperatureStringSTD = PCB_temperatureStr;
                         if (!hideBattery)
                             offset -= 5;
-                        renderer->drawString(PCB_temperatureStringSTD.c_str(), false, tsl::cfg::FramebufferWidth + offset - renderer->calculateStringWidth(PCB_temperatureStringSTD, 20) - renderer->calculateStringWidth(chargeStringSTD, 20) - 22, y_offset, 20, a(tsl::GradientColor(PCB_temperature)));
+                        renderer->drawString(PCB_temperatureStringSTD.c_str(), false, tsl::cfg::FramebufferWidth + offset - renderer->calculateStringWidth(PCB_temperatureStringSTD, 20, true) - renderer->calculateStringWidth(chargeStringSTD, 20, true) - 22, y_offset, 20, a(tsl::GradientColor(PCB_temperature)));
                     }
                     if (!hideSOCTemp && SOC_temperature > 0) {
                         SOC_temperatureStringSTD = SOC_temperatureStr;
                         if (!hidePCBTemp || !hideBattery)
                             offset -= 5;
-                        renderer->drawString(SOC_temperatureStringSTD.c_str(), false, tsl::cfg::FramebufferWidth + offset - renderer->calculateStringWidth(SOC_temperatureStringSTD, 20) - renderer->calculateStringWidth(PCB_temperatureStringSTD, 20) - renderer->calculateStringWidth(chargeStringSTD, 20) - 22, y_offset, 20, a(tsl::GradientColor(SOC_temperature)));
+                        renderer->drawString(SOC_temperatureStringSTD.c_str(), false, tsl::cfg::FramebufferWidth + offset - renderer->calculateStringWidth(SOC_temperatureStringSTD, 20, true) - renderer->calculateStringWidth(PCB_temperatureStringSTD, 20, true) - renderer->calculateStringWidth(chargeStringSTD, 20, true) - 22, y_offset, 20, a(tsl::GradientColor(SOC_temperature)));
                     }
                 } else {
                     x = 20;
@@ -4219,7 +4308,7 @@ namespace tsl {
                 // Render the text with special character handling
                 renderer->drawStringWithColoredSections(menuBottomLine.c_str(), {"\uE0E1","\uE0E0","\uE0ED","\uE0EE"}, 30, 693, 23, a(bottomTextColor), a(buttonColor));
                 
-                //if (debugFPS) {
+                //if (true) {
                 //    // Update FPS
                 //    updateFPS(currentTimeCount);
                 //
@@ -4231,20 +4320,20 @@ namespace tsl {
                 //    // Draw FPS string at the bottom left corner
                 //    renderer->drawString(fpsString.c_str(), false, 20, tsl::cfg::FramebufferHeight - 60, 20, a(tsl::Color(0xFF, 0xFF, 0xFF, 0xFF))); // Adjust position and color as needed
                 //    
-                //    svcGetSystemInfo(&RAM_Used_system_u, 1, INVALID_HANDLE, 2);
-                //    svcGetSystemInfo(&RAM_Total_system_u, 0, INVALID_HANDLE, 2);
-                //    
-                //    float RAM_Total_system_f = (float)RAM_Total_system_u / 1024 / 1024;
-                //    float RAM_Used_system_f = (float)RAM_Used_system_u / 1024 / 1024;
-                //    
-                //    // Convert RAM usage to strings
-                //    std::ostringstream ramStream;
-                //    ramStream << std::fixed << std::setprecision(2)
-                //              << RAM_Total_system_f - RAM_Used_system_f - 8.0 << " MB free (8 MB reserved)";
-                //    std::string ramString = ramStream.str();
-                //    
-                //    
-                //    renderer->drawString(ramString.c_str(), false, 130, tsl::cfg::FramebufferHeight - 60, 20, a(tsl::Color(0xFF, 0xFF, 0xFF, 0xFF))); // Adjust position and color as needed
+                //    //svcGetSystemInfo(&RAM_Used_system_u, 1, INVALID_HANDLE, 2);
+                //    //svcGetSystemInfo(&RAM_Total_system_u, 0, INVALID_HANDLE, 2);
+                //    //
+                //    //float RAM_Total_system_f = (float)RAM_Total_system_u / 1024 / 1024;
+                //    //float RAM_Used_system_f = (float)RAM_Used_system_u / 1024 / 1024;
+                //    //
+                //    //// Convert RAM usage to strings
+                //    //std::ostringstream ramStream;
+                //    //ramStream << std::fixed << std::setprecision(2)
+                //    //          << RAM_Total_system_f - RAM_Used_system_f - 8.0 << " MB free (8 MB reserved)";
+                //    //std::string ramString = ramStream.str();
+                //    //
+                //    //
+                //    //renderer->drawString(ramString.c_str(), false, 130, tsl::cfg::FramebufferHeight - 60, 20, a(tsl::Color(0xFF, 0xFF, 0xFF, 0xFF))); // Adjust position and color as needed
                 //}
 
                 
@@ -4477,6 +4566,9 @@ namespace tsl {
             std::chrono::steady_clock::time_point lastUpdateTime;
             std::chrono::duration<float> elapsed;
 
+            const float smoothingFactor = 0.15f;  // Lower value means faster smoothing
+            const float dampingFactor = 0.3f;   // Closer to 1 means slower damping
+
             //static inline float animationDuration = 2.0f; 
             //InputMode lastInputMode = InputMode::Controller;
 
@@ -4562,12 +4654,12 @@ namespace tsl {
                     u32 scrollbarOffset = (this->m_offset / maxScrollableHeight) * (viewHeight - scrollbarHeight);
                     scrollbarOffset = std::min(scrollbarOffset, viewHeight - scrollbarHeight) + 4;
             
-                    const u32 offset = 10;
-                    const u32 scrollbarX = rightBound + 10 + offset;
+                    //const u32 offset = 10;
+                    const u32 scrollbarX = rightBound + 20;
                     const u32 scrollbarY = this->getY() + scrollbarOffset;
-                    const u32 scrollbarWidth = 5;
+                    //const u32 scrollbarWidth = 5;
             
-                    renderer->drawRect(scrollbarX, scrollbarY, scrollbarWidth, scrollbarHeight, a(trackBarColor));
+                    renderer->drawRect(scrollbarX, scrollbarY, 5, scrollbarHeight, a(trackBarColor));
                     renderer->drawCircle(scrollbarX + 2, scrollbarY, 2, true, a(trackBarColor));
                     renderer->drawCircle(scrollbarX + 2, scrollbarY + scrollbarHeight, 2, true, a(trackBarColor));
                     
@@ -4584,8 +4676,6 @@ namespace tsl {
                     if (Element::getInputMode() == InputMode::Controller) {
                         //static float lastOffset = 0.0f;
                         static float velocity = 0.0f;
-                        const float smoothingFactor = 0.15f;  // Lower value means faster smoothing
-                        const float dampingFactor = 0.3f;   // Closer to 1 means slower damping
                     
                         // Calculate the difference between the next and current offsets
                         float deltaOffset = this->m_nextOffset - this->m_offset;
@@ -4875,7 +4965,7 @@ namespace tsl {
                     scrollbarHeight = viewHeight;
                 }
                 
-                int maxScrollableHeight = totalHeight - viewHeight;
+                u32 maxScrollableHeight = totalHeight - viewHeight;
                 if (maxScrollableHeight < 1) maxScrollableHeight = 1;
                 
                 scrollbarOffset = (static_cast<double>(this->m_offset) / maxScrollableHeight) * (viewHeight - scrollbarHeight);
@@ -4884,11 +4974,11 @@ namespace tsl {
                 }
                 scrollbarOffset += 8;
                 
-                int offset = 11;
-                renderer->drawRect(this->getRightBound() + 10 + offset, this->getY() + scrollbarOffset, 5, scrollbarHeight, a(trackBarColor));
-                renderer->drawCircle(this->getRightBound() + 12 + offset, this->getY() + scrollbarOffset, 2, true, a(trackBarColor));
+                //int offset = 11;
+                renderer->drawRect(this->getRightBound() + 21, this->getY() + scrollbarOffset, 5, scrollbarHeight, a(trackBarColor));
+                renderer->drawCircle(this->getRightBound() + 23, this->getY() + scrollbarOffset, 2, true, a(trackBarColor));
                 //renderer->drawCircle(this->getRightBound() + 12 + offset, (this->getY() + scrollbarOffset + scrollbarHeight) / 2, 2, true, a(trackBarColor));
-                renderer->drawCircle(this->getRightBound() + 12 + offset, this->getY() + scrollbarOffset + scrollbarHeight, 2, true, a(trackBarColor));
+                renderer->drawCircle(this->getRightBound() + 23, this->getY() + scrollbarOffset + scrollbarHeight, 2, true, a(trackBarColor));
                 
                 
                 
@@ -5040,9 +5130,9 @@ namespace tsl {
                 
                 // CUSTOM SECTION START (modification for submenu footer color)
                 //const std::string& value = this->m_value;
-                int xPosition = this->getX() + this->m_maxWidth + 45 - 1;
-                int yPosition = this->getY() + 45;
-                int fontSize = 20;
+                s32 xPosition = this->getX() + this->m_maxWidth + 45 - 1;
+                s32 yPosition = this->getY() + 45;
+                s32 fontSize = 20;
                 //bool isFaint = ;
                 //bool isFocused = this->m_focused;
 
@@ -5259,7 +5349,6 @@ namespace tsl {
             
             
             CategoryHeader(const std::string &title, bool hasSeparator = true) : m_text(title), m_hasSeparator(hasSeparator) {
-                
                 applyLangReplacements(m_text);
             }
             virtual ~CategoryHeader() {}
@@ -5379,42 +5468,56 @@ namespace tsl {
                 if (m_packagePath.empty()) {
                     return;
                 }
+            
+                // Precompute values and reserve space
+                const std::string indexStr = std::to_string(m_index);
+                const std::string valueStr = m_usingNamedStepTrackbar ? m_selection : std::to_string(m_value);
                 
-                std::string indexStr = std::to_string(m_index);
-                std::string valueStr = m_usingNamedStepTrackbar ? m_selection : std::to_string(m_value);
-                
+                // Update INI file values if needed
                 if (updateIni) {
-                    setIniFileValue(m_packagePath + "config.ini", m_label, "index", indexStr);
-                    setIniFileValue(m_packagePath + "config.ini", m_label, "value", valueStr);
+                    const std::string configPath = m_packagePath + "config.ini";
+                    setIniFileValue(configPath, m_label, "index", indexStr);
+                    setIniFileValue(configPath, m_label, "value", valueStr);
                 }
-                
+            
+                // Process and execute commands if needed
                 if (interpretAndExecuteCommands) {
                     auto modifiedCmds = getSourceReplacement(commands, valueStr, m_index, m_packagePath);
-                    size_t pos;
+            
+                    // Prepare strings for replacements
+                    const std::string valuePlaceholder = "{value}";
+                    const std::string indexPlaceholder = "{index}";
+                    const size_t valuePlaceholderLength = valuePlaceholder.length();
+                    const size_t indexPlaceholderLength = indexPlaceholder.length();
+                    
                     for (auto& cmd : modifiedCmds) {
                         for (auto& arg : cmd) {
-                            pos = 0;
-                            while ((pos = arg.find("{value}", pos)) != std::string::npos) {
-                                arg.replace(pos, 7, valueStr);
+                            // Replace {value} placeholders
+                            size_t pos = 0;
+                            while ((pos = arg.find(valuePlaceholder, pos)) != std::string::npos) {
+                                arg.replace(pos, valuePlaceholderLength, valueStr);
                                 pos += valueStr.length();
                             }
-                            
+            
+                            // Replace {index} placeholders if needed
                             if (m_usingNamedStepTrackbar) {
                                 pos = 0;
-                                while ((pos = arg.find("{index}", pos)) != std::string::npos) {
-                                    arg.replace(pos, 7, indexStr);
+                                while ((pos = arg.find(indexPlaceholder, pos)) != std::string::npos) {
+                                    arg.replace(pos, indexPlaceholderLength, indexStr);
                                     pos += indexStr.length();
                                 }
                             }
                         }
                     }
-                    
+            
+                    // Execute commands
                     interpretAndExecuteCommands(std::move(modifiedCmds), m_packagePath, selectedCommand);
                 }
             }
+
             
             virtual inline bool handleInput(u64 keysDown, u64 keysHeld, const HidTouchState &touchPos, HidAnalogStickState leftJoyStick, HidAnalogStickState rightJoyStick) override {
-                static std::chrono::milliseconds initialInterval{67}; // Initial interval between value changes (67ms)
+                //static std::chrono::milliseconds initialInterval{67}; // Initial interval between value changes (67ms)
                 static bool holding = false;
                 static std::chrono::steady_clock::time_point holdStartTime;
                 static u64 prevKeysHeld = 0;
@@ -5567,7 +5670,7 @@ namespace tsl {
 
 
             // Define drawBar function outside the draw method
-            void drawBar(gfx::Renderer *renderer, s32 x, s32 y, u16 width, Color color, bool isRounded = true) {
+            void drawBar(gfx::Renderer *renderer, s32 x, s32 y, u16 width, Color& color, bool isRounded = true) {
                 if (isRounded) {
                     renderer->drawUniformRoundedRect(x, y, width, 7, a(color));
                 } else {
@@ -5919,7 +6022,7 @@ namespace tsl {
              * @param icon Icon shown next to the track bar
              * @param stepDescriptions Step names displayed above the track bar
              */
-            NamedStepTrackBar(std::string label, std::string packagePath, std::vector<std::string> stepDescriptions,
+            NamedStepTrackBar(std::string label, std::string packagePath, std::vector<std::string>& stepDescriptions,
                 std::function<void(std::vector<std::vector<std::string>>&&, const std::string&, const std::string&)> executeCommands = nullptr,
                 std::function<std::vector<std::vector<std::string>>(const std::vector<std::vector<std::string>>&, const std::string&, size_t, const std::string&)> sourceReplacementFunc = nullptr,
                 std::vector<std::vector<std::string>> cmd = {}, const std::string& selCmd = "", bool unlockedTrackbar = false, bool executeOnEveryTick = false)
@@ -5945,6 +6048,7 @@ namespace tsl {
                 u8 halfNumSteps = (this->m_numSteps - 1) / 2;
 
                 // Draw step rectangles
+                //u16 stepX;
                 for (u8 i = 0; i < this->m_numSteps; i++) {
                     u16 stepX = baseX + std::round(i * stepSpacing);
                     
@@ -6419,11 +6523,11 @@ namespace tsl {
             static HidTouchState initialTouchPos = { 0 };
             static HidTouchState oldTouchPos = { 0 };
             static bool oldTouchDetected = false;
-            static elm::TouchEvent touchEvent;
-            static elm::TouchEvent oldTouchEvent;
+            static elm::TouchEvent touchEvent, oldTouchEvent;
+            //static elm::TouchEvent oldTouchEvent;
             static ssize_t counter = 0;
-            static std::chrono::steady_clock::time_point buttonPressTime;
-            static std::chrono::steady_clock::time_point lastKeyEventTime;
+            static std::chrono::steady_clock::time_point buttonPressTime, lastKeyEventTime;
+            //static std::chrono::steady_clock::time_point lastKeyEventTime;
             static bool singlePressHandled = false;
             static const auto clickThreshold = std::chrono::milliseconds(340); // Adjust this value as needed
             static auto keyEventInterval = std::chrono::milliseconds(67); // Interval between key events
@@ -7137,10 +7241,12 @@ std::string convertComboToUnicode(const std::string& combo) {
     bool modified = false;
     std::string token;
     
+    std::string trimmedToken;
+
     // Manually iterate through the combo string and split by '+'
     for (size_t i = 0; i <= combo.length(); ++i) {
         if (i == combo.length() || combo[i] == '+') {
-            std::string trimmedToken = trim(token);
+            trimmedToken = trim(token);
             auto it = buttonCharMap.find(trimmedToken);
 
             if (it != buttonCharMap.end()) {
