@@ -20,7 +20,7 @@
 #include <mutex>
 
 // Specify the log file path
-const std::string logFilePath = "sdmc:/config/ultrahand/log.txt";
+const char* logFilePath = "sdmc:/config/ultrahand/log.txt";
 
 
 // Global mutex for thread-safe logging
