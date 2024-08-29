@@ -120,7 +120,7 @@ inline void createTextFile(const std::string& filePath, const std::string& conte
  */
 void deleteFileOrDirectory(const std::string& pathToDelete, const std::string& logSource = "") {
     std::vector<std::string> stack;
-    logMessage("pathToDelete: " + pathToDelete);
+    //logMessage("pathToDelete: " + pathToDelete);
 
     bool pathIsFile = pathToDelete.back() != '/';
     std::ofstream logSourceFile;
@@ -230,7 +230,7 @@ void deleteFileOrDirectoryByPattern(const std::string& pathPattern, const std::s
     std::vector<std::string> fileList = getFilesListByWildcards(pathPattern);
     
     for (const auto& path : fileList) {
-        logMessage("path: "+path);
+        //logMessage("path: "+path);
         deleteFileOrDirectory(path, logSource);
     }
 }
