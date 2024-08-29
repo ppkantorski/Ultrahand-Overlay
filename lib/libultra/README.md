@@ -33,7 +33,7 @@
 
 - **ini_funcs.hpp**: Helper functions for handling INI configuration files, offering a convenient way to manage application settings.
 
-### [JSON Functions]((/lib/libultra/include/json_funcs.hpp)
+### [JSON Functions](/lib/libultra/include/json_funcs.hpp)
 
 - **json_funcs.hpp**: Utilities for parsing and manipulating JSON data, providing easy integration with JSON-based APIs and services.
 
