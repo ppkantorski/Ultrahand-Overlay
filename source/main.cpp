@@ -932,7 +932,7 @@ public:
             else if (model == SetSysProductModel_Aula)
                 modelRev = "Aula Tegra x1+";
             else if (model == SetSysProductModel_Nx)
-                modelRev = "Nx Tegra x1";
+                modelRev = "Icosa Tegra x1";
             else if (model == SetSysProductModel_Copper)
                 modelRev = "Copper Tegra x1";
             else
