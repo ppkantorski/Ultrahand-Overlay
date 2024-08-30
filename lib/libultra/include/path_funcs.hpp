@@ -55,7 +55,7 @@ inline void createSingleDirectory(const std::string& directoryPath) {
  * @param directoryPath The path of the directory to be created.
  */
 inline void createDirectory(const std::string& directoryPath) {
-    std::string volume = "sdmc:/";
+    std::string volume = ROOT_PATH;
     std::string path = directoryPath;
 
     // Remove leading "sdmc:/" if present
@@ -160,7 +160,7 @@ void deleteFileOrDirectory(const std::string& pathToDelete, const std::string& l
         currentPath = stack.back();
         
         if (stat(currentPath.c_str(), &pathStat) != 0) {
-            logMessage("Error accessing path: " + currentPath);
+            //logMessage("Error accessing path: " + currentPath);
             stack.pop_back();
             continue;
         }
