@@ -296,27 +296,30 @@ bool isDirectoryCached(const struct dirent* entry, const std::string& fullPath) 
 void handleDirectory(const std::string& basePath, const std::vector<std::string>& parts, size_t partIndex, std::vector<std::string>& results, bool directoryOnly) {
     if (partIndex >= parts.size()) return;
 
-    DIR* rawDir = opendir(basePath.c_str());
-    if (!rawDir) return;
-    std::unique_ptr<DIR, DirCloser> dir(rawDir);
+    // Open the directory safely using a smart pointer
+    std::unique_ptr<DIR, DirCloser> dir(opendir(basePath.c_str()));
+    if (!dir) return;
 
     struct dirent* entry;
     std::string entryName, fullPath;
-    
+    bool isCurrentDir, match;
+
     while ((entry = readdir(dir.get())) != nullptr) {
         entryName = entry->d_name;
         if (entryName == "." || entryName == "..") continue;
-
+        
         fullPath = basePath + (basePath.back() == '/' ? "" : "/") + entryName;
-        bool isCurrentDir = isDirectoryCached(entry, fullPath);
-
-        bool match = fnmatch(parts[partIndex].c_str(), entryName.c_str(), FNM_NOESCAPE) == 0;
-        if (!match) continue; // Only process matches
-
+        isCurrentDir = isDirectoryCached(entry, fullPath);
+        
+        match = (fnmatch(parts[partIndex].c_str(), entryName.c_str(), FNM_NOESCAPE) == 0);
+        if (!match) continue; // Skip non-matching entries
+        
+        // Recurse into directories if there are more parts to process
         if (isCurrentDir && partIndex < parts.size() - 1) {
             handleDirectory(fullPath, parts, partIndex + 1, results, directoryOnly);
         }
-
+        
+        // Add matching directories/files to results
         if (match && partIndex == parts.size() - 1 && (directoryOnly ? isCurrentDir : true)) {
             results.push_back(fullPath + (isCurrentDir ? "/" : ""));
         }
