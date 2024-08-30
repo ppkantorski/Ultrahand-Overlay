@@ -931,8 +931,8 @@ public:
             tableData = {
                 {HARDWARE, "", modelRev},
                 {MEMORY, "", memorySize},
-                {"   "+VENDOR, "", memoryVendor},
-                {"   "+MODEL, "", memoryModel},
+                {"└ "+VENDOR, "", memoryVendor},
+                {"└ "+MODEL, "", memoryModel},
                 {STORAGE, "", getSDMCStorageInfo()}
             };
             addTable(list, tableData, "", 160, 20, 3, 4);
@@ -1326,7 +1326,7 @@ public:
             }
             return false;
         });
-    
+        
         // Use raw pointer for adding item
         list->addItem(listItem.release()); // Add the item directly
     }
