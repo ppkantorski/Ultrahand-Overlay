@@ -1,11 +1,11 @@
 /********************************************************************************
- * File: string_funcs.hpp
+ * File: path_funcs.hpp
  * Author: ppkantorski
  * Description:
- *   This header file contains function declarations and utility functions for string
- *   manipulation. These functions are used in the Ultrahand Overlay project to
- *   perform operations like trimming whitespaces, removing quotes, replacing
- *   multiple slashes, and more.
+ *   This header file contains function declarations and utility functions related
+ *   to file and directory path manipulation. These functions are used in the
+ *   Ultrahand Overlay project to handle file operations, such as creating
+ *   directories, moving files, and more.
  *
  *   For the latest updates and contributions, visit the project's GitHub repository.
  *   (GitHub Repository: https://github.com/ppkantorski/Ultrahand-Overlay)
@@ -18,485 +18,771 @@
  ********************************************************************************/
 
 #pragma once
-#include <string>
-#include <iterator> 
-#include <vector>
-#include <jansson.h>
-#include <regex>
-#include <sys/stat.h>
+#include <fstream>
 #include <dirent.h>
-#include "debug_funcs.hpp"
+#include <sys/stat.h>
+#include "string_funcs.hpp"
+#include "get_funcs.hpp"
+#include <queue>
 
-// Function to remove any non-alphanumeric characters from a string
-//std::string replaceSingleQuote(const std::string& str) {
-//    std::string result = str;
-//    std::replace(result.begin(), result.end(), '\'', '_');
-//    return result;
-//}
+static std::atomic<bool> abortFileOp(false);
 
-// Function to remove invalid characters from file names
-inline std::string cleanFileName(const std::string& fileName) {
-    std::string cleanedFileName = fileName;
-    cleanedFileName.erase(std::remove_if(cleanedFileName.begin(), cleanedFileName.end(), [](char c) {
-        return !(std::isalnum(c) || std::isspace(c) || c == '-' || c == '_');
-    }), cleanedFileName.end());
-    return cleanedFileName;
-}
+size_t COPY_BUFFER_SIZE = 4096*4; // Increase buffer size to 128 KB
 
-// Function to clean directory names by removing invalid characters
-inline std::string cleanDirectoryName(const std::string& name) {
-    std::string cleanedName = name;
-    cleanedName.erase(std::remove_if(cleanedName.begin(), cleanedName.end(), [](char c) {
-        return !(std::isalnum(c) || std::isspace(c) || c == '-' || c == '_');
-    }), cleanedName.end());
-    return cleanedName;
-}
-
-/**
- * @brief Trims leading and trailing whitespaces from a string.
- *
- * This function removes leading and trailing whitespaces, tabs, newlines, carriage returns, form feeds,
- * and vertical tabs from the input string.
- *
- * @param str The input string to trim.
- * @return The trimmed string.
- */
-inline std::string trim(const std::string& str) {
-    size_t first = str.find_first_not_of(" \t\n\r\f\v");
-    if (first == std::string::npos)
-        return {};  // Use {} to avoid an extra constructor call
-
-    size_t last = str.find_last_not_of(" \t\n\r\f\v");
-    return str.substr(first, last - first + 1);
-}
-
-
-// Function to trim newline characters from the end of a string
-inline std::string trimNewline(const std::string &str) {
-    size_t end = str.find_last_not_of("\n");
-    return (end == std::string::npos) ? "" : str.substr(0, end + 1);
-}
-
-/**
- * @brief Removes all white spaces from a string.
- *
- * This function removes all white spaces, including spaces, tabs, newlines, carriage returns, form feeds,
- * and vertical tabs from the input string.
- *
- * @param str The input string to remove white spaces from.
- * @return The string with white spaces removed.
- */
-inline std::string removeWhiteSpaces(const std::string& str) {
-    std::string result;
-    result.reserve(str.size()); // Reserve space for the result to avoid reallocations
-    
-    std::remove_copy_if(str.begin(), str.end(), std::back_inserter(result), [](unsigned char c) {
-        return std::isspace(c);
-    });
-    
-    return result;
-}
 
 
 
 /**
- * @brief Removes quotes from a string.
+ * @brief Creates a single directory if it doesn't exist.
  *
- * This function removes single and double quotes from the beginning and end of the input string.
+ * This function checks if the specified directory exists, and if not, it creates the directory.
  *
- * @param str The input string to remove quotes from.
- * @return The string with quotes removed.
+ * @param directoryPath The path of the directory to be created.
  */
-inline std::string removeQuotes(const std::string& str) {
-    if (str.size() >= 2) {
-        char frontQuote = str.front();
-        char backQuote = str.back();
-        if ((frontQuote == '\'' && backQuote == '\'') || (frontQuote == '"' && backQuote == '"')) {
-            return str.substr(1, str.size() - 2);
+inline void createSingleDirectory(const std::string& directoryPath) {
+    //if (!isDirectory(directoryPath)) {
+    mkdir(directoryPath.c_str(), 0777); // Use mode 0777 to allow wide access
+    //}
+}
+
+
+/**
+ * @brief Creates a directory and its parent directories if they don't exist.
+ *
+ * This function creates a directory specified by `directoryPath` and also creates any parent directories
+ * if they don't exist. It handles nested directory creation.
+ *
+ * @param directoryPath The path of the directory to be created.
+ */
+inline void createDirectory(const std::string& directoryPath) {
+    std::string volume = ROOT_PATH;
+    std::string path = directoryPath;
+
+    // Remove leading "sdmc:/" if present
+    if (path.compare(0, volume.size(), volume) == 0) {
+        path = path.substr(volume.size());
+    }
+
+    std::string parentPath = volume;
+    size_t pos = 0, nextPos;
+
+    // Iterate through the path and create each directory level if it doesn't exist
+    while ((nextPos = path.find('/', pos)) != std::string::npos) {
+        if (nextPos != pos) {
+            parentPath += path.substr(pos, nextPos - pos) + "/";
+            createSingleDirectory(parentPath); // Create the parent directory
         }
+        pos = nextPos + 1;
     }
-    return str;
+
+    // Create the final directory level if it doesn't exist
+    if (pos < path.size()) {
+        parentPath += path.substr(pos);
+        createSingleDirectory(parentPath); // Create the final directory
+    }
 }
 
 
-/**
- * @brief Replaces multiple consecutive slashes with a single slash in a string.
- *
- * This function replaces sequences of two or more consecutive slashes with a single slash in the input string.
- *
- * @param input The input string to process.
- * @return The string with multiple slashes replaced.
- */
-inline std::string replaceMultipleSlashes(const std::string& input) {
-    std::string output;
-    output.reserve(input.size()); // Reserve space for the output string
-    
-    bool previousSlash = false;
-    for (char c : input) {
-        if (c == '/') {
-            if (!previousSlash) {
-                output.push_back(c);
-            }
-            previousSlash = true;
-        } else {
-            output.push_back(c);
-            previousSlash = false;
-        }
-    }
-    
-    return output;
-}
-
-
-/**
- * @brief Removes the leading slash from a string if present.
- *
- * This function removes the leading slash ('/') from the input string if it exists.
- *
- * @param pathPattern The input string representing a path pattern.
- * @return The string with the leading slash removed.
- */
-inline std::string_view removeLeadingSlash(const std::string_view& pathPattern) {
-    if (!pathPattern.empty() && pathPattern[0] == '/') {
-        return pathPattern.substr(1);
-    }
-    return pathPattern;
-}
-
-/**
- * @brief Removes the trailing slash from a string if present.
- *
- * This function removes the trailing slash ('/') from the input string if it exists.
- *
- * @param pathPattern The input string representing a path pattern.
- * @return The string with the trailing slash removed.
- */
-inline std::string removeEndingSlash(const std::string& pathPattern) {
-    if (!pathPattern.empty() && pathPattern.back() == '/') {
-        return pathPattern.substr(0, pathPattern.length() - 1);
-    }
-    return pathPattern;
-}
-
-/**
- * @brief Preprocesses a path string by replacing multiple slashes and adding "sdmc:" prefix.
- *
- * This function preprocesses a path string by removing multiple consecutive slashes,
- * adding the "sdmc:" prefix if not present, and returning the resulting string.
- *
- * @param path The input path string to preprocess.
- * @return The preprocessed path string.
- */
-inline std::string preprocessPath(const std::string& path, const std::string& packagePath = "") {
-    std::string formattedPath = replaceMultipleSlashes(removeQuotes(path));
-
-    // Replace "./" at the beginning of the path with the packagePath
-    if (!packagePath.empty() && formattedPath.substr(0, 2) == "./") {
-        formattedPath = packagePath + formattedPath.substr(2);
-    }
-
-    // Ensure all paths start with "sdmc:"
-    if (formattedPath.substr(0, 5) != "sdmc:") {
-        formattedPath = "sdmc:" + formattedPath;
-    }
-
-    return formattedPath;
-}
-
-
-/**
- * @brief Preprocesses a URL string by adding "https://" prefix.
- *
- * This function preprocesses a URL string by adding the "https://" prefix if not already present,
- * and returns the resulting URL string.
- *
- * @param path The input URL string to preprocess.
- * @return The preprocessed URL string.
- */
-inline std::string preprocessUrl(const std::string& path) {
-    std::string formattedPath = removeQuotes(path);
-    if ((formattedPath.compare(0, 7, "http://") == 0) || (formattedPath.compare(0, 8, "https://") == 0)) {
-        return formattedPath;
+inline void writeLog(std::ofstream& logFile, const std::string& line) {
+    if (logFile.is_open()) {
+        logFile << line << std::endl;
     } else {
-        return std::string("https://") + formattedPath;
+        logMessage("Failed to write to log file.");
     }
-}
-
-/**
- * @brief Drops the file extension from a filename.
- *
- * This function removes the file extension (characters after the last dot) from the input filename string.
- *
- * @param filename The input filename from which to drop the extension.
- * @return The filename without the extension.
- */
-inline std::string dropExtension(std::string filename) {
-    size_t lastDotPos = filename.find_last_of(".");
-    if (lastDotPos != std::string::npos) {
-        filename.resize(lastDotPos); // Resize the string to remove the extension
-    }
-    return filename;
-}
-
-/**
- * @brief Checks if a string starts with a given prefix.
- *
- * This function checks if the input string starts with the specified prefix.
- *
- * @param str The input string to check.
- * @param prefix The prefix to check for.
- * @return True if the string starts with the prefix, false otherwise.
- */
-inline bool startsWith(const std::string& str, const std::string& prefix) {
-    return str.compare(0, prefix.length(), prefix) == 0;
-}
-
-/**
- * @brief Checks if a path points to a directory.
- *
- * This function checks if the specified path points to a directory.
- *
- * @param path The path to check.
- * @return True if the path is a directory, false otherwise.
- */
-inline bool isDirectory(const std::string& path) {
-    struct stat pathStat;
-    if (stat(path.c_str(), &pathStat) == 0) {
-        return S_ISDIR(pathStat.st_mode);
-    }
-    return false;
-}
-
-
-
-/**
- * @brief Checks if a path points to a file.
- *
- * This function checks if the specified path points to a file.
- *
- * @param path The path to check.
- * @return True if the path is a file, false otherwise.
- */
-inline bool isFile(const std::string& path) {
-    struct stat pathStat;
-    if (stat(path.c_str(), &pathStat) == 0) {
-        return S_ISREG(pathStat.st_mode);
-    }
-    return false;
 }
 
 
 /**
- * @brief Checks if a path points to a file or directory.
+ * @brief Creates a text file with the specified content.
  *
- * This function checks if the specified path points to either a file or a directory.
+ * This function creates a text file specified by `filePath` and writes the given `content` to the file.
  *
- * @param path The path to check.
- * @return True if the path points to a file or directory, false otherwise.
+ * @param filePath The path of the text file to be created.
+ * @param content The content to be written to the text file.
  */
-inline bool isFileOrDirectory(const std::string& path) {
-    struct stat buffer;
-    return (stat(path.c_str(), &buffer) == 0);
+inline void createTextFile(const std::string& filePath, const std::string& content) {
+    std::ofstream file(filePath);
+    if (file.is_open()) {
+        file << content;
+        file.close();
+    }
 }
 
 
 
-// Helper function to check if a string is a valid integer
-inline bool isValidNumber(const std::string& str) {
-    if (str.empty() || ((str[0] != '-') && !std::isdigit(str[0])) || (str[0] == '-' && str.size() == 1)) {
-        return false;
-    }
-    for (size_t i = 1; i < str.size(); ++i) {
-        if (!std::isdigit(str[i])) {
-            return false;
+
+/**
+ * @brief Deletes a file or directory.
+ *
+ * This function deletes the file or directory specified by `path`. It can delete both files and directories.
+ *
+ * @param path The path of the file or directory to be deleted.
+ */
+void deleteFileOrDirectory(const std::string& pathToDelete, const std::string& logSource = "") {
+    std::vector<std::string> stack;
+    //logMessage("pathToDelete: " + pathToDelete);
+
+    bool pathIsFile = pathToDelete.back() != '/';
+    std::ofstream logSourceFile;
+
+    if (!logSource.empty()) {
+        createDirectory(getParentDirFromPath(logSource));
+        logSourceFile.open(logSource, std::ios::app);
+        if (!logSourceFile.is_open()) {
+            logMessage("Failed to open source log file: " + logSource);
         }
     }
-    return true;
-}
 
-
-// Function to slice a string from start to end index
-inline std::string sliceString(const std::string& str, size_t start, size_t end) {
-    if (start < 0) start = 0;
-    if (end > static_cast<size_t>(str.length())) end = str.length();
-    if (start > end) start = end;
-    return str.substr(start, end - start);
-}
-
-
-
-//inline std::string addQuotesIfNeeded(const std::string& str) {
-//    if (str.find(' ') != std::string::npos) {
-//        return "\"" + str + "\"";
-//    }
-//    return str;
-//}
-
-
-/**
- * @brief Converts a string to lowercase.
- *
- * This function takes a string as input and returns a lowercase version of that string.
- *
- * @param str The input string to convert to lowercase.
- * @return The lowercase version of the input string.
- */
-
-inline std::string stringToLowercase(const std::string& str) {
-    std::string result = str;
-    std::transform(result.begin(), result.end(), result.begin(),
-                   [](unsigned char c) { return std::tolower(c); });
-    return result;
-}
-
-
-/**
- * @brief Formats a priority string to a desired width.
- *
- * This function takes a priority string and formats it to a specified desired width by padding with '0's if it's shorter
- * or truncating with '9's if it's longer.
- *
- * @param priority The input priority string to format.
- * @param desiredWidth The desired width of the formatted string (default is 4).
- * @return A formatted priority string.
- */
-inline std::string formatPriorityString(const std::string& priority, int desiredWidth = 4) {
-    std::string formattedString;
-    int priorityLength = priority.length();
-    
-    if (priorityLength > desiredWidth) {
-        formattedString = std::string(desiredWidth, '9'); // Set to 9's if too long
-    } else {
-        formattedString = std::string(desiredWidth - priorityLength, '0') + priority;
-    }
-    
-    return formattedString;
-}
-
-
-
-/**
- * @brief Removes the part of the string after the first occurrence of '?' character.
- *
- * This function takes a string and removes the portion of the string that appears after
- * the first '?' character, if found. If no '?' character is present, the original string
- * is returned unchanged.
- *
- * @param input The input string from which to remove the tag.
- * @return The input string with everything after the first '?' character removed.
- */
-inline std::string removeTag(const std::string &input) {
-    size_t pos = input.find('?');
-    if (pos != std::string::npos) {
-        return input.substr(0, pos);
-    }
-    return input; // Return the original string if no '?' is found.
-}
-
-
-inline std::string getFirstLongEntry(const std::string& input, size_t minLength = 8) {
-    std::istringstream iss(input);
-    std::string word;
-
-    // Split the input string based on spaces and get the first word
-    if (iss >> word) {
-        // Check if the first word's length is greater than the specified length
-        if (word.length() > minLength) {
-            return word;
-        }
-    }
-    
-    // Return an empty string if the first word is not longer than minLength
-    return input;
-}
-
-
-// This will take a string like "v1.3.5-abasdfasdfa" and output "1.3.5". string could also look like "test-1.3.5-1" or "v1.3.5" and we will only want "1.3.5"
-inline std::string cleanVersionLabel(const std::string& input) {
-    std::string versionLabel;
-    std::string prefix; // To store the preceding characters
-    versionLabel.reserve(input.size()); // Reserve space for the output string
-
-    bool foundDigit = false;
-    for (char c : input) {
-        if (std::isdigit(c) || c == '.') {
-            if (!foundDigit) {
-                // Include the prefix in the version label before adding digits
-                if (!prefix.empty() && prefix.back() != 'v') {
-                    versionLabel += prefix;
-                }
-                prefix.clear();
-            }
-            versionLabel += c;
-            foundDigit = true;
-        } else {
-            if (!foundDigit) {
-                prefix += c; // Add to prefix until a digit is found
+    if (pathIsFile) {
+        if (isFile(pathToDelete)) {
+            if (remove(pathToDelete.c_str()) == 0) {
+                if (logSourceFile.is_open())
+                    writeLog(logSourceFile, pathToDelete);
+                //logMessage("File deleted: " + currentPath);
             } else {
-                // Stop at the first non-digit character after encountering digits
-                break;
+                logMessage("Failed to delete file: " + pathToDelete);
             }
+        } else {
+            //logMessage("File does not exist: " + pathToDelete);
+        }
+        if (logSourceFile.is_open()) {
+            logSourceFile.close();
+        }
+        return;
+    }
+
+    stack.push_back(pathToDelete);
+    struct stat pathStat;
+    std::string currentPath, filePath;
+    bool isEmpty;
+
+    while (!stack.empty()) {
+        currentPath = stack.back();
+        
+        if (stat(currentPath.c_str(), &pathStat) != 0) {
+            //logMessage("Error accessing path: " + currentPath);
+            stack.pop_back();
+            continue;
+        }
+
+        if (S_ISREG(pathStat.st_mode)) { // It's a file
+            stack.pop_back(); // Remove from stack before deletion
+            if (remove(currentPath.c_str()) == 0) {
+                //logMessage("File deleted: " + currentPath);
+                if (logSourceFile.is_open())
+                    writeLog(logSourceFile, currentPath);
+            } else {
+                logMessage("Failed to delete file: " + currentPath);
+            }
+        } else if (S_ISDIR(pathStat.st_mode)) { // It's a directory
+            DIR* directory = opendir(currentPath.c_str());
+            if (!directory) {
+                logMessage("Failed to open directory: " + currentPath);
+                stack.pop_back();
+                continue;
+            }
+
+            dirent* entry;
+            isEmpty = true;
+            while ((entry = readdir(directory)) != nullptr) {
+                const std::string& fileName = entry->d_name;
+                if (fileName != "." && fileName != "..") {
+                    filePath = currentPath + fileName;
+                    stack.push_back(filePath + (filePath.back() == '/' ? "" : "/"));
+                    isEmpty = false;
+                }
+            }
+            closedir(directory);
+
+            if (isEmpty) {
+                stack.pop_back(); // Directory is now empty, safe to remove from stack
+                if (rmdir(currentPath.c_str()) == 0) {
+                    //logMessage("Directory deleted: " + currentPath);
+                } else {
+                    logMessage("Failed to delete directory: " + currentPath);
+                }
+            }
+        } else {
+            stack.pop_back(); // Unknown file type, just remove from stack
+            logMessage("Unknown file type: " + currentPath);
         }
     }
+
+    if (logSourceFile.is_open()) {
+        logSourceFile.close();
+    }
+}
+
+
+
+
+
+/**
+ * @brief Deletes files or directories that match a specified pattern.
+ *
+ * This function deletes files or directories specified by `pathPattern` by matching against a pattern.
+ * It identifies files or directories that match the pattern and deletes them.
+ *
+ * @param pathPattern The pattern used to match and delete files or directories.
+ */
+void deleteFileOrDirectoryByPattern(const std::string& pathPattern, const std::string& logSource = "") {
+    //logMessage("pathPattern: "+pathPattern);
+    std::vector<std::string> fileList = getFilesListByWildcards(pathPattern);
     
-    return versionLabel;
+    for (const auto& path : fileList) {
+        //logMessage("path: "+path);
+        deleteFileOrDirectory(path, logSource);
+    }
 }
 
 
-inline std::string extractTitle(const std::string& input) {
-    size_t spacePos = input.find(' '); // Find the position of the first space
+void moveDirectory(const std::string& sourcePath, const std::string& destinationPath,
+                   const std::string& logSource = "", const std::string& logDestination = "") {
+
+    struct stat sourceInfo;
+    if (stat(sourcePath.c_str(), &sourceInfo) != 0) {
+        logMessage("Source directory doesn't exist: " + sourcePath);
+        return;
+    }
+
+    if (mkdir(destinationPath.c_str(), 0777) != 0 && errno != EEXIST) {
+        logMessage("Failed to create destination directory: " + destinationPath);
+        return;
+    }
+
+    std::ofstream logSourceFile, logDestinationFile;
+    if (!logSource.empty()) {
+        createDirectory(getParentDirFromPath(logSource));
+        logSourceFile.open(logSource, std::ios::app);
+        if (!logSourceFile.is_open()) {
+            logMessage("Failed to open source log file: " + logSource);
+        }
+    }
+
+    if (!logDestination.empty()) {
+        createDirectory(getParentDirFromPath(logDestination));
+        logDestinationFile.open(logDestination, std::ios::app);
+        if (!logDestinationFile.is_open()) {
+            logMessage("Failed to open destination log file: " + logDestination);
+        }
+    }
+
+    std::vector<std::pair<std::string, std::string>> stack;
+    std::vector<std::string> directoriesToRemove;
+    stack.push_back({sourcePath, destinationPath});
+
+    while (!stack.empty()) {
+        auto [currentSource, currentDestination] = stack.back();
+        stack.pop_back();
+
+        DIR* dir = opendir(currentSource.c_str());
+        if (!dir) {
+            logMessage("Failed to open source directory: " + currentSource);
+            continue;
+        }
+
+        dirent* entry;
+        std::string name, fullPathSrc, fullPathDst;
+
+        while ((entry = readdir(dir)) != nullptr) {
+            name = entry->d_name;
+            if (name == "." || name == "..") continue;
+
+            fullPathSrc = currentSource + '/' + name;
+            fullPathDst = currentDestination + '/' + name;
+
+            if (entry->d_type == DT_DIR) {
+                if (mkdir(fullPathDst.c_str(), 0777) != 0 && errno != EEXIST) {
+                    logMessage("Failed to create destination directory: " + fullPathDst);
+                    continue;
+                }
+                stack.push_back({fullPathSrc, fullPathDst});
+                directoriesToRemove.push_back(fullPathSrc);
+            } else {
+                remove(fullPathDst.c_str());
+                if (rename(fullPathSrc.c_str(), fullPathDst.c_str()) != 0) {
+                    logMessage("Failed to move: " + fullPathSrc);
+                } else {
+                    if (logSourceFile.is_open())
+                        logSourceFile << fullPathSrc << std::endl;
+                    if (logDestinationFile.is_open())
+                        logDestinationFile << fullPathDst << std::endl;
+                }
+            }
+        }
+        closedir(dir);
+    }
+
+    for (auto it = directoriesToRemove.rbegin(); it != directoriesToRemove.rend(); ++it) {
+        if (rmdir(it->c_str()) != 0) {
+            logMessage("Failed to delete source directory: " + *it);
+        }
+    }
+
+    if (rmdir(sourcePath.c_str()) != 0) {
+        logMessage("Failed to delete source directory: " + sourcePath);
+    }
+
+    if (logSourceFile.is_open()) {
+        logSourceFile.close();
+    }
+    if (logDestinationFile.is_open()) {
+        logDestinationFile.close();
+    }
+}
+
+
+
+
+
+inline void moveFile(const std::string& sourcePath, const std::string& destinationPath,
+              const std::string& logSource = "", const std::string& logDestination = "") {
+    if (!isFileOrDirectory(sourcePath)) {
+        logMessage("Source file doesn't exist or is not a regular file: " + sourcePath);
+        return;
+    }
+
+    std::ofstream logSourceFile, logDestinationFile;
+    if (!logSource.empty()) {
+        createDirectory(getParentDirFromPath(logSource));
+        logSourceFile.open(logSource, std::ios::app);
+        if (!logSourceFile.is_open()) {
+            logMessage("Failed to open source log file: " + logSource);
+        }
+    }
+
+    if (!logDestination.empty()) {
+        createDirectory(getParentDirFromPath(logDestination));
+        logDestinationFile.open(logDestination, std::ios::app);
+        if (!logDestinationFile.is_open()) {
+            logMessage("Failed to open destination log file: " + logDestination);
+        }
+    }
+
+    if (destinationPath.back() == '/') {
+        if (!isDirectory(destinationPath))
+            createDirectory(destinationPath);
+        // Destination is a directory, construct full destination path
+        std::string destFile = destinationPath + getFileName(sourcePath);
+        //logMessage("destFile: " + destFile);
+        remove(destFile.c_str());
+        if (rename(sourcePath.c_str(), destFile.c_str()) != 0) {
+            logMessage("Failed to move file to directory: " + sourcePath);
+        } else {
+            if (logSourceFile.is_open())
+                writeLog(logSourceFile, sourcePath);
+            if (logDestinationFile.is_open())
+                writeLog(logDestinationFile, destFile);
+        }
+    } else {
+        // Destination is a file path, directly rename the file
+        //logMessage("Removing " + destinationPath);
+        remove(destinationPath.c_str());
+        createDirectory(getParentDirFromPath(destinationPath));
+        if (rename(sourcePath.c_str(), destinationPath.c_str()) != 0) {
+            logMessage("Failed to move file: " + sourcePath + " -> " + destinationPath);
+            logMessage("Error: " + std::string(strerror(errno)));
+        } else {
+            if (logSourceFile.is_open())
+                writeLog(logSourceFile, sourcePath);
+            if (logDestinationFile.is_open())
+                writeLog(logDestinationFile, destinationPath);
+        }
+    }
+
+    if (logSourceFile.is_open()) {
+        logSourceFile.close();
+    }
+    if (logDestinationFile.is_open()) {
+        logDestinationFile.close();
+    }
+}
+
+
+
+
+/**
+ * @brief Moves a file or directory to a new destination.
+ *
+ * This function moves a file or directory from the `sourcePath` to the `destinationPath`. It can handle both
+ * files and directories and ensures that the destination directory exists before moving.
+ *
+ * @param sourcePath The path of the source file or directory.
+ * @param destinationPath The path of the destination where the file or directory will be moved.
+ */
+void moveFileOrDirectory(const std::string& sourcePath, const std::string& destinationPath,
+    const std::string& logSource = "", const std::string& logDestination = "") {
+    if (sourcePath.back() == '/' && destinationPath.back() == '/') {
+        moveDirectory(sourcePath, destinationPath, logSource, logDestination);
+    } else {
+        moveFile(sourcePath, destinationPath, logSource, logDestination);
+    }
+}
+
+
+
+/**
+ * @brief Moves files or directories matching a specified pattern to a destination directory.
+ *
+ * This function identifies files or directories that match the `sourcePathPattern` and moves them to the `destinationPath`.
+ * It processes each matching entry in the source directory pattern and moves them to the specified destination.
+ *
+ * @param sourcePathPattern The pattern used to match files or directories to be moved.
+ * @param destinationPath The destination directory where matching files or directories will be moved.
+ */
+void moveFilesOrDirectoriesByPattern(const std::string& sourcePathPattern, const std::string& destinationPath,
+    const std::string& logSource = "", const std::string& logDestination = "") {
+
+    std::vector<std::string> fileList = getFilesListByWildcards(sourcePathPattern);
     
-    if (spacePos != std::string::npos) {
-        // Extract the substring before the first space
-        return input.substr(0, spacePos);
-    } else {
-        // If no space is found, return the original string
-        return input;
+    //std::string fileListAsString;
+    //for (const std::string& filePath : fileList)
+    //    fileListAsString += filePath + "\n";
+    //logMessage("File List:\n" + fileListAsString);
+    
+    //logMessage("pre loop");
+    std::string folderName, fixedDestinationPath;
+    
+    // Iterate through the file list
+    for (const std::string& sourceFileOrDirectory : fileList) {
+        //logMessage("sourceFileOrDirectory: "+sourceFileOrDirectory);
+        // if sourceFile is a file (Needs condition handling)
+        if (!isDirectory(sourceFileOrDirectory)) {
+            //logMessage("destinationPath: "+destinationPath);
+            moveFileOrDirectory(sourceFileOrDirectory.c_str(), destinationPath.c_str());
+        } else if (isDirectory(sourceFileOrDirectory)) {
+            // if sourceFile is a directory (needs conditoin handling)
+            folderName = getNameFromPath(sourceFileOrDirectory);
+            fixedDestinationPath = destinationPath + folderName + "/";
+            
+            //logMessage("fixedDestinationPath: "+fixedDestinationPath);
+            
+            moveFileOrDirectory(sourceFileOrDirectory.c_str(), fixedDestinationPath.c_str());
+        }
+        
+    }
+    //logMessage("post loop");
+}
+
+static std::atomic<int> copyPercentage(-1);
+
+/**
+ * @brief Copies a single file from the source path to the destination path.
+ *
+ * This function copies a single file specified by `fromFile` to the location specified by `toFile`.
+ *
+ * @param fromFile The path of the source file to be copied.
+ * @param toFile The path of the destination where the file will be copied.
+ */
+inline void copySingleFile(const std::string& fromFile, const std::string& toFile, long long& totalBytesCopied, const long long totalSize,
+                    const std::string& logSource = "", const std::string& logDestination = "") {
+    std::ifstream srcFile(fromFile, std::ios::binary);
+    std::ofstream destFile(toFile, std::ios::binary);
+    const size_t COPY_BUFFER_SIZE = 4096;
+    char buffer[COPY_BUFFER_SIZE];
+    
+    if (!srcFile || !destFile) {
+        logMessage("Error opening files for copying.");
+        return;
+    }
+
+    std::ofstream logSourceFile, logDestinationFile;
+    if (!logSource.empty()) {
+        createDirectory(getParentDirFromPath(logSource));
+        logSourceFile.open(logSource, std::ios::app);
+        if (!logSourceFile.is_open()) {
+            logMessage("Failed to open source log file: " + logSource);
+        }
+    }
+
+    if (!logDestination.empty()) {
+        createDirectory(getParentDirFromPath(logDestination));
+        logDestinationFile.open(logDestination, std::ios::app);
+        if (!logDestinationFile.is_open()) {
+            logMessage("Failed to open destination log file: " + logDestination);
+        }
+    }
+
+    while (srcFile.read(buffer, COPY_BUFFER_SIZE)) {
+        if (abortFileOp.load(std::memory_order_acquire)) {
+            destFile.close();
+            srcFile.close();
+            remove(toFile.c_str());
+            copyPercentage.store(-1, std::memory_order_release);
+            return;
+        }
+        destFile.write(buffer, srcFile.gcount());
+        totalBytesCopied += srcFile.gcount();
+        copyPercentage.store(static_cast<int>(100 * totalBytesCopied / totalSize), std::memory_order_release);
+    }
+
+    // Write the remaining bytes
+    if (srcFile.gcount() > 0) {
+        destFile.write(buffer, srcFile.gcount());
+        totalBytesCopied += srcFile.gcount();
+        copyPercentage.store(static_cast<int>(100 * totalBytesCopied / totalSize), std::memory_order_release);
+    }
+
+    if (logSourceFile.is_open()) {
+        writeLog(logSourceFile, fromFile);
+    }
+    if (logDestinationFile.is_open()) {
+        writeLog(logDestinationFile, toFile);
+    }
+
+    if (logSourceFile.is_open()) {
+        logSourceFile.close();
+    }
+    if (logDestinationFile.is_open()) {
+        logDestinationFile.close();
     }
 }
 
 
-inline std::string removeFilename(const std::string& path) {
-    size_t found = path.find_last_of('/');
-    if (found != std::string::npos) {
-        return path.substr(0, found + 1);
+
+/**
+ * Recursively calculates the total size of the given file or directory.
+ * @param path The path to the file or directory.
+ * @return The total size in bytes of all files within the directory or the size of a file.
+ */
+inline long long getTotalSize(const std::string& path) {
+    struct stat statbuf;
+    if (lstat(path.c_str(), &statbuf) != 0) {
+        return 0; // Cannot stat file
     }
-    return path; // If no directory separator is found, return the original path
+
+    if (S_ISREG(statbuf.st_mode)) {
+        return statbuf.st_size;
+    }
+
+    if (S_ISDIR(statbuf.st_mode)) {
+        long long totalSize = 0;
+        std::queue<std::string> directories;
+        directories.push(path);
+        std::string currentPath, newPath;
+
+        while (!directories.empty()) {
+            currentPath = directories.front();
+            directories.pop();
+
+            DIR* dir = opendir(currentPath.c_str());
+            if (!dir) {
+                continue; // Cannot open directory, skip it
+            }
+
+            dirent* entry;
+            while ((entry = readdir(dir)) != nullptr) {
+                if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
+                    continue; // Skip "." and ".."
+                }
+                newPath = currentPath + "/" + entry->d_name;
+
+                if (lstat(newPath.c_str(), &statbuf) != 0) {
+                    continue; // Cannot stat file, skip it
+                }
+
+                if (S_ISREG(statbuf.st_mode)) {
+                    totalSize += statbuf.st_size;
+                } else if (S_ISDIR(statbuf.st_mode)) {
+                    directories.push(newPath); // Push subdirectory onto queue for processing
+                }
+            }
+            closedir(dir);
+        }
+
+        return totalSize;
+    }
+
+    return 0; // Non-file/directory entries
 }
 
 
-std::vector<std::string> splitString(const std::string& str, const std::string& delimiter) {
-    std::vector<std::string> tokens;
-    size_t start = 0;
-    size_t end = str.find(delimiter);
-    while (end != std::string::npos) {
-        tokens.push_back(str.substr(start, end - start));
-        start = end + delimiter.length();
-        end = str.find(delimiter, start);
-    }
-    tokens.push_back(str.substr(start));
+/**
+ * @brief Copies a file or directory from the source path to the destination path.
+ *
+ * This function copies a file or directory specified by `fromFileOrDirectory` to the location specified by `toFileOrDirectory`.
+ * If the source is a regular file, it copies the file to the destination. If the source is a directory, it recursively copies
+ * the entire directory and its contents to the destination.
+ *
+ * @param fromPath The path of the source file or directory to be copied.
+ * @param toPath The path of the destination where the file or directory will be copied.
+ */
+void copyFileOrDirectory(const std::string& fromPath, const std::string& toPath, long long* totalBytesCopied = nullptr, long long totalSize = 0,
+    const std::string& logSource = "", const std::string& logDestination = "") {
+    bool isTopLevelCall = totalBytesCopied == nullptr;
+    long long tempBytesCopied;
 
-    return tokens;
+    if (isTopLevelCall) {
+        totalSize = getTotalSize(fromPath);
+        if (totalBytesCopied)
+            *totalBytesCopied = 0;
+    }
+
+    if (toPath.back() != '/') {
+        // If toPath is a file, create its parent directory and copy the file
+        createDirectory(getParentDirFromPath(toPath));
+        tempBytesCopied = 0;
+        copySingleFile(fromPath, toPath, tempBytesCopied, totalSize);
+        return;
+    }
+
+    // Ensure the toPath directory exists
+    createDirectory(toPath);
+
+    std::vector<std::pair<std::string, std::string>> directories;
+    directories.push_back({fromPath, toPath}); // Add initial paths to the vector
+
+    size_t currentDirectoryIndex = 0;
+    std::string filename, toFilePath, toDirPath, currentFromPath, currentToPath;
+    
+
+    struct stat fromStat;
+
+    std::string subFromPath, subToPath;
+
+    while (currentDirectoryIndex < directories.size()) {
+        std::tie(currentFromPath, currentToPath) = directories[currentDirectoryIndex++]; // Get paths from the vector
+
+        if (stat(currentFromPath.c_str(), &fromStat) != 0) {
+            logMessage("Failed to get stat of " + currentFromPath);
+            continue;
+        }
+
+        if (S_ISREG(fromStat.st_mode)) {
+            // If it's a regular file, copy it to the toPath directory
+            filename = getNameFromPath(currentFromPath);
+            toFilePath = getParentDirFromPath(currentToPath) + "/" + filename;
+            createDirectory(getParentDirFromPath(toFilePath)); // Ensure the parent directory exists
+            tempBytesCopied = totalBytesCopied ? *totalBytesCopied : 0;
+            copySingleFile(currentFromPath, toFilePath, tempBytesCopied, totalSize, logSource, logDestination);
+
+            if (totalBytesCopied) {
+                *totalBytesCopied = tempBytesCopied; // Update total bytes copied
+                if (totalSize > 0) {
+                    copyPercentage.store(static_cast<int>((tempBytesCopied * 100) / totalSize), std::memory_order_release); // Update progress
+                }
+            }
+        } else if (S_ISDIR(fromStat.st_mode)) {
+            // If it's a directory, iterate over its contents and add them to the vector for processing
+            DIR* dir = opendir(currentFromPath.c_str());
+            if (!dir) {
+                logMessage("Failed to open directory: " + currentFromPath);
+                continue;
+            }
+
+            dirent* entry;
+            while ((entry = readdir(dir)) != nullptr) {
+                if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) continue;
+                subFromPath = currentFromPath + "/" + entry->d_name;
+                subToPath = currentToPath + "/" + entry->d_name;
+                directories.push_back({subFromPath, subToPath}); // Add subdirectory to the vector for processing
+            }
+            closedir(dir);
+        }
+    }
+
+    if (isTopLevelCall && totalBytesCopied) {
+        copyPercentage.store(100, std::memory_order_release); // Set progress to 100% on completion of top-level call
+    }
 }
 
 
-// Function to split a string by a delimiter and return a specific index
-inline std::string splitStringAtIndex(const std::string& str, const std::string& delimiter, size_t index) {
-    std::vector<std::string> tokens = splitString(str, delimiter);
 
-    if (index < tokens.size()) {
-        return tokens[index];
-    } else {
-        return ""; // Return empty string if index is out of bounds
+
+/**
+ * @brief Copies files or directories matching a specified pattern to a destination directory.
+ *
+ * This function identifies files or directories that match the `sourcePathPattern` and copies them to the `toDirectory`.
+ * It processes each matching entry in the source directory pattern and copies them to the specified destination.
+ *
+ * @param sourcePathPattern The pattern used to match files or directories to be copied.
+ * @param toDirectory The destination directory where matching files or directories will be copied.
+ */
+void copyFileOrDirectoryByPattern(const std::string& sourcePathPattern, const std::string& toDirectory,
+    const std::string& logSource = "", const std::string& logDestination = "") {
+    std::vector<std::string> fileList = getFilesListByWildcards(sourcePathPattern);
+    long long totalSize = 0;
+    for (const std::string& path : fileList) {
+        totalSize += getTotalSize(path);
     }
+
+    long long totalBytesCopied = 0;
+    for (const std::string& sourcePath : fileList) {
+        copyFileOrDirectory(sourcePath, toDirectory, &totalBytesCopied, totalSize, logSource, logDestination);
+    }
+    copyPercentage.store(-1, std::memory_order_release);  // Reset after operation
 }
 
 
 
 
 
-//std::string padToEqualLength(const std::string& str, size_t len) {
-//    if (str.length() < len)
-//        return str + std::string(len - str.length(), '\0');
-//    return str.substr(0, len);
+/**
+ * @brief Mirrors the deletion of files from a source directory to a target directory.
+ *
+ * This function mirrors the deletion of files from a `sourcePath` directory to a `targetPath` directory.
+ * It deletes corresponding files in the `targetPath` that match the source directory structure.
+ *
+ * @param sourcePath The path of the source directory.
+ * @param targetPath The path of the target directory where files will be mirrored and deleted.
+ *                   Default is "sdmc:/". You can specify a different target path if needed.
+ */
+void mirrorFiles(const std::string& sourcePath, const std::string targetPath, const std::string mode) {
+    std::vector<std::string> fileList = getFilesListFromDirectory(sourcePath);
+    std::string updatedPath;
+    for (const auto& path : fileList) {
+        // Generate the corresponding path in the target directory by replacing the source path
+        updatedPath = targetPath + path.substr(sourcePath.size());
+        //logMessage("mirror-delete: "+path+" "+updatedPath);
+        if (mode == "delete")
+            deleteFileOrDirectory(updatedPath);
+        else if (mode == "copy") {
+            if (path != updatedPath)
+                copyFileOrDirectory(path, updatedPath);
+        }
+    }
+    //fileList.clear();
+}
+
+/**
+ * @brief Recursively copies files and directories from the source directory to a target directory, mirroring the structure.
+ *
+ * This function recursively copies files and directories from the `sourcePath` to the `targetPath`, preserving the directory structure.
+ * It identifies the files and directories in the source directory and creates equivalent paths in the target directory.
+ *
+ * @param sourcePath The source directory from which files and directories will be copied.
+ * @param targetPath The target directory where the mirrored structure will be created (default is "sdmc:/").
+ */
+//void mirrorCopyFiles(const std::string& sourcePath, const std::string& targetPath="sdmc:/") {
+//    std::vector<std::string> fileList = getFilesListFromDirectory(sourcePath);
+//    
+//    for (const auto& path : fileList) {
+//        // Generate the corresponding path in the target directory by replacing the source path
+//        std::string updatedPath = targetPath + path.substr(sourcePath.size());
+//        if (path != updatedPath){
+//            //logMessage("mirror-copy: "+path+" "+updatedPath);
+//            copyFileOrDirectory(path, updatedPath);
+//        }
+//    }
+//}
+
+/**
+ * @brief Ensures that a directory exists by creating it if it doesn't.
+ *
+ * This function checks if the specified directory path exists. If the directory does not exist, it creates it.
+ *
+ * @param path The path of the directory to ensure its existence.
+ * @return True if the directory exists or was successfully created, false otherwise.
+ */
+//bool ensureDirectoryExists(const std::string& path) {
+//    if (isDirectory(path))
+//        return true;
+//    else {
+//        createDirectory(path);
+//        if (isDirectory(path))
+//            return true;
+//    }
+//    
+//    //logMessage(std::string("Failed to create directory: ") + path);
+//    return false;
 //}
