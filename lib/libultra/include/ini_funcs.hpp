@@ -197,7 +197,7 @@ std::map<std::string, std::map<std::string, std::string>> getParsedDataFromIniFi
     std::map<std::string, std::map<std::string, std::string>> parsedData;
     std::ifstream configFile(configIniPath);
     if (!configFile) {
-        logMessage("Failed to open the file: " + configIniPath);
+        //logMessage("Failed to open the file: " + configIniPath);
         return parsedData;  // Return empty map if file cannot be opened
     }
     
@@ -241,7 +241,7 @@ std::vector<std::string> parseSectionsFromIni(const std::string& filePath) {
     std::vector<std::string> sections;
     std::ifstream file(filePath);
     if (!file) {
-        logMessage("Failed to open the file: " + filePath);
+        //logMessage("Failed to open the file: " + filePath);
         return sections;  // Early return if the file cannot be opened
     }
     
@@ -275,7 +275,7 @@ std::string parseValueFromIniSection(const std::string& filePath, const std::str
     std::string value = "";
     std::ifstream file(filePath);
     if (!file) {
-        logMessage("Failed to open the file: " + filePath);
+        //logMessage("Failed to open the file: " + filePath);
         return value;  // Return empty if the file cannot be opened
     }
     
@@ -741,6 +741,43 @@ void removeIniKey(const std::string& filePath, const std::string& sectionName, c
         // Handle the error accordingly
     }
 }
+
+
+//void saveIniFileData(const std::string& filePath, const std::map<std::string, std::map<std::string, std::string>>& data) {
+//    std::ofstream file(filePath);
+//    if (!file.is_open()) {
+//        // Handle error: could not open file
+//        return;
+//    }
+//
+//    for (const auto& section : data) {
+//        file << "[" << section.first << "]\n";
+//        for (const auto& kv : section.second) {
+//            file << kv.first << "=" << kv.second << "\n";
+//        }
+//        file << "\n"; // Separate sections with a newline
+//    }
+//
+//    file.close();
+//}
+
+
+void updateIniData(const std::map<std::string, std::map<std::string, std::string>>& packageConfigData,
+                   const std::string& packageConfigIniPath,
+                   const std::string& optionName,
+                   const std::string& key,
+                   std::string& value) {
+    auto optionIt = packageConfigData.find(optionName);
+    if (optionIt != packageConfigData.end()) {
+        auto it = optionIt->second.find(key);
+        if (it != optionIt->second.end()) {
+            value = it->second;  // Update value only if the key exists
+        } else {
+            setIniFileValue(packageConfigIniPath, optionName, key, value); // Set INI file value if key not found
+        }
+    }
+}
+
 
 
 // Helper functions
