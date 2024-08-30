@@ -82,6 +82,21 @@ void removeEmptyCommands(std::vector<std::vector<std::string>>& commands) {
 }
 
 
+
+void reloadWallpaper() {
+    while (true) {
+        if (!inPlot) {
+            std::lock_guard<std::mutex> lock(wallpaperMutex);
+            std::vector<u8>().swap(wallpaperData);
+            //if (isFileOrDirectory(WALLPAPER_PATH))
+            wallpaperData = loadBitmapFile(WALLPAPER_PATH, 448, 720);
+            break;
+        }
+    }
+}
+
+
+
 // Define the helper function
 void formatVersion(uint64_t packed_version, int shift1, int shift2, int shift3, char* version_str) {
     sprintf(version_str, "%d.%d.%d",
@@ -1239,10 +1254,10 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
                 modifiedArg = replaceAllPlaceholders(modifiedArg, "{file_source}", entry);
                 modifiedArg = replaceAllPlaceholders(modifiedArg, "{file_name}", fileName);
                 modifiedArg = replaceAllPlaceholders(modifiedArg, "{folder_name}", removeQuotes(getParentDirNameFromPath(entry)));
-                modifiedArg = replaceAllPlaceholders(modifiedArg, "{ram_vendor}", memoryVendor);
-                modifiedArg = replaceAllPlaceholders(modifiedArg, "{ram_model}", memoryModel);
-                modifiedArg = replaceAllPlaceholders(modifiedArg, "{ams_version}", amsVersion);
-                modifiedArg = replaceAllPlaceholders(modifiedArg, "{hos_version}", hosVersion);
+                //modifiedArg = replaceAllPlaceholders(modifiedArg, "{ram_vendor}", memoryVendor);
+                //modifiedArg = replaceAllPlaceholders(modifiedArg, "{ram_model}", memoryModel);
+                //modifiedArg = replaceAllPlaceholders(modifiedArg, "{ams_version}", amsVersion);
+                //modifiedArg = replaceAllPlaceholders(modifiedArg, "{hos_version}", hosVersion);
 
                 if (modifiedArg.find("{list_source(") != std::string::npos) {
                     modifiedArg = replacePlaceholder(modifiedArg, "*", std::to_string(entryIndex));
@@ -1451,7 +1466,10 @@ void applyPlaceholderReplacement(std::vector<std::string>& cmd, const std::strin
         for (const auto& [placeholder, replacer] : placeholders) {
             replacePlaceholders(arg, placeholder, replacer);
         }
-
+        arg = replaceAllPlaceholders(arg, "{ram_vendor}", memoryVendor);
+        arg = replaceAllPlaceholders(arg, "{ram_model}", memoryModel);
+        arg = replaceAllPlaceholders(arg, "{ams_version}", amsVersion);
+        arg = replaceAllPlaceholders(arg, "{hos_version}", hosVersion);
         // Failed replacement cleanup
         //if (arg == NULL_STR) arg = UNAVAILABLE_SELECTION;
     }
@@ -2095,8 +2113,9 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                 tsl::initializeThemeVars();
             else if (refreshPattern == "package")
                 refreshPackage = true;
-            else if (refreshPattern == "wallpaper")
-                refreshWallpaper = true;
+            else if (refreshPattern == "wallpaper") {
+                reloadWallpaper();
+            }
         }
     } else if (commandName == "logging") {
         interpreterLogging = !interpreterLogging;
@@ -2112,6 +2131,7 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
 void executeCommands(std::vector<std::vector<std::string>> commands) {
     interpretAndExecuteCommands(std::move(commands), "", "");
 }
+
 
 
 

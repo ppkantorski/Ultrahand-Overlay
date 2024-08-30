@@ -5807,7 +5807,7 @@ namespace tsl {
                 }
 
                 if (!disableSelectionBG)
-                    renderer->drawRect(this->getX() + x +19, this->getY() + y, this->getWidth()-11, this->getHeight(), a(selectionBGColor)); // CUSTOM MODIFICATION 
+                    renderer->drawRect(this->getX() + x +19, this->getY() + y, this->getWidth()-11-4, this->getHeight(), a(selectionBGColor)); // CUSTOM MODIFICATION 
                 renderer->drawBorderedRoundedRect(this->getX() + x +19, this->getY() + y, this->getWidth()-11, this->getHeight(), 5, 5, a(highlightColor));
 
                 //if (this->m_clickAnimationProgress == 0) {

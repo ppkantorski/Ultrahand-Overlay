@@ -924,17 +924,17 @@ public:
             
             const char* modelRev;
             if (model == SetSysProductModel_Iowa)
-                modelRev = "Iowa Tegra x1+";
+                modelRev = "Iowa Tegra X1+";
             else if (model == SetSysProductModel_Hoag)
-                modelRev = "Hoag Tegra x1+";
+                modelRev = "Hoag Tegra X1+";
             else if (model == SetSysProductModel_Calcio)
-                modelRev = "Calcio Tegra x1+";
+                modelRev = "Calcio Tegra X1+";
             else if (model == SetSysProductModel_Aula)
-                modelRev = "Aula Tegra x1+";
+                modelRev = "Aula Tegra X1+";
             else if (model == SetSysProductModel_Nx)
-                modelRev = "Nx Tegra x1";
+                modelRev = "Icosa Tegra X1";
             else if (model == SetSysProductModel_Copper)
-                modelRev = "Copper Tegra x1";
+                modelRev = "Copper Tegra X1";
             else
                 modelRev = UNAVAILABLE_SELECTION.c_str();  // Fallback for unknown models
 
@@ -1169,11 +1169,8 @@ public:
             return true;
         }
 
-        if (refreshWallpaper.load(std::memory_order_acquire) && !inPlot) {
-            std::lock_guard<std::mutex> lock(wallpaperMutex);
-            std::vector<u8>().swap(wallpaperData);
-            //if (isFileOrDirectory(WALLPAPER_PATH))
-            wallpaperData = loadBitmapFile(WALLPAPER_PATH, 448, 720);
+        if (refreshWallpaper.load(std::memory_order_acquire)) {
+            reloadWallpaper();
             //else
             //    wallpaperData.clear();
             refreshWallpaper.store(false, std::memory_order_release);
