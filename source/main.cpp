@@ -461,22 +461,6 @@ void shiftItemFocus(auto& listItem) {
     tsl::Overlay::get()->getCurrentGui()->requestFocus(listItem, tsl::FocusDirection::None);
 }
 
-void updateIniData(const std::map<std::string, std::map<std::string, std::string>>& packageConfigData,
-                   const std::string& packageConfigIniPath,
-                   const std::string& optionName,
-                   const std::string& key,
-                   std::string& value) {
-    auto optionIt = packageConfigData.find(optionName);
-    if (optionIt != packageConfigData.end()) {
-        auto it = optionIt->second.find(key);
-        if (it != optionIt->second.end()) {
-            value = it->second;  // Update value only if the key exists
-        } else {
-            setIniFileValue(packageConfigIniPath, optionName, key, value); // Set INI file value if key not found
-        }
-    }
-}
-
 
 
 /**
@@ -1279,6 +1263,76 @@ public:
      */
     ~SettingsMenu() {}
     
+    // Helper function to create and configure a ToggleListItem
+    void createAndAddToggleListItem(
+        std::unique_ptr<tsl::elm::List>& list,
+        const std::string& label,
+        bool initialState,
+        const std::string& iniKey,
+        const std::string& currentValue,
+        const std::string& settingsIniPath,
+        const std::string& entryName
+    ) {
+        auto toggleListItem = std::make_unique<tsl::elm::ToggleListItem>(label, initialState, ON, OFF);
+        toggleListItem->setState(currentValue == TRUE_STR);
+        toggleListItem->setStateChangedListener([settingsIniPath, entryName, iniKey, currentValue, listItemRaw = toggleListItem.get()](bool state) {
+            tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemRaw, tsl::FocusDirection::None);
+            setIniFileValue(settingsIniPath, entryName, iniKey, state ? TRUE_STR : FALSE_STR);
+            reloadMenu = (currentValue != (state ? TRUE_STR : FALSE_STR));
+            if (!state) reloadMenu = true;
+        });
+        list->addItem(toggleListItem.release());
+    }
+
+    // Helper function to create, configure, and add a ListItem
+    void createAndAddListItem(
+        std::unique_ptr<tsl::elm::List>& list,
+        const std::string& iStr,
+        const std::string& priorityValue,
+        const std::string& settingsIniPath,
+        const std::string& entryName
+    ) {
+        auto listItem = std::make_unique<tsl::elm::ListItem>(iStr);
+    
+        if (iStr == priorityValue) {
+            listItem->setValue(CHECKMARK_SYMBOL);
+            lastSelectedListItem.reset();
+            lastSelectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){});
+        }
+    
+        listItem->setClickListener([settingsIniPath, entryName, iStr, priorityValue, listItemRaw = listItem.get()](uint64_t keys) {
+            if (runningInterpreter.load(std::memory_order_acquire))
+                return false;
+    
+            if (simulatedSelect && !simulatedSelectComplete) {
+                keys |= KEY_A;
+                simulatedSelect = false;
+            }
+    
+            if (keys & KEY_A) {
+                if (iStr != priorityValue)
+                    reloadMenu = true; // Modify the global variable
+    
+                setIniFileValue(settingsIniPath, entryName, PRIORITY_STR, iStr);
+                lastSelectedListItem->setValue("");
+                selectedListItem->setValue(iStr);
+                listItemRaw->setValue(CHECKMARK_SYMBOL);
+                lastSelectedListItem.reset();
+                lastSelectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItemRaw, [](auto*){});
+                shiftItemFocus(listItemRaw);
+                simulatedSelectComplete = true;
+                lastSelectedListItem->triggerClickAnimation();
+                return true;
+            }
+            return false;
+        });
+    
+        // Use raw pointer for adding item
+        list->addItem(listItem.release()); // Add the item directly
+    }
+
+
+
     /**
      * @brief Creates the graphical user interface (GUI) for the configuration overlay.
      *
@@ -1296,73 +1350,39 @@ public:
             settingsIniPath = PACKAGES_INI_FILEPATH;
             header = packageName;
         }
-        
-        if (dropdownSelection.empty())
-            inSettingsMenu = true;
-        else
-            inSubSettingsMenu = true;
-        
+    
+        inSettingsMenu = dropdownSelection.empty();
+        inSubSettingsMenu = !dropdownSelection.empty();
+    
         auto list = std::make_unique<tsl::elm::List>();
-        //list = std::make_unique<tsl::elm::List>();
-        
-        if (dropdownSelection.empty()) {
-            addHeader(list, header+" "+SETTINGS);
-            
-            
+    
+        if (inSettingsMenu) {
+            addHeader(list, header + " " + SETTINGS);
+    
             std::string fileContent = getFileContents(settingsIniPath);
-            
             std::string priorityValue = parseValueFromIniSection(settingsIniPath, entryName, PRIORITY_STR);
-            
             std::string hideOption = parseValueFromIniSection(settingsIniPath, entryName, HIDE_STR);
-            if (hideOption.empty())
-                hideOption = FALSE_STR;
-            
-            
-            bool hide = false;
-            if (hideOption == TRUE_STR)
-                hide = true;
+            bool hide = (hideOption == TRUE_STR);
             
             std::string useOverlayLaunchArgs = parseValueFromIniSection(settingsIniPath, entryName, USE_LAUNCH_ARGS_STR);
+            std::string useBootPackage = parseValueFromIniSection(settingsIniPath, entryName, USE_BOOT_PACKAGE_STR);
             
-            
-            // Capitalize entryMode
-            std::string hideLabel = entryMode;
-            
-            
-            if (hideLabel == OVERLAY_STR)
-                hideLabel = HIDE_OVERLAY;
-            else if (hideLabel == PACKAGE_STR)
-                hideLabel = HIDE_PACKAGE;
-            
-            
-            // Envoke toggling
+            std::string hideLabel = (entryMode == OVERLAY_STR) ? HIDE_OVERLAY : HIDE_PACKAGE;
+    
             auto toggleListItem = std::make_unique<tsl::elm::ToggleListItem>(hideLabel, false, ON, OFF);
             toggleListItem->setState(hide);
-            toggleListItem->setStateChangedListener([&settingsIniPath = this->settingsIniPath, &entryName = this->entryName, listItemRaw = toggleListItem.get()](bool state) {
+            toggleListItem->setStateChangedListener([this, listItemRaw = toggleListItem.get()](bool state) {
                 tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemRaw, tsl::FocusDirection::None);
                 setIniFileValue(settingsIniPath, entryName, HIDE_STR, state ? TRUE_STR : FALSE_STR);
-                if (state)
-                    reloadMenu = true; // this reloads before main menu
-                else {
-                    reloadMenu = true;
-                    reloadMenu2 = true; // this reloads at main menu
-                }
+                reloadMenu = (state || reloadMenu2);
+                if (!state) reloadMenu2 = true;
             });
             list->addItem(toggleListItem.release());
-            
-            
-            
+    
             auto listItem = std::make_unique<tsl::elm::ListItem>(SORT_PRIORITY);
             listItem->setValue(priorityValue);
-            
-            // Envolke selectionOverlay in optionMode
-            
-            listItem->setClickListener([&entryName = this->entryName, &entryMode = this->entryMode, &overlayName = this->overlayName,
-                listItemRaw = listItem.get()](uint64_t keys) { // Add 'command' to the capture list
-                
-                if (runningInterpreter.load(std::memory_order_acquire))
-                    return false;
-
+            listItem->setClickListener([this, listItemRaw = listItem.get()](uint64_t keys) {
+                if (runningInterpreter.load(std::memory_order_acquire)) return false;
                 if (simulatedSelect && !simulatedSelectComplete) {
                     keys |= KEY_A;
                     simulatedSelect = false;
@@ -1370,7 +1390,6 @@ public:
                 if (keys & KEY_A) {
                     inMainMenu = false;
                     tsl::changeTo<SettingsMenu>(entryName, entryMode, overlayName, "", PRIORITY_STR);
-                    selectedListItem.reset();
                     selectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItemRaw, [](auto*){});
                     simulatedSelectComplete = true;
                     lastSelectedListItem->triggerClickAnimation();
@@ -1379,91 +1398,56 @@ public:
                 return false;
             });
             list->addItem(listItem.release());
-            
+    
+            // Main code snippet
             if (entryMode == OVERLAY_STR) {
-                // Envoke toggling
-                toggleListItem = std::make_unique<tsl::elm::ToggleListItem>(LAUNCH_ARGUMENTS, false, ON, OFF);
-                toggleListItem->setState((useOverlayLaunchArgs==TRUE_STR));
-                toggleListItem->setStateChangedListener([&settingsIniPath = settingsIniPath, &entryName = entryName, useOverlayLaunchArgs,
-                    listItemRaw = toggleListItem.get()](bool state) {
-
-                    tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemRaw, tsl::FocusDirection::None);
-                    setIniFileValue(settingsIniPath, entryName, USE_LAUNCH_ARGS_STR, state ? TRUE_STR : FALSE_STR);
-                    if ((useOverlayLaunchArgs==TRUE_STR) != state)
-                        reloadMenu = true; // this reloads before main menu
-                    if (!state) {
-                        reloadMenu = true;
-                        reloadMenu2 = true; // this reloads at main menu
-                    }
-                });
-                list->addItem(toggleListItem.release());
+                createAndAddToggleListItem(
+                    list,
+                    LAUNCH_ARGUMENTS,
+                    false,
+                    USE_LAUNCH_ARGS_STR,
+                    useOverlayLaunchArgs,
+                    settingsIniPath,
+                    entryName
+                );
+            } else if (entryMode == PACKAGE_STR) {
+                createAndAddToggleListItem(
+                    list,
+                    BOOT_PACKAGE,
+                    true,
+                    USE_BOOT_PACKAGE_STR,
+                    useBootPackage,
+                    settingsIniPath,
+                    entryName
+                );
             }
-            
-            
         } else if (dropdownSelection == PRIORITY_STR) {
             addHeader(list, SORT_PRIORITY);
-            
             std::string priorityValue = parseValueFromIniSection(settingsIniPath, entryName, PRIORITY_STR);
-            
-            std::unique_ptr<tsl::elm::ListItem> listItem;
-
-            std::string iStr;
+            //std::unique_ptr<tsl::elm::ListItem> listItem;
+            //std::string iStr;
             for (int i = 0; i <= MAX_PRIORITY; ++i) { // for i in range 0->20 with 20 being the max value
-                iStr = std::to_string(i);
-                listItem = std::make_unique<tsl::elm::ListItem>(iStr);
-                
-                if (iStr == priorityValue) {
-                    listItem->setValue(CHECKMARK_SYMBOL);
-                    lastSelectedListItem.reset();
-                    lastSelectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){});
-                }
-                
-                listItem->setClickListener([&settingsIniPath = this->settingsIniPath, &entryName = this->entryName, iStr, priorityValue,
-                    listItemRaw = listItem.get()](uint64_t keys) { // Add 'this', 'i', and 'listItem' to the capture list
-                    
-                    if (runningInterpreter.load(std::memory_order_acquire))
-                        return false;
-
-                    if (simulatedSelect && !simulatedSelectComplete) {
-                        keys |= KEY_A;
-                        simulatedSelect = false;
-                    }
-                    if (keys & KEY_A) {
-                        if (iStr != priorityValue)
-                            reloadMenu = true;
-                        setIniFileValue(settingsIniPath, entryName, PRIORITY_STR, iStr);
-                        lastSelectedListItem->setValue("");
-                        selectedListItem->setValue(iStr);
-                        listItemRaw->setValue(CHECKMARK_SYMBOL);
-                        lastSelectedListItem.reset();
-                        lastSelectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItemRaw, [](auto*){});
-                        shiftItemFocus(listItemRaw);
-                        simulatedSelectComplete = true;
-                        lastSelectedListItem->triggerClickAnimation();
-                        return true;
-                    }
-                    return false;
-                });
-                
-                list->addItem(listItem.release());
+                 //iStr = std::to_string(i);
+                 createAndAddListItem(
+                     list,
+                     std::to_string(i),
+                     priorityValue,
+                     settingsIniPath,
+                     entryName
+                 );
             }
+            //listItem.release();
             
         } else {
             addBasicListItem(list, FAILED_TO_OPEN + ": " + settingsIniPath);
-            //list->addItem(new tsl::elm::ListItem(FAILED_TO_OPEN+": " + settingsIniPath));
         }
         
-
-        //tsl::elm::OverlayFrame *rootFrame = new tsl::elm::OverlayFrame("Ultrahand", versionLabel);
-        
-        //auto rootFrame = new tsl::elm::OverlayFrame("Ultrahand", versionLabel);
         auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel);
         rootFrame->setContent(list.release());
         
         return rootFrame.release();
-
-        //return returnRootFrame(list, CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel);
     }
+    
     
     /**
      * @brief Handles user input for the configuration overlay.
@@ -2830,7 +2814,7 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
             
             if (isFileOrDirectory(packageConfigIniPath)) {
                 packageConfigData = getParsedDataFromIniFile(packageConfigIniPath);
-            
+                
                 updateIniData(packageConfigData, packageConfigIniPath, optionName, SYSTEM_STR, commandSystem);
                 updateIniData(packageConfigData, packageConfigIniPath, optionName, MODE_STR, commandMode);
                 updateIniData(packageConfigData, packageConfigIniPath, optionName, GROUPING_STR, commandGrouping);
@@ -4114,6 +4098,7 @@ public:
                         setIniFileValue(PACKAGES_INI_FILEPATH, packageName, PRIORITY_STR, "20");
                         setIniFileValue(PACKAGES_INI_FILEPATH, packageName, STAR_STR, FALSE_STR);
                         setIniFileValue(PACKAGES_INI_FILEPATH, packageName, HIDE_STR, FALSE_STR);
+                        setIniFileValue(OVERLAYS_INI_FILEPATH, packageName, USE_BOOT_PACKAGE_STR, TRUE_STR);
                         setIniFileValue(PACKAGES_INI_FILEPATH, packageName, "custom_name", "");
                         setIniFileValue(PACKAGES_INI_FILEPATH, packageName, "custom_version", "");
                         packageList.insert("0020" + (packageName) +":" + packageName);
@@ -4126,6 +4111,8 @@ public:
                         hide = (packageIt->second.find(HIDE_STR) != packageIt->second.end()) ? 
                                packageIt->second[HIDE_STR] : FALSE_STR;
                         
+                        
+
                         const std::string& customName = getValueOrDefault(packageIt->second, "custom_name", "");
                         const std::string& customVersion = getValueOrDefault(packageIt->second, "custom_version", "");
 
@@ -4263,9 +4250,10 @@ public:
                             if (keys & KEY_A) {
                                 inMainMenu = false;
                                 
-                                
+                                bool useBootPackage = !(parseValueFromIniSection(PACKAGES_INI_FILEPATH, packageName, USE_BOOT_PACKAGE_STR) == FALSE_STR);
+
                                 // read commands from package's boot_package.ini
-                                if (isFileOrDirectory(packageFilePath+BOOT_PACKAGE_FILENAME)) {
+                                if (useBootPackage && isFileOrDirectory(packageFilePath+BOOT_PACKAGE_FILENAME)) {
                                     std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> bootOptions = loadOptionsFromIni(packageFilePath+BOOT_PACKAGE_FILENAME);
                                     if (bootOptions.size() > 0) {
                                         std::string bootOptionName;
