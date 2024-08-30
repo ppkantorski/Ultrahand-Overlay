@@ -170,24 +170,20 @@ const char* getMemoryType(uint64_t packed_version) {
 
 const char* getSDMCStorageInfo() {
     struct statvfs stat;
-    static char buffer[20]; // Static buffer to retain data across function calls
+    static char buffer[30]; // Static buffer to retain data across function calls
 
     // Get filesystem statistics for "sdmc:/"
-    if (statvfs("sdmc:/", &stat) != 0) {
+    if (statvfs(ROOT_PATH.c_str(), &stat) != 0) {
         // Handle error, could not get filesystem statistics
         return ""; // Returning a fixed error message
     }
 
-    // Calculate total and available storage in bytes
-    //uint64_t totalSpace = stat.f_blocks * stat.f_frsize;
-    //uint64_t availableSpace = stat.f_bavail * stat.f_frsize;
-
-    // Convert bytes to GB
-    float totalSpaceGB = (stat.f_blocks * stat.f_frsize) / (1024 * 1024 * 1024);
-    float availableSpaceGB = (stat.f_bavail * stat.f_frsize) / (1024 * 1024 * 1024);
+    // Calculate total and available storage in GB with proper casting to avoid integer division
+    double totalSpaceGB = static_cast<double>(stat.f_blocks) * stat.f_frsize / (1024.0 * 1024.0 * 1024.0);
+    double availableSpaceGB = static_cast<double>(stat.f_bavail) * stat.f_frsize / (1024.0 * 1024.0 * 1024.0);
 
     // Create a formatted string with the available and total storage in GB
-    snprintf(buffer, sizeof(buffer), "%.2f / %.2f GB", availableSpaceGB, totalSpaceGB);
+    snprintf(buffer, sizeof(buffer), "%.2f GB / %.2f GB", availableSpaceGB, totalSpaceGB);
 
     // Return the formatted string
     return buffer;
