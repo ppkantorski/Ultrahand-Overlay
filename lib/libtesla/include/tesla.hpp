@@ -259,6 +259,7 @@ static std::string HIDDEN = "Hidden";
 static std::string HIDE_OVERLAY = "Hide Overlay";
 static std::string HIDE_PACKAGE = "Hide Package";
 static std::string LAUNCH_ARGUMENTS = "Launch Arguments";
+static std::string BOOT_PACKAGE = "Boot Package";
 static std::string COMMANDS = "Commands";
 static std::string SETTINGS = "Settings";
 static std::string MAIN_SETTINGS = "Main Settings";
@@ -399,6 +400,7 @@ void reinitializeLangVars() {
     HIDE_OVERLAY = "Hide Overlay";
     HIDE_PACKAGE = "Hide Package";
     LAUNCH_ARGUMENTS = "Launch Arguments";
+    BOOT_PACKAGE = "Boot Package";
     COMMANDS = "Commands";
     SETTINGS = "Settings";
     MAIN_SETTINGS = "Main Settings";
@@ -554,6 +556,7 @@ void parseLanguage(const std::string langFile) {
         {"HIDE_PACKAGE", &HIDE_PACKAGE},
         {"HIDE_OVERLAY", &HIDE_OVERLAY},
         {"LAUNCH_ARGUMENTS", &LAUNCH_ARGUMENTS},
+        {"BOOT_PACKAGE", &BOOT_PACKAGE},
         {"COMMANDS", &COMMANDS},
         {"SETTINGS", &SETTINGS},
         {"MAIN_SETTINGS", &MAIN_SETTINGS},
