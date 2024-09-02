@@ -864,32 +864,6 @@ public:
             overlayHeader.clear();
 
         } else if (dropdownSelection == "systemMenu") {
-            addHeader(list, COMMANDS);
-            
-            // Get system memory info and format it
-            u64 RAM_Used_system_u, RAM_Total_system_u;
-            svcGetSystemInfo(&RAM_Used_system_u, 1, INVALID_HANDLE, 2);
-            svcGetSystemInfo(&RAM_Total_system_u, 0, INVALID_HANDLE, 2);
-            
-            // Calculate free RAM and store in a smaller buffer
-            char ramString[24];  // Reduced buffer size to 24
-            float freeRamMB = (static_cast<float>(RAM_Total_system_u - RAM_Used_system_u) / (1024.0f * 1024.0f)) - 8.0f;
-            snprintf(ramString, sizeof(ramString), "%.2f MB %s", freeRamMB, FREE.c_str());
-            
-            // Reuse tableData with minimal reallocation
-            std::vector<std::vector<std::string>> tableData = {
-                {NOTICE, "", UTILIZES + " 2 MB (" + ramString + ")"}
-            };
-            addTable(list, tableData, "", 160, 10, 7, 0, DEFAULT_STR, DEFAULT_STR, RIGHT_STR, true);
-            
-            // Memory expansion toggle
-            useMemoryExpansion = (loaderTitle == "nx-ovlloader+" || 
-                                  parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "memory_expansion") == TRUE_STR);
-            createToggleListItem(list, MEMORY_EXPANSION, useMemoryExpansion, "memory_expansion", false, true);
-            
-            // Reboot required info
-            tableData[0] = {"", "", REBOOT_REQUIRED};  // Direct reuse without reallocation
-            addTable(list, tableData, "", 160, 28, 0, 0, DEFAULT_STR, DEFAULT_STR, RIGHT_STR, true);
             
             // Version info formatting with a reduced buffer
             char versionString[32];  // Reduced buffer size to 32
@@ -913,10 +887,11 @@ public:
                 case SetSysProductModel_Copper: modelRev = "Copper│Tegra X1 (Erista)"; break;
                 default: modelRev = UNAVAILABLE_SELECTION.c_str(); break;
             }
-            
-            tableData[0] = {FIRMWARE, "", versionString};
-            tableData.resize(2);
-            tableData[1] = {BOOTLOADER, "", hekateVersion.empty() ? "fusee" : "hekate " + hekateVersion};
+            std::vector<std::vector<std::string>> tableData = {
+                {FIRMWARE, "", versionString},
+                {BOOTLOADER, "", hekateVersion.empty() ? "fusee" : "hekate " + hekateVersion},
+                {"Local IP", "", getLocalIpAddress()}
+            };
             addTable(list, tableData, "", 160, 20, 28, 4);
             
             // Hardware and storage info
@@ -933,23 +908,56 @@ public:
             
             // CPU, GPU, and SOC info
             tableData = {
-                {"", "", "CPU       GPU       SOC"}
+                {"", "", "CPU      GPU      SOC"}
             };
-            addTable(list, tableData, "", 160, 8, 3, -2, DEFAULT_STR, "section", RIGHT_STR, true);
+            addTable(list, tableData, "", 160, 8, 3, 0, DEFAULT_STR, "section", RIGHT_STR, true);
             
             tableData.clear();
             tableData.resize(2);
             
             if (cpuSpeedo0 != 0 && cpuSpeedo2 != 0 && socSpeedo0 != 0 && cpuIDDQ != 0 && gpuIDDQ != 0 && socIDDQ != 0) {
-                tableData[0] = {"Speedo", "", std::to_string(cpuSpeedo0) + "  │ " + std::to_string(cpuSpeedo2) + "  │ " + std::to_string(socSpeedo0)};
-                tableData[1] = {"IDDQ", "", "    " + std::to_string(cpuIDDQ) + "  │     " + std::to_string(gpuIDDQ) + "  │     " + std::to_string(socIDDQ)};
+                tableData[0] = {
+                    "Speedo", "",
+                    customAlign(cpuSpeedo0) + " │ " + customAlign(cpuSpeedo2) + " │ " + customAlign(socSpeedo0)
+                };
+                tableData[1] = {
+                    "IDDQ", "",
+                    customAlign(cpuIDDQ) + " │ " + customAlign(gpuIDDQ) + " │ " + customAlign(socIDDQ)
+                };
             } else {
                 tableData[0] = {"Speedo", "", "⋯    │    ⋯   │    ⋯  "};
                 tableData[1] = {"IDDQ", "", "⋯    │    ⋯   │    ⋯  "};
             }
             addTable(list, tableData, "", 160, 20, -2, 4);
             
-                    
+            // The part that was moved to the end
+            addHeader(list, COMMANDS);
+            
+            // Get system memory info and format it
+            u64 RAM_Used_system_u, RAM_Total_system_u;
+            svcGetSystemInfo(&RAM_Used_system_u, 1, INVALID_HANDLE, 2);
+            svcGetSystemInfo(&RAM_Total_system_u, 0, INVALID_HANDLE, 2);
+            
+            // Calculate free RAM and store in a smaller buffer
+            char ramString[24];  // Reduced buffer size to 24
+            float freeRamMB = (static_cast<float>(RAM_Total_system_u - RAM_Used_system_u) / (1024.0f * 1024.0f)) - 8.0f;
+            snprintf(ramString, sizeof(ramString), "%.2f MB %s", freeRamMB, FREE.c_str());
+            
+            // Reuse tableData with minimal reallocation
+            tableData = {
+                {NOTICE, "", UTILIZES + " 2 MB (" + ramString + ")"}
+            };
+            addTable(list, tableData, "", 160, 10, 7, 0, DEFAULT_STR, DEFAULT_STR, RIGHT_STR, true);
+            // Memory expansion toggle
+            useMemoryExpansion = (loaderTitle == "nx-ovlloader+" || 
+                                  parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "memory_expansion") == TRUE_STR);
+            createToggleListItem(list, MEMORY_EXPANSION, useMemoryExpansion, "memory_expansion", false, true);
+
+            // Reboot required info
+            tableData = {
+                {"", "", REBOOT_REQUIRED}  // Direct reuse without reallocation
+            };
+            addTable(list, tableData, "", 160, 28, 0, 0, DEFAULT_STR, DEFAULT_STR, RIGHT_STR, true);
         
         } else if (dropdownSelection == "themeMenu") {
             addHeader(list, THEME);
