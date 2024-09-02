@@ -246,7 +246,7 @@ std::string getLocalIpAddress() {
         return std::string(ipStr);
     } else {
         // Return a default IP address if the IP could not be retrieved
-        return "0.0.0.0";  // Or "Unknown" if you prefer
+        return UNAVAILABLE_SELECTION;  // Or "Unknown" if you prefer
     }
 }
 
@@ -1295,24 +1295,22 @@ inline void applyPlaceholderReplacement(std::string& input, const std::string& p
 
 
 
-std::string replaceIniPlaceholder(const std::string& arg, const std::string& commandName, const std::string& iniPath) {
+void applyReplaceIniPlaceholder(std::string& arg, const std::string& commandName, const std::string& iniPath) {
 
     const std::string searchString = "{" + commandName + "(";
     size_t startPos = arg.find(searchString);
     if (startPos == std::string::npos) {
-        return arg;
+        return;
     }
 
     size_t endPos = arg.find(")}", startPos);
     if (endPos == std::string::npos || endPos <= startPos) {
-        return arg;
+        return;
     }
 
-    std::string replacement = arg;  // Copy arg because we need to modify it
+    //std::string replacement = arg;  // Copy arg because we need to modify it
 
-
-
-    std::string placeholderContent = replacement.substr(startPos + searchString.length(), endPos - startPos - searchString.length());
+    std::string placeholderContent = arg.substr(startPos + searchString.length(), endPos - startPos - searchString.length());
     placeholderContent = trim(placeholderContent);
 
     size_t commaPos = placeholderContent.find(',');
@@ -1322,7 +1320,7 @@ std::string replaceIniPlaceholder(const std::string& arg, const std::string& com
 
         std::string parsedResult = parseValueFromIniSection(iniPath, iniSection, iniKey);
         // Replace the placeholder with the parsed result and keep the remaining string intact
-        replacement = replacement.substr(0, startPos) + parsedResult + replacement.substr(endPos + 2);
+        arg = arg.substr(0, startPos) + parsedResult + arg.substr(endPos + 2);
     } else {
         // Check if the content is an integer
         if (std::all_of(placeholderContent.begin(), placeholderContent.end(), ::isdigit)) {
@@ -1332,20 +1330,20 @@ std::string replaceIniPlaceholder(const std::string& arg, const std::string& com
             std::vector<std::string> sectionNames = parseSectionsFromIni(iniPath);
             if (entryIndex < sectionNames.size()) {
                 std::string sectionName = sectionNames[entryIndex];
-                replacement = replacement.substr(0, startPos) + sectionName + replacement.substr(endPos + 2);
+                arg = arg.substr(0, startPos) + sectionName + arg.substr(endPos + 2);
             } else {
                 // Handle the case where entryIndex is out of range
-                replacement = replacement.substr(0, startPos) + NULL_STR + replacement.substr(endPos + 2);
+                arg = arg.substr(0, startPos) + NULL_STR + arg.substr(endPos + 2);
             }
         } else {
             // Handle the case where the placeholder content is not a valid index
-            replacement = replacement.substr(0, startPos) + NULL_STR + replacement.substr(endPos + 2);
+            arg = arg.substr(0, startPos) + NULL_STR + arg.substr(endPos + 2);
         }
     }
 
 
 
-    return replacement;
+    //return replacement;
 }
 
 
@@ -1423,17 +1421,17 @@ std::string replaceJsonPlaceholder(const std::string& arg, const std::string& co
 }
 
 // Helper function to replace placeholders
-std::string replaceAllPlaceholders(const std::string& source, const std::string& placeholder, const std::string& replacement) {
-    std::string modifiedArg = source;
+void replaceAllPlaceholders(std::string& source, const std::string& placeholder, const std::string& replacement) {
+    //std::string modifiedArg = source;
     std::string lastArg;
-    while (modifiedArg.find(placeholder) != std::string::npos) {
+    while (source.find(placeholder) != std::string::npos) {
         //modifiedArg = replacePlaceholder(modifiedArg, placeholder, replacement);
-        applyPlaceholderReplacement(modifiedArg, placeholder, replacement);
-        if (modifiedArg == lastArg)
+        applyPlaceholderReplacement(source, placeholder, replacement);
+        if (source == lastArg)
             break;
-        lastArg = modifiedArg;
+        lastArg = source;
     }
-    return modifiedArg;
+    return;
 }
 
 // Optimized getSourceReplacement function
@@ -1496,9 +1494,9 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
                 else if (commandName == "json_file_source" && jsonPath.empty())
                     jsonPath = preprocessPath(cmd[1], packagePath);
                 
-                modifiedArg = replaceAllPlaceholders(modifiedArg, "{file_source}", entry);
-                modifiedArg = replaceAllPlaceholders(modifiedArg, "{file_name}", fileName);
-                modifiedArg = replaceAllPlaceholders(modifiedArg, "{folder_name}", removeQuotes(getParentDirNameFromPath(entry)));
+                replaceAllPlaceholders(modifiedArg, "{file_source}", entry);
+                replaceAllPlaceholders(modifiedArg, "{file_name}", fileName);
+                replaceAllPlaceholders(modifiedArg, "{folder_name}", removeQuotes(getParentDirNameFromPath(entry)));
                 //modifiedArg = replaceAllPlaceholders(modifiedArg, "{ram_vendor}", memoryVendor);
                 //modifiedArg = replaceAllPlaceholders(modifiedArg, "{ram_model}", memoryModel);
                 //modifiedArg = replaceAllPlaceholders(modifiedArg, "{ams_version}", amsVersion);
@@ -1534,9 +1532,10 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
                     startPos = modifiedArg.find("{ini_file_source(");
                     endPos = modifiedArg.find(")}");
                     if (endPos != std::string::npos && endPos > startPos) {
-                        replacement = replaceIniPlaceholder(modifiedArg, "ini_file_source", iniPath);
-                        replacement = replacement.empty() ? NULL_STR : replacement;
-                        modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
+                        //replacement = applyReplaceIniPlaceholder(modifiedArg, "ini_file_source", iniPath);
+                        applyReplaceIniPlaceholder(modifiedArg, "ini_file_source", iniPath);
+                        modifiedArg = modifiedArg.empty() ? NULL_STR : modifiedArg;
+                        modifiedArg.replace(startPos, endPos - startPos + 2, modifiedArg);
                     }
                 }
 
@@ -1633,7 +1632,11 @@ auto replacePlaceholders = [](std::string& arg, const std::string& placeholder, 
 void applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::string& hexPath, const std::string& iniPath, const std::string& listString, const std::string& listPath, const std::string& jsonString, const std::string& jsonPath) {
     std::vector<std::pair<std::string, std::function<std::string(const std::string&)>>> placeholders = {
         {"{hex_file(", [&](const std::string& placeholder) { return replaceHexPlaceholder(placeholder, hexPath); }},
-        {"{ini_file(", [&](const std::string& placeholder) { return replaceIniPlaceholder(placeholder, INI_FILE_STR, iniPath); }},
+        {"{ini_file(", [&](const std::string& placeholder) { 
+            std::string result = placeholder;
+            applyReplaceIniPlaceholder(result, INI_FILE_STR, iniPath); 
+            return result; 
+        }},
         {"{list(", [&](const std::string& placeholder) {
             size_t startPos = placeholder.find('(') + 1;
             size_t endPos = placeholder.find(')');
@@ -1720,16 +1723,16 @@ void applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
         for (const auto& [placeholder, replacer] : placeholders) {
             replacePlaceholders(arg, placeholder, replacer);
         }
-        arg = replaceAllPlaceholders(arg, "{ram_vendor}", memoryVendor);
-        arg = replaceAllPlaceholders(arg, "{ram_model}", memoryModel);
-        arg = replaceAllPlaceholders(arg, "{ams_version}", amsVersion);
-        arg = replaceAllPlaceholders(arg, "{hos_version}", hosVersion);
-        arg = replaceAllPlaceholders(arg, "{cpu_speedo}", std::to_string(cpuSpeedo0));
-        arg = replaceAllPlaceholders(arg, "{cpu_iddq}", std::to_string(cpuIDDQ));
-        arg = replaceAllPlaceholders(arg, "{gpu_speedo}", std::to_string(cpuSpeedo2));
-        arg = replaceAllPlaceholders(arg, "{gpu_iddq}", std::to_string(gpuIDDQ));
-        arg = replaceAllPlaceholders(arg, "{soc_speedo}", std::to_string(socSpeedo0));
-        arg = replaceAllPlaceholders(arg, "{soc_iddq}", std::to_string(socIDDQ));
+        replaceAllPlaceholders(arg, "{ram_vendor}", memoryVendor);
+        replaceAllPlaceholders(arg, "{ram_model}", memoryModel);
+        replaceAllPlaceholders(arg, "{ams_version}", amsVersion);
+        replaceAllPlaceholders(arg, "{hos_version}", hosVersion);
+        replaceAllPlaceholders(arg, "{cpu_speedo}", std::to_string(cpuSpeedo0));
+        replaceAllPlaceholders(arg, "{cpu_iddq}", std::to_string(cpuIDDQ));
+        replaceAllPlaceholders(arg, "{gpu_speedo}", std::to_string(cpuSpeedo2));
+        replaceAllPlaceholders(arg, "{gpu_iddq}", std::to_string(gpuIDDQ));
+        replaceAllPlaceholders(arg, "{soc_speedo}", std::to_string(socSpeedo0));
+        replaceAllPlaceholders(arg, "{soc_iddq}", std::to_string(socIDDQ));
         // Failed replacement cleanup
         //if (arg == NULL_STR) arg = UNAVAILABLE_SELECTION;
     }
