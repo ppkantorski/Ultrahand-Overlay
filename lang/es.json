@@ -24,6 +24,8 @@
     "HIDE_OVERLAY": "Ocultar Superposición",
     "HIDE_PACKAGE": "Ocultar Paquete",
     "LAUNCH_ARGUMENTS": "Argumentos de Inicio",
+    "BOOT_PACKAGE": "Boot Package",
+    "ERROR_LOGGING": "Error Logging",
     "COMMANDS": "Comandos",
     "SETTINGS": "Configuración",
     "MAIN_SETTINGS": "Configuración Principal",
