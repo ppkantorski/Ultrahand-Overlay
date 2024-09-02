@@ -324,7 +324,7 @@ static std::string SHUTDOWN = "Shutdown";
 static std::string BOOT_ENTRY = "Boot Entry";
 static std::string GAP_1 = "     ";
 static std::string GAP_2 = "  ";
-static std::string USERGUIDE_OFFSET = "170";
+static std::string USERGUIDE_OFFSET = "173";
 static std::string SETTINGS_MENU = "Settings Menu";
 static std::string SCRIPT_OVERLAY = "Script Overlay";
 static std::string STAR_FAVORITE = "Star/Favorite";
@@ -467,7 +467,7 @@ void reinitializeLangVars() {
     BOOT_ENTRY = "Boot Entry";
     GAP_1 = "     ";
     GAP_2 = "  ";
-    USERGUIDE_OFFSET = "170";
+    USERGUIDE_OFFSET = "173";
     SETTINGS_MENU = "Settings Menu";
     SCRIPT_OVERLAY = "Script Overlay";
     STAR_FAVORITE = "Star/Favorite";
