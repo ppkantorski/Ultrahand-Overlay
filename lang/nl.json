@@ -59,6 +59,7 @@
     "FREE": "vrij",
     "MEMORY_EXPANSION": "Geheugenuitbreiding",
     "REBOOT_REQUIRED": "*Reboot required.",
+    "LOCAL_IP": "Local IP",
     "WALLPAPER": "Achtergrondafbeelding",
     "THEME": "Thema",
     "DEFAULT": "standaard",
