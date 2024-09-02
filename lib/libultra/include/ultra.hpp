@@ -36,6 +36,7 @@ const std::string ROOT_PATH = "sdmc:/";
 const std::string SETTINGS_PATH = "sdmc:/config/ultrahand/";
 const std::string ULTRAHAND_CONFIG_INI_PATH = "sdmc:/config/ultrahand/config.ini";
 const std::string TESLA_CONFIG_INI_PATH = "sdmc:/config/tesla/config.ini";
+const std::string FUSE_DATA_INI_PATH = "sdmc:/config/ultrahand/fuse.ini";
 const std::string LANG_PATH = "sdmc:/config/ultrahand/lang/";
 const std::string THEME_CONFIG_INI_PATH = "sdmc:/config/ultrahand/theme.ini";
 const std::string THEMES_PATH = "sdmc:/config/ultrahand/themes/";
@@ -56,6 +57,7 @@ const std::string NX_OVLLOADER_PLUS_ZIP_URL = "https://github.com/ppkantorski/nx
 const std::string TESLA_COMBO_STR = "L+DDOWN+RS";
 const std::string ULTRAHAND_COMBO_STR = "ZL+ZR+DDOWN";
 
+const std::string FUSE_STR = "fuse";
 const std::string TESLA_STR = "tesla";
 const std::string ERISTA_STR = "erista";
 const std::string MARIKO_STR = "mariko";
@@ -64,6 +66,7 @@ const std::string DEFAULT_LANG_STR = "default_lang";
 const std::string LAUNCH_ARGS_STR = "launch_args";
 const std::string USE_LAUNCH_ARGS_STR = "use_launch_args";
 const std::string USE_BOOT_PACKAGE_STR = "use_boot_package";
+const std::string USE_LOGGING_STR = "use_logging";
 const std::string LIST_STR = "list";
 const std::string LIST_FILE_STR = "list_file";
 const std::string JSON_STR = "json";
@@ -107,7 +110,7 @@ const std::string NAMED_STEP_TRACKBAR_STR = "named_step_trackbar";
 const std::string NULL_STR = "null";
 const std::string THEME_STR = "theme";
 const std::string NOT_AVAILABLE_STR = "Not available";
-
+const std::string BUFFERS = "buffers";
 
 // Pre-defined symbols
 const std::string OPTION_SYMBOL = "\u22EF";
@@ -131,5 +134,11 @@ const std::string STAR_SYMBOL = "\u2605";
 #include "hex_funcs.hpp"
 #include "download_funcs.hpp"
 #include "mod_funcs.hpp"
+
+inline void resetPercentages() {
+    downloadPercentage.store(-1, std::memory_order_release);
+    unzipPercentage.store(-1, std::memory_order_release);
+    copyPercentage.store(-1, std::memory_order_release);
+}
 
 #endif // ULTRA_HPP
