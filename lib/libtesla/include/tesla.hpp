@@ -297,6 +297,7 @@ static std::string UTILIZES = "Utilizes";
 static std::string FREE = "free";
 static std::string MEMORY_EXPANSION = "Memory Expansion";
 static std::string REBOOT_REQUIRED = "*Reboot required.";
+static std::string LOCAL_IP = "Local IP";
 static std::string WALLPAPER = "Wallpaper";
 static std::string THEME = "Theme";
 static std::string DEFAULT = "default";
@@ -439,6 +440,7 @@ void reinitializeLangVars() {
     FREE = "free";
     MEMORY_EXPANSION = "Memory Expansion";
     REBOOT_REQUIRED = "*Reboot required.";
+    LOCAL_IP = "Local IP";
     WALLPAPER = "Wallpaper";
     THEME = "Theme";
     DEFAULT = "default";
@@ -596,6 +598,7 @@ void parseLanguage(const std::string langFile) {
         {"FREE", &FREE},
         {"MEMORY_EXPANSION", &MEMORY_EXPANSION},
         {"REBOOT_REQUIRED", &REBOOT_REQUIRED},
+        {"LOCAL_IP", &LOCAL_IP},
         {"WALLPAPER", &WALLPAPER},
         {"THEME", &THEME},
         {"DEFAULT", &DEFAULT},
