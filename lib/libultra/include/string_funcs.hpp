@@ -492,6 +492,11 @@ inline std::string splitStringAtIndex(const std::string& str, const std::string&
 }
 
 
+std::string customAlign(int number) {
+    std::string numStr = std::to_string(number);
+    int missingDigits = 4 - numStr.length();
+    return std::string(missingDigits * 2, ' ') + numStr;
+}
 
 
 

@@ -190,6 +190,9 @@ bool updateMenuCombos = false;
 
 std::string convertComboToUnicode(const std::string& combo);
 
+
+
+
 // For improving the speed of hexing consecutively with the same file and asciiPattern.
 //static std::unordered_map<std::string, std::string> hexSumCache;
 
@@ -259,6 +262,8 @@ static std::string HIDDEN = "Hidden";
 static std::string HIDE_OVERLAY = "Hide Overlay";
 static std::string HIDE_PACKAGE = "Hide Package";
 static std::string LAUNCH_ARGUMENTS = "Launch Arguments";
+static std::string BOOT_PACKAGE = "Boot Package";
+static std::string ERROR_LOGGING = "Error Logging";
 static std::string COMMANDS = "Commands";
 static std::string SETTINGS = "Settings";
 static std::string MAIN_SETTINGS = "Main Settings";
@@ -292,6 +297,7 @@ static std::string UTILIZES = "Utilizes";
 static std::string FREE = "free";
 static std::string MEMORY_EXPANSION = "Memory Expansion";
 static std::string REBOOT_REQUIRED = "*Reboot required.";
+static std::string LOCAL_IP = "Local IP";
 static std::string WALLPAPER = "Wallpaper";
 static std::string THEME = "Theme";
 static std::string DEFAULT = "default";
@@ -318,7 +324,7 @@ static std::string SHUTDOWN = "Shutdown";
 static std::string BOOT_ENTRY = "Boot Entry";
 static std::string GAP_1 = "     ";
 static std::string GAP_2 = "  ";
-static std::string USERGUIDE_OFFSET = "170";
+static std::string USERGUIDE_OFFSET = "173";
 static std::string SETTINGS_MENU = "Settings Menu";
 static std::string SCRIPT_OVERLAY = "Script Overlay";
 static std::string STAR_FAVORITE = "Star/Favorite";
@@ -399,6 +405,8 @@ void reinitializeLangVars() {
     HIDE_OVERLAY = "Hide Overlay";
     HIDE_PACKAGE = "Hide Package";
     LAUNCH_ARGUMENTS = "Launch Arguments";
+    BOOT_PACKAGE = "Boot Package";
+    ERROR_LOGGING = "Error Logging";
     COMMANDS = "Commands";
     SETTINGS = "Settings";
     MAIN_SETTINGS = "Main Settings";
@@ -432,6 +440,7 @@ void reinitializeLangVars() {
     FREE = "free";
     MEMORY_EXPANSION = "Memory Expansion";
     REBOOT_REQUIRED = "*Reboot required.";
+    LOCAL_IP = "Local IP";
     WALLPAPER = "Wallpaper";
     THEME = "Theme";
     DEFAULT = "default";
@@ -458,7 +467,7 @@ void reinitializeLangVars() {
     BOOT_ENTRY = "Boot Entry";
     GAP_1 = "     ";
     GAP_2 = "  ";
-    USERGUIDE_OFFSET = "170";
+    USERGUIDE_OFFSET = "173";
     SETTINGS_MENU = "Settings Menu";
     SCRIPT_OVERLAY = "Script Overlay";
     STAR_FAVORITE = "Star/Favorite";
@@ -554,6 +563,8 @@ void parseLanguage(const std::string langFile) {
         {"HIDE_PACKAGE", &HIDE_PACKAGE},
         {"HIDE_OVERLAY", &HIDE_OVERLAY},
         {"LAUNCH_ARGUMENTS", &LAUNCH_ARGUMENTS},
+        {"BOOT_PACKAGE", &BOOT_PACKAGE},
+        {"ERROR_LOGGING", &ERROR_LOGGING},
         {"COMMANDS", &COMMANDS},
         {"SETTINGS", &SETTINGS},
         {"MAIN_SETTINGS", &MAIN_SETTINGS},
@@ -587,6 +598,7 @@ void parseLanguage(const std::string langFile) {
         {"FREE", &FREE},
         {"MEMORY_EXPANSION", &MEMORY_EXPANSION},
         {"REBOOT_REQUIRED", &REBOOT_REQUIRED},
+        {"LOCAL_IP", &LOCAL_IP},
         {"WALLPAPER", &WALLPAPER},
         {"THEME", &THEME},
         {"DEFAULT", &DEFAULT},
@@ -802,7 +814,7 @@ static std::unordered_map<wchar_t, float> characterWidths = {
     {L'=', 0.750},
     {L':', 0.25},
     {L';', 0.25},
-    {L' ', 0.31},
+    {L' ', 0.312},
     {L'|', 0.26},
     {L'.', 0.25},
     {L'+', 0.75},
@@ -850,7 +862,7 @@ static std::unordered_map<wchar_t, float> characterWidths = {
     {L'i', 0.2485},
     {L'j', 0.3748},
     {L'k', 0.5588},
-    {L'l', 0.248},
+    {L'l', 0.251},
     {L'm', 0.935},
     {L'n', 0.5573},
     {L'o', 0.62},
@@ -1004,6 +1016,8 @@ std::map<std::string, std::string> defaultThemeSettingsMap = {
     {"click_text_color", whiteColor},
     {"click_alpha", "7"},
     {"click_color", "#3E25F7"},
+    {"progress_alpha", "7"},
+    {"progress_color", "#253EF7"},
     {"invert_bg_click_color", FALSE_STR},
     {"disable_selection_bg", FALSE_STR},
     {"disable_colorful_logo", FALSE_STR},
@@ -1112,7 +1126,7 @@ std::vector<u8> loadBitmapFile(const std::string& filePath, s32 width, s32 heigh
 static std::atomic<bool> refreshWallpaper(false);
 static std::vector<u8> wallpaperData;
 std::mutex wallpaperMutex; // Mutex to protect wallpaperData
-static bool inPlot = false;
+static std::atomic<bool> inPlot(false);
 
 //static uint8x16x4_t pixelData;
 
@@ -1646,13 +1660,16 @@ namespace tsl {
     static Color highlightColor = tsl::style::color::ColorHighlight;
     
     static size_t clickAlpha = 7;
-
     static Color clickColor = RGB888("#3E25F7", clickAlpha);
+
+    static size_t progressAlpha = 7;
+    static Color progressColor = RGB888("#253EF7", progressAlpha);
+
     static Color trackBarColor = RGB888("#555555");
 
     static size_t separatorAlpha = 15;
-    
     static Color separatorColor = RGB888("#404040", separatorAlpha);
+
     static Color selectedTextColor = RGB888(whiteColor);
     static Color inprogressTextColor = RGB888(whiteColor);
     static Color invalidTextColor = RGB888("#FF0000");
@@ -1734,6 +1751,10 @@ namespace tsl {
             
             clickAlpha = getAlpha("click_alpha");
             clickColor = getColor("click_color", clickAlpha);
+
+            progressAlpha = getAlpha("progress_alpha");
+            progressColor = getColor("progress_color", progressAlpha);
+
             trackBarColor = getColor("trackbar_color");
             
             separatorAlpha = getAlpha("separator_alpha");
@@ -2821,35 +2842,44 @@ namespace tsl {
                 float currFontSize;
                 int xAdvance = 0, leftBearing = 0, kernAdvance = 0;
             
+                // Cache default width for numeric characters if fixedWidthNumbers is true
+                float numericCharWidth = fixedWidthNumbers ? defaultNumericCharWidth * fontSize : 0.0f;
+            
+                // Prepare the font information ahead of time if possible
+                stbtt_fontinfo* currentFont = nullptr;
+            
+                // Use an iterator for characterWidths map lookup
+                auto it = characterWidths.end();
+            
                 while (strPos < str.size()) {
                     codepointWidth = decode_utf8(&currCharacter, reinterpret_cast<const u8*>(&str[strPos]));
-            
                     if (codepointWidth <= 0) {
                         break;
                     }
             
                     if (fixedWidthNumbers && std::isdigit(currCharacter)) {
-                        totalWidth += defaultNumericCharWidth * fontSize;
+                        totalWidth += numericCharWidth;
                     } else {
-                        auto it = characterWidths.find(static_cast<wchar_t>(currCharacter));
+                        // Check if the character is found in the cache
+                        it = characterWidths.find(static_cast<wchar_t>(currCharacter));
                         if (it != characterWidths.end()) {
                             totalWidth += it->second * fontSize;
                         } else {
-                            stbtt_fontinfo* currFont = nullptr;
-            
-                            if (stbtt_FindGlyphIndex(&this->m_extFont, currCharacter)) {
-                                currFont = &this->m_extFont;
-                            } else if (this->m_hasLocalFont && stbtt_FindGlyphIndex(&this->m_stdFont, currCharacter) == 0) {
-                                currFont = &this->m_localFont;
-                            } else {
-                                currFont = &this->m_stdFont;
+                            if (!currentFont || !stbtt_FindGlyphIndex(currentFont, currCharacter)) {
+                                if (stbtt_FindGlyphIndex(&this->m_extFont, currCharacter)) {
+                                    currentFont = &this->m_extFont;
+                                } else if (this->m_hasLocalFont && stbtt_FindGlyphIndex(&this->m_stdFont, currCharacter) == 0) {
+                                    currentFont = &this->m_localFont;
+                                } else {
+                                    currentFont = &this->m_stdFont;
+                                }
                             }
             
-                            currFontSize = stbtt_ScaleForPixelHeight(currFont, fontSize);
-                            stbtt_GetCodepointHMetrics(currFont, currCharacter, &xAdvance, &leftBearing);
+                            currFontSize = stbtt_ScaleForPixelHeight(currentFont, fontSize);
+                            stbtt_GetCodepointHMetrics(currentFont, currCharacter, &xAdvance, &leftBearing);
             
                             if (prevCharacter) {
-                                kernAdvance = stbtt_GetCodepointKernAdvance(currFont, prevCharacter, currCharacter);
+                                kernAdvance = stbtt_GetCodepointKernAdvance(currentFont, prevCharacter, currCharacter);
                                 totalWidth += kernAdvance * currFontSize;
                             }
             
@@ -2868,6 +2898,7 @@ namespace tsl {
 
 
 
+
             /**
              * @brief Draws a string
              *
@@ -2879,11 +2910,11 @@ namespace tsl {
              * @param color Text color. Use transparent color to skip drawing and only get the string's dimensions
              * @return Dimensions of drawn string
              */
-            inline std::pair<u32, u32> drawString(const char* string, bool monospace, const s32 x, const s32 y, const s32 fontSize, const Color& color, const ssize_t maxWidth = 0) {
+            inline std::pair<u32, u32> drawString(const std::string& string, bool monospace, const s32 x, const s32 y, const s32 fontSize, const Color& color, const ssize_t maxWidth = 0) {
                 float maxX = x;
                 float currX = x;
                 float currY = y;
-                
+            
                 static std::unordered_map<u64, Glyph> s_glyphCache;
                 u32 currCharacter;
                 ssize_t codepointWidth;
@@ -2893,29 +2924,36 @@ namespace tsl {
                 Color tmpColor(0);
                 uint8_t bmpColor;
             
-                u32 offset;
+                //u32 offset;
             
                 float xPos, yPos;
                 int yAdvance = 0;
                 float scaledFontSize;
-            
-                while (*string != '\0') {
-                    if (maxWidth > 0 && maxWidth < (currX - x))
+                
+                u32 rowOffset;
+
+                // Iterator for std::string
+                auto itStr = string.cbegin();
+                
+                while (itStr != string.cend()) {
+                    if (maxWidth > 0 && (currX - x) >= maxWidth)
                         break;
-                    
-                    codepointWidth = decode_utf8(&currCharacter, reinterpret_cast<const u8*>(string));
+            
+                    // Decode UTF-8 codepoint
+                    codepointWidth = decode_utf8(&currCharacter, reinterpret_cast<const u8*>(&(*itStr)));
                     if (codepointWidth <= 0)
                         break;
-                    
-                    string += codepointWidth;
-                    
+            
+                    // Move the iterator forward by the width of the current codepoint
+                    itStr += codepointWidth;
+            
                     if (currCharacter == '\n') {
                         maxX = std::max(currX, maxX);
                         currX = x;
                         currY += fontSize;
                         continue;
                     }
-                    
+            
                     key = (static_cast<u64>(currCharacter) << 32) | (static_cast<u64>(monospace) << 31) | (static_cast<u64>(std::bit_cast<u32>(fontSize)));
                     it = s_glyphCache.find(key);
                     if (it == s_glyphCache.end()) {
@@ -2927,16 +2965,16 @@ namespace tsl {
                             glyph->currFont = &this->m_localFont;
                         else
                             glyph->currFont = &this->m_stdFont;
-                        
+            
                         scaledFontSize = stbtt_ScaleForPixelHeight(glyph->currFont, fontSize);
                         glyph->currFontSize = scaledFontSize;
-                        
+            
                         stbtt_GetCodepointBitmapBoxSubpixel(glyph->currFont, currCharacter, scaledFontSize, scaledFontSize,
                             0, 0, &glyph->bounds[0], &glyph->bounds[1], &glyph->bounds[2], &glyph->bounds[3]);
-                        
+            
                         yAdvance = 0;
                         stbtt_GetCodepointHMetrics(glyph->currFont, monospace ? 'W' : currCharacter, &glyph->xAdvance, &yAdvance);
-                        
+            
                         glyph->glyphBmp = stbtt_GetCodepointBitmap(glyph->currFont, scaledFontSize, scaledFontSize, currCharacter, &glyph->width, &glyph->height, nullptr, nullptr);
                     } else {
                         glyph = &it->second;
@@ -2946,12 +2984,14 @@ namespace tsl {
                         xPos = currX + glyph->bounds[0];
                         yPos = currY + glyph->bounds[1];
                         
+                        // Use optimized pixel processing
                         for (s32 bmpY = 0; bmpY < glyph->height; ++bmpY) {
+                            rowOffset = bmpY * glyph->width;
                             for (s32 bmpX = 0; bmpX < glyph->width; ++bmpX) {
-                                bmpColor = glyph->glyphBmp[glyph->width * bmpY + bmpX] >> 4;
+                                bmpColor = glyph->glyphBmp[rowOffset + bmpX] >> 4;
                                 if (bmpColor == 0xF) {
-                                    offset = this->getPixelOffset(xPos + bmpX, yPos + bmpY);
-                                    this->setPixel(xPos + bmpX, yPos + bmpY, color, offset);
+                                    //offset = this->getPixelOffset(xPos + bmpX, yPos + bmpY);
+                                    this->setPixel(xPos + bmpX, yPos + bmpY, color, this->getPixelOffset(xPos + bmpX, yPos + bmpY));
                                 } else if (bmpColor != 0x0) {
                                     tmpColor = color;
                                     tmpColor.a = bmpColor;
@@ -2967,6 +3007,7 @@ namespace tsl {
                 maxX = std::max(currX, maxX);
                 return { static_cast<u32>(maxX - x), static_cast<u32>(currY - y) };
             }
+            
 
             
             
@@ -2974,50 +3015,62 @@ namespace tsl {
                 size_t startPos = 0;
                 size_t textLength = text.length();
                 u32 segmentWidth, segmentHeight;
-                
-                size_t specialPos, foundLength, pos;
-                const char* foundSymbol;
+            
+                // Create a set for fast symbol lookup
+                std::unordered_set<std::string> specialSymbolSet(specialSymbols.begin(), specialSymbols.end());
+            
+                // Variables initialized outside the loop
+                size_t specialPos = std::string::npos;
+                size_t foundLength = 0;
+                std::string_view foundSymbol;
+                std::string normalTextStr; // To hold the text before the special symbol
+                std::string specialSymbolStr; // To hold the special symbol text
+                size_t pos; // To store position of the special symbol in the text
+            
                 while (startPos < textLength) {
                     specialPos = std::string::npos;
                     foundLength = 0;
-                    foundSymbol = nullptr;
-                    
+                    foundSymbol = std::string_view(); // Reset the foundSymbol
+            
                     // Find the nearest special symbol
-                    for (const auto& symbol : specialSymbols) {
+                    for (const auto& symbol : specialSymbolSet) {
                         pos = text.find(symbol, startPos);
                         if (pos != std::string::npos && (specialPos == std::string::npos || pos < specialPos)) {
                             specialPos = pos;
                             foundLength = symbol.length();
-                            foundSymbol = symbol.c_str();
+                            foundSymbol = symbol;
                         }
                     }
-                    
+            
                     // If no special symbol is found, draw the rest of the text
                     if (specialPos == std::string::npos) {
-                        drawString(text.substr(startPos).c_str(), false, x, y, fontSize, defaultColor);
+                        drawString(text.substr(startPos), false, x, y, fontSize, defaultColor);
                         break;
                     }
-                    
+            
                     // Draw the segment before the special symbol
                     if (specialPos > startPos) {
-                        std::tie(segmentWidth, segmentHeight) = drawString(text.substr(startPos, specialPos - startPos).c_str(), false, x, y, fontSize, defaultColor);
+                        normalTextStr = text.substr(startPos, specialPos - startPos);
+                        std::tie(segmentWidth, segmentHeight) = drawString(normalTextStr, false, x, y, fontSize, defaultColor);
+                        //segmentWidth = calculateStringWidth(normalTextStr, fontSize);
                         x += segmentWidth;
                     }
-                    
+            
                     // Draw the special symbol
-                    std::tie(segmentWidth, segmentHeight) = drawString(foundSymbol, false, x, y, fontSize, specialColor);
+                    specialSymbolStr = foundSymbol; // Convert std::string_view to std::string
+                    std::tie(segmentWidth, segmentHeight) = drawString(specialSymbolStr, false, x, y, fontSize, specialColor);
+                    //segmentWidth = calculateStringWidth(specialSymbolStr, fontSize);
                     x += segmentWidth;
-                    
+            
                     // Move startPos past the special symbol
                     startPos = specialPos + foundLength;
                 }
-                
-                // Draw any remaining text after the last special character
+            
+                // Draw any remaining text after the last special symbol
                 if (startPos < textLength) {
-                    drawString(text.substr(startPos).c_str(), false, x, y, fontSize, defaultColor);
+                    drawString(text.substr(startPos), false, x, y, fontSize, defaultColor);
                 }
             }
-
 
             
             /**
@@ -3121,7 +3174,7 @@ namespace tsl {
             
             static inline float s_opacity = 1.0F;
             
-            u32 tmpPos;
+            //u32 tmpPos;
             
             /**
              * @brief Get the current framebuffer address
@@ -3205,7 +3258,7 @@ namespace tsl {
             
                 // Calculate the base offset
                 //tmpPos = (((y & 127) / 16) + ((x / 32) * 8) + ((y / 128) * (cfg::FramebufferWidth / 4)))*1024;
-                tmpPos = (((y & 127) / 16) + ((x / 32) * 8) + ((y / 128) * 112))*512 +
+                return (((y & 127) / 16) + ((x / 32) * 8) + ((y / 128) * 112))*512 +
                         ((y % 16) / 8) * 256 + 
                         ((x % 32) / 16) * 128 + 
                         ((y % 8) / 2) * 32 + 
@@ -3222,7 +3275,7 @@ namespace tsl {
                 //          (y % 2) * 16 + 
                 //          (x % 8) * 2;
             
-                return tmpPos;
+                //return tmpPos;
             }
 
             
@@ -3729,6 +3782,23 @@ namespace tsl {
                 if (this->m_clickAnimationProgress == 0) {
                     if (!disableSelectionBG)
                         renderer->drawRect(this->getX() + x + 4, this->getY() + y, this->getWidth() - 12, this->getHeight(), a(selectionBGColor)); // CUSTOM MODIFICATION 
+
+                    // Determine the active percentage to use
+                    float activePercentage = 0.0f;
+                    if (downloadPercentage > 0) {
+                        activePercentage = downloadPercentage;
+                    } else if (unzipPercentage > 0) {
+                        activePercentage = unzipPercentage;
+                    } else if (copyPercentage > 0) {
+                        activePercentage = copyPercentage;
+                    }
+                    if (activePercentage > 0){
+                        renderer->drawRect(this->getX() + x + 4, this->getY() + y, (this->getWidth()- 12)*(activePercentage/100.0f), this->getHeight(), a(progressColor));
+                        if (activePercentage == 100.0f) {
+                            resetPercentages();
+                        }
+                    }
+
                     renderer->drawBorderedRoundedRect(this->getX() + x, this->getY() + y, this->getWidth(), this->getHeight(), 5, 5, a(highlightColor));
                 }
                 //renderer->drawRect(ELEMENT_BOUNDS(this), a(0xF000)); // This has been moved here (needs to be toggleable)
@@ -4023,14 +4093,16 @@ namespace tsl {
                 //if (expandedMemory && useCustomWallpaper && wallpaperData.empty()) {
                 //std::lock_guard<std::mutex> lock(wallpaperMutex);
                 if (expandedMemory && !inPlot) {
-                    std::lock_guard<std::mutex> lock(wallpaperMutex);
-                    if (wallpaperData.empty()) {
-                        if (isFileOrDirectory(WALLPAPER_PATH))
-                            wallpaperData = loadBitmapFile(WALLPAPER_PATH, 448, 720);
-                        else
-                            wallpaperData.clear();
-                        //wallpaperData = loadBitmapFile(WALLPAPER_PATH, 224, 360);
-                        //wallpaperData = preprocessBitmap(wallpaperData, 224, 360, 448, 720); 
+                    {
+                        std::lock_guard<std::mutex> lock(wallpaperMutex);
+                        if (wallpaperData.empty()) {
+                            if (isFileOrDirectory(WALLPAPER_PATH))
+                                wallpaperData = loadBitmapFile(WALLPAPER_PATH, 448, 720);
+                            else
+                                wallpaperData.clear();
+                            //wallpaperData = loadBitmapFile(WALLPAPER_PATH, 224, 360);
+                            //wallpaperData = preprocessBitmap(wallpaperData, 224, 360, 448, 720); 
+                        }
                     }
                 }
 
@@ -4067,14 +4139,18 @@ namespace tsl {
                 
                 //if (expandedMemory && useCustomWallpaper && !wallpaperData.empty()) {
                 if (expandedMemory && !refreshWallpaper.load(std::memory_order_acquire)) {
-                    inPlot = true;
-                    std::lock_guard<std::mutex> lock(wallpaperMutex);
-                    
-                    if (!wallpaperData.empty()) {
-                        // Draw the bitmap at position (0, 0) on the screen
-                        renderer->drawBitmap(0, 0, 448, 720, wallpaperData.data());
+                    //inPlot = true;
+                    inPlot.store(true, std::memory_order_release);
+                    {
+                        std::lock_guard<std::mutex> lock(wallpaperMutex);
+                        
+                        if (!wallpaperData.empty()) {
+                            // Draw the bitmap at position (0, 0) on the screen
+                            renderer->drawBitmap(0, 0, 448, 720, wallpaperData.data());
+                        }
                     }
-                    inPlot = false;
+                    //inPlot = false;
+                    inPlot.store(false, std::memory_order_release);
                 }
                 
 
@@ -4118,19 +4194,19 @@ namespace tsl {
                                 15
                             };
                             
-                            renderer->drawString(std::string(1, letter).c_str(), false, x, y + offset, fontSize, a(highlightColor));
+                            renderer->drawString(std::string(1, letter), false, x, y + offset, fontSize, a(highlightColor));
                             x += renderer->calculateStringWidth(std::string(1, letter), fontSize);
                             countOffset -= 0.2F;
                         }
                     } else {
                         for (char letter : firstHalf) {
-                            renderer->drawString(std::string(1, letter).c_str(), false, x, y + offset, fontSize, a(logoColor1));
+                            renderer->drawString(std::string(1, letter), false, x, y + offset, fontSize, a(logoColor1));
                             x += renderer->calculateStringWidth(std::string(1, letter), fontSize);
                             countOffset -= 0.2F;
                         }
                     }
                     
-                    renderer->drawString(secondHalf.c_str(), false, x, y + offset, fontSize, a(logoColor2));
+                    renderer->drawString(secondHalf, false, x, y + offset, fontSize, a(logoColor2));
                     
                     if (!(hideBattery && hidePCBTemp && hideSOCTemp && hideClock)) {
                         renderer->drawRect(245, 23, 1, 49, a(separatorColor));
@@ -4146,7 +4222,7 @@ namespace tsl {
                         clock_gettime(CLOCK_REALTIME, &currentTimeSpec);
                         strftime(timeStr, sizeof(timeStr), datetimeFormat.c_str(), localtime(&currentTimeSpec.tv_sec));
                         localizeTimeStr(timeStr);
-                        renderer->drawString(timeStr, false, tsl::cfg::FramebufferWidth - renderer->calculateStringWidth(timeStr, 20, true) - 20, y_offset, 20, a(clockColor));
+                        renderer->drawString(std::string(timeStr), false, tsl::cfg::FramebufferWidth - renderer->calculateStringWidth(timeStr, 20, true) - 20, y_offset, 20, a(clockColor));
                         y_offset += 22;
                     }
                     
@@ -4174,7 +4250,7 @@ namespace tsl {
                         chargeStringSTD = chargeString;
                         Color batteryColorToUse = isCharging ? tsl::Color(0x0, 0xF, 0x0, 0xF) : 
                                                 (batteryCharge < 20 ? tsl::Color(0xF, 0x0, 0x0, 0xF) : batteryColor);
-                        renderer->drawString(chargeStringSTD.c_str(), false, tsl::cfg::FramebufferWidth - renderer->calculateStringWidth(chargeStringSTD, 20, true) - 22, y_offset, 20, a(batteryColorToUse));
+                        renderer->drawString(chargeStringSTD, false, tsl::cfg::FramebufferWidth - renderer->calculateStringWidth(chargeStringSTD, 20, true) - 22, y_offset, 20, a(batteryColorToUse));
                     }
                     
                     offset = 0;
@@ -4182,13 +4258,13 @@ namespace tsl {
                         PCB_temperatureStringSTD = PCB_temperatureStr;
                         if (!hideBattery)
                             offset -= 5;
-                        renderer->drawString(PCB_temperatureStringSTD.c_str(), false, tsl::cfg::FramebufferWidth + offset - renderer->calculateStringWidth(PCB_temperatureStringSTD, 20, true) - renderer->calculateStringWidth(chargeStringSTD, 20, true) - 22, y_offset, 20, a(tsl::GradientColor(PCB_temperature)));
+                        renderer->drawString(PCB_temperatureStringSTD, false, tsl::cfg::FramebufferWidth + offset - renderer->calculateStringWidth(PCB_temperatureStringSTD, 20, true) - renderer->calculateStringWidth(chargeStringSTD, 20, true) - 22, y_offset, 20, a(tsl::GradientColor(PCB_temperature)));
                     }
                     if (!hideSOCTemp && SOC_temperature > 0) {
                         SOC_temperatureStringSTD = SOC_temperatureStr;
                         if (!hidePCBTemp || !hideBattery)
                             offset -= 5;
-                        renderer->drawString(SOC_temperatureStringSTD.c_str(), false, tsl::cfg::FramebufferWidth + offset - renderer->calculateStringWidth(SOC_temperatureStringSTD, 20, true) - renderer->calculateStringWidth(PCB_temperatureStringSTD, 20, true) - renderer->calculateStringWidth(chargeStringSTD, 20, true) - 22, y_offset, 20, a(tsl::GradientColor(SOC_temperature)));
+                        renderer->drawString(SOC_temperatureStringSTD, false, tsl::cfg::FramebufferWidth + offset - renderer->calculateStringWidth(SOC_temperatureStringSTD, 20, true) - renderer->calculateStringWidth(PCB_temperatureStringSTD, 20, true) - renderer->calculateStringWidth(chargeStringSTD, 20, true) - 22, y_offset, 20, a(tsl::GradientColor(SOC_temperature)));
                     }
                 } else {
                     x = 20;
@@ -4200,7 +4276,7 @@ namespace tsl {
                         
                         // Function to draw the title
                         auto drawTitle = [&](const Color& color) {
-                            renderer->drawString(title.c_str(), false, x, y, fontSize, a(color));
+                            renderer->drawString(title, false, x, y, fontSize, a(color));
                         };
                         
                         if (this->m_colorSelection == "green") {
@@ -4265,17 +4341,17 @@ namespace tsl {
                             drawTitle(titleColor); // Using the default titleColor
                         }
                     } else if (this->m_subtitle.find("Ultrahand Script") != std::string::npos) {
-                        renderer->drawString(this->m_title.c_str(), false, 20, 50, 32, a(Color(0xFF, 0x33, 0x3F, 0xFF)));
+                        renderer->drawString(this->m_title, false, 20, 50, 32, a(Color(0xFF, 0x33, 0x3F, 0xFF)));
                     } else {
-                        renderer->drawString(this->m_title.c_str(), false, 20, 50, 30, a(defaultTextColor));
+                        renderer->drawString(this->m_title, false, 20, 50, 30, a(defaultTextColor));
                     }
 
                 }
                 
                 if (this->m_title == CAPITAL_ULTRAHAND_PROJECT_NAME) {
-                    renderer->drawString(versionLabel.c_str(), false, 20, y+25, 15, a(versionTextColor));
+                    renderer->drawString(versionLabel, false, 20, y+25, 15, a(versionTextColor));
                 } else
-                    renderer->drawString(this->m_subtitle.c_str(), false, 20, y+20, 15, a(versionTextColor));
+                    renderer->drawString(this->m_subtitle, false, 20, y+20, 15, a(versionTextColor));
                 
                 renderer->drawRect(15, tsl::cfg::FramebufferHeight - 73, tsl::cfg::FramebufferWidth - 30, 1, a(botttomSeparatorColor));
                 
@@ -4325,7 +4401,7 @@ namespace tsl {
                 
                 //renderer->drawString(menuBottomLine.c_str(), false, 30, 693, 23, a(defaultTextColor));
                 // Render the text with special character handling
-                renderer->drawStringWithColoredSections(menuBottomLine.c_str(), {"\uE0E1","\uE0E0","\uE0ED","\uE0EE"}, 30, 693, 23, a(bottomTextColor), a(buttonColor));
+                renderer->drawStringWithColoredSections(menuBottomLine, {"\uE0E1","\uE0E0","\uE0ED","\uE0EE"}, 30, 693, 23, a(bottomTextColor), a(buttonColor));
                 
                 //if (true) {
                 //    // Update FPS
@@ -4337,7 +4413,7 @@ namespace tsl {
                 //    std::string fpsString = fpsStream.str();
                 //    
                 //    // Draw FPS string at the bottom left corner
-                //    renderer->drawString(fpsString.c_str(), false, 20, tsl::cfg::FramebufferHeight - 60, 20, a(tsl::Color(0xFF, 0xFF, 0xFF, 0xFF))); // Adjust position and color as needed
+                //    renderer->drawString(fpsString, false, 20, tsl::cfg::FramebufferHeight - 60, 20, a(tsl::Color(0xFF, 0xFF, 0xFF, 0xFF))); // Adjust position and color as needed
                 //    
                 //    //svcGetSystemInfo(&RAM_Used_system_u, 1, INVALID_HANDLE, 2);
                 //    //svcGetSystemInfo(&RAM_Total_system_u, 0, INVALID_HANDLE, 2);
@@ -4451,7 +4527,7 @@ namespace tsl {
                 
                 renderer->drawRect(15, tsl::cfg::FramebufferHeight - 73, tsl::cfg::FramebufferWidth - 30, 1, a(defaultTextColor));
                 
-                renderer->drawString(("\uE0E1  "+BACK+"     \uE0E0  "+OK).c_str(), false, 30, 693, 23, a(defaultTextColor)); // CUSTOM MODIFICATION
+                renderer->drawString(("\uE0E1  "+BACK+"     \uE0E0  "+OK), false, 30, 693, 23, a(defaultTextColor)); // CUSTOM MODIFICATION
                 
                 if (this->m_header != nullptr)
                     this->m_header->frame(renderer);
@@ -4634,10 +4710,11 @@ namespace tsl {
                     this->invalidate();
                     this->updateScrollOffset();
                 }
-            
+                
                 if (!this->m_itemsToRemove.empty()) {
+                    auto it = this->m_items.cend(); // Start with end iterator to ensure it's valid
                     for (auto* element : this->m_itemsToRemove) {
-                        auto it = std::find(this->m_items.cbegin(), this->m_items.cend(), element);
+                        it = std::find(this->m_items.cbegin(), this->m_items.cend(), element);
                         if (it != this->m_items.cend()) {
                             this->m_items.erase(it);
                             if (this->m_focusedIndex >= static_cast<size_t>(it - this->m_items.cbegin())) {
@@ -4697,18 +4774,20 @@ namespace tsl {
                         static float velocity = 0.0f;
                     
                         // Calculate the difference between the next and current offsets
-                        float deltaOffset = this->m_nextOffset - this->m_offset;
+                        //float deltaOffset = this->m_nextOffset - this->m_offset;
                     
                         // Apply smoothing to the velocity
-                        velocity = velocity * dampingFactor + deltaOffset * smoothingFactor;
+                        velocity = velocity * dampingFactor + (this->m_nextOffset - this->m_offset) * smoothingFactor;
                     
-                        // Update the offset with the smoothed velocity
-                        this->m_offset += velocity;
+
                     
                         // If the velocity is small, snap to the target offset
-                        if (std::abs(velocity) < 0.1f) {
+                        if (std::abs(velocity) < 0.2f) {
                             this->m_offset = this->m_nextOffset;
                             velocity = 0.0f;
+                        } else {
+                            // Update the offset with the smoothed velocity
+                            this->m_offset += velocity;
                         }
                     
                         // Update the last offset for the next frame
@@ -4960,8 +5039,9 @@ namespace tsl {
             }
             
             inline void removePendingItems() {
+                auto it = this->m_items.cend(); // Initialize iterator to end
                 for (auto element : this->m_itemsToRemove) {
-                    auto it = std::find(this->m_items.cbegin(), this->m_items.cend(), element);
+                    it = std::find(this->m_items.cbegin(), this->m_items.cend(), element);
                     if (it != this->m_items.cend()) {
                         this->m_items.erase(it);
                         if (this->m_focusedIndex >= static_cast<size_t>(it - this->m_items.cbegin())) {
@@ -5091,18 +5171,18 @@ namespace tsl {
 
                 if (this->m_maxWidth == 0) {
                     if (this->m_value.length() > 0) {
-                        std::tie(width, height) = renderer->drawString(this->m_value.c_str(), false, 0, 0, 20, a(tsl::style::color::ColorTransparent));
+                        std::tie(width, height) = renderer->drawString(this->m_value, false, 0, 0, 20, a(tsl::style::color::ColorTransparent));
                         this->m_maxWidth = this->getWidth() - width - 70 +4;
                     } else {
                         this->m_maxWidth = this->getWidth() - 40 -10;
                     }
                     
-                    std::tie(width, height) = renderer->drawString(this->m_text.c_str(), false, 0, 0, 23, a(tsl::style::color::ColorTransparent));
+                    std::tie(width, height) = renderer->drawString(this->m_text, false, 0, 0, 23, a(tsl::style::color::ColorTransparent));
                     this->m_trunctuated = width > this->m_maxWidth+20;
                     
                     if (this->m_trunctuated) {
                         this->m_scrollText = this->m_text + "        ";
-                        std::tie(width, height) = renderer->drawString(this->m_scrollText.c_str(), false, 0, 0, 23, a(tsl::style::color::ColorTransparent));
+                        std::tie(width, height) = renderer->drawString(this->m_scrollText, false, 0, 0, 23, a(tsl::style::color::ColorTransparent));
                         this->m_scrollText += this->m_text;
                         this->m_textWidth = width;
                         
@@ -5115,6 +5195,7 @@ namespace tsl {
                 if (lastBottomBound !=  this->getTopBound())
                     renderer->drawRect(this->getX()+4, this->getTopBound(), this->getWidth()+6, 1, a(separatorColor));
                 renderer->drawRect(this->getX()+4, this->getBottomBound(), this->getWidth()+6, 1, a(separatorColor));
+
                 lastBottomBound = this->getBottomBound();
                 
                 if (this->m_trunctuated) {
@@ -5123,7 +5204,7 @@ namespace tsl {
                             renderer->enableScissoring(this->getX()+6, 97, this->m_maxWidth + 40 - 6-4, tsl::cfg::FramebufferHeight-73-97);
                         else
                             renderer->enableScissoring(this->getX()+6, 97, this->m_maxWidth + 40 - 6, tsl::cfg::FramebufferHeight-73-97);
-                        renderer->drawString(this->m_scrollText.c_str(), false, this->getX() + 20-1 - this->m_scrollOffset, this->getY() + 45, 23, a(selectedTextColor));
+                        renderer->drawString(this->m_scrollText, false, this->getX() + 20-1 - this->m_scrollOffset, this->getY() + 45, 23, a(selectedTextColor));
                         renderer->disableScissoring();
                         //t = std::chrono::steady_clock::now() - this->timeIn;
                         if (std::chrono::steady_clock::now() - this->timeIn >= 2000ms) {
@@ -5136,7 +5217,7 @@ namespace tsl {
                             }
                         } // CUSTOM MODIFICATION END
                     } else {
-                        renderer->drawString(this->m_ellipsisText.c_str(), false, this->getX() + 20-1, this->getY() + 45, 23, a(!useClickTextColor ? defaultTextColor : clickTextColor));
+                        renderer->drawString(this->m_ellipsisText, false, this->getX() + 20-1, this->getY() + 45, 23, a(!useClickTextColor ? defaultTextColor : clickTextColor));
                     }
                 } else {
                     // Render the text with special character handling
@@ -5174,7 +5255,7 @@ namespace tsl {
                 }
 
                 // Draw the string with the determined text color
-                renderer->drawString(this->m_value.c_str(), false, xPosition, yPosition, fontSize, textColor);
+                renderer->drawString(this->m_value, false, xPosition, yPosition, fontSize, textColor);
                 // CUSTOM SECTION END 
             }
             
@@ -5375,9 +5456,9 @@ namespace tsl {
             virtual void draw(gfx::Renderer *renderer) override {
                 if (this->m_hasSeparator) {
                     renderer->drawRect(this->getX()+1+1, this->getBottomBound() - 30, 3, 23, a(headerSeparatorColor));
-                    renderer->drawString(this->m_text.c_str(), false, this->getX() + 15+1, this->getBottomBound() - 12, 15, a(headerTextColor));
+                    renderer->drawString(this->m_text, false, this->getX() + 15+1, this->getBottomBound() - 12, 15, a(headerTextColor));
                 } else {
-                    renderer->drawString(this->m_text.c_str(), false, this->getX(), this->getBottomBound() - 12, 15, a(headerTextColor));
+                    renderer->drawString(this->m_text, false, this->getX(), this->getBottomBound() - 12, 15, a(headerTextColor));
                 }
                 //if (this->m_hasSeparator)
                 //    renderer->drawRect(this->getX(), this->getBottomBound(), this->getWidth(), 1, tsl::style::color::ColorFrame); // CUSTOM MODIFICATION
@@ -5729,15 +5810,15 @@ namespace tsl {
                 else
                     valuePart = this->m_selection;
                 std::string combinedString = labelPart + valuePart;
-                std::tie(descWidth, descHeight) = renderer->drawString(combinedString.c_str(), false, 0, 0, 16, a(tsl::style::color::ColorTransparent));
+                std::tie(descWidth, descHeight) = renderer->drawString(combinedString, false, 0, 0, 16, a(tsl::style::color::ColorTransparent));
                 
                 size_t combinedX = (xPos + width / 2) - (descWidth / 2);
                 size_t labelWidth;
-                std::tie(labelWidth, descHeight) = renderer->drawString(labelPart.c_str(), false, 0, 0, 16, a(tsl::style::color::ColorTransparent));
+                std::tie(labelWidth, descHeight) = renderer->drawString(labelPart, false, 0, 0, 16, a(tsl::style::color::ColorTransparent));
                 
 
-                renderer->drawString(labelPart.c_str(), false, combinedX, this->getY() + 14 + 16, 16, (!this->m_focused ? a(defaultTextColor) : a(selectedTextColor)));
-                renderer->drawString(valuePart.c_str(), false, combinedX + labelWidth, this->getY() + 14 + 16, 16, a(onTextColor));
+                renderer->drawString(labelPart, false, combinedX, this->getY() + 14 + 16, 16, (!this->m_focused ? a(defaultTextColor) : a(selectedTextColor)));
+                renderer->drawString(valuePart, false, combinedX + labelWidth, this->getY() + 14 + 16, 16, a(onTextColor));
                 
                 if (lastBottomBound != this->getTopBound())
                     renderer->drawRect(this->getX() + 4+20-1, this->getTopBound(), this->getWidth() + 6 + 10+20, 1, a(separatorColor));
@@ -5808,6 +5889,7 @@ namespace tsl {
 
                 if (!disableSelectionBG)
                     renderer->drawRect(this->getX() + x +19, this->getY() + y, this->getWidth()-11-4, this->getHeight(), a(selectionBGColor)); // CUSTOM MODIFICATION 
+
                 renderer->drawBorderedRoundedRect(this->getX() + x +19, this->getY() + y, this->getWidth()-11, this->getHeight(), 5, 5, a(highlightColor));
 
                 //if (this->m_clickAnimationProgress == 0) {
@@ -7262,11 +7344,13 @@ std::string convertComboToUnicode(const std::string& combo) {
     
     std::string trimmedToken;
 
+    auto it = buttonCharMap.end(); // Initialize iterator to end
+
     // Manually iterate through the combo string and split by '+'
     for (size_t i = 0; i <= combo.length(); ++i) {
         if (i == combo.length() || combo[i] == '+') {
             trimmedToken = trim(token);
-            auto it = buttonCharMap.find(trimmedToken);
+            it = buttonCharMap.find(trimmedToken);
 
             if (it != buttonCharMap.end()) {
                 unicodeCombo += it->second + "+";
