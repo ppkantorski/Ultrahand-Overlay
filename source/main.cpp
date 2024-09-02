@@ -867,8 +867,8 @@ public:
             
             // Version info formatting with a reduced buffer
             char versionString[32];  // Reduced buffer size to 32
-            snprintf(versionString, sizeof(versionString), "HOS %s│AMS %s%s", 
-                     hosVersion, amsVersion, usingEmunand ? "│E" : "│S");
+            snprintf(versionString, sizeof(versionString), "HOS %s│AMS %s", 
+                     hosVersion, amsVersion);
             
             std::string hekateVersion = extractVersionFromBinary("sdmc:/bootloader/update.bin");
             
@@ -900,7 +900,7 @@ public:
                 {MEMORY, "", memorySize},
                 {"└ " + VENDOR, "", memoryVendor},
                 {"└ " + MODEL, "", memoryModel},
-                {STORAGE, "", ""},
+                {STORAGE, "", usingEmunand ? "emuMMC" : "sysMMC"},
                 {"└ eMMC ", "", getStorageInfo("emmc")},
                 {"└ SD Card", "", getStorageInfo("sdmc")}
             };
