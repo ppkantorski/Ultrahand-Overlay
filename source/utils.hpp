@@ -29,7 +29,7 @@
 #include <queue>
 #include <mutex>
 #include <condition_variable>
-#include <sys/statvfs.h>
+//#include <sys/statvfs.h>
 
 
 static std::atomic<bool> abortCommand(false);
@@ -52,6 +52,9 @@ static std::string memoryType;
 static std::string memoryVendor = UNAVAILABLE_SELECTION;
 static std::string memoryModel = UNAVAILABLE_SELECTION;
 static std::string memorySize = UNAVAILABLE_SELECTION;
+static uint32_t cpuSpeedo0, cpuSpeedo2, socSpeedo0; // CPU, GPU, SOC
+static uint32_t cpuIDDQ, gpuIDDQ, socIDDQ;
+static bool usingEmunand = true;
 
 /**
  * @brief Ultrahand-Overlay Configuration Paths
@@ -72,6 +75,162 @@ static std::string memorySize = UNAVAILABLE_SELECTION;
  */
 
 
+//void testAudioOutput() {
+//    Result res;
+//    audoutInitialize();
+//    
+//    // Sample rate and buffer size
+//    const size_t sampleRate = 48000; // 48 kHz
+//    const size_t seconds = 1; // Duration of audio
+//    const size_t bufferSize = sampleRate * sizeof(int16_t) * seconds;
+//
+//    // Allocate buffer dynamically to avoid large stack allocations
+//    int16_t* buffer = (int16_t*)malloc(bufferSize);
+//    if (buffer == nullptr) {
+//        logMessage("Failed to allocate buffer memory!\n");
+//        audoutExit();
+//        return;
+//    }
+//    
+//    // Generate a simple tone (sine wave)
+//    float frequency = 400.0f; // 440 Hz tone
+//    float amplitude = 0.5f;   // Volume
+//
+//    for (size_t i = 0; i < bufferSize / sizeof(int16_t); i++) {
+//        float sample = amplitude * sinf(2.0f * M_PI * frequency * i / sampleRate);
+//        buffer[i] = (int16_t)(sample * 32767.0f); // Convert to 16-bit PCM
+//    }
+//
+//    // Prepare buffers
+//    AudioOutBuffer audioBuffer;
+//    audioBuffer.buffer = buffer;
+//    audioBuffer.buffer_size = bufferSize;
+//    audioBuffer.data_size = bufferSize;
+//
+//    // Start audio output
+//    res = audoutStartAudioOut();
+//    if (R_FAILED(res)) {
+//        logMessage("Failed to start audio output!");
+//        free(buffer);
+//        audoutExit();
+//        return;
+//    }
+//
+//    // Play the sound
+//    res = audoutAppendAudioOutBuffer(&audioBuffer);
+//    if (R_FAILED(res)) {
+//        logMessage("Failed to append audio buffer!");
+//    }
+//    
+//    audoutWaitPlayFinish(NULL, NULL, 1000);
+//
+//    // Clean up
+//    free(buffer);
+//    audoutStopAudioOut();
+//    audoutExit();
+//}
+
+#define FUSE_CPU_SPEEDO_0_CALIB 0x114
+//#define FUSE_CPU_SPEEDO_1_CALIB 0x12C
+#define FUSE_CPU_SPEEDO_2_CALIB 0x130
+
+#define FUSE_SOC_SPEEDO_0_CALIB 0x134
+//#define FUSE_SOC_SPEEDO_1_CALIB 0x138
+//#define FUSE_SOC_SPEEDO_2_CALIB 0x13C
+
+#define FUSE_CPU_IDDQ_CALIB 0x118
+#define FUSE_SOC_IDDQ_CALIB 0x140
+#define FUSE_GPU_IDDQ_CALIB 0x228
+
+
+//bool areAllNonZero(const std::initializer_list<u32>& values) {
+//    return std::all_of(values.begin(), values.end(), [](u32 value) { return value != 0; });
+//}
+
+//uint32_t readFuseValue(std::ifstream &file, std::streamoff offset) {
+//    uint32_t value = 0;
+//    // Seek to the specified offset
+//    file.seekg(offset, std::ios::beg);
+//    if (file.good()) {
+//        // Read the value (assuming it's a 4-byte integer)
+//        file.read(reinterpret_cast<char*>(&value), sizeof(value));
+//    } else {
+//        //std::cerr << "Error: Unable to seek to the specified offset." << std::endl;
+//    }
+//    return value;
+//}
+
+// Special thanks to Massagrator
+void fuseDumpToIni(const std::string& outputPath = FUSE_DATA_INI_PATH) {
+    if (isFileOrDirectory(outputPath)) {
+        return;
+    }
+
+    u64 pid = 0;
+    if (R_FAILED(pmdmntInitialize()) || R_FAILED(pmdmntGetProcessId(&pid, 0x0100000000000006))) {
+        pmdmntExit();
+        return;
+    }
+
+    pmdmntExit();
+
+    Handle debug;
+    if (R_FAILED(svcDebugActiveProcess(&debug, pid))) {
+        return;
+    }
+
+    MemoryInfo mem_info = {0};
+    u32 pageinfo = 0;
+    u64 addr = 0;
+
+    char stack[0x10] = {0};
+    const char compare[0x10] = {0};
+    char dump[0x400] = {0};
+
+    while (true) {
+        if (R_FAILED(svcQueryDebugProcessMemory(&mem_info, &pageinfo, debug, addr)) || mem_info.addr < addr) {
+            break;
+        }
+
+        if (mem_info.type == MemType_Io && mem_info.size == 0x1000) {
+            if (R_FAILED(svcReadDebugProcessMemory(stack, debug, mem_info.addr, sizeof(stack)))) {
+                break;
+            }
+
+            if (std::memcmp(stack, compare, sizeof(stack)) == 0) {
+                if (R_FAILED(svcReadDebugProcessMemory(dump, debug, mem_info.addr + 0x800, sizeof(dump)))) {
+                    svcCloseHandle(debug);
+                    return;
+                }
+
+                // Simplified INI setting
+                std::ofstream outFile(outputPath);
+                if (outFile) {
+                    outFile.write("[", 1);
+                    outFile.write(FUSE_STR.c_str(), FUSE_STR.size());
+                    outFile.write("]\n", 2);
+                    outFile << "cpuSpeedo0=" << *reinterpret_cast<const uint32_t*>(dump + FUSE_CPU_SPEEDO_0_CALIB) << '\n'
+                            << "cpuSpeedo2=" << *reinterpret_cast<const uint32_t*>(dump + FUSE_CPU_SPEEDO_2_CALIB) << '\n'
+                            << "socSpeedo0=" << *reinterpret_cast<const uint32_t*>(dump + FUSE_SOC_SPEEDO_0_CALIB) << '\n'
+                            << "cpuIDDQ=" << *reinterpret_cast<const uint32_t*>(dump + FUSE_CPU_IDDQ_CALIB) << '\n'
+                            << "socIDDQ=" << *reinterpret_cast<const uint32_t*>(dump + FUSE_SOC_IDDQ_CALIB) << '\n'
+                            << "gpuIDDQ=" << *reinterpret_cast<const uint32_t*>(dump + FUSE_GPU_IDDQ_CALIB) << '\n';
+                    outFile.close();
+                }
+                svcCloseHandle(debug);
+                return;
+            }
+        }
+
+        addr = mem_info.addr + mem_info.size;
+    }
+
+    svcCloseHandle(debug);
+}
+
+
+
+
 // Function to remove all empty command strings
 void removeEmptyCommands(std::vector<std::vector<std::string>>& commands) {
     commands.erase(std::remove_if(commands.begin(), commands.end(),
@@ -85,11 +244,13 @@ void removeEmptyCommands(std::vector<std::vector<std::string>>& commands) {
 
 void reloadWallpaper() {
     while (true) {
-        if (!inPlot) {
-            std::lock_guard<std::mutex> lock(wallpaperMutex);
-            std::vector<u8>().swap(wallpaperData);
-            //if (isFileOrDirectory(WALLPAPER_PATH))
-            wallpaperData = loadBitmapFile(WALLPAPER_PATH, 448, 720);
+        if (!inPlot.load(std::memory_order_acquire)) {
+            {
+                std::lock_guard<std::mutex> lock(wallpaperMutex);
+                std::vector<u8>().swap(wallpaperData);
+                //if (isFileOrDirectory(WALLPAPER_PATH))
+                wallpaperData = loadBitmapFile(WALLPAPER_PATH, 448, 720);
+            }
             break;
         }
     }
@@ -106,88 +267,216 @@ void formatVersion(uint64_t packed_version, int shift1, int shift2, int shift3, 
 }
 
 
-// Function to get the corresponding string for a given packed_version
 const char* getMemoryType(uint64_t packed_version) {
-    // Define an array of strings indexed by packed_version
-    static const char* memoryArray[] = {
-        "Samsung_K4F6E304HB-MGCH_4 GB LPDDR4 3200 Mbps",        // 0
-        "Hynix_H9HCNNNBPUMLHR-NLE_4 GB LPDDR4 3200 Mbps",       // 1
-        "Micron_MT53B512M32D2NP-062 WT:C_4 GB LPDDR4 3200 Mbps",// 2
-        "Hynix_H9HCNNNBKMMLXR-NEE_4 GB LPDDR4X 4266 Mbps",      // 3
-        "Samsung_K4FHE3D4HM-MGCH_6 GB LPDDR4 3200 Mbps",        // 4
-        "Hynix_H9HCNNNBKMMLXR-NEE_4 GB LPDDR4X 4266 Mbps",      // 5
-        "Hynix_H9HCNNNBKMMLXR-NEE_4 GB LPDDR4X 4266 Mbps",      // 6
-        "Samsung_K4FBE3D4HM-MGXX_8 GB LPDDR4 3200 Mbps",        // 7
-        "Samsung_K4U6E3S4AM-MGCJ_4 GB LPDDR4X 3733 Mbps",       // 8
-        "Samsung_K4UBE3D4AM-MGCJ_8 GB LPDDR4X 3733 Mbps",       // 9
-        "Hynix_H9HCNNNBKMMLHR-NME_4 GB LPDDR4X 3733 Mbps",      // 10
-        "Micron_MT53E512M32D2NP-046 WT:E_4 GB LPDDR4X 4266 Mbps",// 11
-        "Samsung_K4U6E3S4AM-MGCJ_4 GB LPDDR4X 3733 Mbps",       // 12
-        "Samsung_K4UBE3D4AM-MGCJ_8 GB LPDDR4X 3733 Mbps",       // 13
-        "Hynix_H9HCNNNBKMMLHR-NME_4 GB LPDDR4X 3733 Mbps",      // 14
-        "Micron_MT53E512M32D2NP-046 WT:E_4 GB LPDDR4X 4266 Mbps",// 15
-        nullptr,                                              // 16 (no entry)
-        "Samsung_K4U6E3S4AA-MGCL_4 GB LPDDR4X 4266 Mbps",       // 17
-        "Samsung_K4UBE3D4AA-MGCL_8 GB LPDDR4X 4266 Mbps",       // 18
-        "Samsung_K4U6E3S4AA-MGCL_4 GB LPDDR4X 4266 Mbps",       // 19
-        "Samsung_K4U6E3S4AB-MGCL_4 GB LPDDR4X 4266 Mbps",       // 20
-        "Samsung_K4U6E3S4AB-MGCL_4 GB LPDDR4X 4266 Mbps",       // 21
-        "Samsung_K4U6E3S4AB-MGCL_4 GB LPDDR4X 4266 Mbps",       // 22
-        "Samsung_K4UBE3D4AA-MGCL_8 GB LPDDR4X 4266 Mbps",       // 23
-        "Samsung_K4U6E3S4AA-MGCL_4 GB LPDDR4X 4266 Mbps",       // 24
-        "Micron_MT53E512M32D2NP-046 WT:F_4 GB LPDDR4X 4266 Mbps",// 25
-        "Micron_MT53E512M32D2NP-046 WT:F_4 GB LPDDR4X 4266 Mbps",// 26
-        "Micron_MT53E512M32D2NP-046 WT:F_4 GB LPDDR4X 4266 Mbps",// 27
-        "Samsung_K4UBE3D4AA-MGCL_8 GB LPDDR4X 4266 Mbps",       // 28
-        "Hynix_H54G46CYRBX267_4 GB LPDDR4X 4266 Mbps",          // 29
-        "Hynix_H54G46CYRBX267_4 GB LPDDR4X 4266 Mbps",          // 30
-        "Hynix_H54G46CYRBX267_4 GB LPDDR4X 4266 Mbps",          // 31
-        "Micron_MT53E512M32D1NP-046 WT:B_4 GB LPDDR4X 4266 Mbps",// 32
-        "Micron_MT53E512M32D1NP-046 WT:B_4 GB LPDDR4X 4266 Mbps",// 33
-        "Micron_MT53E512M32D1NP-046 WT:B_4 GB LPDDR4X 4266 Mbps" // 34
-    };
-
-    if (packed_version < sizeof(memoryArray) / sizeof(memoryArray[0]) && memoryArray[packed_version] != nullptr) {
-        //std::string memoryType = memoryArray[packed_version];
-        
-        //if (modelOnly) {
-        //    // Find the first and second underscores
-        //    size_t firstUnderscore = memoryType.find('_');
-        //    size_t secondUnderscore = memoryType.find('_', firstUnderscore + 1);
-        //    
-        //    // Extract the substring between the two underscores
-        //    if (firstUnderscore != std::string::npos && secondUnderscore != std::string::npos) {
-        //        return memoryType.substr(firstUnderscore + 1, secondUnderscore - firstUnderscore - 1);
-        //    }
-        //}
-
-        return memoryArray[packed_version] ? memoryArray[packed_version] : "";
-    } else {
-        return "";  // Handle the case where the version is not found
+    switch (packed_version) {
+        case 0: return "Samsung_K4F6E304HB-MGCH_4GB_LPDDR4_3200Mbps";
+        case 1: return "Hynix_H9HCNNNBPUMLHR-NLE_4GB_LPDDR4_3200Mbps";
+        case 2: return "Micron_MT53B512M32D2NP-062_WT:C_4GB_LPDDR4_3200Mbps";
+        case 3: return "Hynix_H9HCNNNBKMMLXR-NEE_4GB_LPDDR4X_4266Mbps";
+        case 4: return "Samsung_K4FHE3D4HM-MGCH_6GB_LPDDR4_3200Mbps";
+        case 5: return "Hynix_H9HCNNNBKMMLXR-NEE_4GB_LPDDR4X_4266Mbps";
+        case 6: return "Hynix_H9HCNNNBKMMLXR-NEE_4GB_LPDDR4X_4266Mbps";
+        case 7: return "Samsung_K4FBE3D4HM-MGXX_8GB_LPDDR4_3200Mbps";
+        case 8: return "Samsung_K4U6E3S4AM-MGCJ_4GB_LPDDR4X_3733Mbps";
+        case 9: return "Samsung_K4UBE3D4AM-MGCJ_8GB_LPDDR4X_3733Mbps";
+        case 10: return "Hynix_H9HCNNNBKMMLHR-NME_4GB_LPDDR4X_3733Mbps";
+        case 11: return "Micron_MT53E512M32D2NP-046_WT:E_4GB_LPDDR4X_4266Mbps";
+        case 12: return "Samsung_K4U6E3S4AM-MGCJ_4GB_LPDDR4X_3733Mbps";
+        case 13: return "Samsung_K4UBE3D4AM-MGCJ_8GB_LPDDR4X_3733Mbps";
+        case 14: return "Hynix_H9HCNNNBKMMLHR-NME_4GB_LPDDR4X_3733Mbps";
+        case 15: return "Micron_MT53E512M32D2NP-046_WT:E_4GB_LPDDR4X_4266Mbps";
+        case 17: return "Samsung_K4U6E3S4AA-MGCL_4GB_LPDDR4X_4266Mbps";
+        case 18: return "Samsung_K4UBE3D4AA-MGCL_8GB_LPDDR4X_4266Mbps";
+        case 19: return "Samsung_K4U6E3S4AA-MGCL_4GB_LPDDR4X_4266Mbps";
+        case 20: return "Samsung_K4U6E3S4AB-MGCL_4GB_LPDDR4X_4266Mbps";
+        case 21: return "Samsung_K4U6E3S4AB-MGCL_4GB_LPDDR4X_4266Mbps";
+        case 22: return "Samsung_K4U6E3S4AB-MGCL_4GB_LPDDR4X_4266Mbps";
+        case 23: return "Samsung_K4UBE3D4AA-MGCL_8GB_LPDDR4X_4266Mbps";
+        case 24: return "Samsung_K4U6E3S4AA-MGCL_4GB_LPDDR4X_4266Mbps";
+        case 25: return "Micron_MT53E512M32D2NP-046_WT:F_4GB_LPDDR4X_4266Mbps";
+        case 26: return "Micron_MT53E512M32D2NP-046_WT:F_4GB_LPDDR4X_4266Mbps";
+        case 27: return "Micron_MT53E512M32D2NP-046_WT:F_4GB_LPDDR4X_4266Mbps";
+        case 28: return "Samsung_K4UBE3D4AA-MGCL_8GB_LPDDR4X_4266Mbps";
+        case 29: return "Hynix_H54G46CYRBX267_4GB_LPDDR4X_4266Mbps";
+        case 30: return "Hynix_H54G46CYRBX267_4GB_LPDDR4X_4266Mbps";
+        case 31: return "Hynix_H54G46CYRBX267_4GB_LPDDR4X_4266Mbps";
+        case 32: return "Micron_MT53E512M32D1NP-046_WT:B_4GB_LPDDR4X_4266Mbps";
+        case 33: return "Micron_MT53E512M32D1NP-046_WT:B_4GB_LPDDR4X_4266Mbps";
+        case 34: return "Micron_MT53E512M32D1NP-046_WT:B_4GB_LPDDR4X_4266Mbps";
+        default: return "";
     }
 }
 
 
-const char* getSDMCStorageInfo() {
-    struct statvfs stat;
-    static char buffer[30]; // Static buffer to retain data across function calls
 
-    // Get filesystem statistics for "sdmc:/"
-    if (statvfs(ROOT_PATH.c_str(), &stat) != 0) {
-        // Handle error, could not get filesystem statistics
-        return ""; // Returning a fixed error message
+
+//const char* getSDMCStorageInfo() {
+//    struct statvfs stat;
+//    static char buffer[30]; // Static buffer to retain data across function calls
+//
+//    // Get filesystem statistics for "sdmc:/"
+//    if (statvfs(ROOT_PATH.c_str(), &stat) != 0) {
+//    //if (statvfs("emmc:/", &stat) != 0) {
+//        // Handle error, could not get filesystem statistics
+//        return ""; // Returning a fixed error message
+//    }
+//
+//    // Calculate total and available storage in GB with proper casting to avoid integer division
+//    double totalSpaceGB = static_cast<double>(stat.f_blocks) * stat.f_frsize / (1024.0 * 1024.0 * 1024.0);
+//    double availableSpaceGB = static_cast<double>(stat.f_bavail) * stat.f_frsize / (1024.0 * 1024.0 * 1024.0);
+//
+//    // Create a formatted string with the available and total storage in GB
+//    snprintf(buffer, sizeof(buffer), "%.2f GB / %.2f GB", availableSpaceGB, totalSpaceGB);
+//
+//    // Return the formatted string
+//    return buffer;
+//}
+
+
+//const char* getStorageInfo(NcmStorageId storageId) {
+//    static char buffer[64];  // Increase buffer size for more detailed error messages
+//
+//    // Initialize the filesystem service
+//    Result rc = fsInitialize();
+//    if (R_FAILED(rc)) {
+//        snprintf(buffer, sizeof(buffer), "Error initializing fs: 0x%x", rc);
+//        return buffer;
+//    }
+//
+//    FsStorage storage;
+//    rc = fsOpenBisStorage(&storage, (FsBisPartitionId)storageId);
+//    if (R_FAILED(rc)) {
+//        snprintf(buffer, sizeof(buffer), "Error opening storage: 0x%x", rc);
+//        fsExit();  // Clean up the filesystem service
+//        return buffer;
+//    }
+//
+//    s64 totalSize = 0;
+//    rc = fsStorageGetSize(&storage, &totalSize);
+//    if (R_FAILED(rc)) {
+//        snprintf(buffer, sizeof(buffer), "Error getting size: 0x%x", rc);
+//        fsStorageClose(&storage);
+//        fsExit();  // Clean up the filesystem service
+//        return buffer;
+//    }
+//
+//    // Calculate total storage space in GB
+//    double totalSpaceGB = static_cast<double>(totalSize) / (1024.0 * 1024.0 * 1024.0);
+//
+//    // Create a formatted string with the total storage in GB
+//    snprintf(buffer, sizeof(buffer), "N/A / %.2f GB", totalSpaceGB);
+//
+//    // Close the storage handle
+//    fsStorageClose(&storage);
+//
+//    // Clean up the filesystem service
+//    fsExit();
+//
+//    return buffer;
+//}
+
+
+//const char* getSDMCStorageInfo3() {
+//    s64 freeSpace = 0;  // Free space in bytes
+//    s64 totalSpace = 0; // Total space in bytes
+//    char* buffer = (char*)malloc(64); // Dynamically allocate memory for the string
+//
+//    if (buffer == NULL) {
+//        return "Memory allocation failed.";
+//    }
+//
+//    // Initialize the ns service
+//    Result result = nsInitialize();
+//    if (R_FAILED(result)) {
+//        free(buffer);
+//        return "Failed to initialize ns service.";
+//    }
+//
+//    // Get the free space size on the SD card
+//    //result = nsGetFreeSpaceSize(NcmStorageId_SdCard, &freeSpace);
+//    result = nsGetFreeSpaceSize(NcmStorageId_BuiltInUser, &freeSpace);
+//    if (R_FAILED(result)) {
+//        nsExit(); // Close the ns service
+//        free(buffer); // Free the allocated memory
+//        return "Error retrieving free space.";
+//    }
+//
+//    // Get the total space size on the SD card
+//    //result = nsGetTotalSpaceSize(NcmStorageId_SdCard, &totalSpace);
+//    result = nsGetTotalSpaceSize(NcmStorageId_BuiltInUser, &totalSpace);
+//    if (R_FAILED(result)) {
+//        nsExit(); // Close the ns service
+//        free(buffer); // Free the allocated memory
+//        return "Error retrieving total space.";
+//    }
+//
+//    // Convert the free and total space from bytes to GB
+//    float freeSpaceGB = freeSpace / (1024.0f * 1024.0f * 1024.0f);   // Convert bytes to GB
+//    float totalSpaceGB = totalSpace / (1024.0f * 1024.0f * 1024.0f); // Convert bytes to GB
+//
+//    // Format the free and total space as a string
+//    snprintf(buffer, 64, "%.2f GB / %.2f GB", freeSpaceGB, totalSpaceGB);
+//
+//    // Close the ns service
+//    nsExit();
+//
+//    return buffer; // Return the dynamically allocated string
+//}
+
+const char* getStorageInfo(const std::string& storageType) {
+    s64 freeSpace = 0;
+    s64 totalSpace = 0;
+    char* buffer = (char*)malloc(30);
+
+    FsFileSystem fs;
+    Result result;
+    
+    if (storageType == "emmc")
+        result = fsOpenBisFileSystem(&fs, FsBisPartitionId_User, "");
+    else if (storageType == "sdmc")
+        result = fsOpenContentStorageFileSystem (&fs, FsContentStorageId_SdCard);
+    else
+        return buffer;
+
+    if (R_FAILED(result)) {
+        return buffer;
     }
 
-    // Calculate total and available storage in GB with proper casting to avoid integer division
-    double totalSpaceGB = static_cast<double>(stat.f_blocks) * stat.f_frsize / (1024.0 * 1024.0 * 1024.0);
-    double availableSpaceGB = static_cast<double>(stat.f_bavail) * stat.f_frsize / (1024.0 * 1024.0 * 1024.0);
+    // Get free space on the NAND
+    result = fsFsGetFreeSpace(&fs, "/", &freeSpace);
+    if (R_FAILED(result)) {
+        fsFsClose(&fs);
+        return buffer;
+    }
 
-    // Create a formatted string with the available and total storage in GB
-    snprintf(buffer, sizeof(buffer), "%.2f GB / %.2f GB", availableSpaceGB, totalSpaceGB);
+    // Get total space on the NAND
+    result = fsFsGetTotalSpace(&fs, "/", &totalSpace);
+    if (R_FAILED(result)) {
+        fsFsClose(&fs);
+        return buffer;
+    }
 
-    // Return the formatted string
+    // Convert the free and total space from bytes to GB
+    float freeSpaceGB = freeSpace / (1024.0f * 1024.0f * 1024.0f);
+    float totalSpaceGB = totalSpace / (1024.0f * 1024.0f * 1024.0f);
+
+    // Format the free and total space as a string
+    snprintf(buffer, 64, "%.2f GB / %.2f GB", freeSpaceGB, totalSpaceGB);
+
+    // Close the NAND file system
+    fsFsClose(&fs);
+
     return buffer;
 }
+
+//const char* getStorageInfo(const std::string& storageType = "sdmc") {
+//    if (storageType == "sdmc") {
+//        return getSDMCStorageInfo();
+//    } else if (storageType == "user") {
+//        return getUserStorageInfo();
+//    }
+//    return "";
+//}
 
 
 void unpackDeviceInfo() {
@@ -211,6 +500,28 @@ void unpackDeviceInfo() {
     
     // Format HOS version
     formatVersion(packed_version, 24, 16, 8, hosVersion);
+
+    splGetConfig((SplConfigItem)65007, &packed_version);
+    usingEmunand = (packed_version != 0);
+
+
+    fuseDumpToIni();
+    if (isFileOrDirectory(FUSE_DATA_INI_PATH)) {
+        const std::pair<const char*, u32*> keys[] = {
+            {"cpuSpeedo0", &cpuSpeedo0},
+            {"cpuSpeedo2", &cpuSpeedo2},
+            {"socSpeedo0", &socSpeedo0},
+            {"cpuIDDQ", &cpuIDDQ},
+            {"socIDDQ", &socIDDQ},
+            {"gpuIDDQ", &gpuIDDQ}
+        };
+        std::string value;
+        for (const auto& key : keys) {
+            value = parseValueFromIniSection(FUSE_DATA_INI_PATH, FUSE_STR, key.first);
+            *key.second = value.empty() ? 0 : std::stoi(value);
+        }
+    }
+
 }
 
 
@@ -221,97 +532,54 @@ void unpackDeviceInfo() {
  * It checks the firmware version and uses the appropriate function to get the device condition and disconnects
  * the controllers.
  */
-//void powerOffAllControllers() {
-//    Result rc;
-//    static s32 g_connected_count = 0;
-//    static BtdrvAddress g_addresses[8] = {};
-//    
-//    // Initialize Bluetooth manager
-//    rc = btmInitialize();
-//    if (R_FAILED(rc)) {
-//        commandSuccess = false;
-//        //LogLine("Error btmInitialize: %u - %X\n", rc, rc);
-//        return;
-//    }
-//    
-//    if (hosversionAtLeast(13, 0, 0)) {
-//        BtmConnectedDeviceV13 connected_devices[8];
-//        rc = btmGetDeviceCondition(BtmProfile_None, connected_devices, 8, &g_connected_count);
-//        if (R_SUCCEEDED(rc)) {
-//            for (s32 i = 0; i != g_connected_count; ++i) {
-//                g_addresses[i] = connected_devices[i].address;
-//            }
-//        } else {
-//            commandSuccess = false;
-//            //LogLine("Error btmGetDeviceCondition: %u - %X\n", rc, rc);
-//        }
-//    } else {
-//        BtmDeviceCondition g_device_condition;
-//        rc = btmLegacyGetDeviceCondition(&g_device_condition);
-//        if (R_SUCCEEDED(rc)) {
-//            g_connected_count = g_device_condition.v900.connected_count;
-//            for (s32 i = 0; i != g_connected_count; ++i) {
-//                g_addresses[i] = g_device_condition.v900.devices[i].address;
-//            }
-//        } else {
-//            commandSuccess = false;
-//            //LogLine("Error btmLegacyGetDeviceCondition: %u - %X\n", rc, rc);
-//        }
-//    }
-//    
-//    if (R_SUCCEEDED(rc)) {
-//        //LogLine("Disconnecting controllers. Count: %u\n", g_connected_count);
-//        for (int i = 0; i != g_connected_count; ++i) {
-//            rc = btmHidDisconnect(g_addresses[i]);
-//            if (R_FAILED(rc)) {
-//                commandSuccess = false;
-//                //LogLine("Error btmHidDisconnect: %u - %X\n", rc, rc);
-//            } else {
-//                //LogLine("Disconnected Address: %u - %X\n", g_addresses[i], g_addresses[i]);
-//            }
-//        }
-//        //LogLine("All controllers disconnected.\n");
-//    } else {
-//        commandSuccess = false;
-//    }
-//    
-//    // Exit Bluetooth manager
-//    btmExit();
-//}
-
-//std::unordered_map<std::string, std::string> createButtonCharMap() {
-//    std::unordered_map<std::string, std::string> map;
-//    for (const auto& keyInfo : tsl::impl::KEYS_INFO) {
-//        map[keyInfo.name] = keyInfo.glyph;
-//    }
-//    return map;
-//}
-//
-//std::unordered_map<std::string, std::string> buttonCharMap = createButtonCharMap();
-//
-//
-//std::string convertComboToUnicode(const std::string& combo) {
-//
-//    std::istringstream iss(combo);
-//    std::string token;
-//    std::string unicodeCombo;
-//
-//    while (std::getline(iss, token, '+')) {
-//        unicodeCombo += buttonCharMap[trim(token)] + "+";
-//    }
-//
-//    if (!unicodeCombo.empty()) {
-//        unicodeCombo.pop_back();  // Remove the trailing '+'
-//    }
-//
-//    return unicodeCombo;
-//}
+void powerOffAllControllers() {
+    Result rc;
+    static s32 g_connected_count = 0;
+    static BtdrvAddress g_addresses[8] = {};
+    
+    // Initialize Bluetooth manager
+    rc = btmInitialize();
+    if (R_FAILED(rc)) {
+        commandSuccess = false;
+        //LogLine("Error btmInitialize: %u - %X\n", rc, rc);
+        return;
+    }
+    
+    BtmConnectedDeviceV13 connected_devices[8];
+    rc = btmGetDeviceCondition(BtmProfile_None, connected_devices, 8, &g_connected_count);
+    if (R_SUCCEEDED(rc)) {
+        for (s32 i = 0; i != g_connected_count; ++i) {
+            g_addresses[i] = connected_devices[i].address;
+        }
+    } else {
+        commandSuccess = false;
+        //LogLine("Error btmGetDeviceCondition: %u - %X\n", rc, rc);
+    }
+    
+    if (R_SUCCEEDED(rc)) {
+        //LogLine("Disconnecting controllers. Count: %u\n", g_connected_count);
+        for (int i = 0; i != g_connected_count; ++i) {
+            rc = btmHidDisconnect(g_addresses[i]);
+            if (R_FAILED(rc)) {
+                commandSuccess = false;
+                //LogLine("Error btmHidDisconnect: %u - %X\n", rc, rc);
+            } else {
+                //LogLine("Disconnected Address: %u - %X\n", g_addresses[i], g_addresses[i]);
+            }
+        }
+        //LogLine("All controllers disconnected.\n");
+    } else {
+        commandSuccess = false;
+    }
+    
+    // Exit Bluetooth manager
+    btmExit();
+}
 
 
 
 
-
-void initializeTheme(std::string themeIniPath = THEME_CONFIG_INI_PATH) {
+void initializeTheme(const std::string& themeIniPath = THEME_CONFIG_INI_PATH) {
     tsl::hlp::ini::IniData themeData;
     bool initialize = false;
 
@@ -446,7 +714,9 @@ std::tuple<Result, std::string, std::string> getOverlayInfo(const std::string& f
     if (!file.read(reinterpret_cast<char*>(&nacp), sizeof(NacpStruct))) {
         return {ResultParseError, "", ""};
     }
-    
+
+    file.close();
+
     // Assuming nacp.lang[0].name and nacp.display_version are null-terminated
     return {
         ResultSuccess,
@@ -481,103 +751,74 @@ void addBasicListItem(auto& list, const std::string& itemText) {
 
 
 void drawTable(std::unique_ptr<tsl::elm::List>& list, const std::vector<std::string>& sectionLines, const std::vector<std::string>& infoLines,
-    const size_t& columnOffset = 160, const size_t& startGap = 20, const size_t& endGap = 3, const size_t& newlineGap = 0,
-    const std::string& tableSectionTextColor = DEFAULT_STR, const std::string& tableInfoTextColor = DEFAULT_STR, const std::string& alignment = LEFT_STR, const bool& hideTableBackground = false, const bool& useHeaderIndent = false) {
+               size_t columnOffset = 160, size_t startGap = 20, size_t endGap = 3, size_t newlineGap = 0,
+               const std::string& tableSectionTextColor = DEFAULT_STR, const std::string& tableInfoTextColor = DEFAULT_STR, 
+               const std::string& alignment = LEFT_STR, bool hideTableBackground = false, bool useHeaderIndent = false) {
 
-    size_t lineHeight = 16;
-    size_t fontSize = 16;
-    size_t xMax = tsl::cfg::FramebufferWidth - 95;
+    const size_t lineHeight = 16;
+    const size_t fontSize = 16;
+    const size_t xMax = tsl::cfg::FramebufferWidth - 95;
 
-    auto sectionTextColor = tsl::gfx::Renderer::a(tsl::sectionTextColor);
-    auto infoTextColor = tsl::gfx::Renderer::a(tsl::infoTextColor);
-    auto alternateSectionTextColor = tsl::gfx::Renderer::a(tsl::warningTextColor);
-    auto alternateInfoTextColor = tsl::gfx::Renderer::a(tsl::warningTextColor);
+    auto getTextColor = [](const std::string& colorStr, auto defaultColor) {
+        if (colorStr == "warning") return tsl::warningTextColor;
+        if (colorStr == "text") return tsl::defaultTextColor;
+        if (colorStr == "on_value") return tsl::onTextColor;
+        if (colorStr == "off_value") return tsl::offTextColor;
+        if (colorStr == "header") return tsl::headerTextColor;
+        if (colorStr == "info") return tsl::infoTextColor;
+        if (colorStr == "section") return tsl::sectionTextColor;
+        return (colorStr == DEFAULT_STR) ? defaultColor : tsl::RGB888(colorStr);
+    };
 
-    if (tableSectionTextColor != DEFAULT_STR) {
-        if (tableSectionTextColor == "warning") {
-            alternateSectionTextColor = tsl::warningTextColor;
-        } else if (tableSectionTextColor == "text") {
-            alternateSectionTextColor = tsl::defaultTextColor;
-        } else if (tableSectionTextColor == "on_value") {
-            alternateSectionTextColor = tsl::onTextColor;
-        } else if (tableSectionTextColor == "off_value") {
-            alternateSectionTextColor = tsl::offTextColor;
-        } else if (tableSectionTextColor == "header") {
-            alternateSectionTextColor = tsl::headerTextColor;
-        } else {
-            alternateSectionTextColor = tsl::RGB888(tableSectionTextColor);
-        }
-    }
-
-    if (tableInfoTextColor != DEFAULT_STR) {
-        if (tableInfoTextColor == "warning") {
-            alternateInfoTextColor = tsl::warningTextColor;
-        } else if (tableSectionTextColor == "text") {
-            alternateInfoTextColor = tsl::defaultTextColor;
-        } else if (tableSectionTextColor == "on_value") {
-            alternateInfoTextColor = tsl::onTextColor;
-        } else if (tableSectionTextColor == "off_value") {
-            alternateInfoTextColor = tsl::offTextColor;
-        } else if (tableSectionTextColor == "header") {
-            alternateInfoTextColor = tsl::headerTextColor;
-        } else {
-            alternateInfoTextColor = tsl::RGB888(tableInfoTextColor);
-        }
-    }
+    auto alternateSectionTextColor = getTextColor(tableSectionTextColor, tsl::sectionTextColor);
+    auto alternateInfoTextColor = getTextColor(tableInfoTextColor, tsl::infoTextColor);
 
     size_t totalHeight = lineHeight * sectionLines.size() + newlineGap * (sectionLines.size() - 1) + endGap;
 
     // Precompute all y-offsets for sections and info lines
     std::vector<s32> yOffsets(sectionLines.size());
+    std::vector<int> infoXOffsets(infoLines.size());
+    std::vector<float> infoStringWidths(infoLines.size(), 0.0f);
+
     for (size_t i = 0; i < sectionLines.size(); ++i) {
         yOffsets[i] = startGap + (i * (lineHeight + newlineGap));
     }
 
-    // Precompute all x-offsets for info lines based on alignment
-    std::vector<int> infoXOffsets(infoLines.size());
-    std::vector<float> infoStringWidths(infoLines.size());
-
-    // Precompute string widths using the provided renderer instance in the lambda
-    for (size_t i = 0; i < infoLines.size(); ++i) {
-        infoStringWidths[i] = 0.0f;  // Initialize with a default value
-    }
-
-    // Add the TableDrawer item
     list->addItem(new tsl::elm::TableDrawer([=](tsl::gfx::Renderer* renderer, s32 x, s32 y, s32 w, s32 h) mutable {
-        for (size_t i = 0; i < infoLines.size(); ++i) {
-            if (infoStringWidths[i] == 0.0f) {  // Calculate only if not already calculated
-                if (infoLines[i].find(NULL_STR) == std::string::npos)
-                    infoStringWidths[i] = renderer->calculateStringWidth(infoLines[i], fontSize, false);
-                else
-                    infoStringWidths[i] = renderer->calculateStringWidth(UNAVAILABLE_SELECTION, fontSize, false);
-            }
-
-            if (alignment == LEFT_STR) {
-                infoXOffsets[i] = columnOffset;
-            } else if (alignment == RIGHT_STR) {
-                infoXOffsets[i] = xMax - infoStringWidths[i] + (columnOffset- 160);
-            } else if (alignment == CENTER_STR) {
-                infoXOffsets[i] = columnOffset + (xMax - infoStringWidths[i]) / 2;
-            }
+        if (useHeaderIndent) {
+            renderer->drawRect(x - 2, y + 2, 3, 23, renderer->a(tsl::headerSeparatorColor));
         }
-        if (useHeaderIndent)
-            renderer->drawRect(x-2, y+2, 3, 23, renderer->a(tsl::headerSeparatorColor));
-
-        std::string infoText;
-
-        for (size_t i = 0; i < sectionLines.size(); ++i) {
-            renderer->drawString(sectionLines[i].c_str(), false, x + 12+1, y + yOffsets[i], fontSize, renderer->a((tableSectionTextColor == DEFAULT_STR) ? sectionTextColor : alternateSectionTextColor));
-            // Check if infoLines[i] is "null" and replace it with UNAVAILABLE_SELECTION if true
-            infoText = (infoLines[i].find(NULL_STR) != std::string::npos) ? UNAVAILABLE_SELECTION : infoLines[i];
-            renderer->drawString(infoText.c_str(), false, x + infoXOffsets[i]+1, y + yOffsets[i], fontSize, renderer->a((tableInfoTextColor == DEFAULT_STR) ? infoTextColor : alternateInfoTextColor));
+    
+        for (size_t i = 0; i < infoLines.size(); ++i) {
+            // Calculate string width and offset if not already done
+            if (infoStringWidths[i] == 0.0f) {
+                const std::string& infoText = (infoLines[i].find(NULL_STR) != std::string::npos) ? UNAVAILABLE_SELECTION : infoLines[i];
+                infoStringWidths[i] = renderer->calculateStringWidth(infoText, fontSize, false);
+    
+                if (alignment == LEFT_STR) {
+                    infoXOffsets[i] = static_cast<int>(columnOffset);
+                } else if (alignment == RIGHT_STR) {
+                    infoXOffsets[i] = static_cast<int>(xMax - infoStringWidths[i] + (columnOffset - 160));
+                } else { // CENTER_STR
+                    infoXOffsets[i] = static_cast<int>(columnOffset + (xMax - infoStringWidths[i]) / 2);
+                }
+            }
+    
+            // Draw the section line
+            renderer->drawString(sectionLines[i], false, x + 12, y + yOffsets[i], fontSize, renderer->a(alternateSectionTextColor));
+    
+            // Draw the info line
+            const std::string& infoText = (infoLines[i].find(NULL_STR) != std::string::npos) ? UNAVAILABLE_SELECTION : infoLines[i];
+            renderer->drawString(infoText, false, x + infoXOffsets[i], y + yOffsets[i], fontSize, renderer->a(alternateInfoTextColor));
         }
     }, hideTableBackground, endGap), totalHeight);
+
 }
 
 
 
 
-void applyPlaceholderReplacement(std::vector<std::string>& cmd, const std::string& hexPath, const std::string& iniPath, const std::string& listString, const std::string& listPath, const std::string& jsonString, const std::string& jsonPath);
+void applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::string& hexPath, const std::string& iniPath, const std::string& listString, const std::string& listPath, const std::string& jsonString, const std::string& jsonPath);
 
 void addTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::vector<std::string>>& tableData,
     const std::string& packagePath, const size_t& columnOffset=160, const size_t& tableStartGap=20, const size_t& tableEndGap=3, const size_t& tableSpacing=0,
@@ -603,6 +844,7 @@ void addTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::vector<std
         if (abortCommand.load(std::memory_order_acquire)) {
             abortCommand.store(false, std::memory_order_release);
             commandSuccess = false;
+            disableLogging = true;
             return;
         }
 
@@ -627,9 +869,10 @@ void addTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::vector<std
 
         if ((inEristaSection && !inMarikoSection && usingErista) || (!inEristaSection && inMarikoSection && usingMariko) || (!inEristaSection && !inMarikoSection)) {
 
-            applyPlaceholderReplacement(cmd, hexPath, iniPath, listString, listPath, jsonString, jsonPath);
+            applyPlaceholderReplacements(cmd, hexPath, iniPath, listString, listPath, jsonString, jsonPath);
 
             if (interpreterLogging) {
+                disableLogging = false;
                 message = "Reading line:";
                 for (const std::string& token : cmd)
                     message += " " + token;
@@ -807,6 +1050,7 @@ void addPackageInfo(std::unique_ptr<tsl::elm::List>& list, auto& packageHeader, 
  */
 
 
+
 /**
  * @brief Check if a path contains dangerous combinations.
  *
@@ -816,74 +1060,58 @@ void addPackageInfo(std::unique_ptr<tsl::elm::List>& list, auto& packageHeader, 
  * @return True if the path contains dangerous combinations, otherwise false.
  */
 bool isDangerousCombination(const std::string& patternPath) {
-    static const std::vector<std::string> protectedFolders = {
-        "sdmc:/Nintendo/",
-        "sdmc:/emuMMC/",
-        "sdmc:/emuMMC/RAW1/",
-        "sdmc:/atmosphere/",
-        "sdmc:/bootloader/",
-        "sdmc:/switch/",
-        "sdmc:/config/",
-        ROOT_PATH
+    static const std::vector<std::pair<const char*, size_t>> protectedFolders = {
+        {"sdmc:/Nintendo/", 14},
+        {"sdmc:/emuMMC/", 13},
+        {"sdmc:/emuMMC/RAW1/", 17},
+        {"sdmc:/atmosphere/", 15},
+        {"sdmc:/bootloader/", 15},
+        {"sdmc:/switch/", 12},
+        {"sdmc:/config/", 12},
+        {"sdmc:/", 6}
     };
-    static const std::vector<std::string> ultraProtectedFolders = {
+
+    static const std::vector<const char*> ultraProtectedFolders = {
         "sdmc:/Nintendo/Contents/",
         "sdmc:/Nintendo/save/",
         "sdmc:/emuMMC/RAW1/Nintendo/Contents/",
         "sdmc:/emuMMC/RAW1/Nintendo/save/"
     };
-    static const std::vector<std::string> dangerousCombinationPatterns = {
-        "*",        // Wildcard in general
-        "*/"        // Wildcard in general
-    };
-    static const std::vector<std::string> dangerousPatterns = {
-        "..",       // Attempts to traverse to parent directories
-        "~"         // Represents user's home directory, can be dangerous if misused
+
+    static const std::vector<const char*> dangerousPatterns = {
+        "..",    // Attempts to traverse to parent directories
+        "~",     // Represents user's home directory, can be dangerous if misused
+        "*",     // Wildcard in general
+        "*/"     // Wildcard in general
     };
 
-    // Check ultra-protected folders
+    // Check ultra-protected folders first
     for (const auto& folder : ultraProtectedFolders) {
-        if (patternPath.find(folder) == 0) {
+        if (patternPath.compare(0, std::strlen(folder), folder) == 0) {
             return true; // Path is an ultra-protected folder
         }
     }
 
-    std::string relativePath;
-    size_t slashPos;
-    //bool isDirectlyWithinProtectedFolder;
-
-    // Check protected folders and dangerous patterns
-    for (const auto& folder : protectedFolders) {
-        if (patternPath == folder) {
-            return true; // Path is a protected folder
-        }
-        if (patternPath.find(folder) == 0) {
-            relativePath = patternPath.substr(folder.size());
+    // Check protected folders
+    for (const auto& [folder, folderLen] : protectedFolders) {
+        if (patternPath.compare(0, folderLen, folder) == 0) {
+            std::string relativePath = patternPath.substr(folderLen);
 
             // Check for dangerous patterns in the relative path
             for (const auto& pattern : dangerousPatterns) {
                 if (relativePath.find(pattern) != std::string::npos) {
-                    return true; // Relative path contains a dangerous pattern
-                }
-            }
-
-            // Check for dangerous combination patterns in the relative path directly within the protected folder
-            slashPos = relativePath.find('/');
-            //isDirectlyWithinProtectedFolder = (slashPos == std::string::npos);
-            if (slashPos == std::string::npos) {
-                for (const auto& combination : dangerousCombinationPatterns) {
-                    if (relativePath.find(combination) != std::string::npos) {
-                        return true; // Relative path contains a dangerous combination pattern
-                    }
+                    return true; // Path contains a dangerous pattern
                 }
             }
 
             // Check for wildcard patterns that could affect ultra-protected folders
             for (const auto& ultraFolder : ultraProtectedFolders) {
-                if (patternPath.find(ultraFolder.substr(folder.size())) == 0) {
+                if (relativePath.find(ultraFolder + folderLen) == 0) {
                     return true; // Path with wildcard could affect an ultra-protected folder
                 }
             }
+
+            break; // If it matches a protected folder, no need to check others
         }
     }
 
@@ -895,11 +1123,9 @@ bool isDangerousCombination(const std::string& patternPath) {
     }
 
     // Check wildcard at root level
-    if (patternPath.find(":/") != std::string::npos) {
-        std::string rootPath = patternPath.substr(0, patternPath.find(":/") + 2);
-        if (rootPath.find('*') != std::string::npos) {
-            return true; // Root path contains a wildcard
-        }
+    size_t rootPos = patternPath.find(":/");
+    if (rootPos != std::string::npos && patternPath.find('*', rootPos) != std::string::npos) {
+        return true; // Root path contains a wildcard
     }
 
     return false; // No dangerous combinations found
@@ -1034,14 +1260,14 @@ void populateSelectedItemsList(const std::string& sourceType, const std::string&
  * @param replacement The string to replace the placeholder with.
  * @return The input string with placeholders replaced by the replacement string.
  */
-inline std::string replacePlaceholder(const std::string& input, const std::string& placeholder, const std::string& replacement) {
+inline void applyPlaceholderReplacement(std::string& input, const std::string& placeholder, const std::string& replacement) {
     size_t pos = input.find(placeholder);
     if (pos == std::string::npos) {
-        return input;  // Returns original string directly if no placeholder is found
+        return;  // Returns original string directly if no placeholder is found
     }
-    std::string result = input;
-    result.replace(pos, placeholder.length(), replacement);
-    return result;
+    //std::string result = input;
+    input.replace(pos, placeholder.length(), replacement);
+    //return result;
 }
 
 
@@ -1179,7 +1405,8 @@ std::string replaceAllPlaceholders(const std::string& source, const std::string&
     std::string modifiedArg = source;
     std::string lastArg;
     while (modifiedArg.find(placeholder) != std::string::npos) {
-        modifiedArg = replacePlaceholder(modifiedArg, placeholder, replacement);
+        //modifiedArg = replacePlaceholder(modifiedArg, placeholder, replacement);
+        applyPlaceholderReplacement(modifiedArg, placeholder, replacement);
         if (modifiedArg == lastArg)
             break;
         lastArg = modifiedArg;
@@ -1256,7 +1483,8 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
                 //modifiedArg = replaceAllPlaceholders(modifiedArg, "{hos_version}", hosVersion);
 
                 if (modifiedArg.find("{list_source(") != std::string::npos) {
-                    modifiedArg = replacePlaceholder(modifiedArg, "*", std::to_string(entryIndex));
+                    //modifiedArg = replacePlaceholder(modifiedArg, "*", std::to_string(entryIndex));
+                    applyPlaceholderReplacement(modifiedArg, "*", std::to_string(entryIndex));
                     startPos = modifiedArg.find("{list_source(");
                     endPos = modifiedArg.find(")}");
                     if (endPos != std::string::npos && endPos > startPos) {
@@ -1267,7 +1495,8 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
                 }
 
                 if (modifiedArg.find("{list_file_source(") != std::string::npos) {
-                    modifiedArg = replacePlaceholder(modifiedArg, "*", std::to_string(entryIndex));
+                    //modifiedArg = replacePlaceholder(modifiedArg, "*", std::to_string(entryIndex));
+                    applyPlaceholderReplacement(modifiedArg, "*", std::to_string(entryIndex));
                     startPos = modifiedArg.find("{list_file_source(");
                     endPos = modifiedArg.find(")}");
                     if (endPos != std::string::npos && endPos > startPos) {
@@ -1278,7 +1507,8 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
                 }
 
                 if (modifiedArg.find("{ini_file_source(") != std::string::npos) {
-                    modifiedArg = replacePlaceholder(modifiedArg, "*", std::to_string(entryIndex));
+                    //modifiedArg = replacePlaceholder(modifiedArg, "*", std::to_string(entryIndex));
+                    applyPlaceholderReplacement(modifiedArg, "*", std::to_string(entryIndex));
                     startPos = modifiedArg.find("{ini_file_source(");
                     endPos = modifiedArg.find(")}");
                     if (endPos != std::string::npos && endPos > startPos) {
@@ -1289,7 +1519,8 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
                 }
 
                 if (modifiedArg.find("{json_source(") != std::string::npos) {
-                    modifiedArg = replacePlaceholder(modifiedArg, "*", std::to_string(entryIndex));
+                    //modifiedArg = replacePlaceholder(modifiedArg, "*", std::to_string(entryIndex));
+                    applyPlaceholderReplacement(modifiedArg, "*", std::to_string(entryIndex));
                     startPos = modifiedArg.find("{json_source(");
                     endPos = modifiedArg.find(")}");
                     if (endPos != std::string::npos && endPos > startPos) {
@@ -1300,7 +1531,8 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
                 }
 
                 if (modifiedArg.find("{json_file_source(") != std::string::npos) {
-                    modifiedArg = replacePlaceholder(modifiedArg, "*", std::to_string(entryIndex));
+                    //modifiedArg = replacePlaceholder(modifiedArg, "*", std::to_string(entryIndex));
+                    applyPlaceholderReplacement(modifiedArg, "*", std::to_string(entryIndex));
                     startPos = modifiedArg.find("{json_file_source(");
                     endPos = modifiedArg.find(")}");
                     if (endPos != std::string::npos && endPos > startPos) {
@@ -1326,14 +1558,17 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
 
 
 std::string getCurrentTimestamp(const std::string& format) {
-    //auto now = std::chrono::system_clock::now();
     auto now_time_t = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-    std::stringstream ss;
-    ss << std::put_time(std::localtime(&now_time_t), format.c_str());
-    return ss.str();
+    char buffer[30]; // Adjust size based on expected max format length
+    if (std::strftime(buffer, sizeof(buffer), format.c_str(), std::localtime(&now_time_t))) {
+        return std::string(buffer);
+    } else {
+        return ""; // or handle the error as needed
+    }
 }
 
-// Define the replacePlaceholders function outside of applyPlaceholderReplacement
+
+// Define the replacePlaceholders function outside of applyPlaceholderReplacements
 auto replacePlaceholders = [](std::string& arg, const std::string& placeholder, const std::function<std::string(const std::string&)>& replacer) {
     size_t startPos, endPos;
     std::string lastArg, replacement;
@@ -1362,6 +1597,7 @@ auto replacePlaceholders = [](std::string& arg, const std::string& placeholder, 
         arg.replace(startPos, endPos - startPos + 2, replacement);
         if (arg == lastArg) {
             if (interpreterLogging) {
+                disableLogging = false;
                 logMessage("failed replacement arg: " + arg);
             }
             replacement = NULL_STR;
@@ -1372,7 +1608,7 @@ auto replacePlaceholders = [](std::string& arg, const std::string& placeholder, 
     }
 };
 
-void applyPlaceholderReplacement(std::vector<std::string>& cmd, const std::string& hexPath, const std::string& iniPath, const std::string& listString, const std::string& listPath, const std::string& jsonString, const std::string& jsonPath) {
+void applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::string& hexPath, const std::string& iniPath, const std::string& listString, const std::string& listPath, const std::string& jsonString, const std::string& jsonPath) {
     std::vector<std::pair<std::string, std::function<std::string(const std::string&)>>> placeholders = {
         {"{hex_file(", [&](const std::string& placeholder) { return replaceHexPlaceholder(placeholder, hexPath); }},
         {"{ini_file(", [&](const std::string& placeholder) { return replaceIniPlaceholder(placeholder, INI_FILE_STR, iniPath); }},
@@ -1466,6 +1702,12 @@ void applyPlaceholderReplacement(std::vector<std::string>& cmd, const std::strin
         arg = replaceAllPlaceholders(arg, "{ram_model}", memoryModel);
         arg = replaceAllPlaceholders(arg, "{ams_version}", amsVersion);
         arg = replaceAllPlaceholders(arg, "{hos_version}", hosVersion);
+        arg = replaceAllPlaceholders(arg, "{cpu_speedo}", std::to_string(cpuSpeedo0));
+        arg = replaceAllPlaceholders(arg, "{cpu_iddq}", std::to_string(cpuIDDQ));
+        arg = replaceAllPlaceholders(arg, "{gpu_speedo}", std::to_string(cpuSpeedo2));
+        arg = replaceAllPlaceholders(arg, "{gpu_iddq}", std::to_string(gpuIDDQ));
+        arg = replaceAllPlaceholders(arg, "{soc_speedo}", std::to_string(socSpeedo0));
+        arg = replaceAllPlaceholders(arg, "{soc_iddq}", std::to_string(socIDDQ));
         // Failed replacement cleanup
         //if (arg == NULL_STR) arg = UNAVAILABLE_SELECTION;
     }
@@ -1485,11 +1727,16 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
  * @param commands A list of commands, where each command is represented as a vector of strings.
  */
 void interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& commands, const std::string& packagePath="", const std::string& selectedCommand="") {
+    
+    if (!packagePath.empty()) {
+        disableLogging = !(parseValueFromIniSection(PACKAGES_INI_FILEPATH, getNameFromPath(packagePath), USE_LOGGING_STR) == TRUE_STR);
+        logFilePath = packagePath + "log.txt";
+    }
 
     auto settingsData = getParsedDataFromIniFile(ULTRAHAND_CONFIG_INI_PATH);
-    if (settingsData.count(ULTRAHAND_PROJECT_NAME) > 0) {
-        auto& ultrahandSection = settingsData[ULTRAHAND_PROJECT_NAME];
-        if (settingsData.count(ULTRAHAND_PROJECT_NAME) > 0) {
+    if (settingsData.count(BUFFERS) > 0) {
+        auto& ultrahandSection = settingsData[BUFFERS];
+        if (settingsData.count(BUFFERS) > 0) {
             // Directly update buffer sizes without a map
             std::string section = "copy_buffer_size";
             if (ultrahandSection.count(section) > 0) {
@@ -1536,6 +1783,8 @@ void interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
         if (abortCommand.load(std::memory_order_acquire)) {
             abortCommand.store(false, std::memory_order_release);
             commandSuccess = false;
+            disableLogging = true;
+            logFilePath = defaultLogFilePath;
             return;
         }
 
@@ -1573,9 +1822,10 @@ void interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
         if ((inEristaSection && !inMarikoSection && usingErista) || (!inEristaSection && inMarikoSection && usingMariko) || (!inEristaSection && !inMarikoSection)) {
             if (!inTrySection || (commandSuccess && inTrySection)) {
 
-                applyPlaceholderReplacement(cmd, hexPath, iniPath, listString, listPath, jsonString, jsonPath);
+                applyPlaceholderReplacements(cmd, hexPath, iniPath, listString, listPath, jsonString, jsonPath);
 
                 if (interpreterLogging) {
+                    disableLogging = false;
                     message = "Executing command: ";
                     for (const std::string& token : cmd)
                         message += token + " ";
@@ -1616,7 +1866,8 @@ void interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
 
         commands.erase(commands.begin()); // Remove processed command
     }
-
+    disableLogging = true;
+    logFilePath = defaultLogFilePath;
 }
 
 
@@ -2057,21 +2308,21 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
         fsdevUnmountAll();
         spsmShutdown(SpsmShutdownMode_Reboot);
     } else if (commandName == "shutdown") {
-        //if (cmd.size() >= 2) {
-        //    std::string selection = removeQuotes(cmd[1]);
-        //    if (selection == "controllers") {
-        //        powerOffAllControllers();
-        //    }
-        //} else {
-        //    splExit();
-        //    fsdevUnmountAll();
-        //    spsmShutdown(SpsmShutdownMode_Normal);
-        //}
-        if (cmd.size() >= 1) {
+        if (cmd.size() >= 2) {
+            std::string selection = removeQuotes(cmd[1]);
+            if (selection == "controllers") {
+                powerOffAllControllers();
+            }
+        } else {
             splExit();
             fsdevUnmountAll();
             spsmShutdown(SpsmShutdownMode_Normal);
         }
+        //if (cmd.size() >= 1) {
+        //    splExit();
+        //    fsdevUnmountAll();
+        //    spsmShutdown(SpsmShutdownMode_Normal);
+        //}
     } else if (commandName == "exit") {
         //triggerExit.store(true, std::memory_order_release);
         if (cmd.size() >= 2) {
@@ -2114,11 +2365,11 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             }
         }
     } else if (commandName == "logging") {
-        interpreterLogging = !interpreterLogging;
+        interpreterLogging = true;
     } else if (commandName == "clear") {
         if (cmd.size() >= 2) {
             std::string clearOption = removeQuotes(cmd[1]);
-            if (clearOption == "log") deleteFileOrDirectory(logFilePath);
+            if (clearOption == "log") deleteFileOrDirectory(defaultLogFilePath);
             else if (clearOption == "hex_sum_cache") hexSumCache.clear();
         }
     }
@@ -2127,7 +2378,6 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
 void executeCommands(std::vector<std::vector<std::string>> commands) {
     interpretAndExecuteCommands(std::move(commands), "", "");
 }
-
 
 
 
@@ -2146,11 +2396,6 @@ inline void clearInterpreterFlags(bool state = false) {
     abortCommand.store(state, std::memory_order_release);
 }
 
-inline void resetPercentages() {
-    downloadPercentage.store(-1, std::memory_order_release);
-    unzipPercentage.store(-1, std::memory_order_release);
-    copyPercentage.store(-1, std::memory_order_release);
-}
 
 
 void backgroundInterpreter(void*) {
