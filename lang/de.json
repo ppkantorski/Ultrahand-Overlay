@@ -59,6 +59,7 @@
     "FREE": "vrij",
     "MEMORY_EXPANSION": "Speichererweiterung",
     "REBOOT_REQUIRED": "*Reboot required.",
+    "LOCAL_IP": "Local IP",
     "WALLPAPER": "Hintergrundbild",
     "THEME": "Theme ändern",
     "DEFAULT": "Standard Theme",
