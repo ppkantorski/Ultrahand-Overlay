@@ -24,6 +24,8 @@
     "HIDE_OVERLAY": "Overlay ausblenden",
     "HIDE_PACKAGE": "Paket ausblenden",
     "LAUNCH_ARGUMENTS": "Startargumente",
+    "BOOT_PACKAGE": "Boot Package",
+    "ERROR_LOGGING": "Error Logging",
     "COMMANDS": "(Boot-) Befehle",
     "SETTINGS": "Optionen",
     "MAIN_SETTINGS": "Grundlegende Optionen",
