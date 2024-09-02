@@ -59,6 +59,7 @@
     "FREE": "libre",
     "MEMORY_EXPANSION": "Extension de Mémoire",
     "REBOOT_REQUIRED": "*Reboot required.",
+    "LOCAL_IP": "Local IP",
     "WALLPAPER": "Fond d'écran",
     "THEME": "Thème",
     "DEFAULT": "défaut",
