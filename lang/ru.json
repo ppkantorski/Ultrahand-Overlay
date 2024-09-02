@@ -24,6 +24,8 @@
     "HIDE_OVERLAY": "Скрыть Оверлей",
     "HIDE_PACKAGE": "Скрыть Пакет",
     "LAUNCH_ARGUMENTS": "Параметры Запуска",
+    "BOOT_PACKAGE": "Boot Package",
+    "ERROR_LOGGING": "Error Logging",
     "COMMANDS": "Команды",
     "SETTINGS": "Настройки",
     "MAIN_SETTINGS": "Главные Настройки",
