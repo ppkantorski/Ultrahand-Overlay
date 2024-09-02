@@ -59,6 +59,7 @@
     "FREE": "여유",
     "MEMORY_EXPANSION": "메모리 확장",
     "REBOOT_REQUIRED": "*Reboot required.",
+    "LOCAL_IP": "Local IP",
     "WALLPAPER": "배경화면",
     "THEME": "테마",
     "DEFAULT": "기본값",
