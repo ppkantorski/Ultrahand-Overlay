@@ -811,7 +811,7 @@ static std::unordered_map<wchar_t, float> characterWidths = {
     {L'=', 0.750},
     {L':', 0.25},
     {L';', 0.25},
-    {L' ', 0.31},
+    {L' ', 0.312},
     {L'|', 0.26},
     {L'.', 0.25},
     {L'+', 0.75},
