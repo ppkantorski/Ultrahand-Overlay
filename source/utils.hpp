@@ -160,22 +160,47 @@ static bool usingEmunand = true;
 //    return value;
 //}
 
-// Special thanks to Massagrator
-void fuseDumpToIni(const std::string& outputPath = FUSE_DATA_INI_PATH) {
-    if (isFileOrDirectory(outputPath)) {
-        return;
+void writeFuseIni(const std::string& outputPath, const char* data = nullptr) {
+    std::ofstream outFile(outputPath);
+    if (outFile) {
+        outFile.write("[", 1);
+        outFile.write(FUSE_STR.c_str(), FUSE_STR.size());
+        outFile.write("]\n", 2);
+
+        if (data) {
+            outFile << "cpuSpeedo0=" << *reinterpret_cast<const uint32_t*>(data + FUSE_CPU_SPEEDO_0_CALIB) << '\n'
+                    << "cpuSpeedo2=" << *reinterpret_cast<const uint32_t*>(data + FUSE_CPU_SPEEDO_2_CALIB) << '\n'
+                    << "socSpeedo0=" << *reinterpret_cast<const uint32_t*>(data + FUSE_SOC_SPEEDO_0_CALIB) << '\n'
+                    << "cpuIDDQ=" << *reinterpret_cast<const uint32_t*>(data + FUSE_CPU_IDDQ_CALIB) << '\n'
+                    << "socIDDQ=" << *reinterpret_cast<const uint32_t*>(data + FUSE_SOC_IDDQ_CALIB) << '\n'
+                    << "gpuIDDQ=" << *reinterpret_cast<const uint32_t*>(data + FUSE_GPU_IDDQ_CALIB) << '\n';
+        } else {
+            outFile << "cpuSpeedo0=\n"
+                    << "cpuSpeedo2=\n"
+                    << "socSpeedo0=\n"
+                    << "cpuIDDQ=\n"
+                    << "socIDDQ=\n"
+                    << "gpuIDDQ=\n";
+        }
+
+        outFile.close();
     }
+}
+
+void fuseDumpToIni(const std::string& outputPath = FUSE_DATA_INI_PATH) {
+    if (isFileOrDirectory(outputPath)) return;
 
     u64 pid = 0;
     if (R_FAILED(pmdmntInitialize()) || R_FAILED(pmdmntGetProcessId(&pid, 0x0100000000000006))) {
         pmdmntExit();
+        writeFuseIni(outputPath);
         return;
     }
-
     pmdmntExit();
 
     Handle debug;
     if (R_FAILED(svcDebugActiveProcess(&debug, pid))) {
+        writeFuseIni(outputPath);
         return;
     }
 
@@ -199,24 +224,10 @@ void fuseDumpToIni(const std::string& outputPath = FUSE_DATA_INI_PATH) {
 
             if (std::memcmp(stack, compare, sizeof(stack)) == 0) {
                 if (R_FAILED(svcReadDebugProcessMemory(dump, debug, mem_info.addr + 0x800, sizeof(dump)))) {
-                    svcCloseHandle(debug);
-                    return;
+                    break;
                 }
 
-                // Simplified INI setting
-                std::ofstream outFile(outputPath);
-                if (outFile) {
-                    outFile.write("[", 1);
-                    outFile.write(FUSE_STR.c_str(), FUSE_STR.size());
-                    outFile.write("]\n", 2);
-                    outFile << "cpuSpeedo0=" << *reinterpret_cast<const uint32_t*>(dump + FUSE_CPU_SPEEDO_0_CALIB) << '\n'
-                            << "cpuSpeedo2=" << *reinterpret_cast<const uint32_t*>(dump + FUSE_CPU_SPEEDO_2_CALIB) << '\n'
-                            << "socSpeedo0=" << *reinterpret_cast<const uint32_t*>(dump + FUSE_SOC_SPEEDO_0_CALIB) << '\n'
-                            << "cpuIDDQ=" << *reinterpret_cast<const uint32_t*>(dump + FUSE_CPU_IDDQ_CALIB) << '\n'
-                            << "socIDDQ=" << *reinterpret_cast<const uint32_t*>(dump + FUSE_SOC_IDDQ_CALIB) << '\n'
-                            << "gpuIDDQ=" << *reinterpret_cast<const uint32_t*>(dump + FUSE_GPU_IDDQ_CALIB) << '\n';
-                    outFile.close();
-                }
+                writeFuseIni(outputPath, dump);
                 svcCloseHandle(debug);
                 return;
             }
@@ -226,6 +237,7 @@ void fuseDumpToIni(const std::string& outputPath = FUSE_DATA_INI_PATH) {
     }
 
     svcCloseHandle(debug);
+    writeFuseIni(outputPath);
 }
 
 
