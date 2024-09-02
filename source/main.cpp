@@ -1828,7 +1828,7 @@ public:
 
                 if (cmd.size() > 1) {
                     if (!iniFilePath.empty())
-                        cmd[1] = replaceIniPlaceholder(cmd[1], INI_FILE_STR, iniFilePath);
+                        applyReplaceIniPlaceholder(cmd[1], INI_FILE_STR, iniFilePath);
 
                     if (commandName == "ini_file") {
                         iniFilePath = preprocessPath(cmd[1], filePath);
