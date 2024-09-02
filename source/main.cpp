@@ -890,7 +890,7 @@ public:
             std::vector<std::vector<std::string>> tableData = {
                 {FIRMWARE, "", versionString},
                 {BOOTLOADER, "", hekateVersion.empty() ? "fusee" : "hekate " + hekateVersion},
-                {"Local IP", "", getLocalIpAddress()}
+                {LOCAL_IP, "", getLocalIpAddress()}
             };
             addTable(list, tableData, "", 160, 20, 28, 4);
             
