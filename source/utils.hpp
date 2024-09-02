@@ -229,6 +229,28 @@ void fuseDumpToIni(const std::string& outputPath = FUSE_DATA_INI_PATH) {
 }
 
 
+std::string getLocalIpAddress() {
+    Result rc;
+    u32 ipAddress;
+
+    // Get the current IP address
+    rc = nifmGetCurrentIpAddress(&ipAddress);
+    if (R_SUCCEEDED(rc)) {
+        // Convert the IP address to a string
+        char ipStr[16];
+        snprintf(ipStr, sizeof(ipStr), "%u.%u.%u.%u",
+                 ipAddress & 0xFF,
+                 (ipAddress >> 8) & 0xFF,
+                 (ipAddress >> 16) & 0xFF,
+                 (ipAddress >> 24) & 0xFF);
+        return std::string(ipStr);
+    } else {
+        // Return a default IP address if the IP could not be retrieved
+        return "0.0.0.0";  // Or "Unknown" if you prefer
+    }
+}
+
+
 
 
 // Function to remove all empty command strings
