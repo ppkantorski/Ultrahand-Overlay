@@ -24,6 +24,8 @@
     "HIDE_OVERLAY": "Hide Overlay",
     "HIDE_PACKAGE": "Hide Package",
     "LAUNCH_ARGUMENTS": "Launch Arguments",
+    "BOOT_PACKAGE": "Boot Package",
+    "ERROR_LOGGING": "Error Logging",
     "COMMANDS": "Commands",
     "SETTINGS": "Settings",
     "MAIN_SETTINGS": "Main Settings",
