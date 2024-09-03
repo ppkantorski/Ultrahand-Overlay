@@ -192,12 +192,12 @@ void fuseDumpToIni(const std::string& outputPath = FUSE_DATA_INI_PATH) {
     if (isFileOrDirectory(outputPath)) return;
 
     u64 pid = 0;
-    if (R_FAILED(pmdmntInitialize()) || R_FAILED(pmdmntGetProcessId(&pid, 0x0100000000000006))) {
-        pmdmntExit();
+    if (R_FAILED(pmdmntGetProcessId(&pid, 0x0100000000000006))) {
+        //pmdmntExit();
         writeFuseIni(outputPath);
         return;
     }
-    pmdmntExit();
+    //pmdmntExit();
 
     Handle debug;
     if (R_FAILED(svcDebugActiveProcess(&debug, pid))) {
@@ -880,6 +880,7 @@ void addTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::vector<std
             abortCommand.store(false, std::memory_order_release);
             commandSuccess = false;
             disableLogging = true;
+            logFilePath = defaultLogFilePath;
             return;
         }
 
@@ -2491,7 +2492,13 @@ void closeInterpreterThread() {
 
 
 
-void startInterpreterThread(int stackSize = 0x8000) {
+void startInterpreterThread(const std::string& packagePath = "") {
+    int stackSize = 0x8000;
+
+    if (!packagePath.empty()) {
+        disableLogging = !(parseValueFromIniSection(PACKAGES_INI_FILEPATH, getNameFromPath(packagePath), USE_LOGGING_STR) == TRUE_STR);
+        logFilePath = packagePath + "log.txt";
+    }
 
     std::string interpreterHeap = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "interpreter_heap");
     if (!interpreterHeap.empty())
@@ -2506,6 +2513,8 @@ void startInterpreterThread(int stackSize = 0x8000) {
         runningInterpreter.store(false, std::memory_order_release);
         interpreterThreadExit.store(true, std::memory_order_release);
         logMessage("Failed to create interpreter thread.");
+        logFilePath = defaultLogFilePath;
+        disableLogging = true;
         return;
     }
     threadStart(&interpreterThread);
