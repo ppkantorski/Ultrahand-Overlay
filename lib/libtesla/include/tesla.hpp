@@ -2766,6 +2766,7 @@ namespace tsl {
                         setPixelBlendSrc(x + xRem, y + y1, {p[0], p[1], p[2], p[3]});
                     }
                 }
+                inPlot.store(false, std::memory_order_release);
             }
 
 
@@ -4141,16 +4142,12 @@ namespace tsl {
                 if (expandedMemory && !refreshWallpaper.load(std::memory_order_acquire)) {
                     //inPlot = true;
                     inPlot.store(true, std::memory_order_release);
-                    {
-                        std::lock_guard<std::mutex> lock(wallpaperMutex);
-                        
-                        if (!wallpaperData.empty()) {
-                            // Draw the bitmap at position (0, 0) on the screen
-                            renderer->drawBitmap(0, 0, 448, 720, wallpaperData.data());
-                        }
+                    std::lock_guard<std::mutex> lock(wallpaperMutex);
+                    if (!wallpaperData.empty()) {
+                        // Draw the bitmap at position (0, 0) on the screen
+                        renderer->drawBitmap(0, 0, 448, 720, wallpaperData.data());
                     }
                     //inPlot = false;
-                    inPlot.store(false, std::memory_order_release);
                 }
                 
 
@@ -4434,6 +4431,7 @@ namespace tsl {
                 
                 if (this->m_contentElement != nullptr)
                     this->m_contentElement->frame(renderer);
+
             }
             // CUSTOM SECTION END
             
@@ -4648,6 +4646,11 @@ namespace tsl {
             virtual ~List() {
                 for (auto& item : this->m_items)
                     delete item;
+                this->m_items.clear();
+                this->m_offset = 0;
+                this->m_focusedIndex = 0;
+                this->invalidate();
+                this->m_clearList = false;
             }
             
             u32 scrollbarHeight;
