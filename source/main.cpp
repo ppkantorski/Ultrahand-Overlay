@@ -1052,7 +1052,9 @@ public:
                 if (keys & KEY_A) {
                     setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "current_wallpaper", "");
                     deleteFileOrDirectory(WALLPAPER_PATH);
-                    refreshWallpaper.store(true, std::memory_order_release);
+                    reloadWallpaper();
+                    //refreshWallpaper.store(true, std::memory_order_release);
+
                     //deleteFileOrDirectory(THEME_CONFIG_INI_PATH);
                     //if (isFileOrDirectory(defaultTheme)) copyFileOrDirectory(defaultTheme, THEME_CONFIG_INI_PATH);
                     //else initializeTheme();
@@ -1065,6 +1067,7 @@ public:
                     shiftItemFocus(listItemRaw);
                     simulatedSelectComplete = true;
                     lastSelectedListItem->triggerClickAnimation();
+                    
                     return true;
                 }
                 return false;
@@ -1093,7 +1096,8 @@ public:
                         setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "current_wallpaper", wallpaperName);
                         //deleteFileOrDirectory(THEME_CONFIG_INI_PATH);
                         copyFileOrDirectory(wallpaperFile, WALLPAPER_PATH);
-                        refreshWallpaper.store(true, std::memory_order_release);
+                        reloadWallpaper();
+                        
                         //clearWallpaperData();
                         //initializeTheme();
                         //tsl::initializeThemeVars();
@@ -1105,6 +1109,7 @@ public:
                         shiftItemFocus(listItemRaw);
                         simulatedSelectComplete = true;
                         lastSelectedListItem->triggerClickAnimation();
+                        
                         return true;
                     }
                     return false;
@@ -1165,10 +1170,10 @@ public:
             return true;
         }
 
-        if (refreshWallpaper.load(std::memory_order_acquire)) {
-            reloadWallpaper();
-            refreshWallpaper.store(false, std::memory_order_release);
-        }
+        //if (refreshWallpaper.load(std::memory_order_acquire)) {
+        //    reloadWallpaper();
+        //    refreshWallpaper.store(false, std::memory_order_release);
+        //}
 
         if (inSettingsMenu && !inSubSettingsMenu) {
             if (!returningToSettings) {
