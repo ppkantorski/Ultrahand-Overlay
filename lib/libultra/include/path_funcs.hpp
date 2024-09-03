@@ -478,7 +478,7 @@ inline void copySingleFile(const std::string& fromFile, const std::string& toFil
                     const std::string& logSource = "", const std::string& logDestination = "") {
     std::ifstream srcFile(fromFile, std::ios::binary);
     std::ofstream destFile(toFile, std::ios::binary);
-    const size_t COPY_BUFFER_SIZE = 4096;
+    //const size_t COPY_BUFFER_SIZE = 4096;
     char buffer[COPY_BUFFER_SIZE];
     
     if (!srcFile || !destFile) {
