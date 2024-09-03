@@ -1075,14 +1075,14 @@ std::vector<u8> loadBitmapFile(const std::string& filePath, s32 width, s32 heigh
     std::ifstream file(filePath, std::ios::binary);
     if (!file) {
         //std::cerr << "Failed to open file: " << filePath << std::endl;
-        return {};
+        return bitmapData;
     }
 
     // Read the file content into the bitmapData buffer
     file.read(reinterpret_cast<char*>(bitmapData.data()), dataSize);
     if (!file) {
         //std::cerr << "Failed to read file: " << filePath << std::endl;
-        return {};
+        return bitmapData;
     }
 
     // Preprocess the bitmap data by shifting the color values
