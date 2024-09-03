@@ -278,17 +278,19 @@ void removeEmptyCommands(std::vector<std::vector<std::string>>& commands) {
 
 
 void reloadWallpaper() {
+    refreshWallpaper.store(true, std::memory_order_release);
     while (true) {
         if (!inPlot.load(std::memory_order_acquire)) {
-            {
-                std::lock_guard<std::mutex> lock(wallpaperMutex);
-                std::vector<u8>().swap(wallpaperData);
-                //if (isFileOrDirectory(WALLPAPER_PATH))
-                wallpaperData = loadBitmapFile(WALLPAPER_PATH, 448, 720);
-            }
+            //svcSleepThread(100000000LL);
+            std::lock_guard<std::mutex> lock(wallpaperMutex);
+            std::vector<u8>().swap(wallpaperData);
+            //if (isFileOrDirectory(WALLPAPER_PATH))
+            wallpaperData = loadBitmapFile(WALLPAPER_PATH, 448, 720);
             break;
         }
+        //svcSleepThread(10000000LL);
     }
+    refreshWallpaper.store(false, std::memory_order_release);
 }
 
 
