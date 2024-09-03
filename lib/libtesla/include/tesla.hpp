@@ -4099,8 +4099,6 @@ namespace tsl {
                         if (wallpaperData.empty()) {
                             if (isFileOrDirectory(WALLPAPER_PATH))
                                 wallpaperData = loadBitmapFile(WALLPAPER_PATH, 448, 720);
-                            else
-                                wallpaperData.clear();
                             //wallpaperData = loadBitmapFile(WALLPAPER_PATH, 224, 360);
                             //wallpaperData = preprocessBitmap(wallpaperData, 224, 360, 448, 720); 
                         }
@@ -4146,6 +4144,8 @@ namespace tsl {
                     if (!wallpaperData.empty()) {
                         // Draw the bitmap at position (0, 0) on the screen
                         renderer->drawBitmap(0, 0, 448, 720, wallpaperData.data());
+                    } else {
+                        inPlot.store(false, std::memory_order_release);
                     }
                     //inPlot = false;
                 }
