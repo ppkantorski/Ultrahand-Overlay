@@ -710,7 +710,7 @@ void copyFileOrDirectoryByPattern(const std::string& sourcePathPattern, const st
     for (const std::string& sourcePath : fileList) {
         copyFileOrDirectory(sourcePath, toDirectory, &totalBytesCopied, totalSize, logSource, logDestination);
     }
-    copyPercentage.store(-1, std::memory_order_release);  // Reset after operation
+    //copyPercentage.store(-1, std::memory_order_release);  // Reset after operation
 }
 
 
