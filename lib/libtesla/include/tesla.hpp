@@ -1071,6 +1071,8 @@ std::vector<u8> loadBitmapFile(const std::string& filePath, s32 width, s32 heigh
     size_t dataSize = width * height * 4; // 4 bytes per pixel (RGBA8888)
     std::vector<u8> bitmapData(dataSize);
 
+
+
     // Open the file in binary mode
     std::ifstream file(filePath, std::ios::binary);
     if (!file) {
@@ -1127,6 +1129,8 @@ static std::atomic<bool> refreshWallpaper(false);
 static std::vector<u8> wallpaperData;
 std::mutex wallpaperMutex; // Mutex to protect wallpaperData
 static std::atomic<bool> inPlot(false);
+
+
 
 //static uint8x16x4_t pixelData;
 
@@ -1430,6 +1434,14 @@ const unsigned numThreads = expandedMemory ? 4 : 0;
 std::vector<std::thread> threads(numThreads);
 s32 bmpChunkSize = (720 + numThreads - 1) / numThreads;
 std::atomic<s32> currentRow;
+
+#include <barrier>
+
+// Assuming numThreads is the number of threads you have
+std::barrier barrier(numThreads, [](){
+    inPlot.store(false, std::memory_order_release);
+});
+
 
 
 // CUSTOM SECTION END
@@ -2766,7 +2778,8 @@ namespace tsl {
                         setPixelBlendSrc(x + xRem, y + y1, {p[0], p[1], p[2], p[3]});
                     }
                 }
-                inPlot.store(false, std::memory_order_release);
+                //inPlot.store(false, std::memory_order_release);
+                barrier.arrive_and_wait(); // Wait for all threads to reach this point
             }
 
 
@@ -4139,13 +4152,18 @@ namespace tsl {
                 //if (expandedMemory && useCustomWallpaper && !wallpaperData.empty()) {
                 if (expandedMemory && !refreshWallpaper.load(std::memory_order_acquire)) {
                     //inPlot = true;
-                    inPlot.store(true, std::memory_order_release);
-                    std::lock_guard<std::mutex> lock(wallpaperMutex);
-                    if (!wallpaperData.empty()) {
-                        // Draw the bitmap at position (0, 0) on the screen
-                        renderer->drawBitmap(0, 0, 448, 720, wallpaperData.data());
-                    } else {
-                        inPlot.store(false, std::memory_order_release);
+                    {
+                        inPlot.store(true, std::memory_order_release);
+                        std::lock_guard<std::mutex> lock(wallpaperMutex);
+                        if (!wallpaperData.empty()) {
+                            // Draw the bitmap at position (0, 0) on the screen
+                            if (!refreshWallpaper.load(std::memory_order_acquire))
+                                renderer->drawBitmap(0, 0, 448, 720, wallpaperData.data());
+                            else
+                                inPlot.store(false, std::memory_order_release);
+                        } else {
+                            inPlot.store(false, std::memory_order_release);
+                        }
                     }
                     //inPlot = false;
                 }
