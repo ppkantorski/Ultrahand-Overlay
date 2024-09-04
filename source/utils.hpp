@@ -1735,10 +1735,14 @@ void applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
         }}
     };
 
+    // First replace inner placeholders like {ram_model}
+    //for (auto& [placeholder, replacer] : placeholders) {
+    //    for (auto& arg : cmd) {
+    //        replaceAllPlaceholders(arg, placeholder, replacer(placeholder));
+    //    }
+    //}
+
     for (auto& arg : cmd) {
-        for (const auto& [placeholder, replacer] : placeholders) {
-            replacePlaceholders(arg, placeholder, replacer);
-        }
         replaceAllPlaceholders(arg, "{ram_vendor}", memoryVendor);
         replaceAllPlaceholders(arg, "{ram_model}", memoryModel);
         replaceAllPlaceholders(arg, "{ams_version}", amsVersion);
@@ -1749,6 +1753,9 @@ void applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
         replaceAllPlaceholders(arg, "{gpu_iddq}", std::to_string(gpuIDDQ));
         replaceAllPlaceholders(arg, "{soc_speedo}", std::to_string(socSpeedo0));
         replaceAllPlaceholders(arg, "{soc_iddq}", std::to_string(socIDDQ));
+        for (const auto& [placeholder, replacer] : placeholders) {
+            replacePlaceholders(arg, placeholder, replacer);
+        }
         // Failed replacement cleanup
         //if (arg == NULL_STR) arg = UNAVAILABLE_SELECTION;
     }
