@@ -1,4 +1,4 @@
-# libtesla (custom)
+# libtesla (custom fork)
 
 <p align="center">
   <img src="https://i.imgur.com/fhwyjbd.png">
