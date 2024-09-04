@@ -1,4 +1,4 @@
-# libtesla
+# libtesla (custom)
 
 <p align="center">
   <img src="https://i.imgur.com/fhwyjbd.png">
