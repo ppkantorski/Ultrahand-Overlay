@@ -3662,48 +3662,52 @@ public:
         };
         
         if (isFileOrDirectory(ULTRAHAND_CONFIG_INI_PATH)) {
-            auto settingsData = getParsedDataFromIniFile(ULTRAHAND_CONFIG_INI_PATH);
-            if (settingsData.count(ULTRAHAND_PROJECT_NAME) > 0) {
-                auto& ultrahandSection = settingsData[ULTRAHAND_PROJECT_NAME];
-                
+            // Load key-value pairs from the "ULTRAHAND_PROJECT_NAME" section of the INI file
+            auto ultrahandSection = getKeyValuePairsFromSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME);
+            
+            if (!ultrahandSection.empty()) {
+                // Set default values for various settings
                 setDefaultValue(ultrahandSection, "hide_user_guide", FALSE_STR, hideUserGuide);
                 setDefaultValue(ultrahandSection, "clean_version_labels", FALSE_STR, cleanVersionLabels);
                 setDefaultValue(ultrahandSection, "hide_overlay_versions", FALSE_STR, hideOverlayVersions);
                 setDefaultValue(ultrahandSection, "hide_package_versions", FALSE_STR, hidePackageVersions);
                 setDefaultValue(ultrahandSection, "memory_expansion", FALSE_STR, useMemoryExpansion);
-                //setDefaultValue(ultrahandSection, "custom_wallpaper", FALSE_STR, useCustomWallpaper);
+                // setDefaultValue(ultrahandSection, "custom_wallpaper", FALSE_STR, useCustomWallpaper);
                 setDefaultValue(ultrahandSection, "opaque_screenshots", TRUE_STR, useOpaqueScreenshots);
                 setDefaultValue(ultrahandSection, "progress_animation", FALSE_STR, progressAnimation);
                 
                 setDefaultStrValue(ultrahandSection, DEFAULT_LANG_STR, defaultLang, defaultLang);
-                
+            
+                // Ensure certain settings are set in the INI file if they don't exist
                 if (ultrahandSection.count("datetime_format") == 0) {
                     setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "datetime_format", DEFAULT_DT_FORMAT);
                 }
-                
+            
                 if (ultrahandSection.count("hide_clock") == 0) {
                     setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_clock", FALSE_STR);
                 }
-                
+            
                 if (ultrahandSection.count("hide_battery") == 0) {
                     setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_battery", TRUE_STR);
                 }
-                
+            
                 if (ultrahandSection.count("hide_pcb_temp") == 0) {
                     setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_pcb_temp", TRUE_STR);
                 }
-                
+            
                 if (ultrahandSection.count("hide_soc_temp") == 0) {
                     setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_soc_temp", TRUE_STR);
                 }
-
+            
+                // Handle the 'to_packages' option if it exists
                 if (ultrahandSection.count("to_packages") > 0) {
                     toPackages = (trim(ultrahandSection["to_packages"]) == TRUE_STR);
                 }
-                
+            
+                // Mark settings as loaded if the "in_overlay" setting exists
                 settingsLoaded = ultrahandSection.count(IN_OVERLAY_STR) > 0;
             }
-            settingsData.clear();
+
         } else {
             updateMenuCombos = true;
         }
@@ -4635,7 +4639,7 @@ public:
                     interpretAndExecuteCommands(std::move(bootCommands), PACKAGE_PATH, "boot"); // Execute modified boot commands
                 }
             }
-            
+
             bool disableFuseReload = (parseValueFromIniSection(FUSE_DATA_INI_PATH, FUSE_STR, "disable_reload") == TRUE_STR);
             if (!disableFuseReload)
                 deleteFileOrDirectory(FUSE_DATA_INI_PATH);
