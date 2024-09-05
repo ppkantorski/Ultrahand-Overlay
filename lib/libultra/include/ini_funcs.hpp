@@ -230,6 +230,56 @@ std::map<std::string, std::map<std::string, std::string>> getParsedDataFromIniFi
 
 
 /**
+ * @brief Parses an INI file and retrieves key-value pairs from a specific section.
+ *
+ * This function reads the contents of an INI file located at the specified path,
+ * and returns the key-value pairs within a specific section.
+ *
+ * @param configIniPath The path to the INI file to be parsed.
+ * @param sectionName The name of the section to retrieve key-value pairs from.
+ * @return A map representing the key-value pairs in the specified section.
+ */
+std::map<std::string, std::string> getKeyValuePairsFromSection(const std::string& configIniPath, const std::string& sectionName) {
+    std::map<std::string, std::string> sectionData;
+    std::ifstream configFile(configIniPath);
+    if (!configFile) {
+        //logMessage("Failed to open the file: " + configIniPath);
+        return sectionData;  // Return empty map if file cannot be opened
+    }
+    
+    std::string line, currentSection;
+    std::string trimmedLine;
+    
+    size_t delimiterPos;
+    std::string key, value;
+    bool inTargetSection = false;  // To track if we're in the desired section
+    
+    while (getline(configFile, line)) {
+        trimmedLine = trim(line);
+        
+        if (trimmedLine.empty()) continue; // Skip empty lines
+        
+        if (trimmedLine.front() == '[' && trimmedLine.back() == ']') {
+            // Remove the brackets to get the section name
+            currentSection = trimmedLine.substr(1, trimmedLine.size() - 2);
+            // Check if this is the section we're interested in
+            inTargetSection = (currentSection == sectionName);
+        } else if (inTargetSection) {
+            // Look for key-value pairs within the target section
+            delimiterPos = trimmedLine.find('=');
+            if (delimiterPos != std::string::npos) {
+                key = trim(trimmedLine.substr(0, delimiterPos));
+                value = trim(trimmedLine.substr(delimiterPos + 1));
+                sectionData[key] = value;  // Store the key-value pair
+            }
+        }
+    }
+
+    return sectionData;
+}
+
+
+/**
  * @brief Parses sections from an INI file and returns them as a list of strings.
  *
  * This function reads an INI file and extracts the section names from it.
