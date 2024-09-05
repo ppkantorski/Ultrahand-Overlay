@@ -885,7 +885,7 @@ public:
                 {BOOTLOADER, "", hekateVersion.empty() ? "fusee" : "hekate " + hekateVersion},
                 {LOCAL_IP, "", getLocalIpAddress()}
             };
-            addTable(list, tableData, "", 160, 20, 28, 4);
+            addTable(list, tableData, "", 161, 20, 28, 4);
             
             // Hardware and storage info
             tableData = {
@@ -897,13 +897,13 @@ public:
                 {"└ eMMC ", "", getStorageInfo("emmc")},
                 {"└ SD Card", "", getStorageInfo("sdmc")}
             };
-            addTable(list, tableData, "", 160, 20, 30, 4);
+            addTable(list, tableData, "", 161, 20, 30, 4);
             
             // CPU, GPU, and SOC info
             tableData = {
                 {"", "", "CPU      GPU      SOC"}
             };
-            addTable(list, tableData, "", 160, 8, 3, 0, DEFAULT_STR, "section", RIGHT_STR, true);
+            addTable(list, tableData, "", 161, 8, 3, 0, DEFAULT_STR, "section", RIGHT_STR, true);
             
             tableData.clear();
             tableData.resize(2);
@@ -921,7 +921,7 @@ public:
                 tableData[0] = {"Speedo", "", "⋯    │    ⋯   │    ⋯  "};
                 tableData[1] = {"IDDQ", "", "⋯    │    ⋯   │    ⋯  "};
             }
-            addTable(list, tableData, "", 160, 20, -2, 4);
+            addTable(list, tableData, "", 161, 20, -2, 4);
             
             // The part that was moved to the end
             addHeader(list, COMMANDS);
@@ -940,7 +940,7 @@ public:
             tableData = {
                 {NOTICE, "", UTILIZES + " 2 MB (" + ramString + ")"}
             };
-            addTable(list, tableData, "", 160, 10, 7, 0, DEFAULT_STR, DEFAULT_STR, RIGHT_STR, true);
+            addTable(list, tableData, "", 161, 10, 7, 0, DEFAULT_STR, DEFAULT_STR, RIGHT_STR, true);
             // Memory expansion toggle
             useMemoryExpansion = (loaderTitle == "nx-ovlloader+" || 
                                   parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "memory_expansion") == TRUE_STR);
@@ -950,7 +950,7 @@ public:
             tableData = {
                 {"", "", REBOOT_REQUIRED}  // Direct reuse without reallocation
             };
-            addTable(list, tableData, "", 160, 28, 0, 0, DEFAULT_STR, DEFAULT_STR, RIGHT_STR, true);
+            addTable(list, tableData, "", 161, 28, 0, 0, DEFAULT_STR, DEFAULT_STR, RIGHT_STR, true);
         
         } else if (dropdownSelection == "themeMenu") {
             addHeader(list, THEME);
