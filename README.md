@@ -89,7 +89,7 @@ Please note that running homebrew software on your Nintendo Switch may void your
 To compile and run the software, you need to have the following C/C++ dependencies installed:
 
 - [libultra](lib/libultra)
-- [custom libtesla](lib/libtesla)
+- [libtesla (custom)](lib/libtesla)
 - switch-curl
 - switch-zziplib
 - switch-mbedtls
@@ -102,6 +102,6 @@ Contributions are welcome! If you have any ideas, suggestions, or bug reports, p
 
 ## License
 
-This project is licensed and distributed under [GPLv2](LICENSE) with a custom library utilizing [CC-BY-4.0](SUB_LICENSE).
+This project is licensed and distributed under [GPLv2](LICENSE) with a [custom library](lib/libultra) utilizing [CC-BY-4.0](SUB_LICENSE).
 
 Copyright (c) 2024 ppkantorski

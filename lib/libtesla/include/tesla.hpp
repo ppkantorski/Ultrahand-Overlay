@@ -1065,70 +1065,53 @@ inline float calculateAmplitude(float x, float peakDurationFactor = 0.25f) {
         
 
 
-// Function to load the RGBA file into memory
-std::vector<u8> loadBitmapFile(const std::string& filePath, s32 width, s32 height) {
+static std::atomic<bool> refreshWallpaper(false);
+static std::vector<u8> wallpaperData;
+static std::atomic<bool> inPlot(false);
+
+std::mutex wallpaperMutex;
+std::condition_variable cv;
+
+
+
+// Function to load the RGBA file into memory and modify wallpaperData directly
+void loadWallpaperFile(const std::string& filePath, s32 width = 448, s32 height = 720) {
     // Calculate the size of the bitmap in bytes
     size_t dataSize = width * height * 4; // 4 bytes per pixel (RGBA8888)
-    std::vector<u8> bitmapData(dataSize);
-
-
+    
+    // Resize the wallpaperData vector to the required size
+    wallpaperData.resize(dataSize);
+    
+    if (!isFileOrDirectory(filePath)) {
+        wallpaperData.clear(); // Clear wallpaperData if loading failed
+        return;
+    }
 
     // Open the file in binary mode
     std::ifstream file(filePath, std::ios::binary);
     if (!file) {
         //std::cerr << "Failed to open file: " << filePath << std::endl;
-        return bitmapData;
+        wallpaperData.clear(); // Clear wallpaperData if loading failed
+        return;
     }
-
-    // Read the file content into the bitmapData buffer
-    file.read(reinterpret_cast<char*>(bitmapData.data()), dataSize);
+    
+    // Read the file content into the wallpaperData buffer
+    file.read(reinterpret_cast<char*>(wallpaperData.data()), dataSize);
     if (!file) {
         //std::cerr << "Failed to read file: " << filePath << std::endl;
-        return bitmapData;
+        wallpaperData.clear(); // Clear wallpaperData if reading failed
+        return;
     }
-
+    
     // Preprocess the bitmap data by shifting the color values
     for (size_t i = 0; i < dataSize; i += 4) {
         // Shift the color values to reduce precision (if needed)
-        bitmapData[i] >>= 4;   // Red
-        bitmapData[i + 1] >>= 4; // Green
-        bitmapData[i + 2] >>= 4; // Blue
-        bitmapData[i + 3] >>= 4; // Alpha
+        wallpaperData[i] >>= 4;   // Red
+        wallpaperData[i + 1] >>= 4; // Green
+        wallpaperData[i + 2] >>= 4; // Blue
+        wallpaperData[i + 3] >>= 4; // Alpha
     }
-
-    return bitmapData;
 }
-
-//std::vector<u8> preprocessBitmap(const std::vector<u8>& bitmapData, s32 width, s32 height, s32 screenW, s32 screenH) {
-//    std::vector<u8> preprocessedData(screenW * screenH * 4); // 4 bytes per pixel
-//
-//    s32 scaleX = (width << 8) / screenW;
-//    s32 scaleY = (height << 8) / screenH;
-//    s32 srcRowOffset = width * 4;
-//
-//    for (s32 y1 = 0; y1 < screenH; ++y1) {
-//        s32 srcY = (y1 * scaleY) >> 8;
-//        const u8 *srcRow = bitmapData.data() + (srcY * srcRowOffset);
-//
-//        for (s32 x1 = 0; x1 < screenW; ++x1) {
-//            s32 srcX = (x1 * scaleX) >> 8;
-//            const u8 *srcPixel = srcRow + (srcX * 4);
-//
-//            u8 *destPixel = preprocessedData.data() + ((y1 * screenW + x1) * 4);
-//            destPixel[0] = srcPixel[0]; // Red
-//            destPixel[1] = srcPixel[1]; // Green
-//            destPixel[2] = srcPixel[2]; // Blue
-//            destPixel[3] = srcPixel[3]; // Alpha
-//        }
-//    }
-//
-//    return preprocessedData;
-//}
-
-static std::atomic<bool> refreshWallpaper(false);
-static std::vector<u8> wallpaperData;
-std::mutex wallpaperMutex; // Mutex to protect wallpaperData
-static std::atomic<bool> inPlot(false);
 
 
 
@@ -1157,6 +1140,14 @@ static bool simulatedMenuComplete = true;
 static bool stillTouching = false;
 static bool interruptedTouch = false;
 static bool touchInBounds = false;
+
+
+// Command key defintitions
+const static auto SCRIPT_KEY = KEY_MINUS;
+const static auto SYSTEM_SETTINGS_KEY = KEY_PLUS;
+const static auto SETTINGS_KEY = KEY_Y;
+const static auto STAR_KEY = KEY_X;
+
 
 
 // Battery implementation
@@ -1438,7 +1429,7 @@ std::atomic<s32> currentRow;
 #include <barrier>
 
 // Assuming numThreads is the number of threads you have
-std::barrier barrier(numThreads, [](){
+std::barrier inPlotBarrier(numThreads, [](){
     inPlot.store(false, std::memory_order_release);
 });
 
@@ -2779,7 +2770,7 @@ namespace tsl {
                     }
                 }
                 //inPlot.store(false, std::memory_order_release);
-                barrier.arrive_and_wait(); // Wait for all threads to reach this point
+                inPlotBarrier.arrive_and_wait(); // Wait for all threads to reach this point
             }
 
 
@@ -4106,17 +4097,20 @@ namespace tsl {
                 // Load the bitmap file into memory
                 //if (expandedMemory && useCustomWallpaper && wallpaperData.empty()) {
                 //std::lock_guard<std::mutex> lock(wallpaperMutex);
-                if (expandedMemory && !inPlot) {
-                    {
-                        std::lock_guard<std::mutex> lock(wallpaperMutex);
-                        if (wallpaperData.empty()) {
-                            if (isFileOrDirectory(WALLPAPER_PATH))
-                                wallpaperData = loadBitmapFile(WALLPAPER_PATH, 448, 720);
-                            //wallpaperData = loadBitmapFile(WALLPAPER_PATH, 224, 360);
-                            //wallpaperData = preprocessBitmap(wallpaperData, 224, 360, 448, 720); 
-                        }
+                if (expandedMemory && !inPlot.load(std::memory_order_acquire) && !refreshWallpaper.load(std::memory_order_acquire)) {
+                    // Lock the mutex for condition waiting
+                    std::unique_lock<std::mutex> lock(wallpaperMutex);
+
+                    // Wait for inPlot to be false before reloading the wallpaper
+                    cv.wait(lock, [] { return (!inPlot.load(std::memory_order_acquire) && !refreshWallpaper.load(std::memory_order_acquire)); });
+
+                    if (wallpaperData.empty() && isFileOrDirectory(WALLPAPER_PATH)) {
+                        loadWallpaperFile(WALLPAPER_PATH);
+                        //wallpaperData = loadWallpaperFile(WALLPAPER_PATH, 224, 360);
+                        //wallpaperData = preprocessBitmap(wallpaperData, 224, 360, 448, 720); 
                     }
                 }
+
 
             }
 
@@ -4152,18 +4146,16 @@ namespace tsl {
                 //if (expandedMemory && useCustomWallpaper && !wallpaperData.empty()) {
                 if (expandedMemory && !refreshWallpaper.load(std::memory_order_acquire)) {
                     //inPlot = true;
-                    {
-                        inPlot.store(true, std::memory_order_release);
-                        std::lock_guard<std::mutex> lock(wallpaperMutex);
-                        if (!wallpaperData.empty()) {
-                            // Draw the bitmap at position (0, 0) on the screen
-                            if (!refreshWallpaper.load(std::memory_order_acquire))
-                                renderer->drawBitmap(0, 0, 448, 720, wallpaperData.data());
-                            else
-                                inPlot.store(false, std::memory_order_release);
-                        } else {
+                    inPlot.store(true, std::memory_order_release);
+                    //std::lock_guard<std::mutex> lock(wallpaperMutex);
+                    if (!wallpaperData.empty()) {
+                        // Draw the bitmap at position (0, 0) on the screen
+                        if (!refreshWallpaper.load(std::memory_order_acquire))
+                            renderer->drawBitmap(0, 0, 448, 720, wallpaperData.data());
+                        else
                             inPlot.store(false, std::memory_order_release);
-                        }
+                    } else {
+                        inPlot.store(false, std::memory_order_release);
                     }
                     //inPlot = false;
                 }
@@ -5162,7 +5154,9 @@ namespace tsl {
         public:
             //std::chrono::duration<long int, std::ratio<1, 1000000000>> t;
             u32 width, height;
-            
+            std::chrono::steady_clock::time_point m_touchStartTime;  // Track the time when touch starts
+
+
             /**
              * @brief Constructor
              *
@@ -5286,9 +5280,9 @@ namespace tsl {
             
             virtual bool onClick(u64 keys) override {
 
-                if (keys & HidNpadButton_A)
+                if (keys & KEY_A)
                     this->triggerClickAnimation();
-                else if (keys & (HidNpadButton_AnyUp | HidNpadButton_AnyDown | HidNpadButton_AnyLeft | HidNpadButton_AnyRight))
+                else if (keys & (KEY_UP | KEY_DOWN | KEY_LEFT | KEY_RIGHT))
                     this->m_clickAnimationProgress = 0;
 
                 return Element::onClick(keys);
@@ -5296,21 +5290,31 @@ namespace tsl {
             
             
             virtual bool onTouch(TouchEvent event, s32 currX, s32 currY, s32 prevX, s32 prevY, s32 initialX, s32 initialY) override {
-                if (event == TouchEvent::Touch)
+                if (event == TouchEvent::Touch) {
                     this->m_touched = this->inBounds(currX, currY);
-                
+                    if (this->m_touched) {
+                        // Start the timer when touch begins
+                        m_touchStartTime = std::chrono::steady_clock::now();
+                    }
+                }
+        
                 if (event == TouchEvent::Release && this->m_touched) {
                     this->m_touched = false;
                     
                     if (Element::getInputMode() == InputMode::Touch) {
-                        bool handled = this->onClick(HidNpadButton_A);
-                        
+                        // Calculate the touch duration
+                        auto touchDuration = std::chrono::steady_clock::now() - m_touchStartTime;
+                        auto touchDurationInSeconds = std::chrono::duration_cast<std::chrono::duration<float>>(touchDuration).count();
+        
+                        // Check if the touch lasted for 3 seconds or more
+                        s64 keyToUse = (touchDurationInSeconds >= 0.5) ? SETTINGS_KEY : KEY_A;
+        
+                        bool handled = this->onClick(keyToUse);
                         this->m_clickAnimationProgress = 0;
                         return handled;
                     }
                 }
-                
-                
+        
                 return false;
             }
             

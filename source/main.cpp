@@ -105,13 +105,6 @@ static bool lastRunningInterpreter = false;
 
 
 
-// Command key defintitions
-const static auto SCRIPT_KEY = KEY_MINUS;
-const static auto SYSTEM_SETTINGS_KEY = KEY_PLUS;
-const static auto SETTINGS_KEY = KEY_Y;
-const static auto STAR_KEY = KEY_X;
-
-
 
 
 //struct CommandOptions {
@@ -502,8 +495,8 @@ bool handleRunningInterpreter(uint64_t& keysHeld) {
             }
             lastSymbol = symbol;
             return true;
-        }// else if (lastPercentage != 100 && lastPercentage > 97)
-         //   lastSelectedListItem->setValue(lastSymbol + " 100%");
+        } else if (lastPercentage == 99)
+            lastSelectedListItem->setValue(lastSymbol + " 100%");
         return false;
     };
 
@@ -1839,8 +1832,10 @@ public:
                 }
 
                 if (cmd.size() > 1) {
-                    if (!iniFilePath.empty())
+                    if (!iniFilePath.empty()){
                         applyReplaceIniPlaceholder(cmd[1], INI_FILE_STR, iniFilePath);
+                    }
+
 
                     if (commandName == "ini_file") {
                         iniFilePath = preprocessPath(cmd[1], filePath);
@@ -1949,15 +1944,15 @@ public:
     }
 
     virtual tsl::elm::Element* createUI() override {
-        filesList.clear();
-        filesListOn.clear();
-        filesListOff.clear();
-        filterList.clear();
-        filterListOn.clear();
-        filterListOff.clear();
-        currentSelectedItems.clear();
-        isInitialized.clear();
-        selectedItemsList.clear();
+        //filesList.clear();
+        //filesListOn.clear();
+        //filesListOff.clear();
+        //filterList.clear();
+        //filterListOn.clear();
+        //filterListOff.clear();
+        //currentSelectedItems.clear();
+        //isInitialized.clear();
+        //selectedItemsList.clear();
 
 
         inSelectionMenu = true;
@@ -3667,48 +3662,52 @@ public:
         };
         
         if (isFileOrDirectory(ULTRAHAND_CONFIG_INI_PATH)) {
-            auto settingsData = getParsedDataFromIniFile(ULTRAHAND_CONFIG_INI_PATH);
-            if (settingsData.count(ULTRAHAND_PROJECT_NAME) > 0) {
-                auto& ultrahandSection = settingsData[ULTRAHAND_PROJECT_NAME];
-                
+            // Load key-value pairs from the "ULTRAHAND_PROJECT_NAME" section of the INI file
+            auto ultrahandSection = getKeyValuePairsFromSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME);
+            
+            if (!ultrahandSection.empty()) {
+                // Set default values for various settings
                 setDefaultValue(ultrahandSection, "hide_user_guide", FALSE_STR, hideUserGuide);
                 setDefaultValue(ultrahandSection, "clean_version_labels", FALSE_STR, cleanVersionLabels);
                 setDefaultValue(ultrahandSection, "hide_overlay_versions", FALSE_STR, hideOverlayVersions);
                 setDefaultValue(ultrahandSection, "hide_package_versions", FALSE_STR, hidePackageVersions);
                 setDefaultValue(ultrahandSection, "memory_expansion", FALSE_STR, useMemoryExpansion);
-                //setDefaultValue(ultrahandSection, "custom_wallpaper", FALSE_STR, useCustomWallpaper);
+                // setDefaultValue(ultrahandSection, "custom_wallpaper", FALSE_STR, useCustomWallpaper);
                 setDefaultValue(ultrahandSection, "opaque_screenshots", TRUE_STR, useOpaqueScreenshots);
                 setDefaultValue(ultrahandSection, "progress_animation", FALSE_STR, progressAnimation);
                 
                 setDefaultStrValue(ultrahandSection, DEFAULT_LANG_STR, defaultLang, defaultLang);
-                
+            
+                // Ensure certain settings are set in the INI file if they don't exist
                 if (ultrahandSection.count("datetime_format") == 0) {
                     setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "datetime_format", DEFAULT_DT_FORMAT);
                 }
-                
+            
                 if (ultrahandSection.count("hide_clock") == 0) {
                     setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_clock", FALSE_STR);
                 }
-                
+            
                 if (ultrahandSection.count("hide_battery") == 0) {
                     setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_battery", TRUE_STR);
                 }
-                
+            
                 if (ultrahandSection.count("hide_pcb_temp") == 0) {
                     setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_pcb_temp", TRUE_STR);
                 }
-                
+            
                 if (ultrahandSection.count("hide_soc_temp") == 0) {
                     setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_soc_temp", TRUE_STR);
                 }
-
+            
+                // Handle the 'to_packages' option if it exists
                 if (ultrahandSection.count("to_packages") > 0) {
                     toPackages = (trim(ultrahandSection["to_packages"]) == TRUE_STR);
                 }
-                
+            
+                // Mark settings as loaded if the "in_overlay" setting exists
                 settingsLoaded = ultrahandSection.count(IN_OVERLAY_STR) > 0;
             }
-            settingsData.clear();
+
         } else {
             updateMenuCombos = true;
         }
@@ -3938,7 +3937,7 @@ public:
                             listItem->setValue(overlayVersion, true);
                         
                         // Add a click listener to load the overlay when clicked upon
-                        listItem->setClickListener([&hiddenMenuMode = this->hiddenMenuMode, overlayFile, newStarred, overlayFileName, overlayName](s64 keys) {
+                        listItem->setClickListener([this, overlayFile, newStarred, overlayFileName, overlayName](s64 keys) {
                             
                             if (runningInterpreter.load(std::memory_order_acquire))
                                 return false;
@@ -4243,7 +4242,7 @@ public:
                         //packageHeader.clear(); // free memory
                         
                         // Add a click listener to load the overlay when clicked upon
-                        listItem->setClickListener([&hiddenMenuMode = this->hiddenMenuMode, packageFilePath, newStarred, packageName, newPackageName, packageVersion](s64 keys) {
+                        listItem->setClickListener([this, packageFilePath, newStarred, packageName, newPackageName, packageVersion](s64 keys) {
                             if (runningInterpreter.load(std::memory_order_acquire)) {
                                 return false;
                             }
@@ -4603,9 +4602,6 @@ public:
     }
 };
 
-#define SAMPLERATE 48000
-#define SAMPLESIZE 1024
-#define BUFFERCOUNT 3
 
 /**
  * @brief The `Overlay` class manages the main overlay functionality.
@@ -4633,21 +4629,20 @@ public:
         initializeCurl();
 
         // read commands from root package's boot_package.ini
-        if (firstBoot && isFileOrDirectory(PACKAGE_PATH+BOOT_PACKAGE_FILENAME)) {
-            //std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> bootOptions = loadOptionsFromIni(PACKAGE_PATH+BOOT_PACKAGE_FILENAME);
-            auto bootOptions = loadOptionsFromIni(PACKAGE_PATH+BOOT_PACKAGE_FILENAME);
-            if (bootOptions.size() > 0) {
-                std::string bootOptionName;
-                for (auto& bootOption:bootOptions) {
-                    bootOptionName = bootOption.first;
-                    auto& bootCommands = bootOption.second;
-                    if (bootOptionName == "boot") {
-                        interpretAndExecuteCommands(std::move(bootCommands), PACKAGE_PATH, bootOptionName); // Execute modified
-                        break;
-                    }
+        if (firstBoot) {
+            if (isFileOrDirectory(PACKAGE_PATH + BOOT_PACKAGE_FILENAME)) {
+                // Load only the "boot" section from the INI file
+                auto bootCommands = loadSpecificSectionFromIni(PACKAGE_PATH + BOOT_PACKAGE_FILENAME, "boot");
+            
+                // Check if bootCommands are loaded and execute them
+                if (!bootCommands.empty()) {
+                    interpretAndExecuteCommands(std::move(bootCommands), PACKAGE_PATH, "boot"); // Execute modified boot commands
                 }
-                bootOptions.clear();
             }
+
+            bool disableFuseReload = (parseValueFromIniSection(FUSE_DATA_INI_PATH, FUSE_STR, "disable_reload") == TRUE_STR);
+            if (!disableFuseReload)
+                deleteFileOrDirectory(FUSE_DATA_INI_PATH);
         }
         
         unpackDeviceInfo();

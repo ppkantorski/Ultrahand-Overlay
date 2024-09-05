@@ -169,19 +169,21 @@ void writeFuseIni(const std::string& outputPath, const char* data = nullptr) {
         outFile.write("]\n", 2);
 
         if (data) {
-            outFile << "cpuSpeedo0=" << *reinterpret_cast<const uint32_t*>(data + FUSE_CPU_SPEEDO_0_CALIB) << '\n'
-                    << "cpuSpeedo2=" << *reinterpret_cast<const uint32_t*>(data + FUSE_CPU_SPEEDO_2_CALIB) << '\n'
-                    << "socSpeedo0=" << *reinterpret_cast<const uint32_t*>(data + FUSE_SOC_SPEEDO_0_CALIB) << '\n'
-                    << "cpuIDDQ=" << *reinterpret_cast<const uint32_t*>(data + FUSE_CPU_IDDQ_CALIB) << '\n'
-                    << "socIDDQ=" << *reinterpret_cast<const uint32_t*>(data + FUSE_SOC_IDDQ_CALIB) << '\n'
-                    << "gpuIDDQ=" << *reinterpret_cast<const uint32_t*>(data + FUSE_GPU_IDDQ_CALIB) << '\n';
+            outFile << "cpu_speedo_0=" << *reinterpret_cast<const uint32_t*>(data + FUSE_CPU_SPEEDO_0_CALIB) << '\n'
+                    << "cpu_speedo_2=" << *reinterpret_cast<const uint32_t*>(data + FUSE_CPU_SPEEDO_2_CALIB) << '\n'
+                    << "soc_speedo_0=" << *reinterpret_cast<const uint32_t*>(data + FUSE_SOC_SPEEDO_0_CALIB) << '\n'
+                    << "cpu_iddq=" << *reinterpret_cast<const uint32_t*>(data + FUSE_CPU_IDDQ_CALIB) << '\n'
+                    << "soc_iddq=" << *reinterpret_cast<const uint32_t*>(data + FUSE_SOC_IDDQ_CALIB) << '\n'
+                    << "gpu_iddq=" << *reinterpret_cast<const uint32_t*>(data + FUSE_GPU_IDDQ_CALIB) << '\n'
+                    << "disable_reload=false\n";
         } else {
-            outFile << "cpuSpeedo0=\n"
-                    << "cpuSpeedo2=\n"
-                    << "socSpeedo0=\n"
-                    << "cpuIDDQ=\n"
-                    << "socIDDQ=\n"
-                    << "gpuIDDQ=\n";
+            outFile << "cpu_speedo_0=\n"
+                    << "cpu_speedo_2=\n"
+                    << "soc_speedo_0=\n"
+                    << "cpu_iddq=\n"
+                    << "soc_iddq=\n"
+                    << "gpu_iddq=\n"
+                    << "disable_reload=false\n";
         }
 
         outFile.close();
@@ -276,21 +278,29 @@ void removeEmptyCommands(std::vector<std::vector<std::string>>& commands) {
 }
 
 
-
 void reloadWallpaper() {
+    // Signal that wallpaper is being refreshed
     refreshWallpaper.store(true, std::memory_order_release);
-    while (true) {
-        if (!inPlot.load(std::memory_order_acquire)) {
-            //svcSleepThread(100000000LL);
-            std::lock_guard<std::mutex> lock(wallpaperMutex);
-            std::vector<u8>().swap(wallpaperData);
-            //if (isFileOrDirectory(WALLPAPER_PATH))
-            wallpaperData = loadBitmapFile(WALLPAPER_PATH, 448, 720);
-            break;
-        }
-        //svcSleepThread(10000000LL);
+
+    // Lock the mutex for condition waiting
+    std::unique_lock<std::mutex> lock(wallpaperMutex);
+
+    // Wait for inPlot to be false before reloading the wallpaper
+    cv.wait(lock, [] { return !inPlot.load(std::memory_order_acquire); });
+
+    // Clear the current wallpaper data
+    wallpaperData.clear();
+
+    // Reload the wallpaper file
+    if (isFileOrDirectory(WALLPAPER_PATH)) {
+        loadWallpaperFile(WALLPAPER_PATH);
     }
+
+    // Signal that wallpaper has finished refreshing
     refreshWallpaper.store(false, std::memory_order_release);
+    
+    // Notify any waiting threads
+    cv.notify_all();
 }
 
 
@@ -346,120 +356,6 @@ const char* getMemoryType(uint64_t packed_version) {
 
 
 
-
-//const char* getSDMCStorageInfo() {
-//    struct statvfs stat;
-//    static char buffer[30]; // Static buffer to retain data across function calls
-//
-//    // Get filesystem statistics for "sdmc:/"
-//    if (statvfs(ROOT_PATH.c_str(), &stat) != 0) {
-//    //if (statvfs("emmc:/", &stat) != 0) {
-//        // Handle error, could not get filesystem statistics
-//        return ""; // Returning a fixed error message
-//    }
-//
-//    // Calculate total and available storage in GB with proper casting to avoid integer division
-//    double totalSpaceGB = static_cast<double>(stat.f_blocks) * stat.f_frsize / (1024.0 * 1024.0 * 1024.0);
-//    double availableSpaceGB = static_cast<double>(stat.f_bavail) * stat.f_frsize / (1024.0 * 1024.0 * 1024.0);
-//
-//    // Create a formatted string with the available and total storage in GB
-//    snprintf(buffer, sizeof(buffer), "%.2f GB / %.2f GB", availableSpaceGB, totalSpaceGB);
-//
-//    // Return the formatted string
-//    return buffer;
-//}
-
-
-//const char* getStorageInfo(NcmStorageId storageId) {
-//    static char buffer[64];  // Increase buffer size for more detailed error messages
-//
-//    // Initialize the filesystem service
-//    Result rc = fsInitialize();
-//    if (R_FAILED(rc)) {
-//        snprintf(buffer, sizeof(buffer), "Error initializing fs: 0x%x", rc);
-//        return buffer;
-//    }
-//
-//    FsStorage storage;
-//    rc = fsOpenBisStorage(&storage, (FsBisPartitionId)storageId);
-//    if (R_FAILED(rc)) {
-//        snprintf(buffer, sizeof(buffer), "Error opening storage: 0x%x", rc);
-//        fsExit();  // Clean up the filesystem service
-//        return buffer;
-//    }
-//
-//    s64 totalSize = 0;
-//    rc = fsStorageGetSize(&storage, &totalSize);
-//    if (R_FAILED(rc)) {
-//        snprintf(buffer, sizeof(buffer), "Error getting size: 0x%x", rc);
-//        fsStorageClose(&storage);
-//        fsExit();  // Clean up the filesystem service
-//        return buffer;
-//    }
-//
-//    // Calculate total storage space in GB
-//    double totalSpaceGB = static_cast<double>(totalSize) / (1024.0 * 1024.0 * 1024.0);
-//
-//    // Create a formatted string with the total storage in GB
-//    snprintf(buffer, sizeof(buffer), "N/A / %.2f GB", totalSpaceGB);
-//
-//    // Close the storage handle
-//    fsStorageClose(&storage);
-//
-//    // Clean up the filesystem service
-//    fsExit();
-//
-//    return buffer;
-//}
-
-
-//const char* getSDMCStorageInfo3() {
-//    s64 freeSpace = 0;  // Free space in bytes
-//    s64 totalSpace = 0; // Total space in bytes
-//    char* buffer = (char*)malloc(64); // Dynamically allocate memory for the string
-//
-//    if (buffer == NULL) {
-//        return "Memory allocation failed.";
-//    }
-//
-//    // Initialize the ns service
-//    Result result = nsInitialize();
-//    if (R_FAILED(result)) {
-//        free(buffer);
-//        return "Failed to initialize ns service.";
-//    }
-//
-//    // Get the free space size on the SD card
-//    //result = nsGetFreeSpaceSize(NcmStorageId_SdCard, &freeSpace);
-//    result = nsGetFreeSpaceSize(NcmStorageId_BuiltInUser, &freeSpace);
-//    if (R_FAILED(result)) {
-//        nsExit(); // Close the ns service
-//        free(buffer); // Free the allocated memory
-//        return "Error retrieving free space.";
-//    }
-//
-//    // Get the total space size on the SD card
-//    //result = nsGetTotalSpaceSize(NcmStorageId_SdCard, &totalSpace);
-//    result = nsGetTotalSpaceSize(NcmStorageId_BuiltInUser, &totalSpace);
-//    if (R_FAILED(result)) {
-//        nsExit(); // Close the ns service
-//        free(buffer); // Free the allocated memory
-//        return "Error retrieving total space.";
-//    }
-//
-//    // Convert the free and total space from bytes to GB
-//    float freeSpaceGB = freeSpace / (1024.0f * 1024.0f * 1024.0f);   // Convert bytes to GB
-//    float totalSpaceGB = totalSpace / (1024.0f * 1024.0f * 1024.0f); // Convert bytes to GB
-//
-//    // Format the free and total space as a string
-//    snprintf(buffer, 64, "%.2f GB / %.2f GB", freeSpaceGB, totalSpaceGB);
-//
-//    // Close the ns service
-//    nsExit();
-//
-//    return buffer; // Return the dynamically allocated string
-//}
-
 const char* getStorageInfo(const std::string& storageType) {
     s64 freeSpace = 0;
     s64 totalSpace = 0;
@@ -506,15 +402,6 @@ const char* getStorageInfo(const std::string& storageType) {
     return buffer;
 }
 
-//const char* getStorageInfo(const std::string& storageType = "sdmc") {
-//    if (storageType == "sdmc") {
-//        return getSDMCStorageInfo();
-//    } else if (storageType == "user") {
-//        return getUserStorageInfo();
-//    }
-//    return "";
-//}
-
 
 void unpackDeviceInfo() {
     u64 packed_version;
@@ -543,14 +430,15 @@ void unpackDeviceInfo() {
 
 
     fuseDumpToIni();
+
     if (isFileOrDirectory(FUSE_DATA_INI_PATH)) {
         const std::pair<const char*, u32*> keys[] = {
-            {"cpuSpeedo0", &cpuSpeedo0},
-            {"cpuSpeedo2", &cpuSpeedo2},
-            {"socSpeedo0", &socSpeedo0},
-            {"cpuIDDQ", &cpuIDDQ},
-            {"socIDDQ", &socIDDQ},
-            {"gpuIDDQ", &gpuIDDQ}
+            {"cpu_speedo_0", &cpuSpeedo0},
+            {"cpu_speedo_2", &cpuSpeedo2},
+            {"soc_speedo_0", &socSpeedo0},
+            {"cpu_iddq", &cpuIDDQ},
+            {"soc_iddq", &socIDDQ},
+            {"gpu_iddq", &gpuIDDQ}
         };
         std::string value;
         for (const auto& key : keys) {
@@ -1175,12 +1063,39 @@ bool isDangerousCombination(const std::string& patternPath) {
 
 
 /**
+ * @brief Parses a command line into individual parts, handling quoted strings.
+ *
+ * @param line The command line to parse.
+ * @return A vector of strings containing the parsed command parts.
+ */
+std::vector<std::string> parseCommandLine(const std::string& line) {
+    std::vector<std::string> commandParts;
+    bool inQuotes = false;
+    std::string part;
+
+    std::istringstream iss(line);
+    while (std::getline(iss, part, '\'')) { // Handle single quotes
+        if (inQuotes) {
+            commandParts.push_back(part); // Inside quotes, treat as a whole argument
+        } else {
+            std::istringstream argIss(part);
+            std::string arg;
+            while (argIss >> arg) {
+                commandParts.push_back(arg); // Split part outside quotes by spaces
+            }
+        }
+        inQuotes = !inQuotes; // Toggle the inQuotes flag
+    }
+
+    return commandParts;
+}
+
+/**
  * @brief Loads and parses options from an INI file.
  *
  * This function reads and parses options from an INI file, organizing them by section.
  *
  * @param packageIniPath The path to the INI file.
- * @param makeConfig A flag indicating whether to create a config if it doesn't exist.
  * @return A vector containing pairs of section names and their associated key-value pairs.
  */
 std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadOptionsFromIni(const std::string& packageIniPath) {
@@ -1191,7 +1106,6 @@ std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadO
     std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> options;
     std::string line, currentSection;
     std::vector<std::vector<std::string>> sectionCommands;
-    std::vector<std::string> commandParts;
 
     while (std::getline(packageFile, line)) {
         // Remove carriage returns and newlines
@@ -1206,25 +1120,7 @@ std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadO
             }
             currentSection = line.substr(1, line.size() - 2);
         } else if (!currentSection.empty()) { // Command lines within sections
-            commandParts.clear();
-            bool inQuotes = false;
-            std::string part;
-
-            std::istringstream iss(line);
-            while (std::getline(iss, part, '\'')) {
-                if (inQuotes) {
-                    commandParts.push_back(part); // Inside quotes, treat as a whole argument
-                } else {
-                    std::istringstream argIss(part);
-                    std::string arg;
-                    while (argIss >> arg) {
-                        commandParts.push_back(arg); // Split part outside quotes by spaces
-                    }
-                }
-                inQuotes = !inQuotes; // Toggle the inQuotes flag
-            }
-
-            sectionCommands.push_back(std::move(commandParts));
+            sectionCommands.push_back(parseCommandLine(line)); // Use helper to parse command line
         }
     }
 
@@ -1233,10 +1129,44 @@ std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadO
     }
     packageFile.close();
 
-
     return options;
 }
 
+/**
+ * @brief Loads a specific section from an INI file.
+ *
+ * This function reads and parses a specific section from an INI file.
+ *
+ * @param packageIniPath The path to the INI file.
+ * @param sectionName The name of the section to load.
+ * @return A vector of commands within the specified section.
+ */
+std::vector<std::vector<std::string>> loadSpecificSectionFromIni(const std::string& packageIniPath, const std::string& sectionName) {
+    std::ifstream packageFile(packageIniPath);
+
+    if (!packageFile) return {}; // Return empty vector if file can't be opened
+
+    std::string line, currentSection;
+    std::vector<std::vector<std::string>> sectionCommands;
+    bool inTargetSection = false;
+
+    while (std::getline(packageFile, line)) {
+        // Remove carriage returns and newlines
+        line.erase(std::remove(line.begin(), line.end(), '\r'), line.end());
+
+        if (line.empty() || line.front() == '#') continue; // Skip empty or comment lines
+
+        if (line.front() == '[' && line.back() == ']') { // Section headers
+            currentSection = line.substr(1, line.size() - 2);
+            inTargetSection = (currentSection == sectionName); // Check if this is the target section
+        } else if (inTargetSection) { // Only parse commands within the target section
+            sectionCommands.push_back(parseCommandLine(line)); // Use helper to parse command line
+        }
+    }
+
+    packageFile.close();
+    return sectionCommands; // Return only the commands from the target section
+}
 
 
 
@@ -1513,10 +1443,6 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
                 replaceAllPlaceholders(modifiedArg, "{file_source}", entry);
                 replaceAllPlaceholders(modifiedArg, "{file_name}", fileName);
                 replaceAllPlaceholders(modifiedArg, "{folder_name}", removeQuotes(getParentDirNameFromPath(entry)));
-                //modifiedArg = replaceAllPlaceholders(modifiedArg, "{ram_vendor}", memoryVendor);
-                //modifiedArg = replaceAllPlaceholders(modifiedArg, "{ram_model}", memoryModel);
-                //modifiedArg = replaceAllPlaceholders(modifiedArg, "{ams_version}", amsVersion);
-                //modifiedArg = replaceAllPlaceholders(modifiedArg, "{hos_version}", hosVersion);
 
                 if (modifiedArg.find("{list_source(") != std::string::npos) {
                     //modifiedArg = replacePlaceholder(modifiedArg, "*", std::to_string(entryIndex));
@@ -1780,31 +1706,34 @@ void interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
         disableLogging = !(parseValueFromIniSection(PACKAGES_INI_FILEPATH, getNameFromPath(packagePath), USE_LOGGING_STR) == TRUE_STR);
         logFilePath = packagePath + "log.txt";
     }
-
-    auto settingsData = getParsedDataFromIniFile(ULTRAHAND_CONFIG_INI_PATH);
-    if (settingsData.count(BUFFERS) > 0) {
-        auto& ultrahandSection = settingsData[BUFFERS];
-        if (settingsData.count(BUFFERS) > 0) {
-            // Directly update buffer sizes without a map
-            std::string section = "copy_buffer_size";
-            if (ultrahandSection.count(section) > 0) {
-                COPY_BUFFER_SIZE = std::stoi(ultrahandSection[section]);
-            }
-            section = "unzip_buffer_size";
-            if (ultrahandSection.count(section) > 0) {
-                UNZIP_BUFFER_SIZE = std::stoi(ultrahandSection[section]);
-            }
-            section = "download_buffer_size";
-            if (ultrahandSection.count(section) > 0) {
-                DOWNLOAD_BUFFER_SIZE = std::stoi(ultrahandSection[section]);
-            }
-            section = "hex_buffer_size";
-            if (ultrahandSection.count(section) > 0) {
-                HEX_BUFFER_SIZE = std::stoi(ultrahandSection[section]);
-            }
+    
+    // Load key-value pairs from the "BUFFERS" section of the INI file
+    auto bufferSection = getKeyValuePairsFromSection(ULTRAHAND_CONFIG_INI_PATH, BUFFERS);
+    
+    if (!bufferSection.empty()) {
+        // Directly update buffer sizes without a map
+        std::string section;
+    
+        section = "copy_buffer_size";
+        if (bufferSection.count(section) > 0) {
+            COPY_BUFFER_SIZE = std::stoi(bufferSection[section]);
+        }
+    
+        section = "unzip_buffer_size";
+        if (bufferSection.count(section) > 0) {
+            UNZIP_BUFFER_SIZE = std::stoi(bufferSection[section]);
+        }
+    
+        section = "download_buffer_size";
+        if (bufferSection.count(section) > 0) {
+            DOWNLOAD_BUFFER_SIZE = std::stoi(bufferSection[section]);
+        }
+    
+        section = "hex_buffer_size";
+        if (bufferSection.count(section) > 0) {
+            HEX_BUFFER_SIZE = std::stoi(bufferSection[section]);
         }
     }
-    settingsData.clear();
 
     std::string message;
 
@@ -2118,7 +2047,7 @@ void handleIniCommands(const std::vector<std::string>& cmd, const std::string& p
         std::string desiredSection = removeQuotes(cmd[2]);
         std::string desiredKey = removeQuotes(cmd[3]);
         std::string desiredValue = std::accumulate(cmd.begin() + 4, cmd.end(), std::string(""), [](const std::string& a, const std::string& b) -> std::string {
-            return a.empty() ? b : a + " " + b;
+            return removeQuotes(a.empty() ? b : a + " " + b);
         });
         setIniFileValue(sourcePath, desiredSection, desiredKey, desiredValue);
     } else if (cmd[0] == "set-ini-key" && cmd.size() >= 5) {
@@ -2126,7 +2055,7 @@ void handleIniCommands(const std::vector<std::string>& cmd, const std::string& p
         std::string desiredSection = removeQuotes(cmd[2]);
         std::string desiredKey = removeQuotes(cmd[3]);
         std::string desiredNewKey = std::accumulate(cmd.begin() + 4, cmd.end(), std::string(""), [](const std::string& a, const std::string& b) -> std::string {
-            return a.empty() ? b : a + " " + b;
+            return removeQuotes(a.empty() ? b : a + " " + b);
         });
         setIniFileKey(sourcePath, desiredSection, desiredKey, desiredNewKey);
     }
@@ -2295,25 +2224,21 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
         if (cmd.size() >= 2) {
             std::string bootCommandName = removeQuotes(cmd[1]);
             if (isFileOrDirectory(packagePath + BOOT_PACKAGE_FILENAME)) {
-                auto bootOptions = loadOptionsFromIni(packagePath + BOOT_PACKAGE_FILENAME);
-                std::string bootOptionName;
-                bool resetCommandSuccess;
-                for (auto& bootOption : bootOptions) {
-                    bootOptionName = bootOption.first;
-                    auto& bootCommands = bootOption.second;
-                    if (bootOptionName == bootCommandName) {
-                        resetCommandSuccess = false;
-                        if (!commandSuccess) resetCommandSuccess = true;
-                        interpretAndExecuteCommands(std::move(bootCommands), packagePath, bootOptionName);
-                        if (resetCommandSuccess) {
-                            commandSuccess = false;
-                            resetCommandSuccess = false;
-                        }
-                        break;
+                // Load only the commands from the specific section (bootCommandName)
+                auto bootCommands = loadSpecificSectionFromIni(packagePath + BOOT_PACKAGE_FILENAME, bootCommandName);
+            
+                if (!bootCommands.empty()) {
+                    bool resetCommandSuccess = false;
+                    if (!commandSuccess) resetCommandSuccess = true;
+            
+                    interpretAndExecuteCommands(std::move(bootCommands), packagePath, bootCommandName);
+            
+                    if (resetCommandSuccess) {
+                        commandSuccess = false;
                     }
                 }
-                bootOptions.clear();
             }
+
         }
     } else if (commandName == "reboot") { // credits to Studious Pancake for the Payload and utils methods
         if (util::IsErista() || util::SupportsMarikoRebootToConfig()) {
@@ -2539,179 +2464,3 @@ void enqueueInterpreterCommands(std::vector<std::vector<std::string>>&& commands
     }
     queueCondition.notify_one();
 }
-
-//void playClickVibration() {
-//    // Initialize HID services
-//    if (R_FAILED(hidInitialize())) {
-//        logMessage("Failed to initialize HID services");
-//        return;
-//    }
-//
-//    // Example vibration pattern for a quick click feedback
-//    HidVibrationValue vibrationValue = {
-//        .amp_low = 0.5,
-//        .freq_low = 160.0,
-//        .amp_high = 0.5,
-//        .freq_high = 320.0
-//    };
-//
-//    // Use the correct controller ID
-//    HidVibrationDeviceHandle vibrationDevice;
-//    Result rc = hidGetVibrationDeviceInfo(&vibrationDevice, CONTROLLER_P1_AUTO);
-//    if (R_FAILED(rc)) {
-//        logMessage("Failed to get vibration device info");
-//        hidExit();
-//        return;
-//    }
-//
-//    rc = hidSendVibrationValues(&vibrationDevice, &vibrationValue, 1);
-//    if (R_FAILED(rc)) {
-//        logMessage("Failed to send vibration values");
-//    }
-//
-//    hidExit();
-//}
-//
-
-
-//bool load_wav(const std::string &file_path, int &sample_rate, int &num_channels, std::vector<uint8_t> &audio_data) {
-//    std::ifstream file(file_path, std::ios::binary);
-//    if (!file) {
-//        logMessage("Could not open WAV file: " + file_path);
-//        return false;
-//    }
-//
-//    // Read the WAV header
-//    char buffer[44];
-//    file.read(buffer, 44);
-//
-//    // Parse WAV header (simplified)
-//    sample_rate = *reinterpret_cast<int*>(buffer + 24);
-//    num_channels = *reinterpret_cast<short*>(buffer + 22);
-//
-//    // Check if the format is PCM
-//    if (buffer[20] != 1 || buffer[21] != 0) {
-//        logMessage("Unsupported WAV format");
-//        return false;
-//    }
-//
-//    // Read the audio data
-//    file.seekg(0, std::ios::end);
-//    size_t file_size = file.tellg();
-//    file.seekg(44, std::ios::beg);
-//    size_t data_size = file_size - 44;
-//
-//    audio_data.resize(data_size);
-//    file.read(reinterpret_cast<char*>(audio_data.data()), data_size);
-//
-//    return true;
-//}
-//
-//Result try_open_audio_out(const char* device_name, u32 sample_rate, u32 num_channels, u32& sample_rate_out, u32& channel_count_out, PcmFormat& format, AudioOutState& state) {
-//    Result rc = audoutOpenAudioOut(device_name, nullptr, sample_rate, num_channels, &sample_rate_out, &channel_count_out, &format, &state);
-//    if (R_FAILED(rc)) {
-//        logMessage("Failed to open audio out with result code: " + std::to_string(rc));
-//    }
-//    return rc;
-//}
-//
-//int play_audio(const std::string &file_path) {
-//    int sample_rate, num_channels;
-//    std::vector<uint8_t> audio_data;
-//
-//    if (!load_wav(file_path, sample_rate, num_channels, audio_data)) {
-//        logMessage("Failed to load WAV file");
-//        return 1;
-//    }
-//
-//    logMessage("WAV file loaded successfully");
-//    logMessage("Sample rate: " + std::to_string(sample_rate));
-//    logMessage("Number of channels: " + std::to_string(num_channels));
-//
-//    // Initialize the audio output service
-//    Result rc = audoutInitialize();
-//    if (R_FAILED(rc)) {
-//        logMessage("Failed to initialize audio output, result code: " + std::to_string(rc));
-//        return 1;
-//    }
-//
-//    // List audio outputs to get the device name
-//    char device_names[0x100 * 8] = {0};  // Allow space for up to 8 device names
-//    u32 device_names_count = 0;
-//    rc = audoutListAudioOuts(device_names, 8, &device_names_count);
-//
-//    if (R_FAILED(rc) || device_names_count == 0) {
-//        logMessage("Failed to list audio outputs or no outputs available, result code: " + std::to_string(rc));
-//        audoutExit();
-//        return 1;
-//    }
-//
-//    logMessage("Audio outputs listed successfully, count: " + std::to_string(device_names_count));
-//    logMessage("Device name: " + std::string(device_names));
-//
-//    // Align buffer size to 0x1000 bytes
-//    size_t aligned_buffer_size = (audio_data.size() + 0xFFF) & ~0xFFF;
-//    std::vector<uint8_t> aligned_audio_data(aligned_buffer_size);
-//    memcpy(aligned_audio_data.data(), audio_data.data(), audio_data.size());
-//
-//    AudioOutBuffer source = {};
-//    source.next = nullptr;
-//    source.buffer = aligned_audio_data.data();
-//    source.buffer_size = aligned_buffer_size;
-//    source.data_size = audio_data.size();
-//    source.data_offset = 0;
-//
-//    u32 sample_rate_out;
-//    u32 channel_count_out;
-//    AudioOutState state;
-//
-//    // Try different PCM formats
-//    PcmFormat formats[] = {PcmFormat_Int16, PcmFormat_Int32};
-//    bool success = false;
-//    for (PcmFormat format : formats) {
-//        logMessage("Trying format: " + std::to_string(format));
-//        rc = try_open_audio_out(device_names, sample_rate, num_channels, sample_rate_out, channel_count_out, format, state);
-//        if (R_SUCCEEDED(rc)) {
-//            success = true;
-//            break;
-//        }
-//    }
-//
-//    if (!success) {
-//        logMessage("Failed to open audio out with any supported format.");
-//        audoutExit();
-//        return 1;
-//    }
-//
-//    logMessage("Audio out opened successfully");
-//
-//    rc = audoutStartAudioOut();
-//    if (R_FAILED(rc)) {
-//        logMessage("Failed to start audio out, result code: " + std::to_string(rc));
-//        audoutExit();
-//        return 1;
-//    }
-//
-//    rc = audoutAppendAudioOutBuffer(&source);
-//    if (R_FAILED(rc)) {
-//        logMessage("Failed to play audio buffer, result code: " + std::to_string(rc));
-//        audoutStopAudioOut();
-//        audoutExit();
-//        return 1;
-//    }
-//
-//    AudioOutBuffer* released_buffer = nullptr;
-//    u32 released_count;
-//
-//    rc = audoutWaitPlayFinish(&released_buffer, &released_count, UINT64_MAX);
-//    if (R_FAILED(rc)) {
-//        logMessage("Failed to wait for audio playback, result code: " + std::to_string(rc));
-//    }
-//
-//    audoutStopAudioOut();
-//    audoutExit();
-//
-//    logMessage("Audio playback completed successfully");
-//
-//    return 0;
-//}//
