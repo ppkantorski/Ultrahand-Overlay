@@ -457,8 +457,8 @@ inline void clearMemory() {
     lastSelectedListItem.reset();
 }
 
-void shiftItemFocus(auto& listItem) {
-    tsl::Overlay::get()->getCurrentGui()->requestFocus(listItem, tsl::FocusDirection::None);
+void shiftItemFocus(tsl::elm::Element* element) {
+    tsl::Overlay::get()->getCurrentGui()->requestFocus(element, tsl::FocusDirection::None);
 }
 
 
@@ -498,12 +498,12 @@ bool handleRunningInterpreter(uint64_t& keysHeld) {
             }
             if (currentPercentage == 100) {
                 inProgress = true;  // This seems to be intended to indicate task completion, but setting 'true' here every time might be a mistake?
-                percentage.store(-1, std::memory_order_release);
+                //percentage.store(-1, std::memory_order_release);
             }
             lastSymbol = symbol;
             return true;
-        } else if (lastPercentage != 100 && lastPercentage > 90)
-            lastSelectedListItem->setValue(lastSymbol + " 100%");
+        }// else if (lastPercentage != 100 && lastPercentage > 97)
+         //   lastSelectedListItem->setValue(lastSymbol + " 100%");
         return false;
     };
 
@@ -1052,7 +1052,9 @@ public:
                 if (keys & KEY_A) {
                     setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "current_wallpaper", "");
                     deleteFileOrDirectory(WALLPAPER_PATH);
-                    refreshWallpaper.store(true, std::memory_order_release);
+                    reloadWallpaper();
+                    //refreshWallpaper.store(true, std::memory_order_release);
+
                     //deleteFileOrDirectory(THEME_CONFIG_INI_PATH);
                     //if (isFileOrDirectory(defaultTheme)) copyFileOrDirectory(defaultTheme, THEME_CONFIG_INI_PATH);
                     //else initializeTheme();
@@ -1065,6 +1067,7 @@ public:
                     shiftItemFocus(listItemRaw);
                     simulatedSelectComplete = true;
                     lastSelectedListItem->triggerClickAnimation();
+                    
                     return true;
                 }
                 return false;
@@ -1093,7 +1096,8 @@ public:
                         setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "current_wallpaper", wallpaperName);
                         //deleteFileOrDirectory(THEME_CONFIG_INI_PATH);
                         copyFileOrDirectory(wallpaperFile, WALLPAPER_PATH);
-                        refreshWallpaper.store(true, std::memory_order_release);
+                        reloadWallpaper();
+                        
                         //clearWallpaperData();
                         //initializeTheme();
                         //tsl::initializeThemeVars();
@@ -1105,6 +1109,7 @@ public:
                         shiftItemFocus(listItemRaw);
                         simulatedSelectComplete = true;
                         lastSelectedListItem->triggerClickAnimation();
+                        
                         return true;
                     }
                     return false;
@@ -1165,10 +1170,10 @@ public:
             return true;
         }
 
-        if (refreshWallpaper.load(std::memory_order_acquire)) {
-            reloadWallpaper();
-            refreshWallpaper.store(false, std::memory_order_release);
-        }
+        //if (refreshWallpaper.load(std::memory_order_acquire)) {
+        //    reloadWallpaper();
+        //    refreshWallpaper.store(false, std::memory_order_release);
+        //}
 
         if (inSettingsMenu && !inSubSettingsMenu) {
             if (!returningToSettings) {
@@ -1749,21 +1754,28 @@ private:
     std::string iniPath, iniPathOn, iniPathOff;
     std::string listString, listStringOn, listStringOff;
     std::string jsonString, jsonStringOn, jsonStringOff;
+    std::vector<std::string> selectedItemsList;
 
 public:
     SelectionOverlay(const std::string& path, const std::string& key = "", const std::vector<std::vector<std::string>>& cmds = {}, const std::string& footerKey = "")
         : filePath(path), specificKey(key), commands(std::move(cmds)), specifiedFooterKey(footerKey) {
-        lastSelectedListItem.reset();
+        //lastSelectedListItem.reset();
     }
 
     ~SelectionOverlay() {
         lastSelectedListItem.reset();
-        commands.clear();
-        commandsOn.clear();
-        commandsOff.clear();
-        filesList.clear();
-        filesListOn.clear();
-        filesListOff.clear();
+        //commands.clear();
+        //commandsOn.clear();
+        //commandsOff.clear();
+        //filesList.clear();
+        //filesListOn.clear();
+        //filesListOff.clear();
+        //filterList.clear();
+        //filterListOn.clear();
+        //filterListOff.clear();
+        //currentSelectedItems.clear();
+        //isInitialized.clear();
+        //selectedItemsList.clear();
     }
 
     void processSelectionCommands() {
@@ -1937,6 +1949,17 @@ public:
     }
 
     virtual tsl::elm::Element* createUI() override {
+        filesList.clear();
+        filesListOn.clear();
+        filesListOff.clear();
+        filterList.clear();
+        filterListOn.clear();
+        filterListOff.clear();
+        currentSelectedItems.clear();
+        isInitialized.clear();
+        selectedItemsList.clear();
+
+
         inSelectionMenu = true;
         PackageHeader packageHeader = getPackageHeaderFromIni(filePath + PACKAGE_FILENAME);
 
@@ -1949,7 +1972,7 @@ public:
 
         processSelectionCommands();
 
-        std::vector<std::string> selectedItemsList, selectedItemsListOn, selectedItemsListOff;
+        std::vector<std::string> selectedItemsListOn, selectedItemsListOff;
 
         if (commandMode == DEFAULT_STR || commandMode == OPTION_STR) {
             if (sourceType == FILE_STR)
@@ -2139,8 +2162,7 @@ public:
                     listItem->setValue(footer, true);
                 }
 
-                listItem->setClickListener([&commands = this->commands, &filePath = this->filePath, &specificKey = this->specificKey, &commandMode = this->commandMode,
-                    &specifiedFooterKey = this->specifiedFooterKey, &lastSelectedListItemFooter = this->lastSelectedListItemFooter, i, footer, selectedItem, listItemRaw = listItem.get()](uint64_t keys) {
+                listItem->setClickListener([this, i, footer, listItemRaw = listItem.get()](uint64_t keys) {
                     //listItemPtr = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*) {})](uint64_t keys) {
 
                     if (runningInterpreter.load(std::memory_order_acquire)) {
@@ -2155,8 +2177,10 @@ public:
                     if ((keys & KEY_A)) {
                         isDownloadCommand = false;
                         runningInterpreter.store(true, std::memory_order_release);
-                        enqueueInterpreterCommands(getSourceReplacement(commands, selectedItem, i, filePath), filePath, specificKey);
-                        startInterpreterThread();
+                        //std::string selectedItemStr = std::string(selectedItem);
+
+                        enqueueInterpreterCommands(getSourceReplacement(commands, selectedItemsList[i], i, filePath), filePath, specificKey);
+                        startInterpreterThread(filePath);
 
                         listItemRaw->setValue(INPROGRESS_SYMBOL);
 
@@ -2165,6 +2189,7 @@ public:
                             selectedFooterDict[specifiedFooterKey] = listItemRaw->getText();
                             if (lastSelectedListItem)
                                 lastSelectedListItem->setValue(lastSelectedListItemFooter, true);
+                            //std::string footerStr = std::string(footer);
                             lastSelectedListItemFooter = footer;
                         }
 
@@ -2187,10 +2212,10 @@ public:
                 bool toggleStateOn = std::find(selectedItemsListOn.begin(), selectedItemsListOn.end(), selectedItem) != selectedItemsListOn.end();
                 toggleListItem->setState(toggleStateOn);
 
-                toggleListItem->setStateChangedListener([this, i, selectedItem, listItemRaw = toggleListItem.get(), sourceType = sourceType](bool state) {
+                toggleListItem->setStateChangedListener([this, i, listItemRaw = toggleListItem.get()](bool state) {
                     // Initialize currentSelectedItem for this index if it does not exist
                     if (isInitialized.find(i) == isInitialized.end() || !isInitialized[i]) {
-                        currentSelectedItems[i] = selectedItem;
+                        currentSelectedItems[i] = selectedItemsList[i];
                         isInitialized[i] = true;
                     }
                     
@@ -2198,7 +2223,7 @@ public:
                     
                     auto modifiedCmds = getSourceReplacement(!state ? commandsOn : commandsOff, currentSelectedItems[i], i, filePath);
                     //auto modifiedCmdsCopy = modifiedCmds;
-                    interpretAndExecuteCommands(std::move(modifiedCmds), filePath, specificKey);
+                    //interpretAndExecuteCommands(std::move(modifiedCmds), filePath, specificKey);
                     
                     if (sourceType == FILE_STR) {
                         // Reset variables
@@ -2255,6 +2280,7 @@ public:
                             //logMessage("Selected file name is empty.");
                         }
                     }
+                    interpretAndExecuteCommands(std::move(modifiedCmds), filePath, specificKey);
                 });
                 
                 
@@ -2401,6 +2427,7 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                     const PackageHeader& packageHeader, std::string& pageLeftName, std::string& pageRightName,
                     const std::string& packagePath, const std::string& currentPage, const std::string& packageName, const std::string& dropdownSection, const size_t nestedLayer,
                     std::string& pathPattern, std::string& pathPatternOn, std::string& pathPatternOff, bool& usingPages, const bool packageMenuMode = true) {
+
     tsl::hlp::ini::IniData packageConfigData;
     std::unique_ptr<tsl::elm::ListItem> listItem;
     auto toggleListItem = std::make_unique<tsl::elm::ToggleListItem>("", true, "", "");
@@ -2943,7 +2970,7 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
 
                         const std::string& forwarderPackagePath = getParentDirFromPath(packageSource);
                         const std::string& forwarderPackageIniName = getNameFromPath(packageSource);
-                        listItem->setClickListener([i, commands, keyName = option.first, dropdownSection, packagePath, forwarderPackagePath, forwarderPackageIniName, nestedLayer](s64 keys) mutable {
+                        listItem->setClickListener([commands, keyName = option.first, dropdownSection, packagePath, forwarderPackagePath, forwarderPackageIniName](s64 keys) mutable {
                             if (simulatedSelect && !simulatedSelectComplete) {
                                 keys |= KEY_A;
                                 simulatedSelect = false;
@@ -2977,7 +3004,7 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                         //}
                         //listItem->setValue("TEST", true);
                         //std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(option.second, pathReplace);
-                        listItem->setClickListener([commands, keyName = option.first, dropdownSection, packagePath,  packageName, footer, lastSection, listItemRaw = listItem.get()](uint64_t keys) {
+                        listItem->setClickListener([commands, keyName = option.first, dropdownSection, packagePath, packageName, footer, lastSection, listItemRaw = listItem.get()](uint64_t keys) {
                             //listItemPtr = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){})](uint64_t keys) {
                             
                             if (runningInterpreter.load(std::memory_order_acquire))
@@ -3064,7 +3091,7 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                                 isDownloadCommand = false;
                                 runningInterpreter.store(true, std::memory_order_release);
                                 enqueueInterpreterCommands(getSourceReplacement(commands, selectedItem, i, packagePath), packagePath, keyName);
-                                startInterpreterThread();
+                                startInterpreterThread(packagePath);
                                 listItemRaw->setValue(INPROGRESS_SYMBOL);
                                 
                                 lastSelectedListItem.reset();

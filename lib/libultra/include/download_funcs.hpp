@@ -296,7 +296,7 @@ bool unzipFile(const std::string& zipFilePath, const std::string& toDestination)
                 break;
             }
             outputFile.write(buffer, bytesRead);
-            //logMessage("Extracted: " + extractedFilePath);
+            logMessage("Extracted: " + extractedFilePath);
 
             currentUncompressedSize += bytesRead;
 

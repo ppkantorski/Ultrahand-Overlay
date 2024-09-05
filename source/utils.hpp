@@ -163,6 +163,7 @@ static bool usingEmunand = true;
 void writeFuseIni(const std::string& outputPath, const char* data = nullptr) {
     std::ofstream outFile(outputPath);
     if (outFile) {
+        //outFile.write("; do not adjust these values manually unless they were not dumped correctly\n", 81);
         outFile.write("[", 1);
         outFile.write(FUSE_STR.c_str(), FUSE_STR.size());
         outFile.write("]\n", 2);
@@ -191,12 +192,12 @@ void fuseDumpToIni(const std::string& outputPath = FUSE_DATA_INI_PATH) {
     if (isFileOrDirectory(outputPath)) return;
 
     u64 pid = 0;
-    if (R_FAILED(pmdmntInitialize()) || R_FAILED(pmdmntGetProcessId(&pid, 0x0100000000000006))) {
-        pmdmntExit();
+    if (R_FAILED(pmdmntGetProcessId(&pid, 0x0100000000000006))) {
+        //pmdmntExit();
         writeFuseIni(outputPath);
         return;
     }
-    pmdmntExit();
+    //pmdmntExit();
 
     Handle debug;
     if (R_FAILED(svcDebugActiveProcess(&debug, pid))) {
@@ -277,17 +278,19 @@ void removeEmptyCommands(std::vector<std::vector<std::string>>& commands) {
 
 
 void reloadWallpaper() {
+    refreshWallpaper.store(true, std::memory_order_release);
     while (true) {
         if (!inPlot.load(std::memory_order_acquire)) {
-            {
-                std::lock_guard<std::mutex> lock(wallpaperMutex);
-                std::vector<u8>().swap(wallpaperData);
-                //if (isFileOrDirectory(WALLPAPER_PATH))
-                wallpaperData = loadBitmapFile(WALLPAPER_PATH, 448, 720);
-            }
+            //svcSleepThread(100000000LL);
+            std::lock_guard<std::mutex> lock(wallpaperMutex);
+            std::vector<u8>().swap(wallpaperData);
+            //if (isFileOrDirectory(WALLPAPER_PATH))
+            wallpaperData = loadBitmapFile(WALLPAPER_PATH, 448, 720);
             break;
         }
+        //svcSleepThread(10000000LL);
     }
+    refreshWallpaper.store(false, std::memory_order_release);
 }
 
 
@@ -303,40 +306,40 @@ void formatVersion(uint64_t packed_version, int shift1, int shift2, int shift3, 
 
 const char* getMemoryType(uint64_t packed_version) {
     switch (packed_version) {
-        case 0: return "Samsung_K4F6E304HB-MGCH_4GB_LPDDR4_3200Mbps";
-        case 1: return "Hynix_H9HCNNNBPUMLHR-NLE_4GB_LPDDR4_3200Mbps";
-        case 2: return "Micron_MT53B512M32D2NP-062_WT:C_4GB_LPDDR4_3200Mbps";
-        case 3: return "Hynix_H9HCNNNBKMMLXR-NEE_4GB_LPDDR4X_4266Mbps";
-        case 4: return "Samsung_K4FHE3D4HM-MGCH_6GB_LPDDR4_3200Mbps";
-        case 5: return "Hynix_H9HCNNNBKMMLXR-NEE_4GB_LPDDR4X_4266Mbps";
-        case 6: return "Hynix_H9HCNNNBKMMLXR-NEE_4GB_LPDDR4X_4266Mbps";
-        case 7: return "Samsung_K4FBE3D4HM-MGXX_8GB_LPDDR4_3200Mbps";
-        case 8: return "Samsung_K4U6E3S4AM-MGCJ_4GB_LPDDR4X_3733Mbps";
-        case 9: return "Samsung_K4UBE3D4AM-MGCJ_8GB_LPDDR4X_3733Mbps";
-        case 10: return "Hynix_H9HCNNNBKMMLHR-NME_4GB_LPDDR4X_3733Mbps";
-        case 11: return "Micron_MT53E512M32D2NP-046_WT:E_4GB_LPDDR4X_4266Mbps";
-        case 12: return "Samsung_K4U6E3S4AM-MGCJ_4GB_LPDDR4X_3733Mbps";
-        case 13: return "Samsung_K4UBE3D4AM-MGCJ_8GB_LPDDR4X_3733Mbps";
-        case 14: return "Hynix_H9HCNNNBKMMLHR-NME_4GB_LPDDR4X_3733Mbps";
-        case 15: return "Micron_MT53E512M32D2NP-046_WT:E_4GB_LPDDR4X_4266Mbps";
-        case 17: return "Samsung_K4U6E3S4AA-MGCL_4GB_LPDDR4X_4266Mbps";
-        case 18: return "Samsung_K4UBE3D4AA-MGCL_8GB_LPDDR4X_4266Mbps";
-        case 19: return "Samsung_K4U6E3S4AA-MGCL_4GB_LPDDR4X_4266Mbps";
-        case 20: return "Samsung_K4U6E3S4AB-MGCL_4GB_LPDDR4X_4266Mbps";
-        case 21: return "Samsung_K4U6E3S4AB-MGCL_4GB_LPDDR4X_4266Mbps";
-        case 22: return "Samsung_K4U6E3S4AB-MGCL_4GB_LPDDR4X_4266Mbps";
-        case 23: return "Samsung_K4UBE3D4AA-MGCL_8GB_LPDDR4X_4266Mbps";
-        case 24: return "Samsung_K4U6E3S4AA-MGCL_4GB_LPDDR4X_4266Mbps";
-        case 25: return "Micron_MT53E512M32D2NP-046_WT:F_4GB_LPDDR4X_4266Mbps";
-        case 26: return "Micron_MT53E512M32D2NP-046_WT:F_4GB_LPDDR4X_4266Mbps";
-        case 27: return "Micron_MT53E512M32D2NP-046_WT:F_4GB_LPDDR4X_4266Mbps";
-        case 28: return "Samsung_K4UBE3D4AA-MGCL_8GB_LPDDR4X_4266Mbps";
-        case 29: return "Hynix_H54G46CYRBX267_4GB_LPDDR4X_4266Mbps";
-        case 30: return "Hynix_H54G46CYRBX267_4GB_LPDDR4X_4266Mbps";
-        case 31: return "Hynix_H54G46CYRBX267_4GB_LPDDR4X_4266Mbps";
-        case 32: return "Micron_MT53E512M32D1NP-046_WT:B_4GB_LPDDR4X_4266Mbps";
-        case 33: return "Micron_MT53E512M32D1NP-046_WT:B_4GB_LPDDR4X_4266Mbps";
-        case 34: return "Micron_MT53E512M32D1NP-046_WT:B_4GB_LPDDR4X_4266Mbps";
+        case 0: return "Samsung_K4F6E304HB-MGCH_4GB LPDDR4 3200Mbps";
+        case 1: return "Hynix_H9HCNNNBPUMLHR-NLE_4GB LPDDR4 3200Mbps";
+        case 2: return "Micron_MT53B512M32D2NP-062 WT:C_4GB LPDDR4 3200Mbps";
+        case 3: return "Hynix_H9HCNNNBKMMLXR-NEE_4GB LPDDR4X 4266Mbps";
+        case 4: return "Samsung_K4FHE3D4HM-MGCH_6GB LPDDR4 3200Mbps";
+        case 5: return "Hynix_H9HCNNNBKMMLXR-NEE_4GB LPDDR4X 4266Mbps";
+        case 6: return "Hynix_H9HCNNNBKMMLXR-NEE_4GB LPDDR4X 4266Mbps";
+        case 7: return "Samsung_K4FBE3D4HM-MGXX_8GB LPDDR4 3200Mbps";
+        case 8: return "Samsung_K4U6E3S4AM-MGCJ_4GB LPDDR4X 3733Mbps";
+        case 9: return "Samsung_K4UBE3D4AM-MGCJ_8GB LPDDR4X 3733Mbps";
+        case 10: return "Hynix_H9HCNNNBKMMLHR-NME_4GB LPDDR4X 3733Mbps";
+        case 11: return "Micron_MT53E512M32D2NP-046 WT:E_4GB LPDDR4X 4266Mbps";
+        case 12: return "Samsung_K4U6E3S4AM-MGCJ_4GB LPDDR4X 3733Mbps";
+        case 13: return "Samsung_K4UBE3D4AM-MGCJ_8GB LPDDR4X 3733Mbps";
+        case 14: return "Hynix_H9HCNNNBKMMLHR-NME_4GB LPDDR4X 3733Mbps";
+        case 15: return "Micron_MT53E512M32D2NP-046 WT:E_4GB LPDDR4X 4266Mbps";
+        case 17: return "Samsung_K4U6E3S4AA-MGCL_4GB LPDDR4X 4266Mbps";
+        case 18: return "Samsung_K4UBE3D4AA-MGCL_8GB LPDDR4X 4266Mbps";
+        case 19: return "Samsung_K4U6E3S4AA-MGCL_4GB LPDDR4X 4266Mbps";
+        case 20: return "Samsung_K4U6E3S4AB-MGCL_4GB LPDDR4X 4266Mbps";
+        case 21: return "Samsung_K4U6E3S4AB-MGCL_4GB LPDDR4X 4266Mbps";
+        case 22: return "Samsung_K4U6E3S4AB-MGCL_4GB LPDDR4X 4266Mbps";
+        case 23: return "Samsung_K4UBE3D4AA-MGCL_8GB LPDDR4X 4266Mbps";
+        case 24: return "Samsung_K4U6E3S4AA-MGCL_4GB LPDDR4X 4266Mbps";
+        case 25: return "Micron_MT53E512M32D2NP-046 WT:F_4GB LPDDR4X 4266Mbps";
+        case 26: return "Micron_MT53E512M32D2NP-046 WT:F_4GB LPDDR4X 4266Mbps";
+        case 27: return "Micron_MT53E512M32D2NP-046 WT:F_4GB LPDDR4X 4266Mbps";
+        case 28: return "Samsung_K4UBE3D4AA-MGCL_8GB LPDDR4X 4266Mbps";
+        case 29: return "Hynix_H54G46CYRBX267_4GB LPDDR4X 4266Mbps";
+        case 30: return "Hynix_H54G46CYRBX267_4GB LPDDR4X 4266Mbps";
+        case 31: return "Hynix_H54G46CYRBX267_4GB LPDDR4X 4266Mbps";
+        case 32: return "Micron_MT53E512M32D1NP-046 WT:B_4GB LPDDR4X 4266Mbps";
+        case 33: return "Micron_MT53E512M32D1NP-046 WT:B_4GB LPDDR4X 4266Mbps";
+        case 34: return "Micron_MT53E512M32D1NP-046 WT:B_4GB LPDDR4X 4266Mbps";
         default: return "";
     }
 }
@@ -879,6 +882,7 @@ void addTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::vector<std
             abortCommand.store(false, std::memory_order_release);
             commandSuccess = false;
             disableLogging = true;
+            logFilePath = defaultLogFilePath;
             return;
         }
 
@@ -1731,10 +1735,14 @@ void applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
         }}
     };
 
+    // First replace inner placeholders like {ram_model}
+    //for (auto& [placeholder, replacer] : placeholders) {
+    //    for (auto& arg : cmd) {
+    //        replaceAllPlaceholders(arg, placeholder, replacer(placeholder));
+    //    }
+    //}
+
     for (auto& arg : cmd) {
-        for (const auto& [placeholder, replacer] : placeholders) {
-            replacePlaceholders(arg, placeholder, replacer);
-        }
         replaceAllPlaceholders(arg, "{ram_vendor}", memoryVendor);
         replaceAllPlaceholders(arg, "{ram_model}", memoryModel);
         replaceAllPlaceholders(arg, "{ams_version}", amsVersion);
@@ -1745,6 +1753,9 @@ void applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
         replaceAllPlaceholders(arg, "{gpu_iddq}", std::to_string(gpuIDDQ));
         replaceAllPlaceholders(arg, "{soc_speedo}", std::to_string(socSpeedo0));
         replaceAllPlaceholders(arg, "{soc_iddq}", std::to_string(socIDDQ));
+        for (const auto& [placeholder, replacer] : placeholders) {
+            replacePlaceholders(arg, placeholder, replacer);
+        }
         // Failed replacement cleanup
         //if (arg == NULL_STR) arg = UNAVAILABLE_SELECTION;
     }
@@ -2490,7 +2501,13 @@ void closeInterpreterThread() {
 
 
 
-void startInterpreterThread(int stackSize = 0x8000) {
+void startInterpreterThread(const std::string& packagePath = "") {
+    int stackSize = 0x8000;
+
+    if (!packagePath.empty()) {
+        disableLogging = !(parseValueFromIniSection(PACKAGES_INI_FILEPATH, getNameFromPath(packagePath), USE_LOGGING_STR) == TRUE_STR);
+        logFilePath = packagePath + "log.txt";
+    }
 
     std::string interpreterHeap = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "interpreter_heap");
     if (!interpreterHeap.empty())
@@ -2505,6 +2522,8 @@ void startInterpreterThread(int stackSize = 0x8000) {
         runningInterpreter.store(false, std::memory_order_release);
         interpreterThreadExit.store(true, std::memory_order_release);
         logMessage("Failed to create interpreter thread.");
+        logFilePath = defaultLogFilePath;
+        disableLogging = true;
         return;
     }
     threadStart(&interpreterThread);
