@@ -1706,31 +1706,34 @@ void interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
         disableLogging = !(parseValueFromIniSection(PACKAGES_INI_FILEPATH, getNameFromPath(packagePath), USE_LOGGING_STR) == TRUE_STR);
         logFilePath = packagePath + "log.txt";
     }
-
-    auto settingsData = getParsedDataFromIniFile(ULTRAHAND_CONFIG_INI_PATH);
-    if (settingsData.count(BUFFERS) > 0) {
-        auto& ultrahandSection = settingsData[BUFFERS];
-        if (settingsData.count(BUFFERS) > 0) {
-            // Directly update buffer sizes without a map
-            std::string section = "copy_buffer_size";
-            if (ultrahandSection.count(section) > 0) {
-                COPY_BUFFER_SIZE = std::stoi(ultrahandSection[section]);
-            }
-            section = "unzip_buffer_size";
-            if (ultrahandSection.count(section) > 0) {
-                UNZIP_BUFFER_SIZE = std::stoi(ultrahandSection[section]);
-            }
-            section = "download_buffer_size";
-            if (ultrahandSection.count(section) > 0) {
-                DOWNLOAD_BUFFER_SIZE = std::stoi(ultrahandSection[section]);
-            }
-            section = "hex_buffer_size";
-            if (ultrahandSection.count(section) > 0) {
-                HEX_BUFFER_SIZE = std::stoi(ultrahandSection[section]);
-            }
+    
+    // Load key-value pairs from the "BUFFERS" section of the INI file
+    auto bufferSection = getKeyValuePairsFromSection(ULTRAHAND_CONFIG_INI_PATH, BUFFERS);
+    
+    if (!bufferSection.empty()) {
+        // Directly update buffer sizes without a map
+        std::string section;
+    
+        section = "copy_buffer_size";
+        if (bufferSection.count(section) > 0) {
+            COPY_BUFFER_SIZE = std::stoi(bufferSection[section]);
+        }
+    
+        section = "unzip_buffer_size";
+        if (bufferSection.count(section) > 0) {
+            UNZIP_BUFFER_SIZE = std::stoi(bufferSection[section]);
+        }
+    
+        section = "download_buffer_size";
+        if (bufferSection.count(section) > 0) {
+            DOWNLOAD_BUFFER_SIZE = std::stoi(bufferSection[section]);
+        }
+    
+        section = "hex_buffer_size";
+        if (bufferSection.count(section) > 0) {
+            HEX_BUFFER_SIZE = std::stoi(bufferSection[section]);
         }
     }
-    settingsData.clear();
 
     std::string message;
 
