@@ -2241,6 +2241,8 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
 
         }
     } else if (commandName == "reboot") { // credits to Studious Pancake for the Payload and utils methods
+        //spsmInitialize();
+        //i2cInitialize();
         if (util::IsErista() || util::SupportsMarikoRebootToConfig()) {
             std::string rebootOption;
             if (cmd.size() >= 2) {
@@ -2275,8 +2277,8 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                 Payload::RebootToHekate();
             }
         }
-        spsmInitialize();
-        //i2cExit();
+        
+        i2cExit();
         splExit();
         fsdevUnmountAll();
         spsmShutdown(SpsmShutdownMode_Reboot);
@@ -2288,7 +2290,7 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                 powerOffAllControllers();
             }
         } else {
-            spsmInitialize();
+            //spsmInitialize();
             splExit();
             fsdevUnmountAll();
             spsmShutdown(SpsmShutdownMode_Normal);
