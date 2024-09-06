@@ -2275,11 +2275,12 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                 Payload::RebootToHekate();
             }
         }
-
-        i2cExit();
+        spsmInitialize();
+        //i2cExit();
         splExit();
         fsdevUnmountAll();
         spsmShutdown(SpsmShutdownMode_Reboot);
+        spsmExit();
     } else if (commandName == "shutdown") {
         if (cmd.size() >= 2) {
             std::string selection = removeQuotes(cmd[1]);
@@ -2287,9 +2288,11 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                 powerOffAllControllers();
             }
         } else {
+            spsmInitialize();
             splExit();
             fsdevUnmountAll();
             spsmShutdown(SpsmShutdownMode_Normal);
+            spsmExit();
         }
         //if (cmd.size() >= 1) {
         //    splExit();
