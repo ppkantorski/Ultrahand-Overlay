@@ -4620,8 +4620,8 @@ public:
     virtual void initServices() override {
         fsdevMountSdmc();
         splInitialize();
-        //spsmInitialize(); // moved directly into shutdown / reboot function
-        //i2cInitialize(); // might have been unnecessary
+        spsmInitialize(); // moved directly into shutdown / reboot function
+        i2cInitialize(); // might have been unnecessary
         ASSERT_FATAL(socketInitializeDefault());
         ASSERT_FATAL(nifmInitialize(NifmServiceType_User));
         ASSERT_FATAL(smInitialize());
@@ -4660,9 +4660,9 @@ public:
         closeInterpreterThread(); // shouldn't be running, but run close anyways
         socketExit();
         nifmExit();
-        //i2cExit(); // might have been unnecessary
+        i2cExit(); // might have been unnecessary
         smExit();
-        //spsmExit(); // moved directly into shutdown / reboot function
+        spsmExit(); // moved directly into shutdown / reboot function
         splExit();
         fsdevUnmountAll();
     }
