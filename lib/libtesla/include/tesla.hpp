@@ -4225,8 +4225,9 @@ namespace tsl {
                         y_offset += 10;
                     }
                     
+                    clock_gettime(CLOCK_REALTIME, &currentTimeSpec);
                     if (!hideClock) {
-                        clock_gettime(CLOCK_REALTIME, &currentTimeSpec);
+                        
                         strftime(timeStr, sizeof(timeStr), datetimeFormat.c_str(), localtime(&currentTimeSpec.tv_sec));
                         localizeTimeStr(timeStr);
                         renderer->drawString(std::string(timeStr), false, tsl::cfg::FramebufferWidth - renderer->calculateStringWidth(timeStr, 20, true) - 20, y_offset, 20, a(clockColor));
