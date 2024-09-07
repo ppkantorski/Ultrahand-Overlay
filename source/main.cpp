@@ -1393,10 +1393,19 @@ public:
             } else if (entryMode == PACKAGE_STR) {
                 createAndAddToggleListItem(
                     list,
-                    BOOT_PACKAGE,
+                    BOOT_COMMANDS,
                     true,
                     USE_BOOT_PACKAGE_STR,
                     parseValueFromIniSection(settingsIniPath, entryName, USE_BOOT_PACKAGE_STR),
+                    settingsIniPath,
+                    entryName
+                );
+                createAndAddToggleListItem(
+                    list,
+                    EXIT_COMMANDS,
+                    true,
+                    USE_EXIT_PACKAGE_STR,
+                    parseValueFromIniSection(settingsIniPath, entryName, USE_EXIT_PACKAGE_STR),
                     settingsIniPath,
                     entryName
                 );
@@ -3217,6 +3226,26 @@ public:
             packageRootLayerColor = "";
             overrideTitle = false;
             overrideVersion = false;
+
+            if (isFileOrDirectory(packagePath + EXIT_PACKAGE_FILENAME)) {
+                bool useExitPackage = !(parseValueFromIniSection(PACKAGES_INI_FILEPATH, getNameFromPath(packagePath), USE_EXIT_PACKAGE_STR) == FALSE_STR);
+                
+                if (useExitPackage) {
+                    // Load only the commands from the specific section (bootCommandName)
+                    auto exitCommands = loadSpecificSectionFromIni(packagePath + EXIT_PACKAGE_FILENAME, "exit");
+                    
+                    if (!exitCommands.empty()) {
+                        bool resetCommandSuccess = false;
+                        if (!commandSuccess) resetCommandSuccess = true;
+                        
+                        interpretAndExecuteCommands(std::move(exitCommands), packagePath, "exit");
+                        
+                        if (resetCommandSuccess) {
+                            commandSuccess = false;
+                        }
+                    }
+                }
+            }
         }
     }
     
@@ -4123,6 +4152,7 @@ public:
                         setIniFileValue(PACKAGES_INI_FILEPATH, packageName, STAR_STR, FALSE_STR);
                         setIniFileValue(PACKAGES_INI_FILEPATH, packageName, HIDE_STR, FALSE_STR);
                         setIniFileValue(OVERLAYS_INI_FILEPATH, packageName, USE_BOOT_PACKAGE_STR, TRUE_STR);
+                        setIniFileValue(OVERLAYS_INI_FILEPATH, packageName, USE_EXIT_PACKAGE_STR, TRUE_STR);
                         setIniFileValue(PACKAGES_INI_FILEPATH, packageName, "custom_name", "");
                         setIniFileValue(PACKAGES_INI_FILEPATH, packageName, "custom_version", "");
                         packageList.insert("0020" + (packageName) +":" + packageName);
@@ -4274,24 +4304,27 @@ public:
                             if (keys & KEY_A) {
                                 inMainMenu = false;
                                 
-                                bool useBootPackage = !(parseValueFromIniSection(PACKAGES_INI_FILEPATH, packageName, USE_BOOT_PACKAGE_STR) == FALSE_STR);
 
-                                // read commands from package's boot_package.ini
-                                if (useBootPackage && isFileOrDirectory(packageFilePath+BOOT_PACKAGE_FILENAME)) {
-                                    std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> bootOptions = loadOptionsFromIni(packageFilePath+BOOT_PACKAGE_FILENAME);
-                                    if (bootOptions.size() > 0) {
-                                        std::string bootOptionName;
-                                        for (auto& bootOption:bootOptions) {
-                                            bootOptionName = bootOption.first;
-                                            auto& bootCommands = bootOption.second;
-                                            if (bootOptionName == "boot") {
-                                                interpretAndExecuteCommands(std::move(bootCommands), packageFilePath, bootOptionName); // Execute modified
-                                                break;
+                                if (isFileOrDirectory(packageFilePath + BOOT_PACKAGE_FILENAME)) {
+                                    bool useBootPackage = !(parseValueFromIniSection(PACKAGES_INI_FILEPATH, packageName, USE_BOOT_PACKAGE_STR) == FALSE_STR);
+
+                                    if (useBootPackage) {
+                                        // Load only the commands from the specific section (bootCommandName)
+                                        auto bootCommands = loadSpecificSectionFromIni(packageFilePath + BOOT_PACKAGE_FILENAME, "boot");
+                                    
+                                        if (!bootCommands.empty()) {
+                                            bool resetCommandSuccess = false;
+                                            if (!commandSuccess) resetCommandSuccess = true;
+                                            
+                                            interpretAndExecuteCommands(std::move(bootCommands), packageFilePath, "boot");
+                                            
+                                            if (resetCommandSuccess) {
+                                                commandSuccess = false;
                                             }
                                         }
-                                        bootOptions.clear();
                                     }
                                 }
+
                                 lastPackagePath = packageFilePath;
                                 lastPackageName = PACKAGE_FILENAME;
 
