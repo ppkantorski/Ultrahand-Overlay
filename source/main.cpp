@@ -52,7 +52,7 @@ static bool freshSpawn = true;
 static bool reloadMenu = false;
 static bool reloadMenu2 = false;
 static bool reloadMenu3 = false;
-static bool isDownloaded = false;
+static bool updateHasDownloaded = false;
 
 static bool redrawWidget = false;
 
@@ -589,7 +589,7 @@ private:
                     //});
                     bool success = downloadFile(LATEST_RELEASE_INFO_URL, SETTINGS_PATH);
                     if (success)
-                        isDownloaded = true;
+                        updateHasDownloaded = true;
                 } else if (targetMenu == "themeMenu") {
                     if (!isFileOrDirectory(THEMES_PATH+"ultra.ini")) {
                         //executeCommands({
@@ -4464,8 +4464,8 @@ public:
         }
         
         if (inMainMenu && !inHiddenMode && dropdownSection.empty()){
-            if (isDownloaded) { // for handling software updates
-                isDownloaded = false;
+            if (updateHasDownloaded) { // for handling software updates
+                updateHasDownloaded = false;
                 tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl", "--skipCombo");
                 setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_OVERLAY_STR, TRUE_STR);
                 tsl::Overlay::get()->close();
