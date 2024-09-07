@@ -4275,7 +4275,11 @@ namespace tsl {
                     static char PCB_temperatureStr[10];
                     static char SOC_temperatureStr[10];
 
-                    if ((currentTime.tv_sec - timeOut) >= 1) {
+
+                    s32 statusChange = s32(hideSOCTemp) + s32(hidePCBTemp) + s32(hideBattery);
+                    static s32 lastStatusChange = 0;
+
+                    if ((currentTime.tv_sec - timeOut) >= 1 || statusChange != lastStatusChange) {
                         //if (!hidePCBTemp || !hideSOCTemp) {
                         //    //thermalstatusInit();
                         //    //if (!hidePCBTemp)
@@ -4287,20 +4291,43 @@ namespace tsl {
                         if (!hideSOCTemp) {
                             ReadSocTemperature(&SOC_temperature);
                             snprintf(SOC_temperatureStr, sizeof(SOC_temperatureStr) - 1, "%d°C", SOC_temperature);
+                        } else {
+                            strcpy(SOC_temperatureStr, "");
+                            SOC_temperature=0;
                         }
                         if (!hidePCBTemp) {
                             ReadPcbTemperature(&PCB_temperature);
                             snprintf(PCB_temperatureStr, sizeof(PCB_temperatureStr) - 1, "%d°C", PCB_temperature);
+                        } else {
+                            strcpy(PCB_temperatureStr, "");
+                            PCB_temperature=0;
                         }
                         if (!hideBattery) {
                             powerGetDetails(&batteryCharge, &isCharging);
                             batteryCharge = std::min(batteryCharge, 100U);
                             sprintf(chargeString, "%d%%", batteryCharge);
+                        } else {
+                            strcpy(chargeString, "");
+                            batteryCharge=0;
                         }
                         timeOut = int(currentTime.tv_sec);
                     }
-                    //}
+
+                    lastStatusChange = statusChange;
+
                     
+                    //if (hideSOCTemp && (SOC_temperature > 0 || strlen(SOC_temperatureStr) > 0)) {
+                    //    strcpy(SOC_temperatureStr, "");
+                    //    SOC_temperature=0;
+                    //}
+                    //if (hidePCBTemp && (PCB_temperature > 0 || strlen(PCB_temperatureStr) > 0)) {
+                    //    strcpy(PCB_temperatureStr, "");
+                    //    PCB_temperature=0;
+                    //}
+                    //if (hideBattery && (batteryCharge > 0 || strlen(chargeString) > 0)) {
+                    //    strcpy(chargeString, "");
+                    //    batteryCharge=0;
+                    //}
                     
                     
                     if (!hideBattery && batteryCharge > 0) {
