@@ -5356,7 +5356,7 @@ namespace tsl {
                         auto touchDurationInSeconds = std::chrono::duration_cast<std::chrono::duration<float>>(touchDuration).count();
         
                         // Check if the touch lasted for 3 seconds or more
-                        s64 keyToUse = (touchDurationInSeconds >= 0.5) ? SETTINGS_KEY : KEY_A;
+                        s64 keyToUse = (touchDurationInSeconds >= 1.0) ? STAR_KEY : ((touchDurationInSeconds >= 0.3) ? SETTINGS_KEY : KEY_A);
         
                         bool handled = this->onClick(keyToUse);
                         this->m_clickAnimationProgress = 0;
