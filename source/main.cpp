@@ -52,7 +52,7 @@ static bool freshSpawn = true;
 static bool reloadMenu = false;
 static bool reloadMenu2 = false;
 static bool reloadMenu3 = false;
-static bool updateHasDownloaded = false;
+static bool triggerMenuReload = false;
 
 static bool redrawWidget = false;
 
@@ -544,6 +544,7 @@ private:
     int MAX_PRIORITY = 20;
     std::string comboLabel;
     std::string lastSelectedListItemFooter = "";
+    bool rightAlignmentState;
 
     //void addToggleListItem(std::unique_ptr<tsl::elm::List>& list, const std::string& title, bool state, const std::string& key) {
     //    auto toggleListItem = std::make_unique<tsl::elm::ToggleListItem>(title, state, ON, OFF);
@@ -589,7 +590,7 @@ private:
                     //});
                     bool success = downloadFile(LATEST_RELEASE_INFO_URL, SETTINGS_PATH);
                     if (success)
-                        updateHasDownloaded = true;
+                        triggerMenuReload = true;
                 } else if (targetMenu == "themeMenu") {
                     if (!isFileOrDirectory(THEMES_PATH+"ultra.ini")) {
                         //executeCommands({
@@ -743,6 +744,8 @@ private:
             } else if (iniKey == "hide_clock" || iniKey == "hide_soc_temp" || iniKey == "hide_pcb_temp" || iniKey == "hide_battery") {
                 reinitializeWidgetVars();
                 redrawWidget = true;
+            } else if (iniKey == "right_alignment") {
+                triggerMenuReload = (rightAlignmentState != state);
             }
     
             reloadMenu = true;
@@ -1140,6 +1143,8 @@ public:
             addHeader(list, EFFECTS);
 
             useRightAlignment = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "right_alignment") == TRUE_STR);
+
+            rightAlignmentState = useRightAlignment;
             createToggleListItem(list, RIGHT_SIDE_MODE, useRightAlignment, "right_alignment");
 
 
@@ -4497,8 +4502,8 @@ public:
         }
         
         if (inMainMenu && !inHiddenMode && dropdownSection.empty()){
-            if (updateHasDownloaded) { // for handling software updates
-                updateHasDownloaded = false;
+            if (triggerMenuReload) { // for handling software updates
+                triggerMenuReload = false;
                 tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl", "--skipCombo");
                 setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_OVERLAY_STR, TRUE_STR);
                 tsl::Overlay::get()->close();
