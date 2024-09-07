@@ -4099,9 +4099,6 @@ namespace tsl {
             std::string m_pageLeftName; // CUSTOM MODIFICATION
             std::string m_pageRightName; // CUSTOM MODIFICATION
             
-            std::string firstHalf = "Ultra";
-            std::string secondHalf = "hand";
-            //std::string firstHalf, secondHalf;
             //tsl::Color handColor = RGB888("#F7253E");
             tsl::Color titleColor = {0xF,0xF,0xF,0xF};
             const double cycleDuration = 1.5;
@@ -4118,7 +4115,7 @@ namespace tsl {
             std::string chargeStringSTD;
             std::string PCB_temperatureStringSTD;
             std::string SOC_temperatureStringSTD;
-            std::string menuBottomLine;
+            
             char timeStr[20]; // Allocate a buffer to store the time string
             char PCB_temperatureStr[10];
             char SOC_temperatureStr[10];
@@ -4127,6 +4124,8 @@ namespace tsl {
             //std::string filePath = "sdmc:/config/ultrahand/wallpaper.rgba";
             //s32 width = 448/2;
             //s32 height = 720/2;
+
+            std::string menuBottomLine;
             
         OverlayFrame(const std::string& title, const std::string& subtitle, const std::string& menuMode = "", const std::string& colorSelection = "", const std::string& pageLeftName = "", const std::string& pageRightName = "")
             : Element(), m_title(title), m_subtitle(subtitle), m_menuMode(menuMode), m_colorSelection(colorSelection), m_pageLeftName(pageLeftName), m_pageRightName(pageRightName) {
@@ -4226,7 +4225,7 @@ namespace tsl {
 
                     if (!disableColorfulLogo) {
                         float progress;
-                        for (char letter : firstHalf) {
+                        for (char letter : SPLIT_PROJECT_NAME_1) {
                             counter = (2 * M_PI * (fmod(currentTimeCount, cycleDuration) + countOffset) / 1.5);
                             progress = std::sin(counter); // -1 to 1
                             
@@ -4242,14 +4241,14 @@ namespace tsl {
                             countOffset -= 0.2F;
                         }
                     } else {
-                        for (char letter : firstHalf) {
+                        for (char letter : SPLIT_PROJECT_NAME_1) {
                             renderer->drawString(std::string(1, letter), false, x, y + offset, fontSize, a(logoColor1));
                             x += renderer->calculateStringWidth(std::string(1, letter), fontSize);
                             countOffset -= 0.2F;
                         }
                     }
                     
-                    renderer->drawString(secondHalf, false, x, y + offset, fontSize, a(logoColor2));
+                    renderer->drawString(SPLIT_PROJECT_NAME_2, false, x, y + offset, fontSize, a(logoColor2));
                     
                     if (!(hideBattery && hidePCBTemp && hideSOCTemp && hideClock)) {
                         renderer->drawRect(245, 23, 1, 49, a(separatorColor));
@@ -4280,26 +4279,18 @@ namespace tsl {
                     //}
                     //if (!isHidden.load()) {
                     if ((currentTimeSpec.tv_sec - timeOut) >= 1) {
-                        if (!hidePCBTemp || !hideSOCTemp) {
-                            //float socTemp, pcbTemp;
+                        //if (!hidePCBTemp || !hideSOCTemp) {
+                        //    //thermalstatusInit();
+                        //    //if (!hidePCBTemp)
+                        //    //    thermalstatusGetDetailsPCB(&PCB_temperature);
+                        //    //if (!hideSOCTemp)
+                        //    //    thermalstatusGetDetailsSOC(&SOC_temperature);
+                        //    //thermalstatusExit();
+                        //}
+                        if (!hideSOCTemp)
                             ReadSocTemperature(&SOC_temperature);
-                            //if (R_SUCCEEDED(resSoc)) {
-                            //    printf("SOC Temperature: %.2f°C\n", socTemp);
-                            //}
-                            
+                        if (!hidePCBTemp)
                             ReadPcbTemperature(&PCB_temperature);
-                            //if (R_SUCCEEDED(resPcb)) {
-                            //    printf("PCB Temperature: %.2f°C\n", pcbTemp);
-                            //}
-
-
-                            //thermalstatusInit();
-                            //if (!hidePCBTemp)
-                            //    thermalstatusGetDetailsPCB(&PCB_temperature);
-                            //if (!hideSOCTemp)
-                            //    thermalstatusGetDetailsSOC(&SOC_temperature);
-                            //thermalstatusExit();
-                        }
                         if (!hideBattery)
                             powerGetDetails(&batteryCharge, &isCharging);
                         timeOut = int(currentTimeSpec.tv_sec);
