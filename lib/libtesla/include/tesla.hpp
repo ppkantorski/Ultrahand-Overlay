@@ -189,7 +189,7 @@ bool updateMenuCombos = false;
 #define touchInput &touchPos
 #define JoystickPosition HidAnalogStickState
 
-std::string convertComboToUnicode(const std::string& combo);
+void convertComboToUnicode(std::string& combo);
 
 
 
@@ -4130,8 +4130,6 @@ namespace tsl {
         OverlayFrame(const std::string& title, const std::string& subtitle, const std::string& menuMode = "", const std::string& colorSelection = "", const std::string& pageLeftName = "", const std::string& pageRightName = "")
             : Element(), m_title(title), m_subtitle(subtitle), m_menuMode(menuMode), m_colorSelection(colorSelection), m_pageLeftName(pageLeftName), m_pageRightName(pageRightName) {
                 // Load the bitmap file into memory
-                //if (expandedMemory && useCustomWallpaper && wallpaperData.empty()) {
-                //std::lock_guard<std::mutex> lock(wallpaperMutex);
                 if (expandedMemory && !inPlot.load(std::memory_order_acquire) && !refreshWallpaper.load(std::memory_order_acquire)) {
                     // Lock the mutex for condition waiting
                     std::unique_lock<std::mutex> lock(wallpaperMutex);
@@ -4141,8 +4139,6 @@ namespace tsl {
 
                     if (wallpaperData.empty() && isFileOrDirectory(WALLPAPER_PATH)) {
                         loadWallpaperFile(WALLPAPER_PATH);
-                        //wallpaperData = loadWallpaperFile(WALLPAPER_PATH, 224, 360);
-                        //wallpaperData = preprocessBitmap(wallpaperData, 224, 360, 448, 720); 
                     }
                 }
 
@@ -4152,10 +4148,6 @@ namespace tsl {
             virtual ~OverlayFrame() {
                 if (this->m_contentElement != nullptr)
                     delete this->m_contentElement;
-                //if (!useCustomWallpaper && !wallpaperData.empty()) {
-                //    wallpaperData.clear();
-                //    //wallpaperData.shrink_to_fit();
-                //}
             }
 
             
@@ -4176,9 +4168,7 @@ namespace tsl {
             // CUSTOM SECTION START
             virtual void draw(gfx::Renderer *renderer) override {
                 renderer->fillScreen(a(defaultBackgroundColor));
-
                 
-                //if (expandedMemory && useCustomWallpaper && !wallpaperData.empty()) {
                 if (expandedMemory && !refreshWallpaper.load(std::memory_order_acquire)) {
                     //inPlot = true;
                     inPlot.store(true, std::memory_order_release);
@@ -4208,10 +4198,6 @@ namespace tsl {
                     if (touchingMenu && inMainMenu) {
                         renderer->drawRoundedRect(0.0f, 12.0f, 245.0f, 73.0f, 6.0f, a(clickColor));
                     }
-
-                    //chargeStringSTD.clear();
-                    //PCB_temperatureStringSTD.clear();
-                    //SOC_temperatureStringSTD.clear();
                     
                     
                     x = 20;
@@ -4365,31 +4351,31 @@ namespace tsl {
                         } else if (this->m_colorSelection == "white") {
                             titleColor = Color(0xF, 0xF, 0xF, 0xF);
                             drawTitle(titleColor);
-                        //} else if (this->m_colorSelection == "ultra") {
-                        //    for (char letter : title) {
-                        //        // Calculate the progress for each letter based on the counter
-                        //        progress = calculateAmplitude(counter - x * 0.0001F);
-                        //        
-                        //        // Calculate the corresponding highlight color for each letter
-                        //        highlightColor = {
-                        //            static_cast<u8>((0xA - 0xF) * (3 - 1.5 * progress) + 0xF),
-                        //            static_cast<u8>((0xA - 0xF) * 1.5 * progress + 0xF),
-                        //            static_cast<u8>((0xA - 0xF) * (1.25 - progress) + 0xF),
-                        //            0xF
-                        //        };
-                        //        
-                        //        // Draw each character with its corresponding highlight color
-                        //        renderer->drawString(std::string(1, letter).c_str(), false, x, y, fontSize, a(highlightColor));
-                        //        
-                        //        // Manually calculate the width of the current letter
-                        //        letterWidth = renderer->calculateStringWidth(std::string(1, letter), fontSize);
-                        //        
-                        //        // Adjust the x-coordinate for the next character's position
-                        //        x += letterWidth;
-                        //        
-                        //        // Update the counter for the next character
-                        //        counter -= 0.00004F;
-                        //    }
+                        } else if (this->m_colorSelection == "ultra") {
+                            for (char letter : title) {
+                                // Calculate the progress for each letter based on the counter
+                                progress = calculateAmplitude(counter - x * 0.0001F);
+                                
+                                // Calculate the corresponding highlight color for each letter
+                                highlightColor = {
+                                    static_cast<u8>((0xA - 0xF) * (3 - 1.5 * progress) + 0xF),
+                                    static_cast<u8>((0xA - 0xF) * 1.5 * progress + 0xF),
+                                    static_cast<u8>((0xA - 0xF) * (1.25 - progress) + 0xF),
+                                    0xF
+                                };
+                                
+                                // Draw each character with its corresponding highlight color
+                                renderer->drawString(std::string(1, letter).c_str(), false, x, y, fontSize, a(highlightColor));
+                                
+                                // Manually calculate the width of the current letter
+                                letterWidth = renderer->calculateStringWidth(std::string(1, letter), fontSize);
+                                
+                                // Adjust the x-coordinate for the next character's position
+                                x += letterWidth;
+                                
+                                // Update the counter for the next character
+                                counter -= 0.00004F;
+                            }
                         } else if (this->m_colorSelection.size() == 7 && this->m_colorSelection[0] == '#') {
                             // Check if m_colorSelection is a valid hexadecimal color
                             if (isValidHexColor(this->m_colorSelection.substr(1))) {
@@ -5236,8 +5222,8 @@ namespace tsl {
                 }
 
                 
-                this->m_text = convertComboToUnicode(this->m_text);
-                this->m_value = convertComboToUnicode(this->m_value);
+                convertComboToUnicode(this->m_text);
+                convertComboToUnicode(this->m_value);
 
                 if (this->m_maxWidth == 0) {
                     if (this->m_value.length() > 0) {
@@ -7417,41 +7403,52 @@ std::unordered_map<std::string, std::string> createButtonCharMap() {
 std::unordered_map<std::string, std::string> buttonCharMap = createButtonCharMap();
 
 
-std::string convertComboToUnicode(const std::string& combo) {
+void convertComboToUnicode(std::string& combo) {
+    // Quick check to see if the string contains a '+'
+    if (combo.find('+') == std::string::npos) {
+        return;  // No '+' found, nothing to modify
+    }
+
     std::string unicodeCombo;
     bool modified = false;
-    std::string token;
-    
-    std::string trimmedToken;
+    size_t start = 0;
+    size_t length = combo.length();
+    size_t end = 0;  // Moved outside the loop
+    std::string token;  // Moved outside the loop
+    auto it = buttonCharMap.end();  // Initialize iterator once outside the loop
 
-    auto it = buttonCharMap.end(); // Initialize iterator to end
+    // Iterate through the combo string and split by '+'
+    for (size_t i = 0; i <= length; ++i) {
+        if (i == length || combo[i] == '+') {
+            // Get the current token (trimmed)
+            end = i;  // Reuse the end variable
+            while (start < end && std::isspace(combo[start])) start++;  // Trim leading spaces
+            while (end > start && std::isspace(combo[end - 1])) end--;  // Trim trailing spaces
 
-    // Manually iterate through the combo string and split by '+'
-    for (size_t i = 0; i <= combo.length(); ++i) {
-        if (i == combo.length() || combo[i] == '+') {
-            trimmedToken = trim(token);
-            it = buttonCharMap.find(trimmedToken);
+            token = combo.substr(start, end - start);  // Reuse the token variable
+            it = buttonCharMap.find(token);  // Reuse the iterator
 
             if (it != buttonCharMap.end()) {
-                unicodeCombo += it->second + "+";
+                unicodeCombo += it->second;  // Append the mapped Unicode value
                 modified = true;
             } else {
-                unicodeCombo += trimmedToken + "+";
+                unicodeCombo += token;  // Append the original token if not found
             }
 
-            token.clear();  // Reset token
-        } else {
-            token += combo[i];
+            if (i != length) {
+                unicodeCombo += "+";  // Only append '+' if we're not at the end
+            }
+
+            start = i + 1;  // Move to the next token
         }
     }
 
-    if (!unicodeCombo.empty()) {
-        unicodeCombo.pop_back();  // Remove the trailing '+'
+    // If a modification was made, update the original combo
+    if (modified) {
+        combo = unicodeCombo;
     }
-
-    // If no modification was made, return the original combo
-    return modified ? unicodeCombo : combo;
 }
+
 
 
 #ifdef TESLA_INIT_IMPL
