@@ -584,19 +584,24 @@ private:
             if (keys & KEY_A) {
 
                 if (targetMenu == "softwareUpdateMenu") {
-                    executeCommands({
-                        {"download", LATEST_RELEASE_INFO_URL, SETTINGS_PATH}
-                    });
+                    //executeCommands({
+                    //    {"download", LATEST_RELEASE_INFO_URL, SETTINGS_PATH}
+                    //});
+                    bool success = downloadFile(LATEST_RELEASE_INFO_URL, SETTINGS_PATH);
+                    if (success)
+                        isDownloaded = true;
                 } else if (targetMenu == "themeMenu") {
                     if (!isFileOrDirectory(THEMES_PATH+"ultra.ini")) {
-                        executeCommands({
-                            {"download", INCLUDED_THEME_FOLDER_URL+"ultra.ini", THEMES_PATH}
-                        });
+                        //executeCommands({
+                        //    {"download", INCLUDED_THEME_FOLDER_URL+"ultra.ini", THEMES_PATH}
+                        //});
+                        downloadFile(INCLUDED_THEME_FOLDER_URL+"ultra.ini", THEMES_PATH);
                     }
                     if (!isFileOrDirectory(THEMES_PATH+"classic.ini")) {
-                        executeCommands({
-                            {"download", INCLUDED_THEME_FOLDER_URL+"classic.ini", THEMES_PATH}
-                        });
+                        //executeCommands({
+                        //    {"download", INCLUDED_THEME_FOLDER_URL+"classic.ini", THEMES_PATH}
+                        //});
+                        downloadFile(INCLUDED_THEME_FOLDER_URL+"classic.ini", THEMES_PATH);
                     }
                 }
 
@@ -1133,6 +1138,10 @@ public:
             createToggleListItem(list, PACKAGE_VERSIONS, hidePackageVersions, "hide_package_versions", true);
             
             addHeader(list, EFFECTS);
+
+            useRightAlignment = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "right_alignment") == TRUE_STR);
+            createToggleListItem(list, RIGHT_SIDE_MODE, useRightAlignment, "right_alignment");
+
 
             useOpaqueScreenshots = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "opaque_screenshots") == TRUE_STR);
             createToggleListItem(list, OPAQUE_SCREENSHOTS, useOpaqueScreenshots, "opaque_screenshots");
@@ -3682,6 +3691,7 @@ public:
                 setDefaultValue(ultrahandSection, "hide_package_versions", FALSE_STR, hidePackageVersions);
                 setDefaultValue(ultrahandSection, "memory_expansion", FALSE_STR, useMemoryExpansion);
                 // setDefaultValue(ultrahandSection, "custom_wallpaper", FALSE_STR, useCustomWallpaper);
+                setDefaultValue(ultrahandSection, "right_alignment", FALSE_STR, useRightAlignment);
                 setDefaultValue(ultrahandSection, "opaque_screenshots", TRUE_STR, useOpaqueScreenshots);
                 setDefaultValue(ultrahandSection, "progress_animation", FALSE_STR, progressAnimation);
                 
@@ -4455,7 +4465,9 @@ public:
         
         if (inMainMenu && !inHiddenMode && dropdownSection.empty()){
             if (isDownloaded) { // for handling software updates
-                tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
+                isDownloaded = false;
+                tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl", "--skipCombo");
+                setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_OVERLAY_STR, TRUE_STR);
                 tsl::Overlay::get()->close();
             }
             
