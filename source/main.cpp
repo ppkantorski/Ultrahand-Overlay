@@ -2415,8 +2415,7 @@ public:
 
 
 
-
-class PackageMenu;
+class PackageMenu; // forwarding
 
 void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                     const std::string& packageIniPath,
