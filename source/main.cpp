@@ -52,7 +52,7 @@ static bool freshSpawn = true;
 static bool reloadMenu = false;
 static bool reloadMenu2 = false;
 static bool reloadMenu3 = false;
-static bool isDownloaded = false;
+static bool triggerMenuReload = false;
 
 static bool redrawWidget = false;
 
@@ -71,7 +71,9 @@ static const std::string BACKGROUND_PATTERN = ";background="; // true or false
 static const std::string HEADER_INDENT_PATTERN = ";header_indent="; // true or false
 //static const std::string HEADER_PATTERN = ";header=";
 static const std::string ALIGNMENT_PATTERN = ";alignment=";
-static const std::string GAP_PATTERN =";gap=";
+static const std::string START_GAP_PATTERN =";start_gap=";
+static const std::string END_GAP_PATTERN =";end_gap=";
+static const std::string END_GAP_PATTERN_ALIAS =";gap=";
 static const std::string OFFSET_PATTERN = ";offset=";
 static const std::string SPACING_PATTERN = ";spacing=";
 static const std::string INFO_TEXT_COLOR_PATTERN = ";info_text_color=";
@@ -542,6 +544,7 @@ private:
     int MAX_PRIORITY = 20;
     std::string comboLabel;
     std::string lastSelectedListItemFooter = "";
+    bool rightAlignmentState;
 
     //void addToggleListItem(std::unique_ptr<tsl::elm::List>& list, const std::string& title, bool state, const std::string& key) {
     //    auto toggleListItem = std::make_unique<tsl::elm::ToggleListItem>(title, state, ON, OFF);
@@ -582,19 +585,24 @@ private:
             if (keys & KEY_A) {
 
                 if (targetMenu == "softwareUpdateMenu") {
-                    executeCommands({
-                        {"download", LATEST_RELEASE_INFO_URL, SETTINGS_PATH}
-                    });
+                    //executeCommands({
+                    //    {"download", LATEST_RELEASE_INFO_URL, SETTINGS_PATH}
+                    //});
+                    bool success = downloadFile(LATEST_RELEASE_INFO_URL, SETTINGS_PATH);
+                    if (success)
+                        triggerMenuReload = true;
                 } else if (targetMenu == "themeMenu") {
                     if (!isFileOrDirectory(THEMES_PATH+"ultra.ini")) {
-                        executeCommands({
-                            {"download", INCLUDED_THEME_FOLDER_URL+"ultra.ini", THEMES_PATH}
-                        });
+                        //executeCommands({
+                        //    {"download", INCLUDED_THEME_FOLDER_URL+"ultra.ini", THEMES_PATH}
+                        //});
+                        downloadFile(INCLUDED_THEME_FOLDER_URL+"ultra.ini", THEMES_PATH);
                     }
                     if (!isFileOrDirectory(THEMES_PATH+"classic.ini")) {
-                        executeCommands({
-                            {"download", INCLUDED_THEME_FOLDER_URL+"classic.ini", THEMES_PATH}
-                        });
+                        //executeCommands({
+                        //    {"download", INCLUDED_THEME_FOLDER_URL+"classic.ini", THEMES_PATH}
+                        //});
+                        downloadFile(INCLUDED_THEME_FOLDER_URL+"classic.ini", THEMES_PATH);
                     }
                 }
 
@@ -736,6 +744,8 @@ private:
             } else if (iniKey == "hide_clock" || iniKey == "hide_soc_temp" || iniKey == "hide_pcb_temp" || iniKey == "hide_battery") {
                 reinitializeWidgetVars();
                 redrawWidget = true;
+            } else if (iniKey == "right_alignment") {
+                triggerMenuReload = (rightAlignmentState != state);
             }
     
             reloadMenu = true;
@@ -757,8 +767,8 @@ public:
         inSubSettingsMenu = !dropdownSelection.empty();
         
         const std::vector<std::string> defaultLanguagesRepresentation = {ENGLISH, SPANISH, FRENCH, GERMAN, JAPANESE, KOREAN, ITALIAN, DUTCH, PORTUGUESE, RUSSIAN, POLISH, SIMPLIFIED_CHINESE, TRADITIONAL_CHINESE};
-        const std::vector<std::string> defaultLanguages = {"en", "es", "fr", "de", "ja", "ko", "it", "nl", "pt", "ru", "pl", "zh-cn", "zh-tw"};
-        const std::vector<std::string> defaultCombos = {"ZL+ZR+DDOWN", "ZL+ZR+DRIGHT", "ZL+ZR+DUP", "ZL+ZR+DLEFT", "L+R+DDOWN", "L+R+DRIGHT", "L+R+DUP", "L+R+DLEFT", "L+DDOWN", "R+DDOWN", "ZL+ZR+PLUS", "L+R+PLUS", "ZL+PLUS", "ZR+PLUS", "MINUS+PLUS", "LS+RS", "L+DDOWN+RS"};
+        static const std::vector<std::string> defaultLanguages = {"en", "es", "fr", "de", "ja", "ko", "it", "nl", "pt", "ru", "pl", "zh-cn", "zh-tw"};
+        static const std::vector<std::string> defaultCombos = {"ZL+ZR+DDOWN", "ZL+ZR+DRIGHT", "ZL+ZR+DUP", "ZL+ZR+DLEFT", "L+R+DDOWN", "L+R+DRIGHT", "L+R+DUP", "L+R+DLEFT", "L+DDOWN", "R+DDOWN", "ZL+ZR+PLUS", "L+R+PLUS", "ZL+PLUS", "ZR+PLUS", "MINUS+PLUS", "LS+RS", "L+DDOWN+RS"};
         
         auto list = std::make_unique<tsl::elm::List>();
         
@@ -769,9 +779,8 @@ public:
             defaultLang = defaultLang.empty() ? "en" : defaultLang;
             keyCombo = keyCombo.empty() ? defaultCombos[0] : keyCombo;
 
-            comboLabel = convertComboToUnicode(keyCombo);
-            if (comboLabel.empty()) comboLabel = keyCombo;
-            addListItem(list, KEY_COMBO, comboLabel, "keyComboMenu");
+            convertComboToUnicode(keyCombo);
+            addListItem(list, KEY_COMBO, keyCombo, "keyComboMenu");
             addListItem(list, LANGUAGE, defaultLang, "languageMenu");
             addListItem(list, SYSTEM, DROPDOWN_SYMBOL, "systemMenu");
             addListItem(list, SOFTWARE_UPDATE, DROPDOWN_SYMBOL, "softwareUpdateMenu");
@@ -1133,6 +1142,12 @@ public:
             
             addHeader(list, EFFECTS);
 
+            useRightAlignment = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "right_alignment") == TRUE_STR);
+
+            rightAlignmentState = useRightAlignment;
+            createToggleListItem(list, RIGHT_SIDE_MODE, useRightAlignment, "right_alignment");
+
+
             useOpaqueScreenshots = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "opaque_screenshots") == TRUE_STR);
             createToggleListItem(list, OPAQUE_SCREENSHOTS, useOpaqueScreenshots, "opaque_screenshots");
             
@@ -1383,10 +1398,19 @@ public:
             } else if (entryMode == PACKAGE_STR) {
                 createAndAddToggleListItem(
                     list,
-                    BOOT_PACKAGE,
+                    BOOT_COMMANDS,
                     true,
                     USE_BOOT_PACKAGE_STR,
                     parseValueFromIniSection(settingsIniPath, entryName, USE_BOOT_PACKAGE_STR),
+                    settingsIniPath,
+                    entryName
+                );
+                createAndAddToggleListItem(
+                    list,
+                    EXIT_COMMANDS,
+                    true,
+                    USE_EXIT_PACKAGE_STR,
+                    parseValueFromIniSection(settingsIniPath, entryName, USE_EXIT_PACKAGE_STR),
                     settingsIniPath,
                     entryName
                 );
@@ -2413,8 +2437,7 @@ public:
 
 
 
-
-class PackageMenu;
+class PackageMenu; // forwarding
 
 void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                     const std::string& packageIniPath,
@@ -2726,8 +2749,14 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                     } else if (commandName.find(HEADER_INDENT_PATTERN) == 0) {
                         useHeaderIndent = (commandName.substr(HEADER_INDENT_PATTERN.length()) == TRUE_STR);
                         continue;
-                    } else if (commandName.find(GAP_PATTERN) == 0) {
-                        tableEndGap = std::stoi(commandName.substr(GAP_PATTERN.length()));
+                    } else if (commandName.find(START_GAP_PATTERN) == 0) {
+                        tableStartGap = std::stoi(commandName.substr(START_GAP_PATTERN.length()));
+                        continue;
+                    } else if (commandName.find(END_GAP_PATTERN) == 0) {
+                        tableEndGap = std::stoi(commandName.substr(END_GAP_PATTERN.length()));
+                        continue;
+                    } else if (commandName.find(END_GAP_PATTERN_ALIAS) == 0) {
+                        tableEndGap = std::stoi(commandName.substr(END_GAP_PATTERN_ALIAS.length()));
                         continue;
                     } else if (commandName.find(OFFSET_PATTERN) == 0) {
                         tableColumnOffset = std::stoi(commandName.substr(OFFSET_PATTERN.length()));
@@ -2860,6 +2889,9 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
             
             if (!skipSection && !skipSystem) { // for skipping the drawing of sections
                 if (commandMode == TABLE_STR) {
+                    if (useHeaderIndent) {
+                        tableStartGap = tableEndGap = 19; // for perfect alignment for header tables
+                    }
                     addTable(list, tableData, packagePath, tableColumnOffset, tableStartGap, tableEndGap, tableSpacing, tableSectionTextColor, tableInfoTextColor, tableAlignment, hideTableBackground, useHeaderIndent);
                     continue;
                 } else if (commandMode == TRACKBAR_STR) {
@@ -3199,6 +3231,26 @@ public:
             packageRootLayerColor = "";
             overrideTitle = false;
             overrideVersion = false;
+
+            if (isFileOrDirectory(packagePath + EXIT_PACKAGE_FILENAME)) {
+                bool useExitPackage = !(parseValueFromIniSection(PACKAGES_INI_FILEPATH, getNameFromPath(packagePath), USE_EXIT_PACKAGE_STR) == FALSE_STR);
+                
+                if (useExitPackage) {
+                    // Load only the commands from the specific section (bootCommandName)
+                    auto exitCommands = loadSpecificSectionFromIni(packagePath + EXIT_PACKAGE_FILENAME, "exit");
+                    
+                    if (!exitCommands.empty()) {
+                        bool resetCommandSuccess = false;
+                        if (!commandSuccess) resetCommandSuccess = true;
+                        
+                        interpretAndExecuteCommands(std::move(exitCommands), packagePath, "exit");
+                        
+                        if (resetCommandSuccess) {
+                            commandSuccess = false;
+                        }
+                    }
+                }
+            }
         }
     }
     
@@ -3616,6 +3668,8 @@ public:
      * @return A pointer to the GUI element representing the main menu overlay.
      */
     virtual tsl::elm::Element* createUI() override {
+        menuMode = OVERLAYS_STR;
+
         if (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_OVERLAY_STR) == TRUE_STR) {
             inMainMenu = false;
             inHiddenMode = true;
@@ -3637,7 +3691,7 @@ public:
         //bool skipSystem = false;
         lastMenuMode = hiddenMenuMode;
         
-        menuMode = OVERLAYS_STR;
+        
         
         createDirectory(PACKAGE_PATH);
         createDirectory(SETTINGS_PATH);
@@ -3673,6 +3727,7 @@ public:
                 setDefaultValue(ultrahandSection, "hide_package_versions", FALSE_STR, hidePackageVersions);
                 setDefaultValue(ultrahandSection, "memory_expansion", FALSE_STR, useMemoryExpansion);
                 // setDefaultValue(ultrahandSection, "custom_wallpaper", FALSE_STR, useCustomWallpaper);
+                setDefaultValue(ultrahandSection, "right_alignment", FALSE_STR, useRightAlignment);
                 setDefaultValue(ultrahandSection, "opaque_screenshots", TRUE_STR, useOpaqueScreenshots);
                 setDefaultValue(ultrahandSection, "progress_animation", FALSE_STR, progressAnimation);
                 
@@ -4104,6 +4159,7 @@ public:
                         setIniFileValue(PACKAGES_INI_FILEPATH, packageName, STAR_STR, FALSE_STR);
                         setIniFileValue(PACKAGES_INI_FILEPATH, packageName, HIDE_STR, FALSE_STR);
                         setIniFileValue(OVERLAYS_INI_FILEPATH, packageName, USE_BOOT_PACKAGE_STR, TRUE_STR);
+                        setIniFileValue(OVERLAYS_INI_FILEPATH, packageName, USE_EXIT_PACKAGE_STR, TRUE_STR);
                         setIniFileValue(PACKAGES_INI_FILEPATH, packageName, "custom_name", "");
                         setIniFileValue(PACKAGES_INI_FILEPATH, packageName, "custom_version", "");
                         packageList.insert("0020" + (packageName) +":" + packageName);
@@ -4255,24 +4311,27 @@ public:
                             if (keys & KEY_A) {
                                 inMainMenu = false;
                                 
-                                bool useBootPackage = !(parseValueFromIniSection(PACKAGES_INI_FILEPATH, packageName, USE_BOOT_PACKAGE_STR) == FALSE_STR);
 
-                                // read commands from package's boot_package.ini
-                                if (useBootPackage && isFileOrDirectory(packageFilePath+BOOT_PACKAGE_FILENAME)) {
-                                    std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> bootOptions = loadOptionsFromIni(packageFilePath+BOOT_PACKAGE_FILENAME);
-                                    if (bootOptions.size() > 0) {
-                                        std::string bootOptionName;
-                                        for (auto& bootOption:bootOptions) {
-                                            bootOptionName = bootOption.first;
-                                            auto& bootCommands = bootOption.second;
-                                            if (bootOptionName == "boot") {
-                                                interpretAndExecuteCommands(std::move(bootCommands), packageFilePath, bootOptionName); // Execute modified
-                                                break;
+                                if (isFileOrDirectory(packageFilePath + BOOT_PACKAGE_FILENAME)) {
+                                    bool useBootPackage = !(parseValueFromIniSection(PACKAGES_INI_FILEPATH, packageName, USE_BOOT_PACKAGE_STR) == FALSE_STR);
+
+                                    if (useBootPackage) {
+                                        // Load only the commands from the specific section (bootCommandName)
+                                        auto bootCommands = loadSpecificSectionFromIni(packageFilePath + BOOT_PACKAGE_FILENAME, "boot");
+                                    
+                                        if (!bootCommands.empty()) {
+                                            bool resetCommandSuccess = false;
+                                            if (!commandSuccess) resetCommandSuccess = true;
+                                            
+                                            interpretAndExecuteCommands(std::move(bootCommands), packageFilePath, "boot");
+                                            
+                                            if (resetCommandSuccess) {
+                                                commandSuccess = false;
                                             }
                                         }
-                                        bootOptions.clear();
                                     }
                                 }
+
                                 lastPackagePath = packageFilePath;
                                 lastPackageName = PACKAGE_FILENAME;
 
@@ -4445,8 +4504,14 @@ public:
         }
         
         if (inMainMenu && !inHiddenMode && dropdownSection.empty()){
-            if (isDownloaded) { // for handling software updates
-                tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
+            if (triggerMenuReload) { // for handling software updates
+                triggerMenuReload = false;
+                if (menuMode == PACKAGES_STR)
+                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "to_packages", TRUE_STR);
+                
+                setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_OVERLAY_STR, TRUE_STR);
+                tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl", "--skipCombo");
+                
                 tsl::Overlay::get()->close();
             }
             
@@ -4620,8 +4685,8 @@ public:
     virtual void initServices() override {
         fsdevMountSdmc();
         splInitialize();
-        spsmInitialize(); // moved directly into shutdown / reboot function
-        i2cInitialize(); // might have been unnecessary
+        spsmInitialize();
+        i2cInitialize();
         ASSERT_FATAL(socketInitializeDefault());
         ASSERT_FATAL(nifmInitialize(NifmServiceType_User));
         ASSERT_FATAL(smInitialize());
@@ -4656,13 +4721,22 @@ public:
      * properly shut down services to avoid memory leaks.
      */
     virtual void exitServices() override {
+        if (isFileOrDirectory(PACKAGE_PATH + EXIT_PACKAGE_FILENAME)) {
+            // Load only the commands from the specific section (bootCommandName)
+            auto exitCommands = loadSpecificSectionFromIni(PACKAGE_PATH + EXIT_PACKAGE_FILENAME, "exit");
+            
+            if (!exitCommands.empty()) {
+                interpretAndExecuteCommands(std::move(exitCommands), PACKAGE_PATH, "exit");
+            }
+        }
+
         cleanupCurl();
         closeInterpreterThread(); // shouldn't be running, but run close anyways
         socketExit();
         nifmExit();
-        i2cExit(); // might have been unnecessary
+        i2cExit();
         smExit();
-        spsmExit(); // moved directly into shutdown / reboot function
+        spsmExit();
         splExit();
         fsdevUnmountAll();
     }

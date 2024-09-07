@@ -676,7 +676,7 @@ void addBasicListItem(auto& list, const std::string& itemText) {
 
 
 void drawTable(std::unique_ptr<tsl::elm::List>& list, const std::vector<std::string>& sectionLines, const std::vector<std::string>& infoLines,
-               size_t columnOffset = 160, size_t startGap = 20, size_t endGap = 3, size_t newlineGap = 0,
+               size_t columnOffset = 160, size_t startGap = 19, size_t endGap = 3, size_t newlineGap = 0,
                const std::string& tableSectionTextColor = DEFAULT_STR, const std::string& tableInfoTextColor = DEFAULT_STR, 
                const std::string& alignment = LEFT_STR, bool hideTableBackground = false, bool useHeaderIndent = false) {
 
@@ -711,7 +711,7 @@ void drawTable(std::unique_ptr<tsl::elm::List>& list, const std::vector<std::str
 
     list->addItem(new tsl::elm::TableDrawer([=](tsl::gfx::Renderer* renderer, s32 x, s32 y, s32 w, s32 h) mutable {
         if (useHeaderIndent) {
-            renderer->drawRect(x - 2, y + 2, 3, 23, renderer->a(tsl::headerSeparatorColor));
+            renderer->drawRect(x - 2, y + 1, 3, 23, renderer->a(tsl::headerSeparatorColor));
         }
     
         for (size_t i = 0; i < infoLines.size(); ++i) {
@@ -746,7 +746,7 @@ void drawTable(std::unique_ptr<tsl::elm::List>& list, const std::vector<std::str
 void applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::string& hexPath, const std::string& iniPath, const std::string& listString, const std::string& listPath, const std::string& jsonString, const std::string& jsonPath);
 
 void addTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::vector<std::string>>& tableData,
-    const std::string& packagePath, const size_t& columnOffset=161, const size_t& tableStartGap=20, const size_t& tableEndGap=3, const size_t& tableSpacing=0,
+    const std::string& packagePath, const size_t& columnOffset=161, const size_t& tableStartGap=19, const size_t& tableEndGap=3, const size_t& tableSpacing=0,
     const std::string& tableSectionTextColor=DEFAULT_STR, const std::string& tableInfoTextColor=DEFAULT_STR, const std::string& tableAlignment=RIGHT_STR, const bool& hideTableBackground = false, const bool& useHeaderIndent = false) {
     std::string message;
 
@@ -871,7 +871,7 @@ void addHelpInfo(std::unique_ptr<tsl::elm::List>& list) {
     };
 
     // Draw the table with the defined lines
-    drawTable(list, sectionLines, infoLines, xOffset, 20, 12, 3);
+    drawTable(list, sectionLines, infoLines, xOffset, 19, 12, 3);
 }
 
 
@@ -1059,114 +1059,6 @@ bool isDangerousCombination(const std::string& patternPath) {
 
 
 
-
-
-
-/**
- * @brief Parses a command line into individual parts, handling quoted strings.
- *
- * @param line The command line to parse.
- * @return A vector of strings containing the parsed command parts.
- */
-std::vector<std::string> parseCommandLine(const std::string& line) {
-    std::vector<std::string> commandParts;
-    bool inQuotes = false;
-    std::string part;
-
-    std::istringstream iss(line);
-    while (std::getline(iss, part, '\'')) { // Handle single quotes
-        if (inQuotes) {
-            commandParts.push_back(part); // Inside quotes, treat as a whole argument
-        } else {
-            std::istringstream argIss(part);
-            std::string arg;
-            while (argIss >> arg) {
-                commandParts.push_back(arg); // Split part outside quotes by spaces
-            }
-        }
-        inQuotes = !inQuotes; // Toggle the inQuotes flag
-    }
-
-    return commandParts;
-}
-
-/**
- * @brief Loads and parses options from an INI file.
- *
- * This function reads and parses options from an INI file, organizing them by section.
- *
- * @param packageIniPath The path to the INI file.
- * @return A vector containing pairs of section names and their associated key-value pairs.
- */
-std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadOptionsFromIni(const std::string& packageIniPath) {
-    std::ifstream packageFile(packageIniPath);
-    
-    if (!packageFile) return {}; // Return empty vector if file can't be opened
-
-    std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> options;
-    std::string line, currentSection;
-    std::vector<std::vector<std::string>> sectionCommands;
-
-    while (std::getline(packageFile, line)) {
-        // Remove carriage returns and newlines
-        line.erase(std::remove(line.begin(), line.end(), '\r'), line.end());
-
-        if (line.empty() || line.front() == '#') continue; // Skip empty or comment lines
-
-        if (line.front() == '[' && line.back() == ']') { // Section headers
-            if (!currentSection.empty()) {
-                options.emplace_back(std::move(currentSection), std::move(sectionCommands));
-                sectionCommands.clear();
-            }
-            currentSection = line.substr(1, line.size() - 2);
-        } else if (!currentSection.empty()) { // Command lines within sections
-            sectionCommands.push_back(parseCommandLine(line)); // Use helper to parse command line
-        }
-    }
-
-    if (!currentSection.empty()) {
-        options.emplace_back(std::move(currentSection), std::move(sectionCommands));
-    }
-    packageFile.close();
-
-    return options;
-}
-
-/**
- * @brief Loads a specific section from an INI file.
- *
- * This function reads and parses a specific section from an INI file.
- *
- * @param packageIniPath The path to the INI file.
- * @param sectionName The name of the section to load.
- * @return A vector of commands within the specified section.
- */
-std::vector<std::vector<std::string>> loadSpecificSectionFromIni(const std::string& packageIniPath, const std::string& sectionName) {
-    std::ifstream packageFile(packageIniPath);
-
-    if (!packageFile) return {}; // Return empty vector if file can't be opened
-
-    std::string line, currentSection;
-    std::vector<std::vector<std::string>> sectionCommands;
-    bool inTargetSection = false;
-
-    while (std::getline(packageFile, line)) {
-        // Remove carriage returns and newlines
-        line.erase(std::remove(line.begin(), line.end(), '\r'), line.end());
-
-        if (line.empty() || line.front() == '#') continue; // Skip empty or comment lines
-
-        if (line.front() == '[' && line.back() == ']') { // Section headers
-            currentSection = line.substr(1, line.size() - 2);
-            inTargetSection = (currentSection == sectionName); // Check if this is the target section
-        } else if (inTargetSection) { // Only parse commands within the target section
-            sectionCommands.push_back(parseCommandLine(line)); // Use helper to parse command line
-        }
-    }
-
-    packageFile.close();
-    return sectionCommands; // Return only the commands from the target section
-}
 
 
 

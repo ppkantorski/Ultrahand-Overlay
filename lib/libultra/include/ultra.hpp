@@ -27,10 +27,13 @@
 #include <string>
 
 const std::string BOOT_PACKAGE_FILENAME = "boot_package.ini";
+const std::string EXIT_PACKAGE_FILENAME = "exit_package.ini";
 const std::string PACKAGE_FILENAME = "package.ini";
 const std::string CONFIG_FILENAME = "config.ini";
 const std::string ULTRAHAND_PROJECT_NAME = "ultrahand";
 const std::string CAPITAL_ULTRAHAND_PROJECT_NAME = "Ultrahand";
+const std::string SPLIT_PROJECT_NAME_1 = CAPITAL_ULTRAHAND_PROJECT_NAME.substr(0, 5);
+const std::string SPLIT_PROJECT_NAME_2 = CAPITAL_ULTRAHAND_PROJECT_NAME.substr(5);
 
 const std::string ROOT_PATH = "sdmc:/";
 const std::string SETTINGS_PATH = "sdmc:/config/ultrahand/";
@@ -66,6 +69,7 @@ const std::string DEFAULT_LANG_STR = "default_lang";
 const std::string LAUNCH_ARGS_STR = "launch_args";
 const std::string USE_LAUNCH_ARGS_STR = "use_launch_args";
 const std::string USE_BOOT_PACKAGE_STR = "use_boot_package";
+const std::string USE_EXIT_PACKAGE_STR = "use_exit_package";
 const std::string USE_LOGGING_STR = "use_logging";
 const std::string LIST_STR = "list";
 const std::string LIST_FILE_STR = "list_file";
