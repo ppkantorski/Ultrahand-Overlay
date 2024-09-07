@@ -31,6 +31,8 @@ const std::string PACKAGE_FILENAME = "package.ini";
 const std::string CONFIG_FILENAME = "config.ini";
 const std::string ULTRAHAND_PROJECT_NAME = "ultrahand";
 const std::string CAPITAL_ULTRAHAND_PROJECT_NAME = "Ultrahand";
+const std::string SPLIT_PROJECT_NAME_1 = CAPITAL_ULTRAHAND_PROJECT_NAME.substr(0, 5);
+const std::string SPLIT_PROJECT_NAME_2 = CAPITAL_ULTRAHAND_PROJECT_NAME.substr(5);
 
 const std::string ROOT_PATH = "sdmc:/";
 const std::string SETTINGS_PATH = "sdmc:/config/ultrahand/";
