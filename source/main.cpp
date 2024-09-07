@@ -759,8 +759,8 @@ public:
         inSubSettingsMenu = !dropdownSelection.empty();
         
         const std::vector<std::string> defaultLanguagesRepresentation = {ENGLISH, SPANISH, FRENCH, GERMAN, JAPANESE, KOREAN, ITALIAN, DUTCH, PORTUGUESE, RUSSIAN, POLISH, SIMPLIFIED_CHINESE, TRADITIONAL_CHINESE};
-        const std::vector<std::string> defaultLanguages = {"en", "es", "fr", "de", "ja", "ko", "it", "nl", "pt", "ru", "pl", "zh-cn", "zh-tw"};
-        const std::vector<std::string> defaultCombos = {"ZL+ZR+DDOWN", "ZL+ZR+DRIGHT", "ZL+ZR+DUP", "ZL+ZR+DLEFT", "L+R+DDOWN", "L+R+DRIGHT", "L+R+DUP", "L+R+DLEFT", "L+DDOWN", "R+DDOWN", "ZL+ZR+PLUS", "L+R+PLUS", "ZL+PLUS", "ZR+PLUS", "MINUS+PLUS", "LS+RS", "L+DDOWN+RS"};
+        static const std::vector<std::string> defaultLanguages = {"en", "es", "fr", "de", "ja", "ko", "it", "nl", "pt", "ru", "pl", "zh-cn", "zh-tw"};
+        static const std::vector<std::string> defaultCombos = {"ZL+ZR+DDOWN", "ZL+ZR+DRIGHT", "ZL+ZR+DUP", "ZL+ZR+DLEFT", "L+R+DDOWN", "L+R+DRIGHT", "L+R+DUP", "L+R+DLEFT", "L+DDOWN", "R+DDOWN", "ZL+ZR+PLUS", "L+R+PLUS", "ZL+PLUS", "ZR+PLUS", "MINUS+PLUS", "LS+RS", "L+DDOWN+RS"};
         
         auto list = std::make_unique<tsl::elm::List>();
         
@@ -771,9 +771,8 @@ public:
             defaultLang = defaultLang.empty() ? "en" : defaultLang;
             keyCombo = keyCombo.empty() ? defaultCombos[0] : keyCombo;
 
-            comboLabel = convertComboToUnicode(keyCombo);
-            if (comboLabel.empty()) comboLabel = keyCombo;
-            addListItem(list, KEY_COMBO, comboLabel, "keyComboMenu");
+            convertComboToUnicode(keyCombo);
+            addListItem(list, KEY_COMBO, keyCombo, "keyComboMenu");
             addListItem(list, LANGUAGE, defaultLang, "languageMenu");
             addListItem(list, SYSTEM, DROPDOWN_SYMBOL, "systemMenu");
             addListItem(list, SOFTWARE_UPDATE, DROPDOWN_SYMBOL, "softwareUpdateMenu");
