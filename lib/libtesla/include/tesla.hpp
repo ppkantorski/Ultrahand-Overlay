@@ -69,6 +69,8 @@
 //uint64_t RAM_Total_system_u = 0;
 
 
+static bool useRightAlignment = false;
+
 // Define the duration boundaries (for smooth scrolling)
 const auto initialInterval = std::chrono::milliseconds(67);  // Example initial interval
 const auto shortInterval = std::chrono::milliseconds(10);    // Short interval after long hold
@@ -334,6 +336,7 @@ static std::string ON_MAIN_MENU = "on Main Menu";
 static std::string ON_A_COMMAND = "on a command";
 static std::string ON_OVERLAY_PACKAGE = "on overlay/package";
 static std::string EFFECTS = "Effects";
+static std::string RIGHT_SIDE_MODE = "Right-side Mode";
 static std::string PROGRESS_ANIMATION = "Progress Animation";
 static std::string EMPTY = "Empty";
 
@@ -477,6 +480,7 @@ void reinitializeLangVars() {
     ON_A_COMMAND = "on a command";
     ON_OVERLAY_PACKAGE = "on overlay/package";
     EFFECTS = "Effects";
+    RIGHT_SIDE_MODE = "Right-side Mode";
     PROGRESS_ANIMATION = "Progress Animation";
     EMPTY = "Empty";
 
@@ -635,6 +639,7 @@ void parseLanguage(const std::string langFile) {
         {"ON_A_COMMAND", &ON_A_COMMAND},
         {"ON_OVERLAY_PACKAGE", &ON_OVERLAY_PACKAGE},
         {"EFFECTS", &EFFECTS},
+        {"RIGHT_SIDE_MODE", &RIGHT_SIDE_MODE},
         {"PROGRESS_ANIMATION", &PROGRESS_ANIMATION},
         {"EMPTY", &EMPTY},
         {"SUNDAY", &SUNDAY},
@@ -3325,8 +3330,10 @@ namespace tsl {
              *
              */
             void init() {
-                
-                cfg::LayerPosX = 0;
+                useRightAlignment = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "right_alignment") == TRUE_STR);
+                //cfg::LayerPosX = 1280-32;
+                if (useRightAlignment)
+                    cfg::LayerPosX = 1280-32;
                 cfg::LayerPosY = 0;
                 cfg::FramebufferWidth  = 448;
                 cfg::FramebufferHeight = 720;
