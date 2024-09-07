@@ -3668,6 +3668,8 @@ public:
      * @return A pointer to the GUI element representing the main menu overlay.
      */
     virtual tsl::elm::Element* createUI() override {
+        menuMode = OVERLAYS_STR;
+
         if (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_OVERLAY_STR) == TRUE_STR) {
             inMainMenu = false;
             inHiddenMode = true;
@@ -3689,7 +3691,7 @@ public:
         //bool skipSystem = false;
         lastMenuMode = hiddenMenuMode;
         
-        menuMode = OVERLAYS_STR;
+        
         
         createDirectory(PACKAGE_PATH);
         createDirectory(SETTINGS_PATH);
@@ -4504,8 +4506,12 @@ public:
         if (inMainMenu && !inHiddenMode && dropdownSection.empty()){
             if (triggerMenuReload) { // for handling software updates
                 triggerMenuReload = false;
-                tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl", "--skipCombo");
+                if (menuMode == PACKAGES_STR)
+                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "to_packages", TRUE_STR);
+                
                 setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_OVERLAY_STR, TRUE_STR);
+                tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl", "--skipCombo");
+                
                 tsl::Overlay::get()->close();
             }
             
