@@ -829,6 +829,119 @@ void updateIniData(const std::map<std::string, std::map<std::string, std::string
 }
 
 
+/**
+ * @brief Parses a command line into individual parts, handling quoted strings.
+ *
+ * @param line The command line to parse.
+ * @return A vector of strings containing the parsed command parts.
+ */
+std::vector<std::string> parseCommandLine(const std::string& line) {
+    std::vector<std::string> commandParts;
+    bool inQuotes = false;
+    std::string part;
+
+    std::istringstream iss(line);
+    while (std::getline(iss, part, '\'')) { // Handle single quotes
+        if (inQuotes) {
+            commandParts.push_back(part); // Inside quotes, treat as a whole argument
+        } else {
+            std::istringstream argIss(part);
+            std::string arg;
+            while (argIss >> arg) {
+                commandParts.push_back(arg); // Split part outside quotes by spaces
+            }
+        }
+        inQuotes = !inQuotes; // Toggle the inQuotes flag
+    }
+
+    return commandParts;
+}
+
+
+
+/**
+ * @brief Loads and parses options from an INI file.
+ *
+ * This function reads and parses options from an INI file, organizing them by section.
+ *
+ * @param packageIniPath The path to the INI file.
+ * @return A vector containing pairs of section names and their associated key-value pairs.
+ */
+std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> loadOptionsFromIni(const std::string& packageIniPath) {
+    std::ifstream packageFile(packageIniPath);
+    
+    if (!packageFile) return {}; // Return empty vector if file can't be opened
+
+    std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> options;
+    std::string line, currentSection;
+    std::vector<std::vector<std::string>> sectionCommands;
+
+    while (std::getline(packageFile, line)) {
+        // Remove carriage returns and newlines
+        line.erase(std::remove(line.begin(), line.end(), '\r'), line.end());
+
+        if (line.empty() || line.front() == '#') continue; // Skip empty or comment lines
+
+        if (line.front() == '[' && line.back() == ']') { // Section headers
+            if (!currentSection.empty()) {
+                options.emplace_back(std::move(currentSection), std::move(sectionCommands));
+                sectionCommands.clear();
+            }
+            currentSection = line.substr(1, line.size() - 2);
+        } else if (!currentSection.empty()) { // Command lines within sections
+            sectionCommands.push_back(parseCommandLine(line)); // Use helper to parse command line
+        }
+    }
+
+    if (!currentSection.empty()) {
+        options.emplace_back(std::move(currentSection), std::move(sectionCommands));
+    }
+    packageFile.close();
+
+    return options;
+}
+
+/**
+ * @brief Loads a specific section from an INI file.
+ *
+ * This function reads and parses a specific section from an INI file.
+ *
+ * @param packageIniPath The path to the INI file.
+ * @param sectionName The name of the section to load.
+ * @return A vector of commands within the specified section.
+ */
+std::vector<std::vector<std::string>> loadSpecificSectionFromIni(const std::string& packageIniPath, const std::string& sectionName) {
+    std::ifstream packageFile(packageIniPath);
+
+    if (!packageFile) return {}; // Return empty vector if file can't be opened
+
+    std::string line, currentSection;
+    std::vector<std::vector<std::string>> sectionCommands;
+    bool inTargetSection = false;
+
+    while (std::getline(packageFile, line)) {
+        // Remove carriage returns and newlines
+        line.erase(std::remove(line.begin(), line.end(), '\r'), line.end());
+
+        if (line.empty() || line.front() == '#') continue; // Skip empty or comment lines
+
+        if (line.front() == '[' && line.back() == ']') { // Section headers
+            currentSection = line.substr(1, line.size() - 2);
+            inTargetSection = (currentSection == sectionName); // Check if this is the target section
+        } else if (inTargetSection) { // Only parse commands within the target section
+            sectionCommands.push_back(parseCommandLine(line)); // Use helper to parse command line
+        }
+    }
+
+    packageFile.close();
+    return sectionCommands; // Return only the commands from the target section
+}
+
+
+
+
+
+
 
 // Helper functions
 //std::vector<std::string> getIniSections(const std::string& iniPath) {
