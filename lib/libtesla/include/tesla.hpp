@@ -4112,15 +4112,15 @@ namespace tsl {
             int fontSize;
 
             // Convert the C-style string to an std::string
-            std::string chargeStringSTD;
-            std::string PCB_temperatureStringSTD;
-            std::string SOC_temperatureStringSTD;
+            //std::string chargeStringSTD;
+            //std::string PCB_temperatureStringSTD;
+            //std::string SOC_temperatureStringSTD;
             
-            char timeStr[20]; // Allocate a buffer to store the time string
-            char PCB_temperatureStr[10];
-            char SOC_temperatureStr[10];
+            //char timeStr[20]; // Allocate a buffer to store the time string
+            //char PCB_temperatureStr[10];
+            //char SOC_temperatureStr[10];
 
-            struct timespec currentTimeSpec;
+            //struct timespec currentTimeSpec;
             //std::string filePath = "sdmc:/config/ultrahand/wallpaper.rgba";
             //s32 width = 448/2;
             //s32 height = 720/2;
@@ -4203,17 +4203,15 @@ namespace tsl {
                                     this->m_subtitle.find("Ultrahand Package") == std::string::npos && 
                                     this->m_subtitle.find("Ultrahand Script") == std::string::npos);
 
-                auto currentTime = std::chrono::steady_clock::now();
-                auto currentTimeCount = std::chrono::duration<double>(currentTime.time_since_epoch()).count();
-
                 if (isUltrahand) {
+
                     if (touchingMenu && inMainMenu) {
                         renderer->drawRoundedRect(0.0f, 12.0f, 245.0f, 73.0f, 6.0f, a(clickColor));
                     }
 
-                    chargeStringSTD.clear();
-                    PCB_temperatureStringSTD.clear();
-                    SOC_temperatureStringSTD.clear();
+                    //chargeStringSTD.clear();
+                    //PCB_temperatureStringSTD.clear();
+                    //SOC_temperatureStringSTD.clear();
                     
                     
                     x = 20;
@@ -4224,6 +4222,8 @@ namespace tsl {
                     
 
                     if (!disableColorfulLogo) {
+                        //auto currentTime = std::chrono::steady_clock::now();
+                        auto currentTimeCount = std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
                         float progress;
                         for (char letter : SPLIT_PROJECT_NAME_1) {
                             counter = (2 * M_PI * (fmod(currentTimeCount, cycleDuration) + countOffset) / 1.5);
@@ -4260,12 +4260,12 @@ namespace tsl {
                         y_offset += 10;
                     }
                     
-                    clock_gettime(CLOCK_REALTIME, &currentTimeSpec);
+                    clock_gettime(CLOCK_REALTIME, &currentTime);
                     if (!hideClock) {
-                        
-                        strftime(timeStr, sizeof(timeStr), datetimeFormat.c_str(), localtime(&currentTimeSpec.tv_sec));
+                        static char timeStr[20]; // Allocate a buffer to store the time string
+                        strftime(timeStr, sizeof(timeStr), datetimeFormat.c_str(), localtime(&currentTime.tv_sec));
                         localizeTimeStr(timeStr);
-                        renderer->drawString(std::string(timeStr), false, tsl::cfg::FramebufferWidth - renderer->calculateStringWidth(timeStr, 20, true) - 20, y_offset, 20, a(clockColor));
+                        renderer->drawString(timeStr, false, tsl::cfg::FramebufferWidth - renderer->calculateStringWidth(timeStr, 20, true) - 20, y_offset, 20, a(clockColor));
                         y_offset += 22;
                     }
                     
@@ -4278,7 +4278,11 @@ namespace tsl {
                     //    timeOut = int(currentTimeSpec.tv_sec);
                     //}
                     //if (!isHidden.load()) {
-                    if ((currentTimeSpec.tv_sec - timeOut) >= 1) {
+
+                    static char PCB_temperatureStr[10];
+                    static char SOC_temperatureStr[10];
+
+                    if ((currentTime.tv_sec - timeOut) >= 1) {
                         //if (!hidePCBTemp || !hideSOCTemp) {
                         //    //thermalstatusInit();
                         //    //if (!hidePCBTemp)
@@ -4287,40 +4291,42 @@ namespace tsl {
                         //    //    thermalstatusGetDetailsSOC(&SOC_temperature);
                         //    //thermalstatusExit();
                         //}
-                        if (!hideSOCTemp)
+                        if (!hideSOCTemp) {
                             ReadSocTemperature(&SOC_temperature);
-                        if (!hidePCBTemp)
+                            snprintf(SOC_temperatureStr, sizeof(SOC_temperatureStr) - 1, "%d°C", SOC_temperature);
+                        }
+                        if (!hidePCBTemp) {
                             ReadPcbTemperature(&PCB_temperature);
-                        if (!hideBattery)
+                            snprintf(PCB_temperatureStr, sizeof(PCB_temperatureStr) - 1, "%d°C", PCB_temperature);
+                        }
+                        if (!hideBattery) {
                             powerGetDetails(&batteryCharge, &isCharging);
-                        timeOut = int(currentTimeSpec.tv_sec);
+                            batteryCharge = std::min(batteryCharge, 100U);
+                            sprintf(chargeString, "%d%%", batteryCharge);
+                        }
+                        timeOut = int(currentTime.tv_sec);
                     }
                     //}
-
-                    snprintf(PCB_temperatureStr, sizeof(PCB_temperatureStr) - 1, "%d°C", PCB_temperature);
-                    snprintf(SOC_temperatureStr, sizeof(SOC_temperatureStr) - 1, "%d°C", SOC_temperature);
-                    batteryCharge = std::min(batteryCharge, 100U);
-                    sprintf(chargeString, "%d%%", batteryCharge);
+                    
+                    
                     
                     if (!hideBattery && batteryCharge > 0) {
-                        chargeStringSTD = chargeString;
                         Color batteryColorToUse = isCharging ? tsl::Color(0x0, 0xF, 0x0, 0xF) : 
                                                 (batteryCharge < 20 ? tsl::Color(0xF, 0x0, 0x0, 0xF) : batteryColor);
-                        renderer->drawString(chargeStringSTD, false, tsl::cfg::FramebufferWidth - renderer->calculateStringWidth(chargeStringSTD, 20, true) - 22, y_offset, 20, a(batteryColorToUse));
+                        renderer->drawString(chargeString, false, tsl::cfg::FramebufferWidth - renderer->calculateStringWidth(chargeString, 20, true) - 22, y_offset, 20, a(batteryColorToUse));
                     }
                     
                     offset = 0;
                     if (!hidePCBTemp && PCB_temperature > 0) {
-                        PCB_temperatureStringSTD = PCB_temperatureStr;
                         if (!hideBattery)
                             offset -= 5;
-                        renderer->drawString(PCB_temperatureStringSTD, false, tsl::cfg::FramebufferWidth + offset - renderer->calculateStringWidth(PCB_temperatureStringSTD, 20, true) - renderer->calculateStringWidth(chargeStringSTD, 20, true) - 22, y_offset, 20, a(tsl::GradientColor(PCB_temperature)));
+                        renderer->drawString(PCB_temperatureStr, false, tsl::cfg::FramebufferWidth + offset - renderer->calculateStringWidth(PCB_temperatureStr, 20, true) - renderer->calculateStringWidth(chargeString, 20, true) - 22, y_offset, 20, a(tsl::GradientColor(PCB_temperature)));
                     }
+                    
                     if (!hideSOCTemp && SOC_temperature > 0) {
-                        SOC_temperatureStringSTD = SOC_temperatureStr;
                         if (!hidePCBTemp || !hideBattery)
                             offset -= 5;
-                        renderer->drawString(SOC_temperatureStringSTD, false, tsl::cfg::FramebufferWidth + offset - renderer->calculateStringWidth(SOC_temperatureStringSTD, 20, true) - renderer->calculateStringWidth(PCB_temperatureStringSTD, 20, true) - renderer->calculateStringWidth(chargeStringSTD, 20, true) - 22, y_offset, 20, a(tsl::GradientColor(SOC_temperature)));
+                        renderer->drawString(SOC_temperatureStr, false, tsl::cfg::FramebufferWidth + offset - renderer->calculateStringWidth(SOC_temperatureStr, 20, true) - renderer->calculateStringWidth(PCB_temperatureStr, 20, true) - renderer->calculateStringWidth(chargeString, 20, true) - 22, y_offset, 20, a(tsl::GradientColor(SOC_temperature)));
                     }
                 } else {
                     x = 20;
