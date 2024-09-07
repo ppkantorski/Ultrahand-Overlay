@@ -4276,8 +4276,8 @@ namespace tsl {
                     static char SOC_temperatureStr[10];
 
 
-                    s32 statusChange = s32(hideSOCTemp) + s32(hidePCBTemp) + s32(hideBattery);
-                    static s32 lastStatusChange = 0;
+                    size_t statusChange = size_t(hideSOCTemp) + size_t(hidePCBTemp) + size_t(hideBattery);
+                    static size_t lastStatusChange = 0;
 
                     if ((currentTime.tv_sec - timeOut) >= 1 || statusChange != lastStatusChange) {
                         //if (!hidePCBTemp || !hideSOCTemp) {
