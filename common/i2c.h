@@ -53,16 +53,16 @@ Additional custom temperature functions by ppkantorski (for Ultrahand Overlay)
 #define TMP451_PCB_TEMP_REG 0x00  // Register for PCB temperature integer part
 #define TMP451_PCB_TMP_DEC_REG 0x15  // Register for PCB temperature decimal part
 
-// Function to get the SOC temperature
-Result ReadSocTemperature(s32 *temperature, bool integer = true)
+// Common helper function to read temperature (integer and fractional parts)
+Result ReadTemperature(s32 *temperature, u8 integerReg, u8 fractionalReg, bool integerOnly)
 {
     u16 rawValue;
     u8 val;
     s32 integerPart = 0;
     s32 fractionalPart = 0;
 
-    // Read the integer part of SOC temperature
-    Result res = I2cReadRegHandler(TMP451_SOC_TEMP_REG, I2cDevice_Tmp451, &rawValue);
+    // Read the integer part of the temperature
+    Result res = I2cReadRegHandler(integerReg, I2cDevice_Tmp451, &rawValue);
     if (R_FAILED(res)) {
         return res;  // Error during I2C read
     }
@@ -70,14 +70,14 @@ Result ReadSocTemperature(s32 *temperature, bool integer = true)
     val = (u8)rawValue;  // Cast the value to an 8-bit unsigned integer
     integerPart = val;    // Integer part of temperature in Celsius
 
-    if (integer)
+    if (integerOnly)
     {
         *temperature = integerPart;
         return 0;  // Return only integer part if requested
     }
 
-    // Read the fractional part of SOC temperature
-    res = I2cReadRegHandler(TMP451_SOC_TMP_DEC_REG, I2cDevice_Tmp451, &rawValue);
+    // Read the fractional part of the temperature
+    res = I2cReadRegHandler(fractionalReg, I2cDevice_Tmp451, &rawValue);
     if (R_FAILED(res)) {
         return res;  // Error during I2C read
     }
@@ -91,42 +91,16 @@ Result ReadSocTemperature(s32 *temperature, bool integer = true)
     return 0;
 }
 
-// Function to get the PCB temperature
-Result ReadPcbTemperature(s32 *temperature, bool integer = true)
+// Function to get the SOC temperature
+Result ReadSocTemperature(s32 *temperature, bool integerOnly = true)
 {
-    u16 rawValue;
-    u8 val;
-    s32 integerPart = 0;
-    s32 fractionalPart = 0;
+    return ReadTemperature(temperature, TMP451_SOC_TEMP_REG, TMP451_SOC_TMP_DEC_REG, integerOnly);
+}
 
-    // Read the integer part of PCB temperature
-    Result res = I2cReadRegHandler(TMP451_PCB_TEMP_REG, I2cDevice_Tmp451, &rawValue);
-    if (R_FAILED(res)) {
-        return res;  // Error during I2C read
-    }
-
-    val = (u8)rawValue;  // Cast the value to an 8-bit unsigned integer
-    integerPart = val;    // Integer part of temperature in Celsius
-
-    if (integer)
-    {
-        *temperature = integerPart;
-        return 0;  // Return only integer part if requested
-    }
-
-    // Read the fractional part of PCB temperature
-    res = I2cReadRegHandler(TMP451_PCB_TMP_DEC_REG, I2cDevice_Tmp451, &rawValue);
-    if (R_FAILED(res)) {
-        return res;  // Error during I2C read
-    }
-
-    val = (u8)rawValue;  // Cast the value to an 8-bit unsigned integer
-    fractionalPart = (val >> 4) * 0.0625;  // Fractional part: upper 4 bits, scaled by 1/16
-
-    // Combine integer and fractional parts
-    *temperature = integerPart + fractionalPart;
-
-    return 0;
+// Function to get the PCB temperature
+Result ReadPcbTemperature(s32 *temperature, bool integerOnly = true)
+{
+    return ReadTemperature(temperature, TMP451_PCB_TEMP_REG, TMP451_PCB_TMP_DEC_REG, integerOnly);
 }
 
 // CUSTOM SECTION END
