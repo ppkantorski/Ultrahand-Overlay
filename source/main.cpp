@@ -71,7 +71,9 @@ static const std::string BACKGROUND_PATTERN = ";background="; // true or false
 static const std::string HEADER_INDENT_PATTERN = ";header_indent="; // true or false
 //static const std::string HEADER_PATTERN = ";header=";
 static const std::string ALIGNMENT_PATTERN = ";alignment=";
-static const std::string GAP_PATTERN =";gap=";
+static const std::string START_GAP_PATTERN =";start_gap=";
+static const std::string END_GAP_PATTERN =";end_gap=";
+static const std::string END_GAP_PATTERN_ALIAS =";gap=";
 static const std::string OFFSET_PATTERN = ";offset=";
 static const std::string SPACING_PATTERN = ";spacing=";
 static const std::string INFO_TEXT_COLOR_PATTERN = ";info_text_color=";
@@ -2726,8 +2728,14 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                     } else if (commandName.find(HEADER_INDENT_PATTERN) == 0) {
                         useHeaderIndent = (commandName.substr(HEADER_INDENT_PATTERN.length()) == TRUE_STR);
                         continue;
-                    } else if (commandName.find(GAP_PATTERN) == 0) {
-                        tableEndGap = std::stoi(commandName.substr(GAP_PATTERN.length()));
+                    } else if (commandName.find(START_GAP_PATTERN) == 0) {
+                        tableStartGap = std::stoi(commandName.substr(START_GAP_PATTERN.length()));
+                        continue;
+                    } else if (commandName.find(END_GAP_PATTERN) == 0) {
+                        tableEndGap = std::stoi(commandName.substr(END_GAP_PATTERN.length()));
+                        continue;
+                    } else if (commandName.find(END_GAP_PATTERN_ALIAS) == 0) {
+                        tableEndGap = std::stoi(commandName.substr(END_GAP_PATTERN_ALIAS.length()));
                         continue;
                     } else if (commandName.find(OFFSET_PATTERN) == 0) {
                         tableColumnOffset = std::stoi(commandName.substr(OFFSET_PATTERN.length()));
@@ -2860,6 +2868,9 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
             
             if (!skipSection && !skipSystem) { // for skipping the drawing of sections
                 if (commandMode == TABLE_STR) {
+                    if (useHeaderIndent) {
+                        tableStartGap = tableEndGap = 19; // for perfect alignment for header tables
+                    }
                     addTable(list, tableData, packagePath, tableColumnOffset, tableStartGap, tableEndGap, tableSpacing, tableSectionTextColor, tableInfoTextColor, tableAlignment, hideTableBackground, useHeaderIndent);
                     continue;
                 } else if (commandMode == TRACKBAR_STR) {
@@ -4620,8 +4631,8 @@ public:
     virtual void initServices() override {
         fsdevMountSdmc();
         splInitialize();
-        spsmInitialize(); // moved directly into shutdown / reboot function
-        i2cInitialize(); // might have been unnecessary
+        spsmInitialize();
+        i2cInitialize();
         ASSERT_FATAL(socketInitializeDefault());
         ASSERT_FATAL(nifmInitialize(NifmServiceType_User));
         ASSERT_FATAL(smInitialize());
@@ -4660,9 +4671,9 @@ public:
         closeInterpreterThread(); // shouldn't be running, but run close anyways
         socketExit();
         nifmExit();
-        i2cExit(); // might have been unnecessary
+        i2cExit();
         smExit();
-        spsmExit(); // moved directly into shutdown / reboot function
+        spsmExit();
         splExit();
         fsdevUnmountAll();
     }
