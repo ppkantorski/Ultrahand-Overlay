@@ -1160,7 +1160,7 @@ static PsmSession powerSession;
 
 // Define variables to store previous battery charge and time
 static uint32_t prevBatteryCharge = 0;
-//static uint64_t timeOut = 0;
+static s64 timeOut = 0;
 static char chargeString[6];  // Need space for the null terminator and the percentage sign
 
 static uint32_t batteryCharge;
@@ -4225,8 +4225,9 @@ namespace tsl {
                         y_offset += 10;
                     }
                     
+                    clock_gettime(CLOCK_REALTIME, &currentTimeSpec);
                     if (!hideClock) {
-                        clock_gettime(CLOCK_REALTIME, &currentTimeSpec);
+                        
                         strftime(timeStr, sizeof(timeStr), datetimeFormat.c_str(), localtime(&currentTimeSpec.tv_sec));
                         localizeTimeStr(timeStr);
                         renderer->drawString(std::string(timeStr), false, tsl::cfg::FramebufferWidth - renderer->calculateStringWidth(timeStr, 20, true) - 20, y_offset, 20, a(clockColor));
@@ -4241,12 +4242,21 @@ namespace tsl {
                     //    }
                     //    timeOut = int(currentTimeSpec.tv_sec);
                     //}
-                    if (!isHidden.load()) {
-                        if (!hidePCBTemp) thermalstatusGetDetailsPCB(&PCB_temperature);
-                        if (!hideSOCTemp) thermalstatusGetDetailsSOC(&SOC_temperature);
-                        if (!hideBattery) powerGetDetails(&batteryCharge, &isCharging);
+                    //if (!isHidden.load()) {
+                    if ((currentTimeSpec.tv_sec - timeOut) >= 1) {
+                        if (!hidePCBTemp || !hideSOCTemp) {
+                            thermalstatusInit();
+                            if (!hidePCBTemp)
+                                thermalstatusGetDetailsPCB(&PCB_temperature);
+                            if (!hideSOCTemp)
+                                thermalstatusGetDetailsSOC(&SOC_temperature);
+                            thermalstatusExit();
+                        }
+                        if (!hideBattery)
+                            powerGetDetails(&batteryCharge, &isCharging);
+                        timeOut = int(currentTimeSpec.tv_sec);
                     }
-
+                    //}
 
                     snprintf(PCB_temperatureStr, sizeof(PCB_temperatureStr) - 1, "%d°C", PCB_temperature);
                     snprintf(SOC_temperatureStr, sizeof(SOC_temperatureStr) - 1, "%d°C", SOC_temperature);
@@ -7445,7 +7455,7 @@ extern "C" {
             __libnx_init_time();            // CUSTOM MODIFICATION
             timeExit(); // CUSTOM MODIFICATION
             powerInit();
-            thermalstatusInit();
+            //thermalstatusInit();
         });
     }
     
@@ -7454,7 +7464,7 @@ extern "C" {
      *
      */
     void __appExit(void) {
-        thermalstatusExit();
+        //thermalstatusExit();
         powerExit(); // CUSTOM MODIFICATION
         fsExit();
         hidExit();

@@ -746,7 +746,7 @@ void drawTable(std::unique_ptr<tsl::elm::List>& list, const std::vector<std::str
 void applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::string& hexPath, const std::string& iniPath, const std::string& listString, const std::string& listPath, const std::string& jsonString, const std::string& jsonPath);
 
 void addTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::vector<std::string>>& tableData,
-    const std::string& packagePath, const size_t& columnOffset=160, const size_t& tableStartGap=20, const size_t& tableEndGap=3, const size_t& tableSpacing=0,
+    const std::string& packagePath, const size_t& columnOffset=161, const size_t& tableStartGap=20, const size_t& tableEndGap=3, const size_t& tableSpacing=0,
     const std::string& tableSectionTextColor=DEFAULT_STR, const std::string& tableInfoTextColor=DEFAULT_STR, const std::string& tableAlignment=RIGHT_STR, const bool& hideTableBackground = false, const bool& useHeaderIndent = false) {
     std::string message;
 
@@ -1706,7 +1706,7 @@ void interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
         disableLogging = !(parseValueFromIniSection(PACKAGES_INI_FILEPATH, getNameFromPath(packagePath), USE_LOGGING_STR) == TRUE_STR);
         logFilePath = packagePath + "log.txt";
     }
-    
+
     // Load key-value pairs from the "BUFFERS" section of the INI file
     auto bufferSection = getKeyValuePairsFromSection(ULTRAHAND_CONFIG_INI_PATH, BUFFERS);
     
@@ -2241,6 +2241,8 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
 
         }
     } else if (commandName == "reboot") { // credits to Studious Pancake for the Payload and utils methods
+        //spsmInitialize();
+        //i2cInitialize();
         if (util::IsErista() || util::SupportsMarikoRebootToConfig()) {
             std::string rebootOption;
             if (cmd.size() >= 2) {
@@ -2275,11 +2277,12 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                 Payload::RebootToHekate();
             }
         }
-
+        
         i2cExit();
         splExit();
         fsdevUnmountAll();
         spsmShutdown(SpsmShutdownMode_Reboot);
+        spsmExit();
     } else if (commandName == "shutdown") {
         if (cmd.size() >= 2) {
             std::string selection = removeQuotes(cmd[1]);
@@ -2287,9 +2290,11 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                 powerOffAllControllers();
             }
         } else {
+            //spsmInitialize();
             splExit();
             fsdevUnmountAll();
             spsmShutdown(SpsmShutdownMode_Normal);
+            spsmExit();
         }
         //if (cmd.size() >= 1) {
         //    splExit();
