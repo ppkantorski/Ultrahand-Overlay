@@ -4710,6 +4710,15 @@ public:
      * properly shut down services to avoid memory leaks.
      */
     virtual void exitServices() override {
+        if (isFileOrDirectory(PACKAGE_PATH + EXIT_PACKAGE_FILENAME)) {
+            // Load only the commands from the specific section (bootCommandName)
+            auto exitCommands = loadSpecificSectionFromIni(PACKAGE_PATH + EXIT_PACKAGE_FILENAME, "exit");
+            
+            if (!exitCommands.empty()) {
+                interpretAndExecuteCommands(std::move(exitCommands), PACKAGE_PATH, "exit");
+            }
+        }
+
         cleanupCurl();
         closeInterpreterThread(); // shouldn't be running, but run close anyways
         socketExit();
