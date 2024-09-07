@@ -43,6 +43,7 @@
 #include <ultra.hpp>
 #include <switch.h>
 #include <arm_neon.h>
+#include <i2c.h>
 
 #include <stdlib.h>
 #include <strings.h>
@@ -1258,85 +1259,120 @@ void powerExit(void) {
 
 // Temperature Implementation
 static s32 PCB_temperature, SOC_temperature;
-static Service* g_tsSrv;
-Result tsCheck = 1;
-Result tcCheck = 1;
 
-Result tsOpenTsSession(Service* &serviceSession, TsSession* out, TsDeviceCode device_code) {
-    return serviceDispatchIn(serviceSession, 4, device_code,
-        .out_num_objects = 1,
-        .out_objects = &out->s,
-    );
-}
+//static Service* g_tsSrv;
+//Result tsCheck = 1;
+//Result tcCheck = 1;
+//
+//Result tsOpenTsSession(Service* &serviceSession, TsSession* out, TsDeviceCode device_code) {
+//    return serviceDispatchIn(serviceSession, 4, device_code,
+//        .out_num_objects = 1,
+//        .out_objects = &out->s,
+//    );
+//}
+//
+//inline void tsCloseTsSession(TsSession* in) {
+//    serviceClose(&in->s);
+//}
+//
+//Result tsGetTemperatureWithTsSession(TsSession* ITs, float* temperature) {
+//    return serviceDispatchOut(&ITs->s, 4, *temperature);
+//}
+//
+//
+//inline bool thermalstatusInit(void) {
+//    tcCheck = tcInitialize();
+//    tsCheck = tsInitialize();
+//    if (R_SUCCEEDED(tsCheck)) {
+//        g_tsSrv = tsGetServiceSession();
+//    } else
+//        return false;
+//    
+//    return true;
+//}
+//
+//inline void thermalstatusExit(void) {
+//    tsExit();
+//    tcExit();
+//}
+//
+//inline bool throttle(std::chrono::steady_clock::time_point& last_call) {
+//    auto now = std::chrono::steady_clock::now();
+//    if (std::chrono::duration_cast<std::chrono::seconds>(now - last_call) < min_delay) {
+//        return false;
+//    }
+//    last_call = now;
+//    return true;
+//}
+//
+//inline bool getTemperature(s32* temperature, TsDeviceCode device_code) {
+//    static std::chrono::steady_clock::time_point last_call_pcb, last_call_soc;
+//    //static std::chrono::steady_clock::time_point last_call_soc;
+//
+//    // Choose the appropriate throttle variable based on the device code
+//    std::chrono::steady_clock::time_point& last_call = 
+//        (device_code == TsDeviceCode_LocationInternal) ? last_call_pcb : last_call_soc;
+//
+//    if (!throttle(last_call)) {
+//        return false;
+//    }
+//
+//    TsSession ts_session;
+//    Result rc = tsOpenTsSession(g_tsSrv, &ts_session, device_code);
+//    if (R_SUCCEEDED(rc)) {
+//        float temp_float;
+//        if (R_SUCCEEDED(tsGetTemperatureWithTsSession(&ts_session, &temp_float))) {
+//            *temperature = static_cast<s32>(temp_float);
+//        }
+//        tsSessionClose(&ts_session);
+//        return true;
+//    }
+//    
+//    return false;
+//}
+//
+//inline bool thermalstatusGetDetailsPCB(s32* temperature) {
+//    return getTemperature(temperature, TsDeviceCode_LocationInternal);
+//}
+//
+//inline bool thermalstatusGetDetailsSOC(s32* temperature) {
+//    return getTemperature(temperature, TsDeviceCode_LocationExternal);
+//}
+//
 
-inline void tsCloseTsSession(TsSession* in) {
-    serviceClose(&in->s);
-}
-
-Result tsGetTemperatureWithTsSession(TsSession* ITs, float* temperature) {
-    return serviceDispatchOut(&ITs->s, 4, *temperature);
-}
-
-
-inline bool thermalstatusInit(void) {
-    tcCheck = tcInitialize();
-    tsCheck = tsInitialize();
-    if (R_SUCCEEDED(tsCheck)) {
-        g_tsSrv = tsGetServiceSession();
-    } else
-        return false;
-    
-    return true;
-}
-
-inline void thermalstatusExit(void) {
-    tsExit();
-    tcExit();
-}
-
-inline bool throttle(std::chrono::steady_clock::time_point& last_call) {
-    auto now = std::chrono::steady_clock::now();
-    if (std::chrono::duration_cast<std::chrono::seconds>(now - last_call) < min_delay) {
-        return false;
-    }
-    last_call = now;
-    return true;
-}
-
-inline bool getTemperature(s32* temperature, TsDeviceCode device_code) {
-    static std::chrono::steady_clock::time_point last_call_pcb, last_call_soc;
-    //static std::chrono::steady_clock::time_point last_call_soc;
-
-    // Choose the appropriate throttle variable based on the device code
-    std::chrono::steady_clock::time_point& last_call = 
-        (device_code == TsDeviceCode_LocationInternal) ? last_call_pcb : last_call_soc;
-
-    if (!throttle(last_call)) {
-        return false;
-    }
-
-    TsSession ts_session;
-    Result rc = tsOpenTsSession(g_tsSrv, &ts_session, device_code);
-    if (R_SUCCEEDED(rc)) {
-        float temp_float;
-        if (R_SUCCEEDED(tsGetTemperatureWithTsSession(&ts_session, &temp_float))) {
-            *temperature = static_cast<s32>(temp_float);
-        }
-        tsSessionClose(&ts_session);
-        return true;
-    }
-    
-    return false;
-}
-
-inline bool thermalstatusGetDetailsPCB(s32* temperature) {
-    return getTemperature(temperature, TsDeviceCode_LocationInternal);
-}
-
-inline bool thermalstatusGetDetailsSOC(s32* temperature) {
-    return getTemperature(temperature, TsDeviceCode_LocationExternal);
-}
-
+//#define TMP451_I2C_ADDR ((I2cDevice)0x4C)  // I2C address for the TMP451 sensor
+//#define TMP451_SOC_TMP_DEC_REG 0x10  // Register address for SOC temperature
+//#define TMP451_PCB_TMP_DEC_REG 0x15  // Register address for PCB temperature
+//
+//// Function to read the SOC temperature
+//Result ReadSocTemperature(s32 *temperature)
+//{
+//    u16 rawValue;
+//    Result res = I2cReadRegHandler(TMP451_SOC_TMP_DEC_REG, TMP451_I2C_ADDR, &rawValue);
+//    if (R_FAILED(res))
+//    {
+//        return res;  // Handle the error
+//    }
+//
+//    // Convert the raw value to temperature in Celsius
+//    *temperature = s32((float)(rawValue) / 256.0f);
+//    return 0;
+//}
+//
+//// Function to read the PCB temperature
+//Result ReadPcbTemperature(s32 *temperature)
+//{
+//    u16 rawValue;
+//    Result res = I2cReadRegHandler(TMP451_PCB_TMP_DEC_REG, TMP451_I2C_ADDR, &rawValue);
+//    if (R_FAILED(res))
+//    {
+//        return res;  // Handle the error
+//    }
+//
+//    // Convert the raw value to temperature in Celsius
+//    *temperature = s32((float)(rawValue) / 256.0f);  // Assuming a 1/8 scaling for PCB temperature
+//    return 0;
+//}
 
 
 //s32 SOC_temperature, PCB_temperature;
@@ -4245,12 +4281,24 @@ namespace tsl {
                     //if (!isHidden.load()) {
                     if ((currentTimeSpec.tv_sec - timeOut) >= 1) {
                         if (!hidePCBTemp || !hideSOCTemp) {
-                            thermalstatusInit();
-                            if (!hidePCBTemp)
-                                thermalstatusGetDetailsPCB(&PCB_temperature);
-                            if (!hideSOCTemp)
-                                thermalstatusGetDetailsSOC(&SOC_temperature);
-                            thermalstatusExit();
+                            //float socTemp, pcbTemp;
+                            ReadSocTemperature(&SOC_temperature);
+                            //if (R_SUCCEEDED(resSoc)) {
+                            //    printf("SOC Temperature: %.2f°C\n", socTemp);
+                            //}
+                            
+                            ReadPcbTemperature(&PCB_temperature);
+                            //if (R_SUCCEEDED(resPcb)) {
+                            //    printf("PCB Temperature: %.2f°C\n", pcbTemp);
+                            //}
+
+
+                            //thermalstatusInit();
+                            //if (!hidePCBTemp)
+                            //    thermalstatusGetDetailsPCB(&PCB_temperature);
+                            //if (!hideSOCTemp)
+                            //    thermalstatusGetDetailsSOC(&SOC_temperature);
+                            //thermalstatusExit();
                         }
                         if (!hideBattery)
                             powerGetDetails(&batteryCharge, &isCharging);
