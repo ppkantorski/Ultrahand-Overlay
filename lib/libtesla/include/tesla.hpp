@@ -68,7 +68,7 @@
 //uint64_t RAM_Used_system_u = 0;
 //uint64_t RAM_Total_system_u = 0;
 
-
+static u32 layerEdge = 0;
 static bool useRightAlignment = false;
 
 // Define the duration boundaries (for smooth scrolling)
@@ -3335,8 +3335,10 @@ namespace tsl {
             void init() {
                 useRightAlignment = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "right_alignment") == TRUE_STR);
                 //cfg::LayerPosX = 1280-32;
-                if (useRightAlignment)
+                if (useRightAlignment) {
                     cfg::LayerPosX = 1280-32;
+                    layerEdge = (1280-448);
+                }
                 cfg::LayerPosY = 0;
                 cfg::FramebufferWidth  = 448;
                 cfg::FramebufferHeight = 720;
@@ -3919,7 +3921,8 @@ namespace tsl {
              * @return true if coordinates are in bounds, false otherwise
              */
             bool inBounds(s32 touchX, s32 touchY) {
-                return touchX >= this->getLeftBound() && touchX <= this->getRightBound() && touchY >= this->getTopBound() && touchY <= this->getBottomBound();
+                //static u32 layerEdge = cfg::LayerPosX == 0 ? 0 : (1280-448);
+                return touchX >= this->getLeftBound() + int(layerEdge) && touchX <= this->getRightBound() + int(layerEdge) && touchY >= this->getTopBound() && touchY <= this->getBottomBound();
             }
             
             /**
@@ -5814,10 +5817,11 @@ namespace tsl {
             
             
             virtual bool onTouch(TouchEvent event, s32 currX, s32 currY, s32 prevX, s32 prevY, s32 initialX, s32 initialY) override {
+                //static u32 layerEdge = cfg::LayerPosX == 0 ? 0 : (1280-448);
                 // Calculate the position and radius of the slider circle
                 u16 trackBarWidth = this->getWidth() - 95;
                 u16 handlePos = (trackBarWidth * (this->m_value - m_minValue)) / (m_maxValue - m_minValue);
-                s32 circleCenterX = this->getX() + 59 + handlePos;
+                s32 circleCenterX = layerEdge + this->getX() + 59 + handlePos;
                 s32 circleCenterY = this->getY() + 40 + 16 - 1;
                 s32 circleRadius = 16;
                 
@@ -5840,7 +5844,7 @@ namespace tsl {
                 if (!this->m_interactionLocked && (touchInCircle || touchInSliderBounds)) {
                     touchInSliderBounds = true; // Always keep touchInSliderBounds true while dragging
                     // Calculate the new index based on the touch position
-                    s16 newIndex = static_cast<s16>((currX - (this->getX() + 59)) / static_cast<float>(this->getWidth() - 95) * (m_numSteps - 1));
+                    s16 newIndex = static_cast<s16>((currX - (layerEdge + this->getX() + 59)) / static_cast<float>(this->getWidth() - 95) * (m_numSteps - 1));
                     
                     // Clamp the index within valid range
                     if (newIndex < 0) {
@@ -6603,6 +6607,8 @@ namespace tsl {
         u8 m_animationCounter = 0;
         const int MAX_ANIMATION_COUNTER = 5; // Define the maximum animation counter value
 
+        
+
         bool m_shouldHide = false;
         bool m_shouldClose = false;
         
@@ -6886,10 +6892,12 @@ namespace tsl {
                 topElement->onTouch(elm::TouchEvent::Release, oldTouchPos.x, oldTouchPos.y, oldTouchPos.x, oldTouchPos.y, initialTouchPos.x, initialTouchPos.y);
             }
 
-            touchingBack = (touchPos.x >= 20.0f && touchPos.x < backWidth+86.0f && touchPos.y > cfg::FramebufferHeight - 73U) && (initialTouchPos.x >= 20.0f && initialTouchPos.x < backWidth+86.0f&& initialTouchPos.y > cfg::FramebufferHeight - 73U);
-            touchingSelect = (touchPos.x >= backWidth+86.0f && touchPos.x < (backWidth+86.0f + selectWidth+68.0f) && touchPos.y > cfg::FramebufferHeight - 73U) && (initialTouchPos.x >=  backWidth+86.0f && initialTouchPos.x < (backWidth+86.0f + selectWidth+68.0f) && initialTouchPos.y > cfg::FramebufferHeight - 73U);
-            touchingNextPage = (touchPos.x >= (backWidth+86.0f + selectWidth+68.0f) && (touchPos.x <= backWidth+86.0f + selectWidth+68.0f +nextPageWidth+70.0f) && touchPos.y > cfg::FramebufferHeight - 73U) && (initialTouchPos.x >= (backWidth+86.0f + selectWidth+68.0f) && (initialTouchPos.x <= backWidth+86.0f + selectWidth+68.0f +nextPageWidth+70.0f) && initialTouchPos.y > cfg::FramebufferHeight - 73U);
-            touchingMenu = (touchPos.x > 0U && touchPos.x <= 245 && touchPos.y > 10U && touchPos.y <= 83U) && (initialTouchPos.x > 0U && initialTouchPos.x <= 245 && initialTouchPos.y > 10U && initialTouchPos.y <= 83U);
+            //u32 layerEdge = cfg::LayerPosX == 0 ? 0 : (1280-448);
+
+            touchingBack = (touchPos.x >= 20.0f + layerEdge && touchPos.x < backWidth+86.0f + layerEdge && touchPos.y > cfg::FramebufferHeight - 73U) && (initialTouchPos.x >= 20.0f + layerEdge && initialTouchPos.x < backWidth+86.0f + layerEdge && initialTouchPos.y > cfg::FramebufferHeight - 73U);
+            touchingSelect = (touchPos.x >= backWidth+86.0f + layerEdge && touchPos.x < (backWidth+86.0f + selectWidth+68.0f + layerEdge) && touchPos.y > cfg::FramebufferHeight - 73U) && (initialTouchPos.x >=  backWidth+86.0f + layerEdge && initialTouchPos.x < (backWidth+86.0f + selectWidth+68.0f + layerEdge) && initialTouchPos.y > cfg::FramebufferHeight - 73U);
+            touchingNextPage = (touchPos.x >= (backWidth+86.0f + selectWidth+68.0f + layerEdge) && (touchPos.x <= backWidth+86.0f + selectWidth+68.0f +nextPageWidth+70.0f + layerEdge) && touchPos.y > cfg::FramebufferHeight - 73U) && (initialTouchPos.x >= (backWidth+86.0f + selectWidth+68.0f + layerEdge) && (initialTouchPos.x <= backWidth+86.0f + selectWidth+68.0f +nextPageWidth+70.0f + layerEdge) && initialTouchPos.y > cfg::FramebufferHeight - 73U);
+            touchingMenu = (touchPos.x > layerEdge && touchPos.x <= 245+layerEdge && touchPos.y > 10U && touchPos.y <= 83U) && (initialTouchPos.x > layerEdge && initialTouchPos.x <= 245 + layerEdge && initialTouchPos.y > 10U && initialTouchPos.y <= 83U);
             
 
             if (touchDetected) {
@@ -6912,7 +6920,7 @@ namespace tsl {
                     initialTouchPos = touchPos;
                     elm::Element::setInputMode(InputMode::Touch);
                     if (!runningInterpreter.load(std::memory_order_acquire)) {
-                        touchInBounds = (initialTouchPos.y <= cfg::FramebufferHeight - 73U && initialTouchPos.y > 73U && initialTouchPos.x <= cfg::FramebufferWidth-30U && initialTouchPos.x > 40U);
+                        touchInBounds = (initialTouchPos.y <= cfg::FramebufferHeight - 73U && initialTouchPos.y > 73U && initialTouchPos.x <= layerEdge + cfg::FramebufferWidth-30U && initialTouchPos.x > 40U + layerEdge);
                         if (touchInBounds) currentGui->removeFocus();
                     }
                     touchEvent = elm::TouchEvent::Touch;
@@ -6920,14 +6928,14 @@ namespace tsl {
                 
                 if (currentGui && topElement && !runningInterpreter.load(std::memory_order_acquire)) {
                     topElement->onTouch(touchEvent, touchPos.x, touchPos.y, oldTouchPos.x, oldTouchPos.y, initialTouchPos.x, initialTouchPos.y);
-                    if (touchPos.x > 40U && touchPos.x <= cfg::FramebufferWidth-30U && touchPos.y > 73U && touchPos.y <= cfg::FramebufferHeight - 73U) {
+                    if (touchPos.x > 40U + layerEdge && touchPos.x <= cfg::FramebufferWidth-30U + layerEdge && touchPos.y > 73U && touchPos.y <= cfg::FramebufferHeight - 73U) {
                         currentGui->removeFocus();
                     }
                     
                 }
                 
                 oldTouchPos = touchPos;
-                if (touchPos.x >= cfg::FramebufferWidth && tsl::elm::Element::getInputMode() == tsl::InputMode::Touch) {
+                if ((touchPos.x < layerEdge || touchPos.x > cfg::FramebufferWidth + layerEdge) && tsl::elm::Element::getInputMode() == tsl::InputMode::Touch) {
                     oldTouchPos = { 0 };
                     initialTouchPos = { 0 };
                     this->hide();
@@ -6935,16 +6943,16 @@ namespace tsl {
                 stillTouching = true;
             } else {
                 if (!interruptedTouch && !runningInterpreter.load(std::memory_order_acquire)) {
-                    if ((oldTouchPos.x >= 20.0f && oldTouchPos.x < backWidth+86.0f && oldTouchPos.y > cfg::FramebufferHeight - 73U) && (initialTouchPos.x >= 20.0f && initialTouchPos.x < backWidth+86.0f&& initialTouchPos.y > cfg::FramebufferHeight - 73U)) {
+                    if ((oldTouchPos.x >= 20.0f + layerEdge && oldTouchPos.x < backWidth+86.0f + layerEdge && oldTouchPos.y > cfg::FramebufferHeight - 73U) && (initialTouchPos.x >= 20.0f + layerEdge && initialTouchPos.x < backWidth+86.0f + layerEdge && initialTouchPos.y > cfg::FramebufferHeight - 73U)) {
                         simulatedBackComplete = false;
                         simulatedBack = true;
-                    } else if ((oldTouchPos.x >= backWidth+86.0f && oldTouchPos.x < (backWidth+86.0f + selectWidth+68.0f) && oldTouchPos.y > cfg::FramebufferHeight - 73U) && (initialTouchPos.x >=  backWidth+86.0f && initialTouchPos.x < (backWidth+86.0f + selectWidth+68.0f) && initialTouchPos.y > cfg::FramebufferHeight - 73U)) {
+                    } else if ((oldTouchPos.x >= backWidth+86.0f + layerEdge && oldTouchPos.x < (backWidth+86.0f + selectWidth+68.0f + layerEdge) && oldTouchPos.y > cfg::FramebufferHeight - 73U) && (initialTouchPos.x >=  backWidth+86.0f + layerEdge && initialTouchPos.x < (backWidth+86.0f + selectWidth+68.0f + layerEdge) && initialTouchPos.y > cfg::FramebufferHeight - 73U)) {
                         simulatedSelectComplete = false;
                         simulatedSelect = true;
-                    } else if ((oldTouchPos.x >= (backWidth+86.0f + selectWidth+68.0f) && (oldTouchPos.x <= backWidth+86.0f + selectWidth+68.0f +nextPageWidth+70.0f) && oldTouchPos.y > cfg::FramebufferHeight - 73U) && (initialTouchPos.x >= (backWidth+86.0f + selectWidth+68.0f) && (initialTouchPos.x <= backWidth+86.0f + selectWidth+68.0f +nextPageWidth+70.0f) && initialTouchPos.y > cfg::FramebufferHeight - 73U)) {
+                    } else if ((oldTouchPos.x >= (backWidth+86.0f + selectWidth+68.0f + layerEdge) && (oldTouchPos.x <= backWidth+86.0f + selectWidth+68.0f +nextPageWidth+70.0f + layerEdge) && oldTouchPos.y > cfg::FramebufferHeight - 73U) && (initialTouchPos.x >= (backWidth+86.0f + selectWidth+68.0f + layerEdge) && (initialTouchPos.x <= backWidth+86.0f + selectWidth+68.0f +nextPageWidth+70.0f + layerEdge) && initialTouchPos.y > cfg::FramebufferHeight - 73U)) {
                         simulatedNextPageComplete = false;
                         simulatedNextPage = true;
-                    } else if ((oldTouchPos.x > 0U && oldTouchPos.x <= 245 && oldTouchPos.y > 10U && oldTouchPos.y <= 83U) && (initialTouchPos.x > 0U && initialTouchPos.x <= 245 && initialTouchPos.y > 10U && initialTouchPos.y <= 83U)) {
+                    } else if ((oldTouchPos.x > layerEdge && oldTouchPos.x <= layerEdge + 245 && oldTouchPos.y > 10U && oldTouchPos.y <= 83U) && (initialTouchPos.x > layerEdge && initialTouchPos.x <= layerEdge + 245 && initialTouchPos.y > 10U && initialTouchPos.y <= 83U)) {
                         simulatedMenuComplete = false;
                         simulatedMenu = true;
                     }

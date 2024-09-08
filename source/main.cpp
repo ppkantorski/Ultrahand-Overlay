@@ -588,9 +588,7 @@ private:
                     //executeCommands({
                     //    {"download", LATEST_RELEASE_INFO_URL, SETTINGS_PATH}
                     //});
-                    bool success = downloadFile(LATEST_RELEASE_INFO_URL, SETTINGS_PATH);
-                    if (success)
-                        triggerMenuReload = true;
+                    downloadFile(LATEST_RELEASE_INFO_URL, SETTINGS_PATH);
                 } else if (targetMenu == "themeMenu") {
                     if (!isFileOrDirectory(THEMES_PATH+"ultra.ini")) {
                         //executeCommands({
@@ -633,7 +631,7 @@ private:
                 //listItemPtr = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){})](uint64_t keys) {
                 if (runningInterpreter.load(std::memory_order_acquire))
                     return false;
-    
+                
                 if (simulatedSelect && !simulatedSelectComplete) {
                     keys |= KEY_A;
                     simulatedSelect = false;
@@ -671,6 +669,9 @@ private:
         listItem->setClickListener([listItemRaw = listItem.get(), downloadUrl, targetPath, movePath](uint64_t keys) {
             if (runningInterpreter.load(std::memory_order_acquire)) {
                 return false;
+            } else {
+                if (commandSuccess)
+                    triggerMenuReload = true;
             }
 
             if (simulatedSelect && !simulatedSelectComplete) {
@@ -684,7 +685,7 @@ private:
                 interpreterCommands = {
                     {"try:"},
                     {"delete", targetPath},
-                    {"download", downloadUrl, DOWNLOADS_PATH},
+                    {"download", downloadUrl, DOWNLOADS_PATH}
                 };
                 
                 if (movePath == LANG_PATH) { // for language update commands
