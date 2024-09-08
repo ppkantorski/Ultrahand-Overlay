@@ -100,6 +100,8 @@ To compile and run the software, you need to have the following C/C++ dependenci
 
 Contributions are welcome! If you have any ideas, suggestions, or bug reports, please raise an [issue](https://github.com/ppkantorski/Ultrahand-Overlay/issues/new/choose), submit a [pull request](https://github.com/ppkantorski/Ultrahand-Overlay/compare) or reach out to me directly on [GBATemp](https://gbatemp.net/threads/ultrahand-overlay-the-fully-craft-able-overlay-executor.633560/).
 
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/X8X3VR194)
+
 ## License
 
 This project is licensed and distributed under [GPLv2](LICENSE) with a [custom library](lib/libultra) utilizing [CC-BY-4.0](SUB_LICENSE).
