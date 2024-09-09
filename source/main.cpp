@@ -4689,6 +4689,7 @@ public:
                 if ((keysHeld & KEY_B) && !stillTouching) {
                     allowSlide = unlockedSlide = false;
                     tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
+                    exitingUltrahand = true;
                     tsl::Overlay::get()->close();
                     simulatedBackComplete = true;
                     return true;
@@ -4813,19 +4814,14 @@ public:
         tsl::initializeThemeVars();
         initializeCurl();
 
+        // Load and execute "boot" commands if they exist
+        //executeIniCommands(PACKAGE_PATH + BOOT_PACKAGE_FILENAME, "boot");
+
         // read commands from root package's boot_package.ini
         if (firstBoot) {
-            if (isFileOrDirectory(PACKAGE_PATH + BOOT_PACKAGE_FILENAME)) {
-                // Load only the "boot" section from the INI file
-                auto bootCommands = loadSpecificSectionFromIni(PACKAGE_PATH + BOOT_PACKAGE_FILENAME, "boot");
+            // Load and execute "initial_boot" commands if they exist
+            executeIniCommands(PACKAGE_PATH + BOOT_PACKAGE_FILENAME, "boot");
             
-                // Check if bootCommands are loaded and execute them
-                if (!bootCommands.empty()) {
-                    interpretAndExecuteCommands(std::move(bootCommands), PACKAGE_PATH, "boot"); // Execute modified boot commands
-                    resetPercentages();
-                }
-            }
-
             bool disableFuseReload = (parseValueFromIniSection(FUSE_DATA_INI_PATH, FUSE_STR, "disable_reload") == TRUE_STR);
             if (!disableFuseReload)
                 deleteFileOrDirectory(FUSE_DATA_INI_PATH);
@@ -4842,15 +4838,8 @@ public:
      * properly shut down services to avoid memory leaks.
      */
     virtual void exitServices() override {
-        if (isFileOrDirectory(PACKAGE_PATH + EXIT_PACKAGE_FILENAME)) {
-            // Load only the commands from the specific section (bootCommandName)
-            auto exitCommands = loadSpecificSectionFromIni(PACKAGE_PATH + EXIT_PACKAGE_FILENAME, "exit");
-            
-            if (!exitCommands.empty()) {
-                interpretAndExecuteCommands(std::move(exitCommands), PACKAGE_PATH, "exit");
-                resetPercentages();
-            }
-        }
+        if (exitingUltrahand)
+            executeIniCommands(PACKAGE_PATH + EXIT_PACKAGE_FILENAME, "exit");
 
         cleanupCurl();
         closeInterpreterThread(); // shouldn't be running, but run close anyways
