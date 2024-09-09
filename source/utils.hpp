@@ -2227,7 +2227,7 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                     if (!commandSuccess) resetCommandSuccess = true;
             
                     interpretAndExecuteCommands(std::move(bootCommands), packagePath, bootCommandName);
-            
+                    resetPercentages();
                     if (resetCommandSuccess) {
                         commandSuccess = false;
                     }
@@ -2357,6 +2357,7 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
 
 void executeCommands(std::vector<std::vector<std::string>> commands) {
     interpretAndExecuteCommands(std::move(commands), "", "");
+    resetPercentages();
 }
 
 
