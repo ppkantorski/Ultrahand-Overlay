@@ -7304,11 +7304,11 @@ namespace tsl {
                         // Check if the touch is within bounds for left-to-right swipe within the time window
                         if (useSwipeToOpen && elapsedTime <= TOUCH_THREHELD_MS) {
                             if (lastTouchX != 0 && currentTouch.x != 0) {
-                                if (layerEdge == 0 && currentTouch.x > SWIPE_RIGHT_BOUND + 80 && lastTouchX <= SWIPE_RIGHT_BOUND) {
+                                if (layerEdge == 0 && currentTouch.x > SWIPE_RIGHT_BOUND + 90 && lastTouchX <= SWIPE_RIGHT_BOUND) {
                                     eventFire(&shData->comboEvent);
                                 }
                                 // Check if the touch is within bounds for right-to-left swipe within the time window
-                                else if (layerEdge > 0 && currentTouch.x < SWIPE_LEFT_BOUND - 80 && lastTouchX >= SWIPE_LEFT_BOUND) {
+                                else if (layerEdge > 0 && currentTouch.x < SWIPE_LEFT_BOUND - 90 && lastTouchX >= SWIPE_LEFT_BOUND) {
                                     eventFire(&shData->comboEvent);
                                 }
                             }
