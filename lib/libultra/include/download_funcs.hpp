@@ -254,6 +254,7 @@ bool unzipFile(const std::string& zipFilePath, const std::string& toDestination)
     std::unique_ptr<ZZIP_FILE, ZzipFileDeleter> file;
     std::ofstream outputFile;
 
+    auto it = extractedFilePath.end();
     // Second pass: Extract files and update progress
     while (zzip_dir_read(dir.get(), &entry)) {
         if (entry.d_name[0] == '\0') continue; // Skip empty entries
@@ -262,7 +263,7 @@ bool unzipFile(const std::string& zipFilePath, const std::string& toDestination)
 
         // Remove invalid characters
         extractedFilePath = toDestination + fileName;
-        auto it = extractedFilePath.begin() + std::min(extractedFilePath.find(ROOT_PATH) + 5, extractedFilePath.size());
+        it = extractedFilePath.begin() + std::min(extractedFilePath.find(ROOT_PATH) + 5, extractedFilePath.size());
         extractedFilePath.erase(std::remove_if(it, extractedFilePath.end(), [](char c) {
             return c == ':' || c == '*' || c == '?' || c == '\"' || c == '<' || c == '>' || c == '|';
         }), extractedFilePath.end());
