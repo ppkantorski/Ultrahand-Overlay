@@ -68,8 +68,11 @@
 //uint64_t RAM_Used_system_u = 0;
 //uint64_t RAM_Total_system_u = 0;
 
+static bool internalTouchReleased = true;
 static u32 layerEdge = 0;
 static bool useRightAlignment = false;
+static bool useSwipeToOpen = false;
+
 
 // Define the duration boundaries (for smooth scrolling)
 const auto initialInterval = std::chrono::milliseconds(67);  // Example initial interval
@@ -337,6 +340,7 @@ static std::string ON_MAIN_MENU = "on Main Menu";
 static std::string ON_A_COMMAND = "on a command";
 static std::string ON_OVERLAY_PACKAGE = "on overlay/package";
 static std::string EFFECTS = "Effects";
+static std::string SWIPE_TO_OPEN = "Swipe to Open";
 static std::string RIGHT_SIDE_MODE = "Right-side Mode";
 static std::string PROGRESS_ANIMATION = "Progress Animation";
 static std::string EMPTY = "Empty";
@@ -482,6 +486,7 @@ void reinitializeLangVars() {
     ON_A_COMMAND = "on a command";
     ON_OVERLAY_PACKAGE = "on overlay/package";
     EFFECTS = "Effects";
+    SWIPE_TO_OPEN = "Swipe to Open";
     RIGHT_SIDE_MODE = "Right-side Mode";
     PROGRESS_ANIMATION = "Progress Animation";
     EMPTY = "Empty";
@@ -642,6 +647,7 @@ void parseLanguage(const std::string langFile) {
         {"ON_A_COMMAND", &ON_A_COMMAND},
         {"ON_OVERLAY_PACKAGE", &ON_OVERLAY_PACKAGE},
         {"EFFECTS", &EFFECTS},
+        {"SWIPE_TO_OPEN", &SWIPE_TO_OPEN},
         {"RIGHT_SIDE_MODE", &RIGHT_SIDE_MODE},
         {"PROGRESS_ANIMATION", &PROGRESS_ANIMATION},
         {"EMPTY", &EMPTY},
@@ -1432,7 +1438,7 @@ static s32 PCB_temperature, SOC_temperature;
 // Time implementation
 struct timespec currentTime;
 static const std::string DEFAULT_DT_FORMAT = "'%a %T'";
-static std::string datetimeFormat = removeQuotes(DEFAULT_DT_FORMAT);
+static std::string datetimeFormat = "%a %T";
 
 
 // Widget settings
@@ -3847,9 +3853,9 @@ namespace tsl {
                     }
                     if (activePercentage > 0){
                         renderer->drawRect(this->getX() + x + 4, this->getY() + y, (this->getWidth()- 12)*(activePercentage/100.0f), this->getHeight(), a(progressColor));
-                        if (activePercentage == 100.0f) {
-                            resetPercentages();
-                        }
+                        //if (activePercentage == 100.0f) {
+                        //    resetPercentages();
+                        //}
                     }
 
                     renderer->drawBorderedRoundedRect(this->getX() + x, this->getY() + y, this->getWidth(), this->getHeight(), 5, 5, a(highlightColor));
@@ -4544,7 +4550,7 @@ namespace tsl {
             
             virtual inline bool onTouch(TouchEvent event, s32 currX, s32 currY, s32 prevX, s32 prevY, s32 initialX, s32 initialY) {
                 // Discard touches outside bounds
-                if (!this->m_contentElement->inBounds(currX, currY))
+                if (!this->m_contentElement->inBounds(currX, currY) || !internalTouchReleased)
                     return false;
                 
                 if (this->m_contentElement != nullptr)
@@ -5833,6 +5839,9 @@ namespace tsl {
                 //if (!touchInFrameBounds) {
                 //    event = TouchEvent::Release;
                 //}
+                if (!internalTouchReleased)
+                    return false;
+
                 if (event == TouchEvent::Release) {
                     //if (!m_executeOnEveryTick)
                     updateAndExecute();
@@ -5909,7 +5918,10 @@ namespace tsl {
                     renderer->drawCircle(xPos + x + handlePos, yPos +y, 12, true, a((allowSlide || m_unlockedTrackbar) ? trackBarSliderMalleableColor : trackBarSliderColor));
                 }
                 
-                std::string labelPart = removeTag(this->m_label) + " ";
+                std::string labelPart = this->m_label;
+                removeTag(labelPart);
+                labelPart += " ";
+
                 //std::string valuePart = m_usingNamedStepTrackbar ? this->m_selection : std::to_string(this->m_value) + (this->m_units.empty() ? "" : " ") + this->m_units;
                 std::string valuePart;
                 if (!m_usingNamedStepTrackbar)
@@ -6746,6 +6758,7 @@ namespace tsl {
             
             // Return early if current GUI is not available
             if (!currentGui) return;
+            if (!internalTouchReleased) return;
             
             // Retrieve current focus and top/bottom elements of the GUI
             auto currentFocus = currentGui->getFocusedElement();
@@ -7110,15 +7123,27 @@ namespace tsl {
             if (decodedKeys)
                 tsl::cfg::launchCombo = decodedKeys;
             
-            datetimeFormat = removeQuotes(parsedConfig[ULTRAHAND_PROJECT_NAME]["datetime_format"]); // read datetime_format
+            datetimeFormat = parsedConfig[ULTRAHAND_PROJECT_NAME]["datetime_format"]; // read datetime_format
+            removeQuotes(datetimeFormat);
             if (datetimeFormat.empty()) {
-                datetimeFormat = removeQuotes(DEFAULT_DT_FORMAT);
+                datetimeFormat = DEFAULT_DT_FORMAT;
+                removeQuotes(datetimeFormat);
             }
+            std::string hideClockStr = parsedConfig[ULTRAHAND_PROJECT_NAME]["hide_clock"];
+            removeQuotes(hideClockStr);
+            hideClock = hideClockStr != FALSE_STR;
             
-            hideClock = (removeQuotes(parsedConfig[ULTRAHAND_PROJECT_NAME]["hide_clock"]) != FALSE_STR);
-            hideBattery = (removeQuotes(parsedConfig[ULTRAHAND_PROJECT_NAME]["hide_battery"]) != FALSE_STR);
-            hidePCBTemp = (removeQuotes(parsedConfig[ULTRAHAND_PROJECT_NAME]["hide_pcb_temp"]) != FALSE_STR);
-            hideSOCTemp = (removeQuotes(parsedConfig[ULTRAHAND_PROJECT_NAME]["hide_soc_temp"]) != FALSE_STR);
+            std::string hideBatteryStr = parsedConfig[ULTRAHAND_PROJECT_NAME]["hide_battery"];
+            removeQuotes(hideBatteryStr);
+            hideBattery = hideBatteryStr != FALSE_STR;
+            
+            std::string hidePCBTempStr = parsedConfig[ULTRAHAND_PROJECT_NAME]["hide_pcb_temp"];
+            removeQuotes(hidePCBTempStr);
+            hidePCBTemp = hidePCBTempStr != FALSE_STR;
+            
+            std::string hideSOCTempStr = parsedConfig[ULTRAHAND_PROJECT_NAME]["hide_soc_temp"];
+            removeQuotes(hideSOCTempStr);
+            hideSOCTemp = hideSOCTempStr != FALSE_STR;
             
         }
 
@@ -7141,6 +7166,7 @@ namespace tsl {
             }, ULTRAHAND_CONFIG_FILE);
         }
         
+
         /**
          * @brief Background event polling loop thread
          *
@@ -7197,6 +7223,18 @@ namespace tsl {
                 [WaiterObject_CaptureButton] = waiterForEvent(&captureButtonPressEvent),
             };
             
+            static auto currentTouchTime = std::chrono::steady_clock::now();
+            static auto lastTouchX = 0;
+
+            // Preset touch boundaries
+            static const int SWIPE_RIGHT_BOUND = 16;  // 16 + 80
+            static const int SWIPE_LEFT_BOUND = (1280 - 16);
+            static size_t elapsedTime = 0;
+            static const size_t TOUCH_THREHELD_MS = 150; 
+
+            s32 idx;
+            Result rc;
+
             while (shData->running) {
                 // Scan for input changes
                 padUpdate(&pad);
@@ -7210,10 +7248,62 @@ namespace tsl {
                     shData->joyStickPosLeft  = padGetStickPos(&pad, 0);
                     shData->joyStickPosRight = padGetStickPos(&pad, 1);
                     
-                    // Read in touch positions
-                    if (hidGetTouchScreenStates(&shData->touchState, 1) == 0)
-                        shData->touchState = { 0 };
                     
+                    // Read in touch positions
+                    if (hidGetTouchScreenStates(&shData->touchState, 1) > 0) { // Check if any touch event is present
+                        HidTouchState& currentTouch = shData->touchState.touches[0];  // Correct type is HidTouchPoint
+                        
+                        // Capture the current time when the touch is detected
+                        //auto currentTouchTime = std::chrono::steady_clock::now();
+                    
+                        // If this is the first touch of a gesture, store the starting time
+                        //if (lastTouchX == 0 && currentTouch.x != 0) {
+                        //    currentTouchTime = std::chrono::steady_clock::now();
+                        //}
+                    
+                        if (!shData->overlayOpen) {
+                            internalTouchReleased = false;
+                        }
+                        
+                        elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - currentTouchTime).count();
+                        // Check if the touch is within bounds for left-to-right swipe within the time window
+                        if (useSwipeToOpen && elapsedTime <= TOUCH_THREHELD_MS) {
+                            if (lastTouchX != 0 && currentTouch.x != 0) {
+                                if (layerEdge == 0 && currentTouch.x > SWIPE_RIGHT_BOUND + 80 && lastTouchX <= SWIPE_RIGHT_BOUND) {
+                                    eventFire(&shData->comboEvent);
+                                }
+                                // Check if the touch is within bounds for right-to-left swipe within the time window
+                                else if (layerEdge > 0 && currentTouch.x < SWIPE_LEFT_BOUND - 80 && lastTouchX >= SWIPE_LEFT_BOUND) {
+                                    eventFire(&shData->comboEvent);
+                                }
+                            }
+                        }
+                    
+                        // Handle touch release state
+                        if (currentTouch.x == 0 && currentTouch.y == 0) {
+                            internalTouchReleased = true;  // Indicate that the touch has been released
+                            lastTouchX = currentTouch.x;
+                        }
+
+                        // If this is the first touch of a gesture, store lastTouchX
+                        if (lastTouchX == 0 && currentTouch.x != 0) {
+                            lastTouchX = currentTouch.x;
+                            currentTouchTime = std::chrono::steady_clock::now();
+                        }
+                    
+                    } else {
+                        // Reset touch state if no touch is present
+                        shData->touchState = { 0 };
+                        internalTouchReleased = true;
+                    
+                        // Reset touch history to invalid state
+                        lastTouchX = 0;
+                    
+                        // Reset time tracking
+                        currentTouchTime = std::chrono::steady_clock::now();
+                    }
+                    
+
                     if (updateMenuCombos) {  // CUSTOM MODIFICATION
                         if ((shData->keysHeld & tsl::cfg::launchCombo2) == tsl::cfg::launchCombo2) {
                             tsl::cfg::launchCombo = tsl::cfg::launchCombo2;
@@ -7244,8 +7334,8 @@ namespace tsl {
                 }
                 
                 //20 ms
-                s32 idx = 0;
-                Result rc = waitObjects(&idx, objects, WaiterObject_Count, 20'000'000ul);
+                //s32 idx = 0;
+                rc = waitObjects(&idx, objects, WaiterObject_Count, 20'000'000ul);
                 if (R_SUCCEEDED(rc)) {
                     if (idx == WaiterObject_HomeButton || idx == WaiterObject_PowerButton) { // Changed condition to exclude capture button
                         if (shData->overlayOpen) {
