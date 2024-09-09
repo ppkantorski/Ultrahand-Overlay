@@ -91,7 +91,10 @@ PackageHeader getPackageHeaderFromIni(const std::string& filePath) {
                 if (endPos == std::string::npos) {
                     endPos = line.length();
                 }
-                *field = removeQuotes(trim(line.substr(startPos, endPos - startPos)));
+                std::string newLine = line.substr(startPos, endPos - startPos);
+                trim(newLine);
+                removeQuotes(newLine);
+                *field = newLine;
                 break; // Break after processing the first match in a line
             }
         }
@@ -149,31 +152,35 @@ static std::map<std::string, std::map<std::string, std::string>> parseIni(const 
     auto lines = split(str, '\n');
     std::string lastHeader = "";
     
-    std::string trimmedLine;
+    //std::string trimmedLine;
     
     size_t delimiterPos;
     //std::string key, value;
     
     for (auto& line : lines) {
-        trimmedLine = trim(line);
+        trim(line);
         
-        if (trimmedLine.empty() || trimmedLine.front() == '#') {
+        if (line.empty() || line.front() == '#') {
             // Ignore empty lines and comments
             continue;
         }
         
-        if (trimmedLine.front() == '[' && trimmedLine.back() == ']') {
-            lastHeader = trimmedLine.substr(1, trimmedLine.size() - 2);
+        if (line.front() == '[' && line.back() == ']') {
+            lastHeader = line.substr(1, line.size() - 2);
             iniData[lastHeader]; // Ensures the section exists even if it remains empty
         }
         else {
-            delimiterPos = trimmedLine.find('=');
+            delimiterPos = line.find('=');
             if (delimiterPos != std::string::npos) {
                 //key = trim(trimmedLine.substr(0, delimiterPos));
                 //value = trim(trimmedLine.substr(delimiterPos + 1));
                 if (!lastHeader.empty()) {
                     //iniData[lastHeader][key] = value;
-                    iniData[lastHeader][trim(trimmedLine.substr(0, delimiterPos))] = trim(trimmedLine.substr(delimiterPos + 1));
+                    std::string newLine1 = line.substr(0, delimiterPos);
+                    trim(newLine1);
+                    std::string newLine2 = line.substr(delimiterPos + 1);
+                    trim(newLine2);
+                    iniData[lastHeader][newLine1] = newLine2;
                 }
             }
         }
@@ -202,24 +209,28 @@ std::map<std::string, std::map<std::string, std::string>> getParsedDataFromIniFi
     }
     
     std::string line, currentSection;
-    std::string trimmedLine;
+    //std::string trimmedLine;
     
     size_t delimiterPos;
     std::string key, value;
     
     while (getline(configFile, line)) {
-        trimmedLine = trim(line);
+        trim(line);
         
-        if (trimmedLine.empty()) continue;
+        if (line.empty()) continue;
         
-        if (trimmedLine.front() == '[' && trimmedLine.back() == ']') {
+        if (line.front() == '[' && line.back() == ']') {
             // Remove the brackets and set the current section
-            currentSection = trimmedLine.substr(1, trimmedLine.size() - 2);
+            currentSection = line.substr(1, line.size() - 2);
         } else {
-            delimiterPos = trimmedLine.find('=');
+            delimiterPos = line.find('=');
             if (delimiterPos != std::string::npos) {
-                key = trim(trimmedLine.substr(0, delimiterPos));
-                value = trim(trimmedLine.substr(delimiterPos + 1));
+                key = line.substr(0, delimiterPos);
+                trim(key);
+
+                value = line.substr(delimiterPos + 1);
+                trim(value);
+
                 parsedData[currentSection][key] = value;
             }
         }
@@ -248,28 +259,30 @@ std::map<std::string, std::string> getKeyValuePairsFromSection(const std::string
     }
     
     std::string line, currentSection;
-    std::string trimmedLine;
+    //std::string trimmedLine;
     
     size_t delimiterPos;
     std::string key, value;
     bool inTargetSection = false;  // To track if we're in the desired section
     
     while (getline(configFile, line)) {
-        trimmedLine = trim(line);
+        trim(line);
         
-        if (trimmedLine.empty()) continue; // Skip empty lines
+        if (line.empty()) continue; // Skip empty lines
         
-        if (trimmedLine.front() == '[' && trimmedLine.back() == ']') {
+        if (line.front() == '[' && line.back() == ']') {
             // Remove the brackets to get the section name
-            currentSection = trimmedLine.substr(1, trimmedLine.size() - 2);
+            currentSection = line.substr(1, line.size() - 2);
             // Check if this is the section we're interested in
             inTargetSection = (currentSection == sectionName);
         } else if (inTargetSection) {
             // Look for key-value pairs within the target section
-            delimiterPos = trimmedLine.find('=');
+            delimiterPos = line.find('=');
             if (delimiterPos != std::string::npos) {
-                key = trim(trimmedLine.substr(0, delimiterPos));
-                value = trim(trimmedLine.substr(delimiterPos + 1));
+                key = line.substr(0, delimiterPos);
+                trim(key);
+                value = line.substr(delimiterPos + 1);
+                trim(value);
                 sectionData[key] = value;  // Store the key-value pair
             }
         }
@@ -296,14 +309,14 @@ std::vector<std::string> parseSectionsFromIni(const std::string& filePath) {
     }
     
     std::string line;
-    std::string trimmedLine;
+    //std::string trimmedLine;
 
     while (std::getline(file, line)) {
-        trimmedLine = trim(line);
+        trim(line);
         
         // Check if the line contains a section header
-        if (!trimmedLine.empty() && trimmedLine.front() == '[' && trimmedLine.back() == ']') {
-            std::string sectionName = trimmedLine.substr(1, trimmedLine.size() - 2);
+        if (!line.empty() && line.front() == '[' && line.back() == ']') {
+            std::string sectionName = line.substr(1, line.size() - 2);
             sections.push_back(sectionName);
         }
     }
@@ -333,22 +346,24 @@ std::string parseValueFromIniSection(const std::string& filePath, const std::str
     
     size_t delimiterPos;
     std::string currentKey;
-    std::string trimmedLine;
+    //std::string trimmedLine;
     
     while (std::getline(file, line)) {
-        trimmedLine = trim(line);
+        trim(line);
         
-        if (trimmedLine.empty()) continue;
+        if (line.empty()) continue;
         
-        if (trimmedLine.front() == '[' && trimmedLine.back() == ']') {
-            currentSection = trimmedLine.substr(1, trimmedLine.size() - 2);
+        if (line.front() == '[' && line.back() == ']') {
+            currentSection = line.substr(1, line.size() - 2);
             if (currentSection != sectionName) continue;  // Skip processing other sections
         } else if (currentSection == sectionName) {
-            delimiterPos = trimmedLine.find('=');
+            delimiterPos = line.find('=');
             if (delimiterPos != std::string::npos) {
-                currentKey = trim(trimmedLine.substr(0, delimiterPos));
+                currentKey = line.substr(0, delimiterPos);
+                trim(currentKey);
                 if (currentKey == keyName) {
-                    value = trim(trimmedLine.substr(delimiterPos + 1));
+                    value = line.substr(delimiterPos + 1);
+                    trim(value);
                     break;  // Found the key, exit the loop
                 }
             }
@@ -389,21 +404,21 @@ void cleanIniFormatting(const std::string& filePath) {
     std::string line;
     bool isNewSection = false;
     
-    std::string trimmedLine;
+    //std::string trimmedLine;
     
     while (std::getline(inputFile, line)) {
-        trimmedLine = trim(line);
+        trim(line);
         
         // Add a newline before starting a new section, but not before the first section
-        if (!trimmedLine.empty() && trimmedLine.front() == '[' && trimmedLine.back() == ']') {
+        if (!line.empty() && line.front() == '[' && line.back() == ']') {
             if (isNewSection) {
                 outputFile << '\n'; // Add an extra newline to separate sections
             }
             isNewSection = true;
         }
         
-        if (!trimmedLine.empty()) {
-            outputFile << trimmedLine << '\n';
+        if (!line.empty()) {
+            outputFile << line << '\n';
         }
     }
     
@@ -446,18 +461,18 @@ void setIniFile(const std::string& fileToEdit, const std::string& desiredSection
     bool firstSection = true;  // Flag to control new line before first section
     std::string line, currentSection;
     
-    std::string trimmedLine;
+    //std::string trimmedLine;
     size_t delimiterPos;
     std::string key;
     
     while (getline(configFile, line)) {
-        trimmedLine = trim(line);
+        trim(line);
         
-        if (trimmedLine.empty()) {
+        if (line.empty()) {
             continue;  // Skip empty lines but do not add them to the buffer
         }
         
-        if (trimmedLine[0] == '[' && trimmedLine.back() == ']') {
+        if (line[0] == '[' && line.back() == ']') {
             if (sectionFound && !keyFound) {
                 buffer << desiredKey << "=" << desiredValue << '\n';  // Add missing key-value pair
                 keyFound = true;
@@ -465,23 +480,24 @@ void setIniFile(const std::string& fileToEdit, const std::string& desiredSection
             if (!firstSection) {
                 buffer << '\n';  // Add a newline before the start of a new section
             }
-            currentSection = trimmedLine.substr(1, trimmedLine.size() - 2);
+            currentSection = line.substr(1, line.size() - 2);
             sectionFound = (currentSection == desiredSection);
             buffer << line << '\n';
             firstSection = false;
             continue;
         }
         
-        if (sectionFound && !keyFound && trimmedLine.find('=') != std::string::npos) {
-            delimiterPos = trimmedLine.find('=');
-            key = trim(trimmedLine.substr(0, delimiterPos));
+        if (sectionFound && !keyFound && line.find('=') != std::string::npos) {
+            delimiterPos = line.find('=');
+            key = line.substr(0, delimiterPos);
+            trim(key);
             if (key == desiredKey) {
                 keyFound = true;
-                trimmedLine = (desiredNewKey.empty() ? desiredKey : desiredNewKey) + "=" + desiredValue;
+                line = (desiredNewKey.empty() ? desiredKey : desiredNewKey) + "=" + desiredValue;
             }
         }
         
-        buffer << trimmedLine << '\n';
+        buffer << line << '\n';
     }
     
     if (!sectionFound && !keyFound) {
@@ -633,13 +649,13 @@ void renameIniSection(const std::string& filePath, const std::string& currentSec
         return;
     }
 
-    std::string line, trimmedLine, sectionName;
+    std::string line, sectionName;
 
     while (getline(configFile, line)) {
-        trimmedLine = trim(line);
+        trim(line);
 
-        if (!trimmedLine.empty() && trimmedLine.front() == '[' && trimmedLine.back() == ']') {
-            sectionName = trimmedLine.substr(1, trimmedLine.length() - 2);
+        if (!line.empty() && line.front() == '[' && line.back() == ']') {
+            sectionName = line.substr(1, line.length() - 2);
 
             if (sectionName == currentSectionName) {
                 tempFile << "[" << newSectionName << "]\n";
@@ -695,14 +711,14 @@ void removeIniSection(const std::string& filePath, const std::string& sectionNam
     std::string line, currentSection;
     bool inSectionToRemove = false;
 
-    std::string trimmedLine;
+    //std::string trimmedLine;
 
     while (getline(configFile, line)) {
-        trimmedLine = trim(line);
+        trim(line);
 
         // Check if the line represents a section
-        if (!trimmedLine.empty() && trimmedLine.front() == '[' && trimmedLine.back() == ']') {
-            currentSection = trimmedLine.substr(1, trimmedLine.length() - 2);
+        if (!line.empty() && line.front() == '[' && line.back() == ']') {
+            currentSection = line.substr(1, line.length() - 2);
 
             if (currentSection == sectionName) {
                 // Mark that we are in the section to remove
@@ -751,14 +767,14 @@ void removeIniKey(const std::string& filePath, const std::string& sectionName, c
 
     std::string line, currentSection;
     bool inTargetSection = false;
-    std::string trimmedLine;
+    //std::string trimmedLine;
 
     while (getline(configFile, line)) {
-        trimmedLine = trim(line);
+        trim(line);
 
         // Check if the line represents a section
-        if (!trimmedLine.empty() && trimmedLine.front() == '[' && trimmedLine.back() == ']') {
-            currentSection = trimmedLine.substr(1, trimmedLine.length() - 2);
+        if (!line.empty() && line.front() == '[' && line.back() == ']') {
+            currentSection = line.substr(1, line.length() - 2);
 
             if (currentSection == sectionName) {
                 // We are in the target section
@@ -768,7 +784,7 @@ void removeIniKey(const std::string& filePath, const std::string& sectionName, c
                 inTargetSection = false;
             }
             tempFile << line << '\n'; // Always write section headers
-        } else if (inTargetSection && trimmedLine.find(keyName + "=") == 0) {
+        } else if (inTargetSection && line.find(keyName + "=") == 0) {
             // If we're in the target section and the line starts with the key, skip it
             continue;
         } else {
