@@ -493,7 +493,7 @@ bool handleRunningInterpreter(uint64_t& keysHeld) {
                 lastSymbol = symbol;
             }
             if (currentPercentage == 100) {
-                inProgress = true;  // This seems to be intended to indicate task completion, but setting 'true' here every time might be a mistake?
+                //inProgress = false;
                 percentage.store(-1, std::memory_order_release);
             }
             
@@ -983,7 +983,10 @@ public:
                 if (keys & KEY_A) {
                     setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "current_theme", DEFAULT_STR);
                     deleteFileOrDirectory(THEME_CONFIG_INI_PATH);
-                    if (isFileOrDirectory(defaultTheme)) copyFileOrDirectory(defaultTheme, THEME_CONFIG_INI_PATH);
+                    if (isFileOrDirectory(defaultTheme)) {
+                        copyFileOrDirectory(defaultTheme, THEME_CONFIG_INI_PATH);
+                        copyPercentage.store(-1, std::memory_order_release);
+                    }
                     else initializeTheme();
                     tsl::initializeThemeVars();
                     reloadMenu = reloadMenu2 = true;
@@ -1023,6 +1026,7 @@ public:
                         setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "current_theme", themeName);
                         //deleteFileOrDirectory(THEME_CONFIG_INI_PATH);
                         copyFileOrDirectory(themeFile, THEME_CONFIG_INI_PATH);
+                        copyPercentage.store(-1, std::memory_order_release);
                         initializeTheme();
                         tsl::initializeThemeVars();
                         reloadMenu = reloadMenu2 = true;
@@ -1104,6 +1108,7 @@ public:
                         setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "current_wallpaper", wallpaperName);
                         //deleteFileOrDirectory(THEME_CONFIG_INI_PATH);
                         copyFileOrDirectory(wallpaperFile, WALLPAPER_PATH);
+                        copyPercentage.store(-1, std::memory_order_release);
                         reloadWallpaper();
                         
                         //clearWallpaperData();
@@ -1614,6 +1619,7 @@ private:
     
                 commandVec.emplace_back(std::move(commandParts));
                 interpretAndExecuteCommands(std::move(commandVec), filePath, specificKey);
+                resetPercentages();
     
                 listItemRaw->setValue(commandSuccess ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
                 simulatedSelectComplete = true;
@@ -2354,6 +2360,7 @@ public:
                         }
                     }
                     interpretAndExecuteCommands(std::move(modifiedCmds), filePath, specificKey);
+                    resetPercentages();
                 });
                 
                 
@@ -3091,7 +3098,7 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                                 //interpretAndExecuteCommands(std::move(commandsCopy), packagePath, keyName); // Now correctly moved
                                 //interpretAndExecuteCommands(getSourceReplacement(commands, keyName, i, packagePath), packagePath, keyName); // Now correctly moved
                                 interpretAndExecuteCommands(std::move(std::vector<std::vector<std::string>>(commands)), packagePath, keyName);
-
+                                resetPercentages();
 
                                 nestedMenuCount++;
                                 lastPackagePath = forwarderPackagePath;
@@ -3268,6 +3275,7 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                             interpretAndExecuteCommands(state ? getSourceReplacement(commandsOn, pathPatternOn, i, packagePath) :
                                 getSourceReplacement(commandsOff, pathPatternOff, i, packagePath), packagePath, keyName);
                             
+                            resetPercentages();
                             // Set the ini file value after executing the command
                             setIniFileValue((packagePath + CONFIG_FILENAME), keyName, FOOTER_STR, state ? CAPITAL_ON_STR : CAPITAL_OFF_STR);
                             
@@ -3342,6 +3350,7 @@ public:
                         if (!commandSuccess) resetCommandSuccess = true;
                         
                         interpretAndExecuteCommands(std::move(exitCommands), packagePath, "exit");
+                        resetPercentages();
                         
                         if (resetCommandSuccess) {
                             commandSuccess = false;
@@ -4427,7 +4436,8 @@ public:
                                             if (!commandSuccess) resetCommandSuccess = true;
                                             
                                             interpretAndExecuteCommands(std::move(bootCommands), packageFilePath, "boot");
-                                            
+                                            resetPercentages();
+
                                             if (resetCommandSuccess) {
                                                 commandSuccess = false;
                                             }
@@ -4805,6 +4815,7 @@ public:
                 // Check if bootCommands are loaded and execute them
                 if (!bootCommands.empty()) {
                     interpretAndExecuteCommands(std::move(bootCommands), PACKAGE_PATH, "boot"); // Execute modified boot commands
+                    resetPercentages();
                 }
             }
 
@@ -4830,6 +4841,7 @@ public:
             
             if (!exitCommands.empty()) {
                 interpretAndExecuteCommands(std::move(exitCommands), PACKAGE_PATH, "exit");
+                resetPercentages();
             }
         }
 
