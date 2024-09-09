@@ -68,6 +68,40 @@
 //uint64_t RAM_Used_system_u = 0;
 //uint64_t RAM_Total_system_u = 0;
 
+#include <switch.h>
+#include <string>
+
+std::string getTitleIdAsString() {
+    Result rc;
+    u64 pid = 0;
+    u64 tid = 0;
+
+    // The Process Management service is initialized before (as per your setup)
+    // Get the current application process ID
+    rc = pmdmntGetApplicationProcessId(&pid);
+    if (R_FAILED(rc)) {
+        return NULL_STR;
+    }
+
+    rc = pminfoInitialize();
+    if (R_FAILED(rc)) {
+        return NULL_STR;
+    }
+
+    // Use pminfoGetProgramId to retrieve the Title ID (Program ID)
+    rc = pminfoGetProgramId(&tid, pid);
+    if (R_FAILED(rc)) {
+        pminfoExit();
+        return NULL_STR;
+    }
+    pminfoExit();
+
+    // Convert the Title ID to a string and return it
+    char titleIdStr[17];  // 16 characters for the Title ID + null terminator
+    snprintf(titleIdStr, sizeof(titleIdStr), "%016lX", tid);
+    return std::string(titleIdStr);
+}
+
 static bool internalTouchReleased = true;
 static u32 layerEdge = 0;
 static bool useRightAlignment = false;
@@ -2002,6 +2036,7 @@ namespace tsl {
                     hidsysEnableAppletToGetInput(!enabled, appletAruid);
             }
             
+
             pmdmntGetApplicationProcessId(&applicationAruid);
             hidsysEnableAppletToGetInput(!enabled, applicationAruid);
             
