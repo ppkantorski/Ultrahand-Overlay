@@ -1591,6 +1591,8 @@ void applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
     //    }
     //}
 
+    std::string titleId = getTitleIdAsString();
+
     for (auto& arg : cmd) {
         replaceAllPlaceholders(arg, "{ram_vendor}", memoryVendor);
         replaceAllPlaceholders(arg, "{ram_model}", memoryModel);
@@ -1602,6 +1604,7 @@ void applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
         replaceAllPlaceholders(arg, "{gpu_iddq}", std::to_string(gpuIDDQ));
         replaceAllPlaceholders(arg, "{soc_speedo}", std::to_string(socSpeedo0));
         replaceAllPlaceholders(arg, "{soc_iddq}", std::to_string(socIDDQ));
+        replaceAllPlaceholders(arg, "{title_id}", titleId);
         for (const auto& [placeholder, replacer] : placeholders) {
             replacePlaceholders(arg, placeholder, replacer);
         }
