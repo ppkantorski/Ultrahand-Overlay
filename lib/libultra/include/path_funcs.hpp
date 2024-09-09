@@ -30,6 +30,54 @@ static std::atomic<bool> abortFileOp(false);
 size_t COPY_BUFFER_SIZE = 4096*4; // Increase buffer size to 128 KB
 
 
+/**
+ * @brief Checks if a path points to a directory.
+ *
+ * This function checks if the specified path points to a directory.
+ *
+ * @param path The path to check.
+ * @return True if the path is a directory, false otherwise.
+ */
+inline bool isDirectory(const std::string& path) {
+    struct stat pathStat;
+    if (stat(path.c_str(), &pathStat) == 0) {
+        return S_ISDIR(pathStat.st_mode);
+    }
+    return false;
+}
+
+
+
+/**
+ * @brief Checks if a path points to a file.
+ *
+ * This function checks if the specified path points to a file.
+ *
+ * @param path The path to check.
+ * @return True if the path is a file, false otherwise.
+ */
+inline bool isFile(const std::string& path) {
+    struct stat pathStat;
+    if (stat(path.c_str(), &pathStat) == 0) {
+        return S_ISREG(pathStat.st_mode);
+    }
+    return false;
+}
+
+
+/**
+ * @brief Checks if a path points to a file or directory.
+ *
+ * This function checks if the specified path points to either a file or a directory.
+ *
+ * @param path The path to check.
+ * @return True if the path points to a file or directory, false otherwise.
+ */
+inline bool isFileOrDirectory(const std::string& path) {
+    struct stat buffer;
+    return (stat(path.c_str(), &buffer) == 0);
+}
+
 
 
 /**
