@@ -590,18 +590,21 @@ private:
                     //    {"download", LATEST_RELEASE_INFO_URL, SETTINGS_PATH}
                     //});
                     downloadFile(LATEST_RELEASE_INFO_URL, SETTINGS_PATH);
+                    downloadPercentage.store(-1, std::memory_order_release);
                 } else if (targetMenu == "themeMenu") {
                     if (!isFileOrDirectory(THEMES_PATH+"ultra.ini")) {
                         //executeCommands({
                         //    {"download", INCLUDED_THEME_FOLDER_URL+"ultra.ini", THEMES_PATH}
                         //});
                         downloadFile(INCLUDED_THEME_FOLDER_URL+"ultra.ini", THEMES_PATH);
+                        downloadPercentage.store(-1, std::memory_order_release);
                     }
                     if (!isFileOrDirectory(THEMES_PATH+"classic.ini")) {
                         //executeCommands({
                         //    {"download", INCLUDED_THEME_FOLDER_URL+"classic.ini", THEMES_PATH}
                         //});
                         downloadFile(INCLUDED_THEME_FOLDER_URL+"classic.ini", THEMES_PATH);
+                        downloadPercentage.store(-1, std::memory_order_release);
                     }
                 }
 
@@ -728,10 +731,14 @@ private:
                 reinitializeVersionLabels();
             }
             else if (iniKey == "memory_expansion") {
-                if (!isFileOrDirectory(EXPANSION_PATH + "nx-ovlloader.zip"))
+                if (!isFileOrDirectory(EXPANSION_PATH + "nx-ovlloader.zip")) {
                     downloadFile(NX_OVLLOADER_ZIP_URL, EXPANSION_PATH);
-                if (!isFileOrDirectory(EXPANSION_PATH + "nx-ovlloader+.zip"))
+                    downloadPercentage.store(-1, std::memory_order_release);
+                }
+                if (!isFileOrDirectory(EXPANSION_PATH + "nx-ovlloader+.zip")) {
                     downloadFile(NX_OVLLOADER_PLUS_ZIP_URL, EXPANSION_PATH);
+                    downloadPercentage.store(-1, std::memory_order_release);
+                }
                 if (!isFileOrDirectory(EXPANSION_PATH + "nx-ovlloader.zip") || !isFileOrDirectory(EXPANSION_PATH + "nx-ovlloader+.zip")) {
                     listItemRaw->setState(loaderTitle == "nx-ovlloader+");
                 } else {
@@ -3351,7 +3358,7 @@ public:
                         
                         interpretAndExecuteCommands(std::move(exitCommands), packagePath, "exit");
                         resetPercentages();
-                        
+
                         if (resetCommandSuccess) {
                             commandSuccess = false;
                         }
