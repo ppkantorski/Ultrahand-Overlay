@@ -35,6 +35,7 @@
 static std::atomic<bool> abortCommand(false);
 static std::atomic<bool> triggerExit(false);
 
+static bool exitingUltrahand = false;
 
 bool isDownloadCommand = false;
 bool commandSuccess = false;
@@ -2314,6 +2315,7 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                 setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_OVERLAY_STR, TRUE_STR); // this is handled within tesla.hpp
             }
         }
+        exitingUltrahand = true;
         //setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_OVERLAY_STR, TRUE_STR); // this is handled within tesla.hpp
         tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
         tsl::Overlay::get()->close();
@@ -2363,6 +2365,15 @@ void executeCommands(std::vector<std::vector<std::string>> commands) {
     resetPercentages();
 }
 
+void executeIniCommands(const std::string &iniPath, const std::string &section) {
+    if (isFileOrDirectory(iniPath)) {
+        auto commands = loadSpecificSectionFromIni(iniPath, section);
+        if (!commands.empty()) {
+            interpretAndExecuteCommands(std::move(commands), PACKAGE_PATH, section);
+            resetPercentages();
+        }
+    }
+}
 
 
 // Thread information structure
