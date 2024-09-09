@@ -203,7 +203,7 @@ bool pchtxt2cheat(const std::string &pchtxtPath, std::string cheatName = "", std
     std::istringstream iss(pchtxt);
     std::string line;
     while (std::getline(iss, line)) {
-        line = trim(line);
+        trim(line);
         if (line.empty() || line[0] == '#') {
             continue;
         }
@@ -364,7 +364,8 @@ bool pchtxt2ips(const std::string& pchtxtPath, const std::string& outputFolder) 
     pchtxtFile.close();
 
     // Trim any newline characters from nsobid
-    nsobid = trimNewline(trim(nsobid));
+    trim(nsobid);
+    trimNewline(nsobid);
 
     std::string ipsFileName = nsobid + ".ips";
     std::string ipsFilePath = outputFolder + ipsFileName;

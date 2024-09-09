@@ -473,7 +473,8 @@ std::string replaceHexPlaceholder(const std::string& arg, const std::string& hex
         std::string component;
         
         while (std::getline(componentStream, component, ',')) {
-            components.push_back(trim(component));
+            trim(component);
+            components.push_back(component);
         }
         
         if (components.size() == 3) {
