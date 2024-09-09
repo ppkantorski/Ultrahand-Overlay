@@ -114,7 +114,9 @@ std::vector<std::string> stringToList(const std::string& str) {
         
         while (std::getline(ss, item, ',')) {
             // Trim leading and trailing spaces from each token
-            result.push_back(removeQuotes(trim(item)));
+            trim(item);
+            removeQuotes(item);
+            result.push_back(item);
         }
     }
     
