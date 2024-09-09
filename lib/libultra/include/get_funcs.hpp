@@ -96,7 +96,9 @@ inline std::string getValueFromLine(const std::string& line) {
     size_t equalsPos = line.rfind('=');
     if (equalsPos != std::string::npos && equalsPos + 1 < line.size()) {
         // Directly return the trimmed substring after '='
-        return trim(line.substr(equalsPos + 1));
+        std::string newLine = line.substr(equalsPos + 1);
+        trim(newLine);
+        return newLine;
     }
     return ""; // Return an empty string if '=' is not found or no content after '='
 }
