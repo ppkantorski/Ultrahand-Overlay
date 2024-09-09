@@ -7265,7 +7265,7 @@ namespace tsl {
             static const int SWIPE_RIGHT_BOUND = 16;  // 16 + 80
             static const int SWIPE_LEFT_BOUND = (1280 - 16);
             static size_t elapsedTime = 0;
-            static const size_t TOUCH_THREHELD_MS = 180; 
+            static const size_t TOUCH_THREHELD_MS = 150; 
 
             s32 idx;
             Result rc;
