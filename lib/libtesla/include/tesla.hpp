@@ -3853,8 +3853,8 @@ namespace tsl {
                     }
                     if (activePercentage > 0){
                         renderer->drawRect(this->getX() + x + 4, this->getY() + y, (this->getWidth()- 12)*(activePercentage/100.0f), this->getHeight(), a(progressColor));
-                        //if (activePercentage == 100.0f) {
-                        //    resetPercentages();
+                        //if (copyPercentage == 100.0f) {
+                        //    copyPercentage = -1;
                         //}
                     }
 
