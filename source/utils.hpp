@@ -317,40 +317,40 @@ void formatVersion(uint64_t packed_version, int shift1, int shift2, int shift3, 
 
 const char* getMemoryType(uint64_t packed_version) {
     switch (packed_version) {
-        case 0: return "Samsung_K4F6E304HB-MGCH_4GB LPDDR4 3200Mbps";
-        case 1: return "Hynix_H9HCNNNBPUMLHR-NLE_4GB LPDDR4 3200Mbps";
-        case 2: return "Micron_MT53B512M32D2NP-062 WT:C_4GB LPDDR4 3200Mbps";
-        case 3: return "Hynix_H9HCNNNBKMMLXR-NEE_4GB LPDDR4X 4266Mbps";
-        case 4: return "Samsung_K4FHE3D4HM-MGCH_6GB LPDDR4 3200Mbps";
-        case 5: return "Hynix_H9HCNNNBKMMLXR-NEE_4GB LPDDR4X 4266Mbps";
-        case 6: return "Hynix_H9HCNNNBKMMLXR-NEE_4GB LPDDR4X 4266Mbps";
-        case 7: return "Samsung_K4FBE3D4HM-MGXX_8GB LPDDR4 3200Mbps";
-        case 8: return "Samsung_K4U6E3S4AM-MGCJ_4GB LPDDR4X 3733Mbps";
-        case 9: return "Samsung_K4UBE3D4AM-MGCJ_8GB LPDDR4X 3733Mbps";
-        case 10: return "Hynix_H9HCNNNBKMMLHR-NME_4GB LPDDR4X 3733Mbps";
-        case 11: return "Micron_MT53E512M32D2NP-046 WT:E_4GB LPDDR4X 4266Mbps";
-        case 12: return "Samsung_K4U6E3S4AM-MGCJ_4GB LPDDR4X 3733Mbps";
-        case 13: return "Samsung_K4UBE3D4AM-MGCJ_8GB LPDDR4X 3733Mbps";
-        case 14: return "Hynix_H9HCNNNBKMMLHR-NME_4GB LPDDR4X 3733Mbps";
-        case 15: return "Micron_MT53E512M32D2NP-046 WT:E_4GB LPDDR4X 4266Mbps";
-        case 17: return "Samsung_K4U6E3S4AA-MGCL_4GB LPDDR4X 4266Mbps";
-        case 18: return "Samsung_K4UBE3D4AA-MGCL_8GB LPDDR4X 4266Mbps";
-        case 19: return "Samsung_K4U6E3S4AA-MGCL_4GB LPDDR4X 4266Mbps";
-        case 20: return "Samsung_K4U6E3S4AB-MGCL_4GB LPDDR4X 4266Mbps";
-        case 21: return "Samsung_K4U6E3S4AB-MGCL_4GB LPDDR4X 4266Mbps";
-        case 22: return "Samsung_K4U6E3S4AB-MGCL_4GB LPDDR4X 4266Mbps";
-        case 23: return "Samsung_K4UBE3D4AA-MGCL_8GB LPDDR4X 4266Mbps";
-        case 24: return "Samsung_K4U6E3S4AA-MGCL_4GB LPDDR4X 4266Mbps";
-        case 25: return "Micron_MT53E512M32D2NP-046 WT:F_4GB LPDDR4X 4266Mbps";
-        case 26: return "Micron_MT53E512M32D2NP-046 WT:F_4GB LPDDR4X 4266Mbps";
-        case 27: return "Micron_MT53E512M32D2NP-046 WT:F_4GB LPDDR4X 4266Mbps";
-        case 28: return "Samsung_K4UBE3D4AA-MGCL_8GB LPDDR4X 4266Mbps";
-        case 29: return "Hynix_H54G46CYRBX267_4GB LPDDR4X 4266Mbps";
-        case 30: return "Hynix_H54G46CYRBX267_4GB LPDDR4X 4266Mbps";
-        case 31: return "Hynix_H54G46CYRBX267_4GB LPDDR4X 4266Mbps";
-        case 32: return "Micron_MT53E512M32D1NP-046 WT:B_4GB LPDDR4X 4266Mbps";
-        case 33: return "Micron_MT53E512M32D1NP-046 WT:B_4GB LPDDR4X 4266Mbps";
-        case 34: return "Micron_MT53E512M32D1NP-046 WT:B_4GB LPDDR4X 4266Mbps";
+        case 0: return "Samsung_K4F6E304HB-MGCH_4 GB LPDDR4 3200 Mbps";
+        case 1: return "Hynix_H9HCNNNBPUMLHR-NLE_4 GB LPDDR4 3200 Mbps";
+        case 2: return "Micron_MT53B512M32D2NP-062 WT:C_4 GB LPDDR4 3200 Mbps";
+        case 3: return "Hynix_H9HCNNNBKMMLXR-NEE_4 GB LPDDR4X 4266 Mbps";
+        case 4: return "Samsung_K4FHE3D4HM-MGCH_6GB LPDDR4 3200 Mbps";
+        case 5: return "Hynix_H9HCNNNBKMMLXR-NEE_4 GB LPDDR4X 4266 Mbps";
+        case 6: return "Hynix_H9HCNNNBKMMLXR-NEE_4 GB LPDDR4X 4266 Mbps";
+        case 7: return "Samsung_K4FBE3D4HM-MGXX_8 GB LPDDR4 3200 Mbps";
+        case 8: return "Samsung_K4U6E3S4AM-MGCJ_4 GB LPDDR4X 3733 Mbps";
+        case 9: return "Samsung_K4UBE3D4AM-MGCJ_8 GB LPDDR4X 3733 Mbps";
+        case 10: return "Hynix_H9HCNNNBKMMLHR-NME_4 GB LPDDR4X 3733 Mbps";
+        case 11: return "Micron_MT53E512M32D2NP-046 WT:E_4 GB LPDDR4X 4266 Mbps";
+        case 12: return "Samsung_K4U6E3S4AM-MGCJ_4 GB LPDDR4X 3733 Mbps";
+        case 13: return "Samsung_K4UBE3D4AM-MGCJ_8 GB LPDDR4X 3733 Mbps";
+        case 14: return "Hynix_H9HCNNNBKMMLHR-NME_4 GB LPDDR4X 3733 Mbps";
+        case 15: return "Micron_MT53E512M32D2NP-046 WT:E_4 GB LPDDR4X 4266 Mbps";
+        case 17: return "Samsung_K4U6E3S4AA-MGCL_4 GB LPDDR4X 4266 Mbps";
+        case 18: return "Samsung_K4UBE3D4AA-MGCL_8 GB LPDDR4X 4266 Mbps";
+        case 19: return "Samsung_K4U6E3S4AA-MGCL_4 GB LPDDR4X 4266 Mbps";
+        case 20: return "Samsung_K4U6E3S4AB-MGCL_4 GB LPDDR4X 4266 Mbps";
+        case 21: return "Samsung_K4U6E3S4AB-MGCL_4 GB LPDDR4X 4266 Mbps";
+        case 22: return "Samsung_K4U6E3S4AB-MGCL_4 GB LPDDR4X 4266 Mbps";
+        case 23: return "Samsung_K4UBE3D4AA-MGCL_8 GB LPDDR4X 4266 Mbps";
+        case 24: return "Samsung_K4U6E3S4AA-MGCL_4 GB LPDDR4X 4266 Mbps";
+        case 25: return "Micron_MT53E512M32D2NP-046 WT:F_4 GB LPDDR4X 4266 Mbps";
+        case 26: return "Micron_MT53E512M32D2NP-046 WT:F_4 GB LPDDR4X 4266 Mbps";
+        case 27: return "Micron_MT53E512M32D2NP-046 WT:F_4 GB LPDDR4X 4266 Mbps";
+        case 28: return "Samsung_K4UBE3D4AA-MGCL_8 GB LPDDR4X 4266 Mbps";
+        case 29: return "Hynix_H54G46CYRBX267_4 GB LPDDR4X 4266 Mbps";
+        case 30: return "Hynix_H54G46CYRBX267_4 GB LPDDR4X 4266 Mbps";
+        case 31: return "Hynix_H54G46CYRBX267_4 GB LPDDR4X 4266 Mbps";
+        case 32: return "Micron_MT53E512M32D1NP-046 WT:B_4 GB LPDDR4X 4266 Mbps";
+        case 33: return "Micron_MT53E512M32D1NP-046 WT:B_4 GB LPDDR4X 4266 Mbps";
+        case 34: return "Micron_MT53E512M32D1NP-046 WT:B_4 GB LPDDR4X 4266 Mbps";
         default: return "";
     }
 }
@@ -365,10 +365,11 @@ const char* getStorageInfo(const std::string& storageType) {
     FsFileSystem fs;
     Result result;
     
+    // Open the appropriate file system based on storage type
     if (storageType == "emmc")
         result = fsOpenBisFileSystem(&fs, FsBisPartitionId_User, "");
     else if (storageType == "sdmc")
-        result = fsOpenContentStorageFileSystem (&fs, FsContentStorageId_SdCard);
+        result = fsOpenContentStorageFileSystem(&fs, FsContentStorageId_SdCard);
     else
         return buffer;
 
@@ -376,32 +377,36 @@ const char* getStorageInfo(const std::string& storageType) {
         return buffer;
     }
 
-    // Get free space on the NAND
+    // Get free space on the storage
     result = fsFsGetFreeSpace(&fs, "/", &freeSpace);
     if (R_FAILED(result)) {
         fsFsClose(&fs);
         return buffer;
     }
 
-    // Get total space on the NAND
+    // Get total space on the storage
     result = fsFsGetTotalSpace(&fs, "/", &totalSpace);
     if (R_FAILED(result)) {
         fsFsClose(&fs);
         return buffer;
     }
 
-    // Convert the free and total space from bytes to GB
-    float freeSpaceGB = freeSpace / (1024.0f * 1024.0f * 1024.0f);
+    // Calculate the used space
+    s64 usedSpace = totalSpace - freeSpace;
+
+    // Convert the used, free, and total space from bytes to GB
+    float usedSpaceGB = usedSpace / (1024.0f * 1024.0f * 1024.0f);
     float totalSpaceGB = totalSpace / (1024.0f * 1024.0f * 1024.0f);
 
-    // Format the free and total space as a string
-    snprintf(buffer, 64, "%.2f GB / %.2f GB", freeSpaceGB, totalSpaceGB);
+    // Format the used and total space as a string
+    snprintf(buffer, 64, "%.2f GB / %.2f GB", usedSpaceGB, totalSpaceGB);
 
-    // Close the NAND file system
+    // Close the file system
     fsFsClose(&fs);
 
     return buffer;
 }
+
 
 
 void unpackDeviceInfo() {
@@ -676,7 +681,7 @@ void addBasicListItem(auto& list, const std::string& itemText) {
 }
 
 
-void drawTable(std::unique_ptr<tsl::elm::List>& list, const std::vector<std::string>& sectionLines, const std::vector<std::string>& infoLines,
+void drawTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::string>& sectionLines, std::vector<std::string>& infoLines,
                size_t columnOffset = 160, size_t startGap = 19, size_t endGap = 3, size_t newlineGap = 0,
                const std::string& tableSectionTextColor = DEFAULT_STR, const std::string& tableInfoTextColor = DEFAULT_STR, 
                const std::string& alignment = LEFT_STR, bool hideTableBackground = false, bool useHeaderIndent = false) {
@@ -708,13 +713,15 @@ void drawTable(std::unique_ptr<tsl::elm::List>& list, const std::vector<std::str
 
     for (size_t i = 0; i < sectionLines.size(); ++i) {
         yOffsets[i] = startGap + (i * (lineHeight + newlineGap));
+        //convertComboToUnicode2(sectionLines[i]);
+        //convertComboToUnicode2(infoLines[i]);
     }
 
     list->addItem(new tsl::elm::TableDrawer([=](tsl::gfx::Renderer* renderer, s32 x, s32 y, s32 w, s32 h) mutable {
         if (useHeaderIndent) {
             renderer->drawRect(x - 2, y + 1, 3, 23, renderer->a(tsl::headerSeparatorColor));
         }
-    
+        std::string infoText;
         for (size_t i = 0; i < infoLines.size(); ++i) {
             // Calculate string width and offset if not already done
             if (infoStringWidths[i] == 0.0f) {
@@ -729,12 +736,15 @@ void drawTable(std::unique_ptr<tsl::elm::List>& list, const std::vector<std::str
                     infoXOffsets[i] = static_cast<int>(columnOffset + (xMax - infoStringWidths[i]) / 2);
                 }
             }
+            
     
             // Draw the section line
             renderer->drawString(sectionLines[i], false, x + 12, y + yOffsets[i], fontSize, renderer->a(alternateSectionTextColor));
     
             // Draw the info line
-            const std::string& infoText = (infoLines[i].find(NULL_STR) != std::string::npos) ? UNAVAILABLE_SELECTION : infoLines[i];
+            std::string infoText = (infoLines[i].find(NULL_STR) != std::string::npos) ? UNAVAILABLE_SELECTION : infoLines[i];
+
+            
             renderer->drawString(infoText, false, x + infoXOffsets[i], y + yOffsets[i], fontSize, renderer->a(alternateInfoTextColor));
         }
     }, hideTableBackground, endGap), totalHeight);
@@ -862,14 +872,14 @@ void addHelpInfo(std::unique_ptr<tsl::elm::List>& list) {
     int xOffset = std::stoi(USERGUIDE_OFFSET);
 
     // Define the section lines and info lines directly
-    const std::vector<std::string> sectionLines = {
+    std::vector<std::string> sectionLines = {
         SETTINGS_MENU,
         SCRIPT_OVERLAY,
         STAR_FAVORITE,
         APP_SETTINGS
     };
 
-    const std::vector<std::string> infoLines = {
+    std::vector<std::string> infoLines = {
         "\uE0B5 (" + ON_MAIN_MENU + ")",
         "\uE0B6 (" + ON_A_COMMAND + ")",
         "\uE0E2 (" + ON_OVERLAY_PACKAGE + ")",
