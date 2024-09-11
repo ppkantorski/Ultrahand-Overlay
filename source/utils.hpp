@@ -682,7 +682,7 @@ void addBasicListItem(auto& list, const std::string& itemText) {
 
 
 void drawTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::string>& sectionLines, std::vector<std::string>& infoLines,
-               size_t columnOffset = 160, size_t startGap = 19, size_t endGap = 3, size_t newlineGap = 0,
+               size_t columnOffset = 161, size_t startGap = 19, size_t endGap = 3, size_t newlineGap = 0,
                const std::string& tableSectionTextColor = DEFAULT_STR, const std::string& tableInfoTextColor = DEFAULT_STR, 
                const std::string& alignment = LEFT_STR, bool hideTableBackground = false, bool useHeaderIndent = false) {
 
@@ -1292,6 +1292,48 @@ void replaceAllPlaceholders(std::string& source, const std::string& placeholder,
     return;
 }
 
+
+// Global constant map for button and arrow placeholders
+const std::unordered_map<std::string, std::string> buttonArrowPlaceholders = {
+    {"{A}", ""},
+    {"{B}", ""},
+    {"{X}", ""},
+    {"{Y}", ""},
+    {"{L}", ""},
+    {"{R}", ""},
+    {"{ZL}", ""},
+    {"{ZR}", ""},
+    {"{DUP}", ""},
+    {"{DDOWN}", ""},
+    {"{DLEFT}", ""},
+    {"{DRIGHT}", ""},
+    {"{LS}", ""},
+    {"{RS}", ""},
+    {"{PLUS}", ""},
+    {"{MINUS}", ""},
+    {"{UP_ARROW}", ""},
+    {"{DOWN_ARROW}", ""},
+    {"{LEFT_ARROW}", ""},
+    {"{RIGHT_ARROW}", ""},
+    {"{RIGHT_UP_ARROW}", ""},
+    {"{RIGHT_DOWN_ARROW}", ""},
+    {"{LEFT_UP_ARROW}", ""},
+    {"{LEFT_DOWN_ARROW}", ""}
+};
+
+
+// Helper function to replace all placeholders in a single pass
+void replacePlaceholdersInArg(std::string& source, const std::unordered_map<std::string, std::string>& replacements) {
+    for (const auto& [placeholder, replacement] : replacements) {
+        size_t pos = 0;
+        while ((pos = source.find(placeholder, pos)) != std::string::npos) {
+            source.replace(pos, placeholder.length(), replacement);
+            pos += replacement.length();  // Move past the replacement to avoid infinite loop
+        }
+    }
+}
+
+
 // Optimized getSourceReplacement function
 std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std::vector<std::string>>& commands,
     const std::string& entry, size_t entryIndex, const std::string& packagePath = "") {
@@ -1370,7 +1412,6 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
                 replaceAllPlaceholders(modifiedArg, "{file_name}", fileName);
                 path = getParentDirNameFromPath(entry);
                 removeQuotes(path);
-
                 replaceAllPlaceholders(modifiedArg, "{folder_name}", path);
 
                 if (modifiedArg.find("{list_source(") != std::string::npos) {
@@ -1602,25 +1643,82 @@ void applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
     //    }
     //}
 
-    std::string titleId = getTitleIdAsString();
+    //std::string titleId = getTitleIdAsString();
+    //
+    //for (auto& arg : cmd) {
+    //    replaceAllPlaceholders(arg, "{ram_vendor}", memoryVendor);
+    //    replaceAllPlaceholders(arg, "{ram_model}", memoryModel);
+    //    replaceAllPlaceholders(arg, "{ams_version}", amsVersion);
+    //    replaceAllPlaceholders(arg, "{hos_version}", hosVersion);
+    //    replaceAllPlaceholders(arg, "{cpu_speedo}", std::to_string(cpuSpeedo0));
+    //    replaceAllPlaceholders(arg, "{cpu_iddq}", std::to_string(cpuIDDQ));
+    //    replaceAllPlaceholders(arg, "{gpu_speedo}", std::to_string(cpuSpeedo2));
+    //    replaceAllPlaceholders(arg, "{gpu_iddq}", std::to_string(gpuIDDQ));
+    //    replaceAllPlaceholders(arg, "{soc_speedo}", std::to_string(socSpeedo0));
+    //    replaceAllPlaceholders(arg, "{soc_iddq}", std::to_string(socIDDQ));
+    //    replaceAllPlaceholders(arg, "{title_id}", titleId);
+    //    
+    //    replaceAllPlaceholders(arg, "{A}", "");
+    //    replaceAllPlaceholders(arg, "{B}", "");
+    //    replaceAllPlaceholders(arg, "{X}", "");
+    //    replaceAllPlaceholders(arg, "{Y}", "");
+    //    replaceAllPlaceholders(arg, "{L}", "");
+    //    replaceAllPlaceholders(arg, "{R}", "");
+    //    replaceAllPlaceholders(arg, "{ZL}", "");
+    //    replaceAllPlaceholders(arg, "{ZR}", "");
+    //    replaceAllPlaceholders(arg, "{DUP}", "");
+    //    replaceAllPlaceholders(arg, "{DDOWN}", "");
+    //    replaceAllPlaceholders(arg, "{DLEFT}", "");
+    //    replaceAllPlaceholders(arg, "{DRIGHT}", "");
+    //    replaceAllPlaceholders(arg, "{LS}", "");
+    //    replaceAllPlaceholders(arg, "{RS}", "");
+    //    replaceAllPlaceholders(arg, "{PLUS}", "");
+    //    replaceAllPlaceholders(arg, "{MINUS}", "");
+    //    
+    //    replaceAllPlaceholders(arg, "{UP_ARROW}", "");
+    //    replaceAllPlaceholders(arg, "{DOWN_ARROW}", "");
+    //    replaceAllPlaceholders(arg, "{LEFT_ARROW}", "");
+    //    replaceAllPlaceholders(arg, "{RIGHT_ARROW}", "");
+    //    replaceAllPlaceholders(arg, "{RIGHT_UP_ARROW}", "");
+    //    replaceAllPlaceholders(arg, "{RIGHT_DOWN_ARROW}", "");
+    //    replaceAllPlaceholders(arg, "{LEFT_UP_ARROW}", "");
+    //    replaceAllPlaceholders(arg, "{LEFT_DOWN_ARROW}", "");
+    //    
+    //    for (const auto& [placeholder, replacer] : placeholders) {
+    //        replacePlaceholders(arg, placeholder, replacer);
+    //    }
+    //    // Failed replacement cleanup
+    //    //if (arg == NULL_STR) arg = UNAVAILABLE_SELECTION;
+    //}
 
+
+    // Create a map with all non-button/arrow placeholders and their replacements
+    std::unordered_map<std::string, std::string> generalPlaceholders = {
+        {"{ram_vendor}", memoryVendor},
+        {"{ram_model}", memoryModel},
+        {"{ams_version}", amsVersion},
+        {"{hos_version}", hosVersion},
+        {"{cpu_speedo}", std::to_string(cpuSpeedo0)},
+        {"{cpu_iddq}", std::to_string(cpuIDDQ)},
+        {"{gpu_speedo}", std::to_string(cpuSpeedo2)},
+        {"{gpu_iddq}", std::to_string(gpuIDDQ)},
+        {"{soc_speedo}", std::to_string(socSpeedo0)},
+        {"{soc_iddq}", std::to_string(socIDDQ)},
+        {"{title_id}", getTitleIdAsString()}
+    };
+
+    // Iterate through each command and replace placeholders in one pass
     for (auto& arg : cmd) {
-        replaceAllPlaceholders(arg, "{ram_vendor}", memoryVendor);
-        replaceAllPlaceholders(arg, "{ram_model}", memoryModel);
-        replaceAllPlaceholders(arg, "{ams_version}", amsVersion);
-        replaceAllPlaceholders(arg, "{hos_version}", hosVersion);
-        replaceAllPlaceholders(arg, "{cpu_speedo}", std::to_string(cpuSpeedo0));
-        replaceAllPlaceholders(arg, "{cpu_iddq}", std::to_string(cpuIDDQ));
-        replaceAllPlaceholders(arg, "{gpu_speedo}", std::to_string(cpuSpeedo2));
-        replaceAllPlaceholders(arg, "{gpu_iddq}", std::to_string(gpuIDDQ));
-        replaceAllPlaceholders(arg, "{soc_speedo}", std::to_string(socSpeedo0));
-        replaceAllPlaceholders(arg, "{soc_iddq}", std::to_string(socIDDQ));
-        replaceAllPlaceholders(arg, "{title_id}", titleId);
+        // Replace general placeholders
+        replacePlaceholdersInArg(arg, generalPlaceholders);
+
+        // Replace button/arrow placeholders from the global map
+        replacePlaceholdersInArg(arg, buttonArrowPlaceholders);
+
+        // Additionally replace placeholders from your custom map
         for (const auto& [placeholder, replacer] : placeholders) {
             replacePlaceholders(arg, placeholder, replacer);
         }
-        // Failed replacement cleanup
-        //if (arg == NULL_STR) arg = UNAVAILABLE_SELECTION;
     }
 }
 
