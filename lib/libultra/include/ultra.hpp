@@ -25,6 +25,7 @@
 #ifndef ULTRA_HPP
 #define ULTRA_HPP
 #include <string>
+#include <vector>
 
 const std::string BOOT_PACKAGE_FILENAME = "boot_package.ini";
 const std::string EXIT_PACKAGE_FILENAME = "exit_package.ini";
@@ -126,6 +127,8 @@ const std::string UNZIP_SYMBOL = "\u2191";
 const std::string COPY_SYMBOL = "\u2192";
 const std::string INPROGRESS_SYMBOL = "\u25CF";
 const std::string STAR_SYMBOL = "\u2605";
+
+const std::vector<std::string> THROBBER_SYMBOLS = {"", "", "", "", "", "", "", ""};
 
 // Include all functional headers used in the libUltra library
 #include "debug_funcs.hpp"
