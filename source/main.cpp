@@ -872,7 +872,7 @@ public:
             overlayHeader.version = APP_VERSION;
             overlayHeader.creator = "ppkantorski";
             overlayHeader.about = "Ultrahand Overlay is a versatile tool that enables you to create and share custom command-based packages.";
-            overlayHeader.credits = "Special thanks to B3711, ComplexNarrative, Faker_dev, MasaGratoR, meha, WerWolv, HookedBehemoth and many others. <3";
+            overlayHeader.credits = "Special thanks to B3711, ComplexNarrative, Faker_dev, MasaGratoR, meha, WerWolv, HookedBehemoth and many others. ♥";
             addPackageInfo(list, overlayHeader, OVERLAY_STR);
             overlayHeader.clear();
 
@@ -3251,12 +3251,12 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                         removeTag(cleanOptionName);
                         toggleListItem = std::make_unique<tsl::elm::ToggleListItem>(cleanOptionName, false, ON, OFF);
                         // Preprocess pathPatternOn and pathPatternOff separately
-                        preprocessPath(pathPatternOn, packagePath);
-                        preprocessPath(pathPatternOff, packagePath);
-
+                        //preprocessPath(pathPatternOn, packagePath);
+                        //preprocessPath(pathPatternOff, packagePath);
+                        
                         // Set the initial state of the toggle item
                         if (!pathPatternOn.empty()){
-                            //preprocessPath(pathPatternOn, packagePath);
+                            preprocessPath(pathPatternOn, packagePath);
                             toggleStateOn = isFileOrDirectory(pathPatternOn);
                         }
                         else {
@@ -3270,7 +3270,7 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                             toggleStateOn = (footer == CAPITAL_ON_STR);
                         }
                         
-
+                        
                         toggleListItem->setState(toggleStateOn);
                         
                         toggleListItem->setStateChangedListener([i, commandsOn, commandsOff, keyName = option.first, packagePath,
