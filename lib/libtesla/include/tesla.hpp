@@ -3000,32 +3000,54 @@ namespace tsl {
              * @param color Text color. Use transparent color to skip drawing and only get the string's dimensions
              * @return Dimensions of drawn string
              */
-            inline std::pair<u32, u32> drawString(const std::string& string, bool monospace, const s32 x, const s32 y, const s32 fontSize, const Color& color, const ssize_t maxWidth = 0) {
+            inline std::pair<u32, u32> drawString(const std::string& originalString, bool monospace, const s32 x, const s32 y, const s32 fontSize, const Color& color, const ssize_t maxWidth = 0) {
                 float maxX = x;
                 float currX = x;
                 float currY = y;
-            
-                static std::unordered_map<u64, Glyph> s_glyphCache;
-                u32 currCharacter;
-                ssize_t codepointWidth;
-                u64 key;
-                Glyph* glyph = nullptr;
-                auto it = s_glyphCache.end();
-                Color tmpColor(0);
-                uint8_t bmpColor;
-            
-                //u32 offset;
-            
-                float xPos, yPos;
-                int yAdvance = 0;
-                float scaledFontSize;
                 
-                u32 rowOffset;
+                // Static counter for the throbber symbols
+                static size_t throbberCounter = 0;
+                
+                // Avoid copying the original string
+                const std::string* stringPtr = &originalString;
+                
+                // Check if the string is the INPROGRESS_SYMBOL and replace with throbber symbol without copying
+                if (originalString == INPROGRESS_SYMBOL) {
+                    //size_t index = (throbberCounter / 10) % THROBBER_SYMBOLS.size();  // Change index every 10 counts
+                    stringPtr = &THROBBER_SYMBOLS[(throbberCounter / 10) % THROBBER_SYMBOLS.size()];  // Point to the new string without copying
+                    
+                    throbberCounter++;
 
-                // Iterator for std::string
-                auto itStr = string.cbegin();
+                    // Reset counter to prevent overflow after many cycles (ensures it never grows indefinitely)
+                    if (throbberCounter >= 10 * THROBBER_SYMBOLS.size()) {
+                        throbberCounter = 0;
+                    }
+                }
+            
+                // Cache the end iterator for efficiency
+                auto itStrEnd = stringPtr->cend();
+                auto itStr = stringPtr->cbegin();
                 
-                while (itStr != string.cend()) {
+                // Move variable declarations outside of the loop
+                u32 currCharacter = 0;
+                ssize_t codepointWidth = 0;
+                u64 key = 0;
+                Glyph* glyph = nullptr;
+                
+                float xPos = 0;
+                float yPos = 0;
+                u32 rowOffset = 0;
+                uint8_t bmpColor = 0;
+                Color tmpColor(0);
+                
+                // Static glyph cache
+                static std::unordered_map<u64, Glyph> s_glyphCache; // may cause leak? will investigate later.
+                auto it = s_glyphCache.end();
+
+                float scaledFontSize;
+
+                // Loop through each character in the string
+                while (itStr != itStrEnd) {
                     if (maxWidth > 0 && (currX - x) >= maxWidth)
                         break;
             
@@ -3044,25 +3066,33 @@ namespace tsl {
                         continue;
                     }
             
+                    // Calculate glyph key
                     key = (static_cast<u64>(currCharacter) << 32) | (static_cast<u64>(monospace) << 31) | (static_cast<u64>(std::bit_cast<u32>(fontSize)));
+            
+                    // Check cache for the glyph
                     it = s_glyphCache.find(key);
+            
+                    // If glyph not found, create and cache it
                     if (it == s_glyphCache.end()) {
                         glyph = &s_glyphCache.emplace(key, Glyph()).first->second;
             
-                        if (stbtt_FindGlyphIndex(&this->m_extFont, currCharacter))
+                        // Determine the appropriate font for the character
+                        if (stbtt_FindGlyphIndex(&this->m_extFont, currCharacter)) {
                             glyph->currFont = &this->m_extFont;
-                        else if (this->m_hasLocalFont && stbtt_FindGlyphIndex(&this->m_stdFont, currCharacter) == 0)
+                        } else if (this->m_hasLocalFont && stbtt_FindGlyphIndex(&this->m_stdFont, currCharacter) == 0) {
                             glyph->currFont = &this->m_localFont;
-                        else
+                        } else {
                             glyph->currFont = &this->m_stdFont;
+                        }
             
                         scaledFontSize = stbtt_ScaleForPixelHeight(glyph->currFont, fontSize);
                         glyph->currFontSize = scaledFontSize;
             
+                        // Get glyph bitmap and metrics
                         stbtt_GetCodepointBitmapBoxSubpixel(glyph->currFont, currCharacter, scaledFontSize, scaledFontSize,
-                            0, 0, &glyph->bounds[0], &glyph->bounds[1], &glyph->bounds[2], &glyph->bounds[3]);
+                                                            0, 0, &glyph->bounds[0], &glyph->bounds[1], &glyph->bounds[2], &glyph->bounds[3]);
             
-                        yAdvance = 0;
+                        s32 yAdvance = 0;
                         stbtt_GetCodepointHMetrics(glyph->currFont, monospace ? 'W' : currCharacter, &glyph->xAdvance, &yAdvance);
             
                         glyph->glyphBmp = stbtt_GetCodepointBitmap(glyph->currFont, scaledFontSize, scaledFontSize, currCharacter, &glyph->width, &glyph->height, nullptr, nullptr);
@@ -3073,14 +3103,14 @@ namespace tsl {
                     if (glyph->glyphBmp != nullptr && !std::iswspace(currCharacter) && fontSize > 0 && color.a != 0x0) {
                         xPos = currX + glyph->bounds[0];
                         yPos = currY + glyph->bounds[1];
-                        
-                        // Use optimized pixel processing
+            
+                        // Optimized pixel processing
                         for (s32 bmpY = 0; bmpY < glyph->height; ++bmpY) {
                             rowOffset = bmpY * glyph->width;
                             for (s32 bmpX = 0; bmpX < glyph->width; ++bmpX) {
                                 bmpColor = glyph->glyphBmp[rowOffset + bmpX] >> 4;
                                 if (bmpColor == 0xF) {
-                                    //offset = this->getPixelOffset(xPos + bmpX, yPos + bmpY);
+                                    // Direct pixel manipulation
                                     this->setPixel(xPos + bmpX, yPos + bmpY, color, this->getPixelOffset(xPos + bmpX, yPos + bmpY));
                                 } else if (bmpColor != 0x0) {
                                     tmpColor = color;
@@ -3090,13 +3120,16 @@ namespace tsl {
                             }
                         }
                     }
-                    
+            
+                    // Advance the cursor for the next glyph
                     currX += static_cast<s32>(glyph->xAdvance * glyph->currFontSize);
                 }
-                
+            
                 maxX = std::max(currX, maxX);
                 return { static_cast<u32>(maxX - x), static_cast<u32>(currY - y) };
             }
+            
+
             
 
             
@@ -5384,6 +5417,7 @@ namespace tsl {
                      this->m_value.find(UNZIP_SYMBOL) != std::string::npos ||
                      this->m_value.find(COPY_SYMBOL) != std::string::npos ||
                      this->m_value == INPROGRESS_SYMBOL)) {
+
                     textColor = this->m_faint ? offTextColor : a(inprogressTextColor);
                 } else if (this->m_value == CROSSMARK_SYMBOL) {
                     textColor = this->m_faint ? offTextColor : a(invalidTextColor);
@@ -7620,6 +7654,80 @@ void convertComboToUnicode(std::string& combo) {
         combo = unicodeCombo;
     }
 }
+
+//void convertComboToUnicode2(std::string& combo) {
+//    if (combo.empty()) {
+//        return;
+//    }
+//
+//    std::string unicodeCombo;
+//    bool modified = false;
+//    size_t start = 0;
+//    size_t length = combo.length();
+//    size_t end = 0;
+//    std::string token;
+//
+//    // Helper lambda to check if a character is non-alphanumeric (boundary)
+//    auto isBoundary = [](char c) {
+//        return !std::isalnum(static_cast<unsigned char>(c));  // Non-alphanumeric check
+//    };
+//
+//    // Iterate through the combo string
+//    while (start < length) {
+//        // Append leading boundary characters directly to unicodeCombo
+//        while (start < length && isBoundary(combo[start])) {
+//            unicodeCombo += combo[start++];
+//        }
+//
+//        // Identify the token (word or single character)
+//        end = start;
+//        while (end < length && !isBoundary(combo[end])) {
+//            end++;
+//        }
+//
+//        if (start < end) {
+//            token = combo.substr(start, end - start);
+//
+//            // Check if the token is in the buttonCharMap
+//            auto it = buttonCharMap.find(token);
+//
+//            // Only modify single characters or if found directly in the map
+//            if (it != buttonCharMap.end()) {
+//                unicodeCombo += it->second;  // Replace with Unicode equivalent
+//                modified = true;
+//            } else if (token.length() == 1) {
+//                // Handle single character case, ensuring it's not part of a larger word
+//                char prevChar = start > 0 ? combo[start - 1] : ' ';
+//                char nextChar = end < length ? combo[end] : ' ';
+//
+//                // Modify only if the character is surrounded by boundaries
+//                if (isBoundary(prevChar) || isBoundary(nextChar)) {
+//                    auto singleCharIt = buttonCharMap.find(token);
+//                    if (singleCharIt != buttonCharMap.end()) {
+//                        unicodeCombo += singleCharIt->second;  // Replace single character
+//                        modified = true;
+//                    } else {
+//                        unicodeCombo += token;  // No modification needed
+//                    }
+//                } else {
+//                    unicodeCombo += token;  // Part of a larger word, so no modification
+//                }
+//            } else {
+//                unicodeCombo += token;  // Not found in the map, no modification
+//            }
+//        }
+//
+//        // Add any trailing boundary characters after the token
+//        start = end;
+//    }
+//
+//    // If any modifications were made, update the original combo
+//    if (modified) {
+//        combo = unicodeCombo;
+//    }
+//}
+
+
 
 
 
