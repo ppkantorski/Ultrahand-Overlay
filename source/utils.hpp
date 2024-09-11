@@ -750,8 +750,8 @@ void drawTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::string>& 
 
     for (size_t i = 0; i < sectionLines.size(); ++i) {
         yOffsets[i] = startGap + (i * (lineHeight + newlineGap));
-        //convertComboToUnicode2(sectionLines[i]);
-        //convertComboToUnicode2(infoLines[i]);
+        convertComboToUnicode(sectionLines[i]);
+        convertComboToUnicode(infoLines[i]);
     }
 
     list->addItem(new tsl::elm::TableDrawer([=](tsl::gfx::Renderer* renderer, s32 x, s32 y, s32 w, s32 h) mutable {
