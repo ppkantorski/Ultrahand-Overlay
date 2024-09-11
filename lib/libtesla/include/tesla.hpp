@@ -7265,7 +7265,7 @@ namespace tsl {
             static const int SWIPE_RIGHT_BOUND = 16;  // 16 + 80
             static const int SWIPE_LEFT_BOUND = (1280 - 16);
             static size_t elapsedTime = 0;
-            static const size_t TOUCH_THREHELD_MS = 180; 
+            static const size_t TOUCH_THREHELD_MS = 150; 
 
             s32 idx;
             Result rc;
@@ -7304,11 +7304,11 @@ namespace tsl {
                         // Check if the touch is within bounds for left-to-right swipe within the time window
                         if (useSwipeToOpen && elapsedTime <= TOUCH_THREHELD_MS) {
                             if (lastTouchX != 0 && currentTouch.x != 0) {
-                                if (layerEdge == 0 && currentTouch.x > SWIPE_RIGHT_BOUND + 90 && lastTouchX <= SWIPE_RIGHT_BOUND) {
+                                if (layerEdge == 0 && currentTouch.x > SWIPE_RIGHT_BOUND + 84 && lastTouchX <= SWIPE_RIGHT_BOUND) {
                                     eventFire(&shData->comboEvent);
                                 }
                                 // Check if the touch is within bounds for right-to-left swipe within the time window
-                                else if (layerEdge > 0 && currentTouch.x < SWIPE_LEFT_BOUND - 90 && lastTouchX >= SWIPE_LEFT_BOUND) {
+                                else if (layerEdge > 0 && currentTouch.x < SWIPE_LEFT_BOUND - 84 && lastTouchX >= SWIPE_LEFT_BOUND) {
                                     eventFire(&shData->comboEvent);
                                 }
                             }

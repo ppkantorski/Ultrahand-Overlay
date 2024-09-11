@@ -674,7 +674,7 @@ private:
             if (runningInterpreter.load(std::memory_order_acquire)) {
                 return false;
             } else {
-                if (commandSuccess)
+                if (commandSuccess && movePath != LANG_PATH)
                     triggerMenuReload = true;
             }
 
