@@ -502,7 +502,7 @@ bool handleRunningInterpreter(uint64_t& keysHeld) {
          //   lastSelectedListItem->setValue(lastSymbol + " 100%");
         return false;
     };
-
+    
     if (!updateUI(downloadPercentage, DOWNLOAD_SYMBOL) &&
         !updateUI(unzipPercentage, UNZIP_SYMBOL) &&
         !updateUI(copyPercentage, COPY_SYMBOL) &&
@@ -872,7 +872,7 @@ public:
             overlayHeader.version = APP_VERSION;
             overlayHeader.creator = "ppkantorski";
             overlayHeader.about = "Ultrahand Overlay is a versatile tool that enables you to create and share custom command-based packages.";
-            overlayHeader.credits = "Special thanks to B3711, ComplexNarrative, Faker_dev, MasaGratoR, meha, WerWolv, HookedBehemoth and many others. <3";
+            overlayHeader.credits = "Special thanks to B3711, ComplexNarrative, Faker_dev, MasaGratoR, meha, WerWolv, HookedBehemoth and many others. ♥";
             addPackageInfo(list, overlayHeader, OVERLAY_STR);
             overlayHeader.clear();
 
@@ -2601,9 +2601,9 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
         // Table settings
         hideTableBackground = false;
         useHeaderIndent = false;
-        tableStartGap = 20;
+        tableStartGap = 19;
         tableEndGap = 3;
-        tableColumnOffset = 160;
+        tableColumnOffset = 161;
         tableSpacing = 0;
         tableSectionTextColor = DEFAULT_STR;
         tableInfoTextColor = DEFAULT_STR;
@@ -3251,8 +3251,8 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                         removeTag(cleanOptionName);
                         toggleListItem = std::make_unique<tsl::elm::ToggleListItem>(cleanOptionName, false, ON, OFF);
                         // Preprocess pathPatternOn and pathPatternOff separately
-                        preprocessPath(pathPatternOn, packagePath);
-                        preprocessPath(pathPatternOff, packagePath);
+                        //preprocessPath(pathPatternOn, packagePath);
+                        //preprocessPath(pathPatternOff, packagePath);
 
                         // Set the initial state of the toggle item
                         if (!pathPatternOn.empty()){
