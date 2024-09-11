@@ -76,6 +76,43 @@ static bool usingEmunand = true;
  */
 
 
+// Global constant map for button and arrow placeholders
+const std::unordered_map<std::string, std::string> symbolPlaceholders = {
+    {"{A}", ""},
+    {"{B}", ""},
+    {"{X}", ""},
+    {"{Y}", ""},
+    {"{L}", ""},
+    {"{R}", ""},
+    {"{ZL}", ""},
+    {"{ZR}", ""},
+    {"{DUP}", ""},
+    {"{DDOWN}", ""},
+    {"{DLEFT}", ""},
+    {"{DRIGHT}", ""},
+    {"{LS}", ""},
+    {"{RS}", ""},
+    {"{PLUS}", ""},
+    {"{MINUS}", ""},
+    {"{UP_ARROW}", ""},
+    {"{DOWN_ARROW}", ""},
+    {"{LEFT_ARROW}", ""},
+    {"{RIGHT_ARROW}", ""},
+    {"{RIGHT_UP_ARROW}", ""},
+    {"{RIGHT_DOWN_ARROW}", ""},
+    {"{LEFT_UP_ARROW}", ""},
+    {"{LEFT_DOWN_ARROW}", ""},
+    {"{POWER}", ""},
+    {"{HOME}", ""},
+    {"{CAPTURE}", ""},
+    {"{REFRESH_SYMBOL}", ""},
+    {"{WARNING_SYMBOL}", ""},
+    {"{INFO_SYMBOL}", ""}
+};
+
+
+
+
 //void testAudioOutput() {
 //    Result res;
 //    audoutInitialize();
@@ -1293,34 +1330,6 @@ void replaceAllPlaceholders(std::string& source, const std::string& placeholder,
 }
 
 
-// Global constant map for button and arrow placeholders
-const std::unordered_map<std::string, std::string> buttonArrowPlaceholders = {
-    {"{A}", ""},
-    {"{B}", ""},
-    {"{X}", ""},
-    {"{Y}", ""},
-    {"{L}", ""},
-    {"{R}", ""},
-    {"{ZL}", ""},
-    {"{ZR}", ""},
-    {"{DUP}", ""},
-    {"{DDOWN}", ""},
-    {"{DLEFT}", ""},
-    {"{DRIGHT}", ""},
-    {"{LS}", ""},
-    {"{RS}", ""},
-    {"{PLUS}", ""},
-    {"{MINUS}", ""},
-    {"{UP_ARROW}", ""},
-    {"{DOWN_ARROW}", ""},
-    {"{LEFT_ARROW}", ""},
-    {"{RIGHT_ARROW}", ""},
-    {"{RIGHT_UP_ARROW}", ""},
-    {"{RIGHT_DOWN_ARROW}", ""},
-    {"{LEFT_UP_ARROW}", ""},
-    {"{LEFT_DOWN_ARROW}", ""}
-};
-
 
 // Helper function to replace all placeholders in a single pass
 void replacePlaceholdersInArg(std::string& source, const std::unordered_map<std::string, std::string>& replacements) {
@@ -1713,7 +1722,7 @@ void applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
         replacePlaceholdersInArg(arg, generalPlaceholders);
 
         // Replace button/arrow placeholders from the global map
-        replacePlaceholdersInArg(arg, buttonArrowPlaceholders);
+        replacePlaceholdersInArg(arg, symbolPlaceholders);
 
         // Additionally replace placeholders from your custom map
         for (const auto& [placeholder, replacer] : placeholders) {
