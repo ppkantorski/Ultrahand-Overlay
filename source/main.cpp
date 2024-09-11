@@ -502,7 +502,7 @@ bool handleRunningInterpreter(uint64_t& keysHeld) {
          //   lastSelectedListItem->setValue(lastSymbol + " 100%");
         return false;
     };
-
+    
     if (!updateUI(downloadPercentage, DOWNLOAD_SYMBOL) &&
         !updateUI(unzipPercentage, UNZIP_SYMBOL) &&
         !updateUI(copyPercentage, COPY_SYMBOL) &&
@@ -2601,9 +2601,9 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
         // Table settings
         hideTableBackground = false;
         useHeaderIndent = false;
-        tableStartGap = 20;
+        tableStartGap = 19;
         tableEndGap = 3;
-        tableColumnOffset = 160;
+        tableColumnOffset = 161;
         tableSpacing = 0;
         tableSectionTextColor = DEFAULT_STR;
         tableInfoTextColor = DEFAULT_STR;
@@ -3253,10 +3253,10 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                         // Preprocess pathPatternOn and pathPatternOff separately
                         //preprocessPath(pathPatternOn, packagePath);
                         //preprocessPath(pathPatternOff, packagePath);
-                        
+
                         // Set the initial state of the toggle item
                         if (!pathPatternOn.empty()){
-                            preprocessPath(pathPatternOn, packagePath);
+                            //preprocessPath(pathPatternOn, packagePath);
                             toggleStateOn = isFileOrDirectory(pathPatternOn);
                         }
                         else {
@@ -3270,7 +3270,7 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                             toggleStateOn = (footer == CAPITAL_ON_STR);
                         }
                         
-                        
+
                         toggleListItem->setState(toggleStateOn);
                         
                         toggleListItem->setStateChangedListener([i, commandsOn, commandsOff, keyName = option.first, packagePath,
