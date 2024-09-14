@@ -3013,7 +3013,7 @@ namespace tsl {
                 if (originalString.size() == INPROGRESS_SYMBOL.size() && originalString == INPROGRESS_SYMBOL) {
                     // Static counter for the throbber symbols
                     static size_t throbberCounter = 0;
-                    
+
                     //size_t index = (throbberCounter / 10) % THROBBER_SYMBOLS.size();  // Change index every 10 counts
                     stringPtr = &THROBBER_SYMBOLS[(throbberCounter / 10) % THROBBER_SYMBOLS.size()];  // Point to the new string without copying
                     
@@ -3568,7 +3568,8 @@ namespace tsl {
             Element() {}
             virtual ~Element() { }
             
-            
+            bool m_isTable = false;  // Default to false for non-table elements
+            bool m_isItem = false;
             std::chrono::duration<long int, std::ratio<1, 1000000000>> t;
             //double timeCounter;
             u8 saturation;
@@ -3581,6 +3582,14 @@ namespace tsl {
             s32 amplitude;
             std::chrono::steady_clock::time_point m_animationStartTime; // Start time of the animation
             
+            virtual bool isTable() const {
+                return m_isTable;
+            }
+
+            virtual bool isItem() const {
+                return m_isItem;
+            }
+
             /**
              * @brief Handles focus requesting
              * @note This function should return the element to focus.
@@ -4127,8 +4136,10 @@ namespace tsl {
          */
         class TableDrawer : public Element {
         public:
-            TableDrawer(std::function<void(gfx::Renderer* r, s32 x, s32 y, s32 w, s32 h)> renderFunc, bool _hideTableBackground, size_t _endGap)
-                : Element(), m_renderFunc(renderFunc), hideTableBackground(_hideTableBackground), endGap(_endGap) {}
+            TableDrawer(std::function<void(gfx::Renderer* r, s32 x, s32 y, s32 w, s32 h)> renderFunc, bool _hideTableBackground, size_t _endGap, bool _isScrollable = false)
+                : Element(), m_renderFunc(renderFunc), hideTableBackground(_hideTableBackground), endGap(_endGap), isScrollable(_isScrollable) {
+                    m_isTable = isScrollable;  // Mark this element as a table
+                }
             
             virtual ~TableDrawer() {}
 
@@ -4159,6 +4170,7 @@ namespace tsl {
             std::function<void(gfx::Renderer*, s32 x, s32 y, s32 w, s32 h)> m_renderFunc;
             bool hideTableBackground = false;
             size_t endGap = 3;
+            bool isScrollable = false;
         };
 
 
@@ -4568,7 +4580,7 @@ namespace tsl {
                 
                 //if (true) {
                 //    // Update FPS
-                //    updateFPS(currentTimeCount);
+                //    updateFPS(std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count());
                 //
                 //    // Convert FPS to string
                 //    std::ostringstream fpsStream;
@@ -4833,6 +4845,17 @@ namespace tsl {
             const float smoothingFactor = 0.15f;  // Lower value means faster smoothing
             const float dampingFactor = 0.3f;   // Closer to 1 means slower damping
 
+
+            bool isInTable = false;  // Track if we're inside a table
+            bool inScrollMode = false;  // Track if we're in scroll mode after the table
+            size_t tableIndex = 0;  // Keep track of the table index
+            s32 entryOffset = 0;    // Store the entry point offset when entering the table
+            
+            // Use a vector to track how many downward scroll steps were taken for each table
+            std::vector<int> scrollStepsInsideTable;  // This will track scroll steps for each table
+            
+            const float TABLE_SCROLL_STEP_SIZE = 40.0f; // Fixed scroll step size
+
             //static inline float animationDuration = 2.0f; 
             //InputMode lastInputMode = InputMode::Controller;
 
@@ -4990,7 +5013,7 @@ namespace tsl {
                 }
                 y -= 32;
             }
-            
+                                    
             virtual bool onTouch(TouchEvent event, s32 currX, s32 currY, s32 prevX, s32 prevY, s32 initialX, s32 initialY) {
                 handled = false;
                 
@@ -5022,6 +5045,8 @@ namespace tsl {
                 return false;
             }
             
+
+            
             /**
              * @brief Adds a new item to the list before the next frame starts
              *
@@ -5041,6 +5066,7 @@ namespace tsl {
                 }
             }
             
+
             /**
              * @brief Removes an item form the list and deletes it
              * @note Item will only be deleted if it was found in the list
@@ -5070,15 +5096,19 @@ namespace tsl {
                 this->m_clearList = true;
             }
             
+
+            
             virtual Element* requestFocus(Element* oldFocus, FocusDirection direction) override {
-                if (this->m_clearList || !this->m_itemsToAdd.empty())
+                //disableLogging = false;
+                if (this->m_clearList || !this->m_itemsToAdd.empty()) {
                     return nullptr;
-                
+                }
+            
                 Element* newFocus = nullptr;
-                
+            
+                // Handle initial focus
                 if (direction == FocusDirection::None) {
                     size_t i = 0;
-                    
                     if (oldFocus == nullptr) {
                         s32 elementHeight = 0;
                         while (elementHeight < this->m_offset && i < this->m_items.size() - 1) {
@@ -5086,45 +5116,278 @@ namespace tsl {
                             elementHeight += this->m_items[i]->getHeight();
                         }
                     }
-                    
+            
                     for (; i < this->m_items.size(); ++i) {
                         newFocus = this->m_items[i]->requestFocus(oldFocus, direction);
-                        
-                        if (newFocus != nullptr) {
+                        if (newFocus != nullptr && newFocus != oldFocus) {  // Prevent re-focusing on the same element
                             this->m_focusedIndex = i;
                             this->updateScrollOffset();
+                            isInTable = false;
+                            inScrollMode = false;
+                            //tableIndex = 0;
+                            //entryOffset = 0;
+                            //scrollStepsInsideTable.clear();  // Reset the scroll steps for all tables
+                            //logMessage("Focus set to a new element. Reset scrollStepsInsideTable.");
                             return newFocus;
-                        }
-                    }
-                } else if (direction == FocusDirection::Down) {
-                    for (size_t i = this->m_focusedIndex + 1; i < this->m_items.size(); ++i) {
-                        newFocus = this->m_items[i]->requestFocus(oldFocus, direction);
-                        
-                        if (newFocus != nullptr && newFocus != oldFocus) {
-                            this->m_focusedIndex = i;
-                            this->updateScrollOffset();
-                            return newFocus;
-                        }
-                    }
-                } else if (direction == FocusDirection::Up) {
-                    if (this->m_focusedIndex > 0) {
-                        for (ssize_t i = static_cast<ssize_t>(this->m_focusedIndex) - 1; i >= 0; --i) {
-                            if (static_cast<size_t>(i) >= this->m_items.size() || this->m_items[i] == nullptr)
-                                return oldFocus;
-                            
-                            newFocus = this->m_items[i]->requestFocus(oldFocus, direction);
-                            
-                            if (newFocus != nullptr && newFocus != oldFocus) {
-                                this->m_focusedIndex = static_cast<size_t>(i);
-                                this->updateScrollOffset();
-                                return newFocus;
-                            }
                         }
                     }
                 }
             
+                
+                // Handle scrolling down
+                else if (direction == FocusDirection::Down) {
+                    if (this->m_items.empty()) {
+                        // If there are no items, scroll directly
+                        this->m_nextOffset = std::min(this->m_nextOffset + TABLE_SCROLL_STEP_SIZE, static_cast<float>(this->m_listHeight - this->getHeight() + 50));
+                        this->m_offset = this->m_nextOffset;
+                        this->invalidate();  // Redraw
+                        return oldFocus;
+                    }
+                
+                    for (size_t i = this->m_focusedIndex + 1; i < this->m_items.size(); ++i) {
+                        newFocus = this->m_items[i]->requestFocus(oldFocus, direction);
+                        if (!isInTable && newFocus != nullptr && newFocus != oldFocus) {  // Only update focus if it's a new element
+                            this->m_focusedIndex = i;
+                            this->updateScrollOffset();
+                            isInTable = false;
+                            inScrollMode = false;
+                            tableIndex = 0;
+                            return newFocus;
+                        }
+                
+                        if (this->m_items[i]->isTable()) {
+                            // Check if the table is fully visible (i.e., it fits in the viewport)
+                            if (this->m_items[i]->getHeight() <= this->getHeight()) {
+                                continue;  // Skip the table if it fits within the viewport
+                            }
+                
+                            isInTable = true;
+                            tableIndex = i;
+                            entryOffset = this->m_offset;
+                
+                            // Expand scrollStepsInsideTable if necessary to track this table
+                            if (scrollStepsInsideTable.size() <= tableIndex) {
+                                scrollStepsInsideTable.resize(tableIndex + 1, 0);  // Ensure enough space for the current table index
+                            }
+                
+                            // Calculate the required steps based on the table's scrollable height when entering
+                            int scrollableHeight = this->m_items[tableIndex]->getHeight() - this->getHeight();
+                            int requiredSteps = static_cast<int>(std::ceil(static_cast<float>(scrollableHeight) / TABLE_SCROLL_STEP_SIZE));
+                            
+                            // Set scroll steps for the table when first entering
+                            scrollStepsInsideTable[tableIndex] = std::max(scrollStepsInsideTable[tableIndex], requiredSteps);
+                            
+                
+                            break;
+                        }
+                    }
+                
+                    // Incremental scrolling inside the table
+                    if (isInTable) {
+                        // Always check if there's more to scroll
+                        if (this->m_offset + TABLE_SCROLL_STEP_SIZE < (this->m_listHeight - this->getHeight() + 50)) {
+                            scrollStepsInsideTable[tableIndex]++;  // Increment steps for the current table
+                
+                            // Move the list down by a fixed step size
+                            this->m_nextOffset = std::min(this->m_nextOffset + TABLE_SCROLL_STEP_SIZE, static_cast<float>(this->m_listHeight - this->getHeight() + 50));
+                            this->m_offset = this->m_nextOffset;
+                            this->invalidate();  // Redraw the list to reflect the new offset
+                        } else {
+                            // Reached the bottom of the table
+                            this->m_nextOffset = this->m_listHeight - this->getHeight() + 50;
+                            this->m_offset = this->m_nextOffset;
+                            this->invalidate();  // Redraw the list to reflect the full scroll
+                
+                            // After scrolling, try to focus on the next focusable item below the table
+                            for (size_t i = tableIndex + 1; i < this->m_items.size(); ++i) {
+                                if (!this->m_items[i]->isTable()) {
+                                    newFocus = this->m_items[i]->requestFocus(oldFocus, direction);
+                                    if (newFocus != nullptr && newFocus != oldFocus) {
+                                        this->m_focusedIndex = i;
+                                        this->updateScrollOffset();
+                                        isInTable = false;
+                                        return newFocus;
+                                    }
+                                }
+                            }
+                        }
+                        return oldFocus;
+                    }
+                }
+                
+                
+            
+                // Handle scrolling up
+                else if (direction == FocusDirection::Up) {
+                    if (this->m_items.empty()) {
+                        // If there are no items, scroll directly
+                        //logMessage("No items to focus on, decrementing scroll directly.");
+                        this->m_nextOffset = std::max(this->m_nextOffset - TABLE_SCROLL_STEP_SIZE, 0.0f);
+                        this->m_offset = this->m_nextOffset;
+                        this->invalidate();  // Redraw
+                        return oldFocus;
+                    }
+                    
+                    // Check if the item we're moving to is a table and we should re-enter it
+                    if (!isInTable && this->m_focusedIndex > 0) {
+                        // Traverse upwards to find the nearest table, skipping over non-focusable items
+                        ssize_t potentialTableIndex = this->m_focusedIndex - 1;
+                        int totalScrollableHeight = 0;  // To track the cumulative scrollable height
+                    
+                        while (potentialTableIndex >= 0) {
+                            if (this->m_items[potentialTableIndex] != nullptr) { // Skip nullptr (non-focusable items)
+                                if (this->m_items[potentialTableIndex]->isItem()) { // Break early for ListItems
+                                    break;
+                                } else if (this->m_items[potentialTableIndex]->isTable()) {
+                                    // Check if the table fits within the viewport; if it does, skip re-entering
+                                    int tableHeight = this->m_items[potentialTableIndex]->getHeight();
+                                    
+                                    // Set state for entering the table
+                                    isInTable = true;
+                                    tableIndex = potentialTableIndex;
+                    
+                                    // Ensure scrollStepsInsideTable has enough space for the current table index
+                                    if (scrollStepsInsideTable.size() <= static_cast<size_t>(tableIndex)) {
+                                        scrollStepsInsideTable.resize(static_cast<size_t>(tableIndex) + 1, 0);
+                                    }
+                    
+                                    // Add the current table's scrollable height to the cumulative total
+                                    int scrollableHeight = tableHeight;
+                                    totalScrollableHeight += std::max(0, scrollableHeight); // Accumulate scrollable height
+                    
+                                    // Adjust scroll steps for this table
+                                    int requiredSteps = static_cast<int>(std::ceil(static_cast<float>(totalScrollableHeight) / TABLE_SCROLL_STEP_SIZE));
+                                    scrollStepsInsideTable[tableIndex] = std::max(scrollStepsInsideTable[tableIndex], requiredSteps);
+                    
+                                    // Update entryOffset to reflect the current offset
+                                    entryOffset = this->m_offset;
+                                }
+                            }
+                            potentialTableIndex--;  // Move to the next item above
+                        }
+                    }
+
+
+
+
+                    
+                    if (isInTable) {
+                        //logMessage("Inside table: Offset: " + std::to_string(this->m_offset) + 
+                        //           " | EntryOffset: " + std::to_string(entryOffset) + 
+                        //           " | scrollStepsInsideTable: " + std::to_string(scrollStepsInsideTable[tableIndex]));
+                        
+                        if (scrollStepsInsideTable[tableIndex] > 0) {
+                            // Decrease the offset and decrement steps one at a time
+                            auto preComputedNextOffset = std::min(this->m_nextOffset - TABLE_SCROLL_STEP_SIZE, static_cast<float>(entryOffset));
+                            
+                            // If the offset would go beyond the top, adjust and reset scroll steps to 0
+                            if (preComputedNextOffset < 0.0f) {
+                                this->m_nextOffset = 0.0f;
+                                scrollStepsInsideTable[tableIndex] = 0;
+                                //logMessage("Scroll steps exceeded the top, resetting scrollStepsInsideTable to 0.");
+
+                                //logMessage("Attempting to exit the table. Focus should move to the previous item.");
+                        
+                                for (ssize_t i = static_cast<ssize_t>(tableIndex) - 1; i >= 0; --i) {
+                                    if (this->m_items[i]->isTable()) {
+                                        //logMessage("Skipping table or non-focusable item at index: " + std::to_string(i));
+                                        continue;
+                                    }
+                        
+                                    newFocus = this->m_items[i]->requestFocus(oldFocus, direction);
+                                    if (newFocus != nullptr && newFocus != oldFocus) {
+                                        this->m_focusedIndex = static_cast<size_t>(i);
+                                        this->updateScrollOffset();
+                                        isInTable = false;
+                                        //logMessage("Exited table. Focus is now on the previous item at index: " + std::to_string(i));
+                                        return newFocus;
+                                    } else {
+                                        //logMessage("Failed to focus on the previous item at index: " + std::to_string(i));
+                                    }
+                                }
+                        
+                                //logMessage("All items before the table are non-focusable. Remaining in table.");
+                                return oldFocus;
+                            } else {
+                                this->m_nextOffset = preComputedNextOffset;
+                            }
+                    
+                            this->m_offset = this->m_nextOffset;
+                            scrollStepsInsideTable[tableIndex]--;  // Decrement steps for the current table
+                    
+                            //logMessage("Scrolling up inside table. Current offset: " + std::to_string(this->m_offset) + 
+                            //           " | Remaining scroll steps: " + std::to_string(scrollStepsInsideTable[tableIndex]));
+                    
+                            // Redraw the list to reflect the new position
+                            this->invalidate();  // Ensure the view is updated after each movement
+                    
+                            return oldFocus;  // Stop here to incrementally scroll up, avoid skipping
+                        }
+                    
+                        // Once all scroll steps are undone, attempt to exit the table and move to the previous item
+                        if (scrollStepsInsideTable[tableIndex] == 0) {
+                            //logMessage("Attempting to exit the table. Focus should move to the previous item.");
+                    
+                            for (ssize_t i = static_cast<ssize_t>(tableIndex) - 1; i >= 0; --i) {
+                                if (this->m_items[i]->isTable()) {
+                                    //logMessage("Skipping table or non-focusable item at index: " + std::to_string(i));
+                                    continue;
+                                }
+                    
+                                newFocus = this->m_items[i]->requestFocus(oldFocus, direction);
+                                if (newFocus != nullptr && newFocus != oldFocus) {
+                                    this->m_focusedIndex = static_cast<size_t>(i);
+                                    this->updateScrollOffset();
+                                    isInTable = false;
+                                    //logMessage("Exited table. Focus is now on the previous item at index: " + std::to_string(i));
+                                    return newFocus;
+                                } else {
+                                    //logMessage("Failed to focus on the previous item at index: " + std::to_string(i));
+                                }
+                            }
+                    
+                            //logMessage("All items before the table are non-focusable. Remaining in table.");
+                            return oldFocus;
+                        }
+                    }
+
+            
+                    // Handle moving to the previous focusable item outside the table
+                    if (!isInTable && this->m_focusedIndex > 0) {
+                        for (ssize_t i = static_cast<ssize_t>(this->m_focusedIndex) - 1; i >= 0; --i) {
+                            if (static_cast<size_t>(i) >= this->m_items.size() || this->m_items[i] == nullptr) {
+                                //logMessage("Reached invalid or non-focusable item index.");
+                                return oldFocus;
+                            }
+            
+                            newFocus = this->m_items[i]->requestFocus(oldFocus, direction);
+                            if (newFocus != nullptr && newFocus != oldFocus) {
+                                this->m_focusedIndex = static_cast<size_t>(i);
+                                this->updateScrollOffset();
+                                isInTable = this->m_items[i]->isTable();
+                                tableIndex = isInTable ? i : 0;
+                                //logMessage("Focus moved to item: " + std::to_string(i));
+                                return newFocus;
+                            }
+                        }
+                    }
+            
+                    // Elastic scrolling at the top of the list
+                    if (this->m_nextOffset > 0.0f) {
+                        this->m_nextOffset = std::max(this->m_nextOffset - TABLE_SCROLL_STEP_SIZE, 0.0f);
+                        this->m_offset = this->m_nextOffset;
+                        this->invalidate();
+                    }
+            
+                    return oldFocus;
+                }
+            
                 return oldFocus;
             }
+            
+                        
+
+
 
 
             
@@ -5320,6 +5583,7 @@ namespace tsl {
              */
             ListItem(const std::string& text, const std::string& value = "")
                 : Element(), m_text(text), m_value(value) {
+                m_isItem = true;
                 applyLangReplacements(this->m_text);
                 applyLangReplacements(this->m_value, true);
             }
@@ -5626,6 +5890,48 @@ namespace tsl {
             std::function<void(bool)> m_stateChangedListener = [](bool){};
         };
         
+
+        class DummyListItem : public ListItem {
+        public:
+            DummyListItem()
+                : ListItem("") { // Use an empty string for the base class constructor
+                // Set the properties to indicate it's a dummy item
+                this->m_text = "";
+                this->m_value = "";
+                this->m_maxWidth = 0;
+                this->width = 0;
+                this->height = 0;
+            }
+        
+            virtual ~DummyListItem() {}
+            
+            // Override the draw method to do nothing
+            virtual void draw(gfx::Renderer* renderer) override {
+                // Intentionally left blank
+            }
+            
+            // Override the layout method to set the dimensions to zero
+            virtual void layout(u16 parentX, u16 parentY, u16 parentWidth, u16 parentHeight) override {
+                this->setBoundaries(parentX, parentY, 0, 0); // Zero size
+            }
+            
+            // Override the requestFocus method to allow this item to be focusable
+            virtual inline Element* requestFocus(Element* oldFocus, FocusDirection direction) override {
+                return this; // Allow this item to be focusable
+            }
+            
+            //// Optionally override onClick and onTouch to handle interactions
+            //virtual bool onClick(u64 keys) override {
+            //    return true; // Consume the click event
+            //}
+            //
+            //virtual bool onTouch(TouchEvent event, s32 currX, s32 currY, s32 prevX, s32 prevY, s32 initialX, s32 initialY) override {
+            //    return true; // Consume the touch event
+            //}
+        };
+
+
+
         class CategoryHeader : public Element {
         public:
             
@@ -5707,6 +6013,8 @@ namespace tsl {
                      std::vector<std::vector<std::string>> cmd = {}, const std::string& selCmd = "", bool usingStepTrackbar = false, bool usingNamedStepTrackbar = false, s16 numSteps = -1, bool unlockedTrackbar = false, bool executeOnEveryTick = false)
                 : m_label(label), m_packagePath(packagePath), m_minValue(minValue), m_maxValue(maxValue), m_units(units),
                   interpretAndExecuteCommands(executeCommands), getSourceReplacement(sourceReplacementFunc), commands(std::move(cmd)), selectedCommand(selCmd), m_usingStepTrackbar(usingStepTrackbar), m_usingNamedStepTrackbar(usingNamedStepTrackbar), m_numSteps(numSteps), m_unlockedTrackbar(unlockedTrackbar), m_executeOnEveryTick(executeOnEveryTick) {
+                m_isItem = true;
+                
                 if ((!usingStepTrackbar && !usingNamedStepTrackbar) || numSteps == -1) {
                     m_numSteps = maxValue - minValue;
                 }
