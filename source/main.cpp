@@ -2570,6 +2570,7 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
 
     bool isScrollableTable;
     bool onlyTables = true;
+    bool lastItemIsScrollableTable = false;
 
     // Pack variables into structs
 
@@ -2737,6 +2738,7 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                             });
                         }
                         onlyTables = false;
+                        lastItemIsScrollableTable = false;
                         list->addItem(listItem.release());
                         
                         
@@ -2987,10 +2989,15 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                         tableStartGap = tableEndGap = 19; // for perfect alignment for header tables
                         isScrollableTable = false;
                     }
+                    if (isScrollableTable)
+                        lastItemIsScrollableTable = true;
+                    else
+                        lastItemIsScrollableTable = false;
                     addTable(list, tableData, packagePath, tableColumnOffset, tableStartGap, tableEndGap, tableSpacing, tableSectionTextColor, tableInfoTextColor, tableAlignment, hideTableBackground, useHeaderIndent, isScrollableTable);
                     continue;
                 } else if (commandMode == TRACKBAR_STR) {
                     onlyTables = false;
+                    lastItemIsScrollableTable = false;
                     list->addItem(new tsl::elm::TrackBar(optionName, packagePath, minValue, maxValue, units, interpretAndExecuteCommands, getSourceReplacement, commands, option.first, false, false, -1, unlockedTrackbar, onEveryTick));
                     continue;
                 } else if (commandMode == STEP_TRACKBAR_STR) {
@@ -2998,6 +3005,7 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                         steps = std::abs(maxValue - minValue) +1;
                     }
                     onlyTables = false;
+                    lastItemIsScrollableTable = false;
                     list->addItem(new tsl::elm::StepTrackBar(optionName, packagePath, steps, minValue, maxValue, units, interpretAndExecuteCommands, getSourceReplacement, commands, option.first, false, unlockedTrackbar, onEveryTick));
                     continue;
                 } else if (commandMode == NAMED_STEP_TRACKBAR_STR) {
@@ -3077,6 +3085,7 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                         ++it;
                     }
                     onlyTables = false;
+                    lastItemIsScrollableTable = false;
                     list->addItem(new tsl::elm::NamedStepTrackBar(optionName, packagePath, entryList, interpretAndExecuteCommands, getSourceReplacement, commands, option.first, unlockedTrackbar, onEveryTick));
                     continue;
                 }
@@ -3196,6 +3205,7 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                         });
                     }
                     onlyTables = false;
+                    lastItemIsScrollableTable = false;
                     list->addItem(listItem.release());
                 } else { // For everything else
                     
@@ -3258,6 +3268,7 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                             return false;
                         });
                         onlyTables = false;
+                        lastItemIsScrollableTable = false;
                         list->addItem(listItem.release());
                     } else if (commandMode == TOGGLE_STR) {
                         cleanOptionName = optionName;
@@ -3301,6 +3312,7 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                             
                         });
                         onlyTables = false;
+                        lastItemIsScrollableTable = false;
                         list->addItem(toggleListItem.release());
                     }
                 }
@@ -3310,6 +3322,9 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
     if (onlyTables) {
         auto dummyItem = new tsl::elm::DummyListItem();
         list->addItem(dummyItem, 0, 1);
+    }
+
+    if (lastItemIsScrollableTable) {
         auto dummyItem2 = new tsl::elm::DummyListItem();
         list->addItem(dummyItem2);
     }
