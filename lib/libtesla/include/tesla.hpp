@@ -1762,7 +1762,7 @@ namespace tsl {
     static Color invalidTextColor = RGB888("#FF0000");
     static Color clickTextColor = RGB888(whiteColor);
 
-    static size_t tableBGAlpha = 7;
+    static size_t tableBGAlpha = 10;
     static Color tableBGColor = RGB888("#303030", tableBGAlpha);
     static Color sectionTextColor = RGB888("#e9ff40");
     static Color infoTextColor = RGB888(whiteColor);
@@ -5895,7 +5895,7 @@ namespace tsl {
             std::function<void(bool)> m_stateChangedListener = [](bool){};
         };
         
-        
+
         class DummyListItem : public ListItem {
         public:
             DummyListItem()
@@ -5936,9 +5936,9 @@ namespace tsl {
             //    return true; // Consume the touch event
             //}
         };
-        
-        
-        
+
+
+
         class CategoryHeader : public Element {
         public:
             
