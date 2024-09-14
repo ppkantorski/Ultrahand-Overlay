@@ -2700,7 +2700,7 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                             listItem = std::make_unique<tsl::elm::ListItem>(cleanOptionName, footer);
                         }
                         
-                        if (packageMenuMode)
+                        if (packageMenuMode) {
                             listItem->setClickListener([packagePath, currentPage, packageName, optionName](s64 keys) {
                                 
                                 if (runningInterpreter.load(std::memory_order_acquire))
@@ -2720,7 +2720,7 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                                 }
                                 return false;
                             });
-                        else{
+                        } else {
                             listItem->setClickListener([optionName](s64 keys) {
                                 if (runningInterpreter.load(std::memory_order_acquire))
                                     return false;
@@ -3294,7 +3294,7 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                             toggleStateOn = (footer == CAPITAL_ON_STR);
                         }
                         
-
+                        
                         toggleListItem->setState(toggleStateOn);
                         
                         toggleListItem->setStateChangedListener([i, commandsOn, commandsOff, keyName = option.first, packagePath,
@@ -3323,12 +3323,12 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
         auto dummyItem = new tsl::elm::DummyListItem();
         list->addItem(dummyItem, 0, 1);
     }
-
+    
     if (lastItemIsScrollableTable) {
         auto dummyItem2 = new tsl::elm::DummyListItem();
         list->addItem(dummyItem2);
     }
-
+    
     listItem.release();
     toggleListItem.release();
     options.clear();
