@@ -3005,14 +3005,15 @@ namespace tsl {
                 float currX = x;
                 float currY = y;
                 
-                // Static counter for the throbber symbols
-                static size_t throbberCounter = 0;
                 
                 // Avoid copying the original string
                 const std::string* stringPtr = &originalString;
                 
                 // Check if the string is the INPROGRESS_SYMBOL and replace with throbber symbol without copying
-                if (originalString == INPROGRESS_SYMBOL) {
+                if (originalString.size() == INPROGRESS_SYMBOL.size() && originalString == INPROGRESS_SYMBOL) {
+                    // Static counter for the throbber symbols
+                    static size_t throbberCounter = 0;
+                    
                     //size_t index = (throbberCounter / 10) % THROBBER_SYMBOLS.size();  // Change index every 10 counts
                     stringPtr = &THROBBER_SYMBOLS[(throbberCounter / 10) % THROBBER_SYMBOLS.size()];  // Point to the new string without copying
                     
