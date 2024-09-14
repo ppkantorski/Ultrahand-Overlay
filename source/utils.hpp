@@ -721,7 +721,7 @@ void addBasicListItem(auto& list, const std::string& itemText) {
 void drawTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::string>& sectionLines, std::vector<std::string>& infoLines,
                size_t columnOffset = 161, size_t startGap = 19, size_t endGap = 3, size_t newlineGap = 0,
                const std::string& tableSectionTextColor = DEFAULT_STR, const std::string& tableInfoTextColor = DEFAULT_STR, 
-               const std::string& alignment = LEFT_STR, bool hideTableBackground = false, bool useHeaderIndent = false) {
+               const std::string& alignment = LEFT_STR, bool hideTableBackground = false, bool useHeaderIndent = false, bool isScrollable = false) {
 
     const size_t lineHeight = 16;
     const size_t fontSize = 16;
@@ -784,7 +784,7 @@ void drawTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::string>& 
             
             renderer->drawString(infoText, false, x + infoXOffsets[i], y + yOffsets[i], fontSize, renderer->a(alternateInfoTextColor));
         }
-    }, hideTableBackground, endGap), totalHeight);
+    }, hideTableBackground, endGap, isScrollable), totalHeight);
 
 }
 
@@ -795,7 +795,7 @@ void applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
 
 void addTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::vector<std::string>>& tableData,
     const std::string& packagePath, const size_t& columnOffset=161, const size_t& tableStartGap=19, const size_t& tableEndGap=3, const size_t& tableSpacing=0,
-    const std::string& tableSectionTextColor=DEFAULT_STR, const std::string& tableInfoTextColor=DEFAULT_STR, const std::string& tableAlignment=RIGHT_STR, const bool& hideTableBackground = false, const bool& useHeaderIndent = false) {
+    const std::string& tableSectionTextColor=DEFAULT_STR, const std::string& tableInfoTextColor=DEFAULT_STR, const std::string& tableAlignment=RIGHT_STR, const bool& hideTableBackground = false, const bool& useHeaderIndent = false, const bool& isScrollable = false) {
     std::string message;
 
     //std::string sectionString, infoString;
@@ -897,7 +897,7 @@ void addTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::vector<std
     // seperate sectionString and info string.  the sections will be on the left side of the "=", the info will be on the right side of the "=" within the string.  the end of an entry will be met with a newline (except for the very last entry). 
     // sectionString and infoString will each have equal newlines (denoting )
 
-    drawTable(list, sectionLines, infoLines, columnOffset, tableStartGap, tableEndGap, tableSpacing, tableSectionTextColor, tableInfoTextColor, tableAlignment, hideTableBackground, useHeaderIndent);
+    drawTable(list, sectionLines, infoLines, columnOffset, tableStartGap, tableEndGap, tableSpacing, tableSectionTextColor, tableInfoTextColor, tableAlignment, hideTableBackground, useHeaderIndent, isScrollable);
 }
 
 
