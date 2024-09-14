@@ -3855,7 +3855,8 @@ namespace tsl {
              * @param renderer Renderer
              */
             virtual void drawHighlight(gfx::Renderer *renderer) { // CUSTOM MODIFICATION start
-                
+                if (!m_isItem)
+                    return;
                 //Color highlightColor1 = {0x2, 0x8, 0xC, 0xF};
                 //Color highlightColor2 = {0x8, 0xF, 0xF, 0xF};
                 //highlightColor1Str = "#2288CC";
@@ -5894,7 +5895,7 @@ namespace tsl {
             std::function<void(bool)> m_stateChangedListener = [](bool){};
         };
         
-
+        
         class DummyListItem : public ListItem {
         public:
             DummyListItem()
@@ -5905,8 +5906,9 @@ namespace tsl {
                 this->m_maxWidth = 0;
                 this->width = 0;
                 this->height = 0;
+                m_isItem = false;
             }
-        
+            
             virtual ~DummyListItem() {}
             
             // Override the draw method to do nothing
@@ -5916,7 +5918,8 @@ namespace tsl {
             
             // Override the layout method to set the dimensions to zero
             virtual void layout(u16 parentX, u16 parentY, u16 parentWidth, u16 parentHeight) override {
-                this->setBoundaries(parentX, parentY, 0, 0); // Zero size
+                //this->setBoundaries(parentX, parentY, 0, 0); // Zero size
+                this->setBoundaries(this->getX(), this->getY(), 0, 0);
             }
             
             // Override the requestFocus method to allow this item to be focusable
@@ -5933,9 +5936,9 @@ namespace tsl {
             //    return true; // Consume the touch event
             //}
         };
-
-
-
+        
+        
+        
         class CategoryHeader : public Element {
         public:
             
