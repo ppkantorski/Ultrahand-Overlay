@@ -5171,11 +5171,15 @@ namespace tsl {
                             }
                 
                             // Calculate the required steps based on the table's scrollable height when entering
-                            int scrollableHeight = this->m_items[tableIndex]->getHeight() - this->getHeight();
-                            int requiredSteps = static_cast<int>(std::ceil(static_cast<float>(scrollableHeight) / TABLE_SCROLL_STEP_SIZE));
+                            //int scrollableHeight = this->m_items[tableIndex]->getHeight() - this->getHeight();
+                            //int requiredSteps = static_cast<int>(std::ceil(static_cast<float>(scrollableHeight) / TABLE_SCROLL_STEP_SIZE));
                             
-                            // Set scroll steps for the table when first entering
-                            scrollStepsInsideTable[tableIndex] = std::max(scrollStepsInsideTable[tableIndex], requiredSteps);
+                            //if ()
+                            //    requiredSteps = 0;
+                            //
+                            //// Set scroll steps for the table when first entering
+                            //scrollStepsInsideTable[tableIndex] = std::max(scrollStepsInsideTable[tableIndex], requiredSteps);
+
                             
                 
                             break;
