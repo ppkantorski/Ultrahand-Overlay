@@ -1003,9 +1003,9 @@ void addPackageInfo(std::unique_ptr<tsl::elm::List>& list, auto& packageHeader, 
     }
 
     // Drawing the table with section lines and info lines
-    drawTable(list, sectionLines, infoLines, xOffset, 20, 12, 3);
+    //drawTable(list, sectionLines, infoLines, xOffset, 20, 12, 3);
+    drawTable(list, sectionLines, infoLines, xOffset, 19, 12, 3, DEFAULT_STR, DEFAULT_STR, LEFT_STR, false, false, true);
 }
-
 
 
 
