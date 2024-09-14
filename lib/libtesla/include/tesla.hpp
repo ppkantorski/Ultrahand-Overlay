@@ -5110,14 +5110,13 @@ namespace tsl {
                 // Handle initial focus
                 if (direction == FocusDirection::None) {
                     size_t i = 0;
+                    // Force focus on the first item if no previous focus exists
                     if (oldFocus == nullptr) {
-                        s32 elementHeight = 0;
-                        while (elementHeight < this->m_offset && i < this->m_items.size() - 1) {
-                            i++;
-                            elementHeight += this->m_items[i]->getHeight();
-                        }
+                        i = 0;  // Ensure we start at the top
+                        this->m_offset = 0;  // Reset scroll offset to the top
                     }
-            
+                
+                    // Traverse the items to find the first focusable item
                     for (; i < this->m_items.size(); ++i) {
                         newFocus = this->m_items[i]->requestFocus(oldFocus, direction);
                         if (newFocus != nullptr && newFocus != oldFocus) {  // Prevent re-focusing on the same element
@@ -5125,14 +5124,11 @@ namespace tsl {
                             this->updateScrollOffset();
                             isInTable = false;
                             inScrollMode = false;
-                            //tableIndex = 0;
-                            //entryOffset = 0;
-                            //scrollStepsInsideTable.clear();  // Reset the scroll steps for all tables
-                            //logMessage("Focus set to a new element. Reset scrollStepsInsideTable.");
                             return newFocus;
                         }
                     }
                 }
+                
             
                 
                 // Handle scrolling down
@@ -5158,9 +5154,9 @@ namespace tsl {
                 
                         if (this->m_items[i]->isTable()) {
                             // Check if the table is fully visible (i.e., it fits in the viewport)
-                            if (this->m_items[i]->getHeight() <= this->getHeight()) {
-                                continue;  // Skip the table if it fits within the viewport
-                            }
+                            //if (this->m_items[i]->getHeight() <= this->getHeight()) {
+                            //    continue;  // Skip the table if it fits within the viewport
+                            //}
                 
                             isInTable = true;
                             tableIndex = i;
