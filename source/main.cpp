@@ -3310,6 +3310,8 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
     if (onlyTables) {
         auto dummyItem = new tsl::elm::DummyListItem();
         list->addItem(dummyItem, 0, 1);
+        auto dummyItem2 = new tsl::elm::DummyListItem();
+        list->addItem(dummyItem2);
     }
 
     listItem.release();
