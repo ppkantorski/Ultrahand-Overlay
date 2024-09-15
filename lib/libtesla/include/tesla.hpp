@@ -5301,7 +5301,7 @@ namespace tsl {
                             potentialTableIndex--;  // Move to the next item above
                         }
                     }
-                    
+
                     
                     if (isInTable) {
                         //logMessage("Inside table: Offset: " + std::to_string(this->m_offset) + 
@@ -5450,6 +5450,17 @@ namespace tsl {
                 
                 return it - this->m_items.begin();
             }
+
+            /**
+             * @brief Gets the index in the list of the element passed in
+             *
+             * @param element Element to check
+             * @return Index in list. -1 for if the element isn't a member of the list
+             */
+            virtual s32 getLastIndex() {
+                return this->m_items.size() -1;
+            }
+
             
             virtual void setFocusedIndex(u32 index) {
                 if (this->m_items.size() > index) {
