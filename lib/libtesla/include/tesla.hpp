@@ -5156,7 +5156,7 @@ namespace tsl {
                         }
                     }
                 }
-                
+
                 
                 
                 // Handle scrolling down
@@ -5170,7 +5170,7 @@ namespace tsl {
                     }
                     
                     s32 accumulatedHeight = 0;
-                    
+
                     for (size_t i = this->m_focusedIndex + 1; i < this->m_items.size(); ++i) {
                         newFocus = this->m_items[i]->requestFocus(oldFocus, direction);
                         if (!isInTable && newFocus != nullptr && newFocus != oldFocus) {  // Only update focus if it's a new element
@@ -5301,10 +5301,7 @@ namespace tsl {
                             potentialTableIndex--;  // Move to the next item above
                         }
                     }
-
-
-
-
+                    
                     
                     if (isInTable) {
                         //logMessage("Inside table: Offset: " + std::to_string(this->m_offset) + 
