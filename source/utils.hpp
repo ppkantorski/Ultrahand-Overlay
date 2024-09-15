@@ -717,6 +717,10 @@ void addBasicListItem(auto& list, const std::string& itemText) {
     list->addItem(new tsl::elm::ListItem(itemText));
 }
 
+void addDummyListItem(auto& list, s32 index = -1) {
+    list->addItem(new tsl::elm::DummyListItem(), 0, index);
+}
+
 
 void drawTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::string>& sectionLines, std::vector<std::string>& infoLines,
                size_t columnOffset = 161, size_t startGap = 19, size_t endGap = 3, size_t newlineGap = 0,
