@@ -717,11 +717,15 @@ void addBasicListItem(auto& list, const std::string& itemText) {
     list->addItem(new tsl::elm::ListItem(itemText));
 }
 
+void addDummyListItem(auto& list, s32 index = -1) {
+    list->addItem(new tsl::elm::DummyListItem(), 0, index);
+}
+
 
 void drawTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::string>& sectionLines, std::vector<std::string>& infoLines,
-               size_t columnOffset = 161, size_t startGap = 19, size_t endGap = 3, size_t newlineGap = 0,
+               size_t columnOffset = 161, size_t startGap = 19, size_t endGap = 12, size_t newlineGap = 0,
                const std::string& tableSectionTextColor = DEFAULT_STR, const std::string& tableInfoTextColor = DEFAULT_STR, 
-               const std::string& alignment = LEFT_STR, bool hideTableBackground = false, bool useHeaderIndent = false) {
+               const std::string& alignment = LEFT_STR, bool hideTableBackground = false, bool useHeaderIndent = false, bool isScrollable = false) {
 
     const size_t lineHeight = 16;
     const size_t fontSize = 16;
@@ -784,7 +788,7 @@ void drawTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::string>& 
             
             renderer->drawString(infoText, false, x + infoXOffsets[i], y + yOffsets[i], fontSize, renderer->a(alternateInfoTextColor));
         }
-    }, hideTableBackground, endGap), totalHeight);
+    }, hideTableBackground, endGap, isScrollable), totalHeight);
 
 }
 
@@ -794,12 +798,14 @@ void drawTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::string>& 
 void applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::string& hexPath, const std::string& iniPath, const std::string& listString, const std::string& listPath, const std::string& jsonString, const std::string& jsonPath);
 
 void addTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::vector<std::string>>& tableData,
-    const std::string& packagePath, const size_t& columnOffset=161, const size_t& tableStartGap=19, const size_t& tableEndGap=3, const size_t& tableSpacing=0,
-    const std::string& tableSectionTextColor=DEFAULT_STR, const std::string& tableInfoTextColor=DEFAULT_STR, const std::string& tableAlignment=RIGHT_STR, const bool& hideTableBackground = false, const bool& useHeaderIndent = false) {
+    const std::string& packagePath, const size_t& columnOffset=161, const size_t& tableStartGap=19, const size_t& tableEndGap=12, const size_t& tableSpacing=0,
+    const std::string& tableSectionTextColor=DEFAULT_STR, const std::string& tableInfoTextColor=DEFAULT_STR, const std::string& tableAlignment=RIGHT_STR, const bool& hideTableBackground = false, const bool& useHeaderIndent = false, const bool& isScrollable = false) {
     std::string message;
 
     //std::string sectionString, infoString;
     std::vector<std::string> sectionLines, infoLines;
+
+    std::string listFileSourcePath;
 
     std::string hexPath, iniPath, listString, listPath, jsonString, jsonPath;
 
@@ -855,7 +861,22 @@ void addTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::vector<std
 
             const size_t cmdSize = cmd.size();
 
-            if (commandName == LIST_STR) {
+            if (commandName == "list_file_source" && listFileSourcePath.empty()) {
+                listFileSourcePath = cmd[1];
+                preprocessPath(listFileSourcePath, packagePath);
+                
+                // Read lines from the file
+                std::vector<std::string> lines = readListFromFile(listFileSourcePath);
+            
+                // Append lines to sectionLines and add empty lines to infoLines
+                for (const auto& line : lines) {
+                    sectionLines.push_back(line);
+                    infoLines.push_back(""); // Add an empty string for each section line
+                }
+            }
+
+
+            else if (commandName == LIST_STR) {
                 if (cmdSize >= 2) {
                     listString = cmd[1];
                     removeQuotes(listString);
@@ -897,7 +918,7 @@ void addTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::vector<std
     // seperate sectionString and info string.  the sections will be on the left side of the "=", the info will be on the right side of the "=" within the string.  the end of an entry will be met with a newline (except for the very last entry). 
     // sectionString and infoString will each have equal newlines (denoting )
 
-    drawTable(list, sectionLines, infoLines, columnOffset, tableStartGap, tableEndGap, tableSpacing, tableSectionTextColor, tableInfoTextColor, tableAlignment, hideTableBackground, useHeaderIndent);
+    drawTable(list, sectionLines, infoLines, columnOffset, tableStartGap, tableEndGap, tableSpacing, tableSectionTextColor, tableInfoTextColor, tableAlignment, hideTableBackground, useHeaderIndent, isScrollable);
 }
 
 
@@ -924,7 +945,7 @@ void addHelpInfo(std::unique_ptr<tsl::elm::List>& list) {
     };
 
     // Draw the table with the defined lines
-    drawTable(list, sectionLines, infoLines, xOffset, 19, 12, 3);
+    drawTable(list, sectionLines, infoLines, xOffset, 19, 12, 4);
 }
 
 
@@ -1003,9 +1024,9 @@ void addPackageInfo(std::unique_ptr<tsl::elm::List>& list, auto& packageHeader, 
     }
 
     // Drawing the table with section lines and info lines
-    drawTable(list, sectionLines, infoLines, xOffset, 20, 12, 3);
+    //drawTable(list, sectionLines, infoLines, xOffset, 20, 12, 3);
+    drawTable(list, sectionLines, infoLines, xOffset, 19, 12, 3, DEFAULT_STR, DEFAULT_STR, LEFT_STR, false, false, true);
 }
-
 
 
 

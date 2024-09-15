@@ -67,6 +67,9 @@ static const std::string GROUPING_PATTERN = ";grouping=";
 static const std::string SYSTEM_PATTERN = ";system=";
 
 // Table option patterns
+static const std::string SCROLLABLE_PATTERN = ";scrollable=";
+static const std::string TOP_PIVOT_PATTERN = ";top_pivot=";
+static const std::string BOTTOM_PIVOT_PATTERN = ";bottom_pivot=";
 static const std::string BACKGROUND_PATTERN = ";background="; // true or false
 static const std::string HEADER_INDENT_PATTERN = ";header_indent="; // true or false
 //static const std::string HEADER_PATTERN = ";header=";
@@ -502,7 +505,7 @@ bool handleRunningInterpreter(uint64_t& keysHeld) {
          //   lastSelectedListItem->setValue(lastSymbol + " 100%");
         return false;
     };
-    
+
     if (!updateUI(downloadPercentage, DOWNLOAD_SYMBOL) &&
         !updateUI(unzipPercentage, UNZIP_SYMBOL) &&
         !updateUI(copyPercentage, COPY_SYMBOL) &&
@@ -2507,7 +2510,8 @@ public:
 
 class PackageMenu; // forwarding
 
-void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
+// returns if there are or are not cickable items.
+bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                     const std::string& packageIniPath,
                     const std::string& packageConfigIniPath,
                     const PackageHeader& packageHeader, std::string& pageLeftName, std::string& pageRightName,
@@ -2567,6 +2571,13 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
 
     size_t delimiterPos;
 
+    //bool wasHeader = false;
+    //bool lastItemWasHeader = false;
+    bool isScrollableTable;
+    bool usingTopPivot, usingBottomPivot;
+    bool onlyTables = true;
+    //bool lastItemIsScrollableTable = false;
+
     // Pack variables into structs
 
     // All empty values
@@ -2599,10 +2610,14 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
         footer = "";
         useSelection = false;
         // Table settings
+        
+        isScrollableTable = false;
+        usingTopPivot = false;
+        usingBottomPivot = false;
         hideTableBackground = false;
         useHeaderIndent = false;
         tableStartGap = 19;
-        tableEndGap = 3;
+        tableEndGap = 12;
         tableColumnOffset = 161;
         tableSpacing = 0;
         tableSectionTextColor = DEFAULT_STR;
@@ -2631,6 +2646,12 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
         commandsOn.clear();
         commandsOff.clear();
         
+        //if (wasHeader)
+        //    lastItemWasHeader = true;
+        //else
+        //    lastItemWasHeader = false;
+        //wasHeader = false;
+
         
         if (drawLocation.empty() || (currentPage == drawLocation) || (optionName.front() == '@')) {
             
@@ -2642,6 +2663,7 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                     removeTag(headerTitle);
 
                     addHeader(list, headerTitle);
+                    //wasHeader = true;
                     skipSection = true;
                     lastSection = dropdownSection;
                 }
@@ -2675,6 +2697,7 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                         if (i == 0) {
                             // Add a section break with small text to indicate the "Commands" section
                             addHeader(list, COMMANDS);
+                            //wasHeader = true;
                             skipSection = false;
                             lastSection = "Commands";
                         }
@@ -2694,7 +2717,7 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                             listItem = std::make_unique<tsl::elm::ListItem>(cleanOptionName, footer);
                         }
                         
-                        if (packageMenuMode)
+                        if (packageMenuMode) {
                             listItem->setClickListener([packagePath, currentPage, packageName, optionName](s64 keys) {
                                 
                                 if (runningInterpreter.load(std::memory_order_acquire))
@@ -2714,7 +2737,7 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                                 }
                                 return false;
                             });
-                        else{
+                        } else {
                             listItem->setClickListener([optionName](s64 keys) {
                                 if (runningInterpreter.load(std::memory_order_acquire))
                                     return false;
@@ -2731,7 +2754,8 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                                 return false;
                             });
                         }
-
+                        onlyTables = false;
+                        //lastItemIsScrollableTable = false;
                         list->addItem(listItem.release());
                         
                         
@@ -2751,6 +2775,7 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                             } else {
                                 // Add a section break with small text to indicate the "Commands" section
                                 addHeader(list, cleanOptionName);
+                                //wasHeader = true;
                                 lastSection = optionName;
                             }
                         }
@@ -2762,6 +2787,7 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                 } else if (i == 0) {
                     // Add a section break with small text to indicate the "Commands" section
                     addHeader(list, COMMANDS);
+                    //wasHeader = true;
                     skipSection = false;
                     lastSection = "Commands";
                 }
@@ -2823,6 +2849,15 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                         commandGrouping = commandName.substr(GROUPING_PATTERN.length());
                         if (std::find(commandGroupings.begin(), commandGroupings.end(), commandGrouping) == commandGroupings.end())
                             commandGrouping = commandGroupings[0];
+                        continue;
+                    } else if (commandName.find(SCROLLABLE_PATTERN) == 0) {
+                        isScrollableTable = (commandName.substr(SCROLLABLE_PATTERN.length()) == TRUE_STR);
+                        continue;
+                    } else if (commandName.find(TOP_PIVOT_PATTERN) == 0) {
+                        usingTopPivot = (commandName.substr(TOP_PIVOT_PATTERN.length()) == TRUE_STR);
+                        continue;
+                    } else if (commandName.find(BOTTOM_PIVOT_PATTERN) == 0) {
+                        usingBottomPivot = (commandName.substr(BOTTOM_PIVOT_PATTERN.length()) == TRUE_STR);
                         continue;
                     } else if (commandName.find(BACKGROUND_PATTERN) == 0) {
                         hideTableBackground = (commandName.substr(BACKGROUND_PATTERN.length()) == FALSE_STR);
@@ -2977,16 +3012,39 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                 if (commandMode == TABLE_STR) {
                     if (useHeaderIndent) {
                         tableStartGap = tableEndGap = 19; // for perfect alignment for header tables
+                        isScrollableTable = false;
                     }
-                    addTable(list, tableData, packagePath, tableColumnOffset, tableStartGap, tableEndGap, tableSpacing, tableSectionTextColor, tableInfoTextColor, tableAlignment, hideTableBackground, useHeaderIndent);
+                    //if (isScrollableTable)
+                    //    lastItemIsScrollableTable = true;
+                    //else
+                    //    lastItemIsScrollableTable = false;
+
+                    if (usingTopPivot) {
+                        if (list->getLastIndex() == 0)
+                            onlyTables = false;
+
+                        addDummyListItem(list);
+                    }
+
+                    addTable(list, tableData, packagePath, tableColumnOffset, tableStartGap, tableEndGap, tableSpacing, tableSectionTextColor, tableInfoTextColor, tableAlignment, hideTableBackground, useHeaderIndent, isScrollableTable);
+
+                    if (usingBottomPivot) {
+                        addDummyListItem(list);
+                        //lastItemIsScrollableTable = false;
+                    }
+
                     continue;
                 } else if (commandMode == TRACKBAR_STR) {
+                    onlyTables = false;
+                    //lastItemIsScrollableTable = false;
                     list->addItem(new tsl::elm::TrackBar(optionName, packagePath, minValue, maxValue, units, interpretAndExecuteCommands, getSourceReplacement, commands, option.first, false, false, -1, unlockedTrackbar, onEveryTick));
                     continue;
                 } else if (commandMode == STEP_TRACKBAR_STR) {
                     if (steps == 0) { // assign minimum steps
                         steps = std::abs(maxValue - minValue) +1;
                     }
+                    onlyTables = false;
+                    //lastItemIsScrollableTable = false;
                     list->addItem(new tsl::elm::StepTrackBar(optionName, packagePath, steps, minValue, maxValue, units, interpretAndExecuteCommands, getSourceReplacement, commands, option.first, false, unlockedTrackbar, onEveryTick));
                     continue;
                 } else if (commandMode == NAMED_STEP_TRACKBAR_STR) {
@@ -3065,6 +3123,8 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                         
                         ++it;
                     }
+                    onlyTables = false;
+                    //lastItemIsScrollableTable = false;
                     list->addItem(new tsl::elm::NamedStepTrackBar(optionName, packagePath, entryList, interpretAndExecuteCommands, getSourceReplacement, commands, option.first, unlockedTrackbar, onEveryTick));
                     continue;
                 }
@@ -3183,7 +3243,8 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                             return false;
                         });
                     }
-                    
+                    onlyTables = false;
+                    //lastItemIsScrollableTable = false;
                     list->addItem(listItem.release());
                 } else { // For everything else
                     
@@ -3245,6 +3306,8 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                             }
                             return false;
                         });
+                        onlyTables = false;
+                        //lastItemIsScrollableTable = false;
                         list->addItem(listItem.release());
                     } else if (commandMode == TOGGLE_STR) {
                         cleanOptionName = optionName;
@@ -3287,12 +3350,27 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                             setIniFileValue((packagePath + CONFIG_FILENAME), keyName, FOOTER_STR, state ? CAPITAL_ON_STR : CAPITAL_OFF_STR);
                             
                         });
+                        onlyTables = false;
+                        //lastItemIsScrollableTable = false;
                         list->addItem(toggleListItem.release());
                     }
                 }
             }
         }
     }
+    if (onlyTables) {
+        //auto dummyItem = new tsl::elm::DummyListItem();
+        //list->addItem(dummyItem, 0, 1);
+        addDummyListItem(list, 1);
+        
+    }
+
+    //if (lastItemIsScrollableTable) {
+    //    //auto dummyItem = new tsl::elm::DummyListItem();
+    //    //list->addItem(dummyItem);
+    //    addDummyListItem(list);
+    //}
+
     listItem.release();
     toggleListItem.release();
     options.clear();
@@ -3300,6 +3378,7 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
     commandsOn.clear();
     commandsOff.clear();
     tableData.clear();
+    return onlyTables;
 }
 
 
@@ -3396,9 +3475,10 @@ public:
         
         
         std::string pageLeftName, pageRightName;
-        drawCommandsMenu(list, packageIniPath, packageConfigIniPath, packageHeader, pageLeftName, pageRightName,
+        bool noClickableItems = drawCommandsMenu(list, packageIniPath, packageConfigIniPath, packageHeader, pageLeftName, pageRightName,
             this->packagePath, this->currentPage, this->packageName, this->dropdownSection, this->nestedLayer,
-            this->pathPattern, this->pathPatternOn, this->pathPatternOff, this->usingPages);
+            this->pathPattern, this->pathPatternOn, this->pathPatternOff, this->usingPages
+        );
         
         
 
@@ -3429,7 +3509,8 @@ public:
             "",
             packageHeader.color,
             (usingPages && currentPage == RIGHT_STR) ? pageLeftName : "",
-            (usingPages && currentPage == LEFT_STR) ? pageRightName : ""
+            (usingPages && currentPage == LEFT_STR) ? pageRightName : "",
+            noClickableItems
         );
         
         rootFrame->setContent(list.release());
@@ -3801,6 +3882,8 @@ public:
         std::string filePath, specificKey, pathPattern, pathPatternOn, pathPatternOff, itemName, parentDirName, lastParentDirName;
         std::vector<std::string> filesList, filesListOn, filesListOff, filterList, filterListOn, filterListOff;
         
+        bool noClickableItems = false;
+
         bool toPackages = false;
         //bool skipSystem = false;
         lastMenuMode = hiddenMenuMode;
@@ -4533,7 +4616,7 @@ public:
                 bool usingPages = false;
 
                 PackageHeader packageHeader = getPackageHeaderFromIni(PACKAGE_PATH);
-                drawCommandsMenu(list, packageIniPath, packageConfigIniPath, packageHeader, pageLeftName, pageRightName,
+                noClickableItems = drawCommandsMenu(list, packageIniPath, packageConfigIniPath, packageHeader, pageLeftName, pageRightName,
                     packagePath, currentPage, packageName, this->dropdownSection, nestedLayer,
                     pathPattern, pathPatternOn, pathPatternOff, usingPages, false);
 
@@ -4551,7 +4634,7 @@ public:
         filesList.clear();
 
         //tsl::elm::OverlayFrame *rootFrame = new tsl::elm::OverlayFrame("Ultrahand", versionLabel, menuMode+hiddenMenuMode+dropdownSection);
-        auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel, menuMode+hiddenMenuMode+dropdownSection);
+        auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel, menuMode+hiddenMenuMode+dropdownSection, "", "", "", noClickableItems);
         
         rootFrame->setContent(list.release());
         
