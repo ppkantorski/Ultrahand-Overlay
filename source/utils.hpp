@@ -805,6 +805,8 @@ void addTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::vector<std
     //std::string sectionString, infoString;
     std::vector<std::string> sectionLines, infoLines;
 
+    std::string listFileSourcePath;
+
     std::string hexPath, iniPath, listString, listPath, jsonString, jsonPath;
 
     //std::string columnAlignment = tableAlignment;
@@ -859,7 +861,22 @@ void addTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::vector<std
 
             const size_t cmdSize = cmd.size();
 
-            if (commandName == LIST_STR) {
+            if (commandName == "list_file_source" && listFileSourcePath.empty()) {
+                listFileSourcePath = cmd[1];
+                preprocessPath(listFileSourcePath, packagePath);
+                
+                // Read lines from the file
+                std::vector<std::string> lines = readListFromFile(listFileSourcePath);
+            
+                // Append lines to sectionLines and add empty lines to infoLines
+                for (const auto& line : lines) {
+                    sectionLines.push_back(line);
+                    infoLines.push_back(""); // Add an empty string for each section line
+                }
+            }
+
+
+            else if (commandName == LIST_STR) {
                 if (cmdSize >= 2) {
                     listString = cmd[1];
                     removeQuotes(listString);
