@@ -5272,10 +5272,12 @@ namespace tsl {
                         // Traverse upwards to find the nearest table, skipping over non-focusable items
                         ssize_t potentialTableIndex = this->m_focusedIndex - 1;
                         int totalScrollableHeight = 0;  // To track the cumulative scrollable height
-                    
+                        
+                        bool _isTable = false;
                         while (potentialTableIndex >= 0) {
                             if (this->m_items[potentialTableIndex] != nullptr) { // Skip nullptr (non-focusable items)
                                 if (this->m_items[potentialTableIndex]->isItem()) { // Break early for ListItems
+                                    totalScrollableHeight -= this->m_offset;
                                     break;
                                 } else if (this->m_items[potentialTableIndex]->isTable()) {
                                     // Check if the table fits within the viewport; if it does, skip re-entering
@@ -5291,18 +5293,20 @@ namespace tsl {
                                     }
                     
                                     // Add the current table's scrollable height to the cumulative total
-                                    int scrollableHeight = tableHeight - m_offset;
+                                    int scrollableHeight = tableHeight;
                                     totalScrollableHeight += std::max(0, scrollableHeight); // Accumulate scrollable height
-                    
-                                    // Adjust scroll steps for this table
-                                    int requiredSteps = static_cast<int>(std::ceil(static_cast<float>(totalScrollableHeight) / TABLE_SCROLL_STEP_SIZE));
-                                    scrollStepsInsideTable[tableIndex] = std::max(scrollStepsInsideTable[tableIndex], requiredSteps);
+                                    _isTable = true;
                     
                                     // Update entryOffset to reflect the current offset
                                     entryOffset = this->m_offset;
                                 }
                             }
                             potentialTableIndex--;  // Move to the next item above
+                        }
+                        if (_isTable) {
+                            // Adjust scroll steps for this table
+                            int requiredSteps = static_cast<int>(std::ceil(static_cast<float>(totalScrollableHeight) / TABLE_SCROLL_STEP_SIZE));
+                            scrollStepsInsideTable[tableIndex] = std::max(scrollStepsInsideTable[tableIndex], requiredSteps);
                         }
                     }
 
