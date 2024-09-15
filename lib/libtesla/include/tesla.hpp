@@ -5291,7 +5291,7 @@ namespace tsl {
                                     }
                     
                                     // Add the current table's scrollable height to the cumulative total
-                                    int scrollableHeight = tableHeight;
+                                    int scrollableHeight = tableHeight - m_offset;
                                     totalScrollableHeight += std::max(0, scrollableHeight); // Accumulate scrollable height
                     
                                     // Adjust scroll steps for this table
