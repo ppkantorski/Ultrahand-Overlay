@@ -4273,7 +4273,8 @@ namespace tsl {
             
             // CUSTOM SECTION START
             virtual void draw(gfx::Renderer *renderer) override {
-                noClickableItems = m_noClickableItems;
+                if (m_noClickableItems != noClickableItems)
+                    noClickableItems = m_noClickableItems;
                 renderer->fillScreen(a(defaultBackgroundColor));
                 
                 if (expandedMemory && !refreshWallpaper.load(std::memory_order_acquire)) {
