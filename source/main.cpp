@@ -2576,7 +2576,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
     bool isScrollableTable;
     bool usingTopPivot, usingBottomPivot;
     bool onlyTables = true;
-    bool lastItemIsScrollableTable = false;
+    //bool lastItemIsScrollableTable = false;
 
     // Pack variables into structs
 
@@ -2755,7 +2755,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                             });
                         }
                         onlyTables = false;
-                        lastItemIsScrollableTable = false;
+                        //lastItemIsScrollableTable = false;
                         list->addItem(listItem.release());
                         
                         
@@ -3014,19 +3014,14 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                         tableStartGap = tableEndGap = 19; // for perfect alignment for header tables
                         isScrollableTable = false;
                     }
-                    if (isScrollableTable)
-                        lastItemIsScrollableTable = true;
-                    else
-                        lastItemIsScrollableTable = false;
+                    //if (isScrollableTable)
+                    //    lastItemIsScrollableTable = true;
+                    //else
+                    //    lastItemIsScrollableTable = false;
 
                     if (usingTopPivot) {
                         if (list->getLastIndex() == 0)
                             onlyTables = false;
-                        //auto dummyItem = new tsl::elm::DummyListItem();
-                        ////if (lastItemWasHeader)
-                        ////    list->addItem(dummyItem, 0, list->getItemCount() - 3);
-                        ////else
-                        //list->addItem(dummyItem);
 
                         addDummyListItem(list);
                     }
@@ -3034,16 +3029,14 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                     addTable(list, tableData, packagePath, tableColumnOffset, tableStartGap, tableEndGap, tableSpacing, tableSectionTextColor, tableInfoTextColor, tableAlignment, hideTableBackground, useHeaderIndent, isScrollableTable);
 
                     if (usingBottomPivot) {
-                        //auto dummyItem = new tsl::elm::DummyListItem();
-                        //list->addItem(dummyItem);
                         addDummyListItem(list);
-                        lastItemIsScrollableTable = false;
+                        //lastItemIsScrollableTable = false;
                     }
 
                     continue;
                 } else if (commandMode == TRACKBAR_STR) {
                     onlyTables = false;
-                    lastItemIsScrollableTable = false;
+                    //lastItemIsScrollableTable = false;
                     list->addItem(new tsl::elm::TrackBar(optionName, packagePath, minValue, maxValue, units, interpretAndExecuteCommands, getSourceReplacement, commands, option.first, false, false, -1, unlockedTrackbar, onEveryTick));
                     continue;
                 } else if (commandMode == STEP_TRACKBAR_STR) {
@@ -3051,7 +3044,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                         steps = std::abs(maxValue - minValue) +1;
                     }
                     onlyTables = false;
-                    lastItemIsScrollableTable = false;
+                    //lastItemIsScrollableTable = false;
                     list->addItem(new tsl::elm::StepTrackBar(optionName, packagePath, steps, minValue, maxValue, units, interpretAndExecuteCommands, getSourceReplacement, commands, option.first, false, unlockedTrackbar, onEveryTick));
                     continue;
                 } else if (commandMode == NAMED_STEP_TRACKBAR_STR) {
@@ -3131,7 +3124,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                         ++it;
                     }
                     onlyTables = false;
-                    lastItemIsScrollableTable = false;
+                    //lastItemIsScrollableTable = false;
                     list->addItem(new tsl::elm::NamedStepTrackBar(optionName, packagePath, entryList, interpretAndExecuteCommands, getSourceReplacement, commands, option.first, unlockedTrackbar, onEveryTick));
                     continue;
                 }
@@ -3251,7 +3244,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                         });
                     }
                     onlyTables = false;
-                    lastItemIsScrollableTable = false;
+                    //lastItemIsScrollableTable = false;
                     list->addItem(listItem.release());
                 } else { // For everything else
                     
@@ -3314,7 +3307,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                             return false;
                         });
                         onlyTables = false;
-                        lastItemIsScrollableTable = false;
+                        //lastItemIsScrollableTable = false;
                         list->addItem(listItem.release());
                     } else if (commandMode == TOGGLE_STR) {
                         cleanOptionName = optionName;
@@ -3358,7 +3351,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                             
                         });
                         onlyTables = false;
-                        lastItemIsScrollableTable = false;
+                        //lastItemIsScrollableTable = false;
                         list->addItem(toggleListItem.release());
                     }
                 }
@@ -3372,11 +3365,11 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
         
     }
 
-    if (lastItemIsScrollableTable) {
-        //auto dummyItem = new tsl::elm::DummyListItem();
-        //list->addItem(dummyItem);
-        addDummyListItem(list);
-    }
+    //if (lastItemIsScrollableTable) {
+    //    //auto dummyItem = new tsl::elm::DummyListItem();
+    //    //list->addItem(dummyItem);
+    //    addDummyListItem(list);
+    //}
 
     listItem.release();
     toggleListItem.release();
