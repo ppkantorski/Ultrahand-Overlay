@@ -68,6 +68,8 @@ static const std::string SYSTEM_PATTERN = ";system=";
 
 // Table option patterns
 static const std::string SCROLLABLE_PATTERN = ";scrollable=";
+static const std::string TOP_PIVOT_PATTERN = ";top_pivot=";
+static const std::string BOTTOM_PIVOT_PATTERN = ";bottom_pivot=";
 static const std::string BACKGROUND_PATTERN = ";background="; // true or false
 static const std::string HEADER_INDENT_PATTERN = ";header_indent="; // true or false
 //static const std::string HEADER_PATTERN = ";header=";
@@ -2568,7 +2570,10 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
 
     size_t delimiterPos;
 
+    //bool wasHeader = false;
+    //bool lastItemWasHeader = false;
     bool isScrollableTable;
+    bool usingTopPivot, usingBottomPivot;
     bool onlyTables = true;
     bool lastItemIsScrollableTable = false;
 
@@ -2604,7 +2609,10 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
         footer = "";
         useSelection = false;
         // Table settings
+        
         isScrollableTable = false;
+        usingTopPivot = false;
+        usingBottomPivot = false;
         hideTableBackground = false;
         useHeaderIndent = false;
         tableStartGap = 19;
@@ -2637,6 +2645,12 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
         commandsOn.clear();
         commandsOff.clear();
         
+        //if (wasHeader)
+        //    lastItemWasHeader = true;
+        //else
+        //    lastItemWasHeader = false;
+        //wasHeader = false;
+
         
         if (drawLocation.empty() || (currentPage == drawLocation) || (optionName.front() == '@')) {
             
@@ -2648,6 +2662,7 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                     removeTag(headerTitle);
 
                     addHeader(list, headerTitle);
+                    //wasHeader = true;
                     skipSection = true;
                     lastSection = dropdownSection;
                 }
@@ -2681,6 +2696,7 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                         if (i == 0) {
                             // Add a section break with small text to indicate the "Commands" section
                             addHeader(list, COMMANDS);
+                            //wasHeader = true;
                             skipSection = false;
                             lastSection = "Commands";
                         }
@@ -2758,6 +2774,7 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                             } else {
                                 // Add a section break with small text to indicate the "Commands" section
                                 addHeader(list, cleanOptionName);
+                                //wasHeader = true;
                                 lastSection = optionName;
                             }
                         }
@@ -2769,6 +2786,7 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                 } else if (i == 0) {
                     // Add a section break with small text to indicate the "Commands" section
                     addHeader(list, COMMANDS);
+                    //wasHeader = true;
                     skipSection = false;
                     lastSection = "Commands";
                 }
@@ -2833,6 +2851,12 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                         continue;
                     } else if (commandName.find(SCROLLABLE_PATTERN) == 0) {
                         isScrollableTable = (commandName.substr(SCROLLABLE_PATTERN.length()) == TRUE_STR);
+                        continue;
+                    } else if (commandName.find(TOP_PIVOT_PATTERN) == 0) {
+                        usingTopPivot = (commandName.substr(TOP_PIVOT_PATTERN.length()) == TRUE_STR);
+                        continue;
+                    } else if (commandName.find(BOTTOM_PIVOT_PATTERN) == 0) {
+                        usingBottomPivot = (commandName.substr(BOTTOM_PIVOT_PATTERN.length()) == TRUE_STR);
                         continue;
                     } else if (commandName.find(BACKGROUND_PATTERN) == 0) {
                         hideTableBackground = (commandName.substr(BACKGROUND_PATTERN.length()) == FALSE_STR);
@@ -2993,7 +3017,24 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                         lastItemIsScrollableTable = true;
                     else
                         lastItemIsScrollableTable = false;
+
+                    if (usingTopPivot) {
+                        onlyTables = false;
+                        auto dummyItem = new tsl::elm::DummyListItem();
+                        //if (lastItemWasHeader)
+                        //    list->addItem(dummyItem, 0, list->getItemCount() - 3);
+                        //else
+                        list->addItem(dummyItem);
+                    }
+
                     addTable(list, tableData, packagePath, tableColumnOffset, tableStartGap, tableEndGap, tableSpacing, tableSectionTextColor, tableInfoTextColor, tableAlignment, hideTableBackground, useHeaderIndent, isScrollableTable);
+
+                    if (usingBottomPivot) {
+                        auto dummyItem = new tsl::elm::DummyListItem();
+                        list->addItem(dummyItem);
+                        lastItemIsScrollableTable = false;
+                    }
+
                     continue;
                 } else if (commandMode == TRACKBAR_STR) {
                     onlyTables = false;
@@ -3294,7 +3335,7 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                             toggleStateOn = (footer == CAPITAL_ON_STR);
                         }
                         
-                        
+
                         toggleListItem->setState(toggleStateOn);
                         
                         toggleListItem->setStateChangedListener([i, commandsOn, commandsOff, keyName = option.first, packagePath,
@@ -3323,12 +3364,12 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
         auto dummyItem = new tsl::elm::DummyListItem();
         list->addItem(dummyItem, 0, 1);
     }
-    
+
     if (lastItemIsScrollableTable) {
         auto dummyItem2 = new tsl::elm::DummyListItem();
         list->addItem(dummyItem2);
     }
-    
+
     listItem.release();
     toggleListItem.release();
     options.clear();
