@@ -3019,19 +3019,23 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                         lastItemIsScrollableTable = false;
 
                     if (usingTopPivot) {
-                        onlyTables = false;
-                        auto dummyItem = new tsl::elm::DummyListItem();
-                        //if (lastItemWasHeader)
-                        //    list->addItem(dummyItem, 0, list->getItemCount() - 3);
-                        //else
-                        list->addItem(dummyItem);
+                        if (list->getLastIndex() == 0)
+                            onlyTables = false;
+                        //auto dummyItem = new tsl::elm::DummyListItem();
+                        ////if (lastItemWasHeader)
+                        ////    list->addItem(dummyItem, 0, list->getItemCount() - 3);
+                        ////else
+                        //list->addItem(dummyItem);
+
+                        addDummyListItem(list);
                     }
 
                     addTable(list, tableData, packagePath, tableColumnOffset, tableStartGap, tableEndGap, tableSpacing, tableSectionTextColor, tableInfoTextColor, tableAlignment, hideTableBackground, useHeaderIndent, isScrollableTable);
 
                     if (usingBottomPivot) {
-                        auto dummyItem = new tsl::elm::DummyListItem();
-                        list->addItem(dummyItem);
+                        //auto dummyItem = new tsl::elm::DummyListItem();
+                        //list->addItem(dummyItem);
+                        addDummyListItem(list);
                         lastItemIsScrollableTable = false;
                     }
 
@@ -3361,13 +3365,15 @@ void drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
         }
     }
     if (onlyTables) {
-        auto dummyItem = new tsl::elm::DummyListItem();
-        list->addItem(dummyItem, 0, 1);
+        //auto dummyItem = new tsl::elm::DummyListItem();
+        //list->addItem(dummyItem, 0, 1);
+        addDummyListItem(list, 1);
     }
 
     if (lastItemIsScrollableTable) {
-        auto dummyItem2 = new tsl::elm::DummyListItem();
-        list->addItem(dummyItem2);
+        //auto dummyItem = new tsl::elm::DummyListItem();
+        //list->addItem(dummyItem);
+        addDummyListItem(list);
     }
 
     listItem.release();
