@@ -723,7 +723,7 @@ void addDummyListItem(auto& list, s32 index = -1) {
 
 
 void drawTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::string>& sectionLines, std::vector<std::string>& infoLines,
-               size_t columnOffset = 161, size_t startGap = 19, size_t endGap = 3, size_t newlineGap = 0,
+               size_t columnOffset = 161, size_t startGap = 19, size_t endGap = 12, size_t newlineGap = 0,
                const std::string& tableSectionTextColor = DEFAULT_STR, const std::string& tableInfoTextColor = DEFAULT_STR, 
                const std::string& alignment = LEFT_STR, bool hideTableBackground = false, bool useHeaderIndent = false, bool isScrollable = false) {
 
@@ -798,7 +798,7 @@ void drawTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::string>& 
 void applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::string& hexPath, const std::string& iniPath, const std::string& listString, const std::string& listPath, const std::string& jsonString, const std::string& jsonPath);
 
 void addTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::vector<std::string>>& tableData,
-    const std::string& packagePath, const size_t& columnOffset=161, const size_t& tableStartGap=19, const size_t& tableEndGap=3, const size_t& tableSpacing=0,
+    const std::string& packagePath, const size_t& columnOffset=161, const size_t& tableStartGap=19, const size_t& tableEndGap=12, const size_t& tableSpacing=0,
     const std::string& tableSectionTextColor=DEFAULT_STR, const std::string& tableInfoTextColor=DEFAULT_STR, const std::string& tableAlignment=RIGHT_STR, const bool& hideTableBackground = false, const bool& useHeaderIndent = false, const bool& isScrollable = false) {
     std::string message;
 
@@ -945,7 +945,7 @@ void addHelpInfo(std::unique_ptr<tsl::elm::List>& list) {
     };
 
     // Draw the table with the defined lines
-    drawTable(list, sectionLines, infoLines, xOffset, 19, 12, 3);
+    drawTable(list, sectionLines, infoLines, xOffset, 19, 12, 4);
 }
 
 
