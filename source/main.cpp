@@ -3372,11 +3372,11 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
         
     }
 
-    //if (lastItemIsScrollableTable) {
-    //    //auto dummyItem = new tsl::elm::DummyListItem();
-    //    //list->addItem(dummyItem);
-    //    addDummyListItem(list);
-    //}
+    if (lastItemIsScrollableTable) {
+        //auto dummyItem = new tsl::elm::DummyListItem();
+        //list->addItem(dummyItem);
+        addDummyListItem(list);
+    }
 
     listItem.release();
     toggleListItem.release();
