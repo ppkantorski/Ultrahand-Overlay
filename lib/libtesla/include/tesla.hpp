@@ -5118,49 +5118,43 @@ namespace tsl {
             
                 // Handle initial focus
                 if (direction == FocusDirection::None) {
-                    size_t closestIndex = 0;
-                    s32 elementHeight = 0;
-                    s32 minDistance = std::numeric_limits<s32>::max(); // Minimum distance to find the closest item
-                
-                    // Determine the closest item to the current offset
-                    for (size_t i = 0; i < this->m_items.size(); ++i) {
-                        // Calculate the cumulative height to this item
-                        elementHeight += this->m_items[i]->getHeight();
-                
-                        // Calculate the distance of this item's top edge to the current offset
-                        s32 distance = std::abs(this->m_offset - elementHeight);
-                
-                        // If this item is closer than the previous ones, mark it as the closest
-                        if (distance < minDistance) {
-                            minDistance = distance;
-                            closestIndex = i;
-                        }
-                    }
-                
-                    // Set focus to the closest item found
-                    for (size_t i = closestIndex; i < this->m_items.size(); ++i) {
-                        newFocus = this->m_items[i]->requestFocus(oldFocus, direction);
-                        if (newFocus != nullptr && newFocus != oldFocus) {  // Prevent re-focusing on the same element
-                            this->m_focusedIndex = i;
-                            this->updateScrollOffset();
-                            isInTable = false;
-                            inScrollMode = false;
-                            tableIndex = 0;
-                            entryOffset = 0;
-                            return newFocus;
+                    size_t i = 0;
+                    if (oldFocus == nullptr) {
+                        s32 elementHeight = 0;
+                        while (elementHeight < this->m_offset && i < this->m_items.size() - 1) {
+                            i++;
+                            elementHeight += this->m_items[i]->getHeight();
                         }
                     }
                     
-                    // Edge case: If the loop did not find any focusable items, set the first focusable item
-                    for (size_t i = 0; i < this->m_items.size(); ++i) {
-                        newFocus = this->m_items[i]->requestFocus(oldFocus, direction);
+                    // Loop backwards from the current position to the start
+                    for (ssize_t j = i; j >= 0; j--) {  // Use ssize_t to allow negative indexing check
+                        newFocus = this->m_items[j]->requestFocus(oldFocus, direction);
                         if (newFocus != nullptr && newFocus != oldFocus) {  // Prevent re-focusing on the same element
-                            this->m_focusedIndex = i;
+                            this->m_focusedIndex = j;
                             this->updateScrollOffset();
                             isInTable = false;
                             inScrollMode = false;
-                            tableIndex = 0;
-                            entryOffset = 0;
+                            //tableIndex = 0;
+                            //entryOffset = 0;
+                            //scrollStepsInsideTable.clear();  // Reset the scroll steps for all tables
+                            //logMessage("Focus set to a new element. Reset scrollStepsInsideTable.");
+                            return newFocus;
+                        }
+                    }
+                
+                    // If no new focus found, attempt forward traversal as a fallback
+                    for (size_t k = i + 1; k < this->m_items.size(); ++k) {
+                        newFocus = this->m_items[k]->requestFocus(oldFocus, direction);
+                        if (newFocus != nullptr && newFocus != oldFocus) {  // Prevent re-focusing on the same element
+                            this->m_focusedIndex = k;
+                            this->updateScrollOffset();
+                            isInTable = false;
+                            inScrollMode = false;
+                            //tableIndex = 0;
+                            //entryOffset = 0;
+                            //scrollStepsInsideTable.clear();  // Reset the scroll steps for all tables
+                            //logMessage("Focus set to a new element. Reset scrollStepsInsideTable.");
                             return newFocus;
                         }
                     }
