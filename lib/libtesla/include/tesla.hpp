@@ -5232,6 +5232,7 @@ namespace tsl {
                             this->m_offset = this->m_nextOffset;
                             this->invalidate();  // Redraw the list to reflect the new offset
                         } else {
+                            scrollStepsInsideTable[tableIndex]++;
                             // Reached the bottom of the table
                             this->m_nextOffset = this->m_listHeight - this->getHeight() + 50;
                             this->m_offset = this->m_nextOffset;
