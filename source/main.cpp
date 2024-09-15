@@ -2617,7 +2617,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
         hideTableBackground = false;
         useHeaderIndent = false;
         tableStartGap = 19;
-        tableEndGap = 3;
+        tableEndGap = 12;
         tableColumnOffset = 161;
         tableSpacing = 0;
         tableSectionTextColor = DEFAULT_STR;
