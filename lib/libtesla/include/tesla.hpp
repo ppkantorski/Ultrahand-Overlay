@@ -5109,27 +5109,55 @@ namespace tsl {
             
                 // Handle initial focus
                 if (direction == FocusDirection::None) {
-                    size_t i = 0;
-                    // Force focus on the first item if no previous focus exists
-                    if (oldFocus == nullptr) {
-                        i = 0;  // Ensure we start at the top
-                        this->m_offset = 0;  // Reset scroll offset to the top
+                    size_t closestIndex = 0;
+                    s32 elementHeight = 0;
+                    s32 minDistance = std::numeric_limits<s32>::max(); // Minimum distance to find the closest item
+                
+                    // Determine the closest item to the current offset
+                    for (size_t i = 0; i < this->m_items.size(); ++i) {
+                        // Calculate the cumulative height to this item
+                        elementHeight += this->m_items[i]->getHeight();
+                
+                        // Calculate the distance of this item's top edge to the current offset
+                        s32 distance = std::abs(this->m_offset - elementHeight);
+                
+                        // If this item is closer than the previous ones, mark it as the closest
+                        if (distance < minDistance) {
+                            minDistance = distance;
+                            closestIndex = i;
+                        }
                     }
                 
-                    // Traverse the items to find the first focusable item
-                    for (; i < this->m_items.size(); ++i) {
+                    // Set focus to the closest item found
+                    for (size_t i = closestIndex; i < this->m_items.size(); ++i) {
                         newFocus = this->m_items[i]->requestFocus(oldFocus, direction);
                         if (newFocus != nullptr && newFocus != oldFocus) {  // Prevent re-focusing on the same element
                             this->m_focusedIndex = i;
                             this->updateScrollOffset();
                             isInTable = false;
                             inScrollMode = false;
+                            tableIndex = 0;
+                            entryOffset = 0;
+                            return newFocus;
+                        }
+                    }
+                    
+                    // Edge case: If the loop did not find any focusable items, set the first focusable item
+                    for (size_t i = 0; i < this->m_items.size(); ++i) {
+                        newFocus = this->m_items[i]->requestFocus(oldFocus, direction);
+                        if (newFocus != nullptr && newFocus != oldFocus) {  // Prevent re-focusing on the same element
+                            this->m_focusedIndex = i;
+                            this->updateScrollOffset();
+                            isInTable = false;
+                            inScrollMode = false;
+                            tableIndex = 0;
+                            entryOffset = 0;
                             return newFocus;
                         }
                     }
                 }
                 
-            
+                
                 
                 // Handle scrolling down
                 else if (direction == FocusDirection::Down) {
@@ -5140,7 +5168,9 @@ namespace tsl {
                         this->invalidate();  // Redraw
                         return oldFocus;
                     }
-                
+                    
+                    s32 accumulatedHeight = 0;
+                    
                     for (size_t i = this->m_focusedIndex + 1; i < this->m_items.size(); ++i) {
                         newFocus = this->m_items[i]->requestFocus(oldFocus, direction);
                         if (!isInTable && newFocus != nullptr && newFocus != oldFocus) {  // Only update focus if it's a new element
@@ -5151,22 +5181,26 @@ namespace tsl {
                             tableIndex = 0;
                             return newFocus;
                         }
-                
+                        if (!this->m_items[i]->isItem()) {
+                            // Accumulate the heights of small tables to decide if they should be skipped
+                            accumulatedHeight += this->m_items[i]->getHeight();
+                        }
+                        
                         if (this->m_items[i]->isTable()) {
                             // Check if the table is fully visible (i.e., it fits in the viewport)
-                            //if (this->m_items[i]->getHeight() <= this->getHeight()) {
-                            //    continue;  // Skip the table if it fits within the viewport
-                            //}
-                
+                            if (accumulatedHeight <= this->getHeight()) {
+                                continue;  // Skip the table if it fits within the viewport
+                            }
+                            
                             isInTable = true;
                             tableIndex = i;
                             entryOffset = this->m_offset;
-                
+                            
                             // Expand scrollStepsInsideTable if necessary to track this table
                             if (scrollStepsInsideTable.size() <= tableIndex) {
                                 scrollStepsInsideTable.resize(tableIndex + 1, 0);  // Ensure enough space for the current table index
                             }
-                
+                            
                             // Calculate the required steps based on the table's scrollable height when entering
                             //int scrollableHeight = this->m_items[tableIndex]->getHeight() - this->getHeight();
                             //int requiredSteps = static_cast<int>(std::ceil(static_cast<float>(scrollableHeight) / TABLE_SCROLL_STEP_SIZE));
