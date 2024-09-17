@@ -4887,6 +4887,7 @@ public:
      * It sets up file system mounts, initializes network services, and performs other necessary tasks.
      */
     virtual void initServices() override {
+        isLauncher = true;
         fsdevMountSdmc();
         splInitialize();
         spsmInitialize();
