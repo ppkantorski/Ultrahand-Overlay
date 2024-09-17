@@ -7876,9 +7876,9 @@ namespace tsl {
         bool isLauncher = false;
         bool skipCombo = false;
         for (u8 arg = 0; arg < argc; arg++) {
-            if ((strcasecmp(argv[arg], "ovlmenu.ovl") == 0)) {
-                isLauncher = true;
-            }
+            //if ((strcasecmp(argv[arg], "ovlmenu.ovl") == 0)) {
+            //    isLauncher = true;
+            //}
             if ((strcasecmp(argv[arg], "--skipCombo") == 0)) {
                 skipCombo = true;
                 //logMessage("Skip combo is present.");
@@ -7913,8 +7913,7 @@ namespace tsl {
             (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_OVERLAY_STR) != FALSE_STR)
         );
         if (inOverlay && skipCombo) {
-            if (isLauncher)
-                setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_OVERLAY_STR, FALSE_STR);
+            setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_OVERLAY_STR, FALSE_STR);
             eventFire(&shData.comboEvent);
         }
 
