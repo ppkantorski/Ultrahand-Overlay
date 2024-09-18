@@ -7907,7 +7907,9 @@ namespace tsl {
         overlay->initScreen();
         overlay->changeTo(overlay->loadInitialGui());
 
-        
+        if (isLauncher && firstBoot) {
+            setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_OVERLAY_STR, FALSE_STR);
+        }
         
         
         bool inOverlay = (
