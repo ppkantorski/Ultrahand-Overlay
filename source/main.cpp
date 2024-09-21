@@ -674,11 +674,14 @@ private:
         listItem->setValue(versionLabel, true);
 
         listItem->setClickListener([listItemRaw = listItem.get(), downloadUrl, targetPath, movePath](uint64_t keys) {
+            static bool executingCommands = false;
             if (runningInterpreter.load(std::memory_order_acquire)) {
                 return false;
             } else {
-                if (commandSuccess && movePath != LANG_PATH)
+                if (executingCommands && commandSuccess && movePath != LANG_PATH) {
                     triggerMenuReload = true;
+                }
+                executingCommands = false;
             }
 
             if (simulatedSelect && !simulatedSelectComplete) {
@@ -687,6 +690,7 @@ private:
             }
             std::vector<std::vector<std::string>> interpreterCommands;
             if (keys & KEY_A) {
+                executingCommands = true;
                 isDownloadCommand = true;
                 
                 interpreterCommands = {
