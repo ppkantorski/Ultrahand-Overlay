@@ -1969,7 +1969,11 @@ namespace tsl {
         }
     }
     
-
+    void initializeUltrahandSettings() {
+        // Set Ultrahand Globals
+        useSwipeToOpen = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "swipe_to_open") == TRUE_STR);
+        useOpaqueScreenshots = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "opaque_screenshots") == TRUE_STR);
+    }
 
     
     
