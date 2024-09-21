@@ -760,7 +760,7 @@ void drawTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::string>& 
 
     list->addItem(new tsl::elm::TableDrawer([=](tsl::gfx::Renderer* renderer, s32 x, s32 y, s32 w, s32 h) mutable {
         if (useHeaderIndent) {
-            renderer->drawRect(x - 2, y + 1, 3, 23, renderer->a(tsl::headerSeparatorColor));
+            renderer->drawRect(x - 2, y + 2, 4, 22, renderer->a(tsl::headerSeparatorColor));
         }
         std::string infoText;
         for (size_t i = 0; i < infoLines.size(); ++i) {
