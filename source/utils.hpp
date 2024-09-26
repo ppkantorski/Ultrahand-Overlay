@@ -2463,7 +2463,16 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             std::string togglePattern = cmd[1];
             removeQuotes(togglePattern);
             lblInitialize();
-            if (togglePattern == ON_STR)
+            if (togglePattern == "auto") {
+                if (cmd.size() >= 3) {
+                    togglePattern = cmd[2];
+                    if (togglePattern == ON_STR)
+                        lblEnableAutoBrightnessControl();
+                    else if (togglePattern == OFF_STR)
+                        lblDisableAutoBrightnessControl();
+                }
+            }
+            else if (togglePattern == ON_STR)
                 lblSwitchBacklightOn(0);
             else if (togglePattern == OFF_STR)
                 lblSwitchBacklightOff(0);
@@ -2472,6 +2481,43 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             }
             lblExit();
         }
+    //} else if (commandName == "volume") {
+    //    if (cmd.size() >= 2) {
+    //        std::string volumeInput = cmd[1];
+    //        removeQuotes(volumeInput);  // Sanitize input by removing quotes
+    //        
+    //        if (isValidNumber(volumeInput)) {
+    //            // Convert input string to a float for percentage (0-100)
+    //            float volumePercentage = std::stof(volumeInput);
+    //            
+    //            // Ensure the volume is within valid range 0 to 100
+    //            if (volumePercentage < 0.0f || volumePercentage > 100.0f) {
+    //                return;  // Exit if invalid percentage
+    //            }
+    //            
+    //            // Initialize the settings service
+    //            Result rc = setsysInitialize();
+    //            if (R_SUCCEEDED(rc)) {
+    //                SetSysAudioVolume audio_volume;
+    //                audio_volume.unk_x0 = SetSysAudioDevice_Console;  // Leave this at 0
+    //                
+    //                // Convert percentage (0-100) to a scale of 0-15 for volume control
+    //                audio_volume.volume = static_cast<uint8_t>((volumePercentage / 100.0f) * 15.0f);
+    //                
+    //                // Set the volume for the Console
+    //                rc = setsysSetAudioVolume(SetSysAudioDevice_Console, &audio_volume);
+    //                
+    //                // Check if setting the volume was successful
+    //                if (R_FAILED(rc)) {
+    //                    // Handle failure, exit if needed
+    //                    return;
+    //                }
+    //                
+    //                // Exit the settings service
+    //                setsysExit();
+    //            }
+    //        }
+    //    }
     } else if (commandName == "refresh") {
         if (cmd.size() == 1)
             refreshPage = true;
