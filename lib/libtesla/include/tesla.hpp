@@ -964,75 +964,6 @@ static std::unordered_map<wchar_t, float> characterWidths = {
 };
 
 static float defaultNumericCharWidth = 0.66;
-//static std::unordered_map<wchar_t, float> numericCharacterWidths = {
-//    {L'0', defaultNumericCharWidth},
-//    {L'1', defaultNumericCharWidth},
-//    {L'2', defaultNumericCharWidth},
-//    {L'3', defaultNumericCharWidth},
-//    {L'4', defaultNumericCharWidth},
-//    {L'5', defaultNumericCharWidth},
-//    {L'6', defaultNumericCharWidth},
-//    {L'7', defaultNumericCharWidth},
-//    {L'8', defaultNumericCharWidth},
-//    {L'9', defaultNumericCharWidth}
-//};
-
-
-
-//inline float calculateStringWidth2(const std::string& str, s32 fontSize, bool fixedWidthNumbers = false) {
-//    if (str.empty()) {
-//        return 0.0f;
-//    }
-//    
-//    float totalWidth = 0.0f;
-//    std::string::size_type strPos = 0;
-//    ssize_t codepointWidth;
-//    //u32 prevCharacter = 0;
-//    
-//    //float currFontSize;
-//    //int xAdvance, leftBearing, kernAdvance;
-//    u32 currCharacter;
-//    
-//    bool found;
-//    while (strPos < str.size()) {
-//        found = false;
-//        codepointWidth = decode_utf8(&currCharacter, reinterpret_cast<const u8*>(&str[strPos]));
-//        
-//        if (codepointWidth <= 0) {
-//            break;
-//        }
-//        
-//        // Check if the character is in the character width map
-//        if (!fixedWidthNumbers) {
-//            auto it = characterWidths.find(static_cast<wchar_t>(currCharacter));
-//            if (it != characterWidths.end()) {
-//                totalWidth += it->second * fontSize;
-//                found = true;
-//            }
-//        } else {
-//            auto it = numericCharacterWidths.find(static_cast<wchar_t>(currCharacter));
-//            if (it != numericCharacterWidths.end()) {
-//                totalWidth += it->second * fontSize;
-//                found = true;
-//            } else {
-//                auto it = characterWidths.find(static_cast<wchar_t>(currCharacter));
-//                if (it != characterWidths.end()) {
-//                    totalWidth += it->second * fontSize;
-//                    found = true;
-//                }
-//            }
-//        }
-//        if (!found) {
-//            return 0.0f;
-//        }
-//        
-//        strPos += codepointWidth;
-//        //prevCharacter = currCharacter;
-//    }
-//    
-//    return totalWidth;
-//}
-
 
 
 
@@ -1188,9 +1119,6 @@ void loadWallpaperFile(const std::string& filePath, s32 width = 448, s32 height 
 }
 
 
-
-//static uint8x16x4_t pixelData;
-
 // Global variables for FPS calculation
 //double lastTimeCount = 0.0;
 //int frameCount = 0;
@@ -1235,7 +1163,7 @@ static PsmSession powerSession;
 // Define variables to store previous battery charge and time
 static uint32_t prevBatteryCharge = 0;
 static s64 timeOut = 0;
-static char chargeString[6];  // Need space for the null terminator and the percentage sign
+
 
 static uint32_t batteryCharge;
 static bool isCharging;
@@ -4847,7 +4775,7 @@ namespace tsl {
                 // Draw temperatures and battery percentage
                 static char PCB_temperatureStr[10];
                 static char SOC_temperatureStr[10];
-                //static char chargeString[10];
+                static char chargeString[6];
         
                 size_t statusChange = size_t(hideSOCTemp) + size_t(hidePCBTemp) + size_t(hideBattery);
                 static size_t lastStatusChange = 0;
