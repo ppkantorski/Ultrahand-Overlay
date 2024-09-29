@@ -2482,42 +2482,88 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             lblExit();
         }
     //} else if (commandName == "volume") {
+    //    disableLogging = false;
     //    if (cmd.size() >= 2) {
     //        std::string volumeInput = cmd[1];
+    //        logMessage("Received volume command: " + volumeInput);  // Log the input
     //        removeQuotes(volumeInput);  // Sanitize input by removing quotes
     //        
     //        if (isValidNumber(volumeInput)) {
+    //            logMessage("Volume input is a valid number: " + volumeInput);  // Log valid number
+    //            
     //            // Convert input string to a float for percentage (0-100)
     //            float volumePercentage = std::stof(volumeInput);
+    //            logMessage("Converted volume to percentage: " + std::to_string(volumePercentage));  // Log the percentage
     //            
     //            // Ensure the volume is within valid range 0 to 100
     //            if (volumePercentage < 0.0f || volumePercentage > 100.0f) {
+    //                logMessage("Volume percentage out of bounds: " + std::to_string(volumePercentage));
     //                return;  // Exit if invalid percentage
     //            }
     //            
     //            // Initialize the settings service
+    //            logMessage("Initializing settings service...");
     //            Result rc = setsysInitialize();
     //            if (R_SUCCEEDED(rc)) {
-    //                SetSysAudioVolume audio_volume;
-    //                audio_volume.unk_x0 = SetSysAudioDevice_Console;  // Leave this at 0
+    //                logMessage("Settings service initialized successfully.");
     //                
-    //                // Convert percentage (0-100) to a scale of 0-15 for volume control
-    //                audio_volume.volume = static_cast<uint8_t>((volumePercentage / 100.0f) * 15.0f);
+    //                SetSysAudioVolume audio_volume;
+    //                audio_volume.volume = static_cast<uint8_t>((volumePercentage / 100.0f) * 15.0f);  // Scale to 0-15
+    //                logMessage("Volume scaled to 0-15: " + std::to_string(audio_volume.volume));  // Log scaled volume
     //                
     //                // Set the volume for the Console
+    //                logMessage("Setting audio volume...");
     //                rc = setsysSetAudioVolume(SetSysAudioDevice_Console, &audio_volume);
     //                
     //                // Check if setting the volume was successful
     //                if (R_FAILED(rc)) {
-    //                    // Handle failure, exit if needed
+    //                    logMessage("Failed to set audio volume. Error code: " + std::to_string(rc));
+    //                    setsysExit();
     //                    return;
     //                }
     //                
-    //                // Exit the settings service
+    //                logMessage("Audio volume set successfully.");
     //                setsysExit();
+    //            } else {
+    //                logMessage("Failed to initialize settings service. Error code: " + std::to_string(rc));
     //            }
+    //        } else {
+    //            logMessage("Invalid volume input: " + volumeInput);
     //        }
+    //    } else {
+    //        logMessage("Volume command missing required argument.");
     //    }
+    //} else if (commandName == "wifi") {
+    //    disableLogging = false;
+    //    if (cmd.size() >= 2) {
+    //        std::string togglePattern = cmd[1];
+    //        removeQuotes(togglePattern);
+    //
+    //        Result rc;
+    //
+    //        if (togglePattern == ON_STR) {
+    //            logMessage("Turning Wi-Fi ON...");
+    //            rc = nifmSetWirelessCommunicationEnabled(true);  // Turn Wi-Fi on
+    //            if (R_SUCCEEDED(rc)) {
+    //                logMessage("Wi-Fi enabled successfully.");
+    //            } else {
+    //                logMessage("Failed to enable Wi-Fi. Error code: " + std::to_string(rc));
+    //            }
+    //        } else if (togglePattern == OFF_STR) {
+    //            logMessage("Turning Wi-Fi OFF...");
+    //            rc = nifmSetWirelessCommunicationEnabled(false);  // Turn Wi-Fi off
+    //            if (R_SUCCEEDED(rc)) {
+    //                logMessage("Wi-Fi disabled successfully.");
+    //            } else {
+    //                logMessage("Failed to disable Wi-Fi. Error code: " + std::to_string(rc));
+    //            }
+    //        } else {
+    //            logMessage("Invalid Wi-Fi toggle command: " + togglePattern);
+    //        }
+    //    } else {
+    //        logMessage("Wi-Fi command missing required argument.");
+    //    }
+    //
     } else if (commandName == "refresh") {
         if (cmd.size() == 1)
             refreshPage = true;
