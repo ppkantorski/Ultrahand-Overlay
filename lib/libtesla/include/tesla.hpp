@@ -406,7 +406,6 @@ static std::string EFFECTS = "Effects";
 static std::string SWIPE_TO_OPEN = "Swipe to Open";
 static std::string RIGHT_SIDE_MODE = "Right-side Mode";
 static std::string PROGRESS_ANIMATION = "Progress Animation";
-static std::string TV_OVERSCAN = "TV Underscan";
 static std::string EMPTY = "Empty";
 
 static std::string SUNDAY = "Sunday";
@@ -553,7 +552,6 @@ void reinitializeLangVars() {
     SWIPE_TO_OPEN = "Swipe to Open";
     RIGHT_SIDE_MODE = "Right-side Mode";
     PROGRESS_ANIMATION = "Progress Animation";
-    TV_OVERSCAN = "TV Underscan";
     EMPTY = "Empty";
 
     SUNDAY = "Sunday";
@@ -715,7 +713,6 @@ void parseLanguage(const std::string langFile) {
         {"SWIPE_TO_OPEN", &SWIPE_TO_OPEN},
         {"RIGHT_SIDE_MODE", &RIGHT_SIDE_MODE},
         {"PROGRESS_ANIMATION", &PROGRESS_ANIMATION},
-        {"TV_OVERSCAN", &TV_OVERSCAN},
         {"EMPTY", &EMPTY},
         {"SUNDAY", &SUNDAY},
         {"MONDAY", &MONDAY},
