@@ -70,6 +70,34 @@
 #include <switch.h>
 #include <string>
 
+
+
+bool isDocked() {
+    Result rc;
+    ApmPerformanceMode perfMode = ApmPerformanceMode_Invalid;
+
+    // Initialize the APM service
+    rc = apmInitialize();
+    if (R_FAILED(rc)) {
+        return false;  // Fail early if initialization fails
+    }
+
+    // Get the current performance mode
+    rc = apmGetPerformanceMode(&perfMode);
+    apmExit();  // Clean up the APM service
+
+    if (R_FAILED(rc)) {
+        return false;  // Fail early if performance mode check fails
+    }
+
+    // Check if the performance mode indicates docked state
+    if (perfMode == ApmPerformanceMode_Boost) {
+        return true;  // System is docked (boost mode active)
+    }
+
+    return false;  // Not docked (normal mode or handheld)
+}
+
 std::string getTitleIdAsString() {
     Result rc;
     u64 pid = 0;
@@ -146,7 +174,7 @@ static std::atomic<bool> shakingProgress(true);
 
 static std::atomic<bool> isHidden(true);
 
-bool progressAnimation = false;
+//bool progressAnimation = false;
 bool disableTransparency = false;
 //bool useCustomWallpaper = false;
 bool useMemoryExpansion = false;
@@ -378,6 +406,7 @@ static std::string EFFECTS = "Effects";
 static std::string SWIPE_TO_OPEN = "Swipe to Open";
 static std::string RIGHT_SIDE_MODE = "Right-side Mode";
 static std::string PROGRESS_ANIMATION = "Progress Animation";
+static std::string TV_OVERSCAN = "TV Underscan";
 static std::string EMPTY = "Empty";
 
 static std::string SUNDAY = "Sunday";
@@ -524,6 +553,7 @@ void reinitializeLangVars() {
     SWIPE_TO_OPEN = "Swipe to Open";
     RIGHT_SIDE_MODE = "Right-side Mode";
     PROGRESS_ANIMATION = "Progress Animation";
+    TV_OVERSCAN = "TV Underscan";
     EMPTY = "Empty";
 
     SUNDAY = "Sunday";
@@ -685,6 +715,7 @@ void parseLanguage(const std::string langFile) {
         {"SWIPE_TO_OPEN", &SWIPE_TO_OPEN},
         {"RIGHT_SIDE_MODE", &RIGHT_SIDE_MODE},
         {"PROGRESS_ANIMATION", &PROGRESS_ANIMATION},
+        {"TV_OVERSCAN", &TV_OVERSCAN},
         {"EMPTY", &EMPTY},
         {"SUNDAY", &SUNDAY},
         {"MONDAY", &MONDAY},
@@ -3509,15 +3540,85 @@ namespace tsl {
             }
 
             
+
+            //std::pair<int, int> getUnderscanPixels() {
+            //    // Original dimensions of the full 720p image (1280x720)
+            //    std::string underscanPercentageStr = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "underscan");
+            //    
+            //    float underscanPercentage = 1.0;
+            //    if (!underscanPercentageStr.empty() && isDocked()) {
+            //        if (isValidNumber(underscanPercentageStr)) {
+            //            underscanPercentage = std::max(80, std::min(100, std::stoi(underscanPercentageStr))) / 100.0f;
+            //        }
+            //    }
+            //    
+            //    int originalWidth = cfg::ScreenWidth;
+            //    int originalHeight = cfg::ScreenHeight;
+            //    
+            //    // Adjust the width and height based on the underscan percentage
+            //    int adjustedWidth = static_cast<int>(originalWidth * underscanPercentage);
+            //    int adjustedHeight = static_cast<int>(originalHeight * underscanPercentage);
+            //    
+            //    // Calculate the underscan in pixels (left/right and top/bottom)
+            //    int horizontalUnderscanPixels = (originalWidth - adjustedWidth) / 2;
+            //    int verticalUnderscanPixels = (originalHeight - adjustedHeight) / 2;
+            //
+            //    return {horizontalUnderscanPixels, verticalUnderscanPixels};
+            //}
+            
+            
+
+            std::pair<int, int> getUnderscanPixels() {
+                if (!isDocked()) {
+                    return {0, 0};
+                }
+            
+                // Retrieve the TV settings
+                SetSysTvSettings tvSettings;
+                Result res = setsysGetTvSettings(&tvSettings);
+                if (R_FAILED(res)) {
+                    // Handle error: return default underscan or log error
+                    return {0, 0};
+                }
+            
+                // The underscan value might not be a percentage, we need to interpret it correctly
+                u32 underscanValue = tvSettings.underscan;
+            
+                // Convert the underscan value to a fraction. Assuming 0 means no underscan and larger values represent
+                // greater underscan. Adjust this formula based on actual observed behavior or documentation.
+                float underscanPercentage = 1.0f - (underscanValue / 100.0f);
+            
+                // Original dimensions of the full 720p image (1280x720)
+                int originalWidth = cfg::ScreenWidth;
+                int originalHeight = cfg::ScreenHeight;
+            
+                // Adjust the width and height based on the underscan percentage
+                int adjustedWidth = static_cast<int>(originalWidth * underscanPercentage);
+                int adjustedHeight = static_cast<int>(originalHeight * underscanPercentage);
+            
+                // Calculate the underscan in pixels (left/right and top/bottom)
+                int horizontalUnderscanPixels = (originalWidth - adjustedWidth) / 2;
+                int verticalUnderscanPixels = (originalHeight - adjustedHeight) / 2;
+            
+                return {horizontalUnderscanPixels, verticalUnderscanPixels};
+            }
+
+
+
+            
             /**
              * @brief Initializes the renderer and layers
              *
              */
             void init() {
+                // Get the underscan pixel values for both horizontal and vertical borders
+                auto [horizontalUnderscanPixels, verticalUnderscanPixels] = getUnderscanPixels();
+                //int horizontalUnderscanPixels = 0;
+
                 useRightAlignment = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "right_alignment") == TRUE_STR);
                 //cfg::LayerPosX = 1280-32;
                 if (useRightAlignment) {
-                    cfg::LayerPosX = 1280-32;
+                    cfg::LayerPosX = 1280-32 - horizontalUnderscanPixels;
                     layerEdge = (1280-448);
                 }
                 cfg::LayerPosY = 0;
@@ -3525,11 +3626,17 @@ namespace tsl {
                 cfg::FramebufferHeight = 720;
                 cfg::LayerWidth  = cfg::ScreenHeight * (float(cfg::FramebufferWidth) / float(cfg::FramebufferHeight));
                 cfg::LayerHeight = cfg::ScreenHeight;
+
+                //if (!useRightAlignment)
+                cfg::LayerWidth += horizontalUnderscanPixels;
+
                 
                 if (this->m_initialized)
                     return;
+
+                //s32 layerZ = 0;
                 
-                tsl::hlp::doWithSmSession([this]{
+                tsl::hlp::doWithSmSession([this, horizontalUnderscanPixels]{
                     ASSERT_FATAL(viInitialize(ViServiceType_Manager));
                     ASSERT_FATAL(viOpenDefaultDisplay(&this->m_display));
                     ASSERT_FATAL(viGetDisplayVsyncEvent(&this->m_display, &this->m_vsyncEvent));
@@ -3537,9 +3644,31 @@ namespace tsl {
                     ASSERT_FATAL(viCreateLayer(&this->m_display, &this->m_layer));
                     ASSERT_FATAL(viSetLayerScalingMode(&this->m_layer, ViScalingMode_FitToLayer));
                     
-                    if (s32 layerZ = 0; R_SUCCEEDED(viGetZOrderCountMax(&this->m_display, &layerZ)) && layerZ > 0)
-                        ASSERT_FATAL(viSetLayerZ(&this->m_layer, layerZ));
-                    
+                    //if (s32 layerZ = 0; R_SUCCEEDED(viGetZOrderCountMax(&this->m_display, &layerZ)) && layerZ > 0)
+                    //    ASSERT_FATAL(viSetLayerZ(&this->m_layer, layerZ));
+
+                    // Get the maximum Z-order count
+                    //if (s32 layerZ = 0; R_SUCCEEDED(viGetZOrderCountMax(&this->m_display, &layerZ)) && layerZ > 0) {
+                    //    // Set the overlay layer Z-order to one below the maximum Z-order
+                    //    // This ensures it's still on top but leaves space for system layers
+                    //    disableLogging = false;
+                    //    logMessage(std::to_string(layerZ));
+                    //    ASSERT_FATAL(viSetLayerZ(&this->m_layer, layerZ));
+                    //} else {
+                    //    // If fetching the maximum Z-order fails, fallback to a default Z value
+                    //    // Set a moderately high Z-order to ensure it's visible
+                    //    ASSERT_FATAL(viSetLayerZ(&this->m_layer, 255)); // 10 as a safer fallback
+                    //}
+
+                    if (horizontalUnderscanPixels == 0) {
+                        s32 layerZ = 0;
+                        if (R_SUCCEEDED(viGetZOrderCountMax(&this->m_display, &layerZ)) && layerZ > 0)
+                            ASSERT_FATAL(viSetLayerZ(&this->m_layer, layerZ));
+                        else ASSERT_FATAL(viSetLayerZ(&this->m_layer, 255)); // max value 255 as fallback
+                    } else {
+                        ASSERT_FATAL(viSetLayerZ(&this->m_layer, 34)); // 10 as a safer fallback
+                    }
+
                     ASSERT_FATAL(tsl::hlp::viAddToLayerStack(&this->m_layer, ViLayerStack_Default));
                     ASSERT_FATAL(tsl::hlp::viAddToLayerStack(&this->m_layer, ViLayerStack_Screenshot));
                     ASSERT_FATAL(tsl::hlp::viAddToLayerStack(&this->m_layer, ViLayerStack_Recording));
@@ -3548,7 +3677,6 @@ namespace tsl {
                     ASSERT_FATAL(tsl::hlp::viAddToLayerStack(&this->m_layer, ViLayerStack_Null));
                     ASSERT_FATAL(tsl::hlp::viAddToLayerStack(&this->m_layer, ViLayerStack_ApplicationForDebug));
                     ASSERT_FATAL(tsl::hlp::viAddToLayerStack(&this->m_layer, ViLayerStack_Lcd));
-                    //ASSERT_FATAL(tsl::hlp::viAddToLayerStack(&this->m_layer, 8));
                     
                     ASSERT_FATAL(viSetLayerSize(&this->m_layer, cfg::LayerWidth, cfg::LayerHeight));
                     ASSERT_FATAL(viSetLayerPosition(&this->m_layer, cfg::LayerPosX, cfg::LayerPosY));
@@ -4382,21 +4510,22 @@ namespace tsl {
                     noClickableItems = m_noClickableItems;
                 renderer->fillScreen(a(defaultBackgroundColor));
                 
-                if (expandedMemory && !refreshWallpaper.load(std::memory_order_acquire)) {
-                    //inPlot = true;
-                    inPlot.store(true, std::memory_order_release);
-                    //std::lock_guard<std::mutex> lock(wallpaperMutex);
-                    if (!wallpaperData.empty()) {
-                        // Draw the bitmap at position (0, 0) on the screen
-                        if (!refreshWallpaper.load(std::memory_order_acquire))
-                            renderer->drawBitmap(0, 0, 448, 720, wallpaperData.data());
-                        else
-                            inPlot.store(false, std::memory_order_release);
-                    } else {
-                        inPlot.store(false, std::memory_order_release);
-                    }
-                    //inPlot = false;
-                }
+                //if (expandedMemory && !refreshWallpaper.load(std::memory_order_acquire)) {
+                //    //inPlot = true;
+                //    inPlot.store(true, std::memory_order_release);
+                //    //std::lock_guard<std::mutex> lock(wallpaperMutex);
+                //    if (!wallpaperData.empty()) {
+                //        // Draw the bitmap at position (0, 0) on the screen
+                //        if (!refreshWallpaper.load(std::memory_order_acquire))
+                //            renderer->drawBitmap(0, 0, 448, 720, wallpaperData.data());
+                //        else
+                //            inPlot.store(false, std::memory_order_release);
+                //    } else {
+                //        inPlot.store(false, std::memory_order_release);
+                //    }
+                //    //inPlot = false;
+                //}
+                drawWallpaper(renderer);
                 
 
                 y = 50;
@@ -4407,6 +4536,9 @@ namespace tsl {
                                     this->m_subtitle.find("Ultrahand Script") == std::string::npos);
 
                 if (isUltrahand) {
+                    // Call the extracted widget drawing method
+                    drawWidget(renderer);
+
 
                     if (touchingMenu && inMainMenu) {
                         renderer->drawRoundedRect(0.0f, 12.0f, 245.0f, 73.0f, 6.0f, a(clickColor));
@@ -4449,24 +4581,24 @@ namespace tsl {
                     
                     renderer->drawString(SPLIT_PROJECT_NAME_2, false, x, y + offset, fontSize, a(logoColor2));
                     
-                    if (!(hideBattery && hidePCBTemp && hideSOCTemp && hideClock)) {
-                        renderer->drawRect(245, 23, 1, 49, a(separatorColor));
-                    }
+                    //if (!(hideBattery && hidePCBTemp && hideSOCTemp && hideClock)) {
+                    //    renderer->drawRect(245, 23, 1, 49, a(separatorColor));
+                    //}
                     
                     
-                    y_offset = 45;
-                    if ((hideBattery && hidePCBTemp && hideSOCTemp) || hideClock) {
-                        y_offset += 10;
-                    }
-                    
-                    clock_gettime(CLOCK_REALTIME, &currentTime);
-                    if (!hideClock) {
-                        static char timeStr[20]; // Allocate a buffer to store the time string
-                        strftime(timeStr, sizeof(timeStr), datetimeFormat.c_str(), localtime(&currentTime.tv_sec));
-                        localizeTimeStr(timeStr);
-                        renderer->drawString(timeStr, false, tsl::cfg::FramebufferWidth - renderer->calculateStringWidth(timeStr, 20, true) - 20, y_offset, 20, a(clockColor));
-                        y_offset += 22;
-                    }
+                    //y_offset = 45;
+                    //if ((hideBattery && hidePCBTemp && hideSOCTemp) || hideClock) {
+                    //    y_offset += 10;
+                    //}
+                    //
+                    //clock_gettime(CLOCK_REALTIME, &currentTime);
+                    //if (!hideClock) {
+                    //    static char timeStr[20]; // Allocate a buffer to store the time string
+                    //    strftime(timeStr, sizeof(timeStr), datetimeFormat.c_str(), localtime(&currentTime.tv_sec));
+                    //    localizeTimeStr(timeStr);
+                    //    renderer->drawString(timeStr, false, tsl::cfg::FramebufferWidth - renderer->calculateStringWidth(timeStr, 20, true) - 20, y_offset, 20, a(clockColor));
+                    //    y_offset += 22;
+                    //}
                     
                     //if ((currentTimeSpec.tv_sec - timeOut) >= 1) {
                     //    if (!isHidden.load()) {
@@ -4478,48 +4610,48 @@ namespace tsl {
                     //}
                     //if (!isHidden.load()) {
 
-                    static char PCB_temperatureStr[10];
-                    static char SOC_temperatureStr[10];
-
-
-                    size_t statusChange = size_t(hideSOCTemp) + size_t(hidePCBTemp) + size_t(hideBattery);
-                    static size_t lastStatusChange = 0;
-
-                    if ((currentTime.tv_sec - timeOut) >= 1 || statusChange != lastStatusChange) {
-                        //if (!hidePCBTemp || !hideSOCTemp) {
-                        //    //thermalstatusInit();
-                        //    //if (!hidePCBTemp)
-                        //    //    thermalstatusGetDetailsPCB(&PCB_temperature);
-                        //    //if (!hideSOCTemp)
-                        //    //    thermalstatusGetDetailsSOC(&SOC_temperature);
-                        //    //thermalstatusExit();
-                        //}
-                        if (!hideSOCTemp) {
-                            ReadSocTemperature(&SOC_temperature);
-                            snprintf(SOC_temperatureStr, sizeof(SOC_temperatureStr) - 1, "%d°C", SOC_temperature);
-                        } else {
-                            strcpy(SOC_temperatureStr, "");
-                            SOC_temperature=0;
-                        }
-                        if (!hidePCBTemp) {
-                            ReadPcbTemperature(&PCB_temperature);
-                            snprintf(PCB_temperatureStr, sizeof(PCB_temperatureStr) - 1, "%d°C", PCB_temperature);
-                        } else {
-                            strcpy(PCB_temperatureStr, "");
-                            PCB_temperature=0;
-                        }
-                        if (!hideBattery) {
-                            powerGetDetails(&batteryCharge, &isCharging);
-                            batteryCharge = std::min(batteryCharge, 100U);
-                            sprintf(chargeString, "%d%%", batteryCharge);
-                        } else {
-                            strcpy(chargeString, "");
-                            batteryCharge=0;
-                        }
-                        timeOut = int(currentTime.tv_sec);
-                    }
-
-                    lastStatusChange = statusChange;
+                    //static char PCB_temperatureStr[10];
+                    //static char SOC_temperatureStr[10];
+                    //
+                    //
+                    //size_t statusChange = size_t(hideSOCTemp) + size_t(hidePCBTemp) + size_t(hideBattery);
+                    //static size_t lastStatusChange = 0;
+                    //
+                    //if ((currentTime.tv_sec - timeOut) >= 1 || statusChange != lastStatusChange) {
+                    //    //if (!hidePCBTemp || !hideSOCTemp) {
+                    //    //    //thermalstatusInit();
+                    //    //    //if (!hidePCBTemp)
+                    //    //    //    thermalstatusGetDetailsPCB(&PCB_temperature);
+                    //    //    //if (!hideSOCTemp)
+                    //    //    //    thermalstatusGetDetailsSOC(&SOC_temperature);
+                    //    //    //thermalstatusExit();
+                    //    //}
+                    //    if (!hideSOCTemp) {
+                    //        ReadSocTemperature(&SOC_temperature);
+                    //        snprintf(SOC_temperatureStr, sizeof(SOC_temperatureStr) - 1, "%d°C", SOC_temperature);
+                    //    } else {
+                    //        strcpy(SOC_temperatureStr, "");
+                    //        SOC_temperature=0;
+                    //    }
+                    //    if (!hidePCBTemp) {
+                    //        ReadPcbTemperature(&PCB_temperature);
+                    //        snprintf(PCB_temperatureStr, sizeof(PCB_temperatureStr) - 1, "%d°C", PCB_temperature);
+                    //    } else {
+                    //        strcpy(PCB_temperatureStr, "");
+                    //        PCB_temperature=0;
+                    //    }
+                    //    if (!hideBattery) {
+                    //        powerGetDetails(&batteryCharge, &isCharging);
+                    //        batteryCharge = std::min(batteryCharge, 100U);
+                    //        sprintf(chargeString, "%d%%", batteryCharge);
+                    //    } else {
+                    //        strcpy(chargeString, "");
+                    //        batteryCharge=0;
+                    //    }
+                    //    timeOut = int(currentTime.tv_sec);
+                    //}
+                    //
+                    //lastStatusChange = statusChange;
 
                     
                     //if (hideSOCTemp && (SOC_temperature > 0 || strlen(SOC_temperatureStr) > 0)) {
@@ -4536,24 +4668,24 @@ namespace tsl {
                     //}
                     
                     
-                    if (!hideBattery && batteryCharge > 0) {
-                        Color batteryColorToUse = isCharging ? tsl::Color(0x0, 0xF, 0x0, 0xF) : 
-                                                (batteryCharge < 20 ? tsl::Color(0xF, 0x0, 0x0, 0xF) : batteryColor);
-                        renderer->drawString(chargeString, false, tsl::cfg::FramebufferWidth - renderer->calculateStringWidth(chargeString, 20, true) - 22, y_offset, 20, a(batteryColorToUse));
-                    }
-                    
-                    offset = 0;
-                    if (!hidePCBTemp && PCB_temperature > 0) {
-                        if (!hideBattery)
-                            offset -= 5;
-                        renderer->drawString(PCB_temperatureStr, false, tsl::cfg::FramebufferWidth + offset - renderer->calculateStringWidth(PCB_temperatureStr, 20, true) - renderer->calculateStringWidth(chargeString, 20, true) - 22, y_offset, 20, a(tsl::GradientColor(PCB_temperature)));
-                    }
-                    
-                    if (!hideSOCTemp && SOC_temperature > 0) {
-                        if (!hidePCBTemp || !hideBattery)
-                            offset -= 5;
-                        renderer->drawString(SOC_temperatureStr, false, tsl::cfg::FramebufferWidth + offset - renderer->calculateStringWidth(SOC_temperatureStr, 20, true) - renderer->calculateStringWidth(PCB_temperatureStr, 20, true) - renderer->calculateStringWidth(chargeString, 20, true) - 22, y_offset, 20, a(tsl::GradientColor(SOC_temperature)));
-                    }
+                    //if (!hideBattery && batteryCharge > 0) {
+                    //    Color batteryColorToUse = isCharging ? tsl::Color(0x0, 0xF, 0x0, 0xF) : 
+                    //                            (batteryCharge < 20 ? tsl::Color(0xF, 0x0, 0x0, 0xF) : batteryColor);
+                    //    renderer->drawString(chargeString, false, tsl::cfg::FramebufferWidth - renderer->calculateStringWidth(chargeString, 20, true) - 22, y_offset, 20, a(batteryColorToUse));
+                    //}
+                    //
+                    //offset = 0;
+                    //if (!hidePCBTemp && PCB_temperature > 0) {
+                    //    if (!hideBattery)
+                    //        offset -= 5;
+                    //    renderer->drawString(PCB_temperatureStr, false, tsl::cfg::FramebufferWidth + offset - renderer->calculateStringWidth(PCB_temperatureStr, 20, true) - renderer->calculateStringWidth(chargeString, 20, true) - 22, y_offset, 20, a(tsl::GradientColor(PCB_temperature)));
+                    //}
+                    //
+                    //if (!hideSOCTemp && SOC_temperature > 0) {
+                    //    if (!hidePCBTemp || !hideBattery)
+                    //        offset -= 5;
+                    //    renderer->drawString(SOC_temperatureStr, false, tsl::cfg::FramebufferWidth + offset - renderer->calculateStringWidth(SOC_temperatureStr, 20, true) - renderer->calculateStringWidth(PCB_temperatureStr, 20, true) - renderer->calculateStringWidth(chargeString, 20, true) - 22, y_offset, 20, a(tsl::GradientColor(SOC_temperature)));
+                    //}
                 } else {
                     x = 20;
                     y = 50;
@@ -4728,6 +4860,139 @@ namespace tsl {
 
             }
             // CUSTOM SECTION END
+
+            void drawWallpaper(gfx::Renderer *renderer) {
+                if (expandedMemory && !refreshWallpaper.load(std::memory_order_acquire)) {
+                    //inPlot = true;
+                    inPlot.store(true, std::memory_order_release);
+                    //std::lock_guard<std::mutex> lock(wallpaperMutex);
+                    if (!wallpaperData.empty()) {
+                        // Draw the bitmap at position (0, 0) on the screen
+                        if (!refreshWallpaper.load(std::memory_order_acquire))
+                            renderer->drawBitmap(0, 0, 448, 720, wallpaperData.data());
+                        else
+                            inPlot.store(false, std::memory_order_release);
+                    } else {
+                        inPlot.store(false, std::memory_order_release);
+                    }
+                    //inPlot = false;
+                }
+            }
+
+            // Method to draw clock, temperatures, and battery percentage
+            void drawWidget(gfx::Renderer *renderer) {
+                // Draw clock if it's not hidden
+                static timespec currentTime;
+                static char timeStr[20]; // Allocate a buffer to store the time string
+                size_t y_offset = 45;
+        
+                if (!(hideBattery && hidePCBTemp && hideSOCTemp && hideClock)) {
+                    renderer->drawRect(245, 23, 1, 49, a(separatorColor));
+                }
+
+                if ((hideBattery && hidePCBTemp && hideSOCTemp) || hideClock) {
+                    y_offset += 10;
+                }
+
+                clock_gettime(CLOCK_REALTIME, &currentTime);
+                if (!hideClock) {
+                    strftime(timeStr, sizeof(timeStr), datetimeFormat.c_str(), localtime(&currentTime.tv_sec));
+                    localizeTimeStr(timeStr);
+                    renderer->drawString(timeStr, false, tsl::cfg::FramebufferWidth - renderer->calculateStringWidth(timeStr, 20, true) - 20, y_offset, 20, a(clockColor));
+                    y_offset += 22;
+                }
+        
+                // Draw temperatures and battery percentage
+                static char PCB_temperatureStr[10];
+                static char SOC_temperatureStr[10];
+                //static char chargeString[10];
+        
+                size_t statusChange = size_t(hideSOCTemp) + size_t(hidePCBTemp) + size_t(hideBattery);
+                static size_t lastStatusChange = 0;
+                
+                if ((currentTime.tv_sec - timeOut) >= 1 || statusChange != lastStatusChange) {
+                    //if (!hidePCBTemp || !hideSOCTemp) {
+                    //    //thermalstatusInit();
+                    //    //if (!hidePCBTemp)
+                    //    //    thermalstatusGetDetailsPCB(&PCB_temperature);
+                    //    //if (!hideSOCTemp)
+                    //    //    thermalstatusGetDetailsSOC(&SOC_temperature);
+                    //    //thermalstatusExit();
+                    //}
+                    if (!hideSOCTemp) {
+                        ReadSocTemperature(&SOC_temperature);
+                        snprintf(SOC_temperatureStr, sizeof(SOC_temperatureStr) - 1, "%d°C", SOC_temperature);
+                    } else {
+                        strcpy(SOC_temperatureStr, "");
+                        SOC_temperature=0;
+                    }
+                    if (!hidePCBTemp) {
+                        ReadPcbTemperature(&PCB_temperature);
+                        snprintf(PCB_temperatureStr, sizeof(PCB_temperatureStr) - 1, "%d°C", PCB_temperature);
+                    } else {
+                        strcpy(PCB_temperatureStr, "");
+                        PCB_temperature=0;
+                    }
+                    if (!hideBattery) {
+                        powerGetDetails(&batteryCharge, &isCharging);
+                        batteryCharge = std::min(batteryCharge, 100U);
+                        sprintf(chargeString, "%d%%", batteryCharge);
+                    } else {
+                        strcpy(chargeString, "");
+                        batteryCharge=0;
+                    }
+                    timeOut = int(currentTime.tv_sec);
+                }
+                
+                lastStatusChange = statusChange;
+
+                // Temperature and battery status updates
+                //if (!hideSOCTemp) {
+                //    ReadSocTemperature(&SOC_temperature);
+                //    snprintf(SOC_temperatureStr, sizeof(SOC_temperatureStr) - 1, "%d°C", SOC_temperature);
+                //} else {
+                //    strcpy(SOC_temperatureStr, "");
+                //    SOC_temperature = 0;
+                //}
+                //
+                //if (!hidePCBTemp) {
+                //    ReadPcbTemperature(&PCB_temperature);
+                //    snprintf(PCB_temperatureStr, sizeof(PCB_temperatureStr) - 1, "%d°C", PCB_temperature);
+                //} else {
+                //    strcpy(PCB_temperatureStr, "");
+                //    PCB_temperature = 0;
+                //}
+                //
+                //if (!hideBattery) {
+                //    powerGetDetails(&batteryCharge, &isCharging);
+                //    batteryCharge = std::min(batteryCharge, 100U);
+                //    snprintf(chargeString, sizeof(chargeString), "%d%%", batteryCharge);
+                //} else {
+                //    strcpy(chargeString, "");
+                //    batteryCharge = 0;
+                //}
+                
+                // Draw battery percentage
+                if (!hideBattery && batteryCharge > 0) {
+                    Color batteryColorToUse = isCharging ? tsl::Color(0x0, 0xF, 0x0, 0xF) : 
+                                            (batteryCharge < 20 ? tsl::Color(0xF, 0x0, 0x0, 0xF) : batteryColor);
+                    renderer->drawString(chargeString, false, tsl::cfg::FramebufferWidth - renderer->calculateStringWidth(chargeString, 20, true) - 22, y_offset, 20, a(batteryColorToUse));
+                }
+        
+                // Draw PCB and SOC temperatures
+                int offset = 0;
+                if (!hidePCBTemp && PCB_temperature > 0) {
+                    if (!hideBattery)
+                        offset -= 5;
+                    renderer->drawString(PCB_temperatureStr, false, tsl::cfg::FramebufferWidth + offset - renderer->calculateStringWidth(PCB_temperatureStr, 20, true) - renderer->calculateStringWidth(chargeString, 20, true) - 22, y_offset, 20, a(tsl::GradientColor(PCB_temperature)));
+                }
+        
+                if (!hideSOCTemp && SOC_temperature > 0) {
+                    if (!hidePCBTemp || !hideBattery)
+                        offset -= 5;
+                    renderer->drawString(SOC_temperatureStr, false, tsl::cfg::FramebufferWidth + offset - renderer->calculateStringWidth(SOC_temperatureStr, 20, true) - renderer->calculateStringWidth(PCB_temperatureStr, 20, true) - renderer->calculateStringWidth(chargeString, 20, true) - 22, y_offset, 20, a(tsl::GradientColor(SOC_temperature)));
+                }
+            }
             
             virtual inline void layout(u16 parentX, u16 parentY, u16 parentWidth, u16 parentHeight) override {
                 this->setBoundaries(parentX, parentY, parentWidth, parentHeight);
@@ -7274,7 +7539,9 @@ namespace tsl {
             static bool oldTouchDetected = false;
             static elm::TouchEvent touchEvent, oldTouchEvent;
             //static elm::TouchEvent oldTouchEvent;
-            static ssize_t counter = 0;
+
+            //static ssize_t counter = 0;
+
             static std::chrono::steady_clock::time_point buttonPressTime, lastKeyEventTime;
             //static std::chrono::steady_clock::time_point lastKeyEventTime;
             static bool singlePressHandled = false;
@@ -7301,10 +7568,10 @@ namespace tsl {
                     currentFocus->shakeHighlight(FocusDirection::Left);
                 else if (keysDown & KEY_RIGHT && !(keysDown & ~KEY_RIGHT & ALL_KEYS_MASK))
                     currentFocus->shakeHighlight(FocusDirection::Right);
-                else if (progressAnimation) {
-                    currentFocus->shakeHighlight(static_cast<FocusDirection>(counter % 4));
-                    counter = (counter + 1) % 4;
-                }
+                //else if (progressAnimation) {
+                //    currentFocus->shakeHighlight(static_cast<FocusDirection>(counter % 4));
+                //    counter = (counter + 1) % 4;
+                //}
             }
             
             if (!currentFocus && !simulatedBack && simulatedBackComplete && !stillTouching && !runningInterpreter.load(std::memory_order_acquire)) {
@@ -8068,6 +8335,7 @@ namespace tsl {
     }
 
 }
+
 
 std::unordered_map<std::string, std::string> createButtonCharMap() {
     std::unordered_map<std::string, std::string> map;
