@@ -60,16 +60,12 @@
 #include <list>
 #include <stack>
 #include <map>
-
+#include <barrier>
 
 //static bool debugFPS = true;
 
 //uint64_t RAM_Used_system_u = 0;
 //uint64_t RAM_Total_system_u = 0;
-
-#include <switch.h>
-#include <string>
-
 
 
 bool isDocked() {
@@ -1640,7 +1636,7 @@ std::vector<std::thread> threads(numThreads);
 s32 bmpChunkSize = (720 + numThreads - 1) / numThreads;
 std::atomic<s32> currentRow;
 
-#include <barrier>
+
 
 // Assuming numThreads is the number of threads you have
 std::barrier inPlotBarrier(numThreads, [](){
@@ -3538,38 +3534,11 @@ namespace tsl {
 
             
 
-            //std::pair<int, int> getUnderscanPixels() {
-            //    // Original dimensions of the full 720p image (1280x720)
-            //    std::string underscanPercentageStr = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "underscan");
-            //    
-            //    float underscanPercentage = 1.0;
-            //    if (!underscanPercentageStr.empty() && isDocked()) {
-            //        if (isValidNumber(underscanPercentageStr)) {
-            //            underscanPercentage = std::max(80, std::min(100, std::stoi(underscanPercentageStr))) / 100.0f;
-            //        }
-            //    }
-            //    
-            //    int originalWidth = cfg::ScreenWidth;
-            //    int originalHeight = cfg::ScreenHeight;
-            //    
-            //    // Adjust the width and height based on the underscan percentage
-            //    int adjustedWidth = static_cast<int>(originalWidth * underscanPercentage);
-            //    int adjustedHeight = static_cast<int>(originalHeight * underscanPercentage);
-            //    
-            //    // Calculate the underscan in pixels (left/right and top/bottom)
-            //    int horizontalUnderscanPixels = (originalWidth - adjustedWidth) / 2;
-            //    int verticalUnderscanPixels = (originalHeight - adjustedHeight) / 2;
-            //
-            //    return {horizontalUnderscanPixels, verticalUnderscanPixels};
-            //}
-            
-            
-
             std::pair<int, int> getUnderscanPixels() {
                 if (!isDocked()) {
                     return {0, 0};
                 }
-            
+                
                 // Retrieve the TV settings
                 SetSysTvSettings tvSettings;
                 Result res = setsysGetTvSettings(&tvSettings);
@@ -3577,14 +3546,14 @@ namespace tsl {
                     // Handle error: return default underscan or log error
                     return {0, 0};
                 }
-            
+                
                 // The underscan value might not be a percentage, we need to interpret it correctly
                 u32 underscanValue = tvSettings.underscan;
-            
+                
                 // Convert the underscan value to a fraction. Assuming 0 means no underscan and larger values represent
                 // greater underscan. Adjust this formula based on actual observed behavior or documentation.
                 float underscanPercentage = 1.0f - (underscanValue / 100.0f);
-            
+                
                 // Original dimensions of the full 720p image (1280x720)
                 int originalWidth = cfg::ScreenWidth;
                 int originalHeight = cfg::ScreenHeight;
@@ -3592,11 +3561,11 @@ namespace tsl {
                 // Adjust the width and height based on the underscan percentage
                 int adjustedWidth = static_cast<int>(originalWidth * underscanPercentage);
                 int adjustedHeight = static_cast<int>(originalHeight * underscanPercentage);
-            
+                
                 // Calculate the underscan in pixels (left/right and top/bottom)
                 int horizontalUnderscanPixels = (originalWidth - adjustedWidth) / 2;
                 int verticalUnderscanPixels = (originalHeight - adjustedHeight) / 2;
-            
+                
                 return {horizontalUnderscanPixels, verticalUnderscanPixels};
             }
 
@@ -3624,7 +3593,7 @@ namespace tsl {
                 cfg::LayerWidth  = cfg::ScreenHeight * (float(cfg::FramebufferWidth) / float(cfg::FramebufferHeight));
                 cfg::LayerHeight = cfg::ScreenHeight;
 
-                //if (!useRightAlignment)
+                // Apply underscanning offset
                 cfg::LayerWidth += horizontalUnderscanPixels;
 
                 
@@ -3644,26 +3613,13 @@ namespace tsl {
                     //if (s32 layerZ = 0; R_SUCCEEDED(viGetZOrderCountMax(&this->m_display, &layerZ)) && layerZ > 0)
                     //    ASSERT_FATAL(viSetLayerZ(&this->m_layer, layerZ));
 
-                    // Get the maximum Z-order count
-                    //if (s32 layerZ = 0; R_SUCCEEDED(viGetZOrderCountMax(&this->m_display, &layerZ)) && layerZ > 0) {
-                    //    // Set the overlay layer Z-order to one below the maximum Z-order
-                    //    // This ensures it's still on top but leaves space for system layers
-                    //    disableLogging = false;
-                    //    logMessage(std::to_string(layerZ));
-                    //    ASSERT_FATAL(viSetLayerZ(&this->m_layer, layerZ));
-                    //} else {
-                    //    // If fetching the maximum Z-order fails, fallback to a default Z value
-                    //    // Set a moderately high Z-order to ensure it's visible
-                    //    ASSERT_FATAL(viSetLayerZ(&this->m_layer, 255)); // 10 as a safer fallback
-                    //}
-
                     if (horizontalUnderscanPixels == 0) {
                         s32 layerZ = 0;
                         if (R_SUCCEEDED(viGetZOrderCountMax(&this->m_display, &layerZ)) && layerZ > 0)
                             ASSERT_FATAL(viSetLayerZ(&this->m_layer, layerZ));
                         else ASSERT_FATAL(viSetLayerZ(&this->m_layer, 255)); // max value 255 as fallback
                     } else {
-                        ASSERT_FATAL(viSetLayerZ(&this->m_layer, 34)); // 10 as a safer fallback
+                        ASSERT_FATAL(viSetLayerZ(&this->m_layer, 34)); // 34 is the edge for underscanning
                     }
 
                     ASSERT_FATAL(tsl::hlp::viAddToLayerStack(&this->m_layer, ViLayerStack_Default));
@@ -3806,8 +3762,9 @@ namespace tsl {
             u8 saturation;
             //Color animColor = tsl::style::color::ColorClickAnimation;
             float progress;
-            Color clickColor1 = Color(0);
-            Color clickColor2 = Color(0);
+
+            //Color clickColor1 = Color(0);
+            //Color clickColor2 = Color(0);
             
             s32 x, y;
             s32 amplitude;
@@ -3980,21 +3937,9 @@ namespace tsl {
                     animColor.a = saturation;
                 }
                 renderer->drawRect(ELEMENT_BOUNDS(this), a(animColor));
-                //if (!disableSelectionBG) {
-                //    saturation = tsl::style::ListItemHighlightSaturation * (float(this->m_clickAnimationProgress) / float(tsl::style::ListItemHighlightLength));
-                //    if (invertBGClickColor) {
-                //        animColor.r = 15-saturation;
-                //        animColor.g = 15-saturation;
-                //        animColor.b = 15;
-                //    } else {
-                //        animColor.r = 0;
-                //        animColor.g = saturation;
-                //        animColor.b = saturation;
-                //    }
-                //    renderer->drawRect(ELEMENT_BOUNDS(this), a(animColor));
-                //} else {
-                clickColor1 = highlightColor1;
-                clickColor2 = clickColor;
+
+                Color clickColor1 = highlightColor1;
+                Color clickColor2 = clickColor;
                 
                 //half progress = half((std::sin(2.0 * M_PI * fmod(std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count(), 1.0)) + 1.0) / 2.0);
                 progress = (std::sin(2.0 * M_PI * fmod(std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count(), 1.0)) + 1.0) / 2.0;
