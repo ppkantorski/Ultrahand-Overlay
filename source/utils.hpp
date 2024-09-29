@@ -1571,158 +1571,169 @@ auto replacePlaceholders = [](std::string& arg, const std::string& placeholder, 
     }
 };
 
+
+
+// Function for each placeholder type
+std::string handleHexFile(const std::string& placeholder, const std::string& hexPath) {
+    return replaceHexPlaceholder(placeholder, hexPath);
+}
+
+std::string handleIniFile(const std::string& placeholder, const std::string& iniPath) {
+    std::string result = placeholder;
+    applyReplaceIniPlaceholder(result, INI_FILE_STR, iniPath);
+    return result;
+}
+
+std::string handleList(const std::string& placeholder, const std::string& listString) {
+    size_t startPos = placeholder.find('(') + 1;
+    size_t endPos = placeholder.find(')');
+    size_t listIndex = std::stoi(placeholder.substr(startPos, endPos - startPos));
+    return stringToList(listString)[listIndex];
+}
+
+std::string handleListFile(const std::string& placeholder, const std::string& listPath) {
+    size_t startPos = placeholder.find('(') + 1;
+    size_t endPos = placeholder.find(')');
+    size_t listIndex = std::stoi(placeholder.substr(startPos, endPos - startPos));
+    return getEntryFromListFile(listPath, listIndex);
+}
+
+std::string handleJson(const std::string& placeholder, const std::string& jsonString) {
+    return replaceJsonPlaceholder(placeholder, JSON_STR, jsonString);
+}
+
+std::string handleJsonFile(const std::string& placeholder, const std::string& jsonPath) {
+    return replaceJsonPlaceholder(placeholder, JSON_FILE_STR, jsonPath);
+}
+
+std::string handleTimestamp(const std::string& placeholder, const std::string&) {
+    size_t startPos = placeholder.find("(") + 1;
+    size_t endPos = placeholder.find(")");
+    std::string format = (endPos != std::string::npos) ? placeholder.substr(startPos, endPos - startPos) : "%Y-%m-%d %H:%M:%S";
+    removeQuotes(format);
+    return getCurrentTimestamp(format);
+}
+
+std::string handleDecimalToHex(const std::string& placeholder, const std::string&) {
+    size_t startPos = placeholder.find("(") + 1;
+    size_t endPos = placeholder.find(")");
+    std::string decimalValue = placeholder.substr(startPos, endPos - startPos);
+    return decimalToHex(decimalValue);
+}
+
+std::string handleAsciiToHex(const std::string& placeholder, const std::string&) {
+    size_t startPos = placeholder.find("(") + 1;
+    size_t endPos = placeholder.find(")");
+    std::string asciiValue = placeholder.substr(startPos, endPos - startPos);
+    return asciiToHex(asciiValue);
+}
+
+std::string handleHexToRHex(const std::string& placeholder, const std::string&) {
+    size_t startPos = placeholder.find("(") + 1;
+    size_t endPos = placeholder.find(")");
+    std::string hexValue = placeholder.substr(startPos, endPos - startPos);
+    return hexToReversedHex(hexValue);
+}
+
+std::string handleHexToDecimal(const std::string& placeholder, const std::string&) {
+    size_t startPos = placeholder.find("(") + 1;
+    size_t endPos = placeholder.find(")");
+    std::string hexValue = placeholder.substr(startPos, endPos - startPos);
+    return hexToDecimal(hexValue);
+}
+
+std::string handleSlice(const std::string& placeholder, const std::string&) {
+    size_t startPos = placeholder.find('(') + 1;
+    size_t endPos = placeholder.find(')');
+    std::string parameters = placeholder.substr(startPos, endPos - startPos);
+    size_t commaPos = parameters.find(',');
+
+    if (commaPos != std::string::npos) {
+        std::string str = parameters.substr(0, commaPos);
+        size_t sliceStart = std::stoi(parameters.substr(commaPos + 1, parameters.find(',', commaPos + 1) - (commaPos + 1)));
+        size_t sliceEnd = std::stoi(parameters.substr(parameters.find_last_of(',') + 1));
+        return sliceString(str, sliceStart, sliceEnd);
+    }
+    return placeholder;
+}
+
+std::string handleSplit(const std::string& placeholder, const std::string&) {
+    size_t startPos = placeholder.find('(') + 1;
+    size_t endPos = placeholder.find(')');
+    std::string parameters = placeholder.substr(startPos, endPos - startPos);
+    
+    size_t firstCommaPos = parameters.find(',');
+    size_t lastCommaPos = parameters.find_last_of(',');
+    
+    if (firstCommaPos != std::string::npos && lastCommaPos != std::string::npos && firstCommaPos != lastCommaPos) {
+        std::string str = parameters.substr(0, firstCommaPos);
+        std::string delimiter = parameters.substr(firstCommaPos + 1, lastCommaPos - firstCommaPos - 1);
+        size_t index = std::stoi(parameters.substr(lastCommaPos + 1));
+        trim(str);
+        removeQuotes(str);
+        trim(delimiter);
+        removeQuotes(delimiter);
+
+        std::string result = splitStringAtIndex(str, delimiter, index);
+        if (result.empty()) {
+            return str;
+        } else {
+            return result;
+        }
+    }
+    return placeholder;
+}
+
+std::string handleRandom(const std::string& placeholder, const std::string&) {
+    // Ensure the random seed is initialized
+    std::srand(std::time(0));
+    
+    size_t startPos = placeholder.find('(') + 1;
+    size_t endPos = placeholder.find(')');
+    std::string parameters = placeholder.substr(startPos, endPos - startPos);
+    size_t commaPos = parameters.find(',');
+
+    if (commaPos != std::string::npos) {
+        int lowValue = std::stoi(parameters.substr(0, commaPos));
+        int highValue = std::stoi(parameters.substr(commaPos + 1));
+
+        // Generate a random number in the range [lowValue, highValue]
+        int randomValue = lowValue + rand() % (highValue - lowValue + 1);
+
+        return std::to_string(randomValue);  // Return the random value as a string
+    }
+    
+    return placeholder;  // If invalid, return the original placeholder
+}
+
+
+
 void applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::string& hexPath, const std::string& iniPath, const std::string& listString, const std::string& listPath, const std::string& jsonString, const std::string& jsonPath) {
-    std::vector<std::pair<std::string, std::function<std::string(const std::string&)>>> placeholders = {
-        {"{hex_file(", [&](const std::string& placeholder) { return replaceHexPlaceholder(placeholder, hexPath); }},
-        {"{ini_file(", [&](const std::string& placeholder) { 
-            std::string result = placeholder;
-            applyReplaceIniPlaceholder(result, INI_FILE_STR, iniPath); 
-            return result; 
-        }},
-        {"{list(", [&](const std::string& placeholder) {
-            size_t startPos = placeholder.find('(') + 1;
-            size_t endPos = placeholder.find(')');
-            size_t listIndex = std::stoi(placeholder.substr(startPos, endPos - startPos));
-            return stringToList(listString)[listIndex];
-        }},
-        {"{list_file(", [&](const std::string& placeholder) {
-            size_t startPos = placeholder.find('(') + 1;
-            size_t endPos = placeholder.find(')');
-            size_t listIndex = std::stoi(placeholder.substr(startPos, endPos - startPos));
-            return getEntryFromListFile(listPath, listIndex);
-        }},
-        {"{json(", [&](const std::string& placeholder) { return replaceJsonPlaceholder(placeholder, JSON_STR, jsonString); }},
-        {"{json_file(", [&](const std::string& placeholder) { return replaceJsonPlaceholder(placeholder, JSON_FILE_STR, jsonPath); }},
-        {"{timestamp(", [&](const std::string& placeholder) {
-            size_t startPos = placeholder.find("(") + 1;
-            size_t endPos = placeholder.find(")");
-            std::string format = (endPos != std::string::npos) ? placeholder.substr(startPos, endPos - startPos) : "%Y-%m-%d %H:%M:%S";
-            removeQuotes(format);
-            return getCurrentTimestamp(format);
-        }},
-        {"{decimal_to_hex(", [&](const std::string& placeholder) {
-            size_t startPos = placeholder.find("(") + 1;
-            size_t endPos = placeholder.find(")");
-            std::string decimalValue = placeholder.substr(startPos, endPos - startPos);
-            return decimalToHex(decimalValue);
-        }},
-        {"{ascii_to_hex(", [&](const std::string& placeholder) {
-            size_t startPos = placeholder.find("(") + 1;
-            size_t endPos = placeholder.find(")");
-            std::string asciiValue = placeholder.substr(startPos, endPos - startPos);
-            return asciiToHex(asciiValue);
-        }},
-        {"{hex_to_rhex(", [&](const std::string& placeholder) {
-            size_t startPos = placeholder.find("(") + 1;
-            size_t endPos = placeholder.find(")");
-            std::string hexValue = placeholder.substr(startPos, endPos - startPos);
-            return hexToReversedHex(hexValue);
-        }},
-        {"{hex_to_decimal(", [&](const std::string& placeholder) {
-            size_t startPos = placeholder.find("(") + 1;
-            size_t endPos = placeholder.find(")");
-            std::string hexValue = placeholder.substr(startPos, endPos - startPos);
-            return hexToDecimal(hexValue);
-        }},
-        {"{slice(", [&](const std::string& placeholder) {
-            size_t startPos = placeholder.find('(') + 1;
-            size_t endPos = placeholder.find(')');
-            std::string parameters = placeholder.substr(startPos, endPos - startPos);
-            size_t commaPos = parameters.find(',');
-
-            if (commaPos != std::string::npos) {
-                std::string str = parameters.substr(0, commaPos);
-                size_t sliceStart = std::stoi(parameters.substr(commaPos + 1, parameters.find(',', commaPos + 1) - (commaPos + 1)));
-                size_t sliceEnd = std::stoi(parameters.substr(parameters.find_last_of(',') + 1));
-                return sliceString(str, sliceStart, sliceEnd);
-            }
-            return placeholder;
-        }},
-        {"{split(", [&](const std::string& placeholder) {
-            size_t startPos = placeholder.find('(') + 1;
-            size_t endPos = placeholder.find(')');
-            std::string parameters = placeholder.substr(startPos, endPos - startPos);
-            
-            size_t firstCommaPos = parameters.find(',');
-            size_t lastCommaPos = parameters.find_last_of(',');
-        
-            if (firstCommaPos != std::string::npos && lastCommaPos != std::string::npos && firstCommaPos != lastCommaPos) {
-                std::string str = parameters.substr(0, firstCommaPos);
-                std::string delimiter = parameters.substr(firstCommaPos + 1, lastCommaPos - firstCommaPos - 1);
-                size_t index = std::stoi(parameters.substr(lastCommaPos + 1));
-                trim(str);
-                removeQuotes(str);
-                trim(delimiter);
-                removeQuotes(delimiter);
-
-                std::string result = splitStringAtIndex(str, delimiter, index);
-                if (result.empty()) {
-                    return str;
-                } else {
-                    return result;
-                }
-            }
-            return placeholder;
-        }}
+    struct PlaceholderHandler {
+        std::string placeholder;
+        std::string (*handler)(const std::string&, const std::string&);
+        const std::string& context;
     };
 
-    // First replace inner placeholders like {ram_model}
-    //for (auto& [placeholder, replacer] : placeholders) {
-    //    for (auto& arg : cmd) {
-    //        replaceAllPlaceholders(arg, placeholder, replacer(placeholder));
-    //    }
-    //}
+    // Handlers for various placeholders
+    std::vector<PlaceholderHandler> handlers = {
+        {"{hex_file(", handleHexFile, hexPath},
+        {"{ini_file(", handleIniFile, iniPath},
+        {"{list(", handleList, listString},
+        {"{list_file(", handleListFile, listPath},
+        {"{json(", handleJson, jsonString},
+        {"{json_file(", handleJsonFile, jsonPath},
+        {"{timestamp(", handleTimestamp, ""},
+        {"{decimal_to_hex(", handleDecimalToHex, ""},
+        {"{ascii_to_hex(", handleAsciiToHex, ""},
+        {"{hex_to_rhex(", handleHexToRHex, ""},
+        {"{hex_to_decimal(", handleHexToDecimal, ""},
+        {"{slice(", handleSlice, ""},
+        {"{split(", handleSplit, ""},
+        {"{random(", handleRandom, ""}  // Added random handler
+    };
 
-    //std::string titleId = getTitleIdAsString();
-    //
-    //for (auto& arg : cmd) {
-    //    replaceAllPlaceholders(arg, "{ram_vendor}", memoryVendor);
-    //    replaceAllPlaceholders(arg, "{ram_model}", memoryModel);
-    //    replaceAllPlaceholders(arg, "{ams_version}", amsVersion);
-    //    replaceAllPlaceholders(arg, "{hos_version}", hosVersion);
-    //    replaceAllPlaceholders(arg, "{cpu_speedo}", std::to_string(cpuSpeedo0));
-    //    replaceAllPlaceholders(arg, "{cpu_iddq}", std::to_string(cpuIDDQ));
-    //    replaceAllPlaceholders(arg, "{gpu_speedo}", std::to_string(cpuSpeedo2));
-    //    replaceAllPlaceholders(arg, "{gpu_iddq}", std::to_string(gpuIDDQ));
-    //    replaceAllPlaceholders(arg, "{soc_speedo}", std::to_string(socSpeedo0));
-    //    replaceAllPlaceholders(arg, "{soc_iddq}", std::to_string(socIDDQ));
-    //    replaceAllPlaceholders(arg, "{title_id}", titleId);
-    //    
-    //    replaceAllPlaceholders(arg, "{A}", "");
-    //    replaceAllPlaceholders(arg, "{B}", "");
-    //    replaceAllPlaceholders(arg, "{X}", "");
-    //    replaceAllPlaceholders(arg, "{Y}", "");
-    //    replaceAllPlaceholders(arg, "{L}", "");
-    //    replaceAllPlaceholders(arg, "{R}", "");
-    //    replaceAllPlaceholders(arg, "{ZL}", "");
-    //    replaceAllPlaceholders(arg, "{ZR}", "");
-    //    replaceAllPlaceholders(arg, "{DUP}", "");
-    //    replaceAllPlaceholders(arg, "{DDOWN}", "");
-    //    replaceAllPlaceholders(arg, "{DLEFT}", "");
-    //    replaceAllPlaceholders(arg, "{DRIGHT}", "");
-    //    replaceAllPlaceholders(arg, "{LS}", "");
-    //    replaceAllPlaceholders(arg, "{RS}", "");
-    //    replaceAllPlaceholders(arg, "{PLUS}", "");
-    //    replaceAllPlaceholders(arg, "{MINUS}", "");
-    //    
-    //    replaceAllPlaceholders(arg, "{UP_ARROW}", "");
-    //    replaceAllPlaceholders(arg, "{DOWN_ARROW}", "");
-    //    replaceAllPlaceholders(arg, "{LEFT_ARROW}", "");
-    //    replaceAllPlaceholders(arg, "{RIGHT_ARROW}", "");
-    //    replaceAllPlaceholders(arg, "{RIGHT_UP_ARROW}", "");
-    //    replaceAllPlaceholders(arg, "{RIGHT_DOWN_ARROW}", "");
-    //    replaceAllPlaceholders(arg, "{LEFT_UP_ARROW}", "");
-    //    replaceAllPlaceholders(arg, "{LEFT_DOWN_ARROW}", "");
-    //    
-    //    for (const auto& [placeholder, replacer] : placeholders) {
-    //        replacePlaceholders(arg, placeholder, replacer);
-    //    }
-    //    // Failed replacement cleanup
-    //    //if (arg == NULL_STR) arg = UNAVAILABLE_SELECTION;
-    //}
-
-
-    // Create a map with all non-button/arrow placeholders and their replacements
+    // General placeholder replacements
     std::unordered_map<std::string, std::string> generalPlaceholders = {
         {"{ram_vendor}", memoryVendor},
         {"{ram_model}", memoryModel},
@@ -1737,17 +1748,19 @@ void applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
         {"{title_id}", getTitleIdAsString()}
     };
 
-    // Iterate through each command and replace placeholders in one pass
     for (auto& arg : cmd) {
+
         // Replace general placeholders
         replacePlaceholdersInArg(arg, generalPlaceholders);
 
         // Replace button/arrow placeholders from the global map
         replacePlaceholdersInArg(arg, symbolPlaceholders);
 
-        // Additionally replace placeholders from your custom map
-        for (const auto& [placeholder, replacer] : placeholders) {
-            replacePlaceholders(arg, placeholder, replacer);
+        // Replace specific placeholders using function pointers
+        for (const auto& handler : handlers) {
+            replacePlaceholders(arg, handler.placeholder, [handler](const std::string& placeholder) {
+                return handler.handler(placeholder, handler.context);
+            });
         }
     }
 }
