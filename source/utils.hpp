@@ -1723,6 +1723,7 @@ std::string handleLength(const std::string& placeholder, const std::string&) {
     size_t startPos = placeholder.find('(') + 1;
     size_t endPos = placeholder.find(')');
     std::string str = placeholder.substr(startPos, endPos - startPos);
+    trim(str);
     return std::to_string(str.length());  // Return the length of the string
 }
 
