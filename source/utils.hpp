@@ -1781,7 +1781,7 @@ void replacePlaceholdersRecursively(std::string& arg, const std::vector<std::pai
                 std::string replacement = replacer(placeholderContent);
 
                 if (replacement.empty()) {
-                    replacement = "null";
+                    replacement = NULL_STR;
                 }
 
                 arg.replace(startPos, endPos - startPos + 2, replacement);
@@ -1789,7 +1789,7 @@ void replacePlaceholdersRecursively(std::string& arg, const std::vector<std::pai
 
                 // To prevent infinite loops, if no change is made, break
                 if (arg == lastArg) {
-                    arg.replace(startPos, endPos - startPos + 2, "null");
+                    arg.replace(startPos, endPos - startPos + 2, NULL_STR);
                     break;
                 }
 
