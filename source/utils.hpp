@@ -1726,26 +1726,83 @@ std::string handleLength(const std::string& placeholder, const std::string&) {
     return std::to_string(str.length());  // Return the length of the string
 }
 
-// Helper function to evaluate a simple math expression without exceptions
-double evaluateExpression(const std::string& expression, bool& valid) {
-    std::istringstream exprStream(expression);
-    double result = 0;
-    exprStream >> result;
+// Helper function to skip spaces
+void skipSpaces(const std::string& expression, size_t& pos) {
+    while (pos < expression.length() && std::isspace(expression[pos])) {
+        ++pos;
+    }
+}
 
-    if (exprStream.fail()) {
-        valid = false;  // Invalid start of expression
-        return 0;
+// Helper function to parse a number or a nested expression in parentheses
+float parseExpression(const std::string& expression, size_t& pos, bool& valid);
+
+float parseNumber(const std::string& expression, size_t& pos, bool& valid) {
+    skipSpaces(expression, pos);
+
+    // Check if the expression starts with a '(' indicating a nested expression
+    if (expression[pos] == '(') {
+        ++pos;  // Skip the '('
+        float result = parseExpression(expression, pos, valid);
+        if (expression[pos] == ')') {
+            ++pos;  // Skip the ')'
+        } else {
+            valid = false;  // Unmatched parentheses
+        }
+        return result;
     }
 
-    char op;
-    double operand;
-    
-    while (exprStream >> op >> operand) {
-        if (exprStream.fail()) {
-            valid = false;  // Invalid operator or operand
-            return 0;
+    // Parse a number
+    float result = 0.0f;
+    bool hasDecimal = false;
+    float decimalPlace = 0.1f;
+    bool isNegative = false;
+
+    if (expression[pos] == '-') {
+        isNegative = true;
+        ++pos;
+    }
+
+    while (pos < expression.length() && (std::isdigit(expression[pos]) || expression[pos] == '.')) {
+        if (expression[pos] == '.') {
+            hasDecimal = true;
+            ++pos;
+            continue;
         }
-        
+
+        if (hasDecimal) {
+            result += (expression[pos] - '0') * decimalPlace;
+            decimalPlace *= 0.1f;
+        } else {
+            result = result * 10.0f + (expression[pos] - '0');
+        }
+        ++pos;
+    }
+
+    if (isNegative) {
+        result = -result;
+    }
+
+    valid = true;
+    return result;
+}
+
+// Function to evaluate an expression, which may include parentheses
+float parseExpression(const std::string& expression, size_t& pos, bool& valid) {
+    skipSpaces(expression, pos);
+
+    float result = parseNumber(expression, pos, valid);
+    if (!valid) return 0;
+
+    while (pos < expression.length()) {
+        skipSpaces(expression, pos);
+        if (pos >= expression.length()) break;
+
+        char op = expression[pos++];
+        skipSpaces(expression, pos);
+
+        float operand = parseNumber(expression, pos, valid);
+        if (!valid) return 0;
+
         switch (op) {
             case '+':
                 result += operand;
@@ -1763,46 +1820,71 @@ double evaluateExpression(const std::string& expression, bool& valid) {
                 }
                 result /= operand;
                 break;
+            case '%':
+                if (std::fmod(result, 1.0f) != 0.0f || std::fmod(operand, 1.0f) != 0.0f) {
+                    valid = false;  // Modulus only valid for integers
+                    return 0;
+                }
+                result = static_cast<int>(result) % static_cast<int>(operand);
+                break;
             default:
-                valid = false;  // Invalid operator
+                valid = false;
                 return 0;
         }
-    }
-
-    if (!exprStream.eof()) {
-        valid = false;  // If we didn't reach the end of the expression
-        return 0;
     }
 
     valid = true;
     return result;
 }
 
-// Handle Math Placeholder
+// Function to evaluate a complete expression (this will call parseExpression)
+float evaluateExpression(const std::string& expression, bool& valid) {
+    size_t pos = 0;
+    return parseExpression(expression, pos, valid);
+}
+
+// Handle Math Placeholder with Parentheses, Modulus, and Optional Integer Support
 std::string handleMath(const std::string& placeholder, const std::string&) {
     size_t startPos = placeholder.find('(') + 1;
     size_t endPos = placeholder.find(')');
-    
-    // Return "null" if format is invalid
+
+    // Return NULL_STR if format is invalid
     if (startPos == std::string::npos || endPos == std::string::npos || startPos >= endPos) {
-        return "null";
+        return NULL_STR;
     }
 
     std::string mathExpression = placeholder.substr(startPos, endPos - startPos);
 
-    // Remove any unnecessary spaces in the expression
+    // Check for an optional second parameter, like 'true' to force integer output
+    size_t commaPos = mathExpression.find(',');
+    bool forceInteger = false;
+
+    if (commaPos != std::string::npos) {
+        std::string secondParam = mathExpression.substr(commaPos + 1);
+        trim(secondParam);  // Optionally, remove spaces from the second param
+        forceInteger = (secondParam == TRUE_STR);
+        mathExpression = mathExpression.substr(0, commaPos);  // Remove the second param for evaluation
+    }
+
+    // Remove unnecessary spaces in the expression
     mathExpression.erase(remove_if(mathExpression.begin(), mathExpression.end(), ::isspace), mathExpression.end());
 
     // Evaluate the math expression
     bool valid = false;
-    double result = evaluateExpression(mathExpression, valid);
+    float result = evaluateExpression(mathExpression, valid);
 
-    // Return "null" if the expression was invalid
+    // Return NULL_STR if the expression was invalid
     if (!valid) {
-        return "null";
+        return NULL_STR;
     }
 
-    return std::to_string(result);  // Convert the result to string and return
+    // If forceInteger is true, or the result is already an integer, return it as an integer
+    if (forceInteger || std::fmod(result, 1.0f) == 0.0f) {
+        return std::to_string(static_cast<int>(result));
+    }
+
+    // Otherwise, return the result as a floating-point string
+    return std::to_string(result);
 }
 
 
