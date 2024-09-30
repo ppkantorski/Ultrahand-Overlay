@@ -60,15 +60,39 @@
 #include <list>
 #include <stack>
 #include <map>
-
+#include <barrier>
 
 //static bool debugFPS = true;
 
 //uint64_t RAM_Used_system_u = 0;
 //uint64_t RAM_Total_system_u = 0;
 
-#include <switch.h>
-#include <string>
+
+bool isDocked() {
+    Result rc;
+    ApmPerformanceMode perfMode = ApmPerformanceMode_Invalid;
+
+    // Initialize the APM service
+    rc = apmInitialize();
+    if (R_FAILED(rc)) {
+        return false;  // Fail early if initialization fails
+    }
+
+    // Get the current performance mode
+    rc = apmGetPerformanceMode(&perfMode);
+    apmExit();  // Clean up the APM service
+
+    if (R_FAILED(rc)) {
+        return false;  // Fail early if performance mode check fails
+    }
+
+    // Check if the performance mode indicates docked state
+    if (perfMode == ApmPerformanceMode_Boost) {
+        return true;  // System is docked (boost mode active)
+    }
+
+    return false;  // Not docked (normal mode or handheld)
+}
 
 std::string getTitleIdAsString() {
     Result rc;
@@ -146,7 +170,7 @@ static std::atomic<bool> shakingProgress(true);
 
 static std::atomic<bool> isHidden(true);
 
-bool progressAnimation = false;
+//bool progressAnimation = false;
 bool disableTransparency = false;
 //bool useCustomWallpaper = false;
 bool useMemoryExpansion = false;
@@ -940,75 +964,6 @@ static std::unordered_map<wchar_t, float> characterWidths = {
 };
 
 static float defaultNumericCharWidth = 0.66;
-//static std::unordered_map<wchar_t, float> numericCharacterWidths = {
-//    {L'0', defaultNumericCharWidth},
-//    {L'1', defaultNumericCharWidth},
-//    {L'2', defaultNumericCharWidth},
-//    {L'3', defaultNumericCharWidth},
-//    {L'4', defaultNumericCharWidth},
-//    {L'5', defaultNumericCharWidth},
-//    {L'6', defaultNumericCharWidth},
-//    {L'7', defaultNumericCharWidth},
-//    {L'8', defaultNumericCharWidth},
-//    {L'9', defaultNumericCharWidth}
-//};
-
-
-
-//inline float calculateStringWidth2(const std::string& str, s32 fontSize, bool fixedWidthNumbers = false) {
-//    if (str.empty()) {
-//        return 0.0f;
-//    }
-//    
-//    float totalWidth = 0.0f;
-//    std::string::size_type strPos = 0;
-//    ssize_t codepointWidth;
-//    //u32 prevCharacter = 0;
-//    
-//    //float currFontSize;
-//    //int xAdvance, leftBearing, kernAdvance;
-//    u32 currCharacter;
-//    
-//    bool found;
-//    while (strPos < str.size()) {
-//        found = false;
-//        codepointWidth = decode_utf8(&currCharacter, reinterpret_cast<const u8*>(&str[strPos]));
-//        
-//        if (codepointWidth <= 0) {
-//            break;
-//        }
-//        
-//        // Check if the character is in the character width map
-//        if (!fixedWidthNumbers) {
-//            auto it = characterWidths.find(static_cast<wchar_t>(currCharacter));
-//            if (it != characterWidths.end()) {
-//                totalWidth += it->second * fontSize;
-//                found = true;
-//            }
-//        } else {
-//            auto it = numericCharacterWidths.find(static_cast<wchar_t>(currCharacter));
-//            if (it != numericCharacterWidths.end()) {
-//                totalWidth += it->second * fontSize;
-//                found = true;
-//            } else {
-//                auto it = characterWidths.find(static_cast<wchar_t>(currCharacter));
-//                if (it != characterWidths.end()) {
-//                    totalWidth += it->second * fontSize;
-//                    found = true;
-//                }
-//            }
-//        }
-//        if (!found) {
-//            return 0.0f;
-//        }
-//        
-//        strPos += codepointWidth;
-//        //prevCharacter = currCharacter;
-//    }
-//    
-//    return totalWidth;
-//}
-
 
 
 
@@ -1164,9 +1119,6 @@ void loadWallpaperFile(const std::string& filePath, s32 width = 448, s32 height 
 }
 
 
-
-//static uint8x16x4_t pixelData;
-
 // Global variables for FPS calculation
 //double lastTimeCount = 0.0;
 //int frameCount = 0;
@@ -1211,7 +1163,7 @@ static PsmSession powerSession;
 // Define variables to store previous battery charge and time
 static uint32_t prevBatteryCharge = 0;
 static s64 timeOut = 0;
-static char chargeString[6];  // Need space for the null terminator and the percentage sign
+
 
 static uint32_t batteryCharge;
 static bool isCharging;
@@ -1307,7 +1259,7 @@ void powerExit(void) {
 
 
 // Temperature Implementation
-static s32 PCB_temperature, SOC_temperature;
+static float PCB_temperature, SOC_temperature;
 
 /*
 I2cReadRegHandler was taken from Switch-OC-Suite source code made by KazushiMe
@@ -1358,12 +1310,12 @@ Result I2cReadRegHandler(u8 reg, I2cDevice dev, u16 *out)
 #define TMP451_PCB_TMP_DEC_REG 0x15  // Register for PCB temperature decimal part
 
 // Common helper function to read temperature (integer and fractional parts)
-Result ReadTemperature(s32 *temperature, u8 integerReg, u8 fractionalReg, bool integerOnly)
+Result ReadTemperature(float *temperature, u8 integerReg, u8 fractionalReg, bool integerOnly)
 {
     u16 rawValue;
     u8 val;
     s32 integerPart = 0;
-    s32 fractionalPart = 0;
+    float fractionalPart = 0.0f;  // Change this to a float to retain fractional precision
 
     // Read the integer part of the temperature
     Result res = I2cReadRegHandler(integerReg, I2cDevice_Tmp451, &rawValue);
@@ -1376,7 +1328,7 @@ Result ReadTemperature(s32 *temperature, u8 integerReg, u8 fractionalReg, bool i
 
     if (integerOnly)
     {
-        *temperature = integerPart;
+        *temperature = static_cast<float>(integerPart);  // Ensure it's treated as a float
         return 0;  // Return only integer part if requested
     }
 
@@ -1387,187 +1339,25 @@ Result ReadTemperature(s32 *temperature, u8 integerReg, u8 fractionalReg, bool i
     }
 
     val = (u8)rawValue;  // Cast the value to an 8-bit unsigned integer
-    fractionalPart = (val >> 4) * 0.0625;  // Fractional part: upper 4 bits, scaled by 1/16
+    fractionalPart = static_cast<float>(val >> 4) * 0.0625f;  // Convert upper 4 bits into fractional part
 
     // Combine integer and fractional parts
-    *temperature = integerPart + fractionalPart;
+    *temperature = static_cast<float>(integerPart) + fractionalPart;
 
     return 0;
 }
 
 // Function to get the SOC temperature
-Result ReadSocTemperature(s32 *temperature, bool integerOnly = true)
+Result ReadSocTemperature(float *temperature, bool integerOnly = true)
 {
     return ReadTemperature(temperature, TMP451_SOC_TEMP_REG, TMP451_SOC_TMP_DEC_REG, integerOnly);
 }
 
 // Function to get the PCB temperature
-Result ReadPcbTemperature(s32 *temperature, bool integerOnly = true)
+Result ReadPcbTemperature(float *temperature, bool integerOnly = true)
 {
     return ReadTemperature(temperature, TMP451_PCB_TEMP_REG, TMP451_PCB_TMP_DEC_REG, integerOnly);
 }
-
-
-
-
-//static Service* g_tsSrv;
-//Result tsCheck = 1;
-//Result tcCheck = 1;
-//
-//Result tsOpenTsSession(Service* &serviceSession, TsSession* out, TsDeviceCode device_code) {
-//    return serviceDispatchIn(serviceSession, 4, device_code,
-//        .out_num_objects = 1,
-//        .out_objects = &out->s,
-//    );
-//}
-//
-//inline void tsCloseTsSession(TsSession* in) {
-//    serviceClose(&in->s);
-//}
-//
-//Result tsGetTemperatureWithTsSession(TsSession* ITs, float* temperature) {
-//    return serviceDispatchOut(&ITs->s, 4, *temperature);
-//}
-//
-//
-//inline bool thermalstatusInit(void) {
-//    tcCheck = tcInitialize();
-//    tsCheck = tsInitialize();
-//    if (R_SUCCEEDED(tsCheck)) {
-//        g_tsSrv = tsGetServiceSession();
-//    } else
-//        return false;
-//    
-//    return true;
-//}
-//
-//inline void thermalstatusExit(void) {
-//    tsExit();
-//    tcExit();
-//}
-//
-//inline bool throttle(std::chrono::steady_clock::time_point& last_call) {
-//    auto now = std::chrono::steady_clock::now();
-//    if (std::chrono::duration_cast<std::chrono::seconds>(now - last_call) < min_delay) {
-//        return false;
-//    }
-//    last_call = now;
-//    return true;
-//}
-//
-//inline bool getTemperature(s32* temperature, TsDeviceCode device_code) {
-//    static std::chrono::steady_clock::time_point last_call_pcb, last_call_soc;
-//    //static std::chrono::steady_clock::time_point last_call_soc;
-//
-//    // Choose the appropriate throttle variable based on the device code
-//    std::chrono::steady_clock::time_point& last_call = 
-//        (device_code == TsDeviceCode_LocationInternal) ? last_call_pcb : last_call_soc;
-//
-//    if (!throttle(last_call)) {
-//        return false;
-//    }
-//
-//    TsSession ts_session;
-//    Result rc = tsOpenTsSession(g_tsSrv, &ts_session, device_code);
-//    if (R_SUCCEEDED(rc)) {
-//        float temp_float;
-//        if (R_SUCCEEDED(tsGetTemperatureWithTsSession(&ts_session, &temp_float))) {
-//            *temperature = static_cast<s32>(temp_float);
-//        }
-//        tsSessionClose(&ts_session);
-//        return true;
-//    }
-//    
-//    return false;
-//}
-//
-//inline bool thermalstatusGetDetailsPCB(s32* temperature) {
-//    return getTemperature(temperature, TsDeviceCode_LocationInternal);
-//}
-//
-//inline bool thermalstatusGetDetailsSOC(s32* temperature) {
-//    return getTemperature(temperature, TsDeviceCode_LocationExternal);
-//}
-//
-
-//#define TMP451_I2C_ADDR ((I2cDevice)0x4C)  // I2C address for the TMP451 sensor
-//#define TMP451_SOC_TMP_DEC_REG 0x10  // Register address for SOC temperature
-//#define TMP451_PCB_TMP_DEC_REG 0x15  // Register address for PCB temperature
-//
-//// Function to read the SOC temperature
-//Result ReadSocTemperature(s32 *temperature)
-//{
-//    u16 rawValue;
-//    Result res = I2cReadRegHandler(TMP451_SOC_TMP_DEC_REG, TMP451_I2C_ADDR, &rawValue);
-//    if (R_FAILED(res))
-//    {
-//        return res;  // Handle the error
-//    }
-//
-//    // Convert the raw value to temperature in Celsius
-//    *temperature = s32((float)(rawValue) / 256.0f);
-//    return 0;
-//}
-//
-//// Function to read the PCB temperature
-//Result ReadPcbTemperature(s32 *temperature)
-//{
-//    u16 rawValue;
-//    Result res = I2cReadRegHandler(TMP451_PCB_TMP_DEC_REG, TMP451_I2C_ADDR, &rawValue);
-//    if (R_FAILED(res))
-//    {
-//        return res;  // Handle the error
-//    }
-//
-//    // Convert the raw value to temperature in Celsius
-//    *temperature = s32((float)(rawValue) / 256.0f);  // Assuming a 1/8 scaling for PCB temperature
-//    return 0;
-//}
-
-
-//s32 SOC_temperature, PCB_temperature;
-//static TsSession g_tsInternalSession, g_tsExternalSession;
-//
-//
-//bool thermalstatusInit(void) {
-//    if (R_FAILED(tsInitialize()))
-//        return false;
-//
-//    if (hosversionAtLeast(17,0,0) && R_FAILED(tsOpenSession(&g_tsInternalSession, TsDeviceCode_LocationInternal)) && R_FAILED(tsOpenSession(&g_tsExternalSession, TsDeviceCode_LocationExternal)))
-//        return false;
-//
-//    return true;
-//}
-//
-//void thermalstatusExit(void) {
-//    if (hosversionAtLeast(17,0,0)) {
-//        tsSessionClose(&g_tsInternalSession);
-//        tsSessionClose(&g_tsExternalSession);
-//    }
-//    tsExit();
-//}
-//
-//bool thermalstatusGetDetails(s32 *temperature, std::string location = "internal") {
-//    if (hosversionAtLeast(17,0,0)) {
-//        float temp_float;
-//        if ((location == "internal") && R_SUCCEEDED(tsSessionGetTemperature(&g_tsInternalSession, &temp_float))) {
-//            *temperature = (int)temp_float;
-//            return true;
-//        } else if ((location == "external") && R_SUCCEEDED(tsSessionGetTemperature(&g_tsExternalSession, &temp_float))) {
-//            *temperature = (int)temp_float;
-//            return true;
-//        } else {
-//            return false;
-//        }
-//    } else {
-//        if (location == "internal") {
-//            return R_SUCCEEDED(tsGetTemperature(TsLocation_Internal, temperature));
-//        } else {
-//            return R_SUCCEEDED(tsGetTemperature(TsLocation_External, temperature));
-//        }
-//    }
-//}
-
 
 
 
@@ -1612,7 +1402,7 @@ std::vector<std::thread> threads(numThreads);
 s32 bmpChunkSize = (720 + numThreads - 1) / numThreads;
 std::atomic<s32> currentRow;
 
-#include <barrier>
+
 
 // Assuming numThreads is the number of threads you have
 std::barrier inPlotBarrier(numThreads, [](){
@@ -1657,8 +1447,6 @@ std::barrier inPlotBarrier(numThreads, [](){
 
 using namespace std::literals::string_literals;
 using namespace std::literals::chrono_literals;
-
-
 
 
 
@@ -1973,6 +1761,15 @@ namespace tsl {
         // Set Ultrahand Globals
         useSwipeToOpen = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "swipe_to_open") == TRUE_STR);
         useOpaqueScreenshots = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "opaque_screenshots") == TRUE_STR);
+
+        std::string defaultLang = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, DEFAULT_LANG_STR);
+        defaultLang = defaultLang.empty() ? "en" : defaultLang;
+
+        std::string langFile = LANG_PATH+defaultLang+".json";
+        if (isFileOrDirectory(langFile))
+            parseLanguage(langFile);
+        else
+            reinitializeLangVars();
     }
 
     
@@ -2149,35 +1946,6 @@ namespace tsl {
             hidsysEnableAppletToGetInput(true, 0);
         }
         
-        /**
-         * @brief Splits a string at the given delimeters
-         *
-         * @param str String to split
-         * @param delim Delimeter
-         * @return Vector containing the split tokens
-         */
-        //static std::vector<std::string> split(const std::string& str, char delim = ' ') {
-        //    std::vector<std::string> out;
-        //    
-        //    if (str.empty()) {
-        //        return out;
-        //    }
-        //    
-        //    // Reserve space assuming the worst case where every character is a delimiter
-        //    out.reserve(std::count(str.begin(), str.end(), delim) + 1);
-        //    
-        //    size_t start = 0;
-        //    size_t end = str.find(delim);
-        //    
-        //    while (end != std::string::npos) {
-        //        out.emplace_back(str.substr(start, end - start));
-        //        start = end + 1;
-        //        end = str.find(delim, start);
-        //    }
-        //    out.emplace_back(str.substr(start));
-        //    
-        //    return out;
-        //}
 
         
         namespace ini {
@@ -2187,54 +1955,6 @@ namespace tsl {
              */
             using IniData = std::map<std::string, std::map<std::string, std::string>>;
             
-            /**
-             * @brief Tesla config file
-             */
-            //static const char* TESLA_CONFIG_FILE = "/config/tesla/config.ini"; // CUSTOM MODIFICATION
-            //static const char* ULTRAHAND_CONFIG_FILE = ULTRAHAND_CONFIG_INI_PATH; // CUSTOM MODIFICATION
-            
-            /**
-             * @brief Parses an INI string
-             *
-             * @param str String to parse
-             * @return Parsed data
-             */
-            //static IniData parseIni(const std::string &str) {
-            //    IniData iniData;
-            //   
-            //    auto lines = split(str, '\n');
-            //   
-            //    std::string lastHeader = "";
-            //    for (auto& line : lines) {
-            //        if (line.empty())
-            //            continue;
-            //   
-            //        if (line[0] == '[' && line[line.size() - 1] == ']') {
-            //            lastHeader = line.substr(1, line.size() - 2);
-            //            iniData.emplace(lastHeader, std::map<std::string, std::string>{});
-            //        }
-            //        else {
-            //            auto keyValuePair = split(line, '=');
-            //            if (keyValuePair.size() == 2) {
-            //                std::string key = trim(keyValuePair[0]);
-            //                std::string value = trim(keyValuePair[1]);
-            //   
-            //                // Remove leading spaces before the equal sign, trailing spaces at the end of the line
-            //                key.erase(key.begin(), std::find_if(key.begin(), key.end(), [](unsigned char ch) {
-            //                    return !std::isspace(ch);
-            //                }));
-            //                key.erase(std::find_if(key.rbegin(), key.rend(), [](unsigned char ch) {
-            //                    return !std::isspace(ch);
-            //                }).base(), key.end());
-            //   
-            //                // No need to remove spaces within the value, so just store it as is
-            //                iniData[lastHeader].emplace(key, value);
-            //            }
-            //        }
-            //    }
-            //   
-            //    return iniData;
-            //} // CUSTOM MODIFICATION END
             
             
             /**
@@ -2746,20 +2466,7 @@ namespace tsl {
                             }
                         } else {
                             self->setPixelBlendDst(x1, y1, color);
-                            // Center part
-                            //if (y1 < y_top || y1 >= y_bottom) {
-                            //    // Top and Bottom sides
-                            //    isInCorner = true;
-                            //} else {
-                            //    // Center area inside rectangle
-                            //    isInCorner = true;
-                            //}
                         }
-            
-                        // Set the pixel color if it's in the corner or filled area
-                        //if (isInCorner) {
-                        //    self->setPixelBlendDst(x1, y1, color);
-                        //}
                     }
                 }
             }
@@ -2827,50 +2534,6 @@ namespace tsl {
                     };
                 }
             }
-
-            //void drawRoundedRect(s32 x, s32 y, s32 w, s32 h, s32 radius, Color color) {
-            //    drawRoundedRectFunc(x, y, w, h, radius, color);
-            //}
-
-            //inline void drawRoundedRect(s32 x, s32 y, s32 w, s32 h, s32 radius, Color color) {
-            //    s32 radiusSquared = radius * radius;
-            //    s32 xMin = x + radius;
-            //    s32 yMin = y + radius;
-            //    s32 xMax = x + w - radius;
-            //    s32 yMax = y + h - radius;
-            //
-            //    for (s32 y1 = y; y1 < y + h; ++y1) {
-            //        for (s32 x1 = x; x1 < x + w; ++x1) {
-            //            // Check if the pixel is inside the rectangle area excluding corners
-            //            if (x1 >= xMin && x1 < xMax && y1 >= yMin && y1 < yMax) {
-            //                this->setPixelBlendDst(x1, y1, color);
-            //            } else {
-            //                s32 dx = 0, dy = 0;
-            //
-            //                // Check corners
-            //                if (x1 < xMin && y1 < yMin) { // Top-left corner
-            //                    dx = xMin - x1;
-            //                    dy = yMin - y1;
-            //                } else if (x1 >= xMax && y1 < yMin) { // Top-right corner
-            //                    dx = x1 - xMax;
-            //                    dy = yMin - y1;
-            //                } else if (x1 < xMin && y1 >= yMax) { // Bottom-left corner
-            //                    dx = xMin - x1;
-            //                    dy = y1 - yMax;
-            //                } else if (x1 >= xMax && y1 >= yMax) { // Bottom-right corner
-            //                    dx = x1 - xMax;
-            //                    dy = y1 - yMax;
-            //                }
-            //
-            //                // Check if the pixel is within the radius of the corner
-            //                if (dx * dx + dy * dy <= radiusSquared) {
-            //                    this->setPixelBlendDst(x1, y1, color);
-            //                }
-            //            }
-            //        }
-            //    }
-            //}
-
             
             
             inline void drawUniformRoundedRect(const s32 x, const s32 y, const s32 w, const s32 h, const Color& color) {
@@ -3509,15 +3172,58 @@ namespace tsl {
             }
 
             
+
+            std::pair<int, int> getUnderscanPixels() {
+                if (!isDocked()) {
+                    return {0, 0};
+                }
+                
+                // Retrieve the TV settings
+                SetSysTvSettings tvSettings;
+                Result res = setsysGetTvSettings(&tvSettings);
+                if (R_FAILED(res)) {
+                    // Handle error: return default underscan or log error
+                    return {0, 0};
+                }
+                
+                // The underscan value might not be a percentage, we need to interpret it correctly
+                u32 underscanValue = tvSettings.underscan;
+                
+                // Convert the underscan value to a fraction. Assuming 0 means no underscan and larger values represent
+                // greater underscan. Adjust this formula based on actual observed behavior or documentation.
+                float underscanPercentage = 1.0f - (underscanValue / 100.0f);
+                
+                // Original dimensions of the full 720p image (1280x720)
+                int originalWidth = cfg::ScreenWidth;
+                int originalHeight = cfg::ScreenHeight;
+            
+                // Adjust the width and height based on the underscan percentage
+                int adjustedWidth = static_cast<int>(originalWidth * underscanPercentage);
+                int adjustedHeight = static_cast<int>(originalHeight * underscanPercentage);
+                
+                // Calculate the underscan in pixels (left/right and top/bottom)
+                int horizontalUnderscanPixels = (originalWidth - adjustedWidth) / 2;
+                int verticalUnderscanPixels = (originalHeight - adjustedHeight) / 2;
+                
+                return {horizontalUnderscanPixels, verticalUnderscanPixels};
+            }
+
+
+
+            
             /**
              * @brief Initializes the renderer and layers
              *
              */
             void init() {
+                // Get the underscan pixel values for both horizontal and vertical borders
+                auto [horizontalUnderscanPixels, verticalUnderscanPixels] = getUnderscanPixels();
+                //int horizontalUnderscanPixels = 0;
+
                 useRightAlignment = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "right_alignment") == TRUE_STR);
                 //cfg::LayerPosX = 1280-32;
                 if (useRightAlignment) {
-                    cfg::LayerPosX = 1280-32;
+                    cfg::LayerPosX = 1280-32 - horizontalUnderscanPixels;
                     layerEdge = (1280-448);
                 }
                 cfg::LayerPosY = 0;
@@ -3525,11 +3231,17 @@ namespace tsl {
                 cfg::FramebufferHeight = 720;
                 cfg::LayerWidth  = cfg::ScreenHeight * (float(cfg::FramebufferWidth) / float(cfg::FramebufferHeight));
                 cfg::LayerHeight = cfg::ScreenHeight;
+
+                // Apply underscanning offset
+                cfg::LayerWidth += horizontalUnderscanPixels;
+
                 
                 if (this->m_initialized)
                     return;
+
+                //s32 layerZ = 0;
                 
-                tsl::hlp::doWithSmSession([this]{
+                tsl::hlp::doWithSmSession([this, horizontalUnderscanPixels]{
                     ASSERT_FATAL(viInitialize(ViServiceType_Manager));
                     ASSERT_FATAL(viOpenDefaultDisplay(&this->m_display));
                     ASSERT_FATAL(viGetDisplayVsyncEvent(&this->m_display, &this->m_vsyncEvent));
@@ -3537,9 +3249,18 @@ namespace tsl {
                     ASSERT_FATAL(viCreateLayer(&this->m_display, &this->m_layer));
                     ASSERT_FATAL(viSetLayerScalingMode(&this->m_layer, ViScalingMode_FitToLayer));
                     
-                    if (s32 layerZ = 0; R_SUCCEEDED(viGetZOrderCountMax(&this->m_display, &layerZ)) && layerZ > 0)
-                        ASSERT_FATAL(viSetLayerZ(&this->m_layer, layerZ));
-                    
+                    //if (s32 layerZ = 0; R_SUCCEEDED(viGetZOrderCountMax(&this->m_display, &layerZ)) && layerZ > 0)
+                    //    ASSERT_FATAL(viSetLayerZ(&this->m_layer, layerZ));
+
+                    if (horizontalUnderscanPixels == 0) {
+                        s32 layerZ = 0;
+                        if (R_SUCCEEDED(viGetZOrderCountMax(&this->m_display, &layerZ)) && layerZ > 0)
+                            ASSERT_FATAL(viSetLayerZ(&this->m_layer, layerZ));
+                        else ASSERT_FATAL(viSetLayerZ(&this->m_layer, 255)); // max value 255 as fallback
+                    } else {
+                        ASSERT_FATAL(viSetLayerZ(&this->m_layer, 34)); // 34 is the edge for underscanning
+                    }
+
                     ASSERT_FATAL(tsl::hlp::viAddToLayerStack(&this->m_layer, ViLayerStack_Default));
                     ASSERT_FATAL(tsl::hlp::viAddToLayerStack(&this->m_layer, ViLayerStack_Screenshot));
                     ASSERT_FATAL(tsl::hlp::viAddToLayerStack(&this->m_layer, ViLayerStack_Recording));
@@ -3548,7 +3269,6 @@ namespace tsl {
                     ASSERT_FATAL(tsl::hlp::viAddToLayerStack(&this->m_layer, ViLayerStack_Null));
                     ASSERT_FATAL(tsl::hlp::viAddToLayerStack(&this->m_layer, ViLayerStack_ApplicationForDebug));
                     ASSERT_FATAL(tsl::hlp::viAddToLayerStack(&this->m_layer, ViLayerStack_Lcd));
-                    //ASSERT_FATAL(tsl::hlp::viAddToLayerStack(&this->m_layer, 8));
                     
                     ASSERT_FATAL(viSetLayerSize(&this->m_layer, cfg::LayerWidth, cfg::LayerHeight));
                     ASSERT_FATAL(viSetLayerPosition(&this->m_layer, cfg::LayerPosX, cfg::LayerPosY));
@@ -3681,8 +3401,9 @@ namespace tsl {
             u8 saturation;
             //Color animColor = tsl::style::color::ColorClickAnimation;
             float progress;
-            Color clickColor1 = Color(0);
-            Color clickColor2 = Color(0);
+
+            //Color clickColor1 = Color(0);
+            //Color clickColor2 = Color(0);
             
             s32 x, y;
             s32 amplitude;
@@ -3855,21 +3576,9 @@ namespace tsl {
                     animColor.a = saturation;
                 }
                 renderer->drawRect(ELEMENT_BOUNDS(this), a(animColor));
-                //if (!disableSelectionBG) {
-                //    saturation = tsl::style::ListItemHighlightSaturation * (float(this->m_clickAnimationProgress) / float(tsl::style::ListItemHighlightLength));
-                //    if (invertBGClickColor) {
-                //        animColor.r = 15-saturation;
-                //        animColor.g = 15-saturation;
-                //        animColor.b = 15;
-                //    } else {
-                //        animColor.r = 0;
-                //        animColor.g = saturation;
-                //        animColor.b = saturation;
-                //    }
-                //    renderer->drawRect(ELEMENT_BOUNDS(this), a(animColor));
-                //} else {
-                clickColor1 = highlightColor1;
-                clickColor2 = clickColor;
+
+                Color clickColor1 = highlightColor1;
+                Color clickColor2 = clickColor;
                 
                 //half progress = half((std::sin(2.0 * M_PI * fmod(std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count(), 1.0)) + 1.0) / 2.0);
                 progress = (std::sin(2.0 * M_PI * fmod(std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count(), 1.0)) + 1.0) / 2.0;
@@ -3965,18 +3674,8 @@ namespace tsl {
             virtual void drawHighlight(gfx::Renderer *renderer) { // CUSTOM MODIFICATION start
                 if (!m_isItem)
                     return;
-                //Color highlightColor1 = {0x2, 0x8, 0xC, 0xF};
-                //Color highlightColor2 = {0x8, 0xF, 0xF, 0xF};
-                //highlightColor1Str = "#2288CC";
-                //highlightColor2Str = "#88FFFF";
                 
                 
-                // Get the current time
-                
-                // Calculate the progress for one full sine wave per second
-                //const double cycleDuration = 1.0;  // 1 second for one full sine wave
-                //double timeCounter = 
-                //half progress = half((std::sin(2.0 * M_PI * fmod(std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count(), 1.0)) + 1.0) / 2.0);
                 progress = ((std::sin(2.0 * M_PI * fmod(std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count(), 1.0)) + 1.0) / 2.0);
                 if (runningInterpreter.load(std::memory_order_acquire)) {
                     highlightColor = {
@@ -4285,7 +3984,23 @@ namespace tsl {
 
         
         // CUSTOM SECTION START
-        
+        void drawWallpaper(gfx::Renderer *renderer) {
+            if (expandedMemory && !refreshWallpaper.load(std::memory_order_acquire)) {
+                //inPlot = true;
+                inPlot.store(true, std::memory_order_release);
+                //std::lock_guard<std::mutex> lock(wallpaperMutex);
+                if (!wallpaperData.empty()) {
+                    // Draw the bitmap at position (0, 0) on the screen
+                    if (!refreshWallpaper.load(std::memory_order_acquire))
+                        renderer->drawBitmap(0, 0, 448, 720, wallpaperData.data());
+                    else
+                        inPlot.store(false, std::memory_order_release);
+                } else {
+                    inPlot.store(false, std::memory_order_release);
+                }
+                //inPlot = false;
+            }
+        }
         
         // CUSTOM SECTION END
         
@@ -4320,20 +4035,6 @@ namespace tsl {
             float x, y;
             int offset, y_offset;
             int fontSize;
-
-            // Convert the C-style string to an std::string
-            //std::string chargeStringSTD;
-            //std::string PCB_temperatureStringSTD;
-            //std::string SOC_temperatureStringSTD;
-            
-            //char timeStr[20]; // Allocate a buffer to store the time string
-            //char PCB_temperatureStr[10];
-            //char SOC_temperatureStr[10];
-
-            //struct timespec currentTimeSpec;
-            //std::string filePath = "sdmc:/config/ultrahand/wallpaper.rgba";
-            //s32 width = 448/2;
-            //s32 height = 720/2;
 
             std::string menuBottomLine;
             
@@ -4382,21 +4083,7 @@ namespace tsl {
                     noClickableItems = m_noClickableItems;
                 renderer->fillScreen(a(defaultBackgroundColor));
                 
-                if (expandedMemory && !refreshWallpaper.load(std::memory_order_acquire)) {
-                    //inPlot = true;
-                    inPlot.store(true, std::memory_order_release);
-                    //std::lock_guard<std::mutex> lock(wallpaperMutex);
-                    if (!wallpaperData.empty()) {
-                        // Draw the bitmap at position (0, 0) on the screen
-                        if (!refreshWallpaper.load(std::memory_order_acquire))
-                            renderer->drawBitmap(0, 0, 448, 720, wallpaperData.data());
-                        else
-                            inPlot.store(false, std::memory_order_release);
-                    } else {
-                        inPlot.store(false, std::memory_order_release);
-                    }
-                    //inPlot = false;
-                }
+                drawWallpaper(renderer);
                 
 
                 y = 50;
@@ -4407,6 +4094,9 @@ namespace tsl {
                                     this->m_subtitle.find("Ultrahand Script") == std::string::npos);
 
                 if (isUltrahand) {
+                    // Call the extracted widget drawing method
+                    drawWidget(renderer);
+
 
                     if (touchingMenu && inMainMenu) {
                         renderer->drawRoundedRect(0.0f, 12.0f, 245.0f, 73.0f, 6.0f, a(clickColor));
@@ -4449,111 +4139,6 @@ namespace tsl {
                     
                     renderer->drawString(SPLIT_PROJECT_NAME_2, false, x, y + offset, fontSize, a(logoColor2));
                     
-                    if (!(hideBattery && hidePCBTemp && hideSOCTemp && hideClock)) {
-                        renderer->drawRect(245, 23, 1, 49, a(separatorColor));
-                    }
-                    
-                    
-                    y_offset = 45;
-                    if ((hideBattery && hidePCBTemp && hideSOCTemp) || hideClock) {
-                        y_offset += 10;
-                    }
-                    
-                    clock_gettime(CLOCK_REALTIME, &currentTime);
-                    if (!hideClock) {
-                        static char timeStr[20]; // Allocate a buffer to store the time string
-                        strftime(timeStr, sizeof(timeStr), datetimeFormat.c_str(), localtime(&currentTime.tv_sec));
-                        localizeTimeStr(timeStr);
-                        renderer->drawString(timeStr, false, tsl::cfg::FramebufferWidth - renderer->calculateStringWidth(timeStr, 20, true) - 20, y_offset, 20, a(clockColor));
-                        y_offset += 22;
-                    }
-                    
-                    //if ((currentTimeSpec.tv_sec - timeOut) >= 1) {
-                    //    if (!isHidden.load()) {
-                    //        if (!hidePCBTemp) thermalstatusGetDetailsPCB(&PCB_temperature);
-                    //        if (!hideSOCTemp) thermalstatusGetDetailsSOC(&SOC_temperature);
-                    //        if (!hideBattery) powerGetDetails(&batteryCharge, &isCharging);
-                    //    }
-                    //    timeOut = int(currentTimeSpec.tv_sec);
-                    //}
-                    //if (!isHidden.load()) {
-
-                    static char PCB_temperatureStr[10];
-                    static char SOC_temperatureStr[10];
-
-
-                    size_t statusChange = size_t(hideSOCTemp) + size_t(hidePCBTemp) + size_t(hideBattery);
-                    static size_t lastStatusChange = 0;
-
-                    if ((currentTime.tv_sec - timeOut) >= 1 || statusChange != lastStatusChange) {
-                        //if (!hidePCBTemp || !hideSOCTemp) {
-                        //    //thermalstatusInit();
-                        //    //if (!hidePCBTemp)
-                        //    //    thermalstatusGetDetailsPCB(&PCB_temperature);
-                        //    //if (!hideSOCTemp)
-                        //    //    thermalstatusGetDetailsSOC(&SOC_temperature);
-                        //    //thermalstatusExit();
-                        //}
-                        if (!hideSOCTemp) {
-                            ReadSocTemperature(&SOC_temperature);
-                            snprintf(SOC_temperatureStr, sizeof(SOC_temperatureStr) - 1, "%d°C", SOC_temperature);
-                        } else {
-                            strcpy(SOC_temperatureStr, "");
-                            SOC_temperature=0;
-                        }
-                        if (!hidePCBTemp) {
-                            ReadPcbTemperature(&PCB_temperature);
-                            snprintf(PCB_temperatureStr, sizeof(PCB_temperatureStr) - 1, "%d°C", PCB_temperature);
-                        } else {
-                            strcpy(PCB_temperatureStr, "");
-                            PCB_temperature=0;
-                        }
-                        if (!hideBattery) {
-                            powerGetDetails(&batteryCharge, &isCharging);
-                            batteryCharge = std::min(batteryCharge, 100U);
-                            sprintf(chargeString, "%d%%", batteryCharge);
-                        } else {
-                            strcpy(chargeString, "");
-                            batteryCharge=0;
-                        }
-                        timeOut = int(currentTime.tv_sec);
-                    }
-
-                    lastStatusChange = statusChange;
-
-                    
-                    //if (hideSOCTemp && (SOC_temperature > 0 || strlen(SOC_temperatureStr) > 0)) {
-                    //    strcpy(SOC_temperatureStr, "");
-                    //    SOC_temperature=0;
-                    //}
-                    //if (hidePCBTemp && (PCB_temperature > 0 || strlen(PCB_temperatureStr) > 0)) {
-                    //    strcpy(PCB_temperatureStr, "");
-                    //    PCB_temperature=0;
-                    //}
-                    //if (hideBattery && (batteryCharge > 0 || strlen(chargeString) > 0)) {
-                    //    strcpy(chargeString, "");
-                    //    batteryCharge=0;
-                    //}
-                    
-                    
-                    if (!hideBattery && batteryCharge > 0) {
-                        Color batteryColorToUse = isCharging ? tsl::Color(0x0, 0xF, 0x0, 0xF) : 
-                                                (batteryCharge < 20 ? tsl::Color(0xF, 0x0, 0x0, 0xF) : batteryColor);
-                        renderer->drawString(chargeString, false, tsl::cfg::FramebufferWidth - renderer->calculateStringWidth(chargeString, 20, true) - 22, y_offset, 20, a(batteryColorToUse));
-                    }
-                    
-                    offset = 0;
-                    if (!hidePCBTemp && PCB_temperature > 0) {
-                        if (!hideBattery)
-                            offset -= 5;
-                        renderer->drawString(PCB_temperatureStr, false, tsl::cfg::FramebufferWidth + offset - renderer->calculateStringWidth(PCB_temperatureStr, 20, true) - renderer->calculateStringWidth(chargeString, 20, true) - 22, y_offset, 20, a(tsl::GradientColor(PCB_temperature)));
-                    }
-                    
-                    if (!hideSOCTemp && SOC_temperature > 0) {
-                        if (!hidePCBTemp || !hideBattery)
-                            offset -= 5;
-                        renderer->drawString(SOC_temperatureStr, false, tsl::cfg::FramebufferWidth + offset - renderer->calculateStringWidth(SOC_temperatureStr, 20, true) - renderer->calculateStringWidth(PCB_temperatureStr, 20, true) - renderer->calculateStringWidth(chargeString, 20, true) - 22, y_offset, 20, a(tsl::GradientColor(SOC_temperature)));
-                    }
                 } else {
                     x = 20;
                     y = 50;
@@ -4728,6 +4313,87 @@ namespace tsl {
 
             }
             // CUSTOM SECTION END
+
+            // Method to draw clock, temperatures, and battery percentage
+            void drawWidget(gfx::Renderer *renderer) {
+                // Draw clock if it's not hidden
+                static timespec currentTime;
+                static char timeStr[20]; // Allocate a buffer to store the time string
+                size_t y_offset = 45;
+        
+                if (!(hideBattery && hidePCBTemp && hideSOCTemp && hideClock)) {
+                    renderer->drawRect(245, 23, 1, 49, a(separatorColor));
+                }
+
+                if ((hideBattery && hidePCBTemp && hideSOCTemp) || hideClock) {
+                    y_offset += 10;
+                }
+
+                clock_gettime(CLOCK_REALTIME, &currentTime);
+                if (!hideClock) {
+                    strftime(timeStr, sizeof(timeStr), datetimeFormat.c_str(), localtime(&currentTime.tv_sec));
+                    localizeTimeStr(timeStr);
+                    renderer->drawString(timeStr, false, tsl::cfg::FramebufferWidth - renderer->calculateStringWidth(timeStr, 20, true) - 20, y_offset, 20, a(clockColor));
+                    y_offset += 22;
+                }
+        
+                // Draw temperatures and battery percentage
+                static char PCB_temperatureStr[10];
+                static char SOC_temperatureStr[10];
+                static char chargeString[6];
+        
+                size_t statusChange = size_t(hideSOCTemp) + size_t(hidePCBTemp) + size_t(hideBattery);
+                static size_t lastStatusChange = 0;
+                
+                if ((currentTime.tv_sec - timeOut) >= 1 || statusChange != lastStatusChange) {
+                    if (!hideSOCTemp) {
+                        ReadSocTemperature(&SOC_temperature);
+                        snprintf(SOC_temperatureStr, sizeof(SOC_temperatureStr) - 1, "%d°C", static_cast<int>(round(SOC_temperature)));
+                    } else {
+                        strcpy(SOC_temperatureStr, "");
+                        SOC_temperature=0;
+                    }
+                    if (!hidePCBTemp) {
+                        ReadPcbTemperature(&PCB_temperature);
+                        snprintf(PCB_temperatureStr, sizeof(PCB_temperatureStr) - 1, "%d°C", static_cast<int>(round(PCB_temperature)));
+                    } else {
+                        strcpy(PCB_temperatureStr, "");
+                        PCB_temperature=0;
+                    }
+                    if (!hideBattery) {
+                        powerGetDetails(&batteryCharge, &isCharging);
+                        batteryCharge = std::min(batteryCharge, 100U);
+                        sprintf(chargeString, "%d%%", batteryCharge);
+                    } else {
+                        strcpy(chargeString, "");
+                        batteryCharge=0;
+                    }
+                    timeOut = int(currentTime.tv_sec);
+                }
+                
+                lastStatusChange = statusChange;
+                
+                // Draw battery percentage
+                if (!hideBattery && batteryCharge > 0) {
+                    Color batteryColorToUse = isCharging ? tsl::Color(0x0, 0xF, 0x0, 0xF) : 
+                                            (batteryCharge < 20 ? tsl::Color(0xF, 0x0, 0x0, 0xF) : batteryColor);
+                    renderer->drawString(chargeString, false, tsl::cfg::FramebufferWidth - renderer->calculateStringWidth(chargeString, 20, true) - 22, y_offset, 20, a(batteryColorToUse));
+                }
+        
+                // Draw PCB and SOC temperatures
+                int offset = 0;
+                if (!hidePCBTemp && PCB_temperature > 0) {
+                    if (!hideBattery)
+                        offset -= 5;
+                    renderer->drawString(PCB_temperatureStr, false, tsl::cfg::FramebufferWidth + offset - renderer->calculateStringWidth(PCB_temperatureStr, 20, true) - renderer->calculateStringWidth(chargeString, 20, true) - 22, y_offset, 20, a(tsl::GradientColor(PCB_temperature)));
+                }
+        
+                if (!hideSOCTemp && SOC_temperature > 0) {
+                    if (!hidePCBTemp || !hideBattery)
+                        offset -= 5;
+                    renderer->drawString(SOC_temperatureStr, false, tsl::cfg::FramebufferWidth + offset - renderer->calculateStringWidth(SOC_temperatureStr, 20, true) - renderer->calculateStringWidth(PCB_temperatureStr, 20, true) - renderer->calculateStringWidth(chargeString, 20, true) - 22, y_offset, 20, a(tsl::GradientColor(SOC_temperature)));
+                }
+            }
             
             virtual inline void layout(u16 parentX, u16 parentY, u16 parentWidth, u16 parentHeight) override {
                 this->setBoundaries(parentX, parentY, parentWidth, parentHeight);
@@ -4803,7 +4469,21 @@ namespace tsl {
         class HeaderOverlayFrame : public Element {
         public:
             
-            HeaderOverlayFrame(u16 headerHeight = 175) : Element(), m_headerHeight(headerHeight) {}
+            HeaderOverlayFrame(u16 headerHeight = 175) : Element(), m_headerHeight(headerHeight) {
+                // Load the bitmap file into memory
+                if (expandedMemory && !inPlot.load(std::memory_order_acquire) && !refreshWallpaper.load(std::memory_order_acquire)) {
+                    // Lock the mutex for condition waiting
+                    std::unique_lock<std::mutex> lock(wallpaperMutex);
+
+                    // Wait for inPlot to be false before reloading the wallpaper
+                    cv.wait(lock, [] { return (!inPlot.load(std::memory_order_acquire) && !refreshWallpaper.load(std::memory_order_acquire)); });
+
+                    if (wallpaperData.empty() && isFileOrDirectory(WALLPAPER_PATH)) {
+                        loadWallpaperFile(WALLPAPER_PATH);
+                    }
+                }
+
+            }
             virtual ~HeaderOverlayFrame() {
                 if (this->m_contentElement != nullptr)
                     delete this->m_contentElement;
@@ -4814,13 +4494,31 @@ namespace tsl {
             
             virtual void draw(gfx::Renderer *renderer) override {
                 renderer->fillScreen(a(defaultBackgroundColor));
+
+                drawWallpaper(renderer);
+
                 //renderer->fillScreen(tsl::style::color::ColorFrameBackground);
                 renderer->drawRect(tsl::cfg::FramebufferWidth - 1, 0, 1, tsl::cfg::FramebufferHeight, a(0xF222));
                 
                 renderer->drawRect(15, tsl::cfg::FramebufferHeight - 73, tsl::cfg::FramebufferWidth - 30, 1, a(defaultTextColor));
                 
-                renderer->drawString(("\uE0E1  "+BACK+"     \uE0E0  "+OK), false, 30, 693, 23, a(defaultTextColor)); // CUSTOM MODIFICATION
+                //renderer->drawString(("\uE0E1  "+BACK+"     \uE0E0  "+OK), false, 30, 693, 23, a(defaultTextColor)); // CUSTOM MODIFICATION
                 
+                backWidth = renderer->calculateStringWidth(BACK, 23);
+                if (touchingBack) {
+                    renderer->drawRoundedRect(18.0f, static_cast<float>(cfg::FramebufferHeight - 73), 
+                                              backWidth+68.0f, 73.0f, 6.0f, a(clickColor));
+                }
+
+                selectWidth = renderer->calculateStringWidth(OK, 23);
+                if (touchingSelect) {
+                    renderer->drawRoundedRect(18.0f + backWidth+68.0f, static_cast<float>(cfg::FramebufferHeight - 73), 
+                                              selectWidth+68.0f, 73.0f, 6.0f, a(clickColor));
+                }
+
+                std::string menuBottomLine = "\uE0E1"+GAP_2+BACK+GAP_1+"\uE0E0"+GAP_2+OK+GAP_1;
+                renderer->drawStringWithColoredSections(menuBottomLine, {"\uE0E1","\uE0E0","\uE0ED","\uE0EE"}, 30, 693, 23, a(bottomTextColor), a(buttonColor));
+
                 if (this->m_header != nullptr)
                     this->m_header->frame(renderer);
                 
@@ -4972,18 +4670,6 @@ namespace tsl {
             
             const float TABLE_SCROLL_STEP_SIZE = 40.0f; // Fixed scroll step size
 
-            //static inline float animationDuration = 2.0f; 
-            //InputMode lastInputMode = InputMode::Controller;
-
-            // Function to calculate exponential easing
-            //inline float exponentialEase(float t) {
-            //    return t == 1.0f ? 1.0f : (1 - std::pow(2, -10 * t)) * 1.001f; // Slightly adjust to avoid precision issues
-            //}
-
-            //inline float exponentialEase(float t) {
-            //    return t == 1.0f ? 1.0f : (1.0f - exp2f(-10.0f * t));
-            //}
-
             
             virtual void draw(gfx::Renderer* renderer) override {
                 // Precompute frequently used values
@@ -5067,16 +4753,7 @@ namespace tsl {
                     renderer->drawCircle(scrollbarX + 2, scrollbarY, 2, true, a(trackBarColor));
                     renderer->drawCircle(scrollbarX + 2, scrollbarY + scrollbarHeight, 2, true, a(trackBarColor));
                     
-                    //static float velocity = 0.0f; // Track scrolling speed for momentum
-                    //static float lastOffset = 0.0f;
-                    //static auto lastTouchTime = std::chrono::steady_clock::now();
-                    
-                    //static const std::chrono::duration<float> momentumDuration = std::chrono::seconds(1); // Duration to maintain momentum
 
-                    // Time synchronization for smooth scrolling
-                    //auto now = std::chrono::steady_clock::now();
-                    //elapsed = now - lastUpdateTime;
-                    //lastUpdateTime = now;
                     if (Element::getInputMode() == InputMode::Controller) {
                         //static float lastOffset = 0.0f;
                         static float velocity = 0.0f;
@@ -5310,16 +4987,6 @@ namespace tsl {
                                 scrollStepsInsideTable.resize(tableIndex + 1, 0);  // Ensure enough space for the current table index
                             }
                             
-                            // Calculate the required steps based on the table's scrollable height when entering
-                            //int scrollableHeight = this->m_items[tableIndex]->getHeight() - this->getHeight();
-                            //int requiredSteps = static_cast<int>(std::ceil(static_cast<float>(scrollableHeight) / TABLE_SCROLL_STEP_SIZE));
-                            
-                            //if ()
-                            //    requiredSteps = 0;
-                            //
-                            //// Set scroll steps for the table when first entering
-                            //scrollStepsInsideTable[tableIndex] = std::max(scrollStepsInsideTable[tableIndex], requiredSteps);
-
                             
                 
                             break;
@@ -5596,9 +5263,7 @@ namespace tsl {
             bool m_clearList = false;
             std::vector<Element *> m_itemsToRemove;
             std::vector<std::pair<ssize_t, Element *>> m_itemsToAdd;
-        
-            //static inline std::chrono::steady_clock::time_point lastUpdateTime = std::chrono::steady_clock::now();
-            //static inline float scrollSpeed = 10.0f;  // Adjust this as needed
+            
 
             // Adjust these parameters to fine-tune the behavior
             //static inline constexpr float animationDuration = 3.0f;  // Duration of the animation
@@ -5671,18 +5336,6 @@ namespace tsl {
                 //renderer->drawCircle(this->getRightBound() + 12 + offset, (this->getY() + scrollbarOffset + scrollbarHeight) / 2, 2, true, a(trackBarColor));
                 renderer->drawCircle(this->getRightBound() + 23, this->getY() + scrollbarOffset + scrollbarHeight, 2, true, a(trackBarColor));
                 
-                
-                
-                //if (Element::getInputMode() == InputMode::Controller) {
-                //    this->m_offset += ((this->m_nextOffset) - this->m_offset) * 0.1F;
-                //} else if (Element::getInputMode() == InputMode::TouchScroll) {
-                //    this->m_offset += ((this->m_nextOffset) - this->m_offset);
-                //}
-                
-                //if (static_cast<u32>(prevOffset) != static_cast<u32>(this->m_offset)) {
-                //    this->invalidate();
-                //}
-                //prevOffset = this->m_offset;
             }
             
             
@@ -6363,48 +6016,34 @@ namespace tsl {
             
             
             virtual bool onTouch(TouchEvent event, s32 currX, s32 currY, s32 prevX, s32 prevY, s32 initialX, s32 initialY) override {
-                //static u32 layerEdge = cfg::LayerPosX == 0 ? 0 : (1280-448);
-                // Calculate the position and radius of the slider circle
                 u16 trackBarWidth = this->getWidth() - 95;
                 u16 handlePos = (trackBarWidth * (this->m_value - m_minValue)) / (m_maxValue - m_minValue);
-                s32 circleCenterX = layerEdge + this->getX() + 59 + handlePos;
+                s32 circleCenterX = this->getX() + 59 + handlePos;
                 s32 circleCenterY = this->getY() + 40 + 16 - 1;
                 s32 circleRadius = 16;
-                
-                // Check if the initial touch point is within the bounds of the circle slider
+            
                 bool touchInCircle = (std::abs(initialX - circleCenterX) <= circleRadius) && (std::abs(initialY - circleCenterY) <= circleRadius);
-                
-                // Check if the touch is within the valid framebuffer bounds
-                //bool touchInFrameBounds = (currY <= cfg::FramebufferHeight - 73 && currY > 73 && currX <= cfg::FramebufferWidth - 30 && currX > 40);
-                //if (!touchInFrameBounds) {
-                //    event = TouchEvent::Release;
-                //}
+            
                 if (!internalTouchReleased)
                     return false;
-
+            
                 if (event == TouchEvent::Release) {
-                    //if (!m_executeOnEveryTick)
                     updateAndExecute();
                     this->m_interactionLocked = false;
                     touchInSliderBounds = false;
                     return false;
                 }
-                
+            
                 if (!this->m_interactionLocked && (touchInCircle || touchInSliderBounds)) {
-                    touchInSliderBounds = true; // Always keep touchInSliderBounds true while dragging
-                    // Calculate the new index based on the touch position
-                    s16 newIndex = static_cast<s16>((currX - (layerEdge + this->getX() + 59)) / static_cast<float>(this->getWidth() - 95) * (m_numSteps - 1));
-                    
+                    touchInSliderBounds = true;
+            
+                    s16 newIndex = static_cast<s16>((currX - (this->getX() + 59)) / static_cast<float>(this->getWidth() - 95) * (m_numSteps - 1));
+            
                     // Clamp the index within valid range
-                    if (newIndex < 0) {
-                        newIndex = 0;
-                    } else if (newIndex >= m_numSteps) {
-                        newIndex = m_numSteps - 1;
-                    }
-                    
-                    // Calculate the new value based on the new index
+                    newIndex = std::max(static_cast<s16>(0), std::min(newIndex, static_cast<s16>(m_numSteps - 1)));
+            
                     s16 newValue = m_minValue + newIndex * (static_cast<float>(m_maxValue - m_minValue) / (m_numSteps - 1));
-                    
+            
                     if (newValue != this->m_value || newIndex != this->m_index) {
                         this->m_value = newValue;
                         this->m_index = newIndex;
@@ -6413,14 +6052,15 @@ namespace tsl {
                             updateAndExecute(false);
                         }
                     }
-                    
+            
                     return true;
                 } else {
                     this->m_interactionLocked = true;
                 }
-                
+            
                 return false;
             }
+
 
             
 
@@ -6617,26 +6257,7 @@ namespace tsl {
                 std::function<void(std::vector<std::vector<std::string>>&&, const std::string&, const std::string&)> executeCommands = nullptr,
                 std::function<std::vector<std::vector<std::string>>(const std::vector<std::vector<std::string>>&, const std::string&, size_t, const std::string&)> sourceReplacementFunc = nullptr,
                 std::vector<std::vector<std::string>> cmd = {}, const std::string& selCmd = "", bool usingNamedStepTrackbar = false, bool unlockedTrackbar = false, bool executeOnEveryTick = false)
-                : TrackBar(label, packagePath, minValue, maxValue, units, executeCommands, sourceReplacementFunc, cmd, selCmd, !usingNamedStepTrackbar, usingNamedStepTrackbar, numSteps, unlockedTrackbar, executeOnEveryTick) {
-                    ////usingStepTrackbar = true;
-                    //if (!m_packagePath.empty()) {
-                    //    //logMessage("before StepTrackBar initialize value.");
-                    //    std::string initializedValue;
-                    //    if (!m_usingNamedStepTrackbar)
-                    //        initializedValue = parseValueFromIniSection(m_packagePath + "config.ini", m_label, "value");
-                    //    else
-                    //        initializedValue = parseValueFromIniSection(m_packagePath + "config.ini", m_label, "index");
-                    //    if (!initializedValue.empty() && isValidNumber(initializedValue)) {
-                    //        m_value = static_cast<s16>(std::stoi(initializedValue)); // convert initializedValue to s16
-                    //    } else {
-                    //        m_value = minValue;
-                    //    }
-                    //    //logMessage("after StepTrackBar initialize value.");
-                    //}
-                    //if (m_value > maxValue) m_value = maxValue;
-                    //else if (m_value < minValue) m_value = minValue;
-                    //lastUpdate = std::chrono::steady_clock::now();
-                }
+                : TrackBar(label, packagePath, minValue, maxValue, units, executeCommands, sourceReplacementFunc, cmd, selCmd, !usingNamedStepTrackbar, usingNamedStepTrackbar, numSteps, unlockedTrackbar, executeOnEveryTick) {}
             
             virtual ~StepTrackBar() {}
             
@@ -6714,33 +6335,6 @@ namespace tsl {
                 return false;
             }
             
-            
-            //virtual bool onTouch(TouchEvent event, s32 currX, s32 currY, s32 prevX, s32 prevY, s32 initialX, s32 initialY) override {
-            //    if (this->inBounds(initialX, initialY)) {
-            //        if (currY > this->getTopBound() && currY < this->getBottomBound()) {
-            //            s16 newValue = m_minValue + ((static_cast<float>(currX - (this->getX() + 60)) / static_cast<float>(this->getWidth() - 95)) * (m_maxValue - m_minValue));
-            //            
-            //            if (newValue < m_minValue) {
-            //                newValue = m_minValue;
-            //            } else if (newValue > m_maxValue) {
-            //                newValue = m_maxValue;
-            //            } else {
-            //                float stepSize = static_cast<float>(m_maxValue - m_minValue) / (this->m_numSteps - 1);
-            //                newValue = std::round((newValue - m_minValue) / stepSize) * stepSize + m_minValue;
-            //            }
-            //            
-            //            if (newValue != this->m_value) {
-            //                this->m_value = newValue;
-            //                this->m_valueChangedListener(this->getProgress());
-            //            }
-            //            updateAndExecute();
-            //            return true;
-            //        }
-            //    }
-            //    
-            //    return false;
-            //}
-
             
             /**
              * @brief Gets the current value of the trackbar
@@ -7287,7 +6881,9 @@ namespace tsl {
             static bool oldTouchDetected = false;
             static elm::TouchEvent touchEvent, oldTouchEvent;
             //static elm::TouchEvent oldTouchEvent;
-            static ssize_t counter = 0;
+
+            //static ssize_t counter = 0;
+
             static std::chrono::steady_clock::time_point buttonPressTime, lastKeyEventTime;
             //static std::chrono::steady_clock::time_point lastKeyEventTime;
             static bool singlePressHandled = false;
@@ -7314,10 +6910,10 @@ namespace tsl {
                     currentFocus->shakeHighlight(FocusDirection::Left);
                 else if (keysDown & KEY_RIGHT && !(keysDown & ~KEY_RIGHT & ALL_KEYS_MASK))
                     currentFocus->shakeHighlight(FocusDirection::Right);
-                else if (progressAnimation) {
-                    currentFocus->shakeHighlight(static_cast<FocusDirection>(counter % 4));
-                    counter = (counter + 1) % 4;
-                }
+                //else if (progressAnimation) {
+                //    currentFocus->shakeHighlight(static_cast<FocusDirection>(counter % 4));
+                //    counter = (counter + 1) % 4;
+                //}
             }
             
             if (!currentFocus && !simulatedBack && simulatedBackComplete && !stillTouching && !runningInterpreter.load(std::memory_order_acquire)) {
@@ -7799,13 +7395,6 @@ namespace tsl {
                     if (hidGetTouchScreenStates(&shData->touchState, 1) > 0) { // Check if any touch event is present
                         HidTouchState& currentTouch = shData->touchState.touches[0];  // Correct type is HidTouchPoint
                         
-                        // Capture the current time when the touch is detected
-                        //auto currentTouchTime = std::chrono::steady_clock::now();
-                    
-                        // If this is the first touch of a gesture, store the starting time
-                        //if (lastTouchX == 0 && currentTouch.x != 0) {
-                        //    currentTouchTime = std::chrono::steady_clock::now();
-                        //}
                     
                         if (!shData->overlayOpen) {
                             internalTouchReleased = false;
@@ -8082,6 +7671,7 @@ namespace tsl {
 
 }
 
+
 std::unordered_map<std::string, std::string> createButtonCharMap() {
     std::unordered_map<std::string, std::string> map;
     for (const auto& keyInfo : tsl::impl::KEYS_INFO) {
@@ -8139,79 +7729,6 @@ void convertComboToUnicode(std::string& combo) {
     }
 }
 
-//void convertComboToUnicode2(std::string& combo) {
-//    if (combo.empty()) {
-//        return;
-//    }
-//
-//    std::string unicodeCombo;
-//    bool modified = false;
-//    size_t start = 0;
-//    size_t length = combo.length();
-//    size_t end = 0;
-//    std::string token;
-//
-//    // Helper lambda to check if a character is non-alphanumeric (boundary)
-//    auto isBoundary = [](char c) {
-//        return !std::isalnum(static_cast<unsigned char>(c));  // Non-alphanumeric check
-//    };
-//
-//    // Iterate through the combo string
-//    while (start < length) {
-//        // Append leading boundary characters directly to unicodeCombo
-//        while (start < length && isBoundary(combo[start])) {
-//            unicodeCombo += combo[start++];
-//        }
-//
-//        // Identify the token (word or single character)
-//        end = start;
-//        while (end < length && !isBoundary(combo[end])) {
-//            end++;
-//        }
-//
-//        if (start < end) {
-//            token = combo.substr(start, end - start);
-//
-//            // Check if the token is in the buttonCharMap
-//            auto it = buttonCharMap.find(token);
-//
-//            // Only modify single characters or if found directly in the map
-//            if (it != buttonCharMap.end()) {
-//                unicodeCombo += it->second;  // Replace with Unicode equivalent
-//                modified = true;
-//            } else if (token.length() == 1) {
-//                // Handle single character case, ensuring it's not part of a larger word
-//                char prevChar = start > 0 ? combo[start - 1] : ' ';
-//                char nextChar = end < length ? combo[end] : ' ';
-//
-//                // Modify only if the character is surrounded by boundaries
-//                if (isBoundary(prevChar) || isBoundary(nextChar)) {
-//                    auto singleCharIt = buttonCharMap.find(token);
-//                    if (singleCharIt != buttonCharMap.end()) {
-//                        unicodeCombo += singleCharIt->second;  // Replace single character
-//                        modified = true;
-//                    } else {
-//                        unicodeCombo += token;  // No modification needed
-//                    }
-//                } else {
-//                    unicodeCombo += token;  // Part of a larger word, so no modification
-//                }
-//            } else {
-//                unicodeCombo += token;  // Not found in the map, no modification
-//            }
-//        }
-//
-//        // Add any trailing boundary characters after the token
-//        start = end;
-//    }
-//
-//    // If any modifications were made, update the original combo
-//    if (modified) {
-//        combo = unicodeCombo;
-//    }
-//}
-
-
 
 
 
@@ -8261,7 +7778,6 @@ extern "C" {
             __libnx_init_time();            // CUSTOM MODIFICATION
             timeExit(); // CUSTOM MODIFICATION
             powerInit();
-            //thermalstatusInit();
         });
     }
     

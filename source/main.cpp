@@ -674,11 +674,14 @@ private:
         listItem->setValue(versionLabel, true);
 
         listItem->setClickListener([listItemRaw = listItem.get(), downloadUrl, targetPath, movePath](uint64_t keys) {
+            static bool executingCommands = false;
             if (runningInterpreter.load(std::memory_order_acquire)) {
                 return false;
             } else {
-                if (commandSuccess && movePath != LANG_PATH)
+                if (executingCommands && commandSuccess && movePath != LANG_PATH) {
                     triggerMenuReload = true;
+                }
+                executingCommands = false;
             }
 
             if (simulatedSelect && !simulatedSelectComplete) {
@@ -687,6 +690,7 @@ private:
             }
             std::vector<std::vector<std::string>> interpreterCommands;
             if (keys & KEY_A) {
+                executingCommands = true;
                 isDownloadCommand = true;
                 
                 interpreterCommands = {
@@ -1174,8 +1178,14 @@ public:
             useOpaqueScreenshots = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "opaque_screenshots") == TRUE_STR);
             createToggleListItem(list, OPAQUE_SCREENSHOTS, useOpaqueScreenshots, "opaque_screenshots");
             
-            progressAnimation = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "progress_animation") == TRUE_STR);
-            createToggleListItem(list, PROGRESS_ANIMATION, progressAnimation, "progress_animation");
+            //std::vector<std::vector<std::string>> commands = {
+            //    {"set-ini-value", ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "overscan", "{value}"}
+            //};
+            //
+            //list->addItem(new tsl::elm::TrackBar(TV_OVERSCAN, PACKAGE_PATH, 80, 100, "%", interpretAndExecuteCommands, getSourceReplacement, commands, "overscan", false, false, -1, false, false));
+
+            //progressAnimation = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "progress_animation") == TRUE_STR);
+            //createToggleListItem(list, PROGRESS_ANIMATION, progressAnimation, "progress_animation");
         
         } else {
             addBasicListItem(list, FAILED_TO_OPEN + ": " + settingsIniPath);
@@ -3927,7 +3937,7 @@ public:
                 setDefaultValue(ultrahandSection, "swipe_to_open", TRUE_STR, useSwipeToOpen);
                 setDefaultValue(ultrahandSection, "right_alignment", FALSE_STR, useRightAlignment);
                 setDefaultValue(ultrahandSection, "opaque_screenshots", TRUE_STR, useOpaqueScreenshots);
-                setDefaultValue(ultrahandSection, "progress_animation", FALSE_STR, progressAnimation);
+                //setDefaultValue(ultrahandSection, "progress_animation", FALSE_STR, progressAnimation);
                 
                 setDefaultStrValue(ultrahandSection, DEFAULT_LANG_STR, defaultLang, defaultLang);
             
@@ -3950,6 +3960,10 @@ public:
             
                 if (ultrahandSection.count("hide_soc_temp") == 0) {
                     setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_soc_temp", TRUE_STR);
+                }
+
+                if (ultrahandSection.count("overscan") == 0) {
+                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "overscan", "100");
                 }
             
                 // Handle the 'to_packages' option if it exists

@@ -760,7 +760,7 @@ void drawTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::string>& 
 
     list->addItem(new tsl::elm::TableDrawer([=](tsl::gfx::Renderer* renderer, s32 x, s32 y, s32 w, s32 h) mutable {
         if (useHeaderIndent) {
-            renderer->drawRect(x - 2, y + 1, 3, 23, renderer->a(tsl::headerSeparatorColor));
+            renderer->drawRect(x - 2, y + 2, 4, 22, renderer->a(tsl::headerSeparatorColor));
         }
         std::string infoText;
         for (size_t i = 0; i < infoLines.size(); ++i) {
@@ -1532,197 +1532,443 @@ std::string getCurrentTimestamp(const std::string& format) {
 
 
 // Define the replacePlaceholders function outside of applyPlaceholderReplacements
-auto replacePlaceholders = [](std::string& arg, const std::string& placeholder, const std::function<std::string(const std::string&)>& replacer) {
-    size_t startPos, endPos;
-    std::string lastArg, replacement;
+//auto replacePlaceholders = [](std::string& arg, const std::string& placeholder, const std::function<std::string(const std::string&)>& replacer) {
+//    size_t startPos, endPos;
+//    std::string lastArg, replacement;
+//
+//    size_t nestedStartPos, nextStartPos, nextEndPos;
+//
+//    while ((startPos = arg.find(placeholder)) != std::string::npos) {
+//        nestedStartPos = startPos;
+//        while (true) {
+//            nextStartPos = arg.find(placeholder, nestedStartPos + 1);
+//            nextEndPos = arg.find(")}", nestedStartPos);
+//            if (nextStartPos != std::string::npos && nextStartPos < nextEndPos) {
+//                nestedStartPos = nextStartPos;
+//            } else {
+//                endPos = nextEndPos;
+//                break;
+//            }
+//        }
+//
+//        if (endPos == std::string::npos || endPos <= startPos) break;
+//
+//        replacement = replacer(arg.substr(startPos, endPos - startPos + 2));
+//        if (replacement.empty()) {
+//            replacement = NULL_STR;
+//        }
+//        arg.replace(startPos, endPos - startPos + 2, replacement);
+//        if (arg == lastArg) {
+//            if (interpreterLogging) {
+//                disableLogging = false;
+//                logMessage("failed replacement arg: " + arg);
+//            }
+//            replacement = NULL_STR;
+//            arg.replace(startPos, endPos - startPos + 2, replacement);
+//            break;
+//        }
+//        lastArg = arg;
+//    }
+//};
 
-    size_t nestedStartPos, nextStartPos, nextEndPos;
 
-    while ((startPos = arg.find(placeholder)) != std::string::npos) {
-        nestedStartPos = startPos;
-        while (true) {
-            nextStartPos = arg.find(placeholder, nestedStartPos + 1);
-            nextEndPos = arg.find(")}", nestedStartPos);
-            if (nextStartPos != std::string::npos && nextStartPos < nextEndPos) {
-                nestedStartPos = nextStartPos;
-            } else {
-                endPos = nextEndPos;
-                break;
-            }
-        }
+// Handle Hex File Placeholder
+std::string handleHexFile(const std::string& placeholder, const std::string& hexPath) {
+    return replaceHexPlaceholder(placeholder, hexPath);
+}
 
-        if (endPos == std::string::npos || endPos <= startPos) break;
+// Handle INI File Placeholder
+std::string handleIniFile(const std::string& placeholder, const std::string& iniPath) {
+    std::string result = placeholder;
+    applyReplaceIniPlaceholder(result, INI_FILE_STR, iniPath);
+    return result;
+}
 
-        replacement = replacer(arg.substr(startPos, endPos - startPos + 2));
-        if (replacement.empty()) {
-            replacement = NULL_STR;
-        }
-        arg.replace(startPos, endPos - startPos + 2, replacement);
-        if (arg == lastArg) {
-            if (interpreterLogging) {
-                disableLogging = false;
-                logMessage("failed replacement arg: " + arg);
-            }
-            replacement = NULL_STR;
-            arg.replace(startPos, endPos - startPos + 2, replacement);
-            break;
-        }
-        lastArg = arg;
+// Handle List Placeholder
+std::string handleList(const std::string& placeholder, const std::string& listString) {
+    size_t startPos = placeholder.find('(') + 1;
+    size_t endPos = placeholder.find(')');
+    size_t listIndex = std::stoi(placeholder.substr(startPos, endPos - startPos));
+    return stringToList(listString)[listIndex];
+}
+
+// Handle List File Placeholder
+std::string handleListFile(const std::string& placeholder, const std::string& listPath) {
+    size_t startPos = placeholder.find('(') + 1;
+    size_t endPos = placeholder.find(')');
+    size_t listIndex = std::stoi(placeholder.substr(startPos, endPos - startPos));
+    return getEntryFromListFile(listPath, listIndex);
+}
+
+// Handle JSON Placeholder
+std::string handleJson(const std::string& placeholder, const std::string& jsonString) {
+    return replaceJsonPlaceholder(placeholder, JSON_STR, jsonString);
+}
+
+// Handle JSON File Placeholder
+std::string handleJsonFile(const std::string& placeholder, const std::string& jsonPath) {
+    return replaceJsonPlaceholder(placeholder, JSON_FILE_STR, jsonPath);
+}
+
+// Handle Timestamp Placeholder
+std::string handleTimestamp(const std::string& placeholder, const std::string&) {
+    size_t startPos = placeholder.find('(') + 1;
+    size_t endPos = placeholder.find(')');
+    std::string format = (endPos != std::string::npos) ? placeholder.substr(startPos, endPos - startPos) : "%Y-%m-%d %H:%M:%S";
+    removeQuotes(format);
+    return getCurrentTimestamp(format);
+}
+
+// Handle Decimal to Hex Placeholder
+std::string handleDecimalToHex(const std::string& placeholder, const std::string&) {
+    size_t startPos = placeholder.find('(') + 1;
+    size_t endPos = placeholder.find(')');
+    std::string decimalValue = placeholder.substr(startPos, endPos - startPos);
+    return decimalToHex(decimalValue);
+}
+
+// Handle ASCII to Hex Placeholder
+std::string handleAsciiToHex(const std::string& placeholder, const std::string&) {
+    size_t startPos = placeholder.find('(') + 1;
+    size_t endPos = placeholder.find(')');
+    std::string asciiValue = placeholder.substr(startPos, endPos - startPos);
+    return asciiToHex(asciiValue);
+}
+
+// Handle Hex to Reversed Hex Placeholder
+std::string handleHexToRHex(const std::string& placeholder, const std::string&) {
+    size_t startPos = placeholder.find('(') + 1;
+    size_t endPos = placeholder.find(')');
+    std::string hexValue = placeholder.substr(startPos, endPos - startPos);
+    return hexToReversedHex(hexValue);
+}
+
+// Handle Hex to Decimal Placeholder
+std::string handleHexToDecimal(const std::string& placeholder, const std::string&) {
+    size_t startPos = placeholder.find('(') + 1;
+    size_t endPos = placeholder.find(')');
+    std::string hexValue = placeholder.substr(startPos, endPos - startPos);
+    return hexToDecimal(hexValue);
+}
+
+// Handle Slice Placeholder
+std::string handleSlice(const std::string& placeholder, const std::string&) {
+    size_t startPos = placeholder.find('(') + 1;
+    size_t endPos = placeholder.find(')');
+    std::string parameters = placeholder.substr(startPos, endPos - startPos);
+    size_t commaPos = parameters.find(',');
+
+    if (commaPos != std::string::npos) {
+        std::string str = parameters.substr(0, commaPos);
+        size_t sliceStart = std::stoi(parameters.substr(commaPos + 1, parameters.find(',', commaPos + 1) - (commaPos + 1)));
+        size_t sliceEnd = std::stoi(parameters.substr(parameters.find_last_of(',') + 1));
+        return sliceString(str, sliceStart, sliceEnd);
     }
+    return placeholder;
+}
+
+// Handle Split Placeholder
+std::string handleSplit(const std::string& placeholder, const std::string&) {
+    size_t startPos = placeholder.find('(') + 1;
+    size_t endPos = placeholder.find(')');
+    std::string parameters = placeholder.substr(startPos, endPos - startPos);
+    
+    size_t firstCommaPos = parameters.find(',');
+    size_t lastCommaPos = parameters.find_last_of(',');
+    
+    if (firstCommaPos != std::string::npos && lastCommaPos != std::string::npos && firstCommaPos != lastCommaPos) {
+        std::string str = parameters.substr(0, firstCommaPos);
+        std::string delimiter = parameters.substr(firstCommaPos + 1, lastCommaPos - firstCommaPos - 1);
+        size_t index = std::stoi(parameters.substr(lastCommaPos + 1));
+        trim(str);
+        removeQuotes(str);
+        trim(delimiter);
+        removeQuotes(delimiter);
+
+        std::string result = splitStringAtIndex(str, delimiter, index);
+        if (result.empty()) {
+            return str;
+        } else {
+            return result;
+        }
+    }
+    return placeholder;
+}
+
+// Handle Random Placeholder
+std::string handleRandom(const std::string& placeholder, const std::string&) {
+    // Ensure the random seed is initialized
+    std::srand(std::time(0));
+
+    size_t startPos = placeholder.find('(') + 1;
+    size_t endPos = placeholder.find(')');
+    std::string parameters = placeholder.substr(startPos, endPos - startPos);
+    size_t commaPos = parameters.find(',');
+
+    if (commaPos != std::string::npos) {
+        int lowValue = std::stoi(parameters.substr(0, commaPos));
+        int highValue = std::stoi(parameters.substr(commaPos + 1));
+
+        // Generate a random number in the range [lowValue, highValue]
+        int randomValue = lowValue + rand() % (highValue - lowValue + 1);
+
+        return std::to_string(randomValue);  // Return the random value as a string
+    }
+    
+    return placeholder;  // If invalid, return the original placeholder
+}
+
+// Handle Length Placeholder
+std::string handleLength(const std::string& placeholder, const std::string&) {
+    size_t startPos = placeholder.find('(') + 1;
+    size_t endPos = placeholder.find(')');
+    std::string str = placeholder.substr(startPos, endPos - startPos);
+    trim(str);
+    return std::to_string(str.length());  // Return the length of the string
+}
+
+// Helper function to skip spaces
+void skipSpaces(const std::string& expression, size_t& pos) {
+    while (pos < expression.length() && std::isspace(expression[pos])) {
+        ++pos;
+    }
+}
+
+// Helper function to parse a number or a nested expression in parentheses
+float parseExpression(const std::string& expression, size_t& pos, bool& valid);
+
+float parseNumber(const std::string& expression, size_t& pos, bool& valid) {
+    skipSpaces(expression, pos);
+
+    // Check if the expression starts with a '(' indicating a nested expression
+    if (expression[pos] == '(') {
+        ++pos;  // Skip the '('
+        float result = parseExpression(expression, pos, valid);
+        if (expression[pos] == ')') {
+            ++pos;  // Skip the ')'
+        } else {
+            valid = false;  // Unmatched parentheses
+        }
+        return result;
+    }
+
+    // Parse a number
+    float result = 0.0f;
+    bool hasDecimal = false;
+    float decimalPlace = 0.1f;
+    bool isNegative = false;
+
+    if (expression[pos] == '-') {
+        isNegative = true;
+        ++pos;
+    }
+
+    while (pos < expression.length() && (std::isdigit(expression[pos]) || expression[pos] == '.')) {
+        if (expression[pos] == '.') {
+            hasDecimal = true;
+            ++pos;
+            continue;
+        }
+
+        if (hasDecimal) {
+            result += (expression[pos] - '0') * decimalPlace;
+            decimalPlace *= 0.1f;
+        } else {
+            result = result * 10.0f + (expression[pos] - '0');
+        }
+        ++pos;
+    }
+
+    if (isNegative) {
+        result = -result;
+    }
+
+    valid = true;
+    return result;
+}
+
+// Function to evaluate an expression, which may include parentheses
+float parseExpression(const std::string& expression, size_t& pos, bool& valid) {
+    skipSpaces(expression, pos);
+
+    float result = parseNumber(expression, pos, valid);
+    if (!valid) return 0;
+
+    while (pos < expression.length()) {
+        skipSpaces(expression, pos);
+        if (pos >= expression.length()) break;
+
+        char op = expression[pos++];
+        skipSpaces(expression, pos);
+
+        float operand = parseNumber(expression, pos, valid);
+        if (!valid) return 0;
+
+        switch (op) {
+            case '+':
+                result += operand;
+                break;
+            case '-':
+                result -= operand;
+                break;
+            case '*':
+                result *= operand;
+                break;
+            case '/':
+                if (operand == 0) {
+                    valid = false;  // Division by zero
+                    return 0;
+                }
+                result /= operand;
+                break;
+            case '%':
+                if (std::fmod(result, 1.0f) != 0.0f || std::fmod(operand, 1.0f) != 0.0f) {
+                    valid = false;  // Modulus only valid for integers
+                    return 0;
+                }
+                result = static_cast<int>(result) % static_cast<int>(operand);
+                break;
+            default:
+                valid = false;
+                return 0;
+        }
+    }
+
+    valid = true;
+    return result;
+}
+
+// Function to evaluate a complete expression (this will call parseExpression)
+float evaluateExpression(const std::string& expression, bool& valid) {
+    size_t pos = 0;
+    return parseExpression(expression, pos, valid);
+}
+
+// Handle Math Placeholder with Parentheses, Modulus, and Optional Integer Support
+std::string handleMath(const std::string& placeholder, const std::string&) {
+    size_t startPos = placeholder.find('(') + 1;
+    size_t endPos = placeholder.find(')');
+
+    // Return NULL_STR if format is invalid
+    if (startPos == std::string::npos || endPos == std::string::npos || startPos >= endPos) {
+        return NULL_STR;
+    }
+
+    std::string mathExpression = placeholder.substr(startPos, endPos - startPos);
+
+    // Check for an optional second parameter, like 'true' to force integer output
+    size_t commaPos = mathExpression.find(',');
+    bool forceInteger = false;
+
+    if (commaPos != std::string::npos) {
+        std::string secondParam = mathExpression.substr(commaPos + 1);
+        trim(secondParam);  // Optionally, remove spaces from the second param
+        forceInteger = (secondParam == TRUE_STR);
+        mathExpression = mathExpression.substr(0, commaPos);  // Remove the second param for evaluation
+    }
+
+    // Remove unnecessary spaces in the expression
+    mathExpression.erase(remove_if(mathExpression.begin(), mathExpression.end(), ::isspace), mathExpression.end());
+
+    // Evaluate the math expression
+    bool valid = false;
+    float result = evaluateExpression(mathExpression, valid);
+
+    // Return NULL_STR if the expression was invalid
+    if (!valid) {
+        return NULL_STR;
+    }
+
+    // If forceInteger is true, or the result is already an integer, return it as an integer
+    if (forceInteger || std::fmod(result, 1.0f) == 0.0f) {
+        return std::to_string(static_cast<int>(result));
+    }
+
+    // Otherwise, return the result as a floating-point string
+    return std::to_string(result);
+}
+
+
+
+
+struct PlaceholderHandler {
+    std::string placeholder;
+    std::string (*handler)(const std::string&, const std::string&); // Function pointer
+    const std::string& context;
 };
 
-void applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::string& hexPath, const std::string& iniPath, const std::string& listString, const std::string& listPath, const std::string& jsonString, const std::string& jsonPath) {
-    std::vector<std::pair<std::string, std::function<std::string(const std::string&)>>> placeholders = {
-        {"{hex_file(", [&](const std::string& placeholder) { return replaceHexPlaceholder(placeholder, hexPath); }},
-        {"{ini_file(", [&](const std::string& placeholder) { 
-            std::string result = placeholder;
-            applyReplaceIniPlaceholder(result, INI_FILE_STR, iniPath); 
-            return result; 
-        }},
-        {"{list(", [&](const std::string& placeholder) {
-            size_t startPos = placeholder.find('(') + 1;
-            size_t endPos = placeholder.find(')');
-            size_t listIndex = std::stoi(placeholder.substr(startPos, endPos - startPos));
-            return stringToList(listString)[listIndex];
-        }},
-        {"{list_file(", [&](const std::string& placeholder) {
-            size_t startPos = placeholder.find('(') + 1;
-            size_t endPos = placeholder.find(')');
-            size_t listIndex = std::stoi(placeholder.substr(startPos, endPos - startPos));
-            return getEntryFromListFile(listPath, listIndex);
-        }},
-        {"{json(", [&](const std::string& placeholder) { return replaceJsonPlaceholder(placeholder, JSON_STR, jsonString); }},
-        {"{json_file(", [&](const std::string& placeholder) { return replaceJsonPlaceholder(placeholder, JSON_FILE_STR, jsonPath); }},
-        {"{timestamp(", [&](const std::string& placeholder) {
-            size_t startPos = placeholder.find("(") + 1;
-            size_t endPos = placeholder.find(")");
-            std::string format = (endPos != std::string::npos) ? placeholder.substr(startPos, endPos - startPos) : "%Y-%m-%d %H:%M:%S";
-            removeQuotes(format);
-            return getCurrentTimestamp(format);
-        }},
-        {"{decimal_to_hex(", [&](const std::string& placeholder) {
-            size_t startPos = placeholder.find("(") + 1;
-            size_t endPos = placeholder.find(")");
-            std::string decimalValue = placeholder.substr(startPos, endPos - startPos);
-            return decimalToHex(decimalValue);
-        }},
-        {"{ascii_to_hex(", [&](const std::string& placeholder) {
-            size_t startPos = placeholder.find("(") + 1;
-            size_t endPos = placeholder.find(")");
-            std::string asciiValue = placeholder.substr(startPos, endPos - startPos);
-            return asciiToHex(asciiValue);
-        }},
-        {"{hex_to_rhex(", [&](const std::string& placeholder) {
-            size_t startPos = placeholder.find("(") + 1;
-            size_t endPos = placeholder.find(")");
-            std::string hexValue = placeholder.substr(startPos, endPos - startPos);
-            return hexToReversedHex(hexValue);
-        }},
-        {"{hex_to_decimal(", [&](const std::string& placeholder) {
-            size_t startPos = placeholder.find("(") + 1;
-            size_t endPos = placeholder.find(")");
-            std::string hexValue = placeholder.substr(startPos, endPos - startPos);
-            return hexToDecimal(hexValue);
-        }},
-        {"{slice(", [&](const std::string& placeholder) {
-            size_t startPos = placeholder.find('(') + 1;
-            size_t endPos = placeholder.find(')');
-            std::string parameters = placeholder.substr(startPos, endPos - startPos);
-            size_t commaPos = parameters.find(',');
+// Helper function to extract the innermost placeholder in a string
+std::pair<size_t, size_t> findInnermostPlaceholder(const std::string& arg, const std::vector<PlaceholderHandler>& handlers) {
+    size_t innermostStart = std::string::npos;
+    size_t innermostEnd = std::string::npos;
 
-            if (commaPos != std::string::npos) {
-                std::string str = parameters.substr(0, commaPos);
-                size_t sliceStart = std::stoi(parameters.substr(commaPos + 1, parameters.find(',', commaPos + 1) - (commaPos + 1)));
-                size_t sliceEnd = std::stoi(parameters.substr(parameters.find_last_of(',') + 1));
-                return sliceString(str, sliceStart, sliceEnd);
-            }
-            return placeholder;
-        }},
-        {"{split(", [&](const std::string& placeholder) {
-            size_t startPos = placeholder.find('(') + 1;
-            size_t endPos = placeholder.find(')');
-            std::string parameters = placeholder.substr(startPos, endPos - startPos);
-            
-            size_t firstCommaPos = parameters.find(',');
-            size_t lastCommaPos = parameters.find_last_of(',');
-        
-            if (firstCommaPos != std::string::npos && lastCommaPos != std::string::npos && firstCommaPos != lastCommaPos) {
-                std::string str = parameters.substr(0, firstCommaPos);
-                std::string delimiter = parameters.substr(firstCommaPos + 1, lastCommaPos - firstCommaPos - 1);
-                size_t index = std::stoi(parameters.substr(lastCommaPos + 1));
-                trim(str);
-                removeQuotes(str);
-                trim(delimiter);
-                removeQuotes(delimiter);
-
-                std::string result = splitStringAtIndex(str, delimiter, index);
-                if (result.empty()) {
-                    return str;
-                } else {
-                    return result;
+    // Loop through all placeholders and find the innermost match
+    for (const auto& handler : handlers) {
+        size_t startPos = arg.find(handler.placeholder);
+        if (startPos != std::string::npos) {
+            size_t endPos = arg.find(")}", startPos);
+            if (endPos != std::string::npos) {
+                // Update if it's the innermost match
+                if (innermostStart == std::string::npos || startPos < innermostStart) {
+                    innermostStart = startPos;
+                    innermostEnd = endPos + 2; // Include ")}" in the range
                 }
             }
-            return placeholder;
-        }}
+        }
+    }
+    return {innermostStart, innermostEnd};
+}
+
+// Helper function to resolve the innermost placeholder in a string
+void resolveInnermostPlaceholder(std::string& arg, const std::vector<PlaceholderHandler>& handlers) {
+    while (true) {
+        // Find the innermost placeholder
+        auto [innermostStart, innermostEnd] = findInnermostPlaceholder(arg, handlers);
+
+        // If no more placeholders are found, stop
+        if (innermostStart == std::string::npos || innermostEnd == std::string::npos) {
+            break;
+        }
+
+        // Extract the placeholder string to pass to the replacer
+        std::string placeholderContent = arg.substr(innermostStart, innermostEnd - innermostStart);
+
+        // Loop through handlers to find the correct handler
+        for (const auto& handler : handlers) {
+            if (placeholderContent.find(handler.placeholder) != std::string::npos) {
+                // Replace the innermost placeholder with the result of its handler function
+                std::string replacement = handler.handler(placeholderContent, handler.context);
+                arg.replace(innermostStart, innermostEnd - innermostStart, replacement);
+                break; // Once replaced, move on to the next placeholder
+            }
+        }
+    }
+}
+
+
+// Function to apply placeholder replacements
+void applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::string& hexPath, const std::string& iniPath, const std::string& listString, const std::string& listPath, const std::string& jsonString, const std::string& jsonPath) {
+    // Handlers for various placeholders
+    std::vector<PlaceholderHandler> handlers = {
+        {"{hex_file(", handleHexFile, hexPath},
+        {"{ini_file(", handleIniFile, iniPath},
+        {"{list(", handleList, listString},
+        {"{list_file(", handleListFile, listPath},
+        {"{json(", handleJson, jsonString},
+        {"{json_file(", handleJsonFile, jsonPath},
+        {"{timestamp(", handleTimestamp, ""},
+        {"{decimal_to_hex(", handleDecimalToHex, ""},
+        {"{ascii_to_hex(", handleAsciiToHex, ""},
+        {"{hex_to_rhex(", handleHexToRHex, ""},
+        {"{hex_to_decimal(", handleHexToDecimal, ""},
+        {"{slice(", handleSlice, ""},
+        {"{split(", handleSplit, ""},
+        {"{random(", handleRandom, ""},
+        {"{length(", handleLength, ""},
+        {"{math(", handleMath, ""}
     };
 
-    // First replace inner placeholders like {ram_model}
-    //for (auto& [placeholder, replacer] : placeholders) {
-    //    for (auto& arg : cmd) {
-    //        replaceAllPlaceholders(arg, placeholder, replacer(placeholder));
-    //    }
-    //}
-
-    //std::string titleId = getTitleIdAsString();
-    //
-    //for (auto& arg : cmd) {
-    //    replaceAllPlaceholders(arg, "{ram_vendor}", memoryVendor);
-    //    replaceAllPlaceholders(arg, "{ram_model}", memoryModel);
-    //    replaceAllPlaceholders(arg, "{ams_version}", amsVersion);
-    //    replaceAllPlaceholders(arg, "{hos_version}", hosVersion);
-    //    replaceAllPlaceholders(arg, "{cpu_speedo}", std::to_string(cpuSpeedo0));
-    //    replaceAllPlaceholders(arg, "{cpu_iddq}", std::to_string(cpuIDDQ));
-    //    replaceAllPlaceholders(arg, "{gpu_speedo}", std::to_string(cpuSpeedo2));
-    //    replaceAllPlaceholders(arg, "{gpu_iddq}", std::to_string(gpuIDDQ));
-    //    replaceAllPlaceholders(arg, "{soc_speedo}", std::to_string(socSpeedo0));
-    //    replaceAllPlaceholders(arg, "{soc_iddq}", std::to_string(socIDDQ));
-    //    replaceAllPlaceholders(arg, "{title_id}", titleId);
-    //    
-    //    replaceAllPlaceholders(arg, "{A}", "");
-    //    replaceAllPlaceholders(arg, "{B}", "");
-    //    replaceAllPlaceholders(arg, "{X}", "");
-    //    replaceAllPlaceholders(arg, "{Y}", "");
-    //    replaceAllPlaceholders(arg, "{L}", "");
-    //    replaceAllPlaceholders(arg, "{R}", "");
-    //    replaceAllPlaceholders(arg, "{ZL}", "");
-    //    replaceAllPlaceholders(arg, "{ZR}", "");
-    //    replaceAllPlaceholders(arg, "{DUP}", "");
-    //    replaceAllPlaceholders(arg, "{DDOWN}", "");
-    //    replaceAllPlaceholders(arg, "{DLEFT}", "");
-    //    replaceAllPlaceholders(arg, "{DRIGHT}", "");
-    //    replaceAllPlaceholders(arg, "{LS}", "");
-    //    replaceAllPlaceholders(arg, "{RS}", "");
-    //    replaceAllPlaceholders(arg, "{PLUS}", "");
-    //    replaceAllPlaceholders(arg, "{MINUS}", "");
-    //    
-    //    replaceAllPlaceholders(arg, "{UP_ARROW}", "");
-    //    replaceAllPlaceholders(arg, "{DOWN_ARROW}", "");
-    //    replaceAllPlaceholders(arg, "{LEFT_ARROW}", "");
-    //    replaceAllPlaceholders(arg, "{RIGHT_ARROW}", "");
-    //    replaceAllPlaceholders(arg, "{RIGHT_UP_ARROW}", "");
-    //    replaceAllPlaceholders(arg, "{RIGHT_DOWN_ARROW}", "");
-    //    replaceAllPlaceholders(arg, "{LEFT_UP_ARROW}", "");
-    //    replaceAllPlaceholders(arg, "{LEFT_DOWN_ARROW}", "");
-    //    
-    //    for (const auto& [placeholder, replacer] : placeholders) {
-    //        replacePlaceholders(arg, placeholder, replacer);
-    //    }
-    //    // Failed replacement cleanup
-    //    //if (arg == NULL_STR) arg = UNAVAILABLE_SELECTION;
-    //}
-
-
-    // Create a map with all non-button/arrow placeholders and their replacements
+    // General placeholder replacements
     std::unordered_map<std::string, std::string> generalPlaceholders = {
         {"{ram_vendor}", memoryVendor},
         {"{ram_model}", memoryModel},
@@ -1745,10 +1991,8 @@ void applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
         // Replace button/arrow placeholders from the global map
         replacePlaceholdersInArg(arg, symbolPlaceholders);
 
-        // Additionally replace placeholders from your custom map
-        for (const auto& [placeholder, replacer] : placeholders) {
-            replacePlaceholders(arg, placeholder, replacer);
-        }
+        // Resolve all placeholders recursively by resolving the innermost one
+        resolveInnermostPlaceholder(arg, handlers);
     }
 }
 
@@ -2463,7 +2707,16 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             std::string togglePattern = cmd[1];
             removeQuotes(togglePattern);
             lblInitialize();
-            if (togglePattern == ON_STR)
+            if (togglePattern == "auto") {
+                if (cmd.size() >= 3) {
+                    togglePattern = cmd[2];
+                    if (togglePattern == ON_STR)
+                        lblEnableAutoBrightnessControl();
+                    else if (togglePattern == OFF_STR)
+                        lblDisableAutoBrightnessControl();
+                }
+            }
+            else if (togglePattern == ON_STR)
                 lblSwitchBacklightOn(0);
             else if (togglePattern == OFF_STR)
                 lblSwitchBacklightOff(0);
@@ -2472,6 +2725,89 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             }
             lblExit();
         }
+    //} else if (commandName == "volume") {
+    //    disableLogging = false;
+    //    if (cmd.size() >= 2) {
+    //        std::string volumeInput = cmd[1];
+    //        logMessage("Received volume command: " + volumeInput);  // Log the input
+    //        removeQuotes(volumeInput);  // Sanitize input by removing quotes
+    //        
+    //        if (isValidNumber(volumeInput)) {
+    //            logMessage("Volume input is a valid number: " + volumeInput);  // Log valid number
+    //            
+    //            // Convert input string to a float for percentage (0-100)
+    //            float volumePercentage = std::stof(volumeInput);
+    //            logMessage("Converted volume to percentage: " + std::to_string(volumePercentage));  // Log the percentage
+    //            
+    //            // Ensure the volume is within valid range 0 to 100
+    //            if (volumePercentage < 0.0f || volumePercentage > 100.0f) {
+    //                logMessage("Volume percentage out of bounds: " + std::to_string(volumePercentage));
+    //                return;  // Exit if invalid percentage
+    //            }
+    //            
+    //            // Initialize the settings service
+    //            logMessage("Initializing settings service...");
+    //            Result rc = setsysInitialize();
+    //            if (R_SUCCEEDED(rc)) {
+    //                logMessage("Settings service initialized successfully.");
+    //                
+    //                SetSysAudioVolume audio_volume;
+    //                audio_volume.volume = static_cast<uint8_t>((volumePercentage / 100.0f) * 15.0f);  // Scale to 0-15
+    //                logMessage("Volume scaled to 0-15: " + std::to_string(audio_volume.volume));  // Log scaled volume
+    //                
+    //                // Set the volume for the Console
+    //                logMessage("Setting audio volume...");
+    //                rc = setsysSetAudioVolume(SetSysAudioDevice_Console, &audio_volume);
+    //                
+    //                // Check if setting the volume was successful
+    //                if (R_FAILED(rc)) {
+    //                    logMessage("Failed to set audio volume. Error code: " + std::to_string(rc));
+    //                    setsysExit();
+    //                    return;
+    //                }
+    //                
+    //                logMessage("Audio volume set successfully.");
+    //                setsysExit();
+    //            } else {
+    //                logMessage("Failed to initialize settings service. Error code: " + std::to_string(rc));
+    //            }
+    //        } else {
+    //            logMessage("Invalid volume input: " + volumeInput);
+    //        }
+    //    } else {
+    //        logMessage("Volume command missing required argument.");
+    //    }
+    //} else if (commandName == "wifi") {
+    //    disableLogging = false;
+    //    if (cmd.size() >= 2) {
+    //        std::string togglePattern = cmd[1];
+    //        removeQuotes(togglePattern);
+    //
+    //        Result rc;
+    //
+    //        if (togglePattern == ON_STR) {
+    //            logMessage("Turning Wi-Fi ON...");
+    //            rc = nifmSetWirelessCommunicationEnabled(true);  // Turn Wi-Fi on
+    //            if (R_SUCCEEDED(rc)) {
+    //                logMessage("Wi-Fi enabled successfully.");
+    //            } else {
+    //                logMessage("Failed to enable Wi-Fi. Error code: " + std::to_string(rc));
+    //            }
+    //        } else if (togglePattern == OFF_STR) {
+    //            logMessage("Turning Wi-Fi OFF...");
+    //            rc = nifmSetWirelessCommunicationEnabled(false);  // Turn Wi-Fi off
+    //            if (R_SUCCEEDED(rc)) {
+    //                logMessage("Wi-Fi disabled successfully.");
+    //            } else {
+    //                logMessage("Failed to disable Wi-Fi. Error code: " + std::to_string(rc));
+    //            }
+    //        } else {
+    //            logMessage("Invalid Wi-Fi toggle command: " + togglePattern);
+    //        }
+    //    } else {
+    //        logMessage("Wi-Fi command missing required argument.");
+    //    }
+    //
     } else if (commandName == "refresh") {
         if (cmd.size() == 1)
             refreshPage = true;
