@@ -4500,7 +4500,7 @@ namespace tsl {
                 //renderer->fillScreen(tsl::style::color::ColorFrameBackground);
                 renderer->drawRect(tsl::cfg::FramebufferWidth - 1, 0, 1, tsl::cfg::FramebufferHeight, a(0xF222));
                 
-                renderer->drawRect(15, tsl::cfg::FramebufferHeight - 73, tsl::cfg::FramebufferWidth - 30, 1, a(defaultTextColor));
+                renderer->drawRect(15, tsl::cfg::FramebufferHeight - 73, tsl::cfg::FramebufferWidth - 30, 1, a(botttomSeparatorColor));
                 
                 //renderer->drawString(("\uE0E1  "+BACK+"     \uE0E0  "+OK), false, 30, 693, 23, a(defaultTextColor)); // CUSTOM MODIFICATION
                 
