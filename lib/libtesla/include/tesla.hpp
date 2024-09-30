@@ -3975,7 +3975,23 @@ namespace tsl {
 
         
         // CUSTOM SECTION START
-        
+        void drawWallpaper(gfx::Renderer *renderer) {
+            if (expandedMemory && !refreshWallpaper.load(std::memory_order_acquire)) {
+                //inPlot = true;
+                inPlot.store(true, std::memory_order_release);
+                //std::lock_guard<std::mutex> lock(wallpaperMutex);
+                if (!wallpaperData.empty()) {
+                    // Draw the bitmap at position (0, 0) on the screen
+                    if (!refreshWallpaper.load(std::memory_order_acquire))
+                        renderer->drawBitmap(0, 0, 448, 720, wallpaperData.data());
+                    else
+                        inPlot.store(false, std::memory_order_release);
+                } else {
+                    inPlot.store(false, std::memory_order_release);
+                }
+                //inPlot = false;
+            }
+        }
         
         // CUSTOM SECTION END
         
@@ -4289,24 +4305,6 @@ namespace tsl {
             }
             // CUSTOM SECTION END
 
-            void drawWallpaper(gfx::Renderer *renderer) {
-                if (expandedMemory && !refreshWallpaper.load(std::memory_order_acquire)) {
-                    //inPlot = true;
-                    inPlot.store(true, std::memory_order_release);
-                    //std::lock_guard<std::mutex> lock(wallpaperMutex);
-                    if (!wallpaperData.empty()) {
-                        // Draw the bitmap at position (0, 0) on the screen
-                        if (!refreshWallpaper.load(std::memory_order_acquire))
-                            renderer->drawBitmap(0, 0, 448, 720, wallpaperData.data());
-                        else
-                            inPlot.store(false, std::memory_order_release);
-                    } else {
-                        inPlot.store(false, std::memory_order_release);
-                    }
-                    //inPlot = false;
-                }
-            }
-
             // Method to draw clock, temperatures, and battery percentage
             void drawWidget(gfx::Renderer *renderer) {
                 // Draw clock if it's not hidden
@@ -4462,7 +4460,21 @@ namespace tsl {
         class HeaderOverlayFrame : public Element {
         public:
             
-            HeaderOverlayFrame(u16 headerHeight = 175) : Element(), m_headerHeight(headerHeight) {}
+            HeaderOverlayFrame(u16 headerHeight = 175) : Element(), m_headerHeight(headerHeight) {
+                // Load the bitmap file into memory
+                if (expandedMemory && !inPlot.load(std::memory_order_acquire) && !refreshWallpaper.load(std::memory_order_acquire)) {
+                    // Lock the mutex for condition waiting
+                    std::unique_lock<std::mutex> lock(wallpaperMutex);
+
+                    // Wait for inPlot to be false before reloading the wallpaper
+                    cv.wait(lock, [] { return (!inPlot.load(std::memory_order_acquire) && !refreshWallpaper.load(std::memory_order_acquire)); });
+
+                    if (wallpaperData.empty() && isFileOrDirectory(WALLPAPER_PATH)) {
+                        loadWallpaperFile(WALLPAPER_PATH);
+                    }
+                }
+
+            }
             virtual ~HeaderOverlayFrame() {
                 if (this->m_contentElement != nullptr)
                     delete this->m_contentElement;
@@ -4473,13 +4485,31 @@ namespace tsl {
             
             virtual void draw(gfx::Renderer *renderer) override {
                 renderer->fillScreen(a(defaultBackgroundColor));
+
+                drawWallpaper(renderer);
+
                 //renderer->fillScreen(tsl::style::color::ColorFrameBackground);
                 renderer->drawRect(tsl::cfg::FramebufferWidth - 1, 0, 1, tsl::cfg::FramebufferHeight, a(0xF222));
                 
                 renderer->drawRect(15, tsl::cfg::FramebufferHeight - 73, tsl::cfg::FramebufferWidth - 30, 1, a(defaultTextColor));
                 
-                renderer->drawString(("\uE0E1  "+BACK+"     \uE0E0  "+OK), false, 30, 693, 23, a(defaultTextColor)); // CUSTOM MODIFICATION
+                //renderer->drawString(("\uE0E1  "+BACK+"     \uE0E0  "+OK), false, 30, 693, 23, a(defaultTextColor)); // CUSTOM MODIFICATION
                 
+                backWidth = renderer->calculateStringWidth(BACK, 23);
+                if (touchingBack) {
+                    renderer->drawRoundedRect(18.0f, static_cast<float>(cfg::FramebufferHeight - 73), 
+                                              backWidth+68.0f, 73.0f, 6.0f, a(clickColor));
+                }
+
+                selectWidth = renderer->calculateStringWidth(OK, 23);
+                if (touchingSelect) {
+                    renderer->drawRoundedRect(18.0f + backWidth+68.0f, static_cast<float>(cfg::FramebufferHeight - 73), 
+                                              selectWidth+68.0f, 73.0f, 6.0f, a(clickColor));
+                }
+
+                std::string menuBottomLine = "\uE0E1"+GAP_2+BACK+GAP_1+"\uE0E0"+GAP_2+OK+GAP_1;
+                renderer->drawStringWithColoredSections(menuBottomLine, {"\uE0E1","\uE0E0","\uE0ED","\uE0EE"}, 30, 693, 23, a(bottomTextColor), a(buttonColor));
+
                 if (this->m_header != nullptr)
                     this->m_header->frame(renderer);
                 
