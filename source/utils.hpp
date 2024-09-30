@@ -1711,44 +1711,44 @@ std::string handleLength(const std::string& placeholder) {
 
 
 // Define the replacePlaceholders function outside of applyPlaceholderReplacements
-auto replacePlaceholders = [](std::string& arg, const std::string& placeholder, const std::function<std::string(const std::string&)>& replacer) {
-    size_t startPos, endPos;
-    std::string lastArg, replacement;
-
-    size_t nestedStartPos, nextStartPos, nextEndPos;
-
-    while ((startPos = arg.find(placeholder)) != std::string::npos) {
-        nestedStartPos = startPos;
-        while (true) {
-            nextStartPos = arg.find(placeholder, nestedStartPos + 1);
-            nextEndPos = arg.find(")}", nestedStartPos);
-            if (nextStartPos != std::string::npos && nextStartPos < nextEndPos) {
-                nestedStartPos = nextStartPos;
-            } else {
-                endPos = nextEndPos;
-                break;
-            }
-        }
-
-        if (endPos == std::string::npos || endPos <= startPos) break;
-
-        replacement = replacer(arg.substr(startPos, endPos - startPos + 2));
-        if (replacement.empty()) {
-            replacement = NULL_STR;
-        }
-        arg.replace(startPos, endPos - startPos + 2, replacement);
-        if (arg == lastArg) {
-            if (interpreterLogging) {
-                disableLogging = false;
-                logMessage("failed replacement arg: " + arg);
-            }
-            replacement = NULL_STR;
-            arg.replace(startPos, endPos - startPos + 2, replacement);
-            break;
-        }
-        lastArg = arg;
-    }
-};
+//auto replacePlaceholders = [](std::string& arg, const std::string& placeholder, const std::function<std::string(const std::string&)>& replacer) {
+//    size_t startPos, endPos;
+//    std::string lastArg, replacement;
+//
+//    size_t nestedStartPos, nextStartPos, nextEndPos;
+//
+//    while ((startPos = arg.find(placeholder)) != std::string::npos) {
+//        nestedStartPos = startPos;
+//        while (true) {
+//            nextStartPos = arg.find(placeholder, nestedStartPos + 1);
+//            nextEndPos = arg.find(")}", nestedStartPos);
+//            if (nextStartPos != std::string::npos && nextStartPos < nextEndPos) {
+//                nestedStartPos = nextStartPos;
+//            } else {
+//                endPos = nextEndPos;
+//                break;
+//            }
+//        }
+//
+//        if (endPos == std::string::npos || endPos <= startPos) break;
+//
+//        replacement = replacer(arg.substr(startPos, endPos - startPos + 2));
+//        if (replacement.empty()) {
+//            replacement = NULL_STR;
+//        }
+//        arg.replace(startPos, endPos - startPos + 2, replacement);
+//        if (arg == lastArg) {
+//            if (interpreterLogging) {
+//                disableLogging = false;
+//                logMessage("failed replacement arg: " + arg);
+//            }
+//            replacement = NULL_STR;
+//            arg.replace(startPos, endPos - startPos + 2, replacement);
+//            break;
+//        }
+//        lastArg = arg;
+//    }
+//};
 
 void replacePlaceholdersRecursively(std::string& arg, const std::vector<std::pair<std::string, std::function<std::string(const std::string&)>>>& placeholders) {
     std::string lastArg;
