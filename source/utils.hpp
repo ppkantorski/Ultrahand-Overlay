@@ -1726,6 +1726,85 @@ std::string handleLength(const std::string& placeholder, const std::string&) {
     return std::to_string(str.length());  // Return the length of the string
 }
 
+// Helper function to evaluate a simple math expression without exceptions
+double evaluateExpression(const std::string& expression, bool& valid) {
+    std::istringstream exprStream(expression);
+    double result = 0;
+    exprStream >> result;
+
+    if (exprStream.fail()) {
+        valid = false;  // Invalid start of expression
+        return 0;
+    }
+
+    char op;
+    double operand;
+    
+    while (exprStream >> op >> operand) {
+        if (exprStream.fail()) {
+            valid = false;  // Invalid operator or operand
+            return 0;
+        }
+        
+        switch (op) {
+            case '+':
+                result += operand;
+                break;
+            case '-':
+                result -= operand;
+                break;
+            case '*':
+                result *= operand;
+                break;
+            case '/':
+                if (operand == 0) {
+                    valid = false;  // Division by zero
+                    return 0;
+                }
+                result /= operand;
+                break;
+            default:
+                valid = false;  // Invalid operator
+                return 0;
+        }
+    }
+
+    if (!exprStream.eof()) {
+        valid = false;  // If we didn't reach the end of the expression
+        return 0;
+    }
+
+    valid = true;
+    return result;
+}
+
+// Handle Math Placeholder
+std::string handleMath(const std::string& placeholder, const std::string&) {
+    size_t startPos = placeholder.find('(') + 1;
+    size_t endPos = placeholder.find(')');
+    
+    // Return "null" if format is invalid
+    if (startPos == std::string::npos || endPos == std::string::npos || startPos >= endPos) {
+        return "null";
+    }
+
+    std::string mathExpression = placeholder.substr(startPos, endPos - startPos);
+
+    // Remove any unnecessary spaces in the expression
+    mathExpression.erase(remove_if(mathExpression.begin(), mathExpression.end(), ::isspace), mathExpression.end());
+
+    // Evaluate the math expression
+    bool valid = false;
+    double result = evaluateExpression(mathExpression, valid);
+
+    // Return "null" if the expression was invalid
+    if (!valid) {
+        return "null";
+    }
+
+    return std::to_string(result);  // Convert the result to string and return
+}
+
 
 
 
@@ -1802,7 +1881,8 @@ void applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
         {"{slice(", handleSlice, ""},
         {"{split(", handleSplit, ""},
         {"{random(", handleRandom, ""},
-        {"{length(", handleLength, ""}
+        {"{length(", handleLength, ""},
+        {"{math(", handleMath, ""}
     };
 
     // General placeholder replacements
