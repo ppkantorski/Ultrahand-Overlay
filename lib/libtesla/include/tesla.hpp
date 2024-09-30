@@ -1259,7 +1259,7 @@ void powerExit(void) {
 
 
 // Temperature Implementation
-static s32 PCB_temperature, SOC_temperature;
+static float PCB_temperature, SOC_temperature;
 
 /*
 I2cReadRegHandler was taken from Switch-OC-Suite source code made by KazushiMe
@@ -1310,12 +1310,12 @@ Result I2cReadRegHandler(u8 reg, I2cDevice dev, u16 *out)
 #define TMP451_PCB_TMP_DEC_REG 0x15  // Register for PCB temperature decimal part
 
 // Common helper function to read temperature (integer and fractional parts)
-Result ReadTemperature(s32 *temperature, u8 integerReg, u8 fractionalReg, bool integerOnly)
+Result ReadTemperature(float *temperature, u8 integerReg, u8 fractionalReg, bool integerOnly)
 {
     u16 rawValue;
     u8 val;
     s32 integerPart = 0;
-    s32 fractionalPart = 0;
+    float fractionalPart = 0.0f;  // Change this to a float to retain fractional precision
 
     // Read the integer part of the temperature
     Result res = I2cReadRegHandler(integerReg, I2cDevice_Tmp451, &rawValue);
@@ -1328,7 +1328,7 @@ Result ReadTemperature(s32 *temperature, u8 integerReg, u8 fractionalReg, bool i
 
     if (integerOnly)
     {
-        *temperature = integerPart;
+        *temperature = static_cast<float>(integerPart);  // Ensure it's treated as a float
         return 0;  // Return only integer part if requested
     }
 
@@ -1339,22 +1339,22 @@ Result ReadTemperature(s32 *temperature, u8 integerReg, u8 fractionalReg, bool i
     }
 
     val = (u8)rawValue;  // Cast the value to an 8-bit unsigned integer
-    fractionalPart = (val >> 4) * 0.0625;  // Fractional part: upper 4 bits, scaled by 1/16
+    fractionalPart = static_cast<float>(val >> 4) * 0.0625f;  // Convert upper 4 bits into fractional part
 
     // Combine integer and fractional parts
-    *temperature = integerPart + fractionalPart;
+    *temperature = static_cast<float>(integerPart) + fractionalPart;
 
     return 0;
 }
 
 // Function to get the SOC temperature
-Result ReadSocTemperature(s32 *temperature, bool integerOnly = true)
+Result ReadSocTemperature(float *temperature, bool integerOnly = true)
 {
     return ReadTemperature(temperature, TMP451_SOC_TEMP_REG, TMP451_SOC_TMP_DEC_REG, integerOnly);
 }
 
 // Function to get the PCB temperature
-Result ReadPcbTemperature(s32 *temperature, bool integerOnly = true)
+Result ReadPcbTemperature(float *temperature, bool integerOnly = true)
 {
     return ReadTemperature(temperature, TMP451_PCB_TEMP_REG, TMP451_PCB_TMP_DEC_REG, integerOnly);
 }
@@ -1761,6 +1761,15 @@ namespace tsl {
         // Set Ultrahand Globals
         useSwipeToOpen = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "swipe_to_open") == TRUE_STR);
         useOpaqueScreenshots = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "opaque_screenshots") == TRUE_STR);
+
+        std::string defaultLang = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, DEFAULT_LANG_STR);
+        defaultLang = defaultLang.empty() ? "en" : defaultLang;
+
+        std::string langFile = LANG_PATH+defaultLang+".json";
+        if (isFileOrDirectory(langFile))
+            parseLanguage(langFile);
+        else
+            reinitializeLangVars();
     }
 
     
@@ -4339,14 +4348,14 @@ namespace tsl {
                 if ((currentTime.tv_sec - timeOut) >= 1 || statusChange != lastStatusChange) {
                     if (!hideSOCTemp) {
                         ReadSocTemperature(&SOC_temperature);
-                        snprintf(SOC_temperatureStr, sizeof(SOC_temperatureStr) - 1, "%d°C", SOC_temperature);
+                        snprintf(SOC_temperatureStr, sizeof(SOC_temperatureStr) - 1, "%d°C", static_cast<int>(round(SOC_temperature)));
                     } else {
                         strcpy(SOC_temperatureStr, "");
                         SOC_temperature=0;
                     }
                     if (!hidePCBTemp) {
                         ReadPcbTemperature(&PCB_temperature);
-                        snprintf(PCB_temperatureStr, sizeof(PCB_temperatureStr) - 1, "%d°C", PCB_temperature);
+                        snprintf(PCB_temperatureStr, sizeof(PCB_temperatureStr) - 1, "%d°C", static_cast<int>(round(PCB_temperature)));
                     } else {
                         strcpy(PCB_temperatureStr, "");
                         PCB_temperature=0;
