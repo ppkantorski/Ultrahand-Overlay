@@ -59,7 +59,7 @@ APP_VERSION	:= 1.7.8
 TARGET	    := ovlmenu
 BUILD	    := build
 SOURCES	    := source common 
-INCLUDES	:= source common include lib/libultra/include lib/libtesla/include
+INCLUDES	:= source common include lib/libultrahand/libultra/include lib/libultrahand/libtesla/include
 NO_ICON	    := 1
 
 #---------------------------------------------------------------------------------

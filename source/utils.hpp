@@ -997,13 +997,13 @@ void addPackageInfo(std::unique_ptr<tsl::elm::List>& list, auto& packageHeader, 
 
     // Adding package header info
     if (!packageHeader.title.empty()) {
-        sectionLines.push_back(TITLE);
+        sectionLines.push_back(_TITLE);
         infoLines.push_back(packageHeader.title);
         //numEntries++;
     }
 
     if (!packageHeader.version.empty()) {
-        sectionLines.push_back(VERSION);
+        sectionLines.push_back(_VERSION);
         infoLines.push_back(packageHeader.version);
         //numEntries++;
     }
@@ -1012,15 +1012,15 @@ void addPackageInfo(std::unique_ptr<tsl::elm::List>& list, auto& packageHeader, 
         //sectionLines.push_back(CREATOR);
         //infoLines.push_back(packageHeader.creator);
         //numEntries++;
-        addWrappedText(CREATOR, packageHeader.creator);
+        addWrappedText(_CREATOR, packageHeader.creator);
     }
 
     if (!packageHeader.about.empty()) {
-        addWrappedText(ABOUT, packageHeader.about);
+        addWrappedText(_ABOUT, packageHeader.about);
     }
 
     if (!packageHeader.credits.empty()) {
-        addWrappedText(CREDITS, packageHeader.credits);
+        addWrappedText(_CREDITS, packageHeader.credits);
     }
 
     // Drawing the table with section lines and info lines
