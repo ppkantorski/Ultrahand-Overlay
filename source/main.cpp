@@ -4902,13 +4902,14 @@ public:
      */
     virtual void initServices() override {
         isLauncher = true;
-        fsdevMountSdmc();
-        splInitialize();
-        spsmInitialize();
-        i2cInitialize();
-        ASSERT_FATAL(socketInitializeDefault());
-        ASSERT_FATAL(nifmInitialize(NifmServiceType_User));
-        ASSERT_FATAL(smInitialize());
+        //fsdevMountSdmc();
+        //splInitialize();
+        //spsmInitialize();
+        //i2cInitialize();
+        //ASSERT_FATAL(socketInitializeDefault());
+        //ASSERT_FATAL(nifmInitialize(NifmServiceType_User));
+        //ASSERT_FATAL(smInitialize());
+
         tsl::initializeThemeVars();
         initializeCurl();
 
@@ -4941,13 +4942,14 @@ public:
 
         cleanupCurl();
         closeInterpreterThread(); // shouldn't be running, but run close anyways
-        socketExit();
-        nifmExit();
-        i2cExit();
-        smExit();
-        spsmExit();
-        splExit();
-        fsdevUnmountAll();
+        
+        //socketExit();
+        //nifmExit();
+        //i2cExit();
+        //smExit();
+        //spsmExit();
+        //splExit();
+        //fsdevUnmountAll();
     }
     
     /**
