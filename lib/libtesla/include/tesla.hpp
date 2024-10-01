@@ -7827,6 +7827,16 @@ extern "C" {
             __libnx_init_time();            // CUSTOM MODIFICATION
             timeExit(); // CUSTOM MODIFICATION
             powerInit();
+
+            i2cInitialize();
+
+            fsdevMountSdmc();
+            splInitialize();
+            spsmInitialize();
+            //i2cInitialize();
+            ASSERT_FATAL(socketInitializeDefault());
+            ASSERT_FATAL(nifmInitialize(NifmServiceType_User));
+            ASSERT_FATAL(smInitialize());
         });
     }
     
@@ -7835,7 +7845,17 @@ extern "C" {
      *
      */
     void __appExit(void) {
-        //thermalstatusExit();
+        
+        socketExit();
+        nifmExit();
+        //i2cExit();
+        smExit();
+        spsmExit();
+        splExit();
+        fsdevUnmountAll();
+        
+        i2cExit();
+        
         powerExit(); // CUSTOM MODIFICATION
         fsExit();
         hidExit();
