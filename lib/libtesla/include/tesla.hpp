@@ -4621,8 +4621,8 @@ namespace tsl {
         private:
             Color m_color;
         };
-        
-        
+
+
         /**
          * @brief A List containing list items
          *
@@ -4847,17 +4847,32 @@ namespace tsl {
              * @param index Index in the list where the item should be inserted. -1 or greater list size will insert it at the end
              * @param height Height of the element. Don't set this parameter for libtesla to try and figure out the size based on the type
              */
-            inline void addItem(Element *element, u16 height = 0, ssize_t index = -1) {
+            inline void addItem(Element* element, u16 height = 0, ssize_t index = -1) {
                 if (element != nullptr) {
-                    if (height != 0)
+                    // Check if the list is empty and the first element being added is a ListItem
+                    if (actualItemCount == 0 && element->m_isItem) {
+                        // Add a CustomDrawer to occupy the same space as an empty CategoryHeader
+                        auto* customDrawer = new tsl::elm::CustomDrawer([](gfx::Renderer* r, s32 x, s32 y, s32 w, s32 h) {
+                            // Leave empty to just occupy space without rendering anything
+                        });
+                        customDrawer->setBoundaries(this->getX(), this->getY(), this->getWidth(), tsl::style::ListItemDefaultHeight / 2); // Set same size as CategoryHeader
+                        customDrawer->setParent(this);
+                        customDrawer->invalidate();
+                        this->m_itemsToAdd.emplace_back(-1, customDrawer); // Insert at the beginning
+                    }
+
+                    if (height != 0) {
                         element->setBoundaries(this->getX(), this->getY(), this->getWidth(), height);
-                    
+                    }
+
                     element->setParent(this);
                     element->invalidate();
-                    
+
                     this->m_itemsToAdd.emplace_back(index, element);
                 }
+                actualItemCount++;
             }
+
             
 
             /**
@@ -5270,6 +5285,8 @@ namespace tsl {
             std::vector<float> prefixSums;
 
         private:
+            size_t actualItemCount = 0;
+
             inline void clearItems() {
                 for (auto& item : this->m_items) {
                     delete item;
@@ -5279,6 +5296,7 @@ namespace tsl {
                 this->m_focusedIndex = 0;
                 this->invalidate();
                 this->m_clearList = false;
+                actualItemCount = 0;
             }
             
             inline void addPendingItems() {
@@ -7042,7 +7060,7 @@ namespace tsl {
                             keysDown |= KEY_B;
                             simulatedBack = false;
                         }
-                        
+
                         if (keysDown & KEY_B)
                             this->goBack();
                         singlePressHandled = false;
