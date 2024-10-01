@@ -68,7 +68,7 @@
 //uint64_t RAM_Total_system_u = 0;
 
 
-bool isDocked() {
+bool consoleIsDocked() {
     Result rc;
     ApmPerformanceMode perfMode = ApmPerformanceMode_Invalid;
 
@@ -3174,7 +3174,7 @@ namespace tsl {
             
 
             std::pair<int, int> getUnderscanPixels() {
-                if (!isDocked()) {
+                if (!consoleIsDocked()) {
                     return {0, 0};
                 }
                 
