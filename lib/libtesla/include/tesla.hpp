@@ -5412,8 +5412,8 @@ namespace tsl {
              *
              * @param text Initial description text
              */
-            ListItem(const std::string& text, const std::string& value = "")
-                : Element(), m_text(text), m_value(value) {
+            ListItem(const std::string& text, const std::string& value = "", const u32& listItemHeight = tsl::style::ListItemDefaultHeight)
+                : Element(), m_text(text), m_value(value), m_listItemHeight(listItemHeight) {
                 m_isItem = true;
                 applyLangReplacements(this->m_text);
                 applyLangReplacements(this->m_value, true);
@@ -5434,6 +5434,9 @@ namespace tsl {
                 
                 convertComboToUnicode(this->m_text);
                 convertComboToUnicode(this->m_value);
+
+                // Calculate vertical offset to center the text
+                s32 yOffset = (tsl::style::ListItemDefaultHeight - this->m_listItemHeight) / 2;
 
                 if (this->m_maxWidth == 0) {
                     if (this->m_value.length() > 0) {
@@ -5464,13 +5467,14 @@ namespace tsl {
 
                 lastBottomBound = this->getBottomBound();
                 
+
                 if (this->m_trunctuated) {
                     if (this->m_focused) {
                         if (this->m_value.length() > 0)
                             renderer->enableScissoring(this->getX()+6, 97, this->m_maxWidth + 40 - 6-4, tsl::cfg::FramebufferHeight-73-97);
                         else
                             renderer->enableScissoring(this->getX()+6, 97, this->m_maxWidth + 40 - 6, tsl::cfg::FramebufferHeight-73-97);
-                        renderer->drawString(this->m_scrollText, false, this->getX() + 20-1 - this->m_scrollOffset, this->getY() + 45, 23, a(selectedTextColor));
+                        renderer->drawString(this->m_scrollText, false, this->getX() + 20-1 - this->m_scrollOffset, this->getY() + 45 - yOffset, 23, a(selectedTextColor));
                         renderer->disableScissoring();
                         //t = std::chrono::steady_clock::now() - this->timeIn;
                         if (std::chrono::steady_clock::now() - this->timeIn >= 2000ms) {
@@ -5483,11 +5487,11 @@ namespace tsl {
                             }
                         } // CUSTOM MODIFICATION END
                     } else {
-                        renderer->drawString(this->m_ellipsisText, false, this->getX() + 20-1, this->getY() + 45, 23, a(!useClickTextColor ? defaultTextColor : clickTextColor));
+                        renderer->drawString(this->m_ellipsisText, false, this->getX() + 20-1, this->getY() + 45 - yOffset, 23, a(!useClickTextColor ? defaultTextColor : clickTextColor));
                     }
                 } else {
                     // Render the text with special character handling
-                    renderer->drawStringWithColoredSections(this->m_text, {STAR_SYMBOL+"  "}, this->getX() + 20-1, this->getY() + 45, 23,
+                    renderer->drawStringWithColoredSections(this->m_text, {STAR_SYMBOL+"  "}, this->getX() + 20-1, this->getY() + 45 - yOffset, 23,
                         a(this->m_focused ? (!useClickTextColor ? selectedTextColor : clickTextColor) : (!useClickTextColor ? defaultTextColor : clickTextColor)),
                         a(this->m_focused ? starColor : selectionStarColor)
                     );
@@ -5497,7 +5501,7 @@ namespace tsl {
                 // CUSTOM SECTION START (modification for submenu footer color)
                 //const std::string& value = this->m_value;
                 s32 xPosition = this->getX() + this->m_maxWidth + 45 - 1;
-                s32 yPosition = this->getY() + 45;
+                s32 yPosition = this->getY() + 45 - yOffset;
                 s32 fontSize = 20;
                 //bool isFaint = ;
                 //bool isFocused = this->m_focused;
@@ -5527,7 +5531,7 @@ namespace tsl {
             }
             
             virtual void layout(u16 parentX, u16 parentY, u16 parentWidth, u16 parentHeight) override {
-                this->setBoundaries(this->getX()+2+1, this->getY(), this->getWidth()+8+1, tsl::style::ListItemDefaultHeight);
+                this->setBoundaries(this->getX()+2+1, this->getY(), this->getWidth()+8+1, m_listItemHeight);
             }
             
             virtual bool onClick(u64 keys) override {
@@ -5639,7 +5643,8 @@ namespace tsl {
             std::string m_value = "";
             std::string m_scrollText = "";
             std::string m_ellipsisText = "";
-            
+            u32 m_listItemHeight;
+
             bool m_scroll = false;
             bool m_trunctuated = false;
             bool m_faint = false;
