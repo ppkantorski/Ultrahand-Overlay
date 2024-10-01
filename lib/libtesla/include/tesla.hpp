@@ -6892,6 +6892,7 @@ namespace tsl {
             
             auto& currentGui = this->getCurrentGui();
             
+
             // Return early if current GUI is not available
             if (!currentGui) return;
             if (!internalTouchReleased) return;
@@ -6914,6 +6915,19 @@ namespace tsl {
                 //    currentFocus->shakeHighlight(static_cast<FocusDirection>(counter % 4));
                 //    counter = (counter + 1) % 4;
                 //}
+            }
+
+            if (currentFocus == nullptr) {
+                // Handle the rest of the input only if the game is not paused and not over
+                if (simulatedBack) {
+                    keysDown |= KEY_B;
+                    simulatedBack = false;
+                }
+                if (keysDown & KEY_B) {
+                    if (!currentGui->handleInput(KEY_B, 0,{},{},{}))
+                        this->goBack();
+                    return;
+                }
             }
             
             if (!currentFocus && !simulatedBack && simulatedBackComplete && !stillTouching && !runningInterpreter.load(std::memory_order_acquire)) {
@@ -7023,6 +7037,14 @@ namespace tsl {
                             //shouldShake = currentGui->getFocusedElement() != currentFocus;
                         }
                     } else {
+                        // Handle the rest of the input only if the game is not paused and not over
+                        if (simulatedBack) {
+                            keysDown |= KEY_B;
+                            simulatedBack = false;
+                        }
+                        
+                        if (keysDown & KEY_B)
+                            this->goBack();
                         singlePressHandled = false;
                     }
                 }
