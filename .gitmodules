@@ -1,0 +1,3 @@
+[submodule "lib/libultrahand"]
+	path = lib/libultrahand
+	url = https://github.com/ppkantorski/libultrahand
