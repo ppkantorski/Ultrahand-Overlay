@@ -5531,9 +5531,14 @@ namespace tsl {
             }
             
             virtual bool onClick(u64 keys) override {
-
-                if (keys & KEY_A)
+                if (simulatedSelect && !simulatedSelectComplete) {
+                    keys |= KEY_A;
+                    simulatedSelect = false;
+                }
+                if (keys & KEY_A) {
                     this->triggerClickAnimation();
+                    simulatedSelectComplete = true;
+                }
                 else if (keys & (KEY_UP | KEY_DOWN | KEY_LEFT | KEY_RIGHT))
                     this->m_clickAnimationProgress = 0;
 
