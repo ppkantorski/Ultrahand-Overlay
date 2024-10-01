@@ -103,6 +103,6 @@ Contributions are welcome! If you have any ideas, suggestions, or bug reports, p
 
 ## License
 
-This project is licensed and distributed under [GPLv2](LICENSE) with a [custom library](lib/libultrahand) utilizing [CC-BY-4.0](SUB_LICENSE).
+This project is licensed and distributed under [GPLv2](LICENSE) with a [custom library](https://github.com/ppkantorski/libultrahand) utilizing [CC-BY-4.0](SUB_LICENSE).
 
 Copyright (c) 2024 ppkantorski
