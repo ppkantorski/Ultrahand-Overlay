@@ -377,11 +377,11 @@ static std::string OPAQUE_SCREENSHOTS = "Opaque Screenshots";
 static std::string ON = "On";
 static std::string OFF = "Off";
 static std::string PACKAGE_INFO = "Package Info";
-static std::string TITLE = "Title";
-static std::string VERSION = "Version";
-static std::string CREATOR = "Creator(s)";
-static std::string ABOUT = "About";
-static std::string CREDITS = "Credits";
+static std::string _TITLE = "Title";
+static std::string _VERSION= "Version";
+static std::string _CREATOR = "Creator(s)";
+static std::string _ABOUT = "About";
+static std::string _CREDITS = "Credits";
 static std::string OK = "OK";
 static std::string BACK = "Back";
 static std::string REBOOT_TO = "Reboot To";
@@ -523,11 +523,11 @@ void reinitializeLangVars() {
     ON = "On";
     OFF = "Off";
     PACKAGE_INFO = "Package Info";
-    TITLE = "Title";
-    VERSION = "Version";
-    CREATOR = "Creator(s)";
-    ABOUT = "About";
-    CREDITS = "Credits";
+    _TITLE = "Title";
+    _VERSION= "Version";
+    _CREATOR = "Creator(s)";
+    _ABOUT = "About";
+    _CREDITS = "Credits";
     OK = "OK";
     BACK = "Back";
     REBOOT_TO = "Reboot To";
@@ -684,11 +684,11 @@ void parseLanguage(const std::string langFile) {
         {"ON", &ON},
         {"OFF", &OFF},
         {"PACKAGE_INFO", &PACKAGE_INFO},
-        {"TITLE", &TITLE},
-        {"VERSION", &VERSION},
-        {"CREATOR", &CREATOR},
-        {"ABOUT", &ABOUT},
-        {"CREDITS", &CREDITS},
+        {"_TITLE", &_TITLE},
+        {"_VERSION", &_VERSION},
+        {"_CREATOR", &_CREATOR},
+        {"_ABOUT", &_ABOUT},
+        {"_CREDITS", &_CREDITS},
         {"OK", &OK},
         {"BACK", &BACK},
         {"REBOOT_TO", &REBOOT_TO},
