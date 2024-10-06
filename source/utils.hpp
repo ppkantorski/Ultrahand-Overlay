@@ -671,20 +671,6 @@ std::tuple<Result, std::string, std::string> getOverlayInfo(const std::string& f
 }
 
 
-//auto returnRootFrame(
-//    std::unique_ptr<tsl::elm::List>& list,  // Use unique_ptr to avoid copying and releasing the list
-//    const std::string& title,               // Use const reference to avoid copying strings
-//    const std::string& subTitle,
-//    const std::string& param1 = "",
-//    const std::string& param2 = "",
-//    const std::string& param3 = "",
-//    const std::string& param4 = ""
-//) {
-//    auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(title, subTitle, param1, param2, param3, param4);
-//    rootFrame->setContent(list.release()); // Take ownership of the list
-//
-//    return rootFrame.release(); // Return unique_ptr directly
-//}
 
 void addHeader(auto& list, const std::string& headerText) {
     list->addItem(new tsl::elm::CategoryHeader(headerText));
