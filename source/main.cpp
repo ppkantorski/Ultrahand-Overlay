@@ -854,7 +854,7 @@ public:
                         setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, DEFAULT_LANG_STR, defaultLangMode);
                         reloadMenu = reloadMenu2 = true;
                         parseLanguage(langFile);
-                        if (skipLang) reinitializeLangVars();
+                        if (skipLang && defaultLangMode == "en") reinitializeLangVars();
                         lastSelectedListItem->setValue(lastSelectedListItemFooter);
                         selectedListItem->setValue(defaultLangMode);
                         listItemRaw->setValue(CHECKMARK_SYMBOL);
@@ -3995,8 +3995,10 @@ public:
         std::string langFile = LANG_PATH+defaultLang+".json";
         if (isFileOrDirectory(langFile))
             parseLanguage(langFile);
-        else
-            reinitializeLangVars();
+        else {
+        	if (defaultLang == "en")
+            	reinitializeLangVars();
+        }
         
         // write default theme
         initializeTheme();
