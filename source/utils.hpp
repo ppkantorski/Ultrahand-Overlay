@@ -32,6 +32,8 @@
 //#include <sys/statvfs.h>
 
 
+using namespace ult;
+
 static std::atomic<bool> abortCommand(false);
 static std::atomic<bool> triggerExit(false);
 
@@ -315,31 +317,6 @@ void removeEmptyCommands(std::vector<std::vector<std::string>>& commands) {
         commands.end());
 }
 
-
-void reloadWallpaper() {
-    // Signal that wallpaper is being refreshed
-    refreshWallpaper.store(true, std::memory_order_release);
-
-    // Lock the mutex for condition waiting
-    std::unique_lock<std::mutex> lock(wallpaperMutex);
-
-    // Wait for inPlot to be false before reloading the wallpaper
-    cv.wait(lock, [] { return !inPlot.load(std::memory_order_acquire); });
-
-    // Clear the current wallpaper data
-    wallpaperData.clear();
-
-    // Reload the wallpaper file
-    if (isFileOrDirectory(WALLPAPER_PATH)) {
-        loadWallpaperFile(WALLPAPER_PATH);
-    }
-
-    // Signal that wallpaper has finished refreshing
-    refreshWallpaper.store(false, std::memory_order_release);
-    
-    // Notify any waiting threads
-    cv.notify_all();
-}
 
 
 
@@ -694,20 +671,6 @@ std::tuple<Result, std::string, std::string> getOverlayInfo(const std::string& f
 }
 
 
-//auto returnRootFrame(
-//    std::unique_ptr<tsl::elm::List>& list,  // Use unique_ptr to avoid copying and releasing the list
-//    const std::string& title,               // Use const reference to avoid copying strings
-//    const std::string& subTitle,
-//    const std::string& param1 = "",
-//    const std::string& param2 = "",
-//    const std::string& param3 = "",
-//    const std::string& param4 = ""
-//) {
-//    auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(title, subTitle, param1, param2, param3, param4);
-//    rootFrame->setContent(list.release()); // Take ownership of the list
-//
-//    return rootFrame.release(); // Return unique_ptr directly
-//}
 
 void addHeader(auto& list, const std::string& headerText) {
     list->addItem(new tsl::elm::CategoryHeader(headerText));
@@ -723,7 +686,7 @@ void addDummyListItem(auto& list, s32 index = -1) {
 
 
 void drawTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::string>& sectionLines, std::vector<std::string>& infoLines,
-               size_t columnOffset = 161, size_t startGap = 19, size_t endGap = 12, size_t newlineGap = 0,
+               size_t columnOffset = 163, size_t startGap = 19, size_t endGap = 12, size_t newlineGap = 0,
                const std::string& tableSectionTextColor = DEFAULT_STR, const std::string& tableInfoTextColor = DEFAULT_STR, 
                const std::string& alignment = LEFT_STR, bool hideTableBackground = false, bool useHeaderIndent = false, bool isScrollable = false) {
 
@@ -772,7 +735,7 @@ void drawTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::string>& 
                 if (alignment == LEFT_STR) {
                     infoXOffsets[i] = static_cast<int>(columnOffset);
                 } else if (alignment == RIGHT_STR) {
-                    infoXOffsets[i] = static_cast<int>(xMax - infoStringWidths[i] + (columnOffset - 160));
+                    infoXOffsets[i] = static_cast<int>(xMax - infoStringWidths[i] + (columnOffset - 160 +1));
                 } else { // CENTER_STR
                     infoXOffsets[i] = static_cast<int>(columnOffset + (xMax - infoStringWidths[i]) / 2);
                 }
@@ -798,7 +761,7 @@ void drawTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::string>& 
 void applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::string& hexPath, const std::string& iniPath, const std::string& listString, const std::string& listPath, const std::string& jsonString, const std::string& jsonPath);
 
 void addTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::vector<std::string>>& tableData,
-    const std::string& packagePath, const size_t& columnOffset=161, const size_t& tableStartGap=19, const size_t& tableEndGap=12, const size_t& tableSpacing=0,
+    const std::string& packagePath, const size_t& columnOffset=163, const size_t& tableStartGap=19, const size_t& tableEndGap=12, const size_t& tableSpacing=0,
     const std::string& tableSectionTextColor=DEFAULT_STR, const std::string& tableInfoTextColor=DEFAULT_STR, const std::string& tableAlignment=RIGHT_STR, const bool& hideTableBackground = false, const bool& useHeaderIndent = false, const bool& isScrollable = false) {
     std::string message;
 
