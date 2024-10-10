@@ -911,11 +911,13 @@ public:
                 case SetSysProductModel_Copper: modelRev = "Copper│Tegra X1 (Erista)"; break;
                 default: modelRev = UNAVAILABLE_SELECTION.c_str(); break;
             }
+            ASSERT_FATAL(nifmInitialize(NifmServiceType_User)); // for local IP
             std::vector<std::vector<std::string>> tableData = {
                 {FIRMWARE, "", versionString},
                 {BOOTLOADER, "", hekateVersion.empty() ? "fusee" : "hekate " + hekateVersion},
                 {LOCAL_IP, "", getLocalIpAddress()}
             };
+            nifmExit();
             addTable(list, tableData, "", 163, 20, 28, 4);
             
             // Hardware and storage info
