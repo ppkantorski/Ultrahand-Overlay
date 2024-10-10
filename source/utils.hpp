@@ -288,6 +288,7 @@ std::string getLocalIpAddress() {
     Result rc;
     u32 ipAddress;
 
+    ASSERT_FATAL(nifmInitialize(NifmServiceType_User));
     // Get the current IP address
     rc = nifmGetCurrentIpAddress(&ipAddress);
     if (R_SUCCEEDED(rc)) {
@@ -298,8 +299,10 @@ std::string getLocalIpAddress() {
                  (ipAddress >> 8) & 0xFF,
                  (ipAddress >> 16) & 0xFF,
                  (ipAddress >> 24) & 0xFF);
+        nifmExit();
         return std::string(ipStr);
     } else {
+        nifmExit();
         // Return a default IP address if the IP could not be retrieved
         return UNAVAILABLE_SELECTION;  // Or "Unknown" if you prefer
     }
