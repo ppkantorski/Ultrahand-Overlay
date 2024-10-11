@@ -2645,7 +2645,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
         maxValue = 100;
         units = "";
         steps = 0;
-        unlockedTrackbar = false;
+        unlockedTrackbar = true;
         onEveryTick = false;
         commandFooter = "";
         commandSystem = DEFAULT_STR;
@@ -4756,7 +4756,7 @@ public:
                     }
                 }
 
-                if ((keysHeld & KEY_RIGHT) && !(keysHeld & ~KEY_RIGHT & ALL_KEYS_MASK) && !stillTouching && ((!allowSlide && onTrackBar && !unlockedSlide) || !onTrackBar || simulatedNextPage) ) {
+                if ((keysHeld & KEY_RIGHT) && !(keysHeld & ~KEY_RIGHT & ~KEY_R & ALL_KEYS_MASK) && !stillTouching && (((!allowSlide && !unlockedSlide && onTrackBar) || (keysHeld & KEY_R)) || !onTrackBar || simulatedNextPage)) {
                     simulatedNextPage = false;
                     allowSlide = unlockedSlide = false;
                     if (menuMode != PACKAGES_STR) {
@@ -4770,7 +4770,7 @@ public:
                         return true;
                     }
                 }
-                if ((keysHeld & KEY_LEFT) && !(keysHeld & ~KEY_LEFT & ALL_KEYS_MASK) && !stillTouching && ((!allowSlide && onTrackBar && !unlockedSlide) || !onTrackBar || simulatedNextPage)) {
+                if ((keysHeld & KEY_LEFT) && !(keysHeld & ~KEY_LEFT & ~KEY_R & ALL_KEYS_MASK) && !stillTouching && (((!allowSlide && onTrackBar && !unlockedSlide) || (keysHeld & KEY_R)) || !onTrackBar || simulatedNextPage)) {
                     simulatedNextPage = false;
                     allowSlide = unlockedSlide = false;
                     if (menuMode != OVERLAYS_STR) {
