@@ -1602,6 +1602,17 @@ public:
 };
 
 
+
+// For persistent versions and colors across nested packages (when not specified)
+std::string packageRootLayerTitle;
+std::string packageRootLayerVersion;
+std::string packageRootLayerColor;
+bool overrideTitle = false, overrideVersion = false;
+
+
+
+
+
 class ScriptOverlay : public tsl::Gui {
 private:
     std::string filePath, specificKey, fileName;
@@ -1715,13 +1726,13 @@ public:
         }
     
         PackageHeader packageHeader = getPackageHeaderFromIni(packageFile);
-
-        auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(packageName, packageHeader.version.empty() ? 
+        
+        auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(packageRootLayerTitle, packageHeader.version.empty() ? 
             CAPITAL_ULTRAHAND_PROJECT_NAME + " Script" : packageHeader.version + "   (" + CAPITAL_ULTRAHAND_PROJECT_NAME + " Script)");
         rootFrame->setContent(list.release());
         return rootFrame.release();
-
-
+        
+        
         //return returnRootFrame(list, packageName, packageHeader.version.empty() ? 
         //    CAPITAL_ULTRAHAND_PROJECT_NAME + " Script" : packageHeader.version + "   (" + CAPITAL_ULTRAHAND_PROJECT_NAME + " Script)");
     }
@@ -1771,13 +1782,6 @@ public:
     }
 };
 
-
-
-// For persistent versions and colors across nested packages (when not specified)
-std::string packageRootLayerTitle;
-std::string packageRootLayerVersion;
-std::string packageRootLayerColor;
-bool overrideTitle = false, overrideVersion = false;
 
 
 /**
