@@ -3646,7 +3646,7 @@ public:
                 }
             }
             if (currentPage == LEFT_STR) {
-                if ((keysHeld & KEY_RIGHT) && !(keysHeld & ~KEY_RIGHT & ALL_KEYS_MASK) && !stillTouching && ((!allowSlide && onTrackBar && !unlockedSlide) || !onTrackBar || simulatedNextPage)) {
+                if ((keysHeld & KEY_RIGHT) && !(keysHeld & ~KEY_RIGHT & ~KEY_R & ALL_KEYS_MASK) && !stillTouching && (((!allowSlide && onTrackBar && !unlockedSlide) || (keysHeld & KEY_R)) || !onTrackBar || simulatedNextPage)) {
                     simulatedNextPage = false;
                     allowSlide = unlockedSlide = false;
                     lastPage = RIGHT_STR;
@@ -3659,7 +3659,7 @@ public:
                     return true;
                 }
             } else if (currentPage == RIGHT_STR) {
-                if ((keysHeld & KEY_LEFT) && !(keysHeld & ~KEY_LEFT & ALL_KEYS_MASK) && !stillTouching && ((!allowSlide && onTrackBar && !unlockedSlide) || !onTrackBar || simulatedNextPage)) {
+                if ((keysHeld & KEY_LEFT) && !(keysHeld & ~KEY_LEFT & ~KEY_R & ALL_KEYS_MASK) && !stillTouching && (((!allowSlide && onTrackBar && !unlockedSlide) || (keysHeld & KEY_R)) || !onTrackBar || simulatedNextPage)) {
                     simulatedNextPage = false;
                     allowSlide = unlockedSlide = false;
                     lastPage = LEFT_STR;
