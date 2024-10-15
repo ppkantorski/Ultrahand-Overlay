@@ -288,6 +288,7 @@ std::string getLocalIpAddress() {
     Result rc;
     u32 ipAddress;
 
+    
     // Get the current IP address
     rc = nifmGetCurrentIpAddress(&ipAddress);
     if (R_SUCCEEDED(rc)) {
@@ -298,6 +299,7 @@ std::string getLocalIpAddress() {
                  (ipAddress >> 8) & 0xFF,
                  (ipAddress >> 16) & 0xFF,
                  (ipAddress >> 24) & 0xFF);
+        nifmExit();
         return std::string(ipStr);
     } else {
         // Return a default IP address if the IP could not be retrieved
@@ -1928,7 +1930,7 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
  *
  * @param commands A list of commands, where each command is represented as a vector of strings.
  */
-void interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& commands, const std::string& packagePath="", const std::string& selectedCommand="") {
+bool interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& commands, const std::string& packagePath="", const std::string& selectedCommand="") {
     
     if (!packagePath.empty()) {
         disableLogging = !(parseValueFromIniSection(PACKAGES_INI_FILEPATH, getNameFromPath(packagePath), USE_LOGGING_STR) == TRUE_STR);
@@ -1990,7 +1992,7 @@ void interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
             commandSuccess = false;
             disableLogging = true;
             logFilePath = defaultLogFilePath;
-            return;
+            return commandSuccess;
         }
 
         if (cmd.empty()) {
@@ -2078,6 +2080,8 @@ void interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
     }
     disableLogging = true;
     logFilePath = defaultLogFilePath;
+
+    return commandSuccess;
 }
 
 

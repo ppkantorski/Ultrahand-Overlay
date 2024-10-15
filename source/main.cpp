@@ -911,11 +911,13 @@ public:
                 case SetSysProductModel_Copper: modelRev = "Copper│Tegra X1 (Erista)"; break;
                 default: modelRev = UNAVAILABLE_SELECTION.c_str(); break;
             }
+            ASSERT_FATAL(nifmInitialize(NifmServiceType_User)); // for local IP
             std::vector<std::vector<std::string>> tableData = {
                 {FIRMWARE, "", versionString},
                 {BOOTLOADER, "", hekateVersion.empty() ? "fusee" : "hekate " + hekateVersion},
                 {LOCAL_IP, "", getLocalIpAddress()}
             };
+            nifmExit();
             addTable(list, tableData, "", 163, 20, 28, 4);
             
             // Hardware and storage info
@@ -1600,6 +1602,17 @@ public:
 };
 
 
+
+// For persistent versions and colors across nested packages (when not specified)
+std::string packageRootLayerTitle;
+std::string packageRootLayerVersion;
+std::string packageRootLayerColor;
+bool overrideTitle = false, overrideVersion = false;
+
+
+
+
+
 class ScriptOverlay : public tsl::Gui {
 private:
     std::string filePath, specificKey, fileName;
@@ -1713,13 +1726,13 @@ public:
         }
     
         PackageHeader packageHeader = getPackageHeaderFromIni(packageFile);
-
-        auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(packageName, packageHeader.version.empty() ? 
+        
+        auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(packageRootLayerTitle, packageHeader.version.empty() ? 
             CAPITAL_ULTRAHAND_PROJECT_NAME + " Script" : packageHeader.version + "   (" + CAPITAL_ULTRAHAND_PROJECT_NAME + " Script)");
         rootFrame->setContent(list.release());
         return rootFrame.release();
-
-
+        
+        
         //return returnRootFrame(list, packageName, packageHeader.version.empty() ? 
         //    CAPITAL_ULTRAHAND_PROJECT_NAME + " Script" : packageHeader.version + "   (" + CAPITAL_ULTRAHAND_PROJECT_NAME + " Script)");
     }
@@ -1769,13 +1782,6 @@ public:
     }
 };
 
-
-
-// For persistent versions and colors across nested packages (when not specified)
-std::string packageRootLayerTitle;
-std::string packageRootLayerVersion;
-std::string packageRootLayerColor;
-bool overrideTitle = false, overrideVersion = false;
 
 
 /**
@@ -2643,7 +2649,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
         maxValue = 100;
         units = "";
         steps = 0;
-        unlockedTrackbar = false;
+        unlockedTrackbar = true;
         onEveryTick = false;
         commandFooter = "";
         commandSystem = DEFAULT_STR;
@@ -3644,7 +3650,7 @@ public:
                 }
             }
             if (currentPage == LEFT_STR) {
-                if ((keysHeld & KEY_RIGHT) && !(keysHeld & ~KEY_RIGHT & ALL_KEYS_MASK) && !stillTouching && ((!allowSlide && onTrackBar && !unlockedSlide) || !onTrackBar || simulatedNextPage)) {
+                if ((keysHeld & KEY_RIGHT) && !(keysHeld & ~KEY_RIGHT & ~KEY_R & ALL_KEYS_MASK) && !stillTouching && (((!allowSlide && onTrackBar && !unlockedSlide) || (keysHeld & KEY_R)) || !onTrackBar || simulatedNextPage)) {
                     simulatedNextPage = false;
                     allowSlide = unlockedSlide = false;
                     lastPage = RIGHT_STR;
@@ -3657,7 +3663,7 @@ public:
                     return true;
                 }
             } else if (currentPage == RIGHT_STR) {
-                if ((keysHeld & KEY_LEFT) && !(keysHeld & ~KEY_LEFT & ALL_KEYS_MASK) && !stillTouching && ((!allowSlide && onTrackBar && !unlockedSlide) || !onTrackBar || simulatedNextPage)) {
+                if ((keysHeld & KEY_LEFT) && !(keysHeld & ~KEY_LEFT & ~KEY_R & ALL_KEYS_MASK) && !stillTouching && (((!allowSlide && onTrackBar && !unlockedSlide) || (keysHeld & KEY_R)) || !onTrackBar || simulatedNextPage)) {
                     simulatedNextPage = false;
                     allowSlide = unlockedSlide = false;
                     lastPage = LEFT_STR;
@@ -4754,7 +4760,7 @@ public:
                     }
                 }
 
-                if ((keysHeld & KEY_RIGHT) && !(keysHeld & ~KEY_RIGHT & ALL_KEYS_MASK) && !stillTouching && ((!allowSlide && onTrackBar && !unlockedSlide) || !onTrackBar || simulatedNextPage) ) {
+                if ((keysHeld & KEY_RIGHT) && !(keysHeld & ~KEY_RIGHT & ~KEY_R & ALL_KEYS_MASK) && !stillTouching && (((!allowSlide && !unlockedSlide && onTrackBar) || (keysHeld & KEY_R)) || !onTrackBar || simulatedNextPage)) {
                     simulatedNextPage = false;
                     allowSlide = unlockedSlide = false;
                     if (menuMode != PACKAGES_STR) {
@@ -4768,7 +4774,7 @@ public:
                         return true;
                     }
                 }
-                if ((keysHeld & KEY_LEFT) && !(keysHeld & ~KEY_LEFT & ALL_KEYS_MASK) && !stillTouching && ((!allowSlide && onTrackBar && !unlockedSlide) || !onTrackBar || simulatedNextPage)) {
+                if ((keysHeld & KEY_LEFT) && !(keysHeld & ~KEY_LEFT & ~KEY_R & ALL_KEYS_MASK) && !stillTouching && (((!allowSlide && onTrackBar && !unlockedSlide) || (keysHeld & KEY_R)) || !onTrackBar || simulatedNextPage)) {
                     simulatedNextPage = false;
                     allowSlide = unlockedSlide = false;
                     if (menuMode != OVERLAYS_STR) {
@@ -4913,6 +4919,7 @@ public:
         //tsl::initializeUltrahandSettings(); // unnecessary for Ultrahand's implementation
         //ASSERT_FATAL(smInitialize()); // might be unnecessary? needs investigating
 
+    	ASSERT_FATAL(socketInitializeDefault());
         initializeCurl();
 
         // Load and execute "boot" commands if they exist
@@ -4943,6 +4950,7 @@ public:
             executeIniCommands(PACKAGE_PATH + EXIT_PACKAGE_FILENAME, "exit");
 
         cleanupCurl();
+        socketExit();
 
         //smExit();
         //closeInterpreterThread(); // shouldn't be running, but run close anyways
