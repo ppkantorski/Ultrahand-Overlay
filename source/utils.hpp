@@ -686,15 +686,94 @@ void addDummyListItem(auto& list, s32 index = -1) {
     list->addItem(new tsl::elm::DummyListItem(), 0, index);
 }
 
+// Helper function to wrap text into multiple lines based on a maximum width (character count)
+// Subsequent lines are indented by 4 spaces
+//std::vector<std::string> wrapText(const std::string& text, size_t maxWidth) {
+//    std::vector<std::string> wrappedLines;
+//    //std::string indent = "    ";  // 4 spaces for indentation
+//    std::string indent = "└ ";
+//    size_t currentPos = 0;
+//
+//    // First line (no indentation)
+//    wrappedLines.push_back(text.substr(currentPos, maxWidth));
+//    currentPos += maxWidth;
+//
+//    // Subsequent lines (indented by 4 spaces)
+//    while (currentPos < text.size()) {
+//        wrappedLines.push_back(indent + text.substr(currentPos, maxWidth));
+//        currentPos += maxWidth;
+//    }
+//
+//    return wrappedLines;
+//}
+
+
+std::vector<std::string> wrapText(const std::string& text, float maxWidth, const std::string& wrappingMode, bool useIndent, const std::string& indent, float indentWidth, size_t fontSize) {
+    if (wrappingMode == "none" || (wrappingMode != "char" && wrappingMode != "word")) {
+        return std::vector<std::string>{text};  // Return the entire text as a single line
+    }
+
+    std::vector<std::string> wrappedLines;
+    std::string currentLine;
+    std::string currentWord;
+    bool firstLine = true;
+    float currentMaxWidth = maxWidth;
+
+    if (wrappingMode == "char") {
+        size_t i = 0;
+        while (i < text.size()) {
+            currentLine += text[i];
+            currentMaxWidth = firstLine ? maxWidth : maxWidth - indentWidth;  // Subtract indent width for subsequent lines
+
+            if (tsl::gfx::calculateStringWidth(currentLine, fontSize, false) > currentMaxWidth) {
+                wrappedLines.push_back(((firstLine && useIndent) || !useIndent) ? currentLine : indent + currentLine);  // Indent if not the first line
+                currentLine.clear();  // Start a new line
+                firstLine = false;
+            }
+            i++;
+        }
+
+        if (!currentLine.empty()) {
+            wrappedLines.push_back(((firstLine && useIndent) || !useIndent) ? currentLine : indent + currentLine);  // Add the last line
+        }
+    } else if (wrappingMode == "word") {
+        StringStream stream(text);
+        while (stream >> currentWord) {
+            if (tsl::gfx::calculateStringWidth(currentLine + currentWord, fontSize, false) > currentMaxWidth) {
+                wrappedLines.push_back(((firstLine && useIndent) || !useIndent) ? currentLine : indent + currentLine);  // Add the current line
+                currentLine.clear();  // Start a new line with the current word
+                firstLine = false;
+            }
+
+            if (!currentLine.empty()) {
+                currentLine += " ";  // Add a space between words
+            }
+            currentLine += currentWord;
+        }
+
+        if (!currentLine.empty()) {
+            wrappedLines.push_back(((firstLine && useIndent) || !useIndent) ? currentLine : indent + currentLine);  // Add the last line
+        }
+    }
+
+    return wrappedLines;
+}
+
+
+
 
 void drawTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::string>& sectionLines, std::vector<std::string>& infoLines,
                size_t columnOffset = 163, size_t startGap = 19, size_t endGap = 12, size_t newlineGap = 0,
                const std::string& tableSectionTextColor = DEFAULT_STR, const std::string& tableInfoTextColor = DEFAULT_STR, 
-               const std::string& alignment = LEFT_STR, bool hideTableBackground = false, bool useHeaderIndent = false, bool isScrollable = false) {
+               const std::string& alignment = LEFT_STR, bool hideTableBackground = false, bool useHeaderIndent = false, 
+               bool isScrollable = false, const std::string& wrappingMode = "none", bool useWrappedTextIndent = false) {
 
     const size_t lineHeight = 16;
     const size_t fontSize = 16;
     const size_t xMax = tsl::cfg::FramebufferWidth - 95;
+    //const std::string indent = "    ";  // 4 spaces for indentation
+    const std::string indent = "└ ";
+    float indentWidth = tsl::gfx::calculateStringWidth(indent, fontSize, false);  // Calculate width of the indent
 
     auto getTextColor = [](const std::string& colorStr, auto defaultColor) {
         if (colorStr == "warning") return tsl::warningTextColor;
@@ -710,52 +789,69 @@ void drawTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::string>& 
     auto alternateSectionTextColor = getTextColor(tableSectionTextColor, tsl::sectionTextColor);
     auto alternateInfoTextColor = getTextColor(tableInfoTextColor, tsl::infoTextColor);
 
-    size_t totalHeight = lineHeight * sectionLines.size() + newlineGap * (sectionLines.size() - 1) + endGap;
 
-    // Precompute all y-offsets for sections and info lines
-    std::vector<s32> yOffsets(sectionLines.size());
-    std::vector<int> infoXOffsets(infoLines.size());
-    std::vector<float> infoStringWidths(infoLines.size(), 0.0f);
+    // Vectors for recalculating offsets and expanding lines
+    std::vector<std::string> expandedSectionLines;
+    std::vector<std::string> expandedInfoLines;
+    std::vector<s32> yOffsets;
+    std::vector<int> infoXOffsets;
+
+    // Preprocess and wrap section lines, ensuring infoLines align correctly
+    size_t currentY = startGap;
+
+    std::vector<std::string> wrappedLines;
+    float infoTextWidth;
 
     for (size_t i = 0; i < sectionLines.size(); ++i) {
-        yOffsets[i] = startGap + (i * (lineHeight + newlineGap));
-        convertComboToUnicode(sectionLines[i]);
-        convertComboToUnicode(infoLines[i]);
+        // Wrap the section lines before passing them to the drawer, and indent if required
+        wrappedLines = wrapText(sectionLines[i], xMax - 12 - 4, wrappingMode, useWrappedTextIndent, indent, indentWidth, fontSize);
+        for (const auto& wrappedLine : wrappedLines) {
+            expandedSectionLines.push_back(wrappedLine);
+            expandedInfoLines.push_back(i < infoLines.size() ? infoLines[i] : "");  // Replicate the info line for the first wrapped line
+
+            // Calculate X offsets for the info line based on alignment
+            if (i < infoLines.size()) {
+                const std::string& infoText = expandedInfoLines.back();
+                infoTextWidth = tsl::gfx::calculateStringWidth(infoText, fontSize, false);
+
+                if (alignment == LEFT_STR) {
+                    infoXOffsets.push_back(static_cast<int>(columnOffset));
+                } else if (alignment == RIGHT_STR) {
+                    infoXOffsets.push_back(static_cast<int>(xMax - infoTextWidth + (columnOffset - 160 + 1)));
+                } else { // CENTER_STR
+                    infoXOffsets.push_back(static_cast<int>(columnOffset + (xMax - infoTextWidth) / 2));
+                }
+            }
+
+            yOffsets.push_back(currentY);  // Set the offset for each line
+            currentY += lineHeight + newlineGap;  // Increment Y position for the next line
+        }
     }
 
+    // Compute total height based on the number of expanded lines
+    size_t totalHeight = lineHeight * expandedSectionLines.size() + newlineGap * (expandedSectionLines.size() - 1) + endGap;
+
+    // Add the TableDrawer with modified sectionLines and infoLines (now they match in size)
     list->addItem(new tsl::elm::TableDrawer([=](tsl::gfx::Renderer* renderer, s32 x, s32 y, s32 w, s32 h) mutable {
         if (useHeaderIndent) {
             renderer->drawRect(x - 2, y + 2, 4, 22, renderer->a(tsl::headerSeparatorColor));
         }
         std::string infoText;
-        for (size_t i = 0; i < infoLines.size(); ++i) {
-            // Calculate string width and offset if not already done
-            if (infoStringWidths[i] == 0.0f) {
-                const std::string& infoText = (infoLines[i].find(NULL_STR) != std::string::npos) ? UNAVAILABLE_SELECTION : infoLines[i];
-                infoStringWidths[i] = renderer->calculateStringWidth(infoText, fontSize, false);
-    
-                if (alignment == LEFT_STR) {
-                    infoXOffsets[i] = static_cast<int>(columnOffset);
-                } else if (alignment == RIGHT_STR) {
-                    infoXOffsets[i] = static_cast<int>(xMax - infoStringWidths[i] + (columnOffset - 160 +1));
-                } else { // CENTER_STR
-                    infoXOffsets[i] = static_cast<int>(columnOffset + (xMax - infoStringWidths[i]) / 2);
-                }
-            }
-            
-    
-            // Draw the section line
-            renderer->drawString(sectionLines[i], false, x + 12, y + yOffsets[i], fontSize, renderer->a(alternateSectionTextColor));
-    
-            // Draw the info line
-            std::string infoText = (infoLines[i].find(NULL_STR) != std::string::npos) ? UNAVAILABLE_SELECTION : infoLines[i];
 
-            
-            renderer->drawString(infoText, false, x + infoXOffsets[i], y + yOffsets[i], fontSize, renderer->a(alternateInfoTextColor));
+        // Draw each section and info line
+        for (size_t i = 0; i < expandedSectionLines.size(); ++i) {
+            // Draw the section line
+            renderer->drawString(expandedSectionLines[i], false, x + 12, y + yOffsets[i], fontSize, renderer->a(alternateSectionTextColor));
+
+            // Draw the corresponding info line
+            if (i < expandedInfoLines.size()) {
+                infoText = (expandedInfoLines[i].find(NULL_STR) != std::string::npos) ? UNAVAILABLE_SELECTION : expandedInfoLines[i];
+                renderer->drawString(infoText, false, x + infoXOffsets[i], y + yOffsets[i], fontSize, renderer->a(alternateInfoTextColor));
+            }
         }
     }, hideTableBackground, endGap, isScrollable), totalHeight);
-
 }
+
 
 
 
@@ -764,7 +860,9 @@ void applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
 
 void addTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::vector<std::string>>& tableData,
     const std::string& packagePath, const size_t& columnOffset=163, const size_t& tableStartGap=19, const size_t& tableEndGap=12, const size_t& tableSpacing=0,
-    const std::string& tableSectionTextColor=DEFAULT_STR, const std::string& tableInfoTextColor=DEFAULT_STR, const std::string& tableAlignment=RIGHT_STR, const bool& hideTableBackground = false, const bool& useHeaderIndent = false, const bool& isScrollable = false) {
+    const std::string& tableSectionTextColor=DEFAULT_STR, const std::string& tableInfoTextColor=DEFAULT_STR, const std::string& tableAlignment=RIGHT_STR,
+    const bool& hideTableBackground = false, const bool& useHeaderIndent = false, const bool& isScrollable = false, const std::string& wrappingMode="none", const bool& useWrappedTextIndent = false) {
+
     std::string message;
 
     //std::string sectionString, infoString;
@@ -883,7 +981,7 @@ void addTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::vector<std
     // seperate sectionString and info string.  the sections will be on the left side of the "=", the info will be on the right side of the "=" within the string.  the end of an entry will be met with a newline (except for the very last entry). 
     // sectionString and infoString will each have equal newlines (denoting )
 
-    drawTable(list, sectionLines, infoLines, columnOffset, tableStartGap, tableEndGap, tableSpacing, tableSectionTextColor, tableInfoTextColor, tableAlignment, hideTableBackground, useHeaderIndent, isScrollable);
+    drawTable(list, sectionLines, infoLines, columnOffset, tableStartGap, tableEndGap, tableSpacing, tableSectionTextColor, tableInfoTextColor, tableAlignment, hideTableBackground, useHeaderIndent, isScrollable, wrappingMode, useWrappedTextIndent);
 }
 
 
@@ -911,6 +1009,7 @@ void addHelpInfo(std::unique_ptr<tsl::elm::List>& list) {
 
     // Draw the table with the defined lines
     drawTable(list, sectionLines, infoLines, xOffset, 19, 12, 4);
+    //drawTable(list, sectionLines, infoLines, xOffset, 19, 12, 4, DEFAULT_STR, DEFAULT_STR, LEFT_STR, false, false, true, "none", false);
 }
 
 
@@ -1921,6 +2020,147 @@ void applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
 
 // forward declarartion
 void processCommand(const std::vector<std::string>& cmd, const std::string& packagePath, const std::string& selectedCommand);
+
+
+
+/**
+ * @brief Apply placeholder replacements to a list of commands and handle control flow commands.
+ *
+ * This function iterates over a list of commands, where each command is a vector of strings,
+ * and applies the `applyPlaceholderReplacements` function to handle the placeholders.
+ * It also handles control flow commands like "erista:" and "mariko:".
+ *
+ * @param commands A list of commands, where each command is represented as a vector of strings.
+ * @param packagePath The path to the package (optional).
+ * @param selectedCommand A specific command to execute (optional).
+ * @return Returns true if the placeholders were successfully applied to the commands, false otherwise.
+ */
+bool applyPlaceholderReplacementsToCommands(std::vector<std::vector<std::string>>& commands, const std::string& packagePath = "", const std::string& selectedCommand = "") {
+
+    std::string listString, listPath, jsonString, jsonPath, hexPath, iniPath;
+
+    bool inEristaSection = false;
+    bool inMarikoSection = false;
+    bool eraseAtEnd ;
+
+    // Process commands with control flow and apply replacements
+    for (auto it = commands.begin(); it != commands.end();) {
+        
+        auto& cmd = *it; // Get the current command
+
+        if (cmd.empty()) {
+            it = commands.erase(it); // Remove empty command
+            continue;
+        }
+
+        const std::string& commandName = cmd[0];
+
+        // Handle control flow commands like "erista:" and "mariko:"
+        if (commandName == "erista:") {
+            inEristaSection = true;
+            inMarikoSection = false;
+            it = commands.erase(it); // Remove processed command
+            continue;
+        } else if (commandName == "mariko:") {
+            inEristaSection = false;
+            inMarikoSection = true;
+            it = commands.erase(it); // Remove processed command
+            continue;
+        } else if (commandName.front() == ';' ||
+            (commandName.size() >= 7 && commandName.substr(commandName.size() - 7) == "_source") ||
+            commandName == "logging") { // remove stuff that isn't executable
+            it = commands.erase(it); // Remove processed command
+            continue;
+        }
+
+        // If we're in a section not relevant to the current hardware, skip the command
+        if ((inEristaSection && !usingErista) || (inMarikoSection && !usingMariko)) {
+            ++it; // Skip this command
+            continue;
+        }
+
+        // Apply placeholder replacements in the current command
+        applyPlaceholderReplacements(cmd, hexPath, iniPath, listString, listPath, jsonString, jsonPath);
+
+        // Handle special commands like LIST_STR, LIST_FILE_STR, etc.
+        size_t cmdSize = cmd.size();
+
+        if (commandName == LIST_STR && cmdSize >= 2) {
+            listString = std::string(cmd[1]);  // Make a copy of cmd[1] into listString
+            removeQuotes(listString);
+            eraseAtEnd = true;
+        } else if (commandName == LIST_FILE_STR && cmdSize >= 2) {
+            listPath = std::string(cmd[1]);  // Make a copy of cmd[1] into listPath
+            preprocessPath(listPath, packagePath);
+            eraseAtEnd = true;
+        } else if (commandName == JSON_STR && cmdSize >= 2) {
+            jsonString = std::string(cmd[1]);  // Make a copy of cmd[1] into jsonString
+            eraseAtEnd = true;
+        } else if (commandName == JSON_FILE_STR && cmdSize >= 2) {
+            jsonPath = std::string(cmd[1]);  // Make a copy of cmd[1] into jsonPath
+            preprocessPath(jsonPath, packagePath);
+            eraseAtEnd = true;
+        } else if (commandName == INI_FILE_STR && cmdSize >= 2) {
+            iniPath = std::string(cmd[1]);  // Make a copy of cmd[1] into iniPath
+            preprocessPath(iniPath, packagePath);
+            eraseAtEnd = true;
+        } else if (commandName == HEX_FILE_STR && cmdSize >= 2) {
+            hexPath = std::string(cmd[1]);  // Make a copy of cmd[1] into hexPath
+            preprocessPath(hexPath, packagePath);
+            eraseAtEnd = true;
+        } else if (commandName == "filter" || commandName == "file_name") {
+            eraseAtEnd = true;
+        } else {
+            eraseAtEnd = false;
+        }
+
+        // Now, handle adding quotes only if needed
+        for (size_t i = 1; i < cmd.size(); ++i) {
+            std::string& argument = cmd[i];
+
+            // If the argument is exactly '', skip processing (preserve the empty quotes)
+            if (argument == "") {
+                argument = "''";
+                //continue;  // Do nothing, preserve as is
+            }
+
+            // If the argument already has quotes, skip it
+            if ((argument.front() == '"' && argument.back() == '"') ||
+                (argument.front() == '\'' && argument.back() == '\'')) {
+                continue; // Already quoted, skip
+            }
+
+            // If the argument contains no spaces, do not add quotes
+            if (argument.find(' ') == std::string::npos) {
+                continue;  // No spaces, so no need for quotes
+            }
+
+            // If the argument contains a single quote, wrap it in double quotes
+            if (argument.find('\'') != std::string::npos) {
+                argument = "\"" + argument + "\"";  // Wrap in double quotes
+            }
+            // If the argument contains a double quote, wrap it in single quotes
+            else if (argument.find('"') != std::string::npos) {
+                argument = "\'" + argument + "\'";  // Wrap in single quotes
+            }
+            // If the argument contains spaces but no quotes, wrap it in single quotes by default
+            else {
+                argument = "\'" + argument + "\'";
+            }
+        }
+
+        // If eraseAtEnd is true, erase the current command
+        if (eraseAtEnd) {
+            it = commands.erase(it);  // Erase and update iterator
+        } else {
+            ++it;  // Move to the next command
+        }
+    }
+
+    return true;  // Indicating that placeholder replacements have been applied successfully
+}
+
+
 
 
 /**
