@@ -42,6 +42,7 @@ static bool returningToHiddenMain = false;
 static bool returningToSettings = false;
 static bool returningToPackage = false;
 static bool returningToSubPackage = false;
+static bool returningToSelectionMenu = false;
 //static bool inMainMenu = false; // moved to libtesla
 static bool inHiddenMode = false;
 static bool inSettingsMenu = false;
@@ -78,6 +79,8 @@ static const std::string BACKGROUND_PATTERN = ";background="; // true or false
 static const std::string HEADER_INDENT_PATTERN = ";header_indent="; // true or false
 //static const std::string HEADER_PATTERN = ";header=";
 static const std::string ALIGNMENT_PATTERN = ";alignment=";
+static const std::string WRAPPING_MODE_PATTERN = ";wrapping_mode="; // "none", "char", "word"
+static const std::string WRAPPING_INDENT_PATTERN = ";wrapping_indent="; // true or false
 static const std::string START_GAP_PATTERN =";start_gap=";
 static const std::string END_GAP_PATTERN =";end_gap=";
 static const std::string END_GAP_PATTERN_ALIAS =";gap=";
@@ -632,6 +635,8 @@ private:
             //auto mappedItem = convertComboToUnicode(item); // moved to ListItem class in libTesla
             //if (mappedItem.empty()) mappedItem = item;
             mappedItem = item;
+            if (targetMenu == "keyComboMenu")
+            	convertComboToUnicode(mappedItem);
     
             listItem = std::make_unique<tsl::elm::ListItem>(mappedItem);
             if (item == defaultItem) {
@@ -1615,12 +1620,13 @@ bool overrideTitle = false, overrideVersion = false;
 
 class ScriptOverlay : public tsl::Gui {
 private:
-    std::string filePath, specificKey, fileName;
-    bool isInSection = false, inQuotes = false, isFromMainMenu = false;
+    std::vector<std::vector<std::string>> commands;
+    std::string filePath, specificKey;
+    bool isInSection = false, inQuotes = false, isFromMainMenu = false, isFromPackage = false, isFromSelectionMenu = false;
+    bool tableMode = false;
 
     void addListItem(std::unique_ptr<tsl::elm::List>& list, const std::string& line) {
         auto listItem = std::make_unique<tsl::elm::ListItem>(line);
-        //std::shared_ptr<tsl::elm::ListItem> listItemPtr = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){});
 
         listItem->setClickListener([this, listItemRaw = listItem.get(), line](uint64_t keys) {
             if (runningInterpreter.load(std::memory_order_acquire)) return false;
@@ -1633,7 +1639,7 @@ private:
                 std::vector<std::string> commandParts;
                 std::string currentPart;
                 bool inQuotes = false;
-    
+
                 for (char ch : line) {
                     if (ch == '\'') {
                         inQuotes = !inQuotes;
@@ -1653,12 +1659,21 @@ private:
                 if (!currentPart.empty()) {
                     commandParts.emplace_back(std::move(currentPart));
                 }
-    
+
                 commandVec.emplace_back(std::move(commandParts));
-                interpretAndExecuteCommands(std::move(commandVec), filePath, specificKey);
-                resetPercentages();
-    
-                listItemRaw->setValue(commandSuccess ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
+
+                //interpretAndExecuteCommands(std::move(commandVec), filePath, specificKey);
+                //resetPercentages();
+                //listItemRaw->setValue(commandSuccess ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
+
+                enqueueInterpreterCommands(std::move(commandVec), filePath, specificKey);
+                startInterpreterThread();
+                listItemRaw->setValue(INPROGRESS_SYMBOL);
+
+                lastSelectedListItem.reset();
+                lastSelectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItemRaw, [](auto*) {});
+               
+                lastRunningInterpreter = true;
                 simulatedSelectComplete = true;
                 listItemRaw->triggerClickAnimation();
                 return true;
@@ -1669,72 +1684,99 @@ private:
     }
 
 public:
-    ScriptOverlay(const std::string& file, const std::string& key = "", bool fromMainMenu = false, const std::string& _fileName = PACKAGE_FILENAME)
-        : filePath(file), specificKey(key), fileName(_fileName), isFromMainMenu(fromMainMenu) {}
+    ScriptOverlay(std::vector<std::vector<std::string>> cmds, const std::string& file, const std::string& key = "", const std::string& fromMenu = "", bool tableMode = false)
+        : commands(cmds), filePath(file), specificKey(key), tableMode(tableMode) {
+        	isFromMainMenu = (fromMenu == "main");
+        	isFromPackage = (fromMenu == "package");
+        	isFromSelectionMenu = (fromMenu == "selection");
+        }
 
     virtual tsl::elm::Element* createUI() override {
         inScriptMenu = true;
         std::string packageName = getNameFromPath(filePath);
         if (packageName == ".packages") packageName = ROOT_PACKAGE;
-    
+        else if (!packageRootLayerTitle.empty()) packageName = packageRootLayerTitle;
         auto list = std::make_unique<tsl::elm::List>();
-        const std::string& packageFile = filePath + fileName;
-        const std::string& fileContent = getFileContents(packageFile);
-    
-        if (!fileContent.empty()) {
-            std::string line;
-            std::string currentCategory;
-            bool isInSection = false;
-            size_t startPos = 0;
-            size_t endPos = fileContent.find('\n');
-    
-            while (endPos != std::string::npos) {
-                line = fileContent.substr(startPos, endPos - startPos);
-                startPos = endPos + 1;
-                endPos = fileContent.find('\n', startPos);
-    
-                // Remove leading and trailing whitespaces
-                line.erase(0, line.find_first_not_of(" \t\n\r"));
-                line.erase(line.find_last_not_of(" \t\n\r") + 1);
-    
-                if (line.empty()) continue;
-    
-                if (line.front() == '[' && line.back() == ']') {
-                    currentCategory = line.substr(1, line.size() - 2);
-                    isInSection = specificKey.empty() || currentCategory == specificKey;
-                    if (isInSection) {
-                        addHeader(list, currentCategory);
-                    }
-                } else if (isInSection) {
-                    addListItem(list, line);
-                }
-            }
-    
-            // Process the last line if fileContent does not end with a newline
-            if (startPos < fileContent.size()) {
-                line = fileContent.substr(startPos);
-                line.erase(0, line.find_first_not_of(" \t\n\r"));
-                line.erase(line.find_last_not_of(" \t\n\r") + 1);
-    
-                if (!line.empty() && isInSection) {
-                    addListItem(list, line);
-                }
-            }
-        } else {
-            //list->addItem(new tsl::elm::ListItem(FAILED_TO_OPEN + ": " + packageFile));
-            addBasicListItem(list, FAILED_TO_OPEN + ": " + packageFile);
-        }
-    
-        PackageHeader packageHeader = getPackageHeaderFromIni(packageFile);
+
         
-        auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(packageRootLayerTitle, packageHeader.version.empty() ? 
-            CAPITAL_ULTRAHAND_PROJECT_NAME + " Script" : packageHeader.version + "   (" + CAPITAL_ULTRAHAND_PROJECT_NAME + " Script)");
+		
+		bool noClickableItems = false;
+        if (!tableMode) {
+        	size_t index = 0, tryCount = 0;
+            // If not in table mode, loop through commands and display each command as a list item
+            for (const auto& command : commands) {
+            	if (index == 0 && command[0] != "try:" && command[0] != "on:" && command[0] != "off:") {
+            		addHeader(list, specificKey);
+            	}
+				if (command[0] == "try:") {
+            		tryCount++;
+            		index++;
+            		addHeader(list, specificKey+" (Try #"+std::to_string(tryCount)+")");
+            		continue;
+            	}
+				if (command[0] == "on:") {
+            		index++;
+            		addHeader(list, specificKey+" ("+ON+")");
+            		continue;
+            	}
+				if (command[0] == "off:") {
+            		index++;
+            		addHeader(list, specificKey+" ("+OFF+")");
+            		continue;
+            	}
+                std::string combinedCommand = joinCommands(command); // Join commands into a single line for display
+                addListItem(list, combinedCommand);
+                index++;
+            }
+	    } else {
+	    	addHeader(list, specificKey);
+
+	    	noClickableItems = true;
+	    	std::vector<std::string> sectionLines;  // Holds the sections (commands)
+	    	std::vector<std::string> infoLines;     // Holds the info (empty in this case)
+	        // Table mode: Collect command data for the table
+	        std::string sectionLine;
+	        for (const auto& command : commands) {
+	            // Each command will be treated as a section with no corresponding info
+	            sectionLine = joinCommands(command);  // Combine command parts into a section line
+	            sectionLines.push_back(sectionLine);              // Add to section lines
+	            infoLines.push_back("");                          // Empty info line
+	        }
+	
+	        // Use default parameters for the table view
+	        const size_t tableColumnOffset = 163;
+	        const size_t tableStartGap = 19;
+	        const size_t tableEndGap = 12;
+	        const size_t tableSpacing = 10;
+	        const std::string tableSectionTextColor = DEFAULT_STR;
+	        const std::string tableInfoTextColor = DEFAULT_STR;
+	        const std::string tableAlignment = LEFT_STR;
+	        const bool hideTableBackground = false;
+	        const bool useHeaderIndent = false;
+	        const bool isScrollableTable = true;
+	        const std::string wrappingMode = "char";
+	        const bool useWrappedTextIndent = true;
+	
+	        //const bool usingTopPivot = true;
+	        const bool usingBottomPivot = false;
+
+            addDummyListItem(list);
+	        // Draw the table using the sectionLines and empty infoLines
+	        drawTable(list, sectionLines, infoLines, tableColumnOffset, tableStartGap, tableEndGap, tableSpacing,
+	                  tableSectionTextColor, tableInfoTextColor, tableAlignment, hideTableBackground, useHeaderIndent, isScrollableTable, wrappingMode, useWrappedTextIndent);
+
+            if (usingBottomPivot) {
+                addDummyListItem(list);
+                //lastItemIsScrollableTable = false;
+            }
+	    }
+
+        std::string packageVersion = isFromMainMenu ? "" : packageRootLayerVersion;
+        
+        auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(packageName, packageVersion.empty() ? 
+            CAPITAL_ULTRAHAND_PROJECT_NAME + " Script" : packageVersion + "   (" + CAPITAL_ULTRAHAND_PROJECT_NAME + " Script)", "", "", "", "", noClickableItems);
         rootFrame->setContent(list.release());
         return rootFrame.release();
-        
-        
-        //return returnRootFrame(list, packageName, packageHeader.version.empty() ? 
-        //    CAPITAL_ULTRAHAND_PROJECT_NAME + " Script" : packageHeader.version + "   (" + CAPITAL_ULTRAHAND_PROJECT_NAME + " Script)");
     }
 
     virtual bool handleInput(u64 keysDown, u64 keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
@@ -1763,8 +1805,9 @@ public:
             if ((keysHeld & KEY_B) && !stillTouching) {
                 allowSlide = unlockedSlide = false;
                 inScriptMenu = false;
-                returningToPackage = !isFromMainMenu && lastMenu == "packageMenu";
-                returningToSubPackage = !isFromMainMenu && lastMenu == "subPackageMenu";
+                returningToPackage = isFromPackage && lastMenu == "packageMenu";
+                returningToSubPackage = isFromPackage && lastMenu == "subPackageMenu";
+                returningToSelectionMenu = isFromSelectionMenu;
                 returningToMain = isFromMainMenu;
                 tsl::goBack();
                 simulatedBackComplete = true;
@@ -1774,13 +1817,68 @@ public:
 
         if (triggerExit.load(std::memory_order_acquire)) {
             triggerExit.store(false, std::memory_order_release);
-            tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
+            tsl::setNextOverlay(OVERLAY_PATH + "ovlmenu.ovl");
             tsl::Overlay::get()->close();
         }
 
         return false;
     }
+
+private:
+	std::string joinCommands(const std::vector<std::string>& commandParts) {
+	    std::string combinedCommand;
+	
+	    // Check if this is a section header (e.g., "[*Boot Entry]" or "[hekate]")
+	    if (!commandParts.empty() && commandParts.front().front() == '[' && commandParts.back().back() == ']') {
+	        for (const auto& part : commandParts) {
+	            combinedCommand += part + " ";  // Simply join the parts with spaces
+	        }
+	        return combinedCommand.substr(0, combinedCommand.size() - 1); // Return joined section header
+	    }
+	
+	    // Regular command processing
+	    for (const auto& part : commandParts) {
+	        std::string argument = part;
+
+    		// If the argument is exactly '', skip processing (preserve the empty quotes)
+    		if (argument == "") {
+    			argument = "''";
+    		    //continue;  // Do nothing, preserve as is
+    		}
+
+	        // If the argument already has quotes, skip it
+	        if ((argument.front() == '"' && argument.back() == '"') ||
+	            (argument.front() == '\'' && argument.back() == '\'')) {
+	            combinedCommand += argument + " ";
+	            continue; // Already quoted, skip
+	        }
+	
+	        // If the argument contains no spaces, do not add quotes
+	        if (argument.find(' ') == std::string::npos) {
+	            combinedCommand += argument + " ";
+	            continue;  // No spaces, so no need for quotes
+	        }
+	
+	        // If the argument contains a single quote, wrap it in double quotes
+	        if (argument.find('\'') != std::string::npos) {
+	            combinedCommand += "\"" + argument + "\" ";
+	        }
+	        // If the argument contains a double quote, wrap it in single quotes
+	        else if (argument.find('"') != std::string::npos) {
+	            combinedCommand += "\'" + argument + "\' ";
+	        }
+	        // If the argument contains spaces but no quotes, wrap it in single quotes by default
+	        else {
+	            combinedCommand += "\'" + argument + "\' ";
+	        }
+	    }
+	
+	    return combinedCommand.substr(0, combinedCommand.size() - 1); // Remove trailing space
+	}
+
+
 };
+
 
 
 
@@ -1825,18 +1923,6 @@ public:
 
     ~SelectionOverlay() {
         lastSelectedListItem.reset();
-        //commands.clear();
-        //commandsOn.clear();
-        //commandsOff.clear();
-        //filesList.clear();
-        //filesListOn.clear();
-        //filesListOff.clear();
-        //filterList.clear();
-        //filterListOn.clear();
-        //filterListOff.clear();
-        //currentSelectedItems.clear();
-        //isInitialized.clear();
-        //selectedItemsList.clear();
     }
 
     void processSelectionCommands() {
@@ -2254,6 +2340,17 @@ public:
 
                 listItem = std::make_unique<tsl::elm::ListItem>(itemName);
 
+                // for handling footers that use translations / replacements
+                applyLangReplacements(footer, true);
+                convertComboToUnicode(footer);
+                applyLangReplacements(specifiedFooterKey, true);
+                convertComboToUnicode(specifiedFooterKey);
+
+                applyLangReplacements(itemName, true);
+                convertComboToUnicode(itemName);
+                applyLangReplacements(selectedFooterDict[specifiedFooterKey], true);
+                convertComboToUnicode(selectedFooterDict[specifiedFooterKey]);
+
                 if (commandMode == OPTION_STR) {
                     if (selectedFooterDict[specifiedFooterKey] == itemName) {
                         lastSelectedListItem.reset();
@@ -2311,6 +2408,26 @@ public:
                         lastSelectedListItem->triggerClickAnimation();
                         return true;
                     }
+
+                    else if (keys & SCRIPT_KEY) {
+                        //bool isFromMainMenu = (packagePath == PACKAGE_PATH);
+                        //if (inMainMenu) {
+                        //    isFromMainMenu = true;
+                        //    inMainMenu = false;
+                        //}
+                        //if (inPackageMenu)
+                        //    inPackageMenu = false;
+                        //if (inSubPackageMenu)
+                        //    inSubPackageMenu = false;
+                        inSelectionMenu = false;
+
+                        auto modifiedCmds = getSourceReplacement(commands, selectedItemsList[i], i, filePath);
+                        applyPlaceholderReplacementsToCommands(modifiedCmds);
+                        //tsl::changeTo<ScriptOverlay>(modifiedCmds, filePath, specificKey+" - "+ selectedItemsList[i], "selection");
+                        tsl::changeTo<ScriptOverlay>(modifiedCmds, filePath, getNameFromPath(selectedItemsList[i]), "selection");
+                        return true;
+                    }
+
                     return false;
                 });
                 list->addItem(listItem.release());
@@ -2393,6 +2510,21 @@ public:
                     resetPercentages();
                 });
                 
+				// Set the script key listener (for SCRIPT_KEY)
+				toggleListItem->setScriptKeyListener([this, i](bool state) {
+                    // Initialize currentSelectedItem for this index if it does not exist
+                    if (isInitialized.find(i) == isInitialized.end() || !isInitialized[i]) {
+                        currentSelectedItems[i] = selectedItemsList[i];
+                        isInitialized[i] = true;
+                    }
+
+					inSelectionMenu = false;
+				    // Custom logic for SCRIPT_KEY handling
+				    auto modifiedCmds = getSourceReplacement(state ? commandsOn : commandsOff, currentSelectedItems[i], i, filePath);
+				    applyPlaceholderReplacementsToCommands(modifiedCmds);
+				    tsl::changeTo<ScriptOverlay>(modifiedCmds, filePath, getNameFromPath(selectedItemsList[i]), "selection");
+				});
+
                 
                 
                 list->addItem(toggleListItem.release());
@@ -2508,12 +2640,17 @@ public:
                         }
                     }
                 }
-
                 tsl::goBack();
                 simulatedBackComplete = true;
                 return true;
             }
         }
+
+		if (returningToSelectionMenu && !(keysHeld & KEY_B)){
+            returningToSelectionMenu = false;
+            inSelectionMenu = true;
+        }
+        
 
         if (triggerExit.load(std::memory_order_acquire)) {
             triggerExit.store(false, std::memory_order_release);
@@ -2524,6 +2661,62 @@ public:
         return false;
     }
 };
+
+std::vector<std::vector<std::string>> gatherPromptCommands(
+    const std::string& dropdownSection,
+    const std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>>& options) {
+
+    std::vector<std::vector<std::string>> promptCommands;
+    bool inRelevantSection = false;  // Tracks if we are within the desired section
+
+    bool isFirstSection = true;
+    for (const auto& nextOption : options) {
+        // Check if this is the start of the relevant section
+        if (nextOption.first == dropdownSection) {
+            inRelevantSection = true;  // Start gathering commands
+            continue;
+        }
+
+        // Stop capturing if we encounter a new section with no commands (empty section like [Commands])
+        if (inRelevantSection && nextOption.second.empty()) {
+            break;  // Stop when encountering an empty section
+        }
+
+        // Gather commands if we are in the relevant section
+        if (inRelevantSection) {
+            // Treat the current section name as a command if it's a section header (i.e., capture it with brackets)
+            if (!nextOption.first.empty()) {
+
+                if (!isFirstSection) {
+					std::vector<std::string> fillerCommand = {"\u00A0"}; // whitespace
+                	promptCommands.push_back(fillerCommand);  // Add the section header as a command
+                }
+				else if (isFirstSection) {
+            		isFirstSection = false;
+				}
+                std::vector<std::string> sectionCommand = {"[" + nextOption.first + "]"};
+                promptCommands.push_back(sectionCommand);  // Add the section header as a command
+            }
+
+            // Process and split each command by spaces
+            for (const auto& cmd : nextOption.second) {
+                std::vector<std::string> fullCmd;
+                for (const auto& part : cmd) {
+                    auto splitParts = splitString(part, " ");
+                    fullCmd.insert(fullCmd.end(), splitParts.begin(), splitParts.end());  // Collect all parts of the command
+                }
+                promptCommands.push_back(fullCmd);  // Add the full command
+            }
+        }
+    }
+
+    // Return placeholder if no commands are found
+    if (promptCommands.empty()) {
+        promptCommands = {{"No", "commands", "for", dropdownSection}};
+    }
+
+    return promptCommands;
+}
 
 
 
@@ -2588,6 +2781,9 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
     bool hideTableBackground, useHeaderIndent;
     size_t tableStartGap, tableEndGap, tableColumnOffset, tableSpacing;
     std::string tableSectionTextColor, tableInfoTextColor, tableAlignment;
+    std::string tableWrappingMode;
+
+    bool useWrappingIndent;
 
     size_t delimiterPos;
 
@@ -2643,7 +2839,9 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
         tableSectionTextColor = DEFAULT_STR;
         tableInfoTextColor = DEFAULT_STR;
         tableAlignment = RIGHT_STR;
-        
+        tableWrappingMode = "none";
+        useWrappingIndent = false;
+
         // Trackbar settings
         minValue = 0;
         maxValue = 100;
@@ -2738,7 +2936,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                         }
                         
                         if (packageMenuMode) {
-                            listItem->setClickListener([packagePath, currentPage, packageName, optionName](s64 keys) {
+                            listItem->setClickListener([packagePath, currentPage, packageName, i, optionName, options](s64 keys) {
                                 
                                 if (runningInterpreter.load(std::memory_order_acquire))
                                     return false;
@@ -2754,11 +2952,26 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                                     simulatedSelectComplete = true;
                                     
                                     return true;
-                                }
+                                
+							    } else if (keys & SCRIPT_KEY) {
+							        if (inPackageMenu)
+							            inPackageMenu = false;
+							        if (inSubPackageMenu)
+							            inSubPackageMenu = false;
+									
+														
+							        // Gather the prompt commands for the current dropdown section
+							        std::vector<std::vector<std::string>> promptCommands = gatherPromptCommands(optionName, options);
+									
+														
+							        // Pass all gathered commands to the ScriptOverlay
+							        tsl::changeTo<ScriptOverlay>(promptCommands, packagePath, optionName, "package", true);
+							        return true;
+							    }
                                 return false;
                             });
                         } else {
-                            listItem->setClickListener([optionName](s64 keys) {
+                            listItem->setClickListener([optionName, i, options](s64 keys) {
                                 if (runningInterpreter.load(std::memory_order_acquire))
                                     return false;
                                 if (simulatedSelect && !simulatedSelectComplete) {
@@ -2770,7 +2983,18 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                                     tsl::changeTo<MainMenu>("", optionName);
                                     simulatedSelectComplete = true;
                                     return true;
-                                }
+                            	} else if (keys & SCRIPT_KEY) {
+                            	    if (inMainMenu) {
+                            	        inMainMenu = false;
+                            	    }
+                            	    
+									
+							        // Gather the prompt commands for the current dropdown section
+							        std::vector<std::vector<std::string>> promptCommands = gatherPromptCommands(optionName, options);
+
+                            	    tsl::changeTo<ScriptOverlay>(promptCommands, PACKAGE_PATH, optionName, "main", true);
+                            	    return true;
+                            	}
                                 return false;
                             });
                         }
@@ -2909,7 +3133,12 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                     } else if (commandName.find(ALIGNMENT_PATTERN) == 0) {
                         tableAlignment = commandName.substr(ALIGNMENT_PATTERN.length());
                         continue;
-                    
+                    } else if (commandName.find(WRAPPING_MODE_PATTERN) == 0) {
+                        tableWrappingMode = commandName.substr(WRAPPING_MODE_PATTERN.length());
+                        continue;
+                    } else if (commandName.find(WRAPPING_INDENT_PATTERN) == 0) {
+                        useWrappingIndent = (commandName.substr(WRAPPING_INDENT_PATTERN.length()) == TRUE_STR);
+                        continue;
                     } else if (commandName.find(MIN_VALUE_PATTERN) == 0) {
                         minValue = std::stoi(commandName.substr(MIN_VALUE_PATTERN.length()));
                         continue;
@@ -3046,7 +3275,8 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                         addDummyListItem(list);
                     }
 
-                    addTable(list, tableData, packagePath, tableColumnOffset, tableStartGap, tableEndGap, tableSpacing, tableSectionTextColor, tableInfoTextColor, tableAlignment, hideTableBackground, useHeaderIndent, isScrollableTable);
+                    addTable(list, tableData, packagePath, tableColumnOffset, tableStartGap, tableEndGap, tableSpacing,
+                    	tableSectionTextColor, tableInfoTextColor, tableAlignment, hideTableBackground, useHeaderIndent, isScrollableTable, tableWrappingMode, useWrappingIndent);
 
                     if (usingBottomPivot) {
                         addDummyListItem(list);
@@ -3055,9 +3285,55 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
 
                     continue;
                 } else if (commandMode == TRACKBAR_STR) {
-                    onlyTables = false;
-                    //lastItemIsScrollableTable = false;
-                    list->addItem(new tsl::elm::TrackBarV2(optionName, packagePath, minValue, maxValue, units, interpretAndExecuteCommands, getSourceReplacement, commands, option.first, false, false, -1, unlockedTrackbar, onEveryTick));
+				    onlyTables = false;
+				
+				    // Create TrackBarV2 instance and configure it
+				    auto trackBar = std::make_unique<tsl::elm::TrackBarV2>(optionName, packagePath, minValue, maxValue, units,
+				        interpretAndExecuteCommands, getSourceReplacement, commands, option.first, false, false, -1, unlockedTrackbar, onEveryTick);
+				
+				    // Set the SCRIPT_KEY listener
+				    trackBar->setScriptKeyListener([commands, keyName = option.first, packagePath]() {
+				        bool isFromMainMenu = (packagePath == PACKAGE_PATH);
+						
+				        std::string valueStr = parseValueFromIniSection(packagePath+"config.ini", keyName, "value");
+				        std::string indexStr = parseValueFromIniSection(packagePath+"config.ini", keyName, "index");
+
+				        // Handle the commands and placeholders for the trackbar
+				        auto modifiedCmds = getSourceReplacement(commands, keyName, std::stoi(indexStr), packagePath);
+
+                        //auto modifiedCmds = getSourceReplacement(commands, valueStr, m_index, m_packagePath);
+                        
+                        // Placeholder replacement
+                        const std::string valuePlaceholder = "{value}";
+                        const std::string indexPlaceholder = "{index}";
+                        const size_t valuePlaceholderLength = valuePlaceholder.length();
+                        const size_t indexPlaceholderLength = indexPlaceholder.length();
+
+                        size_t pos;
+                        for (auto& cmd : modifiedCmds) {
+                            for (auto& arg : cmd) {
+                                pos = 0;
+                                while ((pos = arg.find(valuePlaceholder, pos)) != std::string::npos) {
+                                    arg.replace(pos, valuePlaceholderLength, valueStr);
+                                    pos += valueStr.length();
+                                }
+                                pos = 0;
+                                while ((pos = arg.find(indexPlaceholder, pos)) != std::string::npos) {
+                                    arg.replace(pos, indexPlaceholderLength, indexStr);
+                                    pos += indexStr.length();
+                                }
+                            }
+                        }
+
+				        applyPlaceholderReplacementsToCommands(modifiedCmds);
+				
+				        // Switch to ScriptOverlay
+				        tsl::changeTo<ScriptOverlay>(modifiedCmds, packagePath, keyName, isFromMainMenu ? "main" : "package");
+				    });
+				
+				    // Add the TrackBarV2 to the list after setting the necessary listeners
+				    list->addItem(trackBar.release());
+				
                     continue;
                 } else if (commandMode == STEP_TRACKBAR_STR) {
                     if (steps == 0) { // assign minimum steps
@@ -3065,7 +3341,56 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                     }
                     onlyTables = false;
                     //lastItemIsScrollableTable = false;
-                    list->addItem(new tsl::elm::StepTrackBarV2(optionName, packagePath, steps, minValue, maxValue, units, interpretAndExecuteCommands, getSourceReplacement, commands, option.first, false, unlockedTrackbar, onEveryTick));
+                    //list->addItem(new tsl::elm::StepTrackBarV2(optionName, packagePath, steps, minValue, maxValue, units,
+                    //	interpretAndExecuteCommands, getSourceReplacement, commands, option.first, false, unlockedTrackbar, onEveryTick));
+
+					
+					auto stepTrackBar = std::make_unique<tsl::elm::StepTrackBarV2>(optionName, packagePath, steps, minValue, maxValue, units,
+					    interpretAndExecuteCommands, getSourceReplacement, commands, option.first, false, unlockedTrackbar, onEveryTick);
+					
+					// Set the SCRIPT_KEY listener
+					stepTrackBar->setScriptKeyListener([commands, keyName = option.first, packagePath]() {
+					    bool isFromMainMenu = (packagePath == PACKAGE_PATH);
+					    
+					    // Parse the value and index from the INI file
+					    std::string valueStr = parseValueFromIniSection(packagePath + "config.ini", keyName, "value");
+					    std::string indexStr = parseValueFromIniSection(packagePath + "config.ini", keyName, "index");
+						
+						if (!isValidNumber(indexStr))
+							indexStr = "0";
+					    // Get and modify the commands with the appropriate replacements
+					    auto modifiedCmds = getSourceReplacement(commands, keyName, std::stoi(indexStr), packagePath);
+						
+					    // Placeholder replacement for value and index
+					    const std::string valuePlaceholder = "{value}";
+					    const std::string indexPlaceholder = "{index}";
+					    const size_t valuePlaceholderLength = valuePlaceholder.length();
+					    const size_t indexPlaceholderLength = indexPlaceholder.length();
+						
+						size_t pos;
+					    for (auto& cmd : modifiedCmds) {
+					        for (auto& arg : cmd) {
+					            pos = 0;
+					            while ((pos = arg.find(valuePlaceholder, pos)) != std::string::npos) {
+					                arg.replace(pos, valuePlaceholderLength, valueStr);
+					                pos += valueStr.length();
+					            }
+					            pos = 0;
+					            while ((pos = arg.find(indexPlaceholder, pos)) != std::string::npos) {
+					                arg.replace(pos, indexPlaceholderLength, indexStr);
+					                pos += indexStr.length();
+					            }
+					        }
+					    }
+						
+					    // Apply placeholder replacements and switch to ScriptOverlay
+					    applyPlaceholderReplacementsToCommands(modifiedCmds);
+					    tsl::changeTo<ScriptOverlay>(modifiedCmds, packagePath, keyName, isFromMainMenu ? "main" : "package");
+					});
+					
+					// Add the StepTrackBarV2 to the list
+					list->addItem(stepTrackBar.release());
+
                     continue;
                 } else if (commandMode == NAMED_STEP_TRACKBAR_STR) {
                     entryList = {};
@@ -3144,8 +3469,64 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                         ++it;
                     }
                     onlyTables = false;
+
                     //lastItemIsScrollableTable = false;
-                    list->addItem(new tsl::elm::NamedStepTrackBarV2(optionName, packagePath, entryList, interpretAndExecuteCommands, getSourceReplacement, commands, option.first, unlockedTrackbar, onEveryTick));
+                    //list->addItem(new tsl::elm::NamedStepTrackBarV2(optionName, packagePath, entryList,
+                    //	interpretAndExecuteCommands, getSourceReplacement, commands, option.first, unlockedTrackbar, onEveryTick));
+
+					// Create NamedStepTrackBarV2 instance and configure it
+					auto namedStepTrackBar = std::make_unique<tsl::elm::NamedStepTrackBarV2>(optionName, packagePath, entryList,
+					    interpretAndExecuteCommands, getSourceReplacement, commands, option.first, unlockedTrackbar, onEveryTick);
+					
+					// Set the SCRIPT_KEY listener
+					namedStepTrackBar->setScriptKeyListener([commands, keyName = option.first, packagePath, entryList]() {
+					    bool isFromMainMenu = (packagePath == PACKAGE_PATH);
+					
+					    // Parse the value and index from the INI file
+					    std::string valueStr = parseValueFromIniSection(packagePath + "config.ini", keyName, "value");
+					    std::string indexStr = parseValueFromIniSection(packagePath + "config.ini", keyName, "index");
+					
+					    // Fallback if indexStr is not a valid number
+					    if (!isValidNumber(indexStr))
+					        indexStr = "0";
+					
+					    // Ensure the index is within the bounds of the entryList
+					    size_t entryIndex = std::min(static_cast<size_t>(std::stoi(indexStr)), entryList.size() - 1);
+					    valueStr = entryList[entryIndex];  // Update valueStr based on the current entry in the list
+					
+					    // Get and modify the commands with the appropriate replacements
+					    auto modifiedCmds = getSourceReplacement(commands, keyName, entryIndex, packagePath);
+					
+					    // Placeholder replacement for value and index
+					    const std::string valuePlaceholder = "{value}";
+					    const std::string indexPlaceholder = "{index}";
+					    const size_t valuePlaceholderLength = valuePlaceholder.length();
+					    const size_t indexPlaceholderLength = indexPlaceholder.length();
+						size_t pos;
+
+					    for (auto& cmd : modifiedCmds) {
+					        for (auto& arg : cmd) {
+					            pos = 0;
+					            while ((pos = arg.find(valuePlaceholder, pos)) != std::string::npos) {
+					                arg.replace(pos, valuePlaceholderLength, valueStr);
+					                pos += valueStr.length();
+					            }
+					            pos = 0;
+					            while ((pos = arg.find(indexPlaceholder, pos)) != std::string::npos) {
+					                arg.replace(pos, indexPlaceholderLength, indexStr);
+					                pos += indexStr.length();
+					            }
+					        }
+					    }
+					
+					    // Apply placeholder replacements and switch to ScriptOverlay
+					    applyPlaceholderReplacementsToCommands(modifiedCmds);
+					    tsl::changeTo<ScriptOverlay>(modifiedCmds, packagePath, keyName, isFromMainMenu ? "main" : "package");
+					});
+					
+					// Add the NamedStepTrackBarV2 to the list
+					list->addItem(namedStepTrackBar.release());
+
                     continue;
                 }
                 if (useSelection) { // For wildcard commands (dropdown menus)
@@ -3174,7 +3555,8 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
 
                         const std::string& forwarderPackagePath = getParentDirFromPath(packageSource);
                         const std::string& forwarderPackageIniName = getNameFromPath(packageSource);
-                        listItem->setClickListener([commands, keyName = option.first, dropdownSection, packagePath, forwarderPackagePath, forwarderPackageIniName](s64 keys) mutable {
+                        listItem->setClickListener([commands, keyName = option.first, dropdownSection, packagePath,
+                        	forwarderPackagePath, forwarderPackageIniName](s64 keys) mutable {
                             if (simulatedSelect && !simulatedSelectComplete) {
                                 keys |= KEY_A;
                                 simulatedSelect = false;
@@ -3198,6 +3580,24 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                                 tsl::changeTo<PackageMenu>(forwarderPackagePath, "", LEFT_STR, forwarderPackageIniName, nestedMenuCount);
                                 simulatedSelectComplete = true;
                                 return true;
+                            } else if (keys & SCRIPT_KEY) {
+                                bool isFromMainMenu = (packagePath == PACKAGE_PATH);
+                                //if (inMainMenu) {
+                                //    isFromMainMenu = true;
+                                //    inMainMenu = false;
+                                //}
+                                if (inPackageMenu)
+                                    inPackageMenu = false;
+                                if (inSubPackageMenu)
+                                    inSubPackageMenu = false;
+
+                                //auto modifiedCmds = commands;//getSourceReplacement(commands, keyName, i, packagePath);
+                                //applyPlaceholderReplacementsToCommands(modifiedCmds);
+                                std::string selectionItem = keyName;
+                                removeTag(selectionItem);
+                                // add lines ;mode=forwarder and package_source 'forwarderPackagePath' to front of modifiedCmds
+                                tsl::changeTo<ScriptOverlay>(commands, packagePath, selectionItem, isFromMainMenu ? "main" : "package", true);
+                                return true;
                             }
                             return false;
                         });
@@ -3208,7 +3608,8 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                         //}
                         //listItem->setValue("TEST", true);
                         //std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(option.second, pathReplace);
-                        listItem->setClickListener([commands, keyName = option.first, dropdownSection, packagePath, packageName, footer, lastSection, listItemRaw = listItem.get()](uint64_t keys) {
+                        listItem->setClickListener([commands, keyName = option.first, dropdownSection, packagePath, packageName,
+                        	footer, lastSection, listItemRaw = listItem.get()](uint64_t keys) {
                             //listItemPtr = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){})](uint64_t keys) {
                             
                             if (runningInterpreter.load(std::memory_order_acquire))
@@ -3257,7 +3658,12 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                                     inPackageMenu = false;
                                 if (inSubPackageMenu)
                                     inSubPackageMenu = false;
-                                tsl::changeTo<ScriptOverlay>(packagePath, keyName, isFromMainMenu, packageName);
+
+                                //auto modifiedCmds = commands;//getSourceReplacement(commands, keyName, i, packagePath);
+                                //applyPlaceholderReplacementsToCommands(modifiedCmds);
+                                std::string selectionItem = keyName;
+                                removeTag(selectionItem);
+                                tsl::changeTo<ScriptOverlay>(commands, packagePath, selectionItem, isFromMainMenu ? "main" : "package", true);
                                 return true;
                             }
                             return false;
@@ -3287,7 +3693,8 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                             listItem->setValue(footer);
                         
                         
-                        listItem->setClickListener([i, commands, keyName = option.first, packagePath, packageName, selectedItem, listItemRaw = listItem.get()](uint64_t keys) {
+                        listItem->setClickListener([i, commands, keyName = option.first, packagePath, packageName,
+                        	selectedItem, listItemRaw = listItem.get()](uint64_t keys) {
                             
                             if (runningInterpreter.load(std::memory_order_acquire)) {
                                 return false;
@@ -3321,7 +3728,9 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                                     inPackageMenu = false;
                                 if (inSubPackageMenu)
                                     inSubPackageMenu = false;
-                                tsl::changeTo<ScriptOverlay>(packagePath, keyName, isFromMainMenu, packageName);
+                                auto modifiedCmds = getSourceReplacement(commands, selectedItem, i, packagePath);
+                                applyPlaceholderReplacementsToCommands(modifiedCmds);
+                                tsl::changeTo<ScriptOverlay>(modifiedCmds, packagePath, keyName, isFromMainMenu ? "main" : "package");
                                 return true;
                             }
                             return false;
@@ -3370,6 +3779,26 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                             setIniFileValue((packagePath + CONFIG_FILENAME), keyName, FOOTER_STR, state ? CAPITAL_ON_STR : CAPITAL_OFF_STR);
                             
                         });
+
+						// Set the script key listener (for SCRIPT_KEY)
+						toggleListItem->setScriptKeyListener([i, commandsOn, commandsOff, keyName = option.first, packagePath,
+                            pathPatternOn, pathPatternOff](bool state) {
+
+                            bool isFromMainMenu = (packagePath == PACKAGE_PATH);
+                            if (inPackageMenu)
+                                inPackageMenu = false;
+                            if (inSubPackageMenu)
+                                inSubPackageMenu = false;
+
+						    // Custom logic for SCRIPT_KEY handling
+						    auto modifiedCmds = state ? getSourceReplacement(commandsOn, pathPatternOn, i, packagePath) :
+                                getSourceReplacement(commandsOff, pathPatternOff, i, packagePath);
+
+						    applyPlaceholderReplacementsToCommands(modifiedCmds);
+						    tsl::changeTo<ScriptOverlay>(modifiedCmds, packagePath, keyName, isFromMainMenu ? "main" : "package");
+						});
+
+
                         onlyTables = false;
                         //lastItemIsScrollableTable = false;
                         list->addItem(toggleListItem.release());
@@ -3382,7 +3811,6 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
         //auto dummyItem = new tsl::elm::DummyListItem();
         //list->addItem(dummyItem, 0, 1);
         addDummyListItem(list, 1);
-        
     }
 
     //if (lastItemIsScrollableTable) {
