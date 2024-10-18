@@ -69,6 +69,7 @@ To use Ultrahand, follow these steps:
 
 5. Place your custom `package.ini` package file in your Ultrahand package directory (`/switch/.packages/<PACKAGE_NAME>/`). This file will contains the commands for your custom Ultrahand package.
     - See [Ultrahand Packages](https://github.com/ppkantorski/Ultrahand-Packages) for a comprehensive list of known packages.
+If your Ultrahand package does not show up, you may need to run `Fix Bit Archive` in Hekate.
 6. Your commands will now show up on the packages menu within Ultrahand.
 
 ## Additional Features
