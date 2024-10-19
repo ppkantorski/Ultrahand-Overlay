@@ -761,7 +761,6 @@ std::vector<std::string> wrapText(const std::string& text, float maxWidth, const
 
 
 
-
 void drawTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::string>& sectionLines, std::vector<std::string>& infoLines,
                size_t columnOffset = 163, size_t startGap = 19, size_t endGap = 12, size_t newlineGap = 0,
                const std::string& tableSectionTextColor = DEFAULT_STR, const std::string& tableInfoTextColor = DEFAULT_STR, 
@@ -857,6 +856,103 @@ void drawTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::string>& 
 
 
 void applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::string& hexPath, const std::string& iniPath, const std::string& listString, const std::string& listPath, const std::string& jsonString, const std::string& jsonPath);
+
+std::string getFirstSectionText(const std::vector<std::vector<std::string>>& tableData, const std::string& packagePath) {
+    std::string message;
+    std::string listFileSourcePath;
+    std::string hexPath, iniPath, listString, listPath, jsonString, jsonPath;
+    
+    bool inEristaSection = false;
+    bool inMarikoSection = false;
+    
+    for (const auto& commands : tableData) {
+        auto cmd = commands;  // Make a copy if you need to modify it
+
+        if (cmd.empty()) {
+            continue;
+        }
+
+        const std::string& commandName = cmd[0];
+
+        if (commandName == "erista:") {
+            inEristaSection = true;
+            inMarikoSection = false;
+            continue;
+        } else if (commandName == "mariko:") {
+            inEristaSection = false;
+            inMarikoSection = true;
+            continue;
+        }
+
+        if ((inEristaSection && !inMarikoSection && usingErista) ||
+            (!inEristaSection && inMarikoSection && usingMariko) ||
+            (!inEristaSection && !inMarikoSection)) {
+
+            // Apply placeholder replacements if necessary
+            applyPlaceholderReplacements(cmd, hexPath, iniPath, listString, listPath, jsonString, jsonPath);
+
+            const size_t cmdSize = cmd.size();
+
+            if (commandName == "list_file_source" && listFileSourcePath.empty()) {
+                listFileSourcePath = cmd[1];
+                preprocessPath(listFileSourcePath, packagePath);
+
+                // Read lines from the file
+                std::vector<std::string> lines = readListFromFile(listFileSourcePath);
+
+                // Return the first line if available
+                if (!lines.empty()) {
+                    return lines[0];
+                }
+            } else if (commandName == LIST_STR) {
+                if (cmdSize >= 2) {
+                    listString = cmd[1];
+                    removeQuotes(listString);
+                    // Process listString if needed
+                }
+            } else if (commandName == LIST_FILE_STR) {
+                if (cmdSize >= 2) {
+                    listPath = cmd[1];
+                    preprocessPath(listPath, packagePath);
+                    // Read from listPath if needed
+                }
+            } else if (commandName == JSON_STR) {
+                if (cmdSize >= 2) {
+                    jsonString = cmd[1];
+                    // Process jsonString if needed
+                }
+            } else if (commandName == JSON_FILE_STR) {
+                if (cmdSize >= 2) {
+                    jsonPath = cmd[1];
+                    preprocessPath(jsonPath, packagePath);
+                    // Read from jsonPath if needed
+                }
+            } else if (commandName == INI_FILE_STR) {
+                if (cmdSize >= 2) {
+                    iniPath = cmd[1];
+                    preprocessPath(iniPath, packagePath);
+                    // Read from iniPath if needed
+                }
+            } else if (commandName == HEX_FILE_STR) {
+                if (cmdSize >= 2) {
+                    hexPath = cmd[1];
+                    preprocessPath(hexPath, packagePath);
+                    // Read from hexPath if needed
+                }
+            } else {
+                // Default case: This is where sectionLines are populated in addTable
+                // Return cmd[0] as the first section text
+                return cmd[0];
+            }
+        }
+    }
+
+    // If no section text is found, return an empty string or a default value
+    return "";  // Or return a default message if appropriate
+}
+
+
+
 
 void addTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::vector<std::string>>& tableData,
     const std::string& packagePath, const size_t& columnOffset=163, const size_t& tableStartGap=19, const size_t& tableEndGap=12, const size_t& tableSpacing=0,

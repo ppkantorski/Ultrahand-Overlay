@@ -102,6 +102,7 @@ static std::string lastPage = LEFT_STR;
 static std::string lastPackagePath;
 static std::string lastPackageName;
 static std::string lastPackageMenu;
+static std::string lastPageHeader;
 
 static std::string lastMenu = "";
 static std::string lastMenuMode = "";
@@ -1630,6 +1631,9 @@ public:
 std::string packageRootLayerTitle;
 std::string packageRootLayerVersion;
 std::string packageRootLayerColor;
+
+//std::string lastPackageHeader;
+
 bool overrideTitle = false, overrideVersion = false;
 
 
@@ -1642,6 +1646,8 @@ private:
     std::string filePath, specificKey;
     bool isInSection = false, inQuotes = false, isFromMainMenu = false, isFromPackage = false, isFromSelectionMenu = false;
     bool tableMode = false;
+
+    std::string lastPackageHeader;
 
     void addListItem(std::unique_ptr<tsl::elm::List>& list, const std::string& line) {
         auto listItem = std::make_unique<tsl::elm::ListItem>(line);
@@ -1702,8 +1708,8 @@ private:
     }
 
 public:
-    ScriptOverlay(std::vector<std::vector<std::string>> cmds, const std::string& file, const std::string& key = "", const std::string& fromMenu = "", bool tableMode = false)
-        : commands(cmds), filePath(file), specificKey(key), tableMode(tableMode) {
+    ScriptOverlay(std::vector<std::vector<std::string>> cmds, const std::string& file, const std::string& key = "", const std::string& fromMenu = "", bool tableMode = false, const std::string& _lastPackageHeader = "")
+        : commands(cmds), filePath(file), specificKey(key), tableMode(tableMode), lastPackageHeader(_lastPackageHeader) {
         	isFromMainMenu = (fromMenu == "main");
         	isFromPackage = (fromMenu == "package");
         	isFromSelectionMenu = (fromMenu == "selection");
@@ -1791,8 +1797,9 @@ public:
 
         std::string packageVersion = isFromMainMenu ? "" : packageRootLayerVersion;
         
-        auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(packageName, packageVersion.empty() ? 
-            CAPITAL_ULTRAHAND_PROJECT_NAME + " Script" : packageVersion + "   (" + CAPITAL_ULTRAHAND_PROJECT_NAME + " Script)", noClickableItems, "", "", "", "");
+        auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(packageName,
+        	!lastPackageHeader.empty() ? lastPackageHeader + "   ("+CAPITAL_ULTRAHAND_PROJECT_NAME + " Script)" : (packageVersion.empty() ? CAPITAL_ULTRAHAND_PROJECT_NAME + " Script" : packageVersion + "   (" + CAPITAL_ULTRAHAND_PROJECT_NAME + " Script)"),
+        	noClickableItems);
         rootFrame->setContent(list.release());
         return rootFrame.release();
     }
@@ -1917,6 +1924,8 @@ private:
     
     std::string lastSelectedListItemFooter = "";
 
+    std::string lastPackageHeader;
+
     // For handling on/off file_source toggle states
     std::unordered_map<int, std::string> currentSelectedItems;
     std::unordered_map<int, bool> isInitialized;
@@ -1934,8 +1943,8 @@ private:
     std::vector<std::string> selectedItemsList;
 
 public:
-    SelectionOverlay(const std::string& path, const std::string& key = "", const std::vector<std::vector<std::string>>& cmds = {}, const std::string& footerKey = "")
-        : filePath(path), specificKey(key), commands(std::move(cmds)), specifiedFooterKey(footerKey) {
+    SelectionOverlay(const std::string& path, const std::string& key = "", const std::vector<std::vector<std::string>>& cmds = {}, const std::string& footerKey = "", const std::string& _lastPackageHeader = "")
+        : filePath(path), specificKey(key), commands(std::move(cmds)), specifiedFooterKey(footerKey), lastPackageHeader(_lastPackageHeader) {
         //lastSelectedListItem.reset();
     }
 
@@ -2168,6 +2177,8 @@ public:
 
         std::vector<std::string> selectedItemsListOn, selectedItemsListOff;
 
+        std::string currentPackageHeader;
+
         if (commandMode == DEFAULT_STR || commandMode == OPTION_STR) {
             if (sourceType == FILE_STR)
                 selectedItemsList = std::move(filesList);
@@ -2244,6 +2255,7 @@ public:
             std::string cleanSpecificKey = specificKey.substr(1);
             removeTag(cleanSpecificKey);
             addHeader(list, cleanSpecificKey);
+            currentPackageHeader = cleanSpecificKey;
         }
 
         std::unique_ptr<tsl::elm::ListItem> listItem;
@@ -2258,6 +2270,7 @@ public:
                 std::string cleanSpecificKey = specificKey.substr(1);
                 removeTag(cleanSpecificKey);
                 addHeader(list, cleanSpecificKey);
+                currentPackageHeader = cleanSpecificKey;
             }
             listItem = std::make_unique<tsl::elm::ListItem>(EMPTY);
             list->addItem(listItem.release());
@@ -2284,6 +2297,7 @@ public:
 
                     if (lastGroupingName.empty() || (lastGroupingName != groupingName)) {
                         addHeader(list, groupingName);
+                        currentPackageHeader = groupingName;
                         lastGroupingName = groupingName;
                     }
                 } else if (commandGrouping == "split2") {
@@ -2298,6 +2312,7 @@ public:
 
                     if (lastGroupingName.empty() || (lastGroupingName != groupingName)) {
                         addHeader(list, groupingName);
+                        currentPackageHeader = groupingName;
                         lastGroupingName = groupingName;
                     }
                 } else if (commandGrouping == "split3") {
@@ -2312,6 +2327,7 @@ public:
 
                     if (lastGroupingName.empty() || (lastGroupingName != groupingName)) {
                         addHeader(list, groupingName);
+                        currentPackageHeader = groupingName;
                         lastGroupingName = groupingName;
                     }
                 } else if (commandGrouping == "split4") {
@@ -2326,6 +2342,7 @@ public:
 
                     if (lastGroupingName.empty() || (lastGroupingName != groupingName)) {
                         addHeader(list, groupingName);
+                        currentPackageHeader = groupingName;
                         lastGroupingName = groupingName;
                     }
                 }
@@ -2386,7 +2403,7 @@ public:
                     listItem->setValue(footer, true);
                 }
 
-                listItem->setClickListener([this, i, footer, listItemRaw = listItem.get()](uint64_t keys) {
+                listItem->setClickListener([this, i, footer, listItemRaw = listItem.get(), _currentPackageHeader = currentPackageHeader](uint64_t keys) {
                     //listItemPtr = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*) {})](uint64_t keys) {
 
                     if (runningInterpreter.load(std::memory_order_acquire)) {
@@ -2442,7 +2459,7 @@ public:
                         auto modifiedCmds = getSourceReplacement(commands, selectedItemsList[i], i, filePath);
                         applyPlaceholderReplacementsToCommands(modifiedCmds);
                         //tsl::changeTo<ScriptOverlay>(modifiedCmds, filePath, specificKey+" - "+ selectedItemsList[i], "selection");
-                        tsl::changeTo<ScriptOverlay>(modifiedCmds, filePath, getNameFromPath(selectedItemsList[i]), "selection");
+                        tsl::changeTo<ScriptOverlay>(modifiedCmds, filePath, getNameFromPath(selectedItemsList[i]), "selection", false, _currentPackageHeader);
                         return true;
                     }
 
@@ -2529,7 +2546,7 @@ public:
                 });
                 
 				// Set the script key listener (for SCRIPT_KEY)
-				toggleListItem->setScriptKeyListener([this, i](bool state) {
+				toggleListItem->setScriptKeyListener([this, i, _currentPackageHeader = currentPackageHeader](bool state) {
                     // Initialize currentSelectedItem for this index if it does not exist
                     if (isInitialized.find(i) == isInitialized.end() || !isInitialized[i]) {
                         currentSelectedItems[i] = selectedItemsList[i];
@@ -2540,7 +2557,7 @@ public:
 				    // Custom logic for SCRIPT_KEY handling
 				    auto modifiedCmds = getSourceReplacement(state ? commandsOn : commandsOff, currentSelectedItems[i], i, filePath);
 				    applyPlaceholderReplacementsToCommands(modifiedCmds);
-				    tsl::changeTo<ScriptOverlay>(modifiedCmds, filePath, getNameFromPath(selectedItemsList[i]), "selection");
+				    tsl::changeTo<ScriptOverlay>(modifiedCmds, filePath, getNameFromPath(selectedItemsList[i]), "selection", false, _currentPackageHeader);
 				});
 
                 
@@ -2572,7 +2589,7 @@ public:
 
         auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(
             (!packageHeader.title.empty()) ? packageHeader.title : (!packageRootLayerTitle.empty() ? packageRootLayerTitle : getNameFromPath(filePath)),
-            packageHeader.version != "" ? (!packageRootLayerVersion.empty() ? packageRootLayerVersion : packageHeader.version) + "   (Ultrahand Package)" : "Ultrahand Package",
+            !lastPackageHeader.empty() ? lastPackageHeader + "   (Ultrahand Package)" : (packageHeader.version != "" ? (!packageRootLayerVersion.empty() ? packageRootLayerVersion : packageHeader.version) + "   (Ultrahand Package)" : "Ultrahand Package"),
             noClickableItems,
             "",
             packageHeader.color);
@@ -2731,7 +2748,8 @@ std::vector<std::vector<std::string>> gatherPromptCommands(
 
     // Return placeholder if no commands are found
     if (promptCommands.empty()) {
-        promptCommands = {{"No", "commands", "for", dropdownSection}};
+        //promptCommands = {{"No", "commands", "for", dropdownSection+"."}};
+        promptCommands = {{UNAVAILABLE_SELECTION}};
     }
 
     return promptCommands;
@@ -2836,6 +2854,8 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
 
     std::string cleanOptionName;
 
+    std::string lastPackageHeader;
+
     for (size_t i = 0; i < options.size(); ++i) {
         auto& option = options[i];
         
@@ -2900,6 +2920,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                     removeTag(headerTitle);
 
                     addHeader(list, headerTitle);
+                    lastPackageHeader = headerTitle;
                     //wasHeader = true;
                     skipSection = true;
                     lastSection = dropdownSection;
@@ -2934,6 +2955,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                         if (i == 0) {
                             // Add a section break with small text to indicate the "Commands" section
                             addHeader(list, COMMANDS);
+                            lastPackageHeader = COMMANDS;
                             //wasHeader = true;
                             skipSection = false;
                             lastSection = "Commands";
@@ -2955,7 +2977,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                         }
                         
                         if (packageMenuMode) {
-                            listItem->setClickListener([packagePath, currentPage, packageName, i, optionName, options](s64 keys) {
+                            listItem->setClickListener([packagePath, currentPage, packageName, i, optionName, options, _lastPackageHeader = lastPackageHeader](s64 keys) {
                                 
                                 if (runningInterpreter.load(std::memory_order_acquire))
                                     return false;
@@ -2967,7 +2989,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                                     inPackageMenu = false;
                                     selectedListItem.reset();
                                     lastSelectedListItem.reset();
-                                    tsl::changeTo<PackageMenu>(packagePath, optionName, currentPage, packageName);
+                                    tsl::changeTo<PackageMenu>(packagePath, optionName, currentPage, packageName, 0, _lastPackageHeader);
                                     simulatedSelectComplete = true;
                                     
                                     return true;
@@ -2984,13 +3006,13 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
 									
 														
 							        // Pass all gathered commands to the ScriptOverlay
-							        tsl::changeTo<ScriptOverlay>(promptCommands, packagePath, optionName, "package", true);
+							        tsl::changeTo<ScriptOverlay>(promptCommands, packagePath, optionName, "package", true, _lastPackageHeader);
 							        return true;
 							    }
                                 return false;
                             });
                         } else {
-                            listItem->setClickListener([optionName, i, options](s64 keys) {
+                            listItem->setClickListener([optionName, i, options, _lastPackageHeader = lastPackageHeader](s64 keys) {
                                 if (runningInterpreter.load(std::memory_order_acquire))
                                     return false;
                                 if (simulatedSelect && !simulatedSelectComplete) {
@@ -3011,7 +3033,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
 							        // Gather the prompt commands for the current dropdown section
 							        std::vector<std::vector<std::string>> promptCommands = gatherPromptCommands(optionName, options);
 
-                            	    tsl::changeTo<ScriptOverlay>(promptCommands, PACKAGE_PATH, optionName, "main", true);
+                            	    tsl::changeTo<ScriptOverlay>(promptCommands, PACKAGE_PATH, optionName, "main", true, _lastPackageHeader);
                             	    return true;
                             	}
                                 return false;
@@ -3038,6 +3060,8 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                             } else {
                                 // Add a section break with small text to indicate the "Commands" section
                                 addHeader(list, cleanOptionName);
+                                lastPackageHeader = cleanOptionName;
+
                                 //wasHeader = true;
                                 lastSection = optionName;
                             }
@@ -3050,6 +3074,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                 } else if (i == 0) {
                     // Add a section break with small text to indicate the "Commands" section
                     addHeader(list, COMMANDS);
+                    lastPackageHeader = COMMANDS;
                     //wasHeader = true;
                     skipSection = false;
                     lastSection = "Commands";
@@ -3281,6 +3306,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                     if (useHeaderIndent) {
                         tableStartGap = tableEndGap = 19; // for perfect alignment for header tables
                         isScrollableTable = false;
+                        lastPackageHeader = getFirstSectionText(tableData, packagePath);
                     }
                     //if (isScrollableTable)
                     //    lastItemIsScrollableTable = true;
@@ -3311,7 +3337,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
 				        interpretAndExecuteCommands, getSourceReplacement, commands, option.first, false, false, -1, unlockedTrackbar, onEveryTick);
 				
 				    // Set the SCRIPT_KEY listener
-				    trackBar->setScriptKeyListener([commands, keyName = option.first, packagePath]() {
+				    trackBar->setScriptKeyListener([commands, keyName = option.first, packagePath, _lastPackageHeader = lastPackageHeader]() {
 				        bool isFromMainMenu = (packagePath == PACKAGE_PATH);
 						
 				        std::string valueStr = parseValueFromIniSection(packagePath+"config.ini", keyName, "value");
@@ -3347,7 +3373,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
 				        applyPlaceholderReplacementsToCommands(modifiedCmds);
 				
 				        // Switch to ScriptOverlay
-				        tsl::changeTo<ScriptOverlay>(modifiedCmds, packagePath, keyName, isFromMainMenu ? "main" : "package");
+				        tsl::changeTo<ScriptOverlay>(modifiedCmds, packagePath, keyName, isFromMainMenu ? "main" : "package", false, _lastPackageHeader);
 				    });
 				
 				    // Add the TrackBarV2 to the list after setting the necessary listeners
@@ -3368,7 +3394,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
 					    interpretAndExecuteCommands, getSourceReplacement, commands, option.first, false, unlockedTrackbar, onEveryTick);
 					
 					// Set the SCRIPT_KEY listener
-					stepTrackBar->setScriptKeyListener([commands, keyName = option.first, packagePath]() {
+					stepTrackBar->setScriptKeyListener([commands, keyName = option.first, packagePath, _lastPackageHeader = lastPackageHeader]() {
 					    bool isFromMainMenu = (packagePath == PACKAGE_PATH);
 					    
 					    // Parse the value and index from the INI file
@@ -3404,7 +3430,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
 						
 					    // Apply placeholder replacements and switch to ScriptOverlay
 					    applyPlaceholderReplacementsToCommands(modifiedCmds);
-					    tsl::changeTo<ScriptOverlay>(modifiedCmds, packagePath, keyName, isFromMainMenu ? "main" : "package");
+					    tsl::changeTo<ScriptOverlay>(modifiedCmds, packagePath, keyName, isFromMainMenu ? "main" : "package", false, _lastPackageHeader);
 					});
 					
 					// Add the StepTrackBarV2 to the list
@@ -3498,7 +3524,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
 					    interpretAndExecuteCommands, getSourceReplacement, commands, option.first, unlockedTrackbar, onEveryTick);
 					
 					// Set the SCRIPT_KEY listener
-					namedStepTrackBar->setScriptKeyListener([commands, keyName = option.first, packagePath, entryList]() {
+					namedStepTrackBar->setScriptKeyListener([commands, keyName = option.first, packagePath, entryList, _lastPackageHeader = lastPackageHeader]() {
 					    bool isFromMainMenu = (packagePath == PACKAGE_PATH);
 					
 					    // Parse the value and index from the INI file
@@ -3540,7 +3566,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
 					
 					    // Apply placeholder replacements and switch to ScriptOverlay
 					    applyPlaceholderReplacementsToCommands(modifiedCmds);
-					    tsl::changeTo<ScriptOverlay>(modifiedCmds, packagePath, keyName, isFromMainMenu ? "main" : "package");
+					    tsl::changeTo<ScriptOverlay>(modifiedCmds, packagePath, keyName, isFromMainMenu ? "main" : "package", false, _lastPackageHeader);
 					});
 					
 					// Add the NamedStepTrackBarV2 to the list
@@ -3575,7 +3601,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                         const std::string& forwarderPackagePath = getParentDirFromPath(packageSource);
                         const std::string& forwarderPackageIniName = getNameFromPath(packageSource);
                         listItem->setClickListener([commands, keyName = option.first, dropdownSection, packagePath,
-                        	forwarderPackagePath, forwarderPackageIniName](s64 keys) mutable {
+                        	forwarderPackagePath, forwarderPackageIniName, _lastPackageHeader = lastPackageHeader](s64 keys) mutable {
                             if (simulatedSelect && !simulatedSelectComplete) {
                                 keys |= KEY_A;
                                 simulatedSelect = false;
@@ -3596,7 +3622,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                                 else
                                     lastPackageMenu = "subPackageMenu";
                                 allowSlide = unlockedSlide = false;
-                                tsl::changeTo<PackageMenu>(forwarderPackagePath, "", LEFT_STR, forwarderPackageIniName, nestedMenuCount);
+                                tsl::changeTo<PackageMenu>(forwarderPackagePath, "", LEFT_STR, forwarderPackageIniName, nestedMenuCount, _lastPackageHeader);
                                 simulatedSelectComplete = true;
                                 return true;
                             } else if (keys & SCRIPT_KEY) {
@@ -3615,7 +3641,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                                 std::string selectionItem = keyName;
                                 removeTag(selectionItem);
                                 // add lines ;mode=forwarder and package_source 'forwarderPackagePath' to front of modifiedCmds
-                                tsl::changeTo<ScriptOverlay>(commands, packagePath, selectionItem, isFromMainMenu ? "main" : "package", true);
+                                tsl::changeTo<ScriptOverlay>(commands, packagePath, selectionItem, isFromMainMenu ? "main" : "package", true, _lastPackageHeader);
                                 return true;
                             }
                             return false;
@@ -3628,7 +3654,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                         //listItem->setValue("TEST", true);
                         //std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(option.second, pathReplace);
                         listItem->setClickListener([commands, keyName = option.first, dropdownSection, packagePath, packageName,
-                        	footer, lastSection, listItemRaw = listItem.get()](uint64_t keys) {
+                        	footer, lastSection, listItemRaw = listItem.get(), _lastPackageHeader = lastPackageHeader](uint64_t keys) {
                             //listItemPtr = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){})](uint64_t keys) {
                             
                             if (runningInterpreter.load(std::memory_order_acquire))
@@ -3662,7 +3688,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                                             selectedFooterDict[newKey] = footer;
                                     }
                                     lastSelectedListItem.reset();
-                                    tsl::changeTo<SelectionOverlay>(packagePath, keyName, commands, newKey);
+                                    tsl::changeTo<SelectionOverlay>(packagePath, keyName, commands, newKey, _lastPackageHeader);
                                     lastKeyName = keyName;
                                 }
                                 simulatedSelectComplete = true;
@@ -3682,7 +3708,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                                 //applyPlaceholderReplacementsToCommands(modifiedCmds);
                                 std::string selectionItem = keyName;
                                 removeTag(selectionItem);
-                                tsl::changeTo<ScriptOverlay>(commands, packagePath, selectionItem, isFromMainMenu ? "main" : "package", true);
+                                tsl::changeTo<ScriptOverlay>(commands, packagePath, selectionItem, isFromMainMenu ? "main" : "package", true, _lastPackageHeader);
                                 return true;
                             }
                             return false;
@@ -3713,7 +3739,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                         
                         
                         listItem->setClickListener([i, commands, keyName = option.first, packagePath, packageName,
-                        	selectedItem, listItemRaw = listItem.get()](uint64_t keys) {
+                        	selectedItem, listItemRaw = listItem.get(), _lastPackageHeader = lastPackageHeader](uint64_t keys) {
                             
                             if (runningInterpreter.load(std::memory_order_acquire)) {
                                 return false;
@@ -3749,7 +3775,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                                     inSubPackageMenu = false;
                                 auto modifiedCmds = getSourceReplacement(commands, selectedItem, i, packagePath);
                                 applyPlaceholderReplacementsToCommands(modifiedCmds);
-                                tsl::changeTo<ScriptOverlay>(modifiedCmds, packagePath, keyName, isFromMainMenu ? "main" : "package");
+                                tsl::changeTo<ScriptOverlay>(modifiedCmds, packagePath, keyName, isFromMainMenu ? "main" : "package", false, _lastPackageHeader);
                                 return true;
                             }
                             return false;
@@ -3801,7 +3827,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
 
 						// Set the script key listener (for SCRIPT_KEY)
 						toggleListItem->setScriptKeyListener([i, commandsOn, commandsOff, keyName = option.first, packagePath,
-                            pathPatternOn, pathPatternOff](bool state) {
+                            pathPatternOn, pathPatternOff, _lastPackageHeader = lastPackageHeader](bool state) {
 
                             bool isFromMainMenu = (packagePath == PACKAGE_PATH);
                             if (inPackageMenu)
@@ -3814,7 +3840,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                                 getSourceReplacement(commandsOff, pathPatternOff, i, packagePath);
 
 						    applyPlaceholderReplacementsToCommands(modifiedCmds);
-						    tsl::changeTo<ScriptOverlay>(modifiedCmds, packagePath, keyName, isFromMainMenu ? "main" : "package");
+						    tsl::changeTo<ScriptOverlay>(modifiedCmds, packagePath, keyName, isFromMainMenu ? "main" : "package", false, _lastPackageHeader);
 						});
 
 
@@ -3866,6 +3892,7 @@ private:
     bool usingPages = false;
     std::string packageName;
     size_t nestedLayer = 0;
+    std::string pageHeader;
 
 public:
     /**
@@ -3875,8 +3902,8 @@ public:
      *
      * @param path The path to the sub-menu.
      */
-    PackageMenu(const std::string& path, const std::string& sectionName = "", const std::string& page = LEFT_STR, const std::string& _packageName = PACKAGE_FILENAME, const size_t _nestedlayer = 0) :
-        packagePath(path), dropdownSection(sectionName), currentPage(page), packageName(_packageName), nestedLayer(_nestedlayer) {}
+    PackageMenu(const std::string& path, const std::string& sectionName = "", const std::string& page = LEFT_STR, const std::string& _packageName = PACKAGE_FILENAME, const size_t _nestedlayer = 0, const std::string& _pageHeader = "") :
+        packagePath(path), dropdownSection(sectionName), currentPage(page), packageName(_packageName), nestedLayer(_nestedlayer), pageHeader(_pageHeader) {}
     /**
      * @brief Destroys the `PackageMenu` instance.
      *
@@ -3972,7 +3999,7 @@ public:
         
         std::unique_ptr<tsl::elm::OverlayFrame> rootFrame = std::make_unique<tsl::elm::OverlayFrame>(
             (!packageHeader.title.empty()) ? packageHeader.title : (!packageRootLayerTitle.empty() ? packageRootLayerTitle : getNameFromPath(packagePath)),
-            packageHeader.version != "" ? (!packageRootLayerVersion.empty() ? packageRootLayerVersion : packageHeader.version) + "   (Ultrahand Package)" : "Ultrahand Package",
+            (!pageHeader.empty() ? pageHeader+ "   (Ultrahand Package)" : (packageHeader.version != "" ? (!packageRootLayerVersion.empty() ? packageRootLayerVersion : packageHeader.version) + "   (Ultrahand Package)" : "Ultrahand Package")),
             noClickableItems,
             "",
             packageHeader.color,
@@ -4036,6 +4063,7 @@ public:
                     lastPage = currentPage;
                     std::string lastPackageName = packageName;
                     size_t lastNestedLayer = nestedLayer;
+                    //lastPageHeader = pageHeader;
                     
                     inSubPackageMenu = false;
                     inPackageMenu = false;
@@ -4043,7 +4071,7 @@ public:
                 
                     selectedListItem.reset();
                     lastSelectedListItem.reset();
-                    tsl::changeTo<PackageMenu>(lastPackagePath, lastDropdownSection, lastPage, lastPackageName, lastNestedLayer);
+                    tsl::changeTo<PackageMenu>(lastPackagePath, lastDropdownSection, lastPage, lastPackageName, lastNestedLayer, pageHeader);
                 };
                 
                 if (inPackageMenu) {
@@ -4105,7 +4133,7 @@ public:
                     selectedListItem.reset();
                     lastSelectedListItem.reset();
                     tsl::goBack();
-                    tsl::changeTo<PackageMenu>(lastPackagePath, dropdownSection, RIGHT_STR, lastPackageName, nestedMenuCount);
+                    tsl::changeTo<PackageMenu>(lastPackagePath, dropdownSection, RIGHT_STR, lastPackageName, nestedMenuCount, pageHeader);
                     simulatedNextPageComplete = true;
                     return true;
                 }
@@ -4118,7 +4146,7 @@ public:
                     selectedListItem.reset();
                     lastSelectedListItem.reset();
                     tsl::goBack();
-                    tsl::changeTo<PackageMenu>(lastPackagePath, dropdownSection, LEFT_STR, lastPackageName, nestedMenuCount);
+                    tsl::changeTo<PackageMenu>(lastPackagePath, dropdownSection, LEFT_STR, lastPackageName, nestedMenuCount, pageHeader);
                     simulatedNextPageComplete = true;
                     return true;
                 }
