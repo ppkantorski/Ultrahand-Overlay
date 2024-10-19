@@ -1830,10 +1830,17 @@ public:
             if ((keysHeld & KEY_B) && !stillTouching) {
                 allowSlide = unlockedSlide = false;
                 inScriptMenu = false;
-                returningToPackage = isFromPackage && lastMenu == "packageMenu";
-                returningToSubPackage = isFromPackage && lastMenu == "subPackageMenu";
-                returningToSelectionMenu = isFromSelectionMenu;
-                returningToMain = isFromMainMenu;
+                if (isFromPackage) {
+                	returningToPackage = lastMenu == "packageMenu";
+                	returningToSubPackage = lastMenu == "subPackageMenu";
+                }
+                else if (isFromSelectionMenu) {
+                	returningToSelectionMenu = isFromSelectionMenu;
+                }
+                else if (isFromMainMenu) {
+                	returningToMain = isFromMainMenu;
+                }
+
                 tsl::goBack();
                 simulatedBackComplete = true;
                 return true;
@@ -3631,10 +3638,14 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                                 //    isFromMainMenu = true;
                                 //    inMainMenu = false;
                                 //}
-                                if (inPackageMenu)
+                                if (inPackageMenu) {
                                     inPackageMenu = false;
-                                if (inSubPackageMenu)
+                                    lastMenu = "packageMenu";
+                                }
+                                if (inSubPackageMenu) {
                                     inSubPackageMenu = false;
+                                    lastMenu = "subPackageMenu";
+                                }
 
                                 //auto modifiedCmds = commands;//getSourceReplacement(commands, keyName, i, packagePath);
                                 //applyPlaceholderReplacementsToCommands(modifiedCmds);
@@ -3699,10 +3710,14 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                                 //    isFromMainMenu = true;
                                 //    inMainMenu = false;
                                 //}
-                                if (inPackageMenu)
+                                if (inPackageMenu) {
                                     inPackageMenu = false;
-                                if (inSubPackageMenu)
+                                    lastMenu = "packageMenu";
+                                }
+                                if (inSubPackageMenu) {
                                     inSubPackageMenu = false;
+                                    lastMenu = "subPackageMenu";
+                                }
 
                                 //auto modifiedCmds = commands;//getSourceReplacement(commands, keyName, i, packagePath);
                                 //applyPlaceholderReplacementsToCommands(modifiedCmds);
@@ -3769,10 +3784,14 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                                 //    isFromMainMenu = true;
                                 //    inMainMenu = false;
                                 //}
-                                if (inPackageMenu)
+                                if (inPackageMenu) {
                                     inPackageMenu = false;
-                                if (inSubPackageMenu)
+                                    lastMenu = "packageMenu";
+                                }
+                                if (inSubPackageMenu) {
                                     inSubPackageMenu = false;
+                                    lastMenu = "subPackageMenu";
+                                }
                                 auto modifiedCmds = getSourceReplacement(commands, selectedItem, i, packagePath);
                                 applyPlaceholderReplacementsToCommands(modifiedCmds);
                                 tsl::changeTo<ScriptOverlay>(modifiedCmds, packagePath, keyName, isFromMainMenu ? "main" : "package", false, _lastPackageHeader);
