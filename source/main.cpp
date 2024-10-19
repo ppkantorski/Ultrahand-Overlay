@@ -1798,7 +1798,7 @@ public:
         std::string packageVersion = isFromMainMenu ? "" : packageRootLayerVersion;
         
         auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(packageName,
-        	!lastPackageHeader.empty() ? lastPackageHeader + "   ("+CAPITAL_ULTRAHAND_PROJECT_NAME + " Script)" : (packageVersion.empty() ? CAPITAL_ULTRAHAND_PROJECT_NAME + " Script" : packageVersion + "   (" + CAPITAL_ULTRAHAND_PROJECT_NAME + " Script)"),
+        	!lastPackageHeader.empty() ? lastPackageHeader + "(Ultrahand Script*)" : (packageVersion.empty() ? CAPITAL_ULTRAHAND_PROJECT_NAME + " Script" : packageVersion + "   (" + CAPITAL_ULTRAHAND_PROJECT_NAME + " Script)"),
         	noClickableItems);
         rootFrame->setContent(list.release());
         return rootFrame.release();
@@ -2596,7 +2596,7 @@ public:
 
         auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(
             (!packageHeader.title.empty()) ? packageHeader.title : (!packageRootLayerTitle.empty() ? packageRootLayerTitle : getNameFromPath(filePath)),
-            !lastPackageHeader.empty() ? lastPackageHeader + "   (Ultrahand Package)" : (packageHeader.version != "" ? (!packageRootLayerVersion.empty() ? packageRootLayerVersion : packageHeader.version) + "   (Ultrahand Package)" : "Ultrahand Package"),
+            !lastPackageHeader.empty() ? lastPackageHeader : (packageHeader.version != "" ? (!packageRootLayerVersion.empty() ? packageRootLayerVersion : packageHeader.version) + "   (Ultrahand Package)" : "Ultrahand Package"),
             noClickableItems,
             "",
             packageHeader.color);
@@ -4018,7 +4018,7 @@ public:
         
         std::unique_ptr<tsl::elm::OverlayFrame> rootFrame = std::make_unique<tsl::elm::OverlayFrame>(
             (!packageHeader.title.empty()) ? packageHeader.title : (!packageRootLayerTitle.empty() ? packageRootLayerTitle : getNameFromPath(packagePath)),
-            (!pageHeader.empty() ? pageHeader+ "   (Ultrahand Package)" : (packageHeader.version != "" ? (!packageRootLayerVersion.empty() ? packageRootLayerVersion : packageHeader.version) + "   (Ultrahand Package)" : "Ultrahand Package")),
+            (!pageHeader.empty() ? pageHeader: (packageHeader.version != "" ? (!packageRootLayerVersion.empty() ? packageRootLayerVersion : packageHeader.version) + "   (Ultrahand Package)" : "Ultrahand Package")),
             noClickableItems,
             "",
             packageHeader.color,
