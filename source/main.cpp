@@ -667,7 +667,7 @@ private:
                     shiftItemFocus(listItemRaw);
                     simulatedSelectComplete = true;
                     lastSelectedListItem->triggerClickAnimation();
-    
+    				
                     return true;
                 }
                 return false;
@@ -682,7 +682,7 @@ private:
         auto listItem = std::make_unique<tsl::elm::ListItem>(title);
         listItem->setValue(versionLabel, true);
 
-        listItem->setClickListener([listItemRaw = listItem.get(), downloadUrl, targetPath, movePath](uint64_t keys) {
+        listItem->setClickListener([listItemRaw = listItem.get(), title, downloadUrl, targetPath, movePath](uint64_t keys) {
             static bool executingCommands = false;
             if (runningInterpreter.load(std::memory_order_acquire)) {
                 return false;
@@ -701,21 +701,39 @@ private:
             if (keys & KEY_A) {
                 executingCommands = true;
                 isDownloadCommand = true;
-                
-                interpreterCommands = {
-                    {"try:"},
-                    {"delete", targetPath},
-                    {"download", downloadUrl, DOWNLOADS_PATH}
-                };
+
+                if (title == UPDATE_ULTRAHAND) {
+                	interpreterCommands = {
+                	    {"try:"},
+                	    //{"delete", THEMES_PATH+"ultra.ini"},
+                	    //{"delete", THEMES_PATH+"classic.ini"},
+                	    //{"delete", EXPANSION_PATH + "nx-ovlloader.zip"},
+                	    //{"delete", EXPANSION_PATH + "nx-ovlloader+.zip"},
+                	    {"delete", targetPath},
+                	    {"download", INCLUDED_THEME_FOLDER_URL+"ultra.ini", THEMES_PATH},
+                	    {"download", INCLUDED_THEME_FOLDER_URL+"classic.ini", THEMES_PATH},
+                	    {"download", NX_OVLLOADER_ZIP_URL, EXPANSION_PATH},
+                	    {"download", NX_OVLLOADER_PLUS_ZIP_URL, EXPANSION_PATH},
+                	    {"download", downloadUrl, DOWNLOADS_PATH}
+                	};
+                } else {
+                	interpreterCommands = {
+                	    {"try:"},
+                	    {"delete", targetPath},
+                	    {"download", downloadUrl, DOWNLOADS_PATH}
+                	};
+                }
                 
                 if (movePath == LANG_PATH) { // for language update commands
                     interpreterCommands.push_back({"unzip", targetPath, movePath});
                 } else {
                     //interpreterCommands.push_back({"download", INCLUDED_THEME_URL, THEMES_PATH});
                     interpreterCommands.push_back({"move", targetPath, movePath});
+                    interpreterCommands.push_back({"unzip", EXPANSION_PATH + loaderTitle + ".zip", ROOT_PATH});
                 }
                 
                 interpreterCommands.push_back({"delete", targetPath});
+
 
                 runningInterpreter.store(true, std::memory_order_release);
                 enqueueInterpreterCommands(std::move(interpreterCommands), "", "");
@@ -1774,7 +1792,7 @@ public:
         std::string packageVersion = isFromMainMenu ? "" : packageRootLayerVersion;
         
         auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(packageName, packageVersion.empty() ? 
-            CAPITAL_ULTRAHAND_PROJECT_NAME + " Script" : packageVersion + "   (" + CAPITAL_ULTRAHAND_PROJECT_NAME + " Script)", "", "", "", "", noClickableItems);
+            CAPITAL_ULTRAHAND_PROJECT_NAME + " Script" : packageVersion + "   (" + CAPITAL_ULTRAHAND_PROJECT_NAME + " Script)", noClickableItems, "", "", "", "");
         rootFrame->setContent(list.release());
         return rootFrame.release();
     }
@@ -2555,6 +2573,7 @@ public:
         auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(
             (!packageHeader.title.empty()) ? packageHeader.title : (!packageRootLayerTitle.empty() ? packageRootLayerTitle : getNameFromPath(filePath)),
             packageHeader.version != "" ? (!packageRootLayerVersion.empty() ? packageRootLayerVersion : packageHeader.version) + "   (Ultrahand Package)" : "Ultrahand Package",
+            noClickableItems,
             "",
             packageHeader.color);
 
@@ -3954,11 +3973,11 @@ public:
         std::unique_ptr<tsl::elm::OverlayFrame> rootFrame = std::make_unique<tsl::elm::OverlayFrame>(
             (!packageHeader.title.empty()) ? packageHeader.title : (!packageRootLayerTitle.empty() ? packageRootLayerTitle : getNameFromPath(packagePath)),
             packageHeader.version != "" ? (!packageRootLayerVersion.empty() ? packageRootLayerVersion : packageHeader.version) + "   (Ultrahand Package)" : "Ultrahand Package",
+            noClickableItems,
             "",
             packageHeader.color,
             (usingPages && currentPage == RIGHT_STR) ? pageLeftName : "",
-            (usingPages && currentPage == LEFT_STR) ? pageRightName : "",
-            noClickableItems
+            (usingPages && currentPage == LEFT_STR) ? pageRightName : ""
         );
         
         rootFrame->setContent(list.release());
@@ -4475,8 +4494,10 @@ public:
             if (!overlaysIniFile.is_open()) {
                 // The INI file doesn't exist, so create an empty one.
                 std::ofstream createFile(OVERLAYS_INI_FILEPATH);
-                if (createFile.is_open())
-                    initializingSpawn = true;
+                //if (createFile.is_open()) {
+                initializingSpawn = true;
+                createFile.close(); // Close the file after creating it
+                //}
             }
 
             overlaysIniFile.close(); // Close the file
@@ -4536,7 +4557,14 @@ public:
                         setIniFileValue(OVERLAYS_INI_FILEPATH, overlayFileName, "custom_version", "");
                         const auto& [result, overlayName, overlayVersion] = getOverlayInfo(OVERLAY_PATH + overlayFileName);
                         if (result != ResultSuccess) continue;
-                        overlayList.insert("0020"+(overlayName)+":" + overlayFileName);
+
+					    // Use retrieved overlay info
+					    assignedOverlayName = overlayName;
+					    assignedOverlayVersion = overlayVersion;
+					
+					    const std::string& baseOverlayInfo = "0020" + assignedOverlayName + ":" + assignedOverlayName + ":" + assignedOverlayVersion + ":" + overlayFileName;
+					    overlayList.insert(baseOverlayInfo);
+                        //overlayList.insert("0020"+(overlayName)+":" + overlayFileName);
                     } else {
                         const std::string& priority = getValueOrDefault(it->second, PRIORITY_STR, "20", formatPriorityString, 1);
                         const std::string& starred = getValueOrDefault(it->second, STAR_STR, FALSE_STR);
@@ -4816,7 +4844,14 @@ public:
                         setIniFileValue(OVERLAYS_INI_FILEPATH, packageName, USE_EXIT_PACKAGE_STR, TRUE_STR);
                         setIniFileValue(PACKAGES_INI_FILEPATH, packageName, "custom_name", "");
                         setIniFileValue(PACKAGES_INI_FILEPATH, packageName, "custom_version", "");
-                        packageList.insert("0020" + (packageName) +":" + packageName);
+
+                        assignedPackageName = packageHeader.title;
+                        assignedPackageVersion = packageHeader.version;
+
+                        const std::string& basePackageInfo = priority + ":" + assignedPackageName + ":" + assignedPackageVersion + ":" + packageName;
+                        packageList.insert(basePackageInfo);
+
+                        //packageList.insert("0020" + (packageName) +":" + packageName);
                     } else {
                         // Process existing package data
                         priority = (packageIt->second.find(PRIORITY_STR) != packageIt->second.end()) ? 
@@ -4827,7 +4862,6 @@ public:
                                packageIt->second[HIDE_STR] : FALSE_STR;
                         
                         
-
                         const std::string& customName = getValueOrDefault(packageIt->second, "custom_name", "");
                         const std::string& customVersion = getValueOrDefault(packageIt->second, "custom_version", "");
 
@@ -5088,7 +5122,7 @@ public:
         filesList.clear();
 
         //tsl::elm::OverlayFrame *rootFrame = new tsl::elm::OverlayFrame("Ultrahand", versionLabel, menuMode+hiddenMenuMode+dropdownSection);
-        auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel, menuMode+hiddenMenuMode+dropdownSection, "", "", "", noClickableItems);
+        auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel, noClickableItems, menuMode+hiddenMenuMode+dropdownSection, "", "", "");
         
         rootFrame->setContent(list.release());
         
@@ -5361,6 +5395,9 @@ public:
             bool disableFuseReload = (parseValueFromIniSection(FUSE_DATA_INI_PATH, FUSE_STR, "disable_reload") == TRUE_STR);
             if (!disableFuseReload)
                 deleteFileOrDirectory(FUSE_DATA_INI_PATH);
+
+            // initialize expanded memory on boot
+            setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "memory_expansion", (loaderTitle == "nx-ovlloader+") ? TRUE_STR : FALSE_STR);
         }
         
         unpackDeviceInfo();
