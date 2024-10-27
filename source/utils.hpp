@@ -23,7 +23,12 @@
 #include <payload.hpp> // Studious Pancake
 #include <util.hpp> // Studious Pancake
 
+#if NO_FSTREAM_DIRECTIVE
+#include <stdio.h>
+#else
 #include <fstream>
+#endif
+
 #include <fnmatch.h>
 #include <numeric>
 #include <queue>
@@ -201,9 +206,47 @@ const std::unordered_map<std::string, std::string> symbolPlaceholders = {
 //}
 
 void writeFuseIni(const std::string& outputPath, const char* data = nullptr) {
+#if NO_FSTREAM_DIRECTIVE
+    // Use stdio.h functions for file operations
+    FILE* outFile = fopen(outputPath.c_str(), "w");
+    if (outFile) {
+        // Write the header message and section name
+        // Uncomment this line if needed to include the commented warning line
+        // fwrite("; do not adjust these values manually unless they were not dumped correctly\n", 1, 81, outFile);
+        
+        fwrite("[", 1, 1, outFile);
+        fwrite(FUSE_STR.c_str(), 1, FUSE_STR.size(), outFile);
+        fwrite("]\n", 1, 2, outFile);
+
+        if (data) {
+            // Write each key-value pair with `fprintf`
+            fprintf(outFile, "cpu_speedo_0=%u\n", *reinterpret_cast<const uint32_t*>(data + FUSE_CPU_SPEEDO_0_CALIB));
+            fprintf(outFile, "cpu_speedo_2=%u\n", *reinterpret_cast<const uint32_t*>(data + FUSE_CPU_SPEEDO_2_CALIB));
+            fprintf(outFile, "soc_speedo_0=%u\n", *reinterpret_cast<const uint32_t*>(data + FUSE_SOC_SPEEDO_0_CALIB));
+            fprintf(outFile, "cpu_iddq=%u\n", *reinterpret_cast<const uint32_t*>(data + FUSE_CPU_IDDQ_CALIB));
+            fprintf(outFile, "soc_iddq=%u\n", *reinterpret_cast<const uint32_t*>(data + FUSE_SOC_IDDQ_CALIB));
+            fprintf(outFile, "gpu_iddq=%u\n", *reinterpret_cast<const uint32_t*>(data + FUSE_GPU_IDDQ_CALIB));
+            fprintf(outFile, "disable_reload=false\n");
+        } else {
+            // Write empty values if `data` is not provided
+            fputs("cpu_speedo_0=\n", outFile);
+            fputs("cpu_speedo_2=\n", outFile);
+            fputs("soc_speedo_0=\n", outFile);
+            fputs("cpu_iddq=\n", outFile);
+            fputs("soc_iddq=\n", outFile);
+            fputs("gpu_iddq=\n", outFile);
+            fputs("disable_reload=false\n", outFile);
+        }
+
+        fclose(outFile); // Close the file
+    }
+#else
+    // Use fstream for file operations
     std::ofstream outFile(outputPath);
     if (outFile) {
-        //outFile.write("; do not adjust these values manually unless they were not dumped correctly\n", 81);
+        // Uncomment this line if needed to include the commented warning line
+        // outFile.write("; do not adjust these values manually unless they were not dumped correctly\n", 81);
+
         outFile.write("[", 1);
         outFile.write(FUSE_STR.c_str(), FUSE_STR.size());
         outFile.write("]\n", 2);
@@ -228,7 +271,9 @@ void writeFuseIni(const std::string& outputPath, const char* data = nullptr) {
 
         outFile.close();
     }
+#endif
 }
+
 
 void fuseDumpToIni(const std::string& outputPath = FUSE_DATA_INI_PATH) {
     if (isFileOrDirectory(outputPath)) return;
@@ -465,7 +510,7 @@ void unpackDeviceInfo() {
         std::string value;
         for (const auto& key : keys) {
             value = parseValueFromIniSection(FUSE_DATA_INI_PATH, FUSE_STR, key.first);
-            *key.second = value.empty() ? 0 : std::stoi(value);
+            *key.second = value.empty() ? 0 : ult::stoi(value);
         }
     }
 
@@ -635,27 +680,62 @@ constexpr Result ResultParseError = MAKERESULT(OverlayLoaderModuleId, 1);
  * @return A tuple containing the result code, module name, and display version.
  */
 std::tuple<Result, std::string, std::string> getOverlayInfo(const std::string& filePath) {
+#if NO_FSTREAM_DIRECTIVE
+    FILE* file = fopen(filePath.c_str(), "rb");
+    if (!file) {
+        return {ResultParseError, "", ""};
+    }
+
+    NroHeader nroHeader;
+    NroAssetHeader assetHeader;
+    NacpStruct nacp;
+
+    // Read NRO header
+    fseek(file, sizeof(NroStart), SEEK_SET);
+    if (fread(&nroHeader, sizeof(NroHeader), 1, file) != 1) {
+        fclose(file);
+        return {ResultParseError, "", ""};
+    }
+
+    // Read asset header
+    fseek(file, nroHeader.size, SEEK_SET);
+    if (fread(&assetHeader, sizeof(NroAssetHeader), 1, file) != 1) {
+        fclose(file);
+        return {ResultParseError, "", ""};
+    }
+
+    // Read NACP struct
+    fseek(file, nroHeader.size + assetHeader.nacp.offset, SEEK_SET);
+    if (fread(&nacp, sizeof(NacpStruct), 1, file) != 1) {
+        fclose(file);
+        return {ResultParseError, "", ""};
+    }
+
+    fclose(file);
+
+#else
+    // Using std::ifstream version
     std::ifstream file(filePath, std::ios::binary);
     if (!file) {
         return {ResultParseError, "", ""};
     }
-    
+
     NroHeader nroHeader;
     NroAssetHeader assetHeader;
     NacpStruct nacp;
-    
+
     // Read NRO header
     file.seekg(sizeof(NroStart), std::ios::beg);
     if (!file.read(reinterpret_cast<char*>(&nroHeader), sizeof(NroHeader))) {
         return {ResultParseError, "", ""};
     }
-    
+
     // Read asset header
     file.seekg(nroHeader.size, std::ios::beg);
     if (!file.read(reinterpret_cast<char*>(&assetHeader), sizeof(NroAssetHeader))) {
         return {ResultParseError, "", ""};
     }
-    
+
     // Read NACP struct
     file.seekg(nroHeader.size + assetHeader.nacp.offset, std::ios::beg);
     if (!file.read(reinterpret_cast<char*>(&nacp), sizeof(NacpStruct))) {
@@ -663,6 +743,7 @@ std::tuple<Result, std::string, std::string> getOverlayInfo(const std::string& f
     }
 
     file.close();
+#endif
 
     // Assuming nacp.lang[0].name and nacp.display_version are null-terminated
     return {
@@ -678,8 +759,8 @@ void addHeader(auto& list, const std::string& headerText) {
     list->addItem(new tsl::elm::CategoryHeader(headerText));
 }
 
-void addBasicListItem(auto& list, const std::string& itemText) {
-    list->addItem(new tsl::elm::ListItem(itemText));
+void addBasicListItem(auto& list, const std::string& itemText, bool isMini = false) {
+    list->addItem(new tsl::elm::ListItem(itemText, "", isMini));
 }
 
 void addDummyListItem(auto& list, s32 index = -1) {
@@ -982,8 +1063,10 @@ void addTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::vector<std
         if (abortCommand.load(std::memory_order_acquire)) {
             abortCommand.store(false, std::memory_order_release);
             commandSuccess = false;
+            #if USING_LOGGING_DIRECTIVE
             disableLogging = true;
             logFilePath = defaultLogFilePath;
+            #endif
             return;
         }
 
@@ -1010,6 +1093,7 @@ void addTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::vector<std
 
             applyPlaceholderReplacements(cmd, hexPath, iniPath, listString, listPath, jsonString, jsonPath);
 
+            #if USING_LOGGING_DIRECTIVE
             if (interpreterLogging) {
                 disableLogging = false;
                 message = "Reading line:";
@@ -1017,6 +1101,7 @@ void addTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::vector<std
                     message += " " + token;
                 logMessage(message);
             }
+            #endif
 
             const size_t cmdSize = cmd.size();
 
@@ -1086,7 +1171,7 @@ void addHelpInfo(std::unique_ptr<tsl::elm::List>& list) {
     addHeader(list, USER_GUIDE);
 
     // Adjust the horizontal offset as needed
-    int xOffset = std::stoi(USERGUIDE_OFFSET);
+    int xOffset = ult::stoi(USERGUIDE_OFFSET);
 
     // Define the section lines and info lines directly
     std::vector<std::string> sectionLines = {
@@ -1400,7 +1485,7 @@ void applyReplaceIniPlaceholder(std::string& arg, const std::string& commandName
     } else {
         // Check if the content is an integer
         if (std::all_of(placeholderContent.begin(), placeholderContent.end(), ::isdigit)) {
-            size_t entryIndex = std::stoi(placeholderContent);
+            size_t entryIndex = ult::stoi(placeholderContent);
 
             // Return list of section names and use entryIndex to get the specific entry
             std::vector<std::string> sectionNames = parseSectionsFromIni(iniPath);
@@ -1605,8 +1690,8 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
                 replaceAllPlaceholders(modifiedArg, "{folder_name}", path);
 
                 if (modifiedArg.find("{list_source(") != std::string::npos) {
-                    //modifiedArg = replacePlaceholder(modifiedArg, "*", std::to_string(entryIndex));
-                    applyPlaceholderReplacement(modifiedArg, "*", std::to_string(entryIndex));
+                    //modifiedArg = replacePlaceholder(modifiedArg, "*", ult::to_string(entryIndex));
+                    applyPlaceholderReplacement(modifiedArg, "*", ult::to_string(entryIndex));
                     startPos = modifiedArg.find("{list_source(");
                     endPos = modifiedArg.find(")}");
                     if (endPos != std::string::npos && endPos > startPos) {
@@ -1617,8 +1702,8 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
                 }
 
                 if (modifiedArg.find("{list_file_source(") != std::string::npos) {
-                    //modifiedArg = replacePlaceholder(modifiedArg, "*", std::to_string(entryIndex));
-                    applyPlaceholderReplacement(modifiedArg, "*", std::to_string(entryIndex));
+                    //modifiedArg = replacePlaceholder(modifiedArg, "*", ult::to_string(entryIndex));
+                    applyPlaceholderReplacement(modifiedArg, "*", ult::to_string(entryIndex));
                     startPos = modifiedArg.find("{list_file_source(");
                     endPos = modifiedArg.find(")}");
                     if (endPos != std::string::npos && endPos > startPos) {
@@ -1629,8 +1714,8 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
                 }
 
                 if (modifiedArg.find("{ini_file_source(") != std::string::npos) {
-                    //modifiedArg = replacePlaceholder(modifiedArg, "*", std::to_string(entryIndex));
-                    applyPlaceholderReplacement(modifiedArg, "*", std::to_string(entryIndex));
+                    //modifiedArg = replacePlaceholder(modifiedArg, "*", ult::to_string(entryIndex));
+                    applyPlaceholderReplacement(modifiedArg, "*", ult::to_string(entryIndex));
                     startPos = modifiedArg.find("{ini_file_source(");
                     endPos = modifiedArg.find(")}");
                     if (endPos != std::string::npos && endPos > startPos) {
@@ -1642,8 +1727,8 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
                 }
 
                 if (modifiedArg.find("{json_source(") != std::string::npos) {
-                    //modifiedArg = replacePlaceholder(modifiedArg, "*", std::to_string(entryIndex));
-                    applyPlaceholderReplacement(modifiedArg, "*", std::to_string(entryIndex));
+                    //modifiedArg = replacePlaceholder(modifiedArg, "*", ult::to_string(entryIndex));
+                    applyPlaceholderReplacement(modifiedArg, "*", ult::to_string(entryIndex));
                     startPos = modifiedArg.find("{json_source(");
                     endPos = modifiedArg.find(")}");
                     if (endPos != std::string::npos && endPos > startPos) {
@@ -1654,8 +1739,8 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
                 }
 
                 if (modifiedArg.find("{json_file_source(") != std::string::npos) {
-                    //modifiedArg = replacePlaceholder(modifiedArg, "*", std::to_string(entryIndex));
-                    applyPlaceholderReplacement(modifiedArg, "*", std::to_string(entryIndex));
+                    //modifiedArg = replacePlaceholder(modifiedArg, "*", ult::to_string(entryIndex));
+                    applyPlaceholderReplacement(modifiedArg, "*", ult::to_string(entryIndex));
                     startPos = modifiedArg.find("{json_file_source(");
                     endPos = modifiedArg.find(")}");
                     if (endPos != std::string::npos && endPos > startPos) {
@@ -1681,14 +1766,59 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
 
 
 std::string getCurrentTimestamp(const std::string& format) {
-    auto now_time_t = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-    char buffer[30]; // Adjust size based on expected max format length
-    if (std::strftime(buffer, sizeof(buffer), format.c_str(), std::localtime(&now_time_t))) {
-        return std::string(buffer);
-    } else {
-        return ""; // or handle the error as needed
+    auto now = std::chrono::system_clock::now();
+    auto now_time_t = std::chrono::system_clock::to_time_t(now);
+    auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
+
+    // Prepare a format for strftime without unsupported tokens
+    std::string modifiedFormat = format;
+    bool hasMilliseconds = false;
+
+    // Remove %f from the format string temporarily, if present
+    size_t pos = modifiedFormat.find("%f");
+    if (pos != std::string::npos) {
+        modifiedFormat.erase(pos, 2); // Remove "%f"
+        hasMilliseconds = true;
     }
+
+    // Format using strftime up to seconds
+    char buffer[30];
+    if (!std::strftime(buffer, sizeof(buffer), modifiedFormat.c_str(), std::localtime(&now_time_t))) {
+        return ""; // Handle error if needed
+    }
+
+    std::string formattedTime(buffer);
+    StringStream oss;
+
+    // Handle %s for seconds since epoch
+    if (formattedTime.find("%s") != std::string::npos) {
+        oss << static_cast<long long>(std::chrono::system_clock::to_time_t(now)); 
+        formattedTime.replace(formattedTime.find("%s"), 2, oss.str());
+        oss.clear(); // Clear the StringStream for the next usage
+    }
+
+    // Handle %f for milliseconds, if it was in the original format
+    if (hasMilliseconds) {
+        std::string millisecondsStr = ult::to_string(milliseconds.count());
+
+        // Pad milliseconds to three digits if necessary
+        if (millisecondsStr.length() < 3) {
+            millisecondsStr.insert(0, 3 - millisecondsStr.length(), '0');
+        }
+
+        // Check if the format string included '.' right before %f
+        if (pos > 0 && format[pos - 1] == '.') {
+            formattedTime += millisecondsStr;  // Just add milliseconds without an extra period
+        } else {
+            formattedTime += "." + millisecondsStr;  // Add period before milliseconds if not already present
+        }
+    }
+
+    return formattedTime;
 }
+
+
+
 
 
 // Helper function to skip spaces
@@ -1699,15 +1829,15 @@ void skipSpaces(const std::string& expression, size_t& pos) {
 }
 
 // Helper function to parse a number or a nested expression in parentheses
-float parseExpression(const std::string& expression, size_t& pos, bool& valid);
+double parseExpression(const std::string& expression, size_t& pos, bool& valid);
 
-float parseNumber(const std::string& expression, size_t& pos, bool& valid) {
+double parseNumber(const std::string& expression, size_t& pos, bool& valid) {
     skipSpaces(expression, pos);
 
     // Check if the expression starts with a '(' indicating a nested expression
     if (expression[pos] == '(') {
         ++pos;  // Skip the '('
-        float result = parseExpression(expression, pos, valid);
+        double result = parseExpression(expression, pos, valid);
         if (expression[pos] == ')') {
             ++pos;  // Skip the ')'
         } else {
@@ -1717,9 +1847,9 @@ float parseNumber(const std::string& expression, size_t& pos, bool& valid) {
     }
 
     // Parse a number
-    float result = 0.0f;
+    double result = 0.0f;
     bool hasDecimal = false;
-    float decimalPlace = 0.1f;
+    double decimalPlace = 0.1f;
     bool isNegative = false;
 
     if (expression[pos] == '-') {
@@ -1752,10 +1882,10 @@ float parseNumber(const std::string& expression, size_t& pos, bool& valid) {
 }
 
 // Function to evaluate an expression, which may include parentheses
-float parseExpression(const std::string& expression, size_t& pos, bool& valid) {
+double parseExpression(const std::string& expression, size_t& pos, bool& valid) {
     skipSpaces(expression, pos);
 
-    float result = parseNumber(expression, pos, valid);
+    double result = parseNumber(expression, pos, valid);
     if (!valid) return 0;
 
     while (pos < expression.length()) {
@@ -1765,7 +1895,7 @@ float parseExpression(const std::string& expression, size_t& pos, bool& valid) {
         char op = expression[pos++];
         skipSpaces(expression, pos);
 
-        float operand = parseNumber(expression, pos, valid);
+        double operand = parseNumber(expression, pos, valid);
         if (!valid) return 0;
 
         switch (op) {
@@ -1786,7 +1916,7 @@ float parseExpression(const std::string& expression, size_t& pos, bool& valid) {
                 result /= operand;
                 break;
             case '%':
-                if (std::fmod(result, 1.0f) != 0.0f || std::fmod(operand, 1.0f) != 0.0f) {
+                if (STBTT_fmod(result, 1.0f) != 0.0f || STBTT_fmod(operand, 1.0f) != 0.0f) {
                     valid = false;  // Modulus only valid for integers
                     return 0;
                 }
@@ -1803,7 +1933,7 @@ float parseExpression(const std::string& expression, size_t& pos, bool& valid) {
 }
 
 // Function to evaluate a complete expression (this will call parseExpression)
-float evaluateExpression(const std::string& expression, bool& valid) {
+double evaluateExpression(const std::string& expression, bool& valid) {
     size_t pos = 0;
     return parseExpression(expression, pos, valid);
 }
@@ -1813,44 +1943,66 @@ std::string handleMath(const std::string& placeholder) {
     size_t startPos = placeholder.find('(') + 1;
     size_t endPos = placeholder.find(')');
 
-    // Return NULL_STR if format is invalid
     if (startPos == std::string::npos || endPos == std::string::npos || startPos >= endPos) {
         return NULL_STR;
     }
 
     std::string mathExpression = placeholder.substr(startPos, endPos - startPos);
+    removeQuotes(mathExpression);
 
-    // Check for an optional second parameter, like 'true' to force integer output
     size_t commaPos = mathExpression.find(',');
     bool forceInteger = false;
 
     if (commaPos != std::string::npos) {
         std::string secondParam = mathExpression.substr(commaPos + 1);
-        trim(secondParam);  // Optionally, remove spaces from the second param
+        trim(secondParam);
         forceInteger = (secondParam == TRUE_STR);
-        mathExpression = mathExpression.substr(0, commaPos);  // Remove the second param for evaluation
+        mathExpression = mathExpression.substr(0, commaPos);
     }
 
-    // Remove unnecessary spaces in the expression
-    mathExpression.erase(remove_if(mathExpression.begin(), mathExpression.end(), ::isspace), mathExpression.end());
+    // Add spaces around operators to ensure proper parsing
+    for (char op : {'+', '-', '*', '/'}) {
+        size_t pos = 0;
+        while ((pos = mathExpression.find(op, pos)) != std::string::npos) {
+            if (pos > 0 && mathExpression[pos - 1] != ' ') {
+                mathExpression.insert(pos, " ");
+                pos++;
+            }
+            if (pos + 1 < mathExpression.size() && mathExpression[pos + 1] != ' ') {
+                mathExpression.insert(pos + 1, " ");
+            }
+            pos += 2; // Move past the operator and space
+        }
+    }
 
-    // Evaluate the math expression
     bool valid = false;
-    float result = evaluateExpression(mathExpression, valid);
+    double result = evaluateExpression(mathExpression, valid);
 
-    // Return NULL_STR if the expression was invalid
     if (!valid) {
         return NULL_STR;
     }
 
-    // If forceInteger is true, or the result is already an integer, return it as an integer
-    if (forceInteger || std::fmod(result, 1.0f) == 0.0f) {
-        return std::to_string(static_cast<int>(result));
+    // Format the result with StringStream
+    StringStream oss;
+    if (forceInteger || STBTT_fmod(result, 1.0) == 0.0) {
+        oss << static_cast<int>(result);  // Integer output if required
+    } else {
+        // Manually format to two decimal places for double output
+        int intPart = static_cast<int>(result);
+        int decimalPart = static_cast<int>((result - intPart) * 100);  // Get two decimal places
+
+        oss << intPart << ".";
+
+        // Handle cases where decimal part has only one digit (e.g., 3.1 should be 3.10)
+        if (decimalPart < 10) {
+            oss << "0";
+        }
+        oss << decimalPart;
     }
 
-    // Otherwise, return the result as a floating-point string
-    return std::to_string(result);
+    return oss.str();
 }
+
 
 std::string handleLength(const std::string& placeholder) {
     size_t startPos = placeholder.find('(') + 1;
@@ -1862,7 +2014,7 @@ std::string handleLength(const std::string& placeholder) {
         removeQuotes(str);  // If your strings are wrapped in quotes, remove them
         
         // Return the length of the string as a string
-        return std::to_string(str.length());
+        return ult::to_string(str.length());
     }
     
     return placeholder;  // If invalid, return the original placeholder
@@ -1973,13 +2125,13 @@ void applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
         {"{list(", [&](const std::string& placeholder) {
             size_t startPos = placeholder.find('(') + 1;
             size_t endPos = placeholder.find(')');
-            size_t listIndex = std::stoi(placeholder.substr(startPos, endPos - startPos));
+            size_t listIndex = ult::stoi(placeholder.substr(startPos, endPos - startPos));
             return stringToList(listString)[listIndex];
         }},
         {"{list_file(", [&](const std::string& placeholder) {
             size_t startPos = placeholder.find('(') + 1;
             size_t endPos = placeholder.find(')');
-            size_t listIndex = std::stoi(placeholder.substr(startPos, endPos - startPos));
+            size_t listIndex = ult::stoi(placeholder.substr(startPos, endPos - startPos));
             return getEntryFromListFile(listPath, listIndex);
         }},
         {"{json(", [&](const std::string& placeholder) { return replaceJsonPlaceholder(placeholder, JSON_STR, jsonString); }},
@@ -2025,13 +2177,13 @@ void applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
             size_t commaPos = parameters.find(',');
             
             if (commaPos != std::string::npos) {
-                int lowValue = std::stoi(parameters.substr(0, commaPos));
-                int highValue = std::stoi(parameters.substr(commaPos + 1));
+                int lowValue = ult::stoi(parameters.substr(0, commaPos));
+                int highValue = ult::stoi(parameters.substr(commaPos + 1));
                 
                 // Generate a random number in the range [lowValue, highValue]
                 int randomValue = lowValue + rand() % (highValue - lowValue + 1);
                 
-                return std::to_string(randomValue);  // Return the random value as a string
+                return ult::to_string(randomValue);  // Return the random value as a string
             }
             return placeholder;
         }},
@@ -2043,8 +2195,8 @@ void applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
 
             if (commaPos != std::string::npos) {
                 std::string str = parameters.substr(0, commaPos);
-                size_t sliceStart = std::stoi(parameters.substr(commaPos + 1, parameters.find(',', commaPos + 1) - (commaPos + 1)));
-                size_t sliceEnd = std::stoi(parameters.substr(parameters.find_last_of(',') + 1));
+                size_t sliceStart = ult::stoi(parameters.substr(commaPos + 1, parameters.find(',', commaPos + 1) - (commaPos + 1)));
+                size_t sliceEnd = ult::stoi(parameters.substr(parameters.find_last_of(',') + 1));
                 return sliceString(str, sliceStart, sliceEnd);
             }
             return placeholder;
@@ -2060,7 +2212,7 @@ void applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
             if (firstCommaPos != std::string::npos && lastCommaPos != std::string::npos && firstCommaPos != lastCommaPos) {
                 std::string str = parameters.substr(0, firstCommaPos);
                 std::string delimiter = parameters.substr(firstCommaPos + 1, lastCommaPos - firstCommaPos - 1);
-                size_t index = std::stoi(parameters.substr(lastCommaPos + 1));
+                size_t index = ult::stoi(parameters.substr(lastCommaPos + 1));
                 trim(str);
                 removeQuotes(str);
                 trim(delimiter);
@@ -2079,18 +2231,23 @@ void applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
         {"{length(", [&](const std::string& placeholder) { return handleLength(placeholder); }},
     };
 
+     // Second pass: Only replace {math(...)} after other placeholders are evaluated
+    //std::vector<std::pair<std::string, std::function<std::string(const std::string&)>>> secondPassPlaceholders = {
+    //    {"{math(", [&](const std::string& placeholder) { return handleMath(placeholder); }}
+    //};   
+
     // Create a map with all non-button/arrow placeholders and their replacements
     std::unordered_map<std::string, std::string> generalPlaceholders = {
         {"{ram_vendor}", memoryVendor},
         {"{ram_model}", memoryModel},
         {"{ams_version}", amsVersion},
         {"{hos_version}", hosVersion},
-        {"{cpu_speedo}", std::to_string(cpuSpeedo0)},
-        {"{cpu_iddq}", std::to_string(cpuIDDQ)},
-        {"{gpu_speedo}", std::to_string(cpuSpeedo2)},
-        {"{gpu_iddq}", std::to_string(gpuIDDQ)},
-        {"{soc_speedo}", std::to_string(socSpeedo0)},
-        {"{soc_iddq}", std::to_string(socIDDQ)},
+        {"{cpu_speedo}", ult::to_string(cpuSpeedo0)},
+        {"{cpu_iddq}", ult::to_string(cpuIDDQ)},
+        {"{gpu_speedo}", ult::to_string(cpuSpeedo2)},
+        {"{gpu_iddq}", ult::to_string(gpuIDDQ)},
+        {"{soc_speedo}", ult::to_string(socSpeedo0)},
+        {"{soc_iddq}", ult::to_string(socIDDQ)},
         {"{title_id}", getTitleIdAsString()}
     };
 
@@ -2109,6 +2266,7 @@ void applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
 
         // Resolve nested placeholders
         replacePlaceholdersRecursively(arg, placeholders);
+        //replacePlaceholdersRecursively(arg, secondPassPlaceholders);
     }
 }
 
@@ -2268,10 +2426,12 @@ bool applyPlaceholderReplacementsToCommands(std::vector<std::vector<std::string>
  */
 bool interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& commands, const std::string& packagePath="", const std::string& selectedCommand="") {
     
+    #if USING_LOGGING_DIRECTIVE
     if (!packagePath.empty()) {
         disableLogging = !(parseValueFromIniSection(PACKAGES_INI_FILEPATH, getNameFromPath(packagePath), USE_LOGGING_STR) == TRUE_STR);
         logFilePath = packagePath + "log.txt";
     }
+    #endif
 
     // Load key-value pairs from the "BUFFERS" section of the INI file
     auto bufferSection = getKeyValuePairsFromSection(ULTRAHAND_CONFIG_INI_PATH, BUFFERS);
@@ -2282,22 +2442,22 @@ bool interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
     
         section = "copy_buffer_size";
         if (bufferSection.count(section) > 0) {
-            COPY_BUFFER_SIZE = std::stoi(bufferSection[section]);
+            COPY_BUFFER_SIZE = ult::stoi(bufferSection[section]);
         }
     
         section = "unzip_buffer_size";
         if (bufferSection.count(section) > 0) {
-            UNZIP_BUFFER_SIZE = std::stoi(bufferSection[section]);
+            UNZIP_BUFFER_SIZE = ult::stoi(bufferSection[section]);
         }
     
         section = "download_buffer_size";
         if (bufferSection.count(section) > 0) {
-            DOWNLOAD_BUFFER_SIZE = std::stoi(bufferSection[section]);
+            DOWNLOAD_BUFFER_SIZE = ult::stoi(bufferSection[section]);
         }
     
         section = "hex_buffer_size";
         if (bufferSection.count(section) > 0) {
-            HEX_BUFFER_SIZE = std::stoi(bufferSection[section]);
+            HEX_BUFFER_SIZE = ult::stoi(bufferSection[section]);
         }
     }
 
@@ -2326,8 +2486,10 @@ bool interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
         if (abortCommand.load(std::memory_order_acquire)) {
             abortCommand.store(false, std::memory_order_release);
             commandSuccess = false;
+            #if USING_LOGGING_DIRECTIVE
             disableLogging = true;
             logFilePath = defaultLogFilePath;
+            #endif
             return commandSuccess;
         }
 
@@ -2367,6 +2529,7 @@ bool interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
 
                 applyPlaceholderReplacements(cmd, hexPath, iniPath, listString, listPath, jsonString, jsonPath);
 
+                #if USING_LOGGING_DIRECTIVE
                 if (interpreterLogging) {
                     disableLogging = false;
                     message = "Executing command: ";
@@ -2374,6 +2537,7 @@ bool interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
                         message += token + " ";
                     logMessage(message);
                 }
+                #endif
 
                 cmdSize = cmd.size();
 
@@ -2414,8 +2578,11 @@ bool interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
 
         commands.erase(commands.begin()); // Remove processed command
     }
+
+    #if USING_LOGGING_DIRECTIVE
     disableLogging = true;
     logFilePath = defaultLogFilePath;
+    #endif
 
     return commandSuccess;
 }
@@ -2489,11 +2656,15 @@ void handleCopyCommand(const std::vector<std::string>& cmd, const std::string& p
     } else {
         // Ensure source and destination paths are set
         if (sourcePath.empty() || destinationPath.empty()) {
+            #if USING_LOGGING_DIRECTIVE
             logMessage("Source and destination paths must be specified.");
+            #endif
         } else {
             // Perform the copy operation
             if (!isFileOrDirectory(sourcePath)) {
+                #if USING_LOGGING_DIRECTIVE
                 logMessage("Source file or directory doesn't exist: " + sourcePath);
+                #endif
             } else {
                 if (sourcePath.find('*') != std::string::npos) {
                     copyFileOrDirectoryByPattern(sourcePath, destinationPath, logSource, logDestination); // Copy files by pattern
@@ -2527,7 +2698,9 @@ void handleDeleteCommand(const std::vector<std::string>& cmd, const std::string&
 
         // Ensure source path is set
         if (sourcePath.empty()) {
+            #if USING_LOGGING_DIRECTIVE
             logMessage("Source path must be specified.");
+            #endif
         } else {
             // Perform the delete operation
             if (!isDangerousCombination(sourcePath)) {
@@ -2575,7 +2748,9 @@ void handleMoveCommand(const std::vector<std::string>& cmd, const std::string& p
         std::vector<std::string> sourceFilesList = readListFromFile(sourceListPath);
         std::vector<std::string> destinationFilesList = readListFromFile(destinationListPath);
         if (sourceFilesList.size() != destinationFilesList.size()) {
+            #if USING_LOGGING_DIRECTIVE
             logMessage("Source and destination lists must have the same number of entries.");
+            #endif
         } else {
             std::unordered_set<std::string> copyFilterSet;
             if (!copyFilterListPath.empty())
@@ -2604,7 +2779,9 @@ void handleMoveCommand(const std::vector<std::string>& cmd, const std::string& p
     } else {
         // Ensure source and destination paths are set
         if (sourcePath.empty() || destinationPath.empty()) {
+            #if USING_LOGGING_DIRECTIVE
             logMessage("Source and destination paths must be specified.");
+            #endif
         } else {
             // Perform the move operation
             if (!isDangerousCombination(sourcePath)) {
@@ -2745,7 +2922,7 @@ void rebootToHekateConfig(Payload::HekateConfigList& configList, const std::stri
     auto configIterator = configList.begin();
 
     if (std::all_of(option.begin(), option.end(), ::isdigit)) {
-        rebootIndex = std::stoi(option);
+        rebootIndex = ult::stoi(option);
         std::advance(configIterator, rebootIndex);
     } else {
         for (auto it = configList.begin(); it != configList.end(); ++it) {
@@ -2782,7 +2959,10 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
         if (cmd.size() >= 2) {
             std::string desiredValue = cmd[1];
             removeQuotes(desiredValue);
-            setIniFileValue((packagePath + CONFIG_FILENAME), selectedCommand, FOOTER_STR, desiredValue);
+            if (desiredValue.find(NULL_STR) != std::string::npos)
+                commandSuccess = false;
+            else
+                setIniFileValue((packagePath + CONFIG_FILENAME), selectedCommand, FOOTER_STR, desiredValue);
         }
     } else if (commandName == "compare") {
         if (cmd.size() >= 4) {
@@ -2980,62 +3160,45 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             else if (togglePattern == OFF_STR)
                 lblSwitchBacklightOff(0);
             else if (isValidNumber(togglePattern)) {
-                lblSetCurrentBrightnessSetting(std::stof(togglePattern) / 100.0f);
+                lblSetCurrentBrightnessSetting(ult::stof(togglePattern) / 100.0f);
             }
             lblExit();
         }
-    //} else if (commandName == "volume") {
-    //    disableLogging = false;
-    //    if (cmd.size() >= 2) {
-    //        std::string volumeInput = cmd[1];
-    //        logMessage("Received volume command: " + volumeInput);  // Log the input
-    //        removeQuotes(volumeInput);  // Sanitize input by removing quotes
-    //        
-    //        if (isValidNumber(volumeInput)) {
-    //            logMessage("Volume input is a valid number: " + volumeInput);  // Log valid number
-    //            
-    //            // Convert input string to a float for percentage (0-100)
-    //            float volumePercentage = std::stof(volumeInput);
-    //            logMessage("Converted volume to percentage: " + std::to_string(volumePercentage));  // Log the percentage
-    //            
-    //            // Ensure the volume is within valid range 0 to 100
-    //            if (volumePercentage < 0.0f || volumePercentage > 100.0f) {
-    //                logMessage("Volume percentage out of bounds: " + std::to_string(volumePercentage));
-    //                return;  // Exit if invalid percentage
-    //            }
-    //            
-    //            // Initialize the settings service
-    //            logMessage("Initializing settings service...");
-    //            Result rc = setsysInitialize();
-    //            if (R_SUCCEEDED(rc)) {
-    //                logMessage("Settings service initialized successfully.");
-    //                
-    //                SetSysAudioVolume audio_volume;
-    //                audio_volume.volume = static_cast<uint8_t>((volumePercentage / 100.0f) * 15.0f);  // Scale to 0-15
-    //                logMessage("Volume scaled to 0-15: " + std::to_string(audio_volume.volume));  // Log scaled volume
-    //                
-    //                // Set the volume for the Console
-    //                logMessage("Setting audio volume...");
-    //                rc = setsysSetAudioVolume(SetSysAudioDevice_Console, &audio_volume);
-    //                
-    //                // Check if setting the volume was successful
-    //                if (R_FAILED(rc)) {
-    //                    logMessage("Failed to set audio volume. Error code: " + std::to_string(rc));
-    //                    setsysExit();
-    //                    return;
-    //                }
-    //                
-    //                logMessage("Audio volume set successfully.");
-    //                setsysExit();
-    //            } else {
-    //                logMessage("Failed to initialize settings service. Error code: " + std::to_string(rc));
-    //            }
-    //        } else {
-    //            logMessage("Invalid volume input: " + volumeInput);
-    //        }
-    //    } else {
-    //        logMessage("Volume command missing required argument.");
-    //    }
+    } else if (commandName == "volume") {
+        if (cmd.size() >= 2) {
+            std::string volumeInput = cmd[1];
+            removeQuotes(volumeInput);  // Sanitize input by removing quotes
+            
+            if (isValidNumber(volumeInput)) {
+                //logMessage("Volume input is a valid number: " + volumeInput);  // Log valid number
+                
+                // Convert input string to a float for percentage (0-100)
+                float volumePercentage = ult::stof(volumeInput);
+                //logMessage("Converted volume to percentage: " + ult::to_string(volumePercentage));  // Log the percentage
+                
+                // Ensure the volume is within valid range 0 to 100
+                if (volumePercentage < 0.0f || volumePercentage > 150.0f) {
+                    //logMessage("Volume percentage out of bounds: " + ult::to_string(volumePercentage));
+                    return;  // Exit if invalid percentage
+                }
+                
+                // Convert percentage (0-100) to volume scale (0-1)
+                float masterVolume = volumePercentage / 100.0f;
+                
+
+                //logMessage("Initializing settings service...");
+                audctlInitialize();
+
+                // Set the master volume
+                audctlSetSystemOutputMasterVolume(masterVolume);
+
+                audctlExit();
+            }
+        } else {
+            #if USING_LOGGING_DIRECTIVE
+            logMessage("Volume command missing required argument.");
+            #endif
+        }
     //} else if (commandName == "wifi") {
     //    disableLogging = false;
     //    if (cmd.size() >= 2) {
@@ -3050,7 +3213,7 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
     //            if (R_SUCCEEDED(rc)) {
     //                logMessage("Wi-Fi enabled successfully.");
     //            } else {
-    //                logMessage("Failed to enable Wi-Fi. Error code: " + std::to_string(rc));
+    //                logMessage("Failed to enable Wi-Fi. Error code: " + ult::to_string(rc));
     //            }
     //        } else if (togglePattern == OFF_STR) {
     //            logMessage("Turning Wi-Fi OFF...");
@@ -3058,7 +3221,7 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
     //            if (R_SUCCEEDED(rc)) {
     //                logMessage("Wi-Fi disabled successfully.");
     //            } else {
-    //                logMessage("Failed to disable Wi-Fi. Error code: " + std::to_string(rc));
+    //                logMessage("Failed to disable Wi-Fi. Error code: " + ult::to_string(rc));
     //            }
     //        } else {
     //            logMessage("Invalid Wi-Fi toggle command: " + togglePattern);
@@ -3087,7 +3250,11 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
         if (cmd.size() >= 2) {
             std::string clearOption = cmd[1];
             removeQuotes(clearOption);
-            if (clearOption == "log") deleteFileOrDirectory(defaultLogFilePath);
+            if (clearOption == "log") {
+                #if USING_LOGGING_DIRECTIVE
+                deleteFileOrDirectory(defaultLogFilePath);
+                #endif
+            }
             else if (clearOption == "hex_sum_cache") hexSumCache.clear();
         }
     }
@@ -3184,14 +3351,16 @@ void closeInterpreterThread() {
 void startInterpreterThread(const std::string& packagePath = "") {
     int stackSize = 0x8000;
 
+    #if USING_LOGGING_DIRECTIVE
     if (!packagePath.empty()) {
         disableLogging = !(parseValueFromIniSection(PACKAGES_INI_FILEPATH, getNameFromPath(packagePath), USE_LOGGING_STR) == TRUE_STR);
         logFilePath = packagePath + "log.txt";
     }
+    #endif
 
     std::string interpreterHeap = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "interpreter_heap");
     if (!interpreterHeap.empty())
-        stackSize = std::stoi(interpreterHeap, nullptr, 16);  // Convert from base 16
+        stackSize = ult::stoi(interpreterHeap, nullptr, 16);  // Convert from base 16
 
     interpreterThreadExit.store(false, std::memory_order_release);
 
@@ -3201,9 +3370,11 @@ void startInterpreterThread(const std::string& packagePath = "") {
         clearInterpreterFlags();
         runningInterpreter.store(false, std::memory_order_release);
         interpreterThreadExit.store(true, std::memory_order_release);
+        #if USING_LOGGING_DIRECTIVE
         logMessage("Failed to create interpreter thread.");
         logFilePath = defaultLogFilePath;
         disableLogging = true;
+        #endif
         return;
     }
     threadStart(&interpreterThread);

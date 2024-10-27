@@ -71,6 +71,9 @@ static const std::string MODE_PATTERN = ";mode=";
 static const std::string GROUPING_PATTERN = ";grouping=";
 static const std::string SYSTEM_PATTERN = ";system=";
 
+static const std::string MINI_PATTERN = ";mini=";
+static const std::string SELECTION_MINI_PATTERN = ";selection_mini=";
+
 // Table option patterns
 static const std::string SCROLLABLE_PATTERN = ";scrollable=";
 static const std::string TOP_PIVOT_PATTERN = ";top_pivot=";
@@ -109,339 +112,16 @@ static std::string lastMenuMode = "";
 static std::string lastKeyName = "";
 static bool hideUserGuide = false;
 
+static std::string lastCommandMode;
+
+
 static std::unordered_map<std::string, std::string> selectedFooterDict;
 
 static std::shared_ptr<tsl::elm::ListItem> selectedListItem;
 static std::shared_ptr<tsl::elm::ListItem> lastSelectedListItem;
+static std::shared_ptr<tsl::elm::ListItem> forwarderListItem;
 
 static bool lastRunningInterpreter = false;
-
-
-
-
-
-//struct CommandOptions {
-//    bool& inEristaSection;
-//    bool& inMarikoSection;
-//    bool& usingErista;
-//    bool& usingMariko;
-//    std::string& commandName;
-//    std::string& commandSystem;
-//    std::string& commandMode;
-//    std::string& commandGrouping;
-//    std::string& currentSection;
-//    std::string& pathPattern;
-//    std::string& sourceType;
-//    std::string& pathPatternOn;
-//    std::string& sourceTypeOn;
-//    std::string& pathPatternOff;
-//    std::string& sourceTypeOff;
-//    std::string& defaultToggleState;
-//    bool& hideTableBackground;
-//    size_t& tableStartGap;
-//    size_t& tableEndGap;
-//    size_t& tableColumnOffset;
-//    size_t& tableSpacing;
-//    std::string& tableSectionTextColor;
-//    std::string& tableInfoTextColor;
-//    std::string& tableAlignment;
-//    s16& minValue;
-//    s16& maxValue;
-//    std::string& units;
-//    size_t& steps;
-//    bool& unlockedTrackbar;
-//    bool& onEveryTick;
-//
-//    std::string& packageSource;
-//    std::string& packagePath;
-//    std::string& filePath;
-//    std::string& iniFilePath;
-//    std::vector<std::string>& filesList;
-//    std::vector<std::string>& filesListOn;
-//    std::vector<std::string>& filesListOff;
-//    std::vector<std::string>& filterList;
-//    std::vector<std::string>& filterListOn;
-//    std::vector<std::string>& filterListOff;
-//    std::string& jsonString;
-//    std::string& jsonStringOn;
-//    std::string& jsonStringOff;
-//    std::string& jsonKey;
-//    std::string& jsonKeyOn;
-//    std::string& jsonKeyOff;
-//    std::string& jsonPath;
-//    std::string& jsonPathOn;
-//    std::string& jsonPathOff;
-//    std::string& listPath;
-//    std::string& listPathOn;
-//    std::string& listPathOff;
-//    std::string& listString;
-//    std::string& listStringOn;
-//    std::string& listStringOff;
-//    std::string& iniPath;
-//    std::string& iniPathOn;
-//    std::string& iniPathOff;
-//};
-//
-//struct CommandData {
-//    std::vector<std::vector<std::string>>& commands;
-//    std::vector<std::vector<std::string>>& commandsOn;
-//    std::vector<std::vector<std::string>>& commandsOff;
-//    std::vector<std::vector<std::string>>& tableData;
-//};
-//
-//
-//
-//void processCommands(CommandOptions& options, CommandData& data) {
-//    options.inEristaSection = false;
-//    options.inMarikoSection = false;
-//    size_t delimiterPos;
-//
-//    // Remove all empty command strings
-//    data.commands.erase(std::remove_if(data.commands.begin(), data.commands.end(),
-//        [](const std::vector<std::string>& vec) {
-//            return vec.empty();
-//        }),
-//        data.commands.end());
-//
-//    // Initial processing of commands
-//    std::string iniFilePath;
-//    std::string commandNameLower;
-//
-//    for (auto& cmd : data.commands) {
-//        options.commandName = cmd[0];
-//
-//        commandNameLower = stringToLowercase(options.commandName);
-//        if (commandNameLower == "erista:") {
-//            options.inEristaSection = true;
-//            options.inMarikoSection = false;
-//            continue;
-//        } else if (commandNameLower == "mariko:") {
-//            options.inEristaSection = false;
-//            options.inMarikoSection = true;
-//            continue;
-//        }
-//
-//        if ((options.inEristaSection && !options.inMarikoSection && options.usingErista) || 
-//            (!options.inEristaSection && options.inMarikoSection && options.usingMariko) || 
-//            (!options.inEristaSection && !options.inMarikoSection)) {
-//
-//            if (options.commandName.find(SYSTEM_PATTERN) == 0) {
-//                options.commandSystem = options.commandName.substr(SYSTEM_PATTERN.length());
-//                if (std::find(commandSystems.begin(), commandSystems.end(), options.commandSystem) == commandSystems.end())
-//                    options.commandSystem = commandSystems[0];
-//                continue;
-//            } else if (options.commandName.find(MODE_PATTERN) == 0) {
-//                options.commandMode = options.commandName.substr(MODE_PATTERN.length());
-//                if (options.commandMode.find(TOGGLE_STR) != std::string::npos) {
-//                    delimiterPos = options.commandMode.find('?');
-//                    if (delimiterPos != std::string::npos) {
-//                        options.defaultToggleState = options.commandMode.substr(delimiterPos + 1);
-//                    }
-//                    options.commandMode = TOGGLE_STR;
-//                } else if (std::find(commandModes.begin(), commandModes.end(), options.commandMode) == commandModes.end()) {
-//                    options.commandMode = commandModes[0];
-//                }
-//                continue;
-//            } else if (options.commandName.find(GROUPING_PATTERN) == 0) {
-//                options.commandGrouping = options.commandName.substr(GROUPING_PATTERN.length());
-//                if (std::find(commandGroupings.begin(), commandGroupings.end(), options.commandGrouping) == commandGroupings.end())
-//                    options.commandGrouping = commandGroupings[0];
-//                continue;
-//            } else if (options.commandName.find(BACKGROUND_PATTERN) == 0) {
-//                options.hideTableBackground = (options.commandName.substr(BACKGROUND_PATTERN.length()) == FALSE_STR);
-//                continue;
-//            } else if (options.commandName.find(GAP_PATTERN) == 0) {
-//                options.tableEndGap = std::stoi(options.commandName.substr(GAP_PATTERN.length()));
-//                continue;
-//            } else if (options.commandName.find(OFFSET_PATTERN) == 0) {
-//                options.tableColumnOffset = std::stoi(options.commandName.substr(OFFSET_PATTERN.length()));
-//                continue;
-//            } else if (options.commandName.find(SPACING_PATTERN) == 0) {
-//                options.tableSpacing = std::stoi(options.commandName.substr(SPACING_PATTERN.length()));
-//                continue;
-//            } else if (options.commandName.find(SECTION_TEXT_COLOR_PATTERN) == 0) {
-//                options.tableSectionTextColor = options.commandName.substr(SECTION_TEXT_COLOR_PATTERN.length());
-//                continue;
-//            } else if (options.commandName.find(INFO_TEXT_COLOR_PATTERN) == 0) {
-//                options.tableInfoTextColor = options.commandName.substr(INFO_TEXT_COLOR_PATTERN.length());
-//                continue;
-//            } else if (options.commandName.find(ALIGNMENT_PATTERN) == 0) {
-//                options.tableAlignment = options.commandName.substr(ALIGNMENT_PATTERN.length());
-//                continue;
-//
-//            } else if (options.commandName.find(MIN_VALUE_PATTERN) == 0) {
-//                options.minValue = std::stoi(options.commandName.substr(MIN_VALUE_PATTERN.length()));
-//                continue;
-//            } else if (options.commandName.find(MAX_VALUE_PATTERN) == 0) {
-//                options.maxValue = std::stoi(options.commandName.substr(MAX_VALUE_PATTERN.length()));
-//                continue;
-//            } else if (options.commandName.find(UNITS_PATTERN) == 0) {
-//                options.units = removeQuotes(options.commandName.substr(UNITS_PATTERN.length()));
-//                continue;
-//            } else if (options.commandName.find(STEPS_PATTERN) == 0) {
-//                options.steps = std::stoi(options.commandName.substr(STEPS_PATTERN.length()));
-//                continue;
-//            } else if (options.commandName.find(UNLOCKED_PATTERN) == 0) {
-//                options.unlockedTrackbar = (options.commandName.substr(UNLOCKED_PATTERN.length()) == TRUE_STR);
-//                continue;
-//            } else if (options.commandName.find(ON_EVERY_TICK_PATTERN) == 0) {
-//                options.onEveryTick = (options.commandName.substr(ON_EVERY_TICK_PATTERN.length()) == TRUE_STR);
-//                continue;
-//            } else if (options.commandName.find(";") == 0) {
-//                continue;
-//            }
-//
-//            if (options.commandMode == TOGGLE_STR) {
-//                if (options.commandName.find("on:") == 0)
-//                    options.currentSection = ON_STR;
-//                else if (options.commandName.find("off:") == 0)
-//                    options.currentSection = OFF_STR;
-//
-//                if (options.currentSection == GLOBAL_STR) {
-//                    data.commandsOn.push_back(cmd);
-//                    data.commandsOff.push_back(cmd);
-//                } else if (options.currentSection == ON_STR) {
-//                    data.commandsOn.push_back(cmd);
-//                } else if (options.currentSection == OFF_STR) {
-//                    data.commandsOff.push_back(cmd);
-//                }
-//            } else if (options.commandMode == TABLE_STR) {
-//                data.tableData.push_back(cmd);
-//                continue;
-//            } else if (options.commandMode == TRACKBAR_STR || options.commandMode == STEP_TRACKBAR_STR || options.commandMode == NAMED_STEP_TRACKBAR_STR) {
-//                //data.commands.push_back(cmd);
-//                continue;
-//            }
-//
-//            if (cmd.size() > 1) {
-//                if (!iniFilePath.empty())
-//                    cmd[1] = replaceIniPlaceholder(cmd[1], INI_FILE_STR, options.iniFilePath);
-//
-//                if (options.commandName == "ini_file") {
-//                    iniFilePath = preprocessPath(cmd[1], options.filePath);
-//                    continue;
-//                } else if (options.commandName == "filter") {
-//                    std::string filterEntry = removeQuotes(cmd[1]);
-//                    if (options.sourceType == FILE_STR)
-//                        filterEntry = preprocessPath(filterEntry, options.filePath);
-//
-//                    if (options.currentSection == GLOBAL_STR)
-//                        options.filterList.push_back(std::move(filterEntry));
-//                    else if (options.currentSection == ON_STR)
-//                        options.filterListOn.push_back(std::move(filterEntry));
-//                    else if (options.currentSection == OFF_STR)
-//                        options.filterListOff.push_back(std::move(filterEntry));
-//                } else if (options.commandName == "file_source") {
-//                    options.sourceType = FILE_STR;
-//                    if (options.currentSection == GLOBAL_STR) {
-//                        //logMessage("cmd[1]: "+cmd[1]);
-//                        options.pathPattern = preprocessPath(cmd[1], options.filePath);
-//                        //logMessage("pathPattern: "+pathPattern);
-//                        std::vector<std::string> newFiles = getFilesListByWildcards(options.pathPattern);
-//                        options.filesList.insert(options.filesList.end(), newFiles.begin(), newFiles.end()); // Append new files
-//                    } else if (options.currentSection == ON_STR) {
-//                        options.pathPatternOn = preprocessPath(cmd[1], options.filePath);
-//                        std::vector<std::string> newFilesOn = getFilesListByWildcards(options.pathPatternOn);
-//                        options.filesListOn.insert(options.filesListOn.end(), newFilesOn.begin(), newFilesOn.end()); // Append new files
-//                        options.sourceTypeOn = FILE_STR;
-//                    } else if (options.currentSection == OFF_STR) {
-//                        options.pathPatternOff = preprocessPath(cmd[1], options.filePath);
-//                        std::vector<std::string> newFilesOff = getFilesListByWildcards(options.pathPatternOff);
-//                        options.filesListOff.insert(options.filesListOff.end(), newFilesOff.begin(), newFilesOff.end()); // Append new files
-//                        options.sourceTypeOff = FILE_STR;
-//                    }
-//                } else if (options.commandName == "json_file_source") {
-//                    options.sourceType = JSON_FILE_STR;
-//                    if (options.currentSection == GLOBAL_STR) {
-//                        options.jsonPath = preprocessPath(cmd[1], options.filePath);
-//                        if (cmd.size() > 2)
-//                            options.jsonKey = cmd[2];
-//                    } else if (options.currentSection == ON_STR) {
-//                        options.jsonPathOn = preprocessPath(cmd[1], options.filePath);
-//                        options.sourceTypeOn = JSON_FILE_STR;
-//                        if (cmd.size() > 2)
-//                            options.jsonKeyOn = cmd[2];
-//                    } else if (options.currentSection == OFF_STR) {
-//                        options.jsonPathOff = preprocessPath(cmd[1], options.filePath);
-//                        options.sourceTypeOff = JSON_FILE_STR;
-//                        if (cmd.size() > 2)
-//                            options.jsonKeyOff = cmd[2];
-//                    }
-//                } else if (options.commandName == "list_file_source") {
-//                    options.sourceType = LIST_FILE_STR;
-//                    if (options.currentSection == GLOBAL_STR) {
-//                        options.listPath = preprocessPath(cmd[1], options.filePath);
-//                    } else if (options.currentSection == ON_STR) {
-//                        options.listPathOn = preprocessPath(cmd[1], options.filePath);
-//                        options.sourceTypeOn = LIST_FILE_STR;
-//                    } else if (options.currentSection == OFF_STR) {
-//                        options.listPathOff = preprocessPath(cmd[1], options.filePath);
-//                        options.sourceTypeOff = LIST_FILE_STR;
-//                    }
-//                } else if (options.commandName == "list_source") {
-//                    options.sourceType = LIST_STR;
-//                    if (options.currentSection == GLOBAL_STR) {
-//                        options.listString = removeQuotes(cmd[1]);
-//                    } else if (options.currentSection == ON_STR) {
-//                        options.listStringOn = removeQuotes(cmd[1]);
-//                        options.sourceTypeOn = LIST_STR;
-//                    } else if (options.currentSection == OFF_STR) {
-//                        options.listStringOff = removeQuotes(cmd[1]);
-//                        options.sourceTypeOff = LIST_STR;
-//                    }
-//                } else if (options.commandName == "ini_file_source") {
-//                    options.sourceType = INI_FILE_STR;
-//                    if (options.currentSection == GLOBAL_STR) {
-//                        options.iniPath = preprocessPath(cmd[1], options.filePath);
-//                    } else if (options.currentSection == ON_STR) {
-//                        options.iniPathOn = preprocessPath(cmd[1], options.filePath);
-//                        options.sourceTypeOn = INI_FILE_STR;
-//                    } else if (options.currentSection == OFF_STR) {
-//                        options.iniPathOff = preprocessPath(cmd[1], options.filePath);
-//                        options.sourceTypeOff = INI_FILE_STR;
-//                    }
-//                } else if (options.commandName == "json_source") {
-//                    options.sourceType = JSON_STR;
-//                    if (options.currentSection == GLOBAL_STR) {
-//                        options.jsonString = removeQuotes(cmd[1]);
-//                        if (cmd.size() > 2)
-//                            options.jsonKey = removeQuotes(cmd[2]);
-//                    } else if (options.currentSection == ON_STR) {
-//                        options.jsonStringOn = removeQuotes(cmd[1]);
-//                        options.sourceTypeOn = JSON_STR;
-//                        if (cmd.size() > 2)
-//                            options.jsonKeyOn = removeQuotes(cmd[2]);
-//                    } else if (options.currentSection == OFF_STR) {
-//                        options.jsonStringOff = removeQuotes(cmd[1]);
-//                        options.sourceTypeOff = JSON_STR;
-//                        if (cmd.size() > 2)
-//                            options.jsonKeyOff = removeQuotes(cmd[2]);
-//                    }
-//                }
-//            }
-//
-//            if (cmd.size() > 1) {
-//                if (options.commandName == "file_source") {
-//                    if (options.currentSection == GLOBAL_STR) {
-//                        options.pathPattern = preprocessPath(cmd[1], options.packagePath);
-//                        options.sourceType = FILE_STR;
-//                    } else if (options.currentSection == ON_STR) {
-//                        options.pathPatternOn = preprocessPath(cmd[1], options.packagePath);
-//                        options.sourceTypeOn = FILE_STR;
-//                    } else if (options.currentSection == OFF_STR) {
-//                        options.pathPatternOff = preprocessPath(cmd[1], options.packagePath);
-//                        options.sourceTypeOff = FILE_STR;
-//                    }
-//                } else if (options.commandName == "package_source") {
-//                    options.packageSource = preprocessPath(cmd[1], options.packagePath);
-//                }
-//            }
-//        }
-//    }
-//}
-
-
-
 
 
 
@@ -499,7 +179,7 @@ bool handleRunningInterpreter(uint64_t& keysHeld) {
         int currentPercentage = percentage.load(std::memory_order_acquire);
         if (currentPercentage != -1) {
             if (currentPercentage != lastPercentage) {
-                lastSelectedListItem->setValue(symbol + " " + std::to_string(currentPercentage) + "%");
+                lastSelectedListItem->setValue(symbol + " " + ult::to_string(currentPercentage) + "%");
                 lastPercentage = currentPercentage;
                 lastSymbol = symbol;
             }
@@ -557,31 +237,6 @@ private:
     std::string comboLabel;
     std::string lastSelectedListItemFooter = "";
     bool rightAlignmentState;
-
-    //void addToggleListItem(std::unique_ptr<tsl::elm::List>& list, const std::string& title, bool state, const std::string& key) {
-    //    auto toggleListItem = std::make_unique<tsl::elm::ToggleListItem>(title, state, ON, OFF);
-    //    toggleListItem->setStateChangedListener([listItemRaw = toggleListItem.get(), key](bool state) {
-    //        tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemRaw, tsl::FocusDirection::None);
-    //        setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, key, state ? FALSE_STR : TRUE_STR);
-    //        reinitializeWidgetVars();
-    //        redrawWidget = true;
-    //    });
-    //    list->addItem(toggleListItem.release());
-    //}
-
-    // Helper function to add toggle list items
-    //void addToggleItem(std::unique_ptr<tsl::elm::List>& list, const std::string& title, bool& stateVar, const std::string& iniKey, const std::function<void()>& onChangeCallback = nullptr) {
-    //    auto toggleListItem = std::make_unique<tsl::elm::ToggleListItem>(title, stateVar, ON, OFF);
-    //    toggleListItem->setStateChangedListener([listItemRaw = toggleListItem.get(), &stateVar, iniKey, onChangeCallback](bool state) mutable {
-    //        tsl::Overlay::get()->getCurrentGui()->requestFocus(listItemRaw, tsl::FocusDirection::None);
-    //        setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, iniKey, state ? TRUE_STR : FALSE_STR);
-    //        if (stateVar != state) {
-    //            stateVar = state;
-    //            if (onChangeCallback) onChangeCallback();
-    //        }
-    //    });
-    //    list->addItem(toggleListItem.release());
-    //}
 
     void addListItem(std::unique_ptr<tsl::elm::List>& list, const std::string& title, const std::string& value, const std::string& targetMenu) {
         auto listItem = std::make_unique<tsl::elm::ListItem>(title);
@@ -1208,14 +863,6 @@ public:
             useOpaqueScreenshots = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "opaque_screenshots") == TRUE_STR);
             createToggleListItem(list, OPAQUE_SCREENSHOTS, useOpaqueScreenshots, "opaque_screenshots");
             
-            //std::vector<std::vector<std::string>> commands = {
-            //    {"set-ini-value", ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "overscan", "{value}"}
-            //};
-            //
-            //list->addItem(new tsl::elm::TrackBarV2(TV_OVERSCAN, PACKAGE_PATH, 80, 100, "%", interpretAndExecuteCommands, getSourceReplacement, commands, "overscan", false, false, -1, false, false));
-
-            //progressAnimation = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "progress_animation") == TRUE_STR);
-            //createToggleListItem(list, PROGRESS_ANIMATION, progressAnimation, "progress_animation");
         
         } else {
             addBasicListItem(list, FAILED_TO_OPEN + ": " + settingsIniPath);
@@ -1240,11 +887,6 @@ public:
             lastRunningInterpreter = false;
             return true;
         }
-
-        //if (refreshWallpaper.load(std::memory_order_acquire)) {
-        //    reloadWallpaper();
-        //    refreshWallpaper.store(false, std::memory_order_release);
-        //}
 
         if (inSettingsMenu && !inSubSettingsMenu) {
             if (!returningToSettings) {
@@ -1493,7 +1135,7 @@ public:
             for (int i = 0; i <= MAX_PRIORITY; ++i) {
                 createAndAddListItem(
                     list,
-                    std::to_string(i),
+                    ult::to_string(i),
                     priorityValue,
                     settingsIniPath,
                     entryName
@@ -1533,7 +1175,11 @@ public:
             //resetPercentages();
             
             isDownloadCommand = false;
-            lastSelectedListItem->setValue(commandSuccess ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
+            if (lastCommandMode == OPTION_STR)
+                lastSelectedListItem->setValue(commandSuccess ? "footer" : CROSSMARK_SYMBOL);
+            else
+                lastSelectedListItem->setValue(commandSuccess ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
+
             closeInterpreterThread();
             lastRunningInterpreter = false;
             return true;
@@ -1721,7 +1367,6 @@ public:
         if (packageName == ".packages") packageName = ROOT_PACKAGE;
         else if (!packageRootLayerTitle.empty()) packageName = packageRootLayerTitle;
         auto list = std::make_unique<tsl::elm::List>();
-
         
 		
 		bool noClickableItems = false;
@@ -1735,7 +1380,7 @@ public:
 				if (command[0] == "try:") {
             		tryCount++;
             		index++;
-            		addHeader(list, specificKey+" (Try #"+std::to_string(tryCount)+")");
+            		addHeader(list, specificKey+" (Try #"+ult::to_string(tryCount)+")");
             		continue;
             	}
 				if (command[0] == "on:") {
@@ -1798,7 +1443,7 @@ public:
         std::string packageVersion = isFromMainMenu ? "" : packageRootLayerVersion;
         
         auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(packageName,
-        	!lastPackageHeader.empty() ? lastPackageHeader + "(Ultrahand Script*)" : (packageVersion.empty() ? CAPITAL_ULTRAHAND_PROJECT_NAME + " Script" : packageVersion + "   (" + CAPITAL_ULTRAHAND_PROJECT_NAME + " Script)"),
+        	!lastPackageHeader.empty() ? lastPackageHeader + "?Ultrahand Script" : (packageVersion.empty() ? CAPITAL_ULTRAHAND_PROJECT_NAME + " Script" : packageVersion + "   (" + CAPITAL_ULTRAHAND_PROJECT_NAME + " Script)"),
         	noClickableItems);
         rootFrame->setContent(list.release());
         return rootFrame.release();
@@ -1949,6 +1594,8 @@ private:
     std::string jsonString, jsonStringOn, jsonStringOff;
     std::vector<std::string> selectedItemsList;
 
+    bool isMini = false;
+
 public:
     SelectionOverlay(const std::string& path, const std::string& key = "", const std::vector<std::vector<std::string>>& cmds = {}, const std::string& footerKey = "", const std::string& _lastPackageHeader = "")
         : filePath(path), specificKey(key), commands(std::move(cmds)), specifiedFooterKey(footerKey), lastPackageHeader(_lastPackageHeader) {
@@ -1960,11 +1607,6 @@ public:
     }
 
     void processSelectionCommands() {
-        //commands.erase(std::remove_if(commands.begin(), commands.end(),
-        //    [](const std::vector<std::string>& vec) {
-        //        return vec.empty();
-        //    }),
-        //    commands.end());
         removeEmptyCommands(commands);
 
         bool inEristaSection = false;
@@ -1975,6 +1617,8 @@ public:
         std::string commandName;
         std::string filterEntry;
         std::vector<std::string> newFiles, newFilesOn, newFilesOff;
+
+        
 
         for (auto& cmd : commands) {
             commandName = cmd[0];
@@ -2002,6 +1646,8 @@ public:
                     commandGrouping = commandName.substr(GROUPING_PATTERN.length());
                     if (std::find(commandGroupings.begin(), commandGroupings.end(), commandGrouping) == commandGroupings.end())
                         commandGrouping = commandGroupings[0];
+                } else if (commandName.find(SELECTION_MINI_PATTERN) == 0) {
+                    isMini = (commandName.substr(SELECTION_MINI_PATTERN.length()) == TRUE_STR);
                 }
 
                 if (commandMode == TOGGLE_STR) {
@@ -2159,16 +1805,6 @@ public:
     }
 
     virtual tsl::elm::Element* createUI() override {
-        //filesList.clear();
-        //filesListOn.clear();
-        //filesListOff.clear();
-        //filterList.clear();
-        //filterListOn.clear();
-        //filterListOff.clear();
-        //currentSelectedItems.clear();
-        //isInitialized.clear();
-        //selectedItemsList.clear();
-
 
         inSelectionMenu = true;
         PackageHeader packageHeader = getPackageHeaderFromIni(filePath + PACKAGE_FILENAME);
@@ -2380,7 +2016,7 @@ public:
                     dropExtension(footer);
                 }
 
-                listItem = std::make_unique<tsl::elm::ListItem>(itemName);
+                listItem = std::make_unique<tsl::elm::ListItem>(itemName, "", isMini);
 
                 // for handling footers that use translations / replacements
                 applyLangReplacements(footer, true);
@@ -2410,7 +2046,7 @@ public:
                     listItem->setValue(footer, true);
                 }
 
-                listItem->setClickListener([this, i, footer, listItemRaw = listItem.get(), _currentPackageHeader = currentPackageHeader](uint64_t keys) {
+                listItem->setClickListener([this, i, selectedItem, footer, listItemRaw = listItem.get(), _currentPackageHeader = currentPackageHeader](uint64_t keys) {
                     //listItemPtr = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*) {})](uint64_t keys) {
 
                     if (runningInterpreter.load(std::memory_order_acquire)) {
@@ -2440,6 +2076,8 @@ public:
                             //std::string footerStr = std::string(footer);
                             lastSelectedListItemFooter = footer;
                         }
+                        //lastCommandMode = commandMode;
+                        //lastKeyName = selectedItem;
 
                         lastSelectedListItem.reset();
                         lastSelectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItemRaw, [](auto*) {});
@@ -2452,15 +2090,6 @@ public:
                     }
 
                     else if (keys & SCRIPT_KEY) {
-                        //bool isFromMainMenu = (packagePath == PACKAGE_PATH);
-                        //if (inMainMenu) {
-                        //    isFromMainMenu = true;
-                        //    inMainMenu = false;
-                        //}
-                        //if (inPackageMenu)
-                        //    inPackageMenu = false;
-                        //if (inSubPackageMenu)
-                        //    inSubPackageMenu = false;
                         inSelectionMenu = false;
 
                         auto modifiedCmds = getSourceReplacement(commands, selectedItemsList[i], i, filePath);
@@ -2475,7 +2104,7 @@ public:
                 list->addItem(listItem.release());
 
             } else if (commandMode == TOGGLE_STR) {
-                auto toggleListItem = std::make_unique<tsl::elm::ToggleListItem>(itemName, false, ON, OFF);
+                auto toggleListItem = std::make_unique<tsl::elm::ToggleListItem>(itemName, false, ON, OFF, isMini);
 
                 bool toggleStateOn = std::find(selectedItemsListOn.begin(), selectedItemsListOn.end(), selectedItem) != selectedItemsListOn.end();
                 toggleListItem->setState(toggleStateOn);
@@ -2540,7 +2169,7 @@ public:
                                 currentSelectedItems[i] = updatedFileSource;
                                 
                                 // Debug logging
-                                //logMessage("Updated file source for index " + std::to_string(i) + ": " + updatedFileSource);
+                                //logMessage("Updated file source for index " + ult::to_string(i) + ": " + updatedFileSource);
                             } else {
                                 //logMessage("Wildcard '*' not found in file source.");
                             }
@@ -2630,6 +2259,43 @@ public:
             lastRunningInterpreter = false;
             return true;
         }
+
+        //if (lastRunningInterpreter) {
+        //    //while (!interpreterThreadExit.load(std::memory_order_acquire)) {svcSleepThread(50'000'000);}
+        //    
+        //    //resetPercentages();
+        //    
+        //    isDownloadCommand = false;
+        //    if (lastCommandMode == OPTION_STR) {
+        //        if (commandSuccess) {
+        //            //if (isFileOrDirectory(packageConfigIniPath)) {
+        //            //    auto packageConfigData = getParsedDataFromIniFile(packageConfigIniPath);
+        //            //    auto it = packageConfigData.find(lastKeyName);
+        //            //    if (it != packageConfigData.end()) {
+        //            //        auto& optionSection = it->second;
+        //            //        auto footerIt = optionSection.find(FOOTER_STR);
+        //            //        if (footerIt != optionSection.end() && (footerIt->second.find(NULL_STR) == std::string::npos)) {
+        //            //            lastSelectedListItem->setValue(footerIt->second);
+        //            //        }
+        //            //    }
+        //            //    lastSelectedListItem.reset();
+        //            //    lastCommandMode = "";
+        //            //} else {
+        //            //    lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
+        //            //}
+        //            lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
+        //        } else {
+        //            lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
+        //        }
+        //    }
+        //    else
+        //        lastSelectedListItem->setValue(commandSuccess ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
+        //    
+        //    closeInterpreterThread();
+        //    lastRunningInterpreter = false;
+        //    return true;
+        //}
+
 
         if (refreshPage && !stillTouching) {
             tsl::goBack();
@@ -2838,23 +2504,6 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
     bool onlyTables = true;
     //bool lastItemIsScrollableTable = false;
 
-    // Pack variables into structs
-
-    // All empty values
-    //std::string filepath, iniFilePath;
-    //std::vector<std::string> filesList, filesListOn, filesListOff, filterList, filterListOn, filterListOff;
-    //std::string jsonString, jsonStringOn, jsonStringOff, listPath, listPathOn, listPathOff, listString, listStringOn, listStringOff, iniPath, iniPathOn, iniPathOff;
-    //
-    //
-    //CommandOptions cmdOptions = {inEristaSection, inMarikoSection, usingErista, usingMariko, commandName, commandSystem,
-    //                          commandMode, commandGrouping, currentSection, pathPattern, sourceType, pathPatternOn,
-    //                          sourceTypeOn, pathPatternOff, sourceTypeOff, defaultToggleState, hideTableBackground,
-    //                          tableStartGap, tableEndGap, tableColumnOffset, tableSpacing, tableSectionTextColor, tableInfoTextColor, tableAlignment,
-    //                          minValue, maxValue, units, steps, unlockedTrackbar, onEveryTick, packageSource, packagePath,
-    //                          filepath, iniFilePath, filesList, filesListOn, filesListOff, filterList, filterListOn, filterListOff,
-    //                          jsonString, jsonStringOn, jsonStringOff, jsonKey, jsonKeyOn, jsonKeyOff, jsonPath, jsonPathOn, jsonPathOff, listPath, listPathOn, listPathOff, listString, listStringOn, listStringOff, iniPath, iniPathOn, iniPathOff};
-    //
-    //CommandData cmdData = {commands, commandsOn, commandsOff, tableData};
     std::vector<std::string> entryList;
 
     std::string commandNameLower;
@@ -2862,6 +2511,8 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
     std::string cleanOptionName;
 
     std::string lastPackageHeader;
+
+    bool isMini;
 
     for (size_t i = 0; i < options.size(); ++i) {
         auto& option = options[i];
@@ -2871,6 +2522,9 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
         
         footer = "";
         useSelection = false;
+
+        isMini = false;
+
         // Table settings
         
         isScrollableTable = false;
@@ -2973,14 +2627,14 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                             footer = commandFooter;
                             cleanOptionName = optionName.substr(1);
                             removeTag(cleanOptionName);
-                            listItem = std::make_unique<tsl::elm::ListItem>(cleanOptionName);
+                            listItem = std::make_unique<tsl::elm::ListItem>(cleanOptionName, "", isMini);
                             listItem->setValue(footer);
                         } else {
                             footer = DROPDOWN_SYMBOL;
                             cleanOptionName = optionName.substr(1);
                             removeTag(cleanOptionName);
                             // Create reference to PackageMenu with dropdownSection set to optionName
-                            listItem = std::make_unique<tsl::elm::ListItem>(cleanOptionName, footer);
+                            listItem = std::make_unique<tsl::elm::ListItem>(cleanOptionName, footer, isMini);
                         }
                         
                         if (packageMenuMode) {
@@ -3145,6 +2799,8 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                         if (std::find(commandGroupings.begin(), commandGroupings.end(), commandGrouping) == commandGroupings.end())
                             commandGrouping = commandGroupings[0];
                         continue;
+                    } else if (commandName.find(MINI_PATTERN) == 0) {
+                        isMini = (commandName.substr(MINI_PATTERN.length()) == TRUE_STR);
                     } else if (commandName.find(SCROLLABLE_PATTERN) == 0) {
                         isScrollableTable = (commandName.substr(SCROLLABLE_PATTERN.length()) == TRUE_STR);
                         continue;
@@ -3161,19 +2817,19 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                         useHeaderIndent = (commandName.substr(HEADER_INDENT_PATTERN.length()) == TRUE_STR);
                         continue;
                     } else if (commandName.find(START_GAP_PATTERN) == 0) {
-                        tableStartGap = std::stoi(commandName.substr(START_GAP_PATTERN.length()));
+                        tableStartGap = ult::stoi(commandName.substr(START_GAP_PATTERN.length()));
                         continue;
                     } else if (commandName.find(END_GAP_PATTERN) == 0) {
-                        tableEndGap = std::stoi(commandName.substr(END_GAP_PATTERN.length()));
+                        tableEndGap = ult::stoi(commandName.substr(END_GAP_PATTERN.length()));
                         continue;
                     } else if (commandName.find(END_GAP_PATTERN_ALIAS) == 0) {
-                        tableEndGap = std::stoi(commandName.substr(END_GAP_PATTERN_ALIAS.length()));
+                        tableEndGap = ult::stoi(commandName.substr(END_GAP_PATTERN_ALIAS.length()));
                         continue;
                     } else if (commandName.find(OFFSET_PATTERN) == 0) {
-                        tableColumnOffset = std::stoi(commandName.substr(OFFSET_PATTERN.length()));
+                        tableColumnOffset = ult::stoi(commandName.substr(OFFSET_PATTERN.length()));
                         continue;
                     } else if (commandName.find(SPACING_PATTERN) == 0) {
-                        tableSpacing = std::stoi(commandName.substr(SPACING_PATTERN.length()));
+                        tableSpacing = ult::stoi(commandName.substr(SPACING_PATTERN.length()));
                         continue;
                     } else if (commandName.find(SECTION_TEXT_COLOR_PATTERN) == 0) {
                         tableSectionTextColor = commandName.substr(SECTION_TEXT_COLOR_PATTERN.length());
@@ -3191,17 +2847,17 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                         useWrappingIndent = (commandName.substr(WRAPPING_INDENT_PATTERN.length()) == TRUE_STR);
                         continue;
                     } else if (commandName.find(MIN_VALUE_PATTERN) == 0) {
-                        minValue = std::stoi(commandName.substr(MIN_VALUE_PATTERN.length()));
+                        minValue = ult::stoi(commandName.substr(MIN_VALUE_PATTERN.length()));
                         continue;
                     } else if (commandName.find(MAX_VALUE_PATTERN) == 0) {
-                        maxValue = std::stoi(commandName.substr(MAX_VALUE_PATTERN.length()));
+                        maxValue = ult::stoi(commandName.substr(MAX_VALUE_PATTERN.length()));
                         continue;
                     } else if (commandName.find(UNITS_PATTERN) == 0) {
                         units = commandName.substr(UNITS_PATTERN.length());
                         removeQuotes(units);
                         continue;
                     } else if (commandName.find(STEPS_PATTERN) == 0) {
-                        steps = std::stoi(commandName.substr(STEPS_PATTERN.length()));
+                        steps = ult::stoi(commandName.substr(STEPS_PATTERN.length()));
                         continue;
                     } else if (commandName.find(UNLOCKED_PATTERN) == 0) {
                         unlockedTrackbar = (commandName.substr(UNLOCKED_PATTERN.length()) == TRUE_STR);
@@ -3351,7 +3007,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
 				        std::string indexStr = parseValueFromIniSection(packagePath+"config.ini", keyName, "index");
 
 				        // Handle the commands and placeholders for the trackbar
-				        auto modifiedCmds = getSourceReplacement(commands, keyName, std::stoi(indexStr), packagePath);
+				        auto modifiedCmds = getSourceReplacement(commands, keyName, ult::stoi(indexStr), packagePath);
 
                         //auto modifiedCmds = getSourceReplacement(commands, valueStr, m_index, m_packagePath);
                         
@@ -3411,7 +3067,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
 						if (!isValidNumber(indexStr))
 							indexStr = "0";
 					    // Get and modify the commands with the appropriate replacements
-					    auto modifiedCmds = getSourceReplacement(commands, keyName, std::stoi(indexStr), packagePath);
+					    auto modifiedCmds = getSourceReplacement(commands, keyName, ult::stoi(indexStr), packagePath);
 						
 					    // Placeholder replacement for value and index
 					    const std::string valuePlaceholder = "{value}";
@@ -3543,7 +3199,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
 					        indexStr = "0";
 					
 					    // Ensure the index is within the bounds of the entryList
-					    size_t entryIndex = std::min(static_cast<size_t>(std::stoi(indexStr)), entryList.size() - 1);
+					    size_t entryIndex = std::min(static_cast<size_t>(ult::stoi(indexStr)), entryList.size() - 1);
 					    valueStr = entryList[entryIndex];  // Update valueStr based on the current entry in the list
 					
 					    // Get and modify the commands with the appropriate replacements
@@ -3588,12 +3244,12 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                         //    footer = commandFooter;
                         cleanOptionName = optionName;
                         removeTag(cleanOptionName);
-                        listItem = std::make_unique<tsl::elm::ListItem>(cleanOptionName, footer);
+                        listItem = std::make_unique<tsl::elm::ListItem>(cleanOptionName, footer, isMini);
                     }
                     else {
                         cleanOptionName = optionName;
                         removeTag(cleanOptionName);
-                        listItem = std::make_unique<tsl::elm::ListItem>(cleanOptionName);
+                        listItem = std::make_unique<tsl::elm::ListItem>(cleanOptionName, "", isMini);
 
                         if (commandMode == OPTION_STR)
                             listItem->setValue(footer);
@@ -3607,7 +3263,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
 
                         const std::string& forwarderPackagePath = getParentDirFromPath(packageSource);
                         const std::string& forwarderPackageIniName = getNameFromPath(packageSource);
-                        listItem->setClickListener([commands, keyName = option.first, dropdownSection, packagePath,
+                        listItem->setClickListener([commands, keyName = option.first, dropdownSection, packagePath, listItemRaw = listItem.get(),
                         	forwarderPackagePath, forwarderPackageIniName, _lastPackageHeader = lastPackageHeader](s64 keys) mutable {
                             if (simulatedSelect && !simulatedSelectComplete) {
                                 keys |= KEY_A;
@@ -3628,6 +3284,13 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                                     lastPackageMenu = "packageMenu";
                                 else
                                     lastPackageMenu = "subPackageMenu";
+
+                                // set forwarder pointer for updating
+								forwarderListItem.reset();
+                                forwarderListItem = std::shared_ptr<tsl::elm::ListItem>(listItemRaw, [](auto*) {});
+                                lastCommandMode = FORWARDER_STR;
+                                lastKeyName = keyName;
+
                                 allowSlide = unlockedSlide = false;
                                 tsl::changeTo<PackageMenu>(forwarderPackagePath, "", LEFT_STR, forwarderPackageIniName, nestedMenuCount, _lastPackageHeader);
                                 simulatedSelectComplete = true;
@@ -3746,7 +3409,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                     if (commandMode == DEFAULT_STR  || commandMode == SLOT_STR || commandMode == OPTION_STR) { // for handiling toggles
                         cleanOptionName = optionName;
                         removeTag(cleanOptionName);
-                        listItem = std::make_unique<tsl::elm::ListItem>(cleanOptionName);
+                        listItem = std::make_unique<tsl::elm::ListItem>(cleanOptionName, "", isMini);
                         if (commandMode == DEFAULT_STR)
                             listItem->setValue(footer, true);
                         else
@@ -3754,7 +3417,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                         
                         
                         listItem->setClickListener([i, commands, keyName = option.first, packagePath, packageName,
-                        	selectedItem, listItemRaw = listItem.get(), _lastPackageHeader = lastPackageHeader](uint64_t keys) {
+                        	selectedItem, listItemRaw = listItem.get(), _lastPackageHeader = lastPackageHeader, commandMode](uint64_t keys) {
                             
                             if (runningInterpreter.load(std::memory_order_acquire)) {
                                 return false;
@@ -3773,7 +3436,9 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                                 lastSelectedListItem.reset();
                                 lastSelectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItemRaw, [](auto*) {});
                                 shiftItemFocus(listItemRaw);
-                                
+                                lastCommandMode = commandMode;
+                                lastKeyName = selectedItem;
+
                                 lastRunningInterpreter = true;
                                 simulatedSelectComplete = true;
                                 lastSelectedListItem->triggerClickAnimation();
@@ -3805,7 +3470,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                     } else if (commandMode == TOGGLE_STR) {
                         cleanOptionName = optionName;
                         removeTag(cleanOptionName);
-                        toggleListItem = std::make_unique<tsl::elm::ToggleListItem>(cleanOptionName, false, ON, OFF);
+                        toggleListItem = std::make_unique<tsl::elm::ToggleListItem>(cleanOptionName, false, ON, OFF, isMini);
                         // Preprocess pathPatternOn and pathPatternOff separately
                         //preprocessPath(pathPatternOn, packagePath);
                         //preprocessPath(pathPatternOff, packagePath);
@@ -3913,6 +3578,10 @@ private:
     size_t nestedLayer = 0;
     std::string pageHeader;
 
+    std::string packageIniPath;
+    std::string packageConfigIniPath;
+    
+
 public:
     /**
      * @brief Constructs a `PackageMenu` instance for a specific sub-menu path.
@@ -3981,8 +3650,8 @@ public:
         
         auto list = std::make_unique<tsl::elm::List>();
 
-        std::string packageIniPath = packagePath + packageName;
-        std::string packageConfigIniPath = packagePath + CONFIG_FILENAME;
+        packageIniPath = packagePath + packageName;
+        packageConfigIniPath = packagePath + CONFIG_FILENAME;
 
         PackageHeader packageHeader = getPackageHeaderFromIni(packageIniPath);
         
@@ -4041,6 +3710,23 @@ public:
         //);
     }
     
+
+    void handleForwarderFooter() {
+        if (lastCommandMode == FORWARDER_STR && isFileOrDirectory(packageConfigIniPath)) {
+            auto packageConfigData = getParsedDataFromIniFile(packageConfigIniPath);
+            auto it = packageConfigData.find(lastKeyName);
+            if (it != packageConfigData.end()) {
+                auto& optionSection = it->second;
+                auto footerIt = optionSection.find(FOOTER_STR);
+                if (footerIt != optionSection.end() && (footerIt->second.find(NULL_STR) == std::string::npos)) {
+                    forwarderListItem->setValue(footerIt->second);
+                }
+            }
+            forwarderListItem.reset();
+            lastCommandMode = "";
+        }
+    }
+
     /**
      * @brief Handles user input for the sub-menu overlay.
      *
@@ -4059,17 +3745,53 @@ public:
         if (runningInterpreter.load(std::memory_order_acquire)) {
             return handleRunningInterpreter(keysHeld);
         }
+        //if (lastRunningInterpreter) {
+        //    //while (!interpreterThreadExit.load(std::memory_order_acquire)) {svcSleepThread(50'000'000);}
+        //    
+        //    //resetPercentages();
+        //    
+        //    isDownloadCommand = false;
+        //    lastSelectedListItem->setValue(commandSuccess ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
+        //    closeInterpreterThread();
+        //    lastRunningInterpreter = false;
+        //    return true;
+        //}
+
         if (lastRunningInterpreter) {
             //while (!interpreterThreadExit.load(std::memory_order_acquire)) {svcSleepThread(50'000'000);}
             
             //resetPercentages();
             
             isDownloadCommand = false;
-            lastSelectedListItem->setValue(commandSuccess ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
+            if (lastCommandMode == OPTION_STR) {
+                if (commandSuccess) {
+                    if (isFileOrDirectory(packageConfigIniPath)) {
+                        auto packageConfigData = getParsedDataFromIniFile(packageConfigIniPath);
+                        auto it = packageConfigData.find(lastKeyName);
+                        if (it != packageConfigData.end()) {
+                            auto& optionSection = it->second;
+                            auto footerIt = optionSection.find(FOOTER_STR);
+                            if (footerIt != optionSection.end() && (footerIt->second.find(NULL_STR) == std::string::npos)) {
+                                lastSelectedListItem->setValue(footerIt->second);
+                            }
+                        }
+                        lastSelectedListItem.reset();
+                        lastCommandMode = "";
+                    } else {
+                        lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
+                    }
+                } else {
+                    lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
+                }
+            }
+            else
+                lastSelectedListItem->setValue(commandSuccess ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
+
             closeInterpreterThread();
             lastRunningInterpreter = false;
             return true;
         }
+
         
         if (!returningToPackage && !stillTouching) {
             if (refreshPage) {
@@ -4190,6 +3912,8 @@ public:
                     simulatedBack = false;
                 }
                 if ((keysHeld & KEY_B) && !stillTouching) {
+                    handleForwarderFooter();
+
                     allowSlide = unlockedSlide = false;
                     if (nestedMenuCount == 0) {
                         inPackageMenu = false;
@@ -4223,6 +3947,8 @@ public:
                     simulatedBack = false;
                 }
                 if ((keysHeld & KEY_B) && !stillTouching) {
+                    handleForwarderFooter();
+
                     allowSlide = unlockedSlide = false;
                     if (nestedMenuCount == 0) {
                         inPackageMenu = false;
@@ -4272,6 +3998,8 @@ public:
                     simulatedBack = false;
                 }
                 if ((keysHeld & KEY_B) && !stillTouching) {
+                    handleForwarderFooter();
+
                     allowSlide = unlockedSlide = false;
                     inSubPackageMenu = false;
                     returningToPackage = true;
@@ -4287,6 +4015,8 @@ public:
                     simulatedBack = false;
                 }
                 if ((keysHeld & KEY_B) && !stillTouching) {
+                    handleForwarderFooter();
+
                     allowSlide = unlockedSlide = false;
                     inSubPackageMenu = false;
                     returningToPackage = true;
@@ -4536,6 +4266,24 @@ public:
             std::vector<std::string> overlayFiles = getFilesListByWildcards(OVERLAY_PATH+"*.ovl");
             
             
+            #if NO_FSTREAM_DIRECTIVE
+            
+            // Check if the overlays INI file exists
+            FILE* overlaysIniFile = fopen(OVERLAYS_INI_FILEPATH.c_str(), "r"); // Use .c_str() to convert to const char*
+            if (!overlaysIniFile) {
+                // The INI file doesn't exist, so create an empty one
+                FILE* createFile = fopen(OVERLAYS_INI_FILEPATH.c_str(), "w"); // Use .c_str() here as well
+                if (createFile) {
+                    initializingSpawn = true;
+                    fclose(createFile); // Close the file after creating it
+                }
+            } else {
+                fclose(overlaysIniFile); // Close the file if it exists
+            }
+            
+            
+            #else
+
             // Check if the overlays INI file exists
             std::ifstream overlaysIniFile(OVERLAYS_INI_FILEPATH);
             if (!overlaysIniFile.is_open()) {
@@ -4549,6 +4297,7 @@ public:
 
             overlaysIniFile.close(); // Close the file
 
+            #endif
 
             // load overlayList from OVERLAYS_INI_FILEPATH.  this will be the overlayFilenames
             std::set<std::string> overlayList;
@@ -4818,8 +4567,30 @@ public:
         
         // Packages menu
         if (menuMode == PACKAGES_STR ) {
-            if (!isFileOrDirectory(PACKAGE_PATH+PACKAGE_FILENAME)) {
-                std::ofstream packageFileOut(PACKAGE_PATH+PACKAGE_FILENAME);
+            if (!isFileOrDirectory(PACKAGE_PATH + PACKAGE_FILENAME)) {
+            #if NO_FSTREAM_DIRECTIVE
+                // Using stdio.h functions (FILE* and fprintf)
+                FILE* packageFileOut = fopen((PACKAGE_PATH + PACKAGE_FILENAME).c_str(), "w");
+                if (packageFileOut) {
+                    fprintf(packageFileOut,
+                        "[*Reboot To]\n"
+                        "[*Boot Entry]\n"
+                        "ini_file_source /bootloader/hekate_ipl.ini\n"
+                        "filter config\n"
+                        "reboot boot '{ini_file_source(*)}'\n"
+                        "[hekate]\n"
+                        "reboot HEKATE\n"
+                        "[hekate UMS]\n"
+                        "reboot UMS\n"
+                        "\n[Commands]\n"
+                        "[Shutdown]\n"
+                        "shutdown\n"
+                    );
+                    fclose(packageFileOut); // Close the file after writing
+                }
+            #else
+                // Using ofstream
+                std::ofstream packageFileOut(PACKAGE_PATH + PACKAGE_FILENAME);
                 if (packageFileOut) {
                     packageFileOut <<
                         "[*Reboot To]\n"
@@ -4836,7 +4607,9 @@ public:
                         "shutdown\n";
                     packageFileOut.close();
                 }
+            #endif
             }
+
             inOverlaysPage = false;
             inPackagesPage = true;
 
@@ -4845,6 +4618,21 @@ public:
                 createDirectory(PACKAGE_PATH);
                 
                 
+                #if NO_FSTREAM_DIRECTIVE
+                // Using stdio.h functions (FILE* and fopen)
+                FILE* packagesIniFile = fopen(PACKAGES_INI_FILEPATH.c_str(), "r");
+                if (!packagesIniFile) {
+                    // The file doesn't exist, so create an empty one
+                    FILE* createFile = fopen(PACKAGES_INI_FILEPATH.c_str(), "w");
+                    if (createFile) {
+                        initializingSpawn = true;
+                        fclose(createFile); // Close the file after creating it
+                    }
+                } else {
+                    fclose(packagesIniFile); // Close the file if it exists
+                }
+                #else
+                // Using fstream
                 std::fstream packagesIniFile(PACKAGES_INI_FILEPATH, std::ios::in);
                 if (!packagesIniFile.is_open()) {
                     std::ofstream createFile(PACKAGES_INI_FILEPATH); // Create an empty INI file if it doesn't exist
@@ -4853,6 +4641,8 @@ public:
                 } else {
                     packagesIniFile.close();
                 }
+                #endif
+
                 
                 std::set<std::string> packageList;
                 std::set<std::string> hiddenPackageList;
@@ -5196,17 +4986,53 @@ public:
         if (runningInterpreter.load(std::memory_order_acquire))
             return handleRunningInterpreter(keysHeld);
         
+        //if (lastRunningInterpreter) {
+        //    ////while (!interpreterThreadExit.load(std::memory_order_acquire)) {svcSleepThread(50'000'000);}
+        //    
+        //    //resetPercentages();
+        //    
+        //    isDownloadCommand = false;
+        //    lastSelectedListItem->setValue(commandSuccess ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
+        //    closeInterpreterThread();
+        //    lastRunningInterpreter = false;
+        //    return true;
+        //}
+
         if (lastRunningInterpreter) {
-            ////while (!interpreterThreadExit.load(std::memory_order_acquire)) {svcSleepThread(50'000'000);}
+            //while (!interpreterThreadExit.load(std::memory_order_acquire)) {svcSleepThread(50'000'000);}
             
             //resetPercentages();
             
             isDownloadCommand = false;
-            lastSelectedListItem->setValue(commandSuccess ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
+            if (lastCommandMode == OPTION_STR) {
+                if (commandSuccess) {
+                    if (isFileOrDirectory(packageConfigIniPath)) {
+                        auto packageConfigData = getParsedDataFromIniFile(packageConfigIniPath);
+                        auto it = packageConfigData.find(lastKeyName);
+                        if (it != packageConfigData.end()) {
+                            auto& optionSection = it->second;
+                            auto footerIt = optionSection.find(FOOTER_STR);
+                            if (footerIt != optionSection.end() && (footerIt->second.find(NULL_STR) == std::string::npos)) {
+                                lastSelectedListItem->setValue(footerIt->second);
+                            }
+                        }
+                        lastSelectedListItem.reset();
+                        lastCommandMode = "";
+                    } else {
+                        lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
+                    }
+                } else {
+                    lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
+                }
+            }
+            else
+                lastSelectedListItem->setValue(commandSuccess ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
+
             closeInterpreterThread();
             lastRunningInterpreter = false;
             return true;
         }
+
 
 
         if (refreshPage && !stillTouching) {
@@ -5476,7 +5302,7 @@ public:
      */
     virtual void onShow() override {
         //playClickVibration();
-        //logMessage("onShow isHidden: "+std::to_string(isHidden.load()));
+        //logMessage("onShow isHidden: "+ult::to_string(isHidden.load()));
         //std::string file_path = "sdmc:/config/ultrahand/open.wav";
         //
         //if (play_audio(file_path) != 0) {
@@ -5491,7 +5317,7 @@ public:
      * It can be used to perform actions or updates specific to the overlay's visibility.
      */
     virtual void onHide() override {
-        //logMessage("onHide isHidden: "+std::to_string(isHidden.load()));
+        //logMessage("onHide isHidden: "+ult::to_string(isHidden.load()));
     } 
     
     /**
