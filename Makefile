@@ -214,12 +214,18 @@ all: $(BUILD)
 $(BUILD):
 	@[ -d $@ ] || mkdir -p $@
 	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
-
+	@rm -rf $(CURDIR)/SdOut
+	@mkdir -p $(CURDIR)/SdOut/switch/.overlays
+	@mkdir -p $(CURDIR)/SdOut/config/$(APP_TITLE)/lang
+	@mkdir -p $(CURDIR)/SdOut/config/$(APP_TITLE)/themes
+	@cp -r ovlmenu.ovl $(CURDIR)/SdOut/switch/.overlays/
+	@cp -r $(CURDIR)/lang/* $(CURDIR)/SdOut/config/$(APP_TITLE)/lang/
+	@cp -r $(CURDIR)/themes/* $(CURDIR)/SdOut/config/$(APP_TITLE)/themes/
+	@cd $(CURDIR)/SdOut; zip -r -q -9 $(APP_TITLE).zip switch config; cd $(CURDIR)
 
 #---------------------------------------------------------------------------------
 clean:
-	@rm -fr $(BUILD) $(TARGET).ovl $(TARGET).nro $(TARGET).nacp $(TARGET).elf
-
+	@rm -fr $(BUILD) $(CURDIR)/SdOut $(TARGET).ovl $(TARGET).nro $(TARGET).nacp $(TARGET).elf
 
 #---------------------------------------------------------------------------------
 else

@@ -57,5 +57,7 @@ void smc_reboot_to_payload(void) {
         copy_to_iram(IRAM_PAYLOAD_BASE + i, &g_reboot_payload[i], 0x1000);
     }
 
+    splInitialize();
     splSetConfig((SplConfigItem)65001, 2);
+    splExit();
 }

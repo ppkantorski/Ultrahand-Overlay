@@ -37,7 +37,9 @@ namespace Payload {
             if (R_SUCCEEDED(rc)) {
                 rc = amsBpcSetRebootPayload(g_reboot_payload, IRAM_PAYLOAD_MAX_SIZE);
                 if (R_SUCCEEDED(rc)) {
+                    spsmInitialize();
                     spsmShutdown(true);
+                    spsmExit();
                 }
                 amsBpcExit();
             }
