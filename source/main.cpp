@@ -359,6 +359,15 @@ private:
                 isDownloadCommand = true;
 
                 if (title == UPDATE_ULTRAHAND) {
+                    std::string loaderUrl, loaderPlusUrl;
+                    if (isVersionGreaterOrEqual(amsVersion,"1.8.0")) {
+                        loaderUrl = NX_OVLLOADER_ZIP_URL;
+                        loaderPlusUrl = NX_OVLLOADER_PLUS_ZIP_URL;
+                    } else {
+                        loaderUrl = OLD_NX_OVLLOADER_ZIP_URL;
+                        loaderPlusUrl = OLD_NX_OVLLOADER_PLUS_ZIP_URL;
+                    }
+
                 	interpreterCommands = {
                 	    {"try:"},
                 	    //{"delete", THEMES_PATH+"ultra.ini"},
@@ -368,8 +377,8 @@ private:
                 	    {"delete", targetPath},
                 	    {"download", INCLUDED_THEME_FOLDER_URL+"ultra.ini", THEMES_PATH},
                 	    {"download", INCLUDED_THEME_FOLDER_URL+"classic.ini", THEMES_PATH},
-                	    {"download", NX_OVLLOADER_ZIP_URL, EXPANSION_PATH},
-                	    {"download", NX_OVLLOADER_PLUS_ZIP_URL, EXPANSION_PATH},
+                	    {"download", loaderUrl, EXPANSION_PATH},
+                	    {"download", loaderPlusUrl, EXPANSION_PATH},
                 	    {"download", downloadUrl, DOWNLOADS_PATH}
                 	};
                 } else {
@@ -422,11 +431,17 @@ private:
             }
             else if (iniKey == "memory_expansion") {
                 if (!isFileOrDirectory(EXPANSION_PATH + "nx-ovlloader.zip")) {
-                    downloadFile(NX_OVLLOADER_ZIP_URL, EXPANSION_PATH);
+                    if (isVersionGreaterOrEqual(amsVersion,"1.8.0"))
+                        downloadFile(NX_OVLLOADER_ZIP_URL, EXPANSION_PATH);
+                    else
+                        downloadFile(OLD_NX_OVLLOADER_ZIP_URL, EXPANSION_PATH);
                     downloadPercentage.store(-1, std::memory_order_release);
                 }
                 if (!isFileOrDirectory(EXPANSION_PATH + "nx-ovlloader+.zip")) {
-                    downloadFile(NX_OVLLOADER_PLUS_ZIP_URL, EXPANSION_PATH);
+                    if (isVersionGreaterOrEqual(amsVersion,"1.8.0"))
+                        downloadFile(NX_OVLLOADER_PLUS_ZIP_URL, EXPANSION_PATH);
+                    else
+                        downloadFile(OLD_NX_OVLLOADER_PLUS_ZIP_URL, EXPANSION_PATH);
                     downloadPercentage.store(-1, std::memory_order_release);
                 }
                 if (!isFileOrDirectory(EXPANSION_PATH + "nx-ovlloader.zip") || !isFileOrDirectory(EXPANSION_PATH + "nx-ovlloader+.zip")) {

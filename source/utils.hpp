@@ -119,6 +119,53 @@ const std::unordered_map<std::string, std::string> symbolPlaceholders = {
 
 
 
+bool parseVersion(const char* version, int& major, int& minor, int& patch) {
+    major = 0;
+    minor = 0;
+    patch = 0;
+    const char* ptr = version;
+
+    // Parse major version
+    while (*ptr >= '0' && *ptr <= '9') {
+        major = major * 10 + (*ptr - '0');
+        ++ptr;
+    }
+    if (*ptr != '.') return false;
+    ++ptr;
+
+    // Parse minor version
+    while (*ptr >= '0' && *ptr <= '9') {
+        minor = minor * 10 + (*ptr - '0');
+        ++ptr;
+    }
+    if (*ptr != '.') return false;
+    ++ptr;
+
+    // Parse patch version
+    while (*ptr >= '0' && *ptr <= '9') {
+        patch = patch * 10 + (*ptr - '0');
+        ++ptr;
+    }
+    return *ptr == '\0';
+}
+
+bool isVersionGreaterOrEqual(const char* currentVersion, const char* requiredVersion) {
+    int currMajor, currMinor, currPatch;
+    int reqMajor, reqMinor, reqPatch;
+
+    if (!parseVersion(currentVersion, currMajor, currMinor, currPatch) ||
+        !parseVersion(requiredVersion, reqMajor, reqMinor, reqPatch)) {
+        return false; // Invalid format
+    }
+
+    // Compare each component
+    if (currMajor > reqMajor) return true;
+    if (currMajor < reqMajor) return false;
+    if (currMinor > reqMinor) return true;
+    if (currMinor < reqMinor) return false;
+    return currPatch >= reqPatch;
+}
+
 
 //void testAudioOutput() {
 //    Result res;
