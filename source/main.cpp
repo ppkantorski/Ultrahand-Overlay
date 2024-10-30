@@ -141,6 +141,7 @@ inline void clearMemory() {
     selectedFooterDict.clear(); // Clears all data from the map, making it empty again
     selectedListItem.reset();
     lastSelectedListItem.reset();
+    forwarderListItem.reset();
 }
 
 void shiftItemFocus(tsl::elm::Element* element) {
