@@ -119,6 +119,53 @@ const std::unordered_map<std::string, std::string> symbolPlaceholders = {
 
 
 
+bool parseVersion(const char* version, int& major, int& minor, int& patch) {
+    major = 0;
+    minor = 0;
+    patch = 0;
+    const char* ptr = version;
+
+    // Parse major version
+    while (*ptr >= '0' && *ptr <= '9') {
+        major = major * 10 + (*ptr - '0');
+        ++ptr;
+    }
+    if (*ptr != '.') return false;
+    ++ptr;
+
+    // Parse minor version
+    while (*ptr >= '0' && *ptr <= '9') {
+        minor = minor * 10 + (*ptr - '0');
+        ++ptr;
+    }
+    if (*ptr != '.') return false;
+    ++ptr;
+
+    // Parse patch version
+    while (*ptr >= '0' && *ptr <= '9') {
+        patch = patch * 10 + (*ptr - '0');
+        ++ptr;
+    }
+    return *ptr == '\0';
+}
+
+bool isVersionGreaterOrEqual(const char* currentVersion, const char* requiredVersion) {
+    int currMajor, currMinor, currPatch;
+    int reqMajor, reqMinor, reqPatch;
+
+    if (!parseVersion(currentVersion, currMajor, currMinor, currPatch) ||
+        !parseVersion(requiredVersion, reqMajor, reqMinor, reqPatch)) {
+        return false; // Invalid format
+    }
+
+    // Compare each component
+    if (currMajor > reqMajor) return true;
+    if (currMajor < reqMajor) return false;
+    if (currMinor > reqMinor) return true;
+    if (currMinor < reqMinor) return false;
+    return currPatch >= reqPatch;
+}
+
 
 //void testAudioOutput() {
 //    Result res;
@@ -889,28 +936,33 @@ void drawTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::string>& 
     for (size_t i = 0; i < sectionLines.size(); ++i) {
         // Wrap the section lines before passing them to the drawer, and indent if required
         wrappedLines = wrapText(sectionLines[i], xMax - 12 - 4, wrappingMode, useWrappedTextIndent, indent, indentWidth, fontSize);
+        
         for (const auto& wrappedLine : wrappedLines) {
             expandedSectionLines.push_back(wrappedLine);
-            expandedInfoLines.push_back(i < infoLines.size() ? infoLines[i] : "");  // Replicate the info line for the first wrapped line
-
+            
+            // Replicate or replace NULL_STR with UNAVAILABLE_SELECTION in infoLines
+            std::string infoText = (i < infoLines.size() && infoLines[i].find(NULL_STR) != std::string::npos) 
+                                   ? UNAVAILABLE_SELECTION 
+                                   : (i < infoLines.size() ? infoLines[i] : "");
+            
+            expandedInfoLines.push_back(infoText);  // Add the processed info text
+    
             // Calculate X offsets for the info line based on alignment
-            if (i < infoLines.size()) {
-                const std::string& infoText = expandedInfoLines.back();
-                infoTextWidth = tsl::gfx::calculateStringWidth(infoText, fontSize, false);
-
-                if (alignment == LEFT_STR) {
-                    infoXOffsets.push_back(static_cast<int>(columnOffset));
-                } else if (alignment == RIGHT_STR) {
-                    infoXOffsets.push_back(static_cast<int>(xMax - infoTextWidth + (columnOffset - 160 + 1)));
-                } else { // CENTER_STR
-                    infoXOffsets.push_back(static_cast<int>(columnOffset + (xMax - infoTextWidth) / 2));
-                }
+            infoTextWidth = tsl::gfx::calculateStringWidth(infoText, fontSize, false);
+    
+            if (alignment == LEFT_STR) {
+                infoXOffsets.push_back(static_cast<int>(columnOffset));
+            } else if (alignment == RIGHT_STR) {
+                infoXOffsets.push_back(static_cast<int>(xMax - infoTextWidth + (columnOffset - 160 + 1)));
+            } else { // CENTER_STR
+                infoXOffsets.push_back(static_cast<int>(columnOffset + (xMax - infoTextWidth) / 2));
             }
-
+    
             yOffsets.push_back(currentY);  // Set the offset for each line
             currentY += lineHeight + newlineGap;  // Increment Y position for the next line
         }
     }
+
 
     // Compute total height based on the number of expanded lines
     size_t totalHeight = lineHeight * expandedSectionLines.size() + newlineGap * (expandedSectionLines.size() - 1) + endGap;
@@ -929,7 +981,7 @@ void drawTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::string>& 
 
             // Draw the corresponding info line
             if (i < expandedInfoLines.size()) {
-                infoText = (expandedInfoLines[i].find(NULL_STR) != std::string::npos) ? UNAVAILABLE_SELECTION : expandedInfoLines[i];
+                infoText = expandedInfoLines[i];
                 renderer->drawString(infoText, false, x + infoXOffsets[i], y + yOffsets[i], fontSize, renderer->a(alternateInfoTextColor));
             }
         }

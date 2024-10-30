@@ -141,6 +141,7 @@ inline void clearMemory() {
     selectedFooterDict.clear(); // Clears all data from the map, making it empty again
     selectedListItem.reset();
     lastSelectedListItem.reset();
+    forwarderListItem.reset();
 }
 
 void shiftItemFocus(tsl::elm::Element* element) {
@@ -359,6 +360,15 @@ private:
                 isDownloadCommand = true;
 
                 if (title == UPDATE_ULTRAHAND) {
+                    std::string loaderUrl, loaderPlusUrl;
+                    if (isVersionGreaterOrEqual(amsVersion,"1.8.0")) {
+                        loaderUrl = NX_OVLLOADER_ZIP_URL;
+                        loaderPlusUrl = NX_OVLLOADER_PLUS_ZIP_URL;
+                    } else {
+                        loaderUrl = OLD_NX_OVLLOADER_ZIP_URL;
+                        loaderPlusUrl = OLD_NX_OVLLOADER_PLUS_ZIP_URL;
+                    }
+
                 	interpreterCommands = {
                 	    {"try:"},
                 	    //{"delete", THEMES_PATH+"ultra.ini"},
@@ -368,8 +378,8 @@ private:
                 	    {"delete", targetPath},
                 	    {"download", INCLUDED_THEME_FOLDER_URL+"ultra.ini", THEMES_PATH},
                 	    {"download", INCLUDED_THEME_FOLDER_URL+"classic.ini", THEMES_PATH},
-                	    {"download", NX_OVLLOADER_ZIP_URL, EXPANSION_PATH},
-                	    {"download", NX_OVLLOADER_PLUS_ZIP_URL, EXPANSION_PATH},
+                	    {"download", loaderUrl, EXPANSION_PATH},
+                	    {"download", loaderPlusUrl, EXPANSION_PATH},
                 	    {"download", downloadUrl, DOWNLOADS_PATH}
                 	};
                 } else {
@@ -422,11 +432,17 @@ private:
             }
             else if (iniKey == "memory_expansion") {
                 if (!isFileOrDirectory(EXPANSION_PATH + "nx-ovlloader.zip")) {
-                    downloadFile(NX_OVLLOADER_ZIP_URL, EXPANSION_PATH);
+                    if (isVersionGreaterOrEqual(amsVersion,"1.8.0"))
+                        downloadFile(NX_OVLLOADER_ZIP_URL, EXPANSION_PATH);
+                    else
+                        downloadFile(OLD_NX_OVLLOADER_ZIP_URL, EXPANSION_PATH);
                     downloadPercentage.store(-1, std::memory_order_release);
                 }
                 if (!isFileOrDirectory(EXPANSION_PATH + "nx-ovlloader+.zip")) {
-                    downloadFile(NX_OVLLOADER_PLUS_ZIP_URL, EXPANSION_PATH);
+                    if (isVersionGreaterOrEqual(amsVersion,"1.8.0"))
+                        downloadFile(NX_OVLLOADER_PLUS_ZIP_URL, EXPANSION_PATH);
+                    else
+                        downloadFile(OLD_NX_OVLLOADER_PLUS_ZIP_URL, EXPANSION_PATH);
                     downloadPercentage.store(-1, std::memory_order_release);
                 }
                 if (!isFileOrDirectory(EXPANSION_PATH + "nx-ovlloader.zip") || !isFileOrDirectory(EXPANSION_PATH + "nx-ovlloader+.zip")) {
@@ -3363,7 +3379,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                                     }
                                     lastSelectedListItem.reset();
                                     tsl::changeTo<SelectionOverlay>(packagePath, keyName, commands, newKey, _lastPackageHeader);
-                                    lastKeyName = keyName;
+                                    //lastKeyName = keyName;
                                 }
                                 simulatedSelectComplete = true;
                                 return true;
@@ -3687,7 +3703,7 @@ public:
         
         std::unique_ptr<tsl::elm::OverlayFrame> rootFrame = std::make_unique<tsl::elm::OverlayFrame>(
             (!packageHeader.title.empty()) ? packageHeader.title : (!packageRootLayerTitle.empty() ? packageRootLayerTitle : getNameFromPath(packagePath)),
-            (!pageHeader.empty() ? pageHeader: (packageHeader.version != "" ? (!packageRootLayerVersion.empty() ? packageRootLayerVersion : packageHeader.version) + "   (Ultrahand Package)" : "Ultrahand Package")),
+            ((!pageHeader.empty() && packageHeader.show_version != TRUE_STR) ? pageHeader: (packageHeader.version != "" ? (!packageRootLayerVersion.empty() ? packageRootLayerVersion : packageHeader.version) + "   (Ultrahand Package)" : "Ultrahand Package")),
             noClickableItems,
             "",
             packageHeader.color,
