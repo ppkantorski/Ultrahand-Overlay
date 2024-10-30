@@ -3378,7 +3378,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                                     }
                                     lastSelectedListItem.reset();
                                     tsl::changeTo<SelectionOverlay>(packagePath, keyName, commands, newKey, _lastPackageHeader);
-                                    lastKeyName = keyName;
+                                    //lastKeyName = keyName;
                                 }
                                 simulatedSelectComplete = true;
                                 return true;
@@ -3702,7 +3702,7 @@ public:
         
         std::unique_ptr<tsl::elm::OverlayFrame> rootFrame = std::make_unique<tsl::elm::OverlayFrame>(
             (!packageHeader.title.empty()) ? packageHeader.title : (!packageRootLayerTitle.empty() ? packageRootLayerTitle : getNameFromPath(packagePath)),
-            (!pageHeader.empty() ? pageHeader: (packageHeader.version != "" ? (!packageRootLayerVersion.empty() ? packageRootLayerVersion : packageHeader.version) + "   (Ultrahand Package)" : "Ultrahand Package")),
+            ((!pageHeader.empty() && packageHeader.show_version != TRUE_STR) ? pageHeader: (packageHeader.version != "" ? (!packageRootLayerVersion.empty() ? packageRootLayerVersion : packageHeader.version) + "   (Ultrahand Package)" : "Ultrahand Package")),
             noClickableItems,
             "",
             packageHeader.color,
