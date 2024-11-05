@@ -857,6 +857,9 @@ public:
             hideUserGuide = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_user_guide") == TRUE_STR);
             createToggleListItem(list, USER_GUIDE, hideUserGuide, "hide_user_guide", true);
             
+            usePageSwap = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "page_swap") == TRUE_STR);
+            createToggleListItem(list, PAGE_SWAP, usePageSwap, "page_swap");
+
             cleanVersionLabels = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "clean_version_labels") == TRUE_STR);
             createToggleListItem(list, CLEAN_VERSIONS, cleanVersionLabels, "clean_version_labels", false, true);
             
@@ -868,18 +871,15 @@ public:
             
             addHeader(list, EFFECTS);
 
+            useRightAlignment = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "right_alignment") == TRUE_STR);
+            rightAlignmentState = useRightAlignment;
+            createToggleListItem(list, RIGHT_SIDE_MODE, useRightAlignment, "right_alignment");
+
             useSwipeToOpen = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "swipe_to_open") == TRUE_STR);
             createToggleListItem(list, SWIPE_TO_OPEN, useSwipeToOpen, "swipe_to_open");
 
             useOpaqueScreenshots = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "opaque_screenshots") == TRUE_STR);
             createToggleListItem(list, OPAQUE_SCREENSHOTS, useOpaqueScreenshots, "opaque_screenshots");
-
-            usePageSwap = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "page_swap") == TRUE_STR);
-            createToggleListItem(list, PAGE_SWAP, usePageSwap, "page_swap");
-
-            useRightAlignment = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "right_alignment") == TRUE_STR);
-            rightAlignmentState = useRightAlignment;
-            createToggleListItem(list, RIGHT_SIDE_MODE, useRightAlignment, "right_alignment");
             
         
         } else {
