@@ -5117,16 +5117,30 @@ public:
             if (!freshSpawn && !returningToMain && !returningToHiddenMain) {
                 
                 if (simulatedNextPage && !simulatedNextPageComplete) {
-                    if (menuMode != PACKAGES_STR) {
-                        keysHeld |= KEY_DRIGHT;
-                        //simulatedNextPage = false;
-                    }
-                    else if (menuMode != OVERLAYS_STR) {
-                        keysHeld |= KEY_DLEFT;
-                        //simulatedNextPage = false;
+                    if (!usePageSwap) {
+                        if (menuMode != PACKAGES_STR) {
+                            keysHeld |= KEY_DRIGHT;
+                            //simulatedNextPage = false;
+                        }
+                        else if (menuMode != OVERLAYS_STR) {
+                            keysHeld |= KEY_DLEFT;
+                            //simulatedNextPage = false;
+                        } else {
+                            //simulatedNextPage = false;
+                            simulatedNextPageComplete = true;
+                        }
                     } else {
-                        //simulatedNextPage = false;
-                        simulatedNextPageComplete = true;
+                        if (menuMode != PACKAGES_STR) {
+                            keysHeld |= KEY_DLEFT;
+                            //simulatedNextPage = false;
+                        }
+                        else if (menuMode != OVERLAYS_STR) {
+                            keysHeld |= KEY_DRIGHT;
+                            //simulatedNextPage = false;
+                        } else {
+                            //simulatedNextPage = false;
+                            simulatedNextPageComplete = true;
+                        }
                     }
                 }
 
