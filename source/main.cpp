@@ -4150,6 +4150,7 @@ public:
         //bool skipSystem = false;
         lastMenuMode = hiddenMenuMode;
         
+        bool inOverlay = false;
         
         
         createDirectory(PACKAGE_PATH);
@@ -4215,18 +4216,21 @@ public:
                     setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_soc_temp", TRUE_STR);
                 }
 
-                if (ultrahandSection.count("overscan") == 0) {
-                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "overscan", "100");
-                }
+                //if (ultrahandSection.count("overscan") == 0) {
+                //    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "overscan", "100");
+                //}
                 
                 // Handle the 'to_packages' option if it exists
                 if (ultrahandSection.count("to_packages") > 0) {
                     trim(ultrahandSection["to_packages"]);
                     toPackages = (ultrahandSection["to_packages"] == TRUE_STR);
                 }
-            
+                
                 // Mark settings as loaded if the "in_overlay" setting exists
                 settingsLoaded = ultrahandSection.count(IN_OVERLAY_STR) > 0;
+                if (settingsLoaded) {
+                    inOverlay = (ultrahandSection[IN_OVERLAY_STR] == TRUE_STR);
+                }
             }
 
         } else {
@@ -4235,11 +4239,15 @@ public:
 
         static bool hasInitialized = false;
         if (!hasInitialized) {
-            if (!usePageSwap)
-                currentMenu = OVERLAYS_STR;
-            else
-                currentMenu = PACKAGES_STR;
+            if (!inOverlay) {
+                if (!usePageSwap)
+                    currentMenu = OVERLAYS_STR;
+                else
+                    currentMenu = PACKAGES_STR;
+            }
+
             hasInitialized = true;
+            
         }
         
         if (!settingsLoaded) { // Write data if settings are not loaded
