@@ -871,13 +871,15 @@ public:
             useSwipeToOpen = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "swipe_to_open") == TRUE_STR);
             createToggleListItem(list, SWIPE_TO_OPEN, useSwipeToOpen, "swipe_to_open");
 
+            useOpaqueScreenshots = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "opaque_screenshots") == TRUE_STR);
+            createToggleListItem(list, OPAQUE_SCREENSHOTS, useOpaqueScreenshots, "opaque_screenshots");
+
+            usePageSwap = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "page_swap") == TRUE_STR);
+            createToggleListItem(list, PAGE_SWAP, usePageSwap, "page_swap");
+
             useRightAlignment = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "right_alignment") == TRUE_STR);
             rightAlignmentState = useRightAlignment;
             createToggleListItem(list, RIGHT_SIDE_MODE, useRightAlignment, "right_alignment");
-
-
-            useOpaqueScreenshots = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "opaque_screenshots") == TRUE_STR);
-            createToggleListItem(list, OPAQUE_SCREENSHOTS, useOpaqueScreenshots, "opaque_screenshots");
             
         
         } else {
@@ -4123,7 +4125,7 @@ public:
      * @return A pointer to the GUI element representing the main menu overlay.
      */
     virtual tsl::elm::Element* createUI() override {
-        menuMode = OVERLAYS_STR;
+        
 
         if (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_OVERLAY_STR) == TRUE_STR) {
             inMainMenu = false;
@@ -4184,6 +4186,7 @@ public:
                 setDefaultValue(ultrahandSection, "hide_package_versions", FALSE_STR, hidePackageVersions);
                 setDefaultValue(ultrahandSection, "memory_expansion", FALSE_STR, useMemoryExpansion);
                 // setDefaultValue(ultrahandSection, "custom_wallpaper", FALSE_STR, useCustomWallpaper);
+                setDefaultValue(ultrahandSection, "page_swap", FALSE_STR, usePageSwap);
                 setDefaultValue(ultrahandSection, "swipe_to_open", TRUE_STR, useSwipeToOpen);
                 setDefaultValue(ultrahandSection, "right_alignment", FALSE_STR, useRightAlignment);
                 setDefaultValue(ultrahandSection, "opaque_screenshots", TRUE_STR, useOpaqueScreenshots);
@@ -4215,7 +4218,7 @@ public:
                 if (ultrahandSection.count("overscan") == 0) {
                     setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "overscan", "100");
                 }
-            
+                
                 // Handle the 'to_packages' option if it exists
                 if (ultrahandSection.count("to_packages") > 0) {
                     trim(ultrahandSection["to_packages"]);
@@ -4230,6 +4233,14 @@ public:
             updateMenuCombos = true;
         }
 
+        static bool hasInitialized = false;
+        if (!hasInitialized) {
+            if (!usePageSwap)
+                currentMenu = OVERLAYS_STR;
+            else
+                currentMenu = PACKAGES_STR;
+            hasInitialized = true;
+        }
         
         if (!settingsLoaded) { // Write data if settings are not loaded
             setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, DEFAULT_LANG_STR, defaultLang);
@@ -5114,29 +5125,55 @@ public:
                 if ((keysHeld & KEY_RIGHT) && !(keysHeld & ~KEY_RIGHT & ~KEY_R & ALL_KEYS_MASK) && !stillTouching && (((!allowSlide && !unlockedSlide && onTrackBar) || (keysHeld & KEY_R)) || !onTrackBar || simulatedNextPage)) {
                     simulatedNextPage = false;
                     allowSlide = unlockedSlide = false;
-                    if (menuMode != PACKAGES_STR) {
-                        currentMenu = PACKAGES_STR;
-                        selectedListItem.reset();
-                        lastSelectedListItem.reset();
-                        tsl::pop();
-                        tsl::changeTo<MainMenu>();
-                        //startInterpreterThread();
-                        simulatedNextPageComplete = true;
-                        return true;
+                    if (!usePageSwap) {
+                        if (menuMode != PACKAGES_STR) {
+                            currentMenu = PACKAGES_STR;
+                            selectedListItem.reset();
+                            lastSelectedListItem.reset();
+                            tsl::pop();
+                            tsl::changeTo<MainMenu>();
+                            //startInterpreterThread();
+                            simulatedNextPageComplete = true;
+                            return true;
+                        }
+                    } else {
+                        if (menuMode != OVERLAYS_STR) {
+                            currentMenu = OVERLAYS_STR;
+                            selectedListItem.reset();
+                            lastSelectedListItem.reset();
+                            tsl::pop();
+                            tsl::changeTo<MainMenu>();
+                            //closeInterpreterThread();
+                            simulatedNextPageComplete = true;
+                            return true;
+                        }
                     }
                 }
                 if ((keysHeld & KEY_LEFT) && !(keysHeld & ~KEY_LEFT & ~KEY_R & ALL_KEYS_MASK) && !stillTouching && (((!allowSlide && onTrackBar && !unlockedSlide) || (keysHeld & KEY_R)) || !onTrackBar || simulatedNextPage)) {
                     simulatedNextPage = false;
                     allowSlide = unlockedSlide = false;
-                    if (menuMode != OVERLAYS_STR) {
-                        currentMenu = OVERLAYS_STR;
-                        selectedListItem.reset();
-                        lastSelectedListItem.reset();
-                        tsl::pop();
-                        tsl::changeTo<MainMenu>();
-                        //closeInterpreterThread();
-                        simulatedNextPageComplete = true;
-                        return true;
+                    if (!usePageSwap) {
+                        if (menuMode != OVERLAYS_STR) {
+                            currentMenu = OVERLAYS_STR;
+                            selectedListItem.reset();
+                            lastSelectedListItem.reset();
+                            tsl::pop();
+                            tsl::changeTo<MainMenu>();
+                            //closeInterpreterThread();
+                            simulatedNextPageComplete = true;
+                            return true;
+                        }
+                    } else {
+                        if (menuMode != PACKAGES_STR) {
+                            currentMenu = PACKAGES_STR;
+                            selectedListItem.reset();
+                            lastSelectedListItem.reset();
+                            tsl::pop();
+                            tsl::changeTo<MainMenu>();
+                            //startInterpreterThread();
+                            simulatedNextPageComplete = true;
+                            return true;
+                        }
                     }
                 }
                 simulatedNextPage = false;
