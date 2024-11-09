@@ -1351,7 +1351,6 @@ void addPackageInfo(std::unique_ptr<tsl::elm::List>& list, auto& packageHeader, 
  */
 
 
-
 /**
  * @brief Check if a path contains dangerous combinations.
  *
@@ -1379,12 +1378,39 @@ bool isDangerousCombination(const std::string& patternPath) {
         "sdmc:/emuMMC/RAW1/Nintendo/save/"
     };
 
-    static const std::vector<const char*> dangerousPatterns = {
+    static const std::vector<const char*> generalDangerousPatterns = {
         "..",    // Attempts to traverse to parent directories
         "~",     // Represents user's home directory, can be dangerous if misused
         "*",     // Wildcard in general
         "*/"     // Wildcard in general
     };
+
+    // Patterns allowed in Album folders
+    static const std::vector<const char*> albumAllowedPatterns = {
+        "*", 
+        "*/"
+    };
+
+    // Album folders where limited patterns are allowed
+    static const std::vector<const char*> albumFolders = {
+        "sdmc:/Nintendo/Album/",
+        "sdmc:/emuMMC/RAW1/Nintendo/Album/"
+    };
+
+    // Check if path is within an Album folder and restrict to albumAllowedPatterns
+    for (const auto& albumFolder : albumFolders) {
+        if (patternPath.compare(0, std::strlen(albumFolder), albumFolder) == 0) {
+            // Only check for the patterns allowed in Album folders
+            for (const auto& pattern : generalDangerousPatterns) {
+                if (std::find(albumAllowedPatterns.begin(), albumAllowedPatterns.end(), pattern) == albumAllowedPatterns.end() &&
+                    patternPath.find(pattern) != std::string::npos) {
+                    return true; // Path contains a dangerous pattern not allowed in Album folders
+                }
+            }
+            // If only allowed patterns are found, continue safely
+            return false; // Path is safe within Album folders
+        }
+    }
 
     // Check ultra-protected folders first
     for (const auto& folder : ultraProtectedFolders) {
@@ -1399,7 +1425,7 @@ bool isDangerousCombination(const std::string& patternPath) {
             std::string relativePath = patternPath.substr(folderLen);
 
             // Check for dangerous patterns in the relative path
-            for (const auto& pattern : dangerousPatterns) {
+            for (const auto& pattern : generalDangerousPatterns) {
                 if (relativePath.find(pattern) != std::string::npos) {
                     return true; // Path contains a dangerous pattern
                 }
@@ -1417,7 +1443,7 @@ bool isDangerousCombination(const std::string& patternPath) {
     }
 
     // Check dangerous patterns in general
-    for (const auto& pattern : dangerousPatterns) {
+    for (const auto& pattern : generalDangerousPatterns) {
         if (patternPath.find(pattern) != std::string::npos) {
             return true; // Path contains a dangerous pattern
         }
