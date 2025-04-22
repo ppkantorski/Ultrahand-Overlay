@@ -57,11 +57,11 @@ include $(DEVKITPRO)/libnx/switch_rules
 APP_TITLE	:= Ultrahand
 APP_AUTHOR	:= ppkantorski
 APP_VERSION	:= 1.8.2
-TARGET	    := ovlmenu
-BUILD	    := build
-SOURCES	    := source common lib/libultrahand/libultra/source
+TARGET		:= ovlmenu
+BUILD		:= build
+SOURCES		:= source common lib/libultrahand/libultra/source
 INCLUDES	:= source common include lib/libultrahand/libultra/include lib/libultrahand/libtesla/include
-NO_ICON	    := 1
+NO_ICON		:= 1
 
 #---------------------------------------------------------------------------------
 # options for code generation
@@ -215,12 +215,23 @@ $(BUILD):
 	@[ -d $@ ] || mkdir -p $@
 	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
 
+	@rm -rf out/
+	@mkdir -p out/switch/.overlays/
+	@cp $(CURDIR)/$(TARGET).ovl out/switch/.overlays/$(TARGET).ovl
 
 #---------------------------------------------------------------------------------
 clean:
 	@rm -fr $(BUILD) $(TARGET).ovl $(TARGET).nro $(TARGET).nacp $(TARGET).elf
 
+	@rm -rf out/
+	@rm -f $(TARGET).zip
 
+#---------------------------------------------------------------------------------
+dist: all
+	@echo making dist ...
+
+	@rm -f $(TARGET).zip
+	@cd out; zip -r ../$(TARGET).zip ./*; cd ../
 #---------------------------------------------------------------------------------
 else
 .PHONY: all
