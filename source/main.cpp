@@ -377,7 +377,7 @@ private:
                 	    //{"delete", EXPANSION_PATH + "nx-ovlloader+.zip"},
                 	    {"delete", targetPath},
                 	    {"download", INCLUDED_THEME_FOLDER_URL+"ultra.ini", THEMES_PATH},
-                	    {"download", INCLUDED_THEME_FOLDER_URL+"classic.ini", THEMES_PATH},
+                	    {"download", INCLUDED_THEME_FOLDER_URL+"ultra-blue.ini", THEMES_PATH},
                 	    {"download", loaderUrl, EXPANSION_PATH},
                 	    {"download", loaderPlusUrl, EXPANSION_PATH},
                 	    {"download", downloadUrl, DOWNLOADS_PATH}
@@ -461,6 +461,8 @@ private:
                 redrawWidget = true;
             } else if (iniKey == "right_alignment") {
                 triggerMenuReload = (rightAlignmentState != state);
+            } else if (iniKey == "dynamic_logo") {
+                useDynamicLogo = !useDynamicLogo;
             }
     
             reloadMenu = true;
@@ -661,7 +663,7 @@ public:
             
             // Calculate free RAM and store in a smaller buffer
             char ramString[24];  // Reduced buffer size to 24
-            float freeRamMB = (static_cast<float>(RAM_Total_system_u - RAM_Used_system_u) / (1024.0f * 1024.0f)) - 8.0f;
+            float freeRamMB = (static_cast<float>(RAM_Total_system_u - RAM_Used_system_u) / (1024.0f * 1024.0f));
             snprintf(ramString, sizeof(ramString), "%.2f MB %s", freeRamMB, FREE.c_str());
             
             // Reuse tableData with minimal reallocation
@@ -867,6 +869,9 @@ public:
             createToggleListItem(list, PACKAGE_VERSIONS, hidePackageVersions, "hide_package_versions", true);
             
             addHeader(list, EFFECTS);
+
+            useDynamicLogo = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "dynamic_logo") == TRUE_STR);
+            createToggleListItem(list, DYNAMIC_LOGO, useDynamicLogo, "dynamic_logo");
 
             usePageSwap = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "page_swap") == TRUE_STR);
             createToggleListItem(list, PAGE_SWAP, usePageSwap, "page_swap");
@@ -4187,6 +4192,7 @@ public:
                 setDefaultValue(ultrahandSection, "hide_package_versions", FALSE_STR, hidePackageVersions);
                 setDefaultValue(ultrahandSection, "memory_expansion", FALSE_STR, useMemoryExpansion);
                 // setDefaultValue(ultrahandSection, "custom_wallpaper", FALSE_STR, useCustomWallpaper);
+                setDefaultValue(ultrahandSection, "dynamic_logo", TRUE_STR, useDynamicLogo);
                 setDefaultValue(ultrahandSection, "page_swap", FALSE_STR, usePageSwap);
                 setDefaultValue(ultrahandSection, "swipe_to_open", TRUE_STR, useSwipeToOpen);
                 setDefaultValue(ultrahandSection, "right_alignment", FALSE_STR, useRightAlignment);
@@ -4613,12 +4619,12 @@ public:
                         "ini_file_source /bootloader/hekate_ipl.ini\n"
                         "filter config\n"
                         "reboot boot '{ini_file_source(*)}'\n"
-                        "[hekate]\n"
+                        "[hekate - \uE073]\n"
                         "reboot HEKATE\n"
-                        "[hekate UMS]\n"
+                        "[hekate UMS - \uE073\uE08D]\n"
                         "reboot UMS\n"
                         "\n[Commands]\n"
-                        "[Shutdown]\n"
+                        "[Shutdown - \uE0F3]\n"
                         "shutdown\n"
                     );
                     fclose(packageFileOut); // Close the file after writing
@@ -4633,12 +4639,12 @@ public:
                         "ini_file_source /bootloader/hekate_ipl.ini\n"
                         "filter config\n"
                         "reboot boot '{ini_file_source(*)}'\n"
-                        "[hekate]\n"
+                        "[hekate - \uE073]\n"
                         "reboot HEKATE\n"
-                        "[hekate UMS]\n"
+                        "[hekate UMS - \uE073\uE08D]\n"
                         "reboot UMS\n"
                         "\n[Commands]\n"
-                        "[Shutdown]\n"
+                        "[Shutdown - \uE0F3]\n"
                         "shutdown\n";
                     packageFileOut.close();
                 }
