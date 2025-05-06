@@ -891,7 +891,7 @@ std::vector<std::string> wrapText(const std::string& text, float maxWidth, const
 
 void drawTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::string>& sectionLines, std::vector<std::string>& infoLines,
                size_t columnOffset = 163, size_t startGap = 19, size_t endGap = 12, size_t newlineGap = 0,
-               const std::string& tableSectionTextColor = DEFAULT_STR, const std::string& tableInfoTextColor = DEFAULT_STR, 
+               const std::string& tableSectionTextColor = DEFAULT_STR, const std::string& tableInfoTextColor = DEFAULT_STR, const std::string& tableInfoTextHighlightColor = DEFAULT_STR, 
                const std::string& alignment = LEFT_STR, bool hideTableBackground = false, bool useHeaderIndent = false, 
                bool isScrollable = false, const std::string& wrappingMode = "none", bool useWrappedTextIndent = false) {
 
@@ -910,12 +910,15 @@ void drawTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::string>& 
         if (colorStr == "header") return tsl::headerTextColor;
         if (colorStr == "info") return tsl::infoTextColor;
         if (colorStr == "section") return tsl::sectionTextColor;
+        if (colorStr == "healthy_ram") return tsl::healthyRamTextColor;
+        if (colorStr == "neutral_ram") return tsl::neutralRamTextColor;
+        if (colorStr == "bad_ram") return tsl::badRamTextColor;
         return (colorStr == DEFAULT_STR) ? defaultColor : tsl::RGB888(colorStr);
     };
 
     auto alternateSectionTextColor = getTextColor(tableSectionTextColor, tsl::sectionTextColor);
     auto alternateInfoTextColor = getTextColor(tableInfoTextColor, tsl::infoTextColor);
-
+    auto alternateInfoTextHighlightColor = getTextColor(tableInfoTextHighlightColor, tsl::infoTextColor);
 
     // Vectors for recalculating offsets and expanding lines
     std::vector<std::string> expandedSectionLines;
@@ -933,11 +936,12 @@ void drawTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::string>& 
         // Wrap the section lines before passing them to the drawer, and indent if required
         wrappedLines = wrapText(sectionLines[i], xMax - 12 - 4, wrappingMode, useWrappedTextIndent, indent, indentWidth, fontSize);
         
+        std::string infoText;
         for (const auto& wrappedLine : wrappedLines) {
             expandedSectionLines.push_back(wrappedLine);
             
             // Replicate or replace NULL_STR with UNAVAILABLE_SELECTION in infoLines
-            std::string infoText = (i < infoLines.size() && infoLines[i].find(NULL_STR) != std::string::npos) 
+            infoText = (i < infoLines.size() && infoLines[i].find(NULL_STR) != std::string::npos) 
                                    ? UNAVAILABLE_SELECTION 
                                    : (i < infoLines.size() ? infoLines[i] : "");
             
@@ -969,7 +973,7 @@ void drawTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::string>& 
             renderer->drawRect(x - 2, y + 2, 4, 22, renderer->a(tsl::headerSeparatorColor));
         }
         std::string infoText;
-
+        bool infoTextColorIsSame = (tableInfoTextColor == tableInfoTextHighlightColor);
         // Draw each section and info line
         for (size_t i = 0; i < expandedSectionLines.size(); ++i) {
             // Draw the section line
@@ -978,7 +982,11 @@ void drawTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::string>& 
             // Draw the corresponding info line
             if (i < expandedInfoLines.size()) {
                 infoText = expandedInfoLines[i];
-                renderer->drawString(infoText, false, x + infoXOffsets[i], y + yOffsets[i], fontSize, renderer->a(alternateInfoTextColor));
+
+                if (infoTextColorIsSame)
+                    renderer->drawString(infoText, false, x + infoXOffsets[i], y + yOffsets[i], fontSize, renderer->a(alternateInfoTextColor));
+                else
+                    renderer->drawStringWithHighlight(infoText, false, x + infoXOffsets[i], y + yOffsets[i], fontSize, renderer->a(alternateInfoTextColor), renderer->a(alternateInfoTextHighlightColor));
             }
         }
     }, hideTableBackground, endGap, isScrollable), totalHeight);
@@ -1089,7 +1097,7 @@ std::string getFirstSectionText(const std::vector<std::vector<std::string>>& tab
 
 void addTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::vector<std::string>>& tableData,
     const std::string& packagePath, const size_t& columnOffset=163, const size_t& tableStartGap=19, const size_t& tableEndGap=12, const size_t& tableSpacing=0,
-    const std::string& tableSectionTextColor=DEFAULT_STR, const std::string& tableInfoTextColor=DEFAULT_STR, const std::string& tableAlignment=RIGHT_STR,
+    const std::string& tableSectionTextColor=DEFAULT_STR, const std::string& tableInfoTextColor=DEFAULT_STR, const std::string& tableInfoTextHighlightColor=DEFAULT_STR, const std::string& tableAlignment=RIGHT_STR,
     const bool& hideTableBackground = false, const bool& useHeaderIndent = false, const bool& isScrollable = false, const std::string& wrappingMode="none", const bool& useWrappedTextIndent = false) {
 
     std::string message;
@@ -1214,7 +1222,7 @@ void addTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::vector<std
     // seperate sectionString and info string.  the sections will be on the left side of the "=", the info will be on the right side of the "=" within the string.  the end of an entry will be met with a newline (except for the very last entry). 
     // sectionString and infoString will each have equal newlines (denoting )
 
-    drawTable(list, sectionLines, infoLines, columnOffset, tableStartGap, tableEndGap, tableSpacing, tableSectionTextColor, tableInfoTextColor, tableAlignment, hideTableBackground, useHeaderIndent, isScrollable, wrappingMode, useWrappedTextIndent);
+    drawTable(list, sectionLines, infoLines, columnOffset, tableStartGap, tableEndGap, tableSpacing, tableSectionTextColor, tableInfoTextColor, tableInfoTextHighlightColor, tableAlignment, hideTableBackground, useHeaderIndent, isScrollable, wrappingMode, useWrappedTextIndent);
 }
 
 
@@ -1322,7 +1330,7 @@ void addPackageInfo(std::unique_ptr<tsl::elm::List>& list, auto& packageHeader, 
 
     // Drawing the table with section lines and info lines
     //drawTable(list, sectionLines, infoLines, xOffset, 20, 12, 3);
-    drawTable(list, sectionLines, infoLines, xOffset, 19, 12, 3, DEFAULT_STR, DEFAULT_STR, LEFT_STR, false, false, true);
+    drawTable(list, sectionLines, infoLines, xOffset, 19, 12, 3, DEFAULT_STR, DEFAULT_STR, DEFAULT_STR, LEFT_STR, false, false, true);
 }
 
 
