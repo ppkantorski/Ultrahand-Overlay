@@ -17,7 +17,7 @@
 
 #include <switch.h>
 
-#include <optional>
+//#include <optional>
 //#include <cstdio>
 
 /// Console Product Models
@@ -69,23 +69,44 @@ namespace util {
      * Since 1.6.0, Atmosphère bpc-mitm overwrites the reboot on mariko to prevent clearing
      * Timers. We are using those timing registers to communicate with hekate.
      */
+    //bool SupportsMarikoRebootToConfig() {
+    //    static std::optional<bool> impl;
+    //    
+    //    if (impl.has_value())
+    //        return *impl;
+    //    
+    //    u64 version = 0;
+    //    
+    //    if (R_FAILED(splGetConfig(static_cast<SplConfigItem>(65000), &version)))
+    //        return false;
+    //    
+    //    const u32 version_minor = (version >> 48) & 0xff;
+    //    const u32 version_major = (version >> 56) & 0xff;
+    //    
+    //    impl = (version_major >= 1 && version_minor >= 6);
+    //    
+    //    return *impl;
+    //}
+
     bool SupportsMarikoRebootToConfig() {
-        static std::optional<bool> impl;
-
-        if (impl.has_value())
-            return *impl;
-
+        static bool impl_computed = false;
+        static bool impl_value = false;
+    
+        if (impl_computed)
+            return impl_value;
+    
         u64 version = 0;
-        
+    
         if (R_FAILED(splGetConfig(static_cast<SplConfigItem>(65000), &version)))
             return false;
-
+    
         const u32 version_minor = (version >> 48) & 0xff;
         const u32 version_major = (version >> 56) & 0xff;
-
-        impl = (version_major >= 1 && version_minor >= 6);
-
-        return *impl;
+    
+        impl_value = (version_major >= 1 && version_minor >= 6);
+        impl_computed = true; // Set to true to indicate the value has been computed
+    
+        return impl_value;
     }
 
 }

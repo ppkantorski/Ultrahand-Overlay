@@ -56,19 +56,19 @@ include $(DEVKITPRO)/libnx/switch_rules
 #---------------------------------------------------------------------------------
 APP_TITLE	:= Ultrahand
 APP_AUTHOR	:= ppkantorski
-APP_VERSION	:= 1.7.9
-TARGET	    := ovlmenu
-BUILD	    := build
-SOURCES	    := source common lib/libultrahand/libultra/source
+APP_VERSION	:= 1.8.3
+TARGET		:= ovlmenu
+BUILD		:= build
+SOURCES		:= source common lib/libultrahand/libultra/source
 INCLUDES	:= source common include lib/libultrahand/libultra/include lib/libultrahand/libtesla/include
-NO_ICON	    := 1
+NO_ICON		:= 1
 
 #---------------------------------------------------------------------------------
 # options for code generation
 #---------------------------------------------------------------------------------
 ARCH := -march=armv8-a+simd+crc+crypto -mtune=cortex-a57 -mtp=soft -fPIE
 
-CFLAGS := -Wall -Os -ffunction-sections -fdata-sections -flto\
+CFLAGS := -g -Wall -Os -ffunction-sections -fdata-sections -flto -fomit-frame-pointer -finline-small-functions \
 			$(ARCH) $(DEFINES)
 
 CFLAGS += $(INCLUDE) -D__SWITCH__ -DAPP_VERSION="\"$(APP_VERSION)\"" -D_FORTIFY_SOURCE=2
@@ -85,8 +85,11 @@ CFLAGS += -DUSING_WIDGET_DIRECTIVE=$(USING_WIDGET_DIRECTIVE)
 USING_LOGGING_DIRECTIVE := 1  # or true
 CFLAGS += -DUSING_LOGGING_DIRECTIVE=$(USING_LOGGING_DIRECTIVE)
 
+# Disable fstream
+#NO_FSTREAM_DIRECTIVE := 1
+#CFLAGS += -DNO_FSTREAM_DIRECTIVE=$(NO_FSTREAM_DIRECTIVE)
 
-CXXFLAGS := $(CFLAGS) -std=c++20 -Wno-dangling-else -ffast-math
+CXXFLAGS := $(CFLAGS) -std=c++20 -Wno-dangling-else -ffast-math -fno-unwind-tables -fno-asynchronous-unwind-tables
 
 ASFLAGS := $(ARCH)
 LDFLAGS += -specs=$(DEVKITPRO)/libnx/switch.specs $(ARCH) -Wl,-Map,$(notdir $*.map)
@@ -94,7 +97,7 @@ LDFLAGS += -specs=$(DEVKITPRO)/libnx/switch.specs $(ARCH) -Wl,-Map,$(notdir $*.m
 LIBS := -lcurl -lz -lzzip -lmbedtls -lmbedx509 -lmbedcrypto -ljansson -lnx
 
 CXXFLAGS += -fno-exceptions -ffunction-sections -fdata-sections -fno-rtti
-LDFLAGS += -Wl,--gc-sections -Wl,--as-needed
+LDFLAGS += -Wl,--as-needed
 
 # For Ensuring Parallel LTRANS Jobs w/ GCC, make -j6
 CXXFLAGS += -flto -fuse-linker-plugin -flto=6
@@ -212,12 +215,23 @@ $(BUILD):
 	@[ -d $@ ] || mkdir -p $@
 	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
 
+	@rm -rf out/
+	@mkdir -p out/switch/.overlays/
+	@cp $(CURDIR)/$(TARGET).ovl out/switch/.overlays/$(TARGET).ovl
 
 #---------------------------------------------------------------------------------
 clean:
 	@rm -fr $(BUILD) $(TARGET).ovl $(TARGET).nro $(TARGET).nacp $(TARGET).elf
 
+	@rm -rf out/
+	@rm -f $(TARGET).zip
 
+#---------------------------------------------------------------------------------
+dist: all
+	@echo making dist ...
+
+	@rm -f $(TARGET).zip
+	@cd out; zip -r ../$(TARGET).zip ./*; cd ../
 #---------------------------------------------------------------------------------
 else
 .PHONY: all

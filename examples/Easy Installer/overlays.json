@@ -55,11 +55,6 @@
         "download-entry": "0"
     },
     {
-        "name": "sys-patch - latest",
-        "zip-url": "https://api.github.com/repos/ITotalJustice/sys-patch/releases?per_page=1&sort=created&order=desc",
-        "download-entry": "0"
-    },
-    {
         "name": "TriPlayer - latest",
         "zip-url": "https://api.github.com/repos/DefenderOfHyrule/TriPlayer/releases?per_page=1&sort=created&order=desc",
         "download-entry": "0"
