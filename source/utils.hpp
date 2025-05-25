@@ -1376,7 +1376,7 @@ bool isDangerousCombination(const std::string& originalPath) {
         patternPath = normalized;
     }
 
-    // 2) Define folder sets
+    // 2) Define folder sets with behavior-based names
     static const std::vector<const char*> albumFolders = {
         "sdmc:/Nintendo/Album/",
         "sdmc:/emuMMC/RAW1/Nintendo/Album/"
@@ -1389,17 +1389,19 @@ bool isDangerousCombination(const std::string& originalPath) {
         "sdmc:/emuMMC/RAW1/Nintendo/save/"
     };
 
-    static const std::vector<const char*> configLikeFolders = {
+    // Folders where wildcards are allowed, but no broad "delete entire folder" allowed
+    static const std::vector<const char*> restrictedWildcardFolders = {
         "sdmc:/config/",
-        "sdmc:/bootloader/"
+        "sdmc:/bootloader/",
+        "sdmc:/atmosphere/",
+        "sdmc:/switch/"
     };
 
+    // Protected folders where wildcards are disallowed except in album folders
     static const std::vector<const char*> protectedFolders = {
         "sdmc:/Nintendo/",
         "sdmc:/emuMMC/",
-        "sdmc:/emuMMC/RAW1/",
-        "sdmc:/atmosphere/",
-        "sdmc:/switch/"
+        "sdmc:/emuMMC/RAW1/"
     };
 
     static const std::vector<const char*> alwaysDangerousPatterns = {
@@ -1441,14 +1443,20 @@ bool isDangerousCombination(const std::string& originalPath) {
         }
     }
 
-    // --- 6) Handle configLikeFolders: wildcards allowed **only if not all files** (no broad * at root)
-    for (const auto& folder : configLikeFolders) {
+    // --- 6) Handle restrictedWildcardFolders:
+    // Wildcards allowed *inside* these folders,
+    // but disallow targeting the folder itself or broad "*" at root of that folder.
+    for (const auto& folder : restrictedWildcardFolders) {
         if (patternPath.compare(0, std::strlen(folder), folder) == 0) {
             std::string relative = patternPath.substr(std::strlen(folder));
-            if (relative == "*" || relative == "*/" || relative == "") {
-                return true; // block broad wildcards or empty path
+
+            // If relative is empty or just '*', it means "the whole folder" or "all files"
+            if (relative.empty() || relative == "*" || relative == "*/") {
+                return true; // block broad delete or targeting folder itself
             }
-            return false; // otherwise allowed
+
+            // Otherwise allow wildcards deeper inside folder
+            return false;
         }
     }
 
@@ -1469,7 +1477,7 @@ bool isDangerousCombination(const std::string& originalPath) {
             std::string relative = patternPath.substr(std::strlen(folder));
             for (const auto& pat : wildcardPatterns) {
                 if (relative.find(pat) != std::string::npos) {
-                    return true;
+                    return true; // wildcard in protected folder disallowed
                 }
             }
             return false;
