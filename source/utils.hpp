@@ -2784,6 +2784,10 @@ void handleDeleteCommand(const std::vector<std::string>& cmd, const std::string&
                     deleteFileOrDirectoryByPattern(sourcePath, logSource); // Delete files by pattern
                 else
                     deleteFileOrDirectory(sourcePath, logSource); // Delete single file or directory
+            } else {
+                #if USING_LOGGING_DIRECTIVE
+                logMessage("Dangerous combination detected.");
+                #endif
             }
         }
     }
@@ -2867,7 +2871,7 @@ void handleMoveCommand(const std::vector<std::string>& cmd, const std::string& p
                     moveFileOrDirectory(sourcePath, destinationPath, logSource, logDestination); // Move single file or directory
             } else {
                 #if USING_LOGGING_DIRECTIVE
-                logMessage("Dangerous combiation detected.");
+                logMessage("Dangerous combination detected.");
                 #endif
             }
         }
