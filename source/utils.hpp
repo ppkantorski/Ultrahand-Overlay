@@ -2222,8 +2222,32 @@ void applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
         {"{decimal_to_hex(", [&](const std::string& placeholder) {
             size_t startPos = placeholder.find("(") + 1;
             size_t endPos = placeholder.find(")");
-            std::string decimalValue = placeholder.substr(startPos, endPos - startPos);
-            return decimalToHex(decimalValue);
+            std::string params = placeholder.substr(startPos, endPos - startPos);
+        
+            // Split params by comma
+            size_t commaPos = params.find(",");
+            std::string decimalValue;
+            std::string order;
+        
+            if (commaPos != std::string::npos) {
+                decimalValue = params.substr(0, commaPos);
+                order = params.substr(commaPos + 1);
+                // Trim whitespace from order
+                order.erase(0, order.find_first_not_of(" \t\n\r"));
+                order.erase(order.find_last_not_of(" \t\n\r") + 1);
+            } else {
+                decimalValue = params;
+                order = "";  // optional param is empty
+            }
+        
+            // You can now call decimalToHex with decimalValue and order
+            // Adjust decimalToHex function accordingly or handle order here
+        
+            if (order.empty()) {
+                return decimalToHex(decimalValue);
+            } else {
+                return decimalToHex(decimalValue, std::stoi(order)); // assuming overload or second param version
+            }
         }},
         {"{ascii_to_hex(", [&](const std::string& placeholder) {
             size_t startPos = placeholder.find("(") + 1;
@@ -2371,7 +2395,7 @@ bool applyPlaceholderReplacementsToCommands(std::vector<std::vector<std::string>
 
     bool inEristaSection = false;
     bool inMarikoSection = false;
-    bool eraseAtEnd ;
+    bool eraseAtEnd = false;
 
     // Process commands with control flow and apply replacements
     for (auto it = commands.begin(); it != commands.end();) {
@@ -2443,6 +2467,8 @@ bool applyPlaceholderReplacementsToCommands(std::vector<std::vector<std::string>
         } else {
             eraseAtEnd = false;
         }
+
+        logMessage("iniPath: "+iniPath);
 
         // Now, handle adding quotes only if needed
         for (size_t i = 1; i < cmd.size(); ++i) {
@@ -2936,7 +2962,7 @@ void handleIniCommands(const std::vector<std::string>& cmd, const std::string& p
     }
 }
 
-void handleHexEdit(const std::string& sourcePath, const std::string& secondArg, const std::string& thirdArg, const std::string& commandName, const std::vector<std::string>& cmd) {
+void handleHexEdit(const std::string& sourcePath, const std::string& secondArg, const std::string& thirdArg, const std::string& fourthArg, const std::string& commandName, const std::vector<std::string>& cmd) {
     if (commandName == "hex-by-offset") {
         hexEditByOffset(sourcePath, secondArg, thirdArg);
     } else if (commandName == "hex-by-swap") {
@@ -2965,8 +2991,17 @@ void handleHexEdit(const std::string& sourcePath, const std::string& secondArg, 
             hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
         }
     } else if (commandName == "hex-by-decimal") {
-        std::string hexDataToReplace = decimalToHex(secondArg);
-        std::string hexDataReplacement = decimalToHex(thirdArg);
+        std::string hexDataToReplace;
+        std::string hexDataReplacement;
+    
+        if (fourthArg.empty()) {
+            hexDataToReplace = decimalToHex(secondArg);
+            hexDataReplacement = decimalToHex(thirdArg);
+        } else {
+            hexDataToReplace = decimalToHex(secondArg, std::stoi(fourthArg));
+            hexDataReplacement = decimalToHex(thirdArg, std::stoi(fourthArg));
+        }
+    
         if (cmd.size() >= 5) {
             std::string selectedStr = cmd[4];
             removeQuotes(selectedStr);
@@ -2976,8 +3011,17 @@ void handleHexEdit(const std::string& sourcePath, const std::string& secondArg, 
             hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
         }
     } else if (commandName == "hex-by-rdecimal") {
-        std::string hexDataToReplace = decimalToReversedHex(secondArg);
-        std::string hexDataReplacement = decimalToReversedHex(thirdArg);
+        std::string hexDataToReplace;
+        std::string hexDataReplacement;
+    
+        if (fourthArg.empty()) {
+            hexDataToReplace = decimalToReversedHex(secondArg);
+            hexDataReplacement = decimalToReversedHex(thirdArg);
+        } else {
+            hexDataToReplace = decimalToReversedHex(secondArg, std::stoi(fourthArg));
+            hexDataReplacement = decimalToReversedHex(thirdArg, std::stoi(fourthArg));
+        }
+    
         if (cmd.size() >= 5) {
             std::string selectedStr = cmd[4];
             removeQuotes(selectedStr);
@@ -2989,12 +3033,18 @@ void handleHexEdit(const std::string& sourcePath, const std::string& secondArg, 
     }
 }
 
-void handleHexByCustom(const std::string& sourcePath, const std::string& customPattern, const std::string& offset, std::string hexDataReplacement, const std::string& commandName) {
+void handleHexByCustom(const std::string& sourcePath, const std::string& customPattern, const std::string& offset, std::string hexDataReplacement, std::string order, const std::string& commandName) {
     if (hexDataReplacement != NULL_STR) {
         if (commandName == "hex-by-custom-decimal-offset") {
-            hexDataReplacement = decimalToHex(hexDataReplacement);
+            if (!order.empty())
+                hexDataReplacement = decimalToHex(hexDataReplacement, std::stoi(order));
+            else
+                hexDataReplacement = decimalToHex(hexDataReplacement);
         } else if (commandName == "hex-by-custom-rdecimal-offset") {
-            hexDataReplacement = decimalToReversedHex(hexDataReplacement);
+            if (!order.empty())
+                hexDataReplacement = decimalToReversedHex(hexDataReplacement, std::stoi(order));
+            else
+                hexDataReplacement = decimalToReversedHex(hexDataReplacement);
         }
         hexEditByCustomOffset(sourcePath, customPattern, offset, hexDataReplacement);
     }
@@ -3065,11 +3115,18 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
         if (cmd.size() >= 4) {
             std::string sourcePath = cmd[1];
             preprocessPath(sourcePath, packagePath);
+    
             std::string secondArg = cmd[2];
             removeQuotes(secondArg);
             std::string thirdArg = cmd[3];
             removeQuotes(thirdArg);
-
+            
+            std::string fourthArg;  // optional order paramter, default empty
+            if (cmd.size() >= 5) {
+                fourthArg = cmd[4];
+                removeQuotes(fourthArg);
+            }
+    
             if (commandName == "hex-by-custom-offset" || commandName == "hex-by-custom-decimal-offset" || commandName == "hex-by-custom-rdecimal-offset") {
                 if (cmd.size() >= 5) {
                     std::string customPattern = cmd[2];
@@ -3078,10 +3135,10 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                     removeQuotes(offset);
                     std::string hexDataReplacement = cmd[4];
                     removeQuotes(hexDataReplacement);
-                    handleHexByCustom(sourcePath, customPattern, offset, hexDataReplacement, commandName);
+                    handleHexByCustom(sourcePath, customPattern, offset, hexDataReplacement, fourthArg, commandName);
                 }
             } else {
-                handleHexEdit(sourcePath, secondArg, thirdArg, commandName, cmd);
+                handleHexEdit(sourcePath, secondArg, thirdArg, fourthArg, commandName, cmd);
             }
         }
     } else if (commandName == "download") {
