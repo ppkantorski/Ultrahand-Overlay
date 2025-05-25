@@ -1355,15 +1355,14 @@ void addPackageInfo(std::unique_ptr<tsl::elm::List>& list, auto& packageHeader, 
  */
 
 
-/**
- * @brief Check if a path contains dangerous combinations.
- *
- * This function checks if a given path contains patterns that may pose security risks.
- *
- * @param patternPath The path to check.
- * @return True if the path contains dangerous combinations, otherwise false.
- */
-bool isDangerousCombination(const std::string& patternPath) {
+bool isDangerousCombination(const std::string& originalPath) {
+    // 1) Normalize repeated wildcards
+    std::string patternPath = originalPath;
+    while (patternPath.find("**") != std::string::npos) {
+        patternPath = std::regex_replace(patternPath, std::regex("\\*\\*+"), "*");
+    }
+
+    // 2) Define folder sets
     static const std::vector<const char*> albumFolders = {
         "sdmc:/Nintendo/Album/",
         "sdmc:/emuMMC/RAW1/Nintendo/Album/"
@@ -1376,10 +1375,17 @@ bool isDangerousCombination(const std::string& patternPath) {
         "sdmc:/emuMMC/RAW1/Nintendo/save/"
     };
 
-    static const std::vector<std::pair<const char*, size_t>> protectedFolders = {
-        {"sdmc:/Nintendo/", 14},
-        {"sdmc:/emuMMC/", 13},
-        {"sdmc:/emuMMC/RAW1/", 17}
+    static const std::vector<const char*> configLikeFolders = {
+        "sdmc:/config/",
+        "sdmc:/bootloader/"
+    };
+
+    static const std::vector<const char*> protectedFolders = {
+        "sdmc:/Nintendo/",
+        "sdmc:/emuMMC/",
+        "sdmc:/emuMMC/RAW1/",
+        "sdmc:/atmosphere/",
+        "sdmc:/switch/"
     };
 
     static const std::vector<const char*> alwaysDangerousPatterns = {
@@ -1390,69 +1396,81 @@ bool isDangerousCombination(const std::string& patternPath) {
         "*", "*/"
     };
 
-    // 1) Check always dangerous patterns anywhere
+    // --- 3) Always block dangerous patterns anywhere
     for (const auto& pat : alwaysDangerousPatterns) {
         if (patternPath.find(pat) != std::string::npos) {
             return true;
         }
     }
 
-    // 2) Block wildcards at root level (e.g. "sdmc:/*something" or "sdmc:/*/")
-    // Find position after "sdmc:/"
+    // --- 4) Wildcards in root folder names disallowed
     const char rootPrefix[] = "sdmc:/";
     size_t rootLen = std::strlen(rootPrefix);
     if (patternPath.compare(0, rootLen, rootPrefix) == 0) {
-        // Look for wildcard '*' between rootLen and next slash after rootLen
         size_t nextSlash = patternPath.find('/', rootLen);
-        if (nextSlash == std::string::npos) {
-            nextSlash = patternPath.size();
-        }
-        // Check if wildcard in root folder segment
-        if (patternPath.find('*', rootLen) != std::string::npos && patternPath.find('*', rootLen) < nextSlash) {
-            return true; // Wildcard inside root folder name not allowed
+        if (nextSlash == std::string::npos) nextSlash = patternPath.size();
+        size_t wildcardPos = patternPath.find('*', rootLen);
+        if (wildcardPos != std::string::npos && wildcardPos < nextSlash) {
+            return true; // wildcard in top-level directory disallowed
         }
     } else {
-        // If path doesn't start with "sdmc:/", optionally block or handle differently if needed.
-        // For safety, you might block wildcards here too:
+        // Disallow wildcards outside sdmc:/
         if (patternPath.find('*') != std::string::npos) {
             return true;
         }
     }
 
-    // 3) Ultra-protected folders: block anything
+    // --- 5) Block any path inside ultra-protected folders fully
     for (const auto& folder : ultraProtectedFolders) {
         if (patternPath.compare(0, std::strlen(folder), folder) == 0) {
             return true;
         }
     }
 
-    // 4) Protected folders: block wildcards anywhere in relative path
-    for (const auto& [folder, len] : protectedFolders) {
-        if (patternPath.compare(0, len, folder) == 0) {
-            std::string relative = patternPath.substr(len);
+    // --- 6) Handle configLikeFolders: wildcards allowed **only if not all files** (no broad * at root)
+    for (const auto& folder : configLikeFolders) {
+        if (patternPath.compare(0, std::strlen(folder), folder) == 0) {
+            // If the relative part is exactly "*", disallow (dangerous: deleting entire folder)
+            std::string relative = patternPath.substr(std::strlen(folder));
+            if (relative == "*" || relative == "*/" || relative == "") {
+                return true; // block broad wildcards or empty path
+            }
+            // Otherwise wildcards allowed
+            return false;
+        }
+    }
+
+    // --- 7) Block wildcard usage in protectedFolders, except albumFolders
+    for (const auto& folder : protectedFolders) {
+        if (patternPath.compare(0, std::strlen(folder), folder) == 0) {
+            // Check if this path is in an album folder (allow wildcards)
+            bool isAlbum = false;
+            for (const auto& albumFolder : albumFolders) {
+                if (patternPath.compare(0, std::strlen(albumFolder), albumFolder) == 0) {
+                    isAlbum = true;
+                    break;
+                }
+            }
+            if (isAlbum) {
+                return false; // wildcards allowed in album folders
+            }
+
+            // Not album — disallow wildcards inside protected folders
+            std::string relative = patternPath.substr(std::strlen(folder));
             for (const auto& pat : wildcardPatterns) {
                 if (relative.find(pat) != std::string::npos) {
                     return true;
                 }
             }
-            break; // No need to check others once matched
+
+            // Otherwise safe (no wildcard inside protected folder)
+            return false;
         }
     }
 
-    // 5) Album folders: allow wildcards, but always dangerous patterns already checked
-    for (const auto& albumFolder : albumFolders) {
-        if (patternPath.compare(0, std::strlen(albumFolder), albumFolder) == 0) {
-            return false; // safe: wildcards allowed here
-        }
-    }
-
-    // 6) Otherwise: no wildcards restrictions beyond root level and protected folders
-    // Since always dangerous patterns checked first, no further checks needed
-
-    return false; // safe
+    // --- 8) Otherwise, no dangerous combination detected
+    return false;
 }
-
-
 
 
 
