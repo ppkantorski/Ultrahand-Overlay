@@ -1356,10 +1356,24 @@ void addPackageInfo(std::unique_ptr<tsl::elm::List>& list, auto& packageHeader, 
 
 
 bool isDangerousCombination(const std::string& originalPath) {
-    // 1) Normalize repeated wildcards
+    // 1) Normalize repeated wildcards (collapse runs of '*' to a single '*')
     std::string patternPath = originalPath;
-    while (patternPath.find("**") != std::string::npos) {
-        patternPath = std::regex_replace(patternPath, std::regex("\\*\\*+"), "*");
+    {
+        std::string normalized;
+        bool lastWasStar = false;
+        for (char c : patternPath) {
+            if (c == '*') {
+                if (!lastWasStar) {
+                    normalized += c;
+                    lastWasStar = true;
+                }
+                // skip extra '*'
+            } else {
+                normalized += c;
+                lastWasStar = false;
+            }
+        }
+        patternPath = normalized;
     }
 
     // 2) Define folder sets
@@ -1430,20 +1444,17 @@ bool isDangerousCombination(const std::string& originalPath) {
     // --- 6) Handle configLikeFolders: wildcards allowed **only if not all files** (no broad * at root)
     for (const auto& folder : configLikeFolders) {
         if (patternPath.compare(0, std::strlen(folder), folder) == 0) {
-            // If the relative part is exactly "*", disallow (dangerous: deleting entire folder)
             std::string relative = patternPath.substr(std::strlen(folder));
             if (relative == "*" || relative == "*/" || relative == "") {
                 return true; // block broad wildcards or empty path
             }
-            // Otherwise wildcards allowed
-            return false;
+            return false; // otherwise allowed
         }
     }
 
     // --- 7) Block wildcard usage in protectedFolders, except albumFolders
     for (const auto& folder : protectedFolders) {
         if (patternPath.compare(0, std::strlen(folder), folder) == 0) {
-            // Check if this path is in an album folder (allow wildcards)
             bool isAlbum = false;
             for (const auto& albumFolder : albumFolders) {
                 if (patternPath.compare(0, std::strlen(albumFolder), albumFolder) == 0) {
@@ -1455,15 +1466,12 @@ bool isDangerousCombination(const std::string& originalPath) {
                 return false; // wildcards allowed in album folders
             }
 
-            // Not album — disallow wildcards inside protected folders
             std::string relative = patternPath.substr(std::strlen(folder));
             for (const auto& pat : wildcardPatterns) {
                 if (relative.find(pat) != std::string::npos) {
                     return true;
                 }
             }
-
-            // Otherwise safe (no wildcard inside protected folder)
             return false;
         }
     }
