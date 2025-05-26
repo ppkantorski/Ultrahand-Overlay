@@ -2996,14 +2996,12 @@ void handleIniCommands(const std::vector<std::string>& cmd, const std::string& p
     }
 }
 
-void handleHexEdit(const std::string& sourcePath, const std::string& secondArg, const std::string& thirdArg, const std::string& fourthArg, const std::string& commandName, const std::vector<std::string>& cmd) {
+void handleHexEdit(const std::string& sourcePath, const std::string& secondArg, const std::string& thirdArg, const std::string& fourthArg, const std::string& fifthArg, const std::string& commandName, const std::vector<std::string>& cmd) {
     if (commandName == "hex-by-offset") {
         hexEditByOffset(sourcePath, secondArg, thirdArg);
     } else if (commandName == "hex-by-swap") {
         if (cmd.size() >= 5) {
-            std::string selectedStr = cmd[4];
-            removeQuotes(selectedStr);
-            size_t occurrence = std::stoul(selectedStr);
+            size_t occurrence = std::stoul(fourthArg);
             hexEditFindReplace(sourcePath, secondArg, thirdArg, occurrence);
         } else {
             hexEditFindReplace(sourcePath, secondArg, thirdArg);
@@ -3025,6 +3023,7 @@ void handleHexEdit(const std::string& sourcePath, const std::string& secondArg, 
             hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
         }
     } else if (commandName == "hex-by-decimal") {
+
         std::string hexDataToReplace;
         std::string hexDataReplacement;
     
@@ -3036,10 +3035,8 @@ void handleHexEdit(const std::string& sourcePath, const std::string& secondArg, 
             hexDataReplacement = decimalToHex(thirdArg, std::stoi(fourthArg));
         }
     
-        if (cmd.size() >= 5) {
-            std::string selectedStr = cmd[4];
-            removeQuotes(selectedStr);
-            size_t occurrence = std::stoul(selectedStr);
+        if (cmd.size() >= 6) {
+            size_t occurrence = std::stoul(fifthArg);
             hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, occurrence);
         } else {
             hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
@@ -3056,10 +3053,8 @@ void handleHexEdit(const std::string& sourcePath, const std::string& secondArg, 
             hexDataReplacement = decimalToReversedHex(thirdArg, std::stoi(fourthArg));
         }
     
-        if (cmd.size() >= 5) {
-            std::string selectedStr = cmd[4];
-            removeQuotes(selectedStr);
-            size_t occurrence = std::stoul(selectedStr);
+        if (cmd.size() >= 6) {
+            size_t occurrence = std::stoul(fifthArg);
             hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, occurrence);
         } else {
             hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
@@ -3067,7 +3062,7 @@ void handleHexEdit(const std::string& sourcePath, const std::string& secondArg, 
     }
 }
 
-void handleHexByCustom(const std::string& sourcePath, const std::string& customPattern, const std::string& offset, std::string hexDataReplacement, std::string order, const std::string& commandName) {
+void handleHexByCustom(const std::string& sourcePath, const std::string& customPattern, const std::string& offset, std::string hexDataReplacement, const std::string& commandName, std::string order) {
     if (hexDataReplacement != NULL_STR) {
         if (commandName == "hex-by-custom-decimal-offset") {
             if (!order.empty())
@@ -3160,19 +3155,32 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                 fourthArg = cmd[4];
                 removeQuotes(fourthArg);
             }
+
+            std::string fifthArg;  // optional order paramter, default empty
+            if (cmd.size() >= 6) {
+                fifthArg = cmd[5];
+                removeQuotes(fifthArg);
+            }
     
             if (commandName == "hex-by-custom-offset" || commandName == "hex-by-custom-decimal-offset" || commandName == "hex-by-custom-rdecimal-offset") {
                 if (cmd.size() >= 5) {
+
+                    std::string order;  // optional order paramter, default empty
+                    if (cmd.size() >= 6) {
+                        order = cmd[5];
+                        removeQuotes(order);
+                    }
+
                     std::string customPattern = cmd[2];
                     removeQuotes(customPattern);
                     std::string offset = cmd[3];
                     removeQuotes(offset);
                     std::string hexDataReplacement = cmd[4];
                     removeQuotes(hexDataReplacement);
-                    handleHexByCustom(sourcePath, customPattern, offset, hexDataReplacement, fourthArg, commandName);
+                    handleHexByCustom(sourcePath, customPattern, offset, hexDataReplacement, commandName, order);
                 }
             } else {
-                handleHexEdit(sourcePath, secondArg, thirdArg, fourthArg, commandName, cmd);
+                handleHexEdit(sourcePath, secondArg, thirdArg, fourthArg, fifthArg, commandName, cmd);
             }
         }
     } else if (commandName == "download") {
