@@ -3062,16 +3062,16 @@ void handleHexEdit(const std::string& sourcePath, const std::string& secondArg, 
     }
 }
 
-void handleHexByCustom(const std::string& sourcePath, const std::string& customPattern, const std::string& offset, std::string hexDataReplacement, const std::string& commandName, std::string order) {
+void handleHexByCustom(const std::string& sourcePath, const std::string& customPattern, const std::string& offset, std::string hexDataReplacement, const std::string& commandName, std::string byteGroupSize) {
     if (hexDataReplacement != NULL_STR) {
         if (commandName == "hex-by-custom-decimal-offset") {
             if (!order.empty())
-                hexDataReplacement = decimalToHex(hexDataReplacement, std::stoi(order));
+                hexDataReplacement = decimalToHex(hexDataReplacement, std::stoi(byteGroupSize));
             else
                 hexDataReplacement = decimalToHex(hexDataReplacement);
         } else if (commandName == "hex-by-custom-rdecimal-offset") {
             if (!order.empty())
-                hexDataReplacement = decimalToReversedHex(hexDataReplacement, std::stoi(order));
+                hexDataReplacement = decimalToReversedHex(hexDataReplacement, std::stoi(byteGroupSize));
             else
                 hexDataReplacement = decimalToReversedHex(hexDataReplacement);
         }
@@ -3165,10 +3165,10 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             if (commandName == "hex-by-custom-offset" || commandName == "hex-by-custom-decimal-offset" || commandName == "hex-by-custom-rdecimal-offset") {
                 if (cmd.size() >= 5) {
 
-                    std::string order;  // optional order paramter, default empty
+                    std::string byteGroupSize;  // optional order paramter, default empty
                     if (cmd.size() >= 6) {
-                        order = cmd[5];
-                        removeQuotes(order);
+                        byteGroupSize = cmd[5];
+                        removeQuotes(byteGroupSize);
                     }
 
                     std::string customPattern = cmd[2];
@@ -3177,7 +3177,7 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                     removeQuotes(offset);
                     std::string hexDataReplacement = cmd[4];
                     removeQuotes(hexDataReplacement);
-                    handleHexByCustom(sourcePath, customPattern, offset, hexDataReplacement, commandName, order);
+                    handleHexByCustom(sourcePath, customPattern, offset, hexDataReplacement, commandName, byteGroupSize);
                 }
             } else {
                 handleHexEdit(sourcePath, secondArg, thirdArg, fourthArg, fifthArg, commandName, cmd);
