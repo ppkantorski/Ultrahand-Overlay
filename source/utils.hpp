@@ -3150,13 +3150,13 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             std::string thirdArg = cmd[3];
             removeQuotes(thirdArg);
             
-            std::string fourthArg;  // optional order paramter, default empty
+            std::string fourthArg;  // optional paramter, default empty
             if (cmd.size() >= 5) {
                 fourthArg = cmd[4];
                 removeQuotes(fourthArg);
             }
 
-            std::string fifthArg;  // optional order paramter, default empty
+            std::string fifthArg;  // optional paramter, default empty
             if (cmd.size() >= 6) {
                 fifthArg = cmd[5];
                 removeQuotes(fifthArg);
