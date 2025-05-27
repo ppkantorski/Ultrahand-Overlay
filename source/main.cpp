@@ -2125,7 +2125,7 @@ public:
                         inSelectionMenu = false;
 
                         auto modifiedCmds = getSourceReplacement(commands, selectedItemsList[i], i, filePath);
-                        applyPlaceholderReplacementsToCommands(modifiedCmds);
+                        applyPlaceholderReplacementsToCommands(modifiedCmds, filePath);
                         //tsl::changeTo<ScriptOverlay>(modifiedCmds, filePath, specificKey+" - "+ selectedItemsList[i], "selection");
                         tsl::changeTo<ScriptOverlay>(modifiedCmds, filePath, getNameFromPath(selectedItemsList[i]), "selection", false, _currentPackageHeader);
                         return true;
@@ -2224,7 +2224,7 @@ public:
 					inSelectionMenu = false;
 				    // Custom logic for SCRIPT_KEY handling
 				    auto modifiedCmds = getSourceReplacement(state ? commandsOn : commandsOff, currentSelectedItems[i], i, filePath);
-				    applyPlaceholderReplacementsToCommands(modifiedCmds);
+				    applyPlaceholderReplacementsToCommands(modifiedCmds, filePath);
 				    tsl::changeTo<ScriptOverlay>(modifiedCmds, filePath, getNameFromPath(selectedItemsList[i]), "selection", false, _currentPackageHeader);
 				});
 
@@ -3065,7 +3065,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                             }
                         }
 
-				        applyPlaceholderReplacementsToCommands(modifiedCmds);
+				        applyPlaceholderReplacementsToCommands(modifiedCmds, packagePath);
 				
 				        // Switch to ScriptOverlay
 				        tsl::changeTo<ScriptOverlay>(modifiedCmds, packagePath, keyName, isFromMainMenu ? "main" : "package", false, _lastPackageHeader);
@@ -3124,7 +3124,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
 					    }
 						
 					    // Apply placeholder replacements and switch to ScriptOverlay
-					    applyPlaceholderReplacementsToCommands(modifiedCmds);
+					    applyPlaceholderReplacementsToCommands(modifiedCmds, packagePath);
 					    tsl::changeTo<ScriptOverlay>(modifiedCmds, packagePath, keyName, isFromMainMenu ? "main" : "package", false, _lastPackageHeader);
 					});
 					
@@ -3260,7 +3260,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
 					    }
 					
 					    // Apply placeholder replacements and switch to ScriptOverlay
-					    applyPlaceholderReplacementsToCommands(modifiedCmds);
+					    applyPlaceholderReplacementsToCommands(modifiedCmds, packagePath);
 					    tsl::changeTo<ScriptOverlay>(modifiedCmds, packagePath, keyName, isFromMainMenu ? "main" : "package", false, _lastPackageHeader);
 					});
 					
@@ -3490,7 +3490,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                                     lastMenu = "subPackageMenu";
                                 }
                                 auto modifiedCmds = getSourceReplacement(commands, selectedItem, i, packagePath);
-                                applyPlaceholderReplacementsToCommands(modifiedCmds);
+                                applyPlaceholderReplacementsToCommands(modifiedCmds, packagePath);
                                 tsl::changeTo<ScriptOverlay>(modifiedCmds, packagePath, keyName, isFromMainMenu ? "main" : "package", false, _lastPackageHeader);
                                 return true;
                             }
@@ -3555,7 +3555,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
 						    auto modifiedCmds = state ? getSourceReplacement(commandsOn, pathPatternOn, i, packagePath) :
                                 getSourceReplacement(commandsOff, pathPatternOff, i, packagePath);
 
-						    applyPlaceholderReplacementsToCommands(modifiedCmds);
+						    applyPlaceholderReplacementsToCommands(modifiedCmds, packagePath);
 						    tsl::changeTo<ScriptOverlay>(modifiedCmds, packagePath, keyName, isFromMainMenu ? "main" : "package", false, _lastPackageHeader);
 						});
 

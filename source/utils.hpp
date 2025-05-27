@@ -1355,24 +1355,31 @@ void addPackageInfo(std::unique_ptr<tsl::elm::List>& list, auto& packageHeader, 
  */
 
 
-/**
- * @brief Check if a path contains dangerous combinations.
- *
- * This function checks if a given path contains patterns that may pose security risks.
- *
- * @param patternPath The path to check.
- * @return True if the path contains dangerous combinations, otherwise false.
- */
-bool isDangerousCombination(const std::string& patternPath) {
-    static const std::vector<std::pair<const char*, size_t>> protectedFolders = {
-        {"sdmc:/Nintendo/", 14},
-        {"sdmc:/emuMMC/", 13},
-        {"sdmc:/emuMMC/RAW1/", 17},
-        {"sdmc:/atmosphere/", 15},
-        {"sdmc:/bootloader/", 15},
-        {"sdmc:/switch/", 12},
-        {"sdmc:/config/", 12},
-        {"sdmc:/", 6}
+bool isDangerousCombination(const std::string& originalPath) {
+    // 1) Normalize repeated wildcards (collapse runs of '*' to a single '*')
+    std::string patternPath = originalPath;
+    {
+        std::string normalized;
+        bool lastWasStar = false;
+        for (char c : patternPath) {
+            if (c == '*') {
+                if (!lastWasStar) {
+                    normalized += c;
+                    lastWasStar = true;
+                }
+                // skip extra '*'
+            } else {
+                normalized += c;
+                lastWasStar = false;
+            }
+        }
+        patternPath = normalized;
+    }
+
+    // 2) Define folder sets with behavior-based names
+    static const std::vector<const char*> albumFolders = {
+        "sdmc:/Nintendo/Album/",
+        "sdmc:/emuMMC/RAW1/Nintendo/Album/"
     };
 
     static const std::vector<const char*> ultraProtectedFolders = {
@@ -1382,87 +1389,104 @@ bool isDangerousCombination(const std::string& patternPath) {
         "sdmc:/emuMMC/RAW1/Nintendo/save/"
     };
 
-    static const std::vector<const char*> generalDangerousPatterns = {
-        "..",    // Attempts to traverse to parent directories
-        "~",     // Represents user's home directory, can be dangerous if misused
-        "*",     // Wildcard in general
-        "*/"     // Wildcard in general
+    // Folders where wildcards are allowed, but no broad "delete entire folder" allowed
+    static const std::vector<const char*> restrictedWildcardFolders = {
+        "sdmc:/config/",
+        "sdmc:/bootloader/",
+        "sdmc:/atmosphere/",
+        "sdmc:/switch/"
     };
 
-    // Patterns allowed in Album folders
-    static const std::vector<const char*> albumAllowedPatterns = {
-        "*", 
-        "*/"
+    // Protected folders where wildcards are disallowed except in album folders
+    static const std::vector<const char*> protectedFolders = {
+        "sdmc:/Nintendo/",
+        "sdmc:/emuMMC/",
+        "sdmc:/emuMMC/RAW1/"
     };
 
-    // Album folders where limited patterns are allowed
-    static const std::vector<const char*> albumFolders = {
-        "sdmc:/Nintendo/Album/",
-        "sdmc:/emuMMC/RAW1/Nintendo/Album/"
+    static const std::vector<const char*> alwaysDangerousPatterns = {
+        "..", "~"
     };
 
-    // Check if path is within an Album folder and restrict to albumAllowedPatterns
-    for (const auto& albumFolder : albumFolders) {
-        if (patternPath.compare(0, std::strlen(albumFolder), albumFolder) == 0) {
-            // Only check for the patterns allowed in Album folders
-            for (const auto& pattern : generalDangerousPatterns) {
-                if (std::find(albumAllowedPatterns.begin(), albumAllowedPatterns.end(), pattern) == albumAllowedPatterns.end() &&
-                    patternPath.find(pattern) != std::string::npos) {
-                    return true; // Path contains a dangerous pattern not allowed in Album folders
-                }
-            }
-            // If only allowed patterns are found, continue safely
-            return false; // Path is safe within Album folders
+    static const std::vector<const char*> wildcardPatterns = {
+        "*", "*/"
+    };
+
+    // --- 3) Always block dangerous patterns anywhere
+    for (const auto& pat : alwaysDangerousPatterns) {
+        if (patternPath.find(pat) != std::string::npos) {
+            return true;
         }
     }
 
-    // Check ultra-protected folders first
+    // --- 4) Wildcards in root folder names disallowed
+    const char rootPrefix[] = "sdmc:/";
+    size_t rootLen = std::strlen(rootPrefix);
+    if (patternPath.compare(0, rootLen, rootPrefix) == 0) {
+        size_t nextSlash = patternPath.find('/', rootLen);
+        if (nextSlash == std::string::npos) nextSlash = patternPath.size();
+        size_t wildcardPos = patternPath.find('*', rootLen);
+        if (wildcardPos != std::string::npos && wildcardPos < nextSlash) {
+            return true; // wildcard in top-level directory disallowed
+        }
+    } else {
+        // Disallow wildcards outside sdmc:/
+        if (patternPath.find('*') != std::string::npos) {
+            return true;
+        }
+    }
+
+    // --- 5) Block any path inside ultra-protected folders fully
     for (const auto& folder : ultraProtectedFolders) {
         if (patternPath.compare(0, std::strlen(folder), folder) == 0) {
-            return true; // Path is an ultra-protected folder
+            return true;
         }
     }
 
-    // Check protected folders
-    for (const auto& [folder, folderLen] : protectedFolders) {
-        if (patternPath.compare(0, folderLen, folder) == 0) {
-            std::string relativePath = patternPath.substr(folderLen);
+    // --- 6) Handle restrictedWildcardFolders:
+    // Wildcards allowed *inside* these folders,
+    // but disallow targeting the folder itself or broad "*" at root of that folder.
+    for (const auto& folder : restrictedWildcardFolders) {
+        if (patternPath.compare(0, std::strlen(folder), folder) == 0) {
+            std::string relative = patternPath.substr(std::strlen(folder));
 
-            // Check for dangerous patterns in the relative path
-            for (const auto& pattern : generalDangerousPatterns) {
-                if (relativePath.find(pattern) != std::string::npos) {
-                    return true; // Path contains a dangerous pattern
-                }
+            // If relative is empty or just '*', it means "the whole folder" or "all files"
+            if (relative.empty() || relative == "*" || relative == "*/") {
+                return true; // block broad delete or targeting folder itself
             }
 
-            // Check for wildcard patterns that could affect ultra-protected folders
-            for (const auto& ultraFolder : ultraProtectedFolders) {
-                if (relativePath.find(ultraFolder + folderLen) == 0) {
-                    return true; // Path with wildcard could affect an ultra-protected folder
+            // Otherwise allow wildcards deeper inside folder
+            return false;
+        }
+    }
+
+    // --- 7) Block wildcard usage in protectedFolders, except albumFolders
+    for (const auto& folder : protectedFolders) {
+        if (patternPath.compare(0, std::strlen(folder), folder) == 0) {
+            bool isAlbum = false;
+            for (const auto& albumFolder : albumFolders) {
+                if (patternPath.compare(0, std::strlen(albumFolder), albumFolder) == 0) {
+                    isAlbum = true;
+                    break;
                 }
             }
+            if (isAlbum) {
+                return false; // wildcards allowed in album folders
+            }
 
-            break; // If it matches a protected folder, no need to check others
+            std::string relative = patternPath.substr(std::strlen(folder));
+            for (const auto& pat : wildcardPatterns) {
+                if (relative.find(pat) != std::string::npos) {
+                    return true; // wildcard in protected folder disallowed
+                }
+            }
+            return false;
         }
     }
 
-    // Check dangerous patterns in general
-    for (const auto& pattern : generalDangerousPatterns) {
-        if (patternPath.find(pattern) != std::string::npos) {
-            return true; // Path contains a dangerous pattern
-        }
-    }
-
-    // Check wildcard at root level
-    size_t rootPos = patternPath.find(":/");
-    if (rootPos != std::string::npos && patternPath.find('*', rootPos) != std::string::npos) {
-        return true; // Root path contains a wildcard
-    }
-
-    return false; // No dangerous combinations found
+    // --- 8) Otherwise, no dangerous combination detected
+    return false;
 }
-
-
 
 
 
@@ -2232,8 +2256,32 @@ void applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
         {"{decimal_to_hex(", [&](const std::string& placeholder) {
             size_t startPos = placeholder.find("(") + 1;
             size_t endPos = placeholder.find(")");
-            std::string decimalValue = placeholder.substr(startPos, endPos - startPos);
-            return decimalToHex(decimalValue);
+            std::string params = placeholder.substr(startPos, endPos - startPos);
+        
+            // Split params by comma
+            size_t commaPos = params.find(",");
+            std::string decimalValue;
+            std::string order;
+        
+            if (commaPos != std::string::npos) {
+                decimalValue = params.substr(0, commaPos);
+                order = params.substr(commaPos + 1);
+                // Trim whitespace from order
+                order.erase(0, order.find_first_not_of(" \t\n\r"));
+                order.erase(order.find_last_not_of(" \t\n\r") + 1);
+            } else {
+                decimalValue = params;
+                order = "";  // optional param is empty
+            }
+        
+            // You can now call decimalToHex with decimalValue and order
+            // Adjust decimalToHex function accordingly or handle order here
+        
+            if (order.empty()) {
+                return decimalToHex(decimalValue);
+            } else {
+                return decimalToHex(decimalValue, std::stoi(order)); // assuming overload or second param version
+            }
         }},
         {"{ascii_to_hex(", [&](const std::string& placeholder) {
             size_t startPos = placeholder.find("(") + 1;
@@ -2381,7 +2429,7 @@ bool applyPlaceholderReplacementsToCommands(std::vector<std::vector<std::string>
 
     bool inEristaSection = false;
     bool inMarikoSection = false;
-    bool eraseAtEnd ;
+    bool eraseAtEnd = false;
 
     // Process commands with control flow and apply replacements
     for (auto it = commands.begin(); it != commands.end();) {
@@ -2453,6 +2501,8 @@ bool applyPlaceholderReplacementsToCommands(std::vector<std::vector<std::string>
         } else {
             eraseAtEnd = false;
         }
+
+        logMessage("iniPath: "+iniPath);
 
         // Now, handle adding quotes only if needed
         for (size_t i = 1; i < cmd.size(); ++i) {
@@ -2794,6 +2844,10 @@ void handleDeleteCommand(const std::vector<std::string>& cmd, const std::string&
                     deleteFileOrDirectoryByPattern(sourcePath, logSource); // Delete files by pattern
                 else
                     deleteFileOrDirectory(sourcePath, logSource); // Delete single file or directory
+            } else {
+                #if USING_LOGGING_DIRECTIVE
+                logMessage("Dangerous combination detected.");
+                #endif
             }
         }
     }
@@ -2875,6 +2929,10 @@ void handleMoveCommand(const std::vector<std::string>& cmd, const std::string& p
                     moveFilesOrDirectoriesByPattern(sourcePath, destinationPath, logSource, logDestination); // Move files by pattern
                 else
                     moveFileOrDirectory(sourcePath, destinationPath, logSource, logDestination); // Move single file or directory
+            } else {
+                #if USING_LOGGING_DIRECTIVE
+                logMessage("Dangerous combination detected.");
+                #endif
             }
         }
     }
@@ -2938,14 +2996,12 @@ void handleIniCommands(const std::vector<std::string>& cmd, const std::string& p
     }
 }
 
-void handleHexEdit(const std::string& sourcePath, const std::string& secondArg, const std::string& thirdArg, const std::string& commandName, const std::vector<std::string>& cmd) {
+void handleHexEdit(const std::string& sourcePath, const std::string& secondArg, const std::string& thirdArg, const std::string& fourthArg, const std::string& fifthArg, const std::string& commandName, const std::vector<std::string>& cmd) {
     if (commandName == "hex-by-offset") {
         hexEditByOffset(sourcePath, secondArg, thirdArg);
     } else if (commandName == "hex-by-swap") {
         if (cmd.size() >= 5) {
-            std::string selectedStr = cmd[4];
-            removeQuotes(selectedStr);
-            size_t occurrence = std::stoul(selectedStr);
+            size_t occurrence = std::stoul(fourthArg);
             hexEditFindReplace(sourcePath, secondArg, thirdArg, occurrence);
         } else {
             hexEditFindReplace(sourcePath, secondArg, thirdArg);
@@ -2967,23 +3023,38 @@ void handleHexEdit(const std::string& sourcePath, const std::string& secondArg, 
             hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
         }
     } else if (commandName == "hex-by-decimal") {
-        std::string hexDataToReplace = decimalToHex(secondArg);
-        std::string hexDataReplacement = decimalToHex(thirdArg);
-        if (cmd.size() >= 5) {
-            std::string selectedStr = cmd[4];
-            removeQuotes(selectedStr);
-            size_t occurrence = std::stoul(selectedStr);
+
+        std::string hexDataToReplace;
+        std::string hexDataReplacement;
+    
+        if (fourthArg.empty()) {
+            hexDataToReplace = decimalToHex(secondArg);
+            hexDataReplacement = decimalToHex(thirdArg);
+        } else {
+            hexDataToReplace = decimalToHex(secondArg, std::stoi(fourthArg));
+            hexDataReplacement = decimalToHex(thirdArg, std::stoi(fourthArg));
+        }
+    
+        if (cmd.size() >= 6) {
+            size_t occurrence = std::stoul(fifthArg);
             hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, occurrence);
         } else {
             hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
         }
     } else if (commandName == "hex-by-rdecimal") {
-        std::string hexDataToReplace = decimalToReversedHex(secondArg);
-        std::string hexDataReplacement = decimalToReversedHex(thirdArg);
-        if (cmd.size() >= 5) {
-            std::string selectedStr = cmd[4];
-            removeQuotes(selectedStr);
-            size_t occurrence = std::stoul(selectedStr);
+        std::string hexDataToReplace;
+        std::string hexDataReplacement;
+    
+        if (fourthArg.empty()) {
+            hexDataToReplace = decimalToReversedHex(secondArg);
+            hexDataReplacement = decimalToReversedHex(thirdArg);
+        } else {
+            hexDataToReplace = decimalToReversedHex(secondArg, std::stoi(fourthArg));
+            hexDataReplacement = decimalToReversedHex(thirdArg, std::stoi(fourthArg));
+        }
+    
+        if (cmd.size() >= 6) {
+            size_t occurrence = std::stoul(fifthArg);
             hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, occurrence);
         } else {
             hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
@@ -2991,12 +3062,18 @@ void handleHexEdit(const std::string& sourcePath, const std::string& secondArg, 
     }
 }
 
-void handleHexByCustom(const std::string& sourcePath, const std::string& customPattern, const std::string& offset, std::string hexDataReplacement, const std::string& commandName) {
+void handleHexByCustom(const std::string& sourcePath, const std::string& customPattern, const std::string& offset, std::string hexDataReplacement, const std::string& commandName, std::string order) {
     if (hexDataReplacement != NULL_STR) {
         if (commandName == "hex-by-custom-decimal-offset") {
-            hexDataReplacement = decimalToHex(hexDataReplacement);
+            if (!order.empty())
+                hexDataReplacement = decimalToHex(hexDataReplacement, std::stoi(order));
+            else
+                hexDataReplacement = decimalToHex(hexDataReplacement);
         } else if (commandName == "hex-by-custom-rdecimal-offset") {
-            hexDataReplacement = decimalToReversedHex(hexDataReplacement);
+            if (!order.empty())
+                hexDataReplacement = decimalToReversedHex(hexDataReplacement, std::stoi(order));
+            else
+                hexDataReplacement = decimalToReversedHex(hexDataReplacement);
         }
         hexEditByCustomOffset(sourcePath, customPattern, offset, hexDataReplacement);
     }
@@ -3067,23 +3144,43 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
         if (cmd.size() >= 4) {
             std::string sourcePath = cmd[1];
             preprocessPath(sourcePath, packagePath);
+    
             std::string secondArg = cmd[2];
             removeQuotes(secondArg);
             std::string thirdArg = cmd[3];
             removeQuotes(thirdArg);
+            
+            std::string fourthArg;  // optional order paramter, default empty
+            if (cmd.size() >= 5) {
+                fourthArg = cmd[4];
+                removeQuotes(fourthArg);
+            }
 
+            std::string fifthArg;  // optional order paramter, default empty
+            if (cmd.size() >= 6) {
+                fifthArg = cmd[5];
+                removeQuotes(fifthArg);
+            }
+    
             if (commandName == "hex-by-custom-offset" || commandName == "hex-by-custom-decimal-offset" || commandName == "hex-by-custom-rdecimal-offset") {
                 if (cmd.size() >= 5) {
+
+                    std::string order;  // optional order paramter, default empty
+                    if (cmd.size() >= 6) {
+                        order = cmd[5];
+                        removeQuotes(order);
+                    }
+
                     std::string customPattern = cmd[2];
                     removeQuotes(customPattern);
                     std::string offset = cmd[3];
                     removeQuotes(offset);
                     std::string hexDataReplacement = cmd[4];
                     removeQuotes(hexDataReplacement);
-                    handleHexByCustom(sourcePath, customPattern, offset, hexDataReplacement, commandName);
+                    handleHexByCustom(sourcePath, customPattern, offset, hexDataReplacement, commandName, order);
                 }
             } else {
-                handleHexEdit(sourcePath, secondArg, thirdArg, commandName, cmd);
+                handleHexEdit(sourcePath, secondArg, thirdArg, fourthArg, fifthArg, commandName, cmd);
             }
         }
     } else if (commandName == "download") {
