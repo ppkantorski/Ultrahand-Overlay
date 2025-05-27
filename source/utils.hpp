@@ -3165,18 +3165,20 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             if (commandName == "hex-by-custom-offset" || commandName == "hex-by-custom-decimal-offset" || commandName == "hex-by-custom-rdecimal-offset") {
                 if (cmd.size() >= 5) {
 
-                    std::string byteGroupSize;  // optional order paramter, default empty
+                    std::string customPattern = cmd[2];
+                    std::string offset = cmd[3];
+                    std::string hexDataReplacement = cmd[4];
+            
+                    removeQuotes(customPattern);
+                    removeQuotes(offset);
+                    removeQuotes(hexDataReplacement);
+            
+                    std::string byteGroupSize;  // optional
                     if (cmd.size() >= 6) {
                         byteGroupSize = cmd[5];
                         removeQuotes(byteGroupSize);
                     }
-
-                    std::string customPattern = cmd[2];
-                    removeQuotes(customPattern);
-                    std::string offset = cmd[3];
-                    removeQuotes(offset);
-                    std::string hexDataReplacement = cmd[4];
-                    removeQuotes(hexDataReplacement);
+            
                     handleHexByCustom(sourcePath, customPattern, offset, hexDataReplacement, commandName, byteGroupSize);
                 }
             } else {
