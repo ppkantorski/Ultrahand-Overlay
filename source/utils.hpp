@@ -3065,12 +3065,12 @@ void handleHexEdit(const std::string& sourcePath, const std::string& secondArg, 
 void handleHexByCustom(const std::string& sourcePath, const std::string& customPattern, const std::string& offset, std::string hexDataReplacement, const std::string& commandName, std::string byteGroupSize) {
     if (hexDataReplacement != NULL_STR) {
         if (commandName == "hex-by-custom-decimal-offset") {
-            if (!order.empty())
+            if (!byteGroupSize.empty())
                 hexDataReplacement = decimalToHex(hexDataReplacement, std::stoi(byteGroupSize));
             else
                 hexDataReplacement = decimalToHex(hexDataReplacement);
         } else if (commandName == "hex-by-custom-rdecimal-offset") {
-            if (!order.empty())
+            if (!byteGroupSize.empty())
                 hexDataReplacement = decimalToReversedHex(hexDataReplacement, std::stoi(byteGroupSize));
             else
                 hexDataReplacement = decimalToReversedHex(hexDataReplacement);
