@@ -1010,7 +1010,6 @@ static void buildTableDrawerLines(
     const std::string indent = "└ ";
     const float indentWidth = tsl::gfx::calculateStringWidth(indent, fontSize, false);
 
-    // Clear output containers
     outSection.clear();
     outInfo.clear();
     outY.clear();
@@ -1018,8 +1017,47 @@ static void buildTableDrawerLines(
 
     size_t curY = startGap;
 
+    // A small lambda to wrap and push lines with proper x,y and info alignment
+    auto processLines = [&](const std::vector<std::string>& lines, const std::vector<std::string>& infos) {
+        for (size_t i = 0; i < lines.size(); ++i) {
+            const std::string& baseText = lines[i];
+            const std::string& infoTextRaw = (i < infos.size()) ? infos[i] : "";
+            std::string infoText = (infoTextRaw.find(NULL_STR) != std::string::npos) ? UNAVAILABLE_SELECTION : infoTextRaw;
+
+            // Wrap the base text according to wrappingMode and indent params
+            auto wrappedLines = wrapText(
+                baseText,
+                xMax - 12 - 4,
+                wrappingMode,
+                useWrappedTextIndent,
+                indent, indentWidth,
+                fontSize
+            );
+
+            // Cache width of info text only once per base line, not per wrapped line
+            float infoWidth = tsl::gfx::calculateStringWidth(infoText, fontSize, false);
+
+            for (const auto& line : wrappedLines) {
+                outSection.push_back(line);
+                outInfo.push_back(infoText);
+
+                int xPos = 0;
+                if (alignment == LEFT_STR) {
+                    xPos = static_cast<int>(columnOffset);
+                } else if (alignment == RIGHT_STR) {
+                    xPos = static_cast<int>(xMax - infoWidth + (columnOffset - 160 + 1));
+                } else { // CENTER_STR
+                    xPos = static_cast<int>(columnOffset + (xMax - infoWidth) / 2);
+                }
+
+                outX.push_back(xPos);
+                outY.push_back(static_cast<s32>(curY));
+                curY += lineHeight + newlineGap;
+            }
+        }
+    };
+
     if (!tableData.empty()) {
-        // Handle tableData-based structured input
         std::vector<std::string> baseSection;
         std::vector<std::string> baseInfo;
 
@@ -1042,10 +1080,7 @@ static void buildTableDrawerLines(
                 continue;
             }
 
-            if ((inErista && usingErista) ||
-                (inMariko && usingMariko) ||
-                (!inErista && !inMariko)) 
-            {
+            if ((inErista && usingErista) || (inMariko && usingMariko) || (!inErista && !inMariko)) {
                 auto cmd = cmds;  // Copy for placeholder replacements
 
                 applyPlaceholderReplacements(
@@ -1092,72 +1127,9 @@ static void buildTableDrawerLines(
                 }
             }
         }
-
-        // Wrap and format the lines
-        for (size_t i = 0; i < baseSection.size(); ++i) {
-            auto wrappedLines = wrapText(
-                baseSection[i],
-                xMax - 12 - 4,
-                wrappingMode,
-                useWrappedTextIndent,
-                indent, indentWidth,
-                fontSize
-            );
-
-            std::string infoText = (i < baseInfo.size() && baseInfo[i].find(NULL_STR) != std::string::npos)
-                ? UNAVAILABLE_SELECTION
-                : (i < baseInfo.size() ? baseInfo[i] : "");
-
-            for (const auto& line : wrappedLines) {
-                outSection.push_back(line);
-                outInfo.push_back(infoText);
-
-                float infoWidth = tsl::gfx::calculateStringWidth(infoText, fontSize, false);
-                if (alignment == LEFT_STR) {
-                    outX.push_back(static_cast<int>(columnOffset));
-                } else if (alignment == RIGHT_STR) {
-                    outX.push_back(static_cast<int>(xMax - infoWidth + (columnOffset - 160 + 1)));
-                } else { // CENTER_STR
-                    outX.push_back(static_cast<int>(columnOffset + (xMax - infoWidth) / 2));
-                }
-
-                outY.push_back(static_cast<s32>(curY));
-                curY += lineHeight + newlineGap;
-            }
-        }
+        processLines(baseSection, baseInfo);
     } else {
-        // Fallback to old-style sectionLines + infoLines
-        for (size_t i = 0; i < sectionLines.size(); ++i) {
-            auto wrappedLines = wrapText(
-                sectionLines[i],
-                xMax - 12 - 4,
-                wrappingMode,
-                useWrappedTextIndent,
-                indent, indentWidth,
-                fontSize
-            );
-
-            std::string infoText = (i < infoLines.size() && infoLines[i].find(NULL_STR) != std::string::npos)
-                ? UNAVAILABLE_SELECTION
-                : (i < infoLines.size() ? infoLines[i] : "");
-
-            for (const auto& line : wrappedLines) {
-                outSection.push_back(line);
-                outInfo.push_back(infoText);
-
-                float infoWidth = tsl::gfx::calculateStringWidth(infoText, fontSize, false);
-                if (alignment == LEFT_STR) {
-                    outX.push_back(static_cast<int>(columnOffset));
-                } else if (alignment == RIGHT_STR) {
-                    outX.push_back(static_cast<int>(xMax - infoWidth + (columnOffset - 160 + 1)));
-                } else { // CENTER_STR
-                    outX.push_back(static_cast<int>(columnOffset + (xMax - infoWidth) / 2));
-                }
-
-                outY.push_back(static_cast<s32>(curY));
-                curY += lineHeight + newlineGap;
-            }
-        }
+        processLines(sectionLines, infoLines);
     }
 }
 
@@ -1201,23 +1173,24 @@ void drawTable(
     const auto hiliteRaw = getRawColor(tableInfoTextHighlightColor, tsl::infoTextColor);
 
     // Prebuild initial buffers (optional, to warm cache)
-    std::vector<std::string> initExpSec, initExpInfo;
-    std::vector<s32>         initYOff;
-    std::vector<int>         initXOff;
+    std::vector<std::string> cacheExpSec, cacheExpInfo;
+    std::vector<s32>         cacheYOff;
+    std::vector<s32>         cacheXOff;
 
     buildTableDrawerLines(
         tableData, sectionLines, infoLines, packagePath,
         columnOffset, startGap, newlineGap,
         wrappingMode, alignment, useWrappedTextIndent,
-        initExpSec, initExpInfo, initYOff, initXOff
+        cacheExpSec, cacheExpInfo, cacheYOff, cacheXOff
     );
 
-    std::vector<std::string> cacheExpSec = initExpSec;
-    std::vector<std::string> cacheExpInfo = initExpInfo;
-    std::vector<s32>         cacheYOff   = initYOff;
-    std::vector<int>         cacheXOff   = initXOff;
+    //std::vector<std::string> cacheExpSec = initExpSec;
+    //std::vector<std::string> cacheExpInfo = initExpInfo;
+    //std::vector<s32>         cacheYOff   = initYOff;
+    //std::vector<int>         cacheXOff   = initXOff;
 
     auto lastUpdateTime = std::make_shared<timespec>(timespec{0, 0});
+    
 
     // Use move or copy to static cache inside lambda
     list->addItem(new tsl::elm::TableDrawer(
@@ -1226,17 +1199,20 @@ void drawTable(
             timespec currentTime;
             clock_gettime(CLOCK_REALTIME, &currentTime);
 
-            double elapsedSeconds = difftime(currentTime.tv_sec, lastUpdateTime->tv_sec);
+            //double elapsedSeconds = difftime(currentTime.tv_sec, lastUpdateTime->tv_sec);
 
             // Rebuild cache if more than 1 sec passed or empty
-            if ((elapsedSeconds >= 1.0 || cacheExpSec.empty())) {
-                buildTableDrawerLines(
-                    tableData, sectionLines, infoLines, packagePath,
-                    columnOffset, startGap, newlineGap,
-                    wrappingMode, alignment, useWrappedTextIndent,
-                    cacheExpSec, cacheExpInfo, cacheYOff, cacheXOff
-                );
-                *lastUpdateTime = currentTime;
+            if (!tableData.empty()) {
+                double elapsedSeconds = difftime(currentTime.tv_sec, lastUpdateTime->tv_sec);
+                if (elapsedSeconds >= 1.0) {
+                    buildTableDrawerLines(
+                        tableData, sectionLines, infoLines, packagePath,
+                        columnOffset, startGap, newlineGap,
+                        wrappingMode, alignment, useWrappedTextIndent,
+                        cacheExpSec, cacheExpInfo, cacheYOff, cacheXOff
+                    );
+                    *lastUpdateTime = currentTime;
+                }
             }
 
             if (useHeaderIndent) {
@@ -1270,8 +1246,8 @@ void drawTable(
         isScrollable
     ),
     static_cast<u32>(
-        16 * initExpSec.size()
-        + newlineGap * (initExpSec.empty() ? 0 : initExpSec.size() - 1)
+        16 * cacheExpSec.size()
+        + newlineGap * (cacheExpSec.empty() ? 0 : cacheExpSec.size() - 1)
         + endGap
     ));
 }
