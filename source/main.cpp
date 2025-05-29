@@ -1462,8 +1462,11 @@ public:
 	        const bool usingBottomPivot = false;
 
             addDummyListItem(list);
+
+            std::vector<std::vector<std::string>> dummyTableData;
+
 	        // Draw the table using the sectionLines and empty infoLines
-	        drawTable(list, sectionLines, infoLines, tableColumnOffset, tableStartGap, tableEndGap, tableSpacing,
+	        drawTable(list, dummyTableData, sectionLines, infoLines, tableColumnOffset, tableStartGap, tableEndGap, tableSpacing,
 	                  tableSectionTextColor, tableInfoTextColor, tableInfoTextColor, tableAlignment, hideTableBackground, useHeaderIndent, isScrollableTable, wrappingMode, useWrappedTextIndent);
 
             if (usingBottomPivot) {
