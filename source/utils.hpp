@@ -889,113 +889,6 @@ std::vector<std::string> wrapText(const std::string& text, float maxWidth, const
 
 
 
-void drawTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::string>& sectionLines, std::vector<std::string>& infoLines,
-               size_t columnOffset = 163, size_t startGap = 19, size_t endGap = 12, size_t newlineGap = 0,
-               const std::string& tableSectionTextColor = DEFAULT_STR, const std::string& tableInfoTextColor = DEFAULT_STR, const std::string& tableInfoTextHighlightColor = DEFAULT_STR, 
-               const std::string& alignment = LEFT_STR, bool hideTableBackground = false, bool useHeaderIndent = false, 
-               bool isScrollable = false, const std::string& wrappingMode = "none", bool useWrappedTextIndent = false) {
-
-    const size_t lineHeight = 16;
-    const size_t fontSize = 16;
-    const size_t xMax = tsl::cfg::FramebufferWidth - 95;
-    //const std::string indent = "    ";  // 4 spaces for indentation
-    const std::string indent = "└ ";
-    float indentWidth = tsl::gfx::calculateStringWidth(indent, fontSize, false);  // Calculate width of the indent
-
-    auto getTextColor = [](const std::string& colorStr, auto defaultColor) {
-        if (colorStr == "warning") return tsl::warningTextColor;
-        if (colorStr == "text") return tsl::defaultTextColor;
-        if (colorStr == "on_value") return tsl::onTextColor;
-        if (colorStr == "off_value") return tsl::offTextColor;
-        if (colorStr == "header") return tsl::headerTextColor;
-        if (colorStr == "info") return tsl::infoTextColor;
-        if (colorStr == "section") return tsl::sectionTextColor;
-        if (colorStr == "healthy_ram") return tsl::healthyRamTextColor;
-        if (colorStr == "neutral_ram") return tsl::neutralRamTextColor;
-        if (colorStr == "bad_ram") return tsl::badRamTextColor;
-        return (colorStr == DEFAULT_STR) ? defaultColor : tsl::RGB888(colorStr);
-    };
-
-    auto alternateSectionTextColor = getTextColor(tableSectionTextColor, tsl::sectionTextColor);
-    auto alternateInfoTextColor = getTextColor(tableInfoTextColor, tsl::infoTextColor);
-    auto alternateInfoTextHighlightColor = getTextColor(tableInfoTextHighlightColor, tsl::infoTextColor);
-
-    // Vectors for recalculating offsets and expanding lines
-    std::vector<std::string> expandedSectionLines;
-    std::vector<std::string> expandedInfoLines;
-    std::vector<s32> yOffsets;
-    std::vector<int> infoXOffsets;
-
-    // Preprocess and wrap section lines, ensuring infoLines align correctly
-    size_t currentY = startGap;
-
-    std::vector<std::string> wrappedLines;
-    float infoTextWidth;
-
-    for (size_t i = 0; i < sectionLines.size(); ++i) {
-        // Wrap the section lines before passing them to the drawer, and indent if required
-        wrappedLines = wrapText(sectionLines[i], xMax - 12 - 4, wrappingMode, useWrappedTextIndent, indent, indentWidth, fontSize);
-        
-        std::string infoText;
-        for (const auto& wrappedLine : wrappedLines) {
-            expandedSectionLines.push_back(wrappedLine);
-            
-            // Replicate or replace NULL_STR with UNAVAILABLE_SELECTION in infoLines
-            infoText = (i < infoLines.size() && infoLines[i].find(NULL_STR) != std::string::npos) 
-                                   ? UNAVAILABLE_SELECTION 
-                                   : (i < infoLines.size() ? infoLines[i] : "");
-            
-            expandedInfoLines.push_back(infoText);  // Add the processed info text
-    
-            // Calculate X offsets for the info line based on alignment
-            infoTextWidth = tsl::gfx::calculateStringWidth(infoText, fontSize, false);
-    
-            if (alignment == LEFT_STR) {
-                infoXOffsets.push_back(static_cast<int>(columnOffset));
-            } else if (alignment == RIGHT_STR) {
-                infoXOffsets.push_back(static_cast<int>(xMax - infoTextWidth + (columnOffset - 160 + 1)));
-            } else { // CENTER_STR
-                infoXOffsets.push_back(static_cast<int>(columnOffset + (xMax - infoTextWidth) / 2));
-            }
-    
-            yOffsets.push_back(currentY);  // Set the offset for each line
-            currentY += lineHeight + newlineGap;  // Increment Y position for the next line
-        }
-    }
-
-
-    // Compute total height based on the number of expanded lines
-    size_t totalHeight = lineHeight * expandedSectionLines.size() + newlineGap * (expandedSectionLines.size() - 1) + endGap;
-
-    // Add the TableDrawer with modified sectionLines and infoLines (now they match in size)
-    list->addItem(new tsl::elm::TableDrawer([=](tsl::gfx::Renderer* renderer, s32 x, s32 y, s32 w, s32 h) mutable {
-        if (useHeaderIndent) {
-            renderer->drawRect(x - 2, y + 2, 4, 22, renderer->a(tsl::headerSeparatorColor));
-        }
-        std::string infoText;
-        bool infoTextColorIsSame = (tableInfoTextColor == tableInfoTextHighlightColor);
-        // Draw each section and info line
-        for (size_t i = 0; i < expandedSectionLines.size(); ++i) {
-            // Draw the section line
-            renderer->drawString(expandedSectionLines[i], false, x + 12, y + yOffsets[i], fontSize, renderer->a(alternateSectionTextColor));
-
-            // Draw the corresponding info line
-            if (i < expandedInfoLines.size()) {
-                infoText = expandedInfoLines[i];
-
-                if (infoTextColorIsSame)
-                    renderer->drawString(infoText, false, x + infoXOffsets[i], y + yOffsets[i], fontSize, renderer->a(alternateInfoTextColor));
-                else
-                    renderer->drawStringWithHighlight(infoText, false, x + infoXOffsets[i], y + yOffsets[i], fontSize, renderer->a(alternateInfoTextColor), renderer->a(alternateInfoTextHighlightColor));
-            }
-        }
-    }, hideTableBackground, endGap, isScrollable), totalHeight);
-}
-
-
-
-
-
 void applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::string& hexPath, const std::string& iniPath, const std::string& listString, const std::string& listPath, const std::string& jsonString, const std::string& jsonPath);
 
 std::string getFirstSectionText(const std::vector<std::vector<std::string>>& tableData, const std::string& packagePath) {
@@ -1094,135 +987,324 @@ std::string getFirstSectionText(const std::vector<std::vector<std::string>>& tab
 
 
 
+// ─── Helper: flatten + placeholder + wrap & expand ─────────────────────────────
+static void buildTableDrawerLines(
+    const std::vector<std::vector<std::string>>& tableData,
+    std::vector<std::string>&                    sectionLines,
+    std::vector<std::string>&                    infoLines,
+    const std::string&                           packagePath,
+    size_t                                       columnOffset,
+    size_t                                       startGap,
+    size_t                                       newlineGap,
+    const std::string&                           wrappingMode,
+    const std::string&                           alignment,
+    bool                                         useWrappedTextIndent,
+    std::vector<std::string>&                    outSection,
+    std::vector<std::string>&                    outInfo,
+    std::vector<s32>&                            outY,
+    std::vector<int>&                            outX
+) {
+    const size_t lineHeight = 16;
+    const size_t fontSize = 16;
+    const size_t xMax = tsl::cfg::FramebufferWidth - 95;
+    const std::string indent = "└ ";
+    const float indentWidth = tsl::gfx::calculateStringWidth(indent, fontSize, false);
 
-void addTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::vector<std::string>>& tableData,
-    const std::string& packagePath, const size_t& columnOffset=163, const size_t& tableStartGap=19, const size_t& tableEndGap=12, const size_t& tableSpacing=0,
-    const std::string& tableSectionTextColor=DEFAULT_STR, const std::string& tableInfoTextColor=DEFAULT_STR, const std::string& tableInfoTextHighlightColor=DEFAULT_STR, const std::string& tableAlignment=RIGHT_STR,
-    const bool& hideTableBackground = false, const bool& useHeaderIndent = false, const bool& isScrollable = false, const std::string& wrappingMode="none", const bool& useWrappedTextIndent = false) {
+    // Clear output containers
+    outSection.clear();
+    outInfo.clear();
+    outY.clear();
+    outX.clear();
 
-    std::string message;
+    size_t curY = startGap;
 
-    //std::string sectionString, infoString;
-    std::vector<std::string> sectionLines, infoLines;
+    if (!tableData.empty()) {
+        // Handle tableData-based structured input
+        std::vector<std::string> baseSection;
+        std::vector<std::string> baseInfo;
 
-    std::string listFileSourcePath;
+        std::string listFileSourcePath;
+        std::string hexPath, iniPath, listString, listPath, jsonString, jsonPath;
+        bool inErista = false, inMariko = false;
 
-    std::string hexPath, iniPath, listString, listPath, jsonString, jsonPath;
+        for (const auto& cmds : tableData) {
+            if (cmds.empty()) continue;
+            const auto& name = cmds[0];
 
-    //std::string columnAlignment = tableAlignment;
-
-    bool inEristaSection = false;
-    bool inMarikoSection = false;
-    //size_t tableSize = 0;
-    //size_t newlineGap = 10;
-
-    for (auto& commands : tableData) {
-
-        auto& cmd = commands; // Get the first command for processing
-
-        if (abortCommand.load(std::memory_order_acquire)) {
-            abortCommand.store(false, std::memory_order_release);
-            commandSuccess = false;
-            #if USING_LOGGING_DIRECTIVE
-            disableLogging = true;
-            logFilePath = defaultLogFilePath;
-            #endif
-            return;
-        }
-
-        if (cmd.empty()) {
-            //commands.erase(commands.begin()); // Remove empty command
-            continue;
-        }
-
-        const std::string& commandName = cmd[0];
-
-        if (commandName == "erista:") {
-            inEristaSection = true;
-            inMarikoSection = false;
-            commands.erase(commands.begin()); // Remove processed command
-            continue;
-        } else if (commandName == "mariko:") {
-            inEristaSection = false;
-            inMarikoSection = true;
-            commands.erase(commands.begin()); // Remove processed command
-            continue;
-        }
-
-        if ((inEristaSection && !inMarikoSection && usingErista) || (!inEristaSection && inMarikoSection && usingMariko) || (!inEristaSection && !inMarikoSection)) {
-
-            applyPlaceholderReplacements(cmd, hexPath, iniPath, listString, listPath, jsonString, jsonPath);
-
-            #if USING_LOGGING_DIRECTIVE
-            if (interpreterLogging) {
-                disableLogging = false;
-                message = "Reading line:";
-                for (const std::string& token : cmd)
-                    message += " " + token;
-                logMessage(message);
+            if (name == "erista:") {
+                inErista = true;
+                inMariko = false;
+                continue;
             }
-            #endif
+            if (name == "mariko:") {
+                inErista = false;
+                inMariko = true;
+                continue;
+            }
 
-            const size_t cmdSize = cmd.size();
+            if ((inErista && usingErista) ||
+                (inMariko && usingMariko) ||
+                (!inErista && !inMariko)) 
+            {
+                auto cmd = cmds;  // Copy for placeholder replacements
 
-            if (commandName == "list_file_source" && listFileSourcePath.empty()) {
-                listFileSourcePath = cmd[1];
-                preprocessPath(listFileSourcePath, packagePath);
-                
-                // Read lines from the file
-                std::vector<std::string> lines = readListFromFile(listFileSourcePath);
-            
-                // Append lines to sectionLines and add empty lines to infoLines
-                for (const auto& line : lines) {
-                    sectionLines.push_back(line);
-                    infoLines.push_back(""); // Add an empty string for each section line
+                applyPlaceholderReplacements(
+                    cmd, hexPath, iniPath,
+                    listString, listPath,
+                    jsonString, jsonPath
+                );
+
+                if (cmd[0] == "list_file_source" && cmd.size() >= 2 && listFileSourcePath.empty()) {
+                    listFileSourcePath = cmd[1];
+                    preprocessPath(listFileSourcePath, packagePath);
+                    auto lines = readListFromFile(listFileSourcePath);
+                    for (const auto& line : lines) {
+                        baseSection.push_back(line);
+                        baseInfo.push_back("");
+                    }
                 }
-            }
-
-
-            else if (commandName == LIST_STR) {
-                if (cmdSize >= 2) {
+                else if (cmd[0] == LIST_STR && cmd.size() >= 2) {
                     listString = cmd[1];
                     removeQuotes(listString);
                 }
-            } else if (commandName == LIST_FILE_STR) {
-                if (cmdSize >= 2) {
+                else if (cmd[0] == LIST_FILE_STR && cmd.size() >= 2) {
                     listPath = cmd[1];
                     preprocessPath(listPath, packagePath);
                 }
-            } else if (commandName == JSON_STR) {
-                if (cmdSize >= 2) {
+                else if (cmd[0] == JSON_STR && cmd.size() >= 2) {
                     jsonString = cmd[1];
                 }
-            } else if (commandName == JSON_FILE_STR) {
-                if (cmdSize >= 2) {
+                else if (cmd[0] == JSON_FILE_STR && cmd.size() >= 2) {
                     jsonPath = cmd[1];
                     preprocessPath(jsonPath, packagePath);
                 }
-            } else if (commandName == INI_FILE_STR) {
-                if (cmdSize >= 2) {
+                else if (cmd[0] == INI_FILE_STR && cmd.size() >= 2) {
                     iniPath = cmd[1];
                     preprocessPath(iniPath, packagePath);
                 }
-            } else if (commandName == HEX_FILE_STR) {
-                if (cmdSize >= 2) {
+                else if (cmd[0] == HEX_FILE_STR && cmd.size() >= 2) {
                     hexPath = cmd[1];
                     preprocessPath(hexPath, packagePath);
                 }
-            } else {
-                sectionLines.push_back(cmd[0]);
-                infoLines.push_back(cmd[2]);
-                //sectionString += cmd[0] + "\n";
-                //infoString += cmd[2] + "\n";
-                //tableSize++;
+                else {
+                    baseSection.push_back(cmd[0]);
+                    baseInfo.push_back(cmd.size() > 2 ? cmd[2] : "");
+                }
+            }
+        }
+
+        // Wrap and format the lines
+        for (size_t i = 0; i < baseSection.size(); ++i) {
+            auto wrappedLines = wrapText(
+                baseSection[i],
+                xMax - 12 - 4,
+                wrappingMode,
+                useWrappedTextIndent,
+                indent, indentWidth,
+                fontSize
+            );
+
+            std::string infoText = (i < baseInfo.size() && baseInfo[i].find(NULL_STR) != std::string::npos)
+                ? UNAVAILABLE_SELECTION
+                : (i < baseInfo.size() ? baseInfo[i] : "");
+
+            for (const auto& line : wrappedLines) {
+                outSection.push_back(line);
+                outInfo.push_back(infoText);
+
+                float infoWidth = tsl::gfx::calculateStringWidth(infoText, fontSize, false);
+                if (alignment == LEFT_STR) {
+                    outX.push_back(static_cast<int>(columnOffset));
+                } else if (alignment == RIGHT_STR) {
+                    outX.push_back(static_cast<int>(xMax - infoWidth + (columnOffset - 160 + 1)));
+                } else { // CENTER_STR
+                    outX.push_back(static_cast<int>(columnOffset + (xMax - infoWidth) / 2));
+                }
+
+                outY.push_back(static_cast<s32>(curY));
+                curY += lineHeight + newlineGap;
+            }
+        }
+    } else {
+        // Fallback to old-style sectionLines + infoLines
+        for (size_t i = 0; i < sectionLines.size(); ++i) {
+            auto wrappedLines = wrapText(
+                sectionLines[i],
+                xMax - 12 - 4,
+                wrappingMode,
+                useWrappedTextIndent,
+                indent, indentWidth,
+                fontSize
+            );
+
+            std::string infoText = (i < infoLines.size() && infoLines[i].find(NULL_STR) != std::string::npos)
+                ? UNAVAILABLE_SELECTION
+                : (i < infoLines.size() ? infoLines[i] : "");
+
+            for (const auto& line : wrappedLines) {
+                outSection.push_back(line);
+                outInfo.push_back(infoText);
+
+                float infoWidth = tsl::gfx::calculateStringWidth(infoText, fontSize, false);
+                if (alignment == LEFT_STR) {
+                    outX.push_back(static_cast<int>(columnOffset));
+                } else if (alignment == RIGHT_STR) {
+                    outX.push_back(static_cast<int>(xMax - infoWidth + (columnOffset - 160 + 1)));
+                } else { // CENTER_STR
+                    outX.push_back(static_cast<int>(columnOffset + (xMax - infoWidth) / 2));
+                }
+
+                outY.push_back(static_cast<s32>(curY));
+                curY += lineHeight + newlineGap;
             }
         }
     }
+}
 
-    // seperate sectionString and info string.  the sections will be on the left side of the "=", the info will be on the right side of the "=" within the string.  the end of an entry will be met with a newline (except for the very last entry). 
-    // sectionString and infoString will each have equal newlines (denoting )
+void drawTable(
+    std::unique_ptr<tsl::elm::List>&      list,
+    std::vector<std::vector<std::string>>& tableData,
+    std::vector<std::string>&             sectionLines,
+    std::vector<std::string>&             infoLines,
+    size_t columnOffset             = 163,
+    size_t startGap                 = 19,
+    size_t endGap                   = 12,
+    size_t newlineGap               = 0,
+    const std::string& tableSectionTextColor       = DEFAULT_STR,
+    const std::string& tableInfoTextColor          = DEFAULT_STR,
+    const std::string& tableInfoTextHighlightColor = DEFAULT_STR,
+    const std::string& alignment                   = LEFT_STR,
+    bool hideTableBackground        = false,
+    bool useHeaderIndent            = false,
+    bool isScrollable               = false,
+    const std::string& wrappingMode               = "none",
+    bool useWrappedTextIndent        = false,
+    std::string packagePath          = ""
+) {
+    // Helper for raw colors
+    auto getRawColor = [](const std::string& c, auto def) {
+        if (c=="warning")    return tsl::warningTextColor;
+        if (c=="text")       return tsl::defaultTextColor;
+        if (c=="on_value")   return tsl::onTextColor;
+        if (c=="off_value")  return tsl::offTextColor;
+        if (c=="header")     return tsl::headerTextColor;
+        if (c=="info")       return tsl::infoTextColor;
+        if (c=="section")    return tsl::sectionTextColor;
+        if (c=="healthy_ram")return tsl::healthyRamTextColor;
+        if (c=="neutral_ram")return tsl::neutralRamTextColor;
+        if (c=="bad_ram")    return tsl::badRamTextColor;
+        return (c==DEFAULT_STR) ? def : tsl::RGB888(c);
+    };
 
-    drawTable(list, sectionLines, infoLines, columnOffset, tableStartGap, tableEndGap, tableSpacing, tableSectionTextColor, tableInfoTextColor, tableInfoTextHighlightColor, tableAlignment, hideTableBackground, useHeaderIndent, isScrollable, wrappingMode, useWrappedTextIndent);
+    const auto secRaw    = getRawColor(tableSectionTextColor,   tsl::sectionTextColor);
+    const auto infoRaw   = getRawColor(tableInfoTextColor,      tsl::infoTextColor);
+    const auto hiliteRaw = getRawColor(tableInfoTextHighlightColor, tsl::infoTextColor);
+
+    // Prebuild initial buffers (optional, to warm cache)
+    std::vector<std::string> initExpSec, initExpInfo;
+    std::vector<s32>         initYOff;
+    std::vector<int>         initXOff;
+
+    buildTableDrawerLines(
+        tableData, sectionLines, infoLines, packagePath,
+        columnOffset, startGap, newlineGap,
+        wrappingMode, alignment, useWrappedTextIndent,
+        initExpSec, initExpInfo, initYOff, initXOff
+    );
+
+    std::vector<std::string> cacheExpSec = initExpSec;
+    std::vector<std::string> cacheExpInfo = initExpInfo;
+    std::vector<s32>         cacheYOff   = initYOff;
+    std::vector<int>         cacheXOff   = initXOff;
+
+    auto lastUpdateTime = std::make_shared<timespec>(timespec{0, 0});
+
+    // Use move or copy to static cache inside lambda
+    list->addItem(new tsl::elm::TableDrawer(
+        [=](tsl::gfx::Renderer* renderer, s32 x, s32 y, s32 w, s32 h) mutable {
+
+            timespec currentTime;
+            clock_gettime(CLOCK_REALTIME, &currentTime);
+
+            double elapsedSeconds = difftime(currentTime.tv_sec, lastUpdateTime->tv_sec);
+
+            // Rebuild cache if more than 1 sec passed or empty
+            if ((elapsedSeconds >= 1.0 || cacheExpSec.empty())) {
+                buildTableDrawerLines(
+                    tableData, sectionLines, infoLines, packagePath,
+                    columnOffset, startGap, newlineGap,
+                    wrappingMode, alignment, useWrappedTextIndent,
+                    cacheExpSec, cacheExpInfo, cacheYOff, cacheXOff
+                );
+                *lastUpdateTime = currentTime;
+            }
+
+            if (useHeaderIndent) {
+                renderer->drawRect(x-2, y+2, 4, 22, renderer->a(tsl::headerSeparatorColor));
+            }
+
+            bool sameCol = (tableInfoTextColor == tableInfoTextHighlightColor);
+            for (size_t i = 0; i < cacheExpSec.size(); ++i) {
+                renderer->drawString(
+                    cacheExpSec[i], false,
+                    x+12, y + cacheYOff[i],
+                    16, renderer->a(secRaw)
+                );
+                if (sameCol) {
+                    renderer->drawString(
+                        cacheExpInfo[i], false,
+                        x + cacheXOff[i], y + cacheYOff[i],
+                        16, renderer->a(infoRaw)
+                    );
+                } else {
+                    renderer->drawStringWithHighlight(
+                        cacheExpInfo[i], false,
+                        x + cacheXOff[i], y + cacheYOff[i], 16,
+                        renderer->a(infoRaw), renderer->a(hiliteRaw)
+                    );
+                }
+            }
+        },
+        hideTableBackground,
+        endGap,
+        isScrollable
+    ),
+    static_cast<u32>(
+        16 * initExpSec.size()
+        + newlineGap * (initExpSec.empty() ? 0 : initExpSec.size() - 1)
+        + endGap
+    ));
+}
+
+// ─── addTable simply forwards through ───────────────────────────────────────────
+void addTable(
+    std::unique_ptr<tsl::elm::List>&       list,
+    std::vector<std::vector<std::string>>& tableData,
+    const std::string&                     packagePath,
+    const size_t&                          columnOffset                = 163,
+    const size_t&                          tableStartGap               = 19,
+    const size_t&                          tableEndGap                 = 12,
+    const size_t&                          tableSpacing                = 0,
+    const std::string&                     tableSectionTextColor       = DEFAULT_STR,
+    const std::string&                     tableInfoTextColor          = DEFAULT_STR,
+    const std::string&                     tableInfoTextHighlightColor = DEFAULT_STR,
+    const std::string&                     tableAlignment              = RIGHT_STR,
+    const bool&                            hideTableBackground         = false,
+    const bool&                            useHeaderIndent             = false,
+    const bool&                            isScrollable                = false,
+    const std::string&                     wrappingMode                = "none",
+    const bool&                            useWrappedTextIndent        = false
+) {
+    std::vector<std::string> sectionLines, infoLines;
+    drawTable(
+        list, tableData,
+        sectionLines, infoLines,
+        columnOffset, tableStartGap, tableEndGap, tableSpacing,
+        tableSectionTextColor, tableInfoTextColor, tableInfoTextHighlightColor,
+        tableAlignment, hideTableBackground, useHeaderIndent,
+        isScrollable, wrappingMode, useWrappedTextIndent,
+        packagePath
+    );
 }
 
 
@@ -1248,8 +1330,10 @@ void addHelpInfo(std::unique_ptr<tsl::elm::List>& list) {
         "\uE0E3 (" + ON_OVERLAY_PACKAGE + ")"
     };
 
+    std::vector<std::vector<std::string>> dummyTableData;
+
     // Draw the table with the defined lines
-    drawTable(list, sectionLines, infoLines, xOffset, 19, 12, 4);
+    drawTable(list, dummyTableData, sectionLines, infoLines, xOffset, 19, 12, 4);
     //drawTable(list, sectionLines, infoLines, xOffset, 19, 12, 4, DEFAULT_STR, DEFAULT_STR, LEFT_STR, false, false, true, "none", false);
 }
 
@@ -1328,9 +1412,11 @@ void addPackageInfo(std::unique_ptr<tsl::elm::List>& list, auto& packageHeader, 
         addWrappedText(_CREDITS, packageHeader.credits);
     }
 
+    std::vector<std::vector<std::string>> dummyTableData;
+
     // Drawing the table with section lines and info lines
     //drawTable(list, sectionLines, infoLines, xOffset, 20, 12, 3);
-    drawTable(list, sectionLines, infoLines, xOffset, 19, 12, 3, DEFAULT_STR, DEFAULT_STR, DEFAULT_STR, LEFT_STR, false, false, true);
+    drawTable(list, dummyTableData, sectionLines, infoLines, xOffset, 19, 12, 3, DEFAULT_STR, DEFAULT_STR, DEFAULT_STR, LEFT_STR, false, false, true);
 }
 
 
