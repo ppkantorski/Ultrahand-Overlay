@@ -66,7 +66,7 @@ static size_t nestedMenuCount = 0;
 // Command mode globals
 static const std::vector<std::string> commandSystems = {DEFAULT_STR, ERISTA_STR, MARIKO_STR};
 static const std::vector<std::string> commandModes = {DEFAULT_STR, SLOT_STR, TOGGLE_STR, OPTION_STR, FORWARDER_STR, TEXT_STR, TABLE_STR, TRACKBAR_STR, STEP_TRACKBAR_STR, NAMED_STEP_TRACKBAR_STR};
-static const std::vector<std::string> commandGroupings = {DEFAULT_STR, "split", "split2", "split3", "split4"};
+static const std::vector<std::string> commandGroupings = {DEFAULT_STR, "split", "split2", "split3", "split4", "split5"};
 static const std::string MODE_PATTERN = ";mode=";
 static const std::string GROUPING_PATTERN = ";grouping=";
 static const std::string SYSTEM_PATTERN = ";system=";
@@ -1653,9 +1653,31 @@ public:
         std::string filterEntry;
         std::vector<std::string> newFiles, newFilesOn, newFilesOff;
 
+        // Create a map with all non-button/arrow placeholders and their replacements
+        std::unordered_map<std::string, std::string> generalPlaceholders = {
+            {"{ram_vendor}", memoryVendor},
+            {"{ram_model}", memoryModel},
+            {"{ams_version}", amsVersion},
+            {"{hos_version}", hosVersion},
+            {"{cpu_speedo}", ult::to_string(cpuSpeedo0)},
+            {"{cpu_iddq}", ult::to_string(cpuIDDQ)},
+            {"{gpu_speedo}", ult::to_string(cpuSpeedo2)},
+            {"{gpu_iddq}", ult::to_string(gpuIDDQ)},
+            {"{soc_speedo}", ult::to_string(socSpeedo0)},
+            {"{soc_iddq}", ult::to_string(socIDDQ)},
+            {"{title_id}", getTitleIdAsString()}
+        };
         
 
         for (auto& cmd : commands) {
+            for (auto& arg : cmd) {
+                // Replace general placeholders
+                replacePlaceholdersInArg(arg, generalPlaceholders);
+                
+                // Replace button/arrow placeholders from the global map
+                replacePlaceholdersInArg(arg, symbolPlaceholders);
+            }
+
             commandName = cmd[0];
 
             if (stringToLowercase(commandName) == "erista:") {
@@ -2023,6 +2045,21 @@ public:
                         currentPackageHeader = groupingName;
                         lastGroupingName = groupingName;
                     }
+                } else if (commandGrouping == "split5") {
+                    groupingName = getParentDirNameFromPath(selectedItem);
+                    removeQuotes(groupingName);
+
+                    pos = groupingName.find(" - ");
+                    if (pos != std::string::npos) {
+                        itemName = groupingName.substr(pos + 3);
+                        groupingName = groupingName.substr(0, pos);
+                    }
+
+                    if (lastGroupingName.empty() || (lastGroupingName != groupingName)) {
+                        addHeader(list, groupingName);
+                        currentPackageHeader = groupingName;
+                        lastGroupingName = groupingName;
+                    }
                 }
             } else {
                 if (commandMode == TOGGLE_STR) {
@@ -2038,7 +2075,7 @@ public:
             }
 
             if (commandMode == DEFAULT_STR || commandMode == OPTION_STR) {
-                if (sourceType != FILE_STR && commandGrouping != "split2" && commandGrouping != "split3" && commandGrouping != "split4") {
+                if (sourceType != FILE_STR && commandGrouping != "split2" && commandGrouping != "split3" && commandGrouping != "split4" && commandGrouping != "split5") {
                     pos = selectedItem.find(" - ");
                     footer = "";
                     itemName = selectedItem;
@@ -2793,8 +2830,31 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
             //    commands.end());
             removeEmptyCommands(commands);
             
+            // Create a map with all non-button/arrow placeholders and their replacements
+            std::unordered_map<std::string, std::string> generalPlaceholders = {
+                {"{ram_vendor}", memoryVendor},
+                {"{ram_model}", memoryModel},
+                {"{ams_version}", amsVersion},
+                {"{hos_version}", hosVersion},
+                {"{cpu_speedo}", ult::to_string(cpuSpeedo0)},
+                {"{cpu_iddq}", ult::to_string(cpuIDDQ)},
+                {"{gpu_speedo}", ult::to_string(cpuSpeedo2)},
+                {"{gpu_iddq}", ult::to_string(gpuIDDQ)},
+                {"{soc_speedo}", ult::to_string(socSpeedo0)},
+                {"{soc_iddq}", ult::to_string(socIDDQ)},
+                {"{title_id}", getTitleIdAsString()}
+            };
+            
             // Initial processing of commands (DUPLICATE CODE)
-            for (const auto& cmd : commands) {
+            for (auto& cmd : commands) {
+                for (auto& arg : cmd) {
+                    // Replace general placeholders
+                    replacePlaceholdersInArg(arg, generalPlaceholders);
+                    
+                    // Replace button/arrow placeholders from the global map
+                    replacePlaceholdersInArg(arg, symbolPlaceholders);
+                }
+
                 commandName = cmd[0];
                 
                 commandNameLower = stringToLowercase(commandName);
@@ -3017,6 +3077,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
 
                         addDummyListItem(list);
                     }
+
 
                     addTable(list, tableData, packagePath, tableColumnOffset, tableStartGap, tableEndGap, tableSpacing,
                     	tableSectionTextColor, tableInfoTextColor, tableInfoTextColor, tableAlignment, hideTableBackground, useHeaderIndent, isScrollableTable, tableWrappingMode, useWrappingIndent);
