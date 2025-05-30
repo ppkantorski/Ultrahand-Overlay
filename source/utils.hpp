@@ -1792,7 +1792,7 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
     bool inMarikoSection = false;
     
     std::vector<std::vector<std::string>> modifiedCommands;
-    std::string listString, listPath, jsonString, jsonPath, iniPath, hexPath;
+    std::string listString, listPath, jsonString, jsonPath, iniPath;
     bool usingFileSource = false;
 
     std::string fileName = getNameFromPath(entry);
@@ -2447,7 +2447,7 @@ void applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
         {"{soc_iddq}", ult::to_string(socIDDQ)},
         {"{title_id}", getTitleIdAsString()}
     };
-    
+
     // Iterate through each command and replace placeholders in one pass
     for (auto& arg : cmd) {
         // Replace general placeholders
