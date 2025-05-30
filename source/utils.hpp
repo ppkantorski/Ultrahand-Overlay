@@ -1792,7 +1792,7 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
     bool inMarikoSection = false;
     
     std::vector<std::vector<std::string>> modifiedCommands;
-    std::string listString, listPath, jsonString, jsonPath, iniPath;
+    std::string listString, listPath, jsonString, jsonPath, iniPath, hexPath;
     bool usingFileSource = false;
 
     std::string fileName = getNameFromPath(entry);
@@ -1829,6 +1829,7 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
         }
         
         if ((inEristaSection && usingErista) || (inMarikoSection && usingMariko) || (!inEristaSection && !inMarikoSection)) {
+            // Apply placeholder replacements if necessary
             for (const auto& arg : cmd) {
                 modifiedArg = arg;
 
@@ -2446,7 +2447,7 @@ void applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
         {"{soc_iddq}", ult::to_string(socIDDQ)},
         {"{title_id}", getTitleIdAsString()}
     };
-
+    
     // Iterate through each command and replace placeholders in one pass
     for (auto& arg : cmd) {
         // Replace general placeholders
@@ -3389,6 +3390,7 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
         tsl::Overlay::get()->close();
         return;
     } else if (commandName == "back") {
+        simulatedBackComplete = false;
         simulatedBack = true;
     } else if (commandName == "backlight") {
         if (cmd.size() >= 2) {
