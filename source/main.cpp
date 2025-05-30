@@ -1739,12 +1739,24 @@ public:
                             preprocessPath(filterEntry, filePath);
                         }
 
-                        if (currentSection == GLOBAL_STR)
-                            filterList.push_back(std::move(filterEntry));
-                        else if (currentSection == ON_STR)
-                            filterListOn.push_back(std::move(filterEntry));
-                        else if (currentSection == OFF_STR)
-                            filterListOff.push_back(std::move(filterEntry));
+                        if (filterEntry.find('*') != std::string::npos) {
+                            std::vector<std::string> matchedFiles = getFilesListByWildcards(filterEntry);
+                            for (const auto& file : matchedFiles) {
+                                if (currentSection == GLOBAL_STR)
+                                    filterList.push_back(file);
+                                else if (currentSection == ON_STR)
+                                    filterListOn.push_back(file);
+                                else if (currentSection == OFF_STR)
+                                    filterListOff.push_back(file);
+                            }
+                        } else {
+                            if (currentSection == GLOBAL_STR)
+                                filterList.push_back(std::move(filterEntry));
+                            else if (currentSection == ON_STR)
+                                filterListOn.push_back(std::move(filterEntry));
+                            else if (currentSection == OFF_STR)
+                                filterListOff.push_back(std::move(filterEntry));
+                        }
                     } else if (commandName == "file_source") {
                         sourceType = FILE_STR;
                         if (currentSection == GLOBAL_STR) {
