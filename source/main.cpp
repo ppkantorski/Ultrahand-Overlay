@@ -1628,6 +1628,7 @@ private:
     std::string listString, listStringOn, listStringOff;
     std::string jsonString, jsonStringOn, jsonStringOff;
     std::vector<std::string> selectedItemsList;
+    std::string hexPath;
 
     bool isMini = false;
 
@@ -1654,29 +1655,37 @@ public:
         std::vector<std::string> newFiles, newFilesOn, newFilesOff;
 
         // Create a map with all non-button/arrow placeholders and their replacements
-        std::unordered_map<std::string, std::string> generalPlaceholders = {
-            {"{ram_vendor}", memoryVendor},
-            {"{ram_model}", memoryModel},
-            {"{ams_version}", amsVersion},
-            {"{hos_version}", hosVersion},
-            {"{cpu_speedo}", ult::to_string(cpuSpeedo0)},
-            {"{cpu_iddq}", ult::to_string(cpuIDDQ)},
-            {"{gpu_speedo}", ult::to_string(cpuSpeedo2)},
-            {"{gpu_iddq}", ult::to_string(gpuIDDQ)},
-            {"{soc_speedo}", ult::to_string(socSpeedo0)},
-            {"{soc_iddq}", ult::to_string(socIDDQ)},
-            {"{title_id}", getTitleIdAsString()}
-        };
+        //std::unordered_map<std::string, std::string> generalPlaceholders = {
+        //    {"{ram_vendor}", memoryVendor},
+        //    {"{ram_model}", memoryModel},
+        //    {"{ams_version}", amsVersion},
+        //    {"{hos_version}", hosVersion},
+        //    {"{cpu_speedo}", ult::to_string(cpuSpeedo0)},
+        //    {"{cpu_iddq}", ult::to_string(cpuIDDQ)},
+        //    {"{gpu_speedo}", ult::to_string(cpuSpeedo2)},
+        //    {"{gpu_iddq}", ult::to_string(gpuIDDQ)},
+        //    {"{soc_speedo}", ult::to_string(socSpeedo0)},
+        //    {"{soc_iddq}", ult::to_string(socIDDQ)},
+        //    {"{title_id}", getTitleIdAsString()}
+        //};
         
 
         for (auto& cmd : commands) {
-            for (auto& arg : cmd) {
-                // Replace general placeholders
-                replacePlaceholdersInArg(arg, generalPlaceholders);
-                
-                // Replace button/arrow placeholders from the global map
-                replacePlaceholdersInArg(arg, symbolPlaceholders);
-            }
+            if (currentSection == GLOBAL_STR)
+                applyPlaceholderReplacements(cmd, hexPath, iniPath, listString, listPath, jsonString, jsonPath);
+            else if (currentSection == ON_STR)
+                applyPlaceholderReplacements(cmd, hexPath, iniPathOn, listStringOn, listPathOn, jsonStringOn, jsonPathOn);
+            else if (currentSection == OFF_STR)
+                applyPlaceholderReplacements(cmd, hexPath, iniPathOff, listStringOff, listPathOff, jsonStringOff, jsonPathOff);
+
+            
+            //for (auto& arg : cmd) {
+            //    // Replace general placeholders
+            //    replacePlaceholdersInArg(arg, generalPlaceholders);
+            //    
+            //    // Replace button/arrow placeholders from the global map
+            //    replacePlaceholdersInArg(arg, symbolPlaceholders);
+            //}
 
             commandName = cmd[0];
 
@@ -2552,6 +2561,8 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
     std::string jsonPath, jsonPathOn, jsonPathOff;
     std::string jsonKey, jsonKeyOn, jsonKeyOff;
     
+    std::string iniFilePath;
+
     std::string optionName;
     std::vector<std::vector<std::string>> commands, commandsOn, commandsOff;
     std::vector<std::vector<std::string>> tableData;
@@ -2843,29 +2854,33 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
             removeEmptyCommands(commands);
             
             // Create a map with all non-button/arrow placeholders and their replacements
-            std::unordered_map<std::string, std::string> generalPlaceholders = {
-                {"{ram_vendor}", memoryVendor},
-                {"{ram_model}", memoryModel},
-                {"{ams_version}", amsVersion},
-                {"{hos_version}", hosVersion},
-                {"{cpu_speedo}", ult::to_string(cpuSpeedo0)},
-                {"{cpu_iddq}", ult::to_string(cpuIDDQ)},
-                {"{gpu_speedo}", ult::to_string(cpuSpeedo2)},
-                {"{gpu_iddq}", ult::to_string(gpuIDDQ)},
-                {"{soc_speedo}", ult::to_string(socSpeedo0)},
-                {"{soc_iddq}", ult::to_string(socIDDQ)},
-                {"{title_id}", getTitleIdAsString()}
-            };
+            //std::unordered_map<std::string, std::string> generalPlaceholders = {
+            //    {"{ram_vendor}", memoryVendor},
+            //    {"{ram_model}", memoryModel},
+            //    {"{ams_version}", amsVersion},
+            //    {"{hos_version}", hosVersion},
+            //    {"{cpu_speedo}", ult::to_string(cpuSpeedo0)},
+            //    {"{cpu_iddq}", ult::to_string(cpuIDDQ)},
+            //    {"{gpu_speedo}", ult::to_string(cpuSpeedo2)},
+            //    {"{gpu_iddq}", ult::to_string(gpuIDDQ)},
+            //    {"{soc_speedo}", ult::to_string(socSpeedo0)},
+            //    {"{soc_iddq}", ult::to_string(socIDDQ)},
+            //    {"{title_id}", getTitleIdAsString()}
+            //};
             
+            std::string hexPath, listString, listPath, jsonString, jsonPath; // passed as dummy variables
+
             // Initial processing of commands (DUPLICATE CODE)
             for (auto& cmd : commands) {
-                for (auto& arg : cmd) {
-                    // Replace general placeholders
-                    replacePlaceholdersInArg(arg, generalPlaceholders);
-                    
-                    // Replace button/arrow placeholders from the global map
-                    replacePlaceholdersInArg(arg, symbolPlaceholders);
-                }
+                //for (auto& arg : cmd) {
+                //    // Replace general placeholders
+                //    replacePlaceholdersInArg(arg, generalPlaceholders);
+                //    
+                //    // Replace button/arrow placeholders from the global map
+                //    replacePlaceholdersInArg(arg, symbolPlaceholders);
+                //}
+                
+                applyPlaceholderReplacements(cmd, hexPath, iniFilePath, listString, listPath, jsonString, jsonPath);
 
                 commandName = cmd[0];
                 
@@ -2999,7 +3014,10 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                     }
                     
                     if (cmd.size() > 1) {
-                        if (commandName == "file_source") {
+                        if (commandName == "ini_file") {
+                            iniFilePath = cmd[1];
+                            preprocessPath(iniFilePath, packagePath);
+                        } else if (commandName == "file_source") {
                             if (currentSection == GLOBAL_STR) {
                                 pathPattern = cmd[1];
                                 preprocessPath(pathPattern, packagePath);
