@@ -4192,7 +4192,7 @@ public:
         }
 
         if ((keysDown & KEY_B) && !stillTouching) { // for catching lost navigations
-
+            
             allowSlide = unlockedSlide = false;
             inSubPackageMenu = false;
             returningToPackage = true;
