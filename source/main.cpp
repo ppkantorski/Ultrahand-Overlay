@@ -4158,8 +4158,8 @@ public:
             }
         }
         if (returningToPackage && !returningToSubPackage && !(keysDown & KEY_B)){
-            //lastPackageMenu = "packageMenu";
-            lastPackageMenu = "";
+            lastPackageMenu = "packageMenu";
+            //lastPackageMenu = "";
             returningToPackage = false;
             returningToSubPackage = false;
             inPackageMenu = true;
@@ -4172,8 +4172,8 @@ public:
         }
         
         if (returningToSubPackage && !(keysDown & KEY_B)){
-            //lastPackageMenu = "subPackageMenu";
-            lastPackageMenu = "";
+            lastPackageMenu = "subPackageMenu";
+            //lastPackageMenu = "";
             returningToPackage = false;
             returningToSubPackage = false;
             inPackageMenu = false;
@@ -4189,6 +4189,19 @@ public:
             triggerExit.store(false, std::memory_order_release);
             tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
             tsl::Overlay::get()->close();
+        }
+
+        if ((keysDown & KEY_B) && !stillTouching) { // for catching lost navigations
+
+            allowSlide = unlockedSlide = false;
+            inSubPackageMenu = false;
+            returningToPackage = true;
+            lastMenu = "packageMenu";
+            //tsl::goBack();
+            tsl::goBack();
+            
+            simulatedBackComplete = true;
+            return true;
         }
         
         //svcSleepThread(10'000'000);
