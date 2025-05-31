@@ -4158,8 +4158,8 @@ public:
             }
         }
         if (returningToPackage && !returningToSubPackage && !(keysDown & KEY_B)){
-            lastPackageMenu = "packageMenu";
-            //lastPackageMenu = "";
+            //lastPackageMenu = "packageMenu";
+            lastPackageMenu = "";
             returningToPackage = false;
             returningToSubPackage = false;
             inPackageMenu = true;
@@ -4172,8 +4172,8 @@ public:
         }
         
         if (returningToSubPackage && !(keysDown & KEY_B)){
-            lastPackageMenu = "subPackageMenu";
-            //lastPackageMenu = "";
+            //lastPackageMenu = "subPackageMenu";
+            lastPackageMenu = "";
             returningToPackage = false;
             returningToSubPackage = false;
             inPackageMenu = false;
@@ -4191,8 +4191,13 @@ public:
             tsl::Overlay::get()->close();
         }
 
+
+        if (simulatedBack && !simulatedBackComplete) {
+            keysDown |= KEY_B;
+            simulatedBack = false;
+        }
         if ((keysDown & KEY_B) && !stillTouching) { // for catching lost navigations
-            
+
             allowSlide = unlockedSlide = false;
             inSubPackageMenu = false;
             returningToPackage = true;
