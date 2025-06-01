@@ -2611,6 +2611,22 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
 
     bool isMini;
 
+    // Create a map with all non-button/arrow placeholders and their replacements
+    std::unordered_map<std::string, std::string> generalPlaceholders = {
+        {"{ram_vendor}", memoryVendor},
+        {"{ram_model}", memoryModel},
+        {"{ams_version}", amsVersion},
+        {"{hos_version}", hosVersion},
+        {"{cpu_speedo}", ult::to_string(cpuSpeedo0)},
+        {"{cpu_iddq}", ult::to_string(cpuIDDQ)},
+        {"{gpu_speedo}", ult::to_string(cpuSpeedo2)},
+        {"{gpu_iddq}", ult::to_string(gpuIDDQ)},
+        {"{soc_speedo}", ult::to_string(socSpeedo0)},
+        {"{soc_iddq}", ult::to_string(socIDDQ)},
+        {"{title_id}", getTitleIdAsString()}
+    };
+
+
     for (size_t i = 0; i < options.size(); ++i) {
         auto& option = options[i];
         
@@ -2855,21 +2871,6 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
             //    commands.end());
             removeEmptyCommands(commands);
             
-            // Create a map with all non-button/arrow placeholders and their replacements
-            std::unordered_map<std::string, std::string> generalPlaceholders = {
-                {"{ram_vendor}", memoryVendor},
-                {"{ram_model}", memoryModel},
-                {"{ams_version}", amsVersion},
-                {"{hos_version}", hosVersion},
-                {"{cpu_speedo}", ult::to_string(cpuSpeedo0)},
-                {"{cpu_iddq}", ult::to_string(cpuIDDQ)},
-                {"{gpu_speedo}", ult::to_string(cpuSpeedo2)},
-                {"{gpu_iddq}", ult::to_string(gpuIDDQ)},
-                {"{soc_speedo}", ult::to_string(socSpeedo0)},
-                {"{soc_iddq}", ult::to_string(socIDDQ)},
-                {"{title_id}", getTitleIdAsString()}
-            };
-
             //std::string hexPath, listString, listPath, jsonString, jsonPath; // passed as dummy variables
 
             // Initial processing of commands (DUPLICATE CODE)
