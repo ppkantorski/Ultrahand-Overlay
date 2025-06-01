@@ -2216,60 +2216,28 @@ public:
                     auto modifiedCmds = getSourceReplacement(!state ? commandsOn : commandsOff, currentSelectedItems[i], i, filePath);
                     //auto modifiedCmdsCopy = modifiedCmds;
                     //interpretAndExecuteCommands(std::move(modifiedCmds), filePath, specificKey);
-                    
+                                        
                     if (sourceType == FILE_STR) {
-                        // Reset variables
-                        std::string selectedFileName;
                         std::string updatedFileSource;
-                        
-                        // Extract the destination directory from the move command
+                    
+                        // Extract the file_source pattern string
                         for (const auto& cmd : modifiedCmds) {
-                            if (cmd.size() > 1 && cmd[0] == "file_name") {
-                                selectedFileName = cmd[1];
-                                //logMessage("Selected file name: " + selectedFileName);
-                                break; // Assuming there's only one move command at the end
+                            if (cmd.size() > 1 && cmd[0] == "sourced_path") {
+                                updatedFileSource = cmd[1];
+                                break;
                             }
                         }
-                        
-                        if (!selectedFileName.empty()) {
-                            for (const auto& arg : !state ? commandsOff : commandsOn) {
-                                if (arg.size() > 1 && arg[0] == "file_source") {
-                                    updatedFileSource = arg[1];
-                                    break;
-                                }
-                            }
-                            
-                            //logMessage("Original file source: " + updatedFileSource);
-                            
-                            // Replace the filename / folder name wildcard placeholder (rightmost) within updatedFileSource with the selectedFileName
-                            size_t pos = updatedFileSource.rfind('*');
-                            if (pos != std::string::npos) {
-                                std::string prefix = updatedFileSource.substr(0, pos);
-                                std::string suffix = updatedFileSource.substr(pos + 1);
-                                
-                                // Check if suffix contains a file extension
-                                size_t extPos = selectedFileName.find('.');
-                                if (extPos != std::string::npos) {
-                                    // It's a file, include the file extension
-                                    updatedFileSource = prefix + selectedFileName + suffix;
-                                } else {
-                                    // It's a folder, exclude the file extension if present in the suffix
-                                    size_t extSuffixPos = suffix.find('.');
-                                    if (extSuffixPos != std::string::npos) {
-                                        updatedFileSource = prefix + selectedFileName + suffix.substr(extSuffixPos);
-                                    } else {
-                                        updatedFileSource = prefix + selectedFileName + suffix;
-                                    }
-                                }
-                                currentSelectedItems[i] = updatedFileSource;
-                                
-                                // Debug logging
-                                //logMessage("Updated file source for index " + ult::to_string(i) + ": " + updatedFileSource);
-                            } else {
-                                //logMessage("Wildcard '*' not found in file source.");
-                            }
+                    
+                        if (!updatedFileSource.empty()) {
+                            // Here you fully resolve wildcards in updatedFileSource to the actual path,
+                            // presumably done by getSourceReplacement already.
+                            // So just assign:
+                            currentSelectedItems[i] = updatedFileSource;
+                    
+                            // Optionally log for debugging:
+                            // logMessage("Updated currentSelectedItems[" + std::to_string(i) + "]: " + updatedFileSource);
                         } else {
-                            //logMessage("Selected file name is empty.");
+                            // logMessage("file_source missing in modifiedCmds");
                         }
                     }
                     interpretAndExecuteCommands(std::move(modifiedCmds), filePath, specificKey);
@@ -2283,10 +2251,27 @@ public:
                         currentSelectedItems[i] = selectedItemsList[i];
                         isInitialized[i] = true;
                     }
-
+                    
 					inSelectionMenu = false;
+                    
+                    auto modifiedCmds = !state ? commandsOn : commandsOff;
+                    // Optional: re-extract file_source here too if needed
+                    if (sourceType == FILE_STR) {
+                        std::string updatedFileSource;
+                        for (const auto& cmd : modifiedCmds) {
+                            if (cmd.size() > 1 && cmd[0] == "sourced_path") {
+                                updatedFileSource = cmd[1];
+                                break;
+                            }
+                        }
+                        if (!updatedFileSource.empty()) {
+                            currentSelectedItems[i] = updatedFileSource;
+                        }
+                    }
+
+
 				    // Custom logic for SCRIPT_KEY handling
-				    auto modifiedCmds = getSourceReplacement(state ? commandsOn : commandsOff, currentSelectedItems[i], i, filePath);
+				    modifiedCmds = getSourceReplacement(modifiedCmds, currentSelectedItems[i], i, filePath);
 				    applyPlaceholderReplacementsToCommands(modifiedCmds, filePath);
 				    tsl::changeTo<ScriptOverlay>(modifiedCmds, filePath, _itemName, "selection", false, _currentPackageHeader);
 				});
@@ -3393,7 +3378,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                         const std::string& forwarderPackagePath = getParentDirFromPath(packageSource);
                         const std::string& forwarderPackageIniName = getNameFromPath(packageSource);
                         listItem->setClickListener([commands, keyName = option.first, dropdownSection, packagePath, listItemRaw = listItem.get(),
-                        	forwarderPackagePath, forwarderPackageIniName, _lastPackageHeader = lastPackageHeader](s64 keys) mutable {
+                        	forwarderPackagePath, forwarderPackageIniName, _lastPackageHeader = lastPackageHeader, i](s64 keys) mutable {
                             if (simulatedSelect && !simulatedSelectComplete) {
                                 keys |= KEY_A;
                                 simulatedSelect = false;
@@ -3402,8 +3387,8 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                             if (keys & KEY_A) {
                                 //auto commandsCopy = commands;
                                 //interpretAndExecuteCommands(std::move(commandsCopy), packagePath, keyName); // Now correctly moved
-                                //interpretAndExecuteCommands(getSourceReplacement(commands, keyName, i, packagePath), packagePath, keyName); // Now correctly moved
-                                interpretAndExecuteCommands(std::move(std::vector<std::vector<std::string>>(commands)), packagePath, keyName);
+                                auto modifiedCmds = getSourceReplacement(commands, keyName, i, packagePath); // Now correctly moved
+                                interpretAndExecuteCommands(std::move(modifiedCmds), packagePath, keyName);
                                 resetPercentages();
 
                                 nestedMenuCount++;
@@ -3439,12 +3424,12 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                                     lastMenu = "subPackageMenu";
                                 }
 
-                                //auto modifiedCmds = commands;//getSourceReplacement(commands, keyName, i, packagePath);
+                                auto modifiedCmds = getSourceReplacement(commands, keyName, i, packagePath);
                                 //applyPlaceholderReplacementsToCommands(modifiedCmds);
                                 std::string selectionItem = keyName;
                                 removeTag(selectionItem);
                                 // add lines ;mode=forwarder and package_source 'forwarderPackagePath' to front of modifiedCmds
-                                tsl::changeTo<ScriptOverlay>(commands, packagePath, selectionItem, isFromMainMenu ? "main" : "package", true, _lastPackageHeader);
+                                tsl::changeTo<ScriptOverlay>(modifiedCmds, packagePath, selectionItem, isFromMainMenu ? "main" : "package", true, _lastPackageHeader);
                                 return true;
                             }
                             return false;
@@ -3457,7 +3442,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                         //listItem->setValue("TEST", true);
                         //std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(option.second, pathReplace);
                         listItem->setClickListener([commands, keyName = option.first, dropdownSection, packagePath, packageName,
-                        	footer, lastSection, listItemRaw = listItem.get(), _lastPackageHeader = lastPackageHeader](uint64_t keys) {
+                        	footer, lastSection, listItemRaw = listItem.get(), _lastPackageHeader = lastPackageHeader, i](uint64_t keys) {
                             //listItemPtr = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){})](uint64_t keys) {
                             
                             if (runningInterpreter.load(std::memory_order_acquire))
@@ -3511,11 +3496,11 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                                     lastMenu = "subPackageMenu";
                                 }
 
-                                //auto modifiedCmds = commands;//getSourceReplacement(commands, keyName, i, packagePath);
+                                auto modifiedCmds = getSourceReplacement(commands, keyName, i, packagePath);
                                 //applyPlaceholderReplacementsToCommands(modifiedCmds);
                                 std::string selectionItem = keyName;
                                 removeTag(selectionItem);
-                                tsl::changeTo<ScriptOverlay>(commands, packagePath, selectionItem, isFromMainMenu ? "main" : "package", true, _lastPackageHeader);
+                                tsl::changeTo<ScriptOverlay>(modifiedCmds, packagePath, selectionItem, isFromMainMenu ? "main" : "package", true, _lastPackageHeader);
                                 return true;
                             }
                             return false;
