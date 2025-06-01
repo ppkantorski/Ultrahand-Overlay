@@ -3245,6 +3245,18 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             else
                 compareFilesLists(path1, path2, outputPath);
         }
+    } else if (commandName == "flag") {
+        if (cmd.size() >= 3) {
+            std::string wildcardPattern = cmd[1];
+            preprocessPath(wildcardPattern, packagePath);
+            std::string outputDir = cmd[2];
+            preprocessPath(outputDir, packagePath);
+            createFlagFiles(wildcardPattern, outputDir);
+        } else {
+            #if USING_LOGGING_DIRECTIVE
+            logMessage("Usage: flag <wildcardPattern> <outputDir>");
+            #endif
+        }
     } else if (commandName.substr(0, 7) == "hex-by-") {
         if (cmd.size() >= 4) {
             std::string sourcePath = cmd[1];
