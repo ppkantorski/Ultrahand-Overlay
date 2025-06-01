@@ -34,6 +34,7 @@
 #include <queue>
 #include <mutex>
 #include <condition_variable>
+#include <regex>
 //#include <sys/statvfs.h>
 
 
@@ -561,6 +562,122 @@ void unpackDeviceInfo() {
         }
     }
 
+}
+
+
+// Escapes regex special chars except '*'
+static std::string resolveWildcardFromKnownPath(
+    const std::string& oldPattern,
+    const std::string& resolvedPath,
+    const std::string& newPattern
+) {
+    // Helper function to check if paths match and extract wildcard values
+    auto matchAndExtract = [](const std::string& pattern, const std::string& path, std::vector<std::string>& captures) -> bool {
+        size_t patternPos = 0;
+        size_t pathPos = 0;
+        
+        while (patternPos < pattern.size() && pathPos < path.size()) {
+            if (pattern[patternPos] == '*') {
+                // Find the next non-wildcard character in pattern
+                size_t nextPatternPos = patternPos + 1;
+                while (nextPatternPos < pattern.size() && pattern[nextPatternPos] == '*') {
+                    nextPatternPos++; // Skip consecutive wildcards
+                }
+                
+                if (nextPatternPos >= pattern.size()) {
+                    // Wildcard is at the end, capture everything remaining
+                    captures.push_back(path.substr(pathPos));
+                    return true;
+                }
+                
+                // Find the next literal character after the wildcard
+                char nextChar = pattern[nextPatternPos];
+                
+                // Find where this character appears in the path
+                size_t foundPos = pathPos;
+                bool found = false;
+                
+                // Look for the next literal sequence starting from current path position
+                while (foundPos < path.size()) {
+                    if ((nextChar == '/' || nextChar == '\\') && 
+                        (path[foundPos] == '/' || path[foundPos] == '\\')) {
+                        found = true;
+                        break;
+                    } else if (nextChar != '/' && nextChar != '\\' && 
+                               std::tolower(path[foundPos]) == std::tolower(nextChar)) {
+                        found = true;
+                        break;
+                    }
+                    foundPos++;
+                }
+                
+                if (!found) {
+                    return false;
+                }
+                
+                // Capture everything between current position and found position
+                captures.push_back(path.substr(pathPos, foundPos - pathPos));
+                pathPos = foundPos;
+                patternPos = nextPatternPos;
+            } else {
+                // Literal character matching (case-insensitive, handle path separators)
+                char patternChar = pattern[patternPos];
+                char pathChar = path[pathPos];
+                
+                bool match = false;
+                if ((patternChar == '/' || patternChar == '\\') && 
+                    (pathChar == '/' || pathChar == '\\')) {
+                    match = true;
+                } else if (std::tolower(patternChar) == std::tolower(pathChar)) {
+                    match = true;
+                }
+                
+                if (!match) {
+                    return false;
+                }
+                
+                patternPos++;
+                pathPos++;
+            }
+        }
+        
+        // Handle remaining wildcards at the end of pattern
+        while (patternPos < pattern.size() && pattern[patternPos] == '*') {
+            captures.push_back("");
+            patternPos++;
+        }
+        
+        // Pattern should be fully consumed, path can have remaining characters
+        return patternPos >= pattern.size();
+    };
+    
+    // Try to match the pattern at different positions in the resolved path (simulating .* anchors)
+    std::vector<std::string> captures;
+    bool matched = false;
+    
+    for (size_t startPos = 0; startPos <= resolvedPath.size(); ++startPos) {
+        captures.clear();
+        std::string subPath = resolvedPath.substr(startPos);
+        
+        if (matchAndExtract(oldPattern, subPath, captures)) {
+            matched = true;
+            break;
+        }
+    }
+    
+    if (!matched) {
+        return newPattern;
+    }
+    
+    // Replace wildcards in newPattern with captured values
+    std::string result = newPattern;
+    for (size_t i = 0; i < captures.size(); ++i) {
+        size_t pos = result.find('*');
+        if (pos == std::string::npos) break;
+        result.replace(pos, 1, captures[i]);
+    }
+    
+    return result;
 }
 
 
@@ -1958,6 +2075,8 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
     }
 
     if (usingFileSource) {
+        modifiedCommands.insert(modifiedCommands.begin(), { "file_name", fileName });
+        modifiedCommands.insert(modifiedCommands.begin(), { "folder_name", path });
         modifiedCommands.insert(modifiedCommands.begin(), { "sourced_path", entry });
     }
 
@@ -2412,77 +2531,67 @@ void applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
             return returnOrNull(placeholder);
         }},
         {"{slice(", [&](const std::string& placeholder) {
-            // Extract the text inside the parentheses
             size_t startPos = placeholder.find('(');
             size_t endPos = placeholder.rfind(')');
             if (startPos == std::string::npos || endPos == std::string::npos || endPos <= startPos + 1) {
                 return returnOrNull(placeholder);
             }
-            std::string parameters = placeholder.substr(startPos + 1, endPos - startPos - 1);
         
-            // Find the two commas that separate <STRING>,<START_INDEX>,<END_INDEX>
+            std::string parameters = placeholder.substr(startPos + 1, endPos - startPos - 1);
             size_t firstComma = parameters.find(',');
-            size_t secondComma = (firstComma == std::string::npos) 
-                               ? std::string::npos 
-                               : parameters.find(',', firstComma + 1);
+            size_t secondComma = (firstComma == std::string::npos) ? std::string::npos : parameters.find(',', firstComma + 1);
             if (firstComma == std::string::npos || secondComma == std::string::npos) {
                 return returnOrNull(placeholder);
             }
         
-            // Extract each piece
             std::string strPart    = parameters.substr(0, firstComma);
             std::string startIndex = parameters.substr(firstComma + 1, secondComma - firstComma - 1);
             std::string endIndex   = parameters.substr(secondComma + 1);
         
-            // Trim whitespace and remove surrounding quotes if present
             trim(strPart);
-            removeQuotes(strPart);
+            removeQuotes(strPart); // << WARNING: this might be removing your entire string
             trim(startIndex);
             removeQuotes(startIndex);
             trim(endIndex);
             removeQuotes(endIndex);
         
-            // Validate that startIndex and endIndex are all digits
             if (startIndex.empty() || endIndex.empty() ||
                 !std::all_of(startIndex.begin(), startIndex.end(), ::isdigit) ||
                 !std::all_of(endIndex.begin(), endIndex.end(), ::isdigit)) {
                 return returnOrNull(placeholder);
             }
         
-            // Convert indices to size_t
             size_t sliceStart = static_cast<size_t>(ult::stoi(startIndex));
             size_t sliceEnd   = static_cast<size_t>(ult::stoi(endIndex));
         
-            // Perform the slice
-            return returnOrNull(sliceString(strPart, sliceStart, sliceEnd));
+            if (sliceEnd <= sliceStart || sliceStart >= strPart.length()) {
+                return returnOrNull(placeholder); // or maybe return "" if you'd prefer that fallback
+            }
+        
+            // Final slice
+            std::string result = sliceString(strPart, sliceStart, sliceEnd);
+            return returnOrNull(result);
         }},
         {"{split(", [&](const std::string& placeholder) {
             size_t openParen = placeholder.find('(');
             size_t closeParen = placeholder.find(')');
         
-            // If we can’t find both '(' and ')', or they’re in the wrong order, bail out:
             if (openParen == std::string::npos || closeParen == std::string::npos || closeParen <= openParen) {
-                return std::string(NULL_STR);
+                return NULL_STR;
             }
         
-            // Extract “arg1,arg2,arg3” (everything between the parentheses)
-            size_t startPos = openParen + 1;
-            size_t endPos = closeParen;
-            std::string parameters = placeholder.substr(startPos, endPos - startPos);
+            std::string parameters = placeholder.substr(openParen + 1, closeParen - openParen - 1);
         
-            // Locate the commas
             size_t firstCommaPos = parameters.find(',');
             size_t lastCommaPos  = parameters.find_last_of(',');
         
-            // We need at least two commas, and they must be distinct
             if (firstCommaPos == std::string::npos
              || lastCommaPos  == std::string::npos
              || firstCommaPos == lastCommaPos) 
             {
-                return std::string(NULL_STR);
+                return NULL_STR;
             }
         
-            // Split out the three parts: str, delimiter, index
             std::string str = parameters.substr(0, firstCommaPos);
             std::string delimiter = parameters.substr(firstCommaPos + 1, lastCommaPos - firstCommaPos - 1);
             std::string indexStr = parameters.substr(lastCommaPos + 1);
@@ -2493,19 +2602,14 @@ void applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
             removeQuotes(delimiter);
             trim(indexStr);
         
-            // If index is not purely digits, fail
-            if (indexStr.empty() 
-             || !std::all_of(indexStr.begin(), indexStr.end(), ::isdigit)) 
-            {
-                return std::string(NULL_STR);
+            if (indexStr.empty() || !std::all_of(indexStr.begin(), indexStr.end(), ::isdigit)) {
+                return NULL_STR;
             }
         
             size_t index = ult::stoi(indexStr);
             std::string result = splitStringAtIndex(str, delimiter, index);
         
-            // If splitStringAtIndex returns empty, return NULL_STR;
-            // otherwise, return that nonempty result
-            return NULL_STR;
+            return result.empty() ? NULL_STR : result;
         }},
         {"{math(", [&](const std::string& placeholder) { return returnOrNull(handleMath(placeholder)); }},
         {"{length(", [&](const std::string& placeholder) { return returnOrNull(handleLength(placeholder)); }},
@@ -2642,7 +2746,7 @@ bool applyPlaceholderReplacementsToCommands(std::vector<std::vector<std::string>
             hexPath = std::string(cmd[1]);  // Make a copy of cmd[1] into hexPath
             preprocessPath(hexPath, packagePath);
             eraseAtEnd = true;
-        } else if (commandName == "filter" || commandName == "sourced_path") {
+        } else if (commandName == "filter" || commandName == "file_name" || commandName == "folder_name" || commandName == "sourced_path") {
             eraseAtEnd = true;
         } else {
             eraseAtEnd = false;
