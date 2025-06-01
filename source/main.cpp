@@ -2141,7 +2141,7 @@ public:
                     listItem->setValue(footer, true);
                 }
 
-                listItem->setClickListener([this, i, selectedItem, footer, listItemRaw = listItem.get(), _currentPackageHeader = currentPackageHeader](uint64_t keys) {
+                listItem->setClickListener([this, i, selectedItem, footer, listItemRaw = listItem.get(), _currentPackageHeader = currentPackageHeader, _itemName = itemName](uint64_t keys) {
                     //listItemPtr = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*) {})](uint64_t keys) {
 
                     if (runningInterpreter.load(std::memory_order_acquire)) {
@@ -2190,7 +2190,7 @@ public:
                         auto modifiedCmds = getSourceReplacement(commands, selectedItemsList[i], i, filePath);
                         applyPlaceholderReplacementsToCommands(modifiedCmds, filePath);
                         //tsl::changeTo<ScriptOverlay>(modifiedCmds, filePath, specificKey+" - "+ selectedItemsList[i], "selection");
-                        tsl::changeTo<ScriptOverlay>(modifiedCmds, filePath, getNameFromPath(selectedItemsList[i]), "selection", false, _currentPackageHeader);
+                        tsl::changeTo<ScriptOverlay>(modifiedCmds, filePath, _itemName, "selection", false, _currentPackageHeader);
                         return true;
                     }
 
@@ -2277,7 +2277,7 @@ public:
                 });
                 
 				// Set the script key listener (for SCRIPT_KEY)
-				toggleListItem->setScriptKeyListener([this, i, _currentPackageHeader = currentPackageHeader](bool state) {
+				toggleListItem->setScriptKeyListener([this, i, _currentPackageHeader = currentPackageHeader, _itemName = itemName](bool state) {
                     // Initialize currentSelectedItem for this index if it does not exist
                     if (isInitialized.find(i) == isInitialized.end() || !isInitialized[i]) {
                         currentSelectedItems[i] = selectedItemsList[i];
@@ -2288,7 +2288,7 @@ public:
 				    // Custom logic for SCRIPT_KEY handling
 				    auto modifiedCmds = getSourceReplacement(state ? commandsOn : commandsOff, currentSelectedItems[i], i, filePath);
 				    applyPlaceholderReplacementsToCommands(modifiedCmds, filePath);
-				    tsl::changeTo<ScriptOverlay>(modifiedCmds, filePath, getNameFromPath(selectedItemsList[i]), "selection", false, _currentPackageHeader);
+				    tsl::changeTo<ScriptOverlay>(modifiedCmds, filePath, _itemName, "selection", false, _currentPackageHeader);
 				});
 
                 
