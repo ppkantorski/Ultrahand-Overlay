@@ -1418,6 +1418,12 @@ void addPackageInfo(std::unique_ptr<tsl::elm::List>& list, auto& packageHeader, 
 
 
 bool isDangerousCombination(const std::string& originalPath) {
+    // --- NEW: 0) If there are two or more '*' in a row, that's automatically dangerous
+    // (covers "**", "****", etc.)
+    if (originalPath.find("**") != std::string::npos) {
+        return true;
+    }
+
     // 1) Normalize repeated wildcards (collapse runs of '*' to a single '*')
     std::string patternPath = originalPath;
     {
@@ -1466,22 +1472,27 @@ bool isDangerousCombination(const std::string& originalPath) {
         "sdmc:/emuMMC/RAW1/"
     };
 
+    // 3) Always block these dangerous substrings anywhere in the normalized path.
+    //    We add "null*" and "*null" here so that any combination like "null*", "*null",
+    //    or "*null*" is caught as soon as either pattern appears.
     static const std::vector<const char*> alwaysDangerousPatterns = {
-        "..", "~"
+        "..",
+        "~",
+        "null*",
+        "*null"
     };
 
     static const std::vector<const char*> wildcardPatterns = {
         "*", "*/"
     };
 
-    // --- 3) Always block dangerous patterns anywhere
     for (const auto& pat : alwaysDangerousPatterns) {
         if (patternPath.find(pat) != std::string::npos) {
             return true;
         }
     }
 
-    // --- 4) Wildcards in root folder names disallowed
+    // 4) Wildcards in root folder names disallowed
     const char rootPrefix[] = "sdmc:/";
     size_t rootLen = std::strlen(rootPrefix);
     if (patternPath.compare(0, rootLen, rootPrefix) == 0) {
@@ -1498,16 +1509,16 @@ bool isDangerousCombination(const std::string& originalPath) {
         }
     }
 
-    // --- 5) Block any path inside ultra-protected folders fully
+    // 5) Block any path inside ultra-protected folders fully
     for (const auto& folder : ultraProtectedFolders) {
         if (patternPath.compare(0, std::strlen(folder), folder) == 0) {
             return true;
         }
     }
 
-    // --- 6) Handle restrictedWildcardFolders:
-    // Wildcards allowed *inside* these folders,
-    // but disallow targeting the folder itself or broad "*" at root of that folder.
+    // 6) Handle restrictedWildcardFolders:
+    //    Wildcards allowed *inside* these folders,
+    //    but disallow targeting the folder itself or broad "*" at root of that folder.
     for (const auto& folder : restrictedWildcardFolders) {
         if (patternPath.compare(0, std::strlen(folder), folder) == 0) {
             std::string relative = patternPath.substr(std::strlen(folder));
@@ -1522,7 +1533,7 @@ bool isDangerousCombination(const std::string& originalPath) {
         }
     }
 
-    // --- 7) Block wildcard usage in protectedFolders, except albumFolders
+    // 7) Block wildcard usage in protectedFolders, except albumFolders
     for (const auto& folder : protectedFolders) {
         if (patternPath.compare(0, std::strlen(folder), folder) == 0) {
             bool isAlbum = false;
@@ -1546,7 +1557,7 @@ bool isDangerousCombination(const std::string& originalPath) {
         }
     }
 
-    // --- 8) Otherwise, no dangerous combination detected
+    // 8) Otherwise, no dangerous combination detected
     return false;
 }
 
@@ -2289,23 +2300,23 @@ void replacePlaceholdersRecursively(std::string& arg, const std::vector<std::pai
 
 void applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::string& hexPath, const std::string& iniPath, const std::string& listString, const std::string& listPath, const std::string& jsonString, const std::string& jsonPath) {
     std::vector<std::pair<std::string, std::function<std::string(const std::string&)>>> placeholders = {
-        {"{hex_file(", [&](const std::string& placeholder) { return replaceHexPlaceholder(placeholder, hexPath); }},
+        {"{hex_file(", [&](const std::string& placeholder) { return returnOrNull(replaceHexPlaceholder(placeholder, hexPath)); }},
         {"{ini_file(", [&](const std::string& placeholder) { 
             std::string result = placeholder;
             applyReplaceIniPlaceholder(result, INI_FILE_STR, iniPath); 
-            return result; 
+            return returnOrNull(result); 
         }},
         {"{list(", [&](const std::string& placeholder) {
             size_t startPos = placeholder.find('(') + 1;
             size_t endPos = placeholder.find(')');
             size_t listIndex = ult::stoi(placeholder.substr(startPos, endPos - startPos));
-            return stringToList(listString)[listIndex];
+            return returnOrNull(stringToList(listString)[listIndex]);
         }},
         {"{list_file(", [&](const std::string& placeholder) {
             size_t startPos = placeholder.find('(') + 1;
             size_t endPos = placeholder.find(')');
             size_t listIndex = ult::stoi(placeholder.substr(startPos, endPos - startPos));
-            return getEntryFromListFile(listPath, listIndex);
+            return returnOrNull(getEntryFromListFile(listPath, listIndex));
         }},
         {"{json(", [&](const std::string& placeholder) { return replaceJsonPlaceholder(placeholder, JSON_STR, jsonString); }},
         {"{json_file(", [&](const std::string& placeholder) { return replaceJsonPlaceholder(placeholder, JSON_FILE_STR, jsonPath); }},
@@ -2314,7 +2325,7 @@ void applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
             size_t endPos = placeholder.find(")");
             std::string format = (endPos != std::string::npos) ? placeholder.substr(startPos, endPos - startPos) : "%Y-%m-%d %H:%M:%S";
             removeQuotes(format);
-            return getCurrentTimestamp(format);
+            return returnOrNull(getCurrentTimestamp(format));
         }},
         {"{decimal_to_hex(", [&](const std::string& placeholder) {
             size_t startPos = placeholder.find("(") + 1;
@@ -2341,28 +2352,28 @@ void applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
             // Adjust decimalToHex function accordingly or handle order here
         
             if (order.empty()) {
-                return decimalToHex(decimalValue);
+                return returnOrNull(decimalToHex(decimalValue));
             } else {
-                return decimalToHex(decimalValue, std::stoi(order)); // assuming overload or second param version
+                return returnOrNull(decimalToHex(decimalValue, std::stoi(order))); // assuming overload or second param version
             }
         }},
         {"{ascii_to_hex(", [&](const std::string& placeholder) {
             size_t startPos = placeholder.find("(") + 1;
             size_t endPos = placeholder.find(")");
             std::string asciiValue = placeholder.substr(startPos, endPos - startPos);
-            return asciiToHex(asciiValue);
+            return returnOrNull(asciiToHex(asciiValue));
         }},
         {"{hex_to_rhex(", [&](const std::string& placeholder) {
             size_t startPos = placeholder.find("(") + 1;
             size_t endPos = placeholder.find(")");
             std::string hexValue = placeholder.substr(startPos, endPos - startPos);
-            return hexToReversedHex(hexValue);
+            return returnOrNull(hexToReversedHex(hexValue));
         }},
         {"{hex_to_decimal(", [&](const std::string& placeholder) {
             size_t startPos = placeholder.find("(") + 1;
             size_t endPos = placeholder.find(")");
             std::string hexValue = placeholder.substr(startPos, endPos - startPos);
-            return hexToDecimal(hexValue);
+            return returnOrNull(hexToDecimal(hexValue));
         }},
         {"{random(", [&](const std::string& placeholder) {
             // Ensure the random seed is initialized
@@ -2380,23 +2391,54 @@ void applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
                 // Generate a random number in the range [lowValue, highValue]
                 int randomValue = lowValue + rand() % (highValue - lowValue + 1);
                 
-                return ult::to_string(randomValue);  // Return the random value as a string
+                return returnOrNull(ult::to_string(randomValue));  // Return the random value as a string
             }
-            return placeholder;
+            return returnOrNull(placeholder);
         }},
         {"{slice(", [&](const std::string& placeholder) {
-            size_t startPos = placeholder.find('(') + 1;
-            size_t endPos = placeholder.find(')');
-            std::string parameters = placeholder.substr(startPos, endPos - startPos);
-            size_t commaPos = parameters.find(',');
-
-            if (commaPos != std::string::npos) {
-                std::string str = parameters.substr(0, commaPos);
-                size_t sliceStart = ult::stoi(parameters.substr(commaPos + 1, parameters.find(',', commaPos + 1) - (commaPos + 1)));
-                size_t sliceEnd = ult::stoi(parameters.substr(parameters.find_last_of(',') + 1));
-                return sliceString(str, sliceStart, sliceEnd);
+            // Extract the text inside the parentheses
+            size_t startPos = placeholder.find('(');
+            size_t endPos = placeholder.rfind(')');
+            if (startPos == std::string::npos || endPos == std::string::npos || endPos <= startPos + 1) {
+                return returnOrNull(placeholder);
             }
-            return placeholder;
+            std::string parameters = placeholder.substr(startPos + 1, endPos - startPos - 1);
+        
+            // Find the two commas that separate <STRING>,<START_INDEX>,<END_INDEX>
+            size_t firstComma = parameters.find(',');
+            size_t secondComma = (firstComma == std::string::npos) 
+                               ? std::string::npos 
+                               : parameters.find(',', firstComma + 1);
+            if (firstComma == std::string::npos || secondComma == std::string::npos) {
+                return returnOrNull(placeholder);
+            }
+        
+            // Extract each piece
+            std::string strPart    = parameters.substr(0, firstComma);
+            std::string startIndex = parameters.substr(firstComma + 1, secondComma - firstComma - 1);
+            std::string endIndex   = parameters.substr(secondComma + 1);
+        
+            // Trim whitespace and remove surrounding quotes if present
+            trim(strPart);
+            removeQuotes(strPart);
+            trim(startIndex);
+            removeQuotes(startIndex);
+            trim(endIndex);
+            removeQuotes(endIndex);
+        
+            // Validate that startIndex and endIndex are all digits
+            if (startIndex.empty() || endIndex.empty() ||
+                !std::all_of(startIndex.begin(), startIndex.end(), ::isdigit) ||
+                !std::all_of(endIndex.begin(), endIndex.end(), ::isdigit)) {
+                return returnOrNull(placeholder);
+            }
+        
+            // Convert indices to size_t
+            size_t sliceStart = static_cast<size_t>(ult::stoi(startIndex));
+            size_t sliceEnd   = static_cast<size_t>(ult::stoi(endIndex));
+        
+            // Perform the slice
+            return returnOrNull(sliceString(strPart, sliceStart, sliceEnd));
         }},
         {"{split(", [&](const std::string& placeholder) {
             size_t startPos = placeholder.find('(') + 1;
@@ -2417,15 +2459,15 @@ void applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
 
                 std::string result = splitStringAtIndex(str, delimiter, index);
                 if (result.empty()) {
-                    return str;
+                    return returnOrNull(str);
                 } else {
-                    return result;
+                    return returnOrNull(result);
                 }
             }
-            return placeholder;
+            return returnOrNull(placeholder);
         }},
-        {"{math(", [&](const std::string& placeholder) { return handleMath(placeholder); }},
-        {"{length(", [&](const std::string& placeholder) { return handleLength(placeholder); }},
+        {"{math(", [&](const std::string& placeholder) { return returnOrNull(handleMath(placeholder)); }},
+        {"{length(", [&](const std::string& placeholder) { return returnOrNull(handleLength(placeholder)); }},
     };
 
      // Second pass: Only replace {math(...)} after other placeholders are evaluated
