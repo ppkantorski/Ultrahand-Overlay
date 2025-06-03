@@ -1209,10 +1209,18 @@ public:
             //resetPercentages();
             
             isDownloadCommand = false;
-            if (lastCommandMode == OPTION_STR)
-                lastSelectedListItem->setValue(commandSuccess ? "footer" : CROSSMARK_SYMBOL);
-            else
-                lastSelectedListItem->setValue(commandSuccess ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
+            //if (lastCommandMode == OPTION_STR)
+            //    lastSelectedListItem->setValue(commandSuccess ? "footer" : CROSSMARK_SYMBOL);
+            //else
+            //    lastSelectedListItem->setValue(commandSuccess ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
+
+            //if (!lastFooter.empty()) {
+            //    lastSelectedListItem->setValue(commandSuccess ? lastFooter : CROSSMARK_SYMBOL);
+            //    lastFooter = "";
+            //} else
+            //    lastSelectedListItem->setValue(commandSuccess ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
+
+            lastSelectedListItem->setValue(commandSuccess ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
 
             closeInterpreterThread();
             lastRunningInterpreter = false;
@@ -2372,6 +2380,11 @@ public:
         }
         if (lastRunningInterpreter) {
             isDownloadCommand = false;
+           //if (!lastFooter.empty()) {
+           //    lastSelectedListItem->setValue(commandSuccess ? lastFooter : CROSSMARK_SYMBOL);
+           //    lastFooter = "";
+           //} else
+           //    lastSelectedListItem->setValue(commandSuccess ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
             lastSelectedListItem->setValue(commandSuccess ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
             closeInterpreterThread();
             lastRunningInterpreter = false;
@@ -3915,7 +3928,7 @@ public:
             //resetPercentages();
             
             isDownloadCommand = false;
-            if (lastCommandMode == OPTION_STR) {
+            if (lastCommandMode == OPTION_STR || lastCommandMode == SLOT_STR) {
                 if (commandSuccess) {
                     if (isFileOrDirectory(packageConfigIniPath)) {
                         auto packageConfigData = getParsedDataFromIniFile(packageConfigIniPath);
@@ -5196,7 +5209,7 @@ public:
             //resetPercentages();
             
             isDownloadCommand = false;
-            if (lastCommandMode == OPTION_STR) {
+            if (lastCommandMode == OPTION_STR || lastCommandMode == SLOT_STR) {
                 if (commandSuccess) {
                     if (isFileOrDirectory(packageConfigIniPath)) {
                         auto packageConfigData = getParsedDataFromIniFile(packageConfigIniPath);
