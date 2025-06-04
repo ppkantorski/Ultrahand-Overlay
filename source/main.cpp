@@ -312,13 +312,27 @@ private:
                     simulatedSelect = false;
                 }
                 if (keys & KEY_A) {
-                    
                     if (item != defaultItem) {
                         setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, iniKey, item);
-                        if (targetMenu == "keyComboMenu")
+                
+                        if (targetMenu == "keyComboMenu") {
+                            // Also set it in tesla config
                             setIniFileValue(TESLA_CONFIG_INI_PATH, TESLA_STR, iniKey, item);
+                
+                            // Remove this key combo from any overlays using it
+                            const auto overlaySections =  ult::parseSectionsFromIni(OVERLAYS_INI_FILEPATH);
+                            for (const auto& section : overlaySections) {
+                                const std::string overlayCombo = parseValueFromIniSection(OVERLAYS_INI_FILEPATH, section, KEY_COMBO_STR);
+                                if (overlayCombo == item) {
+                                    // Clear the key combo for this overlay
+                                    setIniFileValue(OVERLAYS_INI_FILEPATH, section, KEY_COMBO_STR, "");
+                                }
+                            }
+                        }
+                
                         reloadMenu = true;
                     }
+                
                     lastSelectedListItem->setValue("");
                     selectedListItem->setValue(mappedItem);
                     listItemRaw->setValue(CHECKMARK_SYMBOL);
@@ -1086,14 +1100,51 @@ public:
         std::string header = (entryMode == OVERLAY_STR) ? overlayName : packageName;
         inSettingsMenu = dropdownSelection.empty();
         inSubSettingsMenu = !dropdownSelection.empty();
-
+    
+        // Define default key combos (same as UltrahandSettingsMenu)
+        static const std::vector<std::string> defaultCombos = {
+            "ZL+ZR+DDOWN", "ZL+ZR+DRIGHT", "ZL+ZR+DUP", "ZL+ZR+DLEFT", 
+            "L+R+DDOWN", "L+R+DRIGHT", "L+R+DUP", "L+R+DLEFT", 
+            "L+DDOWN", "R+DDOWN", "ZL+ZR+PLUS", "L+R+PLUS", 
+            "ZL+PLUS", "ZR+PLUS", "MINUS+PLUS", "LS+RS", "L+DDOWN+RS"
+        };
+    
         auto list = std::make_unique<tsl::elm::List>();
-
+    
         if (inSettingsMenu) {
             addHeader(list, header + " " + SETTINGS);
-            //std::string priorityValue = parseValueFromIniSection(settingsIniPath, entryName, PRIORITY_STR);
-            //std::string hideOption = parseValueFromIniSection(settingsIniPath, entryName, HIDE_STR);
 
+
+            if (entryMode == OVERLAY_STR) {
+                std::string currentKeyCombo = parseValueFromIniSection(settingsIniPath, entryName, KEY_COMBO_STR);
+                std::string displayCombo = currentKeyCombo.empty() ? OPTION_SYMBOL : currentKeyCombo;
+                
+                // Convert combo to unicode for display
+                if (!currentKeyCombo.empty()) {
+                    convertComboToUnicode(displayCombo);
+                }
+                
+                auto keyComboItem = std::make_unique<tsl::elm::ListItem>(KEY_COMBO);
+                keyComboItem->setValue(displayCombo);
+                keyComboItem->setClickListener([this, listItemRaw = keyComboItem.get()](uint64_t keys) {
+                    if (runningInterpreter.load(std::memory_order_acquire)) return false;
+                    if (simulatedSelect && !simulatedSelectComplete) {
+                        keys |= KEY_A;
+                        simulatedSelect = false;
+                    }
+                    if (keys & KEY_A) {
+                        inMainMenu = false;
+                        tsl::changeTo<SettingsMenu>(this->entryName, this->entryMode, this->overlayName, "", "keyComboMenu");
+                        selectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItemRaw, [](auto*) {});
+                        simulatedSelectComplete = true;
+                        lastSelectedListItem->triggerClickAnimation();
+                        return true;
+                    }
+                    return false;
+                });
+                list->addItem(keyComboItem.release());
+            }
+    
             createAndAddToggleListItem(
                 list,
                 (entryMode == OVERLAY_STR) ? HIDE_OVERLAY : HIDE_PACKAGE,
@@ -1104,7 +1155,7 @@ public:
                 entryName,
                 true
             );
-
+    
             auto listItem = std::make_unique<tsl::elm::ListItem>(SORT_PRIORITY);
             listItem->setValue(parseValueFromIniSection(settingsIniPath, entryName, PRIORITY_STR));
             listItem->setClickListener([this, listItemRaw = listItem.get()](uint64_t keys) {
@@ -1124,7 +1175,8 @@ public:
                 return false;
             });
             list->addItem(listItem.release());
-
+    
+            // Add Key Combo selection for overlays only
             if (entryMode == OVERLAY_STR) {
                 createAndAddToggleListItem(
                     list,
@@ -1176,10 +1228,91 @@ public:
                     entryName
                 );
             }
+        } else if (dropdownSelection == "keyComboMenu") {
+            addHeader(list, KEY_COMBO);
+            std::string currentKeyCombo = parseValueFromIniSection(settingsIniPath, entryName, KEY_COMBO_STR);
+            std::string globalDefaultCombo = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, KEY_COMBO_STR);
+            trim(globalDefaultCombo);
+            
+            // Add "No Key Combo" option first
+            auto listItem = std::make_unique<tsl::elm::ListItem>(OPTION_SYMBOL);
+            if (currentKeyCombo.empty()) {
+                listItem->setValue(CHECKMARK_SYMBOL);
+                lastSelectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){});
+            }
+            listItem->setClickListener([this, listItemRaw = listItem.get()](uint64_t keys) {
+                if (runningInterpreter.load(std::memory_order_acquire)) return false;
+                if (simulatedSelect && !simulatedSelectComplete) {
+                    keys |= KEY_A;
+                    simulatedSelect = false;
+                }
+                if (keys & KEY_A) {
+                    // Remove key combo from this overlay
+                    setIniFileValue(settingsIniPath, entryName, KEY_COMBO_STR, "");
+                    reloadMenu = true;
+                    
+                    lastSelectedListItem->setValue("");
+                    selectedListItem->setValue(OPTION_SYMBOL);
+                    listItemRaw->setValue(CHECKMARK_SYMBOL);
+                    lastSelectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItemRaw, [](auto*) {});
+                    shiftItemFocus(listItemRaw);
+                    simulatedSelectComplete = true;
+                    lastSelectedListItem->triggerClickAnimation();
+                    return true;
+                }
+                return false;
+            });
+            list->addItem(listItem.release());
+    
+            // Add predefined key combos
+            std::string mappedCombo;
+            for (const auto& combo : defaultCombos) {
+                if (combo == globalDefaultCombo) {
+                    continue; // Skip the global default combo
+                }
+                
+
+                mappedCombo = combo;
+                convertComboToUnicode(mappedCombo);
+                
+                listItem = std::make_unique<tsl::elm::ListItem>(mappedCombo);
+                if (combo == currentKeyCombo) {
+                    listItem->setValue(CHECKMARK_SYMBOL);
+                    lastSelectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){});
+                }
+                listItem->setClickListener([this, combo, mappedCombo, currentKeyCombo, listItemRaw = listItem.get()](uint64_t keys) {
+                    if (runningInterpreter.load(std::memory_order_acquire)) return false;
+                    if (simulatedSelect && !simulatedSelectComplete) {
+                        keys |= KEY_A;
+                        simulatedSelect = false;
+                    }
+                    if (keys & KEY_A) {
+                        if (combo != currentKeyCombo) {
+                            // Remove this key combo from any other overlays first
+                            removeKeyComboFromOtherOverlays(combo, entryName);
+                        
+                            // Set the new key combo for this overlay
+                            setIniFileValue(settingsIniPath, entryName, KEY_COMBO_STR, combo);
+                            reloadMenu = true;
+                        }
+                        
+                        lastSelectedListItem->setValue("");
+                        selectedListItem->setValue(mappedCombo);
+                        listItemRaw->setValue(CHECKMARK_SYMBOL);
+                        lastSelectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItemRaw, [](auto*) {});
+                        shiftItemFocus(listItemRaw);
+                        simulatedSelectComplete = true;
+                        lastSelectedListItem->triggerClickAnimation();
+                        return true;
+                    }
+                    return false;
+                });
+                list->addItem(listItem.release());
+            }
         } else {
             addBasicListItem(list, FAILED_TO_OPEN + ": " + settingsIniPath);
         }
-
+    
         auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel);
         rootFrame->setContent(list.release());
         return rootFrame.release();
