@@ -383,6 +383,7 @@ private:
                         {"download", loaderUrl, EXPANSION_PATH},
                         {"download", loaderPlusUrl, EXPANSION_PATH},
                         {"download", downloadUrl, DOWNLOADS_PATH}
+                        //"delete", THEME_CONFIG_INI_PATH}
                     };
                 } else {
                     interpreterCommands = {
@@ -2776,14 +2777,14 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                             footer = commandFooter;
                             cleanOptionName = optionName.substr(1);
                             removeTag(cleanOptionName);
-                            listItem = std::make_unique<tsl::elm::ListItem>(cleanOptionName, "", isMini);
+                            listItem = std::make_unique<tsl::elm::ListItem>(cleanOptionName, "", isMini, true);
                             listItem->setValue(footer);
                         } else {
                             footer = DROPDOWN_SYMBOL;
                             cleanOptionName = optionName.substr(1);
                             removeTag(cleanOptionName);
                             // Create reference to PackageMenu with dropdownSection set to optionName
-                            listItem = std::make_unique<tsl::elm::ListItem>(cleanOptionName, footer, isMini);
+                            listItem = std::make_unique<tsl::elm::ListItem>(cleanOptionName, footer, isMini, true);
                         }
                         
                         if (packageMenuMode) {
@@ -3409,12 +3410,12 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                         //    footer = commandFooter;
                         cleanOptionName = optionName;
                         removeTag(cleanOptionName);
-                        listItem = std::make_unique<tsl::elm::ListItem>(cleanOptionName, footer, isMini);
+                        listItem = std::make_unique<tsl::elm::ListItem>(cleanOptionName, footer, isMini, true);
                     }
                     else {
                         cleanOptionName = optionName;
                         removeTag(cleanOptionName);
-                        listItem = std::make_unique<tsl::elm::ListItem>(cleanOptionName, "", isMini);
+                        listItem = std::make_unique<tsl::elm::ListItem>(cleanOptionName, "", isMini, true);
 
                         if (commandMode == OPTION_STR)
                             listItem->setValue(footer);
@@ -3574,7 +3575,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                     if (commandMode == DEFAULT_STR  || commandMode == SLOT_STR || commandMode == OPTION_STR) { // for handiling toggles
                         cleanOptionName = optionName;
                         removeTag(cleanOptionName);
-                        listItem = std::make_unique<tsl::elm::ListItem>(cleanOptionName, "", isMini);
+                        listItem = std::make_unique<tsl::elm::ListItem>(cleanOptionName, "", isMini, true);
                         if (commandMode == DEFAULT_STR)
                             listItem->setValue(footer, true);
                         else
@@ -4253,6 +4254,7 @@ public:
 
 
 
+
 /**
  * @brief The `MainMenu` class handles the main menu overlay functionality.
  *
@@ -4878,6 +4880,9 @@ public:
                 for (const auto& packageName: subdirectories) {
                     packageIt = packagesIniData.find(packageName);
                     if (packageIt == packagesIniData.end()) {
+                        // Get package header info first for new packages
+                        packageHeader = getPackageHeaderFromIni(PACKAGE_PATH + packageName+ "/" +PACKAGE_FILENAME);
+                        
                         // Initialize missing package data
                         setIniFileValue(PACKAGES_INI_FILEPATH, packageName, PRIORITY_STR, "20");
                         setIniFileValue(PACKAGES_INI_FILEPATH, packageName, STAR_STR, FALSE_STR);
@@ -4887,10 +4892,13 @@ public:
                         setIniFileValue(PACKAGES_INI_FILEPATH, packageName, "custom_name", "");
                         setIniFileValue(PACKAGES_INI_FILEPATH, packageName, "custom_version", "");
 
-                        assignedPackageName = packageHeader.title;
+                        if (packageHeader.title.empty())
+                            assignedPackageName = packageName;
+                        else
+                            assignedPackageName = packageHeader.title;
                         assignedPackageVersion = packageHeader.version;
 
-                        const std::string& basePackageInfo = priority + ":" + assignedPackageName + ":" + assignedPackageVersion + ":" + packageName;
+                        const std::string& basePackageInfo = "0020:" + assignedPackageName + ":" + assignedPackageVersion + ":" + packageName;
                         packageList.insert(basePackageInfo);
 
                         //packageList.insert("0020" + (packageName) +":" + packageName);
