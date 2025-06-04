@@ -83,6 +83,28 @@ static bool usingEmunand = true;
  * and directories.
  */
 
+static std::vector<std::string> getOverlayNames() {
+    std::vector<std::string> names;
+    auto iniData = ult::getParsedDataFromIniFile(ult::OVERLAYS_INI_FILEPATH);
+    for (const auto& [sectionName, _] : iniData) {
+        names.push_back(sectionName);
+    }
+    return names;
+}
+
+static void removeKeyComboFromOtherOverlays(const std::string& keyCombo, const std::string& currentOverlay) {
+    auto overlayNames = getOverlayNames();  // Make sure hlp namespace is correct
+    for (const auto& overlayName : overlayNames) {
+        if (overlayName != currentOverlay) {
+            std::string existingCombo = ult::parseValueFromIniSection(ult::OVERLAYS_INI_FILEPATH, overlayName, "key_combo");
+            if (!existingCombo.empty() && tsl::hlp::comboStringToKeys(existingCombo) == tsl::hlp::comboStringToKeys(keyCombo)) {
+                // Clear it
+                ult::setIniFileValue(ult::OVERLAYS_INI_FILEPATH, overlayName, "key_combo", "");
+            }
+        }
+    }
+}
+
 
 // Global constant map for button and arrow placeholders
 const std::unordered_map<std::string, std::string> symbolPlaceholders = {
