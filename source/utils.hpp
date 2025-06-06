@@ -65,6 +65,8 @@ static uint32_t cpuSpeedo0, cpuSpeedo2, socSpeedo0; // CPU, GPU, SOC
 static uint32_t cpuIDDQ, gpuIDDQ, socIDDQ;
 static bool usingEmunand = true;
 
+
+
 /**
  * @brief Ultrahand-Overlay Configuration Paths
  *
@@ -105,6 +107,13 @@ static void removeKeyComboFromOtherOverlays(const std::string& keyCombo, const s
     }
 }
 
+// Define default key combos (same as UltrahandSettingsMenu)
+const std::vector<std::string> defaultCombos = {
+    "ZL+ZR+DDOWN", "ZL+ZR+DRIGHT", "ZL+ZR+DUP", "ZL+ZR+DLEFT", 
+    "L+R+DDOWN", "L+R+DRIGHT", "L+R+DUP", "L+R+DLEFT", 
+    "L+DDOWN", "R+DDOWN", "ZL+ZR+PLUS", "L+R+PLUS", 
+    "ZL+PLUS", "ZR+PLUS", "MINUS+PLUS", "LS+RS", "L+DDOWN+RS"
+};
 
 // Global constant map for button and arrow placeholders
 const std::unordered_map<std::string, std::string> symbolPlaceholders = {
@@ -1311,7 +1320,7 @@ void drawTable(
     const auto infoRaw   = getRawColor(tableInfoTextColor,      tsl::infoTextColor);
     const auto hiliteRaw = getRawColor(tableInfoTextHighlightColor, tsl::infoTextColor);
 
-    // Prebuild initial buffers (optional, to warm cache)
+    // Prebuild initial buffers
     std::vector<std::string> cacheExpSec, cacheExpInfo;
     std::vector<s32>         cacheYOff;
     std::vector<s32>         cacheXOff;
@@ -1323,59 +1332,62 @@ void drawTable(
         cacheExpSec, cacheExpInfo, cacheYOff, cacheXOff
     );
 
-    //std::vector<std::string> cacheExpSec = initExpSec;
-    //std::vector<std::string> cacheExpInfo = initExpInfo;
-    //std::vector<s32>         cacheYOff   = initYOff;
-    //std::vector<int>         cacheXOff   = initXOff;
-
-    auto lastUpdateTime = std::make_shared<timespec>(timespec{0, 0});
+    // ULTRA-FAST: Use amsticks for high-performance timing
+    auto lastUpdateTick = std::make_shared<u64>(armGetSystemTick());
     
-
-    // Use move or copy to static cache inside lambda
     list->addItem(new tsl::elm::TableDrawer(
         [=](tsl::gfx::Renderer* renderer, s32 x, s32 y, s32 w, s32 h) mutable {
 
-            timespec currentTime;
-            clock_gettime(CLOCK_REALTIME, &currentTime);
-
-            //double elapsedSeconds = difftime(currentTime.tv_sec, lastUpdateTime->tv_sec);
-
-            // Rebuild cache if more than 1 sec passed or empty
             if (!tableData.empty()) {
-                double elapsedSeconds = difftime(currentTime.tv_sec, lastUpdateTime->tv_sec);
-                if (elapsedSeconds >= 1.0) {
+                u64 currentTick = armGetSystemTick();
+                u64 currentFreq = armGetSystemTickFreq();
+                u64 ticksForOneSecond = currentFreq;
+                
+                if ((currentTick - *lastUpdateTick) >= ticksForOneSecond) {  // Fix: use the correct variable
                     buildTableDrawerLines(
                         tableData, sectionLines, infoLines, packagePath,
                         columnOffset, startGap, newlineGap,
                         wrappingMode, alignment, useWrappedTextIndent,
                         cacheExpSec, cacheExpInfo, cacheYOff, cacheXOff
                     );
-                    *lastUpdateTime = currentTime;
+                    *lastUpdateTick = currentTick;
                 }
             }
 
+            // ULTRA-FAST: Minimal branching, maximum cache efficiency
             if (useHeaderIndent) {
                 renderer->drawRect(x-2, y+2, 4, 22, renderer->a(tsl::headerSeparatorColor));
             }
 
-            bool sameCol = (tableInfoTextColor == tableInfoTextHighlightColor);
-            for (size_t i = 0; i < cacheExpSec.size(); ++i) {
-                renderer->drawString(
-                    cacheExpSec[i], false,
-                    x+12, y + cacheYOff[i],
-                    16, renderer->a(secRaw)
-                );
-                if (sameCol) {
-                    renderer->drawString(
-                        cacheExpInfo[i], false,
-                        x + cacheXOff[i], y + cacheYOff[i],
-                        16, renderer->a(infoRaw)
-                    );
-                } else {
+            // ULTRA-FAST: Pre-calculate everything, optimize for CPU pipeline
+            const bool sameCol = (tableInfoTextColor == tableInfoTextHighlightColor);
+            const size_t count = cacheExpSec.size();
+            
+            if (sameCol) {
+                // Fastest path: same colors, minimal function calls
+                const auto secColor = renderer->a(secRaw);
+                const auto infoColor = renderer->a(infoRaw);
+                const s32 baseX = x + 12;
+                
+                // Tight loop optimized for CPU cache
+                for (size_t i = 0; i < count; ++i) {
+                    const s32 yPos = y + cacheYOff[i];
+                    renderer->drawString(cacheExpSec[i], false, baseX, yPos, 16, secColor);
+                    renderer->drawString(cacheExpInfo[i], false, x + cacheXOff[i], yPos, 16, infoColor);
+                }
+            } else {
+                // Still fast path for different colors
+                const auto secColor = renderer->a(secRaw);
+                const auto infoColor = renderer->a(infoRaw);
+                const auto hiliteColor = renderer->a(hiliteRaw);
+                const s32 baseX = x + 12;
+                
+                for (size_t i = 0; i < count; ++i) {
+                    const s32 yPos = y + cacheYOff[i];
+                    renderer->drawString(cacheExpSec[i], false, baseX, yPos, 16, secColor);
                     renderer->drawStringWithHighlight(
-                        cacheExpInfo[i], false,
-                        x + cacheXOff[i], y + cacheYOff[i], 16,
-                        renderer->a(infoRaw), renderer->a(hiliteRaw)
+                        cacheExpInfo[i], false, x + cacheXOff[i], yPos, 16,
+                        infoColor, hiliteColor
                     );
                 }
             }
