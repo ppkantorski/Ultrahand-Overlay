@@ -220,7 +220,9 @@ $(BUILD):
 
 	@rm -rf out/
 	@mkdir -p out/switch/.overlays/
+	@mkdir -p out/config/ultrahand/
 	@cp $(CURDIR)/$(TARGET).ovl out/switch/.overlays/$(TARGET).ovl
+	@cp -ar lang out/config/ultrahand/
 
 #---------------------------------------------------------------------------------
 clean:
@@ -235,6 +237,7 @@ dist: all
 
 	@rm -f $(TARGET).zip
 	@cd out; zip -r ../$(TARGET).zip ./*; cd ../
+
 #---------------------------------------------------------------------------------
 else
 .PHONY: all
