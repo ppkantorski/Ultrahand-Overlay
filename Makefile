@@ -56,7 +56,7 @@ include $(DEVKITPRO)/libnx/switch_rules
 #---------------------------------------------------------------------------------
 APP_TITLE	:= Ultrahand
 APP_AUTHOR	:= ppkantorski
-APP_VERSION	:= 1.8.9
+APP_VERSION	:= 1.9.0
 TARGET		:= ovlmenu
 BUILD		:= build
 SOURCES		:= source common lib/libultrahand/libultra/source
@@ -92,7 +92,7 @@ CFLAGS += -DUSING_FPS_INDICATOR_DIRECTIVE=$(USING_FPS_INDICATOR_DIRECTIVE)
 #NO_FSTREAM_DIRECTIVE := 1
 #CFLAGS += -DNO_FSTREAM_DIRECTIVE=$(NO_FSTREAM_DIRECTIVE)
 
-CXXFLAGS := $(CFLAGS) -std=c++20 -Wno-dangling-else -ffast-math -fno-unwind-tables -fno-asynchronous-unwind-tables
+CXXFLAGS := $(CFLAGS) -std=c++23 -Wno-dangling-else -ffast-math -fno-unwind-tables -fno-asynchronous-unwind-tables
 
 ASFLAGS := $(ARCH)
 LDFLAGS += -specs=$(DEVKITPRO)/libnx/switch.specs $(ARCH) -Wl,-Map,$(notdir $*.map)
@@ -100,7 +100,7 @@ LDFLAGS += -specs=$(DEVKITPRO)/libnx/switch.specs $(ARCH) -Wl,-Map,$(notdir $*.m
 LIBS := -lcurl -lz -lzzip -lmbedtls -lmbedx509 -lmbedcrypto -ljansson -lnx
 
 CXXFLAGS += -fno-exceptions -ffunction-sections -fdata-sections -fno-rtti
-LDFLAGS += -Wl,--as-needed
+LDFLAGS += -Wl,--as-needed -Wl,--gc-sections
 
 # For Ensuring Parallel LTRANS Jobs w/ GCC, make -j6
 CXXFLAGS += -flto -fuse-linker-plugin -flto=6
