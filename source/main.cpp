@@ -5634,8 +5634,8 @@ public:
         //tsl::initializeUltrahandSettings(); // unnecessary for Ultrahand's implementation
         //ASSERT_FATAL(smInitialize()); // might be unnecessary? needs investigating
 
-        //ASSERT_FATAL(socketInitializeDefault());
-        //initializeCurl();
+        ASSERT_FATAL(socketInitializeDefault());
+        initializeCurl();
 
         // Load and execute "boot" commands if they exist
         //executeIniCommands(PACKAGE_PATH + BOOT_PACKAGE_FILENAME, "boot");
@@ -5667,8 +5667,8 @@ public:
         if (exitingUltrahand)
             executeIniCommands(PACKAGE_PATH + EXIT_PACKAGE_FILENAME, "exit");
 
-        //cleanupCurl();
-        //socketExit();
+        cleanupCurl();
+        socketExit();
 
         //smExit();
         //closeInterpreterThread(); // shouldn't be running, but run close anyways
