@@ -2119,54 +2119,49 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
 
 
 std::string getCurrentTimestamp(const std::string& format) {
-    auto now = std::chrono::system_clock::now();
-    auto now_time_t = std::chrono::system_clock::to_time_t(now);
-    auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
-
-    // Prepare a format for strftime without unsupported tokens
+    // Try using standard POSIX time() function
+    time_t seconds = time(nullptr);
+    u32 milliseconds = 0; // We lose millisecond precision with this method
+    
+    // If you need milliseconds, try to get them from system tick
+    u64 tick_ns = armTicksToNs(armGetSystemTick());
+    milliseconds = (tick_ns / 1000000ULL) % 1000;
+    
     std::string modifiedFormat = format;
     bool hasMilliseconds = false;
-
-    // Remove %f from the format string temporarily, if present
+    
     size_t pos = modifiedFormat.find("%f");
     if (pos != std::string::npos) {
-        modifiedFormat.erase(pos, 2); // Remove "%f"
+        modifiedFormat.erase(pos, 2);
         hasMilliseconds = true;
     }
-
-    // Format using strftime up to seconds
+    
     char buffer[30];
-    if (!std::strftime(buffer, sizeof(buffer), modifiedFormat.c_str(), std::localtime(&now_time_t))) {
-        return ""; // Handle error if needed
+    if (!std::strftime(buffer, sizeof(buffer), modifiedFormat.c_str(), std::localtime(&seconds))) {
+        return "";
     }
-
+    
     std::string formattedTime(buffer);
     StringStream oss;
-
-    // Handle %s for seconds since epoch
+    
     if (formattedTime.find("%s") != std::string::npos) {
-        oss << static_cast<long long>(std::chrono::system_clock::to_time_t(now)); 
+        oss << static_cast<long long>(seconds); 
         formattedTime.replace(formattedTime.find("%s"), 2, oss.str());
-        oss.clear(); // Clear the StringStream for the next usage
+        oss.clear();
     }
-
-    // Handle %f for milliseconds, if it was in the original format
+    
     if (hasMilliseconds) {
-        std::string millisecondsStr = ult::to_string(milliseconds.count());
-
-        // Pad milliseconds to three digits if necessary
+        std::string millisecondsStr = ult::to_string(milliseconds);
         if (millisecondsStr.length() < 3) {
             millisecondsStr.insert(0, 3 - millisecondsStr.length(), '0');
         }
-
-        // Check if the format string included '.' right before %f
         if (pos > 0 && format[pos - 1] == '.') {
-            formattedTime += millisecondsStr;  // Just add milliseconds without an extra period
+            formattedTime += millisecondsStr;
         } else {
-            formattedTime += "." + millisecondsStr;  // Add period before milliseconds if not already present
+            formattedTime += "." + millisecondsStr;
         }
     }
-
+    
     return formattedTime;
 }
 
