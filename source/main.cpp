@@ -258,6 +258,7 @@ private:
                     //executeCommands({
                     //    {"download", LATEST_RELEASE_INFO_URL, SETTINGS_PATH}
                     //});
+                    deleteFileOrDirectory(SETTINGS_PATH+"RELEASE.ini");
                     downloadFile(LATEST_RELEASE_INFO_URL, SETTINGS_PATH);
                     downloadPercentage.store(-1, std::memory_order_release);
                 } else if (targetMenu == "themeMenu") {
