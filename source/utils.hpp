@@ -2781,7 +2781,7 @@ bool applyPlaceholderReplacementsToCommands(std::vector<std::vector<std::string>
             eraseAtEnd = false;
         }
 
-        logMessage("iniPath: "+iniPath);
+        //logMessage("iniPath: "+iniPath);
 
         // Now, handle adding quotes only if needed
         for (size_t i = 1; i < cmd.size(); ++i) {
@@ -2944,7 +2944,7 @@ bool interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
 
                 applyPlaceholderReplacements(cmd, hexPath, iniPath, listString, listPath, jsonString, jsonPath);
 
-                #if USING_LOGGING_DIRECTIVE
+                //#if USING_LOGGING_DIRECTIVE
                 if (interpreterLogging) {
                     disableLogging = false;
                     message = "Executing command: ";
@@ -2952,7 +2952,7 @@ bool interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
                         message += token + " ";
                     logMessage(message);
                 }
-                #endif
+                //#endif
 
                 cmdSize = cmd.size();
 
