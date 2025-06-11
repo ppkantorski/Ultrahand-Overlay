@@ -1296,7 +1296,7 @@ void drawTable(
     const std::string& alignment                   = LEFT_STR,
     bool hideTableBackground        = false,
     bool useHeaderIndent            = false,
-    bool isScrollable               = false,
+    bool isScrollable               = true,
     const std::string& wrappingMode               = "none",
     bool useWrappedTextIndent        = false,
     std::string packagePath          = ""
@@ -1418,7 +1418,7 @@ void addTable(
     const std::string&                     tableAlignment              = RIGHT_STR,
     const bool&                            hideTableBackground         = false,
     const bool&                            useHeaderIndent             = false,
-    const bool&                            isScrollable                = false,
+    const bool&                            isScrollable                = true,
     const std::string&                     wrappingMode                = "none",
     const bool&                            useWrappedTextIndent        = false
 ) {
