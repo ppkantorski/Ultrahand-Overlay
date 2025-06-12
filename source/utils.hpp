@@ -1167,10 +1167,13 @@ static void buildTableDrawerLines(
 
     // A small lambda to wrap and push lines with proper x,y and info alignment
     auto processLines = [&](const std::vector<std::string>& lines, const std::vector<std::string>& infos) {
+        std::string infoText;
+        int xPos;
+        float infoWidth;
         for (size_t i = 0; i < lines.size(); ++i) {
             const std::string& baseText = lines[i];
             const std::string& infoTextRaw = (i < infos.size()) ? infos[i] : "";
-            std::string infoText = (infoTextRaw.find(NULL_STR) != std::string::npos) ? UNAVAILABLE_SELECTION : infoTextRaw;
+            infoText = (infoTextRaw.find(NULL_STR) != std::string::npos) ? UNAVAILABLE_SELECTION : infoTextRaw;
 
             // Wrap the base text according to wrappingMode and indent params
             auto wrappedLines = wrapText(
@@ -1183,9 +1186,8 @@ static void buildTableDrawerLines(
             );
 
             // Cache width of info text only once per base line, not per wrapped line
-            float infoWidth = tsl::gfx::calculateStringWidth(infoText, fontSize, false);
+            infoWidth = tsl::gfx::calculateStringWidth(infoText, fontSize, false);
 
-            int xPos;
             for (const auto& line : wrappedLines) {
                 outSection.push_back(line);
                 outInfo.push_back(infoText);
