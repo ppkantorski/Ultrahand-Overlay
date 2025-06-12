@@ -919,9 +919,13 @@ public:
             //list->addItem(new tsl::elm::ListItem(FAILED_TO_OPEN + ": " + settingsIniPath));
         }
 
-        auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel);
+        //auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel);
+        //rootFrame->setContent(list.release());
+        //return rootFrame.release();
+
+        auto rootFrame = new tsl::elm::OverlayFrame(CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel);
         rootFrame->setContent(list.release());
-        return rootFrame.release();
+        return rootFrame;
 
         //return returnRootFrame(list, CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel);
     }
@@ -1306,9 +1310,13 @@ public:
             addBasicListItem(list, FAILED_TO_OPEN + ": " + settingsIniPath);
         }
     
-        auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel);
+        //auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel);
+        //rootFrame->setContent(list.release());
+        //return rootFrame.release();
+
+        auto rootFrame = new tsl::elm::OverlayFrame(CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel);
         rootFrame->setContent(list.release());
-        return rootFrame.release();
+        return rootFrame;
     }
     
     
@@ -1614,11 +1622,18 @@ public:
 
         std::string packageVersion = isFromMainMenu ? "" : packageRootLayerVersion;
         
-        auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(packageName,
-            !lastPackageHeader.empty() ? lastPackageHeader + "?Ultrahand Script" : (packageVersion.empty() ? CAPITAL_ULTRAHAND_PROJECT_NAME + " Script" : packageVersion + "   (" + CAPITAL_ULTRAHAND_PROJECT_NAME + " Script)"),
-            noClickableItems);
+        //auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(packageName,
+        //    !lastPackageHeader.empty() ? lastPackageHeader + "?Ultrahand Script" : (packageVersion.empty() ? CAPITAL_ULTRAHAND_PROJECT_NAME + " Script" : packageVersion + "   (" + CAPITAL_ULTRAHAND_PROJECT_NAME + " Script)"),
+        //    noClickableItems);
+        //rootFrame->setContent(list.release());
+        //return rootFrame.release();
+
+
+        auto rootFrame = new tsl::elm::OverlayFrame(packageName,
+           !lastPackageHeader.empty() ? lastPackageHeader + "?Ultrahand Script" : (packageVersion.empty() ? CAPITAL_ULTRAHAND_PROJECT_NAME + " Script" : packageVersion + "   (" + CAPITAL_ULTRAHAND_PROJECT_NAME + " Script)"),
+           noClickableItems);
         rootFrame->setContent(list.release());
-        return rootFrame.release();
+        return rootFrame;
     }
 
     virtual bool handleInput(u64 keysDown, u64 keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
@@ -1778,25 +1793,25 @@ public:
         : filePath(path), specificKey(key), commands(std::move(cmds)), specifiedFooterKey(footerKey), lastPackageHeader(_lastPackageHeader) {
         //lastSelectedListItem.reset();
     }
-    
+
     ~SelectionOverlay() {
         lastSelectedListItem.reset();
     }
-    
+
     void processSelectionCommands() {
         removeEmptyCommands(commands);
-        
+
         bool inEristaSection = false;
         bool inMarikoSection = false;
         std::string currentSection = GLOBAL_STR;
         std::string iniFilePath;
-        
+
         std::string commandName;
         std::string filterEntry;
         std::vector<std::string> newFiles, newFilesOn, newFilesOff;
-        
+
         std::vector<std::string> matchedFiles;
-        
+
         // Create a map with all non-button/arrow placeholders and their replacements
         std::unordered_map<std::string, std::string> generalPlaceholders = {
             {"{ram_vendor}", memoryVendor},
@@ -1812,7 +1827,7 @@ public:
             {"{title_id}", getTitleIdAsString()}
         };
         
-        
+
         for (auto& cmd : commands) {
             //if (currentSection == GLOBAL_STR)
             //    applyPlaceholderReplacements(cmd, hexPath, iniPath, listString, listPath, jsonString, jsonPath);
@@ -1820,7 +1835,7 @@ public:
             //    applyPlaceholderReplacements(cmd, hexPath, iniPathOn, listStringOn, listPathOn, jsonStringOn, jsonPathOn);
             //else if (currentSection == OFF_STR)
             //    applyPlaceholderReplacements(cmd, hexPath, iniPathOff, listStringOff, listPathOff, jsonStringOff, jsonPathOff);
-            
+
             
             for (auto& arg : cmd) {
                 // Replace general placeholders
@@ -1829,9 +1844,9 @@ public:
                 // Replace button/arrow placeholders from the global map
                 //replacePlaceholdersInArg(arg, symbolPlaceholders);
             }
-            
+
             commandName = cmd[0];
-            
+
             if (stringToLowercase(commandName) == "erista:") {
                 inEristaSection = true;
                 inMarikoSection = false;
@@ -1841,7 +1856,7 @@ public:
                 inMarikoSection = true;
                 continue;
             }
-            
+
             if ((inEristaSection && !inMarikoSection && usingErista) || (!inEristaSection && inMarikoSection && usingMariko) || (!inEristaSection && !inMarikoSection)) {
                 if (commandName.find(SYSTEM_PATTERN) == 0) {
                     commandSystem = commandName.substr(SYSTEM_PATTERN.length());
@@ -1858,13 +1873,13 @@ public:
                 } else if (commandName.find(SELECTION_MINI_PATTERN) == 0) {
                     isMini = (commandName.substr(SELECTION_MINI_PATTERN.length()) == TRUE_STR);
                 }
-                
+
                 if (commandMode == TOGGLE_STR) {
                     if (commandName == "on:")
                         currentSection = ON_STR;
                     else if (commandName == "off:")
                         currentSection = OFF_STR;
-                    
+
                     if (currentSection == GLOBAL_STR) {
                         commandsOn.push_back(cmd);
                         commandsOff.push_back(cmd);
@@ -1873,13 +1888,13 @@ public:
                     else if (currentSection == OFF_STR)
                         commandsOff.push_back(cmd);
                 }
-                
+
                 if (cmd.size() > 1) {
                     if (!iniFilePath.empty()){
                         applyReplaceIniPlaceholder(cmd[1], INI_FILE_STR, iniFilePath);
                     }
-                    
-                    
+
+
                     if (commandName == "ini_file") {
                         iniFilePath = cmd[1];
                         preprocessPath(iniFilePath, filePath);
@@ -1890,7 +1905,7 @@ public:
                         if (sourceType == FILE_STR) {
                             preprocessPath(filterEntry, filePath);
                         }
-                        
+
                         if (filterEntry.find('*') != std::string::npos) {
                             matchedFiles = getFilesListByWildcards(filterEntry);
                             for (const auto& file : matchedFiles) {
@@ -2479,20 +2494,36 @@ public:
             packageHeader.color = packageRootLayerColor;
         
 
-        auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(
-            (!packageHeader.title.empty()) ? packageHeader.title : (!packageRootLayerTitle.empty() ? packageRootLayerTitle : getNameFromPath(filePath)),
-            !lastPackageHeader.empty() ? lastPackageHeader : (packageHeader.version != "" ? (!packageRootLayerVersion.empty() ? packageRootLayerVersion : packageHeader.version) + "   (Ultrahand Package)" : "Ultrahand Package"),
-            noClickableItems,
-            "",
-            packageHeader.color);
+        //auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(
+        //    (!packageHeader.title.empty()) ? packageHeader.title : (!packageRootLayerTitle.empty() ? packageRootLayerTitle : getNameFromPath(filePath)),
+        //    !lastPackageHeader.empty() ? lastPackageHeader : (packageHeader.version != "" ? (!packageRootLayerVersion.empty() ? packageRootLayerVersion : packageHeader.version) + "   (Ultrahand Package)" : "Ultrahand Package"),
+        //    noClickableItems,
+        //    "",
+        //    packageHeader.color);
+        //
+        //if (filePath == PACKAGE_PATH)
+        //    rootFrame = std::make_unique<tsl::elm::OverlayFrame>(CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel);
+        //
+        ////ist->setAutoJumpTarget(CHECKMARK_SYMBOL);
+        //rootFrame->setContent(list.release());
+        //
+        //return rootFrame.release();
 
-        if (filePath == PACKAGE_PATH)
-            rootFrame = std::make_unique<tsl::elm::OverlayFrame>(CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel);
-
-        //ist->setAutoJumpTarget(CHECKMARK_SYMBOL);
+        tsl::elm::OverlayFrame* rootFrame;
+        
+        if (filePath == PACKAGE_PATH) {
+           rootFrame = new tsl::elm::OverlayFrame(CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel);
+        } else {
+           rootFrame = new tsl::elm::OverlayFrame(
+               (!packageHeader.title.empty()) ? packageHeader.title : (!packageRootLayerTitle.empty() ? packageRootLayerTitle : getNameFromPath(filePath)),
+               !lastPackageHeader.empty() ? lastPackageHeader : (packageHeader.version != "" ? (!packageRootLayerVersion.empty() ? packageRootLayerVersion : packageHeader.version) + "   (Ultrahand Package)" : "Ultrahand Package"),
+               noClickableItems,
+               "",
+               packageHeader.color);
+        }
+        
         rootFrame->setContent(list.release());
-
-        return rootFrame.release();
+        return rootFrame;
 
 
         //if (filePath == PACKAGE_PATH)
@@ -4001,19 +4032,33 @@ public:
         if (packageHeader.color.empty())
             packageHeader.color = packageRootLayerColor;
         
-        std::unique_ptr<tsl::elm::OverlayFrame> rootFrame = std::make_unique<tsl::elm::OverlayFrame>(
-            (!packageHeader.title.empty()) ? packageHeader.title : (!packageRootLayerTitle.empty() ? packageRootLayerTitle : getNameFromPath(packagePath)),
-            ((!pageHeader.empty() && packageHeader.show_version != TRUE_STR) ? pageHeader: (packageHeader.version != "" ? (!packageRootLayerVersion.empty() ? packageRootLayerVersion : packageHeader.version) + "   (Ultrahand Package)" : "Ultrahand Package")),
-            noClickableItems,
-            "",
-            packageHeader.color,
-            (usingPages && currentPage == RIGHT_STR) ? pageLeftName : "",
-            (usingPages && currentPage == LEFT_STR) ? pageRightName : ""
+        //std::unique_ptr<tsl::elm::OverlayFrame> rootFrame = std::make_unique<tsl::elm::OverlayFrame>(
+        //    (!packageHeader.title.empty()) ? packageHeader.title : (!packageRootLayerTitle.empty() ? packageRootLayerTitle : getNameFromPath(packagePath)),
+        //    ((!pageHeader.empty() && packageHeader.show_version != TRUE_STR) ? pageHeader: (packageHeader.version != "" ? (!packageRootLayerVersion.empty() ? packageRootLayerVersion : packageHeader.version) + "   (Ultrahand Package)" : "Ultrahand Package")),
+        //    noClickableItems,
+        //    "",
+        //    packageHeader.color,
+        //    (usingPages && currentPage == RIGHT_STR) ? pageLeftName : "",
+        //    (usingPages && currentPage == LEFT_STR) ? pageRightName : ""
+        //);
+        //
+        //rootFrame->setContent(list.release());
+        //
+        //return rootFrame.release();
+
+        auto rootFrame = new tsl::elm::OverlayFrame(
+           (!packageHeader.title.empty()) ? packageHeader.title : (!packageRootLayerTitle.empty() ? packageRootLayerTitle : getNameFromPath(packagePath)),
+           ((!pageHeader.empty() && packageHeader.show_version != TRUE_STR) ? pageHeader: (packageHeader.version != "" ? (!packageRootLayerVersion.empty() ? packageRootLayerVersion : packageHeader.version) + "   (Ultrahand Package)" : "Ultrahand Package")),
+           noClickableItems,
+           "",
+           packageHeader.color,
+           (usingPages && currentPage == RIGHT_STR) ? pageLeftName : "",
+           (usingPages && currentPage == LEFT_STR) ? pageRightName : ""
         );
         
         rootFrame->setContent(list.release());
         
-        return rootFrame.release();
+        return rootFrame;
 
 
         //return returnRootFrame(list,
@@ -5226,11 +5271,17 @@ public:
         
         filesList.clear();
     
-        auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel, noClickableItems, menuMode+hiddenMenuMode+dropdownSection, "", "", "");
+        //auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel, noClickableItems, menuMode+hiddenMenuMode+dropdownSection, "", "", "");
+        //
+        //rootFrame->setContent(list.release());
+        //
+        //return rootFrame.release();
+
+        auto rootFrame = new tsl::elm::OverlayFrame(CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel, noClickableItems, menuMode+hiddenMenuMode+dropdownSection, "", "", "");
         
         rootFrame->setContent(list.release());
         
-        return rootFrame.release();
+        return rootFrame;
     }
 
 
