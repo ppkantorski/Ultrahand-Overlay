@@ -606,11 +606,18 @@ static std::string resolveWildcardFromKnownPath(
     auto matchAndExtract = [](const std::string& pattern, const std::string& path, std::vector<std::string>& captures) -> bool {
         size_t patternPos = 0;
         size_t pathPos = 0;
-        
+        size_t nextPatternPos;
+        char nextChar;
+        size_t foundPos;
+        bool found;
+        char patternChar;
+        char pathChar;
+        bool match;
+
         while (patternPos < pattern.size() && pathPos < path.size()) {
             if (pattern[patternPos] == '*') {
                 // Find the next non-wildcard character in pattern
-                size_t nextPatternPos = patternPos + 1;
+                nextPatternPos = patternPos + 1;
                 while (nextPatternPos < pattern.size() && pattern[nextPatternPos] == '*') {
                     nextPatternPos++; // Skip consecutive wildcards
                 }
@@ -622,11 +629,11 @@ static std::string resolveWildcardFromKnownPath(
                 }
                 
                 // Find the next literal character after the wildcard
-                char nextChar = pattern[nextPatternPos];
+                nextChar = pattern[nextPatternPos];
                 
                 // Find where this character appears in the path
-                size_t foundPos = pathPos;
-                bool found = false;
+                foundPos = pathPos;
+                found = false;
                 
                 // Look for the next literal sequence starting from current path position
                 while (foundPos < path.size()) {
@@ -652,10 +659,10 @@ static std::string resolveWildcardFromKnownPath(
                 patternPos = nextPatternPos;
             } else {
                 // Literal character matching (case-insensitive, handle path separators)
-                char patternChar = pattern[patternPos];
-                char pathChar = path[pathPos];
+                patternChar = pattern[patternPos];
+                pathChar = path[pathPos];
                 
-                bool match = false;
+                match = false;
                 if ((patternChar == '/' || patternChar == '\\') && 
                     (pathChar == '/' || pathChar == '\\')) {
                     match = true;
@@ -685,10 +692,11 @@ static std::string resolveWildcardFromKnownPath(
     // Try to match the pattern at different positions in the resolved path (simulating .* anchors)
     std::vector<std::string> captures;
     bool matched = false;
-    
+    std::string subPath;
+
     for (size_t startPos = 0; startPos <= resolvedPath.size(); ++startPos) {
         captures.clear();
-        std::string subPath = resolvedPath.substr(startPos);
+        subPath = resolvedPath.substr(startPos);
         
         if (matchAndExtract(oldPattern, subPath, captures)) {
             matched = true;
@@ -702,8 +710,9 @@ static std::string resolveWildcardFromKnownPath(
     
     // Replace wildcards in newPattern with captured values
     std::string result = newPattern;
+    size_t pos;
     for (size_t i = 0; i < captures.size(); ++i) {
-        size_t pos = result.find('*');
+        pos = result.find('*');
         if (pos == std::string::npos) break;
         result.replace(pos, 1, captures[i]);
     }
