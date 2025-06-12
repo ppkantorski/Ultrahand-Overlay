@@ -2633,57 +2633,77 @@ public:
 std::vector<std::vector<std::string>> gatherPromptCommands(
     const std::string& dropdownSection,
     const std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>>& options) {
-
+    
     std::vector<std::vector<std::string>> promptCommands;
-    bool inRelevantSection = false;  // Tracks if we are within the desired section
-
+    promptCommands.reserve(options.size()); // Reserve space to avoid reallocations
+    
+    bool inRelevantSection = false;
     bool isFirstSection = true;
+    
+    // Pre-define vectors outside loop to avoid repeated allocations
+    std::vector<std::string> fillerCommand;
+    std::vector<std::string> sectionCommand;
+    std::vector<std::string> fullCmd;
+    std::vector<std::string> splitParts;
+    
+    // Pre-allocate filler command (whitespace)
+    fillerCommand.reserve(1);
+    fillerCommand.push_back("\u00A0");
+    
     for (const auto& nextOption : options) {
+        const std::string& sectionName = nextOption.first;
+        const std::vector<std::vector<std::string>>& commands = nextOption.second;
+        
         // Check if this is the start of the relevant section
-        if (nextOption.first == dropdownSection) {
-            inRelevantSection = true;  // Start gathering commands
+        if (sectionName == dropdownSection) {
+            inRelevantSection = true;
             continue;
         }
-
-        // Stop capturing if we encounter a new section with no commands (empty section like [Commands])
-        if (inRelevantSection && nextOption.second.empty()) {
-            break;  // Stop when encountering an empty section
+        
+        // Stop capturing if we encounter a new section with no commands (empty section)
+        if (inRelevantSection && commands.empty()) {
+            break;
         }
-
+        
         // Gather commands if we are in the relevant section
         if (inRelevantSection) {
-            // Treat the current section name as a command if it's a section header (i.e., capture it with brackets)
-            if (!nextOption.first.empty()) {
-
+            // Add section header as a command (with brackets)
+            if (!sectionName.empty()) {
                 if (!isFirstSection) {
-                    std::vector<std::string> fillerCommand = {"\u00A0"}; // whitespace
-                    promptCommands.push_back(fillerCommand);  // Add the section header as a command
-                }
-                else if (isFirstSection) {
+                    promptCommands.push_back(fillerCommand); // Add whitespace separator
+                } else {
                     isFirstSection = false;
                 }
-                std::vector<std::string> sectionCommand = {"[" + nextOption.first + "]"};
-                promptCommands.push_back(sectionCommand);  // Add the section header as a command
+                
+                // Clear and prepare section command
+                sectionCommand.clear();
+                sectionCommand.reserve(1);
+                sectionCommand.push_back("[" + sectionName + "]");
+                promptCommands.push_back(sectionCommand);
             }
-
-            // Process and split each command by spaces
-            for (const auto& cmd : nextOption.second) {
-                std::vector<std::string> fullCmd;
+            
+            // Process each command by splitting on spaces
+            for (const auto& cmd : commands) {
+                fullCmd.clear();
+                
                 for (const auto& part : cmd) {
-                    auto splitParts = splitString(part, " ");
-                    fullCmd.insert(fullCmd.end(), splitParts.begin(), splitParts.end());  // Collect all parts of the command
+                    splitParts = splitString(part, " ");
+                    fullCmd.insert(fullCmd.end(), splitParts.begin(), splitParts.end());
                 }
-                promptCommands.push_back(fullCmd);  // Add the full command
+                
+                if (!fullCmd.empty()) {
+                    promptCommands.push_back(fullCmd);
+                }
             }
         }
     }
-
+    
     // Return placeholder if no commands are found
     if (promptCommands.empty()) {
-        //promptCommands = {{"No", "commands", "for", dropdownSection+"."}};
-        promptCommands = {{UNAVAILABLE_SELECTION}};
+        promptCommands.reserve(1);
+        promptCommands.push_back({UNAVAILABLE_SELECTION});
     }
-
+    
     return promptCommands;
 }
 
