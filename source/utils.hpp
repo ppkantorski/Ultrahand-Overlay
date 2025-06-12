@@ -1688,10 +1688,12 @@ bool isDangerousCombination(const std::string& originalPath) {
         }
     }
 
+    bool isAlbum;
+
     // 7) Block wildcard usage in protectedFolders, except albumFolders
     for (const auto& folder : protectedFolders) {
         if (patternPath.compare(0, std::strlen(folder), folder) == 0) {
-            bool isAlbum = false;
+            isAlbum = false;
             for (const auto& albumFolder : albumFolders) {
                 if (patternPath.compare(0, std::strlen(albumFolder), albumFolder) == 0) {
                     isAlbum = true;
@@ -1702,7 +1704,7 @@ bool isDangerousCombination(const std::string& originalPath) {
                 return false; // wildcards allowed in album folders
             }
 
-            std::string relative = patternPath.substr(std::strlen(folder));
+            relative = patternPath.substr(std::strlen(folder));
             for (const auto& pat : wildcardPatterns) {
                 if (relative.find(pat) != std::string::npos) {
                     return true; // wildcard in protected folder disallowed
@@ -1937,8 +1939,9 @@ void replaceAllPlaceholders(std::string& source, const std::string& placeholder,
 
 // Helper function to replace all placeholders in a single pass
 void replacePlaceholdersInArg(std::string& source, const std::unordered_map<std::string, std::string>& replacements) {
+    size_t pos;
     for (const auto& [placeholder, replacement] : replacements) {
-        size_t pos = 0;
+        pos = 0;
         while ((pos = source.find(placeholder, pos)) != std::string::npos) {
             source.replace(pos, placeholder.length(), replacement);
             pos += replacement.length();  // Move past the replacement to avoid infinite loop
@@ -2312,9 +2315,10 @@ std::string handleMath(const std::string& placeholder) {
         mathExpression = mathExpression.substr(0, commaPos);
     }
 
+    size_t pos;
     // Add spaces around operators to ensure proper parsing
     for (char op : {'+', '-', '*', '/'}) {
-        size_t pos = 0;
+        pos = 0;
         while ((pos = mathExpression.find(op, pos)) != std::string::npos) {
             if (pos > 0 && mathExpression[pos - 1] != ' ') {
                 mathExpression.insert(pos, " ");
@@ -2416,7 +2420,9 @@ std::string handleLength(const std::string& placeholder) {
 
 void replacePlaceholdersRecursively(std::string& arg, const std::vector<std::pair<std::string, std::function<std::string(const std::string&)>>>& placeholders) {
     std::string lastArg;
-    
+    std::string placeholderContent;
+    std::string replacement;
+
     // Continue replacing until no more placeholders are found
     bool placeholdersRemaining = true;
     while (placeholdersRemaining) {
@@ -2441,8 +2447,8 @@ void replacePlaceholdersRecursively(std::string& arg, const std::vector<std::pai
 
                 if (endPos == std::string::npos || endPos <= startPos) break;
 
-                std::string placeholderContent = arg.substr(startPos, endPos - startPos + 2);
-                std::string replacement = replacer(placeholderContent);
+                placeholderContent = arg.substr(startPos, endPos - startPos + 2);
+                replacement = replacer(placeholderContent);
 
                 if (replacement.empty()) {
                     replacement = NULL_STR;
@@ -2714,6 +2720,8 @@ bool applyPlaceholderReplacementsToCommands(std::vector<std::vector<std::string>
     bool inMarikoSection = false;
     bool eraseAtEnd = false;
 
+    size_t cmdSize;
+
     // Process commands with control flow and apply replacements
     for (auto it = commands.begin(); it != commands.end();) {
         
@@ -2754,7 +2762,7 @@ bool applyPlaceholderReplacementsToCommands(std::vector<std::vector<std::string>
         applyPlaceholderReplacements(cmd, hexPath, iniPath, listString, listPath, jsonString, jsonPath);
 
         // Handle special commands like LIST_STR, LIST_FILE_STR, etc.
-        size_t cmdSize = cmd.size();
+        cmdSize = cmd.size();
 
         if (commandName == LIST_STR && cmdSize >= 2) {
             listString = std::string(cmd[1]);  // Make a copy of cmd[1] into listString
