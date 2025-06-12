@@ -1778,23 +1778,25 @@ public:
         : filePath(path), specificKey(key), commands(std::move(cmds)), specifiedFooterKey(footerKey), lastPackageHeader(_lastPackageHeader) {
         //lastSelectedListItem.reset();
     }
-
+    
     ~SelectionOverlay() {
         lastSelectedListItem.reset();
     }
-
+    
     void processSelectionCommands() {
         removeEmptyCommands(commands);
-
+        
         bool inEristaSection = false;
         bool inMarikoSection = false;
         std::string currentSection = GLOBAL_STR;
         std::string iniFilePath;
-
+        
         std::string commandName;
         std::string filterEntry;
         std::vector<std::string> newFiles, newFilesOn, newFilesOff;
-
+        
+        std::vector<std::string> matchedFiles;
+        
         // Create a map with all non-button/arrow placeholders and their replacements
         std::unordered_map<std::string, std::string> generalPlaceholders = {
             {"{ram_vendor}", memoryVendor},
@@ -1810,7 +1812,7 @@ public:
             {"{title_id}", getTitleIdAsString()}
         };
         
-
+        
         for (auto& cmd : commands) {
             //if (currentSection == GLOBAL_STR)
             //    applyPlaceholderReplacements(cmd, hexPath, iniPath, listString, listPath, jsonString, jsonPath);
@@ -1818,7 +1820,7 @@ public:
             //    applyPlaceholderReplacements(cmd, hexPath, iniPathOn, listStringOn, listPathOn, jsonStringOn, jsonPathOn);
             //else if (currentSection == OFF_STR)
             //    applyPlaceholderReplacements(cmd, hexPath, iniPathOff, listStringOff, listPathOff, jsonStringOff, jsonPathOff);
-
+            
             
             for (auto& arg : cmd) {
                 // Replace general placeholders
@@ -1827,9 +1829,9 @@ public:
                 // Replace button/arrow placeholders from the global map
                 //replacePlaceholdersInArg(arg, symbolPlaceholders);
             }
-
+            
             commandName = cmd[0];
-
+            
             if (stringToLowercase(commandName) == "erista:") {
                 inEristaSection = true;
                 inMarikoSection = false;
@@ -1839,7 +1841,7 @@ public:
                 inMarikoSection = true;
                 continue;
             }
-
+            
             if ((inEristaSection && !inMarikoSection && usingErista) || (!inEristaSection && inMarikoSection && usingMariko) || (!inEristaSection && !inMarikoSection)) {
                 if (commandName.find(SYSTEM_PATTERN) == 0) {
                     commandSystem = commandName.substr(SYSTEM_PATTERN.length());
@@ -1856,13 +1858,13 @@ public:
                 } else if (commandName.find(SELECTION_MINI_PATTERN) == 0) {
                     isMini = (commandName.substr(SELECTION_MINI_PATTERN.length()) == TRUE_STR);
                 }
-
+                
                 if (commandMode == TOGGLE_STR) {
                     if (commandName == "on:")
                         currentSection = ON_STR;
                     else if (commandName == "off:")
                         currentSection = OFF_STR;
-
+                    
                     if (currentSection == GLOBAL_STR) {
                         commandsOn.push_back(cmd);
                         commandsOff.push_back(cmd);
@@ -1871,13 +1873,13 @@ public:
                     else if (currentSection == OFF_STR)
                         commandsOff.push_back(cmd);
                 }
-
+                
                 if (cmd.size() > 1) {
                     if (!iniFilePath.empty()){
                         applyReplaceIniPlaceholder(cmd[1], INI_FILE_STR, iniFilePath);
                     }
-
-
+                    
+                    
                     if (commandName == "ini_file") {
                         iniFilePath = cmd[1];
                         preprocessPath(iniFilePath, filePath);
@@ -1888,9 +1890,9 @@ public:
                         if (sourceType == FILE_STR) {
                             preprocessPath(filterEntry, filePath);
                         }
-
+                        
                         if (filterEntry.find('*') != std::string::npos) {
-                            std::vector<std::string> matchedFiles = getFilesListByWildcards(filterEntry);
+                            matchedFiles = getFilesListByWildcards(filterEntry);
                             for (const auto& file : matchedFiles) {
                                 if (currentSection == GLOBAL_STR)
                                     filterList.push_back(file);
