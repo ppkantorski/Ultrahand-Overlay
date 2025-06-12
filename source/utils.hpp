@@ -1185,11 +1185,12 @@ static void buildTableDrawerLines(
             // Cache width of info text only once per base line, not per wrapped line
             float infoWidth = tsl::gfx::calculateStringWidth(infoText, fontSize, false);
 
+            int xPos;
             for (const auto& line : wrappedLines) {
                 outSection.push_back(line);
                 outInfo.push_back(infoText);
 
-                int xPos = 0;
+                xPos = 0;
                 if (alignment == LEFT_STR) {
                     xPos = static_cast<int>(columnOffset);
                 } else if (alignment == RIGHT_STR) {
@@ -1670,9 +1671,10 @@ bool isDangerousCombination(const std::string& originalPath) {
     // 6) Handle restrictedWildcardFolders:
     //    Wildcards allowed *inside* these folders,
     //    but disallow targeting the folder itself or broad "*" at root of that folder.
+    std::string relative;
     for (const auto& folder : restrictedWildcardFolders) {
         if (patternPath.compare(0, std::strlen(folder), folder) == 0) {
-            std::string relative = patternPath.substr(std::strlen(folder));
+            relative = patternPath.substr(std::strlen(folder));
 
             // If relative is empty or just '*', it means "the whole folder" or "all files"
             if (relative.empty() || relative == "*" || relative == "*/") {
