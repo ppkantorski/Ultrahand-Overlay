@@ -1686,8 +1686,9 @@ private:
         }
     
         // Regular command processing
+        std::string argument;
         for (const auto& part : commandParts) {
-            std::string argument = part;
+            argument = part;
 
             // If the argument is exactly '', skip processing (preserve the empty quotes)
             if (argument == "") {
