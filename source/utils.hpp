@@ -2944,7 +2944,7 @@ bool interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
 
                 applyPlaceholderReplacements(cmd, hexPath, iniPath, listString, listPath, jsonString, jsonPath);
 
-                //#if USING_LOGGING_DIRECTIVE
+                #if USING_LOGGING_DIRECTIVE
                 if (interpreterLogging) {
                     disableLogging = false;
                     message = "Executing command: ";
@@ -2952,7 +2952,7 @@ bool interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
                         message += token + " ";
                     logMessage(message);
                 }
-                //#endif
+                #endif
 
                 cmdSize = cmd.size();
 
@@ -3536,33 +3536,6 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             }
 
         }
-    //} else if (commandName == "wifi") {
-    //    if (cmd.size() >= 2) {
-    //        std::string action = cmd[1];
-    //        if (action == "disconnect") {
-    //            Result rc = nifmInitialize(NifmServiceType_User);
-    //            if (R_SUCCEEDED(rc)) {
-    //                NifmRequest request;
-    //                rc = nifmCreateRequest(&request, NULL);
-    //                if (R_SUCCEEDED(rc)) {
-    //                    nifmRequestCancel(&request);
-    //                    nifmRequestClose(&request);
-    //                }
-    //                nifmExit();
-    //            }
-    //        } else if (action == "connect") {
-    //            Result rc = nifmInitialize(NifmServiceType_User);
-    //            if (R_SUCCEEDED(rc)) {
-    //                NifmRequest request;
-    //                rc = nifmCreateRequest(&request, NULL);
-    //                if (R_SUCCEEDED(rc)) {
-    //                    nifmRequestSubmit(&request);
-    //                    nifmRequestClose(&request);
-    //                }
-    //                nifmExit();
-    //            }
-    //        }
-    //    }
     } else if (commandName == "reboot") { // credits to Studious Pancake for the Payload and utils methods
         //spsmInitialize();
         //i2cInitialize();
@@ -3857,12 +3830,12 @@ void closeInterpreterThread() {
 void startInterpreterThread(const std::string& packagePath = "") {
     int stackSize = 0x8000;
 
-    //#if USING_LOGGING_DIRECTIVE
+    #if USING_LOGGING_DIRECTIVE
     if (!packagePath.empty()) {
         disableLogging = !(parseValueFromIniSection(PACKAGES_INI_FILEPATH, getNameFromPath(packagePath), USE_LOGGING_STR) == TRUE_STR);
         logFilePath = packagePath + "log.txt";
     }
-    //#endif
+    #endif
 
     std::string interpreterHeap = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "interpreter_heap");
     if (!interpreterHeap.empty())
@@ -3876,11 +3849,11 @@ void startInterpreterThread(const std::string& packagePath = "") {
         clearInterpreterFlags();
         runningInterpreter.store(false, std::memory_order_release);
         interpreterThreadExit.store(true, std::memory_order_release);
-        //#if USING_LOGGING_DIRECTIVE
+        #if USING_LOGGING_DIRECTIVE
         logMessage("Failed to create interpreter thread.");
         logFilePath = defaultLogFilePath;
         disableLogging = true;
-        //#endif
+        #endif
         return;
     }
     threadStart(&interpreterThread);
