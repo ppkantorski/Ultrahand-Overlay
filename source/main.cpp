@@ -1549,6 +1549,7 @@ public:
         bool noClickableItems = false;
         if (!tableMode) {
             size_t index = 0, tryCount = 0;
+            std::string combinedCommand;
             // If not in table mode, loop through commands and display each command as a list item
             for (const auto& command : commands) {
                 if (index == 0 && command[0] != "try:" && command[0] != "on:" && command[0] != "off:") {
@@ -1570,7 +1571,7 @@ public:
                     addHeader(list, specificKey+" ("+OFF+")");
                     continue;
                 }
-                std::string combinedCommand = joinCommands(command); // Join commands into a single line for display
+                combinedCommand = joinCommands(command); // Join commands into a single line for display
                 addListItem(list, combinedCommand);
                 index++;
             }
