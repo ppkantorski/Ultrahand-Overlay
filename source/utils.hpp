@@ -96,9 +96,10 @@ static std::vector<std::string> getOverlayNames() {
 
 static void removeKeyComboFromOtherOverlays(const std::string& keyCombo, const std::string& currentOverlay) {
     auto overlayNames = getOverlayNames();  // Make sure hlp namespace is correct
+    std::string existingCombo;
     for (const auto& overlayName : overlayNames) {
         if (overlayName != currentOverlay) {
-            std::string existingCombo = ult::parseValueFromIniSection(ult::OVERLAYS_INI_FILEPATH, overlayName, "key_combo");
+            existingCombo = ult::parseValueFromIniSection(ult::OVERLAYS_INI_FILEPATH, overlayName, "key_combo");
             if (!existingCombo.empty() && tsl::hlp::comboStringToKeys(existingCombo) == tsl::hlp::comboStringToKeys(keyCombo)) {
                 // Clear it
                 ult::setIniFileValue(ult::OVERLAYS_INI_FILEPATH, overlayName, "key_combo", "");
