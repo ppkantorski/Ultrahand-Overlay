@@ -598,7 +598,7 @@ public:
             overlayHeader.version = APP_VERSION;
             overlayHeader.creator = "ppkantorski";
             overlayHeader.about = "Ultrahand Overlay is a versatile tool that enables you to create and share custom command-based packages.";
-            overlayHeader.credits = "Special thanks to B3711, ComplexNarrative, Faker_dev, MasaGratoR, meha, WerWolv, HookedBehemoth and many others. ♥";
+            overlayHeader.credits = "Special thanks to B3711, ComplexNarrative, ssky, MasaGratoR, meha, WerWolv, HookedBehemoth and many others. ♥";
             addPackageInfo(list, overlayHeader, OVERLAY_STR);
             overlayHeader.clear();
 
@@ -2845,7 +2845,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
         {"{title_id}", getTitleIdAsString()}
     };
 
-    
+
     for (size_t i = 0; i < options.size(); ++i) {
         auto& option = options[i];
         
