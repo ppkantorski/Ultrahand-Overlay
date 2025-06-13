@@ -1046,7 +1046,7 @@ std::vector<std::string> wrapText(const std::string& text, float maxWidth, const
 
 
 
-void applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::string& hexPath, const std::string& iniPath, const std::string& listString, const std::string& listPath, const std::string& jsonString, const std::string& jsonPath);
+bool applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::string& hexPath, const std::string& iniPath, const std::string& listString, const std::string& listPath, const std::string& jsonString, const std::string& jsonPath);
 
 std::string getFirstSectionText(const std::vector<std::vector<std::string>>& tableData, const std::string& packagePath) {
     std::string message;
@@ -1145,7 +1145,7 @@ std::string getFirstSectionText(const std::vector<std::vector<std::string>>& tab
 
 
 // ─── Helper: flatten + placeholder + wrap & expand ─────────────────────────────
-static void buildTableDrawerLines(
+static bool buildTableDrawerLines(
     const std::vector<std::vector<std::string>>& tableData,
     std::vector<std::string>&                    sectionLines,
     std::vector<std::string>&                    infoLines,
@@ -1173,6 +1173,7 @@ static void buildTableDrawerLines(
     outX.clear();
 
     size_t curY = startGap;
+    bool anyReplacementsMade = false;
 
     // A small lambda to wrap and push lines with proper x,y and info alignment
     auto processLines = [&](const std::vector<std::string>& lines, const std::vector<std::string>& infos) {
@@ -1220,6 +1221,7 @@ static void buildTableDrawerLines(
     if (!tableData.empty()) {
         std::vector<std::string> baseSection;
         std::vector<std::string> baseInfo;
+        std::vector<std::string> lines;
 
         std::string listFileSourcePath;
         std::string hexPath, iniPath, listString, listPath, jsonString, jsonPath;
@@ -1243,16 +1245,19 @@ static void buildTableDrawerLines(
             if ((inErista && usingErista) || (inMariko && usingMariko) || (!inErista && !inMariko)) {
                 auto cmd = cmds;  // Copy for placeholder replacements
 
-                applyPlaceholderReplacements(
+                // Track if any placeholder replacements were made
+                if (applyPlaceholderReplacements(
                     cmd, hexPath, iniPath,
                     listString, listPath,
                     jsonString, jsonPath
-                );
+                )) {
+                    anyReplacementsMade = true;
+                }
 
                 if (cmd[0] == "list_file_source" && cmd.size() >= 2 && listFileSourcePath.empty()) {
                     listFileSourcePath = cmd[1];
                     preprocessPath(listFileSourcePath, packagePath);
-                    auto lines = readListFromFile(listFileSourcePath);
+                    lines = readListFromFile(listFileSourcePath);
                     for (const auto& line : lines) {
                         baseSection.push_back(line);
                         baseInfo.push_back("");
@@ -1291,7 +1296,11 @@ static void buildTableDrawerLines(
     } else {
         processLines(sectionLines, infoLines);
     }
+    
+    // Return true if any placeholder replacements were made
+    return anyReplacementsMade;
 }
+
 
 void drawTable(
     std::unique_ptr<tsl::elm::List>&      list,
@@ -1337,41 +1346,40 @@ void drawTable(
     std::vector<s32>         cacheYOff;
     std::vector<s32>         cacheXOff;
 
-    buildTableDrawerLines(
+    bool usingPlaceholders = buildTableDrawerLines(
         tableData, sectionLines, infoLines, packagePath,
         columnOffset, startGap, newlineGap,
         wrappingMode, alignment, useWrappedTextIndent,
         cacheExpSec, cacheExpInfo, cacheYOff, cacheXOff
     );
 
-    // ULTRA-FAST: Use amsticks for high-performance timing
-    auto lastUpdateTick = std::make_shared<u64>(armGetSystemTick());
+    // Use nanoseconds for high-performance timing
+    auto lastUpdateNS = std::make_shared<u64>(armTicksToNs(armGetSystemTick()));
+    constexpr u64 ONE_SECOND_NS = 1000000000ULL; // 1 billion nanoseconds = 1 second
     
     list->addItem(new tsl::elm::TableDrawer(
         [=](tsl::gfx::Renderer* renderer, s32 x, s32 y, s32 w, s32 h) mutable {
 
-            if (!tableData.empty()) {
-                u64 currentTick = armGetSystemTick();
-                u64 currentFreq = armGetSystemTickFreq();
-                u64 ticksForOneSecond = currentFreq;
+            if (usingPlaceholders) {
+                u64 currentNS = armTicksToNs(armGetSystemTick());
                 
-                if ((currentTick - *lastUpdateTick) >= ticksForOneSecond) {  // Fix: use the correct variable
+                if ((currentNS - *lastUpdateNS) >= ONE_SECOND_NS) {
                     buildTableDrawerLines(
                         tableData, sectionLines, infoLines, packagePath,
                         columnOffset, startGap, newlineGap,
                         wrappingMode, alignment, useWrappedTextIndent,
                         cacheExpSec, cacheExpInfo, cacheYOff, cacheXOff
                     );
-                    *lastUpdateTick = currentTick;
+                    *lastUpdateNS = currentNS;
                 }
             }
 
-            // ULTRA-FAST: Minimal branching, maximum cache efficiency
+            // Minimal branching, maximum cache efficiency
             if (useHeaderIndent) {
                 renderer->drawRect(x-2, y+2, 4, 22, renderer->a(tsl::headerSeparatorColor));
             }
 
-            // ULTRA-FAST: Pre-calculate everything, optimize for CPU pipeline
+            // Pre-calculate everything, optimize for CPU pipeline
             const bool sameCol = (tableInfoTextColor == tableInfoTextHighlightColor);
             const size_t count = cacheExpSec.size();
             
@@ -1947,15 +1955,18 @@ void replaceAllPlaceholders(std::string& source, const std::string& placeholder,
 
 
 // Helper function to replace all placeholders in a single pass
-void replacePlaceholdersInArg(std::string& source, const std::unordered_map<std::string, std::string>& replacements) {
+bool replacePlaceholdersInArg(std::string& source, const std::unordered_map<std::string, std::string>& replacements) {
+    bool replaced = false;
     size_t pos;
     for (const auto& [placeholder, replacement] : replacements) {
         pos = 0;
         while ((pos = source.find(placeholder, pos)) != std::string::npos) {
             source.replace(pos, placeholder.length(), replacement);
             pos += replacement.length();  // Move past the replacement to avoid infinite loop
+            replaced = true;
         }
     }
+    return replaced;
 }
 
 
@@ -2427,11 +2438,11 @@ std::string handleLength(const std::string& placeholder) {
 //    }
 //};
 
-void replacePlaceholdersRecursively(std::string& arg, const std::vector<std::pair<std::string, std::function<std::string(const std::string&)>>>& placeholders) {
+bool replacePlaceholdersRecursively(std::string& arg, const std::vector<std::pair<std::string, std::function<std::string(const std::string&)>>>& placeholders) {
+    bool anyReplacementsMade = false;
     std::string lastArg;
     std::string placeholderContent;
     std::string replacement;
-
     // Continue replacing until no more placeholders are found
     bool placeholdersRemaining = true;
     while (placeholdersRemaining) {
@@ -2440,7 +2451,6 @@ void replacePlaceholdersRecursively(std::string& arg, const std::vector<std::pai
         for (const auto& [placeholder, replacer] : placeholders) {
             size_t startPos, endPos;
             size_t nestedStartPos, nextStartPos, nextEndPos;
-
             while ((startPos = arg.find(placeholder)) != std::string::npos) {
                 nestedStartPos = startPos;
                 while (true) {
@@ -2453,35 +2463,33 @@ void replacePlaceholdersRecursively(std::string& arg, const std::vector<std::pai
                         break;
                     }
                 }
-
                 if (endPos == std::string::npos || endPos <= startPos) break;
-
                 placeholderContent = arg.substr(startPos, endPos - startPos + 2);
                 replacement = replacer(placeholderContent);
-
                 if (replacement.empty()) {
                     replacement = NULL_STR;
                 }
-
                 arg.replace(startPos, endPos - startPos + 2, replacement);
                 placeholdersRemaining = true; // Since we replaced something, we continue processing
-
+                anyReplacementsMade = true; // Track that we made a replacement
                 // To prevent infinite loops, if no change is made, break
                 if (arg == lastArg) {
                     arg.replace(startPos, endPos - startPos + 2, NULL_STR);
                     break;
                 }
-
                 lastArg = arg;
             }
         }
     }
+    return anyReplacementsMade;
 }
 
 
 
 
-void applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::string& hexPath, const std::string& iniPath, const std::string& listString, const std::string& listPath, const std::string& jsonString, const std::string& jsonPath) {
+bool applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::string& hexPath, const std::string& iniPath, const std::string& listString, const std::string& listPath, const std::string& jsonString, const std::string& jsonPath) {
+    bool replacementsMade = false;
+    
     std::vector<std::pair<std::string, std::function<std::string(const std::string&)>>> placeholders = {
         {"{hex_file(", [&](const std::string& placeholder) { return returnOrNull(replaceHexPlaceholder(placeholder, hexPath)); }},
         {"{ini_file(", [&](const std::string& placeholder) { 
@@ -2515,7 +2523,6 @@ void applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
             size_t endPos = placeholder.find(")");
             std::string params = placeholder.substr(startPos, endPos - startPos);
         
-            // Split params by comma
             size_t commaPos = params.find(",");
             std::string decimalValue;
             std::string order;
@@ -2523,21 +2530,17 @@ void applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
             if (commaPos != std::string::npos) {
                 decimalValue = params.substr(0, commaPos);
                 order = params.substr(commaPos + 1);
-                // Trim whitespace from order
                 order.erase(0, order.find_first_not_of(" \t\n\r"));
                 order.erase(order.find_last_not_of(" \t\n\r") + 1);
             } else {
                 decimalValue = params;
-                order = "";  // optional param is empty
+                order = "";
             }
-        
-            // You can now call decimalToHex with decimalValue and order
-            // Adjust decimalToHex function accordingly or handle order here
         
             if (order.empty()) {
                 return returnOrNull(decimalToHex(decimalValue));
             } else {
-                return returnOrNull(decimalToHex(decimalValue, std::stoi(order))); // assuming overload or second param version
+                return returnOrNull(decimalToHex(decimalValue, std::stoi(order)));
             }
         }},
         {"{ascii_to_hex(", [&](const std::string& placeholder) {
@@ -2559,7 +2562,6 @@ void applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
             return returnOrNull(hexToDecimal(hexValue));
         }},
         {"{random(", [&](const std::string& placeholder) {
-            // Ensure the random seed is initialized
             std::srand(std::time(0));
             
             size_t startPos = placeholder.find('(') + 1;
@@ -2570,11 +2572,8 @@ void applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
             if (commaPos != std::string::npos) {
                 int lowValue = ult::stoi(parameters.substr(0, commaPos));
                 int highValue = ult::stoi(parameters.substr(commaPos + 1));
-                
-                // Generate a random number in the range [lowValue, highValue]
                 int randomValue = lowValue + rand() % (highValue - lowValue + 1);
-                
-                return returnOrNull(ult::to_string(randomValue));  // Return the random value as a string
+                return returnOrNull(ult::to_string(randomValue));
             }
             return returnOrNull(placeholder);
         }},
@@ -2597,7 +2596,7 @@ void applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
             std::string endIndex   = parameters.substr(secondComma + 1);
         
             trim(strPart);
-            removeQuotes(strPart); // << WARNING: this might be removing your entire string
+            removeQuotes(strPart);
             trim(startIndex);
             removeQuotes(startIndex);
             trim(endIndex);
@@ -2613,10 +2612,9 @@ void applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
             size_t sliceEnd   = static_cast<size_t>(ult::stoi(endIndex));
         
             if (sliceEnd <= sliceStart || sliceStart >= strPart.length()) {
-                return returnOrNull(placeholder); // or maybe return "" if you'd prefer that fallback
+                return returnOrNull(placeholder);
             }
         
-            // Final slice
             std::string result = sliceString(strPart, sliceStart, sliceEnd);
             return returnOrNull(result);
         }},
@@ -2663,12 +2661,6 @@ void applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
         {"{length(", [&](const std::string& placeholder) { return returnOrNull(handleLength(placeholder)); }},
     };
 
-     // Second pass: Only replace {math(...)} after other placeholders are evaluated
-    //std::vector<std::pair<std::string, std::function<std::string(const std::string&)>>> secondPassPlaceholders = {
-    //    {"{math(", [&](const std::string& placeholder) { return handleMath(placeholder); }}
-    //};   
-
-    // Create a map with all non-button/arrow placeholders and their replacements
     std::unordered_map<std::string, std::string> generalPlaceholders = {
         {"{ram_vendor}", memoryVendor},
         {"{ram_model}", memoryModel},
@@ -2683,23 +2675,32 @@ void applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
         {"{title_id}", getTitleIdAsString()}
     };
 
-    // Iterate through each command and replace placeholders in one pass
+    // Iterate through each command and replace placeholders
     for (auto& arg : cmd) {
-        // Replace general placeholders
-        replacePlaceholdersInArg(arg, generalPlaceholders);
+        std::string originalArg = arg; // Store original to compare later
+        
+        // Replace general placeholders - modify these functions to return bool
+        if (replacePlaceholdersInArg(arg, generalPlaceholders)) {
+            replacementsMade = true;
+        }
 
         // Replace button/arrow placeholders from the global map
-        replacePlaceholdersInArg(arg, symbolPlaceholders);
+        if (replacePlaceholdersInArg(arg, symbolPlaceholders)) {
+            replacementsMade = true;
+        }
 
-        // Additionally replace placeholders from your custom map
-        //for (const auto& [placeholder, replacer] : placeholders) {
-        //    replacePlaceholders(arg, placeholder, replacer);
-        //}
-
-        // Resolve nested placeholders
-        replacePlaceholdersRecursively(arg, placeholders);
-        //replacePlaceholdersRecursively(arg, secondPassPlaceholders);
+        // Resolve nested placeholders - modify this function to return bool
+        if (replacePlaceholdersRecursively(arg, placeholders)) {
+            replacementsMade = true;
+        }
+        
+        // Alternative: Simple string comparison if you can't modify the helper functions
+        // if (arg != originalArg) {
+        //     replacementsMade = true;
+        // }
     }
+    
+    return replacementsMade;
 }
 
 
