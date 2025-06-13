@@ -2845,6 +2845,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
         {"{title_id}", getTitleIdAsString()}
     };
 
+    std::string headerTitle;
 
     for (size_t i = 0; i < options.size(); ++i) {
         auto& option = options[i];
@@ -2909,7 +2910,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
             if (!dropdownSection.empty()) {
                 if (i == 0) {
                     // Add a section break with small text to indicate the "Commands" section
-                    std::string headerTitle = dropdownSection.substr(1);
+                    headerTitle = dropdownSection.substr(1);
                     removeTag(headerTitle);
 
                     addHeader(list, headerTitle);
