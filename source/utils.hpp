@@ -1056,6 +1056,7 @@ std::string getFirstSectionText(const std::vector<std::vector<std::string>>& tab
     
     bool inEristaSection = false;
     bool inMarikoSection = false;
+    std::vector<std::string> lines;
     
     for (const auto& commands : tableData) {
         auto cmd = commands;  // Make a copy if you need to modify it
@@ -1090,7 +1091,7 @@ std::string getFirstSectionText(const std::vector<std::vector<std::string>>& tab
                 preprocessPath(listFileSourcePath, packagePath);
 
                 // Read lines from the file
-                std::vector<std::string> lines = readListFromFile(listFileSourcePath);
+                lines = readListFromFile(listFileSourcePath);
 
                 // Return the first line if available
                 if (!lines.empty()) {
@@ -2264,14 +2265,16 @@ double parseExpression(const std::string& expression, size_t& pos, bool& valid) 
     double result = parseNumber(expression, pos, valid);
     if (!valid) return 0;
 
+    char op;
+    double operand;
     while (pos < expression.length()) {
         skipSpaces(expression, pos);
         if (pos >= expression.length()) break;
 
-        char op = expression[pos++];
+        op = expression[pos++];
         skipSpaces(expression, pos);
 
-        double operand = parseNumber(expression, pos, valid);
+        operand = parseNumber(expression, pos, valid);
         if (!valid) return 0;
 
         switch (op) {
@@ -2444,14 +2447,18 @@ bool replacePlaceholdersRecursively(std::string& arg, const std::vector<std::pai
     std::string lastArg;
     std::string placeholderContent;
     std::string replacement;
+
+    size_t startPos, endPos;
+    size_t nestedStartPos, nextStartPos, nextEndPos;
+
     // Continue replacing until no more placeholders are found
     bool placeholdersRemaining = true;
     while (placeholdersRemaining) {
         placeholdersRemaining = false; // Reset the flag at the beginning of each loop
         
         for (const auto& [placeholder, replacer] : placeholders) {
-            size_t startPos, endPos;
-            size_t nestedStartPos, nextStartPos, nextEndPos;
+            //size_t startPos, endPos;
+            //size_t nestedStartPos, nextStartPos, nextEndPos;
             while ((startPos = arg.find(placeholder)) != std::string::npos) {
                 nestedStartPos = startPos;
                 while (true) {
@@ -2678,7 +2685,7 @@ bool applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
 
     // Iterate through each command and replace placeholders
     for (auto& arg : cmd) {
-        std::string originalArg = arg; // Store original to compare later
+        //std::string originalArg = arg; // Store original to compare later
         
         // Replace general placeholders - modify these functions to return bool
         if (replacePlaceholdersInArg(arg, generalPlaceholders)) {
