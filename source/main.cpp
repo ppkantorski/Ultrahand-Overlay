@@ -2522,6 +2522,8 @@ public:
                "",
                packageHeader.color);
         }
+
+        list->jumpToItem("", "");
         
         rootFrame->setContent(list.release());
         return rootFrame;
@@ -5614,8 +5616,9 @@ public:
         //tsl::initializeUltrahandSettings(); // unnecessary for Ultrahand's implementation
         //ASSERT_FATAL(smInitialize()); // might be unnecessary? needs investigating
 
-        ASSERT_FATAL(socketInitializeDefault());
+        socketInitializeDefault(); // remove ASSERT_FATAL for safetly
         initializeCurl();
+
 
         // Load and execute "boot" commands if they exist
         //executeIniCommands(PACKAGE_PATH + BOOT_PACKAGE_FILENAME, "boot");
