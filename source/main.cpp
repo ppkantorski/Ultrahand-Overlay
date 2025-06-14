@@ -924,6 +924,7 @@ public:
         //return rootFrame.release();
 
         auto rootFrame = new tsl::elm::OverlayFrame(CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel);
+        list->jumpToItem("", "");
         rootFrame->setContent(list.release());
         return rootFrame;
 
@@ -5616,7 +5617,7 @@ public:
         //tsl::initializeUltrahandSettings(); // unnecessary for Ultrahand's implementation
         //ASSERT_FATAL(smInitialize()); // might be unnecessary? needs investigating
 
-        socketInitializeDefault(); // remove ASSERT_FATAL for safetly
+        ASSERT_FATAL(socketInitializeDefault());
         initializeCurl();
 
 
