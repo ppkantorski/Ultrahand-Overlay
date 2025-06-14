@@ -1311,7 +1311,7 @@ void drawTable(
     std::vector<std::string>&             infoLines,
     size_t columnOffset             = 163,
     size_t startGap                 = 19,
-    size_t endGap                   = 12,
+    size_t endGap                   = 8,
     size_t newlineGap               = 0,
     const std::string& tableSectionTextColor       = DEFAULT_STR,
     const std::string& tableInfoTextColor          = DEFAULT_STR,
@@ -1432,7 +1432,7 @@ void addTable(
     const std::string&                     packagePath,
     const size_t&                          columnOffset                = 163,
     const size_t&                          tableStartGap               = 19,
-    const size_t&                          tableEndGap                 = 12,
+    const size_t&                          tableEndGap                 = 8,
     const size_t&                          tableSpacing                = 0,
     const std::string&                     tableSectionTextColor       = DEFAULT_STR,
     const std::string&                     tableInfoTextColor          = DEFAULT_STR,
@@ -1482,7 +1482,7 @@ void addHelpInfo(std::unique_ptr<tsl::elm::List>& list) {
     std::vector<std::vector<std::string>> dummyTableData;
 
     // Draw the table with the defined lines
-    drawTable(list, dummyTableData, sectionLines, infoLines, xOffset, 19, 12, 4);
+    drawTable(list, dummyTableData, sectionLines, infoLines, xOffset, 19, 8, 4);
     //drawTable(list, sectionLines, infoLines, xOffset, 19, 12, 4, DEFAULT_STR, DEFAULT_STR, LEFT_STR, false, false, true, "none", false);
 }
 
@@ -1565,7 +1565,7 @@ void addPackageInfo(std::unique_ptr<tsl::elm::List>& list, auto& packageHeader, 
 
     // Drawing the table with section lines and info lines
     //drawTable(list, sectionLines, infoLines, xOffset, 20, 12, 3);
-    drawTable(list, dummyTableData, sectionLines, infoLines, xOffset, 19, 12, 3, DEFAULT_STR, DEFAULT_STR, DEFAULT_STR, LEFT_STR, false, false, true);
+    drawTable(list, dummyTableData, sectionLines, infoLines, xOffset, 19, 8, 3, DEFAULT_STR, DEFAULT_STR, DEFAULT_STR, LEFT_STR, false, false, true);
 }
 
 
