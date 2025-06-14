@@ -633,7 +633,7 @@ public:
                 {LOCAL_IP, "", getLocalIpAddress()}
             };
             nifmExit();
-            addTable(list, tableData, "", 163, 20, 28, 4);
+            addTable(list, tableData, "", 164, 18, 28, 4);
             
             // Hardware and storage info
             tableData = {
@@ -645,13 +645,13 @@ public:
                 {"└ eMMC ", "", getStorageInfo("emmc")},
                 {"└ SD Card", "", getStorageInfo("sdmc")}
             };
-            addTable(list, tableData, "", 163, 20, 30, 4);
+            addTable(list, tableData, "", 163, 18, 30, 4);
             
             // CPU, GPU, and SOC info
             tableData = {
                 {"", "", "CPU      GPU      SOC"}
             };
-            addTable(list, tableData, "", 163, 8, 3, 0, DEFAULT_STR, "section", "section", RIGHT_STR, true);
+            addTable(list, tableData, "", 163, 6, 3, 0, DEFAULT_STR, "section", "section", RIGHT_STR, true);
             
             tableData.clear();
             tableData.resize(2);
@@ -669,7 +669,7 @@ public:
                 tableData[0] = {"Speedo", "", "⋯    │    ⋯   │    ⋯  "};
                 tableData[1] = {"IDDQ", "", "⋯    │    ⋯   │    ⋯  "};
             }
-            addTable(list, tableData, "", 163, 20, -2, 4);
+            addTable(list, tableData, "", 163, 18, -2, 4);
             
             // The part that was moved to the end
             addHeader(list, COMMANDS);
@@ -697,7 +697,7 @@ public:
             tableData = {
                 {NOTICE, "", UTILIZES + " 2 MB (" + ramString + ")"}
             };
-            addTable(list, tableData, "", 163, 10, 7, 0, DEFAULT_STR, DEFAULT_STR, ramColor, RIGHT_STR, true);
+            addTable(list, tableData, "", 160, 8, 7, 0, DEFAULT_STR, DEFAULT_STR, ramColor, RIGHT_STR, true);
             // Memory expansion toggle
             useMemoryExpansion = (loaderTitle == "nx-ovlloader+" || 
                                   parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "memory_expansion") == TRUE_STR);
@@ -1592,9 +1592,9 @@ public:
             }
     
             // Use default parameters for the table view
-            const size_t tableColumnOffset = 163;
+            const size_t tableColumnOffset = 164;
             const size_t tableStartGap = 19;
-            const size_t tableEndGap = 12;
+            const size_t tableEndGap = 20;
             const size_t tableSpacing = 10;
             const std::string tableSectionTextColor = DEFAULT_STR;
             const std::string tableInfoTextColor = DEFAULT_STR;
@@ -2868,7 +2868,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
         hideTableBackground = false;
         useHeaderIndent = false;
         tableStartGap = 19;
-        tableEndGap = 12;
+        tableEndGap = 8;
         tableColumnOffset = 163;
         tableSpacing = 0;
         tableSectionTextColor = DEFAULT_STR;
