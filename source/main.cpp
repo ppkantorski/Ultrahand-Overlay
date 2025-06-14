@@ -858,7 +858,7 @@ public:
                         //clearWallpaperData();
                         //initializeTheme();
                         //tsl::initializeThemeVars();
-                        reloadMenu = reloadMenu2 = true;
+                        //reloadMenu = reloadMenu2 = true;
                         lastSelectedListItem->setValue("");
                         selectedListItem->setValue(wallpaperName);
                         listItemRaw->setValue(CHECKMARK_SYMBOL);
