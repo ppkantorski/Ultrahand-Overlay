@@ -773,7 +773,7 @@ public:
                         copyPercentage.store(-1, std::memory_order_release);
                         initializeTheme();
                         tsl::initializeThemeVars();
-                        reloadMenu = reloadMenu2 = true;
+                        //reloadMenu = reloadMenu2 = true;
                         lastSelectedListItem->setValue("");
                         selectedListItem->setValue(themeName);
                         listItemRaw->setValue(CHECKMARK_SYMBOL);
