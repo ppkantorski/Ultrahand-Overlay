@@ -4954,6 +4954,12 @@ public:
         
         // Packages menu
         if (menuMode == PACKAGES_STR ) {
+            // reset check
+            g_overlayFilename = "";
+            lastOverlayName = "";
+            lastOverlayVersion = "";    
+
+
             if (!isFileOrDirectory(PACKAGE_PATH + PACKAGE_FILENAME)) {
             #if NO_FSTREAM_DIRECTIVE
                 // Using stdio.h functions (FILE* and fprintf)
