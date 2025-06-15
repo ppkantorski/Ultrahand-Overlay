@@ -4933,6 +4933,10 @@ public:
                         }
     
                         if (keys & KEY_A) {
+                            // reset tracking
+                            g_overlayFilename = "";
+                            lastOverlayName = "";
+                            lastOverlayVersion = "";
                             inMainMenu = false;
                             inHiddenMode = true;
                             tsl::changeTo<MainMenu>(OVERLAYS_STR);
