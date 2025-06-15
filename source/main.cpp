@@ -113,6 +113,7 @@ static std::string lastMenu = "";
 static std::string lastMenuMode = "";
 static std::string lastKeyName = "";
 static bool hideUserGuide = false;
+static bool hideHidden = false;
 
 static std::string lastCommandMode;
 
@@ -885,6 +886,9 @@ public:
             
             hideUserGuide = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_user_guide") == TRUE_STR);
             createToggleListItem(list, USER_GUIDE, hideUserGuide, "hide_user_guide", true);
+
+            hideHidden = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_hidden") == TRUE_STR);
+            createToggleListItem(list, "Show Hidden", hideHidden, "hide_hidden", true);
 
             cleanVersionLabels = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "clean_version_labels") == TRUE_STR);
             createToggleListItem(list, CLEAN_VERSIONS, cleanVersionLabels, "clean_version_labels", false, true);
@@ -4558,6 +4562,7 @@ public:
             if (!ultrahandSection.empty()) {
                 // Set default values for various settings
                 setDefaultValue(ultrahandSection, "hide_user_guide", FALSE_STR, hideUserGuide);
+                setDefaultValue(ultrahandSection, "hide_hidden", FALSE_STR, hideHidden);
                 setDefaultValue(ultrahandSection, "clean_version_labels", FALSE_STR, cleanVersionLabels);
                 setDefaultValue(ultrahandSection, "hide_overlay_versions", FALSE_STR, hideOverlayVersions);
                 setDefaultValue(ultrahandSection, "hide_package_versions", FALSE_STR, hidePackageVersions);
@@ -4907,7 +4912,7 @@ public:
                 }
                 overlayList.clear();
                 
-                if (!hiddenOverlayList.empty() && !inHiddenMode) {
+                if (!hiddenOverlayList.empty() && !inHiddenMode && !hideHidden) {
                     listItem = std::make_unique<tsl::elm::ListItem>(HIDDEN, DROPDOWN_SYMBOL);
                     
                     listItem->setClickListener([](uint64_t keys) {
@@ -5220,7 +5225,7 @@ public:
                 }
                 packageList.clear();
                 
-                if (!hiddenPackageList.empty() && !inHiddenMode) {
+                if (!hiddenPackageList.empty() && !inHiddenMode && !hideHidden) {
                     listItem = std::make_unique<tsl::elm::ListItem>(HIDDEN, DROPDOWN_SYMBOL);
                     listItem->setClickListener([](uint64_t keys) {
                         if (runningInterpreter.load(std::memory_order_acquire))
