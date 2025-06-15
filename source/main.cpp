@@ -36,6 +36,8 @@
 using namespace ult;
 
 
+
+
 // Overlay booleans
 static bool returningToMain = false;
 static bool returningToHiddenMain = false;
@@ -4828,7 +4830,7 @@ public:
                                 overlayName = taintedOverlayFileName.substr(thirdLastUnderscorePos + 1, secondLastUnderscorePos - thirdLastUnderscorePos - 1);
                         }
                     }
-                    
+
                     overlayFile = OVERLAY_PATH+overlayFileName;
                     newOverlayName = overlayStarred ? STAR_SYMBOL+"  "+overlayName : overlayName;
                     
@@ -4838,11 +4840,18 @@ public:
                     if (isFileOrDirectory(overlayFile)) {
                         listItem = std::make_unique<tsl::elm::ListItem>(newOverlayName);
                         overlayVersion = getFirstLongEntry(overlayVersion);
+                        //std::string originalOverlayVersion = overlayVersion.c_str();
                         if (cleanVersionLabels)
                             overlayVersion = cleanVersionLabel(overlayVersion);
                         if (!hideOverlayVersions)
                             listItem->setValue(overlayVersion, true);
                         
+
+                        if (overlayFileName == g_overlayFilename) {
+                            lastOverlayName = newOverlayName;
+                            lastOverlayVersion = overlayVersion;
+                        }
+
                         // Add a click listener to load the overlay when clicked upon
                         listItem->setClickListener([this, overlayFile, newStarred, overlayFileName, overlayName](s64 keys) {
                             
@@ -4856,7 +4865,6 @@ public:
                             }
     
                             if (keys & KEY_A) {
-                                
                                 
                                 std::string useOverlayLaunchArgs = parseValueFromIniSection(OVERLAYS_INI_FILEPATH, overlayFileName, USE_LAUNCH_ARGS_STR);
                                 std::string overlayLaunchArgs = parseValueFromIniSection(OVERLAYS_INI_FILEPATH, overlayFileName, LAUNCH_ARGS_STR);
@@ -5287,7 +5295,7 @@ public:
         //return rootFrame.release();
 
         auto rootFrame = new tsl::elm::OverlayFrame(CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel, noClickableItems, menuMode+hiddenMenuMode+dropdownSection, "", "", "");
-        
+        list->jumpToItem(lastOverlayName, lastOverlayVersion);
         rootFrame->setContent(list.release());
         
         return rootFrame;
@@ -5436,6 +5444,9 @@ public:
                 }
 
                 if ((keysDown & KEY_RIGHT) && !(keysDown & ~KEY_RIGHT & ~KEY_R & ALL_KEYS_MASK) && !stillTouching && (((!allowSlide && !unlockedSlide && onTrackBar) || (keysDown & KEY_R)) || !onTrackBar || simulatedNextPage)) {
+                    g_overlayFilename = "";
+                    lastOverlayName = "";
+                    lastOverlayVersion = "";
                     simulatedNextPage = false;
                     allowSlide = unlockedSlide = false;
                     if (!usePageSwap) {
@@ -5463,6 +5474,9 @@ public:
                     }
                 }
                 if ((keysDown & KEY_LEFT) && !(keysDown & ~KEY_LEFT & ~KEY_R & ALL_KEYS_MASK) && !stillTouching && (((!allowSlide && onTrackBar && !unlockedSlide) || (keysDown & KEY_R)) || !onTrackBar || simulatedNextPage)) {
+                    g_overlayFilename = "";
+                    lastOverlayName = "";
+                    lastOverlayVersion = "";
                     simulatedNextPage = false;
                     allowSlide = unlockedSlide = false;
                     if (!usePageSwap) {
@@ -5658,7 +5672,9 @@ public:
 
         cleanupCurl();
         socketExit();
-
+        g_overlayFilename = "";
+        lastOverlayName = "";
+        lastOverlayVersion = "";
         //smExit();
         //closeInterpreterThread(); // shouldn't be running, but run close anyways
     }
@@ -5717,5 +5733,9 @@ public:
  * @return The application's exit code.
  */
 int main(int argc, char* argv[]) {
+    //if (argc > 1) {
+    //    // The filename is the first argument after the program name
+    //    g_overlayFilename = std::string(argv[1]);
+    //}
     return tsl::loop<Overlay, tsl::impl::LaunchFlags::None>(argc, argv);
 }
