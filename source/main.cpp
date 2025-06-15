@@ -113,7 +113,7 @@ static std::string lastMenu = "";
 static std::string lastMenuMode = "";
 static std::string lastKeyName = "";
 static bool hideUserGuide = false;
-static bool hideHidden = false;
+//static bool hideHidden = false;
 
 static std::string lastCommandMode;
 
