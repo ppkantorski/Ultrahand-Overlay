@@ -4954,7 +4954,7 @@ public:
         
         // Packages menu
         if (menuMode == PACKAGES_STR ) {
-            
+
             if (!isFileOrDirectory(PACKAGE_PATH + PACKAGE_FILENAME)) {
             #if NO_FSTREAM_DIRECTIVE
                 // Using stdio.h functions (FILE* and fprintf)
@@ -5531,6 +5531,9 @@ public:
 
                 if ((keysDown & SYSTEM_SETTINGS_KEY) && !stillTouching) {
                     inMainMenu = false;
+                    g_overlayFilename = "";
+                    lastOverlayName = "";
+                    lastOverlayVersion = "";
                     tsl::changeTo<UltrahandSettingsMenu>();
                     //if (menuMode != PACKAGES_STR) startInterpreterThread();
                     
@@ -5558,12 +5561,21 @@ public:
                 }
 
                 if ((keysDown & KEY_B) && !stillTouching) {
+                    //g_overlayFilename = "";
+                    //lastOverlayName = "";
+                    //lastOverlayVersion = "";
+                    
                     if (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_OVERLAY_STR) == FALSE_STR) {
                         inMainMenu = true;
                         inHiddenMode = false;
                         hiddenMenuMode = "";
                         setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_OVERLAY_STR, "");
                         tsl::pop();
+                        // NEW: Set the highlight to "Hidden" when returning from a hidden overlay
+                        lastOverlayName = HIDDEN;
+                        lastOverlayVersion = DROPDOWN_SYMBOL;
+                        // Also clear the global overlay filename since we're not on the main overlay list
+                        g_overlayFilename = "";
                         returningToMain = true;
                         tsl::changeTo<MainMenu>();
                         simulatedBackComplete = true;
