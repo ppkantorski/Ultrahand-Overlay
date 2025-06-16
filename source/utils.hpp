@@ -1319,6 +1319,7 @@ void drawTable(
     const std::string& alignment                   = LEFT_STR,
     bool hideTableBackground        = false,
     bool useHeaderIndent            = false,
+    bool isPolling                  = false,
     bool isScrollable               = true,
     const std::string& wrappingMode               = "none",
     bool useWrappedTextIndent        = false,
@@ -1353,7 +1354,7 @@ void drawTable(
         columnOffset, startGap, newlineGap,
         wrappingMode, alignment, useWrappedTextIndent,
         cacheExpSec, cacheExpInfo, cacheYOff, cacheXOff
-    );
+    ) && isPolling;
 
     // Use nanoseconds for high-performance timing
     auto lastUpdateNS = std::make_shared<u64>(armTicksToNs(armGetSystemTick()));
@@ -1440,6 +1441,7 @@ void addTable(
     const std::string&                     tableAlignment              = RIGHT_STR,
     const bool&                            hideTableBackground         = false,
     const bool&                            useHeaderIndent             = false,
+    const bool&                            isPolling                   = false,
     const bool&                            isScrollable                = true,
     const std::string&                     wrappingMode                = "none",
     const bool&                            useWrappedTextIndent        = false
@@ -1451,7 +1453,7 @@ void addTable(
         columnOffset, tableStartGap, tableEndGap, tableSpacing,
         tableSectionTextColor, tableInfoTextColor, tableInfoTextHighlightColor,
         tableAlignment, hideTableBackground, useHeaderIndent,
-        isScrollable, wrappingMode, useWrappedTextIndent,
+        isPolling, isScrollable, wrappingMode, useWrappedTextIndent,
         packagePath
     );
 }
