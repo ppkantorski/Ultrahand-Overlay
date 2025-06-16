@@ -1254,7 +1254,7 @@ public:
                 if (keys & KEY_A) {
                     // Remove key combo from this overlay
                     setIniFileValue(settingsIniPath, entryName, KEY_COMBO_STR, "");
-                    reloadMenu = true;
+                    //reloadMenu = true;
                     
                     lastSelectedListItem->setValue("");
                     selectedListItem->setValue(OPTION_SYMBOL);
@@ -1298,7 +1298,7 @@ public:
                         
                             // Set the new key combo for this overlay
                             setIniFileValue(settingsIniPath, entryName, KEY_COMBO_STR, combo);
-                            reloadMenu = true;
+                            //reloadMenu = true;
                         }
                         
                         lastSelectedListItem->setValue("");
@@ -1323,6 +1323,7 @@ public:
         //return rootFrame.release();
 
         auto rootFrame = new tsl::elm::OverlayFrame(CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel);
+        list->jumpToItem("", "");
         rootFrame->setContent(list.release());
         return rootFrame;
     }
@@ -4066,7 +4067,7 @@ public:
            (usingPages && currentPage == RIGHT_STR) ? pageLeftName : "",
            (usingPages && currentPage == LEFT_STR) ? pageRightName : ""
         );
-        
+        list->jumpToItem(lastOverlayName,lastOverlayVersion);
         rootFrame->setContent(list.release());
         
         return rootFrame;
@@ -4245,7 +4246,11 @@ public:
                     //lastPackage = packagePath;
                     selectedListItem.reset();
                     lastSelectedListItem.reset();
-                    tsl::goBack();
+                    lastOverlayName = NULL_STR;
+                    lastOverlayVersion = NULL_STR;
+                    g_overlayFilename = "";
+
+                    tsl::pop();
                     tsl::changeTo<PackageMenu>(lastPackagePath, dropdownSection, RIGHT_STR, lastPackageName, nestedMenuCount, pageHeader);
                     simulatedNextPageComplete = true;
                     return true;
@@ -4258,7 +4263,10 @@ public:
                     //lastPackage = packagePath;
                     selectedListItem.reset();
                     lastSelectedListItem.reset();
-                    tsl::goBack();
+                    lastOverlayName = NULL_STR;
+                    lastOverlayVersion = NULL_STR;
+                    g_overlayFilename = "";
+                    tsl::pop();
                     tsl::changeTo<PackageMenu>(lastPackagePath, dropdownSection, LEFT_STR, lastPackageName, nestedMenuCount, pageHeader);
                     simulatedNextPageComplete = true;
                     return true;
@@ -4883,7 +4891,7 @@ public:
                                 
                                 tsl::Overlay::get()->close();
                                 simulatedSelectComplete = true;
-    
+                                
                                 return true;
                             } else if (keys & STAR_KEY) {
                                 
@@ -4906,7 +4914,7 @@ public:
                                     reloadMenu2 = true;
                                 }
                                 refreshPage = true;
-    
+                                
                                 return true;
                             } else if (keys & SETTINGS_KEY) {
                                 if (!inHiddenMode) {
@@ -5202,7 +5210,11 @@ public:
                                         }
                                     }
                                 }
-    
+                                
+                                lastOverlayName = "";
+                                lastOverlayVersion = "";
+                                g_overlayFilename = "";
+
                                 lastPackagePath = packageFilePath;
                                 lastPackageName = PACKAGE_FILENAME;
     
@@ -5220,7 +5232,7 @@ public:
                                 lastOverlayVersion = packageVersion;
                                 // Also clear the global overlay filename since we're not on the main overlay list
                                 g_overlayFilename = "";
-                                
+
                                 wasInHiddenMode = inHiddenMode;
                                 if (inHiddenMode) {
                                     inMainMenu = false;
@@ -5476,8 +5488,8 @@ public:
 
                 if ((keysDown & KEY_RIGHT) && !(keysDown & ~KEY_RIGHT & ~KEY_R & ALL_KEYS_MASK) && !stillTouching && (((!allowSlide && !unlockedSlide && onTrackBar) || (keysDown & KEY_R)) || !onTrackBar || simulatedNextPage)) {
                     g_overlayFilename = "";
-                    lastOverlayName = "";
-                    lastOverlayVersion = "";
+                    lastOverlayName = NULL_STR;
+                    lastOverlayVersion = NULL_STR;
                     simulatedNextPage = false;
                     allowSlide = unlockedSlide = false;
                     if (!usePageSwap) {
@@ -5506,8 +5518,8 @@ public:
                 }
                 if ((keysDown & KEY_LEFT) && !(keysDown & ~KEY_LEFT & ~KEY_R & ALL_KEYS_MASK) && !stillTouching && (((!allowSlide && onTrackBar && !unlockedSlide) || (keysDown & KEY_R)) || !onTrackBar || simulatedNextPage)) {
                     g_overlayFilename = "";
-                    lastOverlayName = "";
-                    lastOverlayVersion = "";
+                    lastOverlayName = NULL_STR;
+                    lastOverlayVersion = NULL_STR;
                     simulatedNextPage = false;
                     allowSlide = unlockedSlide = false;
                     if (!usePageSwap) {
