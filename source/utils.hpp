@@ -3740,9 +3740,9 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
     //    }
     //
     } else if (commandName == "refresh") {
-        if (cmd.size() == 1)
+        if (cmd.size() == 1) {
             refreshPage = true;
-        else if (cmd.size() > 1) {
+        } else if (cmd.size() > 1) {
             std::string refreshPattern = cmd[1];
             removeQuotes(refreshPattern);
             if (refreshPattern == "theme")
@@ -3751,6 +3751,14 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                 refreshPackage = true;
             else if (refreshPattern == "wallpaper") {
                 reloadWallpaper();
+            } else {
+                std::string refreshPattern2 = "";
+                if (cmd.size() > 2) {
+                    refreshPattern2 = cmd[2];
+                }
+                jumpItemName = refreshPattern;
+                jumpItemValue = refreshPattern2;
+                refreshPage = true;
             }
         }
     } else if (commandName == "logging") {
