@@ -1089,8 +1089,9 @@ public:
             }
 
             if (keys & KEY_A) {
-                if (iStr != priorityValue)
+                if (iStr != priorityValue) {
                     reloadMenu = true; // Modify the global variable
+                }
     
                 setIniFileValue(this->settingsIniPath, this->entryName, PRIORITY_STR, iStr);
                 lastSelectedListItem->setValue("");
@@ -4067,7 +4068,7 @@ public:
            (usingPages && currentPage == RIGHT_STR) ? pageLeftName : "",
            (usingPages && currentPage == LEFT_STR) ? pageRightName : ""
         );
-        list->jumpToItem(lastOverlayName,lastOverlayVersion);
+        list->jumpToItem(jumpItemName,jumpItemValue);
         rootFrame->setContent(list.release());
         
         return rootFrame;
@@ -4246,8 +4247,8 @@ public:
                     //lastPackage = packagePath;
                     selectedListItem.reset();
                     lastSelectedListItem.reset();
-                    lastOverlayName = NULL_STR;
-                    lastOverlayVersion = NULL_STR;
+                    jumpItemName = NULL_STR;
+                    jumpItemValue = NULL_STR;
                     g_overlayFilename = "";
 
                     tsl::pop();
@@ -4263,8 +4264,8 @@ public:
                     //lastPackage = packagePath;
                     selectedListItem.reset();
                     lastSelectedListItem.reset();
-                    lastOverlayName = NULL_STR;
-                    lastOverlayVersion = NULL_STR;
+                    jumpItemName = NULL_STR;
+                    jumpItemValue = NULL_STR;
                     g_overlayFilename = "";
                     tsl::pop();
                     tsl::changeTo<PackageMenu>(lastPackagePath, dropdownSection, LEFT_STR, lastPackageName, nestedMenuCount, pageHeader);
@@ -4857,8 +4858,8 @@ public:
                         
 
                         if (overlayFileName == g_overlayFilename) {
-                            lastOverlayName = newOverlayName;
-                            lastOverlayVersion = overlayVersion;
+                            jumpItemName = newOverlayName;
+                            jumpItemValue = overlayVersion;
                         }
 
                         // Add a click listener to load the overlay when clicked upon
@@ -4900,8 +4901,8 @@ public:
                                     setIniFileValue(OVERLAYS_INI_FILEPATH, overlayFileName, STAR_STR, newStarred ? TRUE_STR : FALSE_STR);
                                     // Now, you can use the newStarred value for further processing if needed
                                 }
-                                lastOverlayName = newStarred ? STAR_SYMBOL + "  " + overlayName : overlayName;
-                                lastOverlayVersion = overlayVersion;
+                                jumpItemName = newStarred ? STAR_SYMBOL + "  " + overlayName : overlayName;
+                                jumpItemValue = overlayVersion;
                                 // Also clear the global overlay filename since we're not on the main overlay list
                                 g_overlayFilename = "";
 
@@ -4924,6 +4925,10 @@ public:
                                     lastMenu = "hiddenMenuMode";
                                     inHiddenMode = false;
                                 }
+                                jumpItemName = newStarred ? STAR_SYMBOL + "  " + overlayName : overlayName;
+                                jumpItemValue = overlayVersion;
+                                // Also clear the global overlay filename since we're not on the main overlay list
+                                g_overlayFilename = "";
                                 
                                 tsl::changeTo<SettingsMenu>(overlayFileName, OVERLAY_STR, overlayName);
                                 return true;
@@ -4951,8 +4956,8 @@ public:
                         if (keys & KEY_A) {
                             // reset tracking
                             g_overlayFilename = "";
-                            lastOverlayName = "";
-                            lastOverlayVersion = "";
+                            jumpItemName = "";
+                            jumpItemValue = "";
                             inMainMenu = false;
                             inHiddenMode = true;
                             tsl::changeTo<MainMenu>(OVERLAYS_STR);
@@ -5211,8 +5216,8 @@ public:
                                     }
                                 }
                                 
-                                lastOverlayName = "";
-                                lastOverlayVersion = "";
+                                jumpItemName = "";
+                                jumpItemValue = "";
                                 g_overlayFilename = "";
 
                                 lastPackagePath = packageFilePath;
@@ -5228,8 +5233,8 @@ public:
                                 if (!packageName.empty())
                                     setIniFileValue(PACKAGES_INI_FILEPATH, packageName, STAR_STR, newStarred ? TRUE_STR : FALSE_STR);
                                 
-                                lastOverlayName = newStarred ? STAR_SYMBOL + "  " + newPackageName : newPackageName;
-                                lastOverlayVersion = packageVersion;
+                                jumpItemName = newStarred ? STAR_SYMBOL + "  " + newPackageName : newPackageName;
+                                jumpItemValue = packageVersion;
                                 // Also clear the global overlay filename since we're not on the main overlay list
                                 g_overlayFilename = "";
 
@@ -5251,6 +5256,10 @@ public:
                                     lastMenu = "hiddenMenuMode";
                                     inHiddenMode = false;
                                 }
+                                jumpItemName = newStarred ? STAR_SYMBOL + "  " + newPackageName : newPackageName;
+                                jumpItemValue = packageVersion;
+                                // Also clear the global overlay filename since we're not on the main overlay list
+                                g_overlayFilename = "";
                                 
                                 tsl::changeTo<SettingsMenu>(packageName, PACKAGE_STR, "", newPackageName);
                                 return true;
@@ -5326,7 +5335,7 @@ public:
         //return rootFrame.release();
 
         auto rootFrame = new tsl::elm::OverlayFrame(CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel, noClickableItems, menuMode+hiddenMenuMode+dropdownSection, "", "", "");
-        list->jumpToItem(lastOverlayName, lastOverlayVersion);
+        list->jumpToItem(jumpItemName, jumpItemValue);
         rootFrame->setContent(list.release());
         
         return rootFrame;
@@ -5403,15 +5412,15 @@ public:
         if (refreshPage && !stillTouching) {
             refreshPage = false;
             tsl::pop();
-            //lastOverlayName = HIDDEN;
-            //lastOverlayVersion = DROPDOWN_SYMBOL;
+            //jumpItemName = HIDDEN;
+            //jumpItemValue = DROPDOWN_SYMBOL;
             //// Also clear the global overlay filename since we're not on the main overlay list
             //g_overlayFilename = "";
             tsl::changeTo<MainMenu>(hiddenMenuMode, dropdownSection);
             if (wasInHiddenMode) {
                 // NEW: Set the highlight to "Hidden" when returning from a hidden overlay
-                lastOverlayName = HIDDEN;
-                lastOverlayVersion = DROPDOWN_SYMBOL;
+                jumpItemName = HIDDEN;
+                jumpItemValue = DROPDOWN_SYMBOL;
                 // Also clear the global overlay filename since we're not on the main overlay list
                 g_overlayFilename = "";
                 wasInHiddenMode = false;
@@ -5488,8 +5497,8 @@ public:
 
                 if ((keysDown & KEY_RIGHT) && !(keysDown & ~KEY_RIGHT & ~KEY_R & ALL_KEYS_MASK) && !stillTouching && (((!allowSlide && !unlockedSlide && onTrackBar) || (keysDown & KEY_R)) || !onTrackBar || simulatedNextPage)) {
                     g_overlayFilename = "";
-                    lastOverlayName = NULL_STR;
-                    lastOverlayVersion = NULL_STR;
+                    jumpItemName = NULL_STR;
+                    jumpItemValue = NULL_STR;
                     simulatedNextPage = false;
                     allowSlide = unlockedSlide = false;
                     if (!usePageSwap) {
@@ -5518,8 +5527,8 @@ public:
                 }
                 if ((keysDown & KEY_LEFT) && !(keysDown & ~KEY_LEFT & ~KEY_R & ALL_KEYS_MASK) && !stillTouching && (((!allowSlide && onTrackBar && !unlockedSlide) || (keysDown & KEY_R)) || !onTrackBar || simulatedNextPage)) {
                     g_overlayFilename = "";
-                    lastOverlayName = NULL_STR;
-                    lastOverlayVersion = NULL_STR;
+                    jumpItemName = NULL_STR;
+                    jumpItemValue = NULL_STR;
                     simulatedNextPage = false;
                     allowSlide = unlockedSlide = false;
                     if (!usePageSwap) {
@@ -5570,8 +5579,8 @@ public:
                 if ((keysDown & SYSTEM_SETTINGS_KEY) && !stillTouching) {
                     inMainMenu = false;
                     g_overlayFilename = "";
-                    lastOverlayName = "";
-                    lastOverlayVersion = "";
+                    jumpItemName = "";
+                    jumpItemValue = "";
                     tsl::changeTo<UltrahandSettingsMenu>();
                     //if (menuMode != PACKAGES_STR) startInterpreterThread();
                     
@@ -5600,8 +5609,8 @@ public:
 
                 if ((keysDown & KEY_B) && !stillTouching) {
                     //g_overlayFilename = "";
-                    //lastOverlayName = "";
-                    //lastOverlayVersion = "";
+                    //jumpItemName = "";
+                    //jumpItemValue = "";
                     
                     if (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_OVERLAY_STR) == FALSE_STR) {
                         inMainMenu = true;
@@ -5610,8 +5619,8 @@ public:
                         setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_OVERLAY_STR, "");
                         tsl::pop();
                         // NEW: Set the highlight to "Hidden" when returning from a hidden overlay
-                        lastOverlayName = HIDDEN;
-                        lastOverlayVersion = DROPDOWN_SYMBOL;
+                        jumpItemName = HIDDEN;
+                        jumpItemValue = DROPDOWN_SYMBOL;
                         // Also clear the global overlay filename since we're not on the main overlay list
                         g_overlayFilename = "";
                         returningToMain = true;
@@ -5728,8 +5737,8 @@ public:
         cleanupCurl();
         socketExit();
         g_overlayFilename = "";
-        lastOverlayName = "";
-        lastOverlayVersion = "";
+        jumpItemName = "";
+        jumpItemValue = "";
         //smExit();
         //closeInterpreterThread(); // shouldn't be running, but run close anyways
     }
