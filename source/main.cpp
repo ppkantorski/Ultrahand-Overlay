@@ -1091,6 +1091,8 @@ public:
             if (keys & KEY_A) {
                 if (iStr != priorityValue) {
                     reloadMenu = true; // Modify the global variable
+                } else {
+                    reloadMenu = false;
                 }
     
                 setIniFileValue(this->settingsIniPath, this->entryName, PRIORITY_STR, iStr);
