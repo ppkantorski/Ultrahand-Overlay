@@ -891,7 +891,7 @@ public:
             createToggleListItem(list, USER_GUIDE, hideUserGuide, "hide_user_guide", true);
 
             hideHidden = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_hidden") == TRUE_STR);
-            createToggleListItem(list, "Show Hidden", hideHidden, "hide_hidden", true);
+            createToggleListItem(list, SHOW_HIDDEN, hideHidden, "hide_hidden", true);
 
             cleanVersionLabels = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "clean_version_labels") == TRUE_STR);
             createToggleListItem(list, CLEAN_VERSIONS, cleanVersionLabels, "clean_version_labels", false, true);
