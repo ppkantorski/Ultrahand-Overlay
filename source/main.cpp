@@ -46,6 +46,7 @@ static bool returningToPackage = false;
 static bool returningToSubPackage = false;
 static bool returningToSelectionMenu = false;
 //static bool inMainMenu = false; // moved to libtesla
+static bool wasInHiddenMode = false;
 static bool inHiddenMode = false;
 static bool inSettingsMenu = false;
 static bool inSubSettingsMenu = false;
@@ -4853,7 +4854,7 @@ public:
                         }
 
                         // Add a click listener to load the overlay when clicked upon
-                        listItem->setClickListener([this, overlayFile, newStarred, overlayFileName, overlayName](s64 keys) {
+                        listItem->setClickListener([this, overlayFile, newStarred, overlayFileName, overlayName, overlayVersion](s64 keys) {
                             
                             if (runningInterpreter.load(std::memory_order_acquire))
                                 return false;
@@ -4891,6 +4892,13 @@ public:
                                     setIniFileValue(OVERLAYS_INI_FILEPATH, overlayFileName, STAR_STR, newStarred ? TRUE_STR : FALSE_STR);
                                     // Now, you can use the newStarred value for further processing if needed
                                 }
+                                lastOverlayName = newStarred ? STAR_SYMBOL + "  " + overlayName : overlayName;
+                                lastOverlayVersion = overlayVersion;
+                                // Also clear the global overlay filename since we're not on the main overlay list
+                                g_overlayFilename = "";
+
+                                wasInHiddenMode = inHiddenMode;
+
                                 if (inHiddenMode) {
                                     //tsl::goBack();
                                     inMainMenu = false;
@@ -5208,6 +5216,12 @@ public:
                                 if (!packageName.empty())
                                     setIniFileValue(PACKAGES_INI_FILEPATH, packageName, STAR_STR, newStarred ? TRUE_STR : FALSE_STR);
                                 
+                                lastOverlayName = newStarred ? STAR_SYMBOL + "  " + newPackageName : newPackageName;
+                                lastOverlayVersion = packageVersion;
+                                // Also clear the global overlay filename since we're not on the main overlay list
+                                g_overlayFilename = "";
+                                
+                                wasInHiddenMode = inHiddenMode;
                                 if (inHiddenMode) {
                                     inMainMenu = false;
                                     inHiddenMode = true;
@@ -5377,7 +5391,19 @@ public:
         if (refreshPage && !stillTouching) {
             refreshPage = false;
             tsl::pop();
+            //lastOverlayName = HIDDEN;
+            //lastOverlayVersion = DROPDOWN_SYMBOL;
+            //// Also clear the global overlay filename since we're not on the main overlay list
+            //g_overlayFilename = "";
             tsl::changeTo<MainMenu>(hiddenMenuMode, dropdownSection);
+            if (wasInHiddenMode) {
+                // NEW: Set the highlight to "Hidden" when returning from a hidden overlay
+                lastOverlayName = HIDDEN;
+                lastOverlayVersion = DROPDOWN_SYMBOL;
+                // Also clear the global overlay filename since we're not on the main overlay list
+                g_overlayFilename = "";
+                wasInHiddenMode = false;
+            }
             return true;
         }
 
