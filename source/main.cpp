@@ -80,6 +80,7 @@ static const std::string MINI_PATTERN = ";mini=";
 static const std::string SELECTION_MINI_PATTERN = ";selection_mini=";
 
 // Table option patterns
+static const std::string POLLING_PATTERN = ";polling=";
 static const std::string SCROLLABLE_PATTERN = ";scrollable=";
 static const std::string TOP_PIVOT_PATTERN = ";top_pivot=";
 static const std::string BOTTOM_PIVOT_PATTERN = ";bottom_pivot=";
@@ -1612,6 +1613,7 @@ public:
             const std::string tableAlignment = LEFT_STR;
             const bool hideTableBackground = false;
             const bool useHeaderIndent = false;
+            const bool isPolling = false;
             const bool isScrollableTable = true;
             const std::string wrappingMode = "char";
             const bool useWrappedTextIndent = true;
@@ -1625,7 +1627,7 @@ public:
 
             // Draw the table using the sectionLines and empty infoLines
             drawTable(list, dummyTableData, sectionLines, infoLines, tableColumnOffset, tableStartGap, tableEndGap, tableSpacing,
-                      tableSectionTextColor, tableInfoTextColor, tableInfoTextColor, tableAlignment, hideTableBackground, useHeaderIndent, isScrollableTable, wrappingMode, useWrappedTextIndent);
+                      tableSectionTextColor, tableInfoTextColor, tableInfoTextColor, tableAlignment, hideTableBackground, useHeaderIndent, isPolling, isScrollableTable, wrappingMode, useWrappedTextIndent);
 
             if (usingBottomPivot) {
                 addDummyListItem(list);
@@ -2829,6 +2831,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
 
     //bool wasHeader = false;
     //bool lastItemWasHeader = false;
+    bool isPolling;
     bool isScrollableTable;
     bool usingTopPivot, usingBottomPivot;
     bool onlyTables = true;
@@ -2872,7 +2875,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
         isMini = false;
 
         // Table settings
-        
+        isPolling = false;
         isScrollableTable = true;
         usingTopPivot = false;
         usingBottomPivot = false;
@@ -3159,8 +3162,11 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                         continue;
                     } else if (commandName.find(MINI_PATTERN) == 0) {
                         isMini = (commandName.substr(MINI_PATTERN.length()) == TRUE_STR);
+                    } else if (commandName.find(POLLING_PATTERN) == 0) {
+                        isPolling = (commandName.substr(POLLING_PATTERN.length()) == TRUE_STR);
+                        continue;
                     } else if (commandName.find(SCROLLABLE_PATTERN) == 0) {
-                        isScrollableTable = (commandName.substr(SCROLLABLE_PATTERN.length()) == TRUE_STR);
+                        isScrollableTable = (commandName.substr(SCROLLABLE_PATTERN.length()) != FALSE_STR);
                         continue;
                     } else if (commandName.find(TOP_PIVOT_PATTERN) == 0) {
                         usingTopPivot = (commandName.substr(TOP_PIVOT_PATTERN.length()) == TRUE_STR);
@@ -3329,14 +3335,14 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                 if (commandMode == TABLE_STR) {
                     if (useHeaderIndent) {
                         tableStartGap = tableEndGap = 19; // for perfect alignment for header tables
-                        isScrollableTable = true;
+                        //isScrollableTable = true;
                         lastPackageHeader = getFirstSectionText(tableData, packagePath);
                     }
                     //if (isScrollableTable)
                     //    lastItemIsScrollableTable = true;
                     //else
                     //    lastItemIsScrollableTable = false;
-
+                    
                     if (usingTopPivot) {
                         if (list->getLastIndex() == 0)
                             onlyTables = false;
@@ -3346,7 +3352,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
 
 
                     addTable(list, tableData, packagePath, tableColumnOffset, tableStartGap, tableEndGap, tableSpacing,
-                        tableSectionTextColor, tableInfoTextColor, tableInfoTextColor, tableAlignment, hideTableBackground, useHeaderIndent, isScrollableTable, tableWrappingMode, useWrappingIndent);
+                        tableSectionTextColor, tableInfoTextColor, tableInfoTextColor, tableAlignment, hideTableBackground, useHeaderIndent, isPolling, isScrollableTable, tableWrappingMode, useWrappingIndent);
 
                     if (usingBottomPivot) {
                         addDummyListItem(list);
