@@ -301,7 +301,7 @@ private:
             //auto mappedItem = convertComboToUnicode(item); // moved to ListItem class in libTesla
             //if (mappedItem.empty()) mappedItem = item;
             mappedItem = item;
-            if (targetMenu == "keyComboMenu")
+            if (targetMenu == KEY_COMBO_STR)
                 convertComboToUnicode(mappedItem);
     
             listItem = std::make_unique<tsl::elm::ListItem>(mappedItem);
@@ -322,7 +322,7 @@ private:
                     if (item != defaultItem) {
                         setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, iniKey, item);
                 
-                        if (targetMenu == "keyComboMenu") {
+                        if (targetMenu == KEY_COMBO_STR) {
                             // Also set it in tesla config
                             setIniFileValue(TESLA_CONFIG_INI_PATH, TESLA_STR, iniKey, item);
                 
@@ -522,7 +522,7 @@ public:
             keyCombo = keyCombo.empty() ? defaultCombos[0] : keyCombo;
 
             convertComboToUnicode(keyCombo);
-            addListItem(list, KEY_COMBO, keyCombo, "keyComboMenu");
+            addListItem(list, KEY_COMBO, keyCombo, KEY_COMBO_STR);
             addListItem(list, LANGUAGE, defaultLang, "languageMenu");
             addListItem(list, SYSTEM, DROPDOWN_SYMBOL, "systemMenu");
             addListItem(list, SOFTWARE_UPDATE, DROPDOWN_SYMBOL, "softwareUpdateMenu");
@@ -542,11 +542,11 @@ public:
             addListItem(list, WIDGET, DROPDOWN_SYMBOL, "widgetMenu");
             addListItem(list, MISCELLANEOUS, DROPDOWN_SYMBOL, "miscMenu");
 
-        } else if (dropdownSelection == "keyComboMenu") {
+        } else if (dropdownSelection == KEY_COMBO_STR) {
             addHeader(list, KEY_COMBO);
             std::string defaultCombo = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, KEY_COMBO_STR);
             trim(defaultCombo);
-            handleSelection(list, defaultCombos, defaultCombo, KEY_COMBO_STR, "keyComboMenu");
+            handleSelection(list, defaultCombos, defaultCombo, KEY_COMBO_STR, KEY_COMBO_STR);
         } else if (dropdownSelection == "languageMenu") {
             addHeader(list, LANGUAGE);
             std::string defaulLang = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, DEFAULT_LANG_STR);
@@ -933,7 +933,7 @@ public:
         //return rootFrame.release();
 
         auto rootFrame = new tsl::elm::OverlayFrame(CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel);
-        if (inSubSettingsMenu && ((dropdownSelection == "languageMenu") || (dropdownSelection == "keyComboMenu") || (dropdownSelection == "themeMenu") || (dropdownSelection == "wallpaperMenu"))) {
+        if (inSubSettingsMenu && ((dropdownSelection == "languageMenu") || (dropdownSelection == KEY_COMBO_STR) || (dropdownSelection == "themeMenu") || (dropdownSelection == "wallpaperMenu"))) {
             jumpItemName = "";
             jumpItemValue = "";
             g_overlayFilename = "";
@@ -1153,7 +1153,7 @@ public:
                     }
                     if (keys & KEY_A) {
                         inMainMenu = false;
-                        tsl::changeTo<SettingsMenu>(this->entryName, this->entryMode, this->overlayName, "", "keyComboMenu");
+                        tsl::changeTo<SettingsMenu>(this->entryName, this->entryMode, this->overlayName, "", KEY_COMBO_STR);
                         selectedListItem = std::shared_ptr<tsl::elm::ListItem>(listItemRaw, [](auto*) {});
                         simulatedSelectComplete = true;
                         lastSelectedListItem->triggerClickAnimation();
@@ -1247,7 +1247,7 @@ public:
                     entryName
                 );
             }
-        } else if (dropdownSelection == "keyComboMenu") {
+        } else if (dropdownSelection == KEY_COMBO_STR) {
             addHeader(list, KEY_COMBO);
             std::string currentKeyCombo = parseValueFromIniSection(settingsIniPath, entryName, KEY_COMBO_STR);
             std::string globalDefaultCombo = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, KEY_COMBO_STR);
@@ -1337,7 +1337,7 @@ public:
         //return rootFrame.release();
 
         auto rootFrame = new tsl::elm::OverlayFrame(CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel);
-        if (inSubSettingsMenu) {
+        if (inSubSettingsMenu && ((dropdownSelection == KEY_COMBO_STR) || (dropdownSelection == PRIORITY_STR))) {
             jumpItemName = "";
             jumpItemValue = "";
             g_overlayFilename = "";
