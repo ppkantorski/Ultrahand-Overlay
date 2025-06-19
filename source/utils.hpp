@@ -1811,60 +1811,76 @@ inline void applyPlaceholderReplacement(std::string& input, const std::string& p
 
 
 void applyReplaceIniPlaceholder(std::string& arg, const std::string& commandName, const std::string& iniPath) {
-
     const std::string searchString = "{" + commandName + "(";
-    size_t startPos = arg.find(searchString);
-    if (startPos == std::string::npos) {
-        return;
-    }
-
-    size_t endPos = arg.find(")}", startPos);
-    if (endPos == std::string::npos || endPos <= startPos) {
-        return;
-    }
-
-    //std::string replacement = arg;  // Copy arg because we need to modify it
-
-    std::string placeholderContent = arg.substr(startPos + searchString.length(), endPos - startPos - searchString.length());
-    trim(placeholderContent);
-
-    size_t commaPos = placeholderContent.find(',');
-    if (commaPos != std::string::npos) {
-        std::string iniSection = placeholderContent.substr(0, commaPos);
-        trim(iniSection);
-        removeQuotes(iniSection);
-        std::string iniKey = placeholderContent.substr(commaPos + 1);
-        trim(iniKey);
-        removeQuotes(iniKey);
-
-        std::string parsedResult = parseValueFromIniSection(iniPath, iniSection, iniKey);
-        // Replace the placeholder with the parsed result and keep the remaining string intact
-        arg = arg.substr(0, startPos) + parsedResult + arg.substr(endPos + 2);
-    } else {
-        // Check if the content is an integer
-        if (std::all_of(placeholderContent.begin(), placeholderContent.end(), ::isdigit)) {
-            size_t entryIndex = ult::stoi(placeholderContent);
-
-            // Return list of section names and use entryIndex to get the specific entry
-            std::vector<std::string> sectionNames = parseSectionsFromIni(iniPath);
-            if (entryIndex < sectionNames.size()) {
-                std::string sectionName = sectionNames[entryIndex];
-                arg = arg.substr(0, startPos) + sectionName + arg.substr(endPos + 2);
-            } else {
-                // Handle the case where entryIndex is out of range
-                arg = arg.substr(0, startPos) + NULL_STR + arg.substr(endPos + 2);
-            }
-        } else {
-            // Handle the case where the placeholder content is not a valid index
-            arg = arg.substr(0, startPos) + NULL_STR + arg.substr(endPos + 2);
+    
+    // Pre-declare variables outside the loop
+    size_t startPos = 0;
+    size_t endPos;
+    size_t commaPos;
+    size_t entryIndex;
+    std::string placeholderContent;
+    std::string replacement;
+    std::string iniSection;
+    std::string iniKey;
+    
+    // Cache section names to avoid re-parsing INI file multiple times
+    std::vector<std::string> sectionNames;
+    bool sectionsLoaded = false;
+    
+    // Process all occurrences of the placeholder
+    while ((startPos = arg.find(searchString, startPos)) != std::string::npos) {
+        endPos = arg.find(")}", startPos);
+        if (endPos == std::string::npos || endPos <= startPos) {
+            // Invalid placeholder, skip this occurrence
+            startPos += searchString.length();
+            continue;
         }
+        
+        placeholderContent = arg.substr(startPos + searchString.length(), 
+                                       endPos - startPos - searchString.length());
+        trim(placeholderContent);
+        
+        commaPos = placeholderContent.find(',');
+        
+        if (commaPos != std::string::npos) {
+            // Handle section,key format
+            iniSection = placeholderContent.substr(0, commaPos);
+            trim(iniSection);
+            removeQuotes(iniSection);
+            
+            iniKey = placeholderContent.substr(commaPos + 1);
+            trim(iniKey);
+            removeQuotes(iniKey);
+            
+            replacement = parseValueFromIniSection(iniPath, iniSection, iniKey);
+        } else {
+            // Check if the content is an integer
+            if (std::all_of(placeholderContent.begin(), placeholderContent.end(), ::isdigit)) {
+                entryIndex = ult::stoi(placeholderContent);
+                
+                // Load section names only once when needed
+                if (!sectionsLoaded) {
+                    sectionNames = parseSectionsFromIni(iniPath);
+                    sectionsLoaded = true;
+                }
+                
+                if (entryIndex < sectionNames.size()) {
+                    replacement = sectionNames[entryIndex];
+                } else {
+                    replacement = NULL_STR;
+                }
+            } else {
+                replacement = NULL_STR;
+            }
+        }
+        
+        // Replace the placeholder with the result
+        arg = arg.substr(0, startPos) + replacement + arg.substr(endPos + 2);
+        
+        // Update startPos to continue searching after the replacement
+        startPos += replacement.length();
     }
-
-
-
-    //return replacement;
 }
-
 
 
 /**
@@ -2082,19 +2098,12 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
                     }
                 }
 
-                // {ini_file_source(...)} block
+                // {ini_file_source(...)} block - FIXED
                 if (modifiedArg.find("{ini_file_source(") != std::string::npos) {
                     applyPlaceholderReplacement(modifiedArg, "*", ult::to_string(entryIndex));
-                    startPos = modifiedArg.find("{ini_file_source(");
-                    endPos   = modifiedArg.find(")}");
-                    if (endPos != std::string::npos && endPos > startPos) {
-                        // applyReplaceIniPlaceholder modifies modifiedArg in place
-                        applyReplaceIniPlaceholder(modifiedArg, "ini_file_source", iniPath);
-                        // now modifiedArg itself may be empty, so:
-                        std::string raw = modifiedArg;
-                        replacement = returnOrNull(raw);
-                        modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
-                    }
+                    // applyReplaceIniPlaceholder modifies modifiedArg in place, so we just call it
+                    applyReplaceIniPlaceholder(modifiedArg, "ini_file_source", iniPath);
+                    // No additional replacement needed!
                 }
 
                 // {json_source(...)} block
