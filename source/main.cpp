@@ -3419,7 +3419,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                 if (commandMode == TABLE_STR) {
                     if (useHeaderIndent) {
                         tableStartGap = tableEndGap = 19; // for perfect alignment for header tables
-                        isScrollableTable = true;
+                        isScrollableTable = false;
                         lastPackageHeader = getFirstSectionText(tableData, packagePath);
                     }
                     //if (isScrollableTable)
