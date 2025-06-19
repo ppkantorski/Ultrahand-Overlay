@@ -143,7 +143,7 @@ std::string getValueOrDefault(const Map& data, const std::string& key, const std
 
 
 inline void clearMemory() {
-    directoryCache.clear();
+    //directoryCache.clear();
     hexSumCache.clear();
     selectedFooterDict.clear(); // Clears all data from the map, making it empty again
     selectedListItem.reset();
@@ -169,13 +169,14 @@ void shiftItemFocus(tsl::elm::Element* element) {
  * @param commandSuccess Reference to a boolean tracking the overall command success.
  * @return `true` if the operation needs to abort, `false` otherwise.
  */
-bool handleRunningInterpreter(uint64_t& keysDown) {
+bool handleRunningInterpreter(uint64_t& keysHeld) {
     static std::string lastSymbol;
     static int lastPercentage = -1;
     static bool inProgress = true;
     //static auto last_call = std::chrono::steady_clock::now();
     //auto now = std::chrono::steady_clock::now();
     bool shouldAbort = false;
+
 
     //if (now - last_call < std::chrono::milliseconds(20)) {
     //    return false;  // Exit if the minimum interval hasn't passed
@@ -210,18 +211,18 @@ bool handleRunningInterpreter(uint64_t& keysDown) {
         inProgress = false;
     }
 
-    if (threadFailure.load(std::memory_order_acquire)) {
-        threadFailure.store(false, std::memory_order_release);
-        commandSuccess = false;
-    }
-
-    if ((keysDown & KEY_R) && !(keysDown & ~KEY_R & ALL_KEYS_MASK) && !stillTouching) {
+    if ((keysHeld & KEY_R) && !(keysHeld & ~KEY_R & ALL_KEYS_MASK) && !stillTouching) {
         commandSuccess = false;
         abortDownload.store(true, std::memory_order_release);
         abortUnzip.store(true, std::memory_order_release);
         abortFileOp.store(true, std::memory_order_release);
         abortCommand.store(true, std::memory_order_release);
         shouldAbort = true;
+    }
+
+    if (threadFailure.load(std::memory_order_acquire)) {
+        threadFailure.store(false, std::memory_order_release);
+        commandSuccess = false;
     }
 
     //if (!shouldAbort) {
@@ -932,7 +933,16 @@ public:
         //return rootFrame.release();
 
         auto rootFrame = new tsl::elm::OverlayFrame(CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel);
-        list->jumpToItem("", "");
+        if (inSubSettingsMenu) {
+            jumpItemName = "";
+            jumpItemValue = "";
+            g_overlayFilename = "";
+            list->jumpToItem(jumpItemName, jumpItemValue);
+        } else {
+            jumpItemName = NULL_STR;
+            jumpItemValue = "";
+            g_overlayFilename = "";
+        }
         rootFrame->setContent(list.release());
         return rootFrame;
 
@@ -941,7 +951,7 @@ public:
 
     virtual bool handleInput(u64 keysDown, u64 keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
         if (runningInterpreter.load(std::memory_order_acquire)) {
-            return handleRunningInterpreter(keysDown);
+            return handleRunningInterpreter(keysHeld);
         }
         if (lastRunningInterpreter) {
             isDownloadCommand = false;
@@ -1327,7 +1337,16 @@ public:
         //return rootFrame.release();
 
         auto rootFrame = new tsl::elm::OverlayFrame(CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel);
-        list->jumpToItem("", "");
+        if (inSubSettingsMenu) {
+            jumpItemName = "";
+            jumpItemValue = "";
+            g_overlayFilename = "";
+            list->jumpToItem(jumpItemName, jumpItemValue);
+        } else {
+            jumpItemName = NULL_STR;
+            jumpItemValue = "";
+            g_overlayFilename = "";
+        }
         rootFrame->setContent(list.release());
         return rootFrame;
     }
@@ -1349,7 +1368,7 @@ public:
     virtual bool handleInput(u64 keysDown, u64 keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
 
         if (runningInterpreter.load(std::memory_order_acquire)) {
-            return handleRunningInterpreter(keysDown);
+            return handleRunningInterpreter(keysHeld);
         }
         if (lastRunningInterpreter) {
             //while (!interpreterThreadExit.load(std::memory_order_acquire)) {svcSleepThread(50'000'000);}
@@ -1652,7 +1671,7 @@ public:
     }
 
     virtual bool handleInput(u64 keysDown, u64 keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
-        if (runningInterpreter.load(std::memory_order_acquire)) return handleRunningInterpreter(keysDown);
+        if (runningInterpreter.load(std::memory_order_acquire)) return handleRunningInterpreter(keysHeld);
         if (lastRunningInterpreter) {
             isDownloadCommand = false;
             lastSelectedListItem->setValue(commandSuccess ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
@@ -1807,10 +1826,12 @@ public:
     SelectionOverlay(const std::string& path, const std::string& key = "", const std::vector<std::vector<std::string>>& cmds = {}, const std::string& footerKey = "", const std::string& _lastPackageHeader = "")
         : filePath(path), specificKey(key), commands(std::move(cmds)), specifiedFooterKey(footerKey), lastPackageHeader(_lastPackageHeader) {
         //lastSelectedListItem.reset();
+        //tsl::gfx::FontManager::clearCache();
     }
 
     ~SelectionOverlay() {
         lastSelectedListItem.reset();
+        //tsl::gfx::FontManager::clearCache();
     }
 
     void processSelectionCommands() {
@@ -2537,7 +2558,10 @@ public:
                packageHeader.color);
         }
 
-        list->jumpToItem("", "");
+        jumpItemName = "";
+        jumpItemValue = "";
+        g_overlayFilename = "";
+        list->jumpToItem(jumpItemName, jumpItemValue);
         
         rootFrame->setContent(list.release());
         return rootFrame;
@@ -2555,7 +2579,7 @@ public:
 
     virtual bool handleInput(u64 keysDown, u64 keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
         if (runningInterpreter.load(std::memory_order_acquire)) {
-            return handleRunningInterpreter(keysDown);
+            return handleRunningInterpreter(keysHeld);
         }
         if (lastRunningInterpreter) {
             isDownloadCommand = false;
@@ -2999,6 +3023,9 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                                     inPackageMenu = false;
                                     selectedListItem.reset();
                                     lastSelectedListItem.reset();
+                                    jumpItemName = "";
+                                    jumpItemValue = "";
+                                    g_overlayFilename = "";
                                     tsl::changeTo<PackageMenu>(packagePath, optionName, currentPage, packageName, 0, _lastPackageHeader);
                                     simulatedSelectComplete = true;
                                     
@@ -3335,7 +3362,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                 if (commandMode == TABLE_STR) {
                     if (useHeaderIndent) {
                         tableStartGap = tableEndGap = 19; // for perfect alignment for header tables
-                        //isScrollableTable = true;
+                        isScrollableTable = false;
                         lastPackageHeader = getFirstSectionText(tableData, packagePath);
                     }
                     //if (isScrollableTable)
@@ -3660,6 +3687,9 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                                 lastKeyName = keyName;
 
                                 allowSlide = unlockedSlide = false;
+                                jumpItemName = "";
+                                jumpItemValue = "";
+                                g_overlayFilename = "";
                                 tsl::changeTo<PackageMenu>(forwarderPackagePath, "", LEFT_STR, forwarderPackageIniName, nestedMenuCount, _lastPackageHeader);
                                 simulatedSelectComplete = true;
                                 return true;
@@ -3959,13 +3989,19 @@ public:
      * @param path The path to the sub-menu.
      */
     PackageMenu(const std::string& path, const std::string& sectionName = "", const std::string& page = LEFT_STR, const std::string& _packageName = PACKAGE_FILENAME, const size_t _nestedlayer = 0, const std::string& _pageHeader = "") :
-        packagePath(path), dropdownSection(sectionName), currentPage(page), packageName(_packageName), nestedLayer(_nestedlayer), pageHeader(_pageHeader) {}
+        packagePath(path), dropdownSection(sectionName), currentPage(page), packageName(_packageName), nestedLayer(_nestedlayer), pageHeader(_pageHeader) {
+            //tsl::gfx::FontManager::clearCache();
+            jumpItemName = "";
+            jumpItemValue = "";
+            g_overlayFilename = "";
+        }
     /**
      * @brief Destroys the `PackageMenu` instance.
      *
      * Cleans up any resources associated with the `PackageMenu` instance.
      */
     ~PackageMenu() {
+        //tsl::gfx::FontManager::clearCache();
         if (returningToMain) {
             clearMemory();
             packageRootLayerTitle = "";
@@ -4076,7 +4112,7 @@ public:
            (usingPages && currentPage == RIGHT_STR) ? pageLeftName : "",
            (usingPages && currentPage == LEFT_STR) ? pageRightName : ""
         );
-        list->jumpToItem(jumpItemName,jumpItemValue);
+        //list->jumpToItem(jumpItemName,jumpItemValue);
         rootFrame->setContent(list.release());
         
         return rootFrame;
@@ -4125,7 +4161,7 @@ public:
     virtual bool handleInput(uint64_t keysDown, uint64_t keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
         
         if (runningInterpreter.load(std::memory_order_acquire)) {
-            return handleRunningInterpreter(keysDown);
+            return handleRunningInterpreter(keysHeld);
         }
         //if (lastRunningInterpreter) {
         //    //while (!interpreterThreadExit.load(std::memory_order_acquire)) {svcSleepThread(50'000'000);}
@@ -4255,8 +4291,8 @@ public:
                     //lastPackage = packagePath;
                     selectedListItem.reset();
                     lastSelectedListItem.reset();
-                    jumpItemName = NULL_STR;
-                    jumpItemValue = NULL_STR;
+                    jumpItemName = "";
+                    jumpItemValue = "";
                     g_overlayFilename = "";
 
                     tsl::pop();
@@ -4272,8 +4308,8 @@ public:
                     //lastPackage = packagePath;
                     selectedListItem.reset();
                     lastSelectedListItem.reset();
-                    jumpItemName = NULL_STR;
-                    jumpItemValue = NULL_STR;
+                    jumpItemName = "";
+                    jumpItemValue = "";
                     g_overlayFilename = "";
                     tsl::pop();
                     tsl::changeTo<PackageMenu>(lastPackagePath, dropdownSection, LEFT_STR, lastPackageName, nestedMenuCount, pageHeader);
@@ -4502,13 +4538,16 @@ public:
      * Initializes a new instance of the `MainMenu` class with the necessary parameters.
      */
     MainMenu(const std::string& hiddenMenuMode = "", const std::string& sectionName = "") : hiddenMenuMode(hiddenMenuMode), dropdownSection(sectionName) {
+        //tsl::gfx::FontManager::clearCache();
     }
     /**
      * @brief Destroys the `MainMenu` instance.
      *
      * Cleans up any resources associated with the `MainMenu` instance.
      */
-    ~MainMenu() {}
+    ~MainMenu() {
+        //tsl::gfx::FontManager::clearCache();
+    }
     
     /**
      * @brief Creates the graphical user interface (GUI) for the main menu overlay.
@@ -5366,7 +5405,7 @@ public:
     virtual bool handleInput(uint64_t keysDown, uint64_t keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
 
         if (runningInterpreter.load(std::memory_order_acquire))
-            return handleRunningInterpreter(keysDown);
+            return handleRunningInterpreter(keysHeld);
         
         //if (lastRunningInterpreter) {
         //    ////while (!interpreterThreadExit.load(std::memory_order_acquire)) {svcSleepThread(50'000'000);}

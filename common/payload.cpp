@@ -24,7 +24,6 @@
 #include <unistd.h>
 #include <cstring>
 #include <dirent.h>
-#include <algorithm>
 #include <span>
 
 namespace Payload {
@@ -55,13 +54,17 @@ namespace Payload {
                 return 1;
             }
 
-            /* Find existing entry. */
-            auto it = std::find_if(list->begin(), list->end(), [section](HekateConfig &cfg) {
-                return cfg.name == section;
-            });
+            /* Find existing entry using simple linear search. */
+            HekateConfig *found = nullptr;
+            for (auto &cfg : *list) {
+                if (cfg.name == section) {
+                    found = &cfg;
+                    break;
+                }
+            }
 
             /* Create config entry if not existant. */
-            HekateConfig &config = (it != list->end()) ? *it : list->emplace_back(section, list->size() + 1);
+            HekateConfig &config = found ? *found : list->emplace_back(section, list->size() + 1);
 
             /* TODO: parse more information and display that. */
             (void)config;
@@ -85,9 +88,24 @@ namespace Payload {
             "sdmc:/payloads/",
         };
 
+        // Fast insertion sort - much faster than bubble sort for small arrays
+        void SortEntries(char entries[][0x100], u32 count) {
+            for (u32 i = 1; i < count; i++) {
+                char key[0x100];
+                __builtin_strcpy(key, entries[i]);
+                
+                int j = i - 1;
+                while (j >= 0 && std::strcmp(entries[j], key) > 0) {
+                    __builtin_strcpy(entries[j + 1], entries[j]);
+                    j--;
+                }
+                __builtin_strcpy(entries[j + 1], key);
+            }
+        }
+
         bool LoadPayload(const char* path, bool hekate) {
             /* Clear payload buffer. */
-            std::memset(g_reboot_payload, 0xFF, sizeof(g_reboot_payload));
+            __builtin_memset(g_reboot_payload, 0xFF, sizeof(g_reboot_payload));
 
             /* Open payload. */
             auto const file = fopen(path, "r");
@@ -141,7 +159,7 @@ namespace Payload {
         if (dirp == nullptr)
             return configs;
 
-        u32 count=0;
+        u32 count = 0;
         char dir_entries[8][0x100];
 
         /* Get entries */
@@ -149,24 +167,15 @@ namespace Payload {
             if (dent->d_type != DT_REG)
                 continue;
 
-            std::strcpy(dir_entries[count++], dent->d_name);
+            __builtin_strcpy(dir_entries[count++], dent->d_name);
 
             if (count == std::size(dir_entries))
                 break;
         }
 
+        /* Sort entries if we have more than one */
         if (count > 1) {
-            /* Reorder ini files by ASCII ordering. */
-            char temp[0x100];
-            for (size_t i = 0; i < count - 1 ; i++) {
-                for (size_t j = i + 1; j < count; j++) {
-                    if (std::strcmp(dir_entries[i], dir_entries[j]) > 0) {
-                        std::strcpy(temp, dir_entries[i]);
-                        std::strcpy(dir_entries[i], dir_entries[j]);
-                        std::strcpy(dir_entries[j], temp);
-                    }
-                }
-            }
+            SortEntries(dir_entries, count);
         }
 
         /* parse config */
@@ -201,7 +210,7 @@ namespace Payload {
 
                 /* Get payloads */
                 std::string const name(dent->d_name);
-                if (name.substr(name.size() - 4) == ".bin")
+                if (name.size() >= 4 && name.substr(name.size() - 4) == ".bin")
                     res.emplace_back(name.substr(0, name.size() - 4), (path + name));
             }
 
@@ -223,7 +232,7 @@ namespace Payload {
         auto const storage = reinterpret_cast<BootStorage *>(g_reboot_payload + BootStorageOffset);
 
         /* Clear boot storage. */
-        std::memset(storage, 0, sizeof(BootStorage));
+        __builtin_memset(storage, 0, sizeof(BootStorage));
 
         /* Configure boot storage */
         func(storage);

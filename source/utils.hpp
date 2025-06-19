@@ -994,59 +994,6 @@ void addDummyListItem(auto& list, s32 index = -1) {
 //}
 
 
-std::vector<std::string> wrapText(const std::string& text, float maxWidth, const std::string& wrappingMode, bool useIndent, const std::string& indent, float indentWidth, size_t fontSize) {
-    if (wrappingMode == "none" || (wrappingMode != "char" && wrappingMode != "word")) {
-        return std::vector<std::string>{text};  // Return the entire text as a single line
-    }
-
-    std::vector<std::string> wrappedLines;
-    std::string currentLine;
-    std::string currentWord;
-    bool firstLine = true;
-    float currentMaxWidth = maxWidth;
-
-    if (wrappingMode == "char") {
-        size_t i = 0;
-        while (i < text.size()) {
-            currentLine += text[i];
-            currentMaxWidth = firstLine ? maxWidth : maxWidth - indentWidth;  // Subtract indent width for subsequent lines
-
-            if (tsl::gfx::calculateStringWidth(currentLine, fontSize, false) > currentMaxWidth) {
-                wrappedLines.push_back(((firstLine && useIndent) || !useIndent) ? currentLine : indent + currentLine);  // Indent if not the first line
-                currentLine.clear();  // Start a new line
-                firstLine = false;
-            }
-            i++;
-        }
-
-        if (!currentLine.empty()) {
-            wrappedLines.push_back(((firstLine && useIndent) || !useIndent) ? currentLine : indent + currentLine);  // Add the last line
-        }
-    } else if (wrappingMode == "word") {
-        StringStream stream(text);
-        while (stream >> currentWord) {
-            if (tsl::gfx::calculateStringWidth(currentLine + currentWord, fontSize, false) > currentMaxWidth) {
-                wrappedLines.push_back(((firstLine && useIndent) || !useIndent) ? currentLine : indent + currentLine);  // Add the current line
-                currentLine.clear();  // Start a new line with the current word
-                firstLine = false;
-            }
-
-            if (!currentLine.empty()) {
-                currentLine += " ";  // Add a space between words
-            }
-            currentLine += currentWord;
-        }
-
-        if (!currentLine.empty()) {
-            wrappedLines.push_back(((firstLine && useIndent) || !useIndent) ? currentLine : indent + currentLine);  // Add the last line
-        }
-    }
-
-    return wrappedLines;
-}
-
-
-
 bool applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::string& hexPath, const std::string& iniPath, const std::string& listString, const std::string& listPath, const std::string& jsonString, const std::string& jsonPath);
 
 std::string getFirstSectionText(const std::vector<std::vector<std::string>>& tableData, const std::string& packagePath) {
@@ -1144,6 +1091,56 @@ std::string getFirstSectionText(const std::vector<std::vector<std::string>>& tab
     return "";  // Or return a default message if appropriate
 }
 
+std::vector<std::string> wrapText(const std::string& text, float maxWidth, const std::string& wrappingMode, bool useIndent, const std::string& indent, float indentWidth, size_t fontSize) {
+    if (wrappingMode == "none" || (wrappingMode != "char" && wrappingMode != "word")) {
+        return std::vector<std::string>{text};  // Return the entire text as a single line
+    }
+
+    std::vector<std::string> wrappedLines;
+    std::string currentLine;
+    std::string currentWord;
+    bool firstLine = true;
+    float currentMaxWidth = maxWidth;
+
+    if (wrappingMode == "char") {
+        size_t i = 0;
+        while (i < text.size()) {
+            currentLine += text[i];
+            currentMaxWidth = firstLine ? maxWidth : maxWidth - indentWidth;  // Subtract indent width for subsequent lines
+
+            if (tsl::gfx::calculateStringWidth(currentLine, fontSize, false) > currentMaxWidth) {
+                wrappedLines.push_back(((firstLine && useIndent) || !useIndent) ? currentLine : indent + currentLine);  // Indent if not the first line
+                currentLine.clear();  // Start a new line
+                firstLine = false;
+            }
+            i++;
+        }
+
+        if (!currentLine.empty()) {
+            wrappedLines.push_back(((firstLine && useIndent) || !useIndent) ? currentLine : indent + currentLine);  // Add the last line
+        }
+    } else if (wrappingMode == "word") {
+        StringStream stream(text);
+        while (stream >> currentWord) {
+            if (tsl::gfx::calculateStringWidth(currentLine + currentWord, fontSize, false) > currentMaxWidth) {
+                wrappedLines.push_back(((firstLine && useIndent) || !useIndent) ? currentLine : indent + currentLine);  // Add the current line
+                currentLine.clear();  // Start a new line with the current word
+                firstLine = false;
+            }
+
+            if (!currentLine.empty()) {
+                currentLine += " ";  // Add a space between words
+            }
+            currentLine += currentWord;
+        }
+
+        if (!currentLine.empty()) {
+            wrappedLines.push_back(((firstLine && useIndent) || !useIndent) ? currentLine : indent + currentLine);  // Add the last line
+        }
+    }
+
+    return wrappedLines;
+}
 
 
 // ─── Helper: flatten + placeholder + wrap & expand ─────────────────────────────

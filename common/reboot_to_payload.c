@@ -26,7 +26,7 @@ static alignas(0x1000) u8 g_ff_page[0x1000];
 static alignas(0x1000) u8 g_work_page[0x1000];
 
 static void do_iram_dram_copy(void *buf, uintptr_t iram_addr, size_t size, int option) {
-    memcpy(g_work_page, buf, size);
+    __builtin_memcpy(g_work_page, buf, size);
 
     SecmonArgs args = {0};
     args.X[0]       = 0xF0000201;             /* smcAmsIramCopy */
@@ -36,7 +36,7 @@ static void do_iram_dram_copy(void *buf, uintptr_t iram_addr, size_t size, int o
     args.X[4]       = option;                 /* 0 = Read, 1 = Write */
     svcCallSecureMonitor(&args);
 
-    memcpy(buf, g_work_page, size);
+    __builtin_memcpy(buf, g_work_page, size);
 }
 
 static void copy_to_iram(uintptr_t iram_addr, void *buf, size_t size) {
@@ -44,7 +44,7 @@ static void copy_to_iram(uintptr_t iram_addr, void *buf, size_t size) {
 }
 
 static void clear_iram(void) {
-    memset(g_ff_page, 0xFF, sizeof(g_ff_page));
+    __builtin_memset(g_ff_page, 0xFF, sizeof(g_ff_page));
     for (size_t i = 0; i < IRAM_PAYLOAD_MAX_SIZE; i += sizeof(g_ff_page)) {
         copy_to_iram(IRAM_PAYLOAD_BASE + i, g_ff_page, sizeof(g_ff_page));
     }
