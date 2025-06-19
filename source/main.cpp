@@ -2967,6 +2967,34 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                         addPackageInfo(list, packageHeader);
                     }
                 }
+                if (commands.size() == 1) {
+                    // Check if the first command has at least one element
+                    if (!commands[0].empty()) {
+                        const std::string& commandName = commands[0][0];
+                        
+                        // Use starts_with if C++20 is available, otherwise use compare
+                        if (commandName.starts_with(MINI_PATTERN)) { // C++20
+                        // if (commandName.compare(0, MINI_PATTERN.length(), MINI_PATTERN) == 0) { // Pre-C++20
+                            
+                            // Calculate expected minimum length
+                            size_t expectedMinLength = MINI_PATTERN.length() + TRUE_STR.length();
+                            
+                            if (commandName.length() >= expectedMinLength) {
+                                std::string suffix = commandName.substr(MINI_PATTERN.length());
+                                
+                                // Only proceed if suffix matches expected values
+                                if (suffix == TRUE_STR) {
+                                    isMini = true;
+                                    commands.clear();
+                                } else if (suffix == FALSE_STR) {
+                                    isMini = false;
+                                    commands.clear();
+                                }
+                                // Invalid suffix: no action taken, preserves current state
+                            }
+                        }
+                    }
+                }
                 if (commands.size() == 0) {
                     if (optionName == dropdownSection)
                         skipSection = false;
@@ -2975,6 +3003,35 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                     continue;
                 }
             } else {
+                if (commands.size() == 1) {
+                    // Check if the first command has at least one element
+                    if (!commands[0].empty()) {
+                        const std::string& commandName = commands[0][0];
+                        
+                        // Use starts_with if C++20 is available, otherwise use compare
+                        if (commandName.starts_with(MINI_PATTERN)) { // C++20
+                        // if (commandName.compare(0, MINI_PATTERN.length(), MINI_PATTERN) == 0) { // Pre-C++20
+                            
+                            // Calculate expected minimum length
+                            size_t expectedMinLength = MINI_PATTERN.length() + TRUE_STR.length();
+                            
+                            if (commandName.length() >= expectedMinLength) {
+                                std::string suffix = commandName.substr(MINI_PATTERN.length());
+                                
+                                // Only proceed if suffix matches expected values
+                                if (suffix == TRUE_STR) {
+                                    isMini = true;
+                                    commands.clear();
+                                } else if (suffix == FALSE_STR) {
+                                    isMini = false;
+                                    commands.clear();
+                                }
+                                // Invalid suffix: no action taken, preserves current state
+                            }
+                        }
+                    }
+                }
+
                 if (commands.size() == 0) {
                     if (optionName.front() == '@') {
                         if (drawLocation.empty()) {
