@@ -703,7 +703,7 @@ public:
             tableData = {
                 {NOTICE, "", UTILIZES + " 2 MB (" + ramString + ")"}
             };
-            addTable(list, tableData, "", 160, 8, 7, 0, DEFAULT_STR, DEFAULT_STR, ramColor, RIGHT_STR, true);
+            addTable(list, tableData, "", 163, 8, 7, 0, DEFAULT_STR, DEFAULT_STR, ramColor, RIGHT_STR, true);
             // Memory expansion toggle
             useMemoryExpansion = (loaderTitle == "nx-ovlloader+" || 
                                   parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "memory_expansion") == TRUE_STR);
@@ -933,13 +933,13 @@ public:
         //return rootFrame.release();
 
         auto rootFrame = new tsl::elm::OverlayFrame(CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel);
-        if (inSubSettingsMenu) {
+        if (inSubSettingsMenu && ((dropdownSelection == "languageMenu") || (dropdownSelection == "keyComboMenu") || (dropdownSelection == "themeMenu") || (dropdownSelection == "wallpaperMenu"))) {
             jumpItemName = "";
             jumpItemValue = "";
             g_overlayFilename = "";
             list->jumpToItem(jumpItemName, jumpItemValue);
         } else {
-            jumpItemName = NULL_STR;
+            jumpItemName = "";
             jumpItemValue = "";
             g_overlayFilename = "";
         }
