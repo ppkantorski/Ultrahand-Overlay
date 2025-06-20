@@ -1343,7 +1343,7 @@ public:
             g_overlayFilename = "";
             list->jumpToItem(jumpItemName, jumpItemValue);
         } else {
-            jumpItemName = NULL_STR;
+            jumpItemName = "";
             jumpItemValue = "";
             g_overlayFilename = "";
         }
@@ -2558,9 +2558,9 @@ public:
                packageHeader.color);
         }
 
-        jumpItemName = "";
-        jumpItemValue = "";
-        g_overlayFilename = "";
+        //jumpItemName = "";
+        //jumpItemValue = "";
+        //g_overlayFilename = "";
         list->jumpToItem(jumpItemName, jumpItemValue);
         
         rootFrame->setContent(list.release());
@@ -3115,6 +3115,9 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                                 }
                                 if (keys & KEY_A) {
                                     inPackageMenu = false;
+                                    jumpItemName = "";
+                                    jumpItemValue = "";
+                                    g_overlayFilename = "";
                                     tsl::changeTo<MainMenu>("", optionName);
                                     simulatedSelectComplete = true;
                                     return true;
@@ -3783,7 +3786,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                         //listItem->setValue("TEST", true);
                         //std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(option.second, pathReplace);
                         listItem->setClickListener([commands, keyName = option.first, dropdownSection, packagePath, packageName,
-                            footer, lastSection, listItemRaw = listItem.get(), _lastPackageHeader = lastPackageHeader, i](uint64_t keys) {
+                            footer, lastSection, listItemRaw = listItem.get(), _lastPackageHeader = lastPackageHeader, commandMode, i](uint64_t keys) {
                             //listItemPtr = std::shared_ptr<tsl::elm::ListItem>(listItem.get(), [](auto*){})](uint64_t keys) {
                             
                             if (runningInterpreter.load(std::memory_order_acquire))
@@ -3817,6 +3820,15 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                                             selectedFooterDict[newKey] = footer;
                                     }
                                     lastSelectedListItem.reset();
+                                    if (commandMode == OPTION_STR || commandMode == SLOT_STR) {
+                                        jumpItemName = "";
+                                        jumpItemValue = "";
+                                        g_overlayFilename = "";
+                                    } else {
+                                        jumpItemName = "";
+                                        jumpItemValue = "";
+                                        g_overlayFilename = "";
+                                    }
                                     tsl::changeTo<SelectionOverlay>(packagePath, keyName, commands, newKey, _lastPackageHeader);
                                     //lastKeyName = keyName;
                                 }
@@ -5601,8 +5613,8 @@ public:
 
                 if ((keysDown & KEY_RIGHT) && !(keysDown & ~KEY_RIGHT & ~KEY_R & ALL_KEYS_MASK) && !stillTouching && (((!allowSlide && !unlockedSlide && onTrackBar) || (keysDown & KEY_R)) || !onTrackBar || simulatedNextPage)) {
                     g_overlayFilename = "";
-                    jumpItemName = NULL_STR;
-                    jumpItemValue = NULL_STR;
+                    jumpItemName = "";
+                    jumpItemValue = "";
                     simulatedNextPage = false;
                     allowSlide = unlockedSlide = false;
                     if (!usePageSwap) {
@@ -5631,8 +5643,8 @@ public:
                 }
                 if ((keysDown & KEY_LEFT) && !(keysDown & ~KEY_LEFT & ~KEY_R & ALL_KEYS_MASK) && !stillTouching && (((!allowSlide && onTrackBar && !unlockedSlide) || (keysDown & KEY_R)) || !onTrackBar || simulatedNextPage)) {
                     g_overlayFilename = "";
-                    jumpItemName = NULL_STR;
-                    jumpItemValue = NULL_STR;
+                    jumpItemName = "";
+                    jumpItemValue = "";
                     simulatedNextPage = false;
                     allowSlide = unlockedSlide = false;
                     if (!usePageSwap) {
