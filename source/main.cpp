@@ -936,11 +936,13 @@ public:
         if (inSubSettingsMenu && ((dropdownSelection == "languageMenu") || (dropdownSelection == KEY_COMBO_STR) || (dropdownSelection == "themeMenu") || (dropdownSelection == "wallpaperMenu"))) {
             jumpItemName = "";
             jumpItemValue = "";
+            jumpItemExactMatch = true;
             g_overlayFilename = "";
-            list->jumpToItem(jumpItemName, jumpItemValue);
+            list->jumpToItem(jumpItemName, jumpItemValue, jumpItemExactMatch);
         } else {
             jumpItemName = "";
             jumpItemValue = "";
+            jumpItemExactMatch = true;
             g_overlayFilename = "";
         }
         rootFrame->setContent(list.release());
@@ -1340,11 +1342,13 @@ public:
         if (inSubSettingsMenu && ((dropdownSelection == KEY_COMBO_STR) || (dropdownSelection == PRIORITY_STR))) {
             jumpItemName = "";
             jumpItemValue = "";
+            jumpItemExactMatch = true;
             g_overlayFilename = "";
-            list->jumpToItem(jumpItemName, jumpItemValue);
+            list->jumpToItem(jumpItemName, jumpItemValue, jumpItemExactMatch);
         } else {
             jumpItemName = "";
             jumpItemValue = "";
+            jumpItemExactMatch = true;
             g_overlayFilename = "";
         }
         rootFrame->setContent(list.release());
@@ -2561,7 +2565,7 @@ public:
         //jumpItemName = "";
         //jumpItemValue = "";
         //g_overlayFilename = "";
-        list->jumpToItem(jumpItemName, jumpItemValue);
+        list->jumpToItem(jumpItemName, jumpItemValue, jumpItemExactMatch);
         
         rootFrame->setContent(list.release());
         return rootFrame;
@@ -3082,6 +3086,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                                     lastSelectedListItem.reset();
                                     jumpItemName = "";
                                     jumpItemValue = "";
+                                    jumpItemExactMatch = true;
                                     g_overlayFilename = "";
                                     tsl::changeTo<PackageMenu>(packagePath, optionName, currentPage, packageName, 0, _lastPackageHeader);
                                     simulatedSelectComplete = true;
@@ -3117,6 +3122,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                                     inPackageMenu = false;
                                     jumpItemName = "";
                                     jumpItemValue = "";
+                                    jumpItemExactMatch = true;
                                     g_overlayFilename = "";
                                     tsl::changeTo<MainMenu>("", optionName);
                                     simulatedSelectComplete = true;
@@ -3749,6 +3755,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                                 allowSlide = unlockedSlide = false;
                                 jumpItemName = "";
                                 jumpItemValue = "";
+                                jumpItemExactMatch = true;
                                 g_overlayFilename = "";
                                 tsl::changeTo<PackageMenu>(forwarderPackagePath, "", LEFT_STR, forwarderPackageIniName, nestedMenuCount, _lastPackageHeader);
                                 simulatedSelectComplete = true;
@@ -3823,10 +3830,12 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                                     if (commandMode == OPTION_STR || commandMode == SLOT_STR) {
                                         jumpItemName = "";
                                         jumpItemValue = "";
+                                        jumpItemExactMatch = true;
                                         g_overlayFilename = "";
                                     } else {
                                         jumpItemName = "";
                                         jumpItemValue = "";
+                                        jumpItemExactMatch = true;
                                         g_overlayFilename = "";
                                     }
                                     tsl::changeTo<SelectionOverlay>(packagePath, keyName, commands, newKey, _lastPackageHeader);
@@ -4063,6 +4072,7 @@ public:
             //tsl::gfx::FontManager::clearCache();
             jumpItemName = "";
             jumpItemValue = "";
+            jumpItemExactMatch = true;
             g_overlayFilename = "";
         }
     /**
@@ -4363,6 +4373,7 @@ public:
                     lastSelectedListItem.reset();
                     jumpItemName = "";
                     jumpItemValue = "";
+                    jumpItemExactMatch = true;
                     g_overlayFilename = "";
 
                     tsl::pop();
@@ -4380,6 +4391,7 @@ public:
                     lastSelectedListItem.reset();
                     jumpItemName = "";
                     jumpItemValue = "";
+                    jumpItemExactMatch = true;
                     g_overlayFilename = "";
                     tsl::pop();
                     tsl::changeTo<PackageMenu>(lastPackagePath, dropdownSection, LEFT_STR, lastPackageName, nestedMenuCount, pageHeader);
@@ -4977,6 +4989,7 @@ public:
                         if (overlayFileName == g_overlayFilename) {
                             jumpItemName = newOverlayName;
                             jumpItemValue = overlayVersion;
+                            jumpItemExactMatch = true;
                         }
 
                         // Add a click listener to load the overlay when clicked upon
@@ -5020,6 +5033,7 @@ public:
                                 }
                                 jumpItemName = newStarred ? STAR_SYMBOL + "  " + overlayName : overlayName;
                                 jumpItemValue = overlayVersion;
+                                jumpItemExactMatch = true;
                                 // Also clear the global overlay filename since we're not on the main overlay list
                                 g_overlayFilename = "";
 
@@ -5044,6 +5058,7 @@ public:
                                 }
                                 jumpItemName = newStarred ? STAR_SYMBOL + "  " + overlayName : overlayName;
                                 jumpItemValue = overlayVersion;
+                                jumpItemExactMatch = true;
                                 // Also clear the global overlay filename since we're not on the main overlay list
                                 g_overlayFilename = "";
                                 
@@ -5075,6 +5090,7 @@ public:
                             g_overlayFilename = "";
                             jumpItemName = "";
                             jumpItemValue = "";
+                            jumpItemExactMatch = true;
                             inMainMenu = false;
                             inHiddenMode = true;
                             tsl::changeTo<MainMenu>(OVERLAYS_STR);
@@ -5335,6 +5351,7 @@ public:
                                 
                                 jumpItemName = "";
                                 jumpItemValue = "";
+                                jumpItemExactMatch = true;
                                 g_overlayFilename = "";
 
                                 lastPackagePath = packageFilePath;
@@ -5352,6 +5369,7 @@ public:
                                 
                                 jumpItemName = newStarred ? STAR_SYMBOL + "  " + newPackageName : newPackageName;
                                 jumpItemValue = packageVersion;
+                                jumpItemExactMatch = true;
                                 // Also clear the global overlay filename since we're not on the main overlay list
                                 g_overlayFilename = "";
 
@@ -5375,6 +5393,7 @@ public:
                                 }
                                 jumpItemName = newStarred ? STAR_SYMBOL + "  " + newPackageName : newPackageName;
                                 jumpItemValue = packageVersion;
+                                jumpItemExactMatch = true;
                                 // Also clear the global overlay filename since we're not on the main overlay list
                                 g_overlayFilename = "";
                                 
@@ -5452,7 +5471,7 @@ public:
         //return rootFrame.release();
 
         auto rootFrame = new tsl::elm::OverlayFrame(CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel, noClickableItems, menuMode+hiddenMenuMode+dropdownSection, "", "", "");
-        list->jumpToItem(jumpItemName, jumpItemValue);
+        list->jumpToItem(jumpItemName, jumpItemValue, jumpItemExactMatch);
         rootFrame->setContent(list.release());
         
         return rootFrame;
@@ -5538,6 +5557,7 @@ public:
                 // NEW: Set the highlight to "Hidden" when returning from a hidden overlay
                 jumpItemName = HIDDEN;
                 jumpItemValue = DROPDOWN_SYMBOL;
+                jumpItemExactMatch = true;
                 // Also clear the global overlay filename since we're not on the main overlay list
                 g_overlayFilename = "";
                 wasInHiddenMode = false;
@@ -5616,6 +5636,7 @@ public:
                     g_overlayFilename = "";
                     jumpItemName = "";
                     jumpItemValue = "";
+                    jumpItemExactMatch = true;
                     simulatedNextPage = false;
                     allowSlide = unlockedSlide = false;
                     if (!usePageSwap) {
@@ -5646,6 +5667,7 @@ public:
                     g_overlayFilename = "";
                     jumpItemName = "";
                     jumpItemValue = "";
+                    jumpItemExactMatch = true;
                     simulatedNextPage = false;
                     allowSlide = unlockedSlide = false;
                     if (!usePageSwap) {
@@ -5695,9 +5717,10 @@ public:
 
                 if ((keysDown & SYSTEM_SETTINGS_KEY) && !stillTouching) {
                     inMainMenu = false;
-                    g_overlayFilename = "";
                     jumpItemName = "";
                     jumpItemValue = "";
+                    jumpItemExactMatch = true;
+                    g_overlayFilename = "";
                     tsl::changeTo<UltrahandSettingsMenu>();
                     //if (menuMode != PACKAGES_STR) startInterpreterThread();
                     
@@ -5738,6 +5761,7 @@ public:
                         // NEW: Set the highlight to "Hidden" when returning from a hidden overlay
                         jumpItemName = HIDDEN;
                         jumpItemValue = DROPDOWN_SYMBOL;
+                        jumpItemExactMatch = true;
                         // Also clear the global overlay filename since we're not on the main overlay list
                         g_overlayFilename = "";
                         returningToMain = true;
@@ -5853,9 +5877,11 @@ public:
 
         cleanupCurl();
         socketExit();
-        g_overlayFilename = "";
+
         jumpItemName = "";
         jumpItemValue = "";
+        jumpItemExactMatch = true;
+        g_overlayFilename = "";
         //smExit();
         //closeInterpreterThread(); // shouldn't be running, but run close anyways
     }
