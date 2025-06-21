@@ -3774,12 +3774,21 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             std::string refreshPattern = cmd[1];
             removeQuotes(refreshPattern);
             std::string refreshPattern2 = "";
+            std::string refreshPattern3 = "";
+            
             if (cmd.size() > 2) {
                 refreshPattern2 = cmd[2];
                 removeQuotes(refreshPattern2);
             }
+            
+            if (cmd.size() > 3) {
+                refreshPattern3 = cmd[3];
+                removeQuotes(refreshPattern3);
+            }
+            
             jumpItemName = refreshPattern;
             jumpItemValue = refreshPattern2;
+            jumpItemExactMatch = !(refreshPattern3 == FALSE_STR);
             refreshPage = true;
         }
     } else if (commandName == "logging") {
