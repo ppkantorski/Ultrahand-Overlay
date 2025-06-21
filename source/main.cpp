@@ -45,6 +45,9 @@ static bool returningToSettings = false;
 static bool returningToPackage = false;
 static bool returningToSubPackage = false;
 static bool returningToSelectionMenu = false;
+static bool languageWasChanged = false;
+
+
 //static bool inMainMenu = false; // moved to libtesla
 static bool wasInHiddenMode = false;
 static bool inHiddenMode = false;
@@ -237,6 +240,7 @@ bool handleRunningInterpreter(uint64_t& keysHeld) {
 // Forward declaration of the MainMenu class.
 class MainMenu;
 
+
 class UltrahandSettingsMenu : public tsl::Gui {
 private:
     std::string entryName, entryMode, overlayName, dropdownSelection, settingsIniPath;
@@ -245,6 +249,7 @@ private:
     int MAX_PRIORITY = 20;
     std::string comboLabel;
     std::string lastSelectedListItemFooter = "";
+    
     bool rightAlignmentState;
 
     void addListItem(std::unique_ptr<tsl::elm::List>& list, const std::string& title, const std::string& value, const std::string& targetMenu) {
@@ -509,7 +514,6 @@ public:
         
         const std::vector<std::string> defaultLanguagesRepresentation = {ENGLISH, SPANISH, FRENCH, GERMAN, JAPANESE, KOREAN, ITALIAN, DUTCH, PORTUGUESE, RUSSIAN, UKRAINIAN, POLISH, SIMPLIFIED_CHINESE, TRADITIONAL_CHINESE};
         static const std::vector<std::string> defaultLanguages = {"en", "es", "fr", "de", "ja", "ko", "it", "nl", "pt", "ru", "uk", "pl", "zh-cn", "zh-tw"};
-        //static const std::vector<std::string> defaultCombos = {"ZL+ZR+DDOWN", "ZL+ZR+DRIGHT", "ZL+ZR+DUP", "ZL+ZR+DLEFT", "L+R+DDOWN", "L+R+DRIGHT", "L+R+DUP", "L+R+DLEFT", "L+DDOWN", "R+DDOWN", "ZL+ZR+PLUS", "L+R+PLUS", "ZL+PLUS", "ZR+PLUS", "MINUS+PLUS", "LS+RS", "L+DDOWN+RS"};
         
         auto list = std::make_unique<tsl::elm::List>();
         
@@ -584,6 +588,7 @@ public:
                         simulatedSelectComplete = true;
                         lastSelectedListItem->triggerClickAnimation();
                         lastSelectedListItemFooter = defaultLangMode;
+                        languageWasChanged = true;
                         return true;
                     }
                     return false;
@@ -940,11 +945,21 @@ public:
             g_overlayFilename = "";
             list->jumpToItem(jumpItemName, jumpItemValue, jumpItemExactMatch);
         } else {
-            jumpItemName = "";
-            jumpItemValue = "";
-            jumpItemExactMatch = true;
-            g_overlayFilename = "";
+            if (languageWasChanged) {
+                jumpItemName = LANGUAGE;
+                jumpItemValue = "";
+                jumpItemExactMatch = true;
+                g_overlayFilename = "";
+                languageWasChanged = false;
+                list->jumpToItem(jumpItemName, jumpItemValue, jumpItemExactMatch, true);
+            } else {
+                jumpItemName = "";
+                jumpItemValue = "";
+                jumpItemExactMatch = true;
+                g_overlayFilename = "";
+            }
         }
+
         rootFrame->setContent(list.release());
         return rootFrame;
 
@@ -1011,6 +1026,7 @@ public:
                 inSubSettingsMenu = false;
                 returningToSettings = true;
                 tsl::goBack();
+
                 if (reloadMenu2) {
                     tsl::goBack();
                     tsl::changeTo<UltrahandSettingsMenu>();
