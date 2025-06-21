@@ -1608,6 +1608,7 @@ public:
                 index++;
             }
         } else {
+            //addDummyListItem(list);
             addHeader(list, specificKey);
 
             noClickableItems = true;
@@ -1623,9 +1624,9 @@ public:
             }
     
             // Use default parameters for the table view
-            const size_t tableColumnOffset = 164;
+            const size_t tableColumnOffset = 163;
             const size_t tableStartGap = 19;
-            const size_t tableEndGap = 20;
+            const size_t tableEndGap = 10;
             const size_t tableSpacing = 10;
             const std::string tableSectionTextColor = DEFAULT_STR;
             const std::string tableInfoTextColor = DEFAULT_STR;
@@ -1636,22 +1637,21 @@ public:
             const bool isScrollableTable = true;
             const std::string wrappingMode = "char";
             const bool useWrappedTextIndent = true;
-    
+            
             //const bool usingTopPivot = true;
-            const bool usingBottomPivot = false;
-
-            addDummyListItem(list);
+            //const bool usingBottomPivot = false;
 
             std::vector<std::vector<std::string>> dummyTableData;
 
+            addDummyListItem(list);
             // Draw the table using the sectionLines and empty infoLines
             drawTable(list, dummyTableData, sectionLines, infoLines, tableColumnOffset, tableStartGap, tableEndGap, tableSpacing,
                       tableSectionTextColor, tableInfoTextColor, tableInfoTextColor, tableAlignment, hideTableBackground, useHeaderIndent, isPolling, isScrollableTable, wrappingMode, useWrappedTextIndent);
-
-            if (usingBottomPivot) {
-                addDummyListItem(list);
-                //lastItemIsScrollableTable = false;
-            }
+            addDummyListItem(list);
+            //if (usingBottomPivot) {
+            //    addDummyListItem(list);
+            //    //lastItemIsScrollableTable = false;
+            //}
         }
 
         std::string packageVersion = isFromMainMenu ? "" : packageRootLayerVersion;
@@ -4006,7 +4006,8 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
     if (onlyTables) {
         //auto dummyItem = new tsl::elm::DummyListItem();
         //list->addItem(dummyItem, 0, 1);
-        addDummyListItem(list, 1);
+        addDummyListItem(list, 1); // assuming a header is always above
+        addDummyListItem(list);
     }
 
     //if (lastItemIsScrollableTable) {
