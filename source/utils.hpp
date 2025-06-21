@@ -1187,7 +1187,7 @@ static bool buildTableDrawerLines(
             // Wrap the base text according to wrappingMode and indent params
             auto wrappedLines = wrapText(
                 baseText,
-                xMax - 12 - 4-2,
+                xMax - 22,
                 wrappingMode,
                 useWrappedTextIndent,
                 indent, indentWidth,
