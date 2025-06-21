@@ -112,8 +112,8 @@ static void removeKeyComboFromOtherOverlays(const std::string& keyCombo, const s
 const std::vector<std::string> defaultCombos = {
     "ZL+ZR+DDOWN", "ZL+ZR+DRIGHT", "ZL+ZR+DUP", "ZL+ZR+DLEFT", 
     "L+R+DDOWN", "L+R+DRIGHT", "L+R+DUP", "L+R+DLEFT", 
-    "L+DDOWN", "R+DDOWN", "ZL+ZR+PLUS", "L+R+PLUS", 
-    "ZL+PLUS", "ZR+PLUS", "MINUS+PLUS", "LS+RS", "L+DDOWN+RS"
+    "L+DDOWN", "R+DDOWN", "ZL+ZR+PLUS", "L+R+PLUS", "ZL+ZR+MINUS", "L+R+MINUS", 
+    "ZL+MINUS", "ZR+MINUS", "ZL+PLUS", "ZR+PLUS", "MINUS+PLUS", "LS+RS", "L+DDOWN+RS"
 };
 
 // Global constant map for button and arrow placeholders
