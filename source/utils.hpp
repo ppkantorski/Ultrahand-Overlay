@@ -2556,7 +2556,7 @@ bool applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
             if (order.empty()) {
                 return returnOrNull(decimalToHex(decimalValue));
             } else {
-                return returnOrNull(decimalToHex(decimalValue, std::stoi(order)));
+                return returnOrNull(decimalToHex(decimalValue, ult::stoi(order)));
             }
         }},
         {"{ascii_to_hex(", [&](const std::string& placeholder) {
@@ -3313,6 +3313,28 @@ void handleIniCommands(const std::vector<std::string>& cmd, const std::string& p
     }
 }
 
+void handleJsonCommands(const std::vector<std::string>& cmd, const std::string& packagePath) {
+    if ((cmd[0] == "set-json-val" || cmd[0] == "set-json-value" || cmd[0] == "set-json-key") && cmd.size() >= 4) {
+        std::string sourcePath = cmd[1];
+        preprocessPath(sourcePath, packagePath);
+        
+        std::string desiredKey = cmd[2];
+        removeQuotes(desiredKey);
+        
+        std::string desiredValue = std::accumulate(cmd.begin() + 3, cmd.end(), std::string(""), [](const std::string& a, const std::string& b) -> std::string {
+            std::string returnStr = (a.empty() ? b : a + " " + b);
+            removeQuotes(returnStr);
+            return returnStr;
+        });
+        
+        // set-json-val and set-json-value create file if it doesn't exist
+        // set-json-key does nothing if file doesn't exist
+        bool createIfNotExists = (cmd[0] == "set-json-val" || cmd[0] == "set-json-value");
+        
+        ult::setJsonValue(sourcePath, desiredKey, desiredValue, createIfNotExists);
+    }
+}
+
 void handleHexEdit(const std::string& sourcePath, const std::string& secondArg, const std::string& thirdArg, const std::string& fourthArg, const std::string& fifthArg, const std::string& commandName, const std::vector<std::string>& cmd) {
     if (commandName == "hex-by-offset") {
         hexEditByOffset(sourcePath, secondArg, thirdArg);
@@ -3348,8 +3370,8 @@ void handleHexEdit(const std::string& sourcePath, const std::string& secondArg, 
             hexDataToReplace = decimalToHex(secondArg);
             hexDataReplacement = decimalToHex(thirdArg);
         } else {
-            hexDataToReplace = decimalToHex(secondArg, std::stoi(fourthArg));
-            hexDataReplacement = decimalToHex(thirdArg, std::stoi(fourthArg));
+            hexDataToReplace = decimalToHex(secondArg, ult::stoi(fourthArg));
+            hexDataReplacement = decimalToHex(thirdArg, ult::stoi(fourthArg));
         }
     
         if (cmd.size() >= 6) {
@@ -3366,8 +3388,8 @@ void handleHexEdit(const std::string& sourcePath, const std::string& secondArg, 
             hexDataToReplace = decimalToReversedHex(secondArg);
             hexDataReplacement = decimalToReversedHex(thirdArg);
         } else {
-            hexDataToReplace = decimalToReversedHex(secondArg, std::stoi(fourthArg));
-            hexDataReplacement = decimalToReversedHex(thirdArg, std::stoi(fourthArg));
+            hexDataToReplace = decimalToReversedHex(secondArg, ult::stoi(fourthArg));
+            hexDataReplacement = decimalToReversedHex(thirdArg, ult::stoi(fourthArg));
         }
     
         if (cmd.size() >= 6) {
@@ -3383,12 +3405,12 @@ void handleHexByCustom(const std::string& sourcePath, const std::string& customP
     if (hexDataReplacement != NULL_STR) {
         if (commandName == "hex-by-custom-decimal-offset") {
             if (!byteGroupSize.empty())
-                hexDataReplacement = decimalToHex(hexDataReplacement, std::stoi(byteGroupSize));
+                hexDataReplacement = decimalToHex(hexDataReplacement, ult::stoi(byteGroupSize));
             else
                 hexDataReplacement = decimalToHex(hexDataReplacement);
         } else if (commandName == "hex-by-custom-rdecimal-offset") {
             if (!byteGroupSize.empty())
-                hexDataReplacement = decimalToReversedHex(hexDataReplacement, std::stoi(byteGroupSize));
+                hexDataReplacement = decimalToReversedHex(hexDataReplacement, ult::stoi(byteGroupSize));
             else
                 hexDataReplacement = decimalToReversedHex(hexDataReplacement);
         }
@@ -3435,6 +3457,8 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
         handleMoveCommand(cmd, packagePath);
     } else if (commandName == "add-ini-section" || commandName == "rename-ini-section" || commandName == "remove-ini-section" || commandName == "remove-ini-key" || commandName == "set-ini-val" || commandName == "set-ini-value" || commandName == "set-ini-key") {
         handleIniCommands(cmd, packagePath);
+    } else if (commandName == "set-json-val" || commandName == "set-json-value" || commandName == "set-json-key") {
+        handleJsonCommands(cmd, packagePath);
     } else if (commandName == "set-footer") {
         if (cmd.size() >= 2) {
             std::string desiredValue = cmd[1];

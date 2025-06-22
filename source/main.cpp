@@ -388,6 +388,7 @@ private:
                 isDownloadCommand = true;
 
                 if (title == UPDATE_ULTRAHAND) {
+                    std::string versionLabel = cleanVersionLabel(parseValueFromIniSection((SETTINGS_PATH+"RELEASE.ini"), "Release Info", "latest_version"));
                     std::string loaderUrl, loaderPlusUrl;
                     if (isVersionGreaterOrEqual(amsVersion,"1.8.0")) {
                         loaderUrl = NX_OVLLOADER_ZIP_URL;
@@ -396,7 +397,7 @@ private:
                         loaderUrl = OLD_NX_OVLLOADER_ZIP_URL;
                         loaderPlusUrl = OLD_NX_OVLLOADER_PLUS_ZIP_URL;
                     }
-
+                    
                     interpreterCommands = {
                         {"try:"},
                         //{"delete", THEMES_PATH+"ultra.ini"},
@@ -408,7 +409,8 @@ private:
                         {"download", INCLUDED_THEME_FOLDER_URL+"ultra-blue.ini", THEMES_PATH},
                         {"download", loaderUrl, EXPANSION_PATH},
                         {"download", loaderPlusUrl, EXPANSION_PATH},
-                        {"download", downloadUrl, DOWNLOADS_PATH}
+                        {"download", downloadUrl, DOWNLOADS_PATH},
+                        {"set-json-val", HB_APPSTORE_JSON, "version", versionLabel}
                         //"delete", THEME_CONFIG_INI_PATH}
                     };
                 } else {
