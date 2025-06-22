@@ -3314,7 +3314,22 @@ void handleIniCommands(const std::vector<std::string>& cmd, const std::string& p
 }
 
 void handleJsonCommands(const std::vector<std::string>& cmd, const std::string& packagePath) {
-    if ((cmd[0] == "set-json-val" || cmd[0] == "set-json-value" || cmd[0] == "set-json-key") && cmd.size() >= 4) {
+    if (cmd[0] == "set-json-key" && cmd.size() >= 4) {
+        std::string sourcePath = cmd[1];
+        preprocessPath(sourcePath, packagePath);
+        
+        std::string oldKey = cmd[2];
+        removeQuotes(oldKey);
+        
+        std::string newKey = std::accumulate(cmd.begin() + 3, cmd.end(), std::string(""), [](const std::string& a, const std::string& b) -> std::string {
+            std::string returnStr = (a.empty() ? b : a + " " + b);
+            removeQuotes(returnStr);
+            return returnStr;
+        });
+        
+        ult::renameJsonKey(sourcePath, oldKey, newKey);
+    }
+    else if ((cmd[0] == "set-json-val" || cmd[0] == "set-json-value") && cmd.size() >= 4) {
         std::string sourcePath = cmd[1];
         preprocessPath(sourcePath, packagePath);
         
@@ -3328,8 +3343,7 @@ void handleJsonCommands(const std::vector<std::string>& cmd, const std::string& 
         });
         
         // set-json-val and set-json-value create file if it doesn't exist
-        // set-json-key does nothing if file doesn't exist
-        bool createIfNotExists = (cmd[0] == "set-json-val" || cmd[0] == "set-json-value");
+        bool createIfNotExists = true;
         
         ult::setJsonValue(sourcePath, desiredKey, desiredValue, createIfNotExists);
     }
