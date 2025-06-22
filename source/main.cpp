@@ -2925,8 +2925,8 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
         usingBottomPivot = false;
         hideTableBackground = false;
         useHeaderIndent = false;
-        tableStartGap = 19;
-        tableEndGap = 8;
+        tableStartGap = 19-2;
+        tableEndGap = 10;
         tableColumnOffset = 163;
         tableSpacing = 0;
         tableSectionTextColor = DEFAULT_STR;
@@ -3443,7 +3443,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
             if (!skipSection && !skipSystem) { // for skipping the drawing of sections
                 if (commandMode == TABLE_STR) {
                     if (useHeaderIndent) {
-                        tableStartGap = tableEndGap = 19; // for perfect alignment for header tables
+                        tableStartGap = tableEndGap = 19-2; // for perfect alignment for header tables
                         isScrollableTable = false;
                         lastPackageHeader = getFirstSectionText(tableData, packagePath);
                     }
