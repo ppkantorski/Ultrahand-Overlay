@@ -397,22 +397,20 @@ private:
                         loaderUrl = OLD_NX_OVLLOADER_ZIP_URL;
                         loaderPlusUrl = OLD_NX_OVLLOADER_PLUS_ZIP_URL;
                     }
-                    
-                    interpreterCommands = {
+
+                    std::vector<std::vector<std::string>> interpreterCommands = {
                         {"try:"},
-                        //{"delete", THEMES_PATH+"ultra.ini"},
-                        //{"delete", THEMES_PATH+"classic.ini"},
-                        //{"delete", EXPANSION_PATH + "nx-ovlloader.zip"},
-                        //{"delete", EXPANSION_PATH + "nx-ovlloader+.zip"},
                         {"delete", targetPath},
-                        {"download", INCLUDED_THEME_FOLDER_URL+"ultra.ini", THEMES_PATH},
-                        {"download", INCLUDED_THEME_FOLDER_URL+"ultra-blue.ini", THEMES_PATH},
+                        {"download", INCLUDED_THEME_FOLDER_URL + "ultra.ini", THEMES_PATH},
+                        {"download", INCLUDED_THEME_FOLDER_URL + "ultra-blue.ini", THEMES_PATH},
                         {"download", loaderUrl, EXPANSION_PATH},
                         {"download", loaderPlusUrl, EXPANSION_PATH},
-                        {"download", downloadUrl, DOWNLOADS_PATH},
-                        {"set-json-val", HB_APPSTORE_JSON, "version", versionLabel}
-                        //"delete", THEME_CONFIG_INI_PATH}
+                        {"download", downloadUrl, DOWNLOADS_PATH}
                     };
+                    
+                    if (!versionLabel.empty()) {
+                        interpreterCommands.push_back({"set-json-val", HB_APPSTORE_JSON, "version", versionLabel});
+                    }
                 } else {
                     interpreterCommands = {
                         {"try:"},
