@@ -1307,7 +1307,7 @@ void drawTable(
     std::vector<std::string>&             sectionLines,
     std::vector<std::string>&             infoLines,
     size_t columnOffset             = 163,
-    size_t startGap                 = 19,
+    size_t startGap                 = 19-2,
     size_t endGap                   = 6,
     size_t newlineGap               = 4,
     const std::string& tableSectionTextColor       = DEFAULT_STR,
@@ -1376,7 +1376,7 @@ void drawTable(
 
             // Minimal branching, maximum cache efficiency
             if (useHeaderIndent) {
-                renderer->drawRect(x-2, y+2, 4, 22, renderer->a(tsl::headerSeparatorColor));
+                renderer->drawRect(x-2, y, 4, 22, renderer->a(tsl::headerSeparatorColor));
             }
 
             // Pre-calculate everything, optimize for CPU pipeline
