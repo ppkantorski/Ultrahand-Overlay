@@ -940,7 +940,7 @@ public:
                 jumpItemValue = "";
                 jumpItemExactMatch = true;
                 g_overlayFilename = "";
-                
+                languageWasChanged = false;
                 //tsl::elm::s_skipFrame = true;
                 list->jumpToItem(jumpItemName, jumpItemValue, jumpItemExactMatch);
             } else {
@@ -1026,7 +1026,7 @@ public:
                     tsl::elm::skipDeconstruction = false;
                     tsl::changeTo<UltrahandSettingsMenu>();
                     reloadMenu2 = false;
-                    languageWasChanged = false;
+                    //languageWasChanged = false;
                 } else {
                     tsl::goBack();
                 }
