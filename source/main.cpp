@@ -398,7 +398,7 @@ private:
                         loaderPlusUrl = OLD_NX_OVLLOADER_PLUS_ZIP_URL;
                     }
 
-                    std::vector<std::vector<std::string>> interpreterCommands = {
+                    interpreterCommands = {
                         {"try:"},
                         {"delete", targetPath},
                         {"download", INCLUDED_THEME_FOLDER_URL + "ultra.ini", THEMES_PATH},
@@ -819,12 +819,6 @@ public:
                     setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "current_wallpaper", "");
                     deleteFileOrDirectory(WALLPAPER_PATH);
                     reloadWallpaper();
-                    //refreshWallpaper.store(true, std::memory_order_release);
-
-                    //deleteFileOrDirectory(THEME_CONFIG_INI_PATH);
-                    //if (isFileOrDirectory(defaultTheme)) copyFileOrDirectory(defaultTheme, THEME_CONFIG_INI_PATH);
-                    //else initializeTheme();
-                    //tsl::initializeThemeVars();
                     reloadMenu = reloadMenu2 = true;
                     lastSelectedListItem->setValue("");
                     selectedListItem->setValue(OPTION_SYMBOL);
@@ -866,10 +860,6 @@ public:
                         copyPercentage.store(-1, std::memory_order_release);
                         reloadWallpaper();
                         
-                        //clearWallpaperData();
-                        //initializeTheme();
-                        //tsl::initializeThemeVars();
-                        //reloadMenu = reloadMenu2 = true;
                         lastSelectedListItem->setValue("");
                         selectedListItem->setValue(wallpaperName);
                         listItemRaw->setValue(CHECKMARK_SYMBOL);
@@ -4086,10 +4076,9 @@ public:
     PackageMenu(const std::string& path, const std::string& sectionName = "", const std::string& page = LEFT_STR, const std::string& _packageName = PACKAGE_FILENAME, const size_t _nestedlayer = 0, const std::string& _pageHeader = "") :
         packagePath(path), dropdownSection(sectionName), currentPage(page), packageName(_packageName), nestedLayer(_nestedlayer), pageHeader(_pageHeader) {
             //tsl::gfx::FontManager::clearCache();
-            jumpItemName = "";
+            jumpItemName = ".";
             jumpItemValue = "";
             jumpItemExactMatch = true;
-            g_overlayFilename = "";
         }
     /**
      * @brief Destroys the `PackageMenu` instance.
@@ -4637,6 +4626,9 @@ public:
      */
     MainMenu(const std::string& hiddenMenuMode = "", const std::string& sectionName = "") : hiddenMenuMode(hiddenMenuMode), dropdownSection(sectionName) {
         //tsl::gfx::FontManager::clearCache();
+        jumpItemName = ".";
+        jumpItemValue = "";
+        jumpItemExactMatch = true;
     }
     /**
      * @brief Destroys the `MainMenu` instance.
