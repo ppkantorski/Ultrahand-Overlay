@@ -940,8 +940,9 @@ public:
                 jumpItemValue = "";
                 jumpItemExactMatch = true;
                 g_overlayFilename = "";
-                languageWasChanged = false;
-                list->jumpToItem(jumpItemName, jumpItemValue, jumpItemExactMatch, true);
+                
+                //tsl::elm::s_skipFrame = true;
+                list->jumpToItem(jumpItemName, jumpItemValue, jumpItemExactMatch);
             } else {
                 jumpItemName = "";
                 jumpItemValue = "";
@@ -1016,12 +1017,18 @@ public:
                 allowSlide = unlockedSlide = false;
                 inSubSettingsMenu = false;
                 returningToSettings = true;
-                tsl::goBack();
+                
+                
 
                 if (reloadMenu2) {
-                    tsl::goBack();
+                    tsl::elm::skipDeconstruction = true;
+                    tsl::goBack(2);
+                    tsl::elm::skipDeconstruction = false;
                     tsl::changeTo<UltrahandSettingsMenu>();
                     reloadMenu2 = false;
+                    languageWasChanged = false;
+                } else {
+                    tsl::goBack();
                 }
                 simulatedBackComplete = true;
                 return true;
@@ -5481,7 +5488,10 @@ public:
         //return rootFrame.release();
 
         auto rootFrame = new tsl::elm::OverlayFrame(CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel, noClickableItems, menuMode+hiddenMenuMode+dropdownSection, "", "", "");
-        list->jumpToItem(jumpItemName, jumpItemValue, jumpItemExactMatch);
+        if (g_overlayFilename != "ovlmenu.ovl")
+            list->jumpToItem(jumpItemName, jumpItemValue, jumpItemExactMatch);
+        else
+            g_overlayFilename = "";
         rootFrame->setContent(list.release());
         
         return rootFrame;
