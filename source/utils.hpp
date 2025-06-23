@@ -1324,17 +1324,44 @@ void drawTable(
 ) {
     // Helper for raw colors
     auto getRawColor = [](const std::string& c, auto def) {
-        if (c=="warning")    return tsl::warningTextColor;
-        if (c=="text")       return tsl::defaultTextColor;
-        if (c=="on_value")   return tsl::onTextColor;
-        if (c=="off_value")  return tsl::offTextColor;
-        if (c=="header")     return tsl::headerTextColor;
-        if (c=="info")       return tsl::infoTextColor;
-        if (c=="section")    return tsl::sectionTextColor;
-        if (c=="healthy_ram")return tsl::healthyRamTextColor;
-        if (c=="neutral_ram")return tsl::neutralRamTextColor;
-        if (c=="bad_ram")    return tsl::badRamTextColor;
-        return (c==DEFAULT_STR) ? def : tsl::RGB888(c);
+        // Check most common/special case first
+        if (c == DEFAULT_STR) return def;
+        
+        // Quick length check to eliminate impossible matches
+        const size_t len = c.length();
+        
+        // Group by length to reduce comparisons
+        switch (len) {
+            case 4:
+                if (c == "text") return tsl::defaultTextColor;
+                if (c == "info") return tsl::infoTextColor;
+                break;
+                
+            case 6:
+                if (c == "header") return tsl::headerTextColor;
+                break;
+                
+            case 7:
+                if (c[0] == 'w' && c == "warning") return tsl::warningTextColor;
+                if (c[0] == 's' && c == "section") return tsl::sectionTextColor;
+                if (c[0] == 'b' && c == "bad_ram") return tsl::badRamTextColor;
+                break;
+                
+            case 8:
+                if (c == "on_value") return tsl::onTextColor;
+                break;
+                
+            case 9:
+                if (c == "off_value") return tsl::offTextColor;
+                break;
+                
+            case 11:
+                if (c[0] == 'h' && c == "healthy_ram") return tsl::healthyRamTextColor;
+                if (c[0] == 'n' && c == "neutral_ram") return tsl::neutralRamTextColor;
+                break;
+        }
+        
+        return tsl::RGB888(c);
     };
 
     // Prebuild initial buffers
