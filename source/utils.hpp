@@ -1337,10 +1337,6 @@ void drawTable(
         return (c==DEFAULT_STR) ? def : tsl::RGB888(c);
     };
 
-    const auto secRaw    = getRawColor(tableSectionTextColor,   tsl::sectionTextColor);
-    const auto infoRaw   = getRawColor(tableInfoTextColor,      tsl::infoTextColor);
-    const auto hiliteRaw = getRawColor(tableInfoTextHighlightColor, tsl::infoTextColor);
-
     // Prebuild initial buffers
     std::vector<std::string> cacheExpSec, cacheExpInfo;
     std::vector<s32>         cacheYOff;
@@ -1378,6 +1374,10 @@ void drawTable(
             if (useHeaderIndent) {
                 renderer->drawRect(x-2, y, 4, 22, renderer->a(tsl::headerSeparatorColor));
             }
+
+            const auto secRaw    = getRawColor(tableSectionTextColor,   tsl::sectionTextColor);
+            const auto infoRaw   = getRawColor(tableInfoTextColor,      tsl::infoTextColor);
+            const auto hiliteRaw = getRawColor(tableInfoTextHighlightColor, tsl::infoTextColor);
 
             // Pre-calculate everything, optimize for CPU pipeline
             const bool sameCol = (tableInfoTextColor == tableInfoTextHighlightColor);
