@@ -947,6 +947,7 @@ public:
                 jumpItemValue = "";
                 jumpItemExactMatch = true;
                 g_overlayFilename = "";
+                list->jumpToItem(jumpItemName, jumpItemValue, jumpItemExactMatch);
             }
         }
 
@@ -1350,13 +1351,13 @@ public:
             jumpItemValue = "";
             jumpItemExactMatch = true;
             g_overlayFilename = "";
-            list->jumpToItem(jumpItemName, jumpItemValue, jumpItemExactMatch);
         } else {
-            jumpItemName = "";
+            jumpItemName = NULL_STR;
             jumpItemValue = "";
             jumpItemExactMatch = true;
             g_overlayFilename = "";
         }
+        list->jumpToItem(jumpItemName, jumpItemValue, jumpItemExactMatch);
         rootFrame->setContent(list.release());
         return rootFrame;
     }
@@ -3090,10 +3091,10 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                                     inPackageMenu = false;
                                     selectedListItem.reset();
                                     lastSelectedListItem.reset();
-                                    jumpItemName = "";
-                                    jumpItemValue = "";
-                                    jumpItemExactMatch = true;
-                                    g_overlayFilename = "";
+                                    //jumpItemName = NULL_STR;
+                                    //jumpItemValue = "";
+                                    //jumpItemExactMatch = true;
+                                    //g_overlayFilename = "";
                                     tsl::changeTo<PackageMenu>(packagePath, optionName, currentPage, packageName, 0, _lastPackageHeader);
                                     simulatedSelectComplete = true;
                                     
@@ -3126,10 +3127,10 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                                 }
                                 if (keys & KEY_A) {
                                     inPackageMenu = false;
-                                    jumpItemName = "";
-                                    jumpItemValue = "";
-                                    jumpItemExactMatch = true;
-                                    g_overlayFilename = "";
+                                    //jumpItemName = NULL_STR;
+                                    //jumpItemValue = "";
+                                    //jumpItemExactMatch = true;
+                                    //g_overlayFilename = "";
                                     tsl::changeTo<MainMenu>("", optionName);
                                     simulatedSelectComplete = true;
                                     return true;
@@ -3759,10 +3760,10 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                                 lastKeyName = keyName;
 
                                 allowSlide = unlockedSlide = false;
-                                jumpItemName = "";
-                                jumpItemValue = "";
-                                jumpItemExactMatch = true;
-                                g_overlayFilename = "";
+                                //jumpItemName = NULL_STR;
+                                //jumpItemValue = "";
+                                //jumpItemExactMatch = true;
+                                //g_overlayFilename = "";
                                 tsl::changeTo<PackageMenu>(forwarderPackagePath, "", LEFT_STR, forwarderPackageIniName, nestedMenuCount, _lastPackageHeader);
                                 simulatedSelectComplete = true;
                                 return true;
@@ -4076,9 +4077,10 @@ public:
     PackageMenu(const std::string& path, const std::string& sectionName = "", const std::string& page = LEFT_STR, const std::string& _packageName = PACKAGE_FILENAME, const size_t _nestedlayer = 0, const std::string& _pageHeader = "") :
         packagePath(path), dropdownSection(sectionName), currentPage(page), packageName(_packageName), nestedLayer(_nestedlayer), pageHeader(_pageHeader) {
             //tsl::gfx::FontManager::clearCache();
-            jumpItemName = ".";
+            jumpItemName = "";
             jumpItemValue = "";
             jumpItemExactMatch = true;
+            g_overlayFilename = "";
         }
     /**
      * @brief Destroys the `PackageMenu` instance.
@@ -4197,7 +4199,7 @@ public:
            (usingPages && currentPage == RIGHT_STR) ? pageLeftName : "",
            (usingPages && currentPage == LEFT_STR) ? pageRightName : ""
         );
-        //list->jumpToItem(jumpItemName,jumpItemValue);
+        list->jumpToItem(jumpItemName,jumpItemValue);
         rootFrame->setContent(list.release());
         
         return rootFrame;
@@ -4376,10 +4378,10 @@ public:
                     //lastPackage = packagePath;
                     selectedListItem.reset();
                     lastSelectedListItem.reset();
-                    jumpItemName = "";
-                    jumpItemValue = "";
-                    jumpItemExactMatch = true;
-                    g_overlayFilename = "";
+                    //jumpItemName = "";
+                    //jumpItemValue = "";
+                    //jumpItemExactMatch = true;
+                    //g_overlayFilename = "";
 
                     tsl::pop();
                     tsl::changeTo<PackageMenu>(lastPackagePath, dropdownSection, RIGHT_STR, lastPackageName, nestedMenuCount, pageHeader);
@@ -4394,10 +4396,10 @@ public:
                     //lastPackage = packagePath;
                     selectedListItem.reset();
                     lastSelectedListItem.reset();
-                    jumpItemName = "";
-                    jumpItemValue = "";
-                    jumpItemExactMatch = true;
-                    g_overlayFilename = "";
+                    //jumpItemName = "";
+                    //jumpItemValue = "";
+                    //jumpItemExactMatch = true;
+                    //g_overlayFilename = "";
                     tsl::pop();
                     tsl::changeTo<PackageMenu>(lastPackagePath, dropdownSection, LEFT_STR, lastPackageName, nestedMenuCount, pageHeader);
                     simulatedNextPageComplete = true;
@@ -4626,7 +4628,7 @@ public:
      */
     MainMenu(const std::string& hiddenMenuMode = "", const std::string& sectionName = "") : hiddenMenuMode(hiddenMenuMode), dropdownSection(sectionName) {
         //tsl::gfx::FontManager::clearCache();
-        jumpItemName = ".";
+        jumpItemName = "";
         jumpItemValue = "";
         jumpItemExactMatch = true;
     }
@@ -5357,10 +5359,10 @@ public:
                                     }
                                 }
                                 
-                                jumpItemName = "";
-                                jumpItemValue = "";
-                                jumpItemExactMatch = true;
-                                g_overlayFilename = "";
+                               //jumpItemName = "";
+                               //jumpItemValue = "";
+                               //jumpItemExactMatch = true;
+                               //g_overlayFilename = "";
 
                                 lastPackagePath = packageFilePath;
                                 lastPackageName = PACKAGE_FILENAME;
@@ -5725,10 +5727,10 @@ public:
 
                 if ((keysDown & SYSTEM_SETTINGS_KEY) && !stillTouching) {
                     inMainMenu = false;
-                    jumpItemName = "";
-                    jumpItemValue = "";
-                    jumpItemExactMatch = true;
-                    g_overlayFilename = "";
+                    //jumpItemName = "";
+                    //jumpItemValue = "";
+                    //jumpItemExactMatch = true;
+                    //g_overlayFilename = "";
                     tsl::changeTo<UltrahandSettingsMenu>();
                     //if (menuMode != PACKAGES_STR) startInterpreterThread();
                     
@@ -5886,10 +5888,10 @@ public:
         cleanupCurl();
         socketExit();
 
-        jumpItemName = "";
-        jumpItemValue = "";
-        jumpItemExactMatch = true;
-        g_overlayFilename = "";
+        //jumpItemName = "";
+        //jumpItemValue = "";
+        //jumpItemExactMatch = true;
+        //g_overlayFilename = "";
         //smExit();
         //closeInterpreterThread(); // shouldn't be running, but run close anyways
     }
