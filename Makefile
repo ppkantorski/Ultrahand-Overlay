@@ -59,8 +59,8 @@ APP_AUTHOR	:= ppkantorski
 APP_VERSION	:= 1.9.7
 TARGET		:= ovlmenu
 BUILD		:= build
-SOURCES		:= source common lib/libultrahand/libultra/source
-INCLUDES	:= source common include lib/libultrahand/libultra/include lib/libultrahand/libtesla/include
+SOURCES		:= source common lib/libultrahand/miniz lib/libultrahand/libultra/source
+INCLUDES	:= source common include lib/libultrahand lib/libultrahand/miniz lib/libultrahand/libultra/include lib/libultrahand/libtesla/include
 NO_ICON		:= 1
 
 #---------------------------------------------------------------------------------
@@ -72,6 +72,8 @@ CFLAGS := -g -Wall -Os -ffunction-sections -fdata-sections -flto -fomit-frame-po
 			$(ARCH) $(DEFINES)
 
 CFLAGS += $(INCLUDE) -D__SWITCH__ -DAPP_VERSION="\"$(APP_VERSION)\"" -D_FORTIFY_SOURCE=2
+
+CFLAGS += -DMINIZ_NO_ZLIB_COMPATIBLE_NAMES=1
 
 # For compiling Ultrahand Overlay only
 IS_LAUNCHER_DIRECTIVE := 1
@@ -85,11 +87,12 @@ CFLAGS += -DUSING_WIDGET_DIRECTIVE=$(USING_WIDGET_DIRECTIVE)
 USING_LOGGING_DIRECTIVE := 1  # or true
 CFLAGS += -DUSING_LOGGING_DIRECTIVE=$(USING_LOGGING_DIRECTIVE)
 
-USING_FPS_INDICATOR_DIRECTIVE := 0
+# FPS Indicator (for debugging)
+USING_FPS_INDICATOR_DIRECTIVE := 1
 CFLAGS += -DUSING_FPS_INDICATOR_DIRECTIVE=$(USING_FPS_INDICATOR_DIRECTIVE)
 
-# Disable fstream
-#NO_FSTREAM_DIRECTIVE := 1
+# Disable fstream (ideally for other overlays that dont want to use fstream)
+#NO_FSTREAM_DIRECTIVE := 0
 #CFLAGS += -DNO_FSTREAM_DIRECTIVE=$(NO_FSTREAM_DIRECTIVE)
 
 CXXFLAGS := $(CFLAGS) -std=c++23 -Wno-dangling-else -ffast-math -fno-unwind-tables -fno-asynchronous-unwind-tables
@@ -97,7 +100,7 @@ CXXFLAGS := $(CFLAGS) -std=c++23 -Wno-dangling-else -ffast-math -fno-unwind-tabl
 ASFLAGS := $(ARCH)
 LDFLAGS += -specs=$(DEVKITPRO)/libnx/switch.specs $(ARCH) -Wl,-Map,$(notdir $*.map)
 
-LIBS := -lcurl -lz -lzzip -lmbedtls -lmbedx509 -lmbedcrypto -ljansson -lnx
+LIBS := -lcurl -lz -lmbedtls -lmbedx509 -lmbedcrypto -ljansson -lnx
 
 CXXFLAGS += -fno-exceptions -ffunction-sections -fdata-sections -fno-rtti
 LDFLAGS += -Wl,--as-needed -Wl,--gc-sections
@@ -220,9 +223,7 @@ $(BUILD):
 
 	@rm -rf out/
 	@mkdir -p out/switch/.overlays/
-	@mkdir -p out/config/ultrahand/
 	@cp $(CURDIR)/$(TARGET).ovl out/switch/.overlays/$(TARGET).ovl
-	@cp -ar lang out/config/ultrahand/
 
 #---------------------------------------------------------------------------------
 clean:
@@ -237,7 +238,6 @@ dist: all
 
 	@rm -f $(TARGET).zip
 	@cd out; zip -r ../$(TARGET).zip ./*; cd ../
-
 #---------------------------------------------------------------------------------
 else
 .PHONY: all
