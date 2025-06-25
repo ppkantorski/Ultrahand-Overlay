@@ -65,8 +65,7 @@ INCLUDES	:= source common include
 NO_ICON		:= 1
 
 # Location of where you place the libultrahand directory (can vary between projects)
-LOCAL_LIBS := lib
-include $(TOPDIR)/$(LOCAL_LIBS)/libultrahand/ultrahand.mk
+include $(TOPDIR)/lib/libultrahand/ultrahand.mk
 
 #---------------------------------------------------------------------------------
 # options for code generation
@@ -93,7 +92,7 @@ USING_LOGGING_DIRECTIVE := 1  # or true
 CFLAGS += -DUSING_LOGGING_DIRECTIVE=$(USING_LOGGING_DIRECTIVE)
 
 # FPS Indicator (for debugging)
-USING_FPS_INDICATOR_DIRECTIVE := 1
+USING_FPS_INDICATOR_DIRECTIVE := 0
 CFLAGS += -DUSING_FPS_INDICATOR_DIRECTIVE=$(USING_FPS_INDICATOR_DIRECTIVE)
 
 # Disable fstream (ideally for other overlays that dont want to use fstream)
