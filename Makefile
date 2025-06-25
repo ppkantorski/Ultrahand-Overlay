@@ -26,6 +26,7 @@ endif
 TOPDIR ?= $(CURDIR)
 include $(DEVKITPRO)/libnx/switch_rules
 
+
 #---------------------------------------------------------------------------------
 # TARGET is the name of the output
 # BUILD is the directory where object files & intermediate files will be placed
@@ -59,9 +60,13 @@ APP_AUTHOR	:= ppkantorski
 APP_VERSION	:= 1.9.7
 TARGET		:= ovlmenu
 BUILD		:= build
-SOURCES		:= source common lib/libultrahand/miniz lib/libultrahand/libultra/source
-INCLUDES	:= source common include lib/libultrahand lib/libultrahand/miniz lib/libultrahand/libultra/include lib/libultrahand/libtesla/include
+SOURCES		:= source common
+INCLUDES	:= source common include
 NO_ICON		:= 1
+
+# Location of where you place the libultrahand directory (can vary between projects)
+LOCAL_LIBS := lib
+include $(TOPDIR)/$(LOCAL_LIBS)/libultrahand/ultrahand.mk
 
 #---------------------------------------------------------------------------------
 # options for code generation
