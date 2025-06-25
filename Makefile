@@ -64,8 +64,9 @@ SOURCES		:= source common
 INCLUDES	:= source common include
 NO_ICON		:= 1
 
-# Location of where you place the libultrahand directory (can vary between projects)
-include $(TOPDIR)/lib/libultrahand/ultrahand.mk
+# This location should reflect where you place the libultrahand directory (lib can vary between projects).
+include ${TOPDIR}/lib/libultrahand/ultrahand.mk
+
 
 #---------------------------------------------------------------------------------
 # options for code generation
@@ -92,7 +93,7 @@ USING_LOGGING_DIRECTIVE := 1  # or true
 CFLAGS += -DUSING_LOGGING_DIRECTIVE=$(USING_LOGGING_DIRECTIVE)
 
 # FPS Indicator (for debugging)
-USING_FPS_INDICATOR_DIRECTIVE := 0
+USING_FPS_INDICATOR_DIRECTIVE := 1
 CFLAGS += -DUSING_FPS_INDICATOR_DIRECTIVE=$(USING_FPS_INDICATOR_DIRECTIVE)
 
 # Disable fstream (ideally for other overlays that dont want to use fstream)
@@ -104,6 +105,7 @@ CXXFLAGS := $(CFLAGS) -std=c++23 -Wno-dangling-else -ffast-math -fno-unwind-tabl
 ASFLAGS := $(ARCH)
 LDFLAGS += -specs=$(DEVKITPRO)/libnx/switch.specs $(ARCH) -Wl,-Map,$(notdir $*.map)
 
+# Essential libraries for Ultrahand Overlay
 LIBS := -lcurl -lz -lmbedtls -lmbedx509 -lmbedcrypto -ljansson -lnx
 
 CXXFLAGS += -fno-exceptions -ffunction-sections -fdata-sections -fno-rtti
