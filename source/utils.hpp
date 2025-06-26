@@ -1301,6 +1301,48 @@ static bool buildTableDrawerLines(
 }
 
 
+// Helper function moved outside - no lambda creation overhead
+static tsl::Color getRawColor(const std::string& c, tsl::Color defaultColor) {
+    // Check most common/special case first
+    if (c == DEFAULT_STR) return defaultColor;
+    
+    // Quick length check to eliminate impossible matches
+    const size_t len = c.length();
+    
+    // Group by length to reduce comparisons
+    switch (len) {
+        case 4:
+            if (c == "text") return tsl::defaultTextColor;
+            if (c == "info") return tsl::infoTextColor;
+            break;
+            
+        case 6:
+            if (c == "header") return tsl::headerTextColor;
+            break;
+            
+        case 7:
+            if (c[0] == 'w' && c == "warning") return tsl::warningTextColor;
+            if (c[0] == 's' && c == "section") return tsl::sectionTextColor;
+            if (c[0] == 'b' && c == "bad_ram") return tsl::badRamTextColor;
+            break;
+            
+        case 8:
+            if (c == "on_value") return tsl::onTextColor;
+            break;
+            
+        case 9:
+            if (c == "off_value") return tsl::offTextColor;
+            break;
+            
+        case 11:
+            if (c[0] == 'h' && c == "healthy_ram") return tsl::healthyRamTextColor;
+            if (c[0] == 'n' && c == "neutral_ram") return tsl::neutralRamTextColor;
+            break;
+    }
+    
+    return tsl::RGB888(c);
+}
+
 void drawTable(
     std::unique_ptr<tsl::elm::List>&      list,
     std::vector<std::vector<std::string>>& tableData,
@@ -1322,48 +1364,6 @@ void drawTable(
     bool useWrappedTextIndent        = false,
     std::string packagePath          = ""
 ) {
-    // Helper for raw colors
-    auto getRawColor = [](const std::string& c, auto def) {
-        // Check most common/special case first
-        if (c == DEFAULT_STR) return def;
-        
-        // Quick length check to eliminate impossible matches
-        const size_t len = c.length();
-        
-        // Group by length to reduce comparisons
-        switch (len) {
-            case 4:
-                if (c == "text") return tsl::defaultTextColor;
-                if (c == "info") return tsl::infoTextColor;
-                break;
-                
-            case 6:
-                if (c == "header") return tsl::headerTextColor;
-                break;
-                
-            case 7:
-                if (c[0] == 'w' && c == "warning") return tsl::warningTextColor;
-                if (c[0] == 's' && c == "section") return tsl::sectionTextColor;
-                if (c[0] == 'b' && c == "bad_ram") return tsl::badRamTextColor;
-                break;
-                
-            case 8:
-                if (c == "on_value") return tsl::onTextColor;
-                break;
-                
-            case 9:
-                if (c == "off_value") return tsl::offTextColor;
-                break;
-                
-            case 11:
-                if (c[0] == 'h' && c == "healthy_ram") return tsl::healthyRamTextColor;
-                if (c[0] == 'n' && c == "neutral_ram") return tsl::neutralRamTextColor;
-                break;
-        }
-        
-        return tsl::RGB888(c);
-    };
-
     // Prebuild initial buffers
     std::vector<std::string> cacheExpSec, cacheExpInfo;
     std::vector<s32>         cacheYOff;
@@ -1376,9 +1376,17 @@ void drawTable(
         cacheExpSec, cacheExpInfo, cacheYOff, cacheXOff
     ) && isPolling;
 
+    // Resolve colors once outside the render loop
+    const auto secRaw = getRawColor(tableSectionTextColor, tsl::sectionTextColor);
+    const auto infoRaw = getRawColor(tableInfoTextColor, tsl::infoTextColor);
+    const auto hiliteRaw = getRawColor(tableInfoTextHighlightColor, tsl::infoTextColor);
+    
+    // Pre-calculate color comparison
+    const bool sameCol = (tableInfoTextColor == tableInfoTextHighlightColor);
+
     // Use nanoseconds for high-performance timing
     auto lastUpdateNS = std::make_shared<u64>(armTicksToNs(armGetSystemTick()));
-    constexpr u64 ONE_SECOND_NS = 1000000000ULL; // 1 billion nanoseconds = 1 second
+    constexpr u64 ONE_SECOND_NS = 1000000000ULL;
     
     list->addItem(new tsl::elm::TableDrawer(
         [=](tsl::gfx::Renderer* renderer, s32 x, s32 y, s32 w, s32 h) mutable {
@@ -1402,32 +1410,23 @@ void drawTable(
                 renderer->drawRect(x-2, y, 4, 22, renderer->a(tsl::headerSeparatorColor));
             }
 
-            const auto secRaw    = getRawColor(tableSectionTextColor,   tsl::sectionTextColor);
-            const auto infoRaw   = getRawColor(tableInfoTextColor,      tsl::infoTextColor);
-            const auto hiliteRaw = getRawColor(tableInfoTextHighlightColor, tsl::infoTextColor);
-
-            // Pre-calculate everything, optimize for CPU pipeline
-            const bool sameCol = (tableInfoTextColor == tableInfoTextHighlightColor);
+            // Convert to renderer colors once per frame
+            const auto secColor = renderer->a(secRaw);
+            const auto infoColor = renderer->a(infoRaw);
+            
             const size_t count = cacheExpSec.size();
+            const s32 baseX = x + 12;
             
             if (sameCol) {
                 // Fastest path: same colors, minimal function calls
-                const auto secColor = renderer->a(secRaw);
-                const auto infoColor = renderer->a(infoRaw);
-                const s32 baseX = x + 12;
-                
-                // Tight loop optimized for CPU cache
                 for (size_t i = 0; i < count; ++i) {
                     const s32 yPos = y + cacheYOff[i];
                     renderer->drawString(cacheExpSec[i], false, baseX, yPos, 16, secColor);
                     renderer->drawString(cacheExpInfo[i], false, x + cacheXOff[i], yPos, 16, infoColor);
                 }
             } else {
-                // Still fast path for different colors
-                const auto secColor = renderer->a(secRaw);
-                const auto infoColor = renderer->a(infoRaw);
+                // Different colors path
                 const auto hiliteColor = renderer->a(hiliteRaw);
-                const s32 baseX = x + 12;
                 
                 for (size_t i = 0; i < count; ++i) {
                     const s32 yPos = y + cacheYOff[i];
@@ -2528,7 +2527,22 @@ bool replacePlaceholdersRecursively(std::string& arg, const std::vector<std::pai
 }
 
 
-
+std::unordered_map<std::string, std::string> generalPlaceholders ;
+void updateGeneralPlaceholders() {
+    generalPlaceholders = {
+        {"{ram_vendor}", memoryVendor},
+        {"{ram_model}", memoryModel},
+        {"{ams_version}", amsVersion},
+        {"{hos_version}", hosVersion},
+        {"{cpu_speedo}", ult::to_string(cpuSpeedo0)},
+        {"{cpu_iddq}", ult::to_string(cpuIDDQ)},
+        {"{gpu_speedo}", ult::to_string(cpuSpeedo2)},
+        {"{gpu_iddq}", ult::to_string(gpuIDDQ)},
+        {"{soc_speedo}", ult::to_string(socSpeedo0)},
+        {"{soc_iddq}", ult::to_string(socIDDQ)},
+        {"{title_id}", getTitleIdAsString()}
+    };
+}
 
 bool applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::string& hexPath, const std::string& iniPath, const std::string& listString, const std::string& listPath, const std::string& jsonString, const std::string& jsonPath) {
     bool replacementsMade = false;
@@ -2704,19 +2718,20 @@ bool applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
         {"{length(", [&](const std::string& placeholder) { return returnOrNull(handleLength(placeholder)); }},
     };
 
-    std::unordered_map<std::string, std::string> generalPlaceholders = {
-        {"{ram_vendor}", memoryVendor},
-        {"{ram_model}", memoryModel},
-        {"{ams_version}", amsVersion},
-        {"{hos_version}", hosVersion},
-        {"{cpu_speedo}", ult::to_string(cpuSpeedo0)},
-        {"{cpu_iddq}", ult::to_string(cpuIDDQ)},
-        {"{gpu_speedo}", ult::to_string(cpuSpeedo2)},
-        {"{gpu_iddq}", ult::to_string(gpuIDDQ)},
-        {"{soc_speedo}", ult::to_string(socSpeedo0)},
-        {"{soc_iddq}", ult::to_string(socIDDQ)},
-        {"{title_id}", getTitleIdAsString()}
-    };
+    //generalPlaceholders = {
+    //    {"{ram_vendor}", memoryVendor},
+    //    {"{ram_model}", memoryModel},
+    //    {"{ams_version}", amsVersion},
+    //    {"{hos_version}", hosVersion},
+    //    {"{cpu_speedo}", ult::to_string(cpuSpeedo0)},
+    //    {"{cpu_iddq}", ult::to_string(cpuIDDQ)},
+    //    {"{gpu_speedo}", ult::to_string(cpuSpeedo2)},
+    //    {"{gpu_iddq}", ult::to_string(gpuIDDQ)},
+    //    {"{soc_speedo}", ult::to_string(socSpeedo0)},
+    //    {"{soc_iddq}", ult::to_string(socIDDQ)},
+    //    {"{title_id}", getTitleIdAsString()}
+    //};
+    updateGeneralPlaceholders();
 
     // Iterate through each command and replace placeholders
     for (auto& arg : cmd) {
@@ -2925,14 +2940,24 @@ bool interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
             COPY_BUFFER_SIZE = ult::stoi(bufferSection[section]);
         }
     
-        section = "unzip_buffer_size";
+        section = "unzip_read_buffer";
         if (bufferSection.count(section) > 0) {
-            UNZIP_BUFFER_SIZE = ult::stoi(bufferSection[section]);
+            UNZIP_READ_BUFFER = ult::stoi(bufferSection[section]);
+        }
+
+        section = "unzip_write_buffer";
+        if (bufferSection.count(section) > 0) {
+            UNZIP_WRITE_BUFFER = ult::stoi(bufferSection[section]);
         }
     
-        section = "download_buffer_size";
+        section = "download_read_buffer";
         if (bufferSection.count(section) > 0) {
-            DOWNLOAD_BUFFER_SIZE = ult::stoi(bufferSection[section]);
+            DOWNLOAD_READ_BUFFER = ult::stoi(bufferSection[section]);
+        }
+
+        section = "download_write_buffer";
+        if (bufferSection.count(section) > 0) {
+            DOWNLOAD_WRITE_BUFFER = ult::stoi(bufferSection[section]);
         }
     
         section = "hex_buffer_size";
