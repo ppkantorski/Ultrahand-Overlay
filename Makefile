@@ -97,7 +97,7 @@ USING_FPS_INDICATOR_DIRECTIVE := 1
 CFLAGS += -DUSING_FPS_INDICATOR_DIRECTIVE=$(USING_FPS_INDICATOR_DIRECTIVE)
 
 # Disable fstream (ideally for other overlays that dont want to use fstream)
-NO_FSTREAM_DIRECTIVE := 1
+NO_FSTREAM_DIRECTIVE := 0
 CFLAGS += -DNO_FSTREAM_DIRECTIVE=$(NO_FSTREAM_DIRECTIVE)
 
 CXXFLAGS := $(CFLAGS) -std=c++23 -Wno-dangling-else -ffast-math -fno-unwind-tables -fno-asynchronous-unwind-tables
