@@ -1,4 +1,4 @@
-# OC Toolkit (mariko only) - Outdated. EOS is recommended
+# OC Toolkit (mariko only) - *Outdated, EOS is recommended
 
 The OC Toolkit package provides various options for adjusting the clock speeds, voltages and timings of your device.
 
