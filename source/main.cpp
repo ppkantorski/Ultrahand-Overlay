@@ -617,7 +617,7 @@ public:
             
             // Version info formatting with a reduced buffer
             char versionString[32];  // Reduced buffer size to 32
-            snprintf(versionString, sizeof(versionString), "HOS %s│AMS %s", 
+            snprintf(versionString, sizeof(versionString), "HOS %sAMS %s", 
                      hosVersion, amsVersion);
             
             std::string hekateVersion = extractVersionFromBinary("sdmc:/bootloader/update.bin");
@@ -629,12 +629,12 @@ public:
             
             const char* modelRev;
             switch (model) {
-                case SetSysProductModel_Iowa: modelRev = "Iowa│Tegra X1+ (Mariko)"; break;
-                case SetSysProductModel_Hoag: modelRev = "Hoag│Tegra X1+ (Mariko)"; break;
-                case SetSysProductModel_Calcio: modelRev = "Calcio│Tegra X1+ (Mariko)"; break;
-                case SetSysProductModel_Aula: modelRev = "Aula│Tegra X1+ (Mariko)"; break;
-                case SetSysProductModel_Nx: modelRev = "Icosa│Tegra X1 (Erista)"; break;
-                case SetSysProductModel_Copper: modelRev = "Copper│Tegra X1 (Erista)"; break;
+                case SetSysProductModel_Iowa: modelRev = "IowaTegra X1+ (Mariko)"; break;
+                case SetSysProductModel_Hoag: modelRev = "HoagTegra X1+ (Mariko)"; break;
+                case SetSysProductModel_Calcio: modelRev = "CalcioTegra X1+ (Mariko)"; break;
+                case SetSysProductModel_Aula: modelRev = "AulaTegra X1+ (Mariko)"; break;
+                case SetSysProductModel_Nx: modelRev = "IcosaTegra X1 (Erista)"; break;
+                case SetSysProductModel_Copper: modelRev = "CopperTegra X1 (Erista)"; break;
                 default: modelRev = UNAVAILABLE_SELECTION.c_str(); break;
             }
             ASSERT_FATAL(nifmInitialize(NifmServiceType_User)); // for local IP
@@ -662,7 +662,7 @@ public:
             tableData = {
                 {"", "", "CPU      GPU      SOC"}
             };
-            addTable(list, tableData, "", 163, 8, 3, 0, DEFAULT_STR, "section", "section", RIGHT_STR, true);
+            addTable(list, tableData, "", 162, 9, 3, 0, DEFAULT_STR, "section", "section", RIGHT_STR, true);
             
             tableData.clear();
             tableData.resize(2);
@@ -670,15 +670,15 @@ public:
             if (cpuSpeedo0 != 0 && cpuSpeedo2 != 0 && socSpeedo0 != 0 && cpuIDDQ != 0 && gpuIDDQ != 0 && socIDDQ != 0) {
                 tableData[0] = {
                     "Speedo", "",
-                    customAlign(cpuSpeedo0) + " │ " + customAlign(cpuSpeedo2) + " │ " + customAlign(socSpeedo0)
+                    customAlign(cpuSpeedo0) + "  " + customAlign(cpuSpeedo2) + "  " + customAlign(socSpeedo0)
                 };
                 tableData[1] = {
                     "IDDQ", "",
-                    customAlign(cpuIDDQ) + " │ " + customAlign(gpuIDDQ) + " │ " + customAlign(socIDDQ)
+                    customAlign(cpuIDDQ) + "  " + customAlign(gpuIDDQ) + "  " + customAlign(socIDDQ)
                 };
             } else {
-                tableData[0] = {"Speedo", "", "⋯    │    ⋯   │    ⋯  "};
-                tableData[1] = {"IDDQ", "", "⋯    │    ⋯   │    ⋯  "};
+                tableData[0] = {"Speedo", "", "⋯        ⋯        ⋯  "};
+                tableData[1] = {"IDDQ", "", "⋯        ⋯        ⋯  "};
             }
             addTable(list, tableData, "", 163, 20, -2, 4);
             
@@ -4611,6 +4611,7 @@ public:
 
 
 
+static bool starJump = false;
 
 /**
  * @brief The `MainMenu` class handles the main menu overlay functionality.
@@ -4637,6 +4638,10 @@ public:
      */
     MainMenu(const std::string& hiddenMenuMode = "", const std::string& sectionName = "") : hiddenMenuMode(hiddenMenuMode), dropdownSection(sectionName) {
         //tsl::gfx::FontManager::clearCache();
+        if (starJump) {
+            starJump = false;
+            return;
+        }
         jumpItemName = "";
         jumpItemValue = "";
         jumpItemExactMatch = true;
@@ -5050,6 +5055,7 @@ public:
                                     setIniFileValue(OVERLAYS_INI_FILEPATH, overlayFileName, STAR_STR, newStarred ? TRUE_STR : FALSE_STR);
                                     // Now, you can use the newStarred value for further processing if needed
                                 }
+                                starJump = true;
                                 jumpItemName = newStarred ? STAR_SYMBOL + "  " + overlayName : overlayName;
                                 jumpItemValue = overlayVersion;
                                 jumpItemExactMatch = true;
@@ -5386,6 +5392,7 @@ public:
                                 if (!packageName.empty())
                                     setIniFileValue(PACKAGES_INI_FILEPATH, packageName, STAR_STR, newStarred ? TRUE_STR : FALSE_STR);
                                 
+                                starJump = true;
                                 jumpItemName = newStarred ? STAR_SYMBOL + "  " + newPackageName : newPackageName;
                                 jumpItemValue = packageVersion;
                                 jumpItemExactMatch = true;
@@ -5576,6 +5583,7 @@ public:
             //g_overlayFilename = "";
             tsl::changeTo<MainMenu>(hiddenMenuMode, dropdownSection);
             if (wasInHiddenMode) {
+                starJump = true;
                 // NEW: Set the highlight to "Hidden" when returning from a hidden overlay
                 jumpItemName = HIDDEN;
                 jumpItemValue = DROPDOWN_SYMBOL;
