@@ -1387,6 +1387,8 @@ void drawTable(
     // Use nanoseconds for high-performance timing
     auto lastUpdateNS = std::make_shared<u64>(armTicksToNs(armGetSystemTick()));
     constexpr u64 ONE_SECOND_NS = 1000000000ULL;
+
+    static const std::vector<std::string> specialCharacters =  {""};
     
     list->addItem(new tsl::elm::TableDrawer(
         [=](tsl::gfx::Renderer* renderer, s32 x, s32 y, s32 w, s32 h) mutable {
@@ -1413,6 +1415,7 @@ void drawTable(
             // Convert to renderer colors once per frame
             const auto secColor = renderer->a(secRaw);
             const auto infoColor = renderer->a(infoRaw);
+            const auto dividerColor = renderer->a(tsl::separatorColor);
             
             const size_t count = cacheExpSec.size();
             const s32 baseX = x + 12;
@@ -1421,8 +1424,8 @@ void drawTable(
                 // Fastest path: same colors, minimal function calls
                 for (size_t i = 0; i < count; ++i) {
                     const s32 yPos = y + cacheYOff[i];
-                    renderer->drawString(cacheExpSec[i], false, baseX, yPos, 16, secColor);
-                    renderer->drawString(cacheExpInfo[i], false, x + cacheXOff[i], yPos, 16, infoColor);
+                    renderer->drawStringWithColoredSections(cacheExpSec[i], false, specialCharacters, baseX, yPos, 16, secColor, dividerColor);
+                    renderer->drawStringWithColoredSections(cacheExpInfo[i], false, specialCharacters, x + cacheXOff[i], yPos, 16, infoColor, dividerColor);
                 }
             } else {
                 // Different colors path
@@ -1430,7 +1433,7 @@ void drawTable(
                 
                 for (size_t i = 0; i < count; ++i) {
                     const s32 yPos = y + cacheYOff[i];
-                    renderer->drawString(cacheExpSec[i], false, baseX, yPos, 16, secColor);
+                    renderer->drawStringWithColoredSections(cacheExpSec[i], false, specialCharacters, baseX, yPos, 16, secColor, dividerColor);
                     renderer->drawStringWithHighlight(
                         cacheExpInfo[i], false, x + cacheXOff[i], yPos, 16,
                         infoColor, hiliteColor
@@ -1507,7 +1510,7 @@ void addHelpInfo(std::unique_ptr<tsl::elm::List>& list) {
     std::vector<std::vector<std::string>> dummyTableData;
 
     // Draw the table with the defined lines
-    drawTable(list, dummyTableData, sectionLines, infoLines, xOffset, 19, 9, 4);
+    drawTable(list, dummyTableData, sectionLines, infoLines, xOffset, 20, 9, 4);
     //drawTable(list, sectionLines, infoLines, xOffset, 19, 12, 4, DEFAULT_STR, DEFAULT_STR, LEFT_STR, false, false, true, "none", false);
 }
 
@@ -1590,7 +1593,7 @@ void addPackageInfo(std::unique_ptr<tsl::elm::List>& list, auto& packageHeader, 
 
     // Drawing the table with section lines and info lines
     //drawTable(list, sectionLines, infoLines, xOffset, 20, 12, 3);
-    drawTable(list, dummyTableData, sectionLines, infoLines, xOffset, 19, 9, 3, DEFAULT_STR, DEFAULT_STR, DEFAULT_STR, LEFT_STR, false, false, true);
+    drawTable(list, dummyTableData, sectionLines, infoLines, xOffset, 20, 9, 3, DEFAULT_STR, DEFAULT_STR, DEFAULT_STR, LEFT_STR, false, false, true);
 }
 
 
