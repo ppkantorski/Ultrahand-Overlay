@@ -644,7 +644,7 @@ public:
                 {LOCAL_IP, "", getLocalIpAddress()}
             };
             nifmExit();
-            addTable(list, tableData, "", 164, 18, 28, 4);
+            addTable(list, tableData, "", 164, 20, 28, 4);
             
             // Hardware and storage info
             tableData = {
@@ -656,13 +656,13 @@ public:
                 {"└ eMMC ", "", getStorageInfo("emmc")},
                 {"└ SD Card", "", getStorageInfo("sdmc")}
             };
-            addTable(list, tableData, "", 163, 18, 30, 4);
+            addTable(list, tableData, "", 163, 20, 30, 4);
             
             // CPU, GPU, and SOC info
             tableData = {
                 {"", "", "CPU      GPU      SOC"}
             };
-            addTable(list, tableData, "", 163, 6, 3, 0, DEFAULT_STR, "section", "section", RIGHT_STR, true);
+            addTable(list, tableData, "", 163, 8, 3, 0, DEFAULT_STR, "section", "section", RIGHT_STR, true);
             
             tableData.clear();
             tableData.resize(2);
@@ -680,7 +680,7 @@ public:
                 tableData[0] = {"Speedo", "", "⋯    │    ⋯   │    ⋯  "};
                 tableData[1] = {"IDDQ", "", "⋯    │    ⋯   │    ⋯  "};
             }
-            addTable(list, tableData, "", 163, 18, -2, 4);
+            addTable(list, tableData, "", 163, 20, -2, 4);
             
             // The part that was moved to the end
             addHeader(list, COMMANDS);
@@ -1643,7 +1643,7 @@ public:
     
             // Use default parameters for the table view
             const size_t tableColumnOffset = 163;
-            const size_t tableStartGap = 19;
+            const size_t tableStartGap = 20;
             const size_t tableEndGap = 9;
             const size_t tableSpacing = 10;
             const std::string tableSectionTextColor = DEFAULT_STR;
@@ -1867,19 +1867,20 @@ public:
         std::vector<std::string> matchedFiles;
 
         // Create a map with all non-button/arrow placeholders and their replacements
-        std::unordered_map<std::string, std::string> generalPlaceholders = {
-            {"{ram_vendor}", memoryVendor},
-            {"{ram_model}", memoryModel},
-            {"{ams_version}", amsVersion},
-            {"{hos_version}", hosVersion},
-            {"{cpu_speedo}", ult::to_string(cpuSpeedo0)},
-            {"{cpu_iddq}", ult::to_string(cpuIDDQ)},
-            {"{gpu_speedo}", ult::to_string(cpuSpeedo2)},
-            {"{gpu_iddq}", ult::to_string(gpuIDDQ)},
-            {"{soc_speedo}", ult::to_string(socSpeedo0)},
-            {"{soc_iddq}", ult::to_string(socIDDQ)},
-            {"{title_id}", getTitleIdAsString()}
-        };
+        //std::unordered_map<std::string, std::string> generalPlaceholders = {
+        //    {"{ram_vendor}", memoryVendor},
+        //    {"{ram_model}", memoryModel},
+        //    {"{ams_version}", amsVersion},
+        //    {"{hos_version}", hosVersion},
+        //    {"{cpu_speedo}", ult::to_string(cpuSpeedo0)},
+        //    {"{cpu_iddq}", ult::to_string(cpuIDDQ)},
+        //    {"{gpu_speedo}", ult::to_string(cpuSpeedo2)},
+        //    {"{gpu_iddq}", ult::to_string(gpuIDDQ)},
+        //    {"{soc_speedo}", ult::to_string(socSpeedo0)},
+        //    {"{soc_iddq}", ult::to_string(socIDDQ)},
+        //    {"{title_id}", getTitleIdAsString()}
+        //};
+        updateGeneralPlaceholders();
         
 
         for (auto& cmd : commands) {
@@ -2120,7 +2121,7 @@ public:
             else if (sourceType == INI_FILE_STR)
                 selectedItemsList = parseSectionsFromIni(iniPath);
             else if (sourceType == JSON_STR || sourceType == JSON_FILE_STR) {
-                populateSelectedItemsList(sourceType, (sourceType == JSON_STR) ? jsonString : jsonPath, jsonKey, selectedItemsList);
+                populateSelectedItemsListFromJson(sourceType, (sourceType == JSON_STR) ? jsonString : jsonPath, jsonKey, selectedItemsList);
                 jsonPath.clear();
                 jsonString.clear();
             }
@@ -2133,7 +2134,7 @@ public:
             else if (sourceTypeOn == INI_FILE_STR)
                 selectedItemsListOn = parseSectionsFromIni(iniPathOn);
             else if (sourceTypeOn == JSON_STR || sourceTypeOn == JSON_FILE_STR) {
-                populateSelectedItemsList(sourceTypeOn, (sourceTypeOn == JSON_STR) ? jsonStringOn : jsonPathOn, jsonKeyOn, selectedItemsListOn);
+                populateSelectedItemsListFromJson(sourceTypeOn, (sourceTypeOn == JSON_STR) ? jsonStringOn : jsonPathOn, jsonKeyOn, selectedItemsListOn);
                 jsonPathOn.clear();
                 jsonStringOn.clear();
             }
@@ -2145,7 +2146,7 @@ public:
             else if (sourceTypeOff == INI_FILE_STR)
                 selectedItemsListOff = parseSectionsFromIni(iniPathOff);
             else if (sourceTypeOff == JSON_STR || sourceTypeOff == JSON_FILE_STR) {
-                populateSelectedItemsList(sourceTypeOff, (sourceTypeOff == JSON_STR) ? jsonStringOff : jsonPathOff, jsonKeyOff, selectedItemsListOff);
+                populateSelectedItemsListFromJson(sourceTypeOff, (sourceTypeOff == JSON_STR) ? jsonStringOff : jsonPathOff, jsonKeyOff, selectedItemsListOff);
                 jsonPathOff.clear();
                 jsonStringOff.clear();
             }
@@ -2889,20 +2890,21 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
 
     bool isMini;
 
-    // Create a map with all non-button/arrow placeholders and their replacements
-    std::unordered_map<std::string, std::string> generalPlaceholders = {
-        {"{ram_vendor}", memoryVendor},
-        {"{ram_model}", memoryModel},
-        {"{ams_version}", amsVersion},
-        {"{hos_version}", hosVersion},
-        {"{cpu_speedo}", ult::to_string(cpuSpeedo0)},
-        {"{cpu_iddq}", ult::to_string(cpuIDDQ)},
-        {"{gpu_speedo}", ult::to_string(cpuSpeedo2)},
-        {"{gpu_iddq}", ult::to_string(gpuIDDQ)},
-        {"{soc_speedo}", ult::to_string(socSpeedo0)},
-        {"{soc_iddq}", ult::to_string(socIDDQ)},
-        {"{title_id}", getTitleIdAsString()}
-    };
+    // update general placeholders
+    //generalPlaceholders = {
+    //    {"{ram_vendor}", memoryVendor},
+    //    {"{ram_model}", memoryModel},
+    //    {"{ams_version}", amsVersion},
+    //    {"{hos_version}", hosVersion},
+    //    {"{cpu_speedo}", ult::to_string(cpuSpeedo0)},
+    //    {"{cpu_iddq}", ult::to_string(cpuIDDQ)},
+    //    {"{gpu_speedo}", ult::to_string(cpuSpeedo2)},
+    //    {"{gpu_iddq}", ult::to_string(gpuIDDQ)},
+    //    {"{soc_speedo}", ult::to_string(socSpeedo0)},
+    //    {"{soc_iddq}", ult::to_string(socIDDQ)},
+    //    {"{title_id}", getTitleIdAsString()}
+    //};
+    updateGeneralPlaceholders();
 
 
     for (size_t i = 0; i < options.size(); ++i) {
@@ -2923,7 +2925,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
         usingBottomPivot = false;
         hideTableBackground = false;
         useHeaderIndent = false;
-        tableStartGap = 19-2;
+        tableStartGap = 20;
         tableEndGap = 9;
         tableColumnOffset = 163;
         tableSpacing = 0;
@@ -3636,7 +3638,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                                 removeQuotes(jsonString);
                                 std::string jsonKey = cmd[2];
                                 removeQuotes(jsonKey);
-                                populateSelectedItemsList(JSON_STR, jsonString, jsonKey, entryList);
+                                populateSelectedItemsListFromJson(JSON_STR, jsonString, jsonKey, entryList);
                                 break;
                             }
                             else if (cmd[0] == "json_file_source") {
@@ -3644,7 +3646,7 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
                                 preprocessPath(jsonPath, packagePath);
                                 std::string jsonKey = cmd[2];
                                 removeQuotes(jsonKey);
-                                populateSelectedItemsList(JSON_FILE_STR, jsonPath, jsonKey, entryList);
+                                populateSelectedItemsListFromJson(JSON_FILE_STR, jsonPath, jsonKey, entryList);
                                 break;
                             }
                         }
