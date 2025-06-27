@@ -1765,46 +1765,45 @@ bool isDangerousCombination(const std::string& originalPath) {
 
 
 
+
 // Function to populate selectedItemsListOff from a JSON array based on a key
-void populateSelectedItemsList(const std::string& sourceType, const std::string& jsonStringOrPath, const std::string& jsonKey, std::vector<std::string>& selectedItemsList) {
+void populateSelectedItemsListFromJson(const std::string& sourceType, const std::string& jsonStringOrPath, const std::string& jsonKey, std::vector<std::string>& selectedItemsList) {
     // Check for empty JSON source strings
     if (jsonStringOrPath.empty()) {
         return;
     }
-
     // Use a unique_ptr to manage JSON object with appropriate deleter
-    std::unique_ptr<json_t, void(*)(json_t*)> jsonData(nullptr, json_decref);
-
+    std::unique_ptr<json_t, JsonDeleter> jsonData(nullptr, JsonDeleter());
     // Convert JSON string or read from file based on the source type
     if (sourceType == JSON_STR) {
         jsonData.reset(stringToJson(jsonStringOrPath));
     } else if (sourceType == JSON_FILE_STR) {
         jsonData.reset(readJsonFromFile(jsonStringOrPath));
     }
-
     // Early return if jsonData is null or not an array
-    if (!jsonData || !json_is_array(jsonData.get())) {
+    if (!jsonData) {
         return;
     }
-
+    
+    cJSON* jsonArray = reinterpret_cast<cJSON*>(jsonData.get());
+    if (!cJSON_IsArray(jsonArray)) {
+        return;
+    }
+    
     // Prepare for efficient insertion
-    json_t* jsonArray = jsonData.get();
-    const size_t arraySize = json_array_size(jsonArray);
+    const int arraySize = cJSON_GetArraySize(jsonArray);
     selectedItemsList.reserve(arraySize);
-
+    
     // Store the key as a const char* to avoid repeated c_str() calls
     const char* jsonKeyCStr = jsonKey.c_str();
-
+    
     // Iterate over the JSON array
-    for (size_t i = 0; i < arraySize; ++i) {
-        auto* item = json_array_get(jsonArray, i);
-        if (json_is_object(item)) {
-            auto* keyValue = json_object_get(item, jsonKeyCStr);
-            if (json_is_string(keyValue)) {
-                const char* value = json_string_value(keyValue);
-                if (value) {
-                    selectedItemsList.emplace_back(value);
-                }
+    for (int i = 0; i < arraySize; ++i) {
+        cJSON* item = cJSON_GetArrayItem(jsonArray, i);
+        if (cJSON_IsObject(item)) {
+            cJSON* keyValue = cJSON_GetObjectItemCaseSensitive(item, jsonKeyCStr);
+            if (cJSON_IsString(keyValue) && keyValue->valuestring) {
+                selectedItemsList.emplace_back(keyValue->valuestring);
             }
         }
     }
@@ -1908,7 +1907,6 @@ void applyReplaceIniPlaceholder(std::string& arg, const std::string& commandName
     }
 }
 
-
 /**
  * @brief Replaces a JSON source placeholder with the actual JSON source.
  *
@@ -1950,7 +1948,7 @@ std::string replaceJsonPlaceholder(const std::string& arg, const std::string& co
         }
 
         nextPos = startPos + searchString.length();
-        json_t* value = jsonDict.get(); // Get the JSON root object
+        cJSON* value = reinterpret_cast<cJSON*>(jsonDict.get()); // Get the JSON root object
         validValue = true;
 
         while (nextPos < endPos && validValue) {
@@ -1960,19 +1958,19 @@ std::string replaceJsonPlaceholder(const std::string& arg, const std::string& co
             }
 
             key = replacement.substr(nextPos, commaPos - nextPos); // Extract the key
-            if (json_is_object(value)) {
-                value = json_object_get(value, key.c_str()); // Navigate through object
-            } else if (json_is_array(value)) {
+            if (cJSON_IsObject(value)) {
+                value = cJSON_GetObjectItemCaseSensitive(value, key.c_str()); // Navigate through object
+            } else if (cJSON_IsArray(value)) {
                 index = std::stoul(key); // Convert key to index for arrays
-                value = json_array_get(value, index);
+                value = cJSON_GetArrayItem(value, index);
             } else {
                 validValue = false; // Set validValue to false if value is neither object nor array
             }
             nextPos = commaPos + 1; // Move next position past the comma
         }
 
-        if (validValue && value && json_is_string(value)) {
-            replacement.replace(startPos, endPos + 2 - startPos, json_string_value(value)); // Replace text
+        if (validValue && value && cJSON_IsString(value) && value->valuestring) {
+            replacement.replace(startPos, endPos + 2 - startPos, value->valuestring); // Replace text
         }
 
         startPos = replacement.find(searchString, endPos + 2); // Find next occurrence
@@ -2036,6 +2034,7 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
     std::string replacement;
 
     std::string path;
+    std::string raw;
 
     for (const auto& cmd : commands) {
         if (cmd.empty()) {
@@ -2105,7 +2104,7 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
                     endPos   = modifiedArg.find(")}");
                     if (endPos != std::string::npos && endPos > startPos) {
                         // Get the raw value (may be empty)
-                        std::string raw = stringToList(listString)[entryIndex];
+                        raw = stringToList(listString)[entryIndex];
                         // Use returnOrNull to turn empty → NULL_STR
                         replacement = returnOrNull(raw);
                         modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
@@ -2118,7 +2117,7 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
                     startPos = modifiedArg.find("{list_file_source(");
                     endPos   = modifiedArg.find(")}");
                     if (endPos != std::string::npos && endPos > startPos) {
-                        std::string raw = getEntryFromListFile(listPath, entryIndex);
+                        raw = getEntryFromListFile(listPath, entryIndex);
                         replacement = returnOrNull(raw);
                         modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
                     }
@@ -2138,7 +2137,7 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
                     startPos = modifiedArg.find("{json_source(");
                     endPos   = modifiedArg.find(")}");
                     if (endPos != std::string::npos && endPos > startPos) {
-                        std::string raw = replaceJsonPlaceholder(
+                        raw = replaceJsonPlaceholder(
                             modifiedArg.substr(startPos, endPos - startPos + 2),
                             "json_source",
                             jsonString
@@ -2154,7 +2153,7 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
                     startPos = modifiedArg.find("{json_file_source(");
                     endPos   = modifiedArg.find(")}");
                     if (endPos != std::string::npos && endPos > startPos) {
-                        std::string raw = replaceJsonPlaceholder(
+                        raw = replaceJsonPlaceholder(
                             modifiedArg.substr(startPos, endPos - startPos + 2),
                             "json_file_source",
                             jsonPath
