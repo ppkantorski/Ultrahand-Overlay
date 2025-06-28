@@ -174,70 +174,77 @@ void shiftItemFocus(tsl::elm::Element* element) {
  * @return `true` if the operation needs to abort, `false` otherwise.
  */
 bool handleRunningInterpreter(uint64_t& keysDown, uint64_t& keysHeld) {
-    static std::string lastSymbol;
-    static int lastPercentage = -1;
-    static bool inProgress = true;
-    //static auto last_call = std::chrono::steady_clock::now();
-    //auto now = std::chrono::steady_clock::now();
-    bool shouldAbort = false;
-
-
-    //if (now - last_call < std::chrono::milliseconds(20)) {
-    //    return false;  // Exit if the minimum interval hasn't passed
-    //}
-    //last_call = now;  // Update last_call to the current time
-
-    // Helper lambda to update the UI and manage completion state
-    static auto updateUI = [&](std::atomic<int>& percentage, const std::string& symbol) {
-        int currentPercentage = percentage.load(std::memory_order_acquire);
-        if (currentPercentage != -1) {
-            if (currentPercentage != lastPercentage) {
-                lastSelectedListItem->setValue(symbol + " " + ult::to_string(currentPercentage) + "%");
-                lastPercentage = currentPercentage;
-                lastSymbol = symbol;
-            }
-            if (currentPercentage == 100) {
-                //inProgress = false;
-                percentage.store(-1, std::memory_order_release);
-            }
-            
-            return true;
-        }// else if (lastPercentage > 0)
-         //   lastSelectedListItem->setValue(lastSymbol + " 100%");
-        return false;
-    };
-
-    if (!updateUI(downloadPercentage, DOWNLOAD_SYMBOL) &&
-        !updateUI(unzipPercentage, UNZIP_SYMBOL) &&
-        !updateUI(copyPercentage, COPY_SYMBOL) &&
-        lastPercentage == -1 && inProgress) {
-        lastSelectedListItem->setValue(INPROGRESS_SYMBOL);
-        inProgress = false;
-    }
-
+    static int lastPct = -1;
+    static uint8_t lastOp = 255;
+    static bool inProg = true;
+    
+    // Abort - single optimized check
     if ((keysDown & KEY_R) && !(keysHeld & ~KEY_R & ALL_KEYS_MASK) && !stillTouching) {
-        commandSuccess = false;
         abortDownload.store(true, std::memory_order_release);
         abortUnzip.store(true, std::memory_order_release);
         abortFileOp.store(true, std::memory_order_release);
         abortCommand.store(true, std::memory_order_release);
-        shouldAbort = true;
+        commandSuccess = false;
+        lastPct = -1;
+        lastOp = 255;
+        inProg = true;
+        return true;
     }
-
-    else if ((keysDown & KEY_B) && !(keysHeld & ~KEY_B & ALL_KEYS_MASK) && !stillTouching) {
+    if (abortDownload.load(std::memory_order_acquire) ||
+        abortUnzip.load(std::memory_order_acquire) || 
+        abortFileOp.load(std::memory_order_acquire) || 
+        abortCommand.load(std::memory_order_acquire)) {
+        return true;
+    }
+    
+    // Other input handling
+    if ((keysDown & KEY_B) && !(keysHeld & ~KEY_B & ALL_KEYS_MASK) && !stillTouching) {
         tsl::Overlay::get()->hide();
     }
-
+    
     if (threadFailure.load(std::memory_order_acquire)) {
         threadFailure.store(false, std::memory_order_release);
         commandSuccess = false;
     }
-
-    //if (!shouldAbort) {
-    //    svcSleepThread(10'000'000); // 10 ms sleep
-    //}
-
-    return shouldAbort;
+    
+    // Progress - minimal overhead with proper synchronization
+    static std::atomic<int>* const pcts[] = {&downloadPercentage, &unzipPercentage, &copyPercentage};
+    static const std::string* const syms[] = {&DOWNLOAD_SYMBOL, &UNZIP_SYMBOL, &COPY_SYMBOL};
+    
+    bool foundActive = false;
+    
+    // Check ALL operations first - don't exit early to catch completions
+    for (uint8_t i = 0; i < 3; ++i) {
+        int pct = pcts[i]->load(std::memory_order_acquire);  // Pair with writer's release
+        
+        if (pct != -1) {
+            // Only update UI for the first active operation found
+            if (!foundActive) {
+                foundActive = true;
+                if (pct != lastPct || i != lastOp) {
+                    lastSelectedListItem->setValue(*syms[i] + " " + ult::to_string(pct) + "%");
+                    lastPct = pct;
+                    lastOp = i;
+                }
+            }
+            
+            // Always check for completion on ALL operations
+            if (pct == 100) {
+                pcts[i]->store(-1, std::memory_order_release);
+            }
+        }
+    }
+    
+    if (foundActive) {
+        return false;
+    }
+    
+    if (inProg) {
+        lastSelectedListItem->setValue(INPROGRESS_SYMBOL);
+        inProg = false;
+    }
+    
+    return false;
 }
 
 
