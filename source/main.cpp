@@ -47,6 +47,7 @@ static bool returningToSubPackage = false;
 static bool returningToSelectionMenu = false;
 static bool languageWasChanged = false;
 
+static bool starJump = false; // for overrridng the default main menu jump to implementation
 
 //static bool inMainMenu = false; // moved to libtesla
 static bool wasInHiddenMode = false;
@@ -386,7 +387,7 @@ private:
             if (keys & KEY_A) {
                 executingCommands = true;
                 isDownloadCommand = true;
-
+                bool disableLoaderUpdate = isFile(EXPANSION_PATH+"DISABLE_UPDATES");
                 if (title == UPDATE_ULTRAHAND) {
                     std::string versionLabel = cleanVersionLabel(parseValueFromIniSection((SETTINGS_PATH+"RELEASE.ini"), "Release Info", "latest_version"));
                     std::string loaderUrl, loaderPlusUrl;
@@ -398,16 +399,24 @@ private:
                         loaderPlusUrl = OLD_NX_OVLLOADER_PLUS_ZIP_URL;
                     }
 
+                    // Build base commands that are always needed
                     interpreterCommands = {
                         {"try:"},
                         {"delete", targetPath},
                         {"download", INCLUDED_THEME_FOLDER_URL + "ultra.ini", THEMES_PATH},
-                        {"download", INCLUDED_THEME_FOLDER_URL + "ultra-blue.ini", THEMES_PATH},
-                        {"download", loaderUrl, EXPANSION_PATH},
-                        {"download", loaderPlusUrl, EXPANSION_PATH},
-                        {"download", downloadUrl, DOWNLOADS_PATH}
+                        {"download", INCLUDED_THEME_FOLDER_URL + "ultra-blue.ini", THEMES_PATH}
                     };
                     
+                    // Conditionally add loader downloads only if not disabled
+                    if (!disableLoaderUpdate) {
+                        interpreterCommands.push_back({"download", loaderUrl, EXPANSION_PATH});
+                        interpreterCommands.push_back({"download", loaderPlusUrl, EXPANSION_PATH});
+                    }
+                    
+                    // Add the main download
+                    interpreterCommands.push_back({"download", downloadUrl, DOWNLOADS_PATH});
+                    
+                    // Conditionally add version label
                     if (!versionLabel.empty()) {
                         interpreterCommands.push_back({"set-json-val", HB_APPSTORE_JSON, "version", versionLabel});
                     }
@@ -424,7 +433,8 @@ private:
                 } else {
                     //interpreterCommands.push_back({"download", INCLUDED_THEME_URL, THEMES_PATH});
                     interpreterCommands.push_back({"move", targetPath, movePath});
-                    interpreterCommands.push_back({"unzip", EXPANSION_PATH + loaderTitle + ".zip", ROOT_PATH});
+                    if (!disableLoaderUpdate)
+                        interpreterCommands.push_back({"unzip", EXPANSION_PATH + loaderTitle + ".zip", ROOT_PATH});
                 }
                 
                 interpreterCommands.push_back({"delete", targetPath});
@@ -2613,43 +2623,6 @@ public:
             return true;
         }
 
-        //if (lastRunningInterpreter) {
-        //    //while (!interpreterThreadExit.load(std::memory_order_acquire)) {svcSleepThread(50'000'000);}
-        //    
-        //    //resetPercentages();
-        //    
-        //    isDownloadCommand = false;
-        //    if (lastCommandMode == OPTION_STR) {
-        //        if (commandSuccess) {
-        //            //if (isFileOrDirectory(packageConfigIniPath)) {
-        //            //    auto packageConfigData = getParsedDataFromIniFile(packageConfigIniPath);
-        //            //    auto it = packageConfigData.find(lastKeyName);
-        //            //    if (it != packageConfigData.end()) {
-        //            //        auto& optionSection = it->second;
-        //            //        auto footerIt = optionSection.find(FOOTER_STR);
-        //            //        if (footerIt != optionSection.end() && (footerIt->second.find(NULL_STR) == std::string::npos)) {
-        //            //            lastSelectedListItem->setValue(footerIt->second);
-        //            //        }
-        //            //    }
-        //            //    lastSelectedListItem.reset();
-        //            //    lastCommandMode = "";
-        //            //} else {
-        //            //    lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
-        //            //}
-        //            lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
-        //        } else {
-        //            lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
-        //        }
-        //    }
-        //    else
-        //        lastSelectedListItem->setValue(commandSuccess ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
-        //    
-        //    closeInterpreterThread();
-        //    lastRunningInterpreter = false;
-        //    return true;
-        //}
-
-
         if (refreshPage && !stillTouching) {
             tsl::goBack();
             tsl::changeTo<SelectionOverlay>(filePath, specificKey, commands, specifiedFooterKey);
@@ -2891,19 +2864,6 @@ bool drawCommandsMenu(std::unique_ptr<tsl::elm::List>& list,
     bool isMini;
 
     // update general placeholders
-    //generalPlaceholders = {
-    //    {"{ram_vendor}", memoryVendor},
-    //    {"{ram_model}", memoryModel},
-    //    {"{ams_version}", amsVersion},
-    //    {"{hos_version}", hosVersion},
-    //    {"{cpu_speedo}", ult::to_string(cpuSpeedo0)},
-    //    {"{cpu_iddq}", ult::to_string(cpuIDDQ)},
-    //    {"{gpu_speedo}", ult::to_string(cpuSpeedo2)},
-    //    {"{gpu_iddq}", ult::to_string(gpuIDDQ)},
-    //    {"{soc_speedo}", ult::to_string(socSpeedo0)},
-    //    {"{soc_iddq}", ult::to_string(socIDDQ)},
-    //    {"{title_id}", getTitleIdAsString()}
-    //};
     updateGeneralPlaceholders();
 
 
@@ -4611,7 +4571,6 @@ public:
 
 
 
-static bool starJump = false;
 
 /**
  * @brief The `MainMenu` class handles the main menu overlay functionality.
@@ -5235,57 +5194,57 @@ public:
     
                 auto packageIt = packagesIniData.end();
                 for (const auto& packageName: subdirectories) {
-                packageIt = packagesIniData.find(packageName);
-                if (packageIt == packagesIniData.end()) {
-                    // Get package header info first for new packages
-                    packageHeader = getPackageHeaderFromIni(PACKAGE_PATH + packageName+ "/" +PACKAGE_FILENAME);
-                    
-                    // Initialize missing package data
-                    setIniFileValue(PACKAGES_INI_FILEPATH, packageName, PRIORITY_STR, "20");
-                    setIniFileValue(PACKAGES_INI_FILEPATH, packageName, STAR_STR, FALSE_STR);
-                    setIniFileValue(PACKAGES_INI_FILEPATH, packageName, HIDE_STR, FALSE_STR);
-                    setIniFileValue(OVERLAYS_INI_FILEPATH, packageName, USE_BOOT_PACKAGE_STR, TRUE_STR);
-                    setIniFileValue(OVERLAYS_INI_FILEPATH, packageName, USE_EXIT_PACKAGE_STR, TRUE_STR);
-                    setIniFileValue(PACKAGES_INI_FILEPATH, packageName, "custom_name", "");
-                    setIniFileValue(PACKAGES_INI_FILEPATH, packageName, "custom_version", "");
-
-                    assignedOverlayName = packageHeader.title.empty() ? packageName : packageHeader.title;
-                    assignedOverlayVersion = packageHeader.version;
-
-                    baseOverlayInfo = "0020:" + assignedOverlayName + ":" + assignedOverlayVersion + ":" + packageName;
-                    packageList.insert(baseOverlayInfo);
-
-                } else {
-                    // Process existing package data
-                    priority = (packageIt->second.find(PRIORITY_STR) != packageIt->second.end()) ? 
-                                formatPriorityString(packageIt->second[PRIORITY_STR]) : "0020";
-                    starred = (packageIt->second.find(STAR_STR) != packageIt->second.end()) ? 
-                              packageIt->second[STAR_STR] : FALSE_STR;
-                    hide = (packageIt->second.find(HIDE_STR) != packageIt->second.end()) ? 
-                           packageIt->second[HIDE_STR] : FALSE_STR;
-                    
-                    customName = getValueOrDefault(packageIt->second, "custom_name", "");
-                    customVersion = getValueOrDefault(packageIt->second, "custom_version", "");
-
-                    packageHeader = getPackageHeaderFromIni(PACKAGE_PATH + packageName+ "/" +PACKAGE_FILENAME);
-                    
-                    if (cleanVersionLabels) {
-                        packageHeader.version = cleanVersionLabel(packageHeader.version);
-                        removeQuotes(packageHeader.version);
-                    }
-
-                    assignedOverlayName = !customName.empty() ? customName : 
-                                         (packageHeader.title.empty() ? packageName : packageHeader.title);
-                    assignedOverlayVersion = !customVersion.empty() ? customVersion : packageHeader.version;
-
-                    baseOverlayInfo = priority + ":" + assignedOverlayName + ":" + assignedOverlayVersion + ":" + packageName;
-                    fullOverlayInfo = (starred == TRUE_STR) ? "-1:" + baseOverlayInfo : baseOverlayInfo;
-                    if (hide == FALSE_STR) {
-                        packageList.insert(fullOverlayInfo);
+                    packageIt = packagesIniData.find(packageName);
+                    if (packageIt == packagesIniData.end()) {
+                        // Get package header info first for new packages
+                        packageHeader = getPackageHeaderFromIni(PACKAGE_PATH + packageName+ "/" +PACKAGE_FILENAME);
+                        
+                        // Initialize missing package data
+                        setIniFileValue(PACKAGES_INI_FILEPATH, packageName, PRIORITY_STR, "20");
+                        setIniFileValue(PACKAGES_INI_FILEPATH, packageName, STAR_STR, FALSE_STR);
+                        setIniFileValue(PACKAGES_INI_FILEPATH, packageName, HIDE_STR, FALSE_STR);
+                        setIniFileValue(OVERLAYS_INI_FILEPATH, packageName, USE_BOOT_PACKAGE_STR, TRUE_STR);
+                        setIniFileValue(OVERLAYS_INI_FILEPATH, packageName, USE_EXIT_PACKAGE_STR, TRUE_STR);
+                        setIniFileValue(PACKAGES_INI_FILEPATH, packageName, "custom_name", "");
+                        setIniFileValue(PACKAGES_INI_FILEPATH, packageName, "custom_version", "");
+    
+                        assignedOverlayName = packageHeader.title.empty() ? packageName : packageHeader.title;
+                        assignedOverlayVersion = packageHeader.version;
+    
+                        baseOverlayInfo = "0020:" + assignedOverlayName + ":" + assignedOverlayVersion + ":" + packageName;
+                        packageList.insert(baseOverlayInfo);
+    
                     } else {
-                        hiddenPackageList.insert(fullOverlayInfo);
+                        // Process existing package data
+                        priority = (packageIt->second.find(PRIORITY_STR) != packageIt->second.end()) ? 
+                                    formatPriorityString(packageIt->second[PRIORITY_STR]) : "0020";
+                        starred = (packageIt->second.find(STAR_STR) != packageIt->second.end()) ? 
+                                  packageIt->second[STAR_STR] : FALSE_STR;
+                        hide = (packageIt->second.find(HIDE_STR) != packageIt->second.end()) ? 
+                               packageIt->second[HIDE_STR] : FALSE_STR;
+                        
+                        customName = getValueOrDefault(packageIt->second, "custom_name", "");
+                        customVersion = getValueOrDefault(packageIt->second, "custom_version", "");
+    
+                        packageHeader = getPackageHeaderFromIni(PACKAGE_PATH + packageName+ "/" +PACKAGE_FILENAME);
+                        
+                        if (cleanVersionLabels) {
+                            packageHeader.version = cleanVersionLabel(packageHeader.version);
+                            removeQuotes(packageHeader.version);
+                        }
+    
+                        assignedOverlayName = !customName.empty() ? customName : 
+                                             (packageHeader.title.empty() ? packageName : packageHeader.title);
+                        assignedOverlayVersion = !customVersion.empty() ? customVersion : packageHeader.version;
+    
+                        baseOverlayInfo = priority + ":" + assignedOverlayName + ":" + assignedOverlayVersion + ":" + packageName;
+                        fullOverlayInfo = (starred == TRUE_STR) ? "-1:" + baseOverlayInfo : baseOverlayInfo;
+                        if (hide == FALSE_STR) {
+                            packageList.insert(fullOverlayInfo);
+                        } else {
+                            hiddenPackageList.insert(fullOverlayInfo);
+                        }
                     }
-                }
                 }
     
                 packagesIniData.clear();
