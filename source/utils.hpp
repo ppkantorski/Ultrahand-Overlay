@@ -2931,7 +2931,7 @@ bool interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
     #endif
 
     // Load key-value pairs from the "BUFFERS" section of the INI file
-    auto bufferSection = getKeyValuePairsFromSection(ULTRAHAND_CONFIG_INI_PATH, BUFFERS);
+    auto bufferSection = getKeyValuePairsFromSection(ULTRAHAND_CONFIG_INI_PATH, MEMORY_STR);
     
     if (!bufferSection.empty()) {
         // Directly update buffer sizes without a map
@@ -3997,7 +3997,7 @@ void startInterpreterThread(const std::string& packagePath = "") {
     }
     #endif
 
-    std::string interpreterHeap = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "interpreter_heap");
+    std::string interpreterHeap = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, MEMORY_STR, "interpreter_heap");
     if (!interpreterHeap.empty())
         stackSize = ult::stoi(interpreterHeap, nullptr, 16);  // Convert from base 16
 
