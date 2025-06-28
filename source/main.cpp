@@ -178,18 +178,27 @@ bool handleRunningInterpreter(uint64_t& keysDown, uint64_t& keysHeld) {
     static uint8_t lastOp = 255;
     static bool inProg = true;
     
-    // Abort - single optimized check
+    // FIX: More robust abort handling
     if ((keysDown & KEY_R) && !(keysHeld & ~KEY_R & ALL_KEYS_MASK) && !stillTouching) {
+        // Set all abort flags with proper ordering
         abortDownload.store(true, std::memory_order_release);
         abortUnzip.store(true, std::memory_order_release);
         abortFileOp.store(true, std::memory_order_release);
         abortCommand.store(true, std::memory_order_release);
+        
+        // Reset UI state
         commandSuccess = false;
         lastPct = -1;
         lastOp = 255;
         inProg = true;
+        
+        // FIX: Give curl time to see the abort flag
+        //std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        
         return true;
     }
+    
+    // FIX: Check abort flags with acquire ordering
     if (abortDownload.load(std::memory_order_acquire) ||
         abortUnzip.load(std::memory_order_acquire) || 
         abortFileOp.load(std::memory_order_acquire) || 
@@ -207,39 +216,38 @@ bool handleRunningInterpreter(uint64_t& keysDown, uint64_t& keysHeld) {
         commandSuccess = false;
     }
     
-    // Progress - minimal overhead with proper synchronization
+    // FIX: Better progress tracking with atomic operations
     static std::atomic<int>* const pcts[] = {&downloadPercentage, &unzipPercentage, &copyPercentage};
     static const std::string* const syms[] = {&DOWNLOAD_SYMBOL, &UNZIP_SYMBOL, &COPY_SYMBOL};
     
     bool foundActive = false;
+    int currentPct = -1;
+    uint8_t currentOp = 255;
     
-    // Check ALL operations first - don't exit early to catch completions
+    // Check operations in order
+    static int pct;
     for (uint8_t i = 0; i < 3; ++i) {
-        int pct = pcts[i]->load(std::memory_order_acquire);  // Pair with writer's release
+        pct = pcts[i]->load(std::memory_order_acquire);
         
-        if (pct != -1) {
-            // Only update UI for the first active operation found
+        if (pct >= 0 && pct < 100) {  // Active operation
             if (!foundActive) {
                 foundActive = true;
-                if (pct != lastPct || i != lastOp) {
-                    lastSelectedListItem->setValue(*syms[i] + " " + ult::to_string(pct) + "%");
-                    lastPct = pct;
-                    lastOp = i;
-                }
+                currentPct = pct;
+                currentOp = i;
             }
-            
-            // Always check for completion on ALL operations
-            if (pct == 100) {
-                pcts[i]->store(-1, std::memory_order_release);
-            }
+        } else if (pct == 100) {
+            // Mark as completed
+            pcts[i]->store(-1, std::memory_order_release);
         }
     }
     
-    if (foundActive) {
-        return false;
-    }
-    
-    if (inProg) {
+    // Update UI only when necessary
+    if (foundActive && (currentPct != lastPct || currentOp != lastOp)) {
+        lastSelectedListItem->setValue(*syms[currentOp] + " " + ult::to_string(currentPct) + "%");
+        lastPct = currentPct;
+        lastOp = currentOp;
+        inProg = true;  // Reset inProg when we have active operations
+    } else if (!foundActive && inProg) {
         lastSelectedListItem->setValue(INPROGRESS_SYMBOL);
         inProg = false;
     }
