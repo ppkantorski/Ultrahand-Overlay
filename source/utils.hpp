@@ -2941,12 +2941,12 @@ bool interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
         if (bufferSection.count(section) > 0) {
             COPY_BUFFER_SIZE = ult::stoi(bufferSection[section]);
         }
-    
+        
         section = "unzip_read_buffer";
         if (bufferSection.count(section) > 0) {
             UNZIP_READ_BUFFER = ult::stoi(bufferSection[section]);
         }
-
+        
         section = "unzip_write_buffer";
         if (bufferSection.count(section) > 0) {
             UNZIP_WRITE_BUFFER = ult::stoi(bufferSection[section]);
@@ -2956,12 +2956,12 @@ bool interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
         if (bufferSection.count(section) > 0) {
             DOWNLOAD_READ_BUFFER = ult::stoi(bufferSection[section]);
         }
-
+        
         section = "download_write_buffer";
         if (bufferSection.count(section) > 0) {
             DOWNLOAD_WRITE_BUFFER = ult::stoi(bufferSection[section]);
         }
-    
+        
         section = "hex_buffer_size";
         if (bufferSection.count(section) > 0) {
             HEX_BUFFER_SIZE = ult::stoi(bufferSection[section]);
