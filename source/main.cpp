@@ -173,7 +173,7 @@ void shiftItemFocus(tsl::elm::Element* element) {
  * @param commandSuccess Reference to a boolean tracking the overall command success.
  * @return `true` if the operation needs to abort, `false` otherwise.
  */
-bool handleRunningInterpreter(uint64_t& keysHeld) {
+bool handleRunningInterpreter(uint64_t& keysDown, uint64_t& keysHeld) {
     static std::string lastSymbol;
     static int lastPercentage = -1;
     static bool inProgress = true;
@@ -215,13 +215,17 @@ bool handleRunningInterpreter(uint64_t& keysHeld) {
         inProgress = false;
     }
 
-    if ((keysHeld & KEY_R) && !(keysHeld & ~KEY_R & ALL_KEYS_MASK) && !stillTouching) {
+    if ((keysDown & KEY_R) && !(keysHeld & ~KEY_R & ALL_KEYS_MASK) && !stillTouching) {
         commandSuccess = false;
         abortDownload.store(true, std::memory_order_release);
         abortUnzip.store(true, std::memory_order_release);
         abortFileOp.store(true, std::memory_order_release);
         abortCommand.store(true, std::memory_order_release);
         shouldAbort = true;
+    }
+
+    else if ((keysDown & KEY_B) && !(keysHeld & ~KEY_B & ALL_KEYS_MASK) && !stillTouching) {
+        tsl::Overlay::get()->hide();
     }
 
     if (threadFailure.load(std::memory_order_acquire)) {
@@ -387,7 +391,7 @@ private:
             if (keys & KEY_A) {
                 executingCommands = true;
                 isDownloadCommand = true;
-                bool disableLoaderUpdate = isFile(EXPANSION_PATH+"DISABLE_UPDATES");
+                bool disableLoaderUpdate = isFile(FLAGS_PATH+"NO_LOADER_UPDATES.flag");
                 if (title == UPDATE_ULTRAHAND) {
                     std::string versionLabel = cleanVersionLabel(parseValueFromIniSection((SETTINGS_PATH+"RELEASE.ini"), "Release Info", "latest_version"));
                     std::string loaderUrl, loaderPlusUrl;
@@ -970,7 +974,7 @@ public:
 
     virtual bool handleInput(u64 keysDown, u64 keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
         if (runningInterpreter.load(std::memory_order_acquire)) {
-            return handleRunningInterpreter(keysHeld);
+            return handleRunningInterpreter(keysDown, keysHeld);
         }
         if (lastRunningInterpreter) {
             isDownloadCommand = false;
@@ -1396,7 +1400,7 @@ public:
     virtual bool handleInput(u64 keysDown, u64 keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
 
         if (runningInterpreter.load(std::memory_order_acquire)) {
-            return handleRunningInterpreter(keysHeld);
+            return handleRunningInterpreter(keysDown, keysHeld);
         }
         if (lastRunningInterpreter) {
             //while (!interpreterThreadExit.load(std::memory_order_acquire)) {svcSleepThread(50'000'000);}
@@ -1699,7 +1703,7 @@ public:
     }
 
     virtual bool handleInput(u64 keysDown, u64 keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
-        if (runningInterpreter.load(std::memory_order_acquire)) return handleRunningInterpreter(keysHeld);
+        if (runningInterpreter.load(std::memory_order_acquire)) return handleRunningInterpreter(keysDown, keysHeld);
         if (lastRunningInterpreter) {
             isDownloadCommand = false;
             lastSelectedListItem->setValue(commandSuccess ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
@@ -2608,7 +2612,7 @@ public:
 
     virtual bool handleInput(u64 keysDown, u64 keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
         if (runningInterpreter.load(std::memory_order_acquire)) {
-            return handleRunningInterpreter(keysHeld);
+            return handleRunningInterpreter(keysDown, keysHeld);
         }
         if (lastRunningInterpreter) {
             isDownloadCommand = false;
@@ -4217,7 +4221,7 @@ public:
     virtual bool handleInput(uint64_t keysDown, uint64_t keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
         
         if (runningInterpreter.load(std::memory_order_acquire)) {
-            return handleRunningInterpreter(keysHeld);
+            return handleRunningInterpreter(keysDown, keysHeld);
         }
         //if (lastRunningInterpreter) {
         //    //while (!interpreterThreadExit.load(std::memory_order_acquire)) {svcSleepThread(50'000'000);}
@@ -4658,7 +4662,11 @@ public:
         bool foundOvlmenu = false;
         
         createDirectory(PACKAGE_PATH);
-        createDirectory(SETTINGS_PATH);
+        //createDirectory(SETTINGS_PATH); // will be created with the subdirectories
+        createDirectory(LANG_PATH);
+        createDirectory(FLAGS_PATH);
+        createDirectory(THEMES_PATH);
+        createDirectory(WALLPAPERS_PATH);
         
         bool settingsLoaded = false;
         
@@ -5482,7 +5490,7 @@ public:
     virtual bool handleInput(uint64_t keysDown, uint64_t keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
 
         if (runningInterpreter.load(std::memory_order_acquire))
-            return handleRunningInterpreter(keysHeld);
+            return handleRunningInterpreter(keysDown, keysHeld);
         
         //if (lastRunningInterpreter) {
         //    ////while (!interpreterThreadExit.load(std::memory_order_acquire)) {svcSleepThread(50'000'000);}
