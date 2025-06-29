@@ -697,6 +697,7 @@ static std::string resolveWildcardFromKnownPath(
 
     for (size_t startPos = 0; startPos <= resolvedPath.size(); ++startPos) {
         captures.clear();
+        captures.shrink_to_fit();
         subPath = resolvedPath.substr(startPos);
         
         if (matchAndExtract(oldPattern, subPath, captures)) {
@@ -1111,6 +1112,7 @@ std::vector<std::string> wrapText(const std::string& text, float maxWidth, const
             if (tsl::gfx::calculateStringWidth(currentLine, fontSize, false) > currentMaxWidth) {
                 wrappedLines.push_back(((firstLine && useIndent) || !useIndent) ? currentLine : indent + currentLine);  // Indent if not the first line
                 currentLine.clear();  // Start a new line
+                currentLine.shrink_to_fit();
                 firstLine = false;
             }
             i++;
@@ -1125,6 +1127,7 @@ std::vector<std::string> wrapText(const std::string& text, float maxWidth, const
             if (tsl::gfx::calculateStringWidth(currentLine + currentWord, fontSize, false) > currentMaxWidth) {
                 wrappedLines.push_back(((firstLine && useIndent) || !useIndent) ? currentLine : indent + currentLine);  // Add the current line
                 currentLine.clear();  // Start a new line with the current word
+                currentLine.shrink_to_fit();
                 firstLine = false;
             }
 
@@ -1167,9 +1170,13 @@ static bool buildTableDrawerLines(
     const float indentWidth = tsl::gfx::calculateStringWidth(indent, fontSize, false);
 
     outSection.clear();
+    outSection.shrink_to_fit();
     outInfo.clear();
+    outInfo.shrink_to_fit();
     outY.clear();
+    outY.shrink_to_fit();
     outX.clear();
+    outX.shrink_to_fit();
 
     size_t curY = startGap;
     bool anyReplacementsMade = false;
@@ -1344,7 +1351,7 @@ static tsl::Color getRawColor(const std::string& c, tsl::Color defaultColor) {
 }
 
 void drawTable(
-    std::unique_ptr<tsl::elm::List>&      list,
+    tsl::elm::List*      list,
     std::vector<std::vector<std::string>>& tableData,
     std::vector<std::string>&             sectionLines,
     std::vector<std::string>&             infoLines,
@@ -1454,7 +1461,7 @@ void drawTable(
 
 // ─── addTable simply forwards through ───────────────────────────────────────────
 void addTable(
-    std::unique_ptr<tsl::elm::List>&       list,
+    tsl::elm::List*       list,
     std::vector<std::vector<std::string>>& tableData,
     const std::string&                     packagePath,
     const size_t&                          columnOffset                = 163,
@@ -1485,7 +1492,7 @@ void addTable(
 }
 
 
-void addHelpInfo(std::unique_ptr<tsl::elm::List>& list) {
+void addHelpInfo(tsl::elm::List* list) {
     // Add a section break with small text to indicate the "Commands" section
     addHeader(list, USER_GUIDE);
 
@@ -1516,7 +1523,7 @@ void addHelpInfo(std::unique_ptr<tsl::elm::List>& list) {
 
 
 
-void addPackageInfo(std::unique_ptr<tsl::elm::List>& list, auto& packageHeader, std::string type = PACKAGE_STR) {
+void addPackageInfo(tsl::elm::List* list, auto& packageHeader, std::string type = PACKAGE_STR) {
     // Add a section break with small text to indicate the "Commands" section
     addHeader(list, (type == PACKAGE_STR ? PACKAGE_INFO : OVERLAY_INFO));
 
@@ -2045,6 +2052,7 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
         }
 
         modifiedCmd.clear();
+        modifiedCmd.shrink_to_fit();
         modifiedCmd.reserve(cmd.size());
         commandName = cmd[0];
 
@@ -2946,7 +2954,7 @@ bool interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
         if (bufferSection.count(section) > 0) {
             UNZIP_READ_BUFFER = ult::stoi(bufferSection[section]);
         }
-        
+
         section = "unzip_write_buffer";
         if (bufferSection.count(section) > 0) {
             UNZIP_WRITE_BUFFER = ult::stoi(bufferSection[section]);
@@ -2956,7 +2964,7 @@ bool interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
         if (bufferSection.count(section) > 0) {
             DOWNLOAD_READ_BUFFER = ult::stoi(bufferSection[section]);
         }
-        
+
         section = "download_write_buffer";
         if (bufferSection.count(section) > 0) {
             DOWNLOAD_WRITE_BUFFER = ult::stoi(bufferSection[section]);
