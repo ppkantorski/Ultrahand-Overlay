@@ -179,13 +179,14 @@ bool handleRunningInterpreter(uint64_t& keysDown, uint64_t& keysHeld) {
     static bool inProg = true;
     
     // FIX: More robust abort handling
-    if ((keysDown & KEY_R) && !(keysHeld & ~KEY_R & ALL_KEYS_MASK) && !stillTouching) {
+    if (((keysDown & KEY_R) && !(keysHeld & ~KEY_R & ALL_KEYS_MASK) && !stillTouching) || externalAbortCommands.load(std::memory_order_relaxed)) {
         // Set all abort flags with proper ordering
         abortDownload.store(true, std::memory_order_release);
         abortUnzip.store(true, std::memory_order_release);
         abortFileOp.store(true, std::memory_order_release);
         abortCommand.store(true, std::memory_order_release);
-        
+        externalAbortCommands.store(false, std::memory_order_release);
+
         // Reset UI state
         commandSuccess = false;
         lastPct = -1;
@@ -1913,6 +1914,7 @@ public:
         //lastSelectedListItem = nullptr;
         //tsl::gfx::FontManager::clearCache();
         lastSelectedListItemFooter = "";
+        tsl::clearCacheNow = true;
     }
 
     ~SelectionOverlay() {
@@ -1927,6 +1929,7 @@ public:
         isInitialized.clear();
         toggleCount.clear();
         currentPatternIsOriginal.clear();
+        tsl::clearCacheNow = true;
     }
 
     void processSelectionCommands() {
@@ -4136,6 +4139,7 @@ public:
             jumpItemValue = "";
             jumpItemExactMatch = true;
             g_overlayFilename = "";
+            tsl::clearCacheNow = true;
         }
     /**
      * @brief Destroys the `PackageMenu` instance.
@@ -4144,6 +4148,7 @@ public:
      */
     ~PackageMenu() {
         //tsl::gfx::FontManager::clearCache();
+        tsl::clearCacheNow = true;
         if (returningToMain) {
             clearMemory();
             packageRootLayerTitle = "";
