@@ -85,6 +85,8 @@
     "CREDITS": "크레딧",
     "OK": "확인",
     "BACK": "뒤로",
+    "HIDE": "Hide",
+    "CANCEL": "Cancel",
     "REBOOT_TO": "재부팅 대상",
     "REBOOT": "재부팅",
     "SHUTDOWN": "종료",
