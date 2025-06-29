@@ -513,7 +513,6 @@ private:
                 } else {
                     executeCommands({
                         {"try:"},
-                        {"logging"},
                         {"del", EXPANSION_PATH + (actualState ? "nx-ovlloader+/" : "nx-ovlloader/")},
                         {"unzip", EXPANSION_PATH + (actualState ? "nx-ovlloader+.zip" : "nx-ovlloader.zip"),
                          EXPANSION_PATH + (actualState ? "nx-ovlloader+/" : "nx-ovlloader/")},
