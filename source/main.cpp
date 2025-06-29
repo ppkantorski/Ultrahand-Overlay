@@ -1917,7 +1917,7 @@ public:
         //lastSelectedListItem = nullptr;
         //tsl::gfx::FontManager::clearCache();
         lastSelectedListItemFooter = "";
-        tsl::clearCacheNow = true;
+        tsl::clearGlyphCacheNow = true;
     }
 
     ~SelectionOverlay() {
@@ -1932,7 +1932,7 @@ public:
         isInitialized.clear();
         toggleCount.clear();
         currentPatternIsOriginal.clear();
-        tsl::clearCacheNow = true;
+        tsl::clearGlyphCacheNow = true;
     }
 
     void processSelectionCommands() {
@@ -4138,11 +4138,12 @@ public:
     PackageMenu(const std::string& path, const std::string& sectionName = "", const std::string& page = LEFT_STR, const std::string& _packageName = PACKAGE_FILENAME, const size_t _nestedlayer = 0, const std::string& _pageHeader = "") :
         packagePath(path), dropdownSection(sectionName), currentPage(page), packageName(_packageName), nestedLayer(_nestedlayer), pageHeader(_pageHeader) {
             //tsl::gfx::FontManager::clearCache();
+            //tsl::clearGlyphCacheNow = true;
             jumpItemName = "";
             jumpItemValue = "";
             jumpItemExactMatch = true;
             g_overlayFilename = "";
-            tsl::clearCacheNow = true;
+            
         }
     /**
      * @brief Destroys the `PackageMenu` instance.
@@ -4151,8 +4152,9 @@ public:
      */
     ~PackageMenu() {
         //tsl::gfx::FontManager::clearCache();
-        tsl::clearCacheNow = true;
+        //tsl::clearGlyphCacheNow.store(true, std::memory_order_release);
         if (returningToMain) {
+            //tsl::clearGlyphCacheNow = true;
             clearMemory();
             packageRootLayerTitle = "";
             packageRootLayerVersion = "";
@@ -5449,7 +5451,7 @@ public:
     
                                 packageRootLayerTitle = newPackageName;
                                 packageRootLayerVersion = packageVersion;
-    
+                                tsl::clearGlyphCacheNow = true;
                                 tsl::changeTo<PackageMenu>(packageFilePath, "");
                                 simulatedSelectComplete = true;
                                 return true;
