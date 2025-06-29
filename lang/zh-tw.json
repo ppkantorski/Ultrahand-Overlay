@@ -85,6 +85,8 @@
     "CREDITS": "貢獻",
     "OK": "確定",
     "BACK": "返回",
+    "HIDE": "Hide",
+    "CANCEL": "Cancel",
     "REBOOT_TO": "重新啟動到",
     "REBOOT": "重啟機器",
     "SHUTDOWN": "關閉機器",
