@@ -16,6 +16,7 @@
     "DEFAULT_CHAR_WIDTH": "0.33",
     "UNAVAILABLE_SELECTION": "Not available",
     "OVERLAYS": "Overlays",
+    "OVERLAYS_ABBR": "Overlays",
     "OVERLAY": "Overlay",
     "HIDDEN_OVERLAYS": "Hidden Overlays",
     "PACKAGES": "Packages",
