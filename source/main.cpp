@@ -4191,7 +4191,7 @@ public:
         //tsl::clearGlyphCacheNow = true;
         //tsl::clearGlyphCacheNow.store(true, std::memory_order_release);
         if (returningToMain) {
-            tsl::clearGlyphCacheNow = true;
+            //tsl::clearGlyphCacheNow = true;
             clearMemory();
             packageRootLayerTitle = "";
             packageRootLayerVersion = "";
@@ -4486,6 +4486,7 @@ public:
                     //g_overlayFilename = "";
 
                     tsl::pop();
+                    svcSleepThread(100'000);
                     tsl::changeTo<PackageMenu>(lastPackagePath, dropdownSection, RIGHT_STR, lastPackageName, nestedMenuCount, pageHeader);
                     simulatedNextPageComplete = true;
                     return true;
@@ -4503,6 +4504,7 @@ public:
                     //jumpItemExactMatch = true;
                     //g_overlayFilename = "";
                     tsl::pop();
+                    svcSleepThread(100'000);
                     tsl::changeTo<PackageMenu>(lastPackagePath, dropdownSection, LEFT_STR, lastPackageName, nestedMenuCount, pageHeader);
                     simulatedNextPageComplete = true;
                     return true;
@@ -5781,6 +5783,7 @@ public:
                             selectedListItem = nullptr;
                             lastSelectedListItem = nullptr;
                             tsl::pop();
+                            svcSleepThread(100'000);
                             tsl::changeTo<MainMenu>();
                             //startInterpreterThread();
                             simulatedNextPageComplete = true;
@@ -5792,6 +5795,7 @@ public:
                             selectedListItem = nullptr;
                             lastSelectedListItem = nullptr;
                             tsl::pop();
+                            svcSleepThread(100'000);
                             tsl::changeTo<MainMenu>();
                             //closeInterpreterThread();
                             simulatedNextPageComplete = true;
@@ -5812,6 +5816,7 @@ public:
                             selectedListItem = nullptr;
                             lastSelectedListItem = nullptr;
                             tsl::pop();
+                            svcSleepThread(100'000);
                             tsl::changeTo<MainMenu>();
                             //closeInterpreterThread();
                             simulatedNextPageComplete = true;
@@ -5823,6 +5828,7 @@ public:
                             selectedListItem = nullptr;
                             lastSelectedListItem = nullptr;
                             tsl::pop();
+                            svcSleepThread(100'000);
                             tsl::changeTo<MainMenu>();
                             //startInterpreterThread();
                             simulatedNextPageComplete = true;
