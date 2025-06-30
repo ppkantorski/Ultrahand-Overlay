@@ -2270,7 +2270,7 @@ public:
             }
 
 
-            selectedItemsList.reserve(selectedItemsListOn.size() + selectedItemsListOff.size());
+            //selectedItemsList.reserve(selectedItemsListOn.size() + selectedItemsListOff.size());
             selectedItemsList.insert(selectedItemsList.end(), selectedItemsListOn.begin(), selectedItemsListOn.end());
             selectedItemsList.insert(selectedItemsList.end(), selectedItemsListOff.begin(), selectedItemsListOff.end());
 
@@ -2799,7 +2799,7 @@ std::vector<std::vector<std::string>> gatherPromptCommands(
     const std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>>& options) {
     
     std::vector<std::vector<std::string>> promptCommands;
-    promptCommands.reserve(options.size()); // Reserve space to avoid reallocations
+    //promptCommands.reserve(options.size()); // Reserve space to avoid reallocations
     
     bool inRelevantSection = false;
     bool isFirstSection = true;
@@ -2811,7 +2811,7 @@ std::vector<std::vector<std::string>> gatherPromptCommands(
     std::vector<std::string> splitParts;
     
     // Pre-allocate filler command (whitespace)
-    fillerCommand.reserve(1);
+    //fillerCommand.reserve(1);
     fillerCommand.push_back("\u00A0");
     
     for (const auto& nextOption : options) {
@@ -2842,7 +2842,7 @@ std::vector<std::vector<std::string>> gatherPromptCommands(
                 // Clear and prepare section command
                 sectionCommand.clear();
                 sectionCommand.shrink_to_fit();
-                sectionCommand.reserve(1);
+                //sectionCommand.reserve(1);
                 sectionCommand.push_back("[" + sectionName + "]");
                 promptCommands.push_back(sectionCommand);
             }
@@ -2866,7 +2866,7 @@ std::vector<std::vector<std::string>> gatherPromptCommands(
     
     // Return placeholder if no commands are found
     if (promptCommands.empty()) {
-        promptCommands.reserve(1);
+        //promptCommands.reserve(1);
         promptCommands.push_back({UNAVAILABLE_SELECTION});
     }
     
@@ -4178,10 +4178,10 @@ public:
      */
     ~PackageMenu() {
         //tsl::gfx::FontManager::clearCache();
-
+        //tsl::clearGlyphCacheNow = true;
         //tsl::clearGlyphCacheNow.store(true, std::memory_order_release);
         if (returningToMain) {
-            //tsl::clearGlyphCacheNow = true;
+            tsl::clearGlyphCacheNow = true;
             clearMemory();
             packageRootLayerTitle = "";
             packageRootLayerVersion = "";

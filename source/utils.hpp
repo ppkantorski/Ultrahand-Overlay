@@ -1802,7 +1802,7 @@ void populateSelectedItemsListFromJson(const std::string& sourceType, const std:
     
     // Prepare for efficient insertion
     const int arraySize = cJSON_GetArraySize(jsonArray);
-    selectedItemsList.reserve(arraySize);
+    //selectedItemsList.reserve(arraySize);
     
     // Store the key as a const char* to avoid repeated c_str() calls
     const char* jsonKeyCStr = jsonKey.c_str();
@@ -2053,7 +2053,7 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
 
         modifiedCmd.clear();
         modifiedCmd.shrink_to_fit();
-        modifiedCmd.reserve(cmd.size());
+        //modifiedCmd.reserve(cmd.size());
         commandName = cmd[0];
 
         if (commandName == "download") {
