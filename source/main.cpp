@@ -1684,21 +1684,26 @@ public:
                 index++;
             }
         } else {
-            //addDummyListItem(list);
-            addHeader(list, specificKey);
 
             noClickableItems = true;
             std::vector<std::string> sectionLines;  // Holds the sections (commands)
             std::vector<std::string> infoLines;     // Holds the info (empty in this case)
             // Table mode: Collect command data for the table
             std::string sectionLine;
+
+            std::string packageSourcePath;
+
             for (const auto& command : commands) {
+                if (command.size() > 1 && command[0] == "package_source") {
+                    packageSourcePath = command[1];
+                    preprocessPath(packageSourcePath, filePath);
+                }
                 // Each command will be treated as a section with no corresponding info
                 sectionLine = joinCommands(command);  // Combine command parts into a section line
                 sectionLines.push_back(sectionLine);              // Add to section lines
                 infoLines.push_back("");                          // Empty info line
             }
-    
+            
             // Use default parameters for the table view
             const size_t tableColumnOffset = 163;
             const size_t tableStartGap = 20;
@@ -1719,10 +1724,38 @@ public:
 
             static std::vector<std::vector<std::string>> dummyTableData;
 
+
+            //addDummyListItem(list);
+            addHeader(list, specificKey);
+
             addDummyListItem(list);
             // Draw the table using the sectionLines and empty infoLines
             drawTable(list, dummyTableData, sectionLines, infoLines, tableColumnOffset, tableStartGap, tableEndGap, tableSpacing,
                       tableSectionTextColor, tableInfoTextColor, tableInfoTextColor, tableAlignment, hideTableBackground, useHeaderIndent, isPolling, isScrollableTable, wrappingMode, useWrappedTextIndent);
+
+            if (!packageSourcePath.empty()) {
+
+                std::vector<std::string> sourceCommands = readListFromFile(packageSourcePath);
+                sectionLines.clear();
+                sectionLines.shrink_to_fit();
+                infoLines.clear();
+                infoLines.shrink_to_fit();
+                sectionLine = "";
+                for (const auto& command : sourceCommands) {
+                    // Each command will be treated as a section with no corresponding info
+                    //sectionLine = joinCommands(command);  // Combine command parts into a section line
+                    sectionLines.push_back(command);              // Add to section lines
+                    infoLines.push_back("");                          // Empty info line
+                }
+
+                std::string packageSourceName = getNameFromPath(packageSourcePath);
+
+                addHeader(list, packageSourceName);
+                drawTable(list, dummyTableData, sectionLines, infoLines, tableColumnOffset, tableStartGap, tableEndGap, tableSpacing,
+                          tableSectionTextColor, tableInfoTextColor, tableInfoTextColor, tableAlignment, hideTableBackground, useHeaderIndent, isPolling, isScrollableTable, wrappingMode, useWrappedTextIndent);
+            }
+
+
             //addDummyListItem(list);
             //if (usingBottomPivot) {
             //    addDummyListItem(list);
@@ -1855,6 +1888,7 @@ private:
 };
 
 
+// Set to globals for reduced lambda overhead
 static std::vector<std::vector<std::string>> selectionCommands = {};
 static std::vector<std::vector<std::string>> selectionCommandsOn = {};
 static std::vector<std::vector<std::string>> selectionCommandsOff = {};
@@ -1902,11 +1936,10 @@ private:
     bool isMini = false;
 
     size_t maxItemsLimit = 250;     // 0 = uncapped, any other value = max size
-    bool enableSizeLimiting = true; // Global toggle for size limiting
     
     // Helper function to apply size limit to any vector
     void applyItemsLimit(std::vector<std::string>& vec) {
-        if (!enableSizeLimiting || maxItemsLimit == 0 || vec.size() <= maxItemsLimit) return;
+        if (maxItemsLimit == 0 || vec.size() <= maxItemsLimit) return;
         vec.resize(maxItemsLimit);
         vec.shrink_to_fit();
     }
@@ -2252,29 +2285,26 @@ public:
                 });
             } else if (commandGrouping == "split5") {
                 std::sort(selectedItemsList.begin(), selectedItemsList.end(),
-                    [](auto const& a, auto const& b) {
-                        // extract “Xenoblade Chronicles 3” vs “Xenoblade Chronicles 3” (grouping part)
+                    [](const std::string& a, const std::string& b) {
                         std::string ga = getParentDirNameFromPath(a);
                         std::string gb = getParentDirNameFromPath(b);
                         removeQuotes(ga);
                         removeQuotes(gb);
-        
-                        // split off the “ – ” piece:
-                        auto posA = ga.find(" - ");
-                        auto posB = gb.find(" - ");
-        
-                        std::string baseA = (posA == std::string::npos) ? ga : ga.substr(0, posA);
-                        std::string baseB = (posB == std::string::npos) ? gb : gb.substr(0, posB);
-        
-                        if (baseA != baseB) return baseA < baseB;
-        
-                        // now compare the “Graphics Pack X” portion
-                        std::string itemA = (posA == std::string::npos) ? "" : ga.substr(posA + 3);
-                        std::string itemB = (posB == std::string::npos) ? "" : gb.substr(posB + 3);
-        
-                        return itemA < itemB;
-                    }
-                );
+            
+                        size_t posA = ga.find(" - ");
+                        size_t posB = gb.find(" - ");
+            
+                        if (posA != posB) {
+                            if (posA == std::string::npos) return true;
+                            if (posB == std::string::npos) return false;
+                        }
+            
+                        int cmp = ga.compare(0, posA, gb, 0, posB);
+                        if (cmp != 0) return cmp < 0;
+            
+                        if (posA == std::string::npos) return false;
+                        return ga.compare(posA + 3, std::string::npos, gb, posB + 3, std::string::npos) < 0;
+                    });
             } else {
                 std::sort(selectedItemsList.begin(), selectedItemsList.end(), [](const std::string& a, const std::string& b) {
                     return getNameFromPath(a) < getNameFromPath(b);
@@ -2567,12 +2597,7 @@ public:
                     //disableLogging = false;
                     //logMessage("Resolved pathToUse: "+pathToUse);
                 
-                    auto modifiedCmds = getSourceReplacement(
-                        activeCommands,
-                        pathToUse,
-                        i,
-                        filePath
-                    );
+                    auto modifiedCmds = getSourceReplacement(activeCommands, pathToUse, i, filePath);
                 
                     if (sourceType == FILE_STR) {
                         for (const auto& cmd : modifiedCmds)
@@ -3791,8 +3816,8 @@ bool drawCommandsMenu(tsl::elm::List* list,
                             if (keys & KEY_A) {
                                 //auto commandsCopy = commands;
                                 //interpretAndExecuteCommands(std::move(commandsCopy), packagePath, keyName); // Now correctly moved
-                                auto modifiedCmds = getSourceReplacement(commands, keyName, i, packagePath); // Now correctly moved
-                                interpretAndExecuteCommands(std::move(modifiedCmds), packagePath, keyName);
+                                //auto modifiedCmds = getSourceReplacement(commands, keyName, i, packagePath); // Now correctly moved
+                                interpretAndExecuteCommands(std::move(getSourceReplacement(commands, keyName, i, packagePath)), packagePath, keyName);
                                 resetPercentages();
 
                                 nestedMenuCount++;
@@ -3814,6 +3839,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
                                 //jumpItemValue = "";
                                 //jumpItemExactMatch = true;
                                 //g_overlayFilename = "";
+
                                 tsl::changeTo<PackageMenu>(forwarderPackagePath, "", LEFT_STR, forwarderPackageIniName, nestedMenuCount, _lastPackageHeader);
                                 simulatedSelectComplete = true;
                                 return true;
@@ -3922,11 +3948,11 @@ bool drawCommandsMenu(tsl::elm::List* list,
                                     lastMenu = "subPackageMenu";
                                 }
 
-                                auto modifiedCmds = getSourceReplacement(commands, keyName, i, packagePath);
+                                //auto modifiedCmds = getSourceReplacement(commands, keyName, i, packagePath);
                                 //applyPlaceholderReplacementsToCommands(modifiedCmds);
                                 std::string selectionItem = keyName;
                                 removeTag(selectionItem);
-                                tsl::changeTo<ScriptOverlay>(modifiedCmds, packagePath, selectionItem, isFromMainMenu ? "main" : "package", true, _lastPackageHeader);
+                                tsl::changeTo<ScriptOverlay>(getSourceReplacement(commands, keyName, i, packagePath), packagePath, selectionItem, isFromMainMenu ? "main" : "package", true, _lastPackageHeader);
                                 return true;
                             }
                             return false;
@@ -4152,6 +4178,7 @@ public:
      */
     ~PackageMenu() {
         //tsl::gfx::FontManager::clearCache();
+
         //tsl::clearGlyphCacheNow.store(true, std::memory_order_release);
         if (returningToMain) {
             //tsl::clearGlyphCacheNow = true;
@@ -4732,6 +4759,7 @@ public:
             inMainMenu = false;
             inHiddenMode = true;
             hiddenMenuMode = OVERLAYS_STR;
+            starJump = true;
             setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_OVERLAY_STR, FALSE_STR);
         }
     
@@ -5451,7 +5479,7 @@ public:
     
                                 packageRootLayerTitle = newPackageName;
                                 packageRootLayerVersion = packageVersion;
-                                tsl::clearGlyphCacheNow = true;
+                                //tsl::clearGlyphCacheNow = true;
                                 tsl::changeTo<PackageMenu>(packageFilePath, "");
                                 simulatedSelectComplete = true;
                                 return true;
