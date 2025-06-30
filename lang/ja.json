@@ -16,6 +16,7 @@
     "DEFAULT_CHAR_WIDTH": "0.33",
     "UNAVAILABLE_SELECTION": "利用不可",
     "OVERLAYS": "オーバーレイ",
+    "OVERLAYS_ABBR": "Overlays",
     "OVERLAY": "オーバーレイ",
     "HIDDEN_OVERLAYS": "非表示のオーバーレイ",
     "PACKAGES": "パッケージ",
