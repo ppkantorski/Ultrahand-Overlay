@@ -16,7 +16,7 @@
     "DEFAULT_CHAR_WIDTH": "0.33",
     "UNAVAILABLE_SELECTION": "没有可供选择的文件",
     "OVERLAYS": "插件列表",
-    "OVERLAYS_ABBR": "Overlays",
+    "OVERLAYS_ABBR": "插件列表",
     "OVERLAY": "插件",
     "HIDDEN_OVERLAYS": "不常用插件",
     "PACKAGES": "更多插件包",
