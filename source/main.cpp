@@ -4460,11 +4460,11 @@ public:
             
             if (simulatedNextPage && !simulatedNextPageComplete) {
                 if (currentPage == LEFT_STR) {
-                    keysDown |= KEY_DRIGHT;
+                    keysHeld |= KEY_DRIGHT;
                     //simulatedNextPage = false;
                 }
                 else if (currentPage == RIGHT_STR) {
-                    keysDown |= KEY_DLEFT;
+                    keysHeld |= KEY_DLEFT;
                     //simulatedNextPage = false;
                 }
                 else {
@@ -4473,45 +4473,61 @@ public:
                 }
             }
             if (currentPage == LEFT_STR) {
-                if ((keysDown & KEY_RIGHT) && !(keysDown & ~KEY_RIGHT & ~KEY_R & ALL_KEYS_MASK) && !stillTouching && (((!allowSlide && onTrackBar && !unlockedSlide) || (keysDown & KEY_R)) || !onTrackBar || simulatedNextPage)) {
-                    simulatedNextPage = false;
-                    allowSlide = unlockedSlide = false;
-                    lastPage = RIGHT_STR;
-                    //lastPackage = packagePath;
-                    selectedListItem = nullptr;
-                    lastSelectedListItem = nullptr;
-                    //jumpItemName = "";
-                    //jumpItemValue = "";
-                    //jumpItemExactMatch = true;
-                    //g_overlayFilename = "";
+                if (!tsl::elm::s_lastFrameItems.empty() && tsl::elm::s_hasValidFrame) {
+                    if ((keysHeld & KEY_RIGHT) && !(keysHeld & KEY_LEFT) && !(keysDown & ~KEY_RIGHT & ~KEY_R & ALL_KEYS_MASK) && !stillTouching && (((!allowSlide && onTrackBar && !unlockedSlide) || (keysDown & KEY_R)) || !onTrackBar || simulatedNextPage)) {
+                        simulatedNextPage = false;
+                        allowSlide = unlockedSlide = false;
+                        lastPage = RIGHT_STR;
+                        //lastPackage = packagePath;
+                        selectedListItem = nullptr;
+                        lastSelectedListItem = nullptr;
+                        //jumpItemName = "";
+                        //jumpItemValue = "";
+                        //jumpItemExactMatch = true;
+                        //g_overlayFilename = "";
+                        svcSleepThread(200'000);
+                        tsl::pop();
+                        tsl::changeTo<PackageMenu>(lastPackagePath, dropdownSection, RIGHT_STR, lastPackageName, nestedMenuCount, pageHeader);
 
-                    svcSleepThread(200'000);
-                    tsl::pop();
-                    tsl::changeTo<PackageMenu>(lastPackagePath, dropdownSection, RIGHT_STR, lastPackageName, nestedMenuCount, pageHeader);
+                        simulatedNextPageComplete = true;
+                        return true;
+                    }
+                    simulatedNextPage = false;
                     simulatedNextPageComplete = true;
-                    return true;
+                } else {
+                    simulatedNextPage = false;
+                    tsl::elm::s_hasValidFrame = false;
+                    tsl::elm::s_isForwardCache = false;
+                    tsl::elm::s_cacheForwardFrameOnce = true;
+                    simulatedNextPageComplete = true;
                 }
             } else if (currentPage == RIGHT_STR) {
-                if ((keysDown & KEY_LEFT) && !(keysDown & ~KEY_LEFT & ~KEY_R & ALL_KEYS_MASK) && !stillTouching && (((!allowSlide && onTrackBar && !unlockedSlide) || (keysDown & KEY_R)) || !onTrackBar || simulatedNextPage)) {
+                if (!tsl::elm::s_lastFrameItems.empty() && tsl::elm::s_hasValidFrame) {
+                    if ((keysHeld & KEY_LEFT) && !(keysHeld & KEY_RIGHT) && !(keysDown & ~KEY_LEFT & ~KEY_R & ALL_KEYS_MASK) && !stillTouching && (((!allowSlide && onTrackBar && !unlockedSlide) || (keysDown & KEY_R)) || !onTrackBar || simulatedNextPage)) {
+                        simulatedNextPage = false;
+                        allowSlide = unlockedSlide = false;
+                        lastPage = LEFT_STR;
+                        //lastPackage = packagePath;
+                        selectedListItem = nullptr;
+                        lastSelectedListItem = nullptr;
+                        //jumpItemName = "";
+                        //jumpItemValue = "";
+                        //jumpItemExactMatch = true;
+                        //g_overlayFilename = "";
+                        svcSleepThread(200'000);
+                        tsl::pop();
+                        tsl::changeTo<PackageMenu>(lastPackagePath, dropdownSection, LEFT_STR, lastPackageName, nestedMenuCount, pageHeader);
+                        simulatedNextPageComplete = true;
+                        return true;
+                    }
+                } else {
                     simulatedNextPage = false;
-                    allowSlide = unlockedSlide = false;
-                    lastPage = LEFT_STR;
-                    //lastPackage = packagePath;
-                    selectedListItem = nullptr;
-                    lastSelectedListItem = nullptr;
-                    //jumpItemName = "";
-                    //jumpItemValue = "";
-                    //jumpItemExactMatch = true;
-                    //g_overlayFilename = "";
-
-                    svcSleepThread(200'000);
-                    tsl::pop();
-                    tsl::changeTo<PackageMenu>(lastPackagePath, dropdownSection, LEFT_STR, lastPackageName, nestedMenuCount, pageHeader);
+                    tsl::elm::s_hasValidFrame = false;
+                    tsl::elm::s_isForwardCache = false;
+                    tsl::elm::s_cacheForwardFrameOnce = true;
                     simulatedNextPageComplete = true;
-                    return true;
                 }
             } 
-            simulatedNextPage = false;
         }
         
         if (!returningToPackage && inPackageMenu && nestedMenuCount == nestedLayer) {
@@ -5747,11 +5763,11 @@ public:
                 if (simulatedNextPage && !simulatedNextPageComplete) {
                     if (!usePageSwap) {
                         if (menuMode != PACKAGES_STR) {
-                            keysDown |= KEY_DRIGHT;
+                            keysHeld |= KEY_DRIGHT;
                             //simulatedNextPage = false;
                         }
                         else if (menuMode != OVERLAYS_STR) {
-                            keysDown |= KEY_DLEFT;
+                            keysHeld |= KEY_DLEFT;
                             //simulatedNextPage = false;
                         } else {
                             //simulatedNextPage = false;
@@ -5759,11 +5775,11 @@ public:
                         }
                     } else {
                         if (menuMode != PACKAGES_STR) {
-                            keysDown |= KEY_DLEFT;
+                            keysHeld |= KEY_DLEFT;
                             //simulatedNextPage = false;
                         }
                         else if (menuMode != OVERLAYS_STR) {
-                            keysDown |= KEY_DRIGHT;
+                            keysHeld |= KEY_DRIGHT;
                             //simulatedNextPage = false;
                         } else {
                             //simulatedNextPage = false;
@@ -5771,74 +5787,81 @@ public:
                         }
                     }
                 }
+                if (!tsl::elm::s_lastFrameItems.empty() && tsl::elm::s_hasValidFrame) {
+                    if ((keysHeld & KEY_RIGHT) && !(keysHeld & KEY_LEFT) && !(keysDown & ~KEY_RIGHT & ~KEY_R & ALL_KEYS_MASK) && !stillTouching && (((!allowSlide && !unlockedSlide && onTrackBar) || (keysDown & KEY_R)) || !onTrackBar || simulatedNextPage)) {
+                        g_overlayFilename = "";
+                        jumpItemName = "";
+                        jumpItemValue = "";
+                        jumpItemExactMatch = true;
+                        simulatedNextPage = false;
+                        allowSlide = unlockedSlide = false;
+                        if (!usePageSwap) {
+                            if (menuMode != PACKAGES_STR) {
+                                currentMenu = PACKAGES_STR;
+                                selectedListItem = nullptr;
+                                lastSelectedListItem = nullptr;
+                                svcSleepThread(200'000);
+                                tsl::pop();
+                                tsl::changeTo<MainMenu>();
+                                //startInterpreterThread();
+                                simulatedNextPageComplete = true;
+                                return true;
+                            }
+                        } else {
+                            if (menuMode != OVERLAYS_STR) {
+                                currentMenu = OVERLAYS_STR;
+                                selectedListItem = nullptr;
+                                lastSelectedListItem = nullptr;
+                                svcSleepThread(200'000);
+                                tsl::pop();
+                                tsl::changeTo<MainMenu>();
+                                //closeInterpreterThread();
+                                simulatedNextPageComplete = true;
+                                return true;
+                            }
+                        }
+                    }
 
-                if ((keysDown & KEY_RIGHT) && !(keysDown & ~KEY_RIGHT & ~KEY_R & ALL_KEYS_MASK) && !stillTouching && (((!allowSlide && !unlockedSlide && onTrackBar) || (keysDown & KEY_R)) || !onTrackBar || simulatedNextPage)) {
-                    g_overlayFilename = "";
-                    jumpItemName = "";
-                    jumpItemValue = "";
-                    jumpItemExactMatch = true;
-                    simulatedNextPage = false;
-                    allowSlide = unlockedSlide = false;
-                    if (!usePageSwap) {
-                        if (menuMode != PACKAGES_STR) {
-                            currentMenu = PACKAGES_STR;
-                            selectedListItem = nullptr;
-                            lastSelectedListItem = nullptr;
-                            svcSleepThread(200'000);
-                            tsl::pop();
-                            tsl::changeTo<MainMenu>();
-                            //startInterpreterThread();
-                            simulatedNextPageComplete = true;
-                            return true;
-                        }
-                    } else {
-                        if (menuMode != OVERLAYS_STR) {
-                            currentMenu = OVERLAYS_STR;
-                            selectedListItem = nullptr;
-                            lastSelectedListItem = nullptr;
-                            svcSleepThread(200'000);
-                            tsl::pop();
-                            tsl::changeTo<MainMenu>();
-                            //closeInterpreterThread();
-                            simulatedNextPageComplete = true;
-                            return true;
-                        }
-                    }
-                }
-                if ((keysDown & KEY_LEFT) && !(keysDown & ~KEY_LEFT & ~KEY_R & ALL_KEYS_MASK) && !stillTouching && (((!allowSlide && onTrackBar && !unlockedSlide) || (keysDown & KEY_R)) || !onTrackBar || simulatedNextPage)) {
-                    g_overlayFilename = "";
-                    jumpItemName = "";
-                    jumpItemValue = "";
-                    jumpItemExactMatch = true;
-                    simulatedNextPage = false;
-                    allowSlide = unlockedSlide = false;
-                    if (!usePageSwap) {
-                        if (menuMode != OVERLAYS_STR) {
-                            currentMenu = OVERLAYS_STR;
-                            selectedListItem = nullptr;
-                            lastSelectedListItem = nullptr;
-                            svcSleepThread(200'000);
-                            tsl::pop();
-                            tsl::changeTo<MainMenu>();
-                            //closeInterpreterThread();
-                            simulatedNextPageComplete = true;
-                            return true;
-                        }
-                    } else {
-                        if (menuMode != PACKAGES_STR) {
-                            currentMenu = PACKAGES_STR;
-                            selectedListItem = nullptr;
-                            lastSelectedListItem = nullptr;
-                            svcSleepThread(200'000);
-                            tsl::pop();
-                            tsl::changeTo<MainMenu>();
-                            //startInterpreterThread();
-                            simulatedNextPageComplete = true;
-                            return true;
+                    if ((keysHeld & KEY_LEFT) && !(keysHeld & KEY_RIGHT) && !(keysDown & ~KEY_LEFT & ~KEY_R & ALL_KEYS_MASK) && !stillTouching && (((!allowSlide && onTrackBar && !unlockedSlide) || (keysDown & KEY_R)) || !onTrackBar || simulatedNextPage)) {
+                        g_overlayFilename = "";
+                        jumpItemName = "";
+                        jumpItemValue = "";
+                        jumpItemExactMatch = true;
+                        simulatedNextPage = false;
+                        allowSlide = unlockedSlide = false;
+                        if (!usePageSwap) {
+                            if (menuMode != OVERLAYS_STR) {
+                                currentMenu = OVERLAYS_STR;
+                                selectedListItem = nullptr;
+                                lastSelectedListItem = nullptr;
+                                svcSleepThread(200'000);
+                                tsl::pop();
+                                tsl::changeTo<MainMenu>();
+                                //closeInterpreterThread();
+                                simulatedNextPageComplete = true;
+                                return true;
+                            }
+                        } else {
+                            if (menuMode != PACKAGES_STR) {
+                                currentMenu = PACKAGES_STR;
+                                selectedListItem = nullptr;
+                                lastSelectedListItem = nullptr;
+                                svcSleepThread(200'000);
+                                tsl::pop();
+                                tsl::changeTo<MainMenu>();
+                                //startInterpreterThread();
+                                simulatedNextPageComplete = true;
+                                return true;
+                            }
                         }
                     }
+                } else {
+                    simulatedNextPage = false;
+                    tsl::elm::s_hasValidFrame = false;
+                    tsl::elm::s_isForwardCache = false;
+                    tsl::elm::s_cacheForwardFrameOnce = true;
+                    simulatedNextPageComplete = true;
                 }
-                simulatedNextPage = false;
 
                 if (simulatedBack && !simulatedBackComplete) {
                     keysDown |= KEY_B;
