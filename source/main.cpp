@@ -47,7 +47,7 @@ static bool returningToSubPackage = false;
 static bool returningToSelectionMenu = false;
 static bool languageWasChanged = false;
 
-static bool starJump = false; // for overrridng the default main menu jump to implementation
+static bool skipJumpReset = false; // for overrridng the default main menu jump to implementation
 
 //static bool inMainMenu = false; // moved to libtesla
 static bool wasInHiddenMode = false;
@@ -2087,17 +2087,23 @@ public:
                             //logMessage("pathPattern: "+pathPattern);
                             newFiles = getFilesListByWildcards(pathPattern, maxItemsLimit);
                             filesList.insert(filesList.end(), newFiles.begin(), newFiles.end()); // Append new files
+                            newFiles.clear();
+                            newFiles.shrink_to_fit();
                         } else if (currentSection == ON_STR) {
                             pathPatternOn = cmd[1];
                             preprocessPath(pathPatternOn, filePath);
                             newFilesOn = getFilesListByWildcards(pathPatternOn, maxItemsLimit);
                             filesListOn.insert(filesListOn.end(), newFilesOn.begin(), newFilesOn.end()); // Append new files
+                            newFilesOn.clear();
+                            newFilesOn.shrink_to_fit();
                             sourceTypeOn = FILE_STR;
                         } else if (currentSection == OFF_STR) {
                             pathPatternOff = cmd[1];
                             preprocessPath(pathPatternOff, filePath);
                             newFilesOff = getFilesListByWildcards(pathPatternOff, maxItemsLimit);
                             filesListOff.insert(filesListOff.end(), newFilesOff.begin(), newFilesOff.end()); // Append new files
+                            newFilesOff.clear();
+                            newFilesOff.shrink_to_fit();
                             sourceTypeOff = FILE_STR;
                         }
                     } else if (commandName == "json_file_source") {
@@ -2970,6 +2976,8 @@ bool drawCommandsMenu(tsl::elm::List* list,
         auto& option = options[i];
         
         optionName = option.first;
+        commands.clear();
+        commands.shrink_to_fit();
         commands = std::move(option.second);
         
         footer = "";
@@ -3644,6 +3652,8 @@ bool drawCommandsMenu(tsl::elm::List* list,
 
                     continue;
                 } else if (commandMode == NAMED_STEP_TRACKBAR_STR) {
+                    entryList.clear();
+                    entryList.shrink_to_fit();
                     entryList = {};
                     
                     _inEristaSection = false;
@@ -4727,8 +4737,8 @@ public:
      */
     MainMenu(const std::string& hiddenMenuMode = "", const std::string& sectionName = "") : hiddenMenuMode(hiddenMenuMode), dropdownSection(sectionName) {
         //tsl::gfx::FontManager::clearCache();
-        if (starJump) {
-            starJump = false;
+        if (skipJumpReset) {
+            skipJumpReset = false;
             return;
         }
         jumpItemName = "";
@@ -4759,7 +4769,7 @@ public:
             inMainMenu = false;
             inHiddenMode = true;
             hiddenMenuMode = OVERLAYS_STR;
-            starJump = true;
+            skipJumpReset = true;
             setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_OVERLAY_STR, FALSE_STR);
         }
     
@@ -5149,7 +5159,7 @@ public:
                                     setIniFileValue(OVERLAYS_INI_FILEPATH, overlayFileName, STAR_STR, newStarred ? TRUE_STR : FALSE_STR);
                                     // Now, you can use the newStarred value for further processing if needed
                                 }
-                                starJump = true;
+                                skipJumpReset = true;
                                 jumpItemName = newStarred ? STAR_SYMBOL + "  " + overlayName : overlayName;
                                 jumpItemValue = overlayVersion;
                                 jumpItemExactMatch = true;
@@ -5487,7 +5497,7 @@ public:
                                 if (!packageName.empty())
                                     setIniFileValue(PACKAGES_INI_FILEPATH, packageName, STAR_STR, newStarred ? TRUE_STR : FALSE_STR);
                                 
-                                starJump = true;
+                                skipJumpReset = true;
                                 jumpItemName = newStarred ? STAR_SYMBOL + "  " + newPackageName : newPackageName;
                                 jumpItemValue = packageVersion;
                                 jumpItemExactMatch = true;
@@ -5679,7 +5689,7 @@ public:
             //g_overlayFilename = "";
             tsl::changeTo<MainMenu>(hiddenMenuMode, dropdownSection);
             if (wasInHiddenMode) {
-                starJump = true;
+                skipJumpReset = true;
                 // NEW: Set the highlight to "Hidden" when returning from a hidden overlay
                 jumpItemName = HIDDEN;
                 jumpItemValue = DROPDOWN_SYMBOL;

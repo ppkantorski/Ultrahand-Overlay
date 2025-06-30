@@ -2938,6 +2938,14 @@ bool interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
     }
     #endif
 
+    // Increase bufffer size for expanded memory
+    if (expandedMemory) {
+        UNZIP_READ_BUFFER = 262144;
+        UNZIP_WRITE_BUFFER = 131072;
+        DOWNLOAD_READ_BUFFER = 262144;
+        DOWNLOAD_WRITE_BUFFER = 131072;
+    }
+
     // Load key-value pairs from the "BUFFERS" section of the INI file
     auto bufferSection = getKeyValuePairsFromSection(ULTRAHAND_CONFIG_INI_PATH, MEMORY_STR);
     
