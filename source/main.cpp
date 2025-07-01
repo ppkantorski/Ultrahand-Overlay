@@ -4511,6 +4511,8 @@ public:
                     //simulatedNextPageComplete.store(true, std::memory_order_release);
                     ult::allowSlide = ult::unlockedSlide = false;
                     svcSleepThread(200'000);
+                    bool expected = true;
+                    ult::simulatedNextPage.compare_exchange_strong(expected, false, std::memory_order_release);
                 }
 
             } else if (currentPage == RIGHT_STR) {
@@ -4551,6 +4553,8 @@ public:
                     //simulatedNextPageComplete.store(true, std::memory_order_release);
                     ult::allowSlide = ult::unlockedSlide = false;
                     svcSleepThread(200'000);
+                    bool expected = true;
+                    ult::simulatedNextPage.compare_exchange_strong(expected, false, std::memory_order_release);
                 }
             } 
         }
@@ -5872,6 +5876,8 @@ public:
                     //simulatedNextPageComplete.store(true, std::memory_order_release);
                     ult::allowSlide = ult::unlockedSlide = false;
                     svcSleepThread(200'000);
+                    bool expected = true;
+                    ult::simulatedNextPage.compare_exchange_strong(expected, false, std::memory_order_release);
                 }
 
                 if ((keysDown & KEY_LEFT) && !(keysHeld & KEY_RIGHT) && !(keysDown & ~KEY_LEFT & ~KEY_R & ALL_KEYS_MASK) &&
@@ -5933,6 +5939,8 @@ public:
                     //simulatedNextPageComplete.store(true, std::memory_order_release);
                     ult::allowSlide = ult::unlockedSlide = false;
                     svcSleepThread(200'000); 
+                    bool expected = true;
+                    ult::simulatedNextPage.compare_exchange_strong(expected, false, std::memory_order_release);
                 }
 
                 if (simulatedBack && !simulatedBackComplete) {
