@@ -4157,7 +4157,7 @@ private:
 
     std::string packageIniPath;
     std::string packageConfigIniPath;
-    bool menuIsGenerated = false;
+    //bool menuIsGenerated = false;
 
 public:
     /**
@@ -4175,7 +4175,7 @@ public:
             jumpItemValue = "";
             jumpItemExactMatch = true;
             g_overlayFilename = "";
-            menuIsGenerated = false;
+            //menuIsGenerated = false;
             
         }
     /**
@@ -4230,7 +4230,7 @@ public:
      * @return A pointer to the GUI element representing the sub-menu overlay.
      */
     virtual tsl::elm::Element* createUI() override {
-        menuIsGenerated = false;
+        //menuIsGenerated = false;
         if (dropdownSection.empty()){
             inPackageMenu = true;
             lastMenu = "packageMenu";
@@ -4301,7 +4301,7 @@ public:
         );
         list->jumpToItem(jumpItemName,jumpItemValue);
         rootFrame->setContent(list);
-        menuIsGenerated = true;
+        //menuIsGenerated = true;
         return rootFrame;
 
 
@@ -4774,7 +4774,7 @@ private:
     std::string hiddenMenuMode, dropdownSection;
     bool initializingSpawn = false;
     std::string defaultLang = "en";
-    bool menuIsGenerated = false;
+    //bool menuIsGenerated = false;
 
 public:
     /**
@@ -4810,7 +4810,7 @@ public:
      * @return A pointer to the GUI element representing the main menu overlay.
      */
     virtual tsl::elm::Element* createUI() override {
-        menuIsGenerated = false;
+        //menuIsGenerated = false;
     
         if (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_OVERLAY_STR) == TRUE_STR) {
             inMainMenu = false;
@@ -5656,7 +5656,7 @@ public:
         else
             g_overlayFilename = "";
         rootFrame->setContent(list);
-        menuIsGenerated = true;
+        //menuIsGenerated = true;
         return rootFrame;
     }
 
