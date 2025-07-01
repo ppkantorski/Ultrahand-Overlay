@@ -35,6 +35,8 @@
 
 using namespace ult;
 
+u64 lastNextPageTapTime = 0;
+static constexpr u64 NEXT_PAGE_COOLDOWN_NS = 500'000'000; // 500ms in nanoseconds
 
 
 
@@ -1022,9 +1024,8 @@ public:
                     tsl::changeTo<UltrahandSettingsMenu>();
                     reloadMenu3 = false;
                 }
-                if (simulatedNextPage && !simulatedNextPageComplete) {
-                    simulatedNextPage = false;
-                    simulatedNextPageComplete = true;
+                if (simulatedNextPage.load(std::memory_order_acquire)) {
+                    simulatedNextPage.store(false, std::memory_order_release);
                 }
                 if (simulatedMenu && !simulatedMenuComplete) {
                     simulatedMenu = false;
@@ -1050,9 +1051,8 @@ public:
                 }
             }
         } else if (inSubSettingsMenu) {
-            if (simulatedNextPage && !simulatedNextPageComplete) {
-                simulatedNextPage = false;
-                simulatedNextPageComplete = true;
+            if (simulatedNextPage.load(std::memory_order_acquire)) {
+                simulatedNextPage.store(false, std::memory_order_release);
             }
             if (simulatedBack && !simulatedBackComplete) {
                 keysDown |= KEY_B;
@@ -1467,9 +1467,8 @@ public:
 
         if (inSettingsMenu && !inSubSettingsMenu) {
             if (!returningToSettings) {
-                if (simulatedNextPage && !simulatedNextPageComplete) {
-                    simulatedNextPage = false;
-                    simulatedNextPageComplete = true;
+                if (simulatedNextPage.load(std::memory_order_acquire)) {
+                    simulatedNextPage.store(false, std::memory_order_release);
                 }
 
                 if (simulatedMenu && !simulatedMenuComplete) {
@@ -1509,9 +1508,8 @@ public:
                 }
             }
         } else if (inSubSettingsMenu) {
-            if (simulatedNextPage && !simulatedNextPageComplete) {
-                simulatedNextPage = false;
-                simulatedNextPageComplete = true;
+            if (simulatedNextPage.load(std::memory_order_acquire)) {
+                simulatedNextPage.store(false, std::memory_order_release);
             }
 
             if (simulatedMenu && !simulatedMenuComplete) {
@@ -1790,9 +1788,8 @@ public:
         }
 
         if (inScriptMenu) {
-            if (simulatedNextPage && !simulatedNextPageComplete) {
-                simulatedNextPage = false;
-                simulatedNextPageComplete = true;
+            if (simulatedNextPage.load(std::memory_order_acquire)) {
+                simulatedNextPage.store(false, std::memory_order_release);
             }
             if (simulatedMenu && !simulatedMenuComplete) {
                 simulatedMenu = false;
@@ -2734,9 +2731,8 @@ public:
         }
 
         if (inSelectionMenu) {
-            if (simulatedNextPage && !simulatedNextPageComplete) {
-                simulatedNextPage = false;
-                simulatedNextPageComplete = true;
+            if (simulatedNextPage.load(std::memory_order_acquire)) {
+                simulatedNextPage.store(false, std::memory_order_release);
             }
 
             if (simulatedMenu && !simulatedMenuComplete) {
@@ -4161,7 +4157,7 @@ private:
 
     std::string packageIniPath;
     std::string packageConfigIniPath;
-    
+    bool menuIsGenerated = false;
 
 public:
     /**
@@ -4179,6 +4175,7 @@ public:
             jumpItemValue = "";
             jumpItemExactMatch = true;
             g_overlayFilename = "";
+            menuIsGenerated = false;
             
         }
     /**
@@ -4233,6 +4230,7 @@ public:
      * @return A pointer to the GUI element representing the sub-menu overlay.
      */
     virtual tsl::elm::Element* createUI() override {
+        menuIsGenerated = false;
         if (dropdownSection.empty()){
             inPackageMenu = true;
             lastMenu = "packageMenu";
@@ -4303,7 +4301,7 @@ public:
         );
         list->jumpToItem(jumpItemName,jumpItemValue);
         rootFrame->setContent(list);
-        
+        menuIsGenerated = true;
         return rootFrame;
 
 
@@ -4458,74 +4456,101 @@ public:
                 simulatedMenuComplete = true;
             }
             
-            if (simulatedNextPage && !simulatedNextPageComplete) {
+            if (simulatedNextPage.load(std::memory_order_acquire) && !tsl::elm::s_lastFrameItems.empty()) {
+                //bool expected = true;
+                tsl::swapComplete = false;
+                //ult::simulatedNextPage.compare_exchange_strong(expected, false, std::memory_order_release);
                 if (currentPage == LEFT_STR) {
-                    keysHeld |= KEY_DRIGHT;
-                    //simulatedNextPage = false;
+                    keysDown |= KEY_DRIGHT;
                 }
                 else if (currentPage == RIGHT_STR) {
-                    keysHeld |= KEY_DLEFT;
-                    //simulatedNextPage = false;
-                }
-                else {
-                    //simulatedNextPage = false;
-                    simulatedNextPageComplete = true;
+                    keysDown |= KEY_DLEFT;
                 }
             }
-            if (currentPage == LEFT_STR) {
-                if (!tsl::elm::s_lastFrameItems.empty() && tsl::elm::s_hasValidFrame) {
-                    if ((keysHeld & KEY_RIGHT) && !(keysHeld & KEY_LEFT) && !(keysDown & ~KEY_RIGHT & ~KEY_R & ALL_KEYS_MASK) && !stillTouching && (((!allowSlide && onTrackBar && !unlockedSlide) || (keysDown & KEY_R)) || !onTrackBar || simulatedNextPage)) {
-                        simulatedNextPage = false;
-                        allowSlide = unlockedSlide = false;
-                        lastPage = RIGHT_STR;
-                        //lastPackage = packagePath;
-                        selectedListItem = nullptr;
-                        lastSelectedListItem = nullptr;
-                        //jumpItemName = "";
-                        //jumpItemValue = "";
-                        //jumpItemExactMatch = true;
-                        //g_overlayFilename = "";
-                        svcSleepThread(200'000);
-                        tsl::pop();
-                        tsl::changeTo<PackageMenu>(lastPackagePath, dropdownSection, RIGHT_STR, lastPackageName, nestedMenuCount, pageHeader);
 
-                        simulatedNextPageComplete = true;
-                        return true;
-                    }
-                    simulatedNextPage = false;
-                    simulatedNextPageComplete = true;
-                } else {
-                    simulatedNextPage = false;
+            if (currentPage == LEFT_STR) {
+
+                if ((keysDown & KEY_RIGHT) && !(keysHeld & KEY_LEFT) && !(keysDown & ~KEY_RIGHT & ~KEY_R & ALL_KEYS_MASK) && !stillTouching && 
+                    (((!allowSlide && onTrackBar && !unlockedSlide) || (keysDown & KEY_R)) || !onTrackBar) &&
+                    !tsl::elm::s_lastFrameItems.empty() && (tsl::elm::s_isForwardCache && tsl::elm::s_hasValidFrame)) {
+
+                    allowSlide = unlockedSlide = false;
+                    lastPage = RIGHT_STR;
+                    //lastPackage = packagePath;
+                    selectedListItem = nullptr;
+                    lastSelectedListItem = nullptr;
+                    //jumpItemName = "";
+                    //jumpItemValue = "";
+                    //jumpItemExactMatch = true;
+                    //g_overlayFilename = "";
+                    // Disable swapping immediately
+                    
+                    // Longer sleep for stability
+                    svcSleepThread(200'000);
+                    
+                    // Clear any pending operations before transition
+                    //simulatedNextPage.store(false, std::memory_order_release);
+                    
+                    tsl::pop();
+                    
+                    tsl::changeTo<PackageMenu>(lastPackagePath, dropdownSection, RIGHT_STR, lastPackageName, nestedMenuCount, pageHeader);
+                    svcSleepThread(200'000);
+                    bool expected = true;
+                    ult::simulatedNextPage.compare_exchange_strong(expected, false, std::memory_order_release);
+                    tsl::swapComplete = true;
+                    // Reset state after transition
+                    //simulatedNextPageComplete.store(true, std::memory_order_release);
+                    return true;
+                } else if ((!tsl::elm::s_isForwardCache || !tsl::elm::s_hasValidFrame) || tsl::elm::s_lastFrameItems.empty()) {
+                    tsl::elm::s_lastFrameItems.clear();
+                    tsl::elm::s_lastFrameItems.shrink_to_fit();
+                    tsl::elm::s_isForwardCache = false; // NEW VARIABLE FOR FORWARD CACHING
                     tsl::elm::s_hasValidFrame = false;
-                    tsl::elm::s_isForwardCache = false;
                     tsl::elm::s_cacheForwardFrameOnce = true;
-                    simulatedNextPageComplete = true;
+                    //simulatedNextPage.store(false, std::memory_order_release);
+                    //simulatedNextPageComplete.store(true, std::memory_order_release);
+                    ult::allowSlide = ult::unlockedSlide = false;
+                    svcSleepThread(200'000);
                 }
+
             } else if (currentPage == RIGHT_STR) {
-                if (!tsl::elm::s_lastFrameItems.empty() && tsl::elm::s_hasValidFrame) {
-                    if ((keysHeld & KEY_LEFT) && !(keysHeld & KEY_RIGHT) && !(keysDown & ~KEY_LEFT & ~KEY_R & ALL_KEYS_MASK) && !stillTouching && (((!allowSlide && onTrackBar && !unlockedSlide) || (keysDown & KEY_R)) || !onTrackBar || simulatedNextPage)) {
-                        simulatedNextPage = false;
-                        allowSlide = unlockedSlide = false;
-                        lastPage = LEFT_STR;
-                        //lastPackage = packagePath;
-                        selectedListItem = nullptr;
-                        lastSelectedListItem = nullptr;
-                        //jumpItemName = "";
-                        //jumpItemValue = "";
-                        //jumpItemExactMatch = true;
-                        //g_overlayFilename = "";
-                        svcSleepThread(200'000);
-                        tsl::pop();
-                        tsl::changeTo<PackageMenu>(lastPackagePath, dropdownSection, LEFT_STR, lastPackageName, nestedMenuCount, pageHeader);
-                        simulatedNextPageComplete = true;
-                        return true;
-                    }
-                } else {
-                    simulatedNextPage = false;
+                
+                if ((keysDown & KEY_LEFT) && !(keysHeld & KEY_RIGHT) && !(keysDown & ~KEY_LEFT & ~KEY_R & ALL_KEYS_MASK) && !stillTouching && 
+                    (((!allowSlide && onTrackBar && !unlockedSlide) || (keysDown & KEY_R)) || !onTrackBar) && 
+                    !tsl::elm::s_lastFrameItems.empty() && (tsl::elm::s_isForwardCache && tsl::elm::s_hasValidFrame)) {
+
+                    
+                    allowSlide = unlockedSlide = false;
+                    lastPage = LEFT_STR;
+                    selectedListItem = nullptr;
+                    lastSelectedListItem = nullptr;
+                    
+                    // Longer sleep for stability
+                    svcSleepThread(200'000);
+                    
+                    // Clear any pending operations before transition
+                    //simulatedNextPage.store(false, std::memory_order_release);
+                    
+                    tsl::pop();
+                    
+                    tsl::changeTo<PackageMenu>(lastPackagePath, dropdownSection, LEFT_STR, lastPackageName, nestedMenuCount, pageHeader);
+                    svcSleepThread(200'000);
+                    bool expected = true;
+                    ult::simulatedNextPage.compare_exchange_strong(expected, false, std::memory_order_release);
+                    tsl::swapComplete = true;
+                    // Reset state after transition
+                    //simulatedNextPageComplete.store(true, std::memory_order_release);
+                    return true;
+                } else if ((!tsl::elm::s_isForwardCache || !tsl::elm::s_hasValidFrame) || tsl::elm::s_lastFrameItems.empty()) {
+                    tsl::elm::s_lastFrameItems.clear();
+                    tsl::elm::s_lastFrameItems.shrink_to_fit();
+                    tsl::elm::s_isForwardCache = false; // NEW VARIABLE FOR FORWARD CACHING
                     tsl::elm::s_hasValidFrame = false;
-                    tsl::elm::s_isForwardCache = false;
                     tsl::elm::s_cacheForwardFrameOnce = true;
-                    simulatedNextPageComplete = true;
+                    //simulatedNextPage.store(false, std::memory_order_release);
+                    //simulatedNextPageComplete.store(true, std::memory_order_release);
+                    ult::allowSlide = ult::unlockedSlide = false;
+                    svcSleepThread(200'000);
                 }
             } 
         }
@@ -4536,9 +4561,8 @@ public:
                 simulatedMenuComplete = true;
             }
             
-            if (simulatedNextPage && !simulatedNextPageComplete) {
-                simulatedNextPage = false;
-                simulatedNextPageComplete = true;
+            if (simulatedNextPage.load(std::memory_order_acquire)) {
+                simulatedNextPage.store(false, std::memory_order_release);
             }
             
             if (!usingPages || (usingPages && lastPage == LEFT_STR)) {
@@ -4622,9 +4646,8 @@ public:
                 simulatedMenuComplete = true;
             }
             
-            if (simulatedNextPage && !simulatedNextPageComplete) {
-                simulatedNextPage = false;
-                simulatedNextPageComplete = true;
+            if (simulatedNextPage.load(std::memory_order_acquire)) {
+                simulatedNextPage.store(false, std::memory_order_release);
             }
             
             if (!usingPages || (usingPages && lastPage == LEFT_STR)) {
@@ -4747,7 +4770,8 @@ private:
     std::string hiddenMenuMode, dropdownSection;
     bool initializingSpawn = false;
     std::string defaultLang = "en";
-    
+    bool menuIsGenerated = false;
+
 public:
     /**
      * @brief Constructs a `MainMenu` instance.
@@ -4782,7 +4806,7 @@ public:
      * @return A pointer to the GUI element representing the main menu overlay.
      */
     virtual tsl::elm::Element* createUI() override {
-        
+        menuIsGenerated = false;
     
         if (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_OVERLAY_STR) == TRUE_STR) {
             inMainMenu = false;
@@ -5628,7 +5652,7 @@ public:
         else
             g_overlayFilename = "";
         rootFrame->setContent(list);
-        
+        menuIsGenerated = true;
         return rootFrame;
     }
 
@@ -5722,9 +5746,8 @@ public:
         }
 
         if (!dropdownSection.empty() && !returningToMain) {
-            if (simulatedNextPage && !simulatedNextPageComplete) {
-                simulatedNextPage = false;
-                simulatedNextPageComplete = true;
+            if (simulatedNextPage.load(std::memory_order_acquire)) {
+                simulatedNextPage.store(false, std::memory_order_release);
             }
 
             if (simulatedMenu && !simulatedMenuComplete) {
@@ -5760,107 +5783,156 @@ public:
             
             if (!freshSpawn && !returningToMain && !returningToHiddenMain) {
                 
-                if (simulatedNextPage && !simulatedNextPageComplete) {
+                if (simulatedNextPage.load(std::memory_order_acquire) && !tsl::elm::s_lastFrameItems.empty()) {
+                    tsl::swapComplete = false;
+                    //bool expected = true;
+                    //ult::simulatedNextPage.compare_exchange_strong(expected, false, std::memory_order_release);
                     if (!usePageSwap) {
                         if (menuMode != PACKAGES_STR) {
-                            keysHeld |= KEY_DRIGHT;
-                            //simulatedNextPage = false;
+                            keysDown |= KEY_DRIGHT;
+                            //lastNextPageTapTime = currentTimeNs;
+                            //simulatedNextPage.store(false, std::memory_order_release);
                         }
                         else if (menuMode != OVERLAYS_STR) {
-                            keysHeld |= KEY_DLEFT;
-                            //simulatedNextPage = false;
-                        } else {
-                            //simulatedNextPage = false;
-                            simulatedNextPageComplete = true;
+                            keysDown |= KEY_DLEFT;
+                            //lastNextPageTapTime = currentTimeNs;
+                            //simulatedNextPage.store(false, std::memory_order_release);
                         }
                     } else {
                         if (menuMode != PACKAGES_STR) {
-                            keysHeld |= KEY_DLEFT;
-                            //simulatedNextPage = false;
+                            keysDown |= KEY_DLEFT;
+                            //lastNextPageTapTime = currentTimeNs;
+                            //simulatedNextPage.store(false, std::memory_order_release);
                         }
                         else if (menuMode != OVERLAYS_STR) {
-                            keysHeld |= KEY_DRIGHT;
-                            //simulatedNextPage = false;
-                        } else {
-                            //simulatedNextPage = false;
-                            simulatedNextPageComplete = true;
+                            keysDown |= KEY_DRIGHT;
+                            //lastNextPageTapTime = currentTimeNs;
+                            //simulatedNextPage.store(false, std::memory_order_release);
                         }
                     }
                 }
-                if (!tsl::elm::s_lastFrameItems.empty() && tsl::elm::s_hasValidFrame) {
-                    if ((keysHeld & KEY_RIGHT) && !(keysHeld & KEY_LEFT) && !(keysDown & ~KEY_RIGHT & ~KEY_R & ALL_KEYS_MASK) && !stillTouching && (((!allowSlide && !unlockedSlide && onTrackBar) || (keysDown & KEY_R)) || !onTrackBar || simulatedNextPage)) {
-                        g_overlayFilename = "";
-                        jumpItemName = "";
-                        jumpItemValue = "";
-                        jumpItemExactMatch = true;
-                        simulatedNextPage = false;
-                        allowSlide = unlockedSlide = false;
-                        if (!usePageSwap) {
-                            if (menuMode != PACKAGES_STR) {
-                                currentMenu = PACKAGES_STR;
-                                selectedListItem = nullptr;
-                                lastSelectedListItem = nullptr;
-                                svcSleepThread(200'000);
-                                tsl::pop();
-                                tsl::changeTo<MainMenu>();
-                                //startInterpreterThread();
-                                simulatedNextPageComplete = true;
-                                return true;
-                            }
-                        } else {
-                            if (menuMode != OVERLAYS_STR) {
-                                currentMenu = OVERLAYS_STR;
-                                selectedListItem = nullptr;
-                                lastSelectedListItem = nullptr;
-                                svcSleepThread(200'000);
-                                tsl::pop();
-                                tsl::changeTo<MainMenu>();
-                                //closeInterpreterThread();
-                                simulatedNextPageComplete = true;
-                                return true;
-                            }
+                
+                if ((keysDown & KEY_RIGHT) && !(keysHeld & KEY_LEFT) && !(keysDown & ~KEY_RIGHT & ~KEY_R & ALL_KEYS_MASK) &&
+                    !stillTouching && (((!allowSlide && !unlockedSlide && onTrackBar) || (keysDown & KEY_R)) || !onTrackBar) &&
+                    !tsl::elm::s_lastFrameItems.empty() && (tsl::elm::s_isForwardCache && tsl::elm::s_hasValidFrame)) {
+                    g_overlayFilename = "";
+                    jumpItemName = "";
+                    jumpItemValue = "";
+                    jumpItemExactMatch = true;
+                    
+                    allowSlide = unlockedSlide = false;
+                    if (!usePageSwap) {
+                        if (menuMode != PACKAGES_STR) {
+                            currentMenu = PACKAGES_STR;
+                            selectedListItem = nullptr;
+                            lastSelectedListItem = nullptr;
+                            
+                            svcSleepThread(200'000);
+                            //simulatedNextPage.store(false, std::memory_order_release);
+                            tsl::pop();
+                            
+                            tsl::changeTo<MainMenu>();
+                            svcSleepThread(200'000);  
+                            bool expected = true;
+                            ult::simulatedNextPage.compare_exchange_strong(expected, false, std::memory_order_release);
+                            tsl::swapComplete = true;
+                            //startInterpreterThread();
+                            //simulatedNextPageComplete.store(true, std::memory_order_release);
+                            return true;
+                        }
+                    } else {
+                        if (menuMode != OVERLAYS_STR) {
+                            currentMenu = OVERLAYS_STR;
+                            selectedListItem = nullptr;
+                            lastSelectedListItem = nullptr;
+                            
+                            svcSleepThread(200'000);
+                            //simulatedNextPage.store(false, std::memory_order_release);
+                            tsl::pop();
+                            tsl::changeTo<MainMenu>();
+                            svcSleepThread(200'000);
+                            bool expected = true;
+                            ult::simulatedNextPage.compare_exchange_strong(expected, false, std::memory_order_release);
+                            tsl::swapComplete = true;
+                            //startInterpreterThread();
+                            //simulatedNextPageComplete.store(true, std::memory_order_release);
+                            return true;
                         }
                     }
-
-                    if ((keysHeld & KEY_LEFT) && !(keysHeld & KEY_RIGHT) && !(keysDown & ~KEY_LEFT & ~KEY_R & ALL_KEYS_MASK) && !stillTouching && (((!allowSlide && onTrackBar && !unlockedSlide) || (keysDown & KEY_R)) || !onTrackBar || simulatedNextPage)) {
-                        g_overlayFilename = "";
-                        jumpItemName = "";
-                        jumpItemValue = "";
-                        jumpItemExactMatch = true;
-                        simulatedNextPage = false;
-                        allowSlide = unlockedSlide = false;
-                        if (!usePageSwap) {
-                            if (menuMode != OVERLAYS_STR) {
-                                currentMenu = OVERLAYS_STR;
-                                selectedListItem = nullptr;
-                                lastSelectedListItem = nullptr;
-                                svcSleepThread(200'000);
-                                tsl::pop();
-                                tsl::changeTo<MainMenu>();
-                                //closeInterpreterThread();
-                                simulatedNextPageComplete = true;
-                                return true;
-                            }
-                        } else {
-                            if (menuMode != PACKAGES_STR) {
-                                currentMenu = PACKAGES_STR;
-                                selectedListItem = nullptr;
-                                lastSelectedListItem = nullptr;
-                                svcSleepThread(200'000);
-                                tsl::pop();
-                                tsl::changeTo<MainMenu>();
-                                //startInterpreterThread();
-                                simulatedNextPageComplete = true;
-                                return true;
-                            }
-                        }
-                    }
-                } else {
-                    simulatedNextPage = false;
+                    //simulatedNextPage.store(false, std::memory_order_release);
+                    //simulatedNextPageComplete.store(true, std::memory_order_release);
+                    return true;
+                } else if ((!tsl::elm::s_isForwardCache || !tsl::elm::s_hasValidFrame) || tsl::elm::s_lastFrameItems.empty()) {
+                    tsl::elm::s_lastFrameItems.clear();
+                    tsl::elm::s_lastFrameItems.shrink_to_fit();
+                    tsl::elm::s_isForwardCache = false; // NEW VARIABLE FOR FORWARD CACHING
                     tsl::elm::s_hasValidFrame = false;
-                    tsl::elm::s_isForwardCache = false;
                     tsl::elm::s_cacheForwardFrameOnce = true;
-                    simulatedNextPageComplete = true;
+                    //simulatedNextPage.store(false, std::memory_order_release);
+                    //simulatedNextPageComplete.store(true, std::memory_order_release);
+                    ult::allowSlide = ult::unlockedSlide = false;
+                    svcSleepThread(200'000);
+                }
+
+                if ((keysDown & KEY_LEFT) && !(keysHeld & KEY_RIGHT) && !(keysDown & ~KEY_LEFT & ~KEY_R & ALL_KEYS_MASK) &&
+                    !stillTouching &&(((!allowSlide && onTrackBar && !unlockedSlide) || (keysDown & KEY_R)) || !onTrackBar) &&
+                    !tsl::elm::s_lastFrameItems.empty() && (tsl::elm::s_isForwardCache && tsl::elm::s_hasValidFrame)) {
+                    g_overlayFilename = "";
+                    jumpItemName = "";
+                    jumpItemValue = "";
+                    jumpItemExactMatch = true;
+
+                    allowSlide = unlockedSlide = false;
+                    if (!usePageSwap) {
+                        if (menuMode != OVERLAYS_STR) {
+                            currentMenu = OVERLAYS_STR;
+                            selectedListItem = nullptr;
+                            lastSelectedListItem = nullptr;
+                            
+                            svcSleepThread(200'000);
+                            //simulatedNextPage.store(false, std::memory_order_release);
+                            tsl::pop();
+                            tsl::changeTo<MainMenu>();
+                            svcSleepThread(200'000);  
+                            bool expected = true;
+                            ult::simulatedNextPage.compare_exchange_strong(expected, false, std::memory_order_release);
+                            tsl::swapComplete = true;
+                            //startInterpreterThread();
+                            //simulatedNextPageComplete.store(true, std::memory_order_release);
+                            return true;
+                        }
+                    } else {
+                        if (menuMode != PACKAGES_STR) {
+                            currentMenu = PACKAGES_STR;
+                            selectedListItem = nullptr;
+                            lastSelectedListItem = nullptr;
+                            
+                            svcSleepThread(200'000);
+                            //simulatedNextPage.store(false, std::memory_order_release);
+                            tsl::pop();
+                            tsl::changeTo<MainMenu>();
+                            svcSleepThread(200'000);  
+                            bool expected = true;
+                            ult::simulatedNextPage.compare_exchange_strong(expected, false, std::memory_order_release);
+                            tsl::swapComplete = true;
+                            //startInterpreterThread();
+                            //simulatedNextPageComplete.store(true, std::memory_order_release);
+                            return true;
+                        }
+                    }
+                    //simulatedNextPage.store(false, std::memory_order_release);
+                    //simulatedNextPageComplete.store(true, std::memory_order_release);
+                    return true;
+                } else if ((!tsl::elm::s_isForwardCache || !tsl::elm::s_hasValidFrame) || tsl::elm::s_lastFrameItems.empty()) {
+                    tsl::elm::s_lastFrameItems.clear();
+                    tsl::elm::s_lastFrameItems.shrink_to_fit();
+                    tsl::elm::s_isForwardCache = false; // NEW VARIABLE FOR FORWARD CACHING
+                    tsl::elm::s_hasValidFrame = false;
+                    tsl::elm::s_cacheForwardFrameOnce = true;
+                    //simulatedNextPage.store(false, std::memory_order_release);
+                    //simulatedNextPageComplete.store(true, std::memory_order_release);
+                    ult::allowSlide = ult::unlockedSlide = false;
+                    svcSleepThread(200'000); 
                 }
 
                 if (simulatedBack && !simulatedBackComplete) {
@@ -5899,9 +5971,8 @@ public:
         if (!inMainMenu && inHiddenMode) {
             if (!returningToHiddenMain && !returningToMain) {
 
-                if (simulatedNextPage && !simulatedNextPageComplete) {
-                    simulatedNextPage = false;
-                    simulatedNextPageComplete = true;
+                if (simulatedNextPage.load(std::memory_order_acquire)) {
+                    simulatedNextPage.store(false, std::memory_order_release);
                 }
 
                 if (simulatedMenu && !simulatedMenuComplete) {
