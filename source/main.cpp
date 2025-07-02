@@ -5865,7 +5865,7 @@ public:
                     }
                     //simulatedNextPage.store(false, std::memory_order_release);
                     //simulatedNextPageComplete.store(true, std::memory_order_release);
-                    return true;
+                    //return true;
                 } else if ((!tsl::elm::s_isForwardCache || !tsl::elm::s_hasValidFrame) || tsl::elm::s_lastFrameItems.empty()) {
                     tsl::elm::s_lastFrameItems.clear();
                     tsl::elm::s_lastFrameItems.shrink_to_fit();
@@ -5928,7 +5928,7 @@ public:
                     }
                     //simulatedNextPage.store(false, std::memory_order_release);
                     //simulatedNextPageComplete.store(true, std::memory_order_release);
-                    return true;
+                    //return true;
                 } else if ((!tsl::elm::s_isForwardCache || !tsl::elm::s_hasValidFrame) || tsl::elm::s_lastFrameItems.empty()) {
                     tsl::elm::s_lastFrameItems.clear();
                     tsl::elm::s_lastFrameItems.shrink_to_fit();
