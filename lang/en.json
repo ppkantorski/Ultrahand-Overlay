@@ -38,6 +38,7 @@
     "BATTERY": "Battery",
     "SOC_TEMPERATURE": "SOC Temperature",
     "PCB_TEMPERATURE": "PCB Temperature",
+    "BACKDROP": "Backdrop",
     "MISCELLANEOUS": "Miscellaneous",
     "MENU_ITEMS": "Menu Items",
     "USER_GUIDE": "User Guide",
