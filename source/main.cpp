@@ -521,7 +521,7 @@ private:
                         {"mv", EXPANSION_PATH + (actualState ? "nx-ovlloader+/" : "nx-ovlloader/"), "/"}
                     });
                 }
-            } else if (iniKey == "hide_clock" || iniKey == "hide_soc_temp" || iniKey == "hide_pcb_temp" || iniKey == "hide_battery") {
+            } else if (iniKey == "hide_clock" || iniKey == "hide_soc_temp" || iniKey == "hide_pcb_temp" || iniKey == "hide_battery" || iniKey == "hide_widget_backdrop") {
                 reinitializeWidgetVars();
                 redrawWidget = true;
             } else if (iniKey == "right_alignment") {
@@ -784,7 +784,7 @@ public:
                     }
                     else initializeTheme();
                     tsl::initializeThemeVars();
-                    //reloadMenu = reloadMenu2 = true;
+                    reloadMenu = reloadMenu2 = true;
                     lastSelectedListItem->setValue("");
                     selectedListItem->setValue(DEFAULT);
                     listItem->setValue(CHECKMARK_SYMBOL);
@@ -826,7 +826,7 @@ public:
                         copyPercentage.store(-1, std::memory_order_release);
                         initializeTheme();
                         tsl::initializeThemeVars();
-                        //reloadMenu = reloadMenu2 = true;
+                        reloadMenu = reloadMenu2 = true;
                         lastSelectedListItem->setValue("");
                         selectedListItem->setValue(themeName);
                         listItem->setValue(CHECKMARK_SYMBOL);
@@ -927,6 +927,7 @@ public:
             createToggleListItem(list, SOC_TEMPERATURE, hideSOCTemp, "hide_soc_temp", true);
             createToggleListItem(list, PCB_TEMPERATURE, hidePCBTemp, "hide_pcb_temp", true);
             createToggleListItem(list, BATTERY, hideBattery, "hide_battery", true);
+            createToggleListItem(list, BACKDROP, hideWidgetBackdrop, "hide_widget_backdrop", true);
 
         } else if (dropdownSelection == "miscMenu") {
             addHeader(list, MENU_ITEMS);
@@ -4912,6 +4913,10 @@ public:
             
                 if (ultrahandSection.count("hide_soc_temp") == 0) {
                     setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_soc_temp", TRUE_STR);
+                }
+
+                if (ultrahandSection.count("hide_widget_backdrop") == 0) {
+                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_widget_backdrop", TRUE_STR);
                 }
     
                 //if (ultrahandSection.count("overscan") == 0) {
