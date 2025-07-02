@@ -683,7 +683,7 @@ public:
                 {LOCAL_IP, "", getLocalIpAddress()}
             };
             nifmExit();
-            addTable(list, tableData, "", 164, 20, 28, 4);
+            addTable(list, tableData, "", 163, 20, 28, 4);
             
             // Hardware and storage info
             tableData = {
