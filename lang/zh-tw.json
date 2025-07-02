@@ -38,6 +38,7 @@
     "BATTERY": "電池電量顯示",
     "SOC_TEMPERATURE": "芯片溫度顯示",
     "PCB_TEMPERATURE": "主板溫度顯示",
+    "BACKDROP": "Backdrop",
     "MISCELLANEOUS": "其他模塊設置",
     "MENU_ITEMS": "菜單功能顯示",
     "USER_GUIDE": "用戶指南",
