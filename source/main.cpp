@@ -528,6 +528,8 @@ private:
                 triggerMenuReload = (rightAlignmentState != actualState);
             } else if (iniKey == "dynamic_logo") {
                 useDynamicLogo = !useDynamicLogo;
+            } else if (iniKey == "opaque_screenshots") {
+                useOpaqueScreenshots = !useOpaqueScreenshots;
             }
     
             reloadMenu = true;
