@@ -4916,7 +4916,7 @@ public:
                 }
 
                 if (ultrahandSection.count("hide_widget_backdrop") == 0) {
-                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_widget_backdrop", TRUE_STR);
+                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_widget_backdrop", FALSE_STR);
                 }
     
                 //if (ultrahandSection.count("overscan") == 0) {
