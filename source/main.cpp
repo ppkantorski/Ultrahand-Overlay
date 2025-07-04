@@ -521,7 +521,9 @@ private:
                         {"mv", EXPANSION_PATH + (actualState ? "nx-ovlloader+/" : "nx-ovlloader/"), "/"}
                     });
                 }
-            } else if (iniKey == "hide_clock" || iniKey == "hide_soc_temp" || iniKey == "hide_pcb_temp" || iniKey == "hide_battery" || iniKey == "hide_widget_backdrop") {
+            } else if (iniKey == "hide_clock" || iniKey == "hide_soc_temp" || iniKey == "hide_pcb_temp" ||
+                iniKey == "hide_battery" || iniKey == "hide_widget_backdrop" || iniKey == "dynamic_widget_colors" ||
+                iniKey == "center_widget_alignment" || iniKey == "extended_widget_backdrop") {
                 reinitializeWidgetVars();
                 redrawWidget = true;
             } else if (iniKey == "right_alignment") {
@@ -531,7 +533,7 @@ private:
             } else if (iniKey == "opaque_screenshots") {
                 useOpaqueScreenshots = !useOpaqueScreenshots;
             }
-    
+
             reloadMenu = true;
             if (useReloadMenu2) reloadMenu2 = true;
         });
@@ -924,12 +926,17 @@ public:
                 list->addItem(listItem);
             }
         } else if (dropdownSelection == "widgetMenu") {
-            addHeader(list, WIDGET);
+            addHeader(list, "Widget Items");
             createToggleListItem(list, CLOCK, hideClock, "hide_clock", true);
             createToggleListItem(list, SOC_TEMPERATURE, hideSOCTemp, "hide_soc_temp", true);
             createToggleListItem(list, PCB_TEMPERATURE, hidePCBTemp, "hide_pcb_temp", true);
             createToggleListItem(list, BATTERY, hideBattery, "hide_battery", true);
             createToggleListItem(list, BACKDROP, hideWidgetBackdrop, "hide_widget_backdrop", true);
+
+            addHeader(list, "Widget Settings");
+            createToggleListItem(list, "Dynamic Colors", dynamicWidgetColors, "dynamic_widget_colors", false);
+            createToggleListItem(list, "Center Alignment", centerWidgetAlignment, "center_widget_alignment", false);
+            createToggleListItem(list, "Extended Backdrop", extendedWidgetBackdrop, "extended_widget_backdrop", false);
 
         } else if (dropdownSelection == "miscMenu") {
             addHeader(list, MENU_ITEMS);
@@ -4917,9 +4924,22 @@ public:
                     setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_soc_temp", TRUE_STR);
                 }
 
+                if (ultrahandSection.count("dynamic_widget_colors") == 0) {
+                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "dynamic_widget_colors", TRUE_STR);
+                }
+
                 if (ultrahandSection.count("hide_widget_backdrop") == 0) {
                     setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_widget_backdrop", FALSE_STR);
                 }
+
+                if (ultrahandSection.count("center_widget_alignment") == 0) {
+                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "center_widget_alignment", TRUE_STR);
+                }
+
+                if (ultrahandSection.count("extended_widget_backdrop") == 0) {
+                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "extended_widget_backdrop", FALSE_STR);
+                }
+                
     
                 //if (ultrahandSection.count("overscan") == 0) {
                 //    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "overscan", "100");
