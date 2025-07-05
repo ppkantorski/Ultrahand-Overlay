@@ -181,7 +181,7 @@ bool handleRunningInterpreter(uint64_t& keysDown, uint64_t& keysHeld) {
     static bool inProg = true;
     
     // FIX: More robust abort handling
-    if (((keysDown & KEY_R) && !(keysHeld & ~KEY_R & ALL_KEYS_MASK) && !stillTouching) || externalAbortCommands.load(std::memory_order_relaxed)) {
+    if (((keysDown & KEY_R) && !(keysHeld & ~KEY_R & ALL_KEYS_MASK) && !stillTouching.load(std::memory_order_acquire)) || externalAbortCommands.load(std::memory_order_relaxed)) {
         // Set all abort flags with proper ordering
         abortDownload.store(true, std::memory_order_release);
         abortUnzip.store(true, std::memory_order_release);
@@ -207,7 +207,7 @@ bool handleRunningInterpreter(uint64_t& keysDown, uint64_t& keysHeld) {
     }
     
     // Other input handling
-    if ((keysDown & KEY_B) && !(keysHeld & ~KEY_B & ALL_KEYS_MASK) && !stillTouching) {
+    if ((keysDown & KEY_B) && !(keysHeld & ~KEY_B & ALL_KEYS_MASK) && !stillTouching.load(std::memory_order_acquire)) {
         tsl::Overlay::get()->hide();
     }
     
@@ -281,9 +281,8 @@ private:
             if (runningInterpreter.load(std::memory_order_acquire))
                 return false;
 
-            if (simulatedSelect && !simulatedSelectComplete) {
+            if (simulatedSelect.exchange(false, std::memory_order_acq_rel)) {
                 keys |= KEY_A;
-                simulatedSelect = false;
             }
             if (keys & KEY_A) {
 
@@ -314,7 +313,6 @@ private:
                 tsl::changeTo<UltrahandSettingsMenu>(targetMenu);
                 selectedListItem = nullptr;
                 selectedListItem = listItem;
-                simulatedSelectComplete = true;
                 return true;
             }
             return false;
@@ -343,9 +341,8 @@ private:
                 if (runningInterpreter.load(std::memory_order_acquire))
                     return false;
                 
-                if (simulatedSelect && !simulatedSelectComplete) {
+                if (simulatedSelect.exchange(false, std::memory_order_acq_rel)) {
                     keys |= KEY_A;
-                    simulatedSelect = false;
                 }
                 if (keys & KEY_A) {
                     if (item != defaultItem) {
@@ -374,7 +371,6 @@ private:
                     listItem->setValue(CHECKMARK_SYMBOL);
                     lastSelectedListItem = listItem;
                     shiftItemFocus(listItem);
-                    simulatedSelectComplete = true;
                     lastSelectedListItem->triggerClickAnimation();
                     
                     return true;
@@ -401,9 +397,8 @@ private:
                 executingCommands = false;
             }
 
-            if (simulatedSelect && !simulatedSelectComplete) {
+            if (simulatedSelect.exchange(false, std::memory_order_acq_rel)) {
                 keys |= KEY_A;
-                simulatedSelect = false;
             }
             std::vector<std::vector<std::string>> interpreterCommands;
             if (keys & KEY_A) {
@@ -471,7 +466,6 @@ private:
                 lastSelectedListItem = listItem;
                 shiftItemFocus(listItem);
                 lastRunningInterpreter = true;
-                simulatedSelectComplete = true;
                 lastSelectedListItem->triggerClickAnimation();
                 return true;
             }
@@ -614,9 +608,8 @@ public:
                 listItem->setClickListener([skipLang = !isFileOrDirectory(langFile), defaultLangMode, defaulLang, langFile, listItem](uint64_t keys) {
                     //listItemPtr = std::shared_ptr<tsl::elm::ListItem>(listItem, [](auto*){})](uint64_t keys) {
                     if (runningInterpreter.load(std::memory_order_acquire)) return false;
-                    if (simulatedSelect && !simulatedSelectComplete) {
+                    if (simulatedSelect.exchange(false, std::memory_order_acq_rel)) {
                         keys |= KEY_A;
-                        simulatedSelect = false;
                     }
                     if (keys & KEY_A) {
                         setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, DEFAULT_LANG_STR, defaultLangMode);
@@ -629,7 +622,6 @@ public:
                         lastSelectedListItem = nullptr;
                         lastSelectedListItem = listItem;
                         shiftItemFocus(listItem);
-                        simulatedSelectComplete = true;
                         lastSelectedListItem->triggerClickAnimation();
                         lastSelectedListItemFooter = defaultLangMode;
                         languageWasChanged = true;
@@ -775,9 +767,8 @@ public:
             }
             listItem->setClickListener([defaultTheme = THEMES_PATH + "default.ini", listItem](uint64_t keys) {
                 if (runningInterpreter.load(std::memory_order_acquire)) return false;
-                if (simulatedSelect && !simulatedSelectComplete) {
+                if (simulatedSelect.exchange(false, std::memory_order_acq_rel)) {
                     keys |= KEY_A;
-                    simulatedSelect = false;
                 }
                 if (keys & KEY_A) {
                     setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "current_theme", DEFAULT_STR);
@@ -795,7 +786,6 @@ public:
                     lastSelectedListItem = nullptr;
                     lastSelectedListItem = listItem;
                     shiftItemFocus(listItem);
-                    simulatedSelectComplete = true;
                     lastSelectedListItem->triggerClickAnimation();
                     return true;
                 }
@@ -819,9 +809,8 @@ public:
                 }
                 listItem->setClickListener([themeName, themeFile, listItem](uint64_t keys) {
                     if (runningInterpreter.load(std::memory_order_acquire)) return false;
-                    if (simulatedSelect && !simulatedSelectComplete) {
+                    if (simulatedSelect.exchange(false, std::memory_order_acq_rel)) {
                         keys |= KEY_A;
-                        simulatedSelect = false;
                     }
                     if (keys & KEY_A) {
                         setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "current_theme", themeName);
@@ -837,7 +826,6 @@ public:
                         lastSelectedListItem = nullptr;
                         lastSelectedListItem = listItem;
                         shiftItemFocus(listItem);
-                        simulatedSelectComplete = true;
                         lastSelectedListItem->triggerClickAnimation();
                         return true;
                     }
@@ -859,9 +847,8 @@ public:
 
             listItem->setClickListener([listItem](uint64_t keys) {
                 if (runningInterpreter.load(std::memory_order_acquire)) return false;
-                if (simulatedSelect && !simulatedSelectComplete) {
+                if (simulatedSelect.exchange(false, std::memory_order_acq_rel)) {
                     keys |= KEY_A;
-                    simulatedSelect = false;
                 }
                 if (keys & KEY_A) {
                     setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "current_wallpaper", "");
@@ -874,7 +861,6 @@ public:
                     lastSelectedListItem = nullptr;
                     lastSelectedListItem = listItem;
                     shiftItemFocus(listItem);
-                    simulatedSelectComplete = true;
                     lastSelectedListItem->triggerClickAnimation();
                     
                     return true;
@@ -899,9 +885,8 @@ public:
                 }
                 listItem->setClickListener([wallpaperName, wallpaperFile, listItem](uint64_t keys) {
                     if (runningInterpreter.load(std::memory_order_acquire)) return false;
-                    if (simulatedSelect && !simulatedSelectComplete) {
+                    if (simulatedSelect.exchange(false, std::memory_order_acq_rel)) {
                         keys |= KEY_A;
-                        simulatedSelect = false;
                     }
                     if (keys & KEY_A) {
                         setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "current_wallpaper", wallpaperName);
@@ -916,7 +901,6 @@ public:
                         lastSelectedListItem = nullptr;
                         lastSelectedListItem = listItem;
                         shiftItemFocus(listItem);
-                        simulatedSelectComplete = true;
                         lastSelectedListItem->triggerClickAnimation();
                         
                         return true;
@@ -1034,19 +1018,17 @@ public:
                     tsl::changeTo<UltrahandSettingsMenu>();
                     reloadMenu3 = false;
                 }
-                if (simulatedNextPage.load(std::memory_order_acquire)) {
-                    simulatedNextPage.store(false, std::memory_order_release);
-                }
-                if (simulatedMenu && !simulatedMenuComplete) {
-                    simulatedMenu = false;
-                    simulatedMenuComplete = true;
-                }
-                if (simulatedBack && !simulatedBackComplete) {
+                //if (simulatedNextPage.load(std::memory_order_acquire)) {
+                //    simulatedNextPage.store(false, std::memory_order_release);
+                //}
+                simulatedNextPage.exchange(false, std::memory_order_acq_rel);
+                simulatedMenu.exchange(false, std::memory_order_acq_rel);
+                if (simulatedBack.exchange(false, std::memory_order_acq_rel)) {
                     keysDown |= KEY_B;
-                    simulatedBack = false;
                 }
-                if ((keysDown & KEY_B) && !stillTouching) {
-                    allowSlide = unlockedSlide = false;
+                if ((keysDown & KEY_B) && !stillTouching.load(std::memory_order_acquire)) {
+                    allowSlide.exchange(false, std::memory_order_acq_rel);
+                    unlockedSlide.exchange(false, std::memory_order_acq_rel);
                     inSettingsMenu = false;
                     returningToMain = (lastMenu != "hiddenMenuMode");
                     returningToHiddenMain = !returningToMain;
@@ -1056,20 +1038,20 @@ public:
                         tsl::changeTo<MainMenu>(lastMenuMode);
                         reloadMenu = false;
                     }
-                    simulatedBackComplete = true;
                     return true;
                 }
             }
         } else if (inSubSettingsMenu) {
-            if (simulatedNextPage.load(std::memory_order_acquire)) {
-                simulatedNextPage.store(false, std::memory_order_release);
-            }
-            if (simulatedBack && !simulatedBackComplete) {
+            //if (simulatedNextPage.load(std::memory_order_acquire)) {
+            //    simulatedNextPage.store(false, std::memory_order_release);
+            //}
+            simulatedNextPage.exchange(false, std::memory_order_acq_rel);
+            if (simulatedBack.exchange(false, std::memory_order_acq_rel)) {
                 keysDown |= KEY_B;
-                simulatedBack = false;
             }
-            if ((keysDown & KEY_B) && !stillTouching) {
-                allowSlide = unlockedSlide = false;
+            if ((keysDown & KEY_B) && !stillTouching.load(std::memory_order_acquire)) {
+                allowSlide.exchange(false, std::memory_order_acq_rel);
+                unlockedSlide.exchange(false, std::memory_order_acq_rel);
                 inSubSettingsMenu = false;
                 returningToSettings = true;
                 
@@ -1088,7 +1070,6 @@ public:
                 } else {
                     tsl::goBack();
                 }
-                simulatedBackComplete = true;
                 return true;
             }
         }
@@ -1171,9 +1152,8 @@ public:
         listItem->setClickListener([settingsIniPath=settingsIniPath, entryName=entryName, iStr, priorityValue, listItem](uint64_t keys) {
             if (runningInterpreter.load(std::memory_order_acquire)) return false;
 
-            if (simulatedSelect && !simulatedSelectComplete) {
+            if (simulatedSelect.exchange(false, std::memory_order_acq_rel)) {
                 keys |= KEY_A;
-                simulatedSelect = false;
             }
 
             if (keys & KEY_A) {
@@ -1190,7 +1170,6 @@ public:
                 lastSelectedListItem = nullptr;
                 lastSelectedListItem = listItem;
                 shiftItemFocus(listItem);
-                simulatedSelectComplete = true;
                 lastSelectedListItem->triggerClickAnimation();
             }
             return false;
@@ -1224,16 +1203,14 @@ public:
                 keyComboItem->setValue(displayCombo);
                 keyComboItem->setClickListener([entryName=entryName, entryMode=entryMode, overlayName=overlayName, listItem = keyComboItem](uint64_t keys) {
                     if (runningInterpreter.load(std::memory_order_acquire)) return false;
-                    if (simulatedSelect && !simulatedSelectComplete) {
+                    if (simulatedSelect.exchange(false, std::memory_order_acq_rel)) {
                         keys |= KEY_A;
-                        simulatedSelect = false;
                     }
                     if (keys & KEY_A) {
                         inMainMenu = false;
                         tsl::changeTo<SettingsMenu>(entryName, entryMode, overlayName, "", KEY_COMBO_STR);
                         selectedListItem = nullptr;
                         selectedListItem = listItem;
-                        simulatedSelectComplete = true;
                         lastSelectedListItem->triggerClickAnimation();
                         return true;
                     }
@@ -1257,16 +1234,14 @@ public:
             listItem->setValue(parseValueFromIniSection(settingsIniPath, entryName, PRIORITY_STR));
             listItem->setClickListener([entryName=entryName, entryMode=entryMode, overlayName=overlayName, listItem](uint64_t keys) {
                 if (runningInterpreter.load(std::memory_order_acquire)) return false;
-                if (simulatedSelect && !simulatedSelectComplete) {
+                if (simulatedSelect.exchange(false, std::memory_order_acq_rel)) {
                     keys |= KEY_A;
-                    simulatedSelect = false;
                 }
                 if (keys & KEY_A) {
                     inMainMenu = false;
                     tsl::changeTo<SettingsMenu>(entryName, entryMode, overlayName, "", PRIORITY_STR);
                     selectedListItem = nullptr;
                     selectedListItem = listItem;
-                    simulatedSelectComplete = true;
                     lastSelectedListItem->triggerClickAnimation();
                     return true;
                 }
@@ -1340,9 +1315,8 @@ public:
             }
             listItem->setClickListener([entryName=entryName, settingsIniPath=settingsIniPath, listItem](uint64_t keys) {
                 if (runningInterpreter.load(std::memory_order_acquire)) return false;
-                if (simulatedSelect && !simulatedSelectComplete) {
+                if (simulatedSelect.exchange(false, std::memory_order_acq_rel)) {
                     keys |= KEY_A;
-                    simulatedSelect = false;
                 }
                 if (keys & KEY_A) {
                     // Remove key combo from this overlay
@@ -1354,7 +1328,6 @@ public:
                     listItem->setValue(CHECKMARK_SYMBOL);
                     lastSelectedListItem = listItem;
                     shiftItemFocus(listItem);
-                    simulatedSelectComplete = true;
                     lastSelectedListItem->triggerClickAnimation();
                     return true;
                 }
@@ -1380,9 +1353,8 @@ public:
                 }
                 listItem->setClickListener([entryName=entryName, settingsIniPath=settingsIniPath, combo, mappedCombo, currentKeyCombo, listItem](uint64_t keys) {
                     if (runningInterpreter.load(std::memory_order_acquire)) return false;
-                    if (simulatedSelect && !simulatedSelectComplete) {
+                    if (simulatedSelect.exchange(false, std::memory_order_acq_rel)) {
                         keys |= KEY_A;
-                        simulatedSelect = false;
                     }
                     if (keys & KEY_A) {
                         if (combo != currentKeyCombo) {
@@ -1399,7 +1371,6 @@ public:
                         listItem->setValue(CHECKMARK_SYMBOL);
                         lastSelectedListItem = listItem;
                         shiftItemFocus(listItem);
-                        simulatedSelectComplete = true;
                         lastSelectedListItem->triggerClickAnimation();
                         return true;
                     }
@@ -1477,22 +1448,20 @@ public:
 
         if (inSettingsMenu && !inSubSettingsMenu) {
             if (!returningToSettings) {
-                if (simulatedNextPage.load(std::memory_order_acquire)) {
-                    simulatedNextPage.store(false, std::memory_order_release);
-                }
+                //if (simulatedNextPage.load(std::memory_order_acquire)) {
+                //    simulatedNextPage.store(false, std::memory_order_release);
+                //}
+                simulatedNextPage.exchange(false, std::memory_order_acq_rel);
 
-                if (simulatedMenu && !simulatedMenuComplete) {
-                    simulatedMenu = false;
-                    simulatedMenuComplete = true;
-                }
+                simulatedMenu.exchange(false, std::memory_order_acq_rel);
 
-                if (simulatedBack && !simulatedBackComplete) {
+                if (simulatedBack.exchange(false, std::memory_order_acq_rel)) {
                     keysDown |= KEY_B;
-                    simulatedBack = false;
                 }
 
-                if ((keysDown & KEY_B) && !stillTouching) {
-                    allowSlide = unlockedSlide = false;
+                if ((keysDown & KEY_B) && !stillTouching.load(std::memory_order_acquire)) {
+                    allowSlide.exchange(false, std::memory_order_acq_rel);
+                    unlockedSlide.exchange(false, std::memory_order_acq_rel);
                     inSettingsMenu = false;
                     if (lastMenu != "hiddenMenuMode")
                         returningToMain = true;
@@ -1512,33 +1481,29 @@ public:
                     }
                     
                     lastMenu = "settingsMenu";
-                    simulatedBackComplete = true;
                     //tsl::Overlay::get()->close();
                     return true;
                 }
             }
         } else if (inSubSettingsMenu) {
-            if (simulatedNextPage.load(std::memory_order_acquire)) {
-                simulatedNextPage.store(false, std::memory_order_release);
-            }
+            //if (simulatedNextPage.load(std::memory_order_acquire)) {
+            //    simulatedNextPage.store(false, std::memory_order_release);
+            //}
+            simulatedNextPage.exchange(false, std::memory_order_acq_rel);
 
-            if (simulatedMenu && !simulatedMenuComplete) {
-                simulatedMenu = false;
-                simulatedMenuComplete = true;
-            }
+            simulatedMenu.exchange(false, std::memory_order_acq_rel);
 
-            if (simulatedBack && !simulatedBackComplete) {
+            if (simulatedBack.exchange(false, std::memory_order_acq_rel)) {
                 keysDown |= KEY_B;
-                simulatedBack = false;
             }
 
-            if ((keysDown & KEY_B) && !stillTouching) {
-                allowSlide = unlockedSlide = false;
+            if ((keysDown & KEY_B) && !stillTouching.load(std::memory_order_acquire)) {
+                allowSlide.exchange(false, std::memory_order_acq_rel);
+                unlockedSlide.exchange(false, std::memory_order_acq_rel);
                 inSubSettingsMenu = false;
                 returningToSettings = true;
                 tsl::goBack();
                 //tsl::Overlay::get()->close();
-                simulatedBackComplete = true;
                 return true;
             }
         }
@@ -1591,9 +1556,8 @@ private:
 
         listItem->setClickListener([filePath=filePath, specificKey=specificKey, listItem, line](uint64_t keys) {
             if (runningInterpreter.load(std::memory_order_acquire)) return false;
-            if (simulatedSelect && !simulatedSelectComplete) {
+            if (simulatedSelect.exchange(false, std::memory_order_acq_rel)) {
                 keys |= KEY_A;
-                simulatedSelect = false;
             }
             if (keys & KEY_A) {
                 std::vector<std::vector<std::string>> commandVec;
@@ -1637,7 +1601,6 @@ private:
                 lastSelectedListItem = listItem;
                
                 lastRunningInterpreter = true;
-                simulatedSelectComplete = true;
                 listItem->triggerClickAnimation();
                 return true;
             }
@@ -1798,19 +1761,19 @@ public:
         }
 
         if (inScriptMenu) {
-            if (simulatedNextPage.load(std::memory_order_acquire)) {
-                simulatedNextPage.store(false, std::memory_order_release);
-            }
-            if (simulatedMenu && !simulatedMenuComplete) {
-                simulatedMenu = false;
-                simulatedMenuComplete = true;
-            }
-            if (simulatedBack && !simulatedBackComplete) {
+            //if (simulatedNextPage.load(std::memory_order_acquire)) {
+            //    simulatedNextPage.store(false, std::memory_order_release);
+            //}
+            simulatedNextPage.exchange(false, std::memory_order_acq_rel);
+
+            simulatedMenu.exchange(false, std::memory_order_acq_rel);
+
+            if (simulatedBack.exchange(false, std::memory_order_acq_rel)) {
                 keysDown |= KEY_B;
-                simulatedBack = false;
             }
-            if ((keysDown & KEY_B) && !stillTouching) {
-                allowSlide = unlockedSlide = false;
+            if ((keysDown & KEY_B) && !stillTouching.load(std::memory_order_acquire)) {
+                allowSlide.exchange(false, std::memory_order_acq_rel);
+                unlockedSlide.exchange(false, std::memory_order_acq_rel);
                 inScriptMenu = false;
                 if (isFromPackage) {
                     returningToPackage = lastMenu == "packageMenu";
@@ -1824,7 +1787,6 @@ public:
                 }
 
                 tsl::goBack();
-                simulatedBackComplete = true;
                 return true;
             }
         }
@@ -1957,7 +1919,7 @@ public:
         //lastSelectedListItem = nullptr;
         //tsl::gfx::FontManager::clearCache();
         lastSelectedListItemFooter = "";
-        tsl::clearGlyphCacheNow = true;
+        tsl::clearGlyphCacheNow.store(true, std::memory_order_release);
     }
 
     ~SelectionOverlay() {
@@ -1972,7 +1934,7 @@ public:
         isInitialized.clear();
         toggleCount.clear();
         currentPatternIsOriginal.clear();
-        tsl::clearGlyphCacheNow = true;
+        tsl::clearGlyphCacheNow.store(true, std::memory_order_release);
     }
 
     void processSelectionCommands() {
@@ -2504,9 +2466,8 @@ public:
                         return false;
                     }
 
-                    if (simulatedSelect && !simulatedSelectComplete) {
+                    if (simulatedSelect.exchange(false, std::memory_order_acq_rel)) {
                         keys |= KEY_A;
-                        simulatedSelect = false;
                     }
 
                     if ((keys & KEY_A)) {
@@ -2535,7 +2496,6 @@ public:
                         shiftItemFocus(listItem);
 
                         lastRunningInterpreter = true;
-                        simulatedSelectComplete = true;
                         lastSelectedListItem->triggerClickAnimation();
                         return true;
                     }
@@ -2730,33 +2690,31 @@ public:
             return true;
         }
 
-        if (refreshPage && !stillTouching) {
+        if (refreshPage && !stillTouching.load(std::memory_order_acquire)) {
             tsl::goBack();
             tsl::changeTo<SelectionOverlay>(filePath, specificKey, specifiedFooterKey);
             refreshPage = false;
         }
 
-        if (refreshPackage && !stillTouching) {
+        if (refreshPackage && !stillTouching.load(std::memory_order_acquire)) {
             tsl::goBack();
         }
 
         if (inSelectionMenu) {
-            if (simulatedNextPage.load(std::memory_order_acquire)) {
-                simulatedNextPage.store(false, std::memory_order_release);
-            }
+            //if (simulatedNextPage.load(std::memory_order_acquire)) {
+            //    simulatedNextPage.store(false, std::memory_order_release);
+            //}
+            simulatedNextPage.exchange(false, std::memory_order_acq_rel);
 
-            if (simulatedMenu && !simulatedMenuComplete) {
-                simulatedMenu = false;
-                simulatedMenuComplete = true;
-            }
+            simulatedMenu.exchange(false, std::memory_order_acq_rel);
 
-            if (simulatedBack && !simulatedBackComplete) {
+            if (simulatedBack.exchange(false, std::memory_order_acq_rel)) {
                 keysDown |= KEY_B;
-                simulatedBack = false;
             }
 
-            if ((keysDown & KEY_B) && !stillTouching) {
-                allowSlide = unlockedSlide = false;
+            if ((keysDown & KEY_B) && !stillTouching.load(std::memory_order_acquire)) {
+                allowSlide.exchange(false, std::memory_order_acq_rel);
+                unlockedSlide.exchange(false, std::memory_order_acq_rel);
 
                 inSelectionMenu = false;
 
@@ -2782,7 +2740,6 @@ public:
                     }
                 }
                 tsl::goBack();
-                simulatedBackComplete = true;
                 return true;
             }
         }
@@ -3172,9 +3129,8 @@ bool drawCommandsMenu(tsl::elm::List* list,
                                 
                                 if (runningInterpreter.load(std::memory_order_acquire))
                                     return false;
-                                if (simulatedSelect && !simulatedSelectComplete) {
+                                if (simulatedSelect.exchange(false, std::memory_order_acq_rel)) {
                                     keys |= KEY_A;
-                                    simulatedSelect = false;
                                 }
                                 if (keys & KEY_A) {
                                     inPackageMenu = false;
@@ -3185,7 +3141,6 @@ bool drawCommandsMenu(tsl::elm::List* list,
                                     //jumpItemExactMatch = true;
                                     //g_overlayFilename = "";
                                     tsl::changeTo<PackageMenu>(packagePath, optionName, currentPage, packageName, 0, _lastPackageHeader);
-                                    simulatedSelectComplete = true;
                                     
                                     return true;
                                 
@@ -3210,9 +3165,8 @@ bool drawCommandsMenu(tsl::elm::List* list,
                             listItem->setClickListener([optionName, i, options, _lastPackageHeader = lastPackageHeader](s64 keys) {
                                 if (runningInterpreter.load(std::memory_order_acquire))
                                     return false;
-                                if (simulatedSelect && !simulatedSelectComplete) {
+                                if (simulatedSelect.exchange(false, std::memory_order_acq_rel)) {
                                     keys |= KEY_A;
-                                    simulatedSelect = false;
                                 }
                                 if (keys & KEY_A) {
                                     inPackageMenu = false;
@@ -3221,7 +3175,6 @@ bool drawCommandsMenu(tsl::elm::List* list,
                                     //jumpItemExactMatch = true;
                                     //g_overlayFilename = "";
                                     tsl::changeTo<MainMenu>("", optionName);
-                                    simulatedSelectComplete = true;
                                     return true;
                                 } else if (keys & SCRIPT_KEY) {
                                     if (inMainMenu) {
@@ -3824,9 +3777,8 @@ bool drawCommandsMenu(tsl::elm::List* list,
                         const std::string& forwarderPackageIniName = getNameFromPath(packageSource);
                         listItem->setClickListener([commands, keyName = option.first, dropdownSection, packagePath, listItem,
                             forwarderPackagePath, forwarderPackageIniName, _lastPackageHeader = lastPackageHeader, i](s64 keys) mutable {
-                            if (simulatedSelect && !simulatedSelectComplete) {
+                            if (simulatedSelect.exchange(false, std::memory_order_acq_rel)) {
                                 keys |= KEY_A;
-                                simulatedSelect = false;
                             }
                             
                             if (keys & KEY_A) {
@@ -3850,14 +3802,14 @@ bool drawCommandsMenu(tsl::elm::List* list,
                                 lastCommandMode = FORWARDER_STR;
                                 lastKeyName = keyName;
 
-                                allowSlide = unlockedSlide = false;
+                                allowSlide.exchange(false, std::memory_order_acq_rel);
+                                unlockedSlide.exchange(false, std::memory_order_acq_rel);
                                 //jumpItemName = "🗿";
                                 //jumpItemValue = "";
                                 //jumpItemExactMatch = true;
                                 //g_overlayFilename = "";
 
                                 tsl::changeTo<PackageMenu>(forwarderPackagePath, "", LEFT_STR, forwarderPackageIniName, nestedMenuCount, _lastPackageHeader);
-                                simulatedSelectComplete = true;
                                 return true;
                             } else if (keys & SCRIPT_KEY) {
                                 bool isFromMainMenu = (packagePath == PACKAGE_PATH);
@@ -3897,9 +3849,8 @@ bool drawCommandsMenu(tsl::elm::List* list,
                             
                             if (runningInterpreter.load(std::memory_order_acquire))
                                 return false;
-                            if (simulatedSelect && !simulatedSelectComplete) {
+                            if (simulatedSelect.exchange(false, std::memory_order_acq_rel)) {
                                 keys |= KEY_A;
-                                simulatedSelect = false;
                             }
                             if ((keys & KEY_A)) {
                                 if (footer != UNAVAILABLE_SELECTION && footer != NOT_AVAILABLE_STR && (footer.find(NULL_STR) == std::string::npos)) {
@@ -3947,7 +3898,6 @@ bool drawCommandsMenu(tsl::elm::List* list,
                                     tsl::changeTo<SelectionOverlay>(packagePath, keyName, newKey, _lastPackageHeader);
                                     //lastKeyName = keyName;
                                 }
-                                simulatedSelectComplete = true;
                                 return true;
                             } else if (keys & SCRIPT_KEY) {
                                 bool isFromMainMenu = (packagePath == PACKAGE_PATH);
@@ -4004,9 +3954,8 @@ bool drawCommandsMenu(tsl::elm::List* list,
                             if (runningInterpreter.load(std::memory_order_acquire)) {
                                 return false;
                             }
-                            if (simulatedSelect && !simulatedSelectComplete) {
+                            if (simulatedSelect.exchange(false, std::memory_order_acq_rel)) {
                                 keys |= KEY_A;
-                                simulatedSelect = false;
                             }
                             if ((keys & KEY_A)) {
                                 isDownloadCommand = false;
@@ -4022,7 +3971,6 @@ bool drawCommandsMenu(tsl::elm::List* list,
                                 lastKeyName = selectedItem;
 
                                 lastRunningInterpreter = true;
-                                simulatedSelectComplete = true;
                                 lastSelectedListItem->triggerClickAnimation();
                                 return true;
                             }  else if (keys & SCRIPT_KEY) {
@@ -4180,7 +4128,7 @@ public:
     PackageMenu(const std::string& path, const std::string& sectionName = "", const std::string& page = LEFT_STR, const std::string& _packageName = PACKAGE_FILENAME, const size_t _nestedlayer = 0, const std::string& _pageHeader = "") :
         packagePath(path), dropdownSection(sectionName), currentPage(page), packageName(_packageName), nestedLayer(_nestedlayer), pageHeader(_pageHeader) {
             //tsl::gfx::FontManager::clearCache();
-            //tsl::clearGlyphCacheNow = true;
+            //tsl::clearGlyphCacheNow.store(true, std::memory_order_release);
             jumpItemName = "";
             jumpItemValue = "";
             jumpItemExactMatch = true;
@@ -4195,10 +4143,10 @@ public:
      */
     ~PackageMenu() {
         //tsl::gfx::FontManager::clearCache();
-        //tsl::clearGlyphCacheNow = true;
+        //tsl::clearGlyphCacheNow.store(true, std::memory_order_release);
         //tsl::clearGlyphCacheNow.store(true, std::memory_order_release);
         if (returningToMain) {
-            tsl::clearGlyphCacheNow = true;
+            tsl::clearGlyphCacheNow.store(true, std::memory_order_release);
             clearMemory();
             packageRootLayerTitle = "";
             packageRootLayerVersion = "";
@@ -4408,7 +4356,7 @@ public:
         }
 
         
-        if (!returningToPackage && !stillTouching) {
+        if (!returningToPackage && !stillTouching.load(std::memory_order_acquire)) {
             if (refreshPage) {
                 refreshPage = false;
                 
@@ -4461,14 +4409,11 @@ public:
         }
         
         if (usingPages) {
-            if (simulatedMenu && !simulatedMenuComplete) {
-                simulatedMenu = false;
-                simulatedMenuComplete = true;
-            }
+            simulatedMenu.exchange(false, std::memory_order_acq_rel);
             
-            if (simulatedNextPage.load(std::memory_order_acquire) && !tsl::elm::s_lastFrameItems.empty()) {
+            if (simulatedNextPage.exchange(false, std::memory_order_acq_rel)) {
                 //bool expected = true;
-                tsl::swapComplete = false;
+                //tsl::swapComplete = false;
                 //ult::simulatedNextPage.compare_exchange_strong(expected, false, std::memory_order_release);
                 if (currentPage == LEFT_STR) {
                     keysDown |= KEY_DRIGHT;
@@ -4480,11 +4425,12 @@ public:
 
             if (currentPage == LEFT_STR) {
 
-                if ((keysDown & KEY_RIGHT) && !(keysHeld & KEY_LEFT) && !(keysDown & ~KEY_RIGHT & ~KEY_R & ALL_KEYS_MASK) && !stillTouching && 
-                    (((!allowSlide && onTrackBar && !unlockedSlide) || (keysDown & KEY_R)) || !onTrackBar) &&
-                    !tsl::elm::s_lastFrameItems.empty() && (tsl::elm::s_isForwardCache && tsl::elm::s_hasValidFrame)) {
+                if (tsl::elm::s_hasValidFrame.load(std::memory_order_acquire)  && (keysDown & KEY_RIGHT) && !(keysHeld & KEY_LEFT) && !(keysDown & ~KEY_RIGHT & ~KEY_R & ALL_KEYS_MASK) && !stillTouching.load(std::memory_order_acquire) && 
+                    (((!allowSlide.load(std::memory_order_acquire) && onTrackBar.load(std::memory_order_acquire) && !unlockedSlide.load(std::memory_order_acquire)) || (keysDown & KEY_R)) || !onTrackBar.load(std::memory_order_acquire))) {// && tsl::elm::safeToSwap.exchange(false, std::memory_order_acq_rel)) {//{&&
+                    //!tsl::elm::s_lastFrameItems.empty() && (tsl::elm::s_isForwardCache && tsl::elm::s_hasValidFrame)) {
 
-                    allowSlide = unlockedSlide = false;
+                    allowSlide.exchange(false, std::memory_order_acq_rel);
+                    unlockedSlide.exchange(false, std::memory_order_acq_rel);
                     lastPage = RIGHT_STR;
                     //lastPackage = packagePath;
                     selectedListItem = nullptr;
@@ -4496,7 +4442,7 @@ public:
                     // Disable swapping immediately
                     
                     // Longer sleep for stability
-                    svcSleepThread(200'000);
+                    //svcSleepThread(200'000);
                     
                     // Clear any pending operations before transition
                     //simulatedNextPage.store(false, std::memory_order_release);
@@ -4504,41 +4450,42 @@ public:
                     tsl::pop();
                     
                     tsl::changeTo<PackageMenu>(lastPackagePath, dropdownSection, RIGHT_STR, lastPackageName, nestedMenuCount, pageHeader);
-                    svcSleepThread(200'000);
-                    bool expected = true;
-                    ult::simulatedNextPage.compare_exchange_strong(expected, false, std::memory_order_release);
-                    tsl::swapComplete = true;
+                    //svcSleepThread(200'000);
+                    //bool expected = true;
+                    //ult::simulatedNextPage.compare_exchange_strong(expected, false, std::memory_order_release);
+                    //tsl::swapComplete = true;
                     // Reset state after transition
                     //simulatedNextPageComplete.store(true, std::memory_order_release);
                     return true;
-                } else if ((!tsl::elm::s_isForwardCache || !tsl::elm::s_hasValidFrame) || tsl::elm::s_lastFrameItems.empty()) {
-                    tsl::elm::s_lastFrameItems.clear();
-                    tsl::elm::s_lastFrameItems.shrink_to_fit();
-                    tsl::elm::s_isForwardCache = false; // NEW VARIABLE FOR FORWARD CACHING
-                    tsl::elm::s_hasValidFrame = false;
-                    tsl::elm::s_cacheForwardFrameOnce = true;
-                    //simulatedNextPage.store(false, std::memory_order_release);
-                    //simulatedNextPageComplete.store(true, std::memory_order_release);
-                    ult::allowSlide = ult::unlockedSlide = false;
-                    svcSleepThread(200'000);
-                    bool expected = true;
-                    ult::simulatedNextPage.compare_exchange_strong(expected, false, std::memory_order_release);
+                //} else if ((!tsl::elm::s_isForwardCache || !tsl::elm::s_hasValidFrame) || tsl::elm::s_lastFrameItems.empty()) {
+                //    tsl::elm::s_lastFrameItems.clear();
+                //    tsl::elm::s_lastFrameItems.shrink_to_fit();
+                //    tsl::elm::s_isForwardCache = false; // NEW VARIABLE FOR FORWARD CACHING
+                //    tsl::elm::s_hasValidFrame = false;
+                //    tsl::elm::s_cacheForwardFrameOnce = true;
+                //    //simulatedNextPage.store(false, std::memory_order_release);
+                //    //simulatedNextPageComplete.store(true, std::memory_order_release);
+                //    ult::allowSlide = ult::unlockedSlide = false;
+                //    //svcSleepThread(200'000);
+                //    //bool expected = true;
+                //    //ult::simulatedNextPage.compare_exchange_strong(expected, false, std::memory_order_release);
                 }
 
             } else if (currentPage == RIGHT_STR) {
                 
-                if ((keysDown & KEY_LEFT) && !(keysHeld & KEY_RIGHT) && !(keysDown & ~KEY_LEFT & ~KEY_R & ALL_KEYS_MASK) && !stillTouching && 
-                    (((!allowSlide && onTrackBar && !unlockedSlide) || (keysDown & KEY_R)) || !onTrackBar) && 
-                    !tsl::elm::s_lastFrameItems.empty() && (tsl::elm::s_isForwardCache && tsl::elm::s_hasValidFrame)) {
+                if (tsl::elm::s_hasValidFrame.load(std::memory_order_acquire)  && (keysDown & KEY_LEFT) && !(keysHeld & KEY_RIGHT) && !(keysDown & ~KEY_LEFT & ~KEY_R & ALL_KEYS_MASK) && !stillTouching.load(std::memory_order_acquire) && 
+                    (((!allowSlide.load(std::memory_order_acquire) && onTrackBar.load(std::memory_order_acquire) && !unlockedSlide.load(std::memory_order_acquire)) || (keysDown & KEY_R)) || !onTrackBar.load(std::memory_order_acquire)) ) {// && tsl::elm::safeToSwap.exchange(false, std::memory_order_acq_rel)) {//&& 
+                    //!tsl::elm::s_lastFrameItems.empty() && (tsl::elm::s_isForwardCache && tsl::elm::s_hasValidFrame)) {
 
                     
-                    allowSlide = unlockedSlide = false;
+                    allowSlide.exchange(false, std::memory_order_acq_rel);
+                    unlockedSlide.exchange(false, std::memory_order_acq_rel);
                     lastPage = LEFT_STR;
                     selectedListItem = nullptr;
                     lastSelectedListItem = nullptr;
                     
                     // Longer sleep for stability
-                    svcSleepThread(200'000);
+                    //svcSleepThread(200'000);
                     
                     // Clear any pending operations before transition
                     //simulatedNextPage.store(false, std::memory_order_release);
@@ -4546,48 +4493,46 @@ public:
                     tsl::pop();
                     
                     tsl::changeTo<PackageMenu>(lastPackagePath, dropdownSection, LEFT_STR, lastPackageName, nestedMenuCount, pageHeader);
-                    svcSleepThread(200'000);
-                    bool expected = true;
-                    ult::simulatedNextPage.compare_exchange_strong(expected, false, std::memory_order_release);
-                    tsl::swapComplete = true;
+                    //svcSleepThread(200'000);
+                    //bool expected = true;
+                    //ult::simulatedNextPage.compare_exchange_strong(expected, false, std::memory_order_release);
+                    //tsl::swapComplete = true;
                     // Reset state after transition
                     //simulatedNextPageComplete.store(true, std::memory_order_release);
                     return true;
-                } else if ((!tsl::elm::s_isForwardCache || !tsl::elm::s_hasValidFrame) || tsl::elm::s_lastFrameItems.empty()) {
-                    tsl::elm::s_lastFrameItems.clear();
-                    tsl::elm::s_lastFrameItems.shrink_to_fit();
-                    tsl::elm::s_isForwardCache = false; // NEW VARIABLE FOR FORWARD CACHING
-                    tsl::elm::s_hasValidFrame = false;
-                    tsl::elm::s_cacheForwardFrameOnce = true;
-                    //simulatedNextPage.store(false, std::memory_order_release);
-                    //simulatedNextPageComplete.store(true, std::memory_order_release);
-                    ult::allowSlide = ult::unlockedSlide = false;
-                    svcSleepThread(200'000);
-                    bool expected = true;
-                    ult::simulatedNextPage.compare_exchange_strong(expected, false, std::memory_order_release);
+                //} else if ((!tsl::elm::s_isForwardCache || !tsl::elm::s_hasValidFrame) || tsl::elm::s_lastFrameItems.empty()) {
+                //    tsl::elm::s_lastFrameItems.clear();
+                //    tsl::elm::s_lastFrameItems.shrink_to_fit();
+                //    tsl::elm::s_isForwardCache = false; // NEW VARIABLE FOR FORWARD CACHING
+                //    tsl::elm::s_hasValidFrame = false;
+                //    tsl::elm::s_cacheForwardFrameOnce = true;
+                //    //simulatedNextPage.store(false, std::memory_order_release);
+                //    //simulatedNextPageComplete.store(true, std::memory_order_release);
+                //    ult::allowSlide = ult::unlockedSlide = false;
+                //    //svcSleepThread(200'000);
+                //    //bool expected = true;
+                //    //ult::simulatedNextPage.compare_exchange_strong(expected, false, std::memory_order_release);
                 }
             } 
         }
         
         if (!returningToPackage && inPackageMenu && nestedMenuCount == nestedLayer) {
-            if (simulatedMenu && !simulatedMenuComplete) {
-                simulatedMenu = false;
-                simulatedMenuComplete = true;
-            }
+            simulatedMenu.exchange(false, std::memory_order_acq_rel);
             
-            if (simulatedNextPage.load(std::memory_order_acquire)) {
-                simulatedNextPage.store(false, std::memory_order_release);
-            }
+            //if (simulatedNextPage.load(std::memory_order_acquire)) {
+            //    simulatedNextPage.store(false, std::memory_order_release);
+            //}
+            simulatedNextPage.exchange(false, std::memory_order_acq_rel);
             
             if (!usingPages || (usingPages && lastPage == LEFT_STR)) {
-                if (simulatedBack && !simulatedBackComplete) {
+                if (simulatedBack.exchange(false, std::memory_order_acq_rel)) {
                     keysDown |= KEY_B;
-                    simulatedBack = false;
                 }
-                if ((keysDown & KEY_B) && !stillTouching) {
+                if ((keysDown & KEY_B) && !stillTouching.load(std::memory_order_acquire)) {
                     handleForwarderFooter();
 
-                    allowSlide = unlockedSlide = false;
+                    allowSlide.exchange(false, std::memory_order_acq_rel);
+                    unlockedSlide.exchange(false, std::memory_order_acq_rel);
                     if (nestedMenuCount == 0) {
                         inPackageMenu = false;
                         
@@ -4611,18 +4556,17 @@ public:
                     clearMemory();
                     
                     tsl::goBack();
-                    simulatedBackComplete = true;
                     return true;
                 }
             } else if (usingPages && lastPage == RIGHT_STR) {
-                if (simulatedBack && !simulatedBackComplete) {
+                if (simulatedBack.exchange(false, std::memory_order_acq_rel)) {
                     keysDown |= KEY_B;
-                    simulatedBack = false;
                 }
-                if ((keysDown & KEY_B) && !stillTouching) {
+                if ((keysDown & KEY_B) && !stillTouching.load(std::memory_order_acquire)) {
                     handleForwarderFooter();
 
-                    allowSlide = unlockedSlide = false;
+                    allowSlide.exchange(false, std::memory_order_acq_rel);
+                    unlockedSlide.exchange(false, std::memory_order_acq_rel);
                     if (nestedMenuCount == 0) {
                         inPackageMenu = false;
                         //inNestedPackageMenu = false;
@@ -4648,55 +4592,50 @@ public:
                     
                     lastPage = LEFT_STR;
                     tsl::goBack();
-                    simulatedBackComplete = true;
                     return true;
                 }
             }
         }
         
         if (!returningToSubPackage && inSubPackageMenu) {
-            if (simulatedMenu && !simulatedMenuComplete) {
-                simulatedMenu = false;
-                simulatedMenuComplete = true;
-            }
+            simulatedMenu.exchange(false, std::memory_order_acq_rel);
             
-            if (simulatedNextPage.load(std::memory_order_acquire)) {
-                simulatedNextPage.store(false, std::memory_order_release);
-            }
+            //if (simulatedNextPage.load(std::memory_order_acquire)) {
+            //    simulatedNextPage.store(false, std::memory_order_release);
+            //}
+            simulatedNextPage.exchange(false, std::memory_order_acq_rel);
             
             if (!usingPages || (usingPages && lastPage == LEFT_STR)) {
-                if (simulatedBack && !simulatedBackComplete) {
+                if (simulatedBack.exchange(false, std::memory_order_acq_rel)) {
                     keysDown |= KEY_B;
-                    simulatedBack = false;
                 }
-                if ((keysDown & KEY_B) && !stillTouching) {
+                if ((keysDown & KEY_B) && !stillTouching.load(std::memory_order_acquire)) {
                     handleForwarderFooter();
 
-                    allowSlide = unlockedSlide = false;
+                    allowSlide.exchange(false, std::memory_order_acq_rel);
+                    unlockedSlide.exchange(false, std::memory_order_acq_rel);
                     inSubPackageMenu = false;
                     returningToPackage = true;
                     lastMenu = "packageMenu";
                     tsl::goBack();
                     
-                    simulatedBackComplete = true;
                     return true;
                 }
             } else if (usingPages && lastPage == RIGHT_STR) {
-                if (simulatedBack && !simulatedBackComplete) {
+                if (simulatedBack.exchange(false, std::memory_order_acq_rel)) {
                     keysDown |= KEY_B;
-                    simulatedBack = false;
                 }
-                if ((keysDown & KEY_B) && !stillTouching) {
+                if ((keysDown & KEY_B) && !stillTouching.load(std::memory_order_acquire)) {
                     handleForwarderFooter();
 
-                    allowSlide = unlockedSlide = false;
+                    allowSlide.exchange(false, std::memory_order_acq_rel);
+                    unlockedSlide.exchange(false, std::memory_order_acq_rel);
                     inSubPackageMenu = false;
                     returningToPackage = true;
                     lastMenu = "packageMenu";
                     //tsl::goBack();
                     tsl::goBack();
                     
-                    simulatedBackComplete = true;
                     return true;
                 }
             }
@@ -4712,7 +4651,6 @@ public:
             returningToSubPackage = false;
             inPackageMenu = true;
             inSubPackageMenu = false;
-            simulatedBackComplete = true;
             if (nestedMenuCount == 0 && nestedLayer == 0) {
                 lastPackagePath = packagePath;
                 lastPackageName = PACKAGE_FILENAME;
@@ -4729,7 +4667,6 @@ public:
             returningToSubPackage = false;
             inPackageMenu = false;
             inSubPackageMenu = true;
-            simulatedBackComplete = true;
             if (nestedMenuCount == 0 && nestedLayer == 0) {
                 lastPackagePath = packagePath;
                 lastPackageName = PACKAGE_FILENAME;
@@ -4743,20 +4680,19 @@ public:
         }
 
 
-        if (simulatedBack && !simulatedBackComplete) {
+        if (simulatedBack.exchange(false, std::memory_order_acq_rel)) {
             keysDown |= KEY_B;
-            simulatedBack = false;
         }
-        if ((keysDown & KEY_B) && !stillTouching) { // for catching lost navigations
+        if ((keysDown & KEY_B) && !stillTouching.load(std::memory_order_acquire)) { // for catching lost navigations
 
-            allowSlide = unlockedSlide = false;
+            allowSlide.exchange(false, std::memory_order_acq_rel);
+            unlockedSlide.exchange(false, std::memory_order_acq_rel);
             inSubPackageMenu = false;
             returningToPackage = true;
             lastMenu = "packageMenu";
             //tsl::goBack();
             tsl::goBack();
             
-            simulatedBackComplete = true;
             return true;
         }
         
@@ -5201,9 +5137,8 @@ public:
                                 return false;
                             
     
-                            if (simulatedSelect && !simulatedSelectComplete) {
+                            if (simulatedSelect.exchange(false, std::memory_order_acq_rel)) {
                                 keys |= KEY_A;
-                                simulatedSelect = false;
                             }
     
                             if (keys & KEY_A) {
@@ -5223,7 +5158,6 @@ public:
                                     tsl::setNextOverlay(overlayFile);
                                 
                                 tsl::Overlay::get()->close();
-                                simulatedSelectComplete = true;
                                 
                                 return true;
                             } else if (keys & STAR_KEY) {
@@ -5283,9 +5217,8 @@ public:
                         if (runningInterpreter.load(std::memory_order_acquire))
                             return false;
     
-                        if (simulatedSelect && !simulatedSelectComplete) {
+                        if (simulatedSelect.exchange(false, std::memory_order_acq_rel)) {
                             keys |= KEY_A;
-                            simulatedSelect = false;
                         }
     
                         if (keys & KEY_A) {
@@ -5297,7 +5230,6 @@ public:
                             inMainMenu = false;
                             inHiddenMode = true;
                             tsl::changeTo<MainMenu>(OVERLAYS_STR);
-                            simulatedSelectComplete = true;
                             return true;
                         }
                         return false;
@@ -5524,9 +5456,8 @@ public:
                                 return false;
                             }
                             
-                            if (simulatedSelect && !simulatedSelectComplete) {
+                            if (simulatedSelect.exchange(false, std::memory_order_acq_rel)) {
                                 keys |= KEY_A;
-                                simulatedSelect = false;
                             }
                             
                             if (keys & KEY_A) {
@@ -5563,10 +5494,10 @@ public:
     
                                 packageRootLayerTitle = newPackageName;
                                 packageRootLayerVersion = packageVersion;
-                                //tsl::clearGlyphCacheNow = true;
-                                tsl::clearGlyphCacheNow = true;
+                                //tsl::clearGlyphCacheNow.store(true, std::memory_order_release);
+                                tsl::clearGlyphCacheNow.store(true, std::memory_order_release);
                                 tsl::changeTo<PackageMenu>(packageFilePath, "");
-                                simulatedSelectComplete = true;
+
                                 return true;
                             } else if (keys & STAR_KEY) {
                                 if (!packageName.empty())
@@ -5621,16 +5552,14 @@ public:
                         if (runningInterpreter.load(std::memory_order_acquire))
                             return false;
                         
-                        if (simulatedSelect && !simulatedSelectComplete) {
+                        if (simulatedSelect.exchange(false, std::memory_order_acq_rel)) {
                             keys |= KEY_A;
-                            simulatedSelect = false;
                         }
                         
                         if (keys & KEY_A) {
                             inMainMenu = false;
                             inHiddenMode = true;
                             tsl::changeTo<MainMenu>(PACKAGES_STR);
-                            simulatedSelectComplete = true;
                             return true;
                         }
                         return false;
@@ -5755,7 +5684,7 @@ public:
 
 
 
-        if (refreshPage && !stillTouching) {
+        if (refreshPage && !stillTouching.load(std::memory_order_acquire)) {
             refreshPage = false;
             tsl::pop();
             //jumpItemName = HIDDEN;
@@ -5777,25 +5706,22 @@ public:
         }
 
         if (!dropdownSection.empty() && !returningToMain) {
-            if (simulatedNextPage.load(std::memory_order_acquire)) {
-                simulatedNextPage.store(false, std::memory_order_release);
-            }
+            //if (simulatedNextPage.load(std::memory_order_acquire)) {
+            //    simulatedNextPage.store(false, std::memory_order_release);
+            //}
+            simulatedNextPage.exchange(false, std::memory_order_acq_rel);
 
-            if (simulatedMenu && !simulatedMenuComplete) {
-                simulatedMenu = false;
-                simulatedMenuComplete = true;
-            }
+            simulatedMenu.exchange(false, std::memory_order_acq_rel);
 
-            if (simulatedBack && !simulatedBackComplete) {
+            if (simulatedBack.exchange(false, std::memory_order_acq_rel)) {
                 keysDown |= KEY_B;
-                simulatedBack = false;
             }
 
-            if ((keysDown & KEY_B) && !stillTouching) {
-                allowSlide = unlockedSlide = false;
+            if ((keysDown & KEY_B) && !stillTouching.load(std::memory_order_acquire)) {
+                allowSlide.exchange(false, std::memory_order_acq_rel);
+                unlockedSlide.exchange(false, std::memory_order_acq_rel);
                 returningToMain = true;
                 tsl::goBack();
-                simulatedBackComplete = true;
                 return true;
             }
         }
@@ -5814,8 +5740,8 @@ public:
             
             if (!freshSpawn && !returningToMain && !returningToHiddenMain) {
                 
-                if (simulatedNextPage.load(std::memory_order_acquire) && !tsl::elm::s_lastFrameItems.empty()) {
-                    tsl::swapComplete = false;
+                if (simulatedNextPage.exchange(false, std::memory_order_acq_rel)) {//&& !tsl::elm::s_lastFrameItems.empty()) {
+                    //tsl::swapComplete = false;
                     //bool expected = true;
                     //ult::simulatedNextPage.compare_exchange_strong(expected, false, std::memory_order_release);
                     if (!usePageSwap) {
@@ -5843,30 +5769,31 @@ public:
                     }
                 }
                 
-                if ((keysDown & KEY_RIGHT) && !(keysHeld & KEY_LEFT) && !(keysDown & ~KEY_RIGHT & ~KEY_R & ALL_KEYS_MASK) &&
-                    !stillTouching && (((!allowSlide && !unlockedSlide && onTrackBar) || (keysDown & KEY_R)) || !onTrackBar) &&
-                    !tsl::elm::s_lastFrameItems.empty() && (tsl::elm::s_isForwardCache && tsl::elm::s_hasValidFrame)) {
+                if (tsl::elm::s_hasValidFrame.load(std::memory_order_acquire)  && (keysDown & KEY_RIGHT) && !(keysHeld & KEY_LEFT) && !(keysDown & ~KEY_RIGHT & ~KEY_R & ALL_KEYS_MASK) &&
+                    !stillTouching.load(std::memory_order_acquire) && (((!allowSlide.load(std::memory_order_acquire) && !unlockedSlide.load(std::memory_order_acquire) && onTrackBar.load(std::memory_order_acquire)) || (keysDown & KEY_R)) || !onTrackBar.load(std::memory_order_acquire)) ){// && tsl::elm::safeToSwap.exchange(false, std::memory_order_acq_rel)){ //&&
+                    //!tsl::elm::s_lastFrameItems.empty() && (tsl::elm::s_isForwardCache && tsl::elm::s_hasValidFrame)) {
                     g_overlayFilename = "";
                     jumpItemName = "";
                     jumpItemValue = "";
                     jumpItemExactMatch = true;
                     
-                    allowSlide = unlockedSlide = false;
+                    allowSlide.exchange(false, std::memory_order_acq_rel);
+                    unlockedSlide.exchange(false, std::memory_order_acq_rel);
                     if (!usePageSwap) {
                         if (menuMode != PACKAGES_STR) {
                             currentMenu = PACKAGES_STR;
                             selectedListItem = nullptr;
                             lastSelectedListItem = nullptr;
                             
-                            svcSleepThread(200'000);
+                            //svcSleepThread(200'000);
                             //simulatedNextPage.store(false, std::memory_order_release);
                             tsl::pop();
                             
                             tsl::changeTo<MainMenu>();
-                            svcSleepThread(200'000);  
-                            bool expected = true;
-                            ult::simulatedNextPage.compare_exchange_strong(expected, false, std::memory_order_release);
-                            tsl::swapComplete = true;
+                            //svcSleepThread(200'000);  
+                            //bool expected = true;
+                            //ult::simulatedNextPage.compare_exchange_strong(expected, false, std::memory_order_release);
+                            //tsl::swapComplete = true;
                             //startInterpreterThread();
                             //simulatedNextPageComplete.store(true, std::memory_order_release);
                             return true;
@@ -5877,14 +5804,14 @@ public:
                             selectedListItem = nullptr;
                             lastSelectedListItem = nullptr;
                             
-                            svcSleepThread(200'000);
+                            //svcSleepThread(200'000);
                             //simulatedNextPage.store(false, std::memory_order_release);
                             tsl::pop();
                             tsl::changeTo<MainMenu>();
-                            svcSleepThread(200'000);
-                            bool expected = true;
-                            ult::simulatedNextPage.compare_exchange_strong(expected, false, std::memory_order_release);
-                            tsl::swapComplete = true;
+                            //svcSleepThread(200'000);
+                            //bool expected = true;
+                            //ult::simulatedNextPage.compare_exchange_strong(expected, false, std::memory_order_release);
+                            //tsl::swapComplete = true;
                             //startInterpreterThread();
                             //simulatedNextPageComplete.store(true, std::memory_order_release);
                             return true;
@@ -5893,43 +5820,45 @@ public:
                     //simulatedNextPage.store(false, std::memory_order_release);
                     //simulatedNextPageComplete.store(true, std::memory_order_release);
                     //return true;
-                } else if ((!tsl::elm::s_isForwardCache || !tsl::elm::s_hasValidFrame) || tsl::elm::s_lastFrameItems.empty()) {
-                    tsl::elm::s_lastFrameItems.clear();
-                    tsl::elm::s_lastFrameItems.shrink_to_fit();
-                    tsl::elm::s_isForwardCache = false; // NEW VARIABLE FOR FORWARD CACHING
-                    tsl::elm::s_hasValidFrame = false;
-                    tsl::elm::s_cacheForwardFrameOnce = true;
-                    //simulatedNextPage.store(false, std::memory_order_release);
-                    //simulatedNextPageComplete.store(true, std::memory_order_release);
-                    ult::allowSlide = ult::unlockedSlide = false;
-                    svcSleepThread(200'000);
-                    bool expected = true;
-                    ult::simulatedNextPage.compare_exchange_strong(expected, false, std::memory_order_release);
+                //} else if ((!tsl::elm::s_isForwardCache || !tsl::elm::s_hasValidFrame) || tsl::elm::s_lastFrameItems.empty()) {
+                //    tsl::elm::s_lastFrameItems.clear();
+                //    tsl::elm::s_lastFrameItems.shrink_to_fit();
+                //    tsl::elm::s_isForwardCache = false; // NEW VARIABLE FOR FORWARD CACHING
+                //    tsl::elm::s_hasValidFrame = false;
+                //    tsl::elm::s_cacheForwardFrameOnce = true;
+                //    //simulatedNextPage.store(false, std::memory_order_release);
+                //    //simulatedNextPageComplete.store(true, std::memory_order_release);
+                //    ult::allowSlide = ult::unlockedSlide = false;
+                //    //svcSleepThread(200'000);
+                //    bool expected = true;
+                //    ult::simulatedNextPage.compare_exchange_strong(expected, false, std::memory_order_release);
                 }
 
-                if ((keysDown & KEY_LEFT) && !(keysHeld & KEY_RIGHT) && !(keysDown & ~KEY_LEFT & ~KEY_R & ALL_KEYS_MASK) &&
-                    !stillTouching &&(((!allowSlide && onTrackBar && !unlockedSlide) || (keysDown & KEY_R)) || !onTrackBar) &&
-                    !tsl::elm::s_lastFrameItems.empty() && (tsl::elm::s_isForwardCache && tsl::elm::s_hasValidFrame)) {
+                if (tsl::elm::s_hasValidFrame.load(std::memory_order_acquire)  && (keysDown & KEY_LEFT) && !(keysHeld & KEY_RIGHT) && !(keysDown & ~KEY_LEFT & ~KEY_R & ALL_KEYS_MASK) &&
+                    !stillTouching.load(std::memory_order_acquire) &&(((!allowSlide.load(std::memory_order_acquire) && onTrackBar.load(std::memory_order_acquire) && !unlockedSlide.load(std::memory_order_acquire)) || (keysDown & KEY_R)) || !onTrackBar.load(std::memory_order_acquire)) ) {// && tsl::elm::safeToSwap.exchange(false, std::memory_order_acq_rel)) { //&&
+                    //!tsl::elm::s_lastFrameItems.empty() && (tsl::elm::s_isForwardCache && tsl::elm::s_hasValidFrame)) {
                     g_overlayFilename = "";
                     jumpItemName = "";
                     jumpItemValue = "";
                     jumpItemExactMatch = true;
 
-                    allowSlide = unlockedSlide = false;
+                    allowSlide.exchange(false, std::memory_order_acq_rel);
+                    unlockedSlide.exchange(false, std::memory_order_acq_rel);
+                    //allowSlide = unlockedSlide = false;
                     if (!usePageSwap) {
                         if (menuMode != OVERLAYS_STR) {
                             currentMenu = OVERLAYS_STR;
                             selectedListItem = nullptr;
                             lastSelectedListItem = nullptr;
                             
-                            svcSleepThread(200'000);
+                            //svcSleepThread(200'000);
                             //simulatedNextPage.store(false, std::memory_order_release);
                             tsl::pop();
                             tsl::changeTo<MainMenu>();
-                            svcSleepThread(200'000);  
-                            bool expected = true;
-                            ult::simulatedNextPage.compare_exchange_strong(expected, false, std::memory_order_release);
-                            tsl::swapComplete = true;
+                            //svcSleepThread(200'000);  
+                            //bool expected = true;
+                            //ult::simulatedNextPage.compare_exchange_strong(expected, false, std::memory_order_release);
+                            //tsl::swapComplete = true;
                             //startInterpreterThread();
                             //simulatedNextPageComplete.store(true, std::memory_order_release);
                             return true;
@@ -5940,14 +5869,14 @@ public:
                             selectedListItem = nullptr;
                             lastSelectedListItem = nullptr;
                             
-                            svcSleepThread(200'000);
+                            //svcSleepThread(200'000);
                             //simulatedNextPage.store(false, std::memory_order_release);
                             tsl::pop();
                             tsl::changeTo<MainMenu>();
-                            svcSleepThread(200'000);  
-                            bool expected = true;
-                            ult::simulatedNextPage.compare_exchange_strong(expected, false, std::memory_order_release);
-                            tsl::swapComplete = true;
+                            //svcSleepThread(200'000);  
+                            //bool expected = true;
+                            //ult::simulatedNextPage.compare_exchange_strong(expected, false, std::memory_order_release);
+                            //tsl::swapComplete = true;
                             //startInterpreterThread();
                             //simulatedNextPageComplete.store(true, std::memory_order_release);
                             return true;
@@ -5956,40 +5885,38 @@ public:
                     //simulatedNextPage.store(false, std::memory_order_release);
                     //simulatedNextPageComplete.store(true, std::memory_order_release);
                     //return true;
-                } else if ((!tsl::elm::s_isForwardCache || !tsl::elm::s_hasValidFrame) || tsl::elm::s_lastFrameItems.empty()) {
-                    tsl::elm::s_lastFrameItems.clear();
-                    tsl::elm::s_lastFrameItems.shrink_to_fit();
-                    tsl::elm::s_isForwardCache = false; // NEW VARIABLE FOR FORWARD CACHING
-                    tsl::elm::s_hasValidFrame = false;
-                    tsl::elm::s_cacheForwardFrameOnce = true;
-                    //simulatedNextPage.store(false, std::memory_order_release);
-                    //simulatedNextPageComplete.store(true, std::memory_order_release);
-                    ult::allowSlide = ult::unlockedSlide = false;
-                    svcSleepThread(200'000); 
-                    bool expected = true;
-                    ult::simulatedNextPage.compare_exchange_strong(expected, false, std::memory_order_release);
+                //} else if ((!tsl::elm::s_isForwardCache || !tsl::elm::s_hasValidFrame) || tsl::elm::s_lastFrameItems.empty()) {
+                //    tsl::elm::s_lastFrameItems.clear();
+                //    tsl::elm::s_lastFrameItems.shrink_to_fit();
+                //    tsl::elm::s_isForwardCache = false; // NEW VARIABLE FOR FORWARD CACHING
+                //    tsl::elm::s_hasValidFrame = false;
+                //    tsl::elm::s_cacheForwardFrameOnce = true;
+                //    //simulatedNextPage.store(false, std::memory_order_release);
+                //    //simulatedNextPageComplete.store(true, std::memory_order_release);
+                //    ult::allowSlide = ult::unlockedSlide = false;
+                //    //svcSleepThread(200'000); 
+                //    bool expected = true;
+                //    ult::simulatedNextPage.compare_exchange_strong(expected, false, std::memory_order_release);
                 }
 
-                if (simulatedBack && !simulatedBackComplete) {
+                if (simulatedBack.exchange(false, std::memory_order_acq_rel)) {
                     keysDown |= KEY_B;
-                    simulatedBack = false;
                 }
 
-                if ((keysDown & KEY_B) && !stillTouching) {
-                    allowSlide = unlockedSlide = false;
+                if ((keysDown & KEY_B) && !stillTouching.load(std::memory_order_acquire)) {
+                    allowSlide.exchange(false, std::memory_order_acq_rel);
+                    unlockedSlide.exchange(false, std::memory_order_acq_rel);
                     tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
                     exitingUltrahand = true;
                     tsl::Overlay::get()->close();
-                    simulatedBackComplete = true;
                     return true;
                 }
 
-                if (simulatedMenu && !simulatedMenuComplete) {
+                if (simulatedMenu.exchange(false, std::memory_order_acq_rel)) {
                     keysDown |= SYSTEM_SETTINGS_KEY;
-                    simulatedMenu = false;
                 }
 
-                if ((keysDown & SYSTEM_SETTINGS_KEY) && !stillTouching) {
+                if ((keysDown & SYSTEM_SETTINGS_KEY) && !stillTouching.load(std::memory_order_acquire)) {
                     inMainMenu = false;
                     //jumpItemName = "";
                     //jumpItemValue = "";
@@ -5998,7 +5925,6 @@ public:
                     tsl::changeTo<UltrahandSettingsMenu>();
                     //if (menuMode != PACKAGES_STR) startInterpreterThread();
                     
-                    simulatedMenuComplete = true;
                     return true;
                 }
             }
@@ -6006,21 +5932,18 @@ public:
         if (!inMainMenu && inHiddenMode) {
             if (!returningToHiddenMain && !returningToMain) {
 
-                if (simulatedNextPage.load(std::memory_order_acquire)) {
-                    simulatedNextPage.store(false, std::memory_order_release);
-                }
+                //if (simulatedNextPage.load(std::memory_order_acquire)) {
+                //    simulatedNextPage.store(false, std::memory_order_release);
+                //}
+                simulatedNextPage.exchange(false, std::memory_order_acq_rel);
 
-                if (simulatedMenu && !simulatedMenuComplete) {
-                    simulatedMenu = false;
-                    simulatedMenuComplete = true;
-                }
+                simulatedMenu.exchange(false, std::memory_order_acq_rel);
 
-                if (simulatedBack && !simulatedBackComplete) {
+                if (simulatedBack.exchange(false, std::memory_order_acq_rel)) {
                     keysDown |= KEY_B;
-                    simulatedBack = false;
                 }
 
-                if ((keysDown & KEY_B) && !stillTouching) {
+                if ((keysDown & KEY_B) && !stillTouching.load(std::memory_order_acquire)) {
                     //g_overlayFilename = "";
                     //jumpItemName = "";
                     //jumpItemValue = "";
@@ -6039,7 +5962,6 @@ public:
                         g_overlayFilename = "";
                         returningToMain = true;
                         tsl::changeTo<MainMenu>();
-                        simulatedBackComplete = true;
                         return true;
                     }
 
@@ -6050,13 +5972,12 @@ public:
                         tsl::pop();
                         tsl::changeTo<MainMenu>();
                         reloadMenu2 = false;
-                        simulatedBackComplete = true;
                         return true;
                     }
                     
-                    allowSlide = unlockedSlide = false;
+                    allowSlide.exchange(false, std::memory_order_acq_rel);
+                    unlockedSlide.exchange(false, std::memory_order_acq_rel);
                     tsl::goBack();
-                    simulatedBackComplete = true;
                     return true;
                 }
             }

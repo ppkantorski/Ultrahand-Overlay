@@ -1186,13 +1186,14 @@ static bool buildTableDrawerLines(
         std::string infoText;
         int xPos;
         float infoWidth;
+        std::vector<std::string> wrappedLines;
         for (size_t i = 0; i < lines.size(); ++i) {
             const std::string& baseText = lines[i];
             const std::string& infoTextRaw = (i < infos.size()) ? infos[i] : "";
             infoText = (infoTextRaw.find(NULL_STR) != std::string::npos) ? UNAVAILABLE_SELECTION : infoTextRaw;
 
             // Wrap the base text according to wrappingMode and indent params
-            auto wrappedLines = wrapText(
+            wrappedLines = wrapText(
                 baseText,
                 xMax - 22,
                 wrappingMode,
@@ -3766,8 +3767,7 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
         tsl::Overlay::get()->close();
         return;
     } else if (commandName == "back") {
-        simulatedBackComplete = false;
-        simulatedBack = true;
+        simulatedBack.exchange(true, std::memory_order_acq_rel);
     } else if (commandName == "backlight") {
         if (cmd.size() >= 2) {
             std::string togglePattern = cmd[1];
