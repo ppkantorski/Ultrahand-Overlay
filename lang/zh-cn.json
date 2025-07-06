@@ -34,6 +34,8 @@
     "MAIN_SETTINGS": "主要设置",
     "UI_SETTINGS": "界面风格设置",
     "WIDGET": "窗口组件设置",
+    "WIDGET_ITEMS": "Widget Items",
+    "WIDGET_SETTINGS": "Widget Settings",
     "CLOCK": "时间日期显示",
     "BATTERY": "电池电量显示",
     "SOC_TEMPERATURE": "芯片温度显示",
