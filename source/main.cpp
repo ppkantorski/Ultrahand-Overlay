@@ -4430,7 +4430,7 @@ public:
 
             if (currentPage == LEFT_STR) {
 
-                if (tsl::elm::s_hasValidFrame.load(std::memory_order_acquire)  && (keysDown & KEY_RIGHT) && !(keysHeld & KEY_LEFT) && !(keysDown & ~KEY_RIGHT & ~KEY_R & ALL_KEYS_MASK) && !stillTouching.load(std::memory_order_acquire) && 
+                if (tsl::elm::s_safeToSwap.load(std::memory_order_acquire)  && (keysDown & KEY_RIGHT) && !(keysHeld & KEY_LEFT) && !(keysDown & ~KEY_RIGHT & ~KEY_R & ALL_KEYS_MASK) && !stillTouching.load(std::memory_order_acquire) && 
                     (((!allowSlide.load(std::memory_order_acquire) && onTrackBar.load(std::memory_order_acquire) && !unlockedSlide.load(std::memory_order_acquire)) || (keysDown & KEY_R)) || !onTrackBar.load(std::memory_order_acquire))) {// && tsl::elm::safeToSwap.exchange(false, std::memory_order_acq_rel)) {//{&&
                     //!tsl::elm::s_lastFrameItems.empty() && (tsl::elm::s_isForwardCache && tsl::elm::s_hasValidFrame)) {
 
@@ -4478,7 +4478,7 @@ public:
 
             } else if (currentPage == RIGHT_STR) {
                 
-                if (tsl::elm::s_hasValidFrame.load(std::memory_order_acquire)  && (keysDown & KEY_LEFT) && !(keysHeld & KEY_RIGHT) && !(keysDown & ~KEY_LEFT & ~KEY_R & ALL_KEYS_MASK) && !stillTouching.load(std::memory_order_acquire) && 
+                if (tsl::elm::s_safeToSwap.load(std::memory_order_acquire)  && (keysDown & KEY_LEFT) && !(keysHeld & KEY_RIGHT) && !(keysDown & ~KEY_LEFT & ~KEY_R & ALL_KEYS_MASK) && !stillTouching.load(std::memory_order_acquire) && 
                     (((!allowSlide.load(std::memory_order_acquire) && onTrackBar.load(std::memory_order_acquire) && !unlockedSlide.load(std::memory_order_acquire)) || (keysDown & KEY_R)) || !onTrackBar.load(std::memory_order_acquire)) ) {// && tsl::elm::safeToSwap.exchange(false, std::memory_order_acq_rel)) {//&& 
                     //!tsl::elm::s_lastFrameItems.empty() && (tsl::elm::s_isForwardCache && tsl::elm::s_hasValidFrame)) {
 
@@ -5774,7 +5774,7 @@ public:
                     }
                 }
                 
-                if (tsl::elm::s_hasValidFrame.load(std::memory_order_acquire)  && (keysDown & KEY_RIGHT) && !(keysHeld & KEY_LEFT) && !(keysDown & ~KEY_RIGHT & ~KEY_R & ALL_KEYS_MASK) &&
+                if (tsl::elm::s_safeToSwap.load(std::memory_order_acquire)  && (keysDown & KEY_RIGHT) && !(keysHeld & KEY_LEFT) && !(keysDown & ~KEY_RIGHT & ~KEY_R & ALL_KEYS_MASK) &&
                     !stillTouching.load(std::memory_order_acquire) && (((!allowSlide.load(std::memory_order_acquire) && !unlockedSlide.load(std::memory_order_acquire) && onTrackBar.load(std::memory_order_acquire)) || (keysDown & KEY_R)) || !onTrackBar.load(std::memory_order_acquire)) ){// && tsl::elm::safeToSwap.exchange(false, std::memory_order_acq_rel)){ //&&
                     //!tsl::elm::s_lastFrameItems.empty() && (tsl::elm::s_isForwardCache && tsl::elm::s_hasValidFrame)) {
                     g_overlayFilename = "";
@@ -5839,7 +5839,7 @@ public:
                 //    ult::simulatedNextPage.compare_exchange_strong(expected, false, std::memory_order_release);
                 }
 
-                if (tsl::elm::s_hasValidFrame.load(std::memory_order_acquire)  && (keysDown & KEY_LEFT) && !(keysHeld & KEY_RIGHT) && !(keysDown & ~KEY_LEFT & ~KEY_R & ALL_KEYS_MASK) &&
+                if (tsl::elm::s_safeToSwap.load(std::memory_order_acquire)  && (keysDown & KEY_LEFT) && !(keysHeld & KEY_RIGHT) && !(keysDown & ~KEY_LEFT & ~KEY_R & ALL_KEYS_MASK) &&
                     !stillTouching.load(std::memory_order_acquire) &&(((!allowSlide.load(std::memory_order_acquire) && onTrackBar.load(std::memory_order_acquire) && !unlockedSlide.load(std::memory_order_acquire)) || (keysDown & KEY_R)) || !onTrackBar.load(std::memory_order_acquire)) ) {// && tsl::elm::safeToSwap.exchange(false, std::memory_order_acq_rel)) { //&&
                     //!tsl::elm::s_lastFrameItems.empty() && (tsl::elm::s_isForwardCache && tsl::elm::s_hasValidFrame)) {
                     g_overlayFilename = "";
