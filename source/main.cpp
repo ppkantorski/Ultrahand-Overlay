@@ -1041,9 +1041,9 @@ public:
                     if (reloadMenu) {
                         //tsl::elm::skipDeconstruction = true;
                         
-                        tsl::elm::skipDeconstruction = true;
+                        //tsl::elm::skipDeconstruction = true;
                         tsl::pop(2);
-                        tsl::elm::skipDeconstruction = false;
+                        //tsl::elm::skipDeconstruction = false;
                         //tsl::elm::skipDeconstruction = false;
                         tsl::changeTo<MainMenu>(lastMenuMode);
                         reloadMenu = false;
@@ -1074,9 +1074,9 @@ public:
                     selectedListItem   = nullptr;
                     lastSelectedListItem = nullptr;
                     forwarderListItem  = nullptr;
-                    tsl::elm::skipDeconstruction = true;
+                    //tsl::elm::skipDeconstruction = true;
                     tsl::goBack(2);
-                    tsl::elm::skipDeconstruction = false;
+                    //tsl::elm::skipDeconstruction = false;
                     tsl::changeTo<UltrahandSettingsMenu>();
                     reloadMenu2 = false;
                     //languageWasChanged = false;
@@ -1492,9 +1492,9 @@ public:
                             
                         }
                         reloadMenu = false;
-                        tsl::elm::skipDeconstruction = true;
+                        //tsl::elm::skipDeconstruction = true;
                         tsl::pop(popCount);
-                        tsl::elm::skipDeconstruction = false;
+                        //tsl::elm::skipDeconstruction = false;
                         tsl::changeTo<MainMenu>(lastMenuMode);
                     } else {
                         tsl::goBack();
@@ -4421,12 +4421,16 @@ public:
                     lastPackageName = PACKAGE_FILENAME;
                     
                     //tsl::elm::skipDeconstruction = true;
-                    while (nestedMenuCount > 0) {
-                        tsl::goBack();
-                        nestedMenuCount--;
-                    }
+                    //while (nestedMenuCount > 0) {
+                    //    tsl::goBack();
+                    //    nestedMenuCount--;
+                    //}
+                    //
+                    //tsl::goBack();
 
-                    tsl::goBack();
+                    tsl::goBack(nestedMenuCount+1);
+                    nestedMenuCount = 0;
+
                     //tsl::elm::skipDeconstruction = false;
                     tsl::changeTo<PackageMenu>(lastPackagePath, "");
                     inPackageMenu = true;
@@ -5150,7 +5154,7 @@ public:
                         if (cleanVersionLabels)
                             overlayVersion = cleanVersionLabel(overlayVersion);
                         if (!hideOverlayVersions)
-                            listItem->setValue(overlayVersion, true);
+                            listItem->setValue(overlayVersion, true, true);
                         
 
                         if (overlayFileName == g_overlayFilename) {
@@ -5477,7 +5481,7 @@ public:
                     if (isFileOrDirectory(packageFilePath)) {
                         listItem = new tsl::elm::ListItem(packageStarred ? STAR_SYMBOL + "  " + newPackageName : newPackageName);
                         if (!hidePackageVersions)
-                           listItem->setValue(packageVersion, true);
+                           listItem->setValue(packageVersion, true, true);
                         
                         // Add a click listener to load the overlay when clicked upon
                         listItem->setClickListener([packageFilePath, newStarred, packageName, newPackageName, packageVersion](s64 keys) {
