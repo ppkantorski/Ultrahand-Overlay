@@ -34,6 +34,8 @@
     "MAIN_SETTINGS": "기본 설정",
     "UI_SETTINGS": "UI 설정",
     "WIDGET": "위젯",
+    "WIDGET_ITEMS": "Widget Items",
+    "WIDGET_SETTINGS": "Widget Settings",
     "CLOCK": "시계",
     "BATTERY": "배터리",
     "SOC_TEMPERATURE": "SOC 온도",
