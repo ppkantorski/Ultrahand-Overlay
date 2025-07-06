@@ -67,7 +67,7 @@ static bool freshSpawn = true;
 //static bool refreshPage = false; //moved to libtesla
 static bool reloadMenu = false;
 static bool reloadMenu2 = false;
-static bool reloadMenu3 = false;
+//static bool reloadMenu3 = false;
 static bool triggerMenuReload = false;
 
 
@@ -488,8 +488,10 @@ private:
             if (iniKey == "clean_version_labels") {
                 versionLabel = APP_VERSION + std::string("   (") + loaderTitle + (actualState ? " v" : " ") + cleanVersionLabel(loaderInfo) + std::string(")");
                 reinitializeVersionLabels();
-            }
-            else if (iniKey == "memory_expansion") {
+                reloadMenu = true;
+            } else if (iniKey == "clean_version_labels" || iniKey == "hide_overlay_versions" || iniKey == "hide_package_versions" || iniKey == "page_swap" || iniKey == "hide_hidden") {
+                reloadMenu = true;
+            } else if (iniKey == "memory_expansion") {
                 if (!isFileOrDirectory(EXPANSION_PATH + "nx-ovlloader.zip")) {
                     if (isVersionGreaterOrEqual(amsVersion,"1.8.0"))
                         downloadFile(NX_OVLLOADER_ZIP_URL, EXPANSION_PATH);
@@ -527,7 +529,7 @@ private:
                 useOpaqueScreenshots = !useOpaqueScreenshots;
             }
 
-            reloadMenu = true;
+            
             if (useReloadMenu2) reloadMenu2 = true;
         });
         list->addItem(toggleListItem);
@@ -1012,11 +1014,13 @@ public:
 
         if (inSettingsMenu && !inSubSettingsMenu) {
             if (!returningToSettings) {
-                if (reloadMenu3) {
-                    tsl::goBack();
-                    tsl::changeTo<UltrahandSettingsMenu>();
-                    reloadMenu3 = false;
-                }
+                //if (reloadMenu3) {
+                //    //tsl::elm::skipDeconstruction = true;
+                //    tsl::goBack();
+                //    //tsl::elm::skipDeconstruction = false;
+                //    tsl::changeTo<UltrahandSettingsMenu>();
+                //    reloadMenu3 = false;
+                //}
                 //if (simulatedNextPage.load(std::memory_order_acquire)) {
                 //    simulatedNextPage.store(false, std::memory_order_release);
                 //}
@@ -1032,10 +1036,19 @@ public:
                     returningToMain = (lastMenu != "hiddenMenuMode");
                     returningToHiddenMain = !returningToMain;
                     lastMenu = "settingsMenu";
-                    tsl::goBack();
+                    
+
                     if (reloadMenu) {
+                        //tsl::elm::skipDeconstruction = true;
+                        
+                        tsl::elm::skipDeconstruction = true;
+                        tsl::pop(2);
+                        tsl::elm::skipDeconstruction = false;
+                        //tsl::elm::skipDeconstruction = false;
                         tsl::changeTo<MainMenu>(lastMenuMode);
                         reloadMenu = false;
+                    } else {
+                        tsl::goBack();
                     }
                     return true;
                 }
@@ -1057,10 +1070,11 @@ public:
                 
 
                 if (reloadMenu2) {
-                    tsl::elm::skipDeconstruction = true;
+                    
                     selectedListItem   = nullptr;
                     lastSelectedListItem = nullptr;
                     forwarderListItem  = nullptr;
+                    tsl::elm::skipDeconstruction = true;
                     tsl::goBack(2);
                     tsl::elm::skipDeconstruction = false;
                     tsl::changeTo<UltrahandSettingsMenu>();
@@ -1465,16 +1479,20 @@ public:
                     else
                         returningToHiddenMain = true;
                     
-                    tsl::goBack();
+                    
                     
                     if (reloadMenu) {
                         if (lastMenu == "hiddenMenuMode") {
-                            tsl::goBack();
+                            //tsl::elm::skipDeconstruction = true;
+                            tsl::goBack(2);
+                            //tsl::elm::skipDeconstruction = false;
                             inMainMenu = false;
                             inHiddenMode = true;
                         } else
                             reloadMenu = false;
                         tsl::changeTo<MainMenu>(lastMenuMode);
+                    } else {
+                        tsl::goBack();
                     }
                     
                     lastMenu = "settingsMenu";
@@ -2688,7 +2706,9 @@ public:
         }
 
         if (refreshPage && !stillTouching.load(std::memory_order_acquire)) {
+            //tsl::elm::skipDeconstruction = true;
             tsl::goBack();
+            //tsl::elm::skipDeconstruction = false;
             tsl::changeTo<SelectionOverlay>(filePath, specificKey, specifiedFooterKey);
             refreshPage = false;
         }
@@ -4395,12 +4415,14 @@ public:
                     lastPage = currentPage;
                     lastPackageName = PACKAGE_FILENAME;
                     
+                    //tsl::elm::skipDeconstruction = true;
                     while (nestedMenuCount > 0) {
                         tsl::goBack();
                         nestedMenuCount--;
                     }
 
                     tsl::goBack();
+                    //tsl::elm::skipDeconstruction = false;
                     tsl::changeTo<PackageMenu>(lastPackagePath, "");
                     inPackageMenu = true;
                     inSubPackageMenu = false;
