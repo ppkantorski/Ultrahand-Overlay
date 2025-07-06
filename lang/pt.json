@@ -34,6 +34,8 @@
     "MAIN_SETTINGS": "Configurações Principais",
     "UI_SETTINGS": "Configurações de Interface do Usuário",
     "WIDGET": "Widget",
+    "WIDGET_ITEMS": "Widget Items",
+    "WIDGET_SETTINGS": "Widget Settings",
     "CLOCK": "Relógio",
     "BATTERY": "Bateria",
     "SOC_TEMPERATURE": "Temperatura do SOC",
