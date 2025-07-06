@@ -34,6 +34,8 @@
     "MAIN_SETTINGS": "Hoofdinstellingen",
     "UI_SETTINGS": "UI-instellingen",
     "WIDGET": "Widget",
+    "WIDGET_ITEMS": "Widget Items",
+    "WIDGET_SETTINGS": "Widget Settings",
     "CLOCK": "Klok",
     "BATTERY": "Batterij",
     "SOC_TEMPERATURE": "SOC Temperatuur",
