@@ -34,6 +34,8 @@
     "MAIN_SETTINGS": "Главные настройки",
     "UI_SETTINGS": "Настройки интерфейса",
     "WIDGET": "Виджеты",
+    "WIDGET_ITEMS": "Widget Items",
+    "WIDGET_SETTINGS": "Widget Settings",
     "CLOCK": "Часы",
     "BATTERY": "Аккумулятор",
     "SOC_TEMPERATURE": "Температура SOC",
