@@ -70,7 +70,7 @@ static bool reloadMenu2 = false;
 static bool reloadMenu3 = false;
 static bool triggerMenuReload = false;
 
-static bool redrawWidget = false;
+
 
 static size_t nestedMenuCount = 0;
 
@@ -519,7 +519,6 @@ private:
                 iniKey == "hide_battery" || iniKey == "hide_widget_backdrop" || iniKey == "dynamic_widget_colors" ||
                 iniKey == "center_widget_alignment" || iniKey == "extended_widget_backdrop") {
                 reinitializeWidgetVars();
-                redrawWidget = true;
             } else if (iniKey == "right_alignment") {
                 triggerMenuReload = (rightAlignmentState != actualState);
             } else if (iniKey == "dynamic_logo") {
@@ -920,7 +919,7 @@ public:
             addHeader(list, "Widget Settings");
             createToggleListItem(list, "Dynamic Colors", dynamicWidgetColors, "dynamic_widget_colors", false);
             createToggleListItem(list, "Center Alignment", centerWidgetAlignment, "center_widget_alignment", false);
-            createToggleListItem(list, "Extended Backdrop", extendedWidgetBackdrop, "extended_widget_backdrop", false);
+            createToggleListItem(list, "Extended Backdrop", extendedWidgetBackdrop, "extended_widget_backdrop", true);
 
         } else if (dropdownSelection == "miscMenu") {
             addHeader(list, MENU_ITEMS);
@@ -1082,8 +1081,6 @@ public:
             inSettingsMenu = true;
             tsl::impl::parseOverlaySettings();
         }
-
-        if (redrawWidget) reinitializeWidgetVars();
 
         if (triggerExit.load(std::memory_order_acquire)) {
             triggerExit.store(false, std::memory_order_release);
@@ -3899,7 +3896,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
                                     selectionCommandsOff.clear();
                                     selectionCommandsOff.shrink_to_fit();
                                     selectionCommands = commands;
-                                    
+
                                     tsl::changeTo<SelectionOverlay>(packagePath, keyName, newKey, _lastPackageHeader);
                                     //lastKeyName = keyName;
                                 }
@@ -6006,10 +6003,6 @@ public:
             inHiddenMode = true;
         }
         
-        if (redrawWidget) {
-            reinitializeWidgetVars();
-            redrawWidget = false;
-        }
 
         if (triggerExit.load(std::memory_order_acquire)) {
             triggerExit.store(false, std::memory_order_release);
