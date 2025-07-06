@@ -911,17 +911,17 @@ public:
                 list->addItem(listItem);
             }
         } else if (dropdownSelection == "widgetMenu") {
-            addHeader(list, "Widget Items");
+            addHeader(list, WIDGET_ITEMS);
             createToggleListItem(list, CLOCK, hideClock, "hide_clock", true);
             createToggleListItem(list, SOC_TEMPERATURE, hideSOCTemp, "hide_soc_temp", true);
             createToggleListItem(list, PCB_TEMPERATURE, hidePCBTemp, "hide_pcb_temp", true);
             createToggleListItem(list, BATTERY, hideBattery, "hide_battery", true);
             createToggleListItem(list, BACKDROP, hideWidgetBackdrop, "hide_widget_backdrop", true);
 
-            addHeader(list, "Widget Settings");
-            createToggleListItem(list, "Dynamic Colors", dynamicWidgetColors, "dynamic_widget_colors", false);
-            createToggleListItem(list, "Center Alignment", centerWidgetAlignment, "center_widget_alignment", false);
-            createToggleListItem(list, "Extended Backdrop", extendedWidgetBackdrop, "extended_widget_backdrop", true);
+            addHeader(list, WIDGET_SETTINGS);
+            createToggleListItem(list, DYNAMIC_COLORS, dynamicWidgetColors, "dynamic_widget_colors", false);
+            createToggleListItem(list, CENTER_ALIGNMENT, centerWidgetAlignment, "center_widget_alignment", false);
+            createToggleListItem(list, EXTENDED_BACKDROP, extendedWidgetBackdrop, "extended_widget_backdrop", true);
 
         } else if (dropdownSelection == "miscMenu") {
             addHeader(list, MENU_ITEMS);
@@ -1487,6 +1487,10 @@ public:
                             popCount = 3;
                             inMainMenu = false;
                             inHiddenMode = true;
+                            if (entryMode == OVERLAY_STR)
+                                setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_OVERLAY_STR, TRUE_STR);
+                            else
+                                popCount = 2;
                         } else {
                             popCount = 2;
                             
@@ -1495,6 +1499,7 @@ public:
                         //tsl::elm::skipDeconstruction = true;
                         tsl::pop(popCount);
                         //tsl::elm::skipDeconstruction = false;
+
                         tsl::changeTo<MainMenu>(lastMenuMode);
                     } else {
                         tsl::goBack();
