@@ -2842,7 +2842,11 @@ std::vector<std::vector<std::string>> gatherPromptCommands(
     return promptCommands;
 }
 
-
+auto clearAndDelete = [](auto& vec) {
+    for (auto* p : vec) delete p;
+    vec.clear();
+    vec.shrink_to_fit();
+};
 
 
 class PackageMenu; // forwarding
@@ -3895,6 +3899,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
                                     selectionCommandsOff.clear();
                                     selectionCommandsOff.shrink_to_fit();
                                     selectionCommands = commands;
+                                    
                                     tsl::changeTo<SelectionOverlay>(packagePath, keyName, newKey, _lastPackageHeader);
                                     //lastKeyName = keyName;
                                 }
