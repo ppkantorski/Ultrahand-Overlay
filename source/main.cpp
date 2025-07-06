@@ -1470,7 +1470,7 @@ public:
                     keysDown |= KEY_B;
                 }
 
-                if ((keysDown & KEY_B) && !stillTouching.load(std::memory_order_acquire)) {
+                if ((keysDown & KEY_B) && !stillTouching) {
                     allowSlide.exchange(false, std::memory_order_acq_rel);
                     unlockedSlide.exchange(false, std::memory_order_acq_rel);
                     inSettingsMenu = false;
@@ -1480,16 +1480,21 @@ public:
                         returningToHiddenMain = true;
                     
                     
-                    
                     if (reloadMenu) {
+                        int popCount;
                         if (lastMenu == "hiddenMenuMode") {
-                            //tsl::elm::skipDeconstruction = true;
-                            tsl::goBack(2);
-                            //tsl::elm::skipDeconstruction = false;
+                            //tsl::goBack();
+                            popCount = 3;
                             inMainMenu = false;
                             inHiddenMode = true;
-                        } else
-                            reloadMenu = false;
+                        } else {
+                            popCount = 2;
+                            
+                        }
+                        reloadMenu = false;
+                        tsl::elm::skipDeconstruction = true;
+                        tsl::pop(popCount);
+                        tsl::elm::skipDeconstruction = false;
                         tsl::changeTo<MainMenu>(lastMenuMode);
                     } else {
                         tsl::goBack();
