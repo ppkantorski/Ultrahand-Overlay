@@ -34,6 +34,8 @@
     "MAIN_SETTINGS": "メイン設定",
     "UI_SETTINGS": "UI設定",
     "WIDGET": "ウィジェット",
+    "WIDGET_ITEMS": "Widget Items",
+    "WIDGET_SETTINGS": "Widget Settings",
     "CLOCK": "時計",
     "BATTERY": "バッテリー",
     "SOC_TEMPERATURE": "SOC温度",
