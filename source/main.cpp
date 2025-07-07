@@ -4810,9 +4810,9 @@ public:
             inMainMenu = false;
         
         // Pre-declare all variables used in loops and throughout the function
-        std::string packagePath, pathReplace, pathReplaceOn, pathReplaceOff;
-        std::string filePath, specificKey, pathPattern, pathPatternOn, pathPatternOff, itemName, parentDirName, lastParentDirName;
-        std::vector<std::string> filesList, filesListOn, filesListOff, filterList, filterListOn, filterListOff;
+        std::string packagePath;//, pathReplace, pathReplaceOn, pathReplaceOff;
+        //std::string filePath, specificKey, pathPattern, pathPatternOn, pathPatternOff, itemName, parentDirName, lastParentDirName;
+        //std::vector<std::string> filesList, filesListOn, filesListOff, filterList, filterListOn, filterListOff;
         
         bool noClickableItems = false;
         bool toPackages = false;
@@ -5635,8 +5635,8 @@ public:
             return createUI(); 
         }
         
-        filesList.clear();
-        filesList.shrink_to_fit();
+        //filesList.clear();
+        //filesList.shrink_to_fit();
     
         //auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel, noClickableItems, menuMode+hiddenMenuMode+dropdownSection, "", "", "");
         //
