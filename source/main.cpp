@@ -35,9 +35,6 @@
 
 using namespace ult;
 
-u64 lastNextPageTapTime = 0;
-static constexpr u64 NEXT_PAGE_COOLDOWN_NS = 500'000'000; // 500ms in nanoseconds
-
 
 
 // Overlay booleans
@@ -170,15 +167,14 @@ void shiftItemFocus(tsl::elm::Element* element) {
  * updates the user interface accordingly, and handles the thread failure and abort conditions.
  *
  * @param keysDown A bitset representing keys that are pressed down.
- * @param stillTouching Boolean indicating if the touchscreen is being interacted with.
- * @param lastSelectedListItem Reference to the UI element displaying the current status.
- * @param commandSuccess Reference to a boolean tracking the overall command success.
+ * @param keysHeld A bitset representing keys that are held down.
  * @return `true` if the operation needs to abort, `false` otherwise.
  */
 bool handleRunningInterpreter(uint64_t& keysDown, uint64_t& keysHeld) {
     static int lastPct = -1;
     static uint8_t lastOp = 255;
     static bool inProg = true;
+    static uint8_t currentOpIndex = 0;  // Track which operation to check first
     
     // FIX: More robust abort handling
     if (((keysDown & KEY_R) && !(keysHeld & ~KEY_R & ALL_KEYS_MASK) && !stillTouching.load(std::memory_order_acquire)) || externalAbortCommands.load(std::memory_order_relaxed)) {
@@ -188,12 +184,12 @@ bool handleRunningInterpreter(uint64_t& keysDown, uint64_t& keysHeld) {
         abortFileOp.store(true, std::memory_order_release);
         abortCommand.store(true, std::memory_order_release);
         externalAbortCommands.store(false, std::memory_order_release);
-
         // Reset UI state
         commandSuccess = false;
         lastPct = -1;
         lastOp = 255;
         inProg = true;
+        currentOpIndex = 0;  // Reset operation tracking
         
         return true;
     }
@@ -216,38 +212,51 @@ bool handleRunningInterpreter(uint64_t& keysDown, uint64_t& keysHeld) {
         commandSuccess = false;
     }
     
-    // FIX: Better progress tracking with atomic operations
+    // FIX: Ultra-optimized progress tracking - single operation check
     static std::atomic<int>* const pcts[] = {&downloadPercentage, &unzipPercentage, &copyPercentage};
     static const std::string* const syms[] = {&DOWNLOAD_SYMBOL, &UNZIP_SYMBOL, &COPY_SYMBOL};
     
-    bool foundActive = false;
     int currentPct = -1;
     uint8_t currentOp = 255;
     
-    // Check operations in order
-    static int pct;
-    for (uint8_t i = 0; i < 3; ++i) {
-        pct = pcts[i]->load(std::memory_order_acquire);
+    // If we know operations are sequential, check current index first
+    int pct = pcts[currentOpIndex]->load(std::memory_order_acquire);
+    
+    if (pct >= 0 && pct < 100) {
+        // Current operation is active
+        currentPct = pct;
+        currentOp = currentOpIndex;
+    } else if (pct == 100) {
+        // Current operation completed, mark and advance
+        pcts[currentOpIndex]->store(-1, std::memory_order_release);
+        currentOpIndex = (currentOpIndex + 1) % 3;
         
-        if (pct >= 0 && pct < 100) {  // Active operation
-            if (!foundActive) {
-                foundActive = true;
+        // Check if next operation is already active
+        pct = pcts[currentOpIndex]->load(std::memory_order_acquire);
+        if (pct >= 0 && pct < 100) {
+            currentPct = pct;
+            currentOp = currentOpIndex;
+        }
+    } else {
+        // Current operation not active, do a quick scan for any active operation
+        for (uint8_t i = 0; i < 3; ++i) {
+            pct = pcts[i]->load(std::memory_order_acquire);
+            if (pct >= 0 && pct < 100) {
                 currentPct = pct;
                 currentOp = i;
+                currentOpIndex = i;
+                break;
             }
-        } else if (pct == 100) {
-            // Mark as completed
-            pcts[i]->store(-1, std::memory_order_release);
         }
     }
     
     // Update UI only when necessary
-    if (foundActive && (currentPct != lastPct || currentOp != lastOp)) {
+    if (currentOp != 255 && (currentPct != lastPct || currentOp != lastOp)) {
         lastSelectedListItem->setValue(*syms[currentOp] + " " + ult::to_string(currentPct) + "%");
         lastPct = currentPct;
         lastOp = currentOp;
         inProg = true;  // Reset inProg when we have active operations
-    } else if (!foundActive && inProg) {
+    } else if (currentOp == 255 && inProg) {
         lastSelectedListItem->setValue(INPROGRESS_SYMBOL);
         inProg = false;
     }
