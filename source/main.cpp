@@ -149,9 +149,9 @@ inline void clearMemory() {
     //directoryCache.clear();
     hexSumCache.clear();
     selectedFooterDict.clear(); // Clears all data from the map, making it empty again
-    selectedListItem = nullptr;
-    lastSelectedListItem = nullptr;
-    forwarderListItem = nullptr;
+    //selectedListItem = nullptr;
+    //lastSelectedListItem = nullptr;
+    //forwarderListItem = nullptr;
 }
 
 void shiftItemFocus(tsl::elm::Element* element) {
@@ -320,7 +320,7 @@ private:
                 }
 
                 tsl::changeTo<UltrahandSettingsMenu>(targetMenu);
-                selectedListItem = nullptr;
+                //selectedListItem = nullptr;
                 selectedListItem = listItem;
                 return true;
             }
@@ -342,7 +342,7 @@ private:
             listItem = new tsl::elm::ListItem(mappedItem);
             if (item == defaultItem) {
                 listItem->setValue(CHECKMARK_SYMBOL);
-                lastSelectedListItem = nullptr;
+                //lastSelectedListItem = nullptr;
                 lastSelectedListItem = listItem;
             }
             listItem->setClickListener([item, mappedItem, defaultItem, iniKey, targetMenu, listItem](uint64_t keys) {
@@ -471,7 +471,7 @@ private:
                 startInterpreterThread();
 
                 listItem->setValue(INPROGRESS_SYMBOL);
-                lastSelectedListItem = nullptr;
+                //lastSelectedListItem = nullptr;
                 lastSelectedListItem = listItem;
                 shiftItemFocus(listItem);
                 lastRunningInterpreter = true;
@@ -612,7 +612,7 @@ public:
                 if (defaultLangMode == defaulLang) {
                     lastSelectedListItemFooter = defaultLangMode;
                     listItem->setValue(CHECKMARK_SYMBOL);
-                    lastSelectedListItem = nullptr;
+                    //lastSelectedListItem = nullptr;
                     lastSelectedListItem = listItem;
                 }
                 listItem->setClickListener([skipLang = !isFileOrDirectory(langFile), defaultLangMode, defaulLang, langFile, listItem](uint64_t keys) {
@@ -629,7 +629,7 @@ public:
                         lastSelectedListItem->setValue(lastSelectedListItemFooter);
                         selectedListItem->setValue(defaultLangMode);
                         listItem->setValue(CHECKMARK_SYMBOL);
-                        lastSelectedListItem = nullptr;
+                        //lastSelectedListItem = nullptr;
                         lastSelectedListItem = listItem;
                         shiftItemFocus(listItem);
                         lastSelectedListItem->triggerClickAnimation();
@@ -772,7 +772,7 @@ public:
             auto* listItem = new tsl::elm::ListItem(DEFAULT);
             if (currentTheme == DEFAULT_STR) {
                 listItem->setValue(CHECKMARK_SYMBOL);
-                lastSelectedListItem = nullptr;
+                //lastSelectedListItem = nullptr;
                 lastSelectedListItem = listItem;
             }
             listItem->setClickListener([defaultTheme = THEMES_PATH + "default.ini", listItem](uint64_t keys) {
@@ -793,7 +793,7 @@ public:
                     lastSelectedListItem->setValue("");
                     selectedListItem->setValue(DEFAULT);
                     listItem->setValue(CHECKMARK_SYMBOL);
-                    lastSelectedListItem = nullptr;
+                    //lastSelectedListItem = nullptr;
                     lastSelectedListItem = listItem;
                     shiftItemFocus(listItem);
                     lastSelectedListItem->triggerClickAnimation();
@@ -814,7 +814,7 @@ public:
                 listItem = new tsl::elm::ListItem(themeName);
                 if (themeName == currentTheme) {
                     listItem->setValue(CHECKMARK_SYMBOL);
-                    lastSelectedListItem = nullptr;
+                    //lastSelectedListItem = nullptr;
                     lastSelectedListItem = listItem;
                 }
                 listItem->setClickListener([themeName, themeFile, listItem](uint64_t keys) {
@@ -833,7 +833,7 @@ public:
                         lastSelectedListItem->setValue("");
                         selectedListItem->setValue(themeName);
                         listItem->setValue(CHECKMARK_SYMBOL);
-                        lastSelectedListItem = nullptr;
+                        //lastSelectedListItem = nullptr;
                         lastSelectedListItem = listItem;
                         shiftItemFocus(listItem);
                         lastSelectedListItem->triggerClickAnimation();
@@ -851,7 +851,7 @@ public:
             auto* listItem = new tsl::elm::ListItem(OPTION_SYMBOL);
             if (currentWallpaper == OPTION_SYMBOL) {
                 listItem->setValue(CHECKMARK_SYMBOL);
-                lastSelectedListItem = nullptr;
+                //lastSelectedListItem = nullptr;
                 lastSelectedListItem = listItem;
             }
 
@@ -868,7 +868,7 @@ public:
                     lastSelectedListItem->setValue("");
                     selectedListItem->setValue(OPTION_SYMBOL);
                     listItem->setValue(CHECKMARK_SYMBOL);
-                    lastSelectedListItem = nullptr;
+                    //lastSelectedListItem = nullptr;
                     lastSelectedListItem = listItem;
                     shiftItemFocus(listItem);
                     lastSelectedListItem->triggerClickAnimation();
@@ -890,7 +890,7 @@ public:
                 listItem = new tsl::elm::ListItem(wallpaperName);
                 if (wallpaperName == currentWallpaper) {
                     listItem->setValue(CHECKMARK_SYMBOL);
-                    lastSelectedListItem = nullptr;
+                    //lastSelectedListItem = nullptr;
                     lastSelectedListItem = listItem;
                 }
                 listItem->setClickListener([wallpaperName, wallpaperFile, listItem](uint64_t keys) {
@@ -908,7 +908,7 @@ public:
                         lastSelectedListItem->setValue("");
                         selectedListItem->setValue(wallpaperName);
                         listItem->setValue(CHECKMARK_SYMBOL);
-                        lastSelectedListItem = nullptr;
+                        //lastSelectedListItem = nullptr;
                         lastSelectedListItem = listItem;
                         shiftItemFocus(listItem);
                         lastSelectedListItem->triggerClickAnimation();
@@ -1080,9 +1080,9 @@ public:
 
                 if (reloadMenu2) {
                     
-                    selectedListItem   = nullptr;
-                    lastSelectedListItem = nullptr;
-                    forwarderListItem  = nullptr;
+                    //selectedListItem   = nullptr;
+                    //lastSelectedListItem = nullptr;
+                    //forwarderListItem  = nullptr;
                     //tsl::elm::skipDeconstruction = true;
                     tsl::goBack(2);
                     //tsl::elm::skipDeconstruction = false;
@@ -1097,9 +1097,9 @@ public:
         }
 
         if (returningToSettings && !(keysDown & KEY_B)) {
-            selectedListItem = nullptr;
-            lastSelectedListItem = nullptr;
-            forwarderListItem = nullptr;
+            //selectedListItem = nullptr;
+            //lastSelectedListItem = nullptr;
+            //forwarderListItem = nullptr;
             returningToSettings = false;
             inSettingsMenu = true;
             tsl::impl::parseOverlaySettings();
@@ -1165,7 +1165,7 @@ public:
 
         if (iStr == priorityValue) {
             listItem->setValue(CHECKMARK_SYMBOL);
-            lastSelectedListItem = nullptr;
+            //lastSelectedListItem = nullptr;
             lastSelectedListItem = listItem;
         }
 
@@ -1187,7 +1187,7 @@ public:
                 lastSelectedListItem->setValue("");
                 selectedListItem->setValue(iStr);
                 listItem->setValue(CHECKMARK_SYMBOL);
-                lastSelectedListItem = nullptr;
+                //lastSelectedListItem = nullptr;
                 lastSelectedListItem = listItem;
                 shiftItemFocus(listItem);
                 lastSelectedListItem->triggerClickAnimation();
@@ -1229,7 +1229,7 @@ public:
                     if (keys & KEY_A) {
                         inMainMenu = false;
                         tsl::changeTo<SettingsMenu>(entryName, entryMode, overlayName, "", KEY_COMBO_STR);
-                        selectedListItem = nullptr;
+                        //selectedListItem = nullptr;
                         selectedListItem = listItem;
                         lastSelectedListItem->triggerClickAnimation();
                         return true;
@@ -1260,7 +1260,7 @@ public:
                 if (keys & KEY_A) {
                     inMainMenu = false;
                     tsl::changeTo<SettingsMenu>(entryName, entryMode, overlayName, "", PRIORITY_STR);
-                    selectedListItem = nullptr;
+                    //selectedListItem = nullptr;
                     selectedListItem = listItem;
                     lastSelectedListItem->triggerClickAnimation();
                     return true;
@@ -1544,9 +1544,9 @@ public:
         
         
         if (returningToSettings && !(keysDown & KEY_B)){
-            selectedListItem = nullptr;
-            lastSelectedListItem = nullptr;
-            forwarderListItem = nullptr;
+            //selectedListItem = nullptr;
+            //lastSelectedListItem = nullptr;
+            //forwarderListItem = nullptr;
             returningToSettings = false;
             inSettingsMenu = true;
         }
@@ -1631,7 +1631,7 @@ private:
                 startInterpreterThread();
                 listItem->setValue(INPROGRESS_SYMBOL);
 
-                lastSelectedListItem = nullptr;
+                //lastSelectedListItem = nullptr;
                 lastSelectedListItem = listItem;
                
                 lastRunningInterpreter = true;
@@ -1957,7 +1957,7 @@ public:
     }
 
     ~SelectionOverlay() {
-        lastSelectedListItem = nullptr;
+        //lastSelectedListItem = nullptr;
         selectionCommands.clear();
         selectionCommands.shrink_to_fit();
         selectionCommandsOn.clear();
@@ -2477,7 +2477,7 @@ public:
 
                 if (commandMode == OPTION_STR) {
                     if (selectedFooterDict[specifiedFooterKey] == itemName) {
-                        lastSelectedListItem = nullptr;
+                        //lastSelectedListItem = nullptr;
                         lastSelectedListItem = listItem;
                         lastSelectedListItemFooter = footer;
                         listItem->setValue(CHECKMARK_SYMBOL);
@@ -2525,7 +2525,7 @@ public:
                         //lastCommandMode = commandMode;
                         //lastKeyName = selectedItem;
 
-                        lastSelectedListItem = nullptr;
+                        //lastSelectedListItem = nullptr;
                         lastSelectedListItem = listItem;
                         shiftItemFocus(listItem);
 
@@ -2781,9 +2781,9 @@ public:
         }
 
         if (returningToSelectionMenu && !(keysDown & KEY_B)){
-            selectedListItem = nullptr;
-            lastSelectedListItem = nullptr;
-            forwarderListItem = nullptr;
+            //selectedListItem = nullptr;
+            //lastSelectedListItem = nullptr;
+            //forwarderListItem = nullptr;
             returningToSelectionMenu = false;
             inSelectionMenu = true;
         }
@@ -3174,8 +3174,8 @@ bool drawCommandsMenu(tsl::elm::List* list,
                                 }
                                 if (keys & KEY_A) {
                                     inPackageMenu = false;
-                                    selectedListItem = nullptr;
-                                    lastSelectedListItem = nullptr;
+                                    //selectedListItem = nullptr;
+                                    //lastSelectedListItem = nullptr;
                                     //jumpItemName = "🗿";
                                     //jumpItemValue = "";
                                     //jumpItemExactMatch = true;
@@ -3837,7 +3837,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
                                     lastPackageMenu = "subPackageMenu";
 
                                 // set forwarder pointer for updating
-                                forwarderListItem = nullptr;
+                                //forwarderListItem = nullptr;
                                 forwarderListItem = listItem;
                                 lastCommandMode = FORWARDER_STR;
                                 lastKeyName = keyName;
@@ -3903,7 +3903,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
                                     else
                                         lastPackageMenu = "subPackageMenu";
                                     
-                                    selectedListItem = nullptr;
+                                    //selectedListItem = nullptr;
                                     selectedListItem = listItem;
                                     
                                     std::string newKey = "";
@@ -3916,7 +3916,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
                                         if (selectedFooterDict.find(newKey) == selectedFooterDict.end())
                                             selectedFooterDict[newKey] = footer;
                                     }
-                                    lastSelectedListItem = nullptr;
+                                    //lastSelectedListItem = nullptr;
                                     if (commandMode == OPTION_STR || commandMode == SLOT_STR) {
                                         jumpItemName = "";
                                         jumpItemValue = "";
@@ -4005,7 +4005,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
                                 startInterpreterThread(packagePath);
                                 listItem->setValue(INPROGRESS_SYMBOL);
                                 
-                                lastSelectedListItem = nullptr;
+                                //lastSelectedListItem = nullptr;
                                 lastSelectedListItem = listItem;
                                 shiftItemFocus(listItem);
                                 lastCommandMode = commandMode;
@@ -4326,7 +4326,7 @@ public:
                     forwarderListItem->setValue(footerIt->second);
                 }
             }
-            forwarderListItem = nullptr;
+            //forwarderListItem = nullptr;
             lastCommandMode = "";
         }
     }
@@ -4379,7 +4379,7 @@ public:
                                 lastSelectedListItem->setValue(footerIt->second);
                             }
                         }
-                        lastSelectedListItem = nullptr;
+                        //lastSelectedListItem = nullptr;
                         lastCommandMode = "";
                     } else {
                         lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
@@ -4414,8 +4414,8 @@ public:
                     inPackageMenu = false;
                     tsl::goBack();
                 
-                    selectedListItem = nullptr;
-                    lastSelectedListItem = nullptr;
+                    //selectedListItem = nullptr;
+                    //lastSelectedListItem = nullptr;
                     tsl::changeTo<PackageMenu>(lastPackagePath, lastDropdownSection, lastPage, lastPackageName, lastNestedLayer, pageHeader);
                 };
                 
@@ -4480,8 +4480,8 @@ public:
                     unlockedSlide.exchange(false, std::memory_order_acq_rel);
                     lastPage = RIGHT_STR;
                     //lastPackage = packagePath;
-                    selectedListItem = nullptr;
-                    lastSelectedListItem = nullptr;
+                    //selectedListItem = nullptr;
+                    //lastSelectedListItem = nullptr;
                     //jumpItemName = "";
                     //jumpItemValue = "";
                     //jumpItemExactMatch = true;
@@ -4528,8 +4528,8 @@ public:
                     allowSlide.exchange(false, std::memory_order_acq_rel);
                     unlockedSlide.exchange(false, std::memory_order_acq_rel);
                     lastPage = LEFT_STR;
-                    selectedListItem = nullptr;
-                    lastSelectedListItem = nullptr;
+                    //selectedListItem = nullptr;
+                    //lastSelectedListItem = nullptr;
                     
                     // Longer sleep for stability
                     //svcSleepThread(200'000);
@@ -4690,9 +4690,9 @@ public:
         if (returningToPackage && !returningToSubPackage && !(keysDown & KEY_B)){
             //lastPackageMenu = "packageMenu";
 
-            selectedListItem = nullptr;
-            lastSelectedListItem = nullptr;
-            forwarderListItem = nullptr;
+            //selectedListItem = nullptr;
+            //lastSelectedListItem = nullptr;
+            //forwarderListItem = nullptr;
             lastPackageMenu = "";
             returningToPackage = false;
             returningToSubPackage = false;
@@ -4706,9 +4706,9 @@ public:
         
         if (returningToSubPackage && !(keysDown & KEY_B)){
             //lastPackageMenu = "subPackageMenu";
-            selectedListItem = nullptr;
-            lastSelectedListItem = nullptr;
-            forwarderListItem = nullptr;
+            //selectedListItem = nullptr;
+            //lastSelectedListItem = nullptr;
+            //forwarderListItem = nullptr;
             lastPackageMenu = "";
             returningToPackage = false;
             returningToSubPackage = false;
@@ -5712,7 +5712,7 @@ public:
                                 lastSelectedListItem->setValue(footerIt->second);
                             }
                         }
-                        lastSelectedListItem = nullptr;
+                        //lastSelectedListItem = nullptr;
                         lastCommandMode = "";
                     } else {
                         lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
@@ -5829,8 +5829,8 @@ public:
                     if (!usePageSwap) {
                         if (menuMode != PACKAGES_STR) {
                             currentMenu = PACKAGES_STR;
-                            selectedListItem = nullptr;
-                            lastSelectedListItem = nullptr;
+                            //selectedListItem = nullptr;
+                            //lastSelectedListItem = nullptr;
                             
                             //svcSleepThread(200'000);
                             //simulatedNextPage.store(false, std::memory_order_release);
@@ -5848,8 +5848,8 @@ public:
                     } else {
                         if (menuMode != OVERLAYS_STR) {
                             currentMenu = OVERLAYS_STR;
-                            selectedListItem = nullptr;
-                            lastSelectedListItem = nullptr;
+                            //selectedListItem = nullptr;
+                            //lastSelectedListItem = nullptr;
                             
                             //svcSleepThread(200'000);
                             //simulatedNextPage.store(false, std::memory_order_release);
@@ -5895,8 +5895,8 @@ public:
                     if (!usePageSwap) {
                         if (menuMode != OVERLAYS_STR) {
                             currentMenu = OVERLAYS_STR;
-                            selectedListItem = nullptr;
-                            lastSelectedListItem = nullptr;
+                            //selectedListItem = nullptr;
+                            //lastSelectedListItem = nullptr;
                             
                             //svcSleepThread(200'000);
                             //simulatedNextPage.store(false, std::memory_order_release);
@@ -5913,8 +5913,8 @@ public:
                     } else {
                         if (menuMode != PACKAGES_STR) {
                             currentMenu = PACKAGES_STR;
-                            selectedListItem = nullptr;
-                            lastSelectedListItem = nullptr;
+                            //selectedListItem = nullptr;
+                            //lastSelectedListItem = nullptr;
                             
                             //svcSleepThread(200'000);
                             //simulatedNextPage.store(false, std::memory_order_release);
@@ -6034,16 +6034,16 @@ public:
             freshSpawn = false;
         
         if (returningToMain && !(keysDown & KEY_B)){
-            selectedListItem = nullptr;
-            lastSelectedListItem = nullptr;
-            forwarderListItem = nullptr;
+            //selectedListItem = nullptr;
+            //lastSelectedListItem = nullptr;
+            //forwarderListItem = nullptr;
             returningToMain = false;
             inMainMenu = true;
         }
         if (returningToHiddenMain && !(keysDown & KEY_B)){
-            selectedListItem = nullptr;
-            lastSelectedListItem = nullptr;
-            forwarderListItem = nullptr;
+            //selectedListItem = nullptr;
+            //lastSelectedListItem = nullptr;
+            //forwarderListItem = nullptr;
             returningToHiddenMain = false;
             inHiddenMode = true;
         }
