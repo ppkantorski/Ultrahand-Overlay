@@ -149,9 +149,9 @@ inline void clearMemory() {
     //directoryCache.clear();
     hexSumCache.clear();
     selectedFooterDict.clear(); // Clears all data from the map, making it empty again
-    //selectedListItem = nullptr;
-    //lastSelectedListItem = nullptr;
-    //forwarderListItem = nullptr;
+    selectedListItem = nullptr;
+    lastSelectedListItem = nullptr;
+    forwarderListItem = nullptr;
 }
 
 void shiftItemFocus(tsl::elm::Element* element) {
