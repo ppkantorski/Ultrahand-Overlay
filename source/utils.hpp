@@ -94,16 +94,33 @@ static std::vector<std::string> getOverlayNames() {
     return names;
 }
 
+
 static void removeKeyComboFromOtherOverlays(const std::string& keyCombo, const std::string& currentOverlay) {
-    auto overlayNames = getOverlayNames();  // Make sure hlp namespace is correct
+    auto overlayNames = getOverlayNames();  // Includes currentOverlay
     std::string existingCombo;
+
     for (const auto& overlayName : overlayNames) {
-        if (overlayName != currentOverlay) {
-            existingCombo = ult::parseValueFromIniSection(ult::OVERLAYS_INI_FILEPATH, overlayName, "key_combo");
-            if (!existingCombo.empty() && tsl::hlp::comboStringToKeys(existingCombo) == tsl::hlp::comboStringToKeys(keyCombo)) {
-                // Clear it
-                ult::setIniFileValue(ult::OVERLAYS_INI_FILEPATH, overlayName, "key_combo", "");
+        // 1. Remove from main key_combo field if it matches
+        existingCombo = ult::parseValueFromIniSection(ult::OVERLAYS_INI_FILEPATH, overlayName, "key_combo");
+        if (!existingCombo.empty() && tsl::hlp::comboStringToKeys(existingCombo) == tsl::hlp::comboStringToKeys(keyCombo)) {
+            ult::setIniFileValue(ult::OVERLAYS_INI_FILEPATH, overlayName, "key_combo", "");
+        }
+
+        // 2. Remove from mode_combos list if any element matches
+        std::string comboListStr = ult::parseValueFromIniSection(ult::OVERLAYS_INI_FILEPATH, overlayName, "mode_combos");
+        std::vector<std::string> comboList = splitIniList(comboListStr);
+
+        bool modified = false;
+        for (std::string& combo : comboList) {
+            if (!combo.empty() && tsl::hlp::comboStringToKeys(combo) == tsl::hlp::comboStringToKeys(keyCombo)) {
+                combo.clear();
+                modified = true;
             }
+        }
+
+        if (modified) {
+            std::string newComboStr = "(" + joinIniList(comboList) + ")";
+            ult::setIniFileValue(ult::OVERLAYS_INI_FILEPATH, overlayName, "mode_combos", newComboStr);
         }
     }
 }

@@ -329,6 +329,39 @@ private:
         list->addItem(listItem);
     }
 
+    // Add this method to the UltrahandSettingsMenu class
+    void removeKeyComboFromOthers(const std::string& keyCombo) {
+        auto overlayNames = getOverlayNames(); // Get all overlay names
+        std::string existingCombo;
+        
+        for (const auto& overlayName : overlayNames) {
+            // 1. Remove from main key_combo field if it matches
+            existingCombo = parseValueFromIniSection(OVERLAYS_INI_FILEPATH, overlayName, KEY_COMBO_STR);
+            if (!existingCombo.empty() && tsl::hlp::comboStringToKeys(existingCombo) == tsl::hlp::comboStringToKeys(keyCombo)) {
+                setIniFileValue(OVERLAYS_INI_FILEPATH, overlayName, KEY_COMBO_STR, "");
+            }
+            
+            // 2. Remove from mode_combos list if any element matches
+            std::string comboListStr = parseValueFromIniSection(OVERLAYS_INI_FILEPATH, overlayName, "mode_combos");
+            if (!comboListStr.empty()) {
+                std::vector<std::string> comboList = splitIniList(comboListStr);
+                bool modified = false;
+                
+                for (std::string& combo : comboList) {
+                    if (!combo.empty() && tsl::hlp::comboStringToKeys(combo) == tsl::hlp::comboStringToKeys(keyCombo)) {
+                        combo.clear();
+                        modified = true;
+                    }
+                }
+                
+                if (modified) {
+                    std::string newComboStr = "(" + joinIniList(comboList) + ")";
+                    setIniFileValue(OVERLAYS_INI_FILEPATH, overlayName, "mode_combos", newComboStr);
+                }
+            }
+        }
+    }
+
     void handleSelection(tsl::elm::List* list, const std::vector<std::string>& items, const std::string& defaultItem, const std::string& iniKey, const std::string& targetMenu) {
         tsl::elm::ListItem* listItem;
         std::string mappedItem;
@@ -345,7 +378,7 @@ private:
                 //lastSelectedListItem = nullptr;
                 lastSelectedListItem = listItem;
             }
-            listItem->setClickListener([item, mappedItem, defaultItem, iniKey, targetMenu, listItem](uint64_t keys) {
+            listItem->setClickListener([this, item, mappedItem, defaultItem, iniKey, targetMenu, listItem](uint64_t keys) {
                 //listItemPtr = std::shared_ptr<tsl::elm::ListItem>(listItem, [](auto*){})](uint64_t keys) {
                 if (runningInterpreter.load(std::memory_order_acquire))
                     return false;
@@ -360,16 +393,22 @@ private:
                         if (targetMenu == KEY_COMBO_STR) {
                             // Also set it in tesla config
                             setIniFileValue(TESLA_CONFIG_INI_PATH, TESLA_STR, iniKey, item);
-                
+                            
                             // Remove this key combo from any overlays using it
-                            const auto overlaySections =  ult::parseSectionsFromIni(OVERLAYS_INI_FILEPATH);
-                            for (const auto& section : overlaySections) {
-                                const std::string overlayCombo = parseValueFromIniSection(OVERLAYS_INI_FILEPATH, section, KEY_COMBO_STR);
-                                if (overlayCombo == item) {
-                                    // Clear the key combo for this overlay
-                                    setIniFileValue(OVERLAYS_INI_FILEPATH, section, KEY_COMBO_STR, "");
-                                }
-                            }
+                            //const auto overlaySections =  ult::parseSectionsFromIni(OVERLAYS_INI_FILEPATH);
+                            //for (const auto& section : overlaySections) {
+                            //    const std::string overlayCombo = parseValueFromIniSection(OVERLAYS_INI_FILEPATH, section, KEY_COMBO_STR);
+                            //    if (overlayCombo == item) {
+                            //        // Clear the key combo for this overlay
+                            //        setIniFileValue(OVERLAYS_INI_FILEPATH, section, KEY_COMBO_STR, "");
+                            //    }
+                            //}
+
+                            // Remove this key combo from any overlays using it (both key_combo and mode_combos)
+                            this->removeKeyComboFromOthers(item);
+                            
+                            // Reload the overlay key combos to reflect changes
+                            tsl::hlp::loadOverlayKeyCombos();
                         }
                 
                         reloadMenu = true;
@@ -534,6 +573,8 @@ private:
                 triggerMenuReload = (rightAlignmentState != actualState);
             } else if (iniKey == "dynamic_logo") {
                 useDynamicLogo = !useDynamicLogo;
+            } else if (iniKey == "launch_combos") {
+                useLaunchCombos = !useLaunchCombos;
             } else if (iniKey == "opaque_screenshots") {
                 useOpaqueScreenshots = !useOpaqueScreenshots;
             }
@@ -938,6 +979,9 @@ public:
             hideUserGuide = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_user_guide") == TRUE_STR);
             createToggleListItem(list, USER_GUIDE, hideUserGuide, "hide_user_guide", true);
 
+            useDynamicLogo = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "dynamic_logo") == TRUE_STR);
+            createToggleListItem(list, DYNAMIC_LOGO, useDynamicLogo, "dynamic_logo");
+
             hideHidden = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_hidden") == TRUE_STR);
             createToggleListItem(list, SHOW_HIDDEN, hideHidden, "hide_hidden", true);
 
@@ -950,10 +994,16 @@ public:
             hidePackageVersions = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_package_versions") == TRUE_STR);
             createToggleListItem(list, PACKAGE_VERSIONS, hidePackageVersions, "hide_package_versions", true);
             
-            addHeader(list, EFFECTS);
+            addHeader(list, FEATURES);
 
-            useDynamicLogo = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "dynamic_logo") == TRUE_STR);
-            createToggleListItem(list, DYNAMIC_LOGO, useDynamicLogo, "dynamic_logo");
+            useLaunchCombos = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "launch_combos") == TRUE_STR);
+            createToggleListItem(list, LAUNCH_COMBOS, useLaunchCombos, "launch_combos");
+
+            useOpaqueScreenshots = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "opaque_screenshots") == TRUE_STR);
+            createToggleListItem(list, OPAQUE_SCREENSHOTS, useOpaqueScreenshots, "opaque_screenshots");
+
+            useSwipeToOpen = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "swipe_to_open") == TRUE_STR);
+            createToggleListItem(list, SWIPE_TO_OPEN, useSwipeToOpen, "swipe_to_open");
 
             usePageSwap = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "page_swap") == TRUE_STR);
             createToggleListItem(list, PAGE_SWAP, usePageSwap, "page_swap");
@@ -961,12 +1011,6 @@ public:
             useRightAlignment = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "right_alignment") == TRUE_STR);
             rightAlignmentState = useRightAlignment;
             createToggleListItem(list, RIGHT_SIDE_MODE, useRightAlignment, "right_alignment");
-
-            useSwipeToOpen = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "swipe_to_open") == TRUE_STR);
-            createToggleListItem(list, SWIPE_TO_OPEN, useSwipeToOpen, "swipe_to_open");
-
-            useOpaqueScreenshots = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "opaque_screenshots") == TRUE_STR);
-            createToggleListItem(list, OPAQUE_SCREENSHOTS, useOpaqueScreenshots, "opaque_screenshots");
             
         
         } else {
@@ -1117,18 +1161,36 @@ public:
 
 
 
+int settingsMenuPageDepth = 0;
+std::string rootEntryName, rootEntryMode, rootTitle, rootVersion;
 
 class SettingsMenu : public tsl::Gui {
 private:
     std::string entryName, entryMode, title, version, dropdownSelection, settingsIniPath;
+   
     bool isInSection, inQuotes, isFromMainMenu;
     int MAX_PRIORITY = 20;
 
+    
+
 public:
     SettingsMenu(const std::string& name, const std::string& mode, const std::string& title = "", const std::string& version = "", const std::string& selection = "")
-        : entryName(name), entryMode(mode), title(title), version(version), dropdownSelection(selection) {}
+        : entryName(name), entryMode(mode), title(title), version(version), dropdownSelection(selection) {
+            // Only store once
+            if (settingsMenuPageDepth == 0) {
+               rootEntryName = name;
+               rootEntryMode = mode;
+               rootTitle = title;
+               rootVersion = version;
+            }
+            settingsMenuPageDepth++;
+        }
 
-    ~SettingsMenu() {}
+    ~SettingsMenu() {
+        if (settingsMenuPageDepth > 0) {
+            settingsMenuPageDepth--;
+        }
+    }
 
     void createAndAddToggleListItem(
         tsl::elm::List* list,
@@ -1207,7 +1269,8 @@ public:
         auto list = new tsl::elm::List();
     
         if (inSettingsMenu) {
-            addHeader(list, header + " " + SETTINGS);
+            addHeader(list, SETTINGS + "  " + header);
+            //addHeader(list, header);
 
 
             if (entryMode == OVERLAY_STR) {
@@ -1280,6 +1343,74 @@ public:
                     settingsIniPath,
                     entryName
                 );
+
+                std::string argStr = parseValueFromIniSection(settingsIniPath, entryName, "mode_args");
+                std::string comboStr = parseValueFromIniSection(settingsIniPath, entryName, "mode_combos");
+                std::string labelStr = parseValueFromIniSection(settingsIniPath, entryName, "mode_labels");
+                
+                std::vector<std::string> modeList = splitIniList(argStr);   // (-mini, -micro)
+                std::vector<std::string> comboList = splitIniList(comboStr);     // (ZL+ZR+DRIGHT, '')
+                std::vector<std::string> labelList = splitIniList(labelStr);     // (Mini Mode, Micro Mode)
+                
+                if (!modeList.empty()) {
+                    //addHeader(list, "Key Combo Modes");
+
+                    std::vector<std::vector<std::string>> tableData = {
+                        {"", "", ""}  // Direct reuse without reallocation
+                    };
+                    addTable(list, tableData, "", 163, 0, 19-5, 0, "header", "header", DEFAULT_STR, RIGHT_STR, true, false, false, true, "none", false);
+                    tableData = {
+                        {MODE, "", KEY_COMBO}  // Direct reuse without reallocation
+                    };
+                    addTable(list, tableData, "", 165, 19-2, 19-2, 0, "header", "header", DEFAULT_STR, RIGHT_STR, true, true, false, true, "none", false);
+                    
+                    // Parse the existing combos list, or create empty defaults
+                    std::string comboStr = parseValueFromIniSection(settingsIniPath, entryName, "mode_combos");
+                    std::vector<std::string> comboList = splitIniList(comboStr);
+                    // Ensure comboList is same size as modeList, fill with empty if missing
+                    if (comboList.size() < modeList.size())
+                        comboList.resize(modeList.size(), "");
+                    
+                    std::string mode, displayName, comboDisplay;
+                    for (size_t i = 0; i < modeList.size(); ++i) {
+                        mode = modeList[i];
+                        displayName = (i < labelList.size() && !labelList[i].empty()) ? labelList[i] : mode;
+                        std::string& combo = comboList[i];  // reference so we can modify
+                
+                        // Display combo or OPTION_SYMBOL if empty
+                        comboDisplay = combo.empty() ? OPTION_SYMBOL : combo;
+                        convertComboToUnicode(comboDisplay);
+                
+                        auto* item = new tsl::elm::ListItem(displayName);
+                        item->setValue(comboDisplay);
+                
+                        // Capture by pointer/ref so we can update comboList[i]
+                        item->setClickListener([entryName = entryName, settingsIniPath = settingsIniPath, i, mode, &comboList, item, this](uint64_t keys) mutable {
+                            if (runningInterpreter.load(std::memory_order_acquire)) return false;
+                            if (simulatedSelect.exchange(false, std::memory_order_acq_rel)) {
+                                keys |= KEY_A;
+                            }
+                            if (keys & KEY_A) {
+                                inMainMenu = false;
+                
+                                // Open a new SettingsMenu specifically for editing this mode combo
+                                tsl::changeTo<SettingsMenu>(
+                                    entryName,
+                                    OVERLAY_STR,
+                                    mode,
+                                    "",
+                                    "mode_combo_" + std::to_string(i)
+                                );
+                                selectedListItem = item;
+                                lastSelectedListItem->triggerClickAnimation();
+                                return true;
+                            }
+                            return false;
+                        });
+                
+                        list->addItem(item);
+                    }
+                }
             } else if (entryMode == PACKAGE_STR) {
                 createAndAddToggleListItem(
                     list,
@@ -1341,7 +1472,8 @@ public:
                 if (keys & KEY_A) {
                     // Remove key combo from this overlay
                     setIniFileValue(settingsIniPath, entryName, KEY_COMBO_STR, "");
-                    //reloadMenu = true;
+                    tsl::hlp::loadOverlayKeyCombos(); // reload combos
+                    reloadMenu = true;
                     
                     lastSelectedListItem->setValue("");
                     selectedListItem->setValue(OPTION_SYMBOL);
@@ -1380,12 +1512,12 @@ public:
                         if (combo != currentKeyCombo) {
                             // Remove this key combo from any other overlays first
                             removeKeyComboFromOtherOverlays(combo, entryName);
-                        
                             // Set the new key combo for this overlay
                             setIniFileValue(settingsIniPath, entryName, KEY_COMBO_STR, combo);
                             //reloadMenu = true;
+                            tsl::hlp::loadOverlayKeyCombos(); // reload combos
                         }
-                        
+                        reloadMenu = true;
                         lastSelectedListItem->setValue("");
                         selectedListItem->setValue(mappedCombo);
                         listItem->setValue(CHECKMARK_SYMBOL);
@@ -1398,6 +1530,109 @@ public:
                 });
                 list->addItem(listItem);
             }
+        } else if (dropdownSelection.rfind("mode_combo_", 0) == 0) {  // starts with "mode_combo_"
+            // Extract index from dropdownSelection suffix
+            std::string indexStr = dropdownSelection.substr(std::string("mode_combo_").length());
+            size_t idx = std::stoi(indexStr);
+            
+            // Read labels and use label if available, otherwise fall back to title with quotes
+            std::string labelStr = parseValueFromIniSection(settingsIniPath, entryName, "mode_labels");
+            std::vector<std::string> labelList = splitIniList(labelStr);
+            std::string labelText = (idx < labelList.size() && !labelList[idx].empty()) ? 
+                                   labelList[idx] : 
+                                   "'" + title + "'";
+            if ((idx < labelList.size() && !labelList[idx].empty()))
+                title = labelList[idx];
+            std::string headerText = KEY_COMBO + "  " + labelText;
+            labelList.clear();
+            addHeader(list, headerText);
+
+            // Reboot required info
+            //std::vector<std::vector<std::string>> tableData = {
+            //    {"Key Combo", "", labelText}  // Direct reuse without reallocation
+            //};
+            //
+            //addTable(list, tableData, "", 163, 19-2, 19-2, 0, "header", "header", DEFAULT_STR, RIGHT_STR, true, true, false, true, "none", false);
+
+        
+            // Read current combo list and ensure it's large enough
+            std::string comboStr = parseValueFromIniSection(settingsIniPath, entryName, "mode_combos");
+            std::vector<std::string> comboList = splitIniList(comboStr);
+            if (idx >= comboList.size()) comboList.resize(idx + 1, "");
+        
+            std::string currentCombo = comboList[idx];
+        
+            // Fetch global default combo (to exclude it)
+            std::string globalDefaultCombo = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, KEY_COMBO_STR);
+            trim(globalDefaultCombo);
+        
+            // Add "No Combo" option
+            auto* noComboItem = new tsl::elm::ListItem(OPTION_SYMBOL);
+            if (currentCombo.empty()) {
+                noComboItem->setValue(CHECKMARK_SYMBOL);
+                lastSelectedListItem = noComboItem;
+            }
+            noComboItem->setClickListener([entryName=entryName, settingsIniPath=settingsIniPath, idx, comboList, noComboItem](uint64_t keys) mutable {
+                if (runningInterpreter.load(std::memory_order_acquire)) return false;
+                if (simulatedSelect.exchange(false, std::memory_order_acq_rel)) keys |= KEY_A;
+                if (keys & KEY_A) {
+                    comboList[idx] = "";
+                    std::string newComboStr = "(" + joinIniList(comboList) + ")";
+                    setIniFileValue(settingsIniPath, entryName, "mode_combos", newComboStr);
+                    tsl::hlp::loadOverlayKeyCombos(); // reload combos
+                    reloadMenu = true;
+                    lastSelectedListItem->setValue("");
+                    selectedListItem->setValue(OPTION_SYMBOL);
+                    noComboItem->setValue(CHECKMARK_SYMBOL);
+                    lastSelectedListItem = noComboItem;
+                    shiftItemFocus(noComboItem);
+                    lastSelectedListItem->triggerClickAnimation();
+                    return true;
+                }
+                return false;
+            });
+            list->addItem(noComboItem);
+        
+            // Add valid combos
+            for (const auto& combo : defaultCombos) {
+                if (combo == globalDefaultCombo) continue; // Skip global default combo
+        
+                std::string mappedCombo = combo;
+                convertComboToUnicode(mappedCombo);
+        
+                auto* comboItem = new tsl::elm::ListItem(mappedCombo);
+                if (combo == currentCombo) {
+                    comboItem->setValue(CHECKMARK_SYMBOL);
+                    lastSelectedListItem = comboItem;
+                }
+        
+                comboItem->setClickListener([entryName=entryName, settingsIniPath=settingsIniPath, idx, combo, comboList, mappedCombo, comboItem](uint64_t keys) mutable {
+                    if (runningInterpreter.load(std::memory_order_acquire)) return false;
+                    if (simulatedSelect.exchange(false, std::memory_order_acq_rel)) keys |= KEY_A;
+                    if (keys & KEY_A) {
+                        if (combo != comboList[idx]) {
+                            // Remove same combo from other overlays (both key_combo + mode_combos)
+                            removeKeyComboFromOtherOverlays(combo, entryName);
+                            comboList[idx] = combo;
+                            std::string newComboStr = "(" + joinIniList(comboList) + ")";
+                            setIniFileValue(settingsIniPath, entryName, "mode_combos", newComboStr);
+                            tsl::hlp::loadOverlayKeyCombos(); // reload combos
+                        }
+                        
+                        reloadMenu = true;
+                        lastSelectedListItem->setValue("");
+                        selectedListItem->setValue(mappedCombo);
+                        comboItem->setValue(CHECKMARK_SYMBOL);
+                        lastSelectedListItem = comboItem;
+                        shiftItemFocus(comboItem);
+                        lastSelectedListItem->triggerClickAnimation();
+                        return true;
+                    }
+                    return false;
+                });
+        
+                list->addItem(comboItem);
+            }
         } else {
             addBasicListItem(list, FAILED_TO_OPEN + ": " + settingsIniPath);
         }
@@ -1407,16 +1642,20 @@ public:
         //return rootFrame.release();
 
         auto rootFrame = new tsl::elm::OverlayFrame(CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel);
-        if (inSubSettingsMenu && ((dropdownSelection == KEY_COMBO_STR) || (dropdownSelection == PRIORITY_STR))) {
+        if (inSubSettingsMenu &&
+            (dropdownSelection == KEY_COMBO_STR ||
+             dropdownSelection == PRIORITY_STR ||
+             dropdownSelection.rfind("mode_combo_", 0) == 0)) {
+
             jumpItemName = "";
             jumpItemValue = "";
             jumpItemExactMatch = true;
             g_overlayFilename = "";
-        } else {
-            jumpItemName = "🗿";
-            jumpItemValue = "";
-            jumpItemExactMatch = true;
-            g_overlayFilename = "";
+        //} else {
+        //    jumpItemName = "🗿";
+        //    jumpItemValue = "";
+        //    jumpItemExactMatch = true;
+        //    g_overlayFilename = "";
         }
         list->jumpToItem(jumpItemName, jumpItemValue, jumpItemExactMatch);
         rootFrame->setContent(list);
@@ -1525,24 +1764,43 @@ public:
                 }
             }
         } else if (inSubSettingsMenu) {
-            //if (simulatedNextPage.load(std::memory_order_acquire)) {
-            //    simulatedNextPage.store(false, std::memory_order_release);
-            //}
             simulatedNextPage.exchange(false, std::memory_order_acq_rel);
-
             simulatedMenu.exchange(false, std::memory_order_acq_rel);
-
+        
             if (simulatedBack.exchange(false, std::memory_order_acq_rel)) {
                 keysDown |= KEY_B;
             }
-
+        
             if ((keysDown & KEY_B) && !stillTouching.load(std::memory_order_acquire)) {
                 allowSlide.exchange(false, std::memory_order_acq_rel);
                 unlockedSlide.exchange(false, std::memory_order_acq_rel);
                 inSubSettingsMenu = false;
                 returningToSettings = true;
-                tsl::goBack();
-                //tsl::Overlay::get()->close();
+        
+                // Step 1: Go back one menu level
+                
+        
+                // Step 2: If reload is needed, change to SettingsMenu with focus
+                if (reloadMenu) {
+                    reloadMenu = false;
+                    tsl::goBack(2);
+        
+                    // Provide jump target context
+                    jumpItemName = title;                 // The overlay section name
+                    jumpItemValue = "";    // The specific item like "key_combo" or "mode_combo_2"
+                    jumpItemExactMatch = true;
+                    g_overlayFilename = "";
+
+                    tsl::changeTo<SettingsMenu>(
+                        rootEntryName,
+                        rootEntryMode,
+                        rootTitle,
+                        rootVersion
+                    );
+                } else {
+                    tsl::goBack();
+                }
+        
                 return true;
             }
         }
@@ -3521,6 +3779,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
             if (!skipSection && !skipSystem) { // for skipping the drawing of sections
                 if (commandMode == TABLE_STR) {
                     if (useHeaderIndent) {
+                        tableColumnOffset = 165;
                         tableStartGap = tableEndGap = 19-2; // for perfect alignment for header tables
                         isScrollableTable = false;
                         lastPackageHeader = getFirstSectionText(tableData, packagePath);
@@ -4883,6 +5142,7 @@ public:
                 setDefaultValue(ultrahandSection, "memory_expansion", FALSE_STR, useMemoryExpansion);
                 // setDefaultValue(ultrahandSection, "custom_wallpaper", FALSE_STR, useCustomWallpaper);
                 setDefaultValue(ultrahandSection, "dynamic_logo", TRUE_STR, useDynamicLogo);
+                setDefaultValue(ultrahandSection, "launch_combos", TRUE_STR, useLaunchCombos);
                 setDefaultValue(ultrahandSection, "page_swap", FALSE_STR, usePageSwap);
                 setDefaultValue(ultrahandSection, "swipe_to_open", TRUE_STR, useSwipeToOpen);
                 setDefaultValue(ultrahandSection, "right_alignment", FALSE_STR, useRightAlignment);
