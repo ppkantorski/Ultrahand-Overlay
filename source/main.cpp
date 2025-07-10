@@ -303,14 +303,14 @@ private:
                     downloadFile(LATEST_RELEASE_INFO_URL, SETTINGS_PATH);
                     downloadPercentage.store(-1, std::memory_order_release);
                 } else if (targetMenu == "themeMenu") {
-                    if (!isFileOrDirectory(THEMES_PATH+"ultra.ini")) {
+                    if (!isFile(THEMES_PATH+"ultra.ini")) {
                         //executeCommands({
                         //    {"download", INCLUDED_THEME_FOLDER_URL+"ultra.ini", THEMES_PATH}
                         //});
                         downloadFile(INCLUDED_THEME_FOLDER_URL+"ultra.ini", THEMES_PATH);
                         downloadPercentage.store(-1, std::memory_order_release);
                     }
-                    if (!isFileOrDirectory(THEMES_PATH+"classic.ini")) {
+                    if (!isFile(THEMES_PATH+"classic.ini")) {
                         //executeCommands({
                         //    {"download", INCLUDED_THEME_FOLDER_URL+"classic.ini", THEMES_PATH}
                         //});
@@ -501,14 +501,14 @@ private:
             } else if (iniKey == "clean_version_labels" || iniKey == "hide_overlay_versions" || iniKey == "hide_package_versions" || iniKey == "page_swap" || iniKey == "hide_hidden") {
                 reloadMenu = true;
             } else if (iniKey == "memory_expansion") {
-                if (!isFileOrDirectory(EXPANSION_PATH + "nx-ovlloader.zip")) {
+                if (!isFile(EXPANSION_PATH + "nx-ovlloader.zip")) {
                     if (isVersionGreaterOrEqual(amsVersion,"1.8.0"))
                         downloadFile(NX_OVLLOADER_ZIP_URL, EXPANSION_PATH);
                     else
                         downloadFile(OLD_NX_OVLLOADER_ZIP_URL, EXPANSION_PATH);
                     downloadPercentage.store(-1, std::memory_order_release);
                 }
-                if (!isFileOrDirectory(EXPANSION_PATH + "nx-ovlloader+.zip")) {
+                if (!isFile(EXPANSION_PATH + "nx-ovlloader+.zip")) {
                     if (isVersionGreaterOrEqual(amsVersion,"1.8.0"))
                         downloadFile(NX_OVLLOADER_PLUS_ZIP_URL, EXPANSION_PATH);
                     else
@@ -1120,13 +1120,13 @@ public:
 
 class SettingsMenu : public tsl::Gui {
 private:
-    std::string entryName, entryMode, overlayName, packageName, dropdownSelection, settingsIniPath;
+    std::string entryName, entryMode, title, version, dropdownSelection, settingsIniPath;
     bool isInSection, inQuotes, isFromMainMenu;
     int MAX_PRIORITY = 20;
 
 public:
-    SettingsMenu(const std::string& name, const std::string& mode, const std::string& overlayName = "", const std::string& packageName = "", const std::string& selection = "")
-        : entryName(name), entryMode(mode), overlayName(overlayName), packageName(packageName), dropdownSelection(selection) {}
+    SettingsMenu(const std::string& name, const std::string& mode, const std::string& title = "", const std::string& version = "", const std::string& selection = "")
+        : entryName(name), entryMode(mode), title(title), version(version), dropdownSelection(selection) {}
 
     ~SettingsMenu() {}
 
@@ -1200,7 +1200,7 @@ public:
 
     virtual tsl::elm::Element* createUI() override {
         settingsIniPath = (entryMode == OVERLAY_STR) ? OVERLAYS_INI_FILEPATH : PACKAGES_INI_FILEPATH;
-        std::string header = (entryMode == OVERLAY_STR) ? overlayName : packageName;
+        std::string header =  title + (!version.empty() ? (" " + version) : "");
         inSettingsMenu = dropdownSelection.empty();
         inSubSettingsMenu = !dropdownSelection.empty();
     
@@ -1221,14 +1221,14 @@ public:
                 
                 auto keyComboItem = new tsl::elm::ListItem(KEY_COMBO);
                 keyComboItem->setValue(displayCombo);
-                keyComboItem->setClickListener([entryName=entryName, entryMode=entryMode, overlayName=overlayName, listItem = keyComboItem](uint64_t keys) {
+                keyComboItem->setClickListener([entryName=entryName, entryMode=entryMode, overlayName=title, overlayVersion=version, listItem = keyComboItem](uint64_t keys) {
                     if (runningInterpreter.load(std::memory_order_acquire)) return false;
                     if (simulatedSelect.exchange(false, std::memory_order_acq_rel)) {
                         keys |= KEY_A;
                     }
                     if (keys & KEY_A) {
                         inMainMenu = false;
-                        tsl::changeTo<SettingsMenu>(entryName, entryMode, overlayName, "", KEY_COMBO_STR);
+                        tsl::changeTo<SettingsMenu>(entryName, entryMode, overlayName, overlayVersion, KEY_COMBO_STR);
                         //selectedListItem = nullptr;
                         selectedListItem = listItem;
                         lastSelectedListItem->triggerClickAnimation();
@@ -1252,14 +1252,14 @@ public:
     
             auto* listItem = new tsl::elm::ListItem(SORT_PRIORITY);
             listItem->setValue(parseValueFromIniSection(settingsIniPath, entryName, PRIORITY_STR));
-            listItem->setClickListener([entryName=entryName, entryMode=entryMode, overlayName=overlayName, listItem](uint64_t keys) {
+            listItem->setClickListener([entryName=entryName, entryMode=entryMode, overlayName=title, overlayVersion=version, listItem](uint64_t keys) {
                 if (runningInterpreter.load(std::memory_order_acquire)) return false;
                 if (simulatedSelect.exchange(false, std::memory_order_acq_rel)) {
                     keys |= KEY_A;
                 }
                 if (keys & KEY_A) {
                     inMainMenu = false;
-                    tsl::changeTo<SettingsMenu>(entryName, entryMode, overlayName, "", PRIORITY_STR);
+                    tsl::changeTo<SettingsMenu>(entryName, entryMode, overlayName, overlayVersion, PRIORITY_STR);
                     //selectedListItem = nullptr;
                     selectedListItem = listItem;
                     lastSelectedListItem->triggerClickAnimation();
@@ -1508,6 +1508,11 @@ public:
                         //tsl::elm::skipDeconstruction = true;
                         tsl::pop(popCount);
                         //tsl::elm::skipDeconstruction = false;
+                        jumpItemName = title;
+                        jumpItemValue = version;
+                        g_overlayFilename = "";
+                        jumpItemExactMatch = false;
+                        skipJumpReset = true;
 
                         tsl::changeTo<MainMenu>(lastMenuMode);
                     } else {
@@ -5246,7 +5251,7 @@ public:
                                 // Also clear the global overlay filename since we're not on the main overlay list
                                 g_overlayFilename = "";
                                 
-                                tsl::changeTo<SettingsMenu>(overlayFileName, OVERLAY_STR, overlayName);
+                                tsl::changeTo<SettingsMenu>(overlayFileName, OVERLAY_STR, overlayName, overlayVersion);
                                 return true;
                             }
                             return false;
@@ -5581,7 +5586,7 @@ public:
                                 // Also clear the global overlay filename since we're not on the main overlay list
                                 g_overlayFilename = "";
                                 
-                                tsl::changeTo<SettingsMenu>(packageName, PACKAGE_STR, "", newPackageName);
+                                tsl::changeTo<SettingsMenu>(packageName, PACKAGE_STR, newPackageName, packageVersion);
                                 return true;
                             }
                             return false;
