@@ -1484,7 +1484,7 @@ public:
                     // Remove key combo from this overlay
                     setIniFileValue(settingsIniPath, entryName, KEY_COMBO_STR, "");
                     tsl::hlp::loadOverlayKeyCombos(); // reload combos
-                    reloadMenu = true;
+                    reloadMenu2 = true;
                     
                     lastSelectedListItem->setValue("");
                     selectedListItem->setValue(OPTION_SYMBOL);
@@ -1528,7 +1528,7 @@ public:
                             //reloadMenu = true;
                             tsl::hlp::loadOverlayKeyCombos(); // reload combos
                         }
-                        reloadMenu = true;
+                        reloadMenu2 = true;
                         lastSelectedListItem->setValue("");
                         selectedListItem->setValue(mappedCombo);
                         listItem->setValue(CHECKMARK_SYMBOL);
@@ -1589,9 +1589,10 @@ public:
                 if (keys & KEY_A) {
                     comboList[idx] = "";
                     std::string newComboStr = "(" + joinIniList(comboList) + ")";
+                    removeKeyComboFromOtherOverlays(newComboStr, entryName);
                     setIniFileValue(settingsIniPath, entryName, "mode_combos", newComboStr);
                     tsl::hlp::loadOverlayKeyCombos(); // reload combos
-                    reloadMenu = true;
+                    reloadMenu2 = true;
                     lastSelectedListItem->setValue("");
                     selectedListItem->setValue(OPTION_SYMBOL);
                     noComboItem->setValue(CHECKMARK_SYMBOL);
@@ -1624,13 +1625,19 @@ public:
                         if (combo != comboList[idx]) {
                             // Remove same combo from other overlays (both key_combo + mode_combos)
                             removeKeyComboFromOtherOverlays(combo, entryName);
+                            
+                            // Re-read the combo list after cleaning to get the updated values
+                            std::string comboStr = parseValueFromIniSection(settingsIniPath, entryName, "mode_combos");
+                            comboList = splitIniList(comboStr);
+                            if (idx >= comboList.size()) comboList.resize(idx + 1, "");
+                            
                             comboList[idx] = combo;
                             std::string newComboStr = "(" + joinIniList(comboList) + ")";
                             setIniFileValue(settingsIniPath, entryName, "mode_combos", newComboStr);
                             tsl::hlp::loadOverlayKeyCombos(); // reload combos
                         }
                         
-                        reloadMenu = true;
+                        reloadMenu2 = true;
                         lastSelectedListItem->setValue("");
                         selectedListItem->setValue(mappedCombo);
                         comboItem->setValue(CHECKMARK_SYMBOL);
@@ -1792,12 +1799,12 @@ public:
                 
         
                 // Step 2: If reload is needed, change to SettingsMenu with focus
-                if (reloadMenu) {
+                if (reloadMenu2) {
                     reloadMenu = false;
                     tsl::goBack(2);
         
                     // Provide jump target context
-                    jumpItemName = title;                 // The overlay section name
+                    jumpItemName = rootTitle;                 // The overlay section name
                     jumpItemValue = "";    // The specific item like "key_combo" or "mode_combo_2"
                     jumpItemExactMatch = true;
                     g_overlayFilename = "";

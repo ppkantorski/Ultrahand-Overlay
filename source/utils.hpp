@@ -96,28 +96,29 @@ static std::vector<std::string> getOverlayNames() {
 
 
 static void removeKeyComboFromOtherOverlays(const std::string& keyCombo, const std::string& currentOverlay) {
-    auto overlayNames = getOverlayNames();  // Includes currentOverlay
+    auto overlayNames = getOverlayNames();
     std::string existingCombo;
-
+    
     for (const auto& overlayName : overlayNames) {
         // 1. Remove from main key_combo field if it matches
         existingCombo = ult::parseValueFromIniSection(ult::OVERLAYS_INI_FILEPATH, overlayName, "key_combo");
         if (!existingCombo.empty() && tsl::hlp::comboStringToKeys(existingCombo) == tsl::hlp::comboStringToKeys(keyCombo)) {
             ult::setIniFileValue(ult::OVERLAYS_INI_FILEPATH, overlayName, "key_combo", "");
         }
-
-        // 2. Remove from mode_combos list if any element matches
+        
+        // 2. Remove from mode_combos list - clear ALL instances of this combo
         std::string comboListStr = ult::parseValueFromIniSection(ult::OVERLAYS_INI_FILEPATH, overlayName, "mode_combos");
         std::vector<std::string> comboList = splitIniList(comboListStr);
-
+        
         bool modified = false;
-        for (std::string& combo : comboList) {
-            if (!combo.empty() && tsl::hlp::comboStringToKeys(combo) == tsl::hlp::comboStringToKeys(keyCombo)) {
-                combo.clear();
+        for (size_t i = 0; i < comboList.size(); ++i) {
+            if (!comboList[i].empty() && tsl::hlp::comboStringToKeys(comboList[i]) == tsl::hlp::comboStringToKeys(keyCombo)) {
+                comboList[i] = "";  // Clear ALL instances
                 modified = true;
             }
         }
-
+        
+        // Only update if something was actually removed
         if (modified) {
             std::string newComboStr = "(" + joinIniList(comboList) + ")";
             ult::setIniFileValue(ult::OVERLAYS_INI_FILEPATH, overlayName, "mode_combos", newComboStr);
