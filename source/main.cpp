@@ -1182,7 +1182,7 @@ private:
     bool isInSection, inQuotes, isFromMainMenu;
     int MAX_PRIORITY = 20;
 
-    
+    std::string modeTitle;
 
 public:
     SettingsMenu(const std::string& name, const std::string& mode, const std::string& title = "", const std::string& version = "", const std::string& selection = "")
@@ -1553,7 +1553,9 @@ public:
                                    labelList[idx] : 
                                    "'" + title + "'";
             if ((idx < labelList.size() && !labelList[idx].empty()))
-                title = labelList[idx];
+                modeTitle = labelList[idx];
+            else
+                modeTitle = title;
             std::string headerText = KEY_COMBO + "  " + labelText;
             labelList.clear();
             addHeader(list, headerText);
@@ -1747,6 +1749,7 @@ public:
                     
                     
                     if (reloadMenu) {
+                        reloadMenu = false;
                         int popCount;
                         if (lastMenu == "hiddenMenuMode") {
                             //tsl::goBack();
@@ -1761,12 +1764,12 @@ public:
                             popCount = 2;
                             
                         }
-                        reloadMenu = false;
+                        
                         //tsl::elm::skipDeconstruction = true;
                         tsl::pop(popCount);
                         //tsl::elm::skipDeconstruction = false;
-                        jumpItemName = title;
-                        jumpItemValue = version;
+                        jumpItemName = rootTitle;
+                        jumpItemValue = rootVersion;
                         g_overlayFilename = "";
                         jumpItemExactMatch = false;
                         skipJumpReset = true;
@@ -1800,11 +1803,11 @@ public:
         
                 // Step 2: If reload is needed, change to SettingsMenu with focus
                 if (reloadMenu2) {
-                    reloadMenu = false;
+                    reloadMenu2 = false;
                     tsl::goBack(2);
         
                     // Provide jump target context
-                    jumpItemName = rootTitle;                 // The overlay section name
+                    jumpItemName = modeTitle;                 // The overlay section name
                     jumpItemValue = "";    // The specific item like "key_combo" or "mode_combo_2"
                     jumpItemExactMatch = true;
                     g_overlayFilename = "";
