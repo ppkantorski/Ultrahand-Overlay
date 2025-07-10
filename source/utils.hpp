@@ -3995,12 +3995,15 @@ void backgroundInterpreter(void*) {
             runningInterpreter.store(true, std::memory_order_release);
             interpretAndExecuteCommands(std::move(std::get<0>(args)), std::move(std::get<1>(args)), std::move(std::get<2>(args)));
 
-            // Clear flags and perform any cleanup if necessary
-            clearInterpreterFlags();
-            resetPercentages();
+            svcSleepThread(200'000'000);
 
             runningInterpreter.store(false, std::memory_order_release);
             interpreterThreadExit.store(true, std::memory_order_release);
+            // Clear flags and perform any cleanup if necessary
+            clearInterpreterFlags();
+            
+            resetPercentages();
+
             //logMessage("End of interpreter");
             //break;
         }

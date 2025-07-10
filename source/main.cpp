@@ -222,11 +222,16 @@ bool handleRunningInterpreter(uint64_t& keysDown, uint64_t& keysHeld) {
     // If we know operations are sequential, check current index first
     int pct = pcts[currentOpIndex]->load(std::memory_order_acquire);
     
+    bool displayed100 = false;
     if (pct >= 0 && pct < 100) {
         // Current operation is active
         currentPct = pct;
         currentOp = currentOpIndex;
     } else if (pct == 100) {
+        displayPercentage.store(100, std::memory_order_release);
+        lastSelectedListItem->setValue(*syms[currentOpIndex] + " 100%");
+        displayed100 = true;
+
         // Current operation completed, mark and advance
         pcts[currentOpIndex]->store(-1, std::memory_order_release);
         currentOpIndex = (currentOpIndex + 1) % 3;
@@ -252,12 +257,18 @@ bool handleRunningInterpreter(uint64_t& keysDown, uint64_t& keysHeld) {
     
     // Update UI only when necessary
     if (currentOp != 255 && (currentPct != lastPct || currentOp != lastOp)) {
-        lastSelectedListItem->setValue(*syms[currentOp] + " " + ult::to_string(currentPct) + "%");
+        if (!displayed100) {
+            displayPercentage.store(currentPct, std::memory_order_release);
+            lastSelectedListItem->setValue(*syms[currentOp] + " " + ult::to_string(currentPct) + "%");
+        }
         lastPct = currentPct;
         lastOp = currentOp;
         inProg = true;  // Reset inProg when we have active operations
-    } else if (currentOp == 255 && inProg) {
-        lastSelectedListItem->setValue(INPROGRESS_SYMBOL);
+    } else if (currentOp == 255 && inProg && lastPct < 0) {
+        if (!displayed100) {
+            displayPercentage.store(-1, std::memory_order_release);
+            lastSelectedListItem->setValue(INPROGRESS_SYMBOL);
+        }
         inProg = false;
     }
     
