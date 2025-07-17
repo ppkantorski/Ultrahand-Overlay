@@ -23,7 +23,7 @@
 #include <payload.hpp> // Studious Pancake
 #include <util.hpp> // Studious Pancake
 
-#if NO_FSTREAM_DIRECTIVE
+#if !USING_FSTREAM_DIRECTIVE
 #include <stdio.h>
 #else
 #include <fstream>
@@ -304,7 +304,7 @@ bool isVersionGreaterOrEqual(const char* currentVersion, const char* requiredVer
 //}
 
 void writeFuseIni(const std::string& outputPath, const char* data = nullptr) {
-#if NO_FSTREAM_DIRECTIVE
+#if !USING_FSTREAM_DIRECTIVE
     // Use stdio.h functions for file operations
     FILE* outFile = fopen(outputPath.c_str(), "w");
     if (outFile) {
@@ -891,11 +891,11 @@ void copyTeslaKeyComboToUltrahand() {
 }
 
 
-
 // Constants for overlay module
 constexpr int OverlayLoaderModuleId = 348;
 constexpr Result ResultSuccess = MAKERESULT(0, 0);
 constexpr Result ResultParseError = MAKERESULT(OverlayLoaderModuleId, 1);
+constexpr uint32_t ULTR_SIGNATURE = 0x52544C55;
 
 /**
  * @brief Retrieves overlay module information from a given file.
@@ -903,81 +903,145 @@ constexpr Result ResultParseError = MAKERESULT(OverlayLoaderModuleId, 1);
  * @param filePath The path to the overlay module file.
  * @return A tuple containing the result code, module name, and display version.
  */
-std::tuple<Result, std::string, std::string> getOverlayInfo(const std::string& filePath) {
-#if NO_FSTREAM_DIRECTIVE
+std::tuple<Result, std::string, std::string, bool> getOverlayInfo(const std::string& filePath) {
+    
+#if !USING_FSTREAM_DIRECTIVE
     FILE* file = fopen(filePath.c_str(), "rb");
     if (!file) {
-        return {ResultParseError, "", ""};
+        return {ResultParseError, "", "", false};
     }
-
-    NroHeader nroHeader;
-    NroAssetHeader assetHeader;
-    NacpStruct nacp;
-
+    
+    // Get file size once for bounds checking
+    fseek(file, 0, SEEK_END);
+    const long fileSize = ftell(file);
+    if (static_cast<size_t>(fileSize) < sizeof(NroStart) + sizeof(NroHeader)) {
+        fclose(file);
+        return {ResultParseError, "", "", false};
+    }
+    
     // Read NRO header
     fseek(file, sizeof(NroStart), SEEK_SET);
+    NroHeader nroHeader;
     if (fread(&nroHeader, sizeof(NroHeader), 1, file) != 1) {
         fclose(file);
-        return {ResultParseError, "", ""};
+        return {ResultParseError, "", "", false};
     }
-
+    
+    // Early validation of header size
+    if (nroHeader.size >= fileSize) {
+        fclose(file);
+        return {ResultParseError, "", "", false};
+    }
+    
+    // Check signature and read asset header in one operation
+    bool isUltrahandOverlay = false;
+    uint32_t signature;
+    if (fileSize >= 4 && fseek(file, -4, SEEK_END) == 0 && 
+        fread(&signature, 4, 1, file) == 1 && signature == ULTR_SIGNATURE) {
+        isUltrahandOverlay = true;
+    }
+    
     // Read asset header
     fseek(file, nroHeader.size, SEEK_SET);
+    NroAssetHeader assetHeader;
     if (fread(&assetHeader, sizeof(NroAssetHeader), 1, file) != 1) {
         fclose(file);
-        return {ResultParseError, "", ""};
+        return {ResultParseError, "", "", false};
     }
-
+    
+    // Validate NACP offset before seeking
+    const size_t nacpPos = nroHeader.size + assetHeader.nacp.offset;
+    if (nacpPos + sizeof(NacpStruct) > static_cast<size_t>(fileSize)) {
+        fclose(file);
+        return {ResultParseError, "", "", false};
+    }
+    
     // Read NACP struct
-    fseek(file, nroHeader.size + assetHeader.nacp.offset, SEEK_SET);
+    fseek(file, nacpPos, SEEK_SET);
+    NacpStruct nacp;
     if (fread(&nacp, sizeof(NacpStruct), 1, file) != 1) {
         fclose(file);
-        return {ResultParseError, "", ""};
+        return {ResultParseError, "", "", false};
     }
-
+    
     fclose(file);
-
+    
 #else
-    // Using std::ifstream version
+    // Optimized std::ifstream version
     std::ifstream file(filePath, std::ios::binary);
     if (!file) {
-        return {ResultParseError, "", ""};
+        return {ResultParseError, "", "", false};
     }
-
-    NroHeader nroHeader;
-    NroAssetHeader assetHeader;
-    NacpStruct nacp;
-
+    
+    // Get file size for validation
+    file.seekg(0, std::ios::end);
+    const auto fileSize = file.tellg();
+    if (fileSize < sizeof(NroStart) + sizeof(NroHeader)) {
+        return {ResultParseError, "", "", false};
+    }
+    
     // Read NRO header
     file.seekg(sizeof(NroStart), std::ios::beg);
+    NroHeader nroHeader;
     if (!file.read(reinterpret_cast<char*>(&nroHeader), sizeof(NroHeader))) {
-        return {ResultParseError, "", ""};
+        return {ResultParseError, "", "", false};
     }
-
+    
+    // Early validation
+    if (nroHeader.size >= fileSize) {
+        return {ResultParseError, "", "", false};
+    }
+    
+    // Check signature
+    bool isUltrahandOverlay = false;
+    if (fileSize >= 4) {
+        file.seekg(-4, std::ios::end);
+        uint32_t signature;
+        if (file.read(reinterpret_cast<char*>(&signature), 4) && signature == ULTR_SIGNATURE) {
+            isUltrahandOverlay = true;
+        }
+    }
+    
     // Read asset header
     file.seekg(nroHeader.size, std::ios::beg);
+    NroAssetHeader assetHeader;
     if (!file.read(reinterpret_cast<char*>(&assetHeader), sizeof(NroAssetHeader))) {
-        return {ResultParseError, "", ""};
+        return {ResultParseError, "", "", false};
     }
-
+    
+    // Validate NACP position
+    const auto nacpPos = nroHeader.size + assetHeader.nacp.offset;
+    if (nacpPos + sizeof(NacpStruct) > fileSize) {
+        return {ResultParseError, "", "", false};
+    }
+    
     // Read NACP struct
-    file.seekg(nroHeader.size + assetHeader.nacp.offset, std::ios::beg);
+    file.seekg(nacpPos, std::ios::beg);
+    NacpStruct nacp;
     if (!file.read(reinterpret_cast<char*>(&nacp), sizeof(NacpStruct))) {
-        return {ResultParseError, "", ""};
+        return {ResultParseError, "", "", false};
     }
-
-    file.close();
 #endif
-
-    // Assuming nacp.lang[0].name and nacp.display_version are null-terminated
+    
+    // Optimized string construction using string_view-like approach
+    // Find string ends using pointer arithmetic (faster than indexing)
+    const char* nameStart = nacp.lang[0].name;
+    const char* nameEnd = nameStart;
+    const char* nameLimit = nameStart + sizeof(nacp.lang[0].name);
+    while (nameEnd < nameLimit && *nameEnd != '\0') ++nameEnd;
+    
+    const char* versionStart = nacp.display_version;
+    const char* versionEnd = versionStart;
+    const char* versionLimit = versionStart + sizeof(nacp.display_version);
+    while (versionEnd < versionLimit && *versionEnd != '\0') ++versionEnd;
+    
     return {
         ResultSuccess,
-        std::string(nacp.lang[0].name),
-        std::string(nacp.display_version)
+        std::string(nameStart, nameEnd - nameStart),
+        std::string(versionStart, versionEnd - versionStart),
+        isUltrahandOverlay
     };
 }
-
-
 
 void addHeader(auto& list, const std::string& headerText) {
     list->addItem(new tsl::elm::CategoryHeader(headerText));
@@ -3546,6 +3610,9 @@ void rebootToHekateConfig(Payload::HekateConfigList& configList, const std::stri
     }
 }
 
+
+bool goBackAfter = false;
+
 // Main processCommand function
 void processCommand(const std::vector<std::string>& cmd, const std::string& packagePath = "", const std::string& selectedCommand = "") {
     const std::string& commandName = cmd[0];
@@ -3706,7 +3773,45 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
     } else if (commandName == "reboot") { // credits to Studious Pancake for the Payload and utils methods
         //spsmInitialize();
         //i2cInitialize();
-        if (util::IsErista() || util::SupportsMarikoRebootToConfig()) {
+        bool launchUpdaterPayload = false;
+        // Check each protected file for a corresponding `.ultra` file
+        for (const std::string& file : PROTECTED_FILES) {
+            if (isFile(file + ".ultra")) {
+                // If found, download the updater payload and mark for launch
+                launchUpdaterPayload = true;
+                break;
+            }
+        }
+    
+        if (launchUpdaterPayload) {
+            std::string rebootOption = PAYLOADS_PATH + "ultrahand_updater.bin";
+            if (!isFile(rebootOption)) {
+                downloadFile(UPDATER_PAYLOAD_URL, PAYLOADS_PATH, true);
+                downloadPercentage.store(-1, std::memory_order_release);
+            }
+            if (isFile(rebootOption)) {
+                std::string fileName = getNameFromPath(rebootOption);
+    
+                if (util::IsErista()) {
+                    Payload::PayloadConfig reboot_payload = { fileName, rebootOption };
+                    Payload::RebootToPayload(reboot_payload);
+                } else {
+                    // Strip ROOT_PATH from rebootOption before using in ini
+                    std::string strippedRebootOption = rebootOption;
+                    if (strippedRebootOption.find(ROOT_PATH) == 0) {
+                        strippedRebootOption = strippedRebootOption.substr(ROOT_PATH.length());
+                    }
+                    
+                    deleteFileOrDirectory("/bootloader/ini/" + fileName + ".ini");
+                    setIniFileValue("/bootloader/ini/" + fileName + ".ini", fileName, "payload", strippedRebootOption);
+                    Payload::HekateConfigList iniConfigList = Payload::LoadIniConfigList();
+                    rebootToHekateConfig(iniConfigList, fileName, true);
+                }
+            } else {
+                launchUpdaterPayload = false; // failed to find payload
+            }
+        }
+        if (!launchUpdaterPayload && (util::IsErista() || util::SupportsMarikoRebootToConfig())) {
             std::string rebootOption;
             if (cmd.size() >= 2) {
                 rebootOption = cmd[1];
@@ -3726,13 +3831,19 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                     Payload::RebootToHekateUMS(Payload::UmsTarget_Sd);
                 } else if (rebootOption == "HEKATE" || rebootOption == "hekate") {
                     Payload::RebootToHekateMenu();
-                } else if (isFileOrDirectory(rebootOption)) {
+                } else if (isFile(rebootOption)) {
                     std::string fileName = getNameFromPath(rebootOption);
                     if (util::IsErista()) {
                         Payload::PayloadConfig reboot_payload = {fileName, rebootOption};
                         Payload::RebootToPayload(reboot_payload);
                     } else {
-                        setIniFileValue("/bootloader/ini/" + fileName + ".ini", fileName, "payload", rebootOption);
+                        // Strip ROOT_PATH from rebootOption before using in ini
+                        std::string strippedRebootOption = rebootOption;
+                        if (strippedRebootOption.find(ROOT_PATH) == 0) {
+                            strippedRebootOption = strippedRebootOption.substr(ROOT_PATH.length());
+                        }
+                        
+                        setIniFileValue("/bootloader/ini/" + fileName + ".ini", fileName, "payload", strippedRebootOption);
                         Payload::HekateConfigList iniConfigList = Payload::LoadIniConfigList();
                         rebootToHekateConfig(iniConfigList, fileName, true);
                     }
@@ -3785,7 +3896,8 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
         tsl::Overlay::get()->close();
         return;
     } else if (commandName == "back") {
-        simulatedBack.exchange(true, std::memory_order_acq_rel);
+        goBackAfter = true;
+        
     } else if (commandName == "backlight") {
         if (cmd.size() >= 2) {
             std::string togglePattern = cmd[1];

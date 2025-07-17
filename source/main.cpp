@@ -344,7 +344,11 @@ private:
     void removeKeyComboFromOthers(const std::string& keyCombo) {
         auto overlayNames = getOverlayNames(); // Get all overlay names
         std::string existingCombo;
-        
+        std::string comboListStr;
+        std::vector<std::string> comboList;
+        bool modified;
+        std::string newComboStr;
+
         for (const auto& overlayName : overlayNames) {
             // 1. Remove from main key_combo field if it matches
             existingCombo = parseValueFromIniSection(OVERLAYS_INI_FILEPATH, overlayName, KEY_COMBO_STR);
@@ -353,10 +357,10 @@ private:
             }
             
             // 2. Remove from mode_combos list if any element matches
-            std::string comboListStr = parseValueFromIniSection(OVERLAYS_INI_FILEPATH, overlayName, "mode_combos");
+            comboListStr = parseValueFromIniSection(OVERLAYS_INI_FILEPATH, overlayName, "mode_combos");
             if (!comboListStr.empty()) {
-                std::vector<std::string> comboList = splitIniList(comboListStr);
-                bool modified = false;
+                comboList = splitIniList(comboListStr);
+                modified = false;
                 
                 for (std::string& combo : comboList) {
                     if (!combo.empty() && tsl::hlp::comboStringToKeys(combo) == tsl::hlp::comboStringToKeys(keyCombo)) {
@@ -366,7 +370,7 @@ private:
                 }
                 
                 if (modified) {
-                    std::string newComboStr = "(" + joinIniList(comboList) + ")";
+                    newComboStr = "(" + joinIniList(comboList) + ")";
                     setIniFileValue(OVERLAYS_INI_FILEPATH, overlayName, "mode_combos", newComboStr);
                 }
             }
@@ -479,6 +483,7 @@ private:
                     interpreterCommands = {
                         {"try:"},
                         {"delete", targetPath},
+                        {"download", UPDATER_PAYLOAD_URL, PAYLOADS_PATH},
                         {"download", INCLUDED_THEME_FOLDER_URL + "ultra.ini", THEMES_PATH},
                         {"download", INCLUDED_THEME_FOLDER_URL + "ultra-blue.ini", THEMES_PATH}
                     };
@@ -1073,6 +1078,11 @@ public:
             lastSelectedListItem->setValue(commandSuccess ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
             closeInterpreterThread();
             lastRunningInterpreter = false;
+            return true;
+        }
+        if (goBackAfter) {
+            goBackAfter = false;
+            simulatedBack.exchange(true, std::memory_order_acq_rel);
             return true;
         }
 
@@ -1724,6 +1734,11 @@ public:
             lastRunningInterpreter = false;
             return true;
         }
+        if (goBackAfter) {
+            goBackAfter = false;
+            simulatedBack.exchange(true, std::memory_order_acq_rel);
+            return true;
+        }
 
         if (inSettingsMenu && !inSubSettingsMenu) {
             if (!returningToSettings) {
@@ -2075,6 +2090,11 @@ public:
             lastSelectedListItem->setValue(commandSuccess ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
             closeInterpreterThread();
             lastRunningInterpreter = false;
+            return true;
+        }
+        if (goBackAfter) {
+            goBackAfter = false;
+            simulatedBack.exchange(true, std::memory_order_acq_rel);
             return true;
         }
 
@@ -2801,7 +2821,7 @@ public:
                         
                         if (commandMode == OPTION_STR) {
                             selectedFooterDict[specifiedFooterKey] = listItem->getText();
-                            if (lastSelectedListItem)
+                            if (lastSelectedListItem != listItem)
                                 lastSelectedListItem->setValue(lastSelectedListItemFooter, true);
                             //std::string footerStr = std::string(footer);
                             lastSelectedListItemFooter = footer;
@@ -3005,6 +3025,11 @@ public:
             lastSelectedListItem->setValue(commandSuccess ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
             closeInterpreterThread();
             lastRunningInterpreter = false;
+            return true;
+        }
+        if (goBackAfter) {
+            goBackAfter = false;
+            simulatedBack.exchange(true, std::memory_order_acq_rel);
             return true;
         }
 
@@ -4681,6 +4706,12 @@ public:
             return true;
         }
 
+        if (goBackAfter) {
+            goBackAfter = false;
+            simulatedBack.exchange(true, std::memory_order_acq_rel);
+            return true;
+        }
+
         
         if (!returningToPackage && !stillTouching.load(std::memory_order_acquire)) {
             if (refreshPage) {
@@ -5114,11 +5145,11 @@ public:
         bool inOverlay = false;
         
         // Loop variables
+        bool isUltrahandOverlay = false;
         std::string overlayFileName, overlayName, overlayVersion, assignedOverlayName, assignedOverlayVersion;
         std::string baseOverlayInfo, fullOverlayInfo, priority, starred, hide, useLaunchArgs, launchArgs;
         std::string customName, customVersion, overlayFile, newOverlayName;
         std::string taintedOverlayFileName, packageName, packageVersion, tempPackageName, newPackageName, packageFilePath;
-        size_t lastUnderscorePos, secondLastUnderscorePos, thirdLastUnderscorePos;
         size_t lastColonPos, secondLastColonPos, thirdLastColonPos;
         bool overlayStarred, newStarred, packageStarred;
         bool foundOvlmenu = false;
@@ -5295,7 +5326,7 @@ public:
             std::vector<std::string> overlayFiles = getFilesListByWildcards(OVERLAY_PATH+"*.ovl");
             
             
-            #if NO_FSTREAM_DIRECTIVE
+            #if !USING_FSTREAM_DIRECTIVE
             
             // Check if the overlays INI file exists
             FILE* overlaysIniFile = fopen(OVERLAYS_INI_FILEPATH.c_str(), "r"); // Use .c_str() to convert to const char*
@@ -5356,6 +5387,7 @@ public:
     
                 auto it = overlaysIniData.end();
                 // Process overlay files
+                bool drawHiddenTab = false;
                 for (const auto& overlayFile : overlayFiles) {
                     overlayFileName = getNameFromPath(overlayFile);
                     
@@ -5369,37 +5401,44 @@ public:
                         setIniFileValue(OVERLAYS_INI_FILEPATH, overlayFileName, LAUNCH_ARGS_STR, "");
                         setIniFileValue(OVERLAYS_INI_FILEPATH, overlayFileName, "custom_name", "");
                         setIniFileValue(OVERLAYS_INI_FILEPATH, overlayFileName, "custom_version", "");
-                        const auto& [result, overlayName, overlayVersion] = getOverlayInfo(OVERLAY_PATH + overlayFileName);
+                        const auto& [result, overlayName, overlayVersion, isUltrahandOverlay] = getOverlayInfo(OVERLAY_PATH + overlayFileName);
                         if (result != ResultSuccess) continue;
     
                         // Use retrieved overlay info
                         assignedOverlayName = overlayName;
                         assignedOverlayVersion = overlayVersion;
                     
-                        baseOverlayInfo = "0020" + assignedOverlayName + ":" + assignedOverlayName + ":" + assignedOverlayVersion + ":" + overlayFileName;
+                        //baseOverlayInfo = "0020" + assignedOverlayName + ":" + assignedOverlayName + ":" + assignedOverlayVersion + ":" + overlayFileName;
+                        baseOverlayInfo = "0020" + assignedOverlayName + ":" + assignedOverlayName + ":" + assignedOverlayVersion + ":" + overlayFileName + ":" + (isUltrahandOverlay ? "1" : "0");
                         overlayList.insert(baseOverlayInfo);
                     } else {
-                        priority = getValueOrDefault(it->second, PRIORITY_STR, "20", formatPriorityString, 1);
-                        starred = getValueOrDefault(it->second, STAR_STR, FALSE_STR);
                         hide = getValueOrDefault(it->second, HIDE_STR, FALSE_STR);
-                        useLaunchArgs = getValueOrDefault(it->second, USE_LAUNCH_ARGS_STR, FALSE_STR);
-                        launchArgs = getValueOrDefault(it->second, LAUNCH_ARGS_STR, "");
-                        customName = getValueOrDefault(it->second, "custom_name", "");
-                        customVersion = getValueOrDefault(it->second, "custom_version", "");
-                        
-                        const auto& [result, overlayName, overlayVersion] = getOverlayInfo(OVERLAY_PATH + overlayFileName);
-                        if (result != ResultSuccess) continue;
-    
-                        assignedOverlayName = !customName.empty() ? customName : overlayName;
-                        assignedOverlayVersion = !customVersion.empty() ? customVersion : overlayVersion;
-                        
-                        baseOverlayInfo = priority + assignedOverlayName + ":" + assignedOverlayName + ":" + assignedOverlayVersion + ":" + overlayFileName;
-                        fullOverlayInfo = (starred == TRUE_STR) ? "-1:" + baseOverlayInfo : baseOverlayInfo;
-                        
-                        if (hide == FALSE_STR) {
-                            overlayList.insert(fullOverlayInfo);
-                        } else {
-                            hiddenOverlayList.insert(fullOverlayInfo);
+                        if (hide == TRUE_STR)
+                            drawHiddenTab = true;
+                        if ((!inHiddenMode && hide == FALSE_STR) || (inHiddenMode && hide == TRUE_STR)) {
+                            priority = getValueOrDefault(it->second, PRIORITY_STR, "20", formatPriorityString, 1);
+                            starred = getValueOrDefault(it->second, STAR_STR, FALSE_STR);
+                            
+                            useLaunchArgs = getValueOrDefault(it->second, USE_LAUNCH_ARGS_STR, FALSE_STR);
+                            launchArgs = getValueOrDefault(it->second, LAUNCH_ARGS_STR, "");
+                            customName = getValueOrDefault(it->second, "custom_name", "");
+                            customVersion = getValueOrDefault(it->second, "custom_version", "");
+                            
+                            const auto& [result, overlayName, overlayVersion, isUltrahandOverlay] = getOverlayInfo(OVERLAY_PATH + overlayFileName);
+                            if (result != ResultSuccess) continue;
+                            
+                            assignedOverlayName = !customName.empty() ? customName : overlayName;
+                            assignedOverlayVersion = !customVersion.empty() ? customVersion : overlayVersion;
+                            
+                            //baseOverlayInfo = priority + assignedOverlayName + ":" + assignedOverlayName + ":" + assignedOverlayVersion + ":" + overlayFileName;
+                            baseOverlayInfo = priority + assignedOverlayName + ":" + assignedOverlayName + ":" + assignedOverlayVersion + ":" + overlayFileName + ":" + (isUltrahandOverlay ? "1" : "0");
+                            fullOverlayInfo = (starred == TRUE_STR) ? "-1:" + baseOverlayInfo : baseOverlayInfo;
+                            
+                            if (!inHiddenMode) {
+                                overlayList.insert(fullOverlayInfo);
+                            } else {
+                                hiddenOverlayList.insert(fullOverlayInfo);
+                            }
                         }
                     }
                 }
@@ -5407,12 +5446,13 @@ public:
                 overlaysIniData.clear();
                 
                 if (inHiddenMode) {
-                    overlayList = hiddenOverlayList;
-                    hiddenOverlayList.clear();
+                    overlayList = std::move(hiddenOverlayList);
+                    //hiddenOverlayList.clear();
                 }
                 
                 // Process overlay list items
                 for (const auto& taintedOverlayFileName : overlayList) {
+                    isUltrahandOverlay = false;
                     overlayFileName = "";
                     overlayStarred = false;
                     overlayVersion = "";
@@ -5421,23 +5461,30 @@ public:
                     // Detect if starred
                     overlayStarred = (taintedOverlayFileName.substr(0, 3) == "-1:");
                     
-                    // Find the position of the last underscore
-                    lastUnderscorePos = taintedOverlayFileName.rfind(':');
-                    // Check if an underscore was found
-                    if (lastUnderscorePos != std::string::npos) {
-                        // Extract overlayFileName starting from the character after the last underscore
-                        overlayFileName = taintedOverlayFileName.substr(lastUnderscorePos + 1);
+                    // Find the position of the last colon (isUltrahandOverlay flag)
+                    lastColonPos = taintedOverlayFileName.rfind(':');
+                    if (lastColonPos != std::string::npos) {
+                        // Extract isUltrahandOverlay flag
+                        isUltrahandOverlay = (taintedOverlayFileName.substr(lastColonPos + 1) == "1");
                         
-                        // Now, find the position of the second-to-last underscore
-                        secondLastUnderscorePos = taintedOverlayFileName.rfind(':', lastUnderscorePos - 1);
-                        
-                        if (secondLastUnderscorePos != std::string::npos) {
-                            // Extract overlayName between the two underscores
-                            overlayVersion = taintedOverlayFileName.substr(secondLastUnderscorePos + 1, lastUnderscorePos - secondLastUnderscorePos - 1);
-                            // Now, find the position of the second-to-last underscore
-                            thirdLastUnderscorePos = taintedOverlayFileName.rfind(':', secondLastUnderscorePos - 1);
-                            if (secondLastUnderscorePos != std::string::npos)
-                                overlayName = taintedOverlayFileName.substr(thirdLastUnderscorePos + 1, secondLastUnderscorePos - thirdLastUnderscorePos - 1);
+                        // Find the position of the second-to-last colon (overlayFileName)
+                        secondLastColonPos = taintedOverlayFileName.rfind(':', lastColonPos - 1);
+                        if (secondLastColonPos != std::string::npos) {
+                            // Extract overlayFileName
+                            overlayFileName = taintedOverlayFileName.substr(secondLastColonPos + 1, lastColonPos - secondLastColonPos - 1);
+                            
+                            // Find the position of the third-to-last colon (overlayVersion)
+                            thirdLastColonPos = taintedOverlayFileName.rfind(':', secondLastColonPos - 1);
+                            if (thirdLastColonPos != std::string::npos) {
+                                // Extract overlayVersion
+                                overlayVersion = taintedOverlayFileName.substr(thirdLastColonPos + 1, secondLastColonPos - thirdLastColonPos - 1);
+                                
+                                // Find the position of the fourth-to-last colon (overlayName)
+                                size_t fourthLastColonPos = taintedOverlayFileName.rfind(':', thirdLastColonPos - 1);
+                                if (fourthLastColonPos != std::string::npos) {
+                                    overlayName = taintedOverlayFileName.substr(fourthLastColonPos + 1, thirdLastColonPos - fourthLastColonPos - 1);
+                                }
+                            }
                         }
                     }
 
@@ -5453,8 +5500,10 @@ public:
                         //std::string originalOverlayVersion = overlayVersion.c_str();
                         if (cleanVersionLabels)
                             overlayVersion = cleanVersionLabel(overlayVersion);
-                        if (!hideOverlayVersions)
-                            listItem->setValue(overlayVersion, true, true);
+                        if (!hideOverlayVersions) {
+                            //listItem->setValue(overlayVersion, true, true);
+                            listItem->setValue(overlayVersion, !isUltrahandOverlay ? true : false, !isUltrahandOverlay ? true : false);
+                        }
                         
 
                         if (overlayFileName == g_overlayFilename) {
@@ -5541,9 +5590,9 @@ public:
                     if (listItem != nullptr)
                         list->addItem(listItem);
                 }
-                overlayList.clear();
+                //overlayList.clear();
                 
-                if (!hiddenOverlayList.empty() && !inHiddenMode && !hideHidden) {
+                if (drawHiddenTab && !inHiddenMode && !hideHidden) {
                     listItem = new tsl::elm::ListItem(HIDDEN, DROPDOWN_SYMBOL);
                     
                     listItem->setClickListener([](uint64_t keys) {
@@ -5578,7 +5627,7 @@ public:
         if (menuMode == PACKAGES_STR ) {
 
             if (!isFileOrDirectory(PACKAGE_PATH + PACKAGE_FILENAME)) {
-            #if NO_FSTREAM_DIRECTIVE
+            #if !USING_FSTREAM_DIRECTIVE
                 // Using stdio.h functions (FILE* and fprintf)
                 FILE* packageFileOut = fopen((PACKAGE_PATH + PACKAGE_FILENAME).c_str(), "w");
                 if (packageFileOut) {
@@ -5628,7 +5677,7 @@ public:
                 createDirectory(PACKAGE_PATH);
                 
                 
-                #if NO_FSTREAM_DIRECTIVE
+                #if !USING_FSTREAM_DIRECTIVE
                 // Using stdio.h functions (FILE* and fopen)
                 FILE* packagesIniFile = fopen(PACKAGES_INI_FILEPATH.c_str(), "r");
                 if (!packagesIniFile) {
@@ -5677,6 +5726,8 @@ public:
                 PackageHeader packageHeader;
     
                 auto packageIt = packagesIniData.end();
+
+                bool drawHiddenTab = false;
                 for (const auto& packageName: subdirectories) {
                     packageIt = packagesIniData.find(packageName);
                     if (packageIt == packagesIniData.end()) {
@@ -5700,33 +5751,38 @@ public:
     
                     } else {
                         // Process existing package data
-                        priority = (packageIt->second.find(PRIORITY_STR) != packageIt->second.end()) ? 
-                                    formatPriorityString(packageIt->second[PRIORITY_STR]) : "0020";
-                        starred = (packageIt->second.find(STAR_STR) != packageIt->second.end()) ? 
-                                  packageIt->second[STAR_STR] : FALSE_STR;
                         hide = (packageIt->second.find(HIDE_STR) != packageIt->second.end()) ? 
                                packageIt->second[HIDE_STR] : FALSE_STR;
-                        
-                        customName = getValueOrDefault(packageIt->second, "custom_name", "");
-                        customVersion = getValueOrDefault(packageIt->second, "custom_version", "");
-    
-                        packageHeader = getPackageHeaderFromIni(PACKAGE_PATH + packageName+ "/" +PACKAGE_FILENAME);
-                        
-                        if (cleanVersionLabels) {
-                            packageHeader.version = cleanVersionLabel(packageHeader.version);
-                            removeQuotes(packageHeader.version);
-                        }
-    
-                        assignedOverlayName = !customName.empty() ? customName : 
-                                             (packageHeader.title.empty() ? packageName : packageHeader.title);
-                        assignedOverlayVersion = !customVersion.empty() ? customVersion : packageHeader.version;
-    
-                        baseOverlayInfo = priority + ":" + assignedOverlayName + ":" + assignedOverlayVersion + ":" + packageName;
-                        fullOverlayInfo = (starred == TRUE_STR) ? "-1:" + baseOverlayInfo : baseOverlayInfo;
-                        if (hide == FALSE_STR) {
-                            packageList.insert(fullOverlayInfo);
-                        } else {
-                            hiddenPackageList.insert(fullOverlayInfo);
+
+                        if (hide == TRUE_STR)
+                            drawHiddenTab = true;
+                        if ((!inHiddenMode && hide == FALSE_STR) || (inHiddenMode && hide == TRUE_STR)) {
+                            priority = (packageIt->second.find(PRIORITY_STR) != packageIt->second.end()) ? 
+                                        formatPriorityString(packageIt->second[PRIORITY_STR]) : "0020";
+                            starred = (packageIt->second.find(STAR_STR) != packageIt->second.end()) ? 
+                                      packageIt->second[STAR_STR] : FALSE_STR;
+                            
+                            customName = getValueOrDefault(packageIt->second, "custom_name", "");
+                            customVersion = getValueOrDefault(packageIt->second, "custom_version", "");
+                            
+                            packageHeader = getPackageHeaderFromIni(PACKAGE_PATH + packageName+ "/" +PACKAGE_FILENAME);
+                            
+                            if (cleanVersionLabels) {
+                                packageHeader.version = cleanVersionLabel(packageHeader.version);
+                                removeQuotes(packageHeader.version);
+                            }
+                            
+                            assignedOverlayName = !customName.empty() ? customName : 
+                                                 (packageHeader.title.empty() ? packageName : packageHeader.title);
+                            assignedOverlayVersion = !customVersion.empty() ? customVersion : packageHeader.version;
+                            
+                            baseOverlayInfo = priority + ":" + assignedOverlayName + ":" + assignedOverlayVersion + ":" + packageName;
+                            fullOverlayInfo = (starred == TRUE_STR) ? "-1:" + baseOverlayInfo : baseOverlayInfo;
+                            if (!inHiddenMode) {
+                                packageList.insert(fullOverlayInfo);
+                            } else {
+                                hiddenPackageList.insert(fullOverlayInfo);
+                            }
                         }
                     }
                 }
@@ -5736,8 +5792,8 @@ public:
                 subdirectories.shrink_to_fit();
                 
                 if (inHiddenMode) {
-                    packageList = hiddenPackageList;
-                    hiddenPackageList.clear();
+                    packageList = std::move(hiddenPackageList);
+                    //hiddenPackageList.clear();
                 }
                 bool firstItem = true;
                 for (const auto& taintedPackageName : packageList) {
@@ -5877,9 +5933,9 @@ public:
                             list->addItem(listItem);
                     }
                 }
-                packageList.clear();
+                //packageList.clear();
                 
-                if (!hiddenPackageList.empty() && !inHiddenMode && !hideHidden) {
+                if (drawHiddenTab && !inHiddenMode && !hideHidden) {
                     listItem = new tsl::elm::ListItem(HIDDEN, DROPDOWN_SYMBOL);
                     listItem->setClickListener([](uint64_t keys) {
                         if (runningInterpreter.load(std::memory_order_acquire))
@@ -6014,7 +6070,11 @@ public:
             lastRunningInterpreter = false;
             return true;
         }
-
+        if (goBackAfter) {
+            goBackAfter = false;
+            simulatedBack.exchange(true, std::memory_order_acq_rel);
+            return true;
+        }
 
 
         if (refreshPage && !stillTouching.load(std::memory_order_acquire)) {
