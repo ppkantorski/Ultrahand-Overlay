@@ -5504,10 +5504,14 @@ public:
                             //listItem->setValue(overlayVersion, true, true);
                             listItem->setValue(overlayVersion, true);
 
-                            if (usingLibUltrahand)
+                            if (usingLibUltrahand) {
+                                listItem->setTextColor(tsl::overlayEntryTextColor);
                                 listItem->setValueColor(tsl::overlayVersionTextColor);
-                            else
+                            }
+                            else {
+                                listItem->setTextColor(tsl::tslOverlayEntryTextColor);
                                 listItem->setValueColor(tsl::tslOverlayVersionTextColor);
+                            }
                         }
                         
 
@@ -5843,6 +5847,7 @@ public:
                         listItem = new tsl::elm::ListItem(packageStarred ? STAR_SYMBOL + "  " + newPackageName : newPackageName);
                         if (!hidePackageVersions) {
                             listItem->setValue(packageVersion, true);
+                            listItem->setTextColor(tsl::packageEntryTextColor);
                             listItem->setValueColor(tsl::packageVersionTextColor);
                         }
 
