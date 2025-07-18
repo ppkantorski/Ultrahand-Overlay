@@ -73,7 +73,7 @@ include ${TOPDIR}/lib/libultrahand/ultrahand.mk
 #---------------------------------------------------------------------------------
 ARCH := -march=armv8-a+simd+crc+crypto -mtune=cortex-a57 -mtp=soft -fPIE
 
-CFLAGS := -g -Wall -Os -ffunction-sections -fdata-sections -flto -fomit-frame-pointer -finline-small-functions \
+CFLAGS := -g -Wall -Os -ffunction-sections -fdata-sections -flto -fuse-linker-plugin -fomit-frame-pointer -finline-small-functions \
 			$(ARCH) $(DEFINES)
 
 CFLAGS += $(INCLUDE) -D__SWITCH__ -DAPP_VERSION="\"$(APP_VERSION)\"" -D_FORTIFY_SOURCE=2
@@ -98,9 +98,12 @@ CFLAGS += -DUSING_LOGGING_DIRECTIVE=$(USING_LOGGING_DIRECTIVE)
 USING_FPS_INDICATOR_DIRECTIVE := 0
 CFLAGS += -DUSING_FPS_INDICATOR_DIRECTIVE=$(USING_FPS_INDICATOR_DIRECTIVE)
 
+# Add Ultrahand signature for overlay detection
+CFLAGS += -DULTRAHAND_SIGNATURE=\"ULTRAHAND\"
+
 # Disable fstream (ideally for other overlays that dont want to use fstream)
-NO_FSTREAM_DIRECTIVE := 1
-CFLAGS += -DNO_FSTREAM_DIRECTIVE=$(NO_FSTREAM_DIRECTIVE)
+#USING_FSTREAM_DIRECTIVE := 0
+#CFLAGS += -DUSING_FSTREAM_DIRECTIVE=$(USING_FSTREAM_DIRECTIVE)
 #---------------------------------------------------------------------------------
 
 
@@ -115,9 +118,33 @@ LIBS := -lcurl -lz -lminizip -lmbedtls -lmbedx509 -lmbedcrypto -lnx
 CXXFLAGS += -fno-exceptions -ffunction-sections -fdata-sections -fno-rtti
 LDFLAGS += -Wl,--as-needed -Wl,--gc-sections
 
-# For Ensuring Parallel LTRANS Jobs w/ GCC, make -j6
-CXXFLAGS += -flto -fuse-linker-plugin -flto=6
-LDFLAGS += -flto=6
+# For Ensuring Parallel LTRANS Jobs w/ GCC, make -j N (for convenience)
+# ------------------------------------------------------------
+# Detect how many logical CPUs are available, cross-platform
+# ------------------------------------------------------------
+NPROC := $(shell \
+	getconf _NPROCESSORS_ONLN 2>/dev/null || \
+	nproc 2>/dev/null || \
+	sysctl -n hw.ncpu 2>/dev/null || \
+	echo 1)
+
+# Fallback if detection somehow failed
+ifeq ($(strip $(NPROC)),)
+	NPROC := 1
+endif
+
+# ------------------------------------------------------------
+# Set parallelism flags only if user didn't pass -j manually
+# ------------------------------------------------------------
+ifeq (,$(filter -j -j%,$(MAKEFLAGS)))
+	MAKEFLAGS += -j$(NPROC)
+endif
+
+# ------------------------------------------------------------
+# Enable link-time optimization with parallel jobs
+# ------------------------------------------------------------
+CXXFLAGS += -flto=$(NPROC)
+LDFLAGS  += -flto=$(NPROC)
 
 
 # Add -z notext to LDFLAGS to allow dynamic relocations in read-only segments
@@ -229,7 +256,7 @@ all: $(BUILD)
 
 $(BUILD):
 	@[ -d $@ ] || mkdir -p $@
-	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
+	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile MAKEFLAGS="$(filter-out -j% -j,$(MAKEFLAGS)) -j"
 
 	@rm -rf out/
 	@mkdir -p out/switch/.overlays/
@@ -262,7 +289,8 @@ all : $(OUTPUT).ovl
 $(OUTPUT).ovl: $(OUTPUT).elf $(OUTPUT).nacp 
 	@elf2nro $< $@ $(NROFLAGS)
 	@echo "built ... $(notdir $(OUTPUT).ovl)"
-
+	@printf 'ULTR' >> $@
+	@printf "Ultrahand signature has been added.\n"
 
 
 $(OUTPUT).elf: $(OFILES)
