@@ -5505,9 +5505,9 @@ public:
                             listItem->setValue(overlayVersion, true);
 
                             if (usingLibUltrahand)
-                                listItem->setValueColor(tsl::onTextColor);
+                                listItem->setValueColor(tsl::overlayVersionTextColor);
                             else
-                                listItem->setValueColor(tsl::versionTextColor);
+                                listItem->setValueColor(tsl::tslOverlayVersionTextColor);
                         }
                         
 
@@ -5843,7 +5843,7 @@ public:
                         listItem = new tsl::elm::ListItem(packageStarred ? STAR_SYMBOL + "  " + newPackageName : newPackageName);
                         if (!hidePackageVersions) {
                             listItem->setValue(packageVersion, true);
-                            listItem->setValueColor(tsl::versionTextColor);
+                            listItem->setValueColor(tsl::packageVersionTextColor);
                         }
 
                         
