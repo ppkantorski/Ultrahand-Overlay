@@ -5145,7 +5145,7 @@ public:
         bool inOverlay = false;
         
         // Loop variables
-        bool isUltrahandOverlay = false;
+        bool usingLibUltrahand = false;
         std::string overlayFileName, overlayName, overlayVersion, assignedOverlayName, assignedOverlayVersion;
         std::string baseOverlayInfo, fullOverlayInfo, priority, starred, hide, useLaunchArgs, launchArgs;
         std::string customName, customVersion, overlayFile, newOverlayName;
@@ -5401,7 +5401,7 @@ public:
                         setIniFileValue(OVERLAYS_INI_FILEPATH, overlayFileName, LAUNCH_ARGS_STR, "");
                         setIniFileValue(OVERLAYS_INI_FILEPATH, overlayFileName, "custom_name", "");
                         setIniFileValue(OVERLAYS_INI_FILEPATH, overlayFileName, "custom_version", "");
-                        const auto& [result, overlayName, overlayVersion, isUltrahandOverlay] = getOverlayInfo(OVERLAY_PATH + overlayFileName);
+                        const auto& [result, overlayName, overlayVersion, usingLibUltrahand] = getOverlayInfo(OVERLAY_PATH + overlayFileName);
                         if (result != ResultSuccess) continue;
     
                         // Use retrieved overlay info
@@ -5409,7 +5409,7 @@ public:
                         assignedOverlayVersion = overlayVersion;
                     
                         //baseOverlayInfo = "0020" + assignedOverlayName + ":" + assignedOverlayName + ":" + assignedOverlayVersion + ":" + overlayFileName;
-                        baseOverlayInfo = "0020" + assignedOverlayName + ":" + assignedOverlayName + ":" + assignedOverlayVersion + ":" + overlayFileName + ":" + (isUltrahandOverlay ? "1" : "0");
+                        baseOverlayInfo = "0020" + assignedOverlayName + ":" + assignedOverlayName + ":" + assignedOverlayVersion + ":" + overlayFileName + ":" + (usingLibUltrahand ? "1" : "0");
                         overlayList.insert(baseOverlayInfo);
                     } else {
                         hide = getValueOrDefault(it->second, HIDE_STR, FALSE_STR);
@@ -5424,14 +5424,14 @@ public:
                             customName = getValueOrDefault(it->second, "custom_name", "");
                             customVersion = getValueOrDefault(it->second, "custom_version", "");
                             
-                            const auto& [result, overlayName, overlayVersion, isUltrahandOverlay] = getOverlayInfo(OVERLAY_PATH + overlayFileName);
+                            const auto& [result, overlayName, overlayVersion, usingLibUltrahand] = getOverlayInfo(OVERLAY_PATH + overlayFileName);
                             if (result != ResultSuccess) continue;
                             
                             assignedOverlayName = !customName.empty() ? customName : overlayName;
                             assignedOverlayVersion = !customVersion.empty() ? customVersion : overlayVersion;
                             
                             //baseOverlayInfo = priority + assignedOverlayName + ":" + assignedOverlayName + ":" + assignedOverlayVersion + ":" + overlayFileName;
-                            baseOverlayInfo = priority + assignedOverlayName + ":" + assignedOverlayName + ":" + assignedOverlayVersion + ":" + overlayFileName + ":" + (isUltrahandOverlay ? "1" : "0");
+                            baseOverlayInfo = priority + assignedOverlayName + ":" + assignedOverlayName + ":" + assignedOverlayVersion + ":" + overlayFileName + ":" + (usingLibUltrahand ? "1" : "0");
                             fullOverlayInfo = (starred == TRUE_STR) ? "-1:" + baseOverlayInfo : baseOverlayInfo;
                             
                             if (!inHiddenMode) {
@@ -5452,7 +5452,7 @@ public:
                 
                 // Process overlay list items
                 for (const auto& taintedOverlayFileName : overlayList) {
-                    isUltrahandOverlay = false;
+                    usingLibUltrahand = false;
                     overlayFileName = "";
                     overlayStarred = false;
                     overlayVersion = "";
@@ -5461,11 +5461,11 @@ public:
                     // Detect if starred
                     overlayStarred = (taintedOverlayFileName.substr(0, 3) == "-1:");
                     
-                    // Find the position of the last colon (isUltrahandOverlay flag)
+                    // Find the position of the last colon (usingLibUltrahand flag)
                     lastColonPos = taintedOverlayFileName.rfind(':');
                     if (lastColonPos != std::string::npos) {
-                        // Extract isUltrahandOverlay flag
-                        isUltrahandOverlay = (taintedOverlayFileName.substr(lastColonPos + 1) == "1");
+                        // Extract usingLibUltrahand flag
+                        usingLibUltrahand = (taintedOverlayFileName.substr(lastColonPos + 1) == "1");
                         
                         // Find the position of the second-to-last colon (overlayFileName)
                         secondLastColonPos = taintedOverlayFileName.rfind(':', lastColonPos - 1);
@@ -5502,7 +5502,12 @@ public:
                             overlayVersion = cleanVersionLabel(overlayVersion);
                         if (!hideOverlayVersions) {
                             //listItem->setValue(overlayVersion, true, true);
-                            listItem->setValue(overlayVersion, !isUltrahandOverlay ? true : false, !isUltrahandOverlay ? true : false);
+                            listItem->setValue(overlayVersion, true);
+
+                            if (usingLibUltrahand)
+                                listItem->setValueColor(tsl::onTextColor);
+                            else
+                                listItem->setValueColor(tsl::versionTextColor);
                         }
                         
 
@@ -5836,8 +5841,11 @@ public:
                     
                     if (isFileOrDirectory(packageFilePath)) {
                         listItem = new tsl::elm::ListItem(packageStarred ? STAR_SYMBOL + "  " + newPackageName : newPackageName);
-                        if (!hidePackageVersions)
-                           listItem->setValue(packageVersion, true, true);
+                        if (!hidePackageVersions) {
+                            listItem->setValue(packageVersion, true);
+                            listItem->setValueColor(tsl::versionTextColor);
+                        }
+
                         
                         // Add a click listener to load the overlay when clicked upon
                         listItem->setClickListener([packageFilePath, newStarred, packageName, newPackageName, packageVersion](s64 keys) {

@@ -934,11 +934,11 @@ std::tuple<Result, std::string, std::string, bool> getOverlayInfo(const std::str
     }
     
     // Check signature and read asset header in one operation
-    bool isUltrahandOverlay = false;
+    bool usingLibUltrahand = false;
     uint32_t signature;
     if (fileSize >= 4 && fseek(file, -4, SEEK_END) == 0 && 
         fread(&signature, 4, 1, file) == 1 && signature == ULTR_SIGNATURE) {
-        isUltrahandOverlay = true;
+        usingLibUltrahand = true;
     }
     
     // Read asset header
@@ -993,12 +993,12 @@ std::tuple<Result, std::string, std::string, bool> getOverlayInfo(const std::str
     }
     
     // Check signature
-    bool isUltrahandOverlay = false;
+    bool usingLibUltrahand = false;
     if (fileSize >= 4) {
         file.seekg(-4, std::ios::end);
         uint32_t signature;
         if (file.read(reinterpret_cast<char*>(&signature), 4) && signature == ULTR_SIGNATURE) {
-            isUltrahandOverlay = true;
+            usingLibUltrahand = true;
         }
     }
     
@@ -1039,7 +1039,7 @@ std::tuple<Result, std::string, std::string, bool> getOverlayInfo(const std::str
         ResultSuccess,
         std::string(nameStart, nameEnd - nameStart),
         std::string(versionStart, versionEnd - versionStart),
-        isUltrahandOverlay
+        usingLibUltrahand
     };
 }
 
