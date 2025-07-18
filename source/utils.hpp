@@ -3804,6 +3804,7 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                     
                     deleteFileOrDirectory("/bootloader/ini/" + fileName + ".ini");
                     setIniFileValue("/bootloader/ini/" + fileName + ".ini", fileName, "payload", strippedRebootOption);
+                    setIniFileValue("/bootloader/ini/" + fileName + ".ini", fileName, "bootwait", "0");
                     Payload::HekateConfigList iniConfigList = Payload::LoadIniConfigList();
                     rebootToHekateConfig(iniConfigList, fileName, true);
                 }
@@ -3844,6 +3845,7 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                         }
                         
                         setIniFileValue("/bootloader/ini/" + fileName + ".ini", fileName, "payload", strippedRebootOption);
+                        setIniFileValue("/bootloader/ini/" + fileName + ".ini", fileName, "bootwait", "0");
                         Payload::HekateConfigList iniConfigList = Payload::LoadIniConfigList();
                         rebootToHekateConfig(iniConfigList, fileName, true);
                     }
