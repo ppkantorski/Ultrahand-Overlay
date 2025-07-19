@@ -85,7 +85,7 @@ static bool usingEmunand = true;
  * and directories.
  */
 
-static std::vector<std::string> getOverlayNames() {
+std::vector<std::string> getOverlayNames() {
     std::vector<std::string> names;
     auto iniData = ult::getParsedDataFromIniFile(ult::OVERLAYS_INI_FILEPATH);
     for (const auto& [sectionName, _] : iniData) {
@@ -94,11 +94,28 @@ static std::vector<std::string> getOverlayNames() {
     return names;
 }
 
+std::vector<std::string> getPackageNames() {
+    std::vector<std::string> names;
+    auto iniData = ult::getParsedDataFromIniFile(ult::PACKAGES_INI_FILEPATH);
+    for (const auto& [sectionName, _] : iniData) {
+        names.push_back(sectionName);
+    }
+    return names;
+}
 
-static void removeKeyComboFromOtherOverlays(const std::string& keyCombo, const std::string& currentOverlay) {
+
+
+void removeKeyComboFromOthers(const std::string& keyCombo, const std::string& currentOverlay) {
+    // Handle overlays (same as your original working function)
     auto overlayNames = getOverlayNames();
     std::string existingCombo;
     
+    bool modified;
+
+    std::string comboListStr;
+    std::vector<std::string> comboList;
+    std::string newComboStr;
+
     for (const auto& overlayName : overlayNames) {
         // 1. Remove from main key_combo field if it matches
         existingCombo = ult::parseValueFromIniSection(ult::OVERLAYS_INI_FILEPATH, overlayName, "key_combo");
@@ -107,10 +124,10 @@ static void removeKeyComboFromOtherOverlays(const std::string& keyCombo, const s
         }
         
         // 2. Remove from mode_combos list - clear ALL instances of this combo
-        std::string comboListStr = ult::parseValueFromIniSection(ult::OVERLAYS_INI_FILEPATH, overlayName, "mode_combos");
-        std::vector<std::string> comboList = splitIniList(comboListStr);
+        comboListStr = ult::parseValueFromIniSection(ult::OVERLAYS_INI_FILEPATH, overlayName, "mode_combos");
+        comboList = splitIniList(comboListStr);
         
-        bool modified = false;
+        modified = false;
         for (size_t i = 0; i < comboList.size(); ++i) {
             if (!comboList[i].empty() && tsl::hlp::comboStringToKeys(comboList[i]) == tsl::hlp::comboStringToKeys(keyCombo)) {
                 comboList[i] = "";  // Clear ALL instances
@@ -120,8 +137,17 @@ static void removeKeyComboFromOtherOverlays(const std::string& keyCombo, const s
         
         // Only update if something was actually removed
         if (modified) {
-            std::string newComboStr = "(" + joinIniList(comboList) + ")";
+            newComboStr = "(" + joinIniList(comboList) + ")";
             ult::setIniFileValue(ult::OVERLAYS_INI_FILEPATH, overlayName, "mode_combos", newComboStr);
+        }
+    }
+    
+    // ADD: Handle packages (simple - they only have main key_combo)
+    auto packageNames = getPackageNames();
+    for (const auto& packageName : packageNames) {
+        existingCombo = ult::parseValueFromIniSection(ult::PACKAGES_INI_FILEPATH, packageName, "key_combo");
+        if (!existingCombo.empty() && tsl::hlp::comboStringToKeys(existingCombo) == tsl::hlp::comboStringToKeys(keyCombo)) {
+            ult::setIniFileValue(ult::PACKAGES_INI_FILEPATH, packageName, "key_combo", "");
         }
     }
 }
@@ -519,11 +545,11 @@ const char* getMemoryType(uint64_t packed_version) {
 const char* getStorageInfo(const std::string& storageType) {
     s64 freeSpace = 0;
     s64 totalSpace = 0;
-    char* buffer = (char*)malloc(30);
+    char* buffer = (char*)malloc(64);  // Increased size for percentage info
 
     FsFileSystem fs;
     Result result;
-    
+
     // Open the appropriate file system based on storage type
     if (storageType == "emmc")
         result = fsOpenBisFileSystem(&fs, FsBisPartitionId_User, "");
@@ -550,19 +576,16 @@ const char* getStorageInfo(const std::string& storageType) {
         return buffer;
     }
 
-    // Calculate the used space
+    // Calculate the used space and usage percentage
     s64 usedSpace = totalSpace - freeSpace;
-
-    // Convert the used, free, and total space from bytes to GB
     float usedSpaceGB = usedSpace / (1024.0f * 1024.0f * 1024.0f);
     float totalSpaceGB = totalSpace / (1024.0f * 1024.0f * 1024.0f);
+    int percentUsed = (totalSpace > 0) ? static_cast<int>((usedSpace * 100) / totalSpace) : 0;
 
-    // Format the used and total space as a string
-    snprintf(buffer, 64, "%.2f GB / %.2f GB", usedSpaceGB, totalSpaceGB);
+    // Format the string with percentage
+    snprintf(buffer, 64, "%.1f GB / %.1f GB (%d%%)", usedSpaceGB, totalSpaceGB, percentUsed);
 
-    // Close the file system
     fsFsClose(&fs);
-
     return buffer;
 }
 
@@ -1503,9 +1526,9 @@ void drawTable(
             }
 
             // Convert to renderer colors once per frame
-            const auto secColor = renderer->a(secRaw);
-            const auto infoColor = renderer->a(infoRaw);
-            const auto dividerColor = renderer->a(tsl::separatorColor);
+            const auto secColor = (secRaw);
+            const auto infoColor = (infoRaw);
+            const auto dividerColor = (tsl::textSeparatorColor);
             
             const size_t count = cacheExpSec.size();
             const s32 baseX = x + 12;
@@ -1519,7 +1542,7 @@ void drawTable(
                 }
             } else {
                 // Different colors path
-                const auto hiliteColor = renderer->a(hiliteRaw);
+                const auto hiliteColor = hiliteRaw;
                 
                 for (size_t i = 0; i < count; ++i) {
                     const s32 yPos = y + cacheYOff[i];

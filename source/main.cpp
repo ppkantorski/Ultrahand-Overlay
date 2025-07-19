@@ -35,6 +35,7 @@
 
 using namespace ult;
 
+static std::string selectedPackage; // for package forwarders
 
 // Overlay booleans
 static bool returningToMain = false;
@@ -301,24 +302,15 @@ private:
             if (keys & KEY_A) {
 
                 if (targetMenu == "softwareUpdateMenu") {
-                    //executeCommands({
-                    //    {"download", LATEST_RELEASE_INFO_URL, SETTINGS_PATH}
-                    //});
                     deleteFileOrDirectory(SETTINGS_PATH+"RELEASE.ini");
                     downloadFile(LATEST_RELEASE_INFO_URL, SETTINGS_PATH);
                     downloadPercentage.store(-1, std::memory_order_release);
                 } else if (targetMenu == "themeMenu") {
                     if (!isFile(THEMES_PATH+"ultra.ini")) {
-                        //executeCommands({
-                        //    {"download", INCLUDED_THEME_FOLDER_URL+"ultra.ini", THEMES_PATH}
-                        //});
                         downloadFile(INCLUDED_THEME_FOLDER_URL+"ultra.ini", THEMES_PATH);
                         downloadPercentage.store(-1, std::memory_order_release);
                     }
                     if (!isFile(THEMES_PATH+"classic.ini")) {
-                        //executeCommands({
-                        //    {"download", INCLUDED_THEME_FOLDER_URL+"classic.ini", THEMES_PATH}
-                        //});
                         downloadFile(INCLUDED_THEME_FOLDER_URL+"classic.ini", THEMES_PATH);
                         downloadPercentage.store(-1, std::memory_order_release);
                     }
@@ -334,15 +326,16 @@ private:
         list->addItem(listItem);
     }
 
-    // Add this method to the UltrahandSettingsMenu class
-    void removeKeyComboFromOthers(const std::string& keyCombo) {
+    // Remove all combos from other overlays / packages
+    void removeKeyComboFromAllOthers(const std::string& keyCombo) {
+        // Handle overlays
         auto overlayNames = getOverlayNames(); // Get all overlay names
         std::string existingCombo;
         std::string comboListStr;
         std::vector<std::string> comboList;
         bool modified;
         std::string newComboStr;
-
+        
         for (const auto& overlayName : overlayNames) {
             // 1. Remove from main key_combo field if it matches
             existingCombo = parseValueFromIniSection(OVERLAYS_INI_FILEPATH, overlayName, KEY_COMBO_STR);
@@ -367,6 +360,15 @@ private:
                     newComboStr = "(" + joinIniList(comboList) + ")";
                     setIniFileValue(OVERLAYS_INI_FILEPATH, overlayName, "mode_combos", newComboStr);
                 }
+            }
+        }
+        
+        // Handle packages (they only have main key_combo, no mode_combos)
+        auto packageNames = getPackageNames(); // Get all package names
+        for (const auto& packageName : packageNames) {
+            existingCombo = parseValueFromIniSection(PACKAGES_INI_FILEPATH, packageName, KEY_COMBO_STR);
+            if (!existingCombo.empty() && tsl::hlp::comboStringToKeys(existingCombo) == tsl::hlp::comboStringToKeys(keyCombo)) {
+                setIniFileValue(PACKAGES_INI_FILEPATH, packageName, KEY_COMBO_STR, "");
             }
         }
     }
@@ -403,10 +405,10 @@ private:
                             setIniFileValue(TESLA_CONFIG_INI_PATH, TESLA_STR, iniKey, item);
 
                             // Remove this key combo from any overlays using it (both key_combo and mode_combos)
-                            this->removeKeyComboFromOthers(item);
+                            this->removeKeyComboFromAllOthers(item);
                             
                             // Reload the overlay key combos to reflect changes
-                            tsl::hlp::loadOverlayKeyCombos();
+                            tsl::hlp::loadEntryKeyCombos();
                         }
                 
                         reloadMenu = true;
@@ -524,7 +526,7 @@ private:
     }
 
     // Helper function to create toggle list items
-    auto createToggleListItem(tsl::elm::List* list, const std::string& title, bool state, const std::string& iniKey, const bool invertLogic = false, const bool useReloadMenu2 = false, const bool isMini = true) {
+    auto createToggleListItem(tsl::elm::List* list, const std::string& title, bool& state, const std::string& iniKey, const bool invertLogic = false, const bool useReloadMenu2 = false, const bool isMini = true) {
         auto toggleListItem = new tsl::elm::ToggleListItem(title, invertLogic ? !state : state, ON, OFF, isMini);
         toggleListItem->setStateChangedListener([&, listItem = toggleListItem, iniKey, invertLogic, useReloadMenu2](bool newState) {
             tsl::Overlay::get()->getCurrentGui()->requestFocus(listItem, tsl::FocusDirection::None);
@@ -534,7 +536,12 @@ private:
             
             setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, iniKey, actualState ? TRUE_STR : FALSE_STR);
 
+            static bool firstState = actualState;
+
             if (iniKey == "clean_version_labels" || iniKey == "hide_overlay_versions" || iniKey == "hide_package_versions" || iniKey == "highlight_versions" || iniKey == "highlight_titles" || iniKey == "page_swap" || iniKey == "hide_hidden") {
+                
+                if (iniKey == "page_swap")
+                    triggerMenuReload = firstState != state;
                 reloadMenu = true;
             } else if (iniKey == "memory_expansion") {
                 if (!isFile(EXPANSION_PATH + "nx-ovlloader.zip")) {
@@ -562,20 +569,21 @@ private:
                         {"mv", EXPANSION_PATH + (actualState ? "nx-ovlloader+/" : "nx-ovlloader/"), "/"}
                     });
                 }
-            } else if (iniKey == "hide_clock" || iniKey == "hide_soc_temp" || iniKey == "hide_pcb_temp" ||
-                iniKey == "hide_battery" || iniKey == "hide_widget_backdrop" || iniKey == "dynamic_widget_colors" ||
-                iniKey == "center_widget_alignment" || iniKey == "extended_widget_backdrop") {
-                reinitializeWidgetVars();
+            //} else if (iniKey == "hide_clock" || iniKey == "hide_soc_temp" || iniKey == "hide_pcb_temp" ||
+            //    iniKey == "hide_battery" || iniKey == "hide_widget_backdrop" || iniKey == "dynamic_widget_colors" ||
+            //    iniKey == "center_widget_alignment" || iniKey == "extended_widget_backdrop") {
+            //    reinitializeWidgetVars();
             } else if (iniKey == "right_alignment") {
-                triggerMenuReload = (rightAlignmentState != actualState);
-            } else if (iniKey == "dynamic_logo") {
-                useDynamicLogo = !useDynamicLogo;
-            } else if (iniKey == "launch_combos") {
-                useLaunchCombos = !useLaunchCombos;
-            } else if (iniKey == "opaque_screenshots") {
-                useOpaqueScreenshots = !useOpaqueScreenshots;
+                triggerMenuReload = firstState != state;
+            //} else if (iniKey == "dynamic_logo") {
+            //    useDynamicLogo = !useDynamicLogo;
+            //} else if (iniKey == "launch_combos") {
+            //    useLaunchCombos = !useLaunchCombos;
+            //} else if (iniKey == "opaque_screenshots") {
+            //    useOpaqueScreenshots = !useOpaqueScreenshots;
             }
 
+            state = !state;
             
             if (useReloadMenu2) reloadMenu2 = true;
         });
@@ -681,11 +689,11 @@ public:
                 index++;
             }
         } else if (dropdownSelection == "softwareUpdateMenu") {
-            std::string versionLabel = cleanVersionLabel(parseValueFromIniSection((SETTINGS_PATH+"RELEASE.ini"), "Release Info", "latest_version"));
+            std::string fullVersionLabel = cleanVersionLabel(parseValueFromIniSection((SETTINGS_PATH+"RELEASE.ini"), "Release Info", "latest_version"));
 
             addHeader(list, SOFTWARE_UPDATE);
-            addUpdateButton(list, UPDATE_ULTRAHAND, ULTRAHAND_REPO_URL + "releases/latest/download/ovlmenu.ovl", "/config/ultrahand/downloads/ovlmenu.ovl", "/switch/.overlays/ovlmenu.ovl", versionLabel);
-            addUpdateButton(list, UPDATE_LANGUAGES, ULTRAHAND_REPO_URL + "releases/latest/download/lang.zip", "/config/ultrahand/downloads/lang.zip", LANG_PATH, versionLabel);
+            addUpdateButton(list, UPDATE_ULTRAHAND, ULTRAHAND_REPO_URL + "releases/latest/download/ovlmenu.ovl", "/config/ultrahand/downloads/ovlmenu.ovl", "/switch/.overlays/ovlmenu.ovl", fullVersionLabel);
+            addUpdateButton(list, UPDATE_LANGUAGES, ULTRAHAND_REPO_URL + "releases/latest/download/lang.zip", "/config/ultrahand/downloads/lang.zip", LANG_PATH, fullVersionLabel);
 
             PackageHeader overlayHeader;
             overlayHeader.title = "Ultrahand Overlay";
@@ -994,7 +1002,7 @@ public:
             createToggleListItem(list, SHOW_HIDDEN, hideHidden, "hide_hidden", true);
 
             usePageSwap = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "page_swap") == TRUE_STR);
-            createToggleListItem(list, PAGE_SWAP, usePageSwap, "page_swap");
+            createToggleListItem(list, PAGE_SWAP, usePageSwap, "page_swap", false);
 
             rightAlignmentState = useRightAlignment = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "right_alignment") == TRUE_STR);
             createToggleListItem(list, RIGHT_SIDE_MODE, useRightAlignment, "right_alignment");
@@ -1247,7 +1255,7 @@ public:
         if (inSettingsMenu) {
             addHeader(list, SETTINGS + "  " + header);
 
-            if (entryMode == OVERLAY_STR) {
+            {
                 std::string currentKeyCombo = parseValueFromIniSection(settingsIniPath, entryName, KEY_COMBO_STR);
                 std::string displayCombo = currentKeyCombo.empty() ? OPTION_SYMBOL : currentKeyCombo;
                 
@@ -1443,7 +1451,7 @@ public:
                 if (keys & KEY_A) {
                     // Remove key combo from this overlay
                     setIniFileValue(settingsIniPath, entryName, KEY_COMBO_STR, "");
-                    tsl::hlp::loadOverlayKeyCombos(); // reload combos
+                    tsl::hlp::loadEntryKeyCombos(); // reload combos
                     reloadMenu2 = true;
                     
                     lastSelectedListItem->setValue("");
@@ -1482,11 +1490,11 @@ public:
                     if (keys & KEY_A) {
                         if (combo != currentKeyCombo) {
                             // Remove this key combo from any other overlays first
-                            removeKeyComboFromOtherOverlays(combo, entryName);
+                            removeKeyComboFromOthers(combo, entryName);
                             // Set the new key combo for this overlay
                             setIniFileValue(settingsIniPath, entryName, KEY_COMBO_STR, combo);
                             //reloadMenu = true;
-                            tsl::hlp::loadOverlayKeyCombos(); // reload combos
+                            tsl::hlp::loadEntryKeyCombos(); // reload combos
                         }
                         reloadMenu2 = true;
                         lastSelectedListItem->setValue("");
@@ -1544,9 +1552,9 @@ public:
                 if (keys & KEY_A) {
                     comboList[idx] = "";
                     std::string newComboStr = "(" + joinIniList(comboList) + ")";
-                    removeKeyComboFromOtherOverlays(newComboStr, entryName);
+                    removeKeyComboFromOthers(newComboStr, entryName);
                     setIniFileValue(settingsIniPath, entryName, "mode_combos", newComboStr);
-                    tsl::hlp::loadOverlayKeyCombos(); // reload combos
+                    tsl::hlp::loadEntryKeyCombos(); // reload combos
                     reloadMenu2 = true;
                     lastSelectedListItem->setValue("");
                     selectedListItem->setValue(OPTION_SYMBOL);
@@ -1579,7 +1587,7 @@ public:
                     if (keys & KEY_A) {
                         if (combo != comboList[idx]) {
                             // Remove same combo from other overlays (both key_combo + mode_combos)
-                            removeKeyComboFromOtherOverlays(combo, entryName);
+                            removeKeyComboFromOthers(combo, entryName);
                             
                             // Re-read the combo list after cleaning to get the updated values
                             std::string comboStr = parseValueFromIniSection(settingsIniPath, entryName, "mode_combos");
@@ -1589,7 +1597,7 @@ public:
                             comboList[idx] = combo;
                             std::string newComboStr = "(" + joinIniList(comboList) + ")";
                             setIniFileValue(settingsIniPath, entryName, "mode_combos", newComboStr);
-                            tsl::hlp::loadOverlayKeyCombos(); // reload combos
+                            tsl::hlp::loadEntryKeyCombos(); // reload combos
                         }
                         
                         reloadMenu2 = true;
@@ -1761,10 +1769,7 @@ public:
         }
         
         
-        if (returningToSettings && !(keysDown & KEY_B)){
-            //selectedListItem = nullptr;
-            //lastSelectedListItem = nullptr;
-            //forwarderListItem = nullptr;
+        if (returningToSettings && !(keysDown & KEY_B)) {
             returningToSettings = false;
             inSettingsMenu = true;
         }
@@ -4523,6 +4528,12 @@ public:
                             returningToMain = true;
                         else
                             returningToHiddenMain = true;
+                        if (!selectedPackage.empty()) {
+                            tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
+                            exitingUltrahand = true;
+                            tsl::Overlay::get()->close();
+                            return true;
+                        }
                     }
                     if (nestedMenuCount > 0) {
                         nestedMenuCount--;
@@ -4553,6 +4564,13 @@ public:
                             returningToMain = true;
                         else
                             returningToHiddenMain = true;
+
+                        if (!selectedPackage.empty()) {
+                            tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
+                            exitingUltrahand = true;
+                            tsl::Overlay::get()->close();
+                            return true;
+                        }
                     }
                     if (nestedMenuCount > 0) {
                         nestedMenuCount--;
@@ -4646,6 +4664,13 @@ public:
             keysDown |= KEY_B;
         }
         if ((keysDown & KEY_B) && !stillTouching.load(std::memory_order_acquire)) { // for catching lost navigations
+            if (!selectedPackage.empty()) {
+                tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
+                exitingUltrahand = true;
+                tsl::Overlay::get()->close();
+                return true;
+            }
+
 
             allowSlide.exchange(false, std::memory_order_acq_rel);
             unlockedSlide.exchange(false, std::memory_order_acq_rel);
@@ -4662,7 +4687,8 @@ public:
 };
 
 
-
+bool toPackages = false;
+bool inOverlay = false;
 /**
  * @brief The `MainMenu` class handles the main menu overlay functionality.
  *
@@ -4677,8 +4703,8 @@ private:
     bool useDefaultMenu = false;
     bool useOverlayLaunchArgs = false;
     std::string hiddenMenuMode, dropdownSection;
-    bool initializingSpawn = false;
-    std::string defaultLang = "en";
+    //bool initializingSpawn = false;
+    //std::string defaultLang = "en";
 
 public:
     /**
@@ -4731,9 +4757,9 @@ public:
         std::string packagePath;
         
         bool noClickableItems = false;
-        bool toPackages = false;
+        
         lastMenuMode = hiddenMenuMode;
-        bool inOverlay = false;
+        
         
         // Loop variables
         bool usingLibUltrahand = false;
@@ -4745,142 +4771,142 @@ public:
         bool overlayStarred, newStarred, packageStarred;
         bool foundOvlmenu = false;
         
-        createDirectory(PACKAGE_PATH);
-        //createDirectory(SETTINGS_PATH); // will be created with the subdirectories
-        createDirectory(LANG_PATH);
-        createDirectory(FLAGS_PATH);
-        createDirectory(THEMES_PATH);
-        createDirectory(WALLPAPERS_PATH);
-        
-        bool settingsLoaded = false;
-        
-        auto setDefaultValue = [](const auto& ultrahandSection, const std::string& section, const std::string& defaultValue, bool& settingFlag) {
-            if (ultrahandSection.count(section) > 0) {
-                settingFlag = (ultrahandSection.at(section) == TRUE_STR);
-            } else {
-                setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, section, defaultValue);
-                settingFlag = (defaultValue == TRUE_STR);
-            }
-        };
-        
-        auto setDefaultStrValue = [](const auto& ultrahandSection, const std::string& section, const std::string& defaultValue, std::string& settingValue) {
-            if (ultrahandSection.count(section) > 0) {
-                settingValue = ultrahandSection.at(section);
-            } else {
-                setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, section, defaultValue);
-            }
-        };
-        
-        if (isFileOrDirectory(ULTRAHAND_CONFIG_INI_PATH)) {
-            // Load key-value pairs from the "ULTRAHAND_PROJECT_NAME" section of the INI file
-            auto ultrahandSection = getKeyValuePairsFromSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME);
-            
-            if (!ultrahandSection.empty()) {
-                // Set default values for various settings
-                setDefaultValue(ultrahandSection, "hide_user_guide", FALSE_STR, hideUserGuide);
-                setDefaultValue(ultrahandSection, "hide_hidden", FALSE_STR, hideHidden);
-                setDefaultValue(ultrahandSection, "clean_version_labels", FALSE_STR, cleanVersionLabels);
-                setDefaultValue(ultrahandSection, "hide_overlay_versions", FALSE_STR, hideOverlayVersions);
-                setDefaultValue(ultrahandSection, "hide_package_versions", FALSE_STR, hidePackageVersions);
-                setDefaultValue(ultrahandSection, "highlight_versions", TRUE_STR, highlightVersions);
-                setDefaultValue(ultrahandSection, "highlight_titles", FALSE_STR, highlightTitles);
-                setDefaultValue(ultrahandSection, "memory_expansion", FALSE_STR, useMemoryExpansion);
-                // setDefaultValue(ultrahandSection, "custom_wallpaper", FALSE_STR, useCustomWallpaper);
-                setDefaultValue(ultrahandSection, "dynamic_logo", TRUE_STR, useDynamicLogo);
-                setDefaultValue(ultrahandSection, "launch_combos", TRUE_STR, useLaunchCombos);
-                setDefaultValue(ultrahandSection, "page_swap", FALSE_STR, usePageSwap);
-                setDefaultValue(ultrahandSection, "swipe_to_open", TRUE_STR, useSwipeToOpen);
-                setDefaultValue(ultrahandSection, "right_alignment", FALSE_STR, useRightAlignment);
-                setDefaultValue(ultrahandSection, "opaque_screenshots", TRUE_STR, useOpaqueScreenshots);
-                //setDefaultValue(ultrahandSection, "progress_animation", FALSE_STR, progressAnimation);
-                
-                setDefaultStrValue(ultrahandSection, DEFAULT_LANG_STR, defaultLang, defaultLang);
-            
-                // Ensure certain settings are set in the INI file if they don't exist
-                if (ultrahandSection.count("datetime_format") == 0) {
-                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "datetime_format", DEFAULT_DT_FORMAT);
-                }
-            
-                if (ultrahandSection.count("hide_clock") == 0) {
-                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_clock", FALSE_STR);
-                }
-            
-                if (ultrahandSection.count("hide_battery") == 0) {
-                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_battery", TRUE_STR);
-                }
-            
-                if (ultrahandSection.count("hide_pcb_temp") == 0) {
-                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_pcb_temp", TRUE_STR);
-                }
-            
-                if (ultrahandSection.count("hide_soc_temp") == 0) {
-                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_soc_temp", TRUE_STR);
-                }
-
-                if (ultrahandSection.count("dynamic_widget_colors") == 0) {
-                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "dynamic_widget_colors", TRUE_STR);
-                }
-
-                if (ultrahandSection.count("hide_widget_backdrop") == 0) {
-                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_widget_backdrop", FALSE_STR);
-                }
-
-                if (ultrahandSection.count("center_widget_alignment") == 0) {
-                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "center_widget_alignment", TRUE_STR);
-                }
-
-                if (ultrahandSection.count("extended_widget_backdrop") == 0) {
-                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "extended_widget_backdrop", FALSE_STR);
-                }
-                
-                // Handle the 'to_packages' option if it exists
-                if (ultrahandSection.count("to_packages") > 0) {
-                    trim(ultrahandSection["to_packages"]);
-                    toPackages = (ultrahandSection["to_packages"] == TRUE_STR);
-                }
-                
-                // Mark settings as loaded if the "in_overlay" setting exists
-                settingsLoaded = ultrahandSection.count(IN_OVERLAY_STR) > 0;
-                if (settingsLoaded) {
-                    inOverlay = (ultrahandSection[IN_OVERLAY_STR] == TRUE_STR);
-                }
-            }
-    
-        } else {
-            updateMenuCombos = true;
-        }
-    
-        static bool hasInitialized = false;
-        if (!hasInitialized) {
-            if (!inOverlay) {
-                if (!usePageSwap)
-                    currentMenu = OVERLAYS_STR;
-                else
-                    currentMenu = PACKAGES_STR;
-            }
-    
-            hasInitialized = true;
-            
-        }
-        
-        if (!settingsLoaded) { // Write data if settings are not loaded
-            setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, DEFAULT_LANG_STR, defaultLang);
-            setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_OVERLAY_STR, FALSE_STR);
-            initializingSpawn = true;
-        }
-        
-        
-        std::string langFile = LANG_PATH+defaultLang+".json";
-        if (isFileOrDirectory(langFile))
-            parseLanguage(langFile);
-        else {
-            if (defaultLang == "en")
-                reinitializeLangVars();
-        }
-        
-        // write default theme
-        initializeTheme();
-        copyTeslaKeyComboToUltrahand();
+//        createDirectory(PACKAGE_PATH);
+//        //createDirectory(SETTINGS_PATH); // will be created with the subdirectories
+//        createDirectory(LANG_PATH);
+//        createDirectory(FLAGS_PATH);
+//        createDirectory(THEMES_PATH);
+//        createDirectory(WALLPAPERS_PATH);
+//        
+//        bool settingsLoaded = false;
+//        
+//        auto setDefaultValue = [](const auto& ultrahandSection, const std::string& section, const std::string& defaultValue, bool& settingFlag) {
+//            if (ultrahandSection.count(section) > 0) {
+//                settingFlag = (ultrahandSection.at(section) == TRUE_STR);
+//            } else {
+//                setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, section, defaultValue);
+//                settingFlag = (defaultValue == TRUE_STR);
+//            }
+//        };
+//        
+//        auto setDefaultStrValue = [](const auto& ultrahandSection, const std::string& section, const std::string& defaultValue, std::string& settingValue) {
+//            if (ultrahandSection.count(section) > 0) {
+//                settingValue = ultrahandSection.at(section);
+//            } else {
+//                setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, section, defaultValue);
+//            }
+//        };
+//        
+//        if (isFileOrDirectory(ULTRAHAND_CONFIG_INI_PATH)) {
+//            // Load key-value pairs from the "ULTRAHAND_PROJECT_NAME" section of the INI file
+//            auto ultrahandSection = getKeyValuePairsFromSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME);
+//            
+//            if (!ultrahandSection.empty()) {
+//                // Set default values for various settings
+//                setDefaultValue(ultrahandSection, "hide_user_guide", FALSE_STR, hideUserGuide);
+//                setDefaultValue(ultrahandSection, "hide_hidden", FALSE_STR, hideHidden);
+//                setDefaultValue(ultrahandSection, "clean_version_labels", FALSE_STR, cleanVersionLabels);
+//                setDefaultValue(ultrahandSection, "hide_overlay_versions", FALSE_STR, hideOverlayVersions);
+//                setDefaultValue(ultrahandSection, "hide_package_versions", FALSE_STR, hidePackageVersions);
+//                setDefaultValue(ultrahandSection, "highlight_versions", TRUE_STR, highlightVersions);
+//                setDefaultValue(ultrahandSection, "highlight_titles", FALSE_STR, highlightTitles);
+//                setDefaultValue(ultrahandSection, "memory_expansion", FALSE_STR, useMemoryExpansion);
+//                // setDefaultValue(ultrahandSection, "custom_wallpaper", FALSE_STR, useCustomWallpaper);
+//                setDefaultValue(ultrahandSection, "dynamic_logo", TRUE_STR, useDynamicLogo);
+//                setDefaultValue(ultrahandSection, "launch_combos", TRUE_STR, useLaunchCombos);
+//                setDefaultValue(ultrahandSection, "page_swap", FALSE_STR, usePageSwap);
+//                setDefaultValue(ultrahandSection, "swipe_to_open", TRUE_STR, useSwipeToOpen);
+//                setDefaultValue(ultrahandSection, "right_alignment", FALSE_STR, useRightAlignment);
+//                setDefaultValue(ultrahandSection, "opaque_screenshots", TRUE_STR, useOpaqueScreenshots);
+//                //setDefaultValue(ultrahandSection, "progress_animation", FALSE_STR, progressAnimation);
+//                
+//                setDefaultStrValue(ultrahandSection, DEFAULT_LANG_STR, defaultLang, defaultLang);
+//            
+//                // Ensure certain settings are set in the INI file if they don't exist
+//                if (ultrahandSection.count("datetime_format") == 0) {
+//                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "datetime_format", DEFAULT_DT_FORMAT);
+//                }
+//            
+//                if (ultrahandSection.count("hide_clock") == 0) {
+//                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_clock", FALSE_STR);
+//                }
+//            
+//                if (ultrahandSection.count("hide_battery") == 0) {
+//                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_battery", TRUE_STR);
+//                }
+//            
+//                if (ultrahandSection.count("hide_pcb_temp") == 0) {
+//                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_pcb_temp", TRUE_STR);
+//                }
+//            
+//                if (ultrahandSection.count("hide_soc_temp") == 0) {
+//                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_soc_temp", TRUE_STR);
+//                }
+//
+//                if (ultrahandSection.count("dynamic_widget_colors") == 0) {
+//                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "dynamic_widget_colors", TRUE_STR);
+//                }
+//
+//                if (ultrahandSection.count("hide_widget_backdrop") == 0) {
+//                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_widget_backdrop", FALSE_STR);
+//                }
+//
+//                if (ultrahandSection.count("center_widget_alignment") == 0) {
+//                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "center_widget_alignment", TRUE_STR);
+//                }
+//
+//                if (ultrahandSection.count("extended_widget_backdrop") == 0) {
+//                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "extended_widget_backdrop", FALSE_STR);
+//                }
+//                
+//                // Handle the 'to_packages' option if it exists
+//                if (ultrahandSection.count("to_packages") > 0) {
+//                    trim(ultrahandSection["to_packages"]);
+//                    toPackages = (ultrahandSection["to_packages"] == TRUE_STR);
+//                }
+//                
+//                // Mark settings as loaded if the "in_overlay" setting exists
+//                settingsLoaded = ultrahandSection.count(IN_OVERLAY_STR) > 0;
+//                if (settingsLoaded) {
+//                    inOverlay = (ultrahandSection[IN_OVERLAY_STR] == TRUE_STR);
+//                }
+//            }
+//        
+//        } else {
+//            updateMenuCombos = true;
+//        }
+//        
+         static bool hasInitialized = false;
+         if (!hasInitialized) {
+             if (!inOverlay) {
+                 if (!usePageSwap)
+                     currentMenu = OVERLAYS_STR;
+                 else
+                     currentMenu = PACKAGES_STR;
+             }
+     
+             hasInitialized = true;
+             
+         }
+//        
+//        if (!settingsLoaded) { // Write data if settings are not loaded
+//            setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, DEFAULT_LANG_STR, defaultLang);
+//            setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_OVERLAY_STR, FALSE_STR);
+//            initializingSpawn = true;
+//        }
+//        
+//        
+//        std::string langFile = LANG_PATH+defaultLang+".json";
+//        if (isFileOrDirectory(langFile))
+//            parseLanguage(langFile);
+//        else {
+//            if (defaultLang == "en")
+//                reinitializeLangVars();
+//        }
+//        
+//        // write default theme
+//        initializeTheme();
+//        copyTeslaKeyComboToUltrahand();
         
         if (toPackages) {
             setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "to_packages", FALSE_STR); // this is handled within tesla.hpp
@@ -4889,7 +4915,7 @@ public:
     
         menuMode = currentMenu;
         
-        versionLabel = cleanVersionLabel(APP_VERSION) + "  " + loaderTitle + " " + cleanVersionLabel(loaderInfo);
+        //versionLabel = cleanVersionLabel(APP_VERSION) + "  " + loaderTitle + " " + cleanVersionLabel(loaderInfo);
         //versionLabel = (cleanVersionLabels) ? std::string(APP_VERSION) : (std::string(APP_VERSION) + "   (" + extractTitle(loaderInfo) + " v" + cleanVersionLabel(loaderInfo) + ")");
         
         auto list = new tsl::elm::List();
@@ -4922,7 +4948,7 @@ public:
                 // The INI file doesn't exist, so create an empty one
                 FILE* createFile = fopen(OVERLAYS_INI_FILEPATH.c_str(), "w"); // Use .c_str() here as well
                 if (createFile) {
-                    initializingSpawn = true;
+                    //initializingSpawn = true;
                     fclose(createFile); // Close the file after creating it
                 }
             } else {
@@ -4938,7 +4964,7 @@ public:
                 // The INI file doesn't exist, so create an empty one.
                 std::ofstream createFile(OVERLAYS_INI_FILEPATH);
                 //if (createFile.is_open()) {
-                initializingSpawn = true;
+                //initializingSpawn = true;
                 createFile.close(); // Close the file after creating it
                 //}
             }
@@ -5286,7 +5312,7 @@ public:
                     // The file doesn't exist, so create an empty one
                     FILE* createFile = fopen(PACKAGES_INI_FILEPATH.c_str(), "w");
                     if (createFile) {
-                        initializingSpawn = true;
+                        //initializingSpawn = true;
                         fclose(createFile); // Close the file after creating it
                     }
                 } else {
@@ -5298,7 +5324,7 @@ public:
                 if (!packagesIniFile.is_open()) {
                     std::ofstream createFile(PACKAGES_INI_FILEPATH); // Create an empty INI file if it doesn't exist
                     createFile.close();
-                    initializingSpawn = true;
+                    //initializingSpawn = true;
                 } else {
                     packagesIniFile.close();
                 }
@@ -5397,7 +5423,7 @@ public:
                 //    packageSet = std::move(hiddenPackageSet);
                 //    //hiddenPackageSet.clear();
                 //}
-                
+
                 bool firstItem = true;
                 for (const auto& taintedPackageName : packageSet) {
                     if (firstItem) {
@@ -5572,7 +5598,7 @@ public:
                 size_t nestedLayer = 0;
                 std::string pathPattern, pathPatternOn, pathPatternOff;
                 bool usingPages = false;
-    
+                
                 PackageHeader packageHeader = getPackageHeaderFromIni(PACKAGE_PATH);
                 noClickableItems = drawCommandsMenu(list, packageIniPath, packageConfigIniPath, packageHeader, pageLeftName, pageRightName,
                     packagePath, currentPage, packageName, this->dropdownSection, nestedLayer,
@@ -5583,10 +5609,10 @@ public:
             }
         }
         
-        if (initializingSpawn) {
-            initializingSpawn = false;
-            return createUI(); 
-        }
+        //if (initializingSpawn) {
+        //    initializingSpawn = false;
+        //    return createUI(); 
+        //}
         
 
         auto rootFrame = new tsl::elm::OverlayFrame(CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel, noClickableItems, menuMode+hiddenMenuMode+dropdownSection, "", "", "");
@@ -5909,6 +5935,7 @@ public:
         }
         
         unpackDeviceInfo();
+        initializeSettingsAndDirectories();
     }
     
     /**
@@ -5952,9 +5979,228 @@ public:
      * @return A unique pointer to the initial GUI element.
      */
     virtual std::unique_ptr<tsl::Gui> loadInitialGui() override {
-        return initially<MainMenu>();  // Initial Gui to load. It's possible to pass arguments to its constructor like this
+        // Check if a package was specified via command line
+        if (!selectedPackage.empty()) {
+            
+            std::string packageFilePath = PACKAGE_PATH + selectedPackage + "/";
+            
+            // Check if the package directory exists
+            if (isFileOrDirectory(packageFilePath)) {
+                // GET PROPER PACKAGE TITLE AND VERSION (like main menu does)
+                PackageHeader packageHeader = getPackageHeaderFromIni(packageFilePath + PACKAGE_FILENAME);
+                
+                // Load packages.ini to check for custom name/version
+                std::map<std::string, std::map<std::string, std::string>> packagesIniData = getParsedDataFromIniFile(PACKAGES_INI_FILEPATH);
+                
+                std::string customName = "";
+                std::string customVersion = "";
+                std::string assignedOverlayName;
+                std::string assignedOverlayVersion;
+                
+                // Check if package exists in packages.ini
+                auto packageIt = packagesIniData.find(selectedPackage);
+                if (packageIt != packagesIniData.end()) {
+                    // Get custom name and version if they exist
+                    customName = getValueOrDefault(packageIt->second, "custom_name", "");
+                    customVersion = getValueOrDefault(packageIt->second, "custom_version", "");
+                }
+                
+                // Apply version cleaning if needed (same logic as main menu)
+                if (cleanVersionLabels) {
+                    packageHeader.version = cleanVersionLabel(packageHeader.version);
+                    removeQuotes(packageHeader.version);
+                }
+                
+                // Determine final name and version (same logic as main menu)
+                assignedOverlayName = !customName.empty() ? customName : 
+                                     (packageHeader.title.empty() ? selectedPackage : packageHeader.title);
+                assignedOverlayVersion = !customVersion.empty() ? customVersion : packageHeader.version;
+                
+                // Handle boot package logic (similar to your KEY_A handler)
+                if (isFileOrDirectory(packageFilePath + BOOT_PACKAGE_FILENAME)) {
+                    bool useBootPackage = !(parseValueFromIniSection(PACKAGES_INI_FILEPATH, selectedPackage, USE_BOOT_PACKAGE_STR) == FALSE_STR);
+    
+                    if (useBootPackage) {
+                        // Load only the commands from the specific section (bootCommandName)
+                        auto bootCommands = loadSpecificSectionFromIni(packageFilePath + BOOT_PACKAGE_FILENAME, "boot");
+                    
+                        if (!bootCommands.empty()) {
+                            bool resetCommandSuccess = false;
+                            if (!commandSuccess) resetCommandSuccess = true;
+                            
+                            interpretAndExecuteCommands(std::move(bootCommands), packageFilePath, "boot");
+                            resetPercentages();
+    
+                            if (resetCommandSuccess) {
+                                commandSuccess = false;
+                            }
+                        }
+                    }
+                }
+    
+                // Set the necessary global variables with PROPER NAMES
+                lastPackagePath = packageFilePath;
+                lastPackageName = PACKAGE_FILENAME;
+                packageRootLayerTitle = assignedOverlayName;  // Use proper title
+                packageRootLayerVersion = assignedOverlayVersion;  // Use proper version
+                
+                inMainMenu = false;
+                
+                // Return PackageMenu directly instead of MainMenu
+                return initially<PackageMenu>(packageFilePath, "");
+            } else {
+                // Package not found, clear the selection and fall back to main menu
+                selectedPackage.clear();
+            }
+        }
+        
+        // Default behavior - load main menu
+        return initially<MainMenu>();
+    }
+
+private:
+    
+
+    // Extract the settings initialization logic into a separate method
+    void initializeSettingsAndDirectories() {
+        versionLabel = cleanVersionLabel(APP_VERSION) + "  " + loaderTitle + " " + cleanVersionLabel(loaderInfo);
+        std::string defaultLang = "en";
+
+        // Create necessary directories
+        createDirectory(PACKAGE_PATH);
+        createDirectory(LANG_PATH);
+        createDirectory(FLAGS_PATH);
+        createDirectory(THEMES_PATH);
+        createDirectory(WALLPAPERS_PATH);
+        
+        bool settingsLoaded = false;
+        
+        auto setDefaultValue = [](const auto& ultrahandSection, const std::string& section, const std::string& defaultValue, bool& settingFlag) {
+            if (ultrahandSection.count(section) > 0) {
+                settingFlag = (ultrahandSection.at(section) == TRUE_STR);
+            } else {
+                setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, section, defaultValue);
+                settingFlag = (defaultValue == TRUE_STR);
+            }
+        };
+        
+        auto setDefaultStrValue = [](const auto& ultrahandSection, const std::string& section, const std::string& defaultValue, std::string& settingValue) {
+            if (ultrahandSection.count(section) > 0) {
+                settingValue = ultrahandSection.at(section);
+            } else {
+                setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, section, defaultValue);
+            }
+        };
+        
+        if (isFileOrDirectory(ULTRAHAND_CONFIG_INI_PATH)) {
+            // Load key-value pairs from the "ULTRAHAND_PROJECT_NAME" section of the INI file
+            auto ultrahandSection = getKeyValuePairsFromSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME);
+            
+            if (!ultrahandSection.empty()) {
+                // Set default values for various settings
+                setDefaultValue(ultrahandSection, "hide_user_guide", FALSE_STR, hideUserGuide);
+                setDefaultValue(ultrahandSection, "hide_hidden", FALSE_STR, hideHidden);
+                setDefaultValue(ultrahandSection, "clean_version_labels", FALSE_STR, cleanVersionLabels);
+                setDefaultValue(ultrahandSection, "hide_overlay_versions", FALSE_STR, hideOverlayVersions);
+                setDefaultValue(ultrahandSection, "hide_package_versions", FALSE_STR, hidePackageVersions);
+                setDefaultValue(ultrahandSection, "highlight_versions", TRUE_STR, highlightVersions);
+                setDefaultValue(ultrahandSection, "highlight_titles", FALSE_STR, highlightTitles);
+                setDefaultValue(ultrahandSection, "memory_expansion", FALSE_STR, useMemoryExpansion);
+                setDefaultValue(ultrahandSection, "dynamic_logo", TRUE_STR, useDynamicLogo);
+                setDefaultValue(ultrahandSection, "launch_combos", TRUE_STR, useLaunchCombos);
+                setDefaultValue(ultrahandSection, "page_swap", FALSE_STR, usePageSwap);
+                setDefaultValue(ultrahandSection, "swipe_to_open", TRUE_STR, useSwipeToOpen);
+                setDefaultValue(ultrahandSection, "right_alignment", FALSE_STR, useRightAlignment);
+                setDefaultValue(ultrahandSection, "opaque_screenshots", TRUE_STR, useOpaqueScreenshots);
+                
+                setDefaultStrValue(ultrahandSection, DEFAULT_LANG_STR, defaultLang, defaultLang);
+            
+                // Ensure certain settings are set in the INI file if they don't exist
+                if (ultrahandSection.count("datetime_format") == 0) {
+                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "datetime_format", DEFAULT_DT_FORMAT);
+                }
+            
+                if (ultrahandSection.count("hide_clock") == 0) {
+                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_clock", FALSE_STR);
+                }
+            
+                if (ultrahandSection.count("hide_battery") == 0) {
+                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_battery", TRUE_STR);
+                }
+            
+                if (ultrahandSection.count("hide_pcb_temp") == 0) {
+                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_pcb_temp", TRUE_STR);
+                }
+            
+                if (ultrahandSection.count("hide_soc_temp") == 0) {
+                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_soc_temp", TRUE_STR);
+                }
+
+                if (ultrahandSection.count("dynamic_widget_colors") == 0) {
+                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "dynamic_widget_colors", TRUE_STR);
+                }
+
+                if (ultrahandSection.count("hide_widget_backdrop") == 0) {
+                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_widget_backdrop", FALSE_STR);
+                }
+
+                if (ultrahandSection.count("center_widget_alignment") == 0) {
+                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "center_widget_alignment", TRUE_STR);
+                }
+
+                if (ultrahandSection.count("extended_widget_backdrop") == 0) {
+                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "extended_widget_backdrop", FALSE_STR);
+                }
+                
+                settingsLoaded = ultrahandSection.count(IN_OVERLAY_STR) > 0;
+
+                // Handle the 'to_packages' option if it exists
+                if (ultrahandSection.count("to_packages") > 0) {
+                    trim(ultrahandSection["to_packages"]);
+                    toPackages = (ultrahandSection["to_packages"] == TRUE_STR);
+                }
+                
+                // Mark settings as loaded if the "in_overlay" setting exists
+                settingsLoaded = ultrahandSection.count(IN_OVERLAY_STR) > 0;
+                if (settingsLoaded) {
+                    inOverlay = (ultrahandSection[IN_OVERLAY_STR] == TRUE_STR);
+                }
+            }
+        } else {
+            updateMenuCombos = true;
+        }
+        
+        if (!settingsLoaded) { // Write data if settings are not loaded
+            setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, DEFAULT_LANG_STR, defaultLang);
+            setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_OVERLAY_STR, FALSE_STR);
+        }
+        
+        // Load language file
+        std::string langFile = LANG_PATH + defaultLang + ".json";
+        if (isFileOrDirectory(langFile))
+            parseLanguage(langFile);
+        else {
+            if (defaultLang == "en")
+                reinitializeLangVars();
+        }
+        
+        // Initialize theme
+        initializeTheme();
+        tsl::initializeThemeVars();
+        copyTeslaKeyComboToUltrahand();
+        
+        // Set current menu based on settings
+        static bool hasInitialized = false;
+        if (!hasInitialized) {
+            if (!usePageSwap)
+                currentMenu = OVERLAYS_STR;
+            else
+                currentMenu = PACKAGES_STR;
+            hasInitialized = true;
+        }
     }
 };
+
 
 
 /**
@@ -5970,5 +6216,33 @@ public:
  * @return The application's exit code.
  */
 int main(int argc, char* argv[]) {
+    for (u8 arg = 0; arg < argc; arg++) {
+        if (argv[arg][0] != '-') continue;  // Check first character
+        
+        if (strcasecmp(argv[arg], "--package") == 0) {
+            if (arg + 1 < argc) {
+                selectedPackage = "";
+                
+                // Collect all arguments until we hit another flag or end of args
+                for (u8 nextArg = arg + 1; nextArg < argc; nextArg++) {
+                    // Stop if we hit another flag (starts with -)
+                    if (argv[nextArg][0] == '-') {
+                        arg = nextArg - 1; // Set arg to the argument before the flag
+                        break;
+                    }
+                    
+                    // Add space if this isn't the first word
+                    if (!selectedPackage.empty()) {
+                        selectedPackage += " ";
+                    }
+                    selectedPackage += argv[nextArg];
+                    arg = nextArg; // Update arg to track where we are
+                }
+                
+                trim(selectedPackage);
+            }
+            break;
+        } 
+    }
     return tsl::loop<Overlay, tsl::impl::LaunchFlags::None>(argc, argv);
 }
