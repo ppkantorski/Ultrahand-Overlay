@@ -77,6 +77,7 @@ static const std::vector<std::string> commandGroupings = {DEFAULT_STR, "split", 
 static const std::string MODE_PATTERN = ";mode=";
 static const std::string GROUPING_PATTERN = ";grouping=";
 static const std::string SYSTEM_PATTERN = ";system=";
+static const std::string WIDGET_PATTERN = ";widget=";
 
 static const std::string MINI_PATTERN = ";mini=";
 static const std::string SELECTION_MINI_PATTERN = ";selection_mini=";
@@ -1015,6 +1016,8 @@ public:
             highlightVersions = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "highlight_versions") == TRUE_STR);
             createToggleListItem(list, "Highlight Versions", highlightVersions, "highlight_versions", false);
             
+            highlightPackages = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "highlight_packages") == TRUE_STR);
+            createToggleListItem(list, "Highlight Packages", highlightPackages, "highlight_packages", false);
 
             addHeader(list, "Version Labels");
 
@@ -1207,9 +1210,10 @@ public:
         const std::string& iStr,
         const std::string& priorityValue,
         const std::string& settingsIniPath,
-        const std::string& entryName
+        const std::string& entryName,
+        bool isMini = false
     ) {
-        auto* listItem = new tsl::elm::ListItem(iStr);
+        auto* listItem = new tsl::elm::ListItem(iStr, "", isMini);
 
         if (iStr == priorityValue) {
             listItem->setValue(CHECKMARK_SYMBOL);
@@ -1411,6 +1415,15 @@ public:
                 );
                 createAndAddToggleListItem(
                     list,
+                    "Quick Launch",
+                    false,
+                    USE_QUICK_LAUNCH_STR,
+                    parseValueFromIniSection(settingsIniPath, entryName, USE_QUICK_LAUNCH_STR),
+                    settingsIniPath,
+                    entryName
+                );
+                createAndAddToggleListItem(
+                    list,
                     ERROR_LOGGING,
                     false,
                     USE_LOGGING_STR,
@@ -1428,7 +1441,8 @@ public:
                     ult::to_string(i),
                     priorityValue,
                     settingsIniPath,
-                    entryName
+                    entryName,
+                    true
                 );
             }
         } else if (dropdownSelection == KEY_COMBO_STR) {
@@ -4338,6 +4352,7 @@ public:
         );
         list->jumpToItem(jumpItemName,jumpItemValue);
         rootFrame->setContent(list);
+        rootFrame->m_showWidget = (!packageHeader.show_widget.empty() && packageHeader.show_widget == TRUE_STR);
         return rootFrame;
     }
     
@@ -5119,18 +5134,18 @@ public:
                             listItem->setValue(overlayVersion, true);
 
                             if (usingLibUltrahand) {
-                                listItem->setValueColor(highlightVersions ? tsl::overlayVersionTextColor : tsl::tslOverlayVersionTextColor);
+                                listItem->setValueColor(highlightVersions ? tsl::overlayVersionHighlightTextColor : tsl::overlayVersionTextColor);
                             }
                             else {
-                                listItem->setValueColor(tsl::tslOverlayVersionTextColor);
+                                listItem->setValueColor(tsl::overlayVersionTextColor);
                             }
                         }
 
                         if (usingLibUltrahand) {
-                            listItem->setTextColor(highlightTitles ? tsl::overlayEntryTextColor : tsl::tslOverlayEntryTextColor);
+                            listItem->setTextColor(highlightTitles ? tsl::overlayEntryHighlightTextColor : tsl::overlayEntryTextColor);
                         }
                         else {
-                            listItem->setTextColor(tsl::tslOverlayEntryTextColor);
+                            listItem->setTextColor(tsl::overlayEntryTextColor);
                         }
                         
 
@@ -5368,6 +5383,7 @@ public:
                         setIniFileValue(PACKAGES_INI_FILEPATH, packageName, HIDE_STR, FALSE_STR);
                         setIniFileValue(OVERLAYS_INI_FILEPATH, packageName, USE_BOOT_PACKAGE_STR, TRUE_STR);
                         setIniFileValue(OVERLAYS_INI_FILEPATH, packageName, USE_EXIT_PACKAGE_STR, TRUE_STR);
+                        setIniFileValue(OVERLAYS_INI_FILEPATH, packageName, USE_QUICK_LAUNCH_STR, FALSE_STR);
                         setIniFileValue(PACKAGES_INI_FILEPATH, packageName, "custom_name", "");
                         setIniFileValue(PACKAGES_INI_FILEPATH, packageName, "custom_version", "");
     
@@ -5467,9 +5483,10 @@ public:
                         listItem = new tsl::elm::ListItem(packageStarred ? STAR_SYMBOL + "  " + newPackageName : newPackageName);
                         if (!hidePackageVersions) {
                             listItem->setValue(packageVersion, true);
-                            listItem->setValueColor(highlightVersions ? tsl::packageVersionTextColor : tsl::tslOverlayVersionTextColor);
+                            listItem->setValueColor((highlightVersions && highlightPackages) ? tsl::packageVersionHighlightTextColor : tsl::packageVersionTextColor);
                         }
-                        listItem->setTextColor(tsl::packageEntryTextColor);
+
+                        listItem->setTextColor(highlightTitles ? tsl::packageEntryHighlightTextColor : tsl::packageEntryTextColor);
 
                         
                         // Add a click listener to load the overlay when clicked upon
@@ -5487,7 +5504,9 @@ public:
                                 
                                 if (isFileOrDirectory(packageFilePath + BOOT_PACKAGE_FILENAME)) {
                                     bool useBootPackage = !(parseValueFromIniSection(PACKAGES_INI_FILEPATH, packageName, USE_BOOT_PACKAGE_STR) == FALSE_STR);
-    
+                                    
+                                    if (!selectedPackage.empty())
+                                        useBootPackage = (useBootPackage && !(parseValueFromIniSection(PACKAGES_INI_FILEPATH, packageName, USE_QUICK_LAUNCH_STR) == TRUE_STR));
                                     if (useBootPackage) {
                                         // Load only the commands from the specific section (bootCommandName)
                                         auto bootCommands = loadSpecificSectionFromIni(packageFilePath + BOOT_PACKAGE_FILENAME, "boot");
@@ -6019,7 +6038,8 @@ public:
                 // Handle boot package logic (similar to your KEY_A handler)
                 if (isFileOrDirectory(packageFilePath + BOOT_PACKAGE_FILENAME)) {
                     bool useBootPackage = !(parseValueFromIniSection(PACKAGES_INI_FILEPATH, selectedPackage, USE_BOOT_PACKAGE_STR) == FALSE_STR);
-    
+                    if (!selectedPackage.empty())
+                        useBootPackage = (useBootPackage && !(parseValueFromIniSection(PACKAGES_INI_FILEPATH, selectedPackage, USE_QUICK_LAUNCH_STR) == TRUE_STR));
                     if (useBootPackage) {
                         // Load only the commands from the specific section (bootCommandName)
                         auto bootCommands = loadSpecificSectionFromIni(packageFilePath + BOOT_PACKAGE_FILENAME, "boot");
@@ -6103,8 +6123,9 @@ private:
                 setDefaultValue(ultrahandSection, "clean_version_labels", FALSE_STR, cleanVersionLabels);
                 setDefaultValue(ultrahandSection, "hide_overlay_versions", FALSE_STR, hideOverlayVersions);
                 setDefaultValue(ultrahandSection, "hide_package_versions", FALSE_STR, hidePackageVersions);
-                setDefaultValue(ultrahandSection, "highlight_versions", TRUE_STR, highlightVersions);
                 setDefaultValue(ultrahandSection, "highlight_titles", FALSE_STR, highlightTitles);
+                setDefaultValue(ultrahandSection, "highlight_versions", TRUE_STR, highlightVersions);
+                setDefaultValue(ultrahandSection, "highlight_packages", TRUE_STR, highlightPackages);
                 setDefaultValue(ultrahandSection, "memory_expansion", FALSE_STR, useMemoryExpansion);
                 setDefaultValue(ultrahandSection, "dynamic_logo", TRUE_STR, useDynamicLogo);
                 setDefaultValue(ultrahandSection, "launch_combos", TRUE_STR, useLaunchCombos);
