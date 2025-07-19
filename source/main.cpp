@@ -36,7 +36,6 @@
 using namespace ult;
 
 
-
 // Overlay booleans
 static bool returningToMain = false;
 static bool returningToHiddenMain = false;
@@ -66,7 +65,6 @@ static bool reloadMenu = false;
 static bool reloadMenu2 = false;
 //static bool reloadMenu3 = false;
 static bool triggerMenuReload = false;
-
 
 
 static size_t nestedMenuCount = 0;
@@ -146,12 +144,8 @@ std::string getValueOrDefault(const Map& data, const std::string& key, const std
 
 
 inline void clearMemory() {
-    //directoryCache.clear();
     hexSumCache.clear();
     selectedFooterDict.clear(); // Clears all data from the map, making it empty again
-    selectedListItem = nullptr;
-    lastSelectedListItem = nullptr;
-    forwarderListItem = nullptr;
 }
 
 void shiftItemFocus(tsl::elm::Element* element) {
@@ -394,7 +388,6 @@ private:
                 lastSelectedListItem = listItem;
             }
             listItem->setClickListener([this, item, mappedItem, defaultItem, iniKey, targetMenu, listItem](uint64_t keys) {
-                //listItemPtr = std::shared_ptr<tsl::elm::ListItem>(listItem, [](auto*){})](uint64_t keys) {
                 if (runningInterpreter.load(std::memory_order_acquire))
                     return false;
                 
@@ -408,16 +401,6 @@ private:
                         if (targetMenu == KEY_COMBO_STR) {
                             // Also set it in tesla config
                             setIniFileValue(TESLA_CONFIG_INI_PATH, TESLA_STR, iniKey, item);
-                            
-                            // Remove this key combo from any overlays using it
-                            //const auto overlaySections =  ult::parseSectionsFromIni(OVERLAYS_INI_FILEPATH);
-                            //for (const auto& section : overlaySections) {
-                            //    const std::string overlayCombo = parseValueFromIniSection(OVERLAYS_INI_FILEPATH, section, KEY_COMBO_STR);
-                            //    if (overlayCombo == item) {
-                            //        // Clear the key combo for this overlay
-                            //        setIniFileValue(OVERLAYS_INI_FILEPATH, section, KEY_COMBO_STR, "");
-                            //    }
-                            //}
 
                             // Remove this key combo from any overlays using it (both key_combo and mode_combos)
                             this->removeKeyComboFromOthers(item);
@@ -448,6 +431,8 @@ private:
     void addUpdateButton(tsl::elm::List* list, const std::string& title, const std::string& downloadUrl, const std::string& targetPath, const std::string& movePath, const std::string& versionLabel) {
         auto* listItem = new tsl::elm::ListItem(title);
         listItem->setValue(versionLabel, true);
+        if (isVersionGreaterOrEqual(versionLabel.c_str(), APP_VERSION) && versionLabel != APP_VERSION)
+            listItem->setValueColor(tsl::onTextColor);
 
         listItem->setClickListener([listItem, title, downloadUrl, targetPath, movePath](uint64_t keys) {
             static bool executingCommands = false;
@@ -539,8 +524,8 @@ private:
     }
 
     // Helper function to create toggle list items
-    auto createToggleListItem(tsl::elm::List* list, const std::string& title, bool state, const std::string& iniKey, const bool invertLogic = false, const bool useReloadMenu2 = false) {
-        auto toggleListItem = new tsl::elm::ToggleListItem(title, invertLogic ? !state : state, ON, OFF);
+    auto createToggleListItem(tsl::elm::List* list, const std::string& title, bool state, const std::string& iniKey, const bool invertLogic = false, const bool useReloadMenu2 = false, const bool isMini = true) {
+        auto toggleListItem = new tsl::elm::ToggleListItem(title, invertLogic ? !state : state, ON, OFF, isMini);
         toggleListItem->setStateChangedListener([&, listItem = toggleListItem, iniKey, invertLogic, useReloadMenu2](bool newState) {
             tsl::Overlay::get()->getCurrentGui()->requestFocus(listItem, tsl::FocusDirection::None);
             
@@ -548,12 +533,8 @@ private:
             bool actualState = invertLogic ? !newState : newState;
             
             setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, iniKey, actualState ? TRUE_STR : FALSE_STR);
-    
-            if (iniKey == "clean_version_labels") {
-                versionLabel = APP_VERSION + std::string("  (") + loaderTitle + " " + cleanVersionLabel(loaderInfo) + std::string(")");
-                reinitializeVersionLabels();
-                reloadMenu = true;
-            } else if (iniKey == "clean_version_labels" || iniKey == "hide_overlay_versions" || iniKey == "hide_package_versions" || iniKey == "page_swap" || iniKey == "hide_hidden") {
+
+            if (iniKey == "clean_version_labels" || iniKey == "hide_overlay_versions" || iniKey == "hide_package_versions" || iniKey == "highlight_versions" || iniKey == "highlight_titles" || iniKey == "page_swap" || iniKey == "hide_hidden") {
                 reloadMenu = true;
             } else if (iniKey == "memory_expansion") {
                 if (!isFile(EXPANSION_PATH + "nx-ovlloader.zip")) {
@@ -814,7 +795,7 @@ public:
             // Memory expansion toggle
             useMemoryExpansion = (ult::expandedMemory || 
                                   parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "memory_expansion") == TRUE_STR);
-            createToggleListItem(list, MEMORY_EXPANSION, useMemoryExpansion, "memory_expansion", false, true);
+            createToggleListItem(list, MEMORY_EXPANSION, useMemoryExpansion, "memory_expansion", false, true, false);
 
             // Reboot required info
             tableData = {
@@ -990,26 +971,6 @@ public:
             createToggleListItem(list, EXTENDED_BACKDROP, extendedWidgetBackdrop, "extended_widget_backdrop", true);
 
         } else if (dropdownSelection == "miscMenu") {
-            addHeader(list, MENU_ITEMS);
-            
-            hideUserGuide = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_user_guide") == TRUE_STR);
-            createToggleListItem(list, USER_GUIDE, hideUserGuide, "hide_user_guide", true);
-
-            useDynamicLogo = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "dynamic_logo") == TRUE_STR);
-            createToggleListItem(list, DYNAMIC_LOGO, useDynamicLogo, "dynamic_logo");
-
-            hideHidden = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_hidden") == TRUE_STR);
-            createToggleListItem(list, SHOW_HIDDEN, hideHidden, "hide_hidden", true);
-
-            cleanVersionLabels = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "clean_version_labels") == TRUE_STR);
-            createToggleListItem(list, CLEAN_VERSIONS, cleanVersionLabels, "clean_version_labels", false, true);
-            
-            hideOverlayVersions = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_overlay_versions") == TRUE_STR);
-            createToggleListItem(list, OVERLAY_VERSIONS, hideOverlayVersions, "hide_overlay_versions", true);
-            
-            hidePackageVersions = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_package_versions") == TRUE_STR);
-            createToggleListItem(list, PACKAGE_VERSIONS, hidePackageVersions, "hide_package_versions", true);
-            
             addHeader(list, FEATURES);
 
             useLaunchCombos = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "launch_combos") == TRUE_STR);
@@ -1021,22 +982,47 @@ public:
             useSwipeToOpen = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "swipe_to_open") == TRUE_STR);
             createToggleListItem(list, SWIPE_TO_OPEN, useSwipeToOpen, "swipe_to_open");
 
+            addHeader(list, "Menu Settings");
+            
+            hideUserGuide = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_user_guide") == TRUE_STR);
+            createToggleListItem(list, USER_GUIDE, hideUserGuide, "hide_user_guide", true);
+
+            useDynamicLogo = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "dynamic_logo") == TRUE_STR);
+            createToggleListItem(list, DYNAMIC_LOGO, useDynamicLogo, "dynamic_logo");
+
+            hideHidden = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_hidden") == TRUE_STR);
+            createToggleListItem(list, SHOW_HIDDEN, hideHidden, "hide_hidden", true);
+
             usePageSwap = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "page_swap") == TRUE_STR);
             createToggleListItem(list, PAGE_SWAP, usePageSwap, "page_swap");
 
-            useRightAlignment = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "right_alignment") == TRUE_STR);
-            rightAlignmentState = useRightAlignment;
+            rightAlignmentState = useRightAlignment = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "right_alignment") == TRUE_STR);
             createToggleListItem(list, RIGHT_SIDE_MODE, useRightAlignment, "right_alignment");
+
+            addHeader(list, "libultrahand Detection");
+
+            highlightTitles = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "highlight_titles") == TRUE_STR);
+            createToggleListItem(list, "Highlight Titles", highlightTitles, "highlight_titles", false);
+
+            highlightVersions = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "highlight_versions") == TRUE_STR);
+            createToggleListItem(list, "Highlight Versions", highlightVersions, "highlight_versions", false);
+            
+
+            addHeader(list, "Version Labels");
+
+            hideOverlayVersions = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_overlay_versions") == TRUE_STR);
+            createToggleListItem(list, OVERLAY_VERSIONS, hideOverlayVersions, "hide_overlay_versions", true);
+            
+            hidePackageVersions = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_package_versions") == TRUE_STR);
+            createToggleListItem(list, PACKAGE_VERSIONS, hidePackageVersions, "hide_package_versions", true);
+            
+            cleanVersionLabels = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "clean_version_labels") == TRUE_STR);
+            createToggleListItem(list, CLEAN_VERSIONS, cleanVersionLabels, "clean_version_labels", false, true);
             
         
         } else {
             addBasicListItem(list, FAILED_TO_OPEN + ": " + settingsIniPath);
-            //list->addItem(new tsl::elm::ListItem(FAILED_TO_OPEN + ": " + settingsIniPath));
         }
-
-        //auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel);
-        //rootFrame->setContent(list);
-        //return rootFrame.release();
 
         auto rootFrame = new tsl::elm::OverlayFrame(CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel);
         if (inSubSettingsMenu && ((dropdownSelection == "languageMenu") || (dropdownSelection == KEY_COMBO_STR) || (dropdownSelection == "themeMenu") || (dropdownSelection == "wallpaperMenu"))) {
@@ -1052,7 +1038,6 @@ public:
                 jumpItemExactMatch = true;
                 g_overlayFilename = "";
                 languageWasChanged = false;
-                //tsl::elm::s_skipFrame = true;
                 list->jumpToItem(jumpItemName, jumpItemValue, jumpItemExactMatch);
             } else {
                 jumpItemName = "";
@@ -1088,16 +1073,6 @@ public:
 
         if (inSettingsMenu && !inSubSettingsMenu) {
             if (!returningToSettings) {
-                //if (reloadMenu3) {
-                //    //tsl::elm::skipDeconstruction = true;
-                //    tsl::goBack();
-                //    //tsl::elm::skipDeconstruction = false;
-                //    tsl::changeTo<UltrahandSettingsMenu>();
-                //    reloadMenu3 = false;
-                //}
-                //if (simulatedNextPage.load(std::memory_order_acquire)) {
-                //    simulatedNextPage.store(false, std::memory_order_release);
-                //}
                 simulatedNextPage.exchange(false, std::memory_order_acq_rel);
                 simulatedMenu.exchange(false, std::memory_order_acq_rel);
                 if (simulatedBack.exchange(false, std::memory_order_acq_rel)) {
@@ -1113,12 +1088,7 @@ public:
                     
 
                     if (reloadMenu) {
-                        //tsl::elm::skipDeconstruction = true;
-                        
-                        //tsl::elm::skipDeconstruction = true;
                         tsl::pop(2);
-                        //tsl::elm::skipDeconstruction = false;
-                        //tsl::elm::skipDeconstruction = false;
                         tsl::changeTo<MainMenu>(lastMenuMode);
                         reloadMenu = false;
                     } else {
@@ -1128,9 +1098,6 @@ public:
                 }
             }
         } else if (inSubSettingsMenu) {
-            //if (simulatedNextPage.load(std::memory_order_acquire)) {
-            //    simulatedNextPage.store(false, std::memory_order_release);
-            //}
             simulatedNextPage.exchange(false, std::memory_order_acq_rel);
             if (simulatedBack.exchange(false, std::memory_order_acq_rel)) {
                 keysDown |= KEY_B;
@@ -1144,16 +1111,9 @@ public:
                 
 
                 if (reloadMenu2) {
-                    
-                    //selectedListItem   = nullptr;
-                    //lastSelectedListItem = nullptr;
-                    //forwarderListItem  = nullptr;
-                    //tsl::elm::skipDeconstruction = true;
                     tsl::goBack(2);
-                    //tsl::elm::skipDeconstruction = false;
                     tsl::changeTo<UltrahandSettingsMenu>();
                     reloadMenu2 = false;
-                    //languageWasChanged = false;
                 } else {
                     tsl::goBack();
                 }
@@ -1162,9 +1122,6 @@ public:
         }
 
         if (returningToSettings && !(keysDown & KEY_B)) {
-            //selectedListItem = nullptr;
-            //lastSelectedListItem = nullptr;
-            //forwarderListItem = nullptr;
             returningToSettings = false;
             inSettingsMenu = true;
             tsl::impl::parseOverlaySettings();
@@ -1248,7 +1205,6 @@ public:
 
         if (iStr == priorityValue) {
             listItem->setValue(CHECKMARK_SYMBOL);
-            //lastSelectedListItem = nullptr;
             lastSelectedListItem = listItem;
         }
 
@@ -1270,7 +1226,6 @@ public:
                 lastSelectedListItem->setValue("");
                 selectedListItem->setValue(iStr);
                 listItem->setValue(CHECKMARK_SYMBOL);
-                //lastSelectedListItem = nullptr;
                 lastSelectedListItem = listItem;
                 shiftItemFocus(listItem);
                 lastSelectedListItem->triggerClickAnimation();
@@ -1291,8 +1246,6 @@ public:
     
         if (inSettingsMenu) {
             addHeader(list, SETTINGS + "  " + header);
-            //addHeader(list, header);
-
 
             if (entryMode == OVERLAY_STR) {
                 std::string currentKeyCombo = parseValueFromIniSection(settingsIniPath, entryName, KEY_COMBO_STR);
@@ -1313,7 +1266,6 @@ public:
                     if (keys & KEY_A) {
                         inMainMenu = false;
                         tsl::changeTo<SettingsMenu>(entryName, entryMode, overlayName, overlayVersion, KEY_COMBO_STR);
-                        //selectedListItem = nullptr;
                         selectedListItem = listItem;
                         lastSelectedListItem->triggerClickAnimation();
                         return true;
@@ -1344,7 +1296,6 @@ public:
                 if (keys & KEY_A) {
                     inMainMenu = false;
                     tsl::changeTo<SettingsMenu>(entryName, entryMode, overlayName, overlayVersion, PRIORITY_STR);
-                    //selectedListItem = nullptr;
                     selectedListItem = listItem;
                     lastSelectedListItem->triggerClickAnimation();
                     return true;
@@ -1374,7 +1325,6 @@ public:
                 std::vector<std::string> labelList = splitIniList(labelStr);     // (Mini Mode, Micro Mode)
                 
                 if (!modeList.empty()) {
-                    //addHeader(list, "Key Combo Modes");
 
                     std::vector<std::vector<std::string>> tableData = {
                         {"", "", ""}  // Direct reuse without reallocation
@@ -1570,13 +1520,6 @@ public:
             labelList.clear();
             addHeader(list, headerText);
 
-            // Reboot required info
-            //std::vector<std::vector<std::string>> tableData = {
-            //    {"Key Combo", "", labelText}  // Direct reuse without reallocation
-            //};
-            //
-            //addTable(list, tableData, "", 163, 19-2, 19-2, 0, "header", "header", DEFAULT_STR, RIGHT_STR, true, true, false, true, "none", false);
-
         
             // Read current combo list and ensure it's large enough
             std::string comboStr = parseValueFromIniSection(settingsIniPath, entryName, "mode_combos");
@@ -1681,11 +1624,6 @@ public:
             jumpItemValue = "";
             jumpItemExactMatch = true;
             g_overlayFilename = "";
-        //} else {
-        //    jumpItemName = "🗿";
-        //    jumpItemValue = "";
-        //    jumpItemExactMatch = true;
-        //    g_overlayFilename = "";
         }
         list->jumpToItem(jumpItemName, jumpItemValue, jumpItemExactMatch);
         rootFrame->setContent(list);
@@ -1712,21 +1650,8 @@ public:
             return handleRunningInterpreter(keysDown, keysHeld);
         }
         if (lastRunningInterpreter) {
-            //while (!interpreterThreadExit.load(std::memory_order_acquire)) {svcSleepThread(50'000'000);}
-            
-            //resetPercentages();
             
             isDownloadCommand = false;
-            //if (lastCommandMode == OPTION_STR)
-            //    lastSelectedListItem->setValue(commandSuccess ? "footer" : CROSSMARK_SYMBOL);
-            //else
-            //    lastSelectedListItem->setValue(commandSuccess ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
-
-            //if (!lastFooter.empty()) {
-            //    lastSelectedListItem->setValue(commandSuccess ? lastFooter : CROSSMARK_SYMBOL);
-            //    lastFooter = "";
-            //} else
-            //    lastSelectedListItem->setValue(commandSuccess ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
 
             lastSelectedListItem->setValue(commandSuccess ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
 
@@ -1742,9 +1667,6 @@ public:
 
         if (inSettingsMenu && !inSubSettingsMenu) {
             if (!returningToSettings) {
-                //if (simulatedNextPage.load(std::memory_order_acquire)) {
-                //    simulatedNextPage.store(false, std::memory_order_release);
-                //}
                 simulatedNextPage.exchange(false, std::memory_order_acq_rel);
 
                 simulatedMenu.exchange(false, std::memory_order_acq_rel);
@@ -1780,9 +1702,7 @@ public:
                             
                         }
                         
-                        //tsl::elm::skipDeconstruction = true;
                         tsl::pop(popCount);
-                        //tsl::elm::skipDeconstruction = false;
                         jumpItemName = rootTitle;
                         jumpItemValue = rootVersion;
                         g_overlayFilename = "";
@@ -1795,7 +1715,6 @@ public:
                     }
                     
                     lastMenu = "settingsMenu";
-                    //tsl::Overlay::get()->close();
                     return true;
                 }
             }
@@ -1922,15 +1841,10 @@ private:
 
                 commandVec.emplace_back(std::move(commandParts));
 
-                //interpretAndExecuteCommands(std::move(commandVec), filePath, specificKey);
-                //resetPercentages();
-                //listItem->setValue(commandSuccess ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
-
                 enqueueInterpreterCommands(std::move(commandVec), filePath, specificKey);
                 startInterpreterThread();
                 listItem->setValue(INPROGRESS_SYMBOL);
 
-                //lastSelectedListItem = nullptr;
                 lastSelectedListItem = listItem;
                
                 lastRunningInterpreter = true;
@@ -2022,9 +1936,6 @@ public:
             const bool isScrollableTable = true;
             const std::string wrappingMode = "char";
             const bool useWrappedTextIndent = true;
-            
-            //const bool usingTopPivot = true;
-            //const bool usingBottomPivot = false;
 
             static std::vector<std::vector<std::string>> dummyTableData;
 
@@ -2058,26 +1969,13 @@ public:
                 drawTable(list, dummyTableData, sectionLines, infoLines, tableColumnOffset, tableStartGap, tableEndGap, tableSpacing,
                           tableSectionTextColor, tableInfoTextColor, tableInfoTextColor, tableAlignment, hideTableBackground, useHeaderIndent, isPolling, isScrollableTable, wrappingMode, useWrappedTextIndent);
             }
-
-
-            //addDummyListItem(list);
-            //if (usingBottomPivot) {
-            //    addDummyListItem(list);
-            //    //lastItemIsScrollableTable = false;
-            //}
         }
 
         std::string packageVersion = isFromMainMenu ? "" : packageRootLayerVersion;
-        
-        //auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(packageName,
-        //    !lastPackageHeader.empty() ? lastPackageHeader + "?Ultrahand Script" : (packageVersion.empty() ? CAPITAL_ULTRAHAND_PROJECT_NAME + " Script" : packageVersion + "   (" + CAPITAL_ULTRAHAND_PROJECT_NAME + " Script)"),
-        //    noClickableItems);
-        //rootFrame->setContent(list);
-        //return rootFrame.release();
 
 
         auto rootFrame = new tsl::elm::OverlayFrame(packageName,
-           !lastPackageHeader.empty() ? lastPackageHeader + "?Ultrahand Script" : (packageVersion.empty() ? CAPITAL_ULTRAHAND_PROJECT_NAME + " Script" : packageVersion + "   (" + CAPITAL_ULTRAHAND_PROJECT_NAME + " Script)"),
+           !lastPackageHeader.empty() ? lastPackageHeader + "?Ultrahand Script" : (packageVersion.empty() ? CAPITAL_ULTRAHAND_PROJECT_NAME + " Script" : packageVersion + "  " + CAPITAL_ULTRAHAND_PROJECT_NAME + " Script"),
            noClickableItems);
         rootFrame->setContent(list);
         return rootFrame;
@@ -2099,9 +1997,6 @@ public:
         }
 
         if (inScriptMenu) {
-            //if (simulatedNextPage.load(std::memory_order_acquire)) {
-            //    simulatedNextPage.store(false, std::memory_order_release);
-            //}
             simulatedNextPage.exchange(false, std::memory_order_acq_rel);
 
             simulatedMenu.exchange(false, std::memory_order_acq_rel);
@@ -2220,12 +2115,8 @@ private:
     bool toggleState = false;
     std::string packageConfigIniPath;
     std::string commandSystem, commandMode, commandGrouping;
-    
-    
 
     std::string lastPackageHeader;
-
-
 
     // Variables moved from createUI to class scope
     std::vector<std::string> filesList, filesListOn, filesListOff;
@@ -2254,8 +2145,6 @@ private:
 public:
     SelectionOverlay(const std::string& path, const std::string& key = "", const std::string& footerKey = "", const std::string& _lastPackageHeader = "")
         : filePath(path), specificKey(key), specifiedFooterKey(footerKey), lastPackageHeader(_lastPackageHeader) {
-        //lastSelectedListItem = nullptr;
-        //tsl::gfx::FontManager::clearCache();
         lastSelectedListItemFooter = "";
         tsl::clearGlyphCacheNow.store(true, std::memory_order_release);
     }
@@ -2301,9 +2190,6 @@ public:
             for (auto& arg : cmd) {
                 // Replace general placeholders
                 replacePlaceholdersInArg(arg, generalPlaceholders);
-                
-                // Replace button/arrow placeholders from the global map
-                //replacePlaceholdersInArg(arg, symbolPlaceholders);
             }
 
             commandName = cmd[0];
@@ -2798,7 +2684,6 @@ public:
 
                 listItem->setClickListener([i, selectedItem, footer, listItem, currentPackageHeader, itemName = itemName, filePath=filePath,
                     specificKey=specificKey, commandMode=commandMode, specifiedFooterKey=specifiedFooterKey](uint64_t keys) {
-                    //listItemPtr = std::shared_ptr<tsl::elm::ListItem>(listItem, [](auto*) {})](uint64_t keys) {
 
                     if (runningInterpreter.load(std::memory_order_acquire)) {
                         return false;
@@ -2811,7 +2696,6 @@ public:
                     if ((keys & KEY_A)) {
                         isDownloadCommand = false;
                         runningInterpreter.store(true, std::memory_order_release);
-                        //std::string selectedItemStr = std::string(selectedItem);
 
                         enqueueInterpreterCommands(getSourceReplacement(selectionCommands, selectedItem, i, filePath), filePath, specificKey);
                         startInterpreterThread(filePath);
@@ -2826,10 +2710,7 @@ public:
                             //std::string footerStr = std::string(footer);
                             lastSelectedListItemFooter = footer;
                         }
-                        //lastCommandMode = commandMode;
-                        //lastKeyName = selectedItem;
 
-                        //lastSelectedListItem = nullptr;
                         lastSelectedListItem = listItem;
                         shiftItemFocus(listItem);
 
@@ -2859,8 +2740,7 @@ public:
                 toggleListItem->setState(toggleStateOn);
 
                 toggleListItem->setStateChangedListener([i, toggleListItem, selectedItem, filePath=filePath, sourceType=sourceType, specificKey=specificKey](bool state) {
-                    //disableLogging = false;
-                    //logMessage("Toggle clicked! State: " + std::string(state ? "ON" : "OFF"));
+
                     tsl::Overlay::get()->getCurrentGui()->requestFocus(toggleListItem, tsl::FocusDirection::None);
                 
                     if (toggleCount.find(i) == toggleCount.end()) toggleCount[i] = 0;
@@ -2869,9 +2749,7 @@ public:
                         isInitialized[i] = true;
                         currentPatternIsOriginal[i] = true;  // start in original pattern
                     }
-                    //disableLogging = false;
-                    //logMessage("selectedItemsList[i]: "+selectedItemsList[i]);
-                    //logMessage("currentSelectedItems[i]: " + currentSelectedItems[i]);
+
                     const auto& activeCommands = !state ? selectionCommandsOn : selectionCommandsOff;
                     const auto& inactiveCommands = !state ? selectionCommandsOff : selectionCommandsOn;
                 
@@ -2883,9 +2761,6 @@ public:
 
                     preprocessPath(oldPattern,filePath);
                     preprocessPath(newPattern,filePath);
-                    //disableLogging = false;
-                    //logMessage("oldPattern: "+oldPattern);
-                    //logMessage("newPattern: "+newPattern);
 
                     std::string pathToUse;
                     
@@ -2905,8 +2780,6 @@ public:
                             currentPatternIsOriginal[i] = true;
                         }
                     }
-                    //disableLogging = false;
-                    //logMessage("Resolved pathToUse: "+pathToUse);
                 
                     auto modifiedCmds = getSourceReplacement(activeCommands, pathToUse, i, filePath);
                 
@@ -2964,21 +2837,6 @@ public:
             packageHeader.color = packageRootLayerColor;
         
 
-        //auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(
-        //    (!packageHeader.title.empty()) ? packageHeader.title : (!packageRootLayerTitle.empty() ? packageRootLayerTitle : getNameFromPath(filePath)),
-        //    !lastPackageHeader.empty() ? lastPackageHeader : (packageHeader.version != "" ? (!packageRootLayerVersion.empty() ? packageRootLayerVersion : packageHeader.version) + "   (Ultrahand Package)" : "Ultrahand Package"),
-        //    noClickableItems,
-        //    "",
-        //    packageHeader.color);
-        //
-        //if (filePath == PACKAGE_PATH)
-        //    rootFrame = std::make_unique<tsl::elm::OverlayFrame>(CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel);
-        //
-        ////ist->setAutoJumpTarget(CHECKMARK_SYMBOL);
-        //rootFrame->setContent(list);
-        //
-        //return rootFrame.release();
-
         tsl::elm::OverlayFrame* rootFrame;
         
         if (filePath == PACKAGE_PATH) {
@@ -2986,29 +2844,16 @@ public:
         } else {
            rootFrame = new tsl::elm::OverlayFrame(
                (!packageHeader.title.empty()) ? packageHeader.title : (!packageRootLayerTitle.empty() ? packageRootLayerTitle : getNameFromPath(filePath)),
-               !lastPackageHeader.empty() ? lastPackageHeader : (packageHeader.version != "" ? (!packageRootLayerVersion.empty() ? packageRootLayerVersion : packageHeader.version) + "   (Ultrahand Package)" : "Ultrahand Package"),
+               !lastPackageHeader.empty() ? lastPackageHeader : (packageHeader.version != "" ? (!packageRootLayerVersion.empty() ? packageRootLayerVersion : packageHeader.version) + "  Ultrahand Package" : "Ultrahand Package"),
                noClickableItems,
                "",
                packageHeader.color);
         }
 
-        //jumpItemName = "";
-        //jumpItemValue = "";
-        //g_overlayFilename = "";
         list->jumpToItem(jumpItemName, jumpItemValue, jumpItemExactMatch);
         
         rootFrame->setContent(list);
         return rootFrame;
-
-
-        //if (filePath == PACKAGE_PATH)
-        //    return returnRootFrame(list, CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel);
-        //
-        //return returnRootFrame(list,
-        //    (!packageHeader.title.empty()) ? packageHeader.title : (!packageRootLayerTitle.empty() ? packageRootLayerTitle : getNameFromPath(filePath)),
-        //    packageHeader.version != "" ? (!packageRootLayerVersion.empty() ? packageRootLayerVersion : packageHeader.version) + "   (Ultrahand Package)" : "Ultrahand Package",
-        //    "",
-        //    packageHeader.color);
     }
 
     virtual bool handleInput(u64 keysDown, u64 keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
@@ -3017,11 +2862,6 @@ public:
         }
         if (lastRunningInterpreter) {
             isDownloadCommand = false;
-           //if (!lastFooter.empty()) {
-           //    lastSelectedListItem->setValue(commandSuccess ? lastFooter : CROSSMARK_SYMBOL);
-           //    lastFooter = "";
-           //} else
-           //    lastSelectedListItem->setValue(commandSuccess ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
             lastSelectedListItem->setValue(commandSuccess ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
             closeInterpreterThread();
             lastRunningInterpreter = false;
@@ -3034,9 +2874,7 @@ public:
         }
 
         if (refreshPage && !stillTouching.load(std::memory_order_acquire)) {
-            //tsl::elm::skipDeconstruction = true;
             tsl::goBack();
-            //tsl::elm::skipDeconstruction = false;
             tsl::changeTo<SelectionOverlay>(filePath, specificKey, specifiedFooterKey);
             refreshPage = false;
         }
@@ -3046,9 +2884,6 @@ public:
         }
 
         if (inSelectionMenu) {
-            //if (simulatedNextPage.load(std::memory_order_acquire)) {
-            //    simulatedNextPage.store(false, std::memory_order_release);
-            //}
             simulatedNextPage.exchange(false, std::memory_order_acq_rel);
 
             simulatedMenu.exchange(false, std::memory_order_acq_rel);
@@ -3090,9 +2925,6 @@ public:
         }
 
         if (returningToSelectionMenu && !(keysDown & KEY_B)){
-            //selectedListItem = nullptr;
-            //lastSelectedListItem = nullptr;
-            //forwarderListItem = nullptr;
             returningToSelectionMenu = false;
             inSelectionMenu = true;
         }
@@ -3113,7 +2945,6 @@ std::vector<std::vector<std::string>> gatherPromptCommands(
     const std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>>& options) {
     
     std::vector<std::vector<std::string>> promptCommands;
-    //promptCommands.reserve(options.size()); // Reserve space to avoid reallocations
     
     bool inRelevantSection = false;
     bool isFirstSection = true;
@@ -3125,7 +2956,6 @@ std::vector<std::vector<std::string>> gatherPromptCommands(
     std::vector<std::string> splitParts;
     
     // Pre-allocate filler command (whitespace)
-    //fillerCommand.reserve(1);
     fillerCommand.push_back("\u00A0");
     
     for (const auto& nextOption : options) {
@@ -3156,7 +2986,6 @@ std::vector<std::vector<std::string>> gatherPromptCommands(
                 // Clear and prepare section command
                 sectionCommand.clear();
                 sectionCommand.shrink_to_fit();
-                //sectionCommand.reserve(1);
                 sectionCommand.push_back("[" + sectionName + "]");
                 promptCommands.push_back(sectionCommand);
             }
@@ -3180,7 +3009,6 @@ std::vector<std::vector<std::string>> gatherPromptCommands(
     
     // Return placeholder if no commands are found
     if (promptCommands.empty()) {
-        //promptCommands.reserve(1);
         promptCommands.push_back({UNAVAILABLE_SELECTION});
     }
     
@@ -3239,7 +3067,6 @@ bool drawCommandsMenu(tsl::elm::List* list,
     
     std::string itemName, parentDirName;
 
-    //std::vector<std::string> listData, listDataOn, listDataOff;
     s16 minValue;
     s16 maxValue;
     std::string units;
@@ -3262,13 +3089,10 @@ bool drawCommandsMenu(tsl::elm::List* list,
 
     size_t delimiterPos;
 
-    //bool wasHeader = false;
-    //bool lastItemWasHeader = false;
     bool isPolling;
     bool isScrollableTable;
     bool usingTopPivot, usingBottomPivot;
     bool onlyTables = true;
-    //bool lastItemIsScrollableTable = false;
 
     std::vector<std::string> entryList;
 
@@ -3339,12 +3163,6 @@ bool drawCommandsMenu(tsl::elm::List* list,
         commandsOff.clear();
         commandsOff.shrink_to_fit();
         
-        //if (wasHeader)
-        //    lastItemWasHeader = true;
-        //else
-        //    lastItemWasHeader = false;
-        //wasHeader = false;
-
         
         if (drawLocation.empty() || (currentPage == drawLocation) || (optionName.front() == '@')) {
             
@@ -3483,12 +3301,6 @@ bool drawCommandsMenu(tsl::elm::List* list,
                                 }
                                 if (keys & KEY_A) {
                                     inPackageMenu = false;
-                                    //selectedListItem = nullptr;
-                                    //lastSelectedListItem = nullptr;
-                                    //jumpItemName = "🗿";
-                                    //jumpItemValue = "";
-                                    //jumpItemExactMatch = true;
-                                    //g_overlayFilename = "";
                                     tsl::changeTo<PackageMenu>(packagePath, optionName, currentPage, packageName, 0, _lastPackageHeader);
                                     
                                     return true;
@@ -3519,10 +3331,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
                                 }
                                 if (keys & KEY_A) {
                                     inPackageMenu = false;
-                                    //jumpItemName = "🗿";
-                                    //jumpItemValue = "";
-                                    //jumpItemExactMatch = true;
-                                    //g_overlayFilename = "";
+
                                     tsl::changeTo<MainMenu>("", optionName);
                                     return true;
                                 } else if (keys & SCRIPT_KEY) {
@@ -3588,29 +3397,17 @@ bool drawCommandsMenu(tsl::elm::List* list,
 
             inEristaSection = false;
             inMarikoSection = false;
-            //size_t delimiterPos;
             
             // Remove all empty command strings
-            //commands.erase(std::remove_if(commands.begin(), commands.end(),
-            //    [](const std::vector<std::string>& vec) {
-            //        return vec.empty();
-            //    }),
-            //    commands.end());
             removeEmptyCommands(commands);
-            
-            //std::string hexPath, listString, listPath, jsonString, jsonPath; // passed as dummy variables
 
             // Initial processing of commands (DUPLICATE CODE)
             for (auto& cmd : commands) {
                 for (auto& arg : cmd) {
                     // Replace general placeholders
                     replacePlaceholdersInArg(arg, generalPlaceholders);
-                    
-                    // Replace button/arrow placeholders from the global map
-                    //replacePlaceholdersInArg(arg, symbolPlaceholders);
                 }
                 
-                //applyPlaceholderReplacements(cmd, hexPath, iniFilePath, listString, listPath, jsonString, jsonPath);
 
                 commandName = cmd[0];
                 
@@ -3804,10 +3601,6 @@ bool drawCommandsMenu(tsl::elm::List* list,
             }
             
             if ((commandMode == OPTION_STR) || (commandMode == SLOT_STR) || (commandMode == TOGGLE_STR && !useSelection)) {
-                // override loading of the command footer
-                //if (!commandFooter.empty())
-                //    footer = commandFooter;
-                //else
                 footer = OPTION_SYMBOL;
             }
 
@@ -3830,11 +3623,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
                         isScrollableTable = false;
                         lastPackageHeader = getFirstSectionText(tableData, packagePath);
                     }
-                    //if (isScrollableTable)
-                    //    lastItemIsScrollableTable = true;
-                    //else
-                    //    lastItemIsScrollableTable = false;
-                    
+
                     if (usingTopPivot) {
                         if (list->getLastIndex() == 0)
                             onlyTables = false;
@@ -3848,7 +3637,6 @@ bool drawCommandsMenu(tsl::elm::List* list,
 
                     if (usingBottomPivot) {
                         addDummyListItem(list);
-                        //lastItemIsScrollableTable = false;
                     }
 
                     continue;
@@ -3856,7 +3644,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
                     onlyTables = false;
                 
                     // Create TrackBarV2 instance and configure it
-                    auto trackBar = std::make_unique<tsl::elm::TrackBarV2>(optionName, packagePath, minValue, maxValue, units,
+                    auto trackBar = new tsl::elm::TrackBarV2(optionName, packagePath, minValue, maxValue, units,
                         interpretAndExecuteCommands, getSourceReplacement, commands, option.first, false, false, -1, unlockedTrackbar, onEveryTick);
                 
                     // Set the SCRIPT_KEY listener
@@ -3900,7 +3688,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
                     });
                 
                     // Add the TrackBarV2 to the list after setting the necessary listeners
-                    list->addItem(trackBar.release());
+                    list->addItem(trackBar);
                 
                     continue;
                 } else if (commandMode == STEP_TRACKBAR_STR) {
@@ -3908,12 +3696,8 @@ bool drawCommandsMenu(tsl::elm::List* list,
                         steps = std::abs(maxValue - minValue) +1;
                     }
                     onlyTables = false;
-                    //lastItemIsScrollableTable = false;
-                    //list->addItem(new tsl::elm::StepTrackBarV2(optionName, packagePath, steps, minValue, maxValue, units,
-                    //  interpretAndExecuteCommands, getSourceReplacement, commands, option.first, false, unlockedTrackbar, onEveryTick));
-
                     
-                    auto stepTrackBar = std::make_unique<tsl::elm::StepTrackBarV2>(optionName, packagePath, steps, minValue, maxValue, units,
+                    auto stepTrackBar = new tsl::elm::StepTrackBarV2(optionName, packagePath, steps, minValue, maxValue, units,
                         interpretAndExecuteCommands, getSourceReplacement, commands, option.first, false, unlockedTrackbar, onEveryTick);
                     
                     // Set the SCRIPT_KEY listener
@@ -3926,6 +3710,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
                         
                         if (!isValidNumber(indexStr))
                             indexStr = "0";
+
                         // Get and modify the commands with the appropriate replacements
                         auto modifiedCmds = getSourceReplacement(commands, keyName, ult::stoi(indexStr), packagePath);
                         
@@ -3957,7 +3742,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
                     });
                     
                     // Add the StepTrackBarV2 to the list
-                    list->addItem(stepTrackBar.release());
+                    list->addItem(stepTrackBar);
 
                     continue;
                 } else if (commandMode == NAMED_STEP_TRACKBAR_STR) {
@@ -4040,12 +3825,8 @@ bool drawCommandsMenu(tsl::elm::List* list,
                     }
                     onlyTables = false;
 
-                    //lastItemIsScrollableTable = false;
-                    //list->addItem(new tsl::elm::NamedStepTrackBarV2(optionName, packagePath, entryList,
-                    //  interpretAndExecuteCommands, getSourceReplacement, commands, option.first, unlockedTrackbar, onEveryTick));
-
                     // Create NamedStepTrackBarV2 instance and configure it
-                    auto namedStepTrackBar = std::make_unique<tsl::elm::NamedStepTrackBarV2>(optionName, packagePath, entryList,
+                    auto namedStepTrackBar = new tsl::elm::NamedStepTrackBarV2(optionName, packagePath, entryList,
                         interpretAndExecuteCommands, getSourceReplacement, commands, option.first, unlockedTrackbar, onEveryTick);
                     
                     // Set the SCRIPT_KEY listener
@@ -4095,15 +3876,13 @@ bool drawCommandsMenu(tsl::elm::List* list,
                     });
                     
                     // Add the NamedStepTrackBarV2 to the list
-                    list->addItem(namedStepTrackBar.release());
+                    list->addItem(namedStepTrackBar);
 
                     continue;
                 }
                 if (useSelection) { // For wildcard commands (dropdown menus)
 
                     if ((footer == DROPDOWN_SYMBOL) || (footer.empty()) || footer == commandFooter) {
-                        //if (!commandFooter.empty())
-                        //    footer = commandFooter;
                         cleanOptionName = optionName;
                         removeTag(cleanOptionName);
                         listItem = new tsl::elm::ListItem(cleanOptionName, footer, isMini, true);
@@ -4132,9 +3911,6 @@ bool drawCommandsMenu(tsl::elm::List* list,
                             }
                             
                             if (keys & KEY_A) {
-                                //auto commandsCopy = commands;
-                                //interpretAndExecuteCommands(std::move(commandsCopy), packagePath, keyName); // Now correctly moved
-                                //auto modifiedCmds = getSourceReplacement(commands, keyName, i, packagePath); // Now correctly moved
                                 interpretAndExecuteCommands(std::move(getSourceReplacement(commands, keyName, i, packagePath)), packagePath, keyName);
                                 resetPercentages();
 
@@ -4147,26 +3923,17 @@ bool drawCommandsMenu(tsl::elm::List* list,
                                     lastPackageMenu = "subPackageMenu";
 
                                 // set forwarder pointer for updating
-                                //forwarderListItem = nullptr;
                                 forwarderListItem = listItem;
                                 lastCommandMode = FORWARDER_STR;
                                 lastKeyName = keyName;
 
                                 allowSlide.exchange(false, std::memory_order_acq_rel);
                                 unlockedSlide.exchange(false, std::memory_order_acq_rel);
-                                //jumpItemName = "🗿";
-                                //jumpItemValue = "";
-                                //jumpItemExactMatch = true;
-                                //g_overlayFilename = "";
 
                                 tsl::changeTo<PackageMenu>(forwarderPackagePath, "", LEFT_STR, forwarderPackageIniName, nestedMenuCount, _lastPackageHeader);
                                 return true;
                             } else if (keys & SCRIPT_KEY) {
                                 bool isFromMainMenu = (packagePath == PACKAGE_PATH);
-                                //if (inMainMenu) {
-                                //    isFromMainMenu = true;
-                                //    inMainMenu = false;
-                                //}
                                 if (inPackageMenu) {
                                     inPackageMenu = false;
                                     lastMenu = "packageMenu";
@@ -4177,7 +3944,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
                                 }
 
                                 auto modifiedCmds = getSourceReplacement(commands, keyName, i, packagePath);
-                                //applyPlaceholderReplacementsToCommands(modifiedCmds);
+                                
                                 std::string selectionItem = keyName;
                                 removeTag(selectionItem);
                                 // add lines ;mode=forwarder and package_source 'forwarderPackagePath' to front of modifiedCmds
@@ -4187,12 +3954,6 @@ bool drawCommandsMenu(tsl::elm::List* list,
                             return false;
                         });
                     } else {
-                        //if (!commandFooter.empty()) {
-                        //    listItem->setValue(commandFooter, true);
-                        //    //listItem = new tsl::elm::ListItem(removeTag(optionName), footer);
-                        //}
-                        //listItem->setValue("TEST", true);
-                        //std::vector<std::vector<std::string>> modifiedCommands = getModifyCommands(option.second, pathReplace);
                         listItem->setClickListener([commands, keyName = option.first, dropdownSection, packagePath, packageName,
                             footer, lastSection, listItem, _lastPackageHeader = lastPackageHeader, commandMode, i](uint64_t keys) {
                             //listItemPtr = std::shared_ptr<tsl::elm::ListItem>(listItem, [](auto*){})](uint64_t keys) {
@@ -4213,7 +3974,6 @@ bool drawCommandsMenu(tsl::elm::List* list,
                                     else
                                         lastPackageMenu = "subPackageMenu";
                                     
-                                    //selectedListItem = nullptr;
                                     selectedListItem = listItem;
                                     
                                     std::string newKey = "";
@@ -4226,7 +3986,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
                                         if (selectedFooterDict.find(newKey) == selectedFooterDict.end())
                                             selectedFooterDict[newKey] = footer;
                                     }
-                                    //lastSelectedListItem = nullptr;
+                                    
                                     if (commandMode == OPTION_STR || commandMode == SLOT_STR) {
                                         jumpItemName = "";
                                         jumpItemValue = "";
@@ -4265,8 +4025,6 @@ bool drawCommandsMenu(tsl::elm::List* list,
                                     lastMenu = "subPackageMenu";
                                 }
 
-                                //auto modifiedCmds = getSourceReplacement(commands, keyName, i, packagePath);
-                                //applyPlaceholderReplacementsToCommands(modifiedCmds);
                                 std::string selectionItem = keyName;
                                 removeTag(selectionItem);
                                 tsl::changeTo<ScriptOverlay>(getSourceReplacement(commands, keyName, i, packagePath), packagePath, selectionItem, isFromMainMenu ? "main" : "package", true, _lastPackageHeader);
@@ -4276,7 +4034,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
                         });
                     }
                     onlyTables = false;
-                    //lastItemIsScrollableTable = false;
+                    
                     list->addItem(listItem);
                 } else { // For everything else
                     
@@ -4352,9 +4110,6 @@ bool drawCommandsMenu(tsl::elm::List* list,
                         cleanOptionName = optionName;
                         removeTag(cleanOptionName);
                         toggleListItem = new tsl::elm::ToggleListItem(cleanOptionName, false, ON, OFF, isMini);
-                        // Preprocess pathPatternOn and pathPatternOff separately
-                        //preprocessPath(pathPatternOn, packagePath);
-                        //preprocessPath(pathPatternOff, packagePath);
 
                         // Set the initial state of the toggle item
                         if (!pathPatternOn.empty()){
@@ -4423,14 +4178,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
         addDummyListItem(list, 1); // assuming a header is always above
         //addDummyListItem(list);
     }
-
-    //if (lastItemIsScrollableTable) {
-    //    //auto dummyItem = new tsl::elm::DummyListItem();
-    //    //list->addItem(dummyItem);
-    //    addDummyListItem(list);
-    //}
-
-    //toggleListItem;
+    
     options.clear();
     options.shrink_to_fit();
     commands.clear();
@@ -4443,8 +4191,6 @@ bool drawCommandsMenu(tsl::elm::List* list,
     tableData.shrink_to_fit();
     return onlyTables;
 }
-
-
 
 
 
@@ -4478,14 +4224,10 @@ public:
      */
     PackageMenu(const std::string& path, const std::string& sectionName = "", const std::string& page = LEFT_STR, const std::string& _packageName = PACKAGE_FILENAME, const size_t _nestedlayer = 0, const std::string& _pageHeader = "") :
         packagePath(path), dropdownSection(sectionName), currentPage(page), packageName(_packageName), nestedLayer(_nestedlayer), pageHeader(_pageHeader) {
-            //tsl::gfx::FontManager::clearCache();
-            //tsl::clearGlyphCacheNow.store(true, std::memory_order_release);
             jumpItemName = "";
             jumpItemValue = "";
             jumpItemExactMatch = true;
             g_overlayFilename = "";
-            //menuIsGenerated = false;
-            
         }
     /**
      * @brief Destroys the `PackageMenu` instance.
@@ -4493,9 +4235,6 @@ public:
      * Cleans up any resources associated with the `PackageMenu` instance.
      */
     ~PackageMenu() {
-        //tsl::gfx::FontManager::clearCache();
-        //tsl::clearGlyphCacheNow.store(true, std::memory_order_release);
-        //tsl::clearGlyphCacheNow.store(true, std::memory_order_release);
         if (returningToMain) {
             tsl::clearGlyphCacheNow.store(true, std::memory_order_release);
             clearMemory();
@@ -4527,7 +4266,6 @@ public:
             }
         }
     }
-    
 
 
     /**
@@ -4562,7 +4300,6 @@ public:
             this->pathPattern, this->pathPatternOn, this->pathPatternOff, this->usingPages
         );
         
-        
 
         if (nestedLayer == 0) {
 
@@ -4584,24 +4321,10 @@ public:
             packageHeader.version = packageRootLayerVersion;
         if (packageHeader.color.empty())
             packageHeader.color = packageRootLayerColor;
-        
-        //std::unique_ptr<tsl::elm::OverlayFrame> rootFrame = std::make_unique<tsl::elm::OverlayFrame>(
-        //    (!packageHeader.title.empty()) ? packageHeader.title : (!packageRootLayerTitle.empty() ? packageRootLayerTitle : getNameFromPath(packagePath)),
-        //    ((!pageHeader.empty() && packageHeader.show_version != TRUE_STR) ? pageHeader: (packageHeader.version != "" ? (!packageRootLayerVersion.empty() ? packageRootLayerVersion : packageHeader.version) + "   (Ultrahand Package)" : "Ultrahand Package")),
-        //    noClickableItems,
-        //    "",
-        //    packageHeader.color,
-        //    (usingPages && currentPage == RIGHT_STR) ? pageLeftName : "",
-        //    (usingPages && currentPage == LEFT_STR) ? pageRightName : ""
-        //);
-        //
-        //rootFrame->setContent(list);
-        //
-        //return rootFrame.release();
 
         auto rootFrame = new tsl::elm::OverlayFrame(
            (!packageHeader.title.empty()) ? packageHeader.title : (!packageRootLayerTitle.empty() ? packageRootLayerTitle : getNameFromPath(packagePath)),
-           ((!pageHeader.empty() && packageHeader.show_version != TRUE_STR) ? pageHeader: (packageHeader.version != "" ? (!packageRootLayerVersion.empty() ? packageRootLayerVersion : packageHeader.version) + "   (Ultrahand Package)" : "Ultrahand Package")),
+           ((!pageHeader.empty() && packageHeader.show_version != TRUE_STR) ? pageHeader: (packageHeader.version != "" ? (!packageRootLayerVersion.empty() ? packageRootLayerVersion : packageHeader.version) + "  Ultrahand Package" : "Ultrahand Package")),
            noClickableItems,
            "",
            packageHeader.color,
@@ -4610,18 +4333,7 @@ public:
         );
         list->jumpToItem(jumpItemName,jumpItemValue);
         rootFrame->setContent(list);
-        //menuIsGenerated = true;
         return rootFrame;
-
-
-        //return returnRootFrame(list,
-        //    (!packageHeader.title.empty()) ? packageHeader.title : (!packageRootLayerTitle.empty() ? packageRootLayerTitle : getNameFromPath(packagePath)),
-        //    packageHeader.version != "" ? (!packageRootLayerVersion.empty() ? packageRootLayerVersion : packageHeader.version) + "   (Ultrahand Package)" : "Ultrahand Package",
-        //    "",
-        //    packageHeader.color,
-        //    (usingPages && currentPage == RIGHT_STR) ? pageLeftName : "",
-        //    (usingPages && currentPage == LEFT_STR) ? pageRightName : ""
-        //);
     }
     
 
@@ -4636,7 +4348,6 @@ public:
                     forwarderListItem->setValue(footerIt->second);
                 }
             }
-            //forwarderListItem = nullptr;
             lastCommandMode = "";
         }
     }
@@ -4659,22 +4370,8 @@ public:
         if (runningInterpreter.load(std::memory_order_acquire)) {
             return handleRunningInterpreter(keysDown, keysHeld);
         }
-        //if (lastRunningInterpreter) {
-        //    //while (!interpreterThreadExit.load(std::memory_order_acquire)) {svcSleepThread(50'000'000);}
-        //    
-        //    //resetPercentages();
-        //    
-        //    isDownloadCommand = false;
-        //    lastSelectedListItem->setValue(commandSuccess ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
-        //    closeInterpreterThread();
-        //    lastRunningInterpreter = false;
-        //    return true;
-        //}
 
         if (lastRunningInterpreter) {
-            //while (!interpreterThreadExit.load(std::memory_order_acquire)) {svcSleepThread(50'000'000);}
-            
-            //resetPercentages();
             
             isDownloadCommand = false;
             if (lastCommandMode == OPTION_STR || lastCommandMode == SLOT_STR) {
@@ -4689,7 +4386,7 @@ public:
                                 lastSelectedListItem->setValue(footerIt->second);
                             }
                         }
-                        //lastSelectedListItem = nullptr;
+                        
                         lastCommandMode = "";
                     } else {
                         lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
@@ -4729,9 +4426,7 @@ public:
                     inSubPackageMenu = false;
                     inPackageMenu = false;
                     tsl::goBack();
-                
-                    //selectedListItem = nullptr;
-                    //lastSelectedListItem = nullptr;
+                    
                     tsl::changeTo<PackageMenu>(lastPackagePath, lastDropdownSection, lastPage, lastPackageName, lastNestedLayer, pageHeader);
                 };
                 
@@ -4750,18 +4445,9 @@ public:
                     lastPage = currentPage;
                     lastPackageName = PACKAGE_FILENAME;
                     
-                    //tsl::elm::skipDeconstruction = true;
-                    //while (nestedMenuCount > 0) {
-                    //    tsl::goBack();
-                    //    nestedMenuCount--;
-                    //}
-                    //
-                    //tsl::goBack();
-
                     tsl::goBack(nestedMenuCount+1);
                     nestedMenuCount = 0;
 
-                    //tsl::elm::skipDeconstruction = false;
                     tsl::changeTo<PackageMenu>(lastPackagePath, "");
                     inPackageMenu = true;
                     inSubPackageMenu = false;
@@ -4775,9 +4461,7 @@ public:
             simulatedMenu.exchange(false, std::memory_order_acq_rel);
             
             if (simulatedNextPage.exchange(false, std::memory_order_acq_rel)) {
-                //bool expected = true;
-                //tsl::swapComplete = false;
-                //ult::simulatedNextPage.compare_exchange_strong(expected, false, std::memory_order_release);
+
                 if (currentPage == LEFT_STR) {
                     keysDown |= KEY_DRIGHT;
                 }
@@ -4789,92 +4473,31 @@ public:
             if (currentPage == LEFT_STR) {
 
                 if (tsl::elm::s_safeToSwap.load(std::memory_order_acquire)  && (keysDown & KEY_RIGHT) && !(keysHeld & KEY_LEFT) && !(keysDown & ~KEY_RIGHT & ~KEY_R & ALL_KEYS_MASK) && !stillTouching.load(std::memory_order_acquire) && 
-                    (((!allowSlide.load(std::memory_order_acquire) && onTrackBar.load(std::memory_order_acquire) && !unlockedSlide.load(std::memory_order_acquire)) || (keysDown & KEY_R)) || !onTrackBar.load(std::memory_order_acquire))) {// && tsl::elm::safeToSwap.exchange(false, std::memory_order_acq_rel)) {//{&&
-                    //!tsl::elm::s_lastFrameItems.empty() && (tsl::elm::s_isForwardCache && tsl::elm::s_hasValidFrame)) {
+                    (((!allowSlide.load(std::memory_order_acquire) && onTrackBar.load(std::memory_order_acquire) && !unlockedSlide.load(std::memory_order_acquire)) || (keysDown & KEY_R)) || !onTrackBar.load(std::memory_order_acquire))) {
 
                     allowSlide.exchange(false, std::memory_order_acq_rel);
                     unlockedSlide.exchange(false, std::memory_order_acq_rel);
                     lastPage = RIGHT_STR;
-                    //lastPackage = packagePath;
-                    //selectedListItem = nullptr;
-                    //lastSelectedListItem = nullptr;
-                    //jumpItemName = "";
-                    //jumpItemValue = "";
-                    //jumpItemExactMatch = true;
-                    //g_overlayFilename = "";
-                    // Disable swapping immediately
-                    
-                    // Longer sleep for stability
-                    //svcSleepThread(200'000);
-                    
-                    // Clear any pending operations before transition
-                    //simulatedNextPage.store(false, std::memory_order_release);
-                    
                     tsl::pop();
                     
                     tsl::changeTo<PackageMenu>(lastPackagePath, dropdownSection, RIGHT_STR, lastPackageName, nestedMenuCount, pageHeader);
-                    //svcSleepThread(200'000);
-                    //bool expected = true;
-                    //ult::simulatedNextPage.compare_exchange_strong(expected, false, std::memory_order_release);
-                    //tsl::swapComplete = true;
-                    // Reset state after transition
-                    //simulatedNextPageComplete.store(true, std::memory_order_release);
+
                     return true;
-                //} else if ((!tsl::elm::s_isForwardCache || !tsl::elm::s_hasValidFrame) || tsl::elm::s_lastFrameItems.empty()) {
-                //    tsl::elm::s_lastFrameItems.clear();
-                //    tsl::elm::s_lastFrameItems.shrink_to_fit();
-                //    tsl::elm::s_isForwardCache = false; // NEW VARIABLE FOR FORWARD CACHING
-                //    tsl::elm::s_hasValidFrame = false;
-                //    tsl::elm::s_cacheForwardFrameOnce = true;
-                //    //simulatedNextPage.store(false, std::memory_order_release);
-                //    //simulatedNextPageComplete.store(true, std::memory_order_release);
-                //    ult::allowSlide = ult::unlockedSlide = false;
-                //    //svcSleepThread(200'000);
-                //    //bool expected = true;
-                //    //ult::simulatedNextPage.compare_exchange_strong(expected, false, std::memory_order_release);
                 }
 
             } else if (currentPage == RIGHT_STR) {
                 
                 if (tsl::elm::s_safeToSwap.load(std::memory_order_acquire)  && (keysDown & KEY_LEFT) && !(keysHeld & KEY_RIGHT) && !(keysDown & ~KEY_LEFT & ~KEY_R & ALL_KEYS_MASK) && !stillTouching.load(std::memory_order_acquire) && 
-                    (((!allowSlide.load(std::memory_order_acquire) && onTrackBar.load(std::memory_order_acquire) && !unlockedSlide.load(std::memory_order_acquire)) || (keysDown & KEY_R)) || !onTrackBar.load(std::memory_order_acquire)) ) {// && tsl::elm::safeToSwap.exchange(false, std::memory_order_acq_rel)) {//&& 
-                    //!tsl::elm::s_lastFrameItems.empty() && (tsl::elm::s_isForwardCache && tsl::elm::s_hasValidFrame)) {
-
+                    (((!allowSlide.load(std::memory_order_acquire) && onTrackBar.load(std::memory_order_acquire) && !unlockedSlide.load(std::memory_order_acquire)) || (keysDown & KEY_R)) || !onTrackBar.load(std::memory_order_acquire)) ) {
                     
                     allowSlide.exchange(false, std::memory_order_acq_rel);
                     unlockedSlide.exchange(false, std::memory_order_acq_rel);
                     lastPage = LEFT_STR;
-                    //selectedListItem = nullptr;
-                    //lastSelectedListItem = nullptr;
-                    
-                    // Longer sleep for stability
-                    //svcSleepThread(200'000);
-                    
-                    // Clear any pending operations before transition
-                    //simulatedNextPage.store(false, std::memory_order_release);
                     
                     tsl::pop();
                     
                     tsl::changeTo<PackageMenu>(lastPackagePath, dropdownSection, LEFT_STR, lastPackageName, nestedMenuCount, pageHeader);
-                    //svcSleepThread(200'000);
-                    //bool expected = true;
-                    //ult::simulatedNextPage.compare_exchange_strong(expected, false, std::memory_order_release);
-                    //tsl::swapComplete = true;
-                    // Reset state after transition
-                    //simulatedNextPageComplete.store(true, std::memory_order_release);
                     return true;
-                //} else if ((!tsl::elm::s_isForwardCache || !tsl::elm::s_hasValidFrame) || tsl::elm::s_lastFrameItems.empty()) {
-                //    tsl::elm::s_lastFrameItems.clear();
-                //    tsl::elm::s_lastFrameItems.shrink_to_fit();
-                //    tsl::elm::s_isForwardCache = false; // NEW VARIABLE FOR FORWARD CACHING
-                //    tsl::elm::s_hasValidFrame = false;
-                //    tsl::elm::s_cacheForwardFrameOnce = true;
-                //    //simulatedNextPage.store(false, std::memory_order_release);
-                //    //simulatedNextPageComplete.store(true, std::memory_order_release);
-                //    ult::allowSlide = ult::unlockedSlide = false;
-                //    //svcSleepThread(200'000);
-                //    //bool expected = true;
-                //    //ult::simulatedNextPage.compare_exchange_strong(expected, false, std::memory_order_release);
                 }
             } 
         }
@@ -4882,9 +4505,6 @@ public:
         if (!returningToPackage && inPackageMenu && nestedMenuCount == nestedLayer) {
             simulatedMenu.exchange(false, std::memory_order_acq_rel);
             
-            //if (simulatedNextPage.load(std::memory_order_acquire)) {
-            //    simulatedNextPage.store(false, std::memory_order_release);
-            //}
             simulatedNextPage.exchange(false, std::memory_order_acq_rel);
             
             if (!usingPages || (usingPages && lastPage == LEFT_STR)) {
@@ -4906,17 +4526,13 @@ public:
                     }
                     if (nestedMenuCount > 0) {
                         nestedMenuCount--;
-                        //returningToPackage = true;
                         if (lastPackageMenu == "subPackageMenu") {
                             returningToSubPackage = true;
-                            //lastPackageMenu = "";
                         } else {
                             returningToPackage = true;
                         }
                     }
                     
-                    // Free-up memory
-                    clearMemory();
                     
                     tsl::goBack();
                     return true;
@@ -4932,7 +4548,6 @@ public:
                     unlockedSlide.exchange(false, std::memory_order_acq_rel);
                     if (nestedMenuCount == 0) {
                         inPackageMenu = false;
-                        //inNestedPackageMenu = false;
                         
                         if (!inHiddenMode)
                             returningToMain = true;
@@ -4944,14 +4559,11 @@ public:
                         
                         if (lastPackageMenu == "subPackageMenu") {
                             returningToSubPackage = true;
-                            //lastPackageMenu = "";
                         } else {
                             returningToPackage = true;
                         }
                     }
                     
-                    // Free-up memory
-                    clearMemory();
                     
                     lastPage = LEFT_STR;
                     tsl::goBack();
@@ -4963,9 +4575,6 @@ public:
         if (!returningToSubPackage && inSubPackageMenu) {
             simulatedMenu.exchange(false, std::memory_order_acq_rel);
             
-            //if (simulatedNextPage.load(std::memory_order_acquire)) {
-            //    simulatedNextPage.store(false, std::memory_order_release);
-            //}
             simulatedNextPage.exchange(false, std::memory_order_acq_rel);
             
             if (!usingPages || (usingPages && lastPage == LEFT_STR)) {
@@ -4996,7 +4605,6 @@ public:
                     inSubPackageMenu = false;
                     returningToPackage = true;
                     lastMenu = "packageMenu";
-                    //tsl::goBack();
                     tsl::goBack();
                     
                     return true;
@@ -5004,11 +4612,6 @@ public:
             }
         }
         if (returningToPackage && !returningToSubPackage && !(keysDown & KEY_B)){
-            //lastPackageMenu = "packageMenu";
-
-            //selectedListItem = nullptr;
-            //lastSelectedListItem = nullptr;
-            //forwarderListItem = nullptr;
             lastPackageMenu = "";
             returningToPackage = false;
             returningToSubPackage = false;
@@ -5021,10 +4624,6 @@ public:
         }
         
         if (returningToSubPackage && !(keysDown & KEY_B)){
-            //lastPackageMenu = "subPackageMenu";
-            //selectedListItem = nullptr;
-            //lastSelectedListItem = nullptr;
-            //forwarderListItem = nullptr;
             lastPackageMenu = "";
             returningToPackage = false;
             returningToSubPackage = false;
@@ -5053,17 +4652,14 @@ public:
             inSubPackageMenu = false;
             returningToPackage = true;
             lastMenu = "packageMenu";
-            //tsl::goBack();
             tsl::goBack();
             
             return true;
         }
         
-        //svcSleepThread(10'000'000);
         return false;
     }
 };
-
 
 
 
@@ -5083,7 +4679,6 @@ private:
     std::string hiddenMenuMode, dropdownSection;
     bool initializingSpawn = false;
     std::string defaultLang = "en";
-    //bool menuIsGenerated = false;
 
 public:
     /**
@@ -5106,9 +4701,7 @@ public:
      *
      * Cleans up any resources associated with the `MainMenu` instance.
      */
-    ~MainMenu() {
-        //tsl::gfx::FontManager::clearCache();
-    }
+    ~MainMenu() {}
     
     /**
      * @brief Creates the graphical user interface (GUI) for the main menu overlay.
@@ -5135,9 +4728,7 @@ public:
             inMainMenu = false;
         
         // Pre-declare all variables used in loops and throughout the function
-        std::string packagePath;//, pathReplace, pathReplaceOn, pathReplaceOff;
-        //std::string filePath, specificKey, pathPattern, pathPatternOn, pathPatternOff, itemName, parentDirName, lastParentDirName;
-        //std::vector<std::string> filesList, filesListOn, filesListOff, filterList, filterListOn, filterListOff;
+        std::string packagePath;
         
         bool noClickableItems = false;
         bool toPackages = false;
@@ -5191,6 +4782,8 @@ public:
                 setDefaultValue(ultrahandSection, "clean_version_labels", FALSE_STR, cleanVersionLabels);
                 setDefaultValue(ultrahandSection, "hide_overlay_versions", FALSE_STR, hideOverlayVersions);
                 setDefaultValue(ultrahandSection, "hide_package_versions", FALSE_STR, hidePackageVersions);
+                setDefaultValue(ultrahandSection, "highlight_versions", TRUE_STR, highlightVersions);
+                setDefaultValue(ultrahandSection, "highlight_titles", FALSE_STR, highlightTitles);
                 setDefaultValue(ultrahandSection, "memory_expansion", FALSE_STR, useMemoryExpansion);
                 // setDefaultValue(ultrahandSection, "custom_wallpaper", FALSE_STR, useCustomWallpaper);
                 setDefaultValue(ultrahandSection, "dynamic_logo", TRUE_STR, useDynamicLogo);
@@ -5239,11 +4832,6 @@ public:
                 if (ultrahandSection.count("extended_widget_backdrop") == 0) {
                     setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "extended_widget_backdrop", FALSE_STR);
                 }
-                
-    
-                //if (ultrahandSection.count("overscan") == 0) {
-                //    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "overscan", "100");
-                //}
                 
                 // Handle the 'to_packages' option if it exists
                 if (ultrahandSection.count("to_packages") > 0) {
@@ -5301,7 +4889,7 @@ public:
     
         menuMode = currentMenu;
         
-        versionLabel = std::string(APP_VERSION) + "  (" + loaderTitle + " " + cleanVersionLabel(loaderInfo) + ")";
+        versionLabel = cleanVersionLabel(APP_VERSION) + "  " + loaderTitle + " " + cleanVersionLabel(loaderInfo);
         //versionLabel = (cleanVersionLabels) ? std::string(APP_VERSION) : (std::string(APP_VERSION) + "   (" + extractTitle(loaderInfo) + " v" + cleanVersionLabel(loaderInfo) + ")");
         
         auto list = new tsl::elm::List();
@@ -5359,9 +4947,9 @@ public:
     
             #endif
     
-            // load overlayList from OVERLAYS_INI_FILEPATH.  this will be the overlayFilenames
-            std::set<std::string> overlayList;
-            std::set<std::string> hiddenOverlayList;
+            // load overlaySet from OVERLAYS_INI_FILEPATH.  this will be the overlayFilenames
+            std::set<std::string> overlaySet;
+            //std::set<std::string> hiddenOverlaySet;
             
             // Load subdirectories
             if (!overlayFiles.empty()) {
@@ -5410,7 +4998,7 @@ public:
                     
                         //baseOverlayInfo = "0020" + assignedOverlayName + ":" + assignedOverlayName + ":" + assignedOverlayVersion + ":" + overlayFileName;
                         baseOverlayInfo = "0020" + assignedOverlayName + ":" + assignedOverlayName + ":" + assignedOverlayVersion + ":" + overlayFileName + ":" + (usingLibUltrahand ? "1" : "0");
-                        overlayList.insert(baseOverlayInfo);
+                        overlaySet.insert(baseOverlayInfo);
                     } else {
                         hide = getValueOrDefault(it->second, HIDE_STR, FALSE_STR);
                         if (hide == TRUE_STR)
@@ -5434,24 +5022,24 @@ public:
                             baseOverlayInfo = priority + assignedOverlayName + ":" + assignedOverlayName + ":" + assignedOverlayVersion + ":" + overlayFileName + ":" + (usingLibUltrahand ? "1" : "0");
                             fullOverlayInfo = (starred == TRUE_STR) ? "-1:" + baseOverlayInfo : baseOverlayInfo;
                             
-                            if (!inHiddenMode) {
-                                overlayList.insert(fullOverlayInfo);
-                            } else {
-                                hiddenOverlayList.insert(fullOverlayInfo);
-                            }
+                            //if (!inHiddenMode) {
+                            overlaySet.insert(fullOverlayInfo);
+                            //} else {
+                            //    hiddenOverlaySet.insert(fullOverlayInfo);
+                            //}
                         }
                     }
                 }
     
                 overlaysIniData.clear();
                 
-                if (inHiddenMode) {
-                    overlayList = std::move(hiddenOverlayList);
-                    //hiddenOverlayList.clear();
-                }
+                //if (inHiddenMode) {
+                //    overlaySet = std::move(hiddenOverlaySet);
+                //    //hiddenOverlaySet.clear();
+                //}
                 
                 // Process overlay list items
-                for (const auto& taintedOverlayFileName : overlayList) {
+                for (const auto& taintedOverlayFileName : overlaySet) {
                     usingLibUltrahand = false;
                     overlayFileName = "";
                     overlayStarred = false;
@@ -5505,13 +5093,18 @@ public:
                             listItem->setValue(overlayVersion, true);
 
                             if (usingLibUltrahand) {
-                                listItem->setTextColor(tsl::overlayEntryTextColor);
-                                listItem->setValueColor(tsl::overlayVersionTextColor);
+                                listItem->setValueColor(highlightVersions ? tsl::overlayVersionTextColor : tsl::tslOverlayVersionTextColor);
                             }
                             else {
-                                listItem->setTextColor(tsl::tslOverlayEntryTextColor);
                                 listItem->setValueColor(tsl::tslOverlayVersionTextColor);
                             }
+                        }
+
+                        if (usingLibUltrahand) {
+                            listItem->setTextColor(highlightTitles ? tsl::overlayEntryTextColor : tsl::tslOverlayEntryTextColor);
+                        }
+                        else {
+                            listItem->setTextColor(tsl::tslOverlayEntryTextColor);
                         }
                         
 
@@ -5599,7 +5192,7 @@ public:
                     if (listItem != nullptr)
                         list->addItem(listItem);
                 }
-                //overlayList.clear();
+                //overlaySet.clear();
                 
                 if (drawHiddenTab && !inHiddenMode && !hideHidden) {
                     listItem = new tsl::elm::ListItem(HIDDEN, DROPDOWN_SYMBOL);
@@ -5712,8 +5305,8 @@ public:
                 #endif
     
                 
-                std::set<std::string> packageList;
-                std::set<std::string> hiddenPackageList;
+                std::set<std::string> packageSet;
+                //std::set<std::string> hiddenPackageSet;
                 
                 // Load the INI file and parse its content.
                 std::map<std::string, std::map<std::string, std::string>> packagesIniData = getParsedDataFromIniFile(PACKAGES_INI_FILEPATH);
@@ -5756,7 +5349,7 @@ public:
                         assignedOverlayVersion = packageHeader.version;
     
                         baseOverlayInfo = "0020:" + assignedOverlayName + ":" + assignedOverlayVersion + ":" + packageName;
-                        packageList.insert(baseOverlayInfo);
+                        packageSet.insert(baseOverlayInfo);
     
                     } else {
                         // Process existing package data
@@ -5787,11 +5380,11 @@ public:
                             
                             baseOverlayInfo = priority + ":" + assignedOverlayName + ":" + assignedOverlayVersion + ":" + packageName;
                             fullOverlayInfo = (starred == TRUE_STR) ? "-1:" + baseOverlayInfo : baseOverlayInfo;
-                            if (!inHiddenMode) {
-                                packageList.insert(fullOverlayInfo);
-                            } else {
-                                hiddenPackageList.insert(fullOverlayInfo);
-                            }
+                            //if (!inHiddenMode) {
+                            packageSet.insert(fullOverlayInfo);
+                            //} else {
+                            //    hiddenPackageSet.insert(fullOverlayInfo);
+                            //}
                         }
                     }
                 }
@@ -5800,12 +5393,13 @@ public:
                 subdirectories.clear();
                 subdirectories.shrink_to_fit();
                 
-                if (inHiddenMode) {
-                    packageList = std::move(hiddenPackageList);
-                    //hiddenPackageList.clear();
-                }
+                //if (inHiddenMode) {
+                //    packageSet = std::move(hiddenPackageSet);
+                //    //hiddenPackageSet.clear();
+                //}
+                
                 bool firstItem = true;
-                for (const auto& taintedPackageName : packageList) {
+                for (const auto& taintedPackageName : packageSet) {
                     if (firstItem) {
                         addHeader(list, !inHiddenMode ? PACKAGES : HIDDEN_PACKAGES);
                         firstItem = false;
@@ -5847,9 +5441,9 @@ public:
                         listItem = new tsl::elm::ListItem(packageStarred ? STAR_SYMBOL + "  " + newPackageName : newPackageName);
                         if (!hidePackageVersions) {
                             listItem->setValue(packageVersion, true);
-                            listItem->setTextColor(tsl::packageEntryTextColor);
-                            listItem->setValueColor(tsl::packageVersionTextColor);
+                            listItem->setValueColor(highlightVersions ? tsl::packageVersionTextColor : tsl::tslOverlayVersionTextColor);
                         }
+                        listItem->setTextColor(tsl::packageEntryTextColor);
 
                         
                         // Add a click listener to load the overlay when clicked upon
@@ -5886,10 +5480,6 @@ public:
                                     }
                                 }
                                 
-                               //jumpItemName = "";
-                               //jumpItemValue = "";
-                               //jumpItemExactMatch = true;
-                               //g_overlayFilename = "";
 
                                 lastPackagePath = packageFilePath;
                                 lastPackageName = PACKAGE_FILENAME;
@@ -5946,7 +5536,7 @@ public:
                             list->addItem(listItem);
                     }
                 }
-                //packageList.clear();
+                //packageSet.clear();
                 
                 if (drawHiddenTab && !inHiddenMode && !hideHidden) {
                     listItem = new tsl::elm::ListItem(HIDDEN, DROPDOWN_SYMBOL);
@@ -5995,18 +5585,9 @@ public:
         
         if (initializingSpawn) {
             initializingSpawn = false;
-            //list.reset();
             return createUI(); 
         }
         
-        //filesList.clear();
-        //filesList.shrink_to_fit();
-    
-        //auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel, noClickableItems, menuMode+hiddenMenuMode+dropdownSection, "", "", "");
-        //
-        //rootFrame->setContent(list);
-        //
-        //return rootFrame.release();
 
         auto rootFrame = new tsl::elm::OverlayFrame(CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel, noClickableItems, menuMode+hiddenMenuMode+dropdownSection, "", "", "");
         if (g_overlayFilename != "ovlmenu.ovl")
@@ -6014,7 +5595,6 @@ public:
         else
             g_overlayFilename = "";
         rootFrame->setContent(list);
-        //menuIsGenerated = true;
         return rootFrame;
     }
 
@@ -6036,23 +5616,8 @@ public:
 
         if (runningInterpreter.load(std::memory_order_acquire))
             return handleRunningInterpreter(keysDown, keysHeld);
-        
-        //if (lastRunningInterpreter) {
-        //    ////while (!interpreterThreadExit.load(std::memory_order_acquire)) {svcSleepThread(50'000'000);}
-        //    
-        //    //resetPercentages();
-        //    
-        //    isDownloadCommand = false;
-        //    lastSelectedListItem->setValue(commandSuccess ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
-        //    closeInterpreterThread();
-        //    lastRunningInterpreter = false;
-        //    return true;
-        //}
 
         if (lastRunningInterpreter) {
-            //while (!interpreterThreadExit.load(std::memory_order_acquire)) {svcSleepThread(50'000'000);}
-            
-            //resetPercentages();
             
             isDownloadCommand = false;
             if (lastCommandMode == OPTION_STR || lastCommandMode == SLOT_STR) {
@@ -6067,7 +5632,6 @@ public:
                                 lastSelectedListItem->setValue(footerIt->second);
                             }
                         }
-                        //lastSelectedListItem = nullptr;
                         lastCommandMode = "";
                     } else {
                         lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
@@ -6093,10 +5657,6 @@ public:
         if (refreshPage && !stillTouching.load(std::memory_order_acquire)) {
             refreshPage = false;
             tsl::pop();
-            //jumpItemName = HIDDEN;
-            //jumpItemValue = DROPDOWN_SYMBOL;
-            //// Also clear the global overlay filename since we're not on the main overlay list
-            //g_overlayFilename = "";
             tsl::changeTo<MainMenu>(hiddenMenuMode, dropdownSection);
             if (wasInHiddenMode) {
                 skipJumpReset = true;
@@ -6112,9 +5672,6 @@ public:
         }
 
         if (!dropdownSection.empty() && !returningToMain) {
-            //if (simulatedNextPage.load(std::memory_order_acquire)) {
-            //    simulatedNextPage.store(false, std::memory_order_release);
-            //}
             simulatedNextPage.exchange(false, std::memory_order_acq_rel);
 
             simulatedMenu.exchange(false, std::memory_order_acq_rel);
@@ -6146,38 +5703,27 @@ public:
             
             if (!freshSpawn && !returningToMain && !returningToHiddenMain) {
                 
-                if (simulatedNextPage.exchange(false, std::memory_order_acq_rel)) {//&& !tsl::elm::s_lastFrameItems.empty()) {
-                    //tsl::swapComplete = false;
-                    //bool expected = true;
-                    //ult::simulatedNextPage.compare_exchange_strong(expected, false, std::memory_order_release);
+                if (simulatedNextPage.exchange(false, std::memory_order_acq_rel)) {
                     if (!usePageSwap) {
                         if (menuMode != PACKAGES_STR) {
                             keysDown |= KEY_DRIGHT;
-                            //lastNextPageTapTime = currentTimeNs;
-                            //simulatedNextPage.store(false, std::memory_order_release);
                         }
                         else if (menuMode != OVERLAYS_STR) {
                             keysDown |= KEY_DLEFT;
-                            //lastNextPageTapTime = currentTimeNs;
-                            //simulatedNextPage.store(false, std::memory_order_release);
                         }
                     } else {
                         if (menuMode != PACKAGES_STR) {
                             keysDown |= KEY_DLEFT;
-                            //lastNextPageTapTime = currentTimeNs;
-                            //simulatedNextPage.store(false, std::memory_order_release);
                         }
                         else if (menuMode != OVERLAYS_STR) {
                             keysDown |= KEY_DRIGHT;
-                            //lastNextPageTapTime = currentTimeNs;
-                            //simulatedNextPage.store(false, std::memory_order_release);
                         }
                     }
                 }
                 
                 if (tsl::elm::s_safeToSwap.load(std::memory_order_acquire)  && (keysDown & KEY_RIGHT) && !(keysHeld & KEY_LEFT) && !(keysDown & ~KEY_RIGHT & ~KEY_R & ALL_KEYS_MASK) &&
                     !stillTouching.load(std::memory_order_acquire) && (((!allowSlide.load(std::memory_order_acquire) && !unlockedSlide.load(std::memory_order_acquire) && onTrackBar.load(std::memory_order_acquire)) || (keysDown & KEY_R)) || !onTrackBar.load(std::memory_order_acquire)) ){// && tsl::elm::safeToSwap.exchange(false, std::memory_order_acq_rel)){ //&&
-                    //!tsl::elm::s_lastFrameItems.empty() && (tsl::elm::s_isForwardCache && tsl::elm::s_hasValidFrame)) {
+                    
                     g_overlayFilename = "";
                     jumpItemName = "";
                     jumpItemValue = "";
@@ -6188,61 +5734,24 @@ public:
                     if (!usePageSwap) {
                         if (menuMode != PACKAGES_STR) {
                             currentMenu = PACKAGES_STR;
-                            //selectedListItem = nullptr;
-                            //lastSelectedListItem = nullptr;
-                            
-                            //svcSleepThread(200'000);
-                            //simulatedNextPage.store(false, std::memory_order_release);
                             tsl::pop();
                             
                             tsl::changeTo<MainMenu>();
-                            //svcSleepThread(200'000);  
-                            //bool expected = true;
-                            //ult::simulatedNextPage.compare_exchange_strong(expected, false, std::memory_order_release);
-                            //tsl::swapComplete = true;
-                            //startInterpreterThread();
-                            //simulatedNextPageComplete.store(true, std::memory_order_release);
                             return true;
                         }
                     } else {
                         if (menuMode != OVERLAYS_STR) {
                             currentMenu = OVERLAYS_STR;
-                            //selectedListItem = nullptr;
-                            //lastSelectedListItem = nullptr;
-                            
-                            //svcSleepThread(200'000);
-                            //simulatedNextPage.store(false, std::memory_order_release);
                             tsl::pop();
                             tsl::changeTo<MainMenu>();
-                            //svcSleepThread(200'000);
-                            //bool expected = true;
-                            //ult::simulatedNextPage.compare_exchange_strong(expected, false, std::memory_order_release);
-                            //tsl::swapComplete = true;
-                            //startInterpreterThread();
-                            //simulatedNextPageComplete.store(true, std::memory_order_release);
                             return true;
                         }
                     }
-                    //simulatedNextPage.store(false, std::memory_order_release);
-                    //simulatedNextPageComplete.store(true, std::memory_order_release);
-                    //return true;
-                //} else if ((!tsl::elm::s_isForwardCache || !tsl::elm::s_hasValidFrame) || tsl::elm::s_lastFrameItems.empty()) {
-                //    tsl::elm::s_lastFrameItems.clear();
-                //    tsl::elm::s_lastFrameItems.shrink_to_fit();
-                //    tsl::elm::s_isForwardCache = false; // NEW VARIABLE FOR FORWARD CACHING
-                //    tsl::elm::s_hasValidFrame = false;
-                //    tsl::elm::s_cacheForwardFrameOnce = true;
-                //    //simulatedNextPage.store(false, std::memory_order_release);
-                //    //simulatedNextPageComplete.store(true, std::memory_order_release);
-                //    ult::allowSlide = ult::unlockedSlide = false;
-                //    //svcSleepThread(200'000);
-                //    bool expected = true;
-                //    ult::simulatedNextPage.compare_exchange_strong(expected, false, std::memory_order_release);
                 }
 
                 if (tsl::elm::s_safeToSwap.load(std::memory_order_acquire)  && (keysDown & KEY_LEFT) && !(keysHeld & KEY_RIGHT) && !(keysDown & ~KEY_LEFT & ~KEY_R & ALL_KEYS_MASK) &&
                     !stillTouching.load(std::memory_order_acquire) &&(((!allowSlide.load(std::memory_order_acquire) && onTrackBar.load(std::memory_order_acquire) && !unlockedSlide.load(std::memory_order_acquire)) || (keysDown & KEY_R)) || !onTrackBar.load(std::memory_order_acquire)) ) {// && tsl::elm::safeToSwap.exchange(false, std::memory_order_acq_rel)) { //&&
-                    //!tsl::elm::s_lastFrameItems.empty() && (tsl::elm::s_isForwardCache && tsl::elm::s_hasValidFrame)) {
+                    
                     g_overlayFilename = "";
                     jumpItemName = "";
                     jumpItemValue = "";
@@ -6254,55 +5763,18 @@ public:
                     if (!usePageSwap) {
                         if (menuMode != OVERLAYS_STR) {
                             currentMenu = OVERLAYS_STR;
-                            //selectedListItem = nullptr;
-                            //lastSelectedListItem = nullptr;
-                            
-                            //svcSleepThread(200'000);
-                            //simulatedNextPage.store(false, std::memory_order_release);
                             tsl::pop();
                             tsl::changeTo<MainMenu>();
-                            //svcSleepThread(200'000);  
-                            //bool expected = true;
-                            //ult::simulatedNextPage.compare_exchange_strong(expected, false, std::memory_order_release);
-                            //tsl::swapComplete = true;
-                            //startInterpreterThread();
-                            //simulatedNextPageComplete.store(true, std::memory_order_release);
                             return true;
                         }
                     } else {
                         if (menuMode != PACKAGES_STR) {
                             currentMenu = PACKAGES_STR;
-                            //selectedListItem = nullptr;
-                            //lastSelectedListItem = nullptr;
-                            
-                            //svcSleepThread(200'000);
-                            //simulatedNextPage.store(false, std::memory_order_release);
                             tsl::pop();
                             tsl::changeTo<MainMenu>();
-                            //svcSleepThread(200'000);  
-                            //bool expected = true;
-                            //ult::simulatedNextPage.compare_exchange_strong(expected, false, std::memory_order_release);
-                            //tsl::swapComplete = true;
-                            //startInterpreterThread();
-                            //simulatedNextPageComplete.store(true, std::memory_order_release);
                             return true;
                         }
                     }
-                    //simulatedNextPage.store(false, std::memory_order_release);
-                    //simulatedNextPageComplete.store(true, std::memory_order_release);
-                    //return true;
-                //} else if ((!tsl::elm::s_isForwardCache || !tsl::elm::s_hasValidFrame) || tsl::elm::s_lastFrameItems.empty()) {
-                //    tsl::elm::s_lastFrameItems.clear();
-                //    tsl::elm::s_lastFrameItems.shrink_to_fit();
-                //    tsl::elm::s_isForwardCache = false; // NEW VARIABLE FOR FORWARD CACHING
-                //    tsl::elm::s_hasValidFrame = false;
-                //    tsl::elm::s_cacheForwardFrameOnce = true;
-                //    //simulatedNextPage.store(false, std::memory_order_release);
-                //    //simulatedNextPageComplete.store(true, std::memory_order_release);
-                //    ult::allowSlide = ult::unlockedSlide = false;
-                //    //svcSleepThread(200'000); 
-                //    bool expected = true;
-                //    ult::simulatedNextPage.compare_exchange_strong(expected, false, std::memory_order_release);
                 }
 
                 if (simulatedBack.exchange(false, std::memory_order_acq_rel)) {
@@ -6324,12 +5796,7 @@ public:
 
                 if ((keysDown & SYSTEM_SETTINGS_KEY) && !stillTouching.load(std::memory_order_acquire)) {
                     inMainMenu = false;
-                    //jumpItemName = "";
-                    //jumpItemValue = "";
-                    //jumpItemExactMatch = true;
-                    //g_overlayFilename = "";
                     tsl::changeTo<UltrahandSettingsMenu>();
-                    //if (menuMode != PACKAGES_STR) startInterpreterThread();
                     
                     return true;
                 }
@@ -6338,9 +5805,6 @@ public:
         if (!inMainMenu && inHiddenMode) {
             if (!returningToHiddenMain && !returningToMain) {
 
-                //if (simulatedNextPage.load(std::memory_order_acquire)) {
-                //    simulatedNextPage.store(false, std::memory_order_release);
-                //}
                 simulatedNextPage.exchange(false, std::memory_order_acq_rel);
 
                 simulatedMenu.exchange(false, std::memory_order_acq_rel);
@@ -6350,9 +5814,6 @@ public:
                 }
 
                 if ((keysDown & KEY_B) && !stillTouching.load(std::memory_order_acquire)) {
-                    //g_overlayFilename = "";
-                    //jumpItemName = "";
-                    //jumpItemValue = "";
                     
                     if (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_OVERLAY_STR) == FALSE_STR) {
                         inMainMenu = true;
@@ -6392,17 +5853,11 @@ public:
         if (freshSpawn && !(keysDown & KEY_B))
             freshSpawn = false;
         
-        if (returningToMain && !(keysDown & KEY_B)){
-            //selectedListItem = nullptr;
-            //lastSelectedListItem = nullptr;
-            //forwarderListItem = nullptr;
+        if (returningToMain && !(keysDown & KEY_B)) {
             returningToMain = false;
             inMainMenu = true;
         }
-        if (returningToHiddenMain && !(keysDown & KEY_B)){
-            //selectedListItem = nullptr;
-            //lastSelectedListItem = nullptr;
-            //forwarderListItem = nullptr;
+        if (returningToHiddenMain && !(keysDown & KEY_B)) {
             returningToHiddenMain = false;
             inHiddenMode = true;
         }
@@ -6437,18 +5892,8 @@ public:
     virtual void initServices() override {
         tsl::overrideBackButton = true; // for properly overriding the always go back functionality of KEY_B
 
-        //isLauncher = true;
-
-        //tsl::initializeThemeVars();
-        //tsl::initializeUltrahandSettings(); // unnecessary for Ultrahand's implementation
-        //ASSERT_FATAL(smInitialize()); // might be unnecessary? needs investigating
-
         ASSERT_FATAL(socketInitializeDefault());
         initializeCurl();
-
-
-        // Load and execute "boot" commands if they exist
-        //executeIniCommands(PACKAGE_PATH + BOOT_PACKAGE_FILENAME, "boot");
 
         // read commands from root package's boot_package.ini
         if (firstBoot) {
@@ -6479,13 +5924,6 @@ public:
 
         cleanupCurl();
         socketExit();
-
-        //jumpItemName = "";
-        //jumpItemValue = "";
-        //jumpItemExactMatch = true;
-        //g_overlayFilename = "";
-        //smExit();
-        //closeInterpreterThread(); // shouldn't be running, but run close anyways
     }
     
     /**
@@ -6494,15 +5932,7 @@ public:
      * This function is called when the overlay transitions from an invisible state to a visible state.
      * It can be used to perform actions or updates specific to the overlay's visibility.
      */
-    virtual void onShow() override {
-        //playClickVibration();
-        //logMessage("onShow isHidden: "+ult::to_string(isHidden.load()));
-        //std::string file_path = "sdmc:/config/ultrahand/open.wav";
-        //
-        //if (play_audio(file_path) != 0) {
-        //    logMessage("Failed to play audio.");
-        //}
-    } 
+    virtual void onShow() override {} 
     
     /**
      * @brief Performs actions when the overlay becomes visible.
@@ -6510,9 +5940,7 @@ public:
      * This function is called when the overlay transitions from an invisible state to a visible state.
      * It can be used to perform actions or updates specific to the overlay's visibility.
      */
-    virtual void onHide() override {
-        //logMessage("onHide isHidden: "+ult::to_string(isHidden.load()));
-    } 
+    virtual void onHide() override {} 
     
     /**
      * @brief Loads the initial graphical user interface (GUI) for the overlay.
@@ -6542,9 +5970,5 @@ public:
  * @return The application's exit code.
  */
 int main(int argc, char* argv[]) {
-    //if (argc > 1) {
-    //    // The filename is the first argument after the program name
-    //    g_overlayFilename = std::string(argv[1]);
-    //}
     return tsl::loop<Overlay, tsl::impl::LaunchFlags::None>(argc, argv);
 }
