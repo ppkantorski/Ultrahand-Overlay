@@ -1109,12 +1109,12 @@ public:
                 simulatedNextPage.exchange(false, acq_rel);
                 simulatedMenu.exchange(false, acq_rel);
                 
-                if (simulatedBack.exchange(false, acq_rel)) {
-                    keysDown |= KEY_B;
-                }
+                //if (simulatedBack.exchange(false, acq_rel)) {
+                //    keysDown |= KEY_B;
+                //}
                 
                 const bool isTouching = stillTouching.load(acquire);
-                const bool backKeyPressed = (keysDown & KEY_B) && !isTouching;
+                const bool backKeyPressed = (keysDown & KEY_B || simulatedBack.exchange(false, acq_rel)) && !isTouching;
                 
                 if (backKeyPressed) {
                     allowSlide.exchange(false, acq_rel);
@@ -1137,12 +1137,12 @@ public:
         } else if (inSubSettingsMenu) {
             simulatedNextPage.exchange(false, acq_rel);
             
-            if (simulatedBack.exchange(false, acq_rel)) {
-                keysDown |= KEY_B;
-            }
+            //if (simulatedBack.exchange(false, acq_rel)) {
+            //    keysDown |= KEY_B;
+            //}
             
             const bool isTouching = stillTouching.load(acquire);
-            const bool backKeyPressed = (keysDown & KEY_B) && !isTouching;
+            const bool backKeyPressed = (keysDown & KEY_B || simulatedBack.exchange(false, acq_rel)) && !isTouching;
             
             if (backKeyPressed) {
                 allowSlide.exchange(false, acq_rel);
@@ -1715,18 +1715,21 @@ public:
             simulatedBack.exchange(true, acq_rel);
             return true;
         }
-    
+
+
         if (inSettingsMenu && !inSubSettingsMenu) {
             if (!returningToSettings) {
                 simulatedNextPage.exchange(false, acq_rel);
                 simulatedMenu.exchange(false, acq_rel);
     
-                if (simulatedBack.exchange(false, acq_rel)) {
-                    keysDown |= KEY_B;
-                }
+                //if (simulatedBack.exchange(false, acq_rel)) {
+                //    keysDown |= KEY_B;
+                //}
+                const bool isTouching = stillTouching.load(acquire);
+                const bool backKeyPressed = (keysDown & KEY_B || simulatedBack.exchange(false, acq_rel)) && !isTouching;
     
                 // Note: Original code uses !stillTouching without .load() - preserving this exactly
-                if ((keysDown & KEY_B) && !stillTouching) {
+                if (backKeyPressed) {
                     allowSlide.exchange(false, acq_rel);
                     unlockedSlide.exchange(false, acq_rel);
                     inSettingsMenu = false;
@@ -1774,13 +1777,14 @@ public:
             simulatedNextPage.exchange(false, acq_rel);
             simulatedMenu.exchange(false, acq_rel);
         
-            if (simulatedBack.exchange(false, acq_rel)) {
-                keysDown |= KEY_B;
-            }
+            //if (simulatedBack.exchange(false, acq_rel)) {
+            //    keysDown |= KEY_B;
+            //}
         
             // Note: Original code uses stillTouching.load() here - preserving this difference
             const bool isTouching = stillTouching.load(acquire);
-            const bool backKeyPressed = (keysDown & KEY_B) && !isTouching;
+            const bool backKeyPressed = (keysDown & KEY_B || simulatedBack.exchange(false, acq_rel)) && !isTouching;
+            
             
             if (backKeyPressed) {
                 allowSlide.exchange(false, acq_rel);
@@ -2056,12 +2060,12 @@ public:
             simulatedNextPage.exchange(false, acq_rel);
             simulatedMenu.exchange(false, acq_rel);
             
-            if (simulatedBack.exchange(false, acq_rel)) {
-                keysDown |= KEY_B;
-            }
+            //if (simulatedBack.exchange(false, acq_rel)) {
+            //    keysDown |= KEY_B;
+            //}
             
             const bool isTouching = stillTouching.load(acquire);
-            const bool backKeyPressed = (keysDown & KEY_B) && !isTouching;
+            const bool backKeyPressed = (keysDown & KEY_B || simulatedBack.exchange(false, acq_rel)) && !isTouching;
             
             if (backKeyPressed) {
                 allowSlide.exchange(false, acq_rel);
@@ -2964,13 +2968,13 @@ public:
             simulatedNextPage.exchange(false, acq_rel);
             simulatedMenu.exchange(false, acq_rel);
             
-            if (simulatedBack.exchange(false, acq_rel)) {
-                keysDown |= KEY_B;
-            }
+            //if (simulatedBack.exchange(false, acq_rel)) {
+            //    keysDown |= KEY_B;
+            //}
             
             // Check touching state again for the key handling (different timing context)
             const bool isTouchingForKeys = stillTouching.load(acquire);
-            const bool backKeyPressed = (keysDown & KEY_B) && !isTouchingForKeys;
+            const bool backKeyPressed = (keysDown & KEY_B || simulatedBack.exchange(false, acq_rel)) && !isTouchingForKeys;
             
             if (backKeyPressed) {
                 allowSlide.exchange(false, acq_rel);
@@ -3935,7 +3939,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
                         //const std::string indexPlaceholder = "{index}";
                         //const size_t valuePlaceholderLength = valuePlaceholder.length();
                         //const size_t indexPlaceholderLength = indexPlaceholder.length();
-                        
+
                         size_t pos;
 
                         for (auto& cmd : modifiedCmds) {
@@ -4602,7 +4606,7 @@ public:
         }
         
         // Common back key condition
-        const bool backKeyPressed = (keysDown & KEY_B) && !isTouching;
+        const bool backKeyPressed = (keysDown & KEY_B || simulatedBack.exchange(false, acq_rel)) && !isTouching;
         
         // Helper lambda for common back key handling logic
         auto handleBackKeyCommon = [&]() {
@@ -4664,9 +4668,9 @@ public:
             simulatedNextPage.exchange(false, acq_rel);
             
             if (!usingPages || (usingPages && lastPage == LEFT_STR)) {
-                if (simulatedBack.exchange(false, acq_rel)) {
-                    keysDown |= KEY_B;
-                }
+                //if (simulatedBack.exchange(false, acq_rel)) {
+                //    keysDown |= KEY_B;
+                //}
                 if (backKeyPressed) {
                     if (handleBackKeyCommon()) return true;
                     // Free-up memory
@@ -4675,9 +4679,9 @@ public:
                     return true;
                 }
             } else if (usingPages && lastPage == RIGHT_STR) {
-                if (simulatedBack.exchange(false, acq_rel)) {
-                    keysDown |= KEY_B;
-                }
+                //if (simulatedBack.exchange(false, acq_rel)) {
+                //    keysDown |= KEY_B;
+                //}
                 if (backKeyPressed) {
                     if (handleBackKeyCommon()) return true;
                     // Free-up memory
@@ -4694,9 +4698,9 @@ public:
             simulatedNextPage.exchange(false, acq_rel);
             
             if (!usingPages || (usingPages && lastPage == LEFT_STR)) {
-                if (simulatedBack.exchange(false, acq_rel)) {
-                    keysDown |= KEY_B;
-                }
+                //if (simulatedBack.exchange(false, acq_rel)) {
+                //    keysDown |= KEY_B;
+                //}
                 if (backKeyPressed) {
                     handleForwarderFooter();
                     allowSlide.exchange(false, acq_rel);
@@ -4709,9 +4713,9 @@ public:
                     return true;
                 }
             } else if (usingPages && lastPage == RIGHT_STR) {
-                if (simulatedBack.exchange(false, acq_rel)) {
-                    keysDown |= KEY_B;
-                }
+                //if (simulatedBack.exchange(false, acq_rel)) {
+                //    keysDown |= KEY_B;
+                //}
                 if (backKeyPressed) {
                     handleForwarderFooter();
                     allowSlide.exchange(false, acq_rel);
@@ -4756,9 +4760,9 @@ public:
             tsl::Overlay::get()->close();
         }
     
-        if (simulatedBack.exchange(false, acq_rel)) {
-            keysDown |= KEY_B;
-        }
+        //if (simulatedBack.exchange(false, acq_rel)) {
+        //    keysDown |= KEY_B;
+        //}
         if (backKeyPressed) { // for catching lost navigations
             if (!selectedPackage.empty()) {
                 tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
@@ -5809,15 +5813,15 @@ public:
         }
     
         // Common condition for back key handling
-        const bool backKeyPressed = (keysDown & KEY_B) && !isTouching;
+        const bool backKeyPressed = (keysDown & KEY_B || simulatedBack.exchange(false, acq_rel)) && !isTouching;
         
         if (!dropdownSection.empty() && !returningToMain) {
             simulatedNextPage.exchange(false, acq_rel);
             simulatedMenu.exchange(false, acq_rel);
     
-            if (simulatedBack.exchange(false, acq_rel)) {
-                keysDown |= KEY_B;
-            }
+            //if (simulatedBack.exchange(false, acq_rel)) {
+            //    keysDown |= KEY_B;
+            //}
     
             if (backKeyPressed) {
                 allowSlide.exchange(false, acq_rel);
@@ -5888,9 +5892,9 @@ public:
                     }
                 }
     
-                if (simulatedBack.exchange(false, acq_rel)) {
-                    keysDown |= KEY_B;
-                }
+                //if (simulatedBack.exchange(false, acq_rel)) {
+                //    keysDown |= KEY_B;
+                //}
     
                 if (backKeyPressed) {
                     allowSlide.exchange(false, acq_rel);
@@ -5917,9 +5921,9 @@ public:
             simulatedNextPage.exchange(false, acq_rel);
             simulatedMenu.exchange(false, acq_rel);
     
-            if (simulatedBack.exchange(false, acq_rel)) {
-                keysDown |= KEY_B;
-            }
+            //if (simulatedBack.exchange(false, acq_rel)) {
+            //    keysDown |= KEY_B;
+            //}
     
             if (backKeyPressed) {
                 // Check if we're in hidden mode with no underlying menu to go back to
