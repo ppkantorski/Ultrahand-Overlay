@@ -46,7 +46,7 @@ static bool returningToSubPackage = false;
 static bool returningToSelectionMenu = false;
 static bool languageWasChanged = false;
 
-static bool skipJumpReset = false; // for overrridng the default main menu jump to implementation
+//static bool skipJumpReset = false; // for overrridng the default main menu jump to implementation // moved to utils
 
 //static bool inMainMenu = false; // moved to libtesla
 static bool wasInHiddenMode = false;
@@ -66,6 +66,7 @@ static bool reloadMenu = false;
 static bool reloadMenu2 = false;
 //static bool reloadMenu3 = false;
 static bool triggerMenuReload = false;
+static bool triggerMenuReload2 = false;
 
 
 static size_t nestedMenuCount = 0;
@@ -146,8 +147,12 @@ std::string getValueOrDefault(const Map& data, const std::string& key, const std
 
 
 inline void clearMemory() {
+    
     hexSumCache.clear();
     selectedFooterDict.clear(); // Clears all data from the map, making it empty again
+    //selectedListItem = nullptr;
+    //lastSelectedListItem = nullptr;
+    //forwarderListItem = nullptr;
 }
 
 void shiftItemFocus(tsl::elm::Element* element) {
@@ -398,22 +403,20 @@ private:
                     keys |= KEY_A;
                 }
                 if (keys & KEY_A) {
-                    if (item != defaultItem) {
-                        setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, iniKey, item);
-                
-                        if (targetMenu == KEY_COMBO_STR) {
-                            // Also set it in tesla config
-                            setIniFileValue(TESLA_CONFIG_INI_PATH, TESLA_STR, iniKey, item);
+                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, iniKey, item);
+                    
+                    if (targetMenu == KEY_COMBO_STR) {
+                        // Also set it in tesla config
+                        setIniFileValue(TESLA_CONFIG_INI_PATH, TESLA_STR, iniKey, item);
 
-                            // Remove this key combo from any overlays using it (both key_combo and mode_combos)
-                            this->removeKeyComboFromAllOthers(item);
+                        // Remove this key combo from any overlays using it (both key_combo and mode_combos)
+                        this->removeKeyComboFromAllOthers(item);
                             
-                            // Reload the overlay key combos to reflect changes
-                            tsl::hlp::loadEntryKeyCombos();
-                        }
-                
-                        reloadMenu = true;
+                        // Reload the overlay key combos to reflect changes
+                        tsl::hlp::loadEntryKeyCombos();
                     }
+                    
+                    reloadMenu = true;
                 
                     lastSelectedListItem->setValue("");
                     selectedListItem->setValue(mappedItem);
@@ -575,7 +578,7 @@ private:
             //    iniKey == "center_widget_alignment" || iniKey == "extended_widget_backdrop") {
             //    reinitializeWidgetVars();
             } else if (iniKey == "right_alignment") {
-                triggerMenuReload = firstState != state;
+                triggerMenuReload2 = firstState != state;
             //} else if (iniKey == "dynamic_logo") {
             //    useDynamicLogo = !useDynamicLogo;
             //} else if (iniKey == "launch_combos") {
@@ -599,7 +602,9 @@ public:
         lastSelectedListItemFooter = "";
     }
 
-    ~UltrahandSettingsMenu() {}
+    ~UltrahandSettingsMenu() {
+        lastSelectedListItemFooter = "";
+    }
 
     virtual tsl::elm::Element* createUI() override {
         inSettingsMenu = dropdownSelection.empty();
@@ -836,7 +841,7 @@ public:
                     }
                     else initializeTheme();
                     tsl::initializeThemeVars();
-                    reloadMenu = reloadMenu2 = true;
+                    //reloadMenu = reloadMenu2 = true;
                     lastSelectedListItem->setValue("");
                     selectedListItem->setValue(DEFAULT);
                     listItem->setValue(CHECKMARK_SYMBOL);
@@ -876,7 +881,7 @@ public:
                         copyPercentage.store(-1, std::memory_order_release);
                         initializeTheme();
                         tsl::initializeThemeVars();
-                        reloadMenu = reloadMenu2 = true;
+                        //reloadMenu = reloadMenu2 = true;
                         lastSelectedListItem->setValue("");
                         selectedListItem->setValue(themeName);
                         listItem->setValue(CHECKMARK_SYMBOL);
@@ -1804,6 +1809,7 @@ public:
 std::string packageRootLayerTitle;
 std::string packageRootLayerVersion;
 std::string packageRootLayerColor;
+bool packageRootLayerIsStarred = false;
 
 //std::string lastPackageHeader;
 
@@ -2113,7 +2119,7 @@ private:
 static std::vector<std::vector<std::string>> selectionCommands = {};
 static std::vector<std::vector<std::string>> selectionCommandsOn = {};
 static std::vector<std::vector<std::string>> selectionCommandsOff = {};
-//static std::string lastSelectedListItemFooter = "";
+static std::string lastSelectedListItemFooter2 = "";
 
 std::unordered_map<int, int> toggleCount;
 std::unordered_map<int, bool> currentPatternIsOriginal; 
@@ -2164,12 +2170,17 @@ private:
 public:
     SelectionOverlay(const std::string& path, const std::string& key = "", const std::string& footerKey = "", const std::string& _lastPackageHeader = "")
         : filePath(path), specificKey(key), specifiedFooterKey(footerKey), lastPackageHeader(_lastPackageHeader) {
-        lastSelectedListItemFooter = "";
+        lastSelectedListItemFooter2 = "";
+        lastSelectedListItem = nullptr;
+        //selectedFooterDict.clear();
         tsl::clearGlyphCacheNow.store(true, std::memory_order_release);
     }
 
     ~SelectionOverlay() {
-        //lastSelectedListItem = nullptr;
+        lastSelectedListItemFooter2 = "";
+        lastSelectedListItem = nullptr;
+        //selectedFooterDict.clear();
+
         selectionCommands.clear();
         selectionCommands.shrink_to_fit();
         selectionCommandsOn.clear();
@@ -2686,9 +2697,8 @@ public:
 
                 if (commandMode == OPTION_STR) {
                     if (selectedFooterDict[specifiedFooterKey] == itemName) {
-                        //lastSelectedListItem = nullptr;
                         lastSelectedListItem = listItem;
-                        lastSelectedListItemFooter = footer;
+                        lastSelectedListItemFooter2 = footer;
                         listItem->setValue(CHECKMARK_SYMBOL);
                     } else {
                         if (pos != std::string::npos) {
@@ -2724,10 +2734,14 @@ public:
                         
                         if (commandMode == OPTION_STR) {
                             selectedFooterDict[specifiedFooterKey] = listItem->getText();
-                            if (lastSelectedListItem != listItem)
+                            if (lastSelectedListItem && listItem && lastSelectedListItem != listItem) {
+
                                 lastSelectedListItem->setValue(lastSelectedListItemFooter, true);
-                            //std::string footerStr = std::string(footer);
+                                
+                            }
                             lastSelectedListItemFooter = footer;
+                            //std::string footerStr = std::string(footer);
+                            
                         }
 
                         lastSelectedListItem = listItem;
@@ -2938,6 +2952,7 @@ public:
                         }
                     }
                 }
+                //lastSelectedListItem = nullptr;
                 tsl::goBack();
                 return true;
             }
@@ -3320,6 +3335,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
                                 }
                                 if (keys & KEY_A) {
                                     inPackageMenu = false;
+                                    tsl::clearGlyphCacheNow.store(true, std::memory_order_release);
                                     tsl::changeTo<PackageMenu>(packagePath, optionName, currentPage, packageName, 0, _lastPackageHeader);
                                     
                                     return true;
@@ -3949,6 +3965,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
                                 allowSlide.exchange(false, std::memory_order_acq_rel);
                                 unlockedSlide.exchange(false, std::memory_order_acq_rel);
 
+                                tsl::clearGlyphCacheNow.store(true, std::memory_order_release);
                                 tsl::changeTo<PackageMenu>(forwarderPackagePath, "", LEFT_STR, forwarderPackageIniName, nestedMenuCount, _lastPackageHeader);
                                 return true;
                             } else if (keys & SCRIPT_KEY) {
@@ -4243,10 +4260,15 @@ public:
      */
     PackageMenu(const std::string& path, const std::string& sectionName = "", const std::string& page = LEFT_STR, const std::string& _packageName = PACKAGE_FILENAME, const size_t _nestedlayer = 0, const std::string& _pageHeader = "") :
         packagePath(path), dropdownSection(sectionName), currentPage(page), packageName(_packageName), nestedLayer(_nestedlayer), pageHeader(_pageHeader) {
-            jumpItemName = "";
-            jumpItemValue = "";
-            jumpItemExactMatch = true;
-            g_overlayFilename = "";
+            hexSumCache.clear();
+            if (!skipJumpReset) {
+                jumpItemName = "";
+                jumpItemValue = "";
+                jumpItemExactMatch = true;
+                g_overlayFilename = "";
+            } else
+                skipJumpReset = false;
+            //tsl::clearGlyphCacheNow.store(true, std::memory_order_release);
         }
     /**
      * @brief Destroys the `PackageMenu` instance.
@@ -4254,7 +4276,8 @@ public:
      * Cleans up any resources associated with the `PackageMenu` instance.
      */
     ~PackageMenu() {
-        if (returningToMain) {
+        hexSumCache.clear();
+        if (returningToMain || returningToHiddenMain) {
             tsl::clearGlyphCacheNow.store(true, std::memory_order_release);
             clearMemory();
             packageRootLayerTitle = "";
@@ -4386,13 +4409,20 @@ public:
      * @return `true` if the input was handled within the overlay, `false` otherwise.
      */
     virtual bool handleInput(uint64_t keysDown, uint64_t keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
+        // Cache frequently used values to reduce memory access
+        constexpr auto acquire = std::memory_order_acquire;
+        constexpr auto acq_rel = std::memory_order_acq_rel;
+        constexpr auto release = std::memory_order_release;
         
-        if (runningInterpreter.load(std::memory_order_acquire)) {
+        const bool isRunningInterp = runningInterpreter.load(acquire);
+        const bool isTouching = stillTouching.load(acquire);
+        
+        if (isRunningInterp) {
             return handleRunningInterpreter(keysDown, keysHeld);
         }
-
+    
         if (lastRunningInterpreter) {
-            
+            tsl::clearGlyphCacheNow.store(true, std::memory_order_release);
             isDownloadCommand = false;
             if (lastCommandMode == OPTION_STR || lastCommandMode == SLOT_STR) {
                 if (commandSuccess) {
@@ -4406,7 +4436,6 @@ public:
                                 lastSelectedListItem->setValue(footerIt->second);
                             }
                         }
-                        
                         lastCommandMode = "";
                     } else {
                         lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
@@ -4417,20 +4446,19 @@ public:
             }
             else
                 lastSelectedListItem->setValue(commandSuccess ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
-
+    
             closeInterpreterThread();
             lastRunningInterpreter = false;
             return true;
         }
-
+    
         if (goBackAfter) {
             goBackAfter = false;
-            simulatedBack.exchange(true, std::memory_order_acq_rel);
+            simulatedBack.exchange(true, acq_rel);
             return true;
         }
-
-        
-        if (!returningToPackage && !stillTouching.load(std::memory_order_acquire)) {
+    
+        if (!returningToPackage && !isTouching) {
             if (refreshPage) {
                 refreshPage = false;
                 
@@ -4441,22 +4469,26 @@ public:
                     lastPage = currentPage;
                     std::string lastPackageName = packageName;
                     size_t lastNestedLayer = nestedLayer;
-                    //lastPageHeader = pageHeader;
                     
                     inSubPackageMenu = false;
                     inPackageMenu = false;
+    
+                    selectedListItem = nullptr;
+                    lastSelectedListItem = nullptr;
+                    tsl::clearGlyphCacheNow.store(true, std::memory_order_release);
                     tsl::goBack();
-                    
                     tsl::changeTo<PackageMenu>(lastPackagePath, lastDropdownSection, lastPage, lastPackageName, lastNestedLayer, pageHeader);
                 };
                 
                 if (inPackageMenu) {
                     handleMenuTransition();
                     inPackageMenu = true;
+                    return true;
                 } 
                 else if (inSubPackageMenu) {
                     handleMenuTransition();
                     inSubPackageMenu = true;
+                    return true;
                 }
             }
             if (refreshPackage) {
@@ -4467,21 +4499,20 @@ public:
                     
                     tsl::goBack(nestedMenuCount+1);
                     nestedMenuCount = 0;
-
+    
                     tsl::changeTo<PackageMenu>(lastPackagePath, "");
                     inPackageMenu = true;
                     inSubPackageMenu = false;
                     refreshPackage = false;
-
+                    return true;
                 }
             }
         }
         
         if (usingPages) {
-            simulatedMenu.exchange(false, std::memory_order_acq_rel);
+            simulatedMenu.exchange(false, acq_rel);
             
-            if (simulatedNextPage.exchange(false, std::memory_order_acq_rel)) {
-
+            if (simulatedNextPage.exchange(false, acq_rel)) {
                 if (currentPage == LEFT_STR) {
                     keysDown |= KEY_DRIGHT;
                 }
@@ -4489,161 +4520,168 @@ public:
                     keysDown |= KEY_DLEFT;
                 }
             }
-
+    
+            // Cache slide-related values
+            const bool safeToSwap = tsl::elm::s_safeToSwap.load(acquire);
+            const bool onTrack = onTrackBar.load(acquire);
+            const bool slideAllowed = allowSlide.load(acquire);
+            const bool slideUnlocked = unlockedSlide.load(acquire);
+            const bool slideCondition = ((!slideAllowed && onTrack && !slideUnlocked) || (keysDown & KEY_R)) || !onTrack;
+            
+            // Helper lambda for slide transitions
+            auto resetSlideState = [&]() {
+                allowSlide.exchange(false, acq_rel);
+                unlockedSlide.exchange(false, acq_rel);
+            };
+    
             if (currentPage == LEFT_STR) {
-
-                if (tsl::elm::s_safeToSwap.load(std::memory_order_acquire)  && (keysDown & KEY_RIGHT) && !(keysHeld & KEY_LEFT) && !(keysDown & ~KEY_RIGHT & ~KEY_R & ALL_KEYS_MASK) && !stillTouching.load(std::memory_order_acquire) && 
-                    (((!allowSlide.load(std::memory_order_acquire) && onTrackBar.load(std::memory_order_acquire) && !unlockedSlide.load(std::memory_order_acquire)) || (keysDown & KEY_R)) || !onTrackBar.load(std::memory_order_acquire))) {
-
-                    allowSlide.exchange(false, std::memory_order_acq_rel);
-                    unlockedSlide.exchange(false, std::memory_order_acq_rel);
+                if (safeToSwap && (keysDown & KEY_RIGHT) && !(keysHeld & KEY_LEFT) && 
+                    !(keysDown & ~KEY_RIGHT & ~KEY_R & ALL_KEYS_MASK) && !isTouching && slideCondition) {
+    
+                    resetSlideState();
                     lastPage = RIGHT_STR;
                     tsl::pop();
-                    
                     tsl::changeTo<PackageMenu>(lastPackagePath, dropdownSection, RIGHT_STR, lastPackageName, nestedMenuCount, pageHeader);
-
                     return true;
                 }
-
             } else if (currentPage == RIGHT_STR) {
-                
-                if (tsl::elm::s_safeToSwap.load(std::memory_order_acquire)  && (keysDown & KEY_LEFT) && !(keysHeld & KEY_RIGHT) && !(keysDown & ~KEY_LEFT & ~KEY_R & ALL_KEYS_MASK) && !stillTouching.load(std::memory_order_acquire) && 
-                    (((!allowSlide.load(std::memory_order_acquire) && onTrackBar.load(std::memory_order_acquire) && !unlockedSlide.load(std::memory_order_acquire)) || (keysDown & KEY_R)) || !onTrackBar.load(std::memory_order_acquire)) ) {
+                if (safeToSwap && (keysDown & KEY_LEFT) && !(keysHeld & KEY_RIGHT) && 
+                    !(keysDown & ~KEY_LEFT & ~KEY_R & ALL_KEYS_MASK) && !isTouching && slideCondition) {
                     
-                    allowSlide.exchange(false, std::memory_order_acq_rel);
-                    unlockedSlide.exchange(false, std::memory_order_acq_rel);
+                    resetSlideState();
                     lastPage = LEFT_STR;
-                    
                     tsl::pop();
-                    
                     tsl::changeTo<PackageMenu>(lastPackagePath, dropdownSection, LEFT_STR, lastPackageName, nestedMenuCount, pageHeader);
                     return true;
                 }
             } 
         }
         
-        if (!returningToPackage && inPackageMenu && nestedMenuCount == nestedLayer) {
-            simulatedMenu.exchange(false, std::memory_order_acq_rel);
+        // Common back key condition
+        const bool backKeyPressed = (keysDown & KEY_B) && !isTouching;
+        
+        // Helper lambda for common back key handling logic
+        auto handleBackKeyCommon = [&]() {
+            handleForwarderFooter();
+            allowSlide.exchange(false, acq_rel);
+            unlockedSlide.exchange(false, acq_rel);
             
-            simulatedNextPage.exchange(false, std::memory_order_acq_rel);
+            if (nestedMenuCount == 0) {
+                inPackageMenu = false;
+                if (!inHiddenMode)
+                    returningToMain = true;
+                else
+                    returningToHiddenMain = true;
+                
+                if (!selectedPackage.empty()) {
+                    tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
+                    exitingUltrahand = true;
+                    tsl::Overlay::get()->close();
+                    return true;
+                }
+            }
+            if (nestedMenuCount > 0) {
+                nestedMenuCount--;
+                if (lastPackageMenu == "subPackageMenu") {
+                    returningToSubPackage = true;
+                } else {
+                    returningToPackage = true;
+                }
+            }
+            return false;
+        };
+        
+        // Helper lambda for main menu return handling
+        auto handleMainMenuReturn = [&]() {
+            if (returningToMain || returningToHiddenMain) {
+                if (returningToHiddenMain) {
+                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_PACKAGE_STR, TRUE_STR);
+                }
+                jumpItemName = packageRootLayerIsStarred ? STAR_SYMBOL + "  " + packageRootLayerTitle : packageRootLayerTitle;
+                jumpItemValue = packageRootLayerVersion;
+                jumpItemExactMatch = true;
+                g_overlayFilename = "";
+                skipJumpReset = true;
+    
+                tsl::pop();
+                if (returningToMain) {
+                    tsl::changeTo<MainMenu>(PACKAGES_STR);
+                } else {
+                    tsl::changeTo<MainMenu>();
+                }
+            } else {
+                tsl::clearGlyphCacheNow.store(true, std::memory_order_release);
+                tsl::goBack();
+            }
+        };
+        
+        if (!returningToPackage && inPackageMenu && nestedMenuCount == nestedLayer) {
+            simulatedMenu.exchange(false, acq_rel);
+            simulatedNextPage.exchange(false, acq_rel);
             
             if (!usingPages || (usingPages && lastPage == LEFT_STR)) {
-                if (simulatedBack.exchange(false, std::memory_order_acq_rel)) {
+                if (simulatedBack.exchange(false, acq_rel)) {
                     keysDown |= KEY_B;
                 }
-                if ((keysDown & KEY_B) && !stillTouching.load(std::memory_order_acquire)) {
-                    handleForwarderFooter();
-
-                    allowSlide.exchange(false, std::memory_order_acq_rel);
-                    unlockedSlide.exchange(false, std::memory_order_acq_rel);
-                    if (nestedMenuCount == 0) {
-                        inPackageMenu = false;
-                        
-                        if (!inHiddenMode)
-                            returningToMain = true;
-                        else
-                            returningToHiddenMain = true;
-                        if (!selectedPackage.empty()) {
-                            tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
-                            exitingUltrahand = true;
-                            tsl::Overlay::get()->close();
-                            return true;
-                        }
-                    }
-                    if (nestedMenuCount > 0) {
-                        nestedMenuCount--;
-                        if (lastPackageMenu == "subPackageMenu") {
-                            returningToSubPackage = true;
-                        } else {
-                            returningToPackage = true;
-                        }
-                    }
-                    
-                    
-                    tsl::goBack();
+                if (backKeyPressed) {
+                    if (handleBackKeyCommon()) return true;
+                    // Free-up memory
+                    //clearMemory();
+                    handleMainMenuReturn();
                     return true;
                 }
             } else if (usingPages && lastPage == RIGHT_STR) {
-                if (simulatedBack.exchange(false, std::memory_order_acq_rel)) {
+                if (simulatedBack.exchange(false, acq_rel)) {
                     keysDown |= KEY_B;
                 }
-                if ((keysDown & KEY_B) && !stillTouching.load(std::memory_order_acquire)) {
-                    handleForwarderFooter();
-
-                    allowSlide.exchange(false, std::memory_order_acq_rel);
-                    unlockedSlide.exchange(false, std::memory_order_acq_rel);
-                    if (nestedMenuCount == 0) {
-                        inPackageMenu = false;
-                        
-                        if (!inHiddenMode)
-                            returningToMain = true;
-                        else
-                            returningToHiddenMain = true;
-
-                        if (!selectedPackage.empty()) {
-                            tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
-                            exitingUltrahand = true;
-                            tsl::Overlay::get()->close();
-                            return true;
-                        }
-                    }
-                    if (nestedMenuCount > 0) {
-                        nestedMenuCount--;
-                        
-                        if (lastPackageMenu == "subPackageMenu") {
-                            returningToSubPackage = true;
-                        } else {
-                            returningToPackage = true;
-                        }
-                    }
-                    
-                    
+                if (backKeyPressed) {
+                    if (handleBackKeyCommon()) return true;
+                    // Free-up memory
+                    //clearMemory();
                     lastPage = LEFT_STR;
-                    tsl::goBack();
+                    handleMainMenuReturn();
                     return true;
                 }
             }
         }
         
         if (!returningToSubPackage && inSubPackageMenu) {
-            simulatedMenu.exchange(false, std::memory_order_acq_rel);
-            
-            simulatedNextPage.exchange(false, std::memory_order_acq_rel);
+            simulatedMenu.exchange(false, acq_rel);
+            simulatedNextPage.exchange(false, acq_rel);
             
             if (!usingPages || (usingPages && lastPage == LEFT_STR)) {
-                if (simulatedBack.exchange(false, std::memory_order_acq_rel)) {
+                if (simulatedBack.exchange(false, acq_rel)) {
                     keysDown |= KEY_B;
                 }
-                if ((keysDown & KEY_B) && !stillTouching.load(std::memory_order_acquire)) {
+                if (backKeyPressed) {
                     handleForwarderFooter();
-
-                    allowSlide.exchange(false, std::memory_order_acq_rel);
-                    unlockedSlide.exchange(false, std::memory_order_acq_rel);
+                    allowSlide.exchange(false, acq_rel);
+                    unlockedSlide.exchange(false, acq_rel);
                     inSubPackageMenu = false;
                     returningToPackage = true;
                     lastMenu = "packageMenu";
+                    tsl::clearGlyphCacheNow.store(true, std::memory_order_release);
                     tsl::goBack();
-                    
                     return true;
                 }
             } else if (usingPages && lastPage == RIGHT_STR) {
-                if (simulatedBack.exchange(false, std::memory_order_acq_rel)) {
+                if (simulatedBack.exchange(false, acq_rel)) {
                     keysDown |= KEY_B;
                 }
-                if ((keysDown & KEY_B) && !stillTouching.load(std::memory_order_acquire)) {
+                if (backKeyPressed) {
                     handleForwarderFooter();
-
-                    allowSlide.exchange(false, std::memory_order_acq_rel);
-                    unlockedSlide.exchange(false, std::memory_order_acq_rel);
+                    allowSlide.exchange(false, acq_rel);
+                    unlockedSlide.exchange(false, acq_rel);
                     inSubPackageMenu = false;
                     returningToPackage = true;
                     lastMenu = "packageMenu";
+                    tsl::clearGlyphCacheNow.store(true, std::memory_order_release);
                     tsl::goBack();
-                    
                     return true;
                 }
             }
         }
+        
         if (returningToPackage && !returningToSubPackage && !(keysDown & KEY_B)){
             lastPackageMenu = "";
             returningToPackage = false;
@@ -4668,37 +4706,35 @@ public:
             }
         }
         
-        if (triggerExit.load(std::memory_order_acquire)) {
-            triggerExit.store(false, std::memory_order_release);
+        if (triggerExit.load(acquire)) {
+            triggerExit.store(false, release);
             tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
             tsl::Overlay::get()->close();
         }
-
-
-        if (simulatedBack.exchange(false, std::memory_order_acq_rel)) {
+    
+        if (simulatedBack.exchange(false, acq_rel)) {
             keysDown |= KEY_B;
         }
-        if ((keysDown & KEY_B) && !stillTouching.load(std::memory_order_acquire)) { // for catching lost navigations
+        if (backKeyPressed) { // for catching lost navigations
             if (!selectedPackage.empty()) {
                 tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
                 exitingUltrahand = true;
                 tsl::Overlay::get()->close();
                 return true;
             }
-
-
-            allowSlide.exchange(false, std::memory_order_acq_rel);
-            unlockedSlide.exchange(false, std::memory_order_acq_rel);
+    
+            allowSlide.exchange(false, acq_rel);
+            unlockedSlide.exchange(false, acq_rel);
             inSubPackageMenu = false;
             returningToPackage = true;
             lastMenu = "packageMenu";
+            tsl::clearGlyphCacheNow.store(true, std::memory_order_release);
             tsl::goBack();
-            
             return true;
         }
         
         return false;
-    }
+    };
 };
 
 
@@ -4761,6 +4797,14 @@ public:
             hiddenMenuMode = OVERLAYS_STR;
             skipJumpReset = true;
             setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_OVERLAY_STR, FALSE_STR);
+        }
+
+        else if (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_PACKAGE_STR) == TRUE_STR) {
+            inMainMenu = false;
+            inHiddenMode = true;
+            hiddenMenuMode = PACKAGES_STR;
+            skipJumpReset = true;
+            setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_PACKAGE_STR, FALSE_STR);
         }
     
         if (!inHiddenMode && dropdownSection.empty())
@@ -5487,10 +5531,10 @@ public:
                         }
 
                         listItem->setTextColor(highlightTitles ? tsl::packageEntryHighlightTextColor : tsl::packageEntryTextColor);
-
+                        listItem->disableClickAnimation();
                         
                         // Add a click listener to load the overlay when clicked upon
-                        listItem->setClickListener([packageFilePath, newStarred, packageName, newPackageName, packageVersion](s64 keys) {
+                        listItem->setClickListener([packageFilePath, newStarred, packageName, newPackageName, packageVersion, packageStarred](s64 keys) {
                             if (runningInterpreter.load(std::memory_order_acquire)) {
                                 return false;
                             }
@@ -5531,7 +5575,11 @@ public:
     
                                 packageRootLayerTitle = newPackageName;
                                 packageRootLayerVersion = packageVersion;
+                                packageRootLayerIsStarred = packageStarred;
                                 //tsl::clearGlyphCacheNow.store(true, std::memory_order_release);
+                                
+
+                                tsl::pop(2);
                                 tsl::clearGlyphCacheNow.store(true, std::memory_order_release);
                                 tsl::changeTo<PackageMenu>(packageFilePath, "");
 
@@ -5643,7 +5691,6 @@ public:
         return rootFrame;
     }
 
-
     /**
      * @brief Handles user input for the main menu overlay.
      *
@@ -5658,12 +5705,18 @@ public:
      * @return `true` if the input was handled within the overlay, `false` otherwise.
      */
     virtual bool handleInput(uint64_t keysDown, uint64_t keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
-
-        if (runningInterpreter.load(std::memory_order_acquire))
+        // Cache frequently used values to reduce memory access
+        constexpr auto acquire = std::memory_order_acquire;
+        constexpr auto acq_rel = std::memory_order_acq_rel;
+        constexpr auto release = std::memory_order_release;
+        
+        const bool isRunningInterp = runningInterpreter.load(acquire);
+        const bool isTouching = stillTouching.load(acquire);
+        
+        if (isRunningInterp)
             return handleRunningInterpreter(keysDown, keysHeld);
-
+    
         if (lastRunningInterpreter) {
-            
             isDownloadCommand = false;
             if (lastCommandMode == OPTION_STR || lastCommandMode == SLOT_STR) {
                 if (commandSuccess) {
@@ -5677,6 +5730,7 @@ public:
                                 lastSelectedListItem->setValue(footerIt->second);
                             }
                         }
+                        lastSelectedListItem = nullptr;
                         lastCommandMode = "";
                     } else {
                         lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
@@ -5687,211 +5741,178 @@ public:
             }
             else
                 lastSelectedListItem->setValue(commandSuccess ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
-
+    
             closeInterpreterThread();
             lastRunningInterpreter = false;
             return true;
         }
+        
         if (goBackAfter) {
             goBackAfter = false;
-            simulatedBack.exchange(true, std::memory_order_acq_rel);
+            simulatedBack.exchange(true, acq_rel);
             return true;
         }
-
-
-        if (refreshPage && !stillTouching.load(std::memory_order_acquire)) {
+    
+        if (refreshPage && !isTouching) {
             refreshPage = false;
             tsl::pop();
             tsl::changeTo<MainMenu>(hiddenMenuMode, dropdownSection);
             if (wasInHiddenMode) {
                 skipJumpReset = true;
-                // NEW: Set the highlight to "Hidden" when returning from a hidden overlay
                 jumpItemName = HIDDEN;
                 jumpItemValue = DROPDOWN_SYMBOL;
                 jumpItemExactMatch = true;
-                // Also clear the global overlay filename since we're not on the main overlay list
                 g_overlayFilename = "";
                 wasInHiddenMode = false;
             }
             return true;
         }
-
+    
+        // Common condition for back key handling
+        const bool backKeyPressed = (keysDown & KEY_B) && !isTouching;
+        
         if (!dropdownSection.empty() && !returningToMain) {
-            simulatedNextPage.exchange(false, std::memory_order_acq_rel);
-
-            simulatedMenu.exchange(false, std::memory_order_acq_rel);
-
-            if (simulatedBack.exchange(false, std::memory_order_acq_rel)) {
+            simulatedNextPage.exchange(false, acq_rel);
+            simulatedMenu.exchange(false, acq_rel);
+    
+            if (simulatedBack.exchange(false, acq_rel)) {
                 keysDown |= KEY_B;
             }
-
-            if ((keysDown & KEY_B) && !stillTouching.load(std::memory_order_acquire)) {
-                allowSlide.exchange(false, std::memory_order_acq_rel);
-                unlockedSlide.exchange(false, std::memory_order_acq_rel);
+    
+            if (backKeyPressed) {
+                allowSlide.exchange(false, acq_rel);
+                unlockedSlide.exchange(false, acq_rel);
                 returningToMain = true;
                 tsl::goBack();
                 return true;
             }
         }
         
-        if (inMainMenu && !inHiddenMode && dropdownSection.empty()){
-            if (triggerMenuReload) { // for handling software updates
-                triggerMenuReload = false;
+        if (inMainMenu && !inHiddenMode && dropdownSection.empty()) {
+            if (triggerMenuReload || triggerMenuReload2) {
+                triggerMenuReload = triggerMenuReload2 = false;
                 if (menuMode == PACKAGES_STR)
-                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "to_packages", TRUE_STR);
+                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "to_packages", FALSE_STR);
                 
                 setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_OVERLAY_STR, TRUE_STR);
                 tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl", "--skipCombo");
-                
                 tsl::Overlay::get()->close();
             }
             
             if (!freshSpawn && !returningToMain && !returningToHiddenMain) {
-                
-                if (simulatedNextPage.exchange(false, std::memory_order_acq_rel)) {
-                    if (!usePageSwap) {
-                        if (menuMode != PACKAGES_STR) {
-                            keysDown |= KEY_DRIGHT;
-                        }
-                        else if (menuMode != OVERLAYS_STR) {
-                            keysDown |= KEY_DLEFT;
-                        }
-                    } else {
-                        if (menuMode != PACKAGES_STR) {
-                            keysDown |= KEY_DLEFT;
-                        }
-                        else if (menuMode != OVERLAYS_STR) {
-                            keysDown |= KEY_DRIGHT;
-                        }
-                    }
+                if (simulatedNextPage.exchange(false, acq_rel)) {
+                    const bool toPackages = (!usePageSwap && menuMode != PACKAGES_STR) || (usePageSwap && menuMode != OVERLAYS_STR);
+                    keysDown |= toPackages ? (usePageSwap ? KEY_DLEFT : KEY_DRIGHT) : (usePageSwap ? KEY_DRIGHT : KEY_DLEFT);
                 }
                 
-                if (tsl::elm::s_safeToSwap.load(std::memory_order_acquire)  && (keysDown & KEY_RIGHT) && !(keysHeld & KEY_LEFT) && !(keysDown & ~KEY_RIGHT & ~KEY_R & ALL_KEYS_MASK) &&
-                    !stillTouching.load(std::memory_order_acquire) && (((!allowSlide.load(std::memory_order_acquire) && !unlockedSlide.load(std::memory_order_acquire) && onTrackBar.load(std::memory_order_acquire)) || (keysDown & KEY_R)) || !onTrackBar.load(std::memory_order_acquire)) ){// && tsl::elm::safeToSwap.exchange(false, std::memory_order_acq_rel)){ //&&
-                    
+                // Cache slide conditions
+                const bool safeToSwap = tsl::elm::s_safeToSwap.load(acquire);
+                const bool onTrack = onTrackBar.load(acquire);
+                const bool slideAllowed = allowSlide.load(acquire);
+                const bool slideUnlocked = unlockedSlide.load(acquire);
+                const bool slideCondition = ((!slideAllowed && !slideUnlocked && onTrack) || (keysDown & KEY_R)) || !onTrack;
+                
+                // Helper lambda to reset navigation state
+                auto resetNavState = [&]() {
                     g_overlayFilename = "";
                     jumpItemName = "";
                     jumpItemValue = "";
                     jumpItemExactMatch = true;
+                    allowSlide.exchange(false, acq_rel);
+                    unlockedSlide.exchange(false, acq_rel);
+                };
+                
+                if (safeToSwap && (keysDown & KEY_RIGHT) && !(keysHeld & KEY_LEFT) && 
+                    !(keysDown & ~KEY_RIGHT & ~KEY_R & ALL_KEYS_MASK) && !isTouching && slideCondition) {
                     
-                    allowSlide.exchange(false, std::memory_order_acq_rel);
-                    unlockedSlide.exchange(false, std::memory_order_acq_rel);
-                    if (!usePageSwap) {
-                        if (menuMode != PACKAGES_STR) {
-                            currentMenu = PACKAGES_STR;
-                            tsl::pop();
-                            
-                            tsl::changeTo<MainMenu>();
-                            return true;
-                        }
-                    } else {
-                        if (menuMode != OVERLAYS_STR) {
-                            currentMenu = OVERLAYS_STR;
-                            tsl::pop();
-                            tsl::changeTo<MainMenu>();
-                            return true;
-                        }
+                    resetNavState();
+                    const bool switchToPackages = (!usePageSwap && menuMode != PACKAGES_STR) || (usePageSwap && menuMode != OVERLAYS_STR);
+                    if (switchToPackages) {
+                        currentMenu = usePageSwap ? OVERLAYS_STR : PACKAGES_STR;
+                        tsl::pop();
+                        tsl::changeTo<MainMenu>();
+                        return true;
                     }
                 }
-
-                if (tsl::elm::s_safeToSwap.load(std::memory_order_acquire)  && (keysDown & KEY_LEFT) && !(keysHeld & KEY_RIGHT) && !(keysDown & ~KEY_LEFT & ~KEY_R & ALL_KEYS_MASK) &&
-                    !stillTouching.load(std::memory_order_acquire) &&(((!allowSlide.load(std::memory_order_acquire) && onTrackBar.load(std::memory_order_acquire) && !unlockedSlide.load(std::memory_order_acquire)) || (keysDown & KEY_R)) || !onTrackBar.load(std::memory_order_acquire)) ) {// && tsl::elm::safeToSwap.exchange(false, std::memory_order_acq_rel)) { //&&
+    
+                if (safeToSwap && (keysDown & KEY_LEFT) && !(keysHeld & KEY_RIGHT) && 
+                    !(keysDown & ~KEY_LEFT & ~KEY_R & ALL_KEYS_MASK) && !isTouching && slideCondition) {
                     
-                    g_overlayFilename = "";
-                    jumpItemName = "";
-                    jumpItemValue = "";
-                    jumpItemExactMatch = true;
-
-                    allowSlide.exchange(false, std::memory_order_acq_rel);
-                    unlockedSlide.exchange(false, std::memory_order_acq_rel);
-                    //allowSlide = unlockedSlide = false;
-                    if (!usePageSwap) {
-                        if (menuMode != OVERLAYS_STR) {
-                            currentMenu = OVERLAYS_STR;
-                            tsl::pop();
-                            tsl::changeTo<MainMenu>();
-                            return true;
-                        }
-                    } else {
-                        if (menuMode != PACKAGES_STR) {
-                            currentMenu = PACKAGES_STR;
-                            tsl::pop();
-                            tsl::changeTo<MainMenu>();
-                            return true;
-                        }
+                    resetNavState();
+                    const bool switchToOverlays = (!usePageSwap && menuMode != OVERLAYS_STR) || (usePageSwap && menuMode != PACKAGES_STR);
+                    if (switchToOverlays) {
+                        currentMenu = usePageSwap ? PACKAGES_STR : OVERLAYS_STR;
+                        tsl::pop();
+                        tsl::changeTo<MainMenu>();
+                        return true;
                     }
                 }
-
-                if (simulatedBack.exchange(false, std::memory_order_acq_rel)) {
+    
+                if (simulatedBack.exchange(false, acq_rel)) {
                     keysDown |= KEY_B;
                 }
-
-                if ((keysDown & KEY_B) && !stillTouching.load(std::memory_order_acquire)) {
-                    allowSlide.exchange(false, std::memory_order_acq_rel);
-                    unlockedSlide.exchange(false, std::memory_order_acq_rel);
+    
+                if (backKeyPressed) {
+                    allowSlide.exchange(false, acq_rel);
+                    unlockedSlide.exchange(false, acq_rel);
                     tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
                     exitingUltrahand = true;
                     tsl::Overlay::get()->close();
                     return true;
                 }
-
-                if (simulatedMenu.exchange(false, std::memory_order_acq_rel)) {
+    
+                if (simulatedMenu.exchange(false, acq_rel)) {
                     keysDown |= SYSTEM_SETTINGS_KEY;
                 }
-
-                if ((keysDown & SYSTEM_SETTINGS_KEY) && !stillTouching.load(std::memory_order_acquire)) {
+    
+                if ((keysDown & SYSTEM_SETTINGS_KEY) && !isTouching) {
                     inMainMenu = false;
                     tsl::changeTo<UltrahandSettingsMenu>();
-                    
                     return true;
                 }
             }
         }
-        if (!inMainMenu && inHiddenMode) {
-            if (!returningToHiddenMain && !returningToMain) {
-
-                simulatedNextPage.exchange(false, std::memory_order_acq_rel);
-
-                simulatedMenu.exchange(false, std::memory_order_acq_rel);
-
-                if (simulatedBack.exchange(false, std::memory_order_acq_rel)) {
-                    keysDown |= KEY_B;
-                }
-
-                if ((keysDown & KEY_B) && !stillTouching.load(std::memory_order_acquire)) {
-                    
-                    if (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_OVERLAY_STR) == FALSE_STR) {
-                        inMainMenu = true;
-                        inHiddenMode = false;
-                        hiddenMenuMode = "";
-                        setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_OVERLAY_STR, "");
-                        tsl::pop();
-                        // NEW: Set the highlight to "Hidden" when returning from a hidden overlay
-                        jumpItemName = HIDDEN;
-                        jumpItemValue = DROPDOWN_SYMBOL;
-                        jumpItemExactMatch = true;
-                        // Also clear the global overlay filename since we're not on the main overlay list
-                        g_overlayFilename = "";
-                        returningToMain = true;
-                        tsl::changeTo<MainMenu>();
-                        return true;
-                    }
-
-                    returningToMain = true;
+        
+        if (!inMainMenu && inHiddenMode && !returningToHiddenMain && !returningToMain) {
+            simulatedNextPage.exchange(false, acq_rel);
+            simulatedMenu.exchange(false, acq_rel);
+    
+            if (simulatedBack.exchange(false, acq_rel)) {
+                keysDown |= KEY_B;
+            }
+    
+            if (backKeyPressed) {
+                // Check if we're in hidden mode with no underlying menu to go back to
+                if (hiddenMenuMode == OVERLAYS_STR || hiddenMenuMode == PACKAGES_STR) {
+                    inMainMenu = true;
                     inHiddenMode = false;
-                    
-                    if (reloadMenu2) {
-                        tsl::pop();
-                        tsl::changeTo<MainMenu>();
-                        reloadMenu2 = false;
-                        return true;
-                    }
-                    
-                    allowSlide.exchange(false, std::memory_order_acq_rel);
-                    unlockedSlide.exchange(false, std::memory_order_acq_rel);
-                    tsl::goBack();
+                    hiddenMenuMode = "";
+                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_OVERLAY_STR, "");
+                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_PACKAGE_STR, "");
+                    tsl::pop();
+                    jumpItemName = HIDDEN;
+                    jumpItemValue = DROPDOWN_SYMBOL;
+                    jumpItemExactMatch = true;
+                    g_overlayFilename = "";
+                    returningToMain = true;
+                    tsl::changeTo<MainMenu>();
                     return true;
                 }
+    
+                returningToMain = true;
+                inHiddenMode = false;
+                
+                if (reloadMenu2) {
+                    tsl::pop();
+                    tsl::changeTo<MainMenu>();
+                    reloadMenu2 = false;
+                    return true;
+                }
+                
+                allowSlide.exchange(false, acq_rel);
+                unlockedSlide.exchange(false, acq_rel);
+                tsl::goBack();
+                return true;
             }
         }
         
@@ -5906,10 +5927,9 @@ public:
             returningToHiddenMain = false;
             inHiddenMode = true;
         }
-        
-
-        if (triggerExit.load(std::memory_order_acquire)) {
-            triggerExit.store(false, std::memory_order_release);
+    
+        if (triggerExit.load(acquire)) {
+            triggerExit.store(false, release);
             tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
             tsl::Overlay::get()->close();
         }

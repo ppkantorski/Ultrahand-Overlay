@@ -49,6 +49,7 @@ bool isDownloadCommand = false;
 bool commandSuccess = false;
 bool refreshPage = false;
 bool refreshPackage = false;
+bool skipJumpReset = false;
 bool interpreterLogging = false;
 
 bool usingErista = util::IsErista();
@@ -1884,6 +1885,8 @@ bool isDangerousCombination(const std::string& originalPath) {
 
 // Function to populate selectedItemsListOff from a JSON array based on a key
 void populateSelectedItemsListFromJson(const std::string& sourceType, const std::string& jsonStringOrPath, const std::string& jsonKey, std::vector<std::string>& selectedItemsList) {
+    selectedItemsList.clear();
+
     // Check for empty JSON source strings
     if (jsonStringOrPath.empty()) {
         return;
@@ -3047,7 +3050,7 @@ bool interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
     // Increase bufffer size for expanded memory
     if (expandedMemory) {
         COPY_BUFFER_SIZE = 262144;
-        HEX_BUFFER_SIZE = 262144;
+        HEX_BUFFER_SIZE = 4096;
         UNZIP_READ_BUFFER = 262144;
         UNZIP_WRITE_BUFFER = 131072;
         DOWNLOAD_READ_BUFFER = 262144;
@@ -4054,6 +4057,7 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             jumpItemName = refreshPattern;
             jumpItemValue = refreshPattern2;
             jumpItemExactMatch = !(refreshPattern3 == FALSE_STR);
+            skipJumpReset = true;
             refreshPage = true;
         }
     } else if (commandName == "logging") {
