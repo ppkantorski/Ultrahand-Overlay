@@ -1733,152 +1733,162 @@ void addPackageInfo(tsl::elm::List* list, auto& packageHeader, std::string type 
 
 
 bool isDangerousCombination(const std::string& originalPath) {
-    // --- NEW: 0) If there are two or more '*' in a row, that's automatically dangerous
-    // (covers "**", "****", etc.)
+    // Early exit: Check for double wildcards first (cheapest check)
     if (originalPath.find("**") != std::string::npos) {
         return true;
     }
-
-    // 1) Normalize repeated wildcards (collapse runs of '*' to a single '*')
-    std::string patternPath = originalPath;
-    {
-        std::string normalized;
+    
+    // Early exit: Check if path contains wildcards at all
+    const bool hasWildcards = originalPath.find('*') != std::string::npos;
+    
+    // 1) Normalize repeated wildcards only if wildcards exist
+    std::string patternPath;
+    if (hasWildcards) {
+        patternPath.reserve(originalPath.length()); // Avoid reallocations
         bool lastWasStar = false;
-        for (char c : patternPath) {
+        for (char c : originalPath) {
             if (c == '*') {
                 if (!lastWasStar) {
-                    normalized += c;
+                    patternPath += c;
                     lastWasStar = true;
                 }
                 // skip extra '*'
             } else {
-                normalized += c;
+                patternPath += c;
                 lastWasStar = false;
             }
         }
-        patternPath = normalized;
+    } else {
+        patternPath = originalPath; // No wildcards, use as-is
     }
-
-    // 2) Define folder sets with behavior-based names
-    static const std::vector<const char*> albumFolders = {
-        "sdmc:/Nintendo/Album/",
-        "sdmc:/emuMMC/RAW1/Nintendo/Album/"
+    
+    // 2) Define folder sets with precomputed lengths for faster comparisons
+    struct FolderInfo {
+        const char* path;
+        size_t length;
     };
-
-    static const std::vector<const char*> ultraProtectedFolders = {
-        "sdmc:/Nintendo/Contents/",
-        "sdmc:/Nintendo/save/",
-        "sdmc:/emuMMC/RAW1/Nintendo/Contents/",
-        "sdmc:/emuMMC/RAW1/Nintendo/save/"
+    
+    static constexpr FolderInfo albumFolders[] = {
+        {"sdmc:/Nintendo/Album/", 20},
+        {"sdmc:/emuMMC/RAW1/Nintendo/Album/", 33}
     };
-
-    // Folders where wildcards are allowed, but no broad "delete entire folder" allowed
-    static const std::vector<const char*> restrictedWildcardFolders = {
-        "sdmc:/config/",
-        "sdmc:/bootloader/",
-        "sdmc:/atmosphere/",
-        "sdmc:/switch/"
+    
+    static constexpr FolderInfo ultraProtectedFolders[] = {
+        {"sdmc:/Nintendo/Contents/", 23},
+        {"sdmc:/Nintendo/save/", 18},
+        {"sdmc:/emuMMC/RAW1/Nintendo/Contents/", 36},
+        {"sdmc:/emuMMC/RAW1/Nintendo/save/", 31}
     };
-
-    // Protected folders where wildcards are disallowed except in album folders
-    static const std::vector<const char*> protectedFolders = {
-        "sdmc:/Nintendo/",
-        "sdmc:/emuMMC/",
-        "sdmc:/emuMMC/RAW1/"
+    
+    static constexpr FolderInfo restrictedWildcardFolders[] = {
+        {"sdmc:/config/", 13},
+        {"sdmc:/bootloader/", 18},
+        {"sdmc:/atmosphere/", 18},
+        {"sdmc:/switch/", 14}
     };
-
-    // 3) Always block these dangerous substrings anywhere in the normalized path.
-    //    We add "null*" and "*null" here so that any combination like "null*", "*null",
-    //    or "*null*" is caught as soon as either pattern appears.
+    
+    static constexpr FolderInfo protectedFolders[] = {
+        {"sdmc:/Nintendo/", 16},
+        {"sdmc:/emuMMC/", 13},
+        {"sdmc:/emuMMC/RAW1/", 18}
+    };
+    
+    // 3) Check always dangerous patterns (cheap string searches first)
     static const std::vector<const char*> alwaysDangerousPatterns = {
         "..",
         "~",
         "null*",
         "*null"
     };
-
-    static const std::vector<const char*> wildcardPatterns = {
-        "*", "*/"
-    };
-
+    
     for (const auto& pat : alwaysDangerousPatterns) {
         if (patternPath.find(pat) != std::string::npos) {
             return true;
         }
     }
-
-    // 4) Wildcards in root folder names disallowed
-    const char rootPrefix[] = "sdmc:/";
-    size_t rootLen = std::strlen(rootPrefix);
-    if (patternPath.compare(0, rootLen, rootPrefix) == 0) {
-        size_t nextSlash = patternPath.find('/', rootLen);
-        if (nextSlash == std::string::npos) nextSlash = patternPath.size();
-        size_t wildcardPos = patternPath.find('*', rootLen);
-        if (wildcardPos != std::string::npos && wildcardPos < nextSlash) {
-            return true; // wildcard in top-level directory disallowed
-        }
-    } else {
-        // Disallow wildcards outside sdmc:/
-        if (patternPath.find('*') != std::string::npos) {
-            return true;
-        }
-    }
-
-    // 5) Block any path inside ultra-protected folders fully
-    for (const auto& folder : ultraProtectedFolders) {
-        if (patternPath.compare(0, std::strlen(folder), folder) == 0) {
-            return true;
-        }
-    }
-
-    // 6) Handle restrictedWildcardFolders:
-    //    Wildcards allowed *inside* these folders,
-    //    but disallow targeting the folder itself or broad "*" at root of that folder.
-    std::string relative;
-    for (const auto& folder : restrictedWildcardFolders) {
-        if (patternPath.compare(0, std::strlen(folder), folder) == 0) {
-            relative = patternPath.substr(std::strlen(folder));
-
-            // If relative is empty or just '*', it means "the whole folder" or "all files"
-            if (relative.empty() || relative == "*" || relative == "*/") {
-                return true; // block broad delete or targeting folder itself
+    
+    // 4) Root folder wildcard check (only if wildcards exist)
+    if (hasWildcards) {
+        constexpr const char rootPrefix[] = "sdmc:/";
+        constexpr size_t rootLen = 6; // Length of "sdmc:/"
+        
+        if (patternPath.length() >= rootLen && 
+            patternPath.compare(0, rootLen, rootPrefix) == 0) {
+            size_t nextSlash = patternPath.find('/', rootLen);
+            if (nextSlash == std::string::npos) nextSlash = patternPath.size();
+            size_t wildcardPos = patternPath.find('*', rootLen);
+            if (wildcardPos != std::string::npos && wildcardPos < nextSlash) {
+                return true; // wildcard in top-level directory disallowed
             }
-
-            // Otherwise allow wildcards deeper inside folder
-            return false;
+        } else {
+            // Disallow wildcards outside sdmc:/
+            return true;
         }
     }
-
+    
+    // 5) Check ultra-protected folders (highest priority)
+    for (const auto& folder : ultraProtectedFolders) {
+        if (patternPath.length() >= folder.length &&
+            patternPath.compare(0, folder.length, folder.path) == 0) {
+            return true;
+        }
+    }
+    
+    // 6) Check restricted wildcard folders (only if wildcards exist)
+    if (hasWildcards) {
+        std::string relative;
+        for (const auto& folder : restrictedWildcardFolders) {
+            if (patternPath.length() >= folder.length &&
+                patternPath.compare(0, folder.length, folder.path) == 0) {
+                
+                relative = patternPath.substr(folder.length);
+                
+                // If relative is empty or just '*', it means "the whole folder" or "all files"
+                if (relative.empty() || relative == "*" || relative == "*/") {
+                    return true; // block broad delete or targeting folder itself
+                }
+                
+                // Otherwise allow wildcards deeper inside folder
+                return false;
+            }
+        }
+    }
+    
+    // 7) Check protected folders
+    std::string relative;
     bool isAlbum;
-
-    // 7) Block wildcard usage in protectedFolders, except albumFolders
     for (const auto& folder : protectedFolders) {
-        if (patternPath.compare(0, std::strlen(folder), folder) == 0) {
+        if (patternPath.length() >= folder.length &&
+            patternPath.compare(0, folder.length, folder.path) == 0) {
+            
+            // Check if this is an album folder (exception to protection)
             isAlbum = false;
             for (const auto& albumFolder : albumFolders) {
-                if (patternPath.compare(0, std::strlen(albumFolder), albumFolder) == 0) {
+                if (patternPath.length() >= albumFolder.length &&
+                    patternPath.compare(0, albumFolder.length, albumFolder.path) == 0) {
                     isAlbum = true;
                     break;
                 }
             }
+            
             if (isAlbum) {
                 return false; // wildcards allowed in album folders
             }
-
-            relative = patternPath.substr(std::strlen(folder));
-            for (const auto& pat : wildcardPatterns) {
-                if (relative.find(pat) != std::string::npos) {
+            
+            // Check for wildcards in protected folder (only if wildcards exist)
+            if (hasWildcards) {
+                relative = patternPath.substr(folder.length);
+                if (relative.find('*') != std::string::npos) {
                     return true; // wildcard in protected folder disallowed
                 }
             }
             return false;
         }
     }
-
+    
     // 8) Otherwise, no dangerous combination detected
     return false;
 }
-
 
 
 
@@ -1957,6 +1967,11 @@ inline void applyPlaceholderReplacement(std::string& input, const std::string& p
 void applyReplaceIniPlaceholder(std::string& arg, const std::string& commandName, const std::string& iniPath) {
     const std::string searchString = "{" + commandName + "(";
     
+    // Early exit: Check if placeholder pattern exists before doing any INI work
+    if (arg.find(searchString) == std::string::npos) {
+        return; // No placeholders found, nothing to do
+    }
+    
     // Pre-declare variables outside the loop
     size_t startPos = 0;
     size_t endPos;
@@ -1971,17 +1986,26 @@ void applyReplaceIniPlaceholder(std::string& arg, const std::string& commandName
     std::vector<std::string> sectionNames;
     bool sectionsLoaded = false;
     
+    // Build result incrementally to avoid expensive string replacement operations
+    std::string result;
+    size_t lastPos = 0;
+    const size_t searchStringLen = searchString.length();
+    
     // Process all occurrences of the placeholder
-    while ((startPos = arg.find(searchString, startPos)) != std::string::npos) {
+    while ((startPos = arg.find(searchString, lastPos)) != std::string::npos) {
         endPos = arg.find(")}", startPos);
         if (endPos == std::string::npos || endPos <= startPos) {
-            // Invalid placeholder, skip this occurrence
-            startPos += searchString.length();
+            // Invalid placeholder, append text up to this point and continue searching
+            result.append(arg, lastPos, startPos + searchStringLen - lastPos);
+            lastPos = startPos + searchStringLen;
             continue;
         }
         
-        placeholderContent = arg.substr(startPos + searchString.length(), 
-                                       endPos - startPos - searchString.length());
+        // Append text before placeholder
+        result.append(arg, lastPos, startPos - lastPos);
+        
+        placeholderContent = arg.substr(startPos + searchStringLen, 
+                                       endPos - startPos - searchStringLen);
         trim(placeholderContent);
         
         commaPos = placeholderContent.find(',');
@@ -2018,14 +2042,19 @@ void applyReplaceIniPlaceholder(std::string& arg, const std::string& commandName
             }
         }
         
-        // Replace the placeholder with the result
-        arg = arg.substr(0, startPos) + replacement + arg.substr(endPos + 2);
+        // Append the replacement
+        result.append(replacement);
         
-        // Update startPos to continue searching after the replacement
-        startPos += replacement.length();
+        // Update lastPos to continue after this placeholder
+        lastPos = endPos + 2;
     }
+    
+    // Append remaining text after last placeholder
+    result.append(arg, lastPos);
+    
+    // Replace original string with result
+    arg = std::move(result);
 }
-
 /**
  * @brief Replaces a JSON source placeholder with the actual JSON source.
  *
@@ -2037,49 +2066,64 @@ void applyReplaceIniPlaceholder(std::string& arg, const std::string& commandName
  */
 // Replace JSON placeholders in the string
 std::string replaceJsonPlaceholder(const std::string& arg, const std::string& commandName, const std::string& jsonPathOrString) {
+    // Early exit: Check if placeholder pattern exists before doing any JSON work
+    const std::string searchString = "{" + commandName + "(";
+    if (arg.find(searchString) == std::string::npos) {
+        return arg; // No placeholders found, return original
+    }
+    
+    // Load JSON data only if we have placeholders to process
     std::unique_ptr<json_t, JsonDeleter> jsonDict;
     if (commandName == "json" || commandName == "json_source") {
         jsonDict.reset(stringToJson(jsonPathOrString));
     } else if (commandName == "json_file" || commandName == "json_file_source") {
         jsonDict.reset(readJsonFromFile(jsonPathOrString));
     }
-
     if (!jsonDict) {
         return arg; // Return original string if JSON data couldn't be loaded
     }
-
-    std::string replacement = arg;
-    const std::string searchString = "{" + commandName + "(";
-    size_t startPos = replacement.find(searchString);
-
-    // Declare variables outside the loop to avoid reinitialization
+    
+    // Build result incrementally to avoid expensive string replacement operations
+    std::string result;
+    
+    size_t lastPos = 0;
+    size_t startPos = arg.find(searchString);
+    
+    // Pre-declare variables outside loop to avoid reinitialization
     size_t endPos = 0;
     size_t nextPos = 0;
     size_t commaPos = 0;
-    size_t index ;
+    size_t index = 0;
     std::string key;
     bool validValue = false;
+    const size_t searchStringLen = searchString.length();
     
     while (startPos != std::string::npos) {
-        endPos = replacement.find(")}", startPos);
+        endPos = arg.find(")}", startPos);
         if (endPos == std::string::npos) {
             break; // Break if no closing tag is found
         }
-
-        nextPos = startPos + searchString.length();
+        
+        // Append text before placeholder
+        result.append(arg, lastPos, startPos - lastPos);
+        
+        nextPos = startPos + searchStringLen;
         cJSON* value = reinterpret_cast<cJSON*>(jsonDict.get()); // Get the JSON root object
         validValue = true;
-
+        
         while (nextPos < endPos && validValue) {
-            commaPos = replacement.find(',', nextPos);
+            commaPos = arg.find(',', nextPos);
             if (commaPos == std::string::npos || commaPos > endPos) {
                 commaPos = endPos; // Set to endPos if no comma is found or it's beyond endPos
             }
-
-            key = replacement.substr(nextPos, commaPos - nextPos); // Extract the key
+            
+            // Use substr only when necessary - direct string comparison when possible
             if (cJSON_IsObject(value)) {
+                // Extract key more efficiently
+                key.assign(arg, nextPos, commaPos - nextPos);
                 value = cJSON_GetObjectItemCaseSensitive(value, key.c_str()); // Navigate through object
             } else if (cJSON_IsArray(value)) {
+                key.assign(arg, nextPos, commaPos - nextPos); // Extract the key
                 index = std::stoul(key); // Convert key to index for arrays
                 value = cJSON_GetArrayItem(value, index);
             } else {
@@ -2087,15 +2131,22 @@ std::string replaceJsonPlaceholder(const std::string& arg, const std::string& co
             }
             nextPos = commaPos + 1; // Move next position past the comma
         }
-
+        
         if (validValue && value && cJSON_IsString(value) && value->valuestring) {
-            replacement.replace(startPos, endPos + 2 - startPos, value->valuestring); // Replace text
+            result.append(value->valuestring); // Append replacement value
+        } else {
+            // If replacement failed, keep the original placeholder
+            result.append(arg, startPos, endPos + 2 - startPos);
         }
-
-        startPos = replacement.find(searchString, endPos + 2); // Find next occurrence
+        
+        lastPos = endPos + 2;
+        startPos = arg.find(searchString, lastPos); // Find next occurrence from last position
     }
-
-    return replacement; // Return the modified string
+    
+    // Append remaining text after last placeholder
+    result.append(arg, lastPos);
+    
+    return result; // Return the modified string
 }
 
 // Helper function to replace placeholders
@@ -4099,36 +4150,48 @@ std::mutex queueMutex;
 std::condition_variable queueCondition;
 std::atomic<bool> interpreterThreadExit{false};
 
+// Cache for stack size to avoid repeated INI parsing
+static int cachedStackSize = 0;
 
 inline void clearInterpreterFlags(bool state = false) {
-    abortDownload.store(state, std::memory_order_release);
-    abortUnzip.store(state, std::memory_order_release);
-    abortFileOp.store(state, std::memory_order_release);
-    abortCommand.store(state, std::memory_order_release);
+    // Use relaxed ordering for simple flag clearing - these are just state flags
+    // and don't need acquire-release synchronization
+    abortDownload.store(state, std::memory_order_relaxed);
+    abortUnzip.store(state, std::memory_order_relaxed);
+    abortFileOp.store(state, std::memory_order_relaxed);
+    abortCommand.store(state, std::memory_order_relaxed);
 }
-
-
 
 void backgroundInterpreter(void*) {
     std::tuple<std::vector<std::vector<std::string>>, std::string, std::string> args;
-    while (!interpreterThreadExit.load(std::memory_order_acquire)) {
+
+    bool shouldExit;
+
+    while (true) {
+        // Cache the exit flag load to avoid redundant atomic operations
+        shouldExit = interpreterThreadExit.load(std::memory_order_acquire);
+        if (shouldExit) {
+            break;
+        }
         
         {
             std::unique_lock<std::mutex> lock(queueMutex);
-            queueCondition.wait(lock, [] { return !interpreterQueue.empty() || interpreterThreadExit.load(std::memory_order_acquire); });
+            queueCondition.wait(lock, [] { 
+                return !interpreterQueue.empty() || interpreterThreadExit.load(std::memory_order_acquire); 
+            });
+            
+            // Check exit condition again after wait
             if (interpreterThreadExit.load(std::memory_order_acquire)) {
-                //logMessage("Exiting Thread...");
                 break;
             }
+            
             if (!interpreterQueue.empty()) {
                 args = std::move(interpreterQueue.front());
                 interpreterQueue.pop();
             }
-            //svcSleepThread(10'000'000);
         } // Release the lock before processing the command
 
         if (!std::get<0>(args).empty()) {
-            //logMessage("Start of interpreter");
             // Clear flags and perform any cleanup if necessary
             clearInterpreterFlags();
             resetPercentages();
@@ -4145,11 +4208,7 @@ void backgroundInterpreter(void*) {
             clearInterpreterFlags();
             
             resetPercentages();
-
-            //logMessage("End of interpreter");
-            //break;
         }
-        //logMessage("looping...");
     }
 }
 
@@ -4163,9 +4222,9 @@ void closeInterpreterThread() {
    threadClose(&interpreterThread);
    // Reset flags
    clearInterpreterFlags();
+   // Clear cache for next startup
+   cachedStackSize = 0;
 }
-
-
 
 void startInterpreterThread(const std::string& packagePath = "") {
     int stackSize = 0x8000;
@@ -4177,9 +4236,16 @@ void startInterpreterThread(const std::string& packagePath = "") {
     }
     #endif
 
-    std::string interpreterHeap = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, MEMORY_STR, "interpreter_heap");
-    if (!interpreterHeap.empty())
-        stackSize = ult::stoi(interpreterHeap, nullptr, 16);  // Convert from base 16
+    // Cache stack size parsing to avoid repeated INI file access
+    if (cachedStackSize == 0) {
+        std::string interpreterHeap = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, MEMORY_STR, "interpreter_heap");
+        if (!interpreterHeap.empty()) {
+            cachedStackSize = ult::stoi(interpreterHeap, nullptr, 16);  // Convert from base 16
+        } else {
+            cachedStackSize = 0x8000;  // Default value
+        }
+    }
+    stackSize = cachedStackSize;
 
     interpreterThreadExit.store(false, std::memory_order_release);
 
@@ -4198,9 +4264,6 @@ void startInterpreterThread(const std::string& packagePath = "") {
     }
     threadStart(&interpreterThread);
 }
-
-
-
 
 void enqueueInterpreterCommands(std::vector<std::vector<std::string>>&& commands, const std::string& packagePath, const std::string& selectedCommand) {
     {
