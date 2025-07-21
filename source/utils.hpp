@@ -1744,7 +1744,7 @@ bool isDangerousCombination(const std::string& originalPath) {
     // 1) Normalize repeated wildcards only if wildcards exist
     std::string patternPath;
     if (hasWildcards) {
-        patternPath.reserve(originalPath.length()); // Avoid reallocations
+        //patternPath.reserve(originalPath.length()); // Avoid reallocations
         bool lastWasStar = false;
         for (char c : originalPath) {
             if (c == '*') {
