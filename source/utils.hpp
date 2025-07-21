@@ -154,11 +154,45 @@ void removeKeyComboFromOthers(const std::string& keyCombo, const std::string& cu
 }
 
 // Define default key combos (same as UltrahandSettingsMenu)
+
 const std::vector<std::string> defaultCombos = {
-    "ZL+ZR+DDOWN", "ZL+ZR+DRIGHT", "ZL+ZR+DUP", "ZL+ZR+DLEFT", 
-    "L+R+DDOWN", "L+R+DRIGHT", "L+R+DUP", "L+R+DLEFT", 
-    "L+DDOWN", "R+DDOWN", "ZL+ZR+PLUS", "L+R+PLUS", "ZL+ZR+MINUS", "L+R+MINUS", 
-    "ZL+MINUS", "ZR+MINUS", "ZL+PLUS", "ZR+PLUS", "MINUS+PLUS", "LS+RS", "L+DDOWN+RS"
+    // Primary (Default) Combos – top priority, always first
+    "ZL+ZR+DDOWN",
+    "ZL+ZR+DRIGHT",
+    "ZL+ZR+DUP",
+    "ZL+ZR+DLEFT",
+
+    // Basic Combos – L/R with D-pad
+    "L+R+DDOWN",
+    "L+R+DRIGHT",
+    "L+R+DUP",
+    "L+R+DLEFT",
+    "L+DDOWN",
+    "R+DDOWN",
+
+    // Menu Key Combos – involving PLUS/MINUS
+    "ZL+ZR+PLUS",
+    "L+R+PLUS",
+    "ZL+ZR+MINUS",
+    "L+R+MINUS",
+    "ZL+MINUS",
+    "ZR+MINUS",
+    "ZL+PLUS",
+    "ZR+PLUS",
+    "MINUS+PLUS",
+
+    // Stick Click Combos
+    "LS+RS",
+    "L+DDOWN+RS",
+    "L+R+LS",
+    "L+R+RS",
+
+    // Advanced Combos – unlikely to conflict, good for extra features
+    "ZL+ZR+LS",
+    "ZL+ZR+RS",
+    "ZL+ZR+L",
+    "ZL+ZR+R",
+    "ZL+ZR+LS+RS"
 };
 
 // Global constant map for button and arrow placeholders
@@ -2055,6 +2089,8 @@ void applyReplaceIniPlaceholder(std::string& arg, const std::string& commandName
     // Replace original string with result
     arg = std::move(result);
 }
+
+
 /**
  * @brief Replaces a JSON source placeholder with the actual JSON source.
  *
@@ -4035,37 +4071,75 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             logMessage("Volume command missing required argument.");
             #endif
         }
-    //} else if (commandName == "wifi") {
-    //    disableLogging = false;
-    //    if (cmd.size() >= 2) {
-    //        std::string togglePattern = cmd[1];
-    //        removeQuotes(togglePattern);
-    //
-    //        Result rc;
-    //
-    //        if (togglePattern == ON_STR) {
-    //            logMessage("Turning Wi-Fi ON...");
-    //            rc = nifmSetWirelessCommunicationEnabled(true);  // Turn Wi-Fi on
-    //            if (R_SUCCEEDED(rc)) {
-    //                logMessage("Wi-Fi enabled successfully.");
-    //            } else {
-    //                logMessage("Failed to enable Wi-Fi. Error code: " + ult::to_string(rc));
-    //            }
-    //        } else if (togglePattern == OFF_STR) {
-    //            logMessage("Turning Wi-Fi OFF...");
-    //            rc = nifmSetWirelessCommunicationEnabled(false);  // Turn Wi-Fi off
-    //            if (R_SUCCEEDED(rc)) {
-    //                logMessage("Wi-Fi disabled successfully.");
-    //            } else {
-    //                logMessage("Failed to disable Wi-Fi. Error code: " + ult::to_string(rc));
-    //            }
-    //        } else {
-    //            logMessage("Invalid Wi-Fi toggle command: " + togglePattern);
-    //        }
-    //    } else {
-    //        logMessage("Wi-Fi command missing required argument.");
-    //    }
-    //
+    } else if (commandName == "open") {
+        if (cmd.size() >= 2) {
+            std::string overlayPath = cmd[1];
+            removeQuotes(overlayPath);
+            preprocessPath(overlayPath, packagePath);
+            
+            // Verify the overlay file exists
+            if (!isFileOrDirectory(overlayPath)) {
+                #if USING_LOGGING_DIRECTIVE
+                logMessage("Overlay file not found: " + overlayPath);
+                #endif
+                commandSuccess = false;
+                return;
+            }
+            
+            // Build launch arguments from remaining command arguments
+            std::string launchArgs, arg;
+            if (cmd.size() > 2) {
+                // Join all arguments after the overlay path
+                for (size_t i = 2; i < cmd.size(); ++i) {
+                    if (i > 2) launchArgs += " ";
+                    arg = cmd[i];
+                    removeQuotes(arg);
+                    launchArgs += arg;
+                }
+            }
+            
+            // Always add --direct flag if not already present
+            //if (launchArgs.empty()) {
+            //    launchArgs = "--direct";
+            //} else if (launchArgs.find("--direct") == std::string::npos) {
+            //    launchArgs += " --direct";
+            //}
+            
+            const std::string overlayFileName = ult::getNameFromPath(overlayPath);
+            
+            // Check if overlay is hidden (if hideHidden is enabled)
+            //if (hideHidden) {
+            //    const auto hideStatus = ult::parseValueFromIniSection(
+            //        ult::OVERLAYS_INI_FILEPATH, overlayFileName, ult::HIDE_STR);
+            //    if (hideStatus == ult::TRUE_STR) {
+            //        #if USING_LOGGING_DIRECTIVE
+            //        logMessage("Cannot open hidden overlay: " + overlayFileName);
+            //        #endif
+            //        commandSuccess = false;
+            //        return;
+            //    }
+            //}
+            
+            // Request overlay launch through background event poller
+            {
+                std::lock_guard<std::mutex> lock(ult::overlayLaunchMutex);
+                ult::requestedOverlayPath = overlayPath;
+                ult::requestedOverlayArgs = launchArgs;
+                ult::overlayLaunchRequested.store(true, std::memory_order_release);
+            }
+            
+            #if USING_LOGGING_DIRECTIVE
+            logMessage("Requesting overlay launch: " + overlayPath + " with args: " + launchArgs);
+            #endif
+
+            return;
+        } else {
+            #if USING_LOGGING_DIRECTIVE
+            logMessage("Usage: open <overlay_path> [launch_arguments...]");
+            #endif
+            commandSuccess = false;
+        }
+    
     } else if (commandName == "refresh") {
         if (cmd.size() == 1) {
             refreshPage = true;
@@ -4111,6 +4185,8 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             skipJumpReset = true;
             refreshPage = true;
         }
+    } else if (commandName == "open") {
+        // needs implementation
     } else if (commandName == "logging") {
         interpreterLogging = true;
     } else if (commandName == "clear") {
