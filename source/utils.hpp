@@ -773,7 +773,7 @@ static std::string resolveWildcardFromKnownPath(
 
     for (size_t startPos = 0; startPos <= resolvedPath.size(); ++startPos) {
         captures.clear();
-        captures.shrink_to_fit();
+        //captures.shrink_to_fit();
         subPath = resolvedPath.substr(startPos);
         
         if (matchAndExtract(oldPattern, subPath, captures)) {
@@ -874,7 +874,7 @@ void initializeTheme(const std::string& themeIniPath = THEME_CONFIG_INI_PATH) {
         }
     } else {
         initialize = true;
-    }
+    } 
 
     // If the file does not exist or the theme section is missing, initialize with all default values
     if (initialize) {
@@ -1236,54 +1236,70 @@ std::vector<std::string> wrapText(const std::string& text, float maxWidth, const
     if (wrappingMode == "none" || (wrappingMode != "char" && wrappingMode != "word")) {
         return std::vector<std::string>{text};  // Return the entire text as a single line
     }
-
+    
     std::vector<std::string> wrappedLines;
-    std::string currentLine;
-    std::string currentWord;
     bool firstLine = true;
-    float currentMaxWidth = maxWidth;
 
     if (wrappingMode == "char") {
+        std::string currentLine;
+        
         size_t i = 0;
         while (i < text.size()) {
-            currentLine += text[i];
-            currentMaxWidth = firstLine ? maxWidth : maxWidth - indentWidth;  // Subtract indent width for subsequent lines
-
-            if (tsl::gfx::calculateStringWidth(currentLine, fontSize, false) > currentMaxWidth) {
-                wrappedLines.push_back(((firstLine && useIndent) || !useIndent) ? currentLine : indent + currentLine);  // Indent if not the first line
-                currentLine.clear();  // Start a new line
-                currentLine.shrink_to_fit();
+            // OPTIMIZED: Create test line fresh each iteration
+            std::string testLine = currentLine + text[i];
+            float currentMaxWidth = firstLine ? maxWidth : maxWidth - indentWidth;
+            
+            if (tsl::gfx::calculateStringWidth(testLine, fontSize, false) > currentMaxWidth) {
+                // Line would be too long, finish current line
+                wrappedLines.push_back(((firstLine && useIndent) || !useIndent) ? currentLine : indent + currentLine);
+                
+                // OPTIMIZED: Start fresh line instead of clearing
+                currentLine = std::string(1, text[i]);  // New line with current character
                 firstLine = false;
+            } else {
+                currentLine = std::move(testLine);  // Use the test line
             }
             i++;
         }
-
         if (!currentLine.empty()) {
-            wrappedLines.push_back(((firstLine && useIndent) || !useIndent) ? currentLine : indent + currentLine);  // Add the last line
+            wrappedLines.push_back(((firstLine && useIndent) || !useIndent) ? currentLine : indent + currentLine);
         }
     } else if (wrappingMode == "word") {
+        std::string currentLine;
+        std::string currentWord;  // Safe reuse - standard stream extraction pattern
+        
         StringStream stream(text);
         while (stream >> currentWord) {
-            if (tsl::gfx::calculateStringWidth(currentLine + currentWord, fontSize, false) > currentMaxWidth) {
-                wrappedLines.push_back(((firstLine && useIndent) || !useIndent) ? currentLine : indent + currentLine);  // Add the current line
-                currentLine.clear();  // Start a new line with the current word
-                currentLine.shrink_to_fit();
+            float currentMaxWidth = firstLine ? maxWidth : maxWidth - indentWidth;
+            
+            // OPTIMIZED: Create test line fresh each iteration
+            std::string testLine = currentLine;
+            if (!testLine.empty()) {
+                testLine += " ";
+            }
+            testLine += currentWord;
+            
+            if (tsl::gfx::calculateStringWidth(testLine, fontSize, false) > currentMaxWidth) {
+                // Line would be too long, finish current line
+                if (!currentLine.empty()) {
+                    wrappedLines.push_back(((firstLine && useIndent) || !useIndent) ? currentLine : indent + currentLine);
+                }
+                
+                // OPTIMIZED: Start fresh line instead of clearing
+                currentLine = currentWord;  // New line with current word
                 firstLine = false;
+            } else {
+                currentLine = std::move(testLine);  // Use the test line
             }
-
-            if (!currentLine.empty()) {
-                currentLine += " ";  // Add a space between words
-            }
-            currentLine += currentWord;
         }
-
         if (!currentLine.empty()) {
-            wrappedLines.push_back(((firstLine && useIndent) || !useIndent) ? currentLine : indent + currentLine);  // Add the last line
+            wrappedLines.push_back(((firstLine && useIndent) || !useIndent) ? currentLine : indent + currentLine);
         }
     }
-
+    
     return wrappedLines;
 }
+
 
 
 // ─── Helper: flatten + placeholder + wrap & expand ─────────────────────────────
@@ -1310,13 +1326,13 @@ static bool buildTableDrawerLines(
     const float indentWidth = tsl::gfx::calculateStringWidth(indent, fontSize, false);
 
     outSection.clear();
-    outSection.shrink_to_fit();
+    //outSection.shrink_to_fit();
     outInfo.clear();
-    outInfo.shrink_to_fit();
+    //outInfo.shrink_to_fit();
     outY.clear();
-    outY.shrink_to_fit();
+    //outY.shrink_to_fit();
     outX.clear();
-    outX.shrink_to_fit();
+    //outX.shrink_to_fit();
 
     size_t curY = startGap;
     bool anyReplacementsMade = false;
@@ -1765,7 +1781,6 @@ void addPackageInfo(tsl::elm::List* list, auto& packageHeader, std::string type 
  * directories.
  */
 
-
 bool isDangerousCombination(const std::string& originalPath) {
     // Early exit: Check for double wildcards first (cheapest check)
     if (originalPath.find("**") != std::string::npos) {
@@ -1870,12 +1885,12 @@ bool isDangerousCombination(const std::string& originalPath) {
     
     // 6) Check restricted wildcard folders (only if wildcards exist)
     if (hasWildcards) {
-        std::string relative;
         for (const auto& folder : restrictedWildcardFolders) {
             if (patternPath.length() >= folder.length &&
                 patternPath.compare(0, folder.length, folder.path) == 0) {
                 
-                relative = patternPath.substr(folder.length);
+                // OPTIMIZED: Create relative string only when processing restricted folders
+                std::string relative = patternPath.substr(folder.length);
                 
                 // If relative is empty or just '*', it means "the whole folder" or "all files"
                 if (relative.empty() || relative == "*" || relative == "*/") {
@@ -1889,14 +1904,12 @@ bool isDangerousCombination(const std::string& originalPath) {
     }
     
     // 7) Check protected folders
-    std::string relative;
-    bool isAlbum;
     for (const auto& folder : protectedFolders) {
         if (patternPath.length() >= folder.length &&
             patternPath.compare(0, folder.length, folder.path) == 0) {
             
             // Check if this is an album folder (exception to protection)
-            isAlbum = false;
+            bool isAlbum = false;
             for (const auto& albumFolder : albumFolders) {
                 if (patternPath.length() >= albumFolder.length &&
                     patternPath.compare(0, albumFolder.length, albumFolder.path) == 0) {
@@ -1911,7 +1924,8 @@ bool isDangerousCombination(const std::string& originalPath) {
             
             // Check for wildcards in protected folder (only if wildcards exist)
             if (hasWildcards) {
-                relative = patternPath.substr(folder.length);
+                // OPTIMIZED: Create relative string only when processing protected folders
+                std::string relative = patternPath.substr(folder.length);
                 if (relative.find('*') != std::string::npos) {
                     return true; // wildcard in protected folder disallowed
                 }
@@ -1923,8 +1937,6 @@ bool isDangerousCombination(const std::string& originalPath) {
     // 8) Otherwise, no dangerous combination detected
     return false;
 }
-
-
 
 
 // Function to populate selectedItemsListOff from a JSON array based on a key
@@ -2091,8 +2103,11 @@ void applyReplaceIniPlaceholder(std::string& arg, const std::string& commandName
 }
 
 
+
 /**
  * @brief Replaces a JSON source placeholder with the actual JSON source.
+ *
+ * Optimized version with variables moved to usage scope to avoid repeated allocations.
  *
  * @param arg The input string containing the placeholder.
  * @param commandName The name of the JSON command (e.g., "json", "json_file").
@@ -2100,7 +2115,6 @@ void applyReplaceIniPlaceholder(std::string& arg, const std::string& commandName
  * @return std::string The input string with the placeholder replaced by the actual JSON source,
  *                   or the original input string if replacement failed or jsonDict is nullptr.
  */
-// Replace JSON placeholders in the string
 std::string replaceJsonPlaceholder(const std::string& arg, const std::string& commandName, const std::string& jsonPathOrString) {
     // Early exit: Check if placeholder pattern exists before doing any JSON work
     const std::string searchString = "{" + commandName + "(";
@@ -2125,17 +2139,11 @@ std::string replaceJsonPlaceholder(const std::string& arg, const std::string& co
     size_t lastPos = 0;
     size_t startPos = arg.find(searchString);
     
-    // Pre-declare variables outside loop to avoid reinitialization
-    size_t endPos = 0;
-    size_t nextPos = 0;
-    size_t commaPos = 0;
-    size_t index = 0;
-    std::string key;
-    bool validValue = false;
     const size_t searchStringLen = searchString.length();
     
     while (startPos != std::string::npos) {
-        endPos = arg.find(")}", startPos);
+        // OPTIMIZED: Create variables fresh each iteration instead of reusing
+        size_t endPos = arg.find(")}", startPos);
         if (endPos == std::string::npos) {
             break; // Break if no closing tag is found
         }
@@ -2143,24 +2151,25 @@ std::string replaceJsonPlaceholder(const std::string& arg, const std::string& co
         // Append text before placeholder
         result.append(arg, lastPos, startPos - lastPos);
         
-        nextPos = startPos + searchStringLen;
+        size_t nextPos = startPos + searchStringLen;
         cJSON* value = reinterpret_cast<cJSON*>(jsonDict.get()); // Get the JSON root object
-        validValue = true;
+        bool validValue = true;
         
         while (nextPos < endPos && validValue) {
-            commaPos = arg.find(',', nextPos);
+            // OPTIMIZED: Create position variables fresh each iteration
+            size_t commaPos = arg.find(',', nextPos);
             if (commaPos == std::string::npos || commaPos > endPos) {
                 commaPos = endPos; // Set to endPos if no comma is found or it's beyond endPos
             }
             
-            // Use substr only when necessary - direct string comparison when possible
+            // OPTIMIZED: Create key string fresh each iteration instead of reusing
+            std::string key(arg, nextPos, commaPos - nextPos);
+            
             if (cJSON_IsObject(value)) {
-                // Extract key more efficiently
-                key.assign(arg, nextPos, commaPos - nextPos);
                 value = cJSON_GetObjectItemCaseSensitive(value, key.c_str()); // Navigate through object
             } else if (cJSON_IsArray(value)) {
-                key.assign(arg, nextPos, commaPos - nextPos); // Extract the key
-                index = std::stoul(key); // Convert key to index for arrays
+                // OPTIMIZED: Create index variable only when processing arrays
+                size_t index = std::stoul(key); // Convert key to index for arrays
                 value = cJSON_GetArrayItem(value, index);
             } else {
                 validValue = false; // Set validValue to false if value is neither object nor array
@@ -2248,8 +2257,8 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
         }
 
         modifiedCmd.clear();
-        modifiedCmd.shrink_to_fit();
-        //modifiedCmd.reserve(cmd.size());
+        //modifiedCmd.shrink_to_fit();
+        modifiedCmd.reserve(cmd.size());
         commandName = cmd[0];
 
         if (commandName == "download") {
@@ -2733,6 +2742,7 @@ bool replacePlaceholdersRecursively(std::string& arg, const std::vector<std::pai
 }
 
 
+
 std::unordered_map<std::string, std::string> generalPlaceholders ;
 void updateGeneralPlaceholders() {
     generalPlaceholders = {
@@ -2996,14 +3006,23 @@ bool applyPlaceholderReplacementsToCommands(std::vector<std::vector<std::string>
 
     size_t cmdSize;
 
-    // Process commands with control flow and apply replacements
-    for (auto it = commands.begin(); it != commands.end();) {
-        
-        auto& cmd = *it; // Get the current command
+    // Use deque for efficient front/back operations while maintaining iterator validity
+    std::deque<std::vector<std::string>> commandQueue(
+        std::make_move_iterator(commands.begin()),
+        std::make_move_iterator(commands.end())
+    );
+    commands.clear(); // Free original vector memory
+
+    // Process commands and rebuild the commands vector
+    std::vector<std::vector<std::string>> processedCommands;
+    processedCommands.reserve(commandQueue.size()); // Pre-allocate
+
+    while (!commandQueue.empty()) {
+        auto cmd = std::move(commandQueue.front()); // Move to avoid copy
+        commandQueue.pop_front();
 
         if (cmd.empty()) {
-            it = commands.erase(it); // Remove empty command
-            continue;
+            continue; // Skip empty commands
         }
 
         const std::string& commandName = cmd[0];
@@ -3012,24 +3031,20 @@ bool applyPlaceholderReplacementsToCommands(std::vector<std::vector<std::string>
         if (commandName == "erista:") {
             inEristaSection = true;
             inMarikoSection = false;
-            it = commands.erase(it); // Remove processed command
-            continue;
+            continue; // Don't add to processed commands
         } else if (commandName == "mariko:") {
             inEristaSection = false;
             inMarikoSection = true;
-            it = commands.erase(it); // Remove processed command
-            continue;
-        } else if (commandName.front() == ';' ||
+            continue; // Don't add to processed commands
+        } else if ((!commandName.empty() && commandName.front() == ';') ||
             (commandName.size() >= 7 && commandName.substr(commandName.size() - 7) == "_source") ||
             commandName == "logging") { // remove stuff that isn't executable
-            it = commands.erase(it); // Remove processed command
-            continue;
+            continue; // Don't add to processed commands
         }
 
         // If we're in a section not relevant to the current hardware, skip the command
         if ((inEristaSection && !usingErista) || (inMarikoSection && !usingMariko)) {
-            ++it; // Skip this command
-            continue;
+            continue; // Skip this command entirely
         }
 
         // Apply placeholder replacements in the current command
@@ -3037,51 +3052,49 @@ bool applyPlaceholderReplacementsToCommands(std::vector<std::vector<std::string>
 
         // Handle special commands like LIST_STR, LIST_FILE_STR, etc.
         cmdSize = cmd.size();
+        eraseAtEnd = false;
 
         if (commandName == LIST_STR && cmdSize >= 2) {
-            listString = std::string(cmd[1]);  // Make a copy of cmd[1] into listString
+            listString = cmd[1]; // Direct assignment, no unnecessary copy constructor
             removeQuotes(listString);
             eraseAtEnd = true;
         } else if (commandName == LIST_FILE_STR && cmdSize >= 2) {
-            listPath = std::string(cmd[1]);  // Make a copy of cmd[1] into listPath
+            listPath = cmd[1]; // Direct assignment
             preprocessPath(listPath, packagePath);
             eraseAtEnd = true;
         } else if (commandName == JSON_STR && cmdSize >= 2) {
-            jsonString = std::string(cmd[1]);  // Make a copy of cmd[1] into jsonString
+            jsonString = cmd[1]; // Direct assignment
             eraseAtEnd = true;
         } else if (commandName == JSON_FILE_STR && cmdSize >= 2) {
-            jsonPath = std::string(cmd[1]);  // Make a copy of cmd[1] into jsonPath
+            jsonPath = cmd[1]; // Direct assignment
             preprocessPath(jsonPath, packagePath);
             eraseAtEnd = true;
         } else if (commandName == INI_FILE_STR && cmdSize >= 2) {
-            iniPath = std::string(cmd[1]);  // Make a copy of cmd[1] into iniPath
+            iniPath = cmd[1]; // Direct assignment
             preprocessPath(iniPath, packagePath);
             eraseAtEnd = true;
         } else if (commandName == HEX_FILE_STR && cmdSize >= 2) {
-            hexPath = std::string(cmd[1]);  // Make a copy of cmd[1] into hexPath
+            hexPath = cmd[1]; // Direct assignment
             preprocessPath(hexPath, packagePath);
             eraseAtEnd = true;
         } else if (commandName == "filter" || commandName == "file_name" || commandName == "folder_name" || commandName == "sourced_path") {
             eraseAtEnd = true;
-        } else {
-            eraseAtEnd = false;
         }
 
-        //logMessage("iniPath: "+iniPath);
-
-        // Now, handle adding quotes only if needed
+        // Apply quoting logic to arguments
         for (size_t i = 1; i < cmd.size(); ++i) {
             std::string& argument = cmd[i];
 
-            // If the argument is exactly '', skip processing (preserve the empty quotes)
-            if (argument == "") {
+            // If the argument is exactly empty, add quotes
+            if (argument.empty()) {
                 argument = "''";
-                //continue;  // Do nothing, preserve as is
+                continue;
             }
 
             // If the argument already has quotes, skip it
-            if ((argument.front() == '"' && argument.back() == '"') ||
-                (argument.front() == '\'' && argument.back() == '\'')) {
+            if (argument.size() >= 2 &&
+                ((argument.front() == '"' && argument.back() == '"') ||
+                 (argument.front() == '\'' && argument.back() == '\''))) {
                 continue; // Already quoted, skip
             }
 
@@ -3090,34 +3103,39 @@ bool applyPlaceholderReplacementsToCommands(std::vector<std::vector<std::string>
                 continue;  // No spaces, so no need for quotes
             }
 
-            // If the argument contains a single quote, wrap it in double quotes
+            // Apply appropriate quoting based on content
             if (argument.find('\'') != std::string::npos) {
                 argument = "\"" + argument + "\"";  // Wrap in double quotes
             }
-            // If the argument contains a double quote, wrap it in single quotes
             else if (argument.find('"') != std::string::npos) {
                 argument = "\'" + argument + "\'";  // Wrap in single quotes
             }
-            // If the argument contains spaces but no quotes, wrap it in single quotes by default
             else {
-                argument = "\'" + argument + "\'";
+                argument = "\'" + argument + "\'";  // Default to single quotes
             }
         }
 
-        // If eraseAtEnd is true, erase the current command
-        if (eraseAtEnd) {
-            it = commands.erase(it);  // Erase and update iterator
-        } else {
-            ++it;  // Move to the next command
+        // Only add to processed commands if not marked for erasure
+        if (!eraseAtEnd) {
+            processedCommands.push_back(std::move(cmd));
         }
     }
+
+    // Replace original commands with processed ones
+    commands = std::move(processedCommands);
 
     return true;  // Indicating that placeholder replacements have been applied successfully
 }
 
 
 
-
+/**
+ * @brief Interpret and execute a list of commands.
+ *
+ * This function interprets and executes a list of commands based on their names and arguments.
+ *
+ * @param commands A list of commands, where each command is represented as a vector of strings.
+ */
 /**
  * @brief Interpret and execute a list of commands.
  *
@@ -3134,7 +3152,7 @@ bool interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
     }
     #endif
 
-    // Increase bufffer size for expanded memory
+    // Initialize buffer sizes based on expanded memory setting
     if (expandedMemory) {
         COPY_BUFFER_SIZE = 262144;
         HEX_BUFFER_SIZE = 4096;
@@ -3144,66 +3162,56 @@ bool interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
         DOWNLOAD_WRITE_BUFFER = 131072;
     }
 
-    // Load key-value pairs from the "BUFFERS" section of the INI file
-    auto bufferSection = getKeyValuePairsFromSection(ULTRAHAND_CONFIG_INI_PATH, MEMORY_STR);
+    // Load and apply buffer configuration from INI file
+    const auto bufferSection = getKeyValuePairsFromSection(ULTRAHAND_CONFIG_INI_PATH, MEMORY_STR);
     
     if (!bufferSection.empty()) {
-        // Directly update buffer sizes without a map
-        std::string section;
-    
-        section = "copy_buffer_size";
-        if (bufferSection.count(section) > 0) {
-            COPY_BUFFER_SIZE = ult::stoi(bufferSection[section]);
-        }
+        // Use structured approach for buffer configuration
+        struct BufferConfig {
+            const char* key;
+            size_t* target;
+        };
         
-        section = "unzip_read_buffer";
-        if (bufferSection.count(section) > 0) {
-            UNZIP_READ_BUFFER = ult::stoi(bufferSection[section]);
-        }
-
-        section = "unzip_write_buffer";
-        if (bufferSection.count(section) > 0) {
-            UNZIP_WRITE_BUFFER = ult::stoi(bufferSection[section]);
-        }
-    
-        section = "download_read_buffer";
-        if (bufferSection.count(section) > 0) {
-            DOWNLOAD_READ_BUFFER = ult::stoi(bufferSection[section]);
-        }
-
-        section = "download_write_buffer";
-        if (bufferSection.count(section) > 0) {
-            DOWNLOAD_WRITE_BUFFER = ult::stoi(bufferSection[section]);
-        }
+        const BufferConfig configs[] = {
+            {"copy_buffer_size", &COPY_BUFFER_SIZE},
+            {"unzip_read_buffer", &UNZIP_READ_BUFFER},
+            {"unzip_write_buffer", &UNZIP_WRITE_BUFFER},
+            {"download_read_buffer", &DOWNLOAD_READ_BUFFER},
+            {"download_write_buffer", &DOWNLOAD_WRITE_BUFFER},
+            {"hex_buffer_size", &HEX_BUFFER_SIZE}
+        };
         
-        section = "hex_buffer_size";
-        if (bufferSection.count(section) > 0) {
-            HEX_BUFFER_SIZE = ult::stoi(bufferSection[section]);
+        for (const auto& config : configs) {
+            const auto it = bufferSection.find(config.key);
+            if (it != bufferSection.end()) {
+                *config.target = ult::stoi(it->second);
+            }
         }
     }
 
-    std::string message;
-
+    // Initialize state variables
     bool inEristaSection = false;
     bool inMarikoSection = false;
     bool inTrySection = false;
-    std::string listString, listPath, jsonString, jsonPath, hexPath, iniPath, lastArg;
+    
+    std::string listString, listPath, jsonString, jsonPath, hexPath, iniPath;
+    std::string message;
 
-    //size_t startPos, endPos, listIndex;
-    std::string replacement;
-
-    // Overwrite globals
+    // Reset global state
     commandSuccess = true;
     refreshPage = false;
     refreshPackage = false;
     interpreterLogging = false;
 
-    size_t cmdSize;
-
-    while (!commands.empty()) {
-
-        auto& cmd = commands.front(); // Get the first command for processing
-
+    // Use deque for O(1) front removal while maintaining memory efficiency
+    std::deque<std::vector<std::string>> commandQueue(
+        std::make_move_iterator(commands.begin()),
+        std::make_move_iterator(commands.end())
+    );
+    commands.clear(); // Free original vector memory immediately
+    
+    while (!commandQueue.empty()) {
+        // Check for abort signal
         if (abortCommand.load(std::memory_order_acquire)) {
             abortCommand.store(false, std::memory_order_release);
             commandSuccess = false;
@@ -3214,90 +3222,125 @@ bool interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
             return commandSuccess;
         }
 
+        auto& cmd = commandQueue.front();
+        
+        // Skip empty commands
         if (cmd.empty()) {
-            commands.erase(commands.begin()); // Remove empty command
+            commandQueue.pop_front(); // Free memory immediately
             continue;
         }
 
         const std::string& commandName = cmd[0];
 
+        // Handle control flow commands
         if (commandName == "try:") {
-            if (inTrySection && commandSuccess) break;
+            if (inTrySection && commandSuccess) {
+                break;
+            }
             commandSuccess = true;
-
             inTrySection = true;
-            commands.erase(commands.begin()); // Remove processed command
+            commandQueue.pop_front(); // Free memory
             continue;
-        } else if (commandName == "erista:") {
+        }
+        
+        if (commandName == "erista:") {
             inEristaSection = true;
             inMarikoSection = false;
-            commands.erase(commands.begin()); // Remove processed command
+            commandQueue.pop_front(); // Free memory
             continue;
-        } else if (commandName == "mariko:") {
+        }
+        
+        if (commandName == "mariko:") {
             inEristaSection = false;
             inMarikoSection = true;
-            commands.erase(commands.begin()); // Remove processed command
+            commandQueue.pop_front(); // Free memory
             continue;
         }
 
-        if (!commandSuccess && inTrySection){
-            commands.erase(commands.begin()); // Remove processed command
+        // Skip commands in try section if previous command failed
+        if (!commandSuccess && inTrySection) {
+            commandQueue.pop_front(); // Free memory even when skipping
             continue;
         }
 
-        if ((inEristaSection && !inMarikoSection && usingErista) || (!inEristaSection && inMarikoSection && usingMariko) || (!inEristaSection && !inMarikoSection)) {
-            if (!inTrySection || (commandSuccess && inTrySection)) {
+        // Determine if command should execute based on platform sections
+        const bool shouldExecute = 
+            (inEristaSection && !inMarikoSection && usingErista) ||
+            (!inEristaSection && inMarikoSection && usingMariko) ||
+            (!inEristaSection && !inMarikoSection);
 
-                applyPlaceholderReplacements(cmd, hexPath, iniPath, listString, listPath, jsonString, jsonPath);
+        if (!shouldExecute) {
+            commandQueue.pop_front(); // Free memory for skipped commands
+            continue;
+        }
 
-                #if USING_LOGGING_DIRECTIVE
-                if (interpreterLogging) {
-                    disableLogging = false;
-                    message = "Executing command: ";
-                    for (const std::string& token : cmd)
-                        message += token + " ";
-                    logMessage(message);
-                }
-                #endif
+        // Only execute if not in try section or if we're succeeding in try section
+        if (inTrySection && !commandSuccess) {
+            commandQueue.pop_front(); // Free memory for skipped commands
+            continue;
+        }
 
-                cmdSize = cmd.size();
+        // Apply placeholder replacements
+        applyPlaceholderReplacements(cmd, hexPath, iniPath, listString, listPath, jsonString, jsonPath);
 
-                if (commandName == LIST_STR) {
-                    if (cmdSize >= 2) {
-                        listString = cmd[1];
-                        removeQuotes(listString);
-                    }
-                } else if (commandName == LIST_FILE_STR) {
-                    if (cmdSize >= 2) {
-                        listPath = cmd[1];
-                        preprocessPath(listPath, packagePath);
-                    }
-                } else if (commandName == JSON_STR) {
-                    if (cmdSize >= 2) {
-                        jsonString = cmd[1];
-                    }
-                } else if (commandName == JSON_FILE_STR) {
-                    if (cmdSize >= 2) {
-                        jsonPath = cmd[1];
-                        preprocessPath(jsonPath, packagePath);
-                    }
-                } else if (commandName == INI_FILE_STR) {
-                    if (cmdSize >= 2) {
-                        iniPath = cmd[1];
-                        preprocessPath(iniPath, packagePath);
-                    }
-                } else if (commandName == HEX_FILE_STR) {
-                    if (cmdSize >= 2) {
-                        hexPath = cmd[1];
-                        preprocessPath(hexPath, packagePath);
-                    }
-                } else {
-                    processCommand(cmd, packagePath, selectedCommand);
-                }
+        #if USING_LOGGING_DIRECTIVE
+        if (interpreterLogging) {
+            disableLogging = false;
+            message = "Executing command: ";
+            //message.reserve(256); // Pre-allocate reasonable size
+            
+            for (const std::string& token : cmd) {
+                message += token + " ";
             }
+            logMessage(message);
         }
+        #endif
 
-        commands.erase(commands.begin()); // Remove processed command
+        const size_t cmdSize = cmd.size();
+
+        // Process different command types
+        if (commandName == LIST_STR) {
+            if (cmdSize >= 2) {
+                listString = cmd[1];
+                removeQuotes(listString);
+            }
+        } 
+        else if (commandName == LIST_FILE_STR) {
+            if (cmdSize >= 2) {
+                listPath = cmd[1];
+                preprocessPath(listPath, packagePath);
+            }
+        } 
+        else if (commandName == JSON_STR) {
+            if (cmdSize >= 2) {
+                jsonString = cmd[1];
+            }
+        } 
+        else if (commandName == JSON_FILE_STR) {
+            if (cmdSize >= 2) {
+                jsonPath = cmd[1];
+                preprocessPath(jsonPath, packagePath);
+            }
+        } 
+        else if (commandName == INI_FILE_STR) {
+            if (cmdSize >= 2) {
+                iniPath = cmd[1];
+                preprocessPath(iniPath, packagePath);
+            }
+        } 
+        else if (commandName == HEX_FILE_STR) {
+            if (cmdSize >= 2) {
+                hexPath = cmd[1];
+                preprocessPath(hexPath, packagePath);
+            }
+        } 
+        else {
+            // Process all other commands
+            processCommand(cmd, packagePath, selectedCommand);
+        }
+        
+        // Free processed command memory
+        commandQueue.pop_front();
     }
 
     #if USING_LOGGING_DIRECTIVE
@@ -4240,66 +4283,77 @@ inline void clearInterpreterFlags(bool state = false) {
 
 void backgroundInterpreter(void*) {
     std::tuple<std::vector<std::vector<std::string>>, std::string, std::string> args;
+    bool hasWork = false;
 
-    bool shouldExit;
-
-    while (true) {
-        // Cache the exit flag load to avoid redundant atomic operations
-        shouldExit = interpreterThreadExit.load(std::memory_order_acquire);
-        if (shouldExit) {
-            break;
+    // Get work from queue
+    {
+        std::unique_lock<std::mutex> lock(queueMutex);
+        
+        // Wait for work or exit signal
+        queueCondition.wait(lock, [] { 
+            return !interpreterQueue.empty() || interpreterThreadExit.load(std::memory_order_acquire); 
+        });
+        
+        // Check if we should exit without doing work
+        if (interpreterThreadExit.load(std::memory_order_acquire)) {
+            return;
         }
         
-        {
-            std::unique_lock<std::mutex> lock(queueMutex);
-            queueCondition.wait(lock, [] { 
-                return !interpreterQueue.empty() || interpreterThreadExit.load(std::memory_order_acquire); 
-            });
-            
-            // Check exit condition again after wait
-            if (interpreterThreadExit.load(std::memory_order_acquire)) {
-                break;
-            }
-            
-            if (!interpreterQueue.empty()) {
-                args = std::move(interpreterQueue.front());
-                interpreterQueue.pop();
-            }
-        } // Release the lock before processing the command
-
-        if (!std::get<0>(args).empty()) {
-            // Clear flags and perform any cleanup if necessary
-            clearInterpreterFlags();
-            resetPercentages();
-            threadFailure.store(false, std::memory_order_release);
-            
-            runningInterpreter.store(true, std::memory_order_release);
-            interpretAndExecuteCommands(std::move(std::get<0>(args)), std::move(std::get<1>(args)), std::move(std::get<2>(args)));
-
-            svcSleepThread(200'000'000);
-
-            runningInterpreter.store(false, std::memory_order_release);
-            interpreterThreadExit.store(true, std::memory_order_release);
-            // Clear flags and perform any cleanup if necessary
-            clearInterpreterFlags();
-            
-            resetPercentages();
+        // Get the work if available
+        if (!interpreterQueue.empty()) {
+            args = std::move(interpreterQueue.front());
+            interpreterQueue.pop();
+            hasWork = true;
         }
+    } // Release lock before processing
+
+    // Process the work if we have any
+    if (hasWork && !std::get<0>(args).empty()) {
+        // Clear flags and setup for execution
+        clearInterpreterFlags();
+        resetPercentages();
+        threadFailure.store(false, std::memory_order_release);
+        
+        runningInterpreter.store(true, std::memory_order_release);
+        
+        // Execute the commands
+        interpretAndExecuteCommands(std::move(std::get<0>(args)), std::move(std::get<1>(args)), std::move(std::get<2>(args)));
+
+        // Brief sleep before cleanup
+        svcSleepThread(200'000'000);
+
+        // Cleanup
+        runningInterpreter.store(false, std::memory_order_release);
+        clearInterpreterFlags();
+        resetPercentages();
     }
+    
+    // Thread naturally exits here - no loop needed
 }
 
 void closeInterpreterThread() {
-   {
-       std::lock_guard<std::mutex> lock(queueMutex);
-       interpreterThreadExit.store(true, std::memory_order_release);
-       queueCondition.notify_one();
-   }
-   threadWaitForExit(&interpreterThread);
-   threadClose(&interpreterThread);
-   // Reset flags
-   clearInterpreterFlags();
-   // Clear cache for next startup
-   cachedStackSize = 0;
+    // Signal thread to exit and wake it up
+    {
+        std::lock_guard<std::mutex> lock(queueMutex);
+        interpreterThreadExit.store(true, std::memory_order_release);
+    }
+    queueCondition.notify_one();
+    
+    // Wait for thread to finish and clean up
+    threadWaitForExit(&interpreterThread);
+    threadClose(&interpreterThread);
+    
+    // Reset state
+    clearInterpreterFlags();
+    interpreterThreadExit.store(false, std::memory_order_release);
+    
+    // Clear any remaining queue items
+    {
+        std::lock_guard<std::mutex> lock(queueMutex);
+        while (!interpreterQueue.empty()) {
+            interpreterQueue.pop();
+        }
+    }
 }
 
 void startInterpreterThread(const std::string& packagePath = "") {
@@ -4323,14 +4377,16 @@ void startInterpreterThread(const std::string& packagePath = "") {
     }
     stackSize = cachedStackSize;
 
+    // Ensure exit flag is clear before starting
     interpreterThreadExit.store(false, std::memory_order_release);
 
     int result = threadCreate(&interpreterThread, backgroundInterpreter, nullptr, nullptr, stackSize, 0x2B, -2);
     if (result != 0) {
+        // Handle thread creation failure
         commandSuccess = false;
         clearInterpreterFlags();
         runningInterpreter.store(false, std::memory_order_release);
-        interpreterThreadExit.store(true, std::memory_order_release);
+        
         #if USING_LOGGING_DIRECTIVE
         logMessage("Failed to create interpreter thread.");
         logFilePath = defaultLogFilePath;
