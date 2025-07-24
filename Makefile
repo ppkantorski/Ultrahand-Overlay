@@ -98,12 +98,9 @@ CFLAGS += -DUSING_LOGGING_DIRECTIVE=$(USING_LOGGING_DIRECTIVE)
 USING_FPS_INDICATOR_DIRECTIVE := 0
 CFLAGS += -DUSING_FPS_INDICATOR_DIRECTIVE=$(USING_FPS_INDICATOR_DIRECTIVE)
 
-# Add Ultrahand signature for overlay detection
-CFLAGS += -DULTRAHAND_SIGNATURE=\"ULTRAHAND\"
-
 # Disable fstream (ideally for other overlays that dont want to use fstream)
-NO_FSTREAM_DIRECTIVE := 1
-CFLAGS += -DNO_FSTREAM_DIRECTIVE=$(NO_FSTREAM_DIRECTIVE)
+#USING_FSTREAM_DIRECTIVE := 0
+#CFLAGS += -DUSING_FSTREAM_DIRECTIVE=$(USING_FSTREAM_DIRECTIVE)
 #---------------------------------------------------------------------------------
 
 
