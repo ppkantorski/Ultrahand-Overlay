@@ -98,7 +98,7 @@ CFLAGS += -DUSING_LOGGING_DIRECTIVE=$(USING_LOGGING_DIRECTIVE)
 USING_FPS_INDICATOR_DIRECTIVE := 0
 CFLAGS += -DUSING_FPS_INDICATOR_DIRECTIVE=$(USING_FPS_INDICATOR_DIRECTIVE)
 
-# Disable fstream (ideally for other overlays that dont want to use fstream)
+# Enable fstream (ideally for other overlays want full fstream instead of FILE*)
 #USING_FSTREAM_DIRECTIVE := 0
 #CFLAGS += -DUSING_FSTREAM_DIRECTIVE=$(USING_FSTREAM_DIRECTIVE)
 #---------------------------------------------------------------------------------
