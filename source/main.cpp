@@ -531,8 +531,8 @@ private:
 
 
                 runningInterpreter.store(true, release);
-                enqueueInterpreterCommands(std::move(interpreterCommands), "", "");
-                startInterpreterThread();
+                executeInterpreterCommands(std::move(interpreterCommands), "", "");
+                //startInterpreterThread();
 
                 listItem->setValue(INPROGRESS_SYMBOL);
                 //lastSelectedListItem = nullptr;
@@ -1945,8 +1945,8 @@ private:
 
                 commandVec.emplace_back(std::move(commandParts));
 
-                enqueueInterpreterCommands(std::move(commandVec), filePath, specificKey);
-                startInterpreterThread();
+                executeInterpreterCommands(std::move(commandVec), filePath, specificKey);
+                //startInterpreterThread();
                 listItem->setValue(INPROGRESS_SYMBOL);
 
                 lastSelectedListItem = listItem;
@@ -2841,8 +2841,8 @@ public:
                         isDownloadCommand = false;
                         runningInterpreter.store(true, release);
     
-                        enqueueInterpreterCommands(getSourceReplacement(selectionCommands, selectedItem, i, filePath), filePath, specificKey);
-                        startInterpreterThread(filePath);
+                        executeInterpreterCommands(getSourceReplacement(selectionCommands, selectedItem, i, filePath), filePath, specificKey);
+                        //startInterpreterThread(filePath);
     
                         listItem->setValue(INPROGRESS_SYMBOL);
     
@@ -4242,8 +4242,8 @@ bool drawCommandsMenu(tsl::elm::List* list,
                             if ((keys & KEY_A)) {
                                 isDownloadCommand = false;
                                 runningInterpreter.store(true, release);
-                                enqueueInterpreterCommands(getSourceReplacement(commands, selectedItem, i, packagePath), packagePath, keyName);
-                                startInterpreterThread(packagePath);
+                                executeInterpreterCommands(getSourceReplacement(commands, selectedItem, i, packagePath), packagePath, keyName);
+                                //startInterpreterThread(packagePath);
                                 listItem->setValue(INPROGRESS_SYMBOL);
                                 
                                 //lastSelectedListItem = nullptr;

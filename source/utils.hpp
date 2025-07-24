@@ -3526,8 +3526,8 @@ void handleMoveCommand(const std::vector<std::string>& cmd, const std::string& p
     long long totalBytesCopied, totalSize;
 
     if (!sourceListPath.empty() && !destinationListPath.empty()) {
-        std::vector<std::string> sourceFilesList = readListFromFile(sourceListPath);
-        std::vector<std::string> destinationFilesList = readListFromFile(destinationListPath);
+        const std::vector<std::string> sourceFilesList = readListFromFile(sourceListPath);
+        const std::vector<std::string> destinationFilesList = readListFromFile(destinationListPath);
         if (sourceFilesList.size() != destinationFilesList.size()) {
             #if USING_LOGGING_DIRECTIVE
             logMessage("Source and destination lists must have the same number of entries.");
@@ -3953,13 +3953,13 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
         }
     
         if (launchUpdaterPayload) {
-            std::string rebootOption = PAYLOADS_PATH + "ultrahand_updater.bin";
+            const std::string rebootOption = PAYLOADS_PATH + "ultrahand_updater.bin";
             if (!isFile(rebootOption)) {
                 downloadFile(UPDATER_PAYLOAD_URL, PAYLOADS_PATH, true);
                 downloadPercentage.store(-1, std::memory_order_release);
             }
             if (isFile(rebootOption)) {
-                std::string fileName = getNameFromPath(rebootOption);
+                const std::string fileName = getNameFromPath(rebootOption);
     
                 if (util::IsErista()) {
                     Payload::PayloadConfig reboot_payload = { fileName, rebootOption };
@@ -4275,15 +4275,25 @@ void executeIniCommands(const std::string &iniPath, const std::string &section) 
 }
 
 
+
 // Thread information structure
 Thread interpreterThread;
-std::queue<std::tuple<std::vector<std::vector<std::string>>, std::string, std::string>> interpreterQueue;
-std::mutex queueMutex;
-std::condition_variable queueCondition;
 std::atomic<bool> interpreterThreadExit{false};
 
 // Cache for stack size to avoid repeated INI parsing
 static int cachedStackSize = 0;
+
+// Work data structure to pass to thread
+struct InterpreterWorkData {
+    std::vector<std::vector<std::string>> commands;
+    std::string packagePath;
+    std::string selectedCommand;
+    
+    InterpreterWorkData(std::vector<std::vector<std::string>>&& cmds, 
+                       const std::string& path, 
+                       const std::string& selected)
+        : commands(std::move(cmds)), packagePath(path), selectedCommand(selected) {}
+};
 
 inline void clearInterpreterFlags(bool state = false) {
     // Use relaxed ordering for simple flag clearing - these are just state flags
@@ -4294,34 +4304,18 @@ inline void clearInterpreterFlags(bool state = false) {
     abortCommand.store(state, std::memory_order_relaxed);
 }
 
-void backgroundInterpreter(void*) {
-    std::tuple<std::vector<std::vector<std::string>>, std::string, std::string> args;
-    bool hasWork = false;
-
-    // Get work from queue
-    {
-        std::unique_lock<std::mutex> lock(queueMutex);
-        
-        // Wait for work or exit signal
-        queueCondition.wait(lock, [] { 
-            return !interpreterQueue.empty() || interpreterThreadExit.load(std::memory_order_acquire); 
-        });
-        
-        // Check if we should exit without doing work
-        if (interpreterThreadExit.load(std::memory_order_acquire)) {
-            return;
-        }
-        
-        // Get the work if available
-        if (!interpreterQueue.empty()) {
-            args = std::move(interpreterQueue.front());
-            interpreterQueue.pop();
-            hasWork = true;
-        }
-    } // Release lock before processing
-
-    // Process the work if we have any
-    if (hasWork && !std::get<0>(args).empty()) {
+void backgroundInterpreter(void* workPtr) {
+    // Get work data directly - no queue needed
+    auto workData = static_cast<InterpreterWorkData*>(workPtr);
+    
+    // Check for exit signal before starting work
+    if (interpreterThreadExit.load(std::memory_order_acquire)) {
+        delete workData;
+        return;
+    }
+    
+    // Process the work if we have commands
+    if (!workData->commands.empty()) {
         // Clear flags and setup for execution
         clearInterpreterFlags();
         resetPercentages();
@@ -4330,7 +4324,9 @@ void backgroundInterpreter(void*) {
         runningInterpreter.store(true, std::memory_order_release);
         
         // Execute the commands
-        interpretAndExecuteCommands(std::move(std::get<0>(args)), std::move(std::get<1>(args)), std::move(std::get<2>(args)));
+        interpretAndExecuteCommands(std::move(workData->commands), 
+                                   std::move(workData->packagePath), 
+                                   std::move(workData->selectedCommand));
 
         // Brief sleep before cleanup
         svcSleepThread(200'000'000);
@@ -4341,16 +4337,15 @@ void backgroundInterpreter(void*) {
         resetPercentages();
     }
     
-    // Thread naturally exits here - no loop needed
+    // Clean up work data
+    delete workData;
+    
+    // Thread naturally exits here
 }
 
 void closeInterpreterThread() {
-    // Signal thread to exit and wake it up
-    {
-        std::lock_guard<std::mutex> lock(queueMutex);
-        interpreterThreadExit.store(true, std::memory_order_release);
-    }
-    queueCondition.notify_one();
+    // Signal any running thread to exit
+    interpreterThreadExit.store(true, std::memory_order_release);
     
     // Wait for thread to finish and clean up
     threadWaitForExit(&interpreterThread);
@@ -4359,19 +4354,9 @@ void closeInterpreterThread() {
     // Reset state
     clearInterpreterFlags();
     interpreterThreadExit.store(false, std::memory_order_release);
-    
-    // Clear any remaining queue items
-    {
-        std::lock_guard<std::mutex> lock(queueMutex);
-        while (!interpreterQueue.empty()) {
-            interpreterQueue.pop();
-        }
-    }
 }
 
-void startInterpreterThread(const std::string& packagePath = "") {
-    int stackSize = 0x8000;
-
+int getInterpreterStackSize(const std::string& packagePath = "") {
     #if USING_LOGGING_DIRECTIVE
     if (!packagePath.empty()) {
         disableLogging = !(parseValueFromIniSection(PACKAGES_INI_FILEPATH, getNameFromPath(packagePath), USE_LOGGING_STR) == TRUE_STR);
@@ -4388,17 +4373,38 @@ void startInterpreterThread(const std::string& packagePath = "") {
             cachedStackSize = 0x8000;  // Default value
         }
     }
-    stackSize = cachedStackSize;
+    return cachedStackSize;
+}
 
+// Combined function - creates thread with work data directly
+void executeInterpreterCommands(std::vector<std::vector<std::string>>&& commands, 
+                               const std::string& packagePath = "", 
+                               const std::string& selectedCommand = "") {
+    
+    // Early exit if no commands
+    if (commands.empty()) {
+        return;
+    }
+    
+    // Get stack size and setup logging
+    const int stackSize = getInterpreterStackSize(packagePath);
+    
     // Ensure exit flag is clear before starting
     interpreterThreadExit.store(false, std::memory_order_release);
-
-    const int result = threadCreate(&interpreterThread, backgroundInterpreter, nullptr, nullptr, stackSize, 0x2B, -2);
+    
+    // Create work data (will be cleaned up by the thread)
+    auto workData = new InterpreterWorkData(std::move(commands), packagePath, selectedCommand);
+    
+    // Create and start thread directly with work data
+    const int result = threadCreate(&interpreterThread, backgroundInterpreter, workData, nullptr, stackSize, 0x2B, -2);
     if (result != 0) {
         // Handle thread creation failure
         commandSuccess = false;
         clearInterpreterFlags();
         runningInterpreter.store(false, std::memory_order_release);
+        
+        // Clean up work data since thread won't
+        delete workData;
         
         #if USING_LOGGING_DIRECTIVE
         logMessage("Failed to create interpreter thread.");
@@ -4408,12 +4414,4 @@ void startInterpreterThread(const std::string& packagePath = "") {
         return;
     }
     threadStart(&interpreterThread);
-}
-
-void enqueueInterpreterCommands(std::vector<std::vector<std::string>>&& commands, const std::string& packagePath, const std::string& selectedCommand) {
-    {
-        std::lock_guard<std::mutex> lock(queueMutex);
-        interpreterQueue.emplace(std::move(commands), packagePath, selectedCommand);
-    }
-    queueCondition.notify_one();
 }
