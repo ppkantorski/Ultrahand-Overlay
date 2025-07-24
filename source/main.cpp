@@ -4739,7 +4739,7 @@ public:
                     setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_PACKAGE_STR, TRUE_STR);
                 }
                 jumpItemName = packageRootLayerIsStarred ? STAR_SYMBOL + "  " + packageRootLayerTitle : packageRootLayerTitle;
-                jumpItemValue = packageRootLayerVersion;
+                jumpItemValue = hidePackageVersions ? "" : packageRootLayerVersion;
                 jumpItemExactMatch = true;
                 g_overlayFilename = "";
                 skipJumpReset = true;
@@ -5219,7 +5219,7 @@ public:
 
                         if (overlayFileName == g_overlayFilename) {
                             jumpItemName = newOverlayName;
-                            jumpItemValue = overlayVersion;
+                            jumpItemValue = hideOverlayVersions ? "" : overlayVersion;
                             jumpItemExactMatch = true;
                         }
 
@@ -5262,7 +5262,7 @@ public:
                                 }
                                 skipJumpReset = true;
                                 jumpItemName = newStarred ? STAR_SYMBOL + "  " + overlayName : overlayName;
-                                jumpItemValue = overlayVersion;
+                                jumpItemValue = hideOverlayVersions ? "" : overlayVersion;
                                 jumpItemExactMatch = true;
                                 // Also clear the global overlay filename since we're not on the main overlay list
                                 g_overlayFilename = "";
@@ -5287,7 +5287,7 @@ public:
                                     inHiddenMode = false;
                                 }
                                 jumpItemName = newStarred ? STAR_SYMBOL + "  " + overlayName : overlayName;
-                                jumpItemValue = overlayVersion;
+                                jumpItemValue = hideOverlayVersions ? "" : overlayVersion;
                                 jumpItemExactMatch = true;
                                 // Also clear the global overlay filename since we're not on the main overlay list
                                 g_overlayFilename = "";
@@ -5616,7 +5616,7 @@ public:
                                 
                                 skipJumpReset = true;
                                 jumpItemName = newStarred ? STAR_SYMBOL + "  " + newPackageName : newPackageName;
-                                jumpItemValue = packageVersion;
+                                jumpItemValue = hidePackageVersions ? "" : packageVersion;
                                 jumpItemExactMatch = true;
                                 // Also clear the global overlay filename since we're not on the main overlay list
                                 g_overlayFilename = "";
@@ -5640,7 +5640,7 @@ public:
                                     inHiddenMode = false;
                                 }
                                 jumpItemName = newStarred ? STAR_SYMBOL + "  " + newPackageName : newPackageName;
-                                jumpItemValue = packageVersion;
+                                jumpItemValue = hidePackageVersions ? "" : packageVersion;
                                 jumpItemExactMatch = true;
                                 // Also clear the global overlay filename since we're not on the main overlay list
                                 g_overlayFilename = "";

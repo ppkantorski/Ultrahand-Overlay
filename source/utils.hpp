@@ -1869,7 +1869,7 @@ bool isDangerousCombination(const std::string& originalPath) {
             patternPath.compare(0, rootLen, rootPrefix) == 0) {
             size_t nextSlash = patternPath.find('/', rootLen);
             if (nextSlash == std::string::npos) nextSlash = patternPath.size();
-            size_t wildcardPos = patternPath.find('*', rootLen);
+            const size_t wildcardPos = patternPath.find('*', rootLen);
             if (wildcardPos != std::string::npos && wildcardPos < nextSlash) {
                 return true; // wildcard in top-level directory disallowed
             }
@@ -2483,7 +2483,7 @@ double parseNumber(const std::string& expression, size_t& pos, bool& valid) {
     // Check if the expression starts with a '(' indicating a nested expression
     if (expression[pos] == '(') {
         ++pos;  // Skip the '('
-        double result = parseExpression(expression, pos, valid);
+        const double result = parseExpression(expression, pos, valid);
         if (expression[pos] == ')') {
             ++pos;  // Skip the ')'
         } else {
@@ -3506,12 +3506,12 @@ void handleMirrorCommand(const std::vector<std::string>& cmd, const std::string&
         } else {
             destinationPath = ROOT_PATH;  // Default value if cmd.size() < 3
         }
-        std::string operation = (cmd[0] == "mirror_copy" || cmd[0] == "mirror_cp") ? "copy" : "delete";
+        const std::string operation = (cmd[0] == "mirror_copy" || cmd[0] == "mirror_cp") ? "copy" : "delete";
 
         if (sourcePath.find('*') == std::string::npos) {
             mirrorFiles(sourcePath, destinationPath, operation);
         } else {
-            auto fileList = getFilesListByWildcards(sourcePath);
+            const auto fileList = getFilesListByWildcards(sourcePath);
             for (const auto& sourceDirectory : fileList) {
                 mirrorFiles(sourceDirectory, destinationPath, operation);
             }
@@ -3678,7 +3678,7 @@ void handleHexEdit(const std::string& sourcePath, const std::string& secondArg, 
         hexEditByOffset(sourcePath, secondArg, thirdArg);
     } else if (commandName == "hex-by-swap") {
         if (cmd.size() >= 5) {
-            size_t occurrence = std::stoul(fourthArg);
+            const size_t occurrence = std::stoul(fourthArg);
             hexEditFindReplace(sourcePath, secondArg, thirdArg, occurrence);
         } else {
             hexEditFindReplace(sourcePath, secondArg, thirdArg);
@@ -3694,7 +3694,7 @@ void handleHexEdit(const std::string& sourcePath, const std::string& secondArg, 
         if (cmd.size() >= 5) {
             std::string selectedStr = cmd[4];
             removeQuotes(selectedStr);
-            size_t occurrence = std::stoul(selectedStr);
+            const size_t occurrence = std::stoul(selectedStr);
             hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, occurrence);
         } else {
             hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
@@ -3713,7 +3713,7 @@ void handleHexEdit(const std::string& sourcePath, const std::string& secondArg, 
         }
     
         if (cmd.size() >= 6) {
-            size_t occurrence = std::stoul(fifthArg);
+            const size_t occurrence = std::stoul(fifthArg);
             hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, occurrence);
         } else {
             hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
@@ -3731,7 +3731,7 @@ void handleHexEdit(const std::string& sourcePath, const std::string& secondArg, 
         }
     
         if (cmd.size() >= 6) {
-            size_t occurrence = std::stoul(fifthArg);
+            const size_t occurrence = std::stoul(fifthArg);
             hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, occurrence);
         } else {
             hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
@@ -4002,7 +4002,7 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                 } else if (rebootOption == "HEKATE" || rebootOption == "hekate") {
                     Payload::RebootToHekateMenu();
                 } else if (isFile(rebootOption)) {
-                    std::string fileName = getNameFromPath(rebootOption);
+                    const std::string fileName = getNameFromPath(rebootOption);
                     if (util::IsErista()) {
                         Payload::PayloadConfig reboot_payload = {fileName, rebootOption};
                         Payload::RebootToPayload(reboot_payload);
@@ -4393,7 +4393,7 @@ void startInterpreterThread(const std::string& packagePath = "") {
     // Ensure exit flag is clear before starting
     interpreterThreadExit.store(false, std::memory_order_release);
 
-    int result = threadCreate(&interpreterThread, backgroundInterpreter, nullptr, nullptr, stackSize, 0x2B, -2);
+    const int result = threadCreate(&interpreterThread, backgroundInterpreter, nullptr, nullptr, stackSize, 0x2B, -2);
     if (result != 0) {
         // Handle thread creation failure
         commandSuccess = false;
