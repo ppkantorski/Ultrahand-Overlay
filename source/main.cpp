@@ -3208,7 +3208,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
     tsl::hlp::ini::IniData packageConfigData;
     //tsl::elm::ListItem* listItem;
     //auto toggleListItem = new tsl::elm::ToggleListItem("", true, "", "");
-    const std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> options = loadOptionsFromIni(packageIniPath);
+    std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> options = loadOptionsFromIni(packageIniPath);
     
     bool toggleStateOn;
     
@@ -3282,7 +3282,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
 
 
     for (size_t i = 0; i < options.size(); ++i) {
-        const auto& option = options[i];
+        auto& option = options[i];
         
         optionName = option.first;
         commands.clear();
@@ -3373,7 +3373,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
                             const size_t expectedMinLength = MINI_PATTERN.length() + TRUE_STR.length();
                             
                             if (commandName.length() >= expectedMinLength) {
-                                const std::string suffix = commandName.substr(MINI_PATTERN.length());
+                                std::string suffix = commandName.substr(MINI_PATTERN.length());
                                 
                                 // Only proceed if suffix matches expected values
                                 if (suffix == TRUE_STR) {
@@ -3489,7 +3489,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
                                     
                                                         
                                     // Gather the prompt commands for the current dropdown section
-                                    const std::vector<std::vector<std::string>> promptCommands = gatherPromptCommands(optionName, options);
+                                    std::vector<std::vector<std::string>> promptCommands = gatherPromptCommands(optionName, options);
                                     
                                                         
                                     // Pass all gathered commands to the ScriptOverlay
@@ -3517,7 +3517,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
                                     
                                     
                                     // Gather the prompt commands for the current dropdown section
-                                    const std::vector<std::vector<std::string>> promptCommands = gatherPromptCommands(optionName, options);
+                                    std::vector<std::vector<std::string>> promptCommands = gatherPromptCommands(optionName, options);
 
                                     tsl::changeTo<ScriptOverlay>(promptCommands, PACKAGE_PATH, optionName, "main", true, lastPackageHeader);
                                     return true;
@@ -4113,7 +4113,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
                                 
                                 return true;
                             } else if (keys & SCRIPT_KEY) {
-                                bool isFromMainMenu = (packagePath == PACKAGE_PATH);
+                                const bool isFromMainMenu = (packagePath == PACKAGE_PATH);
                                 if (inPackageMenu) {
                                     inPackageMenu = false;
                                     lastMenu = "packageMenu";
@@ -4184,7 +4184,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
                                 }
                                 return true;
                             } else if (keys & SCRIPT_KEY) {
-                                bool isFromMainMenu = (packagePath == PACKAGE_PATH);
+                                const bool isFromMainMenu = (packagePath == PACKAGE_PATH);
                                 //if (inMainMenu) {
                                 //    isFromMainMenu = true;
                                 //    inMainMenu = false;
@@ -4323,7 +4323,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
                         toggleListItem->setScriptKeyListener([i, commandsOn, commandsOff, keyName = option.first, packagePath,
                             pathPatternOn, pathPatternOff, lastPackageHeader](bool state) {
 
-                            bool isFromMainMenu = (packagePath == PACKAGE_PATH);
+                            const bool isFromMainMenu = (packagePath == PACKAGE_PATH);
                             if (inPackageMenu)
                                 inPackageMenu = false;
                             if (inSubPackageMenu)
@@ -4353,7 +4353,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
         //addDummyListItem(list);
     }
     
-    //options.clear();
+    options.clear();
     //options.shrink_to_fit();
     commands.clear();
     //commands.shrink_to_fit();
