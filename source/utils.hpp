@@ -88,7 +88,7 @@ static bool usingEmunand = true;
 
 std::vector<std::string> getOverlayNames() {
     std::vector<std::string> names;
-    auto iniData = ult::getParsedDataFromIniFile(ult::OVERLAYS_INI_FILEPATH);
+    const auto iniData = ult::getParsedDataFromIniFile(ult::OVERLAYS_INI_FILEPATH);
     for (const auto& [sectionName, _] : iniData) {
         names.push_back(sectionName);
     }
@@ -97,7 +97,7 @@ std::vector<std::string> getOverlayNames() {
 
 std::vector<std::string> getPackageNames() {
     std::vector<std::string> names;
-    auto iniData = ult::getParsedDataFromIniFile(ult::PACKAGES_INI_FILEPATH);
+    const auto iniData = ult::getParsedDataFromIniFile(ult::PACKAGES_INI_FILEPATH);
     for (const auto& [sectionName, _] : iniData) {
         names.push_back(sectionName);
     }
@@ -108,7 +108,7 @@ std::vector<std::string> getPackageNames() {
 
 void removeKeyComboFromOthers(const std::string& keyCombo, const std::string& currentOverlay) {
     // Handle overlays (same as your original working function)
-    auto overlayNames = getOverlayNames();
+    const auto overlayNames = getOverlayNames();
     std::string existingCombo;
     
     bool modified;
@@ -612,10 +612,10 @@ const char* getStorageInfo(const std::string& storageType) {
     }
 
     // Calculate the used space and usage percentage
-    s64 usedSpace = totalSpace - freeSpace;
-    float usedSpaceGB = usedSpace / (1024.0f * 1024.0f * 1024.0f);
-    float totalSpaceGB = totalSpace / (1024.0f * 1024.0f * 1024.0f);
-    int percentUsed = (totalSpace > 0) ? static_cast<int>((usedSpace * 100) / totalSpace) : 0;
+    const s64 usedSpace = totalSpace - freeSpace;
+    const float usedSpaceGB = usedSpace / (1024.0f * 1024.0f * 1024.0f);
+    const float totalSpaceGB = totalSpace / (1024.0f * 1024.0f * 1024.0f);
+    const int percentUsed = (totalSpace > 0) ? static_cast<int>((usedSpace * 100) / totalSpace) : 0;
 
     // Format the string with percentage
     snprintf(buffer, 64, "%.1f GB / %.1f GB (%d%%)", usedSpaceGB, totalSpaceGB, percentUsed);
@@ -898,8 +898,8 @@ void copyTeslaKeyComboToUltrahand() {
     std::string keyCombo = ULTRAHAND_COMBO_STR;
     std::map<std::string, std::map<std::string, std::string>> parsedData;
     
-    bool teslaConfigExists = isFileOrDirectory(TESLA_CONFIG_INI_PATH);
-    bool ultrahandConfigExists = isFileOrDirectory(ULTRAHAND_CONFIG_INI_PATH);
+    const bool teslaConfigExists = isFileOrDirectory(TESLA_CONFIG_INI_PATH);
+    const bool ultrahandConfigExists = isFileOrDirectory(ULTRAHAND_CONFIG_INI_PATH);
 
     bool initializeTesla = false;
     std::string teslaKeyCombo = keyCombo;
@@ -1146,8 +1146,9 @@ std::string getFirstSectionText(const std::vector<std::vector<std::string>>& tab
     bool inMarikoSection = false;
     std::vector<std::string> lines;
     
+    std::vector<std::string> cmd;
     for (const auto& commands : tableData) {
-        auto cmd = commands;  // Make a copy if you need to modify it
+        cmd = commands;  // Make a copy if you need to modify it
 
         if (cmd.empty()) {
             continue;
@@ -1240,14 +1241,17 @@ std::vector<std::string> wrapText(const std::string& text, float maxWidth, const
     std::vector<std::string> wrappedLines;
     bool firstLine = true;
 
+    float currentMaxWidth;
+    std::string testLine;
+
     if (wrappingMode == "char") {
         std::string currentLine;
         
         size_t i = 0;
         while (i < text.size()) {
             // OPTIMIZED: Create test line fresh each iteration
-            std::string testLine = currentLine + text[i];
-            float currentMaxWidth = firstLine ? maxWidth : maxWidth - indentWidth;
+            testLine = currentLine + text[i];
+            currentMaxWidth = firstLine ? maxWidth : maxWidth - indentWidth;
             
             if (tsl::gfx::calculateStringWidth(testLine, fontSize, false) > currentMaxWidth) {
                 // Line would be too long, finish current line
@@ -1270,10 +1274,10 @@ std::vector<std::string> wrapText(const std::string& text, float maxWidth, const
         
         StringStream stream(text);
         while (stream >> currentWord) {
-            float currentMaxWidth = firstLine ? maxWidth : maxWidth - indentWidth;
+            currentMaxWidth = firstLine ? maxWidth : maxWidth - indentWidth;
             
             // OPTIMIZED: Create test line fresh each iteration
-            std::string testLine = currentLine;
+            testLine = currentLine;
             if (!testLine.empty()) {
                 testLine += " ";
             }
@@ -1654,7 +1658,7 @@ void addHelpInfo(tsl::elm::List* list) {
     addHeader(list, USER_GUIDE);
 
     // Adjust the horizontal offset as needed
-    int xOffset = ult::stoi(USERGUIDE_OFFSET);
+    const int xOffset = ult::stoi(USERGUIDE_OFFSET);
 
     // Define the section lines and info lines directly
     std::vector<std::string> sectionLines = {
@@ -1684,8 +1688,8 @@ void addPackageInfo(tsl::elm::List* list, auto& packageHeader, std::string type 
     // Add a section break with small text to indicate the "Commands" section
     addHeader(list, (type == PACKAGE_STR ? PACKAGE_INFO : OVERLAY_INFO));
 
-    int maxLineLength = 28;  // Adjust the maximum line length as needed
-    int xOffset = 120;    // Adjust the horizontal offset as needed
+    const int maxLineLength = 28;  // Adjust the maximum line length as needed
+    const int xOffset = 120;    // Adjust the horizontal offset as needed
     //int numEntries = 0;   // Count of the number of entries
 
     std::vector<std::string> sectionLines;
@@ -1694,7 +1698,7 @@ void addPackageInfo(tsl::elm::List* list, auto& packageHeader, std::string type 
     // Helper function to add text with wrapping
     auto addWrappedText = [&](const std::string& header, const std::string& text) {
         sectionLines.push_back(header);
-        std::string::size_type aboutHeaderLength = header.length();
+        const std::string::size_type aboutHeaderLength = header.length();
         
         size_t startPos = 0;
         size_t spacePos = 0;
@@ -1884,13 +1888,14 @@ bool isDangerousCombination(const std::string& originalPath) {
     }
     
     // 6) Check restricted wildcard folders (only if wildcards exist)
+    std::string relative;
     if (hasWildcards) {
         for (const auto& folder : restrictedWildcardFolders) {
             if (patternPath.length() >= folder.length &&
                 patternPath.compare(0, folder.length, folder.path) == 0) {
                 
                 // OPTIMIZED: Create relative string only when processing restricted folders
-                std::string relative = patternPath.substr(folder.length);
+                relative = patternPath.substr(folder.length);
                 
                 // If relative is empty or just '*', it means "the whole folder" or "all files"
                 if (relative.empty() || relative == "*" || relative == "*/") {
@@ -1904,12 +1909,14 @@ bool isDangerousCombination(const std::string& originalPath) {
     }
     
     // 7) Check protected folders
+    bool isAlbum;
+    
     for (const auto& folder : protectedFolders) {
         if (patternPath.length() >= folder.length &&
             patternPath.compare(0, folder.length, folder.path) == 0) {
             
             // Check if this is an album folder (exception to protection)
-            bool isAlbum = false;
+            isAlbum = false;
             for (const auto& albumFolder : albumFolders) {
                 if (patternPath.length() >= albumFolder.length &&
                     patternPath.compare(0, albumFolder.length, albumFolder.path) == 0) {
@@ -1925,7 +1932,7 @@ bool isDangerousCombination(const std::string& originalPath) {
             // Check for wildcards in protected folder (only if wildcards exist)
             if (hasWildcards) {
                 // OPTIMIZED: Create relative string only when processing protected folders
-                std::string relative = patternPath.substr(folder.length);
+                relative = patternPath.substr(folder.length);
                 if (relative.find('*') != std::string::npos) {
                     return true; // wildcard in protected folder disallowed
                 }
@@ -1998,7 +2005,7 @@ void populateSelectedItemsListFromJson(const std::string& sourceType, const std:
  * @return The input string with placeholders replaced by the replacement string.
  */
 inline void applyPlaceholderReplacement(std::string& input, const std::string& placeholder, const std::string& replacement) {
-    size_t pos = input.find(placeholder);
+    const size_t pos = input.find(placeholder);
     if (pos == std::string::npos) {
         return;  // Returns original string directly if no placeholder is found
     }
@@ -2115,6 +2122,17 @@ void applyReplaceIniPlaceholder(std::string& arg, const std::string& commandName
  * @return std::string The input string with the placeholder replaced by the actual JSON source,
  *                   or the original input string if replacement failed or jsonDict is nullptr.
  */
+/**
+ * @brief Replaces a JSON source placeholder with the actual JSON source.
+ *
+ * Optimized version with variables moved outside loops to avoid repeated allocations.
+ *
+ * @param arg The input string containing the placeholder.
+ * @param commandName The name of the JSON command (e.g., "json", "json_file").
+ * @param jsonPathOrString The path to the JSON file or the JSON string itself.
+ * @return std::string The input string with the placeholder replaced by the actual JSON source,
+ *                   or the original input string if replacement failed or jsonDict is nullptr.
+ */
 std::string replaceJsonPlaceholder(const std::string& arg, const std::string& commandName, const std::string& jsonPathOrString) {
     // Early exit: Check if placeholder pattern exists before doing any JSON work
     const std::string searchString = "{" + commandName + "(";
@@ -2141,9 +2159,13 @@ std::string replaceJsonPlaceholder(const std::string& arg, const std::string& co
     
     const size_t searchStringLen = searchString.length();
     
+    // Pre-declare variables outside loops to avoid repeated allocations
+    size_t endPos, nextPos, commaPos, index;
+    std::string key;
+    bool validValue;
+    
     while (startPos != std::string::npos) {
-        // OPTIMIZED: Create variables fresh each iteration instead of reusing
-        size_t endPos = arg.find(")}", startPos);
+        endPos = arg.find(")}", startPos);
         if (endPos == std::string::npos) {
             break; // Break if no closing tag is found
         }
@@ -2151,25 +2173,23 @@ std::string replaceJsonPlaceholder(const std::string& arg, const std::string& co
         // Append text before placeholder
         result.append(arg, lastPos, startPos - lastPos);
         
-        size_t nextPos = startPos + searchStringLen;
+        nextPos = startPos + searchStringLen;
         cJSON* value = reinterpret_cast<cJSON*>(jsonDict.get()); // Get the JSON root object
-        bool validValue = true;
+        validValue = true;
         
         while (nextPos < endPos && validValue) {
-            // OPTIMIZED: Create position variables fresh each iteration
-            size_t commaPos = arg.find(',', nextPos);
+            commaPos = arg.find(',', nextPos);
             if (commaPos == std::string::npos || commaPos > endPos) {
                 commaPos = endPos; // Set to endPos if no comma is found or it's beyond endPos
             }
             
-            // OPTIMIZED: Create key string fresh each iteration instead of reusing
-            std::string key(arg, nextPos, commaPos - nextPos);
+            // Reuse string capacity for key
+            key.assign(arg, nextPos, commaPos - nextPos);
             
             if (cJSON_IsObject(value)) {
                 value = cJSON_GetObjectItemCaseSensitive(value, key.c_str()); // Navigate through object
             } else if (cJSON_IsArray(value)) {
-                // OPTIMIZED: Create index variable only when processing arrays
-                size_t index = std::stoul(key); // Convert key to index for arrays
+                index = std::stoul(key); // Convert key to index for arrays
                 value = cJSON_GetArrayItem(value, index);
             } else {
                 validValue = false; // Set validValue to false if value is neither object nor array
@@ -2258,7 +2278,7 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
 
         modifiedCmd.clear();
         //modifiedCmd.shrink_to_fit();
-        modifiedCmd.reserve(cmd.size());
+        //modifiedCmd.reserve(cmd.size());
         commandName = cmd[0];
 
         if (commandName == "download") {
@@ -2399,16 +2419,16 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
 std::string getCurrentTimestamp(const std::string& format) {
     // Try using standard POSIX time() function
     time_t seconds = time(nullptr);
-    u32 milliseconds = 0; // We lose millisecond precision with this method
+    const u32 milliseconds = (armTicksToNs(armGetSystemTick()) / 1000000ULL) % 1000; // We lose millisecond precision with this method
     
     // If you need milliseconds, try to get them from system tick
-    u64 tick_ns = armTicksToNs(armGetSystemTick());
-    milliseconds = (tick_ns / 1000000ULL) % 1000;
+    //u64 tick_ns = armTicksToNs(armGetSystemTick());
+    //milliseconds = (armTicksToNs(armGetSystemTick()) / 1000000ULL) % 1000;
     
     std::string modifiedFormat = format;
     bool hasMilliseconds = false;
     
-    size_t pos = modifiedFormat.find("%f");
+    const size_t pos = modifiedFormat.find("%f");
     if (pos != std::string::npos) {
         modifiedFormat.erase(pos, 2);
         hasMilliseconds = true;
@@ -2568,8 +2588,8 @@ double evaluateExpression(const std::string& expression, bool& valid) {
 
 // Handle Math Placeholder with Parentheses, Modulus, and Optional Integer Support
 std::string handleMath(const std::string& placeholder) {
-    size_t startPos = placeholder.find('(') + 1;
-    size_t endPos = placeholder.find(')');
+    const size_t startPos = placeholder.find('(') + 1;
+    const size_t endPos = placeholder.find(')');
 
     if (startPos == std::string::npos || endPos == std::string::npos || startPos >= endPos) {
         return NULL_STR;
@@ -2578,7 +2598,7 @@ std::string handleMath(const std::string& placeholder) {
     std::string mathExpression = placeholder.substr(startPos, endPos - startPos);
     removeQuotes(mathExpression);
 
-    size_t commaPos = mathExpression.find(',');
+    const size_t commaPos = mathExpression.find(',');
     bool forceInteger = false;
 
     if (commaPos != std::string::npos) {
@@ -2605,7 +2625,7 @@ std::string handleMath(const std::string& placeholder) {
     }
 
     bool valid = false;
-    double result = evaluateExpression(mathExpression, valid);
+    const double result = evaluateExpression(mathExpression, valid);
 
     if (!valid) {
         return NULL_STR;
@@ -2617,8 +2637,8 @@ std::string handleMath(const std::string& placeholder) {
         oss << static_cast<int>(result);  // Integer output if required
     } else {
         // Manually format to two decimal places for double output
-        int intPart = static_cast<int>(result);
-        int decimalPart = static_cast<int>((result - intPart) * 100);  // Get two decimal places
+        const int intPart = static_cast<int>(result);
+        const int decimalPart = static_cast<int>((result - intPart) * 100);  // Get two decimal places
 
         oss << intPart << ".";
 
@@ -2634,8 +2654,8 @@ std::string handleMath(const std::string& placeholder) {
 
 
 std::string handleLength(const std::string& placeholder) {
-    size_t startPos = placeholder.find('(') + 1;
-    size_t endPos = placeholder.find(')');
+    const size_t startPos = placeholder.find('(') + 1;
+    const size_t endPos = placeholder.find(')');
     
     if (startPos != std::string::npos && endPos != std::string::npos && endPos > startPos) {
         std::string str = placeholder.substr(startPos, endPos - startPos);
@@ -2771,32 +2791,32 @@ bool applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
             return returnOrNull(result); 
         }},
         {"{list(", [&](const std::string& placeholder) {
-            size_t startPos = placeholder.find('(') + 1;
-            size_t endPos = placeholder.find(')');
-            size_t listIndex = ult::stoi(placeholder.substr(startPos, endPos - startPos));
-            return returnOrNull(stringToList(listString)[listIndex]);
+            const size_t startPos = placeholder.find('(') + 1;
+            //size_t endPos = placeholder.find(')');
+            //size_t listIndex = ult::stoi(placeholder.substr(startPos, placeholder.find(')') - startPos));
+            return returnOrNull(stringToList(listString)[ult::stoi(placeholder.substr(startPos, placeholder.find(')') - startPos))]);
         }},
         {"{list_file(", [&](const std::string& placeholder) {
-            size_t startPos = placeholder.find('(') + 1;
-            size_t endPos = placeholder.find(')');
-            size_t listIndex = ult::stoi(placeholder.substr(startPos, endPos - startPos));
-            return returnOrNull(getEntryFromListFile(listPath, listIndex));
+            const size_t startPos = placeholder.find('(') + 1;
+            //size_t endPos = placeholder.find(')');
+            //size_t listIndex = ult::stoi(placeholder.substr(startPos, placeholder.find(')') - startPos));
+            return returnOrNull(getEntryFromListFile(listPath, ult::stoi(placeholder.substr(startPos, placeholder.find(')') - startPos))));
         }},
         {"{json(", [&](const std::string& placeholder) { return replaceJsonPlaceholder(placeholder, JSON_STR, jsonString); }},
         {"{json_file(", [&](const std::string& placeholder) { return replaceJsonPlaceholder(placeholder, JSON_FILE_STR, jsonPath); }},
         {"{timestamp(", [&](const std::string& placeholder) {
-            size_t startPos = placeholder.find("(") + 1;
-            size_t endPos = placeholder.find(")");
+            const size_t startPos = placeholder.find("(") + 1;
+            const size_t endPos = placeholder.find(")");
             std::string format = (endPos != std::string::npos) ? placeholder.substr(startPos, endPos - startPos) : "%Y-%m-%d %H:%M:%S";
             removeQuotes(format);
             return returnOrNull(getCurrentTimestamp(format));
         }},
         {"{decimal_to_hex(", [&](const std::string& placeholder) {
-            size_t startPos = placeholder.find("(") + 1;
-            size_t endPos = placeholder.find(")");
-            std::string params = placeholder.substr(startPos, endPos - startPos);
+            const size_t startPos = placeholder.find("(") + 1;
+            //size_t endPos = placeholder.find(")");
+            const std::string params = placeholder.substr(startPos, placeholder.find(")") - startPos);
         
-            size_t commaPos = params.find(",");
+            const size_t commaPos = params.find(",");
             std::string decimalValue;
             std::string order;
         
@@ -2817,49 +2837,49 @@ bool applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
             }
         }},
         {"{ascii_to_hex(", [&](const std::string& placeholder) {
-            size_t startPos = placeholder.find("(") + 1;
-            size_t endPos = placeholder.find(")");
-            std::string asciiValue = placeholder.substr(startPos, endPos - startPos);
-            return returnOrNull(asciiToHex(asciiValue));
+            const size_t startPos = placeholder.find("(") + 1;
+            //size_t endPos = placeholder.find(")");
+            //std::string asciiValue = placeholder.substr(startPos, placeholder.find(")") - startPos);
+            return returnOrNull(asciiToHex(placeholder.substr(startPos, placeholder.find(")") - startPos)));
         }},
         {"{hex_to_rhex(", [&](const std::string& placeholder) {
-            size_t startPos = placeholder.find("(") + 1;
-            size_t endPos = placeholder.find(")");
-            std::string hexValue = placeholder.substr(startPos, endPos - startPos);
-            return returnOrNull(hexToReversedHex(hexValue));
+            const size_t startPos = placeholder.find("(") + 1;
+            //size_t endPos = placeholder.find(")");
+            //std::string hexValue = placeholder.substr(startPos, placeholder.find(")") - startPos);
+            return returnOrNull(hexToReversedHex(placeholder.substr(startPos, placeholder.find(")") - startPos)));
         }},
         {"{hex_to_decimal(", [&](const std::string& placeholder) {
-            size_t startPos = placeholder.find("(") + 1;
-            size_t endPos = placeholder.find(")");
-            std::string hexValue = placeholder.substr(startPos, endPos - startPos);
-            return returnOrNull(hexToDecimal(hexValue));
+            const size_t startPos = placeholder.find("(") + 1;
+            //size_t endPos = placeholder.find(")");
+            //std::string hexValue = placeholder.substr(startPos, placeholder.find(")") - startPos);
+            return returnOrNull(hexToDecimal(placeholder.substr(startPos, placeholder.find(")") - startPos)));
         }},
         {"{random(", [&](const std::string& placeholder) {
             std::srand(std::time(0));
             
-            size_t startPos = placeholder.find('(') + 1;
-            size_t endPos = placeholder.find(')');
-            std::string parameters = placeholder.substr(startPos, endPos - startPos);
-            size_t commaPos = parameters.find(',');
+            const size_t startPos = placeholder.find('(') + 1;
+            const size_t endPos = placeholder.find(')');
+            const std::string parameters = placeholder.substr(startPos, endPos - startPos);
+            const size_t commaPos = parameters.find(',');
             
             if (commaPos != std::string::npos) {
-                int lowValue = ult::stoi(parameters.substr(0, commaPos));
-                int highValue = ult::stoi(parameters.substr(commaPos + 1));
-                int randomValue = lowValue + rand() % (highValue - lowValue + 1);
-                return returnOrNull(ult::to_string(randomValue));
+                const int lowValue = ult::stoi(parameters.substr(0, commaPos));
+                //int highValue = ult::stoi(parameters.substr(commaPos + 1));
+                //int randomValue = lowValue + rand() % (ult::stoi(parameters.substr(commaPos + 1)) - lowValue + 1);
+                return returnOrNull(ult::to_string(lowValue + rand() % (ult::stoi(parameters.substr(commaPos + 1)) - lowValue + 1)));
             }
             return returnOrNull(placeholder);
         }},
         {"{slice(", [&](const std::string& placeholder) {
-            size_t startPos = placeholder.find('(');
-            size_t endPos = placeholder.rfind(')');
+            const size_t startPos = placeholder.find('(');
+            const size_t endPos = placeholder.rfind(')');
             if (startPos == std::string::npos || endPos == std::string::npos || endPos <= startPos + 1) {
                 return returnOrNull(placeholder);
             }
         
-            std::string parameters = placeholder.substr(startPos + 1, endPos - startPos - 1);
-            size_t firstComma = parameters.find(',');
-            size_t secondComma = (firstComma == std::string::npos) ? std::string::npos : parameters.find(',', firstComma + 1);
+            const std::string parameters = placeholder.substr(startPos + 1, endPos - startPos - 1);
+            const size_t firstComma = parameters.find(',');
+            const size_t secondComma = (firstComma == std::string::npos) ? std::string::npos : parameters.find(',', firstComma + 1);
             if (firstComma == std::string::npos || secondComma == std::string::npos) {
                 return returnOrNull(placeholder);
             }
@@ -2881,33 +2901,32 @@ bool applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
                 return returnOrNull(placeholder);
             }
         
-            size_t sliceStart = static_cast<size_t>(ult::stoi(startIndex));
-            size_t sliceEnd   = static_cast<size_t>(ult::stoi(endIndex));
+            const size_t sliceStart = static_cast<size_t>(ult::stoi(startIndex));
+            const size_t sliceEnd   = static_cast<size_t>(ult::stoi(endIndex));
         
             if (sliceEnd <= sliceStart || sliceStart >= strPart.length()) {
                 return returnOrNull(placeholder);
             }
         
-            std::string result = sliceString(strPart, sliceStart, sliceEnd);
-            return returnOrNull(result);
+            //std::string result = sliceString(strPart, sliceStart, sliceEnd);
+            return returnOrNull(sliceString(strPart, sliceStart, sliceEnd));
         }},
         {"{split(", [&](const std::string& placeholder) {
-            size_t openParen = placeholder.find('(');
-            size_t closeParen = placeholder.find(')');
+            const size_t openParen = placeholder.find('(');
+            const size_t closeParen = placeholder.find(')');
         
             if (openParen == std::string::npos || closeParen == std::string::npos || closeParen <= openParen) {
                 return NULL_STR;
             }
         
-            std::string parameters = placeholder.substr(openParen + 1, closeParen - openParen - 1);
+            const std::string parameters = placeholder.substr(openParen + 1, closeParen - openParen - 1);
         
-            size_t firstCommaPos = parameters.find(',');
-            size_t lastCommaPos  = parameters.find_last_of(',');
+            const size_t firstCommaPos = parameters.find(',');
+            const size_t lastCommaPos  = parameters.find_last_of(',');
         
             if (firstCommaPos == std::string::npos
              || lastCommaPos  == std::string::npos
-             || firstCommaPos == lastCommaPos) 
-            {
+             || firstCommaPos == lastCommaPos) {
                 return NULL_STR;
             }
         
@@ -2925,8 +2944,8 @@ bool applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
                 return NULL_STR;
             }
         
-            size_t index = ult::stoi(indexStr);
-            std::string result = splitStringAtIndex(str, delimiter, index);
+            //size_t index = ult::stoi(indexStr);
+            std::string result = splitStringAtIndex(str, delimiter, ult::stoi(indexStr));
         
             return result.empty() ? NULL_STR : result;
         }},
@@ -3017,8 +3036,9 @@ bool applyPlaceholderReplacementsToCommands(std::vector<std::vector<std::string>
     std::vector<std::vector<std::string>> processedCommands;
     processedCommands.reserve(commandQueue.size()); // Pre-allocate
 
+    std::vector<std::string> cmd;
     while (!commandQueue.empty()) {
-        auto cmd = std::move(commandQueue.front()); // Move to avoid copy
+        cmd = std::move(commandQueue.front()); // Move to avoid copy
         commandQueue.pop_front();
 
         if (cmd.empty()) {
@@ -3129,13 +3149,6 @@ bool applyPlaceholderReplacementsToCommands(std::vector<std::vector<std::string>
 
 
 
-/**
- * @brief Interpret and execute a list of commands.
- *
- * This function interprets and executes a list of commands based on their names and arguments.
- *
- * @param commands A list of commands, where each command is represented as a vector of strings.
- */
 /**
  * @brief Interpret and execute a list of commands.
  *
@@ -3398,8 +3411,8 @@ void handleCopyCommand(const std::vector<std::string>& cmd, const std::string& p
     long long totalBytesCopied, totalSize;
 
     if (!sourceListPath.empty() && !destinationListPath.empty()) {
-        std::vector<std::string> sourceFilesList = readListFromFile(sourceListPath);
-        std::vector<std::string> destinationFilesList = readListFromFile(destinationListPath);
+        const std::vector<std::string> sourceFilesList = readListFromFile(sourceListPath);
+        const std::vector<std::string> destinationFilesList = readListFromFile(destinationListPath);
 
         std::unordered_set<std::string> filterSet;
         if (!filterListPath.empty())
@@ -3447,7 +3460,7 @@ void handleDeleteCommand(const std::vector<std::string>& cmd, const std::string&
     parseCommandArguments(cmd, packagePath, sourceListPath, destinationListPath, logSource, logDestination, sourcePath, destinationPath, copyFilterListPath, filterListPath);
 
     if (!sourceListPath.empty()) {
-        std::vector<std::string> sourceFilesList = readListFromFile(sourceListPath);
+        const std::vector<std::string> sourceFilesList = readListFromFile(sourceListPath);
         std::unordered_set<std::string> filterSet;
         if (!filterListPath.empty())
             filterSet = readSetFromFile(filterListPath);
@@ -4368,7 +4381,7 @@ void startInterpreterThread(const std::string& packagePath = "") {
 
     // Cache stack size parsing to avoid repeated INI file access
     if (cachedStackSize == 0) {
-        std::string interpreterHeap = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, MEMORY_STR, "interpreter_heap");
+        const std::string interpreterHeap = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, MEMORY_STR, "interpreter_heap");
         if (!interpreterHeap.empty()) {
             cachedStackSize = ult::stoi(interpreterHeap, nullptr, 16);  // Convert from base 16
         } else {
