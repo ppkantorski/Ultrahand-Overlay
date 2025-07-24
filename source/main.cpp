@@ -2565,17 +2565,13 @@ public:
                 selectedItemsList = parseSectionsFromIni(iniPath);
             else if (sourceType == JSON_STR || sourceType == JSON_FILE_STR) {
                 populateSelectedItemsListFromJson(sourceType, (sourceType == JSON_STR) ? jsonString : jsonPath, jsonKey, selectedItemsList);
-                // Clear JSON data after use to save memory
-                if (sourceType == JSON_STR) {
-                    jsonString.clear();
-                    //jsonString.shrink_to_fit();
-                } else {
-                    jsonPath.clear();
-                    //jsonPath.shrink_to_fit();
-                }
+                jsonPath.clear();
+                //jsonPath.shrink_to_fit();
+                jsonString.clear();
+                //jsonString.shrink_to_fit();
             }
             applyItemsLimit(selectedItemsList);
-    
+
         } else if (commandMode == TOGGLE_STR) {
             if (sourceTypeOn == FILE_STR)
                 selectedItemsListOn = std::move(filesListOn);
@@ -2585,17 +2581,13 @@ public:
                 selectedItemsListOn = parseSectionsFromIni(iniPathOn);
             else if (sourceTypeOn == JSON_STR || sourceTypeOn == JSON_FILE_STR) {
                 populateSelectedItemsListFromJson(sourceTypeOn, (sourceTypeOn == JSON_STR) ? jsonStringOn : jsonPathOn, jsonKeyOn, selectedItemsListOn);
-                // Clear JSON data after use to save memory
-                if (sourceTypeOn == JSON_STR) {
-                    jsonStringOn.clear();
-                    //jsonStringOn.shrink_to_fit();
-                } else {
-                    jsonPathOn.clear();
-                    //jsonPathOn.shrink_to_fit();
-                }
+                jsonPathOn.clear();
+                //jsonPathOn.shrink_to_fit();
+                jsonStringOn.clear();
+                //jsonStringOn.shrink_to_fit();
             }
             applyItemsLimit(selectedItemsListOn);
-    
+
             if (sourceTypeOff == FILE_STR)
                 selectedItemsListOff = std::move(filesListOff);
             else if (sourceTypeOff == LIST_STR || sourceTypeOff == LIST_FILE_STR)
@@ -2604,38 +2596,28 @@ public:
                 selectedItemsListOff = parseSectionsFromIni(iniPathOff);
             else if (sourceTypeOff == JSON_STR || sourceTypeOff == JSON_FILE_STR) {
                 populateSelectedItemsListFromJson(sourceTypeOff, (sourceTypeOff == JSON_STR) ? jsonStringOff : jsonPathOff, jsonKeyOff, selectedItemsListOff);
-                // Clear JSON data after use to save memory
-                if (sourceTypeOff == JSON_STR) {
-                    jsonStringOff.clear();
-                    //jsonStringOff.shrink_to_fit();
-                } else {
-                    jsonPathOff.clear();
-                    //jsonPathOff.shrink_to_fit();
-                }
+                jsonPathOff.clear();
+                //jsonStringOff.shrink_to_fit();
+                jsonStringOff.clear();
+                //jsonStringOff.shrink_to_fit();
             }
             applyItemsLimit(selectedItemsListOff);
-    
+
             if (sourceType == FILE_STR) {
                 filterItemsList(filterListOn, selectedItemsListOn);
-                // Clear filter lists after use
                 filterListOn.clear();
                 //filterListOn.shrink_to_fit();
-    
+
                 filterItemsList(filterListOff, selectedItemsListOff);
                 filterListOff.clear();
                 //filterListOff.shrink_to_fit();
             }
-    
-            // Efficient vector merging with move iterators
-            selectedItemsList.clear();
-            //selectedItemsList.shrink_to_fit();
-            selectedItemsList.reserve(selectedItemsListOn.size() + selectedItemsListOff.size());
-            selectedItemsList.insert(selectedItemsList.end(), 
-                                   std::make_move_iterator(selectedItemsListOn.begin()),
-                                   std::make_move_iterator(selectedItemsListOn.end()));
-            selectedItemsList.insert(selectedItemsList.end(), 
-                                   std::make_move_iterator(selectedItemsListOff.begin()),
-                                   std::make_move_iterator(selectedItemsListOff.end()));
+
+
+            //selectedItemsList.reserve(selectedItemsListOn.size() + selectedItemsListOff.size());
+            selectedItemsList.insert(selectedItemsList.end(), selectedItemsListOn.begin(), selectedItemsListOn.end());
+            selectedItemsList.insert(selectedItemsList.end(), selectedItemsListOff.begin(), selectedItemsListOff.end());
+
         }
     
         if (sourceType == FILE_STR) {
