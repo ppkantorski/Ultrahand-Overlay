@@ -3246,7 +3246,6 @@ bool drawCommandsMenu(tsl::elm::List* list,
                     const std::string& packagePath, const std::string& currentPage, const std::string& packageName, const std::string& dropdownSection, const size_t nestedLayer,
                     std::string& pathPattern, std::string& pathPatternOn, std::string& pathPatternOff, bool& usingPages, const bool packageMenuMode = true) {
 
-    tsl::hlp::ini::IniData packageConfigData;
     //tsl::elm::ListItem* listItem;
     //auto toggleListItem = new tsl::elm::ToggleListItem("", true, "", "");
     std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>> options = loadOptionsFromIni(packageIniPath);
@@ -3320,6 +3319,31 @@ bool drawCommandsMenu(tsl::elm::List* list,
 
     // update general placeholders
     updateGeneralPlaceholders();
+
+    tsl::hlp::ini::IniData packageConfigData;
+    bool needsUpdate = false;
+
+    // Helper lambda that modifies in-memory data and tracks updates
+    auto updateValue = [&](const std::string& key, std::string& value) {
+        auto optionIt = packageConfigData.find(optionName);
+        if (optionIt != packageConfigData.end()) {
+            auto it = optionIt->second.find(key);
+            if (it != optionIt->second.end()) {
+                value = it->second;  // Update value if the key exists
+            } else {
+                // Key not found - add it to in-memory data
+                packageConfigData[optionName][key] = value;
+                needsUpdate = true;
+            }
+        } else {
+            // Section not found - create it with the key/value
+            packageConfigData[optionName][key] = value;
+            needsUpdate = true;
+        }
+    };
+    if (isFileOrDirectory(packageConfigIniPath)) {
+        packageConfigData = getParsedDataFromIniFile(packageConfigIniPath);
+    }
 
 
     for (size_t i = 0; i < options.size(); ++i) {
@@ -3489,7 +3513,12 @@ bool drawCommandsMenu(tsl::elm::List* list,
                             skipSection = false;
                             lastSection = "Commands";
                         }
-                        commandFooter = parseValueFromIniSection(packageConfigIniPath, optionName, FOOTER_STR);
+                        //commandFooter = parseValueFromIniSection(packageConfigIniPath, optionName, FOOTER_STR);
+                        // Get commandFooter from already-loaded data
+                        auto optionIt = packageConfigData.find(optionName);
+                        commandFooter = (optionIt != packageConfigData.end() && optionIt->second.count(FOOTER_STR)) 
+                            ? optionIt->second.at(FOOTER_STR) : "";
+
                         // override loading of the command footer
 
                         tsl::elm::ListItem* listItem;
@@ -3530,7 +3559,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
                                     
                                                         
                                     // Gather the prompt commands for the current dropdown section
-                                    std::vector<std::vector<std::string>> promptCommands = gatherPromptCommands(optionName, options);
+                                    const std::vector<std::vector<std::string>> promptCommands = gatherPromptCommands(optionName, options);
                                     
                                                         
                                     // Pass all gathered commands to the ScriptOverlay
@@ -3558,7 +3587,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
                                     
                                     
                                     // Gather the prompt commands for the current dropdown section
-                                    std::vector<std::vector<std::string>> promptCommands = gatherPromptCommands(optionName, options);
+                                    const std::vector<std::vector<std::string>> promptCommands = gatherPromptCommands(optionName, options);
 
                                     tsl::changeTo<ScriptOverlay>(promptCommands, PACKAGE_PATH, optionName, "main", true, lastPackageHeader);
                                     return true;
@@ -3788,21 +3817,47 @@ bool drawCommandsMenu(tsl::elm::List* list,
             }
 
             
-            if (isFileOrDirectory(packageConfigIniPath)) {
-                packageConfigData = getParsedDataFromIniFile(packageConfigIniPath);
-                
-                updateIniData(packageConfigData, packageConfigIniPath, optionName, SYSTEM_STR, commandSystem);
-                updateIniData(packageConfigData, packageConfigIniPath, optionName, MODE_STR, commandMode);
-                updateIniData(packageConfigData, packageConfigIniPath, optionName, GROUPING_STR, commandGrouping);
-                updateIniData(packageConfigData, packageConfigIniPath, optionName, FOOTER_STR, commandFooter);
-                
-                packageConfigData.clear();
-            } else { // write default data if settings are not loaded
-                setIniFileValue(packageConfigIniPath, optionName, SYSTEM_STR, commandSystem);
-                setIniFileValue(packageConfigIniPath, optionName, MODE_STR, commandMode);
-                setIniFileValue(packageConfigIniPath, optionName, GROUPING_STR, commandGrouping);
-                //setIniFileValue(packageConfigIniPath, optionName, FOOTER_STR, NULL_STR);
-            }
+            //if (isFileOrDirectory(packageConfigIniPath)) {
+            //    packageConfigData = getParsedDataFromIniFile(packageConfigIniPath);
+            //    needsUpdate = false;
+            //    
+            //    
+            //    // Update all values in memory
+            //    updateValue(SYSTEM_STR, commandSystem);
+            //    updateValue(MODE_STR, commandMode);
+            //    updateValue(GROUPING_STR, commandGrouping);
+            //    updateValue(FOOTER_STR, commandFooter);
+            //    
+            //    // Write back only if changes were made
+            //    if (needsUpdate) {
+            //        saveIniFileData(packageConfigIniPath, packageConfigData);
+            //    }
+            //                
+            //    packageConfigData.clear();
+            //} else { // write default data if settings are not loaded
+            //    //setIniFileValue(packageConfigIniPath, optionName, SYSTEM_STR, commandSystem);
+            //    //setIniFileValue(packageConfigIniPath, optionName, MODE_STR, commandMode);
+            //    //setIniFileValue(packageConfigIniPath, optionName, GROUPING_STR, commandGrouping);
+            //    
+            //    // Load INI data once and modify in memory
+            //    packageConfigData = getParsedDataFromIniFile(packageConfigIniPath);
+            //    auto& optionSection = packageConfigData[optionName];
+            //    
+            //    // Set all three values in memory
+            //    optionSection[SYSTEM_STR] = commandSystem;
+            //    optionSection[MODE_STR] = commandMode;
+            //    optionSection[GROUPING_STR] = commandGrouping;
+            //    
+            //    // Write back once
+            //    saveIniFileData(packageConfigIniPath, packageConfigData);
+            //    packageConfigData.clear();
+            //}
+
+            // Update all values in memory
+            updateValue(SYSTEM_STR, commandSystem);
+            updateValue(MODE_STR, commandMode);
+            updateValue(GROUPING_STR, commandGrouping);
+            updateValue(FOOTER_STR, commandFooter);
             
             
             // Get Option name and footer
@@ -3862,7 +3917,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
                     onlyTables = false;
                 
                     // Create TrackBarV2 instance and configure it
-                    auto trackBar = new tsl::elm::TrackBarV2(optionName, packagePath, minValue, maxValue, units,
+                    auto* trackBar = new tsl::elm::TrackBarV2(optionName, packagePath, minValue, maxValue, units,
                         interpretAndExecuteCommands, getSourceReplacement, commands, option.first, false, false, -1, unlockedTrackbar, onEveryTick);
                 
                     // Set the SCRIPT_KEY listener
@@ -3917,7 +3972,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
                     }
                     onlyTables = false;
                     
-                    auto stepTrackBar = new tsl::elm::StepTrackBarV2(optionName, packagePath, steps, minValue, maxValue, units,
+                    auto* stepTrackBar = new tsl::elm::StepTrackBarV2(optionName, packagePath, steps, minValue, maxValue, units,
                         interpretAndExecuteCommands, getSourceReplacement, commands, option.first, false, unlockedTrackbar, onEveryTick);
                     
                     // Set the SCRIPT_KEY listener
@@ -4046,7 +4101,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
                     onlyTables = false;
 
                     // Create NamedStepTrackBarV2 instance and configure it
-                    auto namedStepTrackBar = new tsl::elm::NamedStepTrackBarV2(optionName, packagePath, entryList,
+                    auto* namedStepTrackBar = new tsl::elm::NamedStepTrackBarV2(optionName, packagePath, entryList,
                         interpretAndExecuteCommands, getSourceReplacement, commands, option.first, unlockedTrackbar, onEveryTick);
                     
                     // Set the SCRIPT_KEY listener
@@ -4389,6 +4444,13 @@ bool drawCommandsMenu(tsl::elm::List* list,
             }
         }
     }
+
+    // AFTER the loop ends, write once if needed:
+    if (needsUpdate) {
+        saveIniFileData(packageConfigIniPath, packageConfigData);
+    }
+    packageConfigData.clear();
+
     if (onlyTables) {
         //auto dummyItem = new tsl::elm::DummyListItem();
         //list->addItem(dummyItem, 0, 1);
@@ -5975,8 +6037,21 @@ public:
                     inMainMenu = true;
                     inHiddenMode = false;
                     hiddenMenuMode = "";
-                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_OVERLAY_STR, "");
-                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_PACKAGE_STR, "");
+                    //setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_OVERLAY_STR, "");
+                    //setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_PACKAGE_STR, "");
+                    {
+                        // Load INI data once and modify in memory
+                        auto iniData = getParsedDataFromIniFile(ULTRAHAND_CONFIG_INI_PATH);
+                        auto& ultrahandSection = iniData[ULTRAHAND_PROJECT_NAME];
+                        
+                        // Clear both values in memory
+                        ultrahandSection[IN_HIDDEN_OVERLAY_STR] = "";
+                        ultrahandSection[IN_HIDDEN_PACKAGE_STR] = "";
+                        
+                        // Write back once
+                        saveIniFileData(ULTRAHAND_CONFIG_INI_PATH, iniData);
+                    }
+
                     tsl::pop();
                     jumpItemName = HIDDEN;
                     jumpItemValue = DROPDOWN_SYMBOL;
