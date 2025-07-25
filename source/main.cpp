@@ -345,51 +345,97 @@ private:
         });
         list->addItem(listItem);
     }
-
+    
     // Remove all combos from other overlays / packages
     void removeKeyComboFromAllOthers(const std::string& keyCombo) {
-        // Handle overlays
-        const auto overlayNames = getOverlayNames(); // Get all overlay names
+        // Declare variables once for reuse across both scopes
         std::string existingCombo;
         std::string comboListStr;
         std::vector<std::string> comboList;
         bool modified;
         std::string newComboStr;
         
-        for (const auto& overlayName : overlayNames) {
-            // 1. Remove from main key_combo field if it matches
-            existingCombo = parseValueFromIniSection(OVERLAYS_INI_FILEPATH, overlayName, KEY_COMBO_STR);
-            if (!existingCombo.empty() && tsl::hlp::comboStringToKeys(existingCombo) == tsl::hlp::comboStringToKeys(keyCombo)) {
-                setIniFileValue(OVERLAYS_INI_FILEPATH, overlayName, KEY_COMBO_STR, "");
-            }
+        // Process overlays first
+        {
+            auto overlaysIniData = getParsedDataFromIniFile(OVERLAYS_INI_FILEPATH);
+            bool overlaysModified = false;
             
-            // 2. Remove from mode_combos list if any element matches
-            comboListStr = parseValueFromIniSection(OVERLAYS_INI_FILEPATH, overlayName, "mode_combos");
-            if (!comboListStr.empty()) {
-                comboList = splitIniList(comboListStr);
-                modified = false;
+            const auto overlayNames = getOverlayNames(); // Get all overlay names
+            
+            for (const auto& overlayName : overlayNames) {
+                auto overlayIt = overlaysIniData.find(overlayName);
+                if (overlayIt == overlaysIniData.end()) continue; // Skip if overlay not in INI
                 
-                for (std::string& combo : comboList) {
-                    if (!combo.empty() && tsl::hlp::comboStringToKeys(combo) == tsl::hlp::comboStringToKeys(keyCombo)) {
-                        combo.clear();
-                        modified = true;
+                auto& overlaySection = overlayIt->second;
+                
+                // 1. Remove from main key_combo field if it matches
+                auto keyComboIt = overlaySection.find(KEY_COMBO_STR);
+                if (keyComboIt != overlaySection.end()) {
+                    existingCombo = keyComboIt->second;
+                    if (!existingCombo.empty() && tsl::hlp::comboStringToKeys(existingCombo) == tsl::hlp::comboStringToKeys(keyCombo)) {
+                        overlaySection[KEY_COMBO_STR] = "";
+                        overlaysModified = true;
                     }
                 }
                 
-                if (modified) {
-                    newComboStr = "(" + joinIniList(comboList) + ")";
-                    setIniFileValue(OVERLAYS_INI_FILEPATH, overlayName, "mode_combos", newComboStr);
+                // 2. Remove from mode_combos list if any element matches
+                auto modeCombosIt = overlaySection.find("mode_combos");
+                if (modeCombosIt != overlaySection.end()) {
+                    comboListStr = modeCombosIt->second;
+                    if (!comboListStr.empty()) {
+                        comboList = splitIniList(comboListStr);
+                        modified = false;
+                        
+                        for (std::string& combo : comboList) {
+                            if (!combo.empty() && tsl::hlp::comboStringToKeys(combo) == tsl::hlp::comboStringToKeys(keyCombo)) {
+                                combo.clear();
+                                modified = true;
+                            }
+                        }
+                        
+                        if (modified) {
+                            newComboStr = "(" + joinIniList(comboList) + ")";
+                            overlaySection["mode_combos"] = newComboStr;
+                            overlaysModified = true;
+                        }
+                    }
                 }
             }
+            
+            // Write back if modified, then clear memory
+            if (overlaysModified) {
+                saveIniFileData(OVERLAYS_INI_FILEPATH, overlaysIniData);
+            }
+            // overlaysIniData automatically cleared when scope ends
         }
         
-        // Handle packages (they only have main key_combo, no mode_combos)
-        const auto packageNames = getPackageNames(); // Get all package names
-        for (const auto& packageName : packageNames) {
-            existingCombo = parseValueFromIniSection(PACKAGES_INI_FILEPATH, packageName, KEY_COMBO_STR);
-            if (!existingCombo.empty() && tsl::hlp::comboStringToKeys(existingCombo) == tsl::hlp::comboStringToKeys(keyCombo)) {
-                setIniFileValue(PACKAGES_INI_FILEPATH, packageName, KEY_COMBO_STR, "");
+        // Process packages second (overlays INI data is already cleared)
+        {
+            auto packagesIniData = getParsedDataFromIniFile(PACKAGES_INI_FILEPATH);
+            bool packagesModified = false;
+            
+            const auto packageNames = getPackageNames(); // Get all package names
+            
+            for (const auto& packageName : packageNames) {
+                auto packageIt = packagesIniData.find(packageName);
+                if (packageIt == packagesIniData.end()) continue; // Skip if package not in INI
+                
+                auto& packageSection = packageIt->second;
+                auto keyComboIt = packageSection.find(KEY_COMBO_STR);
+                if (keyComboIt != packageSection.end()) {
+                    existingCombo = keyComboIt->second; // Reusing the same variable
+                    if (!existingCombo.empty() && tsl::hlp::comboStringToKeys(existingCombo) == tsl::hlp::comboStringToKeys(keyCombo)) {
+                        packageSection[KEY_COMBO_STR] = "";
+                        packagesModified = true;
+                    }
+                }
             }
+            
+            // Write back if modified, then clear memory
+            if (packagesModified) {
+                saveIniFileData(PACKAGES_INI_FILEPATH, packagesIniData);
+            }
+            // packagesIniData automatically cleared when scope ends
         }
     }
 
@@ -866,7 +912,7 @@ public:
                     }
                     else initializeTheme();
                     tsl::initializeThemeVars();
-                    //reloadMenu = reloadMenu2 = true;
+                    reloadMenu = reloadMenu2 = true;
                     if (lastSelectedListItem)
                         lastSelectedListItem->setValue("");
                     if (selectedListItem)
@@ -910,7 +956,7 @@ public:
                         copyPercentage.store(-1, release);
                         initializeTheme();
                         tsl::initializeThemeVars();
-                        //reloadMenu = reloadMenu2 = true;
+                        reloadMenu = reloadMenu2 = true;
                         if (lastSelectedListItem)
                             lastSelectedListItem->setValue("");
                         if (selectedListItem)
@@ -1024,57 +1070,52 @@ public:
             createToggleListItem(list, EXTENDED_BACKDROP, extendedWidgetBackdrop, "extended_widget_backdrop", true);
 
         } else if (dropdownSelection == "miscMenu") {
+            // Load INI section once instead of 14 separate file reads
+            auto ultrahandSection = getKeyValuePairsFromSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME);
+            
+            // Helper lambda to safely get boolean values
+            auto getBoolValue = [&](const std::string& key, bool defaultValue = false) -> bool {
+                auto it = ultrahandSection.find(key);
+                return (it != ultrahandSection.end()) ? (it->second == TRUE_STR) : defaultValue;
+            };
+            
             addHeader(list, FEATURES);
-
-            useLaunchCombos = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "launch_combos") == TRUE_STR);
+            useLaunchCombos = getBoolValue("launch_combos", true); // TRUE_STR default
             createToggleListItem(list, LAUNCH_COMBOS, useLaunchCombos, "launch_combos");
-
-            useOpaqueScreenshots = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "opaque_screenshots") == TRUE_STR);
+            useOpaqueScreenshots = getBoolValue("opaque_screenshots", true); // TRUE_STR default
             createToggleListItem(list, OPAQUE_SCREENSHOTS, useOpaqueScreenshots, "opaque_screenshots");
-
-            useSwipeToOpen = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "swipe_to_open") == TRUE_STR);
+            useSwipeToOpen = getBoolValue("swipe_to_open", true); // TRUE_STR default
             createToggleListItem(list, SWIPE_TO_OPEN, useSwipeToOpen, "swipe_to_open");
-
             addHeader(list, "Menu Settings");
             
-            hideUserGuide = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_user_guide") == TRUE_STR);
+            hideUserGuide = getBoolValue("hide_user_guide", false); // FALSE_STR default
             createToggleListItem(list, USER_GUIDE, hideUserGuide, "hide_user_guide", true);
-
-            useDynamicLogo = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "dynamic_logo") == TRUE_STR);
+            useDynamicLogo = getBoolValue("dynamic_logo", true); // TRUE_STR default
             createToggleListItem(list, DYNAMIC_LOGO, useDynamicLogo, "dynamic_logo");
-
-            hideHidden = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_hidden") == TRUE_STR);
+            hideHidden = getBoolValue("hide_hidden", false); // FALSE_STR default
             createToggleListItem(list, SHOW_HIDDEN, hideHidden, "hide_hidden", true);
-
-            usePageSwap = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "page_swap") == TRUE_STR);
+            usePageSwap = getBoolValue("page_swap", false); // FALSE_STR default
             createToggleListItem(list, PAGE_SWAP, usePageSwap, "page_swap", false);
-
-            rightAlignmentState = useRightAlignment = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "right_alignment") == TRUE_STR);
+            rightAlignmentState = useRightAlignment = getBoolValue("right_alignment", false); // FALSE_STR default
             createToggleListItem(list, RIGHT_SIDE_MODE, useRightAlignment, "right_alignment");
-
             addHeader(list, "libultrahand Detection");
-
-            highlightTitles = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "highlight_titles") == TRUE_STR);
+            highlightTitles = getBoolValue("highlight_titles", false); // FALSE_STR default
             createToggleListItem(list, "Highlight Titles", highlightTitles, "highlight_titles", false);
-
-            highlightVersions = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "highlight_versions") == TRUE_STR);
+            highlightVersions = getBoolValue("highlight_versions", true); // TRUE_STR default
             createToggleListItem(list, "Highlight Versions", highlightVersions, "highlight_versions", false);
             
-            highlightPackages = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "highlight_packages") == TRUE_STR);
+            highlightPackages = getBoolValue("highlight_packages", true); // TRUE_STR default
             createToggleListItem(list, "Highlight Packages", highlightPackages, "highlight_packages", false);
-
             addHeader(list, "Version Labels");
-
-            hideOverlayVersions = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_overlay_versions") == TRUE_STR);
+            hideOverlayVersions = getBoolValue("hide_overlay_versions", false); // FALSE_STR default
             createToggleListItem(list, OVERLAY_VERSIONS, hideOverlayVersions, "hide_overlay_versions", true);
             
-            hidePackageVersions = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_package_versions") == TRUE_STR);
+            hidePackageVersions = getBoolValue("hide_package_versions", false); // FALSE_STR default
             createToggleListItem(list, PACKAGE_VERSIONS, hidePackageVersions, "hide_package_versions", true);
             
-            cleanVersionLabels = (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "clean_version_labels") == TRUE_STR);
+            cleanVersionLabels = getBoolValue("clean_version_labels", false); // FALSE_STR default
             createToggleListItem(list, CLEAN_VERSIONS, cleanVersionLabels, "clean_version_labels", false, true);
-            
-        
+
         } else {
             addBasicListItem(list, FAILED_TO_OPEN + ": " + settingsIniPath);
         }
@@ -3828,8 +3869,10 @@ bool drawCommandsMenu(tsl::elm::List* list,
                     trackBar->setScriptKeyListener([commands, keyName = option.first, packagePath, lastPackageHeader]() {
                         const bool isFromMainMenu = (packagePath == PACKAGE_PATH);
                         
-                        std::string valueStr = parseValueFromIniSection(packagePath+"config.ini", keyName, "value");
+                        const std::string valueStr = parseValueFromIniSection(packagePath+"config.ini", keyName, "value");
                         std::string indexStr = parseValueFromIniSection(packagePath+"config.ini", keyName, "index");
+                        if (!isValidNumber(indexStr))
+                            indexStr = "0";
 
                         // Handle the commands and placeholders for the trackbar
                         auto modifiedCmds = getSourceReplacement(commands, keyName, ult::stoi(indexStr), packagePath);
@@ -3882,7 +3925,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
                         const bool isFromMainMenu = (packagePath == PACKAGE_PATH);
                         
                         // Parse the value and index from the INI file
-                        std::string valueStr = parseValueFromIniSection(packagePath + "config.ini", keyName, "value");
+                        const std::string valueStr = parseValueFromIniSection(packagePath + "config.ini", keyName, "value");
                         std::string indexStr = parseValueFromIniSection(packagePath + "config.ini", keyName, "index");
                         
                         if (!isValidNumber(indexStr))
@@ -4973,7 +5016,7 @@ public:
         std::string baseOverlayInfo, fullOverlayInfo, priority, starred, hide, useLaunchArgs, launchArgs;
         std::string customName, customVersion, overlayFile, newOverlayName;
         std::string taintedOverlayFileName, packageName, packageVersion, tempPackageName, newPackageName, packageFilePath;
-        size_t lastColonPos, secondLastColonPos, thirdLastColonPos;
+        //size_t lastColonPos, secondLastColonPos, thirdLastColonPos;
         bool overlayStarred, newStarred, packageStarred;
         bool foundOvlmenu = false;
         
@@ -5063,7 +5106,7 @@ public:
             // Load subdirectories
             if (!overlayFiles.empty()) {
                 // Load the INI file and parse its content.
-                const std::map<std::string, std::map<std::string, std::string>> overlaysIniData = getParsedDataFromIniFile(OVERLAYS_INI_FILEPATH);
+                std::map<std::string, std::map<std::string, std::string>> overlaysIniData = getParsedDataFromIniFile(OVERLAYS_INI_FILEPATH);
                 
                 // Single pass overlay filtering
                 overlayFiles.erase(
@@ -5085,22 +5128,29 @@ public:
                 auto it = overlaysIniData.end();
                 // Process overlay files
                 bool drawHiddenTab = false;
+
+                // Track if we need to write back
+                bool overlaysNeedsUpdate = false;
+
                 for (const auto& overlayFile : overlayFiles) {
                     overlayFileName = getNameFromPath(overlayFile);
                     
                     it = overlaysIniData.find(overlayFileName);
                     if (it == overlaysIniData.end()) {
-                        // Initialization of new entries
-                        setIniFileValue(OVERLAYS_INI_FILEPATH, overlayFileName, PRIORITY_STR, "20");
-                        setIniFileValue(OVERLAYS_INI_FILEPATH, overlayFileName, STAR_STR, FALSE_STR);
-                        setIniFileValue(OVERLAYS_INI_FILEPATH, overlayFileName, HIDE_STR, FALSE_STR);
-                        setIniFileValue(OVERLAYS_INI_FILEPATH, overlayFileName, USE_LAUNCH_ARGS_STR, FALSE_STR);
-                        setIniFileValue(OVERLAYS_INI_FILEPATH, overlayFileName, LAUNCH_ARGS_STR, "");
-                        setIniFileValue(OVERLAYS_INI_FILEPATH, overlayFileName, "custom_name", "");
-                        setIniFileValue(OVERLAYS_INI_FILEPATH, overlayFileName, "custom_version", "");
+                        // Initialization of new entries IN MEMORY (no file I/O)
+                        auto& overlaySection = overlaysIniData[overlayFileName];
+                        overlaySection[PRIORITY_STR] = "20";
+                        overlaySection[STAR_STR] = FALSE_STR;
+                        overlaySection[HIDE_STR] = FALSE_STR;
+                        overlaySection[USE_LAUNCH_ARGS_STR] = FALSE_STR;
+                        overlaySection[LAUNCH_ARGS_STR] = "";
+                        overlaySection["custom_name"] = "";
+                        overlaySection["custom_version"] = "";
+                        overlaysNeedsUpdate = true;
+                        
                         const auto& [result, overlayName, overlayVersion, usingLibUltrahand] = getOverlayInfo(OVERLAY_PATH + overlayFileName);
                         if (result != ResultSuccess) continue;
-    
+                
                         // Use retrieved overlay info
                         assignedOverlayName = overlayName;
                         assignedOverlayVersion = overlayVersion;
@@ -5139,8 +5189,13 @@ public:
                         }
                     }
                 }
-    
-                //overlaysIniData.clear();
+
+                // Write back file only if changes were made
+                if (overlaysNeedsUpdate) {
+                    saveIniFileData(OVERLAYS_INI_FILEPATH, overlaysIniData);
+                }
+
+                overlaysIniData.clear();
                 
                 //if (inHiddenMode) {
                 //    overlaySet = std::move(hiddenOverlaySet);
@@ -5159,25 +5214,25 @@ public:
                     overlayStarred = (taintedOverlayFileName.substr(0, 3) == "-1:");
                     
                     // Find the position of the last colon (usingLibUltrahand flag)
-                    lastColonPos = taintedOverlayFileName.rfind(':');
+                    const size_t lastColonPos = taintedOverlayFileName.rfind(':');
                     if (lastColonPos != std::string::npos) {
                         // Extract usingLibUltrahand flag
                         usingLibUltrahand = (taintedOverlayFileName.substr(lastColonPos + 1) == "1");
                         
                         // Find the position of the second-to-last colon (overlayFileName)
-                        secondLastColonPos = taintedOverlayFileName.rfind(':', lastColonPos - 1);
+                        const size_t secondLastColonPos = taintedOverlayFileName.rfind(':', lastColonPos - 1);
                         if (secondLastColonPos != std::string::npos) {
                             // Extract overlayFileName
                             overlayFileName = taintedOverlayFileName.substr(secondLastColonPos + 1, lastColonPos - secondLastColonPos - 1);
                             
                             // Find the position of the third-to-last colon (overlayVersion)
-                            thirdLastColonPos = taintedOverlayFileName.rfind(':', secondLastColonPos - 1);
+                            const size_t thirdLastColonPos = taintedOverlayFileName.rfind(':', secondLastColonPos - 1);
                             if (thirdLastColonPos != std::string::npos) {
                                 // Extract overlayVersion
                                 overlayVersion = taintedOverlayFileName.substr(thirdLastColonPos + 1, secondLastColonPos - thirdLastColonPos - 1);
                                 
                                 // Find the position of the fourth-to-last colon (overlayName)
-                                size_t fourthLastColonPos = taintedOverlayFileName.rfind(':', thirdLastColonPos - 1);
+                                const size_t fourthLastColonPos = taintedOverlayFileName.rfind(':', thirdLastColonPos - 1);
                                 if (fourthLastColonPos != std::string::npos) {
                                     overlayName = taintedOverlayFileName.substr(fourthLastColonPos + 1, thirdLastColonPos - fourthLastColonPos - 1);
                                 }
@@ -5440,25 +5495,29 @@ public:
                 auto packageIt = packagesIniData.end();
 
                 bool drawHiddenTab = false;
+                bool packagesNeedsUpdate = false;  // Track if we need to write back
+
                 for (const auto& packageName: subdirectories) {
                     packageIt = packagesIniData.find(packageName);
                     if (packageIt == packagesIniData.end()) {
                         // Get package header info first for new packages
                         packageHeader = getPackageHeaderFromIni(PACKAGE_PATH + packageName+ "/" +PACKAGE_FILENAME);
                         
-                        // Initialize missing package data
-                        setIniFileValue(PACKAGES_INI_FILEPATH, packageName, PRIORITY_STR, "20");
-                        setIniFileValue(PACKAGES_INI_FILEPATH, packageName, STAR_STR, FALSE_STR);
-                        setIniFileValue(PACKAGES_INI_FILEPATH, packageName, HIDE_STR, FALSE_STR);
-                        setIniFileValue(OVERLAYS_INI_FILEPATH, packageName, USE_BOOT_PACKAGE_STR, TRUE_STR);
-                        setIniFileValue(OVERLAYS_INI_FILEPATH, packageName, USE_EXIT_PACKAGE_STR, TRUE_STR);
-                        setIniFileValue(OVERLAYS_INI_FILEPATH, packageName, USE_QUICK_LAUNCH_STR, FALSE_STR);
-                        setIniFileValue(PACKAGES_INI_FILEPATH, packageName, "custom_name", "");
-                        setIniFileValue(PACKAGES_INI_FILEPATH, packageName, "custom_version", "");
-    
+                        // Initialize missing package data IN MEMORY (no file I/O)
+                        auto& packageSection = packagesIniData[packageName];
+                        packageSection[PRIORITY_STR] = "20";
+                        packageSection[STAR_STR] = FALSE_STR;
+                        packageSection[HIDE_STR] = FALSE_STR;
+                        packageSection[USE_BOOT_PACKAGE_STR] = TRUE_STR;
+                        packageSection[USE_EXIT_PACKAGE_STR] = TRUE_STR;
+                        packageSection[USE_QUICK_LAUNCH_STR] = FALSE_STR;
+                        packageSection["custom_name"] = "";
+                        packageSection["custom_version"] = "";
+                        packagesNeedsUpdate = true;
+                
                         assignedOverlayName = packageHeader.title.empty() ? packageName : packageHeader.title;
                         assignedOverlayVersion = packageHeader.version;
-    
+                
                         baseOverlayInfo = "0020:" + assignedOverlayName + ":" + assignedOverlayVersion + ":" + packageName;
                         packageSet.insert(baseOverlayInfo);
     
@@ -5499,6 +5558,11 @@ public:
                         }
                     }
                 }
+
+                // Write back file only if changes were made
+                if (packagesNeedsUpdate) {
+                    saveIniFileData(PACKAGES_INI_FILEPATH, packagesIniData);
+                }
     
                 packagesIniData.clear();
                 subdirectories.clear();
@@ -5525,19 +5589,19 @@ public:
                     tempPackageName = packageStarred ? taintedPackageName.substr(3) : taintedPackageName;
                     
                     // Find the position of the last colon
-                    lastColonPos = tempPackageName.rfind(':');
+                    const size_t lastColonPos = tempPackageName.rfind(':');
                     if (lastColonPos != std::string::npos) {
                         // Extract packageName starting from the character after the last colon
                         packageName = tempPackageName.substr(lastColonPos + 1);
                         
                         // Now, find the position of the second-to-last colon
-                        secondLastColonPos = tempPackageName.rfind(':', lastColonPos - 1);
+                        const size_t secondLastColonPos = tempPackageName.rfind(':', lastColonPos - 1);
                         
                         if (secondLastColonPos != std::string::npos) {
                             // Extract packageVersion between the two colons
                             packageVersion = tempPackageName.substr(secondLastColonPos + 1, lastColonPos - secondLastColonPos - 1);
                             // Now, find the position of the third-to-last colon
-                            thirdLastColonPos = tempPackageName.rfind(':', secondLastColonPos - 1);
+                            const size_t thirdLastColonPos = tempPackageName.rfind(':', secondLastColonPos - 1);
                             if (thirdLastColonPos != std::string::npos)
                                 newPackageName = tempPackageName.substr(thirdLastColonPos + 1, secondLastColonPos - thirdLastColonPos - 1);
                         }
@@ -5977,106 +6041,127 @@ void initializeSettingsAndDirectories() {
     createDirectory(WALLPAPERS_PATH);
     
     bool settingsLoaded = false;
+    bool needsUpdate = false;
     
-    auto setDefaultValue = [](const auto& ultrahandSection, const std::string& section, const std::string& defaultValue, bool& settingFlag) {
-        if (ultrahandSection.count(section) > 0) {
-            settingFlag = (ultrahandSection.at(section) == TRUE_STR);
-        } else {
-            setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, section, defaultValue);
-            settingFlag = (defaultValue == TRUE_STR);
-        }
-    };
+    // Always try to load INI data (will be empty if file doesn't exist)
+    auto iniData = getParsedDataFromIniFile(ULTRAHAND_CONFIG_INI_PATH);
+    auto& ultrahandSection = iniData[ULTRAHAND_PROJECT_NAME];
     
-    auto setDefaultStrValue = [](const auto& ultrahandSection, const std::string& section, const std::string& defaultValue, std::string& settingValue) {
-        if (ultrahandSection.count(section) > 0) {
-            settingValue = ultrahandSection.at(section);
-        } else {
-            setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, section, defaultValue);
-        }
-    };
-    
-    if (isFileOrDirectory(ULTRAHAND_CONFIG_INI_PATH)) {
-        // Load key-value pairs from the "ULTRAHAND_PROJECT_NAME" section of the INI file
-        auto ultrahandSection = getKeyValuePairsFromSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME);
-        
-        if (!ultrahandSection.empty()) {
-            // Set default values for various settings
-            setDefaultValue(ultrahandSection, "hide_user_guide", FALSE_STR, hideUserGuide);
-            setDefaultValue(ultrahandSection, "hide_hidden", FALSE_STR, hideHidden);
-            setDefaultValue(ultrahandSection, "clean_version_labels", FALSE_STR, cleanVersionLabels);
-            setDefaultValue(ultrahandSection, "hide_overlay_versions", FALSE_STR, hideOverlayVersions);
-            setDefaultValue(ultrahandSection, "hide_package_versions", FALSE_STR, hidePackageVersions);
-            setDefaultValue(ultrahandSection, "highlight_titles", FALSE_STR, highlightTitles);
-            setDefaultValue(ultrahandSection, "highlight_versions", TRUE_STR, highlightVersions);
-            setDefaultValue(ultrahandSection, "highlight_packages", TRUE_STR, highlightPackages);
-            setDefaultValue(ultrahandSection, "memory_expansion", FALSE_STR, useMemoryExpansion);
-            setDefaultValue(ultrahandSection, "dynamic_logo", TRUE_STR, useDynamicLogo);
-            setDefaultValue(ultrahandSection, "launch_combos", TRUE_STR, useLaunchCombos);
-            setDefaultValue(ultrahandSection, "page_swap", FALSE_STR, usePageSwap);
-            setDefaultValue(ultrahandSection, "swipe_to_open", TRUE_STR, useSwipeToOpen);
-            setDefaultValue(ultrahandSection, "right_alignment", FALSE_STR, useRightAlignment);
-            setDefaultValue(ultrahandSection, "opaque_screenshots", TRUE_STR, useOpaqueScreenshots);
-            
-            setDefaultStrValue(ultrahandSection, DEFAULT_LANG_STR, defaultLang, defaultLang);
-        
-            // Ensure certain settings are set in the INI file if they don't exist
-            if (ultrahandSection.count("datetime_format") == 0) {
-                setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "datetime_format", DEFAULT_DT_FORMAT);
-            }
-        
-            if (ultrahandSection.count("hide_clock") == 0) {
-                setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_clock", FALSE_STR);
-            }
-        
-            if (ultrahandSection.count("hide_battery") == 0) {
-                setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_battery", TRUE_STR);
-            }
-        
-            if (ultrahandSection.count("hide_pcb_temp") == 0) {
-                setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_pcb_temp", TRUE_STR);
-            }
-        
-            if (ultrahandSection.count("hide_soc_temp") == 0) {
-                setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_soc_temp", TRUE_STR);
-            }
-
-            if (ultrahandSection.count("dynamic_widget_colors") == 0) {
-                setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "dynamic_widget_colors", TRUE_STR);
-            }
-
-            if (ultrahandSection.count("hide_widget_backdrop") == 0) {
-                setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hide_widget_backdrop", FALSE_STR);
-            }
-
-            if (ultrahandSection.count("center_widget_alignment") == 0) {
-                setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "center_widget_alignment", TRUE_STR);
-            }
-
-            if (ultrahandSection.count("extended_widget_backdrop") == 0) {
-                setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "extended_widget_backdrop", FALSE_STR);
-            }
-            
-            settingsLoaded = ultrahandSection.count(IN_OVERLAY_STR) > 0;
-
-            // Handle the 'to_packages' option if it exists
-            if (ultrahandSection.count("to_packages") > 0) {
-                trim(ultrahandSection["to_packages"]);
-                toPackages = (ultrahandSection["to_packages"] == TRUE_STR);
-            }
-            
-            // Mark settings as loaded if the "in_overlay" setting exists
-            settingsLoaded = ultrahandSection.count(IN_OVERLAY_STR) > 0;
-            if (settingsLoaded) {
-                inOverlay = (ultrahandSection[IN_OVERLAY_STR] == TRUE_STR);
-            }
-        }
-    } else {
+    // Check if file didn't exist
+    if (!isFileOrDirectory(ULTRAHAND_CONFIG_INI_PATH)) {
         updateMenuCombos = true;
     }
     
-    if (!settingsLoaded) { // Write data if settings are not loaded
-        setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, DEFAULT_LANG_STR, defaultLang);
-        setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_OVERLAY_STR, FALSE_STR);
+    // Efficient lambdas that modify in-memory data and track updates
+    auto setDefaultValue = [&](const std::string& section, const std::string& defaultValue, bool& settingFlag) {
+        if (ultrahandSection.count(section) > 0) {
+            settingFlag = (ultrahandSection.at(section) == TRUE_STR);
+        } else {
+            ultrahandSection[section] = defaultValue;
+            settingFlag = (defaultValue == TRUE_STR);
+            needsUpdate = true;
+        }
+    };
+    
+    auto setDefaultStrValue = [&](const std::string& section, const std::string& defaultValue, std::string& settingValue) {
+        if (ultrahandSection.count(section) > 0) {
+            settingValue = ultrahandSection.at(section);
+        } else {
+            ultrahandSection[section] = defaultValue;
+            settingValue = defaultValue;
+            needsUpdate = true;
+        }
+    };
+    
+    // Set default values for various settings (works for both existing and new files)
+    setDefaultValue("hide_user_guide", FALSE_STR, hideUserGuide);
+    setDefaultValue("hide_hidden", FALSE_STR, hideHidden);
+    setDefaultValue("clean_version_labels", FALSE_STR, cleanVersionLabels);
+    setDefaultValue("hide_overlay_versions", FALSE_STR, hideOverlayVersions);
+    setDefaultValue("hide_package_versions", FALSE_STR, hidePackageVersions);
+    setDefaultValue("highlight_titles", FALSE_STR, highlightTitles);
+    setDefaultValue("highlight_versions", TRUE_STR, highlightVersions);
+    setDefaultValue("highlight_packages", TRUE_STR, highlightPackages);
+    setDefaultValue("memory_expansion", FALSE_STR, useMemoryExpansion);
+    setDefaultValue("dynamic_logo", TRUE_STR, useDynamicLogo);
+    setDefaultValue("launch_combos", TRUE_STR, useLaunchCombos);
+    setDefaultValue("page_swap", FALSE_STR, usePageSwap);
+    setDefaultValue("swipe_to_open", TRUE_STR, useSwipeToOpen);
+    setDefaultValue("right_alignment", FALSE_STR, useRightAlignment);
+    setDefaultValue("opaque_screenshots", TRUE_STR, useOpaqueScreenshots);
+    
+    setDefaultStrValue(DEFAULT_LANG_STR, defaultLang, defaultLang);
+
+    // Ensure certain settings are set in the INI file if they don't exist (in memory)
+    if (ultrahandSection.count("datetime_format") == 0) {
+        ultrahandSection["datetime_format"] = DEFAULT_DT_FORMAT;
+        needsUpdate = true;
+    }
+
+    if (ultrahandSection.count("hide_clock") == 0) {
+        ultrahandSection["hide_clock"] = FALSE_STR;
+        needsUpdate = true;
+    }
+
+    if (ultrahandSection.count("hide_battery") == 0) {
+        ultrahandSection["hide_battery"] = TRUE_STR;
+        needsUpdate = true;
+    }
+
+    if (ultrahandSection.count("hide_pcb_temp") == 0) {
+        ultrahandSection["hide_pcb_temp"] = TRUE_STR;
+        needsUpdate = true;
+    }
+
+    if (ultrahandSection.count("hide_soc_temp") == 0) {
+        ultrahandSection["hide_soc_temp"] = TRUE_STR;
+        needsUpdate = true;
+    }
+
+    if (ultrahandSection.count("dynamic_widget_colors") == 0) {
+        ultrahandSection["dynamic_widget_colors"] = TRUE_STR;
+        needsUpdate = true;
+    }
+
+    if (ultrahandSection.count("hide_widget_backdrop") == 0) {
+        ultrahandSection["hide_widget_backdrop"] = FALSE_STR;
+        needsUpdate = true;
+    }
+
+    if (ultrahandSection.count("center_widget_alignment") == 0) {
+        ultrahandSection["center_widget_alignment"] = TRUE_STR;
+        needsUpdate = true;
+    }
+
+    if (ultrahandSection.count("extended_widget_backdrop") == 0) {
+        ultrahandSection["extended_widget_backdrop"] = FALSE_STR;
+        needsUpdate = true;
+    }
+    
+    // Check if settings were previously loaded
+    settingsLoaded = ultrahandSection.count(IN_OVERLAY_STR) > 0;
+
+    // Handle the 'to_packages' option if it exists
+    if (ultrahandSection.count("to_packages") > 0) {
+        trim(ultrahandSection["to_packages"]);
+        toPackages = (ultrahandSection["to_packages"] == TRUE_STR);
+    }
+    
+    // Handle the 'in_overlay' setting
+    if (settingsLoaded) {
+        inOverlay = (ultrahandSection[IN_OVERLAY_STR] == TRUE_STR);
+    }
+    
+    // If settings weren't previously loaded, add the missing defaults
+    if (!settingsLoaded) {
+        ultrahandSection[DEFAULT_LANG_STR] = defaultLang;
+        ultrahandSection[IN_OVERLAY_STR] = FALSE_STR;
+        needsUpdate = true;
+    }
+    
+    // Only write back to file if we made changes
+    if (needsUpdate) {
+        saveIniFileData(ULTRAHAND_CONFIG_INI_PATH, iniData);
     }
     
     // Load language file
@@ -6103,7 +6188,6 @@ void initializeSettingsAndDirectories() {
         hasInitialized = true;
     }
 }
-
 
 /**
  * @brief The `Overlay` class manages the main overlay functionality.
@@ -6212,6 +6296,7 @@ public:
                     customName = getValueOrDefault(packageIt->second, "custom_name", "");
                     customVersion = getValueOrDefault(packageIt->second, "custom_version", "");
                 }
+
                 
                 // Apply version cleaning if needed (same logic as main menu)
                 if (cleanVersionLabels) {

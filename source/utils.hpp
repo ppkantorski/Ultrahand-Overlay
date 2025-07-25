@@ -107,49 +107,96 @@ std::vector<std::string> getPackageNames() {
 
 
 void removeKeyComboFromOthers(const std::string& keyCombo, const std::string& currentOverlay) {
-    // Handle overlays (same as your original working function)
-    const auto overlayNames = getOverlayNames();
+    // Declare variables once for reuse across both scopes
     std::string existingCombo;
-    
-    bool modified;
-
     std::string comboListStr;
     std::vector<std::string> comboList;
+    bool modified;
     std::string newComboStr;
-
-    for (const auto& overlayName : overlayNames) {
-        // 1. Remove from main key_combo field if it matches
-        existingCombo = ult::parseValueFromIniSection(ult::OVERLAYS_INI_FILEPATH, overlayName, "key_combo");
-        if (!existingCombo.empty() && tsl::hlp::comboStringToKeys(existingCombo) == tsl::hlp::comboStringToKeys(keyCombo)) {
-            ult::setIniFileValue(ult::OVERLAYS_INI_FILEPATH, overlayName, "key_combo", "");
-        }
+    
+    // Process overlays first
+    {
+        auto overlaysIniData = ult::getParsedDataFromIniFile(ult::OVERLAYS_INI_FILEPATH);
+        bool overlaysModified = false;
         
-        // 2. Remove from mode_combos list - clear ALL instances of this combo
-        comboListStr = ult::parseValueFromIniSection(ult::OVERLAYS_INI_FILEPATH, overlayName, "mode_combos");
-        comboList = splitIniList(comboListStr);
+        const auto overlayNames = getOverlayNames();
         
-        modified = false;
-        for (size_t i = 0; i < comboList.size(); ++i) {
-            if (!comboList[i].empty() && tsl::hlp::comboStringToKeys(comboList[i]) == tsl::hlp::comboStringToKeys(keyCombo)) {
-                comboList[i] = "";  // Clear ALL instances
-                modified = true;
+        for (const auto& overlayName : overlayNames) {
+            auto overlayIt = overlaysIniData.find(overlayName);
+            if (overlayIt == overlaysIniData.end()) continue; // Skip if overlay not in INI
+            
+            auto& overlaySection = overlayIt->second;
+            
+            // 1. Remove from main key_combo field if it matches
+            auto keyComboIt = overlaySection.find("key_combo");
+            if (keyComboIt != overlaySection.end()) {
+                existingCombo = keyComboIt->second;
+                if (!existingCombo.empty() && tsl::hlp::comboStringToKeys(existingCombo) == tsl::hlp::comboStringToKeys(keyCombo)) {
+                    overlaySection["key_combo"] = "";
+                    overlaysModified = true;
+                }
+            }
+            
+            // 2. Remove from mode_combos list - clear ALL instances of this combo
+            auto modeCombosIt = overlaySection.find("mode_combos");
+            if (modeCombosIt != overlaySection.end()) {
+                comboListStr = modeCombosIt->second;
+            } else {
+                comboListStr = "";
+            }
+            
+            comboList = splitIniList(comboListStr);
+            modified = false;
+            
+            for (size_t i = 0; i < comboList.size(); ++i) {
+                if (!comboList[i].empty() && tsl::hlp::comboStringToKeys(comboList[i]) == tsl::hlp::comboStringToKeys(keyCombo)) {
+                    comboList[i] = "";  // Clear ALL instances
+                    modified = true;
+                }
+            }
+            
+            // Only update if something was actually removed
+            if (modified) {
+                newComboStr = "(" + joinIniList(comboList) + ")";
+                overlaySection["mode_combos"] = newComboStr;
+                overlaysModified = true;
             }
         }
         
-        // Only update if something was actually removed
-        if (modified) {
-            newComboStr = "(" + joinIniList(comboList) + ")";
-            ult::setIniFileValue(ult::OVERLAYS_INI_FILEPATH, overlayName, "mode_combos", newComboStr);
+        // Write back if modified, then clear memory
+        if (overlaysModified) {
+            ult::saveIniFileData(ult::OVERLAYS_INI_FILEPATH, overlaysIniData);
         }
+        // overlaysIniData automatically cleared when scope ends
     }
     
-    // ADD: Handle packages (simple - they only have main key_combo)
-    auto packageNames = getPackageNames();
-    for (const auto& packageName : packageNames) {
-        existingCombo = ult::parseValueFromIniSection(ult::PACKAGES_INI_FILEPATH, packageName, "key_combo");
-        if (!existingCombo.empty() && tsl::hlp::comboStringToKeys(existingCombo) == tsl::hlp::comboStringToKeys(keyCombo)) {
-            ult::setIniFileValue(ult::PACKAGES_INI_FILEPATH, packageName, "key_combo", "");
+    // Process packages second (overlays INI data is already cleared)
+    {
+        auto packagesIniData = ult::getParsedDataFromIniFile(ult::PACKAGES_INI_FILEPATH);
+        bool packagesModified = false;
+        
+        auto packageNames = getPackageNames();
+        
+        for (const auto& packageName : packageNames) {
+            auto packageIt = packagesIniData.find(packageName);
+            if (packageIt == packagesIniData.end()) continue; // Skip if package not in INI
+            
+            auto& packageSection = packageIt->second;
+            auto keyComboIt = packageSection.find("key_combo");
+            if (keyComboIt != packageSection.end()) {
+                existingCombo = keyComboIt->second; // Reusing the same variable
+                if (!existingCombo.empty() && tsl::hlp::comboStringToKeys(existingCombo) == tsl::hlp::comboStringToKeys(keyCombo)) {
+                    packageSection["key_combo"] = "";
+                    packagesModified = true;
+                }
+            }
         }
+        
+        // Write back if modified, then clear memory
+        if (packagesModified) {
+            ult::saveIniFileData(ult::PACKAGES_INI_FILEPATH, packagesIniData);
+        }
+        // packagesIniData automatically cleared when scope ends
     }
 }
 
@@ -647,14 +694,14 @@ void unpackDeviceInfo() {
     
     // Format HOS version
     formatVersion(packed_version, 24, 16, 8, hosVersion);
-
     splGetConfig((SplConfigItem)65007, &packed_version);
     usingEmunand = (packed_version != 0);
-
-
     fuseDumpToIni();
-
+    
     if (isFileOrDirectory(FUSE_DATA_INI_PATH)) {
+        // Load INI data once instead of 6 separate file reads
+        const auto fuseSection = getKeyValuePairsFromSection(FUSE_DATA_INI_PATH, FUSE_STR);
+        
         const std::pair<const char*, u32*> keys[] = {
             {"cpu_speedo_0", &cpuSpeedo0},
             {"cpu_speedo_2", &cpuSpeedo2},
@@ -663,13 +710,17 @@ void unpackDeviceInfo() {
             {"soc_iddq", &socIDDQ},
             {"gpu_iddq", &gpuIDDQ}
         };
-        std::string value;
+        
+        // Helper lambda to safely get u32 values
+        auto getU32Value = [&](const std::string& key) -> u32 {
+            auto it = fuseSection.find(key);
+            return (it != fuseSection.end() && !it->second.empty()) ? ult::stoi(it->second) : 0;
+        };
+        
         for (const auto& key : keys) {
-            value = parseValueFromIniSection(FUSE_DATA_INI_PATH, FUSE_STR, key.first);
-            *key.second = value.empty() ? 0 : ult::stoi(value);
+            *key.second = getU32Value(key.first);
         }
     }
-
 }
 
 
@@ -854,35 +905,38 @@ void powerOffAllControllers() {
 
 
 void initializeTheme(const std::string& themeIniPath = THEME_CONFIG_INI_PATH) {
-    tsl::hlp::ini::IniData themeData;
-    bool initialize = false;
-
-    if (isFileOrDirectory(themeIniPath)) {
-        themeData = getParsedDataFromIniFile(themeIniPath);
-
-        if (themeData.count(THEME_STR) > 0) {
-            auto& themeSection = themeData[THEME_STR];
-
-            // Iterate through each default setting and apply if not already set
-            for (const auto& [key, value] : defaultThemeSettingsMap) {
-                if (themeSection.count(key) == 0) {
-                    setIniFileValue(themeIniPath, THEME_STR, key, value);
-                }
+    // Load INI data once
+    tsl::hlp::ini::IniData themeData = getParsedDataFromIniFile(themeIniPath);
+    bool needsUpdate = false;
+    
+    // Check if file exists and has theme section
+    bool fileExists = isFileOrDirectory(themeIniPath);
+    bool hasThemeSection = fileExists && (themeData.count(THEME_STR) > 0);
+    
+    if (hasThemeSection) {
+        // File exists with theme section - check for missing keys
+        auto& themeSection = themeData[THEME_STR];
+        for (const auto& [key, value] : defaultThemeSettingsMap) {
+            if (themeSection.count(key) == 0) {
+                themeSection[key] = value;
+                needsUpdate = true;
             }
-        } else {
-            initialize = true;
         }
     } else {
-        initialize = true;
-    } 
-
-    // If the file does not exist or the theme section is missing, initialize with all default values
-    if (initialize) {
+        // File doesn't exist or theme section is missing - initialize all defaults
+        auto& themeSection = themeData[THEME_STR];
         for (const auto& [key, value] : defaultThemeSettingsMap) {
-            setIniFileValue(themeIniPath, THEME_STR, key, value);
+            themeSection[key] = value;
         }
+        needsUpdate = true;
     }
-
+    
+    // Write back only if changes were made
+    if (needsUpdate) {
+        saveIniFileData(themeIniPath, themeData);
+    }
+    
+    // Ensure themes directory exists
     if (!isFileOrDirectory(THEMES_PATH)) {
         createDirectory(THEMES_PATH);
     }
@@ -1785,6 +1839,23 @@ void addPackageInfo(tsl::elm::List* list, auto& packageHeader, std::string type 
  * directories.
  */
 
+/**
+ * @brief Ultrahand-Overlay Protected Folders
+ *
+ * This block of code defines two vectors containing paths to protected folders used in the
+ * Ultrahand-Overlay project. These folders are designated as protected to prevent certain
+ * operations that may pose security risks.
+ *
+ * The two vectors include:
+ *
+ * - `protectedFolders`: Paths to standard protected folders.
+ * - `ultraProtectedFolders`: Paths to ultra protected folders with stricter security.
+ *
+ * These protected folder paths are used within the Ultrahand-Overlay project to enforce
+ * safety conditions and ensure that certain operations are not performed on sensitive
+ * directories.
+ */
+
 bool isDangerousCombination(const std::string& originalPath) {
     // Early exit: Check for double wildcards first (cheapest check)
     if (originalPath.find("**") != std::string::npos) {
@@ -1846,9 +1917,15 @@ bool isDangerousCombination(const std::string& originalPath) {
         {"sdmc:/emuMMC/RAW1/", 18}
     };
     
-    // 3) Check always dangerous patterns (cheap string searches first)
+    // 3) Check for directory traversal patterns (before other dangerous patterns)
+    //if (patternPath.find("/../") != std::string::npos || 
+    //    patternPath.find("../") == 0 ||
+    //    patternPath.find("/..") == patternPath.length() - 3) {
+    //    return true;
+    //}
+    
+    // 4) Check other always dangerous patterns (cheap string searches)
     static const std::vector<const char*> alwaysDangerousPatterns = {
-        "..",
         "~",
         "null*",
         "*null"
@@ -1860,7 +1937,7 @@ bool isDangerousCombination(const std::string& originalPath) {
         }
     }
     
-    // 4) Root folder wildcard check (only if wildcards exist)
+    // 5) Root folder wildcard check (only if wildcards exist)
     if (hasWildcards) {
         constexpr const char rootPrefix[] = "sdmc:/";
         constexpr size_t rootLen = 6; // Length of "sdmc:/"
@@ -1879,7 +1956,7 @@ bool isDangerousCombination(const std::string& originalPath) {
         }
     }
     
-    // 5) Check ultra-protected folders (highest priority)
+    // 6) Check ultra-protected folders (highest priority)
     for (const auto& folder : ultraProtectedFolders) {
         if (patternPath.length() >= folder.length &&
             patternPath.compare(0, folder.length, folder.path) == 0) {
@@ -1887,7 +1964,7 @@ bool isDangerousCombination(const std::string& originalPath) {
         }
     }
     
-    // 6) Check restricted wildcard folders (only if wildcards exist)
+    // 7) Check restricted wildcard folders (only if wildcards exist)
     std::string relative;
     if (hasWildcards) {
         for (const auto& folder : restrictedWildcardFolders) {
@@ -1908,7 +1985,7 @@ bool isDangerousCombination(const std::string& originalPath) {
         }
     }
     
-    // 7) Check protected folders
+    // 8) Check protected folders
     bool isAlbum;
     
     for (const auto& folder : protectedFolders) {
@@ -1941,7 +2018,7 @@ bool isDangerousCombination(const std::string& originalPath) {
         }
     }
     
-    // 8) Otherwise, no dangerous combination detected
+    // 9) Otherwise, no dangerous combination detected
     return false;
 }
 
@@ -2025,7 +2102,38 @@ void applyReplaceIniPlaceholder(std::string& arg, const std::string& commandName
         return; // No placeholders found, nothing to do
     }
     
-    // Pre-declare variables outside the loop
+    // Pre-declare scan variables for efficiency
+    size_t scanPos = 0;
+    std::string scanContent;
+    
+    // Pre-scan to check if we need ANY INI data (section,key OR numeric placeholders)
+    bool needsIniData = false;
+    while ((scanPos = arg.find(searchString, scanPos)) != std::string::npos) {
+        const size_t scanEndPos = arg.find(")}", scanPos);
+        if (scanEndPos != std::string::npos) {
+            scanContent = arg.substr(scanPos + searchString.length(), 
+                                   scanEndPos - scanPos - searchString.length());
+            trim(scanContent);
+            if (!scanContent.empty()) {
+                needsIniData = true;
+                break;
+            }
+        }
+        scanPos += searchString.length();
+    }
+    
+    // Load INI data once if needed
+    std::map<std::string, std::map<std::string, std::string>> iniData;
+    std::vector<std::string> sectionNames;
+    if (needsIniData) {
+        iniData = getParsedDataFromIniFile(iniPath);
+        // Extract section names from loaded data instead of calling parseSectionsFromIni
+        for (const auto& section : iniData) {
+            sectionNames.push_back(section.first);
+        }
+    }
+    
+    // Pre-declare main loop variables outside the loop
     size_t startPos = 0;
     size_t endPos;
     size_t commaPos;
@@ -2035,14 +2143,22 @@ void applyReplaceIniPlaceholder(std::string& arg, const std::string& commandName
     std::string iniSection;
     std::string iniKey;
     
-    // Cache section names to avoid re-parsing INI file multiple times
-    std::vector<std::string> sectionNames;
-    bool sectionsLoaded = false;
-    
     // Build result incrementally to avoid expensive string replacement operations
     std::string result;
     size_t lastPos = 0;
     const size_t searchStringLen = searchString.length();
+    
+    // Helper lambda to safely get values from loaded INI data
+    auto getIniValue = [&](const std::string& section, const std::string& key) -> std::string {
+        auto sectionIt = iniData.find(section);
+        if (sectionIt != iniData.end()) {
+            auto keyIt = sectionIt->second.find(key);
+            if (keyIt != sectionIt->second.end()) {
+                return keyIt->second;
+            }
+        }
+        return "";
+    };
     
     // Process all occurrences of the placeholder
     while ((startPos = arg.find(searchString, lastPos)) != std::string::npos) {
@@ -2064,7 +2180,7 @@ void applyReplaceIniPlaceholder(std::string& arg, const std::string& commandName
         commaPos = placeholderContent.find(',');
         
         if (commaPos != std::string::npos) {
-            // Handle section,key format
+            // Handle section,key format using loaded INI data
             iniSection = placeholderContent.substr(0, commaPos);
             trim(iniSection);
             removeQuotes(iniSection);
@@ -2073,18 +2189,13 @@ void applyReplaceIniPlaceholder(std::string& arg, const std::string& commandName
             trim(iniKey);
             removeQuotes(iniKey);
             
-            replacement = parseValueFromIniSection(iniPath, iniSection, iniKey);
+            replacement = getIniValue(iniSection, iniKey);
         } else {
             // Check if the content is an integer
             if (std::all_of(placeholderContent.begin(), placeholderContent.end(), ::isdigit)) {
                 entryIndex = ult::stoi(placeholderContent);
                 
-                // Load section names only once when needed
-                if (!sectionsLoaded) {
-                    sectionNames = parseSectionsFromIni(iniPath);
-                    sectionsLoaded = true;
-                }
-                
+                // Use section names extracted from already-loaded INI data
                 if (entryIndex < sectionNames.size()) {
                     replacement = sectionNames[entryIndex];
                 } else {
@@ -2108,7 +2219,6 @@ void applyReplaceIniPlaceholder(std::string& arg, const std::string& commandName
     // Replace original string with result
     arg = std::move(result);
 }
-
 
 
 /**
@@ -4101,7 +4211,7 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                 //logMessage("Volume input is a valid number: " + volumeInput);  // Log valid number
                 
                 // Convert input string to a float for percentage (0-100)
-                float volumePercentage = ult::stof(volumeInput);
+                const float volumePercentage = ult::stof(volumeInput);
                 //logMessage("Converted volume to percentage: " + ult::to_string(volumePercentage));  // Log the percentage
                 
                 // Ensure the volume is within valid range 0 to 100
@@ -4111,7 +4221,7 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                 }
                 
                 // Convert percentage (0-100) to volume scale (0-1)
-                float masterVolume = volumePercentage / 100.0f;
+                const float masterVolume = volumePercentage / 100.0f;
                 
 
                 //logMessage("Initializing settings service...");
