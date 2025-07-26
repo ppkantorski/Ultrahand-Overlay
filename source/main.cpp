@@ -1150,7 +1150,7 @@ public:
             addBasicListItem(list, FAILED_TO_OPEN + ": " + settingsIniPath);
         }
 
-        auto rootFrame = new tsl::elm::OverlayFrame(CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel);
+        auto* rootFrame = new tsl::elm::OverlayFrame(CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel);
         if (inSubSettingsMenu && ((dropdownSelection == "languageMenu") || (dropdownSelection == KEY_COMBO_STR) || (dropdownSelection == "themeMenu") || (dropdownSelection == "wallpaperMenu"))) {
             jumpItemName = "";
             jumpItemValue = "";
@@ -1797,11 +1797,11 @@ public:
             addBasicListItem(list, FAILED_TO_OPEN + ": " + settingsIniPath);
         }
     
-        //auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel);
+        //auto* rootFrame = std::make_unique<tsl::elm::OverlayFrame>(CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel);
         //rootFrame->setContent(list);
         //return rootFrame.release();
     
-        auto rootFrame = new tsl::elm::OverlayFrame(CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel);
+        auto* rootFrame = new tsl::elm::OverlayFrame(CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel);
         if (inSubSettingsMenu &&
             (dropdownSelection == KEY_COMBO_STR ||
              dropdownSelection == PRIORITY_STR ||
@@ -2049,7 +2049,7 @@ private:
     }
 
 public:
-    ScriptOverlay(std::vector<std::vector<std::string>> cmds, const std::string& file, const std::string& key = "", const std::string& fromMenu = "", bool tableMode = false, const std::string& _lastPackageHeader = "")
+    ScriptOverlay(std::vector<std::vector<std::string>>&& cmds, const std::string& file, const std::string& key = "", const std::string& fromMenu = "", bool tableMode = false, const std::string& _lastPackageHeader = "")
         : commands(cmds), filePath(file), specificKey(key), tableMode(tableMode), lastPackageHeader(_lastPackageHeader) {
             isFromMainMenu = (fromMenu == "main");
             isFromPackage = (fromMenu == "package");
@@ -2166,7 +2166,7 @@ public:
         std::string packageVersion = isFromMainMenu ? "" : packageRootLayerVersion;
 
 
-        auto rootFrame = new tsl::elm::OverlayFrame(packageName,
+        auto* rootFrame = new tsl::elm::OverlayFrame(packageName,
            !lastPackageHeader.empty() ? lastPackageHeader + "?Ultrahand Script" : (packageVersion.empty() ? CAPITAL_ULTRAHAND_PROJECT_NAME + " Script" : packageVersion + "  " + CAPITAL_ULTRAHAND_PROJECT_NAME + " Script"),
            noClickableItems);
         list->disableCaching();
@@ -2956,11 +2956,11 @@ public:
                     }
     
                     else if (keys & SCRIPT_KEY) {
-                        inSelectionMenu = false;
+                        //inSelectionMenu = false;
     
                         auto modifiedCmds = getSourceReplacement(selectionCommands, selectedItem, i, filePath);
                         applyPlaceholderReplacementsToCommands(modifiedCmds, filePath);
-                        tsl::changeTo<ScriptOverlay>(modifiedCmds, filePath, itemName, "selection", false, currentPackageHeader);
+                        tsl::changeTo<ScriptOverlay>(std::move(modifiedCmds), filePath, itemName, "selection", false, currentPackageHeader);
                         return true;
                     }
     
@@ -3052,11 +3052,11 @@ public:
                         isInitialized[i] = true;
                     }
     
-                    inSelectionMenu = false;
+                    //inSelectionMenu = false;
                     // Custom logic for SCRIPT_KEY handling
                     auto modifiedCmds = getSourceReplacement(state ? selectionCommandsOn : selectionCommandsOff, currentSelectedItems[i], i, filePath);
                     applyPlaceholderReplacementsToCommands(modifiedCmds, filePath);
-                    tsl::changeTo<ScriptOverlay>(modifiedCmds, filePath, itemName, "selection", false, currentPackageHeader);
+                    tsl::changeTo<ScriptOverlay>(std::move(modifiedCmds), filePath, itemName, "selection", false, currentPackageHeader);
                 });
     
                 list->addItem(toggleListItem);
@@ -3599,18 +3599,18 @@ bool drawCommandsMenu(tsl::elm::List* list,
                                     return true;
                                 
                                 } else if (keys & SCRIPT_KEY) {
-                                    if (inPackageMenu)
-                                        inPackageMenu = false;
-                                    if (inSubPackageMenu)
-                                        inSubPackageMenu = false;
+                                    //if (inPackageMenu)
+                                    //    inPackageMenu = false;
+                                    //if (inSubPackageMenu)
+                                    //    inSubPackageMenu = false;
                                     
                                                         
                                     // Gather the prompt commands for the current dropdown section
-                                    const std::vector<std::vector<std::string>> promptCommands = gatherPromptCommands(optionName, options);
+                                    std::vector<std::vector<std::string>> promptCommands = gatherPromptCommands(optionName, options);
                                     
                                                         
                                     // Pass all gathered commands to the ScriptOverlay
-                                    tsl::changeTo<ScriptOverlay>(promptCommands, packagePath, optionName, "package", true, lastPackageHeader);
+                                    tsl::changeTo<ScriptOverlay>(std::move(promptCommands), packagePath, optionName, "package", true, lastPackageHeader);
                                     return true;
                                 }
                                 return false;
@@ -3628,15 +3628,20 @@ bool drawCommandsMenu(tsl::elm::List* list,
                                     tsl::changeTo<MainMenu>("", optionName);
                                     return true;
                                 } else if (keys & SCRIPT_KEY) {
-                                    if (inMainMenu) {
-                                        inMainMenu = false;
-                                    }
+                                    //if (inMainMenu) {
+                                    //    inMainMenu = false;
+                                    //}
+                                    //
+                                    //if (inPackageMenu)
+                                    //    inPackageMenu = false;
+                                    //if (inSubPackageMenu)
+                                    //    inSubPackageMenu = false;
                                     
                                     
                                     // Gather the prompt commands for the current dropdown section
-                                    const std::vector<std::vector<std::string>> promptCommands = gatherPromptCommands(optionName, options);
+                                    std::vector<std::vector<std::string>> promptCommands = gatherPromptCommands(optionName, options);
 
-                                    tsl::changeTo<ScriptOverlay>(promptCommands, PACKAGE_PATH, optionName, "main", true, lastPackageHeader);
+                                    tsl::changeTo<ScriptOverlay>(std::move(promptCommands), PACKAGE_PATH, optionName, "main", true, lastPackageHeader);
                                     return true;
                                 }
                                 return false;
@@ -4031,7 +4036,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
                         applyPlaceholderReplacementsToCommands(modifiedCmds, packagePath);
                 
                         // Switch to ScriptOverlay
-                        tsl::changeTo<ScriptOverlay>(modifiedCmds, packagePath, keyName, isFromMainMenu ? "main" : "package", false, lastPackageHeader);
+                        tsl::changeTo<ScriptOverlay>(std::move(modifiedCmds), packagePath, keyName, isFromMainMenu ? "main" : "package", false, lastPackageHeader);
                     });
                 
                     // Add the TrackBarV2 to the list after setting the necessary listeners
@@ -4105,7 +4110,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
                         
                         // Apply placeholder replacements and switch to ScriptOverlay
                         applyPlaceholderReplacementsToCommands(modifiedCmds, packagePath);
-                        tsl::changeTo<ScriptOverlay>(modifiedCmds, packagePath, keyName, isFromMainMenu ? "main" : "package", false, lastPackageHeader);
+                        tsl::changeTo<ScriptOverlay>(std::move(modifiedCmds), packagePath, keyName, isFromMainMenu ? "main" : "package", false, lastPackageHeader);
                     });
                     
                     // Add the StepTrackBarV2 to the list
@@ -4261,7 +4266,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
                     
                         // Apply placeholder replacements and switch to ScriptOverlay
                         applyPlaceholderReplacementsToCommands(modifiedCmds, packagePath);
-                        tsl::changeTo<ScriptOverlay>(modifiedCmds, packagePath, keyName, isFromMainMenu ? "main" : "package", false, lastPackageHeader);
+                        tsl::changeTo<ScriptOverlay>(std::move(modifiedCmds), packagePath, keyName, isFromMainMenu ? "main" : "package", false, lastPackageHeader);
                     });
                     
                     // Add the NamedStepTrackBarV2 to the list
@@ -4325,21 +4330,21 @@ bool drawCommandsMenu(tsl::elm::List* list,
                                 return true;
                             } else if (keys & SCRIPT_KEY) {
                                 const bool isFromMainMenu = (packagePath == PACKAGE_PATH);
-                                if (inPackageMenu) {
-                                    inPackageMenu = false;
-                                    lastMenu = "packageMenu";
-                                }
-                                if (inSubPackageMenu) {
-                                    inSubPackageMenu = false;
-                                    lastMenu = "subPackageMenu";
-                                }
+                                //if (inPackageMenu) {
+                                //    inPackageMenu = false;
+                                //    lastMenu = "packageMenu";
+                                //}
+                                //if (inSubPackageMenu) {
+                                //    inSubPackageMenu = false;
+                                //    lastMenu = "subPackageMenu";
+                                //}
 
                                 auto modifiedCmds = getSourceReplacement(commands, keyName, i, packagePath);
                                 
                                 std::string selectionItem = keyName;
                                 removeTag(selectionItem);
                                 // add lines ;mode=forwarder and package_source 'forwarderPackagePath' to front of modifiedCmds
-                                tsl::changeTo<ScriptOverlay>(modifiedCmds, packagePath, selectionItem, isFromMainMenu ? "main" : "package", true, lastPackageHeader);
+                                tsl::changeTo<ScriptOverlay>(std::move(modifiedCmds), packagePath, selectionItem, isFromMainMenu ? "main" : "package", true, lastPackageHeader);
                                 return true;
                             }
                             return false;
@@ -4400,18 +4405,18 @@ bool drawCommandsMenu(tsl::elm::List* list,
                                 //    isFromMainMenu = true;
                                 //    inMainMenu = false;
                                 //}
-                                if (inPackageMenu) {
-                                    inPackageMenu = false;
-                                    lastMenu = "packageMenu";
-                                }
-                                if (inSubPackageMenu) {
-                                    inSubPackageMenu = false;
-                                    lastMenu = "subPackageMenu";
-                                }
+                                //if (inPackageMenu) {
+                                //    inPackageMenu = false;
+                                //    lastMenu = "packageMenu";
+                                //}
+                                //if (inSubPackageMenu) {
+                                //    inSubPackageMenu = false;
+                                //    lastMenu = "subPackageMenu";
+                                //}
 
                                 std::string selectionItem = keyName;
                                 removeTag(selectionItem);
-                                tsl::changeTo<ScriptOverlay>(getSourceReplacement(commands, keyName, i, packagePath), packagePath, selectionItem, isFromMainMenu ? "main" : "package", true, lastPackageHeader);
+                                tsl::changeTo<ScriptOverlay>(std::move(getSourceReplacement(commands, keyName, i, packagePath)), packagePath, selectionItem, isFromMainMenu ? "main" : "package", true, lastPackageHeader);
                                 return true;
                             }
                             return false;
@@ -4473,17 +4478,17 @@ bool drawCommandsMenu(tsl::elm::List* list,
                                 //    isFromMainMenu = true;
                                 //    inMainMenu = false;
                                 //}
-                                if (inPackageMenu) {
-                                    inPackageMenu = false;
-                                    lastMenu = "packageMenu";
-                                }
-                                if (inSubPackageMenu) {
-                                    inSubPackageMenu = false;
-                                    lastMenu = "subPackageMenu";
-                                }
+                                //if (inPackageMenu) {
+                                //    inPackageMenu = false;
+                                //    lastMenu = "packageMenu";
+                                //}
+                                //if (inSubPackageMenu) {
+                                //    inSubPackageMenu = false;
+                                //    lastMenu = "subPackageMenu";
+                                //}
                                 auto modifiedCmds = getSourceReplacement(commands, selectedItem, i, packagePath);
                                 applyPlaceholderReplacementsToCommands(modifiedCmds, packagePath);
-                                tsl::changeTo<ScriptOverlay>(modifiedCmds, packagePath, keyName, isFromMainMenu ? "main" : "package", false, lastPackageHeader);
+                                tsl::changeTo<ScriptOverlay>(std::move(modifiedCmds), packagePath, keyName, isFromMainMenu ? "main" : "package", false, lastPackageHeader);
                                 return true;
                             }
                             return false;
@@ -4535,17 +4540,21 @@ bool drawCommandsMenu(tsl::elm::List* list,
                             pathPatternOn, pathPatternOff, lastPackageHeader](bool state) {
 
                             const bool isFromMainMenu = (packagePath == PACKAGE_PATH);
-                            if (inPackageMenu)
-                                inPackageMenu = false;
-                            if (inSubPackageMenu)
-                                inSubPackageMenu = false;
+                            //if (inPackageMenu) {
+                            //    inPackageMenu = false;
+                            //    lastMenu = "packageMenu";
+                            //}
+                            //if (inSubPackageMenu) {
+                            //    inSubPackageMenu = false;
+                            //    lastMenu = "subPackageMenu";
+                            //}
 
                             // Custom logic for SCRIPT_KEY handling
                             auto modifiedCmds = state ? getSourceReplacement(commandsOn, pathPatternOn, i, packagePath) :
                                 getSourceReplacement(commandsOff, pathPatternOff, i, packagePath);
 
                             applyPlaceholderReplacementsToCommands(modifiedCmds, packagePath);
-                            tsl::changeTo<ScriptOverlay>(modifiedCmds, packagePath, keyName, isFromMainMenu ? "main" : "package", false, lastPackageHeader);
+                            tsl::changeTo<ScriptOverlay>(std::move(modifiedCmds), packagePath, keyName, isFromMainMenu ? "main" : "package", false, lastPackageHeader);
                         });
 
 
@@ -4562,7 +4571,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
     if (needsUpdate) {
         saveIniFileData(packageConfigIniPath, packageConfigData);
     }
-    packageConfigData.clear();
+    //packageConfigData.clear();
 
     if (onlyTables) {
         //auto dummyItem = new tsl::elm::DummyListItem();
@@ -4571,11 +4580,11 @@ bool drawCommandsMenu(tsl::elm::List* list,
         //addDummyListItem(list);
     }
     
-    options.clear();
-    commands.clear();
-    commandsOn.clear();
-    commandsOff.clear();
-    tableData.clear();
+    //options.clear();
+    //commands.clear();
+    //commandsOn.clear();
+    //commandsOff.clear();
+    //tableData.clear();
     return onlyTables;
 }
 
@@ -4719,7 +4728,7 @@ public:
         if (packageHeader.color.empty())
             packageHeader.color = packageRootLayerColor;
 
-        auto rootFrame = new tsl::elm::OverlayFrame(
+        auto* rootFrame = new tsl::elm::OverlayFrame(
            (!packageHeader.title.empty()) ? packageHeader.title : (!packageRootLayerTitle.empty() ? packageRootLayerTitle : getNameFromPath(packagePath)),
            ((!pageHeader.empty() && packageHeader.show_version != TRUE_STR) ? pageHeader: (packageHeader.version != "" ? (!packageRootLayerVersion.empty() ? packageRootLayerVersion : packageHeader.version) + "  Ultrahand Package" : "Ultrahand Package")),
            noClickableItems,
@@ -6036,7 +6045,7 @@ public:
         //}
         
 
-        auto rootFrame = new tsl::elm::OverlayFrame(CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel, noClickableItems, menuMode+hiddenMenuMode+dropdownSection, "", "", "");
+        auto* rootFrame = new tsl::elm::OverlayFrame(CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel, noClickableItems, menuMode+hiddenMenuMode+dropdownSection, "", "", "");
         if (g_overlayFilename != "ovlmenu.ovl")
             list->jumpToItem(jumpItemName, jumpItemValue, jumpItemExactMatch);
         else
