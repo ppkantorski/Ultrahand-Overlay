@@ -6303,9 +6303,13 @@ void initializeSettingsAndDirectories() {
     } else {
         // Always try to load INI data (will be empty if file doesn't exist)
         iniData = getParsedDataFromIniFile(ULTRAHAND_CONFIG_INI_PATH);
-        if (iniData.empty() || iniData[ULTRAHAND_PROJECT_NAME].empty()) {
-            svcSleepThread(100'000);
-            iniData = getParsedDataFromIniFile(ULTRAHAND_CONFIG_INI_PATH);
+        for (int i = 0; i < 3; i++) {
+            if (iniData.empty() || iniData[ULTRAHAND_PROJECT_NAME].empty()) {
+                svcSleepThread(100'000);
+                iniData = getParsedDataFromIniFile(ULTRAHAND_CONFIG_INI_PATH);
+            } else {
+                break;
+            }
         }
     }
 
@@ -6633,10 +6637,6 @@ public:
         // Default behavior - load main menu
         return initially<MainMenu>();
     }
-
-private:
-    
-
 
 };
 
