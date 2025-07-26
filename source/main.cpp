@@ -3378,8 +3378,12 @@ bool drawCommandsMenu(tsl::elm::List* list,
         auto& option = options[i];
         
         optionName = option.first;
+
         commands.clear();
-        //commands.shrink_to_fit();
+        tableData.clear();
+        commandsOn.clear();
+        commandsOff.clear();
+
         commands = std::move(option.second);
         
         footer = "";
@@ -3422,12 +3426,6 @@ bool drawCommandsMenu(tsl::elm::List* list,
         sourceTypeOn = DEFAULT_STR;
         sourceTypeOff = DEFAULT_STR;
         
-        tableData.clear();
-        //tableData.shrink_to_fit();
-        commandsOn.clear();
-        //commandsOn.shrink_to_fit();
-        commandsOff.clear();
-        //commandsOff.shrink_to_fit();
         
         
         if (drawLocation.empty() || (currentPage == drawLocation) || (optionName.front() == '@')) {
@@ -3541,7 +3539,18 @@ bool drawCommandsMenu(tsl::elm::List* list,
                             skipSection = false;
                             lastSection = "Commands";
                         }
-                        commandFooter = parseValueFromIniSection(packageConfigIniPath, optionName, FOOTER_STR);
+                        //commandFooter = parseValueFromIniSection(packageConfigIniPath, optionName, FOOTER_STR);
+
+                        packageConfigData = getParsedDataFromIniFile(packageConfigIniPath); // reuse variable (better memory management)
+                        auto optionIt = packageConfigData.find(optionName);
+                        if (optionIt != packageConfigData.end()) {
+                            auto footerIt = optionIt->second.find(FOOTER_STR);
+                            if (footerIt != optionIt->second.end()) {
+                                commandFooter = footerIt->second;
+                            }
+                        }
+                        packageConfigData.clear();
+
                         // override loading of the command footer
 
                         tsl::elm::ListItem* listItem;
@@ -3911,6 +3920,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
 
                     addTable(list, tableData, packagePath, tableColumnOffset, tableStartGap, tableEndGap, tableSpacing,
                         tableSectionTextColor, tableInfoTextColor, tableInfoTextColor, tableAlignment, hideTableBackground, useHeaderIndent, isPolling, isScrollableTable, tableWrappingMode, useWrappingIndent);
+                    tableData.clear();
 
                     if (usingBottomPivot) {
                         addDummyListItem(list);
@@ -4066,7 +4076,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
 
                     continue;
                 } else if (commandMode == NAMED_STEP_TRACKBAR_STR) {
-                    entryList.clear();
+                    //entryList.clear();
                     //entryList.shrink_to_fit();
                     entryList = {};
                     
@@ -4215,6 +4225,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
                         applyPlaceholderReplacementsToCommands(modifiedCmds, packagePath);
                         tsl::changeTo<ScriptOverlay>(std::move(modifiedCmds), packagePath, keyName, isFromMainMenu ? "main" : "package", false, lastPackageHeader);
                     });
+                    entryList.clear();
                     
                     // Add the NamedStepTrackBarV2 to the list
                     list->addItem(namedStepTrackBar);
@@ -6218,6 +6229,7 @@ public:
                     }
 
                     tsl::pop();
+                    skipJumpReset = true;
                     jumpItemName = HIDDEN;
                     jumpItemValue = DROPDOWN_SYMBOL;
                     jumpItemExactMatch = true;
