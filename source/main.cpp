@@ -143,6 +143,7 @@ static std::unordered_map<std::string, std::string> selectedFooterDict;
 static tsl::elm::ListItem* selectedListItem;
 static tsl::elm::ListItem* lastSelectedListItem;
 static tsl::elm::ListItem* forwarderListItem;
+//static tsl::elm::ListItem* dropdownListItem;
 
 static bool lastRunningInterpreter = false;
 
@@ -678,37 +679,66 @@ public:
         const std::vector<std::string> defaultLanguagesRepresentation = {ENGLISH, SPANISH, FRENCH, GERMAN, JAPANESE, KOREAN, ITALIAN, DUTCH, PORTUGUESE, RUSSIAN, UKRAINIAN, POLISH, SIMPLIFIED_CHINESE, TRADITIONAL_CHINESE};
         static const std::vector<std::string> defaultLanguages = {"en", "es", "fr", "de", "ja", "ko", "it", "nl", "pt", "ru", "uk", "pl", "zh-cn", "zh-tw"};
         
-        auto list = new tsl::elm::List();
+        auto* list = new tsl::elm::List();
         
         if (dropdownSelection.empty()) {
             addHeader(list, MAIN_SETTINGS);
-            std::string defaultLang = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, DEFAULT_LANG_STR);
-            std::string keyCombo = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, KEY_COMBO_STR);
+            
+            // Load INI once and extract all values
+            auto ultrahandIniData = getParsedDataFromIniFile(ULTRAHAND_CONFIG_INI_PATH);
+            auto sectionIt = ultrahandIniData.find(ULTRAHAND_PROJECT_NAME);
+            
+            // Extract all values with defaults
+            std::string defaultLang = "";
+            std::string keyCombo = "";
+            std::string currentTheme = "";
+            std::string currentWallpaper = "";
+            
+            if (sectionIt != ultrahandIniData.end()) {
+                auto langIt = sectionIt->second.find(DEFAULT_LANG_STR);
+                if (langIt != sectionIt->second.end()) {
+                    defaultLang = langIt->second;
+                }
+                
+                auto comboIt = sectionIt->second.find(KEY_COMBO_STR);
+                if (comboIt != sectionIt->second.end()) {
+                    keyCombo = comboIt->second;
+                }
+                
+                auto themeIt = sectionIt->second.find("current_theme");
+                if (themeIt != sectionIt->second.end()) {
+                    currentTheme = themeIt->second;
+                }
+                
+                if (expandedMemory) {
+                    auto wallpaperIt = sectionIt->second.find("current_wallpaper");
+                    if (wallpaperIt != sectionIt->second.end()) {
+                        currentWallpaper = wallpaperIt->second;
+                    }
+                }
+            }
+            
+            // Apply defaults and processing
             trim(keyCombo);
             defaultLang = defaultLang.empty() ? "en" : defaultLang;
             keyCombo = keyCombo.empty() ? defaultCombos[0] : keyCombo;
-
             convertComboToUnicode(keyCombo);
+            currentTheme = (currentTheme.empty() || currentTheme == DEFAULT_STR) ? DEFAULT : currentTheme;
+            if (expandedMemory) {
+                currentWallpaper = (currentWallpaper.empty() || currentWallpaper == OPTION_SYMBOL) ? OPTION_SYMBOL : currentWallpaper;
+            }
+            
             addListItem(list, KEY_COMBO, keyCombo, KEY_COMBO_STR);
             addListItem(list, LANGUAGE, defaultLang, "languageMenu");
             addListItem(list, SYSTEM, DROPDOWN_SYMBOL, "systemMenu");
             addListItem(list, SOFTWARE_UPDATE, DROPDOWN_SYMBOL, "softwareUpdateMenu");
-
             addHeader(list, UI_SETTINGS);
-
-            std::string currentTheme = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "current_theme");
-            currentTheme = (currentTheme.empty() || currentTheme == DEFAULT_STR) ? DEFAULT : currentTheme;
             addListItem(list, THEME, currentTheme, "themeMenu");
-
             if (expandedMemory) {
-                std::string currentWallpaper = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "current_wallpaper");
-                currentWallpaper = (currentWallpaper.empty() || currentWallpaper == OPTION_SYMBOL) ? OPTION_SYMBOL : currentWallpaper;
                 addListItem(list, WALLPAPER, currentWallpaper, "wallpaperMenu");
             }
-
             addListItem(list, WIDGET, DROPDOWN_SYMBOL, "widgetMenu");
             addListItem(list, MISCELLANEOUS, DROPDOWN_SYMBOL, "miscMenu");
-
         } else if (dropdownSelection == KEY_COMBO_STR) {
             addHeader(list, KEY_COMBO);
             std::string defaultCombo = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, KEY_COMBO_STR);
@@ -1348,20 +1378,30 @@ public:
 
         list->addItem(listItem);
     }
-
+    
     virtual tsl::elm::Element* createUI() override {
         settingsIniPath = (entryMode == OVERLAY_STR) ? OVERLAYS_INI_FILEPATH : PACKAGES_INI_FILEPATH;
-        const std::string header =  title + (!version.empty() ? (" " + version) : "");
+        const std::string header = title + (!version.empty() ? (" " + version) : "");
         inSettingsMenu = dropdownSelection.empty();
         inSubSettingsMenu = !dropdownSelection.empty();
-    
-        auto list = new tsl::elm::List();
+        
+        // Load settings INI once for the entire method
+        auto settingsIniData = getParsedDataFromIniFile(settingsIniPath);
+        auto sectionIt = settingsIniData.find(entryName);
+        
+        // Helper lambda to safely get values from loaded settings data
+        auto getSettingsValue = [&](const std::string& key) -> std::string {
+            return (sectionIt != settingsIniData.end() && sectionIt->second.count(key)) 
+                ? sectionIt->second.at(key) : "";
+        };
+        
+        auto* list = new tsl::elm::List();
     
         if (inSettingsMenu) {
-            addHeader(list, SETTINGS + "  " + header);
-
+            addHeader(list, SETTINGS + "  " + header);
+    
             {
-                std::string currentKeyCombo = parseValueFromIniSection(settingsIniPath, entryName, KEY_COMBO_STR);
+                const std::string currentKeyCombo = getSettingsValue(KEY_COMBO_STR);
                 std::string displayCombo = currentKeyCombo.empty() ? OPTION_SYMBOL : currentKeyCombo;
                 
                 // Convert combo to unicode for display
@@ -1394,14 +1434,14 @@ public:
                 (entryMode == OVERLAY_STR) ? HIDE_OVERLAY : HIDE_PACKAGE,
                 false,
                 HIDE_STR,
-                parseValueFromIniSection(settingsIniPath, entryName, HIDE_STR),
+                getSettingsValue(HIDE_STR),
                 settingsIniPath,
                 entryName,
                 true
             );
     
             auto* listItem = new tsl::elm::ListItem(SORT_PRIORITY);
-            listItem->setValue(parseValueFromIniSection(settingsIniPath, entryName, PRIORITY_STR));
+            listItem->setValue(getSettingsValue(PRIORITY_STR));
             listItem->setClickListener([entryName=entryName, entryMode=entryMode, overlayName=title, overlayVersion=version, listItem](uint64_t keys) {
                 if (runningInterpreter.load(acquire)) return false;
                 if (simulatedSelect.exchange(false, acq_rel)) {
@@ -1426,21 +1466,21 @@ public:
                     LAUNCH_ARGUMENTS,
                     false,
                     USE_LAUNCH_ARGS_STR,
-                    parseValueFromIniSection(settingsIniPath, entryName, USE_LAUNCH_ARGS_STR),
+                    getSettingsValue(USE_LAUNCH_ARGS_STR),
                     settingsIniPath,
                     entryName
                 );
-
-                const std::string argStr = parseValueFromIniSection(settingsIniPath, entryName, "mode_args");
-                const std::string comboStr = parseValueFromIniSection(settingsIniPath, entryName, "mode_combos");
-                const std::string labelStr = parseValueFromIniSection(settingsIniPath, entryName, "mode_labels");
+    
+                const std::string argStr = getSettingsValue("mode_args");
+                const std::string comboStr = getSettingsValue("mode_combos");
+                const std::string labelStr = getSettingsValue("mode_labels");
                 
                 const std::vector<std::string> modeList = splitIniList(argStr);   // (-mini, -micro)
                 const std::vector<std::string> comboList = splitIniList(comboStr);     // (ZL+ZR+DRIGHT, '')
                 const std::vector<std::string> labelList = splitIniList(labelStr);     // (Mini Mode, Micro Mode)
                 
                 if (!modeList.empty()) {
-
+    
                     std::vector<std::vector<std::string>> tableData = {
                         {"", "", ""}  // Direct reuse without reallocation
                     };
@@ -1450,35 +1490,34 @@ public:
                     };
                     addTable(list, tableData, "", 165, 19-2, 19-2, 0, "header", "header", DEFAULT_STR, RIGHT_STR, true, true, false, true, "none", false);
                     
-                    // Parse the existing combos list, or create empty defaults
-                    const std::string comboStr = parseValueFromIniSection(settingsIniPath, entryName, "mode_combos");
-                    std::vector<std::string> comboList = splitIniList(comboStr);
+                    // Use already loaded comboStr instead of re-reading
+                    std::vector<std::string> comboListMutable = splitIniList(comboStr);
                     // Ensure comboList is same size as modeList, fill with empty if missing
-                    if (comboList.size() < modeList.size())
-                        comboList.resize(modeList.size(), "");
+                    if (comboListMutable.size() < modeList.size())
+                        comboListMutable.resize(modeList.size(), "");
                     
                     std::string mode, displayName, comboDisplay;
                     for (size_t i = 0; i < modeList.size(); ++i) {
                         mode = modeList[i];
                         displayName = (i < labelList.size() && !labelList[i].empty()) ? labelList[i] : mode;
-                        const std::string& combo = comboList[i];  // reference so we can modify
-                
+                        const std::string& combo = comboListMutable[i];  // reference so we can modify
+    
                         // Display combo or OPTION_SYMBOL if empty
                         comboDisplay = combo.empty() ? OPTION_SYMBOL : combo;
                         convertComboToUnicode(comboDisplay);
-                
+    
                         auto* item = new tsl::elm::ListItem(displayName);
                         item->setValue(comboDisplay);
-                
+    
                         // Capture by pointer/ref so we can update comboList[i]
-                        item->setClickListener([entryName = entryName, settingsIniPath = settingsIniPath, i, mode, &comboList, item, this](uint64_t keys) mutable {
+                        item->setClickListener([entryName = entryName, settingsIniPath = settingsIniPath, i, mode, &comboListMutable, item, this](uint64_t keys) mutable {
                             if (runningInterpreter.load(acquire)) return false;
                             if (simulatedSelect.exchange(false, acq_rel)) {
                                 keys |= KEY_A;
                             }
                             if (keys & KEY_A) {
                                 inMainMenu = false;
-                
+    
                                 // Open a new SettingsMenu specifically for editing this mode combo
                                 tsl::changeTo<SettingsMenu>(
                                     entryName,
@@ -1494,7 +1533,7 @@ public:
                             }
                             return false;
                         });
-                
+    
                         list->addItem(item);
                     }
                 }
@@ -1504,7 +1543,7 @@ public:
                     BOOT_COMMANDS,
                     true,
                     USE_BOOT_PACKAGE_STR,
-                    parseValueFromIniSection(settingsIniPath, entryName, USE_BOOT_PACKAGE_STR),
+                    getSettingsValue(USE_BOOT_PACKAGE_STR),
                     settingsIniPath,
                     entryName
                 );
@@ -1513,7 +1552,7 @@ public:
                     EXIT_COMMANDS,
                     true,
                     USE_EXIT_PACKAGE_STR,
-                    parseValueFromIniSection(settingsIniPath, entryName, USE_EXIT_PACKAGE_STR),
+                    getSettingsValue(USE_EXIT_PACKAGE_STR),
                     settingsIniPath,
                     entryName
                 );
@@ -1522,7 +1561,7 @@ public:
                     "Quick Launch",
                     false,
                     USE_QUICK_LAUNCH_STR,
-                    parseValueFromIniSection(settingsIniPath, entryName, USE_QUICK_LAUNCH_STR),
+                    getSettingsValue(USE_QUICK_LAUNCH_STR),
                     settingsIniPath,
                     entryName
                 );
@@ -1531,14 +1570,14 @@ public:
                     ERROR_LOGGING,
                     false,
                     USE_LOGGING_STR,
-                    parseValueFromIniSection(settingsIniPath, entryName, USE_LOGGING_STR),
+                    getSettingsValue(USE_LOGGING_STR),
                     settingsIniPath,
                     entryName
                 );
             }
         } else if (dropdownSelection == PRIORITY_STR) {
             addHeader(list, SORT_PRIORITY);
-            const std::string priorityValue = parseValueFromIniSection(settingsIniPath, entryName, PRIORITY_STR);
+            const std::string priorityValue = getSettingsValue(PRIORITY_STR);
             for (int i = 0; i <= MAX_PRIORITY; ++i) {
                 createAndAddListItem(
                     list,
@@ -1551,8 +1590,13 @@ public:
             }
         } else if (dropdownSelection == KEY_COMBO_STR) {
             addHeader(list, KEY_COMBO);
-            const std::string currentKeyCombo = parseValueFromIniSection(settingsIniPath, entryName, KEY_COMBO_STR);
-            std::string globalDefaultCombo = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, KEY_COMBO_STR);
+            const std::string currentKeyCombo = getSettingsValue(KEY_COMBO_STR);
+            
+            // Load ultrahand config INI for global default combo
+            auto ultrahandConfigData = getParsedDataFromIniFile(ULTRAHAND_CONFIG_INI_PATH);
+            auto ultrahandSectionIt = ultrahandConfigData.find(ULTRAHAND_PROJECT_NAME);
+            std::string globalDefaultCombo = (ultrahandSectionIt != ultrahandConfigData.end() && ultrahandSectionIt->second.count(KEY_COMBO_STR))
+                ? ultrahandSectionIt->second.at(KEY_COMBO_STR) : "";
             trim(globalDefaultCombo);
             
             // Add "No Key Combo" option first
@@ -1594,7 +1638,7 @@ public:
                     continue; // Skip the global default combo
                 }
                 
-
+    
                 mappedCombo = combo;
                 convertComboToUnicode(mappedCombo);
                 
@@ -1639,7 +1683,7 @@ public:
             const size_t idx = std::stoi(indexStr);
             
             // Read labels and use label if available, otherwise fall back to title with quotes
-            const std::string labelStr = parseValueFromIniSection(settingsIniPath, entryName, "mode_labels");
+            const std::string labelStr = getSettingsValue("mode_labels");
             const std::vector<std::string> labelList = splitIniList(labelStr);
             const std::string labelText = (idx < labelList.size() && !labelList[idx].empty()) ? 
                                    labelList[idx] : 
@@ -1648,20 +1692,23 @@ public:
                 modeTitle = labelList[idx];
             else
                 modeTitle = title;
-            const std::string headerText = KEY_COMBO + "  " + labelText;
+            const std::string headerText = KEY_COMBO + "  " + labelText;
             //labelList.clear();
             addHeader(list, headerText);
-
+    
         
             // Read current combo list and ensure it's large enough
-            std::string comboStr = parseValueFromIniSection(settingsIniPath, entryName, "mode_combos");
+            std::string comboStr = getSettingsValue("mode_combos");
             std::vector<std::string> comboList = splitIniList(comboStr);
             if (idx >= comboList.size()) comboList.resize(idx + 1, "");
         
             std::string currentCombo = comboList[idx];
         
-            // Fetch global default combo (to exclude it)
-            std::string globalDefaultCombo = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, KEY_COMBO_STR);
+            // Load ultrahand config INI for global default combo
+            auto ultrahandConfigData = getParsedDataFromIniFile(ULTRAHAND_CONFIG_INI_PATH);
+            auto ultrahandSectionIt = ultrahandConfigData.find(ULTRAHAND_PROJECT_NAME);
+            std::string globalDefaultCombo = (ultrahandSectionIt != ultrahandConfigData.end() && ultrahandSectionIt->second.count(KEY_COMBO_STR))
+                ? ultrahandSectionIt->second.at(KEY_COMBO_STR) : "";
             trim(globalDefaultCombo);
         
             // Add "No Combo" option
@@ -1697,7 +1744,7 @@ public:
         
             // Add valid combos
             std::string mappedCombo;
-
+    
             for (const auto& combo : defaultCombos) {
                 if (combo == globalDefaultCombo) continue; // Skip global default combo
         
@@ -1753,13 +1800,13 @@ public:
         //auto rootFrame = std::make_unique<tsl::elm::OverlayFrame>(CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel);
         //rootFrame->setContent(list);
         //return rootFrame.release();
-
+    
         auto rootFrame = new tsl::elm::OverlayFrame(CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel);
         if (inSubSettingsMenu &&
             (dropdownSelection == KEY_COMBO_STR ||
              dropdownSelection == PRIORITY_STR ||
              dropdownSelection.rfind("mode_combo_", 0) == 0)) {
-
+    
             jumpItemName = "";
             jumpItemValue = "";
             jumpItemExactMatch = true;
@@ -2014,7 +2061,7 @@ public:
         std::string packageName = getNameFromPath(filePath);
         if (packageName == ".packages") packageName = ROOT_PACKAGE;
         else if (!packageRootLayerTitle.empty()) packageName = packageRootLayerTitle;
-        auto list = new tsl::elm::List();
+        auto* list = new tsl::elm::List();
         
         
         bool noClickableItems = false;
@@ -2585,7 +2632,7 @@ public:
         inSelectionMenu = true;
         PackageHeader packageHeader = getPackageHeaderFromIni(filePath + PACKAGE_FILENAME);
     
-        auto list = new tsl::elm::List();
+        auto* list = new tsl::elm::List();
         packageConfigIniPath = filePath + CONFIG_FILENAME;
     
         commandSystem = commandSystems[0];
@@ -3857,7 +3904,12 @@ bool drawCommandsMenu(tsl::elm::List* list,
             updateValue(SYSTEM_STR, commandSystem);
             updateValue(MODE_STR, commandMode);
             updateValue(GROUPING_STR, commandGrouping);
-            updateValue(FOOTER_STR, commandFooter);
+            //updateValue(FOOTER_STR, commandFooter);
+
+            auto optionIt = packageConfigData.find(optionName);
+            if ((optionIt != packageConfigData.end() && optionIt->second.count(FOOTER_STR)) || !commandFooter.empty()) {
+                updateValue(FOOTER_STR, commandFooter);
+            }
             
             
             // Get Option name and footer
@@ -3924,8 +3976,28 @@ bool drawCommandsMenu(tsl::elm::List* list,
                     trackBar->setScriptKeyListener([commands, keyName = option.first, packagePath, lastPackageHeader]() {
                         const bool isFromMainMenu = (packagePath == PACKAGE_PATH);
                         
-                        const std::string valueStr = parseValueFromIniSection(packagePath+"config.ini", keyName, "value");
-                        std::string indexStr = parseValueFromIniSection(packagePath+"config.ini", keyName, "index");
+                        //std::string valueStr = parseValueFromIniSection(packagePath+"config.ini", keyName, "value");
+                        //std::string indexStr = parseValueFromIniSection(packagePath+"config.ini", keyName, "index");
+
+                        std::string valueStr = "";
+                        std::string indexStr = "";
+                        
+                        {
+                            auto configIniData = getParsedDataFromIniFile(packagePath + "config.ini");
+                            auto sectionIt = configIniData.find(keyName);
+                            if (sectionIt != configIniData.end()) {
+                                auto valueIt = sectionIt->second.find("value");
+                                if (valueIt != sectionIt->second.end()) {
+                                    valueStr = valueIt->second;
+                                }
+                                
+                                auto indexIt = sectionIt->second.find("index");
+                                if (indexIt != sectionIt->second.end()) {
+                                    indexStr = indexIt->second;
+                                }
+                            }
+                        }
+
                         if (!isValidNumber(indexStr))
                             indexStr = "0";
 
@@ -3980,8 +4052,28 @@ bool drawCommandsMenu(tsl::elm::List* list,
                         const bool isFromMainMenu = (packagePath == PACKAGE_PATH);
                         
                         // Parse the value and index from the INI file
-                        const std::string valueStr = parseValueFromIniSection(packagePath + "config.ini", keyName, "value");
-                        std::string indexStr = parseValueFromIniSection(packagePath + "config.ini", keyName, "index");
+                        //std::string valueStr = parseValueFromIniSection(packagePath + "config.ini", keyName, "value");
+                        //std::string indexStr = parseValueFromIniSection(packagePath + "config.ini", keyName, "index");
+
+                        std::string valueStr = "";
+                        std::string indexStr = "";
+                        
+                        {
+                            auto configIniData = getParsedDataFromIniFile(packagePath + "config.ini");
+                            auto sectionIt = configIniData.find(keyName);
+                            if (sectionIt != configIniData.end()) {
+                                auto valueIt = sectionIt->second.find("value");
+                                if (valueIt != sectionIt->second.end()) {
+                                    valueStr = valueIt->second;
+                                }
+                                
+                                auto indexIt = sectionIt->second.find("index");
+                                if (indexIt != sectionIt->second.end()) {
+                                    indexStr = indexIt->second;
+                                }
+                            }
+                        }
+
                         
                         if (!isValidNumber(indexStr))
                             indexStr = "0";
@@ -4109,8 +4201,29 @@ bool drawCommandsMenu(tsl::elm::List* list,
                         const bool isFromMainMenu = (packagePath == PACKAGE_PATH);
                     
                         // Parse the value and index from the INI file
-                        std::string valueStr = parseValueFromIniSection(packagePath + "config.ini", keyName, "value");
-                        std::string indexStr = parseValueFromIniSection(packagePath + "config.ini", keyName, "index");
+                        //std::string valueStr = parseValueFromIniSection(packagePath + "config.ini", keyName, "value");
+                        //std::string indexStr = parseValueFromIniSection(packagePath + "config.ini", keyName, "index");
+
+                        // Load config INI once and extract both values
+                        
+                        std::string valueStr = "";
+                        std::string indexStr = "";
+
+                        {
+                            auto configIniData = getParsedDataFromIniFile(packagePath + "config.ini");
+                            auto sectionIt = configIniData.find(keyName);
+                            if (sectionIt != configIniData.end()) {
+                                auto valueIt = sectionIt->second.find("value");
+                                if (valueIt != sectionIt->second.end()) {
+                                    valueStr = valueIt->second;
+                                }
+                                
+                                auto indexIt = sectionIt->second.find("index");
+                                if (indexIt != sectionIt->second.end()) {
+                                    indexStr = indexIt->second;
+                                }
+                            }
+                        }
                     
                         // Fallback if indexStr is not a valid number
                         if (!isValidNumber(indexStr))
@@ -4459,15 +4572,10 @@ bool drawCommandsMenu(tsl::elm::List* list,
     }
     
     options.clear();
-    //options.shrink_to_fit();
     commands.clear();
-    //commands.shrink_to_fit();
     commandsOn.clear();
-    //commandsOn.shrink_to_fit();
     commandsOff.clear();
-    //commandsOff.shrink_to_fit();
     tableData.clear();
-    //tableData.shrink_to_fit();
     return onlyTables;
 }
 
@@ -4575,7 +4683,7 @@ public:
             lastMenu = "subPackageMenu";
         }
         
-        auto list = new tsl::elm::List();
+        auto* list = new tsl::elm::List();
 
         packageIniPath = packagePath + packageName;
         packageConfigIniPath = packagePath + CONFIG_FILENAME;
@@ -5043,21 +5151,58 @@ public:
     virtual tsl::elm::Element* createUI() override {
         //menuIsGenerated = false;
     
-        if (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_OVERLAY_STR) == TRUE_STR) {
-            inMainMenu = false;
-            inHiddenMode = true;
-            hiddenMenuMode = OVERLAYS_STR;
-            skipJumpReset = true;
-            setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_OVERLAY_STR, FALSE_STR);
+        //if (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_OVERLAY_STR) == TRUE_STR) {
+        //    inMainMenu = false;
+        //    inHiddenMode = true;
+        //    hiddenMenuMode = OVERLAYS_STR;
+        //    skipJumpReset = true;
+        //    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_OVERLAY_STR, FALSE_STR);
+        //}
+        //
+        //else if (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_PACKAGE_STR) == TRUE_STR) {
+        //    inMainMenu = false;
+        //    inHiddenMode = true;
+        //    hiddenMenuMode = PACKAGES_STR;
+        //    skipJumpReset = true;
+        //    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_PACKAGE_STR, FALSE_STR);
+        //}
+
+        {
+            // Load INI once and check both values
+            auto iniData = getParsedDataFromIniFile(ULTRAHAND_CONFIG_INI_PATH);
+            auto& ultrahandSection = iniData[ULTRAHAND_PROJECT_NAME];
+            
+            bool needsUpdate = false;
+            
+            // Check for hidden overlay
+            auto overlayIt = ultrahandSection.find(IN_HIDDEN_OVERLAY_STR);
+            if (overlayIt != ultrahandSection.end() && overlayIt->second == TRUE_STR) {
+                inMainMenu = false;
+                inHiddenMode = true;
+                hiddenMenuMode = OVERLAYS_STR;
+                skipJumpReset = true;
+                ultrahandSection[IN_HIDDEN_OVERLAY_STR] = FALSE_STR;
+                needsUpdate = true;
+            }
+            // Check for hidden package
+            else {
+                auto packageIt = ultrahandSection.find(IN_HIDDEN_PACKAGE_STR);
+                if (packageIt != ultrahandSection.end() && packageIt->second == TRUE_STR) {
+                    inMainMenu = false;
+                    inHiddenMode = true;
+                    hiddenMenuMode = PACKAGES_STR;
+                    skipJumpReset = true;
+                    ultrahandSection[IN_HIDDEN_PACKAGE_STR] = FALSE_STR;
+                    needsUpdate = true;
+                }
+            }
+            
+            // Write back only if changes were made
+            if (needsUpdate) {
+                saveIniFileData(ULTRAHAND_CONFIG_INI_PATH, iniData);
+            }
         }
 
-        else if (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_PACKAGE_STR) == TRUE_STR) {
-            inMainMenu = false;
-            inHiddenMode = true;
-            hiddenMenuMode = PACKAGES_STR;
-            skipJumpReset = true;
-            setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_PACKAGE_STR, FALSE_STR);
-        }
     
         if (!inHiddenMode && dropdownSection.empty())
             inMainMenu = true;
@@ -5106,7 +5251,7 @@ public:
         //versionLabel = cleanVersionLabel(APP_VERSION) + "  " + loaderTitle + " " + cleanVersionLabel(loaderInfo);
         //versionLabel = (cleanVersionLabels) ? std::string(APP_VERSION) : (std::string(APP_VERSION) + "   (" + extractTitle(loaderInfo) + " v" + cleanVersionLabel(loaderInfo) + ")");
         
-        auto list = new tsl::elm::List();
+        auto* list = new tsl::elm::List();
         //list = std::make_unique<tsl::elm::List>();
     
         
@@ -5353,15 +5498,53 @@ public:
     
                             if (keys & KEY_A) {
                                 
-                                const std::string useOverlayLaunchArgs = parseValueFromIniSection(OVERLAYS_INI_FILEPATH, overlayFileName, USE_LAUNCH_ARGS_STR);
-                                std::string overlayLaunchArgs = parseValueFromIniSection(OVERLAYS_INI_FILEPATH, overlayFileName, LAUNCH_ARGS_STR);
-                                removeQuotes(overlayLaunchArgs);
-                                
-                                if (inHiddenMode) {
-                                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_OVERLAY_STR, TRUE_STR);
+                                //std::string useOverlayLaunchArgs = parseValueFromIniSection(OVERLAYS_INI_FILEPATH, overlayFileName, USE_LAUNCH_ARGS_STR);
+                                //std::string overlayLaunchArgs = parseValueFromIniSection(OVERLAYS_INI_FILEPATH, overlayFileName, LAUNCH_ARGS_STR);
+
+                                std::string useOverlayLaunchArgs;
+                                std::string overlayLaunchArgs;
+                                {
+                                    // Load INI once and extract both values
+                                    auto overlaysIniData = getParsedDataFromIniFile(OVERLAYS_INI_FILEPATH);
+                                    
+                                    auto sectionIt = overlaysIniData.find(overlayFileName);
+                                    if (sectionIt != overlaysIniData.end()) {
+                                        auto useArgsIt = sectionIt->second.find(USE_LAUNCH_ARGS_STR);
+                                        if (useArgsIt != sectionIt->second.end()) {
+                                            useOverlayLaunchArgs = useArgsIt->second;
+                                        }
+                                        
+                                        auto argsIt = sectionIt->second.find(LAUNCH_ARGS_STR);
+                                        if (argsIt != sectionIt->second.end()) {
+                                            overlayLaunchArgs = argsIt->second;
+                                        }
+                                    }
+                                    removeQuotes(overlayLaunchArgs);
                                 }
+
                                 
-                                setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_OVERLAY_STR, TRUE_STR); // this is handled within tesla.hpp
+                                
+                                //if (inHiddenMode) {
+                                //    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_OVERLAY_STR, TRUE_STR);
+                                //}
+                                //setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_OVERLAY_STR, TRUE_STR); // this is handled within tesla.hpp
+
+                                {
+                                    // Load INI data once and modify in memory
+                                    auto iniData = getParsedDataFromIniFile(ULTRAHAND_CONFIG_INI_PATH);
+                                    auto& ultrahandSection = iniData[ULTRAHAND_PROJECT_NAME];
+                                    
+                                    // Make all changes in memory
+                                    if (inHiddenMode) {
+                                        ultrahandSection[IN_HIDDEN_OVERLAY_STR] = TRUE_STR;
+                                    }
+                                    ultrahandSection[IN_OVERLAY_STR] = TRUE_STR; // this is handled within tesla.hpp
+                                    
+                                    // Write back once
+                                    saveIniFileData(ULTRAHAND_CONFIG_INI_PATH, iniData);
+                                }
+
+
                                 if (useOverlayLaunchArgs == TRUE_STR)
                                     tsl::setNextOverlay(overlayFile, overlayLaunchArgs);
                                 else
@@ -5699,10 +5882,29 @@ public:
                                 inMainMenu = false;
                                 
                                 if (isFileOrDirectory(packageFilePath + BOOT_PACKAGE_FILENAME)) {
-                                    bool useBootPackage = !(parseValueFromIniSection(PACKAGES_INI_FILEPATH, packageName, USE_BOOT_PACKAGE_STR) == FALSE_STR);
-                                    
-                                    if (!selectedPackage.empty())
-                                        useBootPackage = (useBootPackage && !(parseValueFromIniSection(PACKAGES_INI_FILEPATH, packageName, USE_QUICK_LAUNCH_STR) == TRUE_STR));
+                                    //bool useBootPackage = !(parseValueFromIniSection(PACKAGES_INI_FILEPATH, packageName, USE_BOOT_PACKAGE_STR) == FALSE_STR);
+                                    //if (!selectedPackage.empty())
+                                    //    useBootPackage = (useBootPackage && !(parseValueFromIniSection(PACKAGES_INI_FILEPATH, packageName, USE_QUICK_LAUNCH_STR) == TRUE_STR));
+
+                                    bool useBootPackage = true;
+                                    {
+                                        // Load INI data once and extract both values
+                                        const auto packagesIniData = getParsedDataFromIniFile(PACKAGES_INI_FILEPATH);
+                                        auto sectionIt = packagesIniData.find(selectedPackage);
+                                        
+                                        
+                                        if (sectionIt != packagesIniData.end()) {
+                                            auto bootIt = sectionIt->second.find(USE_BOOT_PACKAGE_STR);
+                                            useBootPackage = (bootIt == sectionIt->second.end()) || (bootIt->second != FALSE_STR);
+                                            
+                                            if (!selectedPackage.empty()) {
+                                                auto quickIt = sectionIt->second.find(USE_QUICK_LAUNCH_STR);
+                                                const bool useQuickLaunch = (quickIt != sectionIt->second.end()) && (quickIt->second == TRUE_STR);
+                                                useBootPackage = useBootPackage && !useQuickLaunch;
+                                            }
+                                        }
+                                    }
+
                                     if (useBootPackage) {
                                         // Load only the commands from the specific section (bootCommandName)
                                         auto bootCommands = loadSpecificSectionFromIni(packageFilePath + BOOT_PACKAGE_FILENAME, "boot");
@@ -5941,10 +6143,26 @@ public:
         if (inMainMenu && !inHiddenMode && dropdownSection.empty()) {
             if (triggerMenuReload || triggerMenuReload2) {
                 triggerMenuReload = triggerMenuReload2 = false;
-                if (menuMode == PACKAGES_STR)
-                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "to_packages", FALSE_STR);
-                
-                setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_OVERLAY_STR, TRUE_STR);
+                //if (menuMode == PACKAGES_STR)
+                //    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "to_packages", FALSE_STR);
+                //
+                //setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_OVERLAY_STR, TRUE_STR);
+
+                // Load INI data once and modify in memory
+                {
+                    auto iniData = getParsedDataFromIniFile(ULTRAHAND_CONFIG_INI_PATH);
+                    auto& ultrahandSection = iniData[ULTRAHAND_PROJECT_NAME];
+                    
+                    // Make all changes in memory
+                    if (menuMode == PACKAGES_STR) {
+                        ultrahandSection["to_packages"] = FALSE_STR;
+                    }
+                    ultrahandSection[IN_OVERLAY_STR] = TRUE_STR;
+                    
+                    // Write back once
+                    saveIniFileData(ULTRAHAND_CONFIG_INI_PATH, iniData);
+                }
+
                 tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl", "--skipCombo");
                 tsl::Overlay::get()->close();
             }
@@ -6386,9 +6604,30 @@ public:
                 
                 // Handle boot package logic (similar to your KEY_A handler)
                 if (isFileOrDirectory(packageFilePath + BOOT_PACKAGE_FILENAME)) {
-                    bool useBootPackage = !(parseValueFromIniSection(PACKAGES_INI_FILEPATH, selectedPackage, USE_BOOT_PACKAGE_STR) == FALSE_STR);
-                    if (!selectedPackage.empty())
-                        useBootPackage = (useBootPackage && !(parseValueFromIniSection(PACKAGES_INI_FILEPATH, selectedPackage, USE_QUICK_LAUNCH_STR) == TRUE_STR));
+                    //bool useBootPackage = !(parseValueFromIniSection(PACKAGES_INI_FILEPATH, selectedPackage, USE_BOOT_PACKAGE_STR) == FALSE_STR);
+                    //if (!selectedPackage.empty())
+                    //    useBootPackage = (useBootPackage && !(parseValueFromIniSection(PACKAGES_INI_FILEPATH, selectedPackage, USE_QUICK_LAUNCH_STR) == TRUE_STR));
+
+
+                    bool useBootPackage = true;
+                    {
+                        // Load INI data once and extract both values
+                        const auto packagesIniData = getParsedDataFromIniFile(PACKAGES_INI_FILEPATH);
+                        auto sectionIt = packagesIniData.find(selectedPackage);
+                        
+                        
+                        if (sectionIt != packagesIniData.end()) {
+                            auto bootIt = sectionIt->second.find(USE_BOOT_PACKAGE_STR);
+                            useBootPackage = (bootIt == sectionIt->second.end()) || (bootIt->second != FALSE_STR);
+                            
+                            if (!selectedPackage.empty()) {
+                                auto quickIt = sectionIt->second.find(USE_QUICK_LAUNCH_STR);
+                                const bool useQuickLaunch = (quickIt != sectionIt->second.end()) && (quickIt->second == TRUE_STR);
+                                useBootPackage = useBootPackage && !useQuickLaunch;
+                            }
+                        }
+                    }
+
                     if (useBootPackage) {
                         // Load only the commands from the specific section (bootCommandName)
                         auto bootCommands = loadSpecificSectionFromIni(packageFilePath + BOOT_PACKAGE_FILENAME, "boot");
