@@ -6295,14 +6295,22 @@ void initializeSettingsAndDirectories() {
     bool settingsLoaded = false;
     bool needsUpdate = false;
     
-    // Always try to load INI data (will be empty if file doesn't exist)
-    auto iniData = getParsedDataFromIniFile(ULTRAHAND_CONFIG_INI_PATH);
-    auto& ultrahandSection = iniData[ULTRAHAND_PROJECT_NAME];
-    
+    std::map<std::string, std::map<std::string, std::string>> iniData;
+
     // Check if file didn't exist
     if (!isFileOrDirectory(ULTRAHAND_CONFIG_INI_PATH)) {
         updateMenuCombos = true;
+    } else {
+        // Always try to load INI data (will be empty if file doesn't exist)
+        iniData = getParsedDataFromIniFile(ULTRAHAND_CONFIG_INI_PATH);
+        if (iniData.empty() || iniData[ULTRAHAND_PROJECT_NAME].empty()) {
+            svcSleepThread(100'000);
+            iniData = getParsedDataFromIniFile(ULTRAHAND_CONFIG_INI_PATH);
+        }
     }
+
+
+    auto& ultrahandSection = iniData[ULTRAHAND_PROJECT_NAME];
     
     // Efficient lambdas that modify in-memory data and track updates
     auto setDefaultValue = [&](const std::string& section, const std::string& defaultValue, bool& settingFlag) {
@@ -6519,6 +6527,7 @@ public:
      * @return A unique pointer to the initial GUI element.
      */
     virtual std::unique_ptr<tsl::Gui> loadInitialGui() override {
+        settingsInitialized.exchange(false, acq_rel);
         tsl::gfx::FontManager::preloadPersistentGlyphs("0123456789%●", 20);
         tsl::gfx::FontManager::preloadPersistentGlyphs(""+ult::HIDE+""+ult::CANCEL, 23);
         initializeSettingsAndDirectories();
@@ -6612,7 +6621,7 @@ public:
                 packageRootLayerVersion = assignedOverlayVersion;  // Use proper version
                 
                 inMainMenu = false;
-                
+                settingsInitialized.exchange(true, acq_rel);
                 // Return PackageMenu directly instead of MainMenu
                 return initially<PackageMenu>(packageFilePath, "");
             } else {
@@ -6620,7 +6629,7 @@ public:
                 selectedPackage.clear();
             }
         }
-        
+        settingsInitialized.exchange(true, acq_rel);
         // Default behavior - load main menu
         return initially<MainMenu>();
     }
