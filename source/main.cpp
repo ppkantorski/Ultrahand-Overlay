@@ -57,6 +57,7 @@ static bool returningToPackage = false;
 static bool returningToSubPackage = false;
 static bool returningToSelectionMenu = false;
 static bool languageWasChanged = false;
+static bool themeWasChanged = false;
 
 //static bool skipJumpReset = false; // for overrridng the default main menu jump to implementation // moved to utils
 
@@ -953,6 +954,7 @@ public:
                     shiftItemFocus(listItem);
                     if (lastSelectedListItem)
                         lastSelectedListItem->triggerClickAnimation();
+                    themeWasChanged = true;
                     return true;
                 }
                 return false;
@@ -997,6 +999,7 @@ public:
                         shiftItemFocus(listItem);
                         if (lastSelectedListItem)
                             lastSelectedListItem->triggerClickAnimation();
+                        themeWasChanged = true;
                         return true;
                     }
                     return false;
@@ -1035,7 +1038,6 @@ public:
                     shiftItemFocus(listItem);
                     if (lastSelectedListItem)
                         lastSelectedListItem->triggerClickAnimation();
-                    
                     return true;
                 }
                 return false;
@@ -1068,7 +1070,6 @@ public:
                         copyFileOrDirectory(wallpaperFile, WALLPAPER_PATH);
                         copyPercentage.store(-1, release);
                         reloadWallpaper();
-                        
                         if (lastSelectedListItem)
                             lastSelectedListItem->setValue("");
                         if (selectedListItem)
@@ -1079,7 +1080,6 @@ public:
                         shiftItemFocus(listItem);
                         if (selectedListItem)
                             lastSelectedListItem->triggerClickAnimation();
-                        
                         return true;
                     }
                     return false;
@@ -1164,6 +1164,13 @@ public:
                 jumpItemExactMatch = true;
                 g_overlayFilename = "";
                 languageWasChanged = false;
+                list->jumpToItem(jumpItemName, jumpItemValue, jumpItemExactMatch);
+            } else if (themeWasChanged) {
+                jumpItemName = THEME;
+                jumpItemValue = "";
+                jumpItemExactMatch = true;
+                g_overlayFilename = "";
+                themeWasChanged = false;
                 list->jumpToItem(jumpItemName, jumpItemValue, jumpItemExactMatch);
             } else {
                 jumpItemName = "";
@@ -4578,6 +4585,7 @@ public:
             } else
                 skipJumpReset = false;
             //tsl::clearGlyphCacheNow.store(true, release);
+            settingsInitialized.exchange(true, acq_rel);
         }
 
     /**
@@ -5090,6 +5098,7 @@ public:
         jumpItemName = "";
         jumpItemValue = "";
         jumpItemExactMatch = true;
+        settingsInitialized.exchange(true, acq_rel);
     }
     /**
      * @brief Destroys the `MainMenu` instance.
@@ -6531,7 +6540,7 @@ public:
      * @return A unique pointer to the initial GUI element.
      */
     virtual std::unique_ptr<tsl::Gui> loadInitialGui() override {
-        settingsInitialized.exchange(false, acq_rel);
+        //settingsInitialized.exchange(false, acq_rel);
         tsl::gfx::FontManager::preloadPersistentGlyphs("0123456789%●", 20);
         tsl::gfx::FontManager::preloadPersistentGlyphs(""+ult::HIDE+""+ult::CANCEL, 23);
         initializeSettingsAndDirectories();
@@ -6625,7 +6634,7 @@ public:
                 packageRootLayerVersion = assignedOverlayVersion;  // Use proper version
                 
                 inMainMenu = false;
-                settingsInitialized.exchange(true, acq_rel);
+                
                 // Return PackageMenu directly instead of MainMenu
                 return initially<PackageMenu>(packageFilePath, "");
             } else {
@@ -6633,7 +6642,7 @@ public:
                 selectedPackage.clear();
             }
         }
-        settingsInitialized.exchange(true, acq_rel);
+        //settingsInitialized.exchange(true, acq_rel);
         // Default behavior - load main menu
         return initially<MainMenu>();
     }
