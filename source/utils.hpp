@@ -2102,38 +2102,7 @@ void applyReplaceIniPlaceholder(std::string& arg, const std::string& commandName
         return; // No placeholders found, nothing to do
     }
     
-    // Pre-declare scan variables for efficiency
-    size_t scanPos = 0;
-    std::string scanContent;
-    
-    // Pre-scan to check if we need ANY INI data (section,key OR numeric placeholders)
-    bool needsIniData = false;
-    while ((scanPos = arg.find(searchString, scanPos)) != std::string::npos) {
-        const size_t scanEndPos = arg.find(")}", scanPos);
-        if (scanEndPos != std::string::npos) {
-            scanContent = arg.substr(scanPos + searchString.length(), 
-                                   scanEndPos - scanPos - searchString.length());
-            trim(scanContent);
-            if (!scanContent.empty()) {
-                needsIniData = true;
-                break;
-            }
-        }
-        scanPos += searchString.length();
-    }
-    
-    // Load INI data once if needed
-    std::map<std::string, std::map<std::string, std::string>> iniData;
-    std::vector<std::string> sectionNames;
-    if (needsIniData) {
-        iniData = getParsedDataFromIniFile(iniPath);
-        // Extract section names from loaded data instead of calling parseSectionsFromIni
-        for (const auto& section : iniData) {
-            sectionNames.push_back(section.first);
-        }
-    }
-    
-    // Pre-declare main loop variables outside the loop
+    // Pre-declare variables outside the loop
     size_t startPos = 0;
     size_t endPos;
     size_t commaPos;
@@ -2143,22 +2112,14 @@ void applyReplaceIniPlaceholder(std::string& arg, const std::string& commandName
     std::string iniSection;
     std::string iniKey;
     
+    // Cache section names to avoid re-parsing INI file multiple times
+    std::vector<std::string> sectionNames;
+    bool sectionsLoaded = false;
+    
     // Build result incrementally to avoid expensive string replacement operations
     std::string result;
     size_t lastPos = 0;
     const size_t searchStringLen = searchString.length();
-    
-    // Helper lambda to safely get values from loaded INI data
-    auto getIniValue = [&](const std::string& section, const std::string& key) -> std::string {
-        auto sectionIt = iniData.find(section);
-        if (sectionIt != iniData.end()) {
-            auto keyIt = sectionIt->second.find(key);
-            if (keyIt != sectionIt->second.end()) {
-                return keyIt->second;
-            }
-        }
-        return "";
-    };
     
     // Process all occurrences of the placeholder
     while ((startPos = arg.find(searchString, lastPos)) != std::string::npos) {
@@ -2180,7 +2141,7 @@ void applyReplaceIniPlaceholder(std::string& arg, const std::string& commandName
         commaPos = placeholderContent.find(',');
         
         if (commaPos != std::string::npos) {
-            // Handle section,key format using loaded INI data
+            // Handle section,key format
             iniSection = placeholderContent.substr(0, commaPos);
             trim(iniSection);
             removeQuotes(iniSection);
@@ -2189,13 +2150,18 @@ void applyReplaceIniPlaceholder(std::string& arg, const std::string& commandName
             trim(iniKey);
             removeQuotes(iniKey);
             
-            replacement = getIniValue(iniSection, iniKey);
+            replacement = parseValueFromIniSection(iniPath, iniSection, iniKey);
         } else {
             // Check if the content is an integer
             if (std::all_of(placeholderContent.begin(), placeholderContent.end(), ::isdigit)) {
                 entryIndex = ult::stoi(placeholderContent);
                 
-                // Use section names extracted from already-loaded INI data
+                // Load section names only once when needed
+                if (!sectionsLoaded) {
+                    sectionNames = parseSectionsFromIni(iniPath);
+                    sectionsLoaded = true;
+                }
+                
                 if (entryIndex < sectionNames.size()) {
                     replacement = sectionNames[entryIndex];
                 } else {

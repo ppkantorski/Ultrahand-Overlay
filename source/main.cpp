@@ -2311,7 +2311,7 @@ private:
  */
 class SelectionOverlay : public tsl::Gui {
 private:
-    std::string filePath, specificKey, pathPattern, pathPatternOn, pathPatternOff, itemName, groupingName, lastGroupingName;
+    std::string filePath, specificKey, pathPattern, pathPatternOn, pathPatternOff, groupingName, lastGroupingName;
     std::string specifiedFooterKey;
     bool toggleState = false;
     std::string packageConfigIniPath;
@@ -2392,7 +2392,8 @@ public:
         bool inMarikoSection = false;
         std::string currentSection = GLOBAL_STR;
         std::string iniFilePath;
-    
+        
+        
         // Use string_view for read-only operations to avoid copying
         std::string commandName;
         std::string filterEntry;
@@ -2650,6 +2651,7 @@ public:
     
         std::vector<std::string> selectedItemsListOn, selectedItemsListOff;
         std::string currentPackageHeader;
+        std::string itemName;
     
         if (commandMode == DEFAULT_STR || commandMode == OPTION_STR) {
             if (sourceType == FILE_STR)
@@ -2922,7 +2924,7 @@ public:
                     listItem->setValue(footer, true);
                 }
     
-                listItem->setClickListener([i, selectedItem, footer, listItem, currentPackageHeader, this](uint64_t keys) {
+                listItem->setClickListener([this, i, selectedItem, footer, listItem, currentPackageHeader, itemName](uint64_t keys) {
     
                     if (runningInterpreter.load(acquire)) {
                         return false;
@@ -2982,7 +2984,7 @@ public:
                 const bool toggleStateOn = std::find(selectedItemsListOn.cbegin(), selectedItemsListOn.cend(), selectedItem) != selectedItemsListOn.cend();
                 toggleListItem->setState(toggleStateOn);
     
-                toggleListItem->setStateChangedListener([i, toggleListItem, selectedItem, this](bool state) {
+                toggleListItem->setStateChangedListener([this, i, toggleListItem, selectedItem, itemName](bool state) {
     
                     tsl::Overlay::get()->getCurrentGui()->requestFocus(toggleListItem, tsl::FocusDirection::None);
                 
@@ -3052,7 +3054,7 @@ public:
                 });
                                 
                 // Set the script key listener (for SCRIPT_KEY)
-                toggleListItem->setScriptKeyListener([i, currentPackageHeader, this, selectedItem](bool state) {
+                toggleListItem->setScriptKeyListener([this, i, currentPackageHeader, itemName, selectedItem](bool state) {
                     // Initialize currentSelectedItem for this index if it does not exist
                     if (isInitialized.find(i) == isInitialized.end() || !isInitialized[i]) {
                         currentSelectedItems[i] = selectedItem;
@@ -4381,7 +4383,9 @@ bool drawCommandsMenu(tsl::elm::List* list,
 
                                 std::string selectionItem = keyName;
                                 removeTag(selectionItem);
-                                tsl::changeTo<ScriptOverlay>(std::move(getSourceReplacement(commands, keyName, i, packagePath)), packagePath, selectionItem, isFromMainMenu ? "main" : "package", true, lastPackageHeader);
+                                auto modifiedCmds = commands;
+                                applyPlaceholderReplacementsToCommands(modifiedCmds, packagePath);
+                                tsl::changeTo<ScriptOverlay>(std::move(modifiedCmds), packagePath, selectionItem, isFromMainMenu ? "main" : "package", true, lastPackageHeader);
                                 return true;
                             }
                             return false;
