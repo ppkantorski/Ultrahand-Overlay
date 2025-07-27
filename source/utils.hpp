@@ -3078,151 +3078,160 @@ bool applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
 void processCommand(const std::vector<std::string>& cmd, const std::string& packagePath, const std::string& selectedCommand);
 
 
-
 /**
  * @brief Apply placeholder replacements to a list of commands and handle control flow commands.
  *
  * This function iterates over a list of commands, where each command is a vector of strings,
  * and applies the `applyPlaceholderReplacements` function to handle the placeholders.
  * It also handles control flow commands like "erista:" and "mariko:".
+ * Optimized for minimal memory usage with in-place compaction.
  *
  * @param commands A list of commands, where each command is represented as a vector of strings.
  * @param packagePath The path to the package (optional).
  * @param selectedCommand A specific command to execute (optional).
  * @return Returns true if the placeholders were successfully applied to the commands, false otherwise.
  */
-bool applyPlaceholderReplacementsToCommands(std::vector<std::vector<std::string>>& commands, const std::string& packagePath = "", const std::string& selectedCommand = "") {
-
+bool applyPlaceholderReplacementsToCommands(std::vector<std::vector<std::string>>& commands, 
+                                           const std::string& packagePath = "", 
+                                           const std::string& selectedCommand = "") {
+    
     std::string listString, listPath, jsonString, jsonPath, hexPath, iniPath;
-
     bool inEristaSection = false;
     bool inMarikoSection = false;
-    bool eraseAtEnd = false;
-
-    size_t cmdSize;
-
-    // Use deque for efficient front/back operations while maintaining iterator validity
-    std::deque<std::vector<std::string>> commandQueue(
-        std::make_move_iterator(commands.begin()),
-        std::make_move_iterator(commands.end())
-    );
-    commands.clear(); // Free original vector memory
-
-    // Process commands and rebuild the commands vector
-    std::vector<std::vector<std::string>> processedCommands;
-    processedCommands.reserve(commandQueue.size()); // Pre-allocate
-
-    std::vector<std::string> cmd;
-    while (!commandQueue.empty()) {
-        cmd = std::move(commandQueue.front()); // Move to avoid copy
-        commandQueue.pop_front();
-
+    
+    // Two-pointer technique: readIndex reads all commands, writeIndex writes kept commands
+    size_t writeIndex = 0;
+    
+    for (size_t readIndex = 0; readIndex < commands.size(); ++readIndex) {
+        auto& cmd = commands[readIndex];
+        
         if (cmd.empty()) {
-            continue; // Skip empty commands
+            // Skip empty commands, don't increment writeIndex
+            cmd.clear();
+            cmd.shrink_to_fit();
+            continue;
         }
 
-        const std::string& commandName = cmd[0];
+        const std::string_view commandName = cmd[0];
 
-        // Handle control flow commands like "erista:" and "mariko:"
+        // Handle control flow commands
         if (commandName == "erista:") {
             inEristaSection = true;
             inMarikoSection = false;
-            continue; // Don't add to processed commands
+            cmd.clear();
+            cmd.shrink_to_fit();
+            continue; // Don't keep this command
         } else if (commandName == "mariko:") {
             inEristaSection = false;
             inMarikoSection = true;
-            continue; // Don't add to processed commands
+            cmd.clear();
+            cmd.shrink_to_fit();
+            continue; // Don't keep this command
         } else if ((!commandName.empty() && commandName.front() == ';') ||
-            (commandName.size() >= 7 && commandName.substr(commandName.size() - 7) == "_source") ||
-            commandName == "logging") { // remove stuff that isn't executable
-            continue; // Don't add to processed commands
+                   (commandName.size() >= 7 && commandName.substr(commandName.size() - 7) == "_source") ||
+                   commandName == "logging") {
+            cmd.clear();
+            cmd.shrink_to_fit();
+            continue; // Don't keep this command
         }
 
-        // If we're in a section not relevant to the current hardware, skip the command
+        // Skip commands not relevant to current hardware
         if ((inEristaSection && !usingErista) || (inMarikoSection && !usingMariko)) {
-            continue; // Skip this command entirely
+            cmd.clear();
+            cmd.shrink_to_fit();
+            continue; // Don't keep this command
         }
 
-        // Apply placeholder replacements in the current command
+        // Apply placeholder replacements
         applyPlaceholderReplacements(cmd, hexPath, iniPath, listString, listPath, jsonString, jsonPath);
 
-        // Handle special commands like LIST_STR, LIST_FILE_STR, etc.
-        cmdSize = cmd.size();
-        eraseAtEnd = false;
+        // Handle special commands
+        const size_t cmdSize = cmd.size();
+        bool shouldKeep = true;
 
         if (commandName == LIST_STR && cmdSize >= 2) {
-            listString = cmd[1]; // Direct assignment, no unnecessary copy constructor
+            listString = cmd[1];
             removeQuotes(listString);
-            eraseAtEnd = true;
+            shouldKeep = false;
         } else if (commandName == LIST_FILE_STR && cmdSize >= 2) {
-            listPath = cmd[1]; // Direct assignment
+            listPath = cmd[1];
             preprocessPath(listPath, packagePath);
-            eraseAtEnd = true;
+            shouldKeep = false;
         } else if (commandName == JSON_STR && cmdSize >= 2) {
-            jsonString = cmd[1]; // Direct assignment
-            eraseAtEnd = true;
+            jsonString = cmd[1];
+            shouldKeep = false;
         } else if (commandName == JSON_FILE_STR && cmdSize >= 2) {
-            jsonPath = cmd[1]; // Direct assignment
+            jsonPath = cmd[1];
             preprocessPath(jsonPath, packagePath);
-            eraseAtEnd = true;
+            shouldKeep = false;
         } else if (commandName == INI_FILE_STR && cmdSize >= 2) {
-            iniPath = cmd[1]; // Direct assignment
+            iniPath = cmd[1];
             preprocessPath(iniPath, packagePath);
-            eraseAtEnd = true;
+            shouldKeep = false;
         } else if (commandName == HEX_FILE_STR && cmdSize >= 2) {
-            hexPath = cmd[1]; // Direct assignment
+            hexPath = cmd[1];
             preprocessPath(hexPath, packagePath);
-            eraseAtEnd = true;
-        } else if (commandName == "filter" || commandName == "file_name" || commandName == "folder_name" || commandName == "sourced_path") {
-            eraseAtEnd = true;
+            shouldKeep = false;
+        } else if (commandName == "filter" || commandName == "file_name" || 
+                   commandName == "folder_name" || commandName == "sourced_path") {
+            shouldKeep = false;
         }
 
-        // Apply quoting logic to arguments
+        if (!shouldKeep) {
+            cmd.clear();
+            cmd.shrink_to_fit();
+            continue; // Don't keep this command
+        }
+
+        // Apply quoting logic to arguments for commands we're keeping
         for (size_t i = 1; i < cmd.size(); ++i) {
             std::string& argument = cmd[i];
 
-            // If the argument is exactly empty, add quotes
             if (argument.empty()) {
                 argument = "''";
                 continue;
             }
 
-            // If the argument already has quotes, skip it
             if (argument.size() >= 2 &&
                 ((argument.front() == '"' && argument.back() == '"') ||
                  (argument.front() == '\'' && argument.back() == '\''))) {
-                continue; // Already quoted, skip
+                continue;
             }
 
-            // If the argument contains no spaces, do not add quotes
             if (argument.find(' ') == std::string::npos) {
-                continue;  // No spaces, so no need for quotes
+                continue;
             }
 
-            // Apply appropriate quoting based on content
-            if (argument.find('\'') != std::string::npos) {
-                argument = "\"" + argument + "\"";  // Wrap in double quotes
-            }
-            else if (argument.find('"') != std::string::npos) {
-                argument = "\'" + argument + "\'";  // Wrap in single quotes
-            }
-            else {
-                argument = "\'" + argument + "\'";  // Default to single quotes
+            // Optimized quoting - fewer string operations
+            const bool hasSingleQuote = argument.find('\'') != std::string::npos;
+            const bool hasDoubleQuote = argument.find('"') != std::string::npos;
+            
+            if (hasSingleQuote && !hasDoubleQuote) {
+                argument.insert(0, 1, '"');
+                argument.push_back('"');
+            } else {
+                argument.insert(0, 1, '\'');
+                argument.push_back('\'');
             }
         }
 
-        // Only add to processed commands if not marked for erasure
-        if (!eraseAtEnd) {
-            processedCommands.push_back(std::move(cmd));
+        // Keep this command - move it to the write position
+        if (writeIndex != readIndex) {
+            commands[writeIndex] = std::move(cmd);
         }
+        ++writeIndex;
+    }
+    
+    // Resize to keep only the commands we want
+    commands.resize(writeIndex);
+    
+    // Shrink capacity if we removed a lot of commands
+    if (commands.capacity() > commands.size() * 2) {
+        commands.shrink_to_fit();
     }
 
-    // Replace original commands with processed ones
-    commands = std::move(processedCommands);
-
-    return true;  // Indicating that placeholder replacements have been applied successfully
+    return true;
 }
-
 
 
 /**
@@ -3232,7 +3241,17 @@ bool applyPlaceholderReplacementsToCommands(std::vector<std::vector<std::string>
  *
  * @param commands A list of commands, where each command is represented as a vector of strings.
  */
-bool interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& commands, const std::string& packagePath="", const std::string& selectedCommand="") {
+/**
+ * @brief Interpret and execute a list of commands.
+ *
+ * This function interprets and executes a list of commands based on their names and arguments.
+ * Optimized for minimal memory usage by clearing processed commands immediately.
+ *
+ * @param commands A list of commands, where each command is represented as a vector of strings.
+ */
+bool interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& commands, 
+                                const std::string& packagePath = "", 
+                                const std::string& selectedCommand = "") {
     
     #if USING_LOGGING_DIRECTIVE
     if (!packagePath.empty()) {
@@ -3255,7 +3274,6 @@ bool interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
     const auto bufferSection = getKeyValuePairsFromSection(ULTRAHAND_CONFIG_INI_PATH, MEMORY_STR);
     
     if (!bufferSection.empty()) {
-        // Use structured approach for buffer configuration
         struct BufferConfig {
             const char* key;
             size_t* target;
@@ -3283,8 +3301,12 @@ bool interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
     bool inMarikoSection = false;
     bool inTrySection = false;
     
+    // String buffers for command processing
     std::string listString, listPath, jsonString, jsonPath, hexPath, iniPath;
-    std::string message;
+    
+    #if USING_LOGGING_DIRECTIVE
+    std::string messageBuffer;
+    #endif
 
     // Reset global state
     commandSuccess = true;
@@ -3292,18 +3314,19 @@ bool interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
     refreshPackage = false;
     interpreterLogging = false;
 
-    // Use deque for O(1) front removal while maintaining memory efficiency
-    std::deque<std::vector<std::string>> commandQueue(
-        std::make_move_iterator(commands.begin()),
-        std::make_move_iterator(commands.end())
-    );
-    commands.clear(); // Free original vector memory immediately
-    
-    while (!commandQueue.empty()) {
+    // Process commands one by one, clearing each after processing
+    for (size_t i = 0; i < commands.size(); ++i) {
         // Check for abort signal
         if (abortCommand.load(std::memory_order_acquire)) {
             abortCommand.store(false, std::memory_order_release);
             commandSuccess = false;
+            // Clear all remaining commands
+            for (size_t j = i; j < commands.size(); ++j) {
+                commands[j].clear();
+                commands[j].shrink_to_fit();
+            }
+            commands.clear();
+            commands.shrink_to_fit();
             #if USING_LOGGING_DIRECTIVE
             disableLogging = true;
             logFilePath = defaultLogFilePath;
@@ -3311,44 +3334,62 @@ bool interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
             return commandSuccess;
         }
 
-        auto& cmd = commandQueue.front();
+        auto& cmd = commands[i];
         
         // Skip empty commands
         if (cmd.empty()) {
-            commandQueue.pop_front(); // Free memory immediately
             continue;
         }
 
-        const std::string& commandName = cmd[0];
+        // Use string_view to avoid copying command name
+        const std::string_view commandName = cmd[0];
 
         // Handle control flow commands
         if (commandName == "try:") {
             if (inTrySection && commandSuccess) {
-                break;
+                // Clear remaining commands and exit
+                for (size_t j = i; j < commands.size(); ++j) {
+                    commands[j].clear();
+                    commands[j].shrink_to_fit();
+                }
+                commands.clear();
+                commands.shrink_to_fit();
+                #if USING_LOGGING_DIRECTIVE
+                disableLogging = true;
+                logFilePath = defaultLogFilePath;
+                #endif
+                return commandSuccess;
             }
             commandSuccess = true;
             inTrySection = true;
-            commandQueue.pop_front(); // Free memory
+            // Clear and continue
+            cmd.clear();
+            cmd.shrink_to_fit();
             continue;
         }
         
         if (commandName == "erista:") {
             inEristaSection = true;
             inMarikoSection = false;
-            commandQueue.pop_front(); // Free memory
+            // Clear and continue
+            cmd.clear();
+            cmd.shrink_to_fit();
             continue;
         }
         
         if (commandName == "mariko:") {
             inEristaSection = false;
             inMarikoSection = true;
-            commandQueue.pop_front(); // Free memory
+            // Clear and continue
+            cmd.clear();
+            cmd.shrink_to_fit();
             continue;
         }
 
         // Skip commands in try section if previous command failed
         if (!commandSuccess && inTrySection) {
-            commandQueue.pop_front(); // Free memory even when skipping
+            cmd.clear();
+            cmd.shrink_to_fit();
             continue;
         }
 
@@ -3359,38 +3400,52 @@ bool interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
             (!inEristaSection && !inMarikoSection);
 
         if (!shouldExecute) {
-            commandQueue.pop_front(); // Free memory for skipped commands
+            cmd.clear();
+            cmd.shrink_to_fit();
             continue;
         }
 
         // Only execute if not in try section or if we're succeeding in try section
         if (inTrySection && !commandSuccess) {
-            commandQueue.pop_front(); // Free memory for skipped commands
+            cmd.clear();
+            cmd.shrink_to_fit();
             continue;
         }
 
-        // Apply placeholder replacements
-        applyPlaceholderReplacements(cmd, hexPath, iniPath, listString, listPath, jsonString, jsonPath);
+        // Apply placeholder replacements only if needed
+        bool hasPlaceholders = false;
+        for (const auto& arg : cmd) {
+            if (arg.find('{') != std::string::npos) {
+                hasPlaceholders = true;
+                break;
+            }
+        }
+        
+        if (hasPlaceholders) {
+            applyPlaceholderReplacements(cmd, hexPath, iniPath, listString, listPath, jsonString, jsonPath);
+        }
 
         #if USING_LOGGING_DIRECTIVE
         if (interpreterLogging) {
             disableLogging = false;
-            message = "Executing command: ";
-            //message.reserve(256); // Pre-allocate reasonable size
             
-            for (const std::string& token : cmd) {
-                message += token + " ";
+            // Build log message efficiently
+            messageBuffer.clear();
+            messageBuffer += "Executing command: ";
+            for (const auto& token : cmd) {
+                messageBuffer += token;
+                messageBuffer += ' ';
             }
-            logMessage(message);
+            logMessage(messageBuffer);
         }
         #endif
 
         const size_t cmdSize = cmd.size();
 
-        // Process different command types
+        // Process different command types with direct assignment to reuse string buffers
         if (commandName == LIST_STR) {
             if (cmdSize >= 2) {
-                listString = cmd[1];
+                listString = cmd[1]; // Reuses existing string buffer
                 removeQuotes(listString);
             }
         } 
@@ -3428,9 +3483,14 @@ bool interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
             processCommand(cmd, packagePath, selectedCommand);
         }
         
-        // Free processed command memory
-        commandQueue.pop_front();
+        // Clear the processed command immediately to free its memory
+        cmd.clear();
+        cmd.shrink_to_fit();
     }
+
+    // Final cleanup
+    commands.clear();
+    commands.shrink_to_fit();
 
     #if USING_LOGGING_DIRECTIVE
     disableLogging = true;
@@ -3482,175 +3542,252 @@ void handleMakeDirCommand(const std::vector<std::string>& cmd, const std::string
 }
 
 void handleCopyCommand(const std::vector<std::string>& cmd, const std::string& packagePath) {
+    // Declare only the strings we always need
     std::string sourceListPath, destinationListPath, logSource, logDestination, sourcePath, destinationPath, copyFilterListPath, filterListPath;
     parseCommandArguments(cmd, packagePath, sourceListPath, destinationListPath, logSource, logDestination, sourcePath, destinationPath, copyFilterListPath, filterListPath);
-    long long totalBytesCopied, totalSize;
-
+    
     if (!sourceListPath.empty() && !destinationListPath.empty()) {
-        const std::vector<std::string> sourceFilesList = readListFromFile(sourceListPath);
-        const std::vector<std::string> destinationFilesList = readListFromFile(destinationListPath);
-
-        std::unordered_set<std::string> filterSet;
-        if (!filterListPath.empty())
-            filterSet = readSetFromFile(filterListPath);
-
+        // Process list-based copying
+        auto sourceFilesList = readListFromFile(sourceListPath);
+        auto destinationFilesList = readListFromFile(destinationListPath);
         
-        for (size_t i = 0; i < sourceFilesList.size(); ++i) {
-            sourcePath = sourceFilesList[i];
+        // Only create filterSet if filter file exists
+        std::unique_ptr<std::unordered_set<std::string>> filterSet;
+        if (!filterListPath.empty()) {
+            filterSet = std::make_unique<std::unordered_set<std::string>>(readSetFromFile(filterListPath));
+        }
+        
+        const size_t listSize = std::min(sourceFilesList.size(), destinationFilesList.size());
+        for (size_t i = 0; i < listSize; ++i) {
+            // Reuse existing sourcePath and destinationPath strings
+            sourcePath = std::move(sourceFilesList[i]);
             preprocessPath(sourcePath, packagePath);
-            destinationPath = destinationFilesList[i];
+            
+            destinationPath = std::move(destinationFilesList[i]);
             preprocessPath(destinationPath, packagePath);
-            if (filterListPath.empty() || (!filterListPath.empty() && filterSet.find(sourcePath) == filterSet.end())) {
-                totalBytesCopied = 0;
-                totalSize = getTotalSize(sourcePath);  // Ensure this is calculated if needed.
+            
+            // Only check filter if it exists
+            const bool shouldCopy = !filterSet || filterSet->find(sourcePath) == filterSet->end();
+            
+            if (shouldCopy) {
+                const long long totalSize = getTotalSize(sourcePath);
+                long long totalBytesCopied = 0;
                 copyFileOrDirectory(sourcePath, destinationPath, &totalBytesCopied, totalSize);
             }
+            
+            // Clear the source vectors as we process to free memory immediately
+            sourceFilesList[i].clear();
+            destinationFilesList[i].clear();
         }
+        
     } else {
-        // Ensure source and destination paths are set
+        // Single file/directory copying - early returns to avoid unnecessary work
         if (sourcePath.empty() || destinationPath.empty()) {
             #if USING_LOGGING_DIRECTIVE
             logMessage("Source and destination paths must be specified.");
             #endif
+            return;
+        }
+        
+        if (!isFileOrDirectory(sourcePath)) {
+            #if USING_LOGGING_DIRECTIVE
+            logMessage("Source file or directory doesn't exist: " + sourcePath);
+            #endif
+            return;
+        }
+        
+        if (sourcePath.find('*') != std::string::npos) {
+            copyFileOrDirectoryByPattern(sourcePath, destinationPath, logSource, logDestination);
         } else {
-            // Perform the copy operation
-            if (!isFileOrDirectory(sourcePath)) {
-                #if USING_LOGGING_DIRECTIVE
-                logMessage("Source file or directory doesn't exist: " + sourcePath);
-                #endif
-            } else {
-                if (sourcePath.find('*') != std::string::npos) {
-                    copyFileOrDirectoryByPattern(sourcePath, destinationPath, logSource, logDestination); // Copy files by pattern
-                } else {
-                    totalBytesCopied = 0;
-                    totalSize = getTotalSize(sourcePath);  // Ensure this is calculated if needed.
-                    copyFileOrDirectory(sourcePath, destinationPath, &totalBytesCopied, totalSize, logSource, logDestination);
-                }
-            }
+            const long long totalSize = getTotalSize(sourcePath);
+            long long totalBytesCopied = 0;
+            copyFileOrDirectory(sourcePath, destinationPath, &totalBytesCopied, totalSize, logSource, logDestination);
         }
     }
 }
 
 void handleDeleteCommand(const std::vector<std::string>& cmd, const std::string& packagePath) {
+    // Declare only the strings we need
     std::string sourceListPath, destinationListPath, logSource, logDestination, sourcePath, destinationPath, copyFilterListPath, filterListPath;
     parseCommandArguments(cmd, packagePath, sourceListPath, destinationListPath, logSource, logDestination, sourcePath, destinationPath, copyFilterListPath, filterListPath);
-
+    
     if (!sourceListPath.empty()) {
-        const std::vector<std::string> sourceFilesList = readListFromFile(sourceListPath);
-        std::unordered_set<std::string> filterSet;
-        if (!filterListPath.empty())
-            filterSet = readSetFromFile(filterListPath);
-
-        for (size_t i = 0; i < sourceFilesList.size(); ++i) {
-            sourcePath = sourceFilesList[i];
-            preprocessPath(sourcePath, packagePath);
-            if (filterListPath.empty() || (!filterListPath.empty() && filterSet.find(sourcePath) == filterSet.end()))
-                deleteFileOrDirectory(sourcePath);
+        // Process list-based deletion
+        auto sourceFilesList = readListFromFile(sourceListPath);
+        
+        // Only create filterSet if filter file exists
+        std::unique_ptr<std::unordered_set<std::string>> filterSet;
+        if (!filterListPath.empty()) {
+            filterSet = std::make_unique<std::unordered_set<std::string>>(readSetFromFile(filterListPath));
         }
+        
+        for (size_t i = 0; i < sourceFilesList.size(); ++i) {
+            // Move string to avoid copy
+            sourcePath = std::move(sourceFilesList[i]);
+            preprocessPath(sourcePath, packagePath);
+            
+            // Only check filter if it exists
+            const bool shouldDelete = !filterSet || filterSet->find(sourcePath) == filterSet->end();
+            
+            if (shouldDelete) {
+                deleteFileOrDirectory(sourcePath);
+            }
+            
+            // Clear the vector element immediately to free memory
+            sourceFilesList[i].clear();
+        }
+        
     } else {
-
-        // Ensure source path is set
+        // Single file/directory deletion - early returns for error conditions
         if (sourcePath.empty()) {
             #if USING_LOGGING_DIRECTIVE
             logMessage("Source path must be specified.");
             #endif
+            return;
+        }
+        
+        if (isDangerousCombination(sourcePath)) {
+            #if USING_LOGGING_DIRECTIVE
+            logMessage("Dangerous combination detected.");
+            #endif
+            return;
+        }
+        
+        // Perform the delete operation
+        if (sourcePath.find('*') != std::string::npos) {
+            deleteFileOrDirectoryByPattern(sourcePath, logSource);
         } else {
-            // Perform the delete operation
-            if (!isDangerousCombination(sourcePath)) {
-                if (sourcePath.find('*') != std::string::npos)
-                    deleteFileOrDirectoryByPattern(sourcePath, logSource); // Delete files by pattern
-                else
-                    deleteFileOrDirectory(sourcePath, logSource); // Delete single file or directory
-            } else {
-                #if USING_LOGGING_DIRECTIVE
-                logMessage("Dangerous combination detected.");
-                #endif
-            }
+            deleteFileOrDirectory(sourcePath, logSource);
         }
     }
 }
 
 
 void handleMirrorCommand(const std::vector<std::string>& cmd, const std::string& packagePath) {
-    if (cmd.size() >= 2) {
-        std::string sourcePath = cmd[1];
-        preprocessPath(sourcePath, packagePath);
-        std::string destinationPath;
-        if (cmd.size() >= 3) {
-            destinationPath = cmd[2];   // Extract the path first
-            preprocessPath(destinationPath, packagePath);  // Preprocess it
-        } else {
-            destinationPath = ROOT_PATH;  // Default value if cmd.size() < 3
-        }
-        const std::string operation = (cmd[0] == "mirror_copy" || cmd[0] == "mirror_cp") ? "copy" : "delete";
-
-        if (sourcePath.find('*') == std::string::npos) {
-            mirrorFiles(sourcePath, destinationPath, operation);
-        } else {
-            const auto fileList = getFilesListByWildcards(sourcePath);
-            for (const auto& sourceDirectory : fileList) {
-                mirrorFiles(sourceDirectory, destinationPath, operation);
-            }
+    // Early validation
+    if (cmd.size() < 2) {
+        #if USING_LOGGING_DIRECTIVE
+        logMessage("Mirror command requires at least a source path.");
+        #endif
+        return;
+    }
+    
+    // Extract and preprocess source path
+    std::string sourcePath = cmd[1];
+    preprocessPath(sourcePath, packagePath);
+    
+    // Extract destination path or use default
+    std::string destinationPath;
+    if (cmd.size() >= 3) {
+        destinationPath = cmd[2];
+        preprocessPath(destinationPath, packagePath);
+    } else {
+        destinationPath = ROOT_PATH;
+    }
+    
+    // Determine operation type using string_view to avoid string creation
+    const std::string_view commandName = cmd[0];
+    const std::string operation = (commandName == "mirror_copy" || commandName == "mirror_cp") ? "copy" : "delete";
+    
+    if (sourcePath.find('*') == std::string::npos) {
+        // Single directory mirror
+        mirrorFiles(sourcePath, destinationPath, operation);
+    } else {
+        // Wildcard mirror - get file list and process with immediate cleanup
+        auto fileList = getFilesListByWildcards(sourcePath);
+        
+        // Process files one by one, freeing memory as we go
+        for (size_t i = 0; i < fileList.size(); ++i) {
+            // Move the string to avoid copy
+            auto sourceDirectory = std::move(fileList[i]);
+            mirrorFiles(sourceDirectory, destinationPath, operation);
+            
+            // Clear the vector element immediately to free memory
+            fileList[i].clear();
         }
     }
 }
 
 void handleMoveCommand(const std::vector<std::string>& cmd, const std::string& packagePath) {
+    // Declare only the strings we need
     std::string sourceListPath, destinationListPath, logSource, logDestination, sourcePath, destinationPath, copyFilterListPath, filterListPath;
     parseCommandArguments(cmd, packagePath, sourceListPath, destinationListPath, logSource, logDestination, sourcePath, destinationPath, copyFilterListPath, filterListPath);
-
-    long long totalBytesCopied, totalSize;
-
+    
     if (!sourceListPath.empty() && !destinationListPath.empty()) {
-        const std::vector<std::string> sourceFilesList = readListFromFile(sourceListPath);
-        const std::vector<std::string> destinationFilesList = readListFromFile(destinationListPath);
+        // Process list-based moving
+        auto sourceFilesList = readListFromFile(sourceListPath);
+        auto destinationFilesList = readListFromFile(destinationListPath);
+        
+        // Early validation of list sizes
         if (sourceFilesList.size() != destinationFilesList.size()) {
             #if USING_LOGGING_DIRECTIVE
             logMessage("Source and destination lists must have the same number of entries.");
             #endif
-        } else {
-            std::unordered_set<std::string> copyFilterSet;
-            if (!copyFilterListPath.empty())
-                copyFilterSet = readSetFromFile(copyFilterListPath);
-
-            std::unordered_set<std::string> filterSet;
-            if (!filterListPath.empty())
-                filterSet = readSetFromFile(filterListPath);
-
-            for (size_t i = 0; i < sourceFilesList.size(); ++i) {
-                sourcePath = sourceFilesList[i];
-                preprocessPath(sourcePath, packagePath);
-                destinationPath = destinationFilesList[i];
-                preprocessPath(destinationPath, packagePath);
-                if (filterListPath.empty() || (!filterListPath.empty() && filterSet.find(sourcePath) == filterSet.end())) {
-                    if (!copyFilterListPath.empty() && copyFilterSet.find(sourcePath) != copyFilterSet.end()) {
-                        totalBytesCopied = 0;
-                        totalSize = getTotalSize(sourcePath);  // Ensure this is calculated if needed.
-                        copyFileOrDirectory(sourcePath, destinationPath, &totalBytesCopied, totalSize);
-                    } else {
-                        moveFileOrDirectory(sourcePath, destinationPath, "", "");
-                    }
+            return;
+        }
+        
+        // Only create filter sets if filter files exist
+        std::unique_ptr<std::unordered_set<std::string>> copyFilterSet;
+        if (!copyFilterListPath.empty()) {
+            copyFilterSet = std::make_unique<std::unordered_set<std::string>>(readSetFromFile(copyFilterListPath));
+        }
+        
+        std::unique_ptr<std::unordered_set<std::string>> filterSet;
+        if (!filterListPath.empty()) {
+            filterSet = std::make_unique<std::unordered_set<std::string>>(readSetFromFile(filterListPath));
+        }
+        
+        const size_t listSize = sourceFilesList.size(); // Both lists are same size now
+        for (size_t i = 0; i < listSize; ++i) {
+            // Move strings to avoid copies
+            sourcePath = std::move(sourceFilesList[i]);
+            preprocessPath(sourcePath, packagePath);
+            
+            destinationPath = std::move(destinationFilesList[i]);
+            preprocessPath(destinationPath, packagePath);
+            
+            // Only check filter if it exists
+            const bool shouldProcess = !filterSet || filterSet->find(sourcePath) == filterSet->end();
+            
+            if (shouldProcess) {
+                // Check if we should copy instead of move
+                const bool shouldCopy = copyFilterSet && copyFilterSet->find(sourcePath) != copyFilterSet->end();
+                
+                if (shouldCopy) {
+                    const long long totalSize = getTotalSize(sourcePath);
+                    long long totalBytesCopied = 0;
+                    copyFileOrDirectory(sourcePath, destinationPath, &totalBytesCopied, totalSize);
+                } else {
+                    moveFileOrDirectory(sourcePath, destinationPath, "", "");
                 }
             }
+            
+            // Clear the vector elements immediately to free memory
+            sourceFilesList[i].clear();
+            destinationFilesList[i].clear();
         }
+        
     } else {
-        // Ensure source and destination paths are set
+        // Single file/directory moving - early returns for error conditions
         if (sourcePath.empty() || destinationPath.empty()) {
             #if USING_LOGGING_DIRECTIVE
             logMessage("Source and destination paths must be specified.");
             #endif
+            return;
+        }
+        
+        if (isDangerousCombination(sourcePath)) {
+            #if USING_LOGGING_DIRECTIVE
+            logMessage("Dangerous combination detected.");
+            #endif
+            return;
+        }
+        
+        // Perform the move operation
+        if (sourcePath.find('*') != std::string::npos) {
+            moveFilesOrDirectoriesByPattern(sourcePath, destinationPath, logSource, logDestination);
         } else {
-            // Perform the move operation
-            if (!isDangerousCombination(sourcePath)) {
-                if (sourcePath.find('*') != std::string::npos)
-                    moveFilesOrDirectoriesByPattern(sourcePath, destinationPath, logSource, logDestination); // Move files by pattern
-                else
-                    moveFileOrDirectory(sourcePath, destinationPath, logSource, logDestination); // Move single file or directory
-            } else {
-                #if USING_LOGGING_DIRECTIVE
-                logMessage("Dangerous combination detected.");
-                #endif
-            }
+            moveFileOrDirectory(sourcePath, destinationPath, logSource, logDestination);
         }
     }
 }
