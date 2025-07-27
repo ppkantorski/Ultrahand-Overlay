@@ -1377,8 +1377,8 @@ static bool buildTableDrawerLines(
     std::vector<s32>&                            outY,
     std::vector<int>&                            outX
 ) {
-    const size_t lineHeight = 16;
-    const size_t fontSize = 16;
+    constexpr size_t lineHeight = 16;
+    constexpr size_t fontSize = 16;
     const size_t xMax = tsl::cfg::FramebufferWidth - 95;
     const std::string indent = "└ ";
     const float indentWidth = tsl::gfx::calculateStringWidth(indent, fontSize, false);
@@ -1409,7 +1409,7 @@ static bool buildTableDrawerLines(
             // Wrap the base text according to wrappingMode and indent params
             wrappedLines = wrapText(
                 baseText,
-                xMax - 22,
+                xMax - 8,
                 wrappingMode,
                 useWrappedTextIndent,
                 indent, indentWidth,
@@ -1419,8 +1419,8 @@ static bool buildTableDrawerLines(
             // Cache width of info text only once per base line, not per wrapped line
             infoWidth = tsl::gfx::calculateStringWidth(infoText, fontSize, false);
 
-            for (const auto& line : wrappedLines) {
-                outSection.push_back(line);
+            for (auto& line : wrappedLines) {
+                outSection.push_back(std::move(line));
                 outInfo.push_back(infoText);
 
                 xPos = 0;
@@ -2686,7 +2686,7 @@ std::string handleMath(const std::string& placeholder) {
 
     size_t pos;
     // Add spaces around operators to ensure proper parsing
-    for (char op : {'+', '-', '*', '/'}) {
+    for (const char op : {'+', '-', '*', '/'}) {
         pos = 0;
         while ((pos = mathExpression.find(op, pos)) != std::string::npos) {
             if (pos > 0 && mathExpression[pos - 1] != ' ') {

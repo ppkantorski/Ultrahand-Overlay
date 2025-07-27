@@ -161,9 +161,10 @@ std::string getValueOrDefault(const Map& data, const std::string& key, const std
 
 
 inline void clearMemory() {
-    
-    hexSumCache.clear();
-    selectedFooterDict.clear(); // Clears all data from the map, making it empty again
+    hexSumCache = {};
+    selectedFooterDict = {};
+    //hexSumCache.clear();
+    //selectedFooterDict.clear(); // Clears all data from the map, making it empty again
     //selectedListItem = nullptr;
     //lastSelectedListItem = nullptr;
     //forwarderListItem = nullptr;
@@ -1605,6 +1606,7 @@ public:
             std::string globalDefaultCombo = (ultrahandSectionIt != ultrahandConfigData.end() && ultrahandSectionIt->second.count(KEY_COMBO_STR))
                 ? ultrahandSectionIt->second.at(KEY_COMBO_STR) : "";
             trim(globalDefaultCombo);
+            ultrahandConfigData.clear();
             
             // Add "No Key Combo" option first
             auto* listItem = new tsl::elm::ListItem(OPTION_SYMBOL);
@@ -1717,6 +1719,7 @@ public:
             std::string globalDefaultCombo = (ultrahandSectionIt != ultrahandConfigData.end() && ultrahandSectionIt->second.count(KEY_COMBO_STR))
                 ? ultrahandSectionIt->second.at(KEY_COMBO_STR) : "";
             trim(globalDefaultCombo);
+            ultrahandConfigData.clear();
         
             // Add "No Combo" option
             auto* noComboItem = new tsl::elm::ListItem(OPTION_SYMBOL);
@@ -1773,7 +1776,7 @@ public:
                             removeKeyComboFromOthers(combo, entryName);
                             
                             // Re-read the combo list after cleaning to get the updated values
-                            std::string comboStr = parseValueFromIniSection(settingsIniPath, entryName, "mode_combos");
+                            const std::string comboStr = parseValueFromIniSection(settingsIniPath, entryName, "mode_combos");
                             comboList = splitIniList(comboStr);
                             if (idx >= comboList.size()) comboList.resize(idx + 1, "");
                             
@@ -2160,12 +2163,14 @@ public:
                 infoLines.clear();
                 //infoLines.shrink_to_fit();
                 sectionLine = "";
-                for (const auto& command : sourceCommands) {
+                for (auto& command : sourceCommands) {
                     // Each command will be treated as a section with no corresponding info
                     //sectionLine = joinCommands(command);  // Combine command parts into a section line
-                    sectionLines.push_back(command);              // Add to section lines
+                    sectionLines.push_back(std::move(command));              // Add to section lines
                     infoLines.push_back("");                          // Empty info line
                 }
+                sourceCommands.clear();
+                sourceCommands.shrink_to_fit();
 
                 std::string packageSourceName = getNameFromPath(packageSourcePath);
 
@@ -2175,7 +2180,7 @@ public:
             }
         }
 
-        std::string packageVersion = isFromMainMenu ? "" : packageRootLayerVersion;
+        const std::string packageVersion = isFromMainMenu ? "" : packageRootLayerVersion;
 
 
         auto* rootFrame = new tsl::elm::OverlayFrame(packageName,
@@ -3497,7 +3502,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
                             const size_t expectedMinLength = MINI_PATTERN.length() + TRUE_STR.length();
                             
                             if (commandName.length() >= expectedMinLength) {
-                                std::string suffix = commandName.substr(MINI_PATTERN.length());
+                                const std::string suffix = commandName.substr(MINI_PATTERN.length());
                                 
                                 // Only proceed if suffix matches expected values
                                 if (suffix == TRUE_STR) {
@@ -4206,7 +4211,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
                         std::string indexStr = "";
                         
                         {
-                            auto configIniData = getParsedDataFromIniFile(packagePath + "config.ini");
+                            const auto configIniData = getParsedDataFromIniFile(packagePath + "config.ini");
                             auto sectionIt = configIniData.find(keyName);
                             if (sectionIt != configIniData.end()) {
                                 auto valueIt = sectionIt->second.find("value");
@@ -4606,7 +4611,9 @@ public:
      */
     PackageMenu(const std::string& path, const std::string& sectionName = "", const std::string& page = LEFT_STR, const std::string& _packageName = PACKAGE_FILENAME, const size_t _nestedlayer = 0, const std::string& _pageHeader = "") :
         packagePath(path), dropdownSection(sectionName), currentPage(page), packageName(_packageName), nestedLayer(_nestedlayer), pageHeader(_pageHeader) {
-            hexSumCache.clear();
+            //if (nestedLayer > 0)
+            //    hexSumCache.clear();
+
             if (!skipJumpReset) {
                 jumpItemName = "";
                 jumpItemValue = "";
@@ -4624,7 +4631,7 @@ public:
      * Cleans up any resources associated with the `PackageMenu` instance.
      */
     ~PackageMenu() {
-        hexSumCache.clear();
+        
 
         if (returningToMain || returningToHiddenMain) {
             tsl::clearGlyphCacheNow.store(true, release);
@@ -4657,6 +4664,8 @@ public:
                 }
             }
 
+        //} else {
+        //    hexSumCache.clear();
         }
     }
 
