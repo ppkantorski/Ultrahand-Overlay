@@ -2793,7 +2793,7 @@ public:
     
         if (selectedItemsList.empty()) {
             if (commandGrouping != DEFAULT_STR) {
-                std::string cleanSpecificKey = specificKey;
+                std::string cleanSpecificKey = specificKey.substr(1);
                 removeTag(cleanSpecificKey);
                 addHeader(list, cleanSpecificKey);
                 currentPackageHeader = cleanSpecificKey;
@@ -2968,10 +2968,10 @@ public:
                             selectedFooterDict[specifiedFooterKey] = listItem->getText();
                             if (lastSelectedListItem && listItem && lastSelectedListItem != listItem) {
                             
-                                lastSelectedListItem->setValue(lastSelectedListItemFooter, true);
+                                lastSelectedListItem->setValue(lastSelectedListItemFooter2, true);
                                 
                             }
-                            lastSelectedListItemFooter = footer;
+                            lastSelectedListItemFooter2 = footer;
                             
                         }
                         
@@ -3913,6 +3913,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
             
             
             // Get Option name and footer
+            const std::string originalOptionName = optionName;
             if (!optionName.empty() && optionName[0] == '*') { 
                 useSelection = true;
                 optionName.erase(0, 1); // Remove first character in-place
@@ -3970,11 +3971,11 @@ bool drawCommandsMenu(tsl::elm::List* list,
                     onlyTables = false;
                 
                     // Create TrackBarV2 instance and configure it
-                    auto trackBar = new tsl::elm::TrackBarV2(optionName, packagePath, minValue, maxValue, units,
-                        interpretAndExecuteCommands, getSourceReplacement, commands, optionName, false, false, -1, unlockedTrackbar, onEveryTick);
+                    auto trackBar = new tsl::elm::TrackBarV2(originalOptionName, packagePath, minValue, maxValue, units,
+                        interpretAndExecuteCommands, getSourceReplacement, commands, originalOptionName, false, false, -1, unlockedTrackbar, onEveryTick);
                 
                     // Set the SCRIPT_KEY listener
-                    trackBar->setScriptKeyListener([commands, keyName = optionName, packagePath, lastPackageHeader]() {
+                    trackBar->setScriptKeyListener([commands, keyName = originalOptionName, packagePath, lastPackageHeader]() {
                         const bool isFromMainMenu = (packagePath == PACKAGE_PATH);
                         
                         //const std::string valueStr = parseValueFromIniSection(packagePath+"config.ini", keyName, "value");
@@ -4047,10 +4048,10 @@ bool drawCommandsMenu(tsl::elm::List* list,
                     onlyTables = false;
                     
                     auto stepTrackBar = new tsl::elm::StepTrackBarV2(optionName, packagePath, steps, minValue, maxValue, units,
-                        interpretAndExecuteCommands, getSourceReplacement, commands, optionName, false, unlockedTrackbar, onEveryTick);
+                        interpretAndExecuteCommands, getSourceReplacement, commands, originalOptionName, false, unlockedTrackbar, onEveryTick);
                     
                     // Set the SCRIPT_KEY listener
-                    stepTrackBar->setScriptKeyListener([commands, keyName = optionName, packagePath, lastPackageHeader]() {
+                    stepTrackBar->setScriptKeyListener([commands, keyName = originalOptionName, packagePath, lastPackageHeader]() {
                         const bool isFromMainMenu = (packagePath == PACKAGE_PATH);
                         
                         // Parse the value and index from the INI file
@@ -4196,10 +4197,10 @@ bool drawCommandsMenu(tsl::elm::List* list,
 
                     // Create NamedStepTrackBarV2 instance and configure it
                     auto namedStepTrackBar = new tsl::elm::NamedStepTrackBarV2(optionName, packagePath, entryList,
-                        interpretAndExecuteCommands, getSourceReplacement, commands, optionName, unlockedTrackbar, onEveryTick);
+                        interpretAndExecuteCommands, getSourceReplacement, commands, originalOptionName, unlockedTrackbar, onEveryTick);
                     
                     // Set the SCRIPT_KEY listener
-                    namedStepTrackBar->setScriptKeyListener([commands, keyName = optionName, packagePath, entryList, lastPackageHeader]() {
+                    namedStepTrackBar->setScriptKeyListener([commands, keyName = originalOptionName, packagePath, entryList, lastPackageHeader]() {
                         const bool isFromMainMenu = (packagePath == PACKAGE_PATH);
                     
                         // Parse the value and index from the INI file
@@ -4295,7 +4296,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
 
                         const std::string& forwarderPackagePath = getParentDirFromPath(packageSource);
                         const std::string& forwarderPackageIniName = getNameFromPath(packageSource);
-                        listItem->setClickListener([commands, keyName = optionName, dropdownSection, packagePath, listItem,
+                        listItem->setClickListener([commands, keyName = originalOptionName, dropdownSection, packagePath, listItem,
                             forwarderPackagePath, forwarderPackageIniName, lastPackageHeader, i](s64 keys) mutable {
                             if (simulatedSelect.exchange(false, acq_rel)) {
                                 keys |= KEY_A;
@@ -4347,7 +4348,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
                             return false;
                         });
                     } else {
-                        listItem->setClickListener([commands, keyName = optionName, dropdownSection, packagePath, packageName,
+                        listItem->setClickListener([commands, keyName = originalOptionName, dropdownSection, packagePath, packageName,
                             footer, lastSection, listItem, lastPackageHeader, commandMode, i](uint64_t keys) {
                             //listItemPtr = std::shared_ptr<tsl::elm::ListItem>(listItem, [](auto*){})](uint64_t keys) {
                             
@@ -4445,7 +4446,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
                             listItem->setValue(footer);
                         
                         
-                        listItem->setClickListener([i, commands, keyName = optionName, packagePath, packageName,
+                        listItem->setClickListener([i, commands, keyName = originalOptionName, packagePath, packageName,
                             selectedItem, listItem, lastPackageHeader, commandMode](uint64_t keys) {
                             
                             if (runningInterpreter.load(acquire)) {
@@ -4519,7 +4520,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
 
                         toggleListItem->setState(toggleStateOn);
                         
-                        toggleListItem->setStateChangedListener([i, commandsOn, commandsOff, keyName = optionName, packagePath,
+                        toggleListItem->setStateChangedListener([i, commandsOn, commandsOff, keyName = originalOptionName, packagePath,
                             pathPatternOn, pathPatternOff, listItem = toggleListItem](bool state) {
                             
                             tsl::Overlay::get()->getCurrentGui()->requestFocus(listItem, tsl::FocusDirection::None);
@@ -4535,7 +4536,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
                         });
 
                         // Set the script key listener (for SCRIPT_KEY)
-                        toggleListItem->setScriptKeyListener([i, commandsOn, commandsOff, keyName = optionName, packagePath,
+                        toggleListItem->setScriptKeyListener([i, commandsOn, commandsOff, keyName = originalOptionName, packagePath,
                             pathPatternOn, pathPatternOff, lastPackageHeader](bool state) {
 
                             const bool isFromMainMenu = (packagePath == PACKAGE_PATH);
