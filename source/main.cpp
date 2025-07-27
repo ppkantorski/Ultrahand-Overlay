@@ -2083,17 +2083,17 @@ public:
                 if (command[0] == "try:") {
                     tryCount++;
                     index++;
-                    addHeader(list, specificKey+" (Try #"+ult::to_string(tryCount)+")");
+                    addHeader(list, specificKey+"Try #"+ult::to_string(tryCount));
                     continue;
                 }
                 if (command[0] == "on:") {
                     index++;
-                    addHeader(list, specificKey+" ("+ON+")");
+                    addHeader(list, specificKey+""+ON);
                     continue;
                 }
                 if (command[0] == "off:") {
                     index++;
-                    addHeader(list, specificKey+" ("+OFF+")");
+                    addHeader(list, specificKey+""+OFF);
                     continue;
                 }
                 combinedCommand = joinCommands(command); // Join commands into a single line for display
@@ -2461,15 +2461,6 @@ public:
                         currentSection = ON_STR;
                     else if (commandName == "off:")
                         currentSection = OFF_STR;
-    
-                    // Don't use move semantics here to avoid invalidating cmd
-                    if (currentSection == GLOBAL_STR) {
-                        selectionCommandsOn.push_back(cmd);
-                        selectionCommandsOff.push_back(cmd);
-                    } else if (currentSection == ON_STR)
-                        selectionCommandsOn.push_back(cmd);
-                    else if (currentSection == OFF_STR)
-                        selectionCommandsOff.push_back(cmd);
                 }
     
                 if (cmd.size() > 1) {
@@ -2638,6 +2629,16 @@ public:
                             }
                         }
                     }
+                }
+
+                if (commandMode == TOGGLE_STR) {
+                    if (currentSection == GLOBAL_STR) {
+                        selectionCommandsOn.push_back(cmd);
+                        selectionCommandsOff.push_back(std::move(cmd));
+                    } else if (currentSection == ON_STR)
+                        selectionCommandsOn.push_back(std::move(cmd));
+                    else if (currentSection == OFF_STR)
+                        selectionCommandsOff.push_back(std::move(cmd));
                 }
                 //if (commandMode == TOGGLE_STR)
                 //    cmd.clear();
@@ -3087,7 +3088,7 @@ public:
             selectedItem.clear();
             selectedItem.shrink_to_fit();
         }
-        
+
         // NOW you can clear everything
         selectedItemsList.clear();
         selectedItemsList.shrink_to_fit();
