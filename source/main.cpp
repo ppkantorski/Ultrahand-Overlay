@@ -2358,7 +2358,7 @@ private:
     void applyItemsLimit(std::vector<std::string>& vec) {
         if (maxItemsLimit == 0 || vec.size() <= maxItemsLimit) return;
         vec.resize(maxItemsLimit);
-        //vec.shrink_to_fit();
+        vec.shrink_to_fit();
     }
 
 public:
@@ -3237,7 +3237,7 @@ public:
 
 std::vector<std::vector<std::string>> gatherPromptCommands(
     const std::string& dropdownSection,
-    const std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>>& options) {
+    std::vector<std::pair<std::string, std::vector<std::vector<std::string>>>>&& options) {
     
     std::vector<std::vector<std::string>> promptCommands;
     
@@ -3253,9 +3253,9 @@ std::vector<std::vector<std::string>> gatherPromptCommands(
     // Pre-allocate filler command (whitespace)
     fillerCommand.push_back("\u00A0");
     
-    for (const auto& nextOption : options) {
-        const std::string& sectionName = nextOption.first;
-        const std::vector<std::vector<std::string>>& commands = nextOption.second;
+    for (auto& nextOption : options) {
+        const std::string sectionName = std::move(nextOption.first);
+        const std::vector<std::vector<std::string>> commands = std::move(nextOption.second);
         
         // Check if this is the start of the relevant section
         if (sectionName == dropdownSection) {
@@ -3415,9 +3415,9 @@ bool drawCommandsMenu(tsl::elm::List* list,
 
         commands = std::move(option.second);
 
-        option.first.clear();
-        option.second.clear();
-        option.second.shrink_to_fit(); 
+        //option.first.clear();
+        //option.second.clear();
+        //option.second.shrink_to_fit(); 
 
         footer = "";
         useSelection = false;
@@ -3611,7 +3611,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
                                 }
                                 if (keys & KEY_A) {
                                     inPackageMenu = false;
-                                    tsl::clearGlyphCacheNow.store(true, release);
+                                    //tsl::clearGlyphCacheNow.store(true, release);
                                     tsl::changeTo<PackageMenu>(packagePath, optionName, currentPage, packageName, 0, lastPackageHeader);
                                     
                                     return true;
@@ -3628,7 +3628,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
                                     
                                     //auto options = loadOptionsFromIni(packageIniPath);
                                     // Pass all gathered commands to the ScriptOverlay
-                                    tsl::changeTo<ScriptOverlay>(std::move(gatherPromptCommands(optionName, loadOptionsFromIni(packageIniPath))), packagePath, optionName, "package", true, lastPackageHeader);
+                                    tsl::changeTo<ScriptOverlay>(std::move(gatherPromptCommands(optionName, std::move(loadOptionsFromIni(packageIniPath)))), packagePath, optionName, "package", true, lastPackageHeader);
                                     return true;
                                 }
                                 return false;
@@ -3655,7 +3655,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
                                     //const std::vector<std::vector<std::string>> promptCommands = gatherPromptCommands(optionName, options);
                                     //auto options = loadOptionsFromIni(packageIniPath);
 
-                                    tsl::changeTo<ScriptOverlay>(std::move(gatherPromptCommands(optionName, loadOptionsFromIni(packageIniPath))), PACKAGE_PATH, optionName, "main", true, lastPackageHeader);
+                                    tsl::changeTo<ScriptOverlay>(std::move(gatherPromptCommands(optionName, std::move(loadOptionsFromIni(packageIniPath)))), PACKAGE_PATH, optionName, "main", true, lastPackageHeader);
                                     return true;
                                 }
                                 return false;
@@ -4316,7 +4316,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
                                 allowSlide.exchange(false, acq_rel);
                                 unlockedSlide.exchange(false, acq_rel);
 
-                                tsl::clearGlyphCacheNow.store(true, release);
+                                //tsl::clearGlyphCacheNow.store(true, release);
                                 tsl::changeTo<PackageMenu>(forwarderPackagePath, "", LEFT_STR, forwarderPackageIniName, nestedMenuCount, lastPackageHeader);
                                 
                                 return true;
