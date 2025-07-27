@@ -2083,7 +2083,7 @@ public:
                 if (command[0] == "try:") {
                     tryCount++;
                     index++;
-                    addHeader(list, specificKey+"Try #"+ult::to_string(tryCount));
+                    addHeader(list, specificKey+""+"Try"+" #"+ult::to_string(tryCount));
                     continue;
                 }
                 if (command[0] == "on:") {
@@ -2774,7 +2774,7 @@ public:
         }
     
         if (commandGrouping == DEFAULT_STR) {
-            std::string cleanSpecificKey = specificKey.substr(1);
+            std::string cleanSpecificKey = specificKey;
             removeTag(cleanSpecificKey);
             addHeader(list, cleanSpecificKey);
             currentPackageHeader = cleanSpecificKey;
