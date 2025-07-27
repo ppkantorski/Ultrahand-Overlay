@@ -2352,7 +2352,7 @@ private:
 
     bool isMini = false;
 
-    size_t maxItemsLimit = 200;     // 0 = uncapped, any other value = max size
+    size_t maxItemsLimit = 250;     // 0 = uncapped, any other value = max size
     
     // Helper function to apply size limit to any vector
     void applyItemsLimit(std::vector<std::string>& vec) {
