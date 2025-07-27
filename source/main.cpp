@@ -2677,6 +2677,9 @@ public:
                 //jsonString.shrink_to_fit();
             }
             applyItemsLimit(selectedItemsList);
+            filterItemsList(filterList, selectedItemsList);
+            filterList.clear();
+            filterList.shrink_to_fit();
 
         } else if (commandMode == TOGGLE_STR) {
             if (sourceTypeOn == FILE_STR)
@@ -2708,16 +2711,21 @@ public:
                 //jsonStringOff.shrink_to_fit();
             }
             applyItemsLimit(selectedItemsListOff);
-
-            if (sourceType == FILE_STR) {
-                filterItemsList(filterListOn, selectedItemsListOn);
-                filterListOn.clear();
-                //filterListOn.shrink_to_fit();
-
-                filterItemsList(filterListOff, selectedItemsListOff);
-                filterListOff.clear();
-                //filterListOff.shrink_to_fit();
-            }
+            filterItemsList(filterListOn, selectedItemsListOn);
+            filterListOn.clear();
+            filterListOn.shrink_to_fit();
+            filterItemsList(filterListOff, selectedItemsListOff);
+            filterListOff.clear();
+            filterListOff.shrink_to_fit();
+            //if (sourceType == FILE_STR) {
+            //    filterItemsList(filterListOn, selectedItemsListOn);
+            //    //filterListOn.clear();
+            //    //filterListOn.shrink_to_fit();
+            //    
+            //    filterItemsList(filterListOff, selectedItemsListOff);
+            //    //filterListOff.clear();
+            //    //filterListOff.shrink_to_fit();
+            //}
 
 
             //selectedItemsList.reserve(selectedItemsListOn.size() + selectedItemsListOff.size());
@@ -2761,10 +2769,7 @@ public:
                 });
             }
     
-            filterItemsList(filterList, selectedItemsList);
-            // Clear filter list after use
-            filterList.clear();
-            //filterList.shrink_to_fit();
+            //filterItemsList(filterList, selectedItemsList);
         }
     
         if (commandGrouping == DEFAULT_STR) {
@@ -2877,17 +2882,17 @@ public:
                         lastGroupingName = groupingName;
                     }
                 }
-            } else {
-                if (commandMode == TOGGLE_STR && sourceType == FILE_STR) {
-                    if (std::find(filterListOn.cbegin(), filterListOn.cend(), itemName) != filterListOn.cend() ||
-                        std::find(filterListOff.cbegin(), filterListOff.cend(), itemName) != filterListOff.cend()) {
-                        continue;
-                    }
-                } else if (commandMode != TOGGLE_STR) {
-                    if (std::find(filterList.cbegin(), filterList.cend(), itemName) != filterList.cend()) {
-                        continue;
-                    }
-                }
+            //} else {
+            //    if (commandMode == TOGGLE_STR && sourceType == FILE_STR) {
+            //        if (std::find(filterListOn.cbegin(), filterListOn.cend(), itemName) != filterListOn.cend() ||
+            //            std::find(filterListOff.cbegin(), filterListOff.cend(), itemName) != filterListOff.cend()) {
+            //            continue;
+            //        }
+            //    } else if (commandMode != TOGGLE_STR) {
+            //        if (std::find(filterList.cbegin(), filterList.cend(), itemName) != filterList.cend()) {
+            //            continue;
+            //        }
+            //    }
             }
     
             if (commandMode == DEFAULT_STR || commandMode == OPTION_STR) {
@@ -3082,11 +3087,14 @@ public:
             selectedItem.clear();
             selectedItem.shrink_to_fit();
         }
-
+        
         // NOW you can clear everything
         selectedItemsList.clear();
+        selectedItemsList.shrink_to_fit();
         selectedItemsListOn.clear();
+        selectedItemsListOn.shrink_to_fit();
         selectedItemsListOff.clear();
+        selectedItemsListOff.shrink_to_fit();
         
         if (!packageRootLayerTitle.empty())
             overrideTitle = true;
