@@ -2779,7 +2779,7 @@ public:
         }
     
         if (commandGrouping == DEFAULT_STR) {
-            std::string cleanSpecificKey = specificKey;
+            std::string cleanSpecificKey = specificKey.substr(1);
             removeTag(cleanSpecificKey);
             addHeader(list, cleanSpecificKey);
             currentPackageHeader = cleanSpecificKey;
