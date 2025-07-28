@@ -2024,14 +2024,14 @@ private:
                         inQuotes = !inQuotes;
                         if (!inQuotes) {
                             commandParts.emplace_back(std::move(currentPart));
-                            currentPart.clear();
-                            //currentPart.shrink_to_fit();
+                            //currentPart.clear();
+                            currentPart.shrink_to_fit();
                         }
                     } else if (ch == ' ' && !inQuotes) {
                         if (!currentPart.empty()) {
                             commandParts.emplace_back(std::move(currentPart));
-                            currentPart.clear();
-                            //currentPart.shrink_to_fit();
+                            //currentPart.clear();
+                            currentPart.shrink_to_fit();
                         }
                     } else {
                         currentPart += ch;
@@ -2042,6 +2042,7 @@ private:
                 }
 
                 commandVec.emplace_back(std::move(commandParts));
+                commandParts.shrink_to_fit();
 
                 executeInterpreterCommands(std::move(commandVec), filePath, specificKey);
                 //startInterpreterThread();
@@ -2167,6 +2168,7 @@ public:
                     // Each command will be treated as a section with no corresponding info
                     //sectionLine = joinCommands(command);  // Combine command parts into a section line
                     sectionLines.push_back(std::move(command));              // Add to section lines
+                    command.shrink_to_fit();
                     infoLines.push_back("");                          // Empty info line
                 }
                 sourceCommands.clear();
@@ -2376,7 +2378,7 @@ public:
     }
 
     ~SelectionOverlay() {
-        //lastSelectedListItemFooter2 = "";
+        //0lastSelectedListItemFooter2 = "";
         lastSelectedListItem = nullptr;
         //selectedFooterDict.clear();
 
@@ -2480,6 +2482,7 @@ public:
                     } else if (commandName == "filter") {
                         // Avoid copying by directly assigning and then processing
                         filterEntry = std::move(cmd[1]); // Move instead of copy
+                        cmd[1].shrink_to_fit();
                         removeQuotes(filterEntry);
                         if (sourceType == FILE_STR) {
                             preprocessPath(filterEntry, filePath);
@@ -2511,6 +2514,7 @@ public:
                                 filterListOn.push_back(std::move(filterEntry));
                             else if (currentSection == OFF_STR)
                                 filterListOff.push_back(std::move(filterEntry));
+                            filterEntry.shrink_to_fit();
                         }
                     } else if (commandName == "file_source") {
                         sourceType = FILE_STR;
@@ -2644,6 +2648,7 @@ public:
                         selectionCommandsOn.push_back(std::move(cmd));
                     else if (currentSection == OFF_STR)
                         selectionCommandsOff.push_back(std::move(cmd));
+                    cmd.shrink_to_fit();
                 }
                 //if (commandMode == TOGGLE_STR)
                 //    cmd.clear();
@@ -2669,8 +2674,10 @@ public:
         std::string itemName;
     
         if (commandMode == DEFAULT_STR || commandMode == OPTION_STR) {
-            if (sourceType == FILE_STR)
+            if (sourceType == FILE_STR) {
                 selectedItemsList = std::move(filesList);
+                filesList.shrink_to_fit();
+            }
             else if (sourceType == LIST_STR || sourceType == LIST_FILE_STR)
                 selectedItemsList = (sourceType == LIST_STR) ? stringToList(listString) : readListFromFile(listPath, maxItemsLimit);
             else if (sourceType == INI_FILE_STR)
@@ -2688,8 +2695,10 @@ public:
             filterList.shrink_to_fit();
 
         } else if (commandMode == TOGGLE_STR) {
-            if (sourceTypeOn == FILE_STR)
+            if (sourceTypeOn == FILE_STR) {
                 selectedItemsListOn = std::move(filesListOn);
+                filesListOn.shrink_to_fit();
+            }
             else if (sourceTypeOn == LIST_STR || sourceTypeOn == LIST_FILE_STR)
                 selectedItemsListOn = (sourceTypeOn == LIST_STR) ? stringToList(listStringOn) : readListFromFile(listPathOn, maxItemsLimit);
             else if (sourceTypeOn == INI_FILE_STR)
@@ -2703,8 +2712,10 @@ public:
             }
             applyItemsLimit(selectedItemsListOn);
 
-            if (sourceTypeOff == FILE_STR)
+            if (sourceTypeOff == FILE_STR) {
                 selectedItemsListOff = std::move(filesListOff);
+                filesListOff.shrink_to_fit();
+            }
             else if (sourceTypeOff == LIST_STR || sourceTypeOff == LIST_FILE_STR)
                 selectedItemsListOff = (sourceTypeOff == LIST_STR) ? stringToList(listStringOff) : readListFromFile(listPathOff, maxItemsLimit);
             else if (sourceTypeOff == INI_FILE_STR)
@@ -3262,7 +3273,9 @@ std::vector<std::vector<std::string>> gatherPromptCommands(
 
     for (auto& nextOption : options) {
         const std::string sectionName = std::move(nextOption.first);
+        nextOption.first.shrink_to_fit();
         commands = std::move(nextOption.second);
+        nextOption.second.shrink_to_fit();
         
         // Check if this is the start of the relevant section
         if (sectionName == dropdownSection) {
@@ -3425,8 +3438,10 @@ bool drawCommandsMenu(tsl::elm::List* list,
         auto& option = options[i];
         
         optionName = std::move(option.first);
+        option.first.shrink_to_fit();
 
         commands = std::move(option.second);
+        option.second.shrink_to_fit();
 
         //option.first.clear();
         //option.second.clear();

@@ -273,7 +273,8 @@ const std::unordered_map<std::string, std::string> symbolPlaceholders = {
     {"{CAPTURE}", ""},
     {"{REFRESH_SYMBOL}", ""},
     {"{WARNING_SYMBOL}", ""},
-    {"{INFO_SYMBOL}", ""}
+    {"{INFO_SYMBOL}", ""},
+    {"{DIVIDER_SYMBOL}", ""}
 };
 
 
@@ -1421,6 +1422,7 @@ static bool buildTableDrawerLines(
 
             for (auto& line : wrappedLines) {
                 outSection.push_back(std::move(line));
+                line.shrink_to_fit();
                 outInfo.push_back(infoText);
 
                 xPos = 0;
@@ -3217,6 +3219,7 @@ bool applyPlaceholderReplacementsToCommands(std::vector<std::vector<std::string>
         // Keep this command - move it to the write position
         if (writeIndex != readIndex) {
             commands[writeIndex] = std::move(cmd);
+            cmd.shrink_to_fit();
         }
         ++writeIndex;
     }
@@ -3560,9 +3563,11 @@ void handleCopyCommand(const std::vector<std::string>& cmd, const std::string& p
         for (size_t i = 0; i < listSize; ++i) {
             // Reuse existing sourcePath and destinationPath strings
             sourcePath = std::move(sourceFilesList[i]);
+            sourceFilesList[i].shrink_to_fit();     // Free the capacity
             preprocessPath(sourcePath, packagePath);
             
             destinationPath = std::move(destinationFilesList[i]);
+            destinationFilesList[i].shrink_to_fit(); // Free the capacity
             preprocessPath(destinationPath, packagePath);
             
             // Only check filter if it exists
@@ -3573,10 +3578,6 @@ void handleCopyCommand(const std::vector<std::string>& cmd, const std::string& p
                 long long totalBytesCopied = 0;
                 copyFileOrDirectory(sourcePath, destinationPath, &totalBytesCopied, totalSize);
             }
-            
-            // Clear the source vectors as we process to free memory immediately
-            sourceFilesList[i].clear();
-            destinationFilesList[i].clear();
         }
         
     } else {
@@ -3623,6 +3624,7 @@ void handleDeleteCommand(const std::vector<std::string>& cmd, const std::string&
         for (size_t i = 0; i < sourceFilesList.size(); ++i) {
             // Move string to avoid copy
             sourcePath = std::move(sourceFilesList[i]);
+            sourceFilesList[i].shrink_to_fit();     // Free the capacity
             preprocessPath(sourcePath, packagePath);
             
             // Only check filter if it exists
@@ -3633,7 +3635,7 @@ void handleDeleteCommand(const std::vector<std::string>& cmd, const std::string&
             }
             
             // Clear the vector element immediately to free memory
-            sourceFilesList[i].clear();
+            //sourceFilesList[i].clear();
         }
         
     } else {
@@ -3699,10 +3701,11 @@ void handleMirrorCommand(const std::vector<std::string>& cmd, const std::string&
         for (size_t i = 0; i < fileList.size(); ++i) {
             // Move the string to avoid copy
             auto sourceDirectory = std::move(fileList[i]);
+            fileList[i].shrink_to_fit();     // Free the capacity
             mirrorFiles(sourceDirectory, destinationPath, operation);
             
             // Clear the vector element immediately to free memory
-            fileList[i].clear();
+            //fileList[i].clear();
         }
     }
 }
@@ -3740,9 +3743,11 @@ void handleMoveCommand(const std::vector<std::string>& cmd, const std::string& p
         for (size_t i = 0; i < listSize; ++i) {
             // Move strings to avoid copies
             sourcePath = std::move(sourceFilesList[i]);
+            sourceFilesList[i].shrink_to_fit();     // Free the capacity
             preprocessPath(sourcePath, packagePath);
             
             destinationPath = std::move(destinationFilesList[i]);
+            destinationFilesList[i].shrink_to_fit();     // Free the capacity
             preprocessPath(destinationPath, packagePath);
             
             // Only check filter if it exists
@@ -3762,8 +3767,8 @@ void handleMoveCommand(const std::vector<std::string>& cmd, const std::string& p
             }
             
             // Clear the vector elements immediately to free memory
-            sourceFilesList[i].clear();
-            destinationFilesList[i].clear();
+            //sourceFilesList[i].clear();
+            //destinationFilesList[i].clear();
         }
         
     } else {
@@ -4453,8 +4458,6 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             skipJumpReset = true;
             refreshPage = true;
         }
-    } else if (commandName == "open") {
-        // needs implementation
     } else if (commandName == "logging") {
         interpreterLogging = true;
     } else if (commandName == "clear") {
