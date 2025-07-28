@@ -4990,11 +4990,12 @@ public:
                 //tsl::clearGlyphCacheNow.store(true, release);
                 tsl::pop();
                 
-                if (returningToMain) {
-                    tsl::changeTo<MainMenu>(PACKAGES_STR);
-                } else {
-                    tsl::changeTo<MainMenu>();
-                }
+                //if (returningToMain) {
+                //    tsl::changeTo<MainMenu>(PACKAGES_STR);
+                //} else {
+                //    tsl::changeTo<MainMenu>();
+                //}
+                tsl::changeTo<MainMenu>();
             } else {
                 //tsl::clearGlyphCacheNow.store(true, release);
                 tsl::goBack();
