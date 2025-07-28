@@ -869,15 +869,15 @@ public:
             if (cpuSpeedo0 != 0 && cpuSpeedo2 != 0 && socSpeedo0 != 0 && cpuIDDQ != 0 && gpuIDDQ != 0 && socIDDQ != 0) {
                 tableData[0] = {
                     "Speedo", "",
-                    customAlign(cpuSpeedo0) + "  " + customAlign(cpuSpeedo2) + "  " + customAlign(socSpeedo0)
+                    customAlign(cpuSpeedo0) + " "+DIVIDER_SYMBOL+" " + customAlign(cpuSpeedo2) + " "+DIVIDER_SYMBOL+" " + customAlign(socSpeedo0)
                 };
                 tableData[1] = {
                     "IDDQ", "",
-                    customAlign(cpuIDDQ) + "  " + customAlign(gpuIDDQ) + "  " + customAlign(socIDDQ)
+                    customAlign(cpuIDDQ) + " "+DIVIDER_SYMBOL+" " + customAlign(gpuIDDQ) + " "+DIVIDER_SYMBOL+" " + customAlign(socIDDQ)
                 };
             } else {
-                tableData[0] = {"Speedo", "", "⋯        ⋯        ⋯  "};
-                tableData[1] = {"IDDQ", "", "⋯        ⋯        ⋯  "};
+                tableData[0] = {"Speedo", "", "⋯    "+DIVIDER_SYMBOL+"    ⋯    "+DIVIDER_SYMBOL+"    ⋯  "};
+                tableData[1] = {"IDDQ", "", "⋯    "+DIVIDER_SYMBOL+"    ⋯    "+DIVIDER_SYMBOL+"    ⋯  "};
             }
             addTable(list, tableData, "", 163, 20, -2, 4);
             
@@ -1154,7 +1154,7 @@ public:
         auto* rootFrame = new tsl::elm::OverlayFrame(CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel);
         if (inSubSettingsMenu && ((dropdownSelection == "languageMenu") || (dropdownSelection == KEY_COMBO_STR) || (dropdownSelection == "themeMenu") || (dropdownSelection == "wallpaperMenu"))) {
             jumpItemName = "";
-            jumpItemValue = "";
+            jumpItemValue = CHECKMARK_SYMBOL;
             jumpItemExactMatch = true;
             g_overlayFilename = "";
             list->jumpToItem(jumpItemName, jumpItemValue, jumpItemExactMatch);
@@ -1406,7 +1406,7 @@ public:
         auto* list = new tsl::elm::List();
     
         if (inSettingsMenu) {
-            addHeader(list, SETTINGS + "  " + header);
+            addHeader(list, SETTINGS + " "+DIVIDER_SYMBOL+" " + header);
     
             {
                 const std::string currentKeyCombo = getSettingsValue(KEY_COMBO_STR);
@@ -1818,7 +1818,7 @@ public:
              dropdownSelection.rfind("mode_combo_", 0) == 0)) {
     
             jumpItemName = "";
-            jumpItemValue = "";
+            jumpItemValue = CHECKMARK_SYMBOL;
             jumpItemExactMatch = true;
             g_overlayFilename = "";
         }
@@ -2086,17 +2086,17 @@ public:
                 if (command[0] == "try:") {
                     tryCount++;
                     index++;
-                    addHeader(list, specificKey+"  "+"Try"+" #"+ult::to_string(tryCount));
+                    addHeader(list, specificKey+" "+DIVIDER_SYMBOL+" "+"Try"+" #"+ult::to_string(tryCount));
                     continue;
                 }
                 if (command[0] == "on:") {
                     index++;
-                    addHeader(list, specificKey+"  "+ON);
+                    addHeader(list, specificKey+" "+DIVIDER_SYMBOL+" "+ON);
                     continue;
                 }
                 if (command[0] == "off:") {
                     index++;
-                    addHeader(list, specificKey+"  "+OFF);
+                    addHeader(list, specificKey+" "+DIVIDER_SYMBOL+" "+OFF);
                     continue;
                 }
                 combinedCommand = joinCommands(command); // Join commands into a single line for display
@@ -2184,7 +2184,7 @@ public:
 
 
         auto* rootFrame = new tsl::elm::OverlayFrame(packageName,
-           !lastPackageHeader.empty() ? lastPackageHeader + "?Ultrahand Script" : (packageVersion.empty() ? CAPITAL_ULTRAHAND_PROJECT_NAME + " Script" : packageVersion + "  " + CAPITAL_ULTRAHAND_PROJECT_NAME + " Script"),
+           !lastPackageHeader.empty() ? lastPackageHeader + "?Ultrahand Script" : (packageVersion.empty() ? CAPITAL_ULTRAHAND_PROJECT_NAME + " Script" : packageVersion + " "+DIVIDER_SYMBOL+" " + CAPITAL_ULTRAHAND_PROJECT_NAME + " Script"),
            noClickableItems);
         list->disableCaching();
         rootFrame->setContent(list);
@@ -2369,14 +2369,14 @@ private:
 public:
     SelectionOverlay(const std::string& path, const std::string& key, const std::string& footerKey, const std::string& _lastPackageHeader, const std::vector<std::vector<std::string>>& commands)
         : filePath(path), specificKey(key), specifiedFooterKey(footerKey), lastPackageHeader(_lastPackageHeader), selectionCommands(commands) {
-        lastSelectedListItemFooter2 = "";
+        //lastSelectedListItemFooter2 = "";
         lastSelectedListItem = nullptr;
         //selectedFooterDict.clear();
         tsl::clearGlyphCacheNow.store(true, release);
     }
 
     ~SelectionOverlay() {
-        lastSelectedListItemFooter2 = "";
+        //lastSelectedListItemFooter2 = "";
         lastSelectedListItem = nullptr;
         //selectedFooterDict.clear();
 
@@ -4391,7 +4391,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
                                     
                                     if (commandMode == OPTION_STR || commandMode == SLOT_STR) {
                                         jumpItemName = "";
-                                        jumpItemValue = "";
+                                        jumpItemValue = CHECKMARK_SYMBOL;
                                         jumpItemExactMatch = true;
                                         g_overlayFilename = "";
                                     } else {
@@ -4736,7 +4736,7 @@ public:
 
         auto* rootFrame = new tsl::elm::OverlayFrame(
            (!packageHeader.title.empty()) ? packageHeader.title : (!packageRootLayerTitle.empty() ? packageRootLayerTitle : getNameFromPath(packagePath)),
-           ((!pageHeader.empty() && packageHeader.show_version != TRUE_STR) ? pageHeader: (packageHeader.version != "" ? (!packageRootLayerVersion.empty() ? packageRootLayerVersion : packageHeader.version) + "  Ultrahand Package" : "Ultrahand Package")),
+           ((!pageHeader.empty() && packageHeader.show_version != TRUE_STR) ? pageHeader: (packageHeader.version != "" ? (!packageRootLayerVersion.empty() ? packageRootLayerVersion : packageHeader.version) + " "+DIVIDER_SYMBOL+" Ultrahand Package" : "Ultrahand Package")),
            noClickableItems,
            "",
            packageHeader.color,
@@ -6346,7 +6346,7 @@ public:
 
 // Extract the settings initialization logic into a separate method
 void initializeSettingsAndDirectories() {
-    versionLabel = cleanVersionLabel(APP_VERSION) + "  " + loaderTitle + " " + cleanVersionLabel(loaderInfo);
+    versionLabel = cleanVersionLabel(APP_VERSION) + " "+DIVIDER_SYMBOL+" " + loaderTitle + " " + cleanVersionLabel(loaderInfo);
     std::string defaultLang = "en";
 
     // Create necessary directories
