@@ -3258,13 +3258,16 @@ std::vector<std::vector<std::string>> gatherPromptCommands(
     // Pre-allocate filler command (whitespace)
     fillerCommand.push_back("\u00A0");
     
+    std::vector<std::vector<std::string>> commands;
+
     for (auto& nextOption : options) {
         const std::string sectionName = std::move(nextOption.first);
-        const std::vector<std::vector<std::string>> commands = std::move(nextOption.second);
+        commands = std::move(nextOption.second);
         
         // Check if this is the start of the relevant section
         if (sectionName == dropdownSection) {
             inRelevantSection = true;
+            commands.clear();
             continue;
         }
         
@@ -3291,21 +3294,25 @@ std::vector<std::vector<std::string>> gatherPromptCommands(
             }
             
             // Process each command by splitting on spaces
-            for (const auto& cmd : commands) {
+            for (auto& cmd : commands) {
                 fullCmd.clear();
                 //fullCmd.shrink_to_fit();
                 
-                for (const auto& part : cmd) {
+                for (auto& part : cmd) {
                     splitParts = splitString(part, " ");
                     fullCmd.insert(fullCmd.end(), splitParts.begin(), splitParts.end());
+                    part.clear();
                 }
                 
                 if (!fullCmd.empty()) {
                     promptCommands.push_back(fullCmd);
                 }
+                cmd.clear();
             }
         }
+        commands.clear();
     }
+    //commands.clear();
     
     // Return placeholder if no commands are found
     if (promptCommands.empty()) {
@@ -3409,10 +3416,11 @@ bool drawCommandsMenu(tsl::elm::List* list,
 
 
     for (size_t i = 0; i < options.size(); ++i) {
+        optionName.clear();
         commands.clear();
-        tableData.clear();
         commandsOn.clear();
         commandsOff.clear();
+        tableData.clear();
 
         auto& option = options[i];
         
@@ -4564,6 +4572,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
     }
 
     options.clear();
+    optionName.clear();
     commands.clear();
     commandsOn.clear();
     commandsOff.clear();
@@ -5346,9 +5355,9 @@ public:
                 // Track if we need to write back
                 bool overlaysNeedsUpdate = false;
 
-                for (const auto& overlayFile : overlayFiles) {
+                for (auto& overlayFile : overlayFiles) {
                     overlayFileName = getNameFromPath(overlayFile);
-                    
+                    overlayFile = "";
                     it = overlaysIniData.find(overlayFileName);
                     if (it == overlaysIniData.end()) {
                         // Initialization of new entries IN MEMORY (no file I/O)
@@ -5403,6 +5412,8 @@ public:
                         }
                     }
                 }
+                overlayFiles.clear();
+                overlayFiles.shrink_to_fit();
 
                 // Write back file only if changes were made
                 if (overlaysNeedsUpdate) {
@@ -5609,7 +5620,7 @@ public:
                     //if (listItem != nullptr)
                         
                 }
-                //overlaySet.clear();
+                overlaySet.clear();
                 
                 if (drawHiddenTab && !inHiddenMode && !hideHidden) {
                     tsl::elm::ListItem* listItem = new tsl::elm::ListItem(HIDDEN, DROPDOWN_SYMBOL);
@@ -5749,7 +5760,7 @@ public:
                 bool drawHiddenTab = false;
                 bool packagesNeedsUpdate = false;  // Track if we need to write back
 
-                for (const auto& packageName: subdirectories) {
+                for (auto& packageName: subdirectories) {
                     packageIt = packagesIniData.find(packageName);
                     if (packageIt == packagesIniData.end()) {
                         // Get package header info first for new packages
@@ -5809,7 +5820,10 @@ public:
                             //}
                         }
                     }
+                    packageName = "";
                 }
+                subdirectories.clear();
+                subdirectories.shrink_to_fit();
 
                 // Write back file only if changes were made
                 if (packagesNeedsUpdate) {
@@ -5817,7 +5831,7 @@ public:
                 }
     
                 packagesIniData.clear();
-                subdirectories.clear();
+                //subdirectories.clear();
                 //subdirectories.shrink_to_fit();
                 
                 //if (inHiddenMode) {
@@ -5990,7 +6004,8 @@ public:
                             list->addItem(listItem);
                     }
                 }
-                //packageSet.clear();
+
+                packageSet.clear();
                 
                 if (drawHiddenTab && !inHiddenMode && !hideHidden) {
                     tsl::elm::ListItem* listItem = new tsl::elm::ListItem(HIDDEN, DROPDOWN_SYMBOL);
