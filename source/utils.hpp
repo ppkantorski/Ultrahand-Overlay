@@ -3107,7 +3107,6 @@ bool applyPlaceholderReplacementsToCommands(std::vector<std::vector<std::string>
         
         if (cmd.empty()) {
             // Skip empty commands, don't increment writeIndex
-            cmd.clear();
             cmd.shrink_to_fit();
             continue;
         }

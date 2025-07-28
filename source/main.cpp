@@ -1406,7 +1406,7 @@ public:
         auto* list = new tsl::elm::List();
     
         if (inSettingsMenu) {
-            addHeader(list, SETTINGS + "  " + header);
+            addHeader(list, SETTINGS + "  " + header);
     
             {
                 const std::string currentKeyCombo = getSettingsValue(KEY_COMBO_STR);
@@ -2086,17 +2086,17 @@ public:
                 if (command[0] == "try:") {
                     tryCount++;
                     index++;
-                    addHeader(list, specificKey+""+"Try"+" #"+ult::to_string(tryCount));
+                    addHeader(list, specificKey+"  "+"Try"+" #"+ult::to_string(tryCount));
                     continue;
                 }
                 if (command[0] == "on:") {
                     index++;
-                    addHeader(list, specificKey+""+ON);
+                    addHeader(list, specificKey+"  "+ON);
                     continue;
                 }
                 if (command[0] == "off:") {
                     index++;
-                    addHeader(list, specificKey+""+OFF);
+                    addHeader(list, specificKey+"  "+OFF);
                     continue;
                 }
                 combinedCommand = joinCommands(command); // Join commands into a single line for display
@@ -4534,8 +4534,8 @@ bool drawCommandsMenu(tsl::elm::List* list,
                             tsl::Overlay::get()->getCurrentGui()->requestFocus(listItem, tsl::FocusDirection::None);
                             
                             // Now pass the preprocessed paths to getSourceReplacement
-                            interpretAndExecuteCommands(state ? getSourceReplacement(commandsOn, pathPatternOn, i, packagePath) :
-                                getSourceReplacement(commandsOff, pathPatternOff, i, packagePath), packagePath, keyName);
+                            interpretAndExecuteCommands(std::move(state ? getSourceReplacement(commandsOn, pathPatternOn, i, packagePath) :
+                                getSourceReplacement(commandsOff, pathPatternOff, i, packagePath)), packagePath, keyName);
                             
                             resetPercentages();
                             // Set the ini file value after executing the command
