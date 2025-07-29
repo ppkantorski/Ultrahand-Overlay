@@ -163,6 +163,7 @@ std::string getValueOrDefault(const Map& data, const std::string& key, const std
 inline void clearMemory() {
     hexSumCache = {};
     selectedFooterDict = {};
+    clearIniMutexCache();
     //hexSumCache.clear();
     //selectedFooterDict.clear(); // Clears all data from the map, making it empty again
     //selectedListItem = nullptr;
@@ -2407,7 +2408,7 @@ public:
         
         
         // Use string_view for read-only operations to avoid copying
-        std::string commandName;
+        //std::string commandName;
         std::string filterEntry;
         std::vector<std::string> matchedFiles, tempFiles;
     
@@ -2425,7 +2426,7 @@ public:
                 replacePlaceholdersInArg(arg, generalPlaceholders);
             }
     
-            commandName = cmd[0]; // Now assigns to string_view - no copy
+            const std::string& commandName = cmd[0]; // Now assigns to string_view - no copy
     
             // Keep original case-insensitive logic
             if (stringToLowercase(commandName) == "erista:") {
@@ -2490,7 +2491,7 @@ public:
     
                         if (filterEntry.find('*') != std::string::npos) {
                             // Get files directly into temporary, avoid intermediate storage
-                            //tempFiles.clear();
+                            tempFiles.clear();
                             tempFiles = getFilesListByWildcards(filterEntry, maxItemsLimit);
                             if (currentSection == GLOBAL_STR) {
                                 filterList.insert(filterList.end(), 
@@ -2505,8 +2506,7 @@ public:
                                                    std::make_move_iterator(tempFiles.begin()),
                                                    std::make_move_iterator(tempFiles.end()));
                             }
-                            tempFiles.clear();
-                            // tempFiles automatically destroyed here, freeing memory
+                            //tempFiles.clear(); // automatically cleared since it is moved out of list.
                         } else {
                             if (currentSection == GLOBAL_STR)
                                 filterList.push_back(std::move(filterEntry));
@@ -2522,30 +2522,30 @@ public:
                             pathPattern = cmd[1];
                             preprocessPath(pathPattern, filePath);
                             // Get files directly, avoid storing in intermediate variable
-                            //tempFiles.clear();
-                            filesList = getFilesListByWildcards(pathPattern, maxItemsLimit);
-                            //filesList.insert(filesList.end(), 
-                            //               std::make_move_iterator(tempFiles.begin()),
-                            //               std::make_move_iterator(tempFiles.end()));
+                            tempFiles.clear();
+                            tempFiles = getFilesListByWildcards(pathPattern, maxItemsLimit);
+                            filesList.insert(filesList.end(), 
+                                           std::make_move_iterator(tempFiles.begin()),
+                                           std::make_move_iterator(tempFiles.end()));
                             //tempFiles.clear();
                         } else if (currentSection == ON_STR) {
                             pathPatternOn = cmd[1];
                             preprocessPath(pathPatternOn, filePath);
-                            //tempFiles.clear();
-                            filesListOn = getFilesListByWildcards(pathPatternOn, maxItemsLimit);
-                            //filesListOn.insert(filesListOn.end(), 
-                            //                 std::make_move_iterator(tempFiles.begin()),
-                            //                 std::make_move_iterator(tempFiles.end()));
+                            tempFiles.clear();
+                            tempFiles = getFilesListByWildcards(pathPatternOn, maxItemsLimit);
+                            filesListOn.insert(filesListOn.end(), 
+                                             std::make_move_iterator(tempFiles.begin()),
+                                             std::make_move_iterator(tempFiles.end()));
                             //tempFiles.clear();
                             sourceTypeOn = FILE_STR;
                         } else if (currentSection == OFF_STR) {
                             pathPatternOff = cmd[1];
                             preprocessPath(pathPatternOff, filePath);
-                            //tempFiles.clear();
-                            filesListOff = getFilesListByWildcards(pathPatternOff, maxItemsLimit);
-                            //filesListOff.insert(filesListOff.end(), 
-                            //                  std::make_move_iterator(tempFiles.begin()),
-                            //                  std::make_move_iterator(tempFiles.end()));
+                            tempFiles.clear();
+                            tempFiles = getFilesListByWildcards(pathPatternOff, maxItemsLimit);
+                            filesListOff.insert(filesListOff.end(), 
+                                              std::make_move_iterator(tempFiles.begin()),
+                                              std::make_move_iterator(tempFiles.end()));
                             //tempFiles.clear();
                             sourceTypeOff = FILE_STR;
                         }
@@ -2678,10 +2678,15 @@ public:
                 selectedItemsList = std::move(filesList);
                 filesList.shrink_to_fit();
             }
-            else if (sourceType == LIST_STR || sourceType == LIST_FILE_STR)
+            else if (sourceType == LIST_STR || sourceType == LIST_FILE_STR) {
                 selectedItemsList = (sourceType == LIST_STR) ? stringToList(listString) : readListFromFile(listPath, maxItemsLimit);
-            else if (sourceType == INI_FILE_STR)
+                listString.clear();
+                listPath.clear();
+            }
+            else if (sourceType == INI_FILE_STR) {
                 selectedItemsList = parseSectionsFromIni(iniPath);
+                iniPath.clear();
+            }
             else if (sourceType == JSON_STR || sourceType == JSON_FILE_STR) {
                 populateSelectedItemsListFromJson(sourceType, (sourceType == JSON_STR) ? jsonString : jsonPath, jsonKey, selectedItemsList);
                 jsonPath.clear();
@@ -2699,10 +2704,15 @@ public:
                 selectedItemsListOn = std::move(filesListOn);
                 filesListOn.shrink_to_fit();
             }
-            else if (sourceTypeOn == LIST_STR || sourceTypeOn == LIST_FILE_STR)
+            else if (sourceTypeOn == LIST_STR || sourceTypeOn == LIST_FILE_STR) {
                 selectedItemsListOn = (sourceTypeOn == LIST_STR) ? stringToList(listStringOn) : readListFromFile(listPathOn, maxItemsLimit);
-            else if (sourceTypeOn == INI_FILE_STR)
+                listStringOn.clear();
+                listPathOn.clear();
+            }
+            else if (sourceTypeOn == INI_FILE_STR) {
                 selectedItemsListOn = parseSectionsFromIni(iniPathOn);
+                iniPathOn.clear();
+            }
             else if (sourceTypeOn == JSON_STR || sourceTypeOn == JSON_FILE_STR) {
                 populateSelectedItemsListFromJson(sourceTypeOn, (sourceTypeOn == JSON_STR) ? jsonStringOn : jsonPathOn, jsonKeyOn, selectedItemsListOn);
                 jsonPathOn.clear();
@@ -2716,10 +2726,15 @@ public:
                 selectedItemsListOff = std::move(filesListOff);
                 filesListOff.shrink_to_fit();
             }
-            else if (sourceTypeOff == LIST_STR || sourceTypeOff == LIST_FILE_STR)
+            else if (sourceTypeOff == LIST_STR || sourceTypeOff == LIST_FILE_STR) {
                 selectedItemsListOff = (sourceTypeOff == LIST_STR) ? stringToList(listStringOff) : readListFromFile(listPathOff, maxItemsLimit);
-            else if (sourceTypeOff == INI_FILE_STR)
+                listStringOff.clear();
+                listPathOff.clear();
+            }
+            else if (sourceTypeOff == INI_FILE_STR) {
                 selectedItemsListOff = parseSectionsFromIni(iniPathOff);
+                iniPathOff.clear();
+            }
             else if (sourceTypeOff == JSON_STR || sourceTypeOff == JSON_FILE_STR) {
                 populateSelectedItemsListFromJson(sourceTypeOff, (sourceTypeOff == JSON_STR) ? jsonStringOff : jsonPathOff, jsonKeyOff, selectedItemsListOff);
                 jsonPathOff.clear();
@@ -3414,7 +3429,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
     bool usingTopPivot, usingBottomPivot;
     bool onlyTables = true;
 
-    std::vector<std::string> entryList;
+    //std::vector<std::string> entryList;
 
     std::string commandNameLower;
 
@@ -4141,7 +4156,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
                 } else if (commandMode == NAMED_STEP_TRACKBAR_STR) {
                     //entryList.clear();
                     //entryList.shrink_to_fit();
-                    entryList = {};
+                    std::vector<std::string> entryList = {};
                     
                     _inEristaSection = false;
                     _inMarikoSection = false;
@@ -4223,7 +4238,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
                         interpretAndExecuteCommands, getSourceReplacement, commands, originalOptionName, unlockedTrackbar, onEveryTick);
                     
                     // Set the SCRIPT_KEY listener
-                    namedStepTrackBar->setScriptKeyListener([commands, keyName = originalOptionName, packagePath, entryList, lastPackageHeader]() {
+                    namedStepTrackBar->setScriptKeyListener([commands, keyName = originalOptionName, packagePath, entryList=entryList, lastPackageHeader]() {
                         const bool isFromMainMenu = (packagePath == PACKAGE_PATH);
                     
                         // Parse the value and index from the INI file
