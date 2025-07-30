@@ -320,14 +320,7 @@ private:
             if (runningInterpreter.load(acquire))
                 return false;
 
-            //if (simulatedSelect.exchange(false, acq_rel)) {
-            //    keys |= KEY_A;
-            //}
-            const bool _simulatedSelect = simulatedSelect.load(acquire);
-            if (_simulatedSelect)
-                simulatedSelect.store(false, release);
-
-            if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) || _simulatedSelect) {
+            if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
 
                 if (targetMenu == "softwareUpdateMenu") {
                     deleteFileOrDirectory(SETTINGS_PATH+"RELEASE.ini");
@@ -467,14 +460,8 @@ private:
                 if (runningInterpreter.load(acquire))
                     return false;
                 
-                //if (simulatedSelect.exchange(false, acq_rel)) {
-                //    keys |= KEY_A;
-                //}
-                const bool _simulatedSelect = simulatedSelect.load(acquire);
-                if (_simulatedSelect)
-                    simulatedSelect.store(false, release);
 
-                if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) || _simulatedSelect) {
+                if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
                     setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, iniKey, item);
                     
                     if (targetMenu == KEY_COMBO_STR) {
@@ -527,15 +514,8 @@ private:
                 executingCommands = false;
             }
 
-            //if (simulatedSelect.exchange(false, acq_rel)) {
-            //    keys |= KEY_A;
-            //}
-            const bool _simulatedSelect = simulatedSelect.load(acquire);
-            if (_simulatedSelect)
-                simulatedSelect.store(false, release);
-
             std::vector<std::vector<std::string>> interpreterCommands;
-            if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) || _simulatedSelect) {
+            if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
                 executingCommands = true;
                 isDownloadCommand = true;
                 const bool disableLoaderUpdate = isFile(FLAGS_PATH+"NO_LOADER_UPDATES.flag");
@@ -782,14 +762,8 @@ public:
                 listItem->setClickListener([skipLang = !isFileOrDirectory(langFile), defaultLangMode, defaulLang, langFile, listItem](uint64_t keys) {
                     //listItemPtr = std::shared_ptr<tsl::elm::ListItem>(listItem, [](auto*){})](uint64_t keys) {
                     if (runningInterpreter.load(acquire)) return false;
-                    //if (simulatedSelect.exchange(false, acq_rel)) {
-                    //    keys |= KEY_A;
-                    //}
-                    const bool _simulatedSelect = simulatedSelect.load(acquire);
-                    if (_simulatedSelect)
-                        simulatedSelect.store(false, release);
 
-                    if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) || _simulatedSelect) {
+                    if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
                         setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, DEFAULT_LANG_STR, defaultLangMode);
                         reloadMenu = reloadMenu2 = true;
                         parseLanguage(langFile);
@@ -949,14 +923,8 @@ public:
             }
             listItem->setClickListener([defaultTheme = THEMES_PATH + "default.ini", listItem](uint64_t keys) {
                 if (runningInterpreter.load(acquire)) return false;
-                //if (simulatedSelect.exchange(false, acq_rel)) {
-                //    keys |= KEY_A;
-                //}
-                const bool _simulatedSelect = simulatedSelect.load(acquire);
-                if (_simulatedSelect)
-                    simulatedSelect.store(false, release);
 
-                if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) || _simulatedSelect) {
+                if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
                     setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "current_theme", DEFAULT_STR);
                     deleteFileOrDirectory(THEME_CONFIG_INI_PATH);
                     if (isFileOrDirectory(defaultTheme)) {
@@ -1000,14 +968,8 @@ public:
                 }
                 listItem->setClickListener([themeName, themeFile, listItem](uint64_t keys) {
                     if (runningInterpreter.load(acquire)) return false;
-                    //if (simulatedSelect.exchange(false, acq_rel)) {
-                    //    keys |= KEY_A;
-                    //}
-                    const bool _simulatedSelect = simulatedSelect.load(acquire);
-                    if (_simulatedSelect)
-                        simulatedSelect.store(false, release);
 
-                    if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) || _simulatedSelect) {
+                    if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
                         setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "current_theme", themeName);
                         //deleteFileOrDirectory(THEME_CONFIG_INI_PATH);
                         copyFileOrDirectory(themeFile, THEME_CONFIG_INI_PATH);
@@ -1046,14 +1008,8 @@ public:
 
             listItem->setClickListener([listItem](uint64_t keys) {
                 if (runningInterpreter.load(acquire)) return false;
-                //if (simulatedSelect.exchange(false, acq_rel)) {
-                //    keys |= KEY_A;
-                //}
-                const bool _simulatedSelect = simulatedSelect.load(acquire);
-                if (_simulatedSelect)
-                    simulatedSelect.store(false, release);
 
-                if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) || _simulatedSelect) {
+                if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
                     setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "current_wallpaper", "");
                     deleteFileOrDirectory(WALLPAPER_PATH);
                     reloadWallpaper();
@@ -1091,14 +1047,8 @@ public:
                 }
                 listItem->setClickListener([wallpaperName, wallpaperFile, listItem](uint64_t keys) {
                     if (runningInterpreter.load(acquire)) return false;
-                    //if (simulatedSelect.exchange(false, acq_rel)) {
-                    //    keys |= KEY_A;
-                    //}
-                    const bool _simulatedSelect = simulatedSelect.load(acquire);
-                    if (_simulatedSelect)
-                        simulatedSelect.store(false, release);
 
-                    if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) || _simulatedSelect) {
+                    if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
                         setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "current_wallpaper", wallpaperName);
                         //deleteFileOrDirectory(THEME_CONFIG_INI_PATH);
                         copyFileOrDirectory(wallpaperFile, WALLPAPER_PATH);
@@ -1240,8 +1190,7 @@ public:
         
         if (goBackAfter) {
             goBackAfter = false;
-            if (simulatedBack.load(acquire))
-                simulatedBack.store(true, release);
+            simulatedBack.store(true, release);
             return true;
         }
         
@@ -1252,16 +1201,8 @@ public:
                 if (simulatedMenu.load(acquire))
                     simulatedMenu.store(false, release);
                 
-                //if (simulatedBack.exchange(false, acq_rel)) {
-                //    keysDown |= KEY_B;
-                //}
-                
                 const bool isTouching = stillTouching.load(acquire);
-                const bool _simulatedBack = simulatedBack.load(acquire);
-                if (_simulatedBack)
-                    simulatedBack.store(false, release);
-
-                const bool backKeyPressed = !isTouching && (((keysDown & KEY_B) && !(keysHeld & ~KEY_B & ALL_KEYS_MASK)) || _simulatedBack);
+                const bool backKeyPressed = !isTouching && (((keysDown & KEY_B) && !(keysHeld & ~KEY_B & ALL_KEYS_MASK)));
                 
                 if (backKeyPressed) {
                     if (allowSlide.load(acquire))
@@ -1289,15 +1230,8 @@ public:
             if (simulatedMenu.load(acquire))
                 simulatedMenu.store(false, release);
             
-            //if (simulatedBack.exchange(false, acq_rel)) {
-            //    keysDown |= KEY_B;
-            //}
-            
             const bool isTouching = stillTouching.load(acquire);
-            const bool _simulatedBack = simulatedBack.load(acquire);
-            if (_simulatedBack)
-                simulatedBack.store(false, release);
-            const bool backKeyPressed = !isTouching && (((keysDown & KEY_B) && !(keysHeld & ~KEY_B & ALL_KEYS_MASK)) || _simulatedBack);
+            const bool backKeyPressed = !isTouching && (((keysDown & KEY_B) && !(keysHeld & ~KEY_B & ALL_KEYS_MASK)));
             
             if (backKeyPressed) {
                 if (allowSlide.load(acquire))
@@ -1409,14 +1343,8 @@ public:
         listItem->setClickListener([settingsIniPath=settingsIniPath, entryName=entryName, iStr, priorityValue, listItem](uint64_t keys) {
             if (runningInterpreter.load(acquire)) return false;
 
-            //if (simulatedSelect.exchange(false, acq_rel)) {
-            //    keys |= KEY_A;
-            //}
-            const bool _simulatedSelect = simulatedSelect.load(acquire);
-            if (_simulatedSelect)
-                simulatedSelect.store(false, release);
 
-            if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) || _simulatedSelect) {
+            if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
                 if (iStr != priorityValue) {
                     reloadMenu = true; // Modify the global variable
                 } else {
@@ -1474,14 +1402,8 @@ public:
                 keyComboItem->setValue(displayCombo);
                 keyComboItem->setClickListener([entryName=entryName, entryMode=entryMode, overlayName=title, overlayVersion=version, listItem = keyComboItem](uint64_t keys) {
                     if (runningInterpreter.load(acquire)) return false;
-                    //if (simulatedSelect.exchange(false, acq_rel)) {
-                    //    keys |= KEY_A;
-                    //}
-                    const bool _simulatedSelect = simulatedSelect.load(acquire);
-                    if (_simulatedSelect)
-                        simulatedSelect.store(false, release);
 
-                    if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) || _simulatedSelect) {
+                    if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
                         inMainMenu = false;
                         tsl::changeTo<SettingsMenu>(entryName, entryMode, overlayName, overlayVersion, KEY_COMBO_STR);
                         selectedListItem = listItem;
@@ -1509,14 +1431,8 @@ public:
             listItem->setValue(getSettingsValue(PRIORITY_STR));
             listItem->setClickListener([entryName=entryName, entryMode=entryMode, overlayName=title, overlayVersion=version, listItem](uint64_t keys) {
                 if (runningInterpreter.load(acquire)) return false;
-                //if (simulatedSelect.exchange(false, acq_rel)) {
-                //    keys |= KEY_A;
-                //}
-                const bool _simulatedSelect = simulatedSelect.load(acquire);
-                if (_simulatedSelect)
-                    simulatedSelect.store(false, release);
 
-                if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) || _simulatedSelect) {
+                if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
                     inMainMenu = false;
                     tsl::changeTo<SettingsMenu>(entryName, entryMode, overlayName, overlayVersion, PRIORITY_STR);
                     selectedListItem = listItem;
@@ -1581,14 +1497,8 @@ public:
                         // Capture by pointer/ref so we can update comboList[i]
                         item->setClickListener([entryName = entryName, settingsIniPath = settingsIniPath, i, mode, &comboListMutable, item, this](uint64_t keys) mutable {
                             if (runningInterpreter.load(acquire)) return false;
-                            //if (simulatedSelect.exchange(false, acq_rel)) {
-                            //    keys |= KEY_A;
-                            //}
-                            const bool _simulatedSelect = simulatedSelect.load(acquire);
-                            if (_simulatedSelect)
-                                simulatedSelect.store(false, release);
 
-                            if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) || _simulatedSelect) {
+                            if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
                                 inMainMenu = false;
     
                                 // Open a new SettingsMenu specifically for editing this mode combo
@@ -1681,14 +1591,8 @@ public:
             }
             listItem->setClickListener([entryName=entryName, settingsIniPath=settingsIniPath, listItem](uint64_t keys) {
                 if (runningInterpreter.load(acquire)) return false;
-                //if (simulatedSelect.exchange(false, acq_rel)) {
-                //    keys |= KEY_A;
-                //}
-                const bool _simulatedSelect = simulatedSelect.load(acquire);
-                if (_simulatedSelect)
-                    simulatedSelect.store(false, release);
 
-                if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) || _simulatedSelect) {
+                if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
                     // Remove key combo from this overlay
                     setIniFileValue(settingsIniPath, entryName, KEY_COMBO_STR, "");
                     tsl::hlp::loadEntryKeyCombos(); // reload combos
@@ -1727,14 +1631,9 @@ public:
                 }
                 listItem->setClickListener([entryName=entryName, settingsIniPath=settingsIniPath, combo, mappedCombo, currentKeyCombo, listItem](uint64_t keys) {
                     if (runningInterpreter.load(acquire)) return false;
-                    //if (simulatedSelect.exchange(false, acq_rel)) {
-                    //    keys |= KEY_A;
-                    //}
-                    const bool _simulatedSelect = simulatedSelect.load(acquire);
-                    if (_simulatedSelect)
-                        simulatedSelect.store(false, release);
 
-                    if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) || _simulatedSelect) {
+
+                    if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
                         if (combo != currentKeyCombo) {
                             // Remove this key combo from any other overlays first
                             removeKeyComboFromOthers(combo, entryName);
@@ -1802,13 +1701,8 @@ public:
             }
             noComboItem->setClickListener([entryName=entryName, settingsIniPath=settingsIniPath, idx, comboList, noComboItem](uint64_t keys) mutable {
                 if (runningInterpreter.load(acquire)) return false;
-                //if (simulatedSelect.exchange(false, acq_rel))
-                //    keys |= KEY_A;
-                const bool _simulatedSelect = simulatedSelect.load(acquire);
-                if (_simulatedSelect)
-                    simulatedSelect.store(false, release);
 
-                if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) || _simulatedSelect) {
+                if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
                     comboList[idx] = "";
                     const std::string newComboStr = "(" + joinIniList(comboList) + ")";
                     removeKeyComboFromOthers(newComboStr, entryName);
@@ -1847,13 +1741,8 @@ public:
         
                 comboItem->setClickListener([entryName=entryName, settingsIniPath=settingsIniPath, idx, combo, comboList, mappedCombo, comboItem](uint64_t keys) mutable {
                     if (runningInterpreter.load(acquire)) return false;
-                    //if (simulatedSelect.exchange(false, acq_rel))
-                    //    keys |= KEY_A;
-                    const bool _simulatedSelect = simulatedSelect.load(acquire);
-                    if (_simulatedSelect)
-                        simulatedSelect.store(false, release);
 
-                    if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) || _simulatedSelect) {
+                    if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
                         if (combo != comboList[idx]) {
                             // Remove same combo from other overlays (both key_combo + mode_combos)
                             removeKeyComboFromOthers(combo, entryName);
@@ -1942,8 +1831,7 @@ public:
         
         if (goBackAfter) {
             goBackAfter = false;
-            if (simulatedBack.load(acquire))
-                simulatedBack.store(true, release);
+            simulatedBack.store(true, release);
             return true;
         }
 
@@ -1954,16 +1842,9 @@ public:
                     simulatedNextPage.store(false, release);
                 if (simulatedMenu.load(acquire))
                     simulatedMenu.store(false, release);
-    
-                //if (simulatedBack.exchange(false, acq_rel)) {
-                //    keysDown |= KEY_B;
-                //}
 
                 const bool isTouching = stillTouching.load(acquire);
-                const bool _simulatedBack = simulatedBack.load(acquire);
-                if (_simulatedBack)
-                    simulatedBack.store(false, release);
-                const bool backKeyPressed = !isTouching && (((keysDown & KEY_B) && !(keysHeld & ~KEY_B & ALL_KEYS_MASK)) || _simulatedBack);
+                const bool backKeyPressed = !isTouching && (((keysDown & KEY_B) && !(keysHeld & ~KEY_B & ALL_KEYS_MASK)));
     
                 // Note: Original code uses !stillTouching without .load() - preserving this exactly
                 if (backKeyPressed) {
@@ -2017,17 +1898,10 @@ public:
                 simulatedNextPage.store(false, release);
             if (simulatedMenu.load(acquire))
                 simulatedMenu.store(false, release);
-        
-            //if (simulatedBack.exchange(false, acq_rel)) {
-            //    keysDown |= KEY_B;
-            //}
-            const bool _simulatedBack = simulatedBack.load(acquire);
-            if (_simulatedBack)
-                simulatedBack.store(false, release);
             
             // Note: Original code uses stillTouching.load() here - preserving this difference
             const bool isTouching = stillTouching.load(acquire);
-            const bool backKeyPressed = !isTouching && (((keysDown & KEY_B) && !(keysHeld & ~KEY_B & ALL_KEYS_MASK)) || _simulatedBack);
+            const bool backKeyPressed = !isTouching && (((keysDown & KEY_B) && !(keysHeld & ~KEY_B & ALL_KEYS_MASK)));
             
             
             if (backKeyPressed) {
@@ -2109,14 +1983,8 @@ private:
 
         listItem->setClickListener([filePath=filePath, specificKey=specificKey, listItem, line](uint64_t keys) {
             if (runningInterpreter.load(acquire)) return false;
-            //if (simulatedSelect.exchange(false, acq_rel)) {
-            //    keys |= KEY_A;
-            //}
-            const bool _simulatedSelect = simulatedSelect.load(acquire);
-            if (_simulatedSelect)
-                simulatedSelect.store(false, release);
 
-            if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) || _simulatedSelect) {
+            if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
                 std::vector<std::vector<std::string>> commandVec;
                 std::vector<std::string> commandParts;
                 std::string currentPart;
@@ -2314,8 +2182,7 @@ public:
         
         if (goBackAfter) {
             goBackAfter = false;
-            if (simulatedBack.load(acquire))
-                simulatedBack.store(true, release);
+            simulatedBack.store(true, release);
             return true;
         }
         
@@ -2325,15 +2192,9 @@ public:
             if (simulatedMenu.load(acquire))
                 simulatedMenu.store(false, release);
             
-            //if (simulatedBack.exchange(false, acq_rel)) {
-            //    keysDown |= KEY_B;
-            //}
-            const bool _simulatedBack = simulatedBack.load(acquire);
-            if (_simulatedBack)
-                simulatedBack.store(false, release);
             
             const bool isTouching = stillTouching.load(acquire);
-            const bool backKeyPressed = !isTouching && (((keysDown & KEY_B) && !(keysHeld & ~KEY_B & ALL_KEYS_MASK)) || _simulatedBack);
+            const bool backKeyPressed = !isTouching && (((keysDown & KEY_B) && !(keysHeld & ~KEY_B & ALL_KEYS_MASK)));
             
             if (backKeyPressed) {
                 if (allowSlide.load(acquire))
@@ -3147,15 +3008,7 @@ public:
                         return false;
                     }
     
-                    //if (simulatedSelect.exchange(false, acq_rel)) {
-                    //    keys |= KEY_A;
-                    //}
-                    const bool _simulatedSelect = simulatedSelect.load(acquire);
-                    if (_simulatedSelect)
-                        simulatedSelect.store(false, release);
-
-    
-                    if (((keys & KEY_A) && !(keys & ~KEY_A & ALL_KEYS_MASK)) || _simulatedSelect) {
+                    if (((keys & KEY_A) && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
                         isDownloadCommand = false;
                         runningInterpreter.store(true, release);
     
@@ -3367,8 +3220,7 @@ public:
         
         if (goBackAfter) {
             goBackAfter = false;
-            if (simulatedBack.load(acquire))
-                simulatedBack.store(true, release);
+            simulatedBack.store(true, release);
             return true;
         }
         
@@ -3391,16 +3243,10 @@ public:
             if (simulatedMenu.load(acquire))
                 simulatedMenu.store(false, release);
             
-            //if (simulatedBack.exchange(false, acq_rel)) {
-            //    keysDown |= KEY_B;
-            //}
-            const bool _simulatedBack = simulatedBack.load(acquire);
-            if (_simulatedBack)
-                simulatedBack.store(false, release);
             
             // Check touching state again for the key handling (different timing context)
             const bool isTouchingForKeys = stillTouching.load(acquire);
-            const bool backKeyPressed = !isTouchingForKeys && (((keysDown & KEY_B) && !(keysHeld & ~KEY_B & ALL_KEYS_MASK)) || _simulatedBack);
+            const bool backKeyPressed = !isTouchingForKeys && (((keysDown & KEY_B) && !(keysHeld & ~KEY_B & ALL_KEYS_MASK)));
             
             if (backKeyPressed) {
                 if (allowSlide.load(acquire))
@@ -3837,14 +3683,8 @@ bool drawCommandsMenu(tsl::elm::List* list,
                                 
                                 if (runningInterpreter.load(acquire))
                                     return false;
-                                //if (simulatedSelect.exchange(false, acq_rel)) {
-                                //    keys |= KEY_A;
-                                //}
-                                const bool _simulatedSelect = simulatedSelect.load(acquire);
-                                if (_simulatedSelect)
-                                    simulatedSelect.store(false, release);
 
-                                if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) || _simulatedSelect) {
+                                if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
                                     inPackageMenu = false;
                                     //tsl::clearGlyphCacheNow.store(true, release);
                                     tsl::changeTo<PackageMenu>(packagePath, optionName, currentPage, packageName, 0, lastPackageHeader);
@@ -3872,14 +3712,8 @@ bool drawCommandsMenu(tsl::elm::List* list,
                             listItem->setClickListener([optionName, i, packageIniPath, lastPackageHeader](s64 keys) {
                                 if (runningInterpreter.load(acquire))
                                     return false;
-                                //if (simulatedSelect.exchange(false, acq_rel)) {
-                                //    keys |= KEY_A;
-                                //}
-                                const bool _simulatedSelect = simulatedSelect.load(acquire);
-                                if (_simulatedSelect)
-                                    simulatedSelect.store(false, release);
 
-                                if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) || _simulatedSelect) {
+                                if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
                                     inPackageMenu = false;
 
                                     tsl::changeTo<MainMenu>("", optionName);
@@ -4532,15 +4366,8 @@ bool drawCommandsMenu(tsl::elm::List* list,
                         const std::string& forwarderPackageIniName = getNameFromPath(packageSource);
                         listItem->setClickListener([commands, keyName = originalOptionName, dropdownSection, packagePath, listItem,
                             forwarderPackagePath, forwarderPackageIniName, lastPackageHeader, i](s64 keys) mutable {
-                            //if (simulatedSelect.exchange(false, acq_rel)) {
-                            //    keys |= KEY_A;
-                            //}
-                            
-                            const bool _simulatedSelect = simulatedSelect.load(acquire);
-                            if (_simulatedSelect)
-                                simulatedSelect.store(false, release);
 
-                            if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) || _simulatedSelect) {
+                            if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
                                 interpretAndExecuteCommands(std::move(getSourceReplacement(commands, keyName, i, packagePath)), packagePath, keyName);
                                 resetPercentages();
 
@@ -4594,14 +4421,8 @@ bool drawCommandsMenu(tsl::elm::List* list,
                             
                             if (runningInterpreter.load(acquire))
                                 return false;
-                            //if (simulatedSelect.exchange(false, acq_rel)) {
-                            //    keys |= KEY_A;
-                            //}
-                            const bool _simulatedSelect = simulatedSelect.load(acquire);
-                            if (_simulatedSelect)
-                                simulatedSelect.store(false, release);
 
-                            if (((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) || _simulatedSelect) {
+                            if (((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)))) {
                                 if (footer != UNAVAILABLE_SELECTION && footer != NOT_AVAILABLE_STR && (footer.find(NULL_STR) == std::string::npos)) {
                                     if (inPackageMenu)
                                         inPackageMenu = false;
@@ -4696,14 +4517,8 @@ bool drawCommandsMenu(tsl::elm::List* list,
                             if (runningInterpreter.load(acquire)) {
                                 return false;
                             }
-                            //if (simulatedSelect.exchange(false, acq_rel)) {
-                            //    keys |= KEY_A;
-                            //}
-                            const bool _simulatedSelect = simulatedSelect.load(acquire);
-                            if (_simulatedSelect)
-                                simulatedSelect.store(false, release);
 
-                            if (((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) || _simulatedSelect) {
+                            if (((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)))) {
                                 isDownloadCommand = false;
                                 runningInterpreter.store(true, release);
                                 executeInterpreterCommands(getSourceReplacement(commands, selectedItem, i, packagePath), packagePath, keyName);
@@ -5063,8 +4878,7 @@ public:
     
         if (goBackAfter) {
             goBackAfter = false;
-            if (simulatedBack.load(acquire))
-                simulatedBack.store(true, release);
+            simulatedBack.store(true, release);
             return true;
         }
     
@@ -5179,11 +4993,8 @@ public:
         }
         
         // Common back key condition
-        const bool _simulatedBack = simulatedBack.load(acquire);
-        if (_simulatedBack)
-            simulatedBack.store(false, release);
 
-        const bool backKeyPressed = !isTouching && (((keysDown & KEY_B) && !(keysHeld & ~KEY_B & ALL_KEYS_MASK)) || _simulatedBack);
+        const bool backKeyPressed = !isTouching && (((keysDown & KEY_B) && !(keysHeld & ~KEY_B & ALL_KEYS_MASK)));
         
         // Helper lambda for common back key handling logic
         auto handleBackKeyCommon = [&]() {
@@ -5253,9 +5064,6 @@ public:
                 simulatedMenu.store(false, release);
             
             if (!usingPages || (usingPages && lastPage == LEFT_STR)) {
-                //if (simulatedBack.exchange(false, acq_rel)) {
-                //    keysDown |= KEY_B;
-                //}
                 if (backKeyPressed) {
                     if (handleBackKeyCommon()) return true;
                     // Free-up memory
@@ -5264,9 +5072,6 @@ public:
                     return true;
                 }
             } else if (usingPages && lastPage == RIGHT_STR) {
-                //if (simulatedBack.exchange(false, acq_rel)) {
-                //    keysDown |= KEY_B;
-                //}
                 if (backKeyPressed) {
                     if (handleBackKeyCommon()) return true;
                     // Free-up memory
@@ -5285,9 +5090,6 @@ public:
                 simulatedMenu.store(false, release);
             
             if (!usingPages || (usingPages && lastPage == LEFT_STR)) {
-                //if (simulatedBack.exchange(false, acq_rel)) {
-                //    keysDown |= KEY_B;
-                //}
                 if (backKeyPressed) {
                     handleForwarderFooter();
                     if (allowSlide.load(acquire))
@@ -5303,9 +5105,6 @@ public:
                     return true;
                 }
             } else if (usingPages && lastPage == RIGHT_STR) {
-                //if (simulatedBack.exchange(false, acq_rel)) {
-                //    keysDown |= KEY_B;
-                //}
                 if (backKeyPressed) {
                     handleForwarderFooter();
                     if (allowSlide.load(acquire))
@@ -5352,10 +5151,7 @@ public:
             tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
             tsl::Overlay::get()->close();
         }
-    
-        //if (simulatedBack.exchange(false, acq_rel)) {
-        //    keysDown |= KEY_B;
-        //}
+        
         if (backKeyPressed) { // for catching lost navigations
             if (!selectedPackage.empty()) {
                 tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
@@ -5782,14 +5578,7 @@ public:
                                 return false;
                             
     
-                            //if (simulatedSelect.exchange(false, acq_rel)) {
-                            //    keys |= KEY_A;
-                            //}
-                            const bool _simulatedSelect = simulatedSelect.load(acquire);
-                            if (_simulatedSelect)
-                                simulatedSelect.store(false, release);
-    
-                            if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) || _simulatedSelect) {
+                            if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
                                 
                                 //std::string useOverlayLaunchArgs = parseValueFromIniSection(OVERLAYS_INI_FILEPATH, overlayFileName, USE_LAUNCH_ARGS_STR);
                                 //std::string overlayLaunchArgs = parseValueFromIniSection(OVERLAYS_INI_FILEPATH, overlayFileName, LAUNCH_ARGS_STR);
@@ -5904,14 +5693,7 @@ public:
                         if (runningInterpreter.load(acquire))
                             return false;
     
-                        //if (simulatedSelect.exchange(false, acq_rel)) {
-                        //    keys |= KEY_A;
-                        //}
-                        const bool _simulatedSelect = simulatedSelect.load(acquire);
-                        if (_simulatedSelect)
-                            simulatedSelect.store(false, release);
-    
-                        if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) || _simulatedSelect) {
+                        if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
                             // reset tracking
                             g_overlayFilename = "";
                             jumpItemName = "";
@@ -6176,15 +5958,7 @@ public:
                                 return false;
                             }
                             
-                            //if (simulatedSelect.exchange(false, acq_rel)) {
-                            //    keys |= KEY_A;
-                            //}
-                            const bool _simulatedSelect = simulatedSelect.load(acquire);
-                            if (_simulatedSelect)
-                                simulatedSelect.store(false, release);
-
-                            
-                            if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) || _simulatedSelect) {
+                            if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
                                 inMainMenu = false;
                                 
                                 if (isFileOrDirectory(packageFilePath + BOOT_PACKAGE_FILENAME)) {
@@ -6298,14 +6072,7 @@ public:
                         if (runningInterpreter.load(acquire))
                             return false;
                         
-                        //if (simulatedSelect.exchange(false, acq_rel)) {
-                        //    keys |= KEY_A;
-                        //}
-                        const bool _simulatedSelect = simulatedSelect.load(acquire);
-                        if (_simulatedSelect)
-                            simulatedSelect.store(false, release);
-                        
-                        if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) || _simulatedSelect) {
+                        if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
                             inMainMenu = false;
                             inHiddenMode = true;
                             tsl::changeTo<MainMenu>(PACKAGES_STR);
@@ -6411,8 +6178,7 @@ public:
         
         if (goBackAfter) {
             goBackAfter = false;
-            if (simulatedBack.load(acquire))
-                simulatedBack.store(true, release);
+            simulatedBack.store(true, release);
             return true;
         }
     
@@ -6432,21 +6198,13 @@ public:
         }
     
         // Common condition for back key handling
-        const bool _simulatedBack = simulatedBack.load(acquire);
-        if (_simulatedBack)
-            simulatedBack.store(false, release);
-
-        const bool backKeyPressed = !isTouching && ((((keysDown & KEY_B)) && !(keysHeld & ~KEY_B & ALL_KEYS_MASK)) || _simulatedBack);
+        const bool backKeyPressed = !isTouching && ((((keysDown & KEY_B)) && !(keysHeld & ~KEY_B & ALL_KEYS_MASK)));
         
         if (!dropdownSection.empty() && !returningToMain) {
             if (simulatedNextPage.load(acquire))
                 simulatedNextPage.store(false, release);
             if (simulatedMenu.load(acquire))
                 simulatedMenu.store(false, release);
-    
-            //if (simulatedBack.exchange(false, acq_rel)) {
-            //    keysDown |= KEY_B;
-            //}
     
             if (backKeyPressed) {
                 if (allowSlide.load(acquire))
@@ -6542,10 +6300,6 @@ public:
                     return true;
                 }
     
-                //if (simulatedBack.exchange(false, acq_rel)) {
-                //    keysDown |= KEY_B;
-                //}
-    
                 if (backKeyPressed) {
                     if (allowSlide.load(acquire))
                         allowSlide.store(false, release);
@@ -6574,10 +6328,6 @@ public:
                 simulatedNextPage.store(false, release);
             if (simulatedMenu.load(acquire))
                 simulatedMenu.store(false, release);
-    
-            //if (simulatedBack.exchange(false, acq_rel)) {
-            //    keysDown |= KEY_B;
-            //}
     
             if (backKeyPressed) {
                 // Check if we're in hidden mode with no underlying menu to go back to
