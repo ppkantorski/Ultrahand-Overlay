@@ -2483,7 +2483,7 @@ public:
                     } else if (commandName == "filter") {
                         // Avoid copying by directly assigning and then processing
                         filterEntry = std::move(cmd[1]); // Move instead of copy
-                        cmd[1].shrink_to_fit();
+                        //cmd[1].shrink_to_fit();
                         removeQuotes(filterEntry);
                         if (sourceType == FILE_STR) {
                             preprocessPath(filterEntry, filePath);
@@ -2514,8 +2514,9 @@ public:
                                 filterListOn.push_back(std::move(filterEntry));
                             else if (currentSection == OFF_STR)
                                 filterListOff.push_back(std::move(filterEntry));
-                            filterEntry.shrink_to_fit();
+                            //filterEntry.shrink_to_fit();
                         }
+                        filterEntry.shrink_to_fit();
                     } else if (commandName == "file_source") {
                         sourceType = FILE_STR;
                         if (currentSection == GLOBAL_STR) {
@@ -2671,7 +2672,7 @@ public:
     
         std::vector<std::string> selectedItemsListOn, selectedItemsListOff;
         std::string currentPackageHeader;
-        std::string itemName;
+        
     
         if (commandMode == DEFAULT_STR || commandMode == OPTION_STR) {
             if (sourceType == FILE_STR) {
@@ -2690,14 +2691,11 @@ public:
             else if (sourceType == JSON_STR || sourceType == JSON_FILE_STR) {
                 populateSelectedItemsListFromJson(sourceType, (sourceType == JSON_STR) ? jsonString : jsonPath, jsonKey, selectedItemsList);
                 jsonPath.clear();
-                //jsonPath.shrink_to_fit();
+                jsonPath.shrink_to_fit();
                 jsonString.clear();
-                //jsonString.shrink_to_fit();
+                jsonString.shrink_to_fit();
             }
             applyItemsLimit(selectedItemsList);
-            filterItemsList(filterList, selectedItemsList);
-            filterList.clear();
-            filterList.shrink_to_fit();
 
         } else if (commandMode == TOGGLE_STR) {
             if (sourceTypeOn == FILE_STR) {
@@ -2716,9 +2714,9 @@ public:
             else if (sourceTypeOn == JSON_STR || sourceTypeOn == JSON_FILE_STR) {
                 populateSelectedItemsListFromJson(sourceTypeOn, (sourceTypeOn == JSON_STR) ? jsonStringOn : jsonPathOn, jsonKeyOn, selectedItemsListOn);
                 jsonPathOn.clear();
-                //jsonPathOn.shrink_to_fit();
+                jsonPathOn.shrink_to_fit();
                 jsonStringOn.clear();
-                //jsonStringOn.shrink_to_fit();
+                jsonStringOn.shrink_to_fit();
             }
             applyItemsLimit(selectedItemsListOn);
 
@@ -2738,34 +2736,18 @@ public:
             else if (sourceTypeOff == JSON_STR || sourceTypeOff == JSON_FILE_STR) {
                 populateSelectedItemsListFromJson(sourceTypeOff, (sourceTypeOff == JSON_STR) ? jsonStringOff : jsonPathOff, jsonKeyOff, selectedItemsListOff);
                 jsonPathOff.clear();
-                //jsonStringOff.shrink_to_fit();
+                jsonStringOff.shrink_to_fit();
                 jsonStringOff.clear();
-                //jsonStringOff.shrink_to_fit();
+                jsonStringOff.shrink_to_fit();
             }
             applyItemsLimit(selectedItemsListOff);
-            filterItemsList(filterListOn, selectedItemsListOn);
-            filterListOn.clear();
-            filterListOn.shrink_to_fit();
-            filterItemsList(filterListOff, selectedItemsListOff);
-            filterListOff.clear();
-            filterListOff.shrink_to_fit();
-            //if (sourceType == FILE_STR) {
-            //    filterItemsList(filterListOn, selectedItemsListOn);
-            //    //filterListOn.clear();
-            //    //filterListOn.shrink_to_fit();
-            //    
-            //    filterItemsList(filterListOff, selectedItemsListOff);
-            //    //filterListOff.clear();
-            //    //filterListOff.shrink_to_fit();
-            //}
-
 
             //selectedItemsList.reserve(selectedItemsListOn.size() + selectedItemsListOff.size());
             selectedItemsList.insert(selectedItemsList.end(), selectedItemsListOn.begin(), selectedItemsListOn.end());
             selectedItemsList.insert(selectedItemsList.end(), selectedItemsListOff.begin(), selectedItemsListOff.end());
 
         }
-    
+
         if (sourceType == FILE_STR) {
             if (commandGrouping == "split2" || commandGrouping == "split4") {
                 std::sort(selectedItemsList.begin(), selectedItemsList.end(), [](const std::string& a, const std::string& b) {
@@ -2800,8 +2782,6 @@ public:
                     return getNameFromPath(a) < getNameFromPath(b);
                 });
             }
-    
-            //filterItemsList(filterList, selectedItemsList);
         }
     
         if (commandGrouping == DEFAULT_STR) {
@@ -2830,12 +2810,56 @@ public:
     
         std::string tmpSelectedItem;
         const size_t selectedItemsSize = selectedItemsList.size(); // Cache size to avoid repeated calls
-    
+        
+        
+        // Pre-process filtered items for reduced memory imprint
         for (size_t i = 0; i < selectedItemsSize; ++i) {
             std::string& selectedItem = selectedItemsList[i];
-    
+            
+            //if (isFileOrDirectory(selectedItem)) {
+            const std::string itemName = getNameFromPath(selectedItem);
+            if (itemName.front() == '.') { // Skip hidden items
+                selectedItem.clear();
+                continue;
+            }
+            //}
+
+            if (commandMode == TOGGLE_STR) {
+                auto it = std::find(filterListOn.begin(), filterListOn.end(), selectedItem);
+                if (it != filterListOn.end()) {
+                    filterListOn.erase(it);
+                    selectedItem.clear();
+                    continue;
+                }
+                it = std::find(filterListOff.begin(), filterListOff.end(), selectedItem);
+                if (it != filterListOff.end()) {
+                    filterListOff.erase(it);
+                    selectedItem.clear();
+                    continue;
+                }
+            } else {
+                auto it = std::find(filterList.begin(), filterList.end(), selectedItem);
+                if (it != filterList.end()) {
+                    filterList.erase(it);
+                    selectedItem.clear();
+                    continue;
+                }
+            }
+        }
+        filterList.clear();
+        filterList.shrink_to_fit();
+        filterListOn.clear();
+        filterListOn.shrink_to_fit();
+        filterListOff.clear();
+        filterListOff.shrink_to_fit();
+
+        std::string itemName;
+        for (size_t i = 0; i < selectedItemsSize; ++i) {
+            std::string& selectedItem = selectedItemsList[i];
+            
+
             itemName = getNameFromPath(selectedItem);
-            if (itemName.front() == '.') // Skip hidden items
+            if (itemName.empty()) // Skip empty lines
                 continue;
     
             tmpSelectedItem = selectedItem;
@@ -2915,13 +2939,24 @@ public:
                     }
                 }
             //} else {
-            //    if (commandMode == TOGGLE_STR && sourceType == FILE_STR) {
-            //        if (std::find(filterListOn.cbegin(), filterListOn.cend(), itemName) != filterListOn.cend() ||
-            //            std::find(filterListOff.cbegin(), filterListOff.cend(), itemName) != filterListOff.cend()) {
+            //    if (commandMode == TOGGLE_STR) {
+            //        auto it = std::find(filterListOn.begin(), filterListOn.end(), itemName);
+            //        if (it != filterListOn.end()) {
+            //            filterListOn.erase(it);
+            //            selectedItem.clear();
             //            continue;
             //        }
-            //    } else if (commandMode != TOGGLE_STR) {
-            //        if (std::find(filterList.cbegin(), filterList.cend(), itemName) != filterList.cend()) {
+            //        it = std::find(filterListOff.begin(), filterListOff.end(), itemName);
+            //        if (it != filterListOff.end()) {
+            //            filterListOff.erase(it);
+            //            selectedItem.clear();
+            //            continue;
+            //        }
+            //    } else {
+            //        auto it = std::find(filterList.begin(), filterList.end(), itemName);
+            //        if (it != filterList.end()) {
+            //            filterList.erase(it);
+            //            selectedItem.clear();
             //            continue;
             //        }
             //    }
