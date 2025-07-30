@@ -320,10 +320,14 @@ private:
             if (runningInterpreter.load(acquire))
                 return false;
 
-            if (simulatedSelect.exchange(false, acq_rel)) {
-                keys |= KEY_A;
-            }
-            if (keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) {
+            //if (simulatedSelect.exchange(false, acq_rel)) {
+            //    keys |= KEY_A;
+            //}
+            const bool _simulatedSelect = simulatedSelect.load(acquire);
+            if (_simulatedSelect)
+                simulatedSelect.store(false, release);
+
+            if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) || _simulatedSelect) {
 
                 if (targetMenu == "softwareUpdateMenu") {
                     deleteFileOrDirectory(SETTINGS_PATH+"RELEASE.ini");
@@ -463,10 +467,14 @@ private:
                 if (runningInterpreter.load(acquire))
                     return false;
                 
-                if (simulatedSelect.exchange(false, acq_rel)) {
-                    keys |= KEY_A;
-                }
-                if (keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) {
+                //if (simulatedSelect.exchange(false, acq_rel)) {
+                //    keys |= KEY_A;
+                //}
+                const bool _simulatedSelect = simulatedSelect.load(acquire);
+                if (_simulatedSelect)
+                    simulatedSelect.store(false, release);
+
+                if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) || _simulatedSelect) {
                     setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, iniKey, item);
                     
                     if (targetMenu == KEY_COMBO_STR) {
@@ -519,11 +527,15 @@ private:
                 executingCommands = false;
             }
 
-            if (simulatedSelect.exchange(false, acq_rel)) {
-                keys |= KEY_A;
-            }
+            //if (simulatedSelect.exchange(false, acq_rel)) {
+            //    keys |= KEY_A;
+            //}
+            const bool _simulatedSelect = simulatedSelect.load(acquire);
+            if (_simulatedSelect)
+                simulatedSelect.store(false, release);
+
             std::vector<std::vector<std::string>> interpreterCommands;
-            if (keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) {
+            if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) || _simulatedSelect) {
                 executingCommands = true;
                 isDownloadCommand = true;
                 const bool disableLoaderUpdate = isFile(FLAGS_PATH+"NO_LOADER_UPDATES.flag");
@@ -770,10 +782,14 @@ public:
                 listItem->setClickListener([skipLang = !isFileOrDirectory(langFile), defaultLangMode, defaulLang, langFile, listItem](uint64_t keys) {
                     //listItemPtr = std::shared_ptr<tsl::elm::ListItem>(listItem, [](auto*){})](uint64_t keys) {
                     if (runningInterpreter.load(acquire)) return false;
-                    if (simulatedSelect.exchange(false, acq_rel)) {
-                        keys |= KEY_A;
-                    }
-                    if (keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) {
+                    //if (simulatedSelect.exchange(false, acq_rel)) {
+                    //    keys |= KEY_A;
+                    //}
+                    const bool _simulatedSelect = simulatedSelect.load(acquire);
+                    if (_simulatedSelect)
+                        simulatedSelect.store(false, release);
+
+                    if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) || _simulatedSelect) {
                         setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, DEFAULT_LANG_STR, defaultLangMode);
                         reloadMenu = reloadMenu2 = true;
                         parseLanguage(langFile);
@@ -933,10 +949,14 @@ public:
             }
             listItem->setClickListener([defaultTheme = THEMES_PATH + "default.ini", listItem](uint64_t keys) {
                 if (runningInterpreter.load(acquire)) return false;
-                if (simulatedSelect.exchange(false, acq_rel)) {
-                    keys |= KEY_A;
-                }
-                if (keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) {
+                //if (simulatedSelect.exchange(false, acq_rel)) {
+                //    keys |= KEY_A;
+                //}
+                const bool _simulatedSelect = simulatedSelect.load(acquire);
+                if (_simulatedSelect)
+                    simulatedSelect.store(false, release);
+
+                if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) || _simulatedSelect) {
                     setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "current_theme", DEFAULT_STR);
                     deleteFileOrDirectory(THEME_CONFIG_INI_PATH);
                     if (isFileOrDirectory(defaultTheme)) {
@@ -980,10 +1000,14 @@ public:
                 }
                 listItem->setClickListener([themeName, themeFile, listItem](uint64_t keys) {
                     if (runningInterpreter.load(acquire)) return false;
-                    if (simulatedSelect.exchange(false, acq_rel)) {
-                        keys |= KEY_A;
-                    }
-                    if (keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) {
+                    //if (simulatedSelect.exchange(false, acq_rel)) {
+                    //    keys |= KEY_A;
+                    //}
+                    const bool _simulatedSelect = simulatedSelect.load(acquire);
+                    if (_simulatedSelect)
+                        simulatedSelect.store(false, release);
+
+                    if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) || _simulatedSelect) {
                         setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "current_theme", themeName);
                         //deleteFileOrDirectory(THEME_CONFIG_INI_PATH);
                         copyFileOrDirectory(themeFile, THEME_CONFIG_INI_PATH);
@@ -1022,10 +1046,14 @@ public:
 
             listItem->setClickListener([listItem](uint64_t keys) {
                 if (runningInterpreter.load(acquire)) return false;
-                if (simulatedSelect.exchange(false, acq_rel)) {
-                    keys |= KEY_A;
-                }
-                if (keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) {
+                //if (simulatedSelect.exchange(false, acq_rel)) {
+                //    keys |= KEY_A;
+                //}
+                const bool _simulatedSelect = simulatedSelect.load(acquire);
+                if (_simulatedSelect)
+                    simulatedSelect.store(false, release);
+
+                if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) || _simulatedSelect) {
                     setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "current_wallpaper", "");
                     deleteFileOrDirectory(WALLPAPER_PATH);
                     reloadWallpaper();
@@ -1063,10 +1091,14 @@ public:
                 }
                 listItem->setClickListener([wallpaperName, wallpaperFile, listItem](uint64_t keys) {
                     if (runningInterpreter.load(acquire)) return false;
-                    if (simulatedSelect.exchange(false, acq_rel)) {
-                        keys |= KEY_A;
-                    }
-                    if (keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) {
+                    //if (simulatedSelect.exchange(false, acq_rel)) {
+                    //    keys |= KEY_A;
+                    //}
+                    const bool _simulatedSelect = simulatedSelect.load(acquire);
+                    if (_simulatedSelect)
+                        simulatedSelect.store(false, release);
+
+                    if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) || _simulatedSelect) {
                         setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "current_wallpaper", wallpaperName);
                         //deleteFileOrDirectory(THEME_CONFIG_INI_PATH);
                         copyFileOrDirectory(wallpaperFile, WALLPAPER_PATH);
@@ -1208,25 +1240,34 @@ public:
         
         if (goBackAfter) {
             goBackAfter = false;
-            simulatedBack.exchange(true, acq_rel);
+            if (simulatedBack.load(acquire))
+                simulatedBack.store(true, release);
             return true;
         }
         
         if (inSettingsMenu && !inSubSettingsMenu) {
             if (!returningToSettings) {
-                simulatedNextPage.exchange(false, acq_rel);
-                simulatedMenu.exchange(false, acq_rel);
+                if (simulatedNextPage.load(acquire))
+                    simulatedNextPage.store(false, release);
+                if (simulatedMenu.load(acquire))
+                    simulatedMenu.store(false, release);
                 
                 //if (simulatedBack.exchange(false, acq_rel)) {
                 //    keysDown |= KEY_B;
                 //}
                 
                 const bool isTouching = stillTouching.load(acquire);
-                const bool backKeyPressed = (keysDown & KEY_B || simulatedBack.exchange(false, acq_rel)) && !(keysHeld & ~KEY_B & ALL_KEYS_MASK) && !isTouching;
+                const bool _simulatedBack = simulatedBack.load(acquire);
+                if (_simulatedBack)
+                    simulatedBack.store(false, release);
+
+                const bool backKeyPressed = !isTouching && (((keysDown & KEY_B) && !(keysHeld & ~KEY_B & ALL_KEYS_MASK)) || _simulatedBack);
                 
                 if (backKeyPressed) {
-                    allowSlide.exchange(false, acq_rel);
-                    unlockedSlide.exchange(false, acq_rel);
+                    if (allowSlide.load(acquire))
+                        allowSlide.store(false, release);
+                    if (unlockedSlide.load(acquire))
+                        unlockedSlide.store(false, release);
                     inSettingsMenu = false;
                     returningToMain = (lastMenu != "hiddenMenuMode");
                     returningToHiddenMain = !returningToMain;
@@ -1243,18 +1284,26 @@ public:
                 }
             }
         } else if (inSubSettingsMenu) {
-            simulatedNextPage.exchange(false, acq_rel);
+            if (simulatedNextPage.load(acquire))
+                simulatedNextPage.store(false, release);
+            if (simulatedMenu.load(acquire))
+                simulatedMenu.store(false, release);
             
             //if (simulatedBack.exchange(false, acq_rel)) {
             //    keysDown |= KEY_B;
             //}
             
             const bool isTouching = stillTouching.load(acquire);
-            const bool backKeyPressed = (keysDown & KEY_B || simulatedBack.exchange(false, acq_rel)) && !(keysHeld & ~KEY_B & ALL_KEYS_MASK) && !isTouching;
+            const bool _simulatedBack = simulatedBack.load(acquire);
+            if (_simulatedBack)
+                simulatedBack.store(false, release);
+            const bool backKeyPressed = !isTouching && (((keysDown & KEY_B) && !(keysHeld & ~KEY_B & ALL_KEYS_MASK)) || _simulatedBack);
             
             if (backKeyPressed) {
-                allowSlide.exchange(false, acq_rel);
-                unlockedSlide.exchange(false, acq_rel);
+                if (allowSlide.load(acquire))
+                    allowSlide.store(false, release);
+                if (unlockedSlide.load(acquire))
+                    unlockedSlide.store(false, release);
                 inSubSettingsMenu = false;
                 returningToSettings = true;
                 
@@ -1360,11 +1409,14 @@ public:
         listItem->setClickListener([settingsIniPath=settingsIniPath, entryName=entryName, iStr, priorityValue, listItem](uint64_t keys) {
             if (runningInterpreter.load(acquire)) return false;
 
-            if (simulatedSelect.exchange(false, acq_rel)) {
-                keys |= KEY_A;
-            }
+            //if (simulatedSelect.exchange(false, acq_rel)) {
+            //    keys |= KEY_A;
+            //}
+            const bool _simulatedSelect = simulatedSelect.load(acquire);
+            if (_simulatedSelect)
+                simulatedSelect.store(false, release);
 
-            if (keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) {
+            if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) || _simulatedSelect) {
                 if (iStr != priorityValue) {
                     reloadMenu = true; // Modify the global variable
                 } else {
@@ -1422,10 +1474,14 @@ public:
                 keyComboItem->setValue(displayCombo);
                 keyComboItem->setClickListener([entryName=entryName, entryMode=entryMode, overlayName=title, overlayVersion=version, listItem = keyComboItem](uint64_t keys) {
                     if (runningInterpreter.load(acquire)) return false;
-                    if (simulatedSelect.exchange(false, acq_rel)) {
-                        keys |= KEY_A;
-                    }
-                    if (keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) {
+                    //if (simulatedSelect.exchange(false, acq_rel)) {
+                    //    keys |= KEY_A;
+                    //}
+                    const bool _simulatedSelect = simulatedSelect.load(acquire);
+                    if (_simulatedSelect)
+                        simulatedSelect.store(false, release);
+
+                    if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) || _simulatedSelect) {
                         inMainMenu = false;
                         tsl::changeTo<SettingsMenu>(entryName, entryMode, overlayName, overlayVersion, KEY_COMBO_STR);
                         selectedListItem = listItem;
@@ -1453,10 +1509,14 @@ public:
             listItem->setValue(getSettingsValue(PRIORITY_STR));
             listItem->setClickListener([entryName=entryName, entryMode=entryMode, overlayName=title, overlayVersion=version, listItem](uint64_t keys) {
                 if (runningInterpreter.load(acquire)) return false;
-                if (simulatedSelect.exchange(false, acq_rel)) {
-                    keys |= KEY_A;
-                }
-                if (keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) {
+                //if (simulatedSelect.exchange(false, acq_rel)) {
+                //    keys |= KEY_A;
+                //}
+                const bool _simulatedSelect = simulatedSelect.load(acquire);
+                if (_simulatedSelect)
+                    simulatedSelect.store(false, release);
+
+                if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) || _simulatedSelect) {
                     inMainMenu = false;
                     tsl::changeTo<SettingsMenu>(entryName, entryMode, overlayName, overlayVersion, PRIORITY_STR);
                     selectedListItem = listItem;
@@ -1521,10 +1581,14 @@ public:
                         // Capture by pointer/ref so we can update comboList[i]
                         item->setClickListener([entryName = entryName, settingsIniPath = settingsIniPath, i, mode, &comboListMutable, item, this](uint64_t keys) mutable {
                             if (runningInterpreter.load(acquire)) return false;
-                            if (simulatedSelect.exchange(false, acq_rel)) {
-                                keys |= KEY_A;
-                            }
-                            if (keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) {
+                            //if (simulatedSelect.exchange(false, acq_rel)) {
+                            //    keys |= KEY_A;
+                            //}
+                            const bool _simulatedSelect = simulatedSelect.load(acquire);
+                            if (_simulatedSelect)
+                                simulatedSelect.store(false, release);
+
+                            if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) || _simulatedSelect) {
                                 inMainMenu = false;
     
                                 // Open a new SettingsMenu specifically for editing this mode combo
@@ -1617,10 +1681,14 @@ public:
             }
             listItem->setClickListener([entryName=entryName, settingsIniPath=settingsIniPath, listItem](uint64_t keys) {
                 if (runningInterpreter.load(acquire)) return false;
-                if (simulatedSelect.exchange(false, acq_rel)) {
-                    keys |= KEY_A;
-                }
-                if (keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) {
+                //if (simulatedSelect.exchange(false, acq_rel)) {
+                //    keys |= KEY_A;
+                //}
+                const bool _simulatedSelect = simulatedSelect.load(acquire);
+                if (_simulatedSelect)
+                    simulatedSelect.store(false, release);
+
+                if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) || _simulatedSelect) {
                     // Remove key combo from this overlay
                     setIniFileValue(settingsIniPath, entryName, KEY_COMBO_STR, "");
                     tsl::hlp::loadEntryKeyCombos(); // reload combos
@@ -1659,10 +1727,14 @@ public:
                 }
                 listItem->setClickListener([entryName=entryName, settingsIniPath=settingsIniPath, combo, mappedCombo, currentKeyCombo, listItem](uint64_t keys) {
                     if (runningInterpreter.load(acquire)) return false;
-                    if (simulatedSelect.exchange(false, acq_rel)) {
-                        keys |= KEY_A;
-                    }
-                    if (keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) {
+                    //if (simulatedSelect.exchange(false, acq_rel)) {
+                    //    keys |= KEY_A;
+                    //}
+                    const bool _simulatedSelect = simulatedSelect.load(acquire);
+                    if (_simulatedSelect)
+                        simulatedSelect.store(false, release);
+
+                    if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) || _simulatedSelect) {
                         if (combo != currentKeyCombo) {
                             // Remove this key combo from any other overlays first
                             removeKeyComboFromOthers(combo, entryName);
@@ -1730,8 +1802,13 @@ public:
             }
             noComboItem->setClickListener([entryName=entryName, settingsIniPath=settingsIniPath, idx, comboList, noComboItem](uint64_t keys) mutable {
                 if (runningInterpreter.load(acquire)) return false;
-                if (simulatedSelect.exchange(false, acq_rel)) keys |= KEY_A;
-                if (keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) {
+                //if (simulatedSelect.exchange(false, acq_rel))
+                //    keys |= KEY_A;
+                const bool _simulatedSelect = simulatedSelect.load(acquire);
+                if (_simulatedSelect)
+                    simulatedSelect.store(false, release);
+
+                if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) || _simulatedSelect) {
                     comboList[idx] = "";
                     const std::string newComboStr = "(" + joinIniList(comboList) + ")";
                     removeKeyComboFromOthers(newComboStr, entryName);
@@ -1770,8 +1847,13 @@ public:
         
                 comboItem->setClickListener([entryName=entryName, settingsIniPath=settingsIniPath, idx, combo, comboList, mappedCombo, comboItem](uint64_t keys) mutable {
                     if (runningInterpreter.load(acquire)) return false;
-                    if (simulatedSelect.exchange(false, acq_rel)) keys |= KEY_A;
-                    if (keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) {
+                    //if (simulatedSelect.exchange(false, acq_rel))
+                    //    keys |= KEY_A;
+                    const bool _simulatedSelect = simulatedSelect.load(acquire);
+                    if (_simulatedSelect)
+                        simulatedSelect.store(false, release);
+
+                    if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) || _simulatedSelect) {
                         if (combo != comboList[idx]) {
                             // Remove same combo from other overlays (both key_combo + mode_combos)
                             removeKeyComboFromOthers(combo, entryName);
@@ -1860,26 +1942,35 @@ public:
         
         if (goBackAfter) {
             goBackAfter = false;
-            simulatedBack.exchange(true, acq_rel);
+            if (simulatedBack.load(acquire))
+                simulatedBack.store(true, release);
             return true;
         }
 
 
         if (inSettingsMenu && !inSubSettingsMenu) {
             if (!returningToSettings) {
-                simulatedNextPage.exchange(false, acq_rel);
-                simulatedMenu.exchange(false, acq_rel);
+                if (simulatedNextPage.load(acquire))
+                    simulatedNextPage.store(false, release);
+                if (simulatedMenu.load(acquire))
+                    simulatedMenu.store(false, release);
     
                 //if (simulatedBack.exchange(false, acq_rel)) {
                 //    keysDown |= KEY_B;
                 //}
+
                 const bool isTouching = stillTouching.load(acquire);
-                const bool backKeyPressed = (keysDown & KEY_B || simulatedBack.exchange(false, acq_rel)) && !(keysHeld & ~KEY_B & ALL_KEYS_MASK) && !isTouching;
+                const bool _simulatedBack = simulatedBack.load(acquire);
+                if (_simulatedBack)
+                    simulatedBack.store(false, release);
+                const bool backKeyPressed = !isTouching && (((keysDown & KEY_B) && !(keysHeld & ~KEY_B & ALL_KEYS_MASK)) || _simulatedBack);
     
                 // Note: Original code uses !stillTouching without .load() - preserving this exactly
                 if (backKeyPressed) {
-                    allowSlide.exchange(false, acq_rel);
-                    unlockedSlide.exchange(false, acq_rel);
+                    if (allowSlide.load(acquire))
+                        allowSlide.store(false, release);
+                    if (unlockedSlide.load(acquire))
+                        unlockedSlide.store(false, release);
                     inSettingsMenu = false;
                     
                     // Determine return destination
@@ -1922,21 +2013,28 @@ public:
                 }
             }
         } else if (inSubSettingsMenu) {
-            simulatedNextPage.exchange(false, acq_rel);
-            simulatedMenu.exchange(false, acq_rel);
+            if (simulatedNextPage.load(acquire))
+                simulatedNextPage.store(false, release);
+            if (simulatedMenu.load(acquire))
+                simulatedMenu.store(false, release);
         
             //if (simulatedBack.exchange(false, acq_rel)) {
             //    keysDown |= KEY_B;
             //}
-        
+            const bool _simulatedBack = simulatedBack.load(acquire);
+            if (_simulatedBack)
+                simulatedBack.store(false, release);
+            
             // Note: Original code uses stillTouching.load() here - preserving this difference
             const bool isTouching = stillTouching.load(acquire);
-            const bool backKeyPressed = (keysDown & KEY_B || simulatedBack.exchange(false, acq_rel)) && !(keysHeld & ~KEY_B & ALL_KEYS_MASK) && !isTouching;
+            const bool backKeyPressed = !isTouching && (((keysDown & KEY_B) && !(keysHeld & ~KEY_B & ALL_KEYS_MASK)) || _simulatedBack);
             
             
             if (backKeyPressed) {
-                allowSlide.exchange(false, acq_rel);
-                unlockedSlide.exchange(false, acq_rel);
+                if (allowSlide.load(acquire))
+                    allowSlide.store(false, release);
+                if (unlockedSlide.load(acquire))
+                    unlockedSlide.store(false, release);
                 inSubSettingsMenu = false;
                 returningToSettings = true;
     
@@ -2011,10 +2109,14 @@ private:
 
         listItem->setClickListener([filePath=filePath, specificKey=specificKey, listItem, line](uint64_t keys) {
             if (runningInterpreter.load(acquire)) return false;
-            if (simulatedSelect.exchange(false, acq_rel)) {
-                keys |= KEY_A;
-            }
-            if (keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) {
+            //if (simulatedSelect.exchange(false, acq_rel)) {
+            //    keys |= KEY_A;
+            //}
+            const bool _simulatedSelect = simulatedSelect.load(acquire);
+            if (_simulatedSelect)
+                simulatedSelect.store(false, release);
+
+            if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) || _simulatedSelect) {
                 std::vector<std::vector<std::string>> commandVec;
                 std::vector<std::string> commandParts;
                 std::string currentPart;
@@ -2104,8 +2206,9 @@ public:
                 combinedCommand = joinCommands(command); // Join commands into a single line for display
                 addListItem(list, combinedCommand);
                 index++;
-                command.clear();
-                command.shrink_to_fit();
+                command = {};
+                //command.clear();
+                //command.shrink_to_fit();
             }
         } else {
 
@@ -2126,9 +2229,9 @@ public:
                 sectionLine = joinCommands(command);  // Combine command parts into a section line
                 sectionLines.push_back(sectionLine);              // Add to section lines
                 infoLines.push_back("");                          // Empty info line
-
-                command.clear();
-                command.shrink_to_fit();
+                command = {};
+                //command.clear();
+                //command.shrink_to_fit();
             }
             
             // Use default parameters for the table view
@@ -2172,10 +2275,10 @@ public:
                     command.shrink_to_fit();
                     infoLines.push_back("");                          // Empty info line
                 }
-                sourceCommands.clear();
+                //sourceCommands.clear();
                 sourceCommands.shrink_to_fit();
 
-                std::string packageSourceName = getNameFromPath(packageSourcePath);
+                const std::string packageSourceName = getNameFromPath(packageSourcePath);
 
                 addHeader(list, packageSourceName);
                 drawTable(list, dummyTableData, sectionLines, infoLines, tableColumnOffset, tableStartGap, tableEndGap, tableSpacing,
@@ -2211,24 +2314,32 @@ public:
         
         if (goBackAfter) {
             goBackAfter = false;
-            simulatedBack.exchange(true, acq_rel);
+            if (simulatedBack.load(acquire))
+                simulatedBack.store(true, release);
             return true;
         }
         
         if (inScriptMenu) {
-            simulatedNextPage.exchange(false, acq_rel);
-            simulatedMenu.exchange(false, acq_rel);
+            if (simulatedNextPage.load(acquire))
+                simulatedNextPage.store(false, release);
+            if (simulatedMenu.load(acquire))
+                simulatedMenu.store(false, release);
             
             //if (simulatedBack.exchange(false, acq_rel)) {
             //    keysDown |= KEY_B;
             //}
+            const bool _simulatedBack = simulatedBack.load(acquire);
+            if (_simulatedBack)
+                simulatedBack.store(false, release);
             
             const bool isTouching = stillTouching.load(acquire);
-            const bool backKeyPressed = (keysDown & KEY_B || simulatedBack.exchange(false, acq_rel)) && !(keysHeld & ~KEY_B & ALL_KEYS_MASK) && !isTouching;
+            const bool backKeyPressed = !isTouching && (((keysDown & KEY_B) && !(keysHeld & ~KEY_B & ALL_KEYS_MASK)) || _simulatedBack);
             
             if (backKeyPressed) {
-                allowSlide.exchange(false, acq_rel);
-                unlockedSlide.exchange(false, acq_rel);
+                if (allowSlide.load(acquire))
+                    allowSlide.store(false, release);
+                if (unlockedSlide.load(acquire))
+                    unlockedSlide.store(false, release);
                 inScriptMenu = false;
                 
                 // Handle return destination logic
@@ -2645,11 +2756,14 @@ public:
                     if (currentSection == GLOBAL_STR) {
                         selectionCommandsOn.push_back(cmd);
                         selectionCommandsOff.push_back(std::move(cmd));
-                    } else if (currentSection == ON_STR)
+                        cmd.shrink_to_fit();
+                    } else if (currentSection == ON_STR) {
                         selectionCommandsOn.push_back(std::move(cmd));
-                    else if (currentSection == OFF_STR)
+                        cmd.shrink_to_fit();
+                    } else if (currentSection == OFF_STR) {
                         selectionCommandsOff.push_back(std::move(cmd));
-                    cmd.shrink_to_fit();
+                        cmd.shrink_to_fit();
+                    }
                 }
                 //if (commandMode == TOGGLE_STR)
                 //    cmd.clear();
@@ -2681,8 +2795,10 @@ public:
             }
             else if (sourceType == LIST_STR || sourceType == LIST_FILE_STR) {
                 selectedItemsList = (sourceType == LIST_STR) ? stringToList(listString) : readListFromFile(listPath, maxItemsLimit);
-                listString.clear();
-                listPath.clear();
+                listString = "";
+                listPath = "";
+                //listString.clear();
+                //listPath.clear();
             }
             else if (sourceType == INI_FILE_STR) {
                 selectedItemsList = parseSectionsFromIni(iniPath);
@@ -2690,10 +2806,13 @@ public:
             }
             else if (sourceType == JSON_STR || sourceType == JSON_FILE_STR) {
                 populateSelectedItemsListFromJson(sourceType, (sourceType == JSON_STR) ? jsonString : jsonPath, jsonKey, selectedItemsList);
-                jsonPath.clear();
-                jsonPath.shrink_to_fit();
-                jsonString.clear();
-                jsonString.shrink_to_fit();
+                jsonPath = "";
+                jsonString = "";
+
+                //jsonPath.clear();
+                //jsonPath.shrink_to_fit();
+                //jsonString.clear();
+                //jsonString.shrink_to_fit();
             }
             applyItemsLimit(selectedItemsList);
 
@@ -2704,19 +2823,25 @@ public:
             }
             else if (sourceTypeOn == LIST_STR || sourceTypeOn == LIST_FILE_STR) {
                 selectedItemsListOn = (sourceTypeOn == LIST_STR) ? stringToList(listStringOn) : readListFromFile(listPathOn, maxItemsLimit);
-                listStringOn.clear();
-                listPathOn.clear();
+                listStringOn = "";
+                listPathOn = "";
+                //listStringOn.clear();
+                //listPathOn.clear();
             }
             else if (sourceTypeOn == INI_FILE_STR) {
                 selectedItemsListOn = parseSectionsFromIni(iniPathOn);
-                iniPathOn.clear();
+                iniPathOn = "";
+                //iniPathOn.clear();
             }
             else if (sourceTypeOn == JSON_STR || sourceTypeOn == JSON_FILE_STR) {
                 populateSelectedItemsListFromJson(sourceTypeOn, (sourceTypeOn == JSON_STR) ? jsonStringOn : jsonPathOn, jsonKeyOn, selectedItemsListOn);
-                jsonPathOn.clear();
-                jsonPathOn.shrink_to_fit();
-                jsonStringOn.clear();
-                jsonStringOn.shrink_to_fit();
+                jsonPathOff = "";
+                jsonStringOff = "";
+
+                //jsonPathOn.clear();
+                //jsonPathOn.shrink_to_fit();
+                //jsonStringOn.clear();
+                //jsonStringOn.shrink_to_fit();
             }
             applyItemsLimit(selectedItemsListOn);
 
@@ -2726,20 +2851,26 @@ public:
             }
             else if (sourceTypeOff == LIST_STR || sourceTypeOff == LIST_FILE_STR) {
                 selectedItemsListOff = (sourceTypeOff == LIST_STR) ? stringToList(listStringOff) : readListFromFile(listPathOff, maxItemsLimit);
-                listStringOff.clear();
-                listPathOff.clear();
+                listStringOff = "";
+                listPathOff = "";
+                //listStringOff.clear();
+                //listPathOff.clear();
             }
             else if (sourceTypeOff == INI_FILE_STR) {
                 selectedItemsListOff = parseSectionsFromIni(iniPathOff);
-                iniPathOff.clear();
+                iniPathOff = "";
+                //iniPathOff.clear();
             }
             else if (sourceTypeOff == JSON_STR || sourceTypeOff == JSON_FILE_STR) {
                 populateSelectedItemsListFromJson(sourceTypeOff, (sourceTypeOff == JSON_STR) ? jsonStringOff : jsonPathOff, jsonKeyOff, selectedItemsListOff);
-                jsonPathOff.clear();
-                jsonStringOff.shrink_to_fit();
-                jsonStringOff.clear();
-                jsonStringOff.shrink_to_fit();
-            }
+                jsonPathOff = "";
+                jsonStringOff = "";
+
+                //jsonPathOff.clear();
+                //jsonStringOff.shrink_to_fit();
+                //jsonStringOff.clear();
+                //jsonStringOff.shrink_to_fit();
+            }//
             applyItemsLimit(selectedItemsListOff);
 
             //selectedItemsList.reserve(selectedItemsListOn.size() + selectedItemsListOff.size());
@@ -2819,7 +2950,7 @@ public:
             //if (isFileOrDirectory(selectedItem)) {
             const std::string itemName = getNameFromPath(selectedItem);
             if (itemName.front() == '.') { // Skip hidden items
-                selectedItem.clear();
+                selectedItem = "";
                 continue;
             }
             //}
@@ -2828,30 +2959,35 @@ public:
                 auto it = std::find(filterListOn.begin(), filterListOn.end(), selectedItem);
                 if (it != filterListOn.end()) {
                     filterListOn.erase(it);
-                    selectedItem.clear();
+                    selectedItem = "";
                     continue;
                 }
                 it = std::find(filterListOff.begin(), filterListOff.end(), selectedItem);
                 if (it != filterListOff.end()) {
                     filterListOff.erase(it);
-                    selectedItem.clear();
+                    selectedItem = "";
                     continue;
                 }
             } else {
                 auto it = std::find(filterList.begin(), filterList.end(), selectedItem);
                 if (it != filterList.end()) {
                     filterList.erase(it);
-                    selectedItem.clear();
+                    selectedItem = "";
                     continue;
                 }
             }
         }
-        filterList.clear();
-        filterList.shrink_to_fit();
-        filterListOn.clear();
-        filterListOn.shrink_to_fit();
-        filterListOff.clear();
-        filterListOff.shrink_to_fit();
+
+        filterList = {};
+        filterListOn = {};
+        filterListOff = {};
+
+        //filterList.clear();
+        //filterList.shrink_to_fit();
+        //filterListOn.clear();
+        //filterListOn.shrink_to_fit();
+        //filterListOff.clear();
+        //filterListOff.shrink_to_fit();
 
         std::string itemName;
         for (size_t i = 0; i < selectedItemsSize; ++i) {
@@ -3011,11 +3147,15 @@ public:
                         return false;
                     }
     
-                    if (simulatedSelect.exchange(false, acq_rel)) {
-                        keys |= KEY_A;
-                    }
+                    //if (simulatedSelect.exchange(false, acq_rel)) {
+                    //    keys |= KEY_A;
+                    //}
+                    const bool _simulatedSelect = simulatedSelect.load(acquire);
+                    if (_simulatedSelect)
+                        simulatedSelect.store(false, release);
+
     
-                    if ((keys & KEY_A) && !(keys & ~KEY_A & ALL_KEYS_MASK)) {
+                    if (((keys & KEY_A) && !(keys & ~KEY_A & ALL_KEYS_MASK)) || _simulatedSelect) {
                         isDownloadCommand = false;
                         runningInterpreter.store(true, release);
     
@@ -3151,17 +3291,22 @@ public:
     
                 list->addItem(toggleListItem);
             }
-            selectedItem.clear();
-            selectedItem.shrink_to_fit();
+            selectedItem = "";
+            //selectedItem.clear();
+            //selectedItem.shrink_to_fit();
         }
 
-        // NOW you can clear everything
-        selectedItemsList.clear();
-        selectedItemsList.shrink_to_fit();
-        selectedItemsListOn.clear();
-        selectedItemsListOn.shrink_to_fit();
-        selectedItemsListOff.clear();
-        selectedItemsListOff.shrink_to_fit();
+        // clear everything
+        selectedItemsList = {};
+        selectedItemsListOn = {};
+        selectedItemsListOff = {};
+
+        //selectedItemsList.clear();
+        //selectedItemsList.shrink_to_fit();
+        //selectedItemsListOn.clear();
+        //selectedItemsListOn.shrink_to_fit();
+        //selectedItemsListOff.clear();
+        //selectedItemsListOff.shrink_to_fit();
         
         if (!packageRootLayerTitle.empty())
             overrideTitle = true;
@@ -3222,7 +3367,8 @@ public:
         
         if (goBackAfter) {
             goBackAfter = false;
-            simulatedBack.exchange(true, acq_rel);
+            if (simulatedBack.load(acquire))
+                simulatedBack.store(true, release);
             return true;
         }
         
@@ -3240,20 +3386,27 @@ public:
         }
         
         if (inSelectionMenu) {
-            simulatedNextPage.exchange(false, acq_rel);
-            simulatedMenu.exchange(false, acq_rel);
+            if (simulatedNextPage.load(acquire))
+                simulatedNextPage.store(false, release);
+            if (simulatedMenu.load(acquire))
+                simulatedMenu.store(false, release);
             
             //if (simulatedBack.exchange(false, acq_rel)) {
             //    keysDown |= KEY_B;
             //}
+            const bool _simulatedBack = simulatedBack.load(acquire);
+            if (_simulatedBack)
+                simulatedBack.store(false, release);
             
             // Check touching state again for the key handling (different timing context)
             const bool isTouchingForKeys = stillTouching.load(acquire);
-            const bool backKeyPressed = (keysDown & KEY_B || simulatedBack.exchange(false, acq_rel)) && !(keysHeld & ~KEY_B & ALL_KEYS_MASK) && !isTouchingForKeys;
+            const bool backKeyPressed = !isTouchingForKeys && (((keysDown & KEY_B) && !(keysHeld & ~KEY_B & ALL_KEYS_MASK)) || _simulatedBack);
             
             if (backKeyPressed) {
-                allowSlide.exchange(false, acq_rel);
-                unlockedSlide.exchange(false, acq_rel);
+                if (allowSlide.load(acquire))
+                    allowSlide.store(false, release);
+                if (unlockedSlide.load(acquire))
+                    unlockedSlide.store(false, release);
                 inSelectionMenu = false;
                 
                 // Determine return destination
@@ -3684,10 +3837,14 @@ bool drawCommandsMenu(tsl::elm::List* list,
                                 
                                 if (runningInterpreter.load(acquire))
                                     return false;
-                                if (simulatedSelect.exchange(false, acq_rel)) {
-                                    keys |= KEY_A;
-                                }
-                                if (keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) {
+                                //if (simulatedSelect.exchange(false, acq_rel)) {
+                                //    keys |= KEY_A;
+                                //}
+                                const bool _simulatedSelect = simulatedSelect.load(acquire);
+                                if (_simulatedSelect)
+                                    simulatedSelect.store(false, release);
+
+                                if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) || _simulatedSelect) {
                                     inPackageMenu = false;
                                     //tsl::clearGlyphCacheNow.store(true, release);
                                     tsl::changeTo<PackageMenu>(packagePath, optionName, currentPage, packageName, 0, lastPackageHeader);
@@ -3715,10 +3872,14 @@ bool drawCommandsMenu(tsl::elm::List* list,
                             listItem->setClickListener([optionName, i, packageIniPath, lastPackageHeader](s64 keys) {
                                 if (runningInterpreter.load(acquire))
                                     return false;
-                                if (simulatedSelect.exchange(false, acq_rel)) {
-                                    keys |= KEY_A;
-                                }
-                                if (keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) {
+                                //if (simulatedSelect.exchange(false, acq_rel)) {
+                                //    keys |= KEY_A;
+                                //}
+                                const bool _simulatedSelect = simulatedSelect.load(acquire);
+                                if (_simulatedSelect)
+                                    simulatedSelect.store(false, release);
+
+                                if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) || _simulatedSelect) {
                                     inPackageMenu = false;
 
                                     tsl::changeTo<MainMenu>("", optionName);
@@ -4371,11 +4532,15 @@ bool drawCommandsMenu(tsl::elm::List* list,
                         const std::string& forwarderPackageIniName = getNameFromPath(packageSource);
                         listItem->setClickListener([commands, keyName = originalOptionName, dropdownSection, packagePath, listItem,
                             forwarderPackagePath, forwarderPackageIniName, lastPackageHeader, i](s64 keys) mutable {
-                            if (simulatedSelect.exchange(false, acq_rel)) {
-                                keys |= KEY_A;
-                            }
+                            //if (simulatedSelect.exchange(false, acq_rel)) {
+                            //    keys |= KEY_A;
+                            //}
                             
-                            if (keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) {
+                            const bool _simulatedSelect = simulatedSelect.load(acquire);
+                            if (_simulatedSelect)
+                                simulatedSelect.store(false, release);
+
+                            if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) || _simulatedSelect) {
                                 interpretAndExecuteCommands(std::move(getSourceReplacement(commands, keyName, i, packagePath)), packagePath, keyName);
                                 resetPercentages();
 
@@ -4392,8 +4557,10 @@ bool drawCommandsMenu(tsl::elm::List* list,
                                 lastCommandMode = FORWARDER_STR;
                                 lastKeyName = keyName;
 
-                                allowSlide.exchange(false, acq_rel);
-                                unlockedSlide.exchange(false, acq_rel);
+                                if (allowSlide.load(acquire))
+                                    allowSlide.store(false, release);
+                                if (unlockedSlide.load(acquire))
+                                    unlockedSlide.store(false, release);
 
                                 //tsl::clearGlyphCacheNow.store(true, release);
                                 tsl::changeTo<PackageMenu>(forwarderPackagePath, "", LEFT_STR, forwarderPackageIniName, nestedMenuCount, lastPackageHeader);
@@ -4427,10 +4594,14 @@ bool drawCommandsMenu(tsl::elm::List* list,
                             
                             if (runningInterpreter.load(acquire))
                                 return false;
-                            if (simulatedSelect.exchange(false, acq_rel)) {
-                                keys |= KEY_A;
-                            }
-                            if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
+                            //if (simulatedSelect.exchange(false, acq_rel)) {
+                            //    keys |= KEY_A;
+                            //}
+                            const bool _simulatedSelect = simulatedSelect.load(acquire);
+                            if (_simulatedSelect)
+                                simulatedSelect.store(false, release);
+
+                            if (((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) || _simulatedSelect) {
                                 if (footer != UNAVAILABLE_SELECTION && footer != NOT_AVAILABLE_STR && (footer.find(NULL_STR) == std::string::npos)) {
                                     if (inPackageMenu)
                                         inPackageMenu = false;
@@ -4525,10 +4696,14 @@ bool drawCommandsMenu(tsl::elm::List* list,
                             if (runningInterpreter.load(acquire)) {
                                 return false;
                             }
-                            if (simulatedSelect.exchange(false, acq_rel)) {
-                                keys |= KEY_A;
-                            }
-                            if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
+                            //if (simulatedSelect.exchange(false, acq_rel)) {
+                            //    keys |= KEY_A;
+                            //}
+                            const bool _simulatedSelect = simulatedSelect.load(acquire);
+                            if (_simulatedSelect)
+                                simulatedSelect.store(false, release);
+
+                            if (((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) || _simulatedSelect) {
                                 isDownloadCommand = false;
                                 runningInterpreter.store(true, release);
                                 executeInterpreterCommands(getSourceReplacement(commands, selectedItem, i, packagePath), packagePath, keyName);
@@ -4888,7 +5063,8 @@ public:
     
         if (goBackAfter) {
             goBackAfter = false;
-            simulatedBack.exchange(true, acq_rel);
+            if (simulatedBack.load(acquire))
+                simulatedBack.store(true, release);
             return true;
         }
     
@@ -4944,19 +5120,20 @@ public:
         }
         
         if (usingPages) {
-            simulatedMenu.exchange(false, acq_rel);
+            if (simulatedMenu.load(acquire))
+                simulatedMenu.store(false, release);
             
-            if (simulatedNextPage.exchange(false, acq_rel)) {
-                if (currentPage == LEFT_STR) {
-                    keysDown |= KEY_DRIGHT;
-                }
-                else if (currentPage == RIGHT_STR) {
-                    keysDown |= KEY_DLEFT;
-                }
-            }
+            //if (simulatedNextPage.exchange(false, acq_rel)) {
+            //    if (currentPage == LEFT_STR) {
+            //        keysDown |= KEY_DRIGHT;
+            //    }
+            //    else if (currentPage == RIGHT_STR) {
+            //        keysDown |= KEY_DLEFT;
+            //    }
+            //}
     
             // Cache slide-related values
-            const bool safeToSwap = tsl::elm::s_safeToSwap.load(acquire);
+            
             const bool onTrack = onTrackBar.load(acquire);
             const bool slideAllowed = allowSlide.load(acquire);
             const bool slideUnlocked = unlockedSlide.load(acquire);
@@ -4964,39 +5141,57 @@ public:
             
             // Helper lambda for slide transitions
             auto resetSlideState = [&]() {
-                allowSlide.exchange(false, acq_rel);
-                unlockedSlide.exchange(false, acq_rel);
+                if (allowSlide.load(acquire))
+                    allowSlide.store(false, release);
+                if (unlockedSlide.load(acquire))
+                    unlockedSlide.store(false, release);
             };
     
             if (currentPage == LEFT_STR) {
-                if (safeToSwap && (keysDown & KEY_RIGHT) && !(keysHeld & ~KEY_RIGHT & ALL_KEYS_MASK) && !isTouching && slideCondition) {
-    
-                    resetSlideState();
-                    lastPage = RIGHT_STR;
-                    tsl::pop();
-                    tsl::changeTo<PackageMenu>(lastPackagePath, dropdownSection, RIGHT_STR, lastPackageName, nestedMenuCount, pageHeader);
+                if (!isTouching && slideCondition && (((keysDown & KEY_RIGHT) && !(keysHeld & ~KEY_RIGHT & ALL_KEYS_MASK)) || simulatedNextPage.load(acquire))) {
+                    const bool safeToSwap = tsl::elm::s_safeToSwap.load(acquire);
+                    if (simulatedNextPage.load(acquire))
+                        simulatedNextPage.store(false, release);
+                    if (safeToSwap) {
+                        //tsl::elm::s_safeToSwap.store(false, release);
+                        resetSlideState();
+                        lastPage = RIGHT_STR;
+                        tsl::pop();
+                        tsl::changeTo<PackageMenu>(lastPackagePath, dropdownSection, RIGHT_STR, lastPackageName, nestedMenuCount, pageHeader);
+                    }
                     return true;
                 }
             } else if (currentPage == RIGHT_STR) {
-                if (safeToSwap && (keysDown & KEY_LEFT) && !(keysHeld & ~KEY_LEFT & ALL_KEYS_MASK) && !isTouching && slideCondition) {
-                    
-                    resetSlideState();
-                    lastPage = LEFT_STR;
-                    tsl::pop();
-                    tsl::changeTo<PackageMenu>(lastPackagePath, dropdownSection, LEFT_STR, lastPackageName, nestedMenuCount, pageHeader);
+                if (!isTouching && slideCondition && (((keysDown & KEY_LEFT) && !(keysHeld & ~KEY_LEFT & ALL_KEYS_MASK)) || simulatedNextPage.load(acquire))) {
+                    const bool safeToSwap = tsl::elm::s_safeToSwap.load(acquire);
+                    if (simulatedNextPage.load(acquire))
+                        simulatedNextPage.store(false, release);
+                    if (safeToSwap) {
+                        //tsl::elm::s_safeToSwap.store(false, release);
+                        resetSlideState();
+                        lastPage = LEFT_STR;
+                        tsl::pop();
+                        tsl::changeTo<PackageMenu>(lastPackagePath, dropdownSection, LEFT_STR, lastPackageName, nestedMenuCount, pageHeader);
+                    }
                     return true;
                 }
             } 
         }
         
         // Common back key condition
-        const bool backKeyPressed = (keysDown & KEY_B || simulatedBack.exchange(false, acq_rel)) && !(keysHeld & ~KEY_B & ALL_KEYS_MASK) && !isTouching;
+        const bool _simulatedBack = simulatedBack.load(acquire);
+        if (_simulatedBack)
+            simulatedBack.store(false, release);
+
+        const bool backKeyPressed = !isTouching && (((keysDown & KEY_B) && !(keysHeld & ~KEY_B & ALL_KEYS_MASK)) || _simulatedBack);
         
         // Helper lambda for common back key handling logic
         auto handleBackKeyCommon = [&]() {
             handleForwarderFooter();
-            allowSlide.exchange(false, acq_rel);
-            unlockedSlide.exchange(false, acq_rel);
+            if (allowSlide.load(acquire))
+                allowSlide.store(false, release);
+            if (unlockedSlide.load(acquire))
+                unlockedSlide.store(false, release);
             
             if (nestedMenuCount == 0) {
                 inPackageMenu = false;
@@ -5052,8 +5247,10 @@ public:
         };
         
         if (!returningToPackage && inPackageMenu && nestedMenuCount == nestedLayer) {
-            simulatedMenu.exchange(false, acq_rel);
-            simulatedNextPage.exchange(false, acq_rel);
+            if (simulatedNextPage.load(acquire))
+                simulatedNextPage.store(false, release);
+            if (simulatedMenu.load(acquire))
+                simulatedMenu.store(false, release);
             
             if (!usingPages || (usingPages && lastPage == LEFT_STR)) {
                 //if (simulatedBack.exchange(false, acq_rel)) {
@@ -5082,8 +5279,10 @@ public:
         }
         
         if (!returningToSubPackage && inSubPackageMenu) {
-            simulatedMenu.exchange(false, acq_rel);
-            simulatedNextPage.exchange(false, acq_rel);
+            if (simulatedNextPage.load(acquire))
+                simulatedNextPage.store(false, release);
+            if (simulatedMenu.load(acquire))
+                simulatedMenu.store(false, release);
             
             if (!usingPages || (usingPages && lastPage == LEFT_STR)) {
                 //if (simulatedBack.exchange(false, acq_rel)) {
@@ -5091,8 +5290,10 @@ public:
                 //}
                 if (backKeyPressed) {
                     handleForwarderFooter();
-                    allowSlide.exchange(false, acq_rel);
-                    unlockedSlide.exchange(false, acq_rel);
+                    if (allowSlide.load(acquire))
+                        allowSlide.store(false, release);
+                    if (unlockedSlide.load(acquire))
+                        unlockedSlide.store(false, release);
                     inSubPackageMenu = false;
                     returningToPackage = true;
                     lastMenu = "packageMenu";
@@ -5107,8 +5308,10 @@ public:
                 //}
                 if (backKeyPressed) {
                     handleForwarderFooter();
-                    allowSlide.exchange(false, acq_rel);
-                    unlockedSlide.exchange(false, acq_rel);
+                    if (allowSlide.load(acquire))
+                        allowSlide.store(false, release);
+                    if (unlockedSlide.load(acquire))
+                        unlockedSlide.store(false, release);
                     inSubPackageMenu = false;
                     returningToPackage = true;
                     lastMenu = "packageMenu";
@@ -5161,8 +5364,10 @@ public:
                 return true;
             }
     
-            allowSlide.exchange(false, acq_rel);
-            unlockedSlide.exchange(false, acq_rel);
+            if (allowSlide.load(acquire))
+                allowSlide.store(false, release);
+            if (unlockedSlide.load(acquire))
+                unlockedSlide.store(false, release);
             inSubPackageMenu = false;
             returningToPackage = true;
             lastMenu = "packageMenu";
@@ -5476,15 +5681,18 @@ public:
                         }
                     }
                 }
-                overlayFiles.clear();
-                overlayFiles.shrink_to_fit();
+                overlayFiles = {};
+
+                //overlayFiles.clear();
+                //overlayFiles.shrink_to_fit();
 
                 // Write back file only if changes were made
                 if (overlaysNeedsUpdate) {
                     saveIniFileData(OVERLAYS_INI_FILEPATH, overlaysIniData);
                 }
 
-                overlaysIniData.clear();
+                overlaysIniData = {};
+                //overlaysIniData.clear();
                 
                 //if (inHiddenMode) {
                 //    overlaySet = std::move(hiddenOverlaySet);
@@ -5574,11 +5782,14 @@ public:
                                 return false;
                             
     
-                            if (simulatedSelect.exchange(false, acq_rel)) {
-                                keys |= KEY_A;
-                            }
+                            //if (simulatedSelect.exchange(false, acq_rel)) {
+                            //    keys |= KEY_A;
+                            //}
+                            const bool _simulatedSelect = simulatedSelect.load(acquire);
+                            if (_simulatedSelect)
+                                simulatedSelect.store(false, release);
     
-                            if (keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) {
+                            if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) || _simulatedSelect) {
                                 
                                 //std::string useOverlayLaunchArgs = parseValueFromIniSection(OVERLAYS_INI_FILEPATH, overlayFileName, USE_LAUNCH_ARGS_STR);
                                 //std::string overlayLaunchArgs = parseValueFromIniSection(OVERLAYS_INI_FILEPATH, overlayFileName, LAUNCH_ARGS_STR);
@@ -5693,11 +5904,14 @@ public:
                         if (runningInterpreter.load(acquire))
                             return false;
     
-                        if (simulatedSelect.exchange(false, acq_rel)) {
-                            keys |= KEY_A;
-                        }
+                        //if (simulatedSelect.exchange(false, acq_rel)) {
+                        //    keys |= KEY_A;
+                        //}
+                        const bool _simulatedSelect = simulatedSelect.load(acquire);
+                        if (_simulatedSelect)
+                            simulatedSelect.store(false, release);
     
-                        if (keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) {
+                        if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) || _simulatedSelect) {
                             // reset tracking
                             g_overlayFilename = "";
                             jumpItemName = "";
@@ -5886,15 +6100,18 @@ public:
                     }
                     packageName = "";
                 }
-                subdirectories.clear();
-                subdirectories.shrink_to_fit();
+                subdirectories = {};
+
+                //subdirectories.clear();
+                //subdirectories.shrink_to_fit();
 
                 // Write back file only if changes were made
                 if (packagesNeedsUpdate) {
                     saveIniFileData(PACKAGES_INI_FILEPATH, packagesIniData);
                 }
-    
-                packagesIniData.clear();
+                packagesIniData = {};
+
+                //packagesIniData.clear();
                 //subdirectories.clear();
                 //subdirectories.shrink_to_fit();
                 
@@ -5959,11 +6176,15 @@ public:
                                 return false;
                             }
                             
-                            if (simulatedSelect.exchange(false, acq_rel)) {
-                                keys |= KEY_A;
-                            }
+                            //if (simulatedSelect.exchange(false, acq_rel)) {
+                            //    keys |= KEY_A;
+                            //}
+                            const bool _simulatedSelect = simulatedSelect.load(acquire);
+                            if (_simulatedSelect)
+                                simulatedSelect.store(false, release);
+
                             
-                            if (keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) {
+                            if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) || _simulatedSelect) {
                                 inMainMenu = false;
                                 
                                 if (isFileOrDirectory(packageFilePath + BOOT_PACKAGE_FILENAME)) {
@@ -6077,11 +6298,14 @@ public:
                         if (runningInterpreter.load(acquire))
                             return false;
                         
-                        if (simulatedSelect.exchange(false, acq_rel)) {
-                            keys |= KEY_A;
-                        }
+                        //if (simulatedSelect.exchange(false, acq_rel)) {
+                        //    keys |= KEY_A;
+                        //}
+                        const bool _simulatedSelect = simulatedSelect.load(acquire);
+                        if (_simulatedSelect)
+                            simulatedSelect.store(false, release);
                         
-                        if (keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) {
+                        if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) || _simulatedSelect) {
                             inMainMenu = false;
                             inHiddenMode = true;
                             tsl::changeTo<MainMenu>(PACKAGES_STR);
@@ -6187,7 +6411,8 @@ public:
         
         if (goBackAfter) {
             goBackAfter = false;
-            simulatedBack.exchange(true, acq_rel);
+            if (simulatedBack.load(acquire))
+                simulatedBack.store(true, release);
             return true;
         }
     
@@ -6207,19 +6432,27 @@ public:
         }
     
         // Common condition for back key handling
-        const bool backKeyPressed = ((keysDown & KEY_B) || simulatedBack.exchange(false, acq_rel)) && !(keysHeld & ~KEY_B & ALL_KEYS_MASK) && !isTouching;
+        const bool _simulatedBack = simulatedBack.load(acquire);
+        if (_simulatedBack)
+            simulatedBack.store(false, release);
+
+        const bool backKeyPressed = !isTouching && ((((keysDown & KEY_B)) && !(keysHeld & ~KEY_B & ALL_KEYS_MASK)) || _simulatedBack);
         
         if (!dropdownSection.empty() && !returningToMain) {
-            simulatedNextPage.exchange(false, acq_rel);
-            simulatedMenu.exchange(false, acq_rel);
+            if (simulatedNextPage.load(acquire))
+                simulatedNextPage.store(false, release);
+            if (simulatedMenu.load(acquire))
+                simulatedMenu.store(false, release);
     
             //if (simulatedBack.exchange(false, acq_rel)) {
             //    keysDown |= KEY_B;
             //}
     
             if (backKeyPressed) {
-                allowSlide.exchange(false, acq_rel);
-                unlockedSlide.exchange(false, acq_rel);
+                if (allowSlide.load(acquire))
+                    allowSlide.store(false, release);
+                if (unlockedSlide.load(acquire))
+                    unlockedSlide.store(false, release);
                 returningToMain = true;
                 tsl::goBack();
                 return true;
@@ -6254,13 +6487,13 @@ public:
             }
             
             if (!freshSpawn && !returningToMain && !returningToHiddenMain) {
-                if (simulatedNextPage.exchange(false, acq_rel)) {
-                    const bool toPackages = (!usePageSwap && menuMode != PACKAGES_STR) || (usePageSwap && menuMode != OVERLAYS_STR);
-                    keysDown |= toPackages ? (usePageSwap ? KEY_DLEFT : KEY_DRIGHT) : (usePageSwap ? KEY_DRIGHT : KEY_DLEFT);
-                }
+                //if (simulatedNextPage.exchange(false, acq_rel)) {
+                //    const bool toPackages = (!usePageSwap && menuMode != PACKAGES_STR) || (usePageSwap && menuMode != OVERLAYS_STR);
+                //    keysDown |= toPackages ? (usePageSwap ? KEY_DLEFT : KEY_DRIGHT) : (usePageSwap ? KEY_DRIGHT : KEY_DLEFT);
+                //}
                 
                 // Cache slide conditions
-                const bool safeToSwap = tsl::elm::s_safeToSwap.load(acquire);
+                
                 const bool onTrack = onTrackBar.load(acquire);
                 const bool slideAllowed = allowSlide.load(acquire);
                 const bool slideUnlocked = unlockedSlide.load(acquire);
@@ -6272,32 +6505,41 @@ public:
                     jumpItemName = "";
                     jumpItemValue = "";
                     jumpItemExactMatch = true;
-                    allowSlide.exchange(false, acq_rel);
-                    unlockedSlide.exchange(false, acq_rel);
+                    if (allowSlide.load(acquire))
+                        allowSlide.store(false, release);
+                    if (unlockedSlide.load(acquire))
+                        unlockedSlide.store(false, release);
                 };
                 
-                if (safeToSwap && (keysDown & KEY_RIGHT) && !(keysHeld & ~KEY_RIGHT & ALL_KEYS_MASK)  && !isTouching && slideCondition) {
-                    
-                    resetNavState();
-                    const bool switchToPackages = (!usePageSwap && menuMode != PACKAGES_STR) || (usePageSwap && menuMode != OVERLAYS_STR);
-                    if (switchToPackages) {
+                const bool switchToPackages = (!usePageSwap && menuMode != PACKAGES_STR) || (usePageSwap && menuMode != OVERLAYS_STR);
+                if (switchToPackages && !isTouching && slideCondition && (((keysDown & KEY_RIGHT) && !(keysHeld & ~KEY_RIGHT & ALL_KEYS_MASK)) || simulatedNextPage.load(acquire))) {
+                    const bool safeToSwap = tsl::elm::s_safeToSwap.load(acquire);
+                    if (simulatedNextPage.load(acquire))
+                        simulatedNextPage.store(false, release);
+                    if (safeToSwap) {
+                        //tsl::elm::s_safeToSwap.store(false, release);
+                        resetNavState();
                         currentMenu = usePageSwap ? OVERLAYS_STR : PACKAGES_STR;
                         tsl::pop();
                         tsl::changeTo<MainMenu>();
-                        return true;
                     }
-                }
-    
-                if (safeToSwap && (keysDown & KEY_LEFT) && !(keysHeld & ~KEY_LEFT & ALL_KEYS_MASK) && !isTouching && slideCondition) {
                     
-                    resetNavState();
-                    const bool switchToOverlays = (!usePageSwap && menuMode != OVERLAYS_STR) || (usePageSwap && menuMode != PACKAGES_STR);
-                    if (switchToOverlays) {
+                    return true;
+                }
+                
+                const bool switchToOverlays = (!usePageSwap && menuMode != OVERLAYS_STR) || (usePageSwap && menuMode != PACKAGES_STR);
+                if (switchToOverlays && !isTouching && slideCondition && (((keysDown & KEY_LEFT) && !(keysHeld & ~KEY_LEFT & ALL_KEYS_MASK)) || simulatedNextPage.load(acquire))) {
+                    const bool safeToSwap = tsl::elm::s_safeToSwap.load(acquire);
+                    if (simulatedNextPage.load(acquire))
+                        simulatedNextPage.store(false, release);
+                    if (safeToSwap) {
+                        //tsl::elm::s_safeToSwap.store(false, release);
+                        resetNavState();
                         currentMenu = usePageSwap ? PACKAGES_STR : OVERLAYS_STR;
                         tsl::pop();
                         tsl::changeTo<MainMenu>();
-                        return true;
                     }
+                    return true;
                 }
     
                 //if (simulatedBack.exchange(false, acq_rel)) {
@@ -6305,19 +6547,21 @@ public:
                 //}
     
                 if (backKeyPressed) {
-                    allowSlide.exchange(false, acq_rel);
-                    unlockedSlide.exchange(false, acq_rel);
+                    if (allowSlide.load(acquire))
+                        allowSlide.store(false, release);
+                    if (unlockedSlide.load(acquire))
+                        unlockedSlide.store(false, release);
                     tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
                     exitingUltrahand = true;
                     tsl::Overlay::get()->close();
                     return true;
                 }
     
-                if (simulatedMenu.exchange(false, acq_rel)) {
-                    keysDown |= SYSTEM_SETTINGS_KEY;
-                }
+                //if (simulatedMenu.exchange(false, acq_rel)) {
+                //    keysDown |= SYSTEM_SETTINGS_KEY;
+                //}
     
-                if ((keysDown & SYSTEM_SETTINGS_KEY && !(keysHeld & ~SYSTEM_SETTINGS_KEY & ALL_KEYS_MASK)) && !isTouching) {
+                if (!isTouching && (((keysDown & SYSTEM_SETTINGS_KEY && !(keysHeld & ~SYSTEM_SETTINGS_KEY & ALL_KEYS_MASK))) || simulatedMenu.exchange(false, acq_rel))) {
                     inMainMenu = false;
                     tsl::changeTo<UltrahandSettingsMenu>();
                     return true;
@@ -6326,8 +6570,10 @@ public:
         }
         
         if (!inMainMenu && inHiddenMode && !returningToHiddenMain && !returningToMain) {
-            simulatedNextPage.exchange(false, acq_rel);
-            simulatedMenu.exchange(false, acq_rel);
+            if (simulatedNextPage.load(acquire))
+                simulatedNextPage.store(false, release);
+            if (simulatedMenu.load(acquire))
+                simulatedMenu.store(false, release);
     
             //if (simulatedBack.exchange(false, acq_rel)) {
             //    keysDown |= KEY_B;
@@ -6375,8 +6621,10 @@ public:
                     return true;
                 }
                 
-                allowSlide.exchange(false, acq_rel);
-                unlockedSlide.exchange(false, acq_rel);
+                if (allowSlide.load(acquire))
+                    allowSlide.store(false, release);
+                if (unlockedSlide.load(acquire))
+                    unlockedSlide.store(false, release);
                 tsl::goBack();
                 return true;
             }

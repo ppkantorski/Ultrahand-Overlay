@@ -3119,27 +3119,31 @@ bool applyPlaceholderReplacementsToCommands(std::vector<std::vector<std::string>
         if (commandName == "erista:") {
             inEristaSection = true;
             inMarikoSection = false;
-            cmd.clear();
-            cmd.shrink_to_fit();
+            cmd = {};
+            //cmd.clear();
+            //cmd.shrink_to_fit();
             continue; // Don't keep this command
         } else if (commandName == "mariko:") {
             inEristaSection = false;
             inMarikoSection = true;
-            cmd.clear();
-            cmd.shrink_to_fit();
+            cmd = {};
+            //cmd.clear();
+            //cmd.shrink_to_fit();
             continue; // Don't keep this command
         } else if ((!commandName.empty() && commandName.front() == ';') ||
                    (commandName.size() >= 7 && commandName.substr(commandName.size() - 7) == "_source") ||
                    commandName == "logging") {
-            cmd.clear();
-            cmd.shrink_to_fit();
+            cmd = {};
+            //cmd.clear();
+            //cmd.shrink_to_fit();
             continue; // Don't keep this command
         }
 
         // Skip commands not relevant to current hardware
         if ((inEristaSection && !usingErista) || (inMarikoSection && !usingMariko)) {
-            cmd.clear();
-            cmd.shrink_to_fit();
+            cmd = {};
+            //cmd.clear();
+            //cmd.shrink_to_fit();
             continue; // Don't keep this command
         }
 
@@ -3179,8 +3183,9 @@ bool applyPlaceholderReplacementsToCommands(std::vector<std::vector<std::string>
         }
 
         if (!shouldKeep) {
-            cmd.clear();
-            cmd.shrink_to_fit();
+            //cmd.clear();
+            //cmd.shrink_to_fit();
+            cmd = {};
             continue; // Don't keep this command
         }
 
@@ -3226,11 +3231,12 @@ bool applyPlaceholderReplacementsToCommands(std::vector<std::vector<std::string>
     
     // Resize to keep only the commands we want
     commands.resize(writeIndex);
-    
+    commands.shrink_to_fit();  // Always - maximize memory efficiency
+
     // Shrink capacity if we removed a lot of commands
-    if (commands.capacity() > commands.size() * 2) {
-        commands.shrink_to_fit();
-    }
+    //if (commands.capacity() > commands.size() * 2) {
+    //    commands.shrink_to_fit();
+    //}
 
     return true;
 }
@@ -3323,12 +3329,13 @@ bool interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
             abortCommand.store(false, std::memory_order_release);
             commandSuccess = false;
             // Clear all remaining commands
-            for (size_t j = i; j < commands.size(); ++j) {
-                commands[j].clear();
-                commands[j].shrink_to_fit();
-            }
-            commands.clear();
-            commands.shrink_to_fit();
+            //for (size_t j = i; j < commands.size(); ++j) {
+            //    commands[j].clear();
+            //    commands[j].shrink_to_fit();
+            //}
+            commands = {};
+            //commands.clear();
+            //commands.shrink_to_fit();
             #if USING_LOGGING_DIRECTIVE
             disableLogging = true;
             logFilePath = defaultLogFilePath;
@@ -3350,12 +3357,13 @@ bool interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
         if (commandName == "try:") {
             if (inTrySection && commandSuccess) {
                 // Clear remaining commands and exit
-                for (size_t j = i; j < commands.size(); ++j) {
-                    commands[j].clear();
-                    commands[j].shrink_to_fit();
-                }
-                commands.clear();
-                commands.shrink_to_fit();
+                //for (size_t j = i; j < commands.size(); ++j) {
+                //    commands[j].clear();
+                //    commands[j].shrink_to_fit();
+                //}
+                //commands.clear();
+                //commands.shrink_to_fit();
+                commands = {};
                 #if USING_LOGGING_DIRECTIVE
                 disableLogging = true;
                 logFilePath = defaultLogFilePath;
@@ -3365,8 +3373,9 @@ bool interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
             commandSuccess = true;
             inTrySection = true;
             // Clear and continue
-            cmd.clear();
-            cmd.shrink_to_fit();
+            cmd = {};
+            //cmd.clear();
+            //cmd.shrink_to_fit();
             continue;
         }
         
@@ -3374,8 +3383,9 @@ bool interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
             inEristaSection = true;
             inMarikoSection = false;
             // Clear and continue
-            cmd.clear();
-            cmd.shrink_to_fit();
+            cmd = {};
+            //cmd.clear();
+            //cmd.shrink_to_fit();
             continue;
         }
         
@@ -3383,15 +3393,17 @@ bool interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
             inEristaSection = false;
             inMarikoSection = true;
             // Clear and continue
-            cmd.clear();
-            cmd.shrink_to_fit();
+            cmd = {};
+            //cmd.clear();
+            //cmd.shrink_to_fit();
             continue;
         }
 
         // Skip commands in try section if previous command failed
         if (!commandSuccess && inTrySection) {
-            cmd.clear();
-            cmd.shrink_to_fit();
+            cmd = {};
+            //cmd.clear();
+            //cmd.shrink_to_fit();
             continue;
         }
 
@@ -3402,15 +3414,17 @@ bool interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
             (!inEristaSection && !inMarikoSection);
 
         if (!shouldExecute) {
-            cmd.clear();
-            cmd.shrink_to_fit();
+            cmd = {};
+            //cmd.clear();
+            //cmd.shrink_to_fit();
             continue;
         }
 
         // Only execute if not in try section or if we're succeeding in try section
         if (inTrySection && !commandSuccess) {
-            cmd.clear();
-            cmd.shrink_to_fit();
+            cmd = {};
+            //cmd.clear();
+            //cmd.shrink_to_fit();
             continue;
         }
 
@@ -3486,13 +3500,15 @@ bool interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
         }
         
         // Clear the processed command immediately to free its memory
-        cmd.clear();
-        cmd.shrink_to_fit();
+        cmd = {};
+        //cmd.clear();
+        //cmd.shrink_to_fit();
     }
 
     // Final cleanup
-    commands.clear();
-    commands.shrink_to_fit();
+    commands = {};
+    //commands.clear();
+    //commands.shrink_to_fit();
 
     #if USING_LOGGING_DIRECTIVE
     disableLogging = true;
