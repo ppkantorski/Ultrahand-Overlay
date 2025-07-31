@@ -42,6 +42,7 @@ constexpr auto release = std::memory_order_release;
 
 static std::mutex transitionMutex;
 
+
 // Placeholder replacement
 const std::string valuePlaceholder = "{value}";
 const std::string indexPlaceholder = "{index}";
@@ -4968,13 +4969,16 @@ public:
             if (simulatedMenu.load(acquire))
                 simulatedMenu.store(false, release);
             
-            if (simulatedNextPage.load(acquire)) {
-                simulatedNextPage.store(false, release);
-                if (currentPage == LEFT_STR) {
-                    keysDown |= KEY_RIGHT;
-                }
-                else if (currentPage == RIGHT_STR) {
-                    keysDown |= KEY_LEFT;
+            {
+                //std::lock_guard<std::mutex> lock(ult::simulatedNextPageMutex);
+                if (simulatedNextPage.load(acquire)) {
+                    simulatedNextPage.store(false, release);
+                    if (currentPage == LEFT_STR) {
+                        keysDown |= KEY_RIGHT;
+                    }
+                    else if (currentPage == RIGHT_STR) {
+                        keysDown |= KEY_LEFT;
+                    }
                 }
             }
     
@@ -6320,14 +6324,17 @@ public:
                 //    const bool toPackages = (!usePageSwap && menuMode != PACKAGES_STR) || (usePageSwap && menuMode != OVERLAYS_STR);
                 //    keysDown |= toPackages ? (usePageSwap ? KEY_DLEFT : KEY_DRIGHT) : (usePageSwap ? KEY_DRIGHT : KEY_DLEFT);
                 //}
-
-                if (simulatedNextPage.load(acquire)) {
-                    simulatedNextPage.store(false, release);
-                    if ((!usePageSwap && menuMode != PACKAGES_STR) || (usePageSwap && menuMode != OVERLAYS_STR)) {
-                        keysDown |= KEY_RIGHT;
-                    }
-                    else {
-                        keysDown |= KEY_LEFT;
+                const bool onLeftPage = (!usePageSwap && menuMode != PACKAGES_STR) || (usePageSwap && menuMode != OVERLAYS_STR);
+                {
+                    //std::lock_guard<std::mutex> lock(ult::simulatedNextPageMutex);
+                    if (simulatedNextPage.load(acquire)) {
+                        simulatedNextPage.store(false, release);
+                        if (onLeftPage) {
+                            keysDown |= KEY_RIGHT;
+                        }
+                        else {
+                            keysDown |= KEY_LEFT;
+                        }
                     }
                 }
                 
@@ -6353,8 +6360,8 @@ public:
                     unlockedSlide.store(false, release);
                 };
                 
-                const bool switchToPackages = (!usePageSwap && menuMode != PACKAGES_STR) || (usePageSwap && menuMode != OVERLAYS_STR);
-                if (switchToPackages && !isTouching && slideCondition && (((keysDown & KEY_RIGHT) && !(keysHeld & ~KEY_RIGHT & ALL_KEYS_MASK)))) {
+                //const bool switchToPackages = (!usePageSwap && menuMode != PACKAGES_STR) || (usePageSwap && menuMode != OVERLAYS_STR);
+                if (onLeftPage && !isTouching && slideCondition && (((keysDown & KEY_RIGHT) && !(keysHeld & ~KEY_RIGHT & ALL_KEYS_MASK)))) {
                     //bool safeToSwap = false;
                     {
                         std::lock_guard<std::mutex> lock(tsl::elm::s_safeToSwapMutex);
@@ -6375,8 +6382,8 @@ public:
                     
                 }
                 
-                const bool switchToOverlays = (!usePageSwap && menuMode != OVERLAYS_STR) || (usePageSwap && menuMode != PACKAGES_STR);
-                if (switchToOverlays && !isTouching && slideCondition && (((keysDown & KEY_LEFT) && !(keysHeld & ~KEY_LEFT & ALL_KEYS_MASK)))) {
+                //const bool switchToOverlays = (!usePageSwap && menuMode != OVERLAYS_STR) || (usePageSwap && menuMode != PACKAGES_STR);
+                if (!onLeftPage && !isTouching && slideCondition && (((keysDown & KEY_LEFT) && !(keysHeld & ~KEY_LEFT & ALL_KEYS_MASK)))) {
                     //bool safeToSwap = false;
                     {
                         std::lock_guard<std::mutex> lock(tsl::elm::s_safeToSwapMutex);
