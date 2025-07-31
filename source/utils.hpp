@@ -43,17 +43,19 @@ using namespace ult;
 static std::atomic<bool> abortCommand(false);
 static std::atomic<bool> triggerExit(false);
 
-static bool exitingUltrahand = false;
+std::atomic<bool> exitingUltrahand{false};
+std::atomic<bool> isDownloadCommand{false};
+std::atomic<bool> commandSuccess{false};
+std::atomic<bool> refreshPage{false};
+std::atomic<bool> refreshPackage{false};
+std::atomic<bool> skipJumpReset{false};
+std::atomic<bool> interpreterLogging{false};
 
-bool isDownloadCommand = false;
-bool commandSuccess = false;
-bool refreshPage = false;
-bool refreshPackage = false;
-bool skipJumpReset = false;
-bool interpreterLogging = false;
 
-bool usingErista = util::IsErista();
-bool usingMariko = util::IsMariko();
+std::atomic<bool> goBackAfter{false};
+
+std::atomic<bool> usingErista{util::IsErista()};
+std::atomic<bool> usingMariko{util::IsMariko()};
 
 // Device info globals
 static char amsVersion[12];
@@ -866,7 +868,7 @@ void powerOffAllControllers() {
     // Initialize Bluetooth manager
     rc = btmInitialize();
     if (R_FAILED(rc)) {
-        commandSuccess = false;
+        commandSuccess.store(false, std::memory_order_release);
         //LogLine("Error btmInitialize: %u - %X\n", rc, rc);
         return;
     }
@@ -878,7 +880,7 @@ void powerOffAllControllers() {
             g_addresses[i] = connected_devices[i].address;
         }
     } else {
-        commandSuccess = false;
+        commandSuccess.store(false, std::memory_order_release);
         //LogLine("Error btmGetDeviceCondition: %u - %X\n", rc, rc);
     }
     
@@ -887,7 +889,7 @@ void powerOffAllControllers() {
         for (int i = 0; i != g_connected_count; ++i) {
             rc = btmHidDisconnect(g_addresses[i]);
             if (R_FAILED(rc)) {
-                commandSuccess = false;
+                commandSuccess.store(false, std::memory_order_release);
                 //LogLine("Error btmHidDisconnect: %u - %X\n", rc, rc);
             } else {
                 //LogLine("Disconnected Address: %u - %X\n", g_addresses[i], g_addresses[i]);
@@ -895,7 +897,7 @@ void powerOffAllControllers() {
         }
         //LogLine("All controllers disconnected.\n");
     } else {
-        commandSuccess = false;
+        commandSuccess.store(false, std::memory_order_release);
     }
     
     // Exit Bluetooth manager
@@ -2360,7 +2362,7 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
         commandName = cmd[0];
 
         if (commandName == "download") {
-            isDownloadCommand = true;
+            isDownloadCommand.store(true, std::memory_order_release);
         }
 
         if (stringToLowercase(commandName) == "erista:") {
@@ -3317,17 +3319,17 @@ bool interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
     #endif
 
     // Reset global state
-    commandSuccess = true;
-    refreshPage = false;
-    refreshPackage = false;
-    interpreterLogging = false;
+    commandSuccess.store(true, std::memory_order_release);
+    refreshPage.store(false, std::memory_order_release);
+    refreshPackage.store(false, std::memory_order_release);
+    interpreterLogging.store(false, std::memory_order_release);
 
     // Process commands one by one, clearing each after processing
     for (size_t i = 0; i < commands.size(); ++i) {
         // Check for abort signal
         if (abortCommand.load(std::memory_order_acquire)) {
             abortCommand.store(false, std::memory_order_release);
-            commandSuccess = false;
+            commandSuccess.store(false, std::memory_order_release);
             // Clear all remaining commands
             //for (size_t j = i; j < commands.size(); ++j) {
             //    commands[j].clear();
@@ -3355,7 +3357,7 @@ bool interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
 
         // Handle control flow commands
         if (commandName == "try:") {
-            if (inTrySection && commandSuccess) {
+            if (inTrySection && commandSuccess.load(std::memory_order_acquire)) {
                 // Clear remaining commands and exit
                 //for (size_t j = i; j < commands.size(); ++j) {
                 //    commands[j].clear();
@@ -3368,9 +3370,9 @@ bool interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
                 disableLogging = true;
                 logFilePath = defaultLogFilePath;
                 #endif
-                return commandSuccess;
+                return true;
             }
-            commandSuccess = true;
+            commandSuccess.store(true, std::memory_order_release);
             inTrySection = true;
             // Clear and continue
             cmd = {};
@@ -3400,7 +3402,7 @@ bool interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
         }
 
         // Skip commands in try section if previous command failed
-        if (!commandSuccess && inTrySection) {
+        if (!commandSuccess.load(std::memory_order_acquire) && inTrySection) {
             cmd = {};
             //cmd.clear();
             //cmd.shrink_to_fit();
@@ -3421,7 +3423,7 @@ bool interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
         }
 
         // Only execute if not in try section or if we're succeeding in try section
-        if (inTrySection && !commandSuccess) {
+        if (inTrySection && !commandSuccess.load(std::memory_order_acquire)) {
             cmd = {};
             //cmd.clear();
             //cmd.shrink_to_fit();
@@ -3442,7 +3444,7 @@ bool interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
         }
 
         #if USING_LOGGING_DIRECTIVE
-        if (interpreterLogging) {
+        if (interpreterLogging.load(std::memory_order_acquire)) {
             disableLogging = false;
             
             // Build log message efficiently
@@ -3515,7 +3517,7 @@ bool interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
     logFilePath = defaultLogFilePath;
     #endif
 
-    return commandSuccess;
+    return commandSuccess.load(std::memory_order_acquire);
 }
 
 
@@ -4013,7 +4015,6 @@ void rebootToHekateConfig(Payload::HekateConfigList& configList, const std::stri
 }
 
 
-bool goBackAfter = false;
 
 // Main processCommand function
 void processCommand(const std::vector<std::string>& cmd, const std::string& packagePath = "", const std::string& selectedCommand = "") {
@@ -4038,7 +4039,7 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             std::string desiredValue = cmd[1];
             removeQuotes(desiredValue);
             if (desiredValue.find(NULL_STR) != std::string::npos)
-                commandSuccess = false;
+                commandSuccess.store(false, std::memory_order_release);
             else
                 setIniFileValue((packagePath + CONFIG_FILENAME), selectedCommand, FOOTER_STR, desiredValue);
         }
@@ -4127,7 +4128,11 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                 }
                 if (downloadSuccess) break;
             }
-            commandSuccess = downloadSuccess && commandSuccess;
+            commandSuccess.store(
+                downloadSuccess &&
+                commandSuccess.load(std::memory_order_acquire),
+                std::memory_order_release
+            );
         }
     } else if (commandName == "unzip") {
         if (cmd.size() >= 3) {
@@ -4135,7 +4140,11 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             preprocessPath(sourcePath, packagePath);
             std::string destinationPath = cmd[2];
             preprocessPath(destinationPath, packagePath);
-            commandSuccess = unzipFile(sourcePath, destinationPath) && commandSuccess;
+            commandSuccess.store(
+                unzipFile(sourcePath, destinationPath) &&
+                commandSuccess.load(std::memory_order_acquire),
+                std::memory_order_release
+            );
         }
     } else if (commandName == "pchtxt2ips") {
         if (cmd.size() >= 3) {
@@ -4143,13 +4152,21 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             preprocessPath(sourcePath, packagePath);
             std::string destinationPath = cmd[2];
             preprocessPath(destinationPath, packagePath);
-            commandSuccess = pchtxt2ips(sourcePath, destinationPath) && commandSuccess;
+            commandSuccess.store(
+                pchtxt2ips(sourcePath, destinationPath) &&
+                commandSuccess.load(std::memory_order_acquire),
+                std::memory_order_release
+            );
         }
     } else if (commandName == "pchtxt2cheat") {
         if (cmd.size() >= 2) {
             std::string sourcePath = cmd[1];
             preprocessPath(sourcePath, packagePath);
-            commandSuccess = pchtxt2cheat(sourcePath) && commandSuccess;
+            commandSuccess.store(
+                pchtxt2cheat(sourcePath) &&
+                commandSuccess.load(std::memory_order_acquire),
+                std::memory_order_release
+            );
         }
     } else if (commandName == "exec") {
         if (cmd.size() >= 2) {
@@ -4161,12 +4178,12 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             
                 if (!bootCommands.empty()) {
                     bool resetCommandSuccess = false;
-                    if (!commandSuccess) resetCommandSuccess = true;
+                    if (!commandSuccess.load(std::memory_order_acquire)) resetCommandSuccess = true;
             
                     interpretAndExecuteCommands(std::move(bootCommands), packagePath, bootCommandName);
                     resetPercentages();
                     if (resetCommandSuccess) {
-                        commandSuccess = false;
+                        commandSuccess.store(false, std::memory_order_release);
                     }
                 }
             }
@@ -4294,13 +4311,13 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                 setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_OVERLAY_STR, TRUE_STR); // this is handled within tesla.hpp
             }
         }
-        exitingUltrahand = true;
+        exitingUltrahand.store(true, std::memory_order_release);
         //setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_OVERLAY_STR, TRUE_STR); // this is handled within tesla.hpp
         tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
         tsl::Overlay::get()->close();
         return;
     } else if (commandName == "back") {
-        goBackAfter = true;
+        goBackAfter.store(true, std::memory_order_release);
         
     } else if (commandName == "backlight") {
         if (cmd.size() >= 2) {
@@ -4371,7 +4388,7 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                 #if USING_LOGGING_DIRECTIVE
                 logMessage("Overlay file not found: " + overlayPath);
                 #endif
-                commandSuccess = false;
+                commandSuccess.store(false, std::memory_order_release);
                 return;
             }
             
@@ -4404,7 +4421,7 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             //        #if USING_LOGGING_DIRECTIVE
             //        logMessage("Cannot open hidden overlay: " + overlayFileName);
             //        #endif
-            //        commandSuccess = false;
+            //        commandSuccess.store(false, std::memory_order_release);
             //        return;
             //    }
             //}
@@ -4426,19 +4443,19 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             #if USING_LOGGING_DIRECTIVE
             logMessage("Usage: open <overlay_path> [launch_arguments...]");
             #endif
-            commandSuccess = false;
+            commandSuccess.store(false, std::memory_order_release);
         }
     
     } else if (commandName == "refresh") {
         if (cmd.size() == 1) {
-            refreshPage = true;
+            refreshPage.store(true, std::memory_order_release);
         } else if (cmd.size() > 1) {
             std::string refreshPattern = cmd[1];
             removeQuotes(refreshPattern);
             if (refreshPattern == "theme")
                 tsl::initializeThemeVars();
             else if (refreshPattern == "package")
-                refreshPackage = true;
+                refreshPackage.store(true, std::memory_order_release);
             else if (refreshPattern == "wallpaper") {
                 reloadWallpaper();
             //} else {
@@ -4448,7 +4465,7 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             //    }
             //    jumpItemName = refreshPattern;
             //    jumpItemValue = refreshPattern2;
-            //    refreshPage = true;
+            //    refreshPage.store(true, std::memory_order_release);
             }
         }
     } else if (commandName == "refresh-to") {
@@ -4471,11 +4488,11 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             jumpItemName = refreshPattern;
             jumpItemValue = refreshPattern2;
             jumpItemExactMatch = !(refreshPattern3 == FALSE_STR);
-            skipJumpReset = true;
-            refreshPage = true;
+            skipJumpReset.store(true, std::memory_order_release);
+            refreshPage.store(true, std::memory_order_release);
         }
     } else if (commandName == "logging") {
-        interpreterLogging = true;
+        interpreterLogging.store(true, std::memory_order_release);
     } else if (commandName == "clear") {
         if (cmd.size() >= 2) {
             std::string clearOption = cmd[1];
@@ -4630,7 +4647,7 @@ void executeInterpreterCommands(std::vector<std::vector<std::string>>&& commands
     const int result = threadCreate(&interpreterThread, backgroundInterpreter, workData, nullptr, stackSize, 0x2B, -2);
     if (result != 0) {
         // Handle thread creation failure
-        commandSuccess = false;
+        commandSuccess.store(false, std::memory_order_release);
         clearInterpreterFlags();
         runningInterpreter.store(false, std::memory_order_release);
         
