@@ -58,7 +58,7 @@ static bool returningToSettings = false;
 static bool returningToPackage = false;
 static bool returningToSubPackage = false;
 static bool returningToSelectionMenu = false;
-static bool languageWasChanged = false;
+//static bool languageWasChanged = false; // moved to tsl_utils
 static bool themeWasChanged = false;
 
 //static bool skipJumpReset.store(false, release); // for overrridng the default main menu jump to implementation // moved to utils
@@ -751,7 +751,7 @@ public:
 
             for (const auto& defaultLangMode : defaultLanguages) {
                 langFile = LANG_PATH + defaultLangMode + ".json";
-                if (defaultLangMode != "en" && !isFileOrDirectory(langFile))  {index++; continue;}
+                if (defaultLangMode != "en" && !isFile(langFile))  {index++; continue;}
 
                 tsl::elm::ListItem* listItem = new tsl::elm::ListItem(defaultLanguagesRepresentation[index]);
 
@@ -762,10 +762,16 @@ public:
                     //lastSelectedListItem = nullptr;
                     lastSelectedListItem = listItem;
                 }
-                listItem->setClickListener([skipLang = !isFileOrDirectory(langFile), defaultLangMode, defaulLang, langFile, listItem](uint64_t keys) {
+                listItem->setClickListener([skipLang = !isFile(langFile), defaultLangMode, defaulLang, langFile, listItem](uint64_t keys) {
                     //listItemPtr = std::shared_ptr<tsl::elm::ListItem>(listItem, [](auto*){})](uint64_t keys) {
                     if (runningInterpreter.load(acquire)) return false;
 
+                    static bool hasNotTriggeredAnimation = false;
+
+                    if (hasNotTriggeredAnimation) { // needed because of swapTo
+                        listItem->triggerClickAnimation();
+                        hasNotTriggeredAnimation = false;
+                    }
                     if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
                         setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, DEFAULT_LANG_STR, defaultLangMode);
                         reloadMenu = reloadMenu2 = true;
@@ -779,10 +785,16 @@ public:
                         //lastSelectedListItem = nullptr;
                         lastSelectedListItem = listItem;
                         shiftItemFocus(listItem);
-                        if (lastSelectedListItem)
-                            lastSelectedListItem->triggerClickAnimation();
+                        //if (lastSelectedListItem)
+                        //    lastSelectedListItem->triggerClickAnimation();
                         lastSelectedListItemFooter = defaultLangMode;
-                        languageWasChanged = true;
+                        languageWasChanged.store(true, release);
+                        hasNotTriggeredAnimation = true;
+                        //executeCommands({
+                        //    {"refresh-to", "", CHECKMARK_SYMBOL, FALSE_STR}
+                        //});
+                        tsl::swapTo<UltrahandSettingsMenu>("languageMenu");
+
                         return true;
                     }
                     return false;
@@ -1148,7 +1160,7 @@ public:
             }
             list->jumpToItem(jumpItemName, jumpItemValue, jumpItemExactMatch.load(acquire));
         } else {
-            if (languageWasChanged) {
+            if (languageWasChanged.load(acquire)) {
                 {
                     //std::lock_guard<std::mutex> lock(jumpItemMutex);
                     jumpItemName = LANGUAGE;
@@ -1156,7 +1168,7 @@ public:
                     jumpItemExactMatch.store(true, release);
                     g_overlayFilename = "";
                 }
-                languageWasChanged = false;
+                languageWasChanged.store(false, release);
                 list->jumpToItem(jumpItemName, jumpItemValue, jumpItemExactMatch.load(acquire));
             } else if (themeWasChanged) {
                 {
@@ -1208,6 +1220,12 @@ public:
             simulatedBack.store(true, release);
             return true;
         }
+
+        //if (refreshPage.load(acquire)) {
+        //    //tsl::goBack();tsl::changeTo<UltrahandSettingsMenu>(targetMenu);
+        //    tsl::swapTo<UltrahandSettingsMenu>("languageMenu");
+        //    refreshPage.store(false, release);
+        //}
         
         if (inSettingsMenu && !inSubSettingsMenu) {
             if (!returningToSettings) {
@@ -2174,6 +2192,7 @@ public:
                 drawTable(list, dummyTableData, sectionLines, infoLines, tableColumnOffset, tableStartGap, tableEndGap, tableSpacing,
                           tableSectionTextColor, tableInfoTextColor, tableInfoTextColor, tableAlignment, hideTableBackground, useHeaderIndent, isPolling, isScrollableTable, wrappingMode, useWrappedTextIndent);
             }
+            addDummyListItem(list);
         }
 
         const std::string packageVersion = isFromMainMenu ? "" : packageRootLayerVersion;
@@ -3253,8 +3272,8 @@ public:
         const bool isTouching = stillTouching.load(acquire);
         
         if (refreshPage.load(acquire) && !isTouching) {
-            tsl::goBack();
-            tsl::changeTo<SelectionOverlay>(filePath, specificKey, specifiedFooterKey, lastPackageHeader, selectionCommands);
+            //tsl::goBack();
+            tsl::swapTo<SelectionOverlay>(filePath, specificKey, specifiedFooterKey, lastPackageHeader, selectionCommands);
             refreshPage.store(false, release);
         }
         
@@ -3415,6 +3434,13 @@ std::vector<std::vector<std::string>> gatherPromptCommands(
 //    vec.shrink_to_fit();
 //};
 
+std::string returnToPackagePath;
+std::string returnToCurrentPage; 
+std::string returnToPackageName;
+size_t returnToNestedLayer;
+std::string returnToPageHeader;
+std::string returnToOption;
+
 
 class PackageMenu; // forwarding
 
@@ -3562,7 +3588,8 @@ bool drawCommandsMenu(tsl::elm::List* list,
         sourceTypeOff = DEFAULT_STR;
         
         
-        
+        bool isSlot = false;
+
         if (drawLocation.empty() || (currentPage == drawLocation) || (optionName.front() == '@')) {
             
             // Custom header implementation
@@ -3586,34 +3613,59 @@ bool drawCommandsMenu(tsl::elm::List* list,
                         addPackageInfo(list, packageHeader);
                     }
                 }
-                if (commands.size() == 1) {
-                    // Check if the first command has at least one element
-                    if (!commands[0].empty()) {
-                        const std::string& commandName = commands[0][0];
-                        
-                        // Use starts_with if C++20 is available, otherwise use compare
-                        if (commandName.starts_with(MINI_PATTERN)) { // C++20
-                        // if (commandName.compare(0, MINI_PATTERN.length(), MINI_PATTERN) == 0) { // Pre-C++20
+                if (optionName.front() == '*' && commands.size() > 0 && commands.size() <= 2) {
+                    bool foundMini = false;
+                    bool foundMode = false;
+                    bool modeIsSlot = false;
+                    bool miniValue = false;
+                    
+                    // Scan all commands for mini/mode patterns
+                    for (const auto& command : commands) {
+                        if (!command.empty()) {
+                            const std::string& commandName = command[0];
                             
-                            // Calculate expected minimum length
-                            const size_t expectedMinLength = MINI_PATTERN.length() + TRUE_STR.length();
-                            
-                            if (commandName.length() >= expectedMinLength) {
-                                const std::string suffix = commandName.substr(MINI_PATTERN.length());
-                                
-                                // Only proceed if suffix matches expected values
-                                if (suffix == TRUE_STR) {
-                                    isMini = true;
-                                    commands.clear();
-                                    //commands.shrink_to_fit();
-                                } else if (suffix == FALSE_STR) {
-                                    isMini = false;
-                                    commands.clear();
-                                    //commands.shrink_to_fit();
+                            // Check for mini pattern
+                            if (commandName.starts_with(MINI_PATTERN)) {
+                                const size_t expectedMinLength = MINI_PATTERN.length() + TRUE_STR.length();
+                                if (commandName.length() >= expectedMinLength) {
+                                    const std::string suffix = commandName.substr(MINI_PATTERN.length());
+                                    if (suffix == TRUE_STR) {
+                                        foundMini = true;
+                                        miniValue = true;
+                                    } else if (suffix == FALSE_STR) {
+                                        foundMini = true;
+                                        miniValue = false;
+                                    }
                                 }
-                                // Invalid suffix: no action taken, preserves current state
+                            }
+                            // Check for mode pattern  
+                            else if (commandName.starts_with(MODE_PATTERN)) {
+                                const size_t expectedMinLength = MODE_PATTERN.length() + 4; // "slot"
+                                if (commandName.length() >= expectedMinLength) {
+                                    foundMode = true;
+                                    const std::string suffix = commandName.substr(MODE_PATTERN.length());
+                                    if (suffix == "slot") {
+                                        modeIsSlot = true;
+                                    }
+                                }
                             }
                         }
+                    }
+                    
+                    // Apply the settings
+                    if (foundMini) {
+                        isMini = miniValue;
+                    } else if (modeIsSlot) {
+                        isSlot = true;
+                    }
+                    
+                    // Clear commands only when we've actually processed something
+                    bool shouldClear = (commands.size() == 1 && (foundMini || foundMode)) ||
+                                       (commands.size() == 2 && foundMini && foundMode);
+                    
+                    if (shouldClear) {
+                        commands.clear();
+                        // commands.shrink_to_fit(); // Uncomment if needed
                     }
                 }
                 if (commands.size() == 0) {
@@ -3624,34 +3676,60 @@ bool drawCommandsMenu(tsl::elm::List* list,
                     continue;
                 }
             } else {
-                if (commands.size() == 1) {
-                    // Check if the first command has at least one element
-                    if (!commands[0].empty()) {
-                        const std::string& commandName = commands[0][0];
-                        
-                        // Use starts_with if C++20 is available, otherwise use compare
-                        if (commandName.starts_with(MINI_PATTERN)) { // C++20
-                        // if (commandName.compare(0, MINI_PATTERN.length(), MINI_PATTERN) == 0) { // Pre-C++20
-                            
-                            // Calculate expected minimum length
-                            const size_t expectedMinLength = MINI_PATTERN.length() + TRUE_STR.length();
-                            
-                            if (commandName.length() >= expectedMinLength) {
-                                const std::string suffix = commandName.substr(MINI_PATTERN.length());
                                 
-                                // Only proceed if suffix matches expected values
-                                if (suffix == TRUE_STR) {
-                                    isMini = true;
-                                    commands.clear();
-                                    //commands.shrink_to_fit();
-                                } else if (suffix == FALSE_STR) {
-                                    isMini = false;
-                                    commands.clear();
-                                    //commands.shrink_to_fit();
+                if (optionName.front() == '*' && commands.size() > 0 && commands.size() <= 2) {
+                    bool foundMini = false;
+                    bool foundMode = false;
+                    bool modeIsSlot = false;
+                    bool miniValue = false;
+                    
+                    // Scan all commands for mini/mode patterns
+                    for (const auto& command : commands) {
+                        if (!command.empty()) {
+                            const std::string& commandName = command[0];
+                            
+                            // Check for mini pattern
+                            if (commandName.starts_with(MINI_PATTERN)) {
+                                const size_t expectedMinLength = MINI_PATTERN.length() + TRUE_STR.length();
+                                if (commandName.length() >= expectedMinLength) {
+                                    const std::string suffix = commandName.substr(MINI_PATTERN.length());
+                                    if (suffix == TRUE_STR) {
+                                        foundMini = true;
+                                        miniValue = true;
+                                    } else if (suffix == FALSE_STR) {
+                                        foundMini = true;
+                                        miniValue = false;
+                                    }
                                 }
-                                // Invalid suffix: no action taken, preserves current state
+                            }
+                            // Check for mode pattern  
+                            else if (commandName.starts_with(MODE_PATTERN)) {
+                                const size_t expectedMinLength = MODE_PATTERN.length() + 4; // "slot"
+                                if (commandName.length() >= expectedMinLength) {
+                                    foundMode = true;
+                                    const std::string suffix = commandName.substr(MODE_PATTERN.length());
+                                    if (suffix == "slot") {
+                                        modeIsSlot = true;
+                                    }
+                                }
                             }
                         }
+                    }
+                    
+                    // Apply the settings
+                    if (foundMini) {
+                        isMini = miniValue;
+                    } else if (modeIsSlot) {
+                        isSlot = true;
+                    }
+                    
+                    // Clear commands only when we've actually processed something
+                    bool shouldClear = (commands.size() == 1 && (foundMini || foundMode)) ||
+                                       (commands.size() == 2 && foundMini && foundMode);
+                    
+                    if (shouldClear) {
+                        commands.clear();
+                        // commands.shrink_to_fit(); // Uncomment if needed
                     }
                 }
 
@@ -3696,7 +3774,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
                             listItem = new tsl::elm::ListItem(cleanOptionName, "", isMini, true);
                             listItem->setValue(footer);
                         } else {
-                            footer = DROPDOWN_SYMBOL;
+                            footer = !isSlot ? DROPDOWN_SYMBOL : OPTION_SYMBOL;
                             cleanOptionName = optionName.substr(1);
                             removeTag(cleanOptionName);
                             // Create reference to PackageMenu with dropdownSection set to optionName
@@ -3704,7 +3782,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
                         }
                         
                         if (packageMenuMode) {
-                            listItem->setClickListener([packagePath, currentPage, packageName, i, packageIniPath, optionName, lastPackageHeader](s64 keys) {
+                            listItem->setClickListener([packagePath, currentPage, packageName, nestedLayer, i, packageIniPath, optionName, cleanOptionName, lastPackageHeader](s64 keys) {
                                 
                                 if (runningInterpreter.load(acquire))
                                     return false;
@@ -3712,6 +3790,15 @@ bool drawCommandsMenu(tsl::elm::List* list,
                                 if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
                                     inPackageMenu = false;
                                     //tsl::clearGlyphCacheNow.store(true, release);
+                                    // Store return info
+                                    returnToPackagePath = packagePath;
+                                    returnToCurrentPage = currentPage; 
+                                    returnToPackageName = packageName;
+                                    returnToNestedLayer = nestedLayer;
+                                    returnToPageHeader = lastPackageHeader;
+                                    returnToOption = cleanOptionName;
+
+
                                     tsl::changeTo<PackageMenu>(packagePath, optionName, currentPage, packageName, 0, lastPackageHeader);
                                     
                                     return true;
@@ -4664,7 +4751,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
         //auto dummyItem = new tsl::elm::DummyListItem();
         //list->addItem(dummyItem, 0, 1);
         addDummyListItem(list, 1); // assuming a header is always above
-        //addDummyListItem(list);
+        addDummyListItem(list);
         list->disableCaching();
     }
 
@@ -4830,7 +4917,7 @@ public:
            (usingPages && currentPage == LEFT_STR) ? pageRightName : ""
         );
 
-        list->jumpToItem(jumpItemName,jumpItemValue);
+        list->jumpToItem(jumpItemName,jumpItemValue, jumpItemExactMatch);
         rootFrame->setContent(list);
         rootFrame->m_showWidget = (!packageHeader.show_widget.empty() && packageHeader.show_widget == TRUE_STR);
         return rootFrame;
@@ -5147,7 +5234,17 @@ public:
                     returningToPackage = true;
                     lastMenu = "packageMenu";
                     //tsl::clearGlyphCacheNow.store(true, release);
-                    tsl::goBack();
+                    if (!returnToPackagePath.empty()) {
+                        jumpItemName = returnToOption;
+                        jumpItemValue = "";
+                        jumpItemExactMatch = false;
+                        skipJumpReset.store(true, std::memory_order_release);
+                        tsl::swapTo<PackageMenu>(SwapDepth(2), returnToPackagePath, "", returnToCurrentPage, 
+                                                returnToPackageName, returnToNestedLayer, returnToPageHeader);
+                        returnToPackagePath = "";
+                    }
+                    else
+                        tsl::goBack();
                     
                     return true;
                 }
@@ -5162,7 +5259,17 @@ public:
                     returningToPackage = true;
                     lastMenu = "packageMenu";
                     //tsl::clearGlyphCacheNow.store(true, release);
-                    tsl::goBack();
+                    if (!returnToPackagePath.empty()) {
+                        jumpItemName = returnToOption;
+                        jumpItemValue = "";
+                        jumpItemExactMatch = false;
+                        skipJumpReset.store(true, std::memory_order_release);
+                        tsl::swapTo<PackageMenu>(SwapDepth(2), returnToPackagePath, "", returnToCurrentPage, 
+                                                returnToPackageName, returnToNestedLayer, returnToPageHeader);
+                        returnToPackagePath = "";
+                    }
+                    else
+                        tsl::goBack();
                     
                     return true;
                 }
@@ -5215,7 +5322,14 @@ public:
             returningToPackage = true;
             lastMenu = "packageMenu";
             //tsl::clearGlyphCacheNow.store(true, release);
-            tsl::goBack();
+
+            if (!returnToPackagePath.empty()) {
+                tsl::swapTo<PackageMenu>(returnToPackagePath, "", returnToCurrentPage, 
+                                        returnToPackageName, returnToNestedLayer, returnToPageHeader);
+                returnToPackagePath = "";
+            }
+            else
+                tsl::goBack();
             
             return true;
         }
@@ -5594,7 +5708,7 @@ public:
                     newStarred = !overlayStarred;
                     
                     if (isFileOrDirectory(overlayFile)) {
-                        tsl::elm::ListItem* listItem = new tsl::elm::ListItem(newOverlayName);
+                        tsl::elm::ListItem* listItem = new tsl::elm::ListItem(newOverlayName, "", false, false);
                         overlayVersion = getFirstLongEntry(overlayVersion);
                         //std::string originalOverlayVersion = overlayVersion.c_str();
                         if (cleanVersionLabels)
@@ -6007,7 +6121,7 @@ public:
                     
                     if (isFileOrDirectory(packageFilePath)) {
 
-                        tsl::elm::ListItem* listItem = new tsl::elm::ListItem(packageStarred ? STAR_SYMBOL + "  " + newPackageName : newPackageName);
+                        tsl::elm::ListItem* listItem = new tsl::elm::ListItem(packageStarred ? STAR_SYMBOL + "  " + newPackageName : newPackageName, "", false, false);
                         if (!hidePackageVersions) {
                             listItem->setValue(packageVersion, true);
                             listItem->setValueColor((highlightVersions && highlightPackages) ? tsl::packageVersionHighlightTextColor : tsl::packageVersionTextColor);
