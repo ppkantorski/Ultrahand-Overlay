@@ -126,11 +126,11 @@ static const std::string UNLOCKED_PATTERN = ";unlocked=";
 static const std::string ON_EVERY_TICK_PATTERN = ";on_every_tick=";
 
 static std::string currentMenu = OVERLAYS_STR;
-static std::string lastPage = LEFT_STR;
-static std::string lastPackagePath;
-static std::string lastPackageName;
+//static std::string lastPage = LEFT_STR;
+//static std::string lastPackagePath;
+//static std::string lastPackageName;
 static std::string lastPackageMenu;
-static std::string lastPageHeader;
+//static std::string lastPageHeader;
 
 static std::string lastMenu = "";
 static std::string lastMenuMode = "";
@@ -3440,14 +3440,8 @@ std::vector<std::vector<std::string>> gatherPromptCommands(
 //    vec.shrink_to_fit();
 //};
 
-//std::string returnToPackagePath;
-//std::string returnToCurrentPage; 
-//std::string returnToPackageName;
-//size_t returnToNestedLayer;
-//std::string returnToPageHeader;
-//std::string returnToOption;
 
-
+// For returning with menu redrawing
 struct ReturnContext {
     std::string packagePath;
     std::string sectionName;
@@ -4539,8 +4533,8 @@ bool drawCommandsMenu(
 
                                 // set forwarder pointer for updating
                                 //forwarderListItem = listItem;
-                                //lastCommandMode = FORWARDER_STR;
-                                //lastKeyName = keyName;
+                                lastCommandMode = FORWARDER_STR;
+                                lastKeyName = keyName;
                                 nestedMenuCount++;
 
                                 returnContextStack.push({
@@ -5075,9 +5069,9 @@ public:
                 
                 // Function to handle the transition and state resetting
                 auto handleMenuTransition = [&] {
-                    lastPackagePath = packagePath;
+                    const std::string lastPackagePath = packagePath;
                     const std::string lastDropdownSection = dropdownSection;
-                    lastPage = currentPage;
+                    const std::string lastPage = currentPage;
                     const std::string lastPackageName = packageName;
                     const size_t lastNestedLayer = nestedLayer;
                     
@@ -5104,14 +5098,14 @@ public:
             }
             if (refreshPackage.load(acquire)) {
                 if (nestedMenuCount == nestedLayer) {
-                    lastPackagePath = packagePath;
-                    lastPage = currentPage;
-                    lastPackageName = PACKAGE_FILENAME;
+                    //astPackagePath = packagePath;
+                    //lastPage = currentPage;
+                    //lastPackageName = PACKAGE_FILENAME;
                     
                     //tsl::goBack(nestedMenuCount+1);
                     //nestedMenuCount = 0;
     
-                    tsl::swapTo<PackageMenu>(SwapDepth(nestedMenuCount+1), lastPackagePath, "");
+                    tsl::swapTo<PackageMenu>(SwapDepth(nestedMenuCount+1), packagePath, "");
                     nestedMenuCount = 0;
                     inPackageMenu = true;
                     inSubPackageMenu = false;
@@ -5158,7 +5152,7 @@ public:
                     {
                         std::lock_guard<std::mutex> lock(tsl::elm::s_safeToSwapMutex);
                         if (tsl::elm::s_safeToSwap.load(acquire)) {
-                            lastPage = RIGHT_STR;
+                            //lastPage = RIGHT_STR;
                             tsl::swapTo<PackageMenu>(packagePath, dropdownSection, RIGHT_STR, packageName, nestedLayer, pageHeader);
                             resetSlideState();
                         }
@@ -5171,7 +5165,7 @@ public:
                     {
                         std::lock_guard<std::mutex> lock(tsl::elm::s_safeToSwapMutex);
                         if (tsl::elm::s_safeToSwap.load(acquire)) {
-                            lastPage = LEFT_STR;
+                            //lastPage = LEFT_STR;
                             tsl::swapTo<PackageMenu>(packagePath, dropdownSection, LEFT_STR, packageName, nestedLayer, pageHeader);
                             resetSlideState();
                         }
@@ -5310,13 +5304,13 @@ public:
             if (simulatedMenu.load(acquire))
                 simulatedMenu.store(false, release);
             
-            if (!usingPages || (usingPages && lastPage == LEFT_STR)) {
+            if (!usingPages || (usingPages && currentPage == LEFT_STR)) {
                 if (backKeyPressed) {
                     return handleNormalBack();
                 }
-            } else if (usingPages && lastPage == RIGHT_STR) {
+            } else if (usingPages && currentPage == RIGHT_STR) {
                 if (backKeyPressed) {
-                    lastPage = LEFT_STR; 
+                    //lastPage = LEFT_STR; 
                     return handleNormalBack();
                 }
             }
@@ -5329,7 +5323,7 @@ public:
             if (simulatedMenu.load(acquire))
                 simulatedMenu.store(false, release);
             
-            if (!usingPages || (usingPages && lastPage == LEFT_STR)) {
+            if (!usingPages || (usingPages && currentPage == LEFT_STR)) {
                 if (backKeyPressed) {
                     //handleForwarderFooter();
                     if (allowSlide.load(acquire))
@@ -5346,7 +5340,7 @@ public:
                     tsl::goBack();
                     return true;
                 }
-            } else if (usingPages && lastPage == RIGHT_STR) {
+            } else if (usingPages && currentPage == RIGHT_STR) {
                 if (backKeyPressed) {
                     //handleForwarderFooter();
                     if (allowSlide.load(acquire))
@@ -5373,8 +5367,8 @@ public:
             inPackageMenu = true;
             inSubPackageMenu = false;
             if (nestedMenuCount == 0 && nestedLayer == 0) {
-                lastPackagePath = packagePath;
-                lastPackageName = PACKAGE_FILENAME;
+                //lastPackagePath = packagePath;
+                //lastPackageName = PACKAGE_FILENAME;
             }
         }
         
@@ -5385,8 +5379,8 @@ public:
             inPackageMenu = false;
             inSubPackageMenu = true;
             if (nestedMenuCount == 0 && nestedLayer == 0) {
-                lastPackagePath = packagePath;
-                lastPackageName = PACKAGE_FILENAME;
+                //lastPackagePath = packagePath;
+                //lastPackageName = PACKAGE_FILENAME;
             }
         }
         
@@ -6273,8 +6267,8 @@ public:
                                 }
                                 
 
-                                lastPackagePath = packageFilePath;
-                                lastPackageName = PACKAGE_FILENAME;
+                                //lastPackagePath = packageFilePath;
+                                //lastPackageName = PACKAGE_FILENAME;
     
                                 packageRootLayerTitle = newPackageName;
                                 packageRootLayerVersion = packageVersion;
@@ -7054,8 +7048,8 @@ public:
                 }
     
                 // Set the necessary global variables with PROPER NAMES
-                lastPackagePath = packageFilePath;
-                lastPackageName = PACKAGE_FILENAME;
+                //lastPackagePath = packageFilePath;
+                //lastPackageName = PACKAGE_FILENAME;
                 packageRootLayerTitle = assignedOverlayName;  // Use proper title
                 packageRootLayerVersion = assignedOverlayVersion;  // Use proper version
                 
