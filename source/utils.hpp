@@ -3271,14 +3271,14 @@ bool interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
     #endif
 
     // Initialize buffer sizes based on expanded memory setting
-    if (expandedMemory) {
-        COPY_BUFFER_SIZE = 262144;
-        HEX_BUFFER_SIZE = 8192;
-        UNZIP_READ_BUFFER = 262144;
-        UNZIP_WRITE_BUFFER = 131072;
-        DOWNLOAD_READ_BUFFER = 262144;
-        DOWNLOAD_WRITE_BUFFER = 131072;
-    }
+    //if (expandedMemory) {
+    //    COPY_BUFFER_SIZE = 262144;
+    //    HEX_BUFFER_SIZE = 8192;
+    //    UNZIP_READ_BUFFER = 262144;
+    //    UNZIP_WRITE_BUFFER = 131072;
+    //    DOWNLOAD_READ_BUFFER = 262144;
+    //    DOWNLOAD_WRITE_BUFFER = 131072;
+    //}
 
     // Load and apply buffer configuration from INI file
     const auto bufferSection = getKeyValuePairsFromSection(ULTRAHAND_CONFIG_INI_PATH, MEMORY_STR);
