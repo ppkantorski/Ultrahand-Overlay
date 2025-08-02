@@ -2150,21 +2150,21 @@ public:
             }
             
             // Use default parameters for the table view
-            const size_t tableColumnOffset = 163;
-            const size_t tableStartGap = 20;
-            const size_t tableEndGap = 9;
-            const size_t tableSpacing = 10;
-            const std::string tableSectionTextColor = DEFAULT_STR;
-            const std::string tableInfoTextColor = DEFAULT_STR;
-            const std::string tableAlignment = LEFT_STR;
-            const bool hideTableBackground = false;
-            const bool useHeaderIndent = false;
-            const bool isPolling = false;
-            const bool isScrollableTable = true;
+            constexpr size_t tableColumnOffset = 163;
+            constexpr size_t tableStartGap = 20;
+            constexpr size_t tableEndGap = 9;
+            constexpr size_t tableSpacing = 10;
+            const std::string& tableSectionTextColor = DEFAULT_STR;
+            const std::string& tableInfoTextColor = DEFAULT_STR;
+            const std::string& tableAlignment = LEFT_STR;
+            constexpr bool hideTableBackground = false;
+            constexpr bool useHeaderIndent = false;
+            constexpr bool isPolling = false;
+            constexpr bool isScrollableTable = true;
             const std::string wrappingMode = "char";
-            const bool useWrappedTextIndent = true;
+            constexpr bool useWrappedTextIndent = true;
 
-            static std::vector<std::vector<std::string>> dummyTableData;
+            std::vector<std::vector<std::string>> dummyTableData;
 
 
             //addDummyListItem(list);
@@ -4808,7 +4808,7 @@ bool drawCommandsMenu(
         //list->addItem(dummyItem, 0, 1);
         addDummyListItem(list, 1); // assuming a header is always above
         addDummyListItem(list);
-        list->disableCaching();
+        //list->disableCaching(); // causes a visual glitch when entered fresh on return, may look into again later.
     }
 
     return onlyTables;

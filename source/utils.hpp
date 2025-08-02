@@ -1380,8 +1380,8 @@ static bool buildTableDrawerLines(
     std::vector<s32>&                            outY,
     std::vector<int>&                            outX
 ) {
-    constexpr size_t lineHeight = 16;
-    constexpr size_t fontSize = 16;
+    static constexpr size_t lineHeight = 16;
+    static constexpr size_t fontSize = 16;
     const size_t xMax = tsl::cfg::FramebufferWidth - 95;
     const std::string indent = "└ ";
     const float indentWidth = tsl::gfx::calculateStringWidth(indent, fontSize, false);
@@ -1612,7 +1612,7 @@ void drawTable(
 
     // Use nanoseconds for high-performance timing
     auto lastUpdateNS = std::make_shared<u64>(armTicksToNs(armGetSystemTick()));
-    constexpr u64 ONE_SECOND_NS = 1000000000ULL;
+    static constexpr u64 ONE_SECOND_NS = 1000000000ULL;
 
     static const std::vector<std::string> specialCharacters =  {""};
     
@@ -1620,7 +1620,7 @@ void drawTable(
         [=](tsl::gfx::Renderer* renderer, s32 x, s32 y, s32 w, s32 h) mutable {
 
             if (usingPlaceholders) {
-                u64 currentNS = armTicksToNs(armGetSystemTick());
+                const u64 currentNS = armTicksToNs(armGetSystemTick());
                 
                 if ((currentNS - *lastUpdateNS) >= ONE_SECOND_NS) {
                     buildTableDrawerLines(
@@ -1943,8 +1943,8 @@ bool isDangerousCombination(const std::string& originalPath) {
     
     // 5) Root folder wildcard check (only if wildcards exist)
     if (hasWildcards) {
-        constexpr const char rootPrefix[] = "sdmc:/";
-        constexpr size_t rootLen = 6; // Length of "sdmc:/"
+        static constexpr const char rootPrefix[] = "sdmc:/";
+        static constexpr size_t rootLen = 6; // Length of "sdmc:/"
         
         if (patternPath.length() >= rootLen && 
             patternPath.compare(0, rootLen, rootPrefix) == 0) {
