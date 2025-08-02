@@ -145,7 +145,7 @@ static std::unordered_map<std::string, std::string> selectedFooterDict;
 
 static tsl::elm::ListItem* selectedListItem;
 static tsl::elm::ListItem* lastSelectedListItem;
-static tsl::elm::ListItem* forwarderListItem;
+//static tsl::elm::ListItem* forwarderListItem;
 //static tsl::elm::ListItem* dropdownListItem;
 
 static std::atomic<bool> lastRunningInterpreter{false};
@@ -196,8 +196,14 @@ bool handleRunningInterpreter(uint64_t& keysDown, uint64_t& keysHeld) {
     static bool inProg = true;
     static uint8_t currentOpIndex = 0;  // Track which operation to check first
     
+    static bool wasHoldingR = false;
+
+    bool isHoldingR = keysHeld & KEY_R && !(keysHeld & ~KEY_R & ALL_KEYS_MASK);
+    bool releasedR = wasHoldingR && !(isHoldingR);
+    wasHoldingR = isHoldingR;
+
     // FIX: More robust abort handling
-    if (((keysDown & KEY_R) && !(keysHeld & ~KEY_R & ALL_KEYS_MASK) && !stillTouching.load(acquire)) || externalAbortCommands.load(acquire)) {
+    if ((releasedR && !(keysHeld & ~KEY_R & ALL_KEYS_MASK) && !stillTouching.load(acquire)) || externalAbortCommands.load(acquire)) {
         // Set all abort flags with proper ordering
         abortDownload.store(true, release);
         abortUnzip.store(true, release);
@@ -626,7 +632,7 @@ private:
                         downloadFile(OLD_NX_OVLLOADER_PLUS_ZIP_URL, EXPANSION_PATH);
                     downloadPercentage.store(-1, release);
                 }
-                if (!isFileOrDirectory(EXPANSION_PATH + "nx-ovlloader.zip") || !isFileOrDirectory(EXPANSION_PATH + "nx-ovlloader+.zip")) {
+                if (!isFile(EXPANSION_PATH + "nx-ovlloader.zip") || !isFile(EXPANSION_PATH + "nx-ovlloader+.zip")) {
                     listItem->setState(loaderTitle == "nx-ovlloader+");
                 } else {
                     executeCommands({
@@ -942,7 +948,7 @@ public:
                 if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
                     setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "current_theme", DEFAULT_STR);
                     deleteFileOrDirectory(THEME_CONFIG_INI_PATH);
-                    if (isFileOrDirectory(defaultTheme)) {
+                    if (isFile(defaultTheme)) {
                         copyFileOrDirectory(defaultTheme, THEME_CONFIG_INI_PATH);
                         copyPercentage.store(-1, release);
                     }
@@ -3311,7 +3317,7 @@ public:
                 }
                 
                 // Handle package config footer logic
-                if (commandMode == OPTION_STR && isFileOrDirectory(packageConfigIniPath)) {
+                if (commandMode == OPTION_STR && isFile(packageConfigIniPath)) {
                     const auto packageConfigData = getParsedDataFromIniFile(packageConfigIniPath);
                     auto it = packageConfigData.find(specificKey);
                     if (it != packageConfigData.end()) {
@@ -3434,23 +3440,58 @@ std::vector<std::vector<std::string>> gatherPromptCommands(
 //    vec.shrink_to_fit();
 //};
 
-std::string returnToPackagePath;
-std::string returnToCurrentPage; 
-std::string returnToPackageName;
-size_t returnToNestedLayer;
-std::string returnToPageHeader;
-std::string returnToOption;
+//std::string returnToPackagePath;
+//std::string returnToCurrentPage; 
+//std::string returnToPackageName;
+//size_t returnToNestedLayer;
+//std::string returnToPageHeader;
+//std::string returnToOption;
+
+
+struct ReturnContext {
+    std::string packagePath;
+    std::string sectionName;
+    std::string currentPage;
+    std::string packageName;
+    std::string pageHeader;
+    std::string option;
+    size_t nestedLayer = 0;
+
+    void clear() {
+        packagePath.clear();
+        sectionName.clear();
+        currentPage.clear();
+        packageName.clear();
+        pageHeader.clear();
+        option.clear();
+        nestedLayer = 0;
+    }
+};
+
+//ReturnContext returnTo;
+static std::stack<ReturnContext> returnContextStack;
 
 
 class PackageMenu; // forwarding
 
 // returns if there are or are not cickable items.
-bool drawCommandsMenu(tsl::elm::List* list,
-                    const std::string& packageIniPath,
-                    const std::string& packageConfigIniPath,
-                    const PackageHeader& packageHeader, std::string& pageLeftName, std::string& pageRightName,
-                    const std::string& packagePath, const std::string& currentPage, const std::string& packageName, const std::string& dropdownSection, const size_t nestedLayer,
-                    std::string& pathPattern, std::string& pathPatternOn, std::string& pathPatternOff, bool& usingPages, const bool packageMenuMode = true) {
+bool drawCommandsMenu(
+    tsl::elm::List* list,
+    const std::string& packageIniPath,
+    const std::string& packageConfigIniPath,
+    const PackageHeader& packageHeader,
+    std::string& pageLeftName,
+    std::string& pageRightName,
+    const std::string& packagePath,
+    const std::string& currentPage,
+    const std::string& packageName,
+    const std::string& dropdownSection,
+    const size_t nestedLayer,
+    std::string& pathPattern,
+    std::string& pathPatternOn,
+    std::string& pathPatternOff,
+    bool& usingPages,
+    const bool packageMenuMode) {
 
     tsl::hlp::ini::IniData packageConfigData;
     //tsl::elm::ListItem* listItem;
@@ -3782,32 +3823,37 @@ bool drawCommandsMenu(tsl::elm::List* list,
                         }
                         
                         if (packageMenuMode) {
-                            listItem->setClickListener([packagePath, currentPage, packageName, nestedLayer, i, packageIniPath, optionName, cleanOptionName, lastPackageHeader](s64 keys) {
+                            listItem->setClickListener([packagePath, dropdownSection, currentPage, packageName, nestedLayer, i, packageIniPath, optionName, cleanOptionName, lastPackageHeader](s64 keys) {
                                 
                                 if (runningInterpreter.load(acquire))
                                     return false;
 
                                 if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
                                     inPackageMenu = false;
+
+                                    nestedMenuCount++;
                                     //tsl::clearGlyphCacheNow.store(true, release);
                                     // Store return info
-                                    returnToPackagePath = packagePath;
-                                    returnToCurrentPage = currentPage; 
-                                    returnToPackageName = packageName;
-                                    returnToNestedLayer = nestedLayer;
-                                    returnToPageHeader = lastPackageHeader;
-                                    returnToOption = cleanOptionName;
 
+                                    returnContextStack.push({
+                                        .packagePath = packagePath,
+                                        .sectionName = dropdownSection,
+                                        .currentPage = currentPage,
+                                        .packageName = packageName,
+                                        .pageHeader = lastPackageHeader,    // Move this before nestedLayer
+                                        .option = cleanOptionName,
+                                        .nestedLayer = nestedLayer          // Move this to the end
+                                    });
 
-                                    tsl::changeTo<PackageMenu>(packagePath, optionName, currentPage, packageName, 0, lastPackageHeader);
+                                    tsl::changeTo<PackageMenu>(packagePath, optionName, currentPage, packageName, nestedMenuCount, lastPackageHeader);
                                     
                                     return true;
                                 
                                 } else if (keys & SCRIPT_KEY && !(keys & ~SCRIPT_KEY & ALL_KEYS_MASK)) {
-                                    if (inPackageMenu)
-                                        inPackageMenu = false;
-                                    if (inSubPackageMenu)
-                                        inSubPackageMenu = false;
+                                    //if (inPackageMenu)
+                                    //    inPackageMenu = false;
+                                    //if (inSubPackageMenu)
+                                    //    inSubPackageMenu = false;
                                     
                                                         
                                     // Gather the prompt commands for the current dropdown section
@@ -3831,9 +3877,9 @@ bool drawCommandsMenu(tsl::elm::List* list,
                                     tsl::changeTo<MainMenu>("", optionName);
                                     return true;
                                 } else if (keys & SCRIPT_KEY && !(keys & ~SCRIPT_KEY & ALL_KEYS_MASK)) {
-                                    if (inMainMenu.load(acquire)) {
-                                        inMainMenu.store(false, std::memory_order_release);
-                                    }
+                                    //if (inMainMenu.load(acquire)) {
+                                    //    inMainMenu.store(false, std::memory_order_release);
+                                    //}
                                     
                                     
                                     // Gather the prompt commands for the current dropdown section
@@ -4068,7 +4114,7 @@ bool drawCommandsMenu(tsl::elm::List* list,
             }
 
             
-            if (isFileOrDirectory(packageConfigIniPath)) {
+            if (isFile(packageConfigIniPath)) {
                 packageConfigData = getParsedDataFromIniFile(packageConfigIniPath);
                 
                 syncIniValue(packageConfigData, packageConfigIniPath, optionName, SYSTEM_STR, commandSystem);
@@ -4476,25 +4522,38 @@ bool drawCommandsMenu(tsl::elm::List* list,
 
                         const std::string& forwarderPackagePath = getParentDirFromPath(packageSource);
                         const std::string& forwarderPackageIniName = getNameFromPath(packageSource);
-                        listItem->setClickListener([commands, keyName = originalOptionName, dropdownSection, packagePath, listItem,
+                        listItem->setClickListener([commands, keyName = originalOptionName, dropdownSection, packagePath, currentPage, packageName, nestedLayer, cleanOptionName, listItem,
                             forwarderPackagePath, forwarderPackageIniName, lastPackageHeader, i](s64 keys) mutable {
 
                             if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
                                 interpretAndExecuteCommands(std::move(getSourceReplacement(commands, keyName, i, packagePath)), packagePath, keyName);
                                 resetPercentages();
 
-                                nestedMenuCount++;
-                                lastPackagePath = forwarderPackagePath;
-                                lastPackageName = forwarderPackageIniName;
+                                //nestedMenuCount++;
+                                //lastPackagePath = forwarderPackagePath;
+                                //lastPackageName = forwarderPackageIniName;
                                 if (dropdownSection.empty())
                                     lastPackageMenu = "packageMenu";
                                 else
                                     lastPackageMenu = "subPackageMenu";
 
                                 // set forwarder pointer for updating
-                                forwarderListItem = listItem;
-                                lastCommandMode = FORWARDER_STR;
-                                lastKeyName = keyName;
+                                //forwarderListItem = listItem;
+                                //lastCommandMode = FORWARDER_STR;
+                                //lastKeyName = keyName;
+                                nestedMenuCount++;
+
+                                returnContextStack.push({
+                                    .packagePath = packagePath,
+                                    .sectionName = dropdownSection,
+                                    .currentPage = currentPage,
+                                    .packageName = packageName,
+                                    .pageHeader = lastPackageHeader,    // Move this before nestedLayer
+                                    .option = cleanOptionName,
+                                    .nestedLayer = nestedLayer          // Move this to the end
+                                });
+                                
+
 
                                 if (allowSlide.load(acquire))
                                     allowSlide.store(false, release);
@@ -4788,21 +4847,30 @@ public:
      *
      * @param path The path to the sub-menu.
      */
-    PackageMenu(const std::string& path, const std::string& sectionName = "", const std::string& page = LEFT_STR, const std::string& _packageName = PACKAGE_FILENAME, const size_t _nestedlayer = 0, const std::string& _pageHeader = "") :
+    PackageMenu(const std::string& path, const std::string& sectionName = "", const std::string& page = LEFT_STR,
+        const std::string& _packageName = PACKAGE_FILENAME, const size_t _nestedlayer = 0, const std::string& _pageHeader = "") :
         packagePath(path), dropdownSection(sectionName), currentPage(page), packageName(_packageName), nestedLayer(_nestedlayer), pageHeader(_pageHeader) {
             std::lock_guard<std::mutex> lock(transitionMutex);
             //if (nestedLayer > 0)
             //    hexSumCache.clear();
-            {
-                //std::lock_guard<std::mutex> lock(jumpItemMutex);
-                if (!skipJumpReset.load(acquire)) {
-                    jumpItemName = "";
-                    jumpItemValue = "";
-                    jumpItemExactMatch.store(true, release);
-                    g_overlayFilename = "";
-                } else
-                    skipJumpReset.store(false, release);
-            }
+            //{
+            //    //std::lock_guard<std::mutex> lock(jumpItemMutex);
+            //    if (!skipJumpReset.load(acquire)) {
+            //        jumpItemName = "";
+            //        jumpItemValue = "";
+            //        jumpItemExactMatch.store(true, release);
+            //        g_overlayFilename = "";
+            //    } else
+            //        skipJumpReset.store(false, release);
+            //}
+
+            if (!skipJumpReset.load(acquire)) {
+                jumpItemName = "";
+                jumpItemValue = "";
+                jumpItemExactMatch.store(true, release);
+                g_overlayFilename = "";
+            } else
+                skipJumpReset.store(false, release);
             //tsl::clearGlyphCacheNow.store(true, release);
             settingsInitialized.exchange(true, acq_rel);
         }
@@ -4825,7 +4893,7 @@ public:
             overrideTitle = false;
             overrideVersion = false;
 
-            if (isFileOrDirectory(packagePath + EXIT_PACKAGE_FILENAME)) {
+            if (isFile(packagePath + EXIT_PACKAGE_FILENAME)) {
                 const bool useExitPackage = !(parseValueFromIniSection(PACKAGES_INI_FILEPATH, getNameFromPath(packagePath), USE_EXIT_PACKAGE_STR) == FALSE_STR);
                 
                 if (useExitPackage) {
@@ -4882,7 +4950,7 @@ public:
         std::string pageLeftName, pageRightName;
         bool noClickableItems = drawCommandsMenu(list, packageIniPath, packageConfigIniPath, packageHeader, pageLeftName, pageRightName,
             this->packagePath, this->currentPage, this->packageName, this->dropdownSection, this->nestedLayer,
-            this->pathPattern, this->pathPatternOn, this->pathPatternOff, this->usingPages
+            this->pathPattern, this->pathPatternOn, this->pathPatternOff, this->usingPages, true
         );
         
 
@@ -4917,28 +4985,28 @@ public:
            (usingPages && currentPage == LEFT_STR) ? pageRightName : ""
         );
 
-        list->jumpToItem(jumpItemName,jumpItemValue, jumpItemExactMatch);
+        list->jumpToItem(jumpItemName, jumpItemValue, jumpItemExactMatch);
         rootFrame->setContent(list);
         rootFrame->m_showWidget = (!packageHeader.show_widget.empty() && packageHeader.show_widget == TRUE_STR);
         return rootFrame;
     }
     
 
-    void handleForwarderFooter() {
-        if (lastCommandMode == FORWARDER_STR && isFileOrDirectory(packageConfigIniPath)) {
-            auto packageConfigData = getParsedDataFromIniFile(packageConfigIniPath);
-            auto it = packageConfigData.find(lastKeyName);
-            if (it != packageConfigData.end()) {
-                auto& optionSection = it->second;
-                auto footerIt = optionSection.find(FOOTER_STR);
-                if (footerIt != optionSection.end() && (footerIt->second.find(NULL_STR) == std::string::npos)) {
-                    if (forwarderListItem)
-                        forwarderListItem->setValue(footerIt->second);
-                }
-            }
-            lastCommandMode = "";
-        }
-    }
+    //void handleForwarderFooter() {
+    //    //if (lastCommandMode == FORWARDER_STR && isFile(packageConfigIniPath)) {
+    //    //    auto packageConfigData = getParsedDataFromIniFile(packageConfigIniPath);
+    //    //    auto it = packageConfigData.find(lastKeyName);
+    //    //    if (it != packageConfigData.end()) {
+    //    //        auto& optionSection = it->second;
+    //    //        auto footerIt = optionSection.find(FOOTER_STR);
+    //    //        if (footerIt != optionSection.end() && (footerIt->second.find(NULL_STR) == std::string::npos)) {
+    //    //            if (forwarderListItem)
+    //    //                forwarderListItem->setValue(footerIt->second);
+    //    //        }
+    //    //    }
+    //    //    lastCommandMode = "";
+    //    //}
+    //}
 
     /**
      * @brief Handles user input for the sub-menu overlay.
@@ -4954,7 +5022,7 @@ public:
      * @return `true` if the input was handled within the overlay, `false` otherwise.
      */
     virtual bool handleInput(uint64_t keysDown, uint64_t keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
-
+    
         const bool isRunningInterp = runningInterpreter.load(acquire);
         const bool isTouching = stillTouching.load(acquire);
         
@@ -4968,7 +5036,7 @@ public:
             if (lastSelectedListItem) {
                 if (lastCommandMode == OPTION_STR || lastCommandMode == SLOT_STR) {
                     if (commandSuccess) {
-                        if (isFileOrDirectory(packageConfigIniPath)) {
+                        if (isFile(packageConfigIniPath)) {
                             auto packageConfigData = getParsedDataFromIniFile(packageConfigIniPath);
                             auto it = packageConfigData.find(lastKeyName);
                             if (it != packageConfigData.end()) {
@@ -5019,8 +5087,8 @@ public:
                     //selectedListItem = nullptr;
                     //lastSelectedListItem = nullptr;
                     //tsl::clearGlyphCacheNow.store(true, release);
-                    tsl::goBack();
-                    tsl::changeTo<PackageMenu>(lastPackagePath, lastDropdownSection, lastPage, lastPackageName, lastNestedLayer, pageHeader);
+                    //tsl::goBack();
+                    tsl::swapTo<PackageMenu>(lastPackagePath, lastDropdownSection, lastPage, lastPackageName, lastNestedLayer, pageHeader);
                 };
                 
                 if (inPackageMenu) {
@@ -5040,10 +5108,11 @@ public:
                     lastPage = currentPage;
                     lastPackageName = PACKAGE_FILENAME;
                     
-                    tsl::goBack(nestedMenuCount+1);
-                    nestedMenuCount = 0;
+                    //tsl::goBack(nestedMenuCount+1);
+                    //nestedMenuCount = 0;
     
-                    tsl::changeTo<PackageMenu>(lastPackagePath, "");
+                    tsl::swapTo<PackageMenu>(SwapDepth(nestedMenuCount+1), lastPackagePath, "");
+                    nestedMenuCount = 0;
                     inPackageMenu = true;
                     inSubPackageMenu = false;
                     refreshPackage.store(false, release);
@@ -5061,10 +5130,10 @@ public:
                 if (simulatedNextPage.load(acquire)) {
                     simulatedNextPage.store(false, release);
                     if (currentPage == LEFT_STR) {
-                        keysDown |= KEY_RIGHT;
+                        keysDown |= KEY_DRIGHT;
                     }
                     else if (currentPage == RIGHT_STR) {
-                        keysDown |= KEY_LEFT;
+                        keysDown |= KEY_DLEFT;
                     }
                 }
             }
@@ -5088,14 +5157,9 @@ public:
                 if (!isTouching && slideCondition && (((keysDown & KEY_RIGHT) && !(keysHeld & ~KEY_RIGHT & ALL_KEYS_MASK)))) {
                     {
                         std::lock_guard<std::mutex> lock(tsl::elm::s_safeToSwapMutex);
-                        //safeToSwap = tsl::elm::s_safeToSwap.load(acquire);
-                        //if (simulatedNextPage.load(acquire))
-                        //    simulatedNextPage.store(false, release);
                         if (tsl::elm::s_safeToSwap.load(acquire)) {
-                            //tsl::elm::s_safeToSwap.store(false, release);
                             lastPage = RIGHT_STR;
-                            //tsl::pop();
-                            tsl::swapTo<PackageMenu>(lastPackagePath, dropdownSection, RIGHT_STR, lastPackageName, nestedMenuCount, pageHeader);
+                            tsl::swapTo<PackageMenu>(packagePath, dropdownSection, RIGHT_STR, packageName, nestedLayer, pageHeader);
                             resetSlideState();
                         }
                         return true;
@@ -5106,14 +5170,9 @@ public:
                 if (!isTouching && slideCondition && (((keysDown & KEY_LEFT) && !(keysHeld & ~KEY_LEFT & ALL_KEYS_MASK)))) {
                     {
                         std::lock_guard<std::mutex> lock(tsl::elm::s_safeToSwapMutex);
-                        //safeToSwap = tsl::elm::s_safeToSwap.load(acquire);
-                        //if (simulatedNextPage.load(acquire))
-                        //    simulatedNextPage.store(false, release);
                         if (tsl::elm::s_safeToSwap.load(acquire)) {
-                            //tsl::elm::s_safeToSwap.store(false, release);
                             lastPage = LEFT_STR;
-                            //tsl::pop();
-                            tsl::swapTo<PackageMenu>(lastPackagePath, dropdownSection, LEFT_STR, lastPackageName, nestedMenuCount, pageHeader);
+                            tsl::swapTo<PackageMenu>(packagePath, dropdownSection, LEFT_STR, packageName, nestedLayer, pageHeader);
                             resetSlideState();
                         }
                         return true;
@@ -5124,12 +5183,11 @@ public:
         }
         
         // Common back key condition
-
         const bool backKeyPressed = !isTouching && (((keysDown & KEY_B) && !(keysHeld & ~KEY_B & ALL_KEYS_MASK)));
         
         // Helper lambda for common back key handling logic
         auto handleBackKeyCommon = [&]() {
-            handleForwarderFooter();
+            //handleForwarderFooter();
             if (allowSlide.load(acquire))
                 allowSlide.store(false, release);
             if (unlockedSlide.load(acquire))
@@ -5143,6 +5201,9 @@ public:
                     returningToHiddenMain = true;
                 
                 if (!selectedPackage.empty()) {
+                    while (!returnContextStack.empty()) {
+                        returnContextStack.pop();
+                    }
                     tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
                     exitingUltrahand.store(true, release);
                     tsl::Overlay::get()->close();
@@ -5190,7 +5251,59 @@ public:
                 
             }
         };
+    
+        // Helper lambda for return context handling  
+        auto tryReturnContext = [&]() -> bool {
+            if (!returnContextStack.empty()) {
+                ReturnContext returnTo = returnContextStack.top();
+                returnContextStack.pop();
+                
+                // Decrement nestedMenuCount when returning via context
+                if (nestedMenuCount > 0)
+                    nestedMenuCount--;
+                
+                jumpItemName = returnTo.option;
+                jumpItemValue = "";
+                jumpItemExactMatch = false;
+                skipJumpReset.store(true, std::memory_order_release);
+                
+                // Set appropriate states for return
+                inSubPackageMenu = false;
+                inPackageMenu = false;  
+                returningToPackage = true;
+                lastMenu = "packageMenu";
+                
+                tsl::swapTo<PackageMenu>(
+                    SwapDepth(2),
+                    returnTo.packagePath,      // Where we came FROM
+                    returnTo.sectionName,      // Source section
+                    returnTo.currentPage,      // Source page
+                    returnTo.packageName,      // Source package
+                    returnTo.nestedLayer,      // Source nesting level
+                    returnTo.pageHeader        // Source header
+                );
+                return true;
+            }
+            return false;
+        };
         
+        // Helper lambda for normal back navigation
+        auto handleNormalBack = [&]() -> bool {
+            if (handleBackKeyCommon()) return true;
+            
+            // Try return context first (for forwarders)
+            if (tryReturnContext()) return true;
+            
+            // Normal back navigation
+            if (nestedMenuCount == 0) {
+                handleMainMenuReturn();
+            } else {
+                tsl::goBack();
+            }
+            return true;
+        };
+        
+        // Handle main package menu (dropdownSection is empty)
         if (!returningToPackage && inPackageMenu && nestedMenuCount == nestedLayer) {
             if (simulatedNextPage.load(acquire))
                 simulatedNextPage.store(false, release);
@@ -5199,24 +5312,17 @@ public:
             
             if (!usingPages || (usingPages && lastPage == LEFT_STR)) {
                 if (backKeyPressed) {
-                    if (handleBackKeyCommon()) return true;
-                    // Free-up memory
-                    //clearMemory();
-                    handleMainMenuReturn();
-                    return true;
+                    return handleNormalBack();
                 }
             } else if (usingPages && lastPage == RIGHT_STR) {
                 if (backKeyPressed) {
-                    if (handleBackKeyCommon()) return true;
-                    // Free-up memory
-                    //clearMemory();
-                    lastPage = LEFT_STR;
-                    handleMainMenuReturn();
-                    return true;
+                    lastPage = LEFT_STR; 
+                    return handleNormalBack();
                 }
             }
         }
         
+        // Handle sub-package menu (dropdownSection is not empty)
         if (!returningToSubPackage && inSubPackageMenu) {
             if (simulatedNextPage.load(acquire))
                 simulatedNextPage.store(false, release);
@@ -5225,52 +5331,36 @@ public:
             
             if (!usingPages || (usingPages && lastPage == LEFT_STR)) {
                 if (backKeyPressed) {
-                    handleForwarderFooter();
+                    //handleForwarderFooter();
                     if (allowSlide.load(acquire))
                         allowSlide.store(false, release);
                     if (unlockedSlide.load(acquire))
                         unlockedSlide.store(false, release);
+                    
+                    // Try return context first, fallback to normal navigation
+                    if (tryReturnContext()) return true;
+                    
                     inSubPackageMenu = false;
                     returningToPackage = true;
                     lastMenu = "packageMenu";
-                    //tsl::clearGlyphCacheNow.store(true, release);
-                    if (!returnToPackagePath.empty()) {
-                        jumpItemName = returnToOption;
-                        jumpItemValue = "";
-                        jumpItemExactMatch = false;
-                        skipJumpReset.store(true, std::memory_order_release);
-                        tsl::swapTo<PackageMenu>(SwapDepth(2), returnToPackagePath, "", returnToCurrentPage, 
-                                                returnToPackageName, returnToNestedLayer, returnToPageHeader);
-                        returnToPackagePath = "";
-                    }
-                    else
-                        tsl::goBack();
-                    
+                    tsl::goBack();
                     return true;
                 }
             } else if (usingPages && lastPage == RIGHT_STR) {
                 if (backKeyPressed) {
-                    handleForwarderFooter();
+                    //handleForwarderFooter();
                     if (allowSlide.load(acquire))
                         allowSlide.store(false, release);
                     if (unlockedSlide.load(acquire))
                         unlockedSlide.store(false, release);
+                    
+                    // Try return context first, fallback to normal navigation
+                    if (tryReturnContext()) return true;
+                    
                     inSubPackageMenu = false;
                     returningToPackage = true;
                     lastMenu = "packageMenu";
-                    //tsl::clearGlyphCacheNow.store(true, release);
-                    if (!returnToPackagePath.empty()) {
-                        jumpItemName = returnToOption;
-                        jumpItemValue = "";
-                        jumpItemExactMatch = false;
-                        skipJumpReset.store(true, std::memory_order_release);
-                        tsl::swapTo<PackageMenu>(SwapDepth(2), returnToPackagePath, "", returnToCurrentPage, 
-                                                returnToPackageName, returnToNestedLayer, returnToPageHeader);
-                        returnToPackagePath = "";
-                    }
-                    else
-                        tsl::goBack();
-                    
+                    tsl::goBack();
                     return true;
                 }
             }
@@ -5302,11 +5392,15 @@ public:
         
         if (triggerExit.load(acquire)) {
             triggerExit.store(false, release);
+            while (!returnContextStack.empty()) {
+                returnContextStack.pop();
+            }
             tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
             tsl::Overlay::get()->close();
         }
         
-        if (backKeyPressed) { // for catching lost navigations
+        // Fallback for lost navigations
+        if (backKeyPressed) {
             if (!selectedPackage.empty()) {
                 tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
                 exitingUltrahand.store(true, release);
@@ -5318,19 +5412,15 @@ public:
                 allowSlide.store(false, release);
             if (unlockedSlide.load(acquire))
                 unlockedSlide.store(false, release);
+            
+            // Try return context first for any lost navigation scenarios
+            if (tryReturnContext()) return true;
+            
+            // Fallback to normal navigation
             inSubPackageMenu = false;
             returningToPackage = true;
             lastMenu = "packageMenu";
-            //tsl::clearGlyphCacheNow.store(true, release);
-
-            if (!returnToPackagePath.empty()) {
-                tsl::swapTo<PackageMenu>(returnToPackagePath, "", returnToCurrentPage, 
-                                        returnToPackageName, returnToNestedLayer, returnToPageHeader);
-                returnToPackagePath = "";
-            }
-            else
-                tsl::goBack();
-            
+            tsl::goBack();
             return true;
         }
         
@@ -5357,6 +5447,7 @@ private:
     std::string hiddenMenuMode, dropdownSection;
     //bool initializingSpawn = false;
     //std::string defaultLang = "en";
+
 
 public:
     /**
@@ -5707,7 +5798,7 @@ public:
                     // Toggle the starred status
                     newStarred = !overlayStarred;
                     
-                    if (isFileOrDirectory(overlayFile)) {
+                    if (isFile(overlayFile)) {
                         tsl::elm::ListItem* listItem = new tsl::elm::ListItem(newOverlayName, "", false, false);
                         overlayVersion = getFirstLongEntry(overlayVersion);
                         //std::string originalOverlayVersion = overlayVersion.c_str();
@@ -5894,7 +5985,7 @@ public:
         // Packages menu
         if (menuMode == PACKAGES_STR ) {
 
-            if (!isFileOrDirectory(PACKAGE_PATH + PACKAGE_FILENAME)) {
+            if (!isFile(PACKAGE_PATH + PACKAGE_FILENAME)) {
             #if !USING_FSTREAM_DIRECTIVE
                 // Using stdio.h functions (FILE* and fprintf)
                 FILE* packageFileOut = fopen((PACKAGE_PATH + PACKAGE_FILENAME).c_str(), "w");
@@ -6139,7 +6230,7 @@ public:
                             if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
                                 inMainMenu.store(false, std::memory_order_release);
                                 
-                                if (isFileOrDirectory(packageFilePath + BOOT_PACKAGE_FILENAME)) {
+                                if (isFile(packageFilePath + BOOT_PACKAGE_FILENAME)) {
                                     //bool useBootPackage = !(parseValueFromIniSection(PACKAGES_INI_FILEPATH, packageName, USE_BOOT_PACKAGE_STR) == FALSE_STR);
                                     //if (!selectedPackage.empty())
                                     //    useBootPackage = (useBootPackage && !(parseValueFromIniSection(PACKAGES_INI_FILEPATH, packageName, USE_QUICK_LAUNCH_STR) == TRUE_STR));
@@ -6336,7 +6427,7 @@ public:
             if (lastSelectedListItem) {
                 if (lastCommandMode == OPTION_STR || lastCommandMode == SLOT_STR) {
                     if (commandSuccess.load(acquire)) {
-                        if (isFileOrDirectory(packageConfigIniPath)) {
+                        if (isFile(packageConfigIniPath)) {
                             auto packageConfigData = getParsedDataFromIniFile(packageConfigIniPath);
                             auto it = packageConfigData.find(lastKeyName);
                             if (it != packageConfigData.end()) {
@@ -6444,10 +6535,10 @@ public:
                     if (simulatedNextPage.load(acquire)) {
                         simulatedNextPage.store(false, release);
                         if (onLeftPage) {
-                            keysDown |= KEY_RIGHT;
+                            keysDown |= KEY_DRIGHT;
                         }
                         else {
-                            keysDown |= KEY_LEFT;
+                            keysDown |= KEY_DLEFT;
                         }
                     }
                 }
@@ -6642,7 +6733,7 @@ void initializeSettingsAndDirectories() {
     std::map<std::string, std::map<std::string, std::string>> iniData;
 
     // Check if file didn't exist
-    if (!isFileOrDirectory(ULTRAHAND_CONFIG_INI_PATH)) {
+    if (!isFile(ULTRAHAND_CONFIG_INI_PATH)) {
         updateMenuCombos = true;
     } else {
         // Always try to load INI data (will be empty if file doesn't exist)
@@ -6774,7 +6865,7 @@ void initializeSettingsAndDirectories() {
     
     // Load language file
     const std::string langFile = LANG_PATH + defaultLang + ".json";
-    if (isFileOrDirectory(langFile))
+    if (isFile(langFile))
         parseLanguage(langFile);
     else {
         if (defaultLang == "en")
@@ -6919,7 +7010,7 @@ public:
                 assignedOverlayVersion = !customVersion.empty() ? customVersion : packageHeader.version;
                 
                 // Handle boot package logic (similar to your KEY_A handler)
-                if (isFileOrDirectory(packageFilePath + BOOT_PACKAGE_FILENAME)) {
+                if (isFile(packageFilePath + BOOT_PACKAGE_FILENAME)) {
                     //bool useBootPackage = !(parseValueFromIniSection(PACKAGES_INI_FILEPATH, selectedPackage, USE_BOOT_PACKAGE_STR) == FALSE_STR);
                     //if (!selectedPackage.empty())
                     //    useBootPackage = (useBootPackage && !(parseValueFromIniSection(PACKAGES_INI_FILEPATH, selectedPackage, USE_QUICK_LAUNCH_STR) == TRUE_STR));
