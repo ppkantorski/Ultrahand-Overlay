@@ -198,8 +198,8 @@ bool handleRunningInterpreter(uint64_t& keysDown, uint64_t& keysHeld) {
     
     static bool wasHoldingR = false;
 
-    bool isHoldingR = keysHeld & KEY_R && !(keysHeld & ~KEY_R & ALL_KEYS_MASK);
-    bool releasedR = wasHoldingR && !(isHoldingR);
+    const bool isHoldingR = keysHeld & KEY_R && !(keysHeld & ~KEY_R & ALL_KEYS_MASK);
+    const bool releasedR = wasHoldingR && !(isHoldingR);
     wasHoldingR = isHoldingR;
 
     // FIX: More robust abort handling
@@ -1718,11 +1718,11 @@ public:
     
         
             // Read current combo list and ensure it's large enough
-            std::string comboStr = getSettingsValue("mode_combos");
+            const std::string comboStr = getSettingsValue("mode_combos");
             std::vector<std::string> comboList = splitIniList(comboStr);
             if (idx >= comboList.size()) comboList.resize(idx + 1, "");
         
-            std::string currentCombo = comboList[idx];
+            const std::string currentCombo = comboList[idx];
         
             // Load ultrahand config INI for global default combo
             auto ultrahandConfigData = getParsedDataFromIniFile(ULTRAHAND_CONFIG_INI_PATH);
@@ -3696,7 +3696,7 @@ bool drawCommandsMenu(
                     }
                     
                     // Clear commands only when we've actually processed something
-                    bool shouldClear = (commands.size() == 1 && (foundMini || foundMode)) ||
+                    const bool shouldClear = (commands.size() == 1 && (foundMini || foundMode)) ||
                                        (commands.size() == 2 && foundMini && foundMode);
                     
                     if (shouldClear) {
@@ -3760,7 +3760,7 @@ bool drawCommandsMenu(
                     }
                     
                     // Clear commands only when we've actually processed something
-                    bool shouldClear = (commands.size() == 1 && (foundMini || foundMode)) ||
+                    const bool shouldClear = (commands.size() == 1 && (foundMini || foundMode)) ||
                                        (commands.size() == 2 && foundMini && foundMode);
                     
                     if (shouldClear) {
