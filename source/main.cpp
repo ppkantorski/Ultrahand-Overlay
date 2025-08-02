@@ -1792,7 +1792,7 @@ public:
                             if (idx >= comboList.size()) comboList.resize(idx + 1, "");
                             
                             comboList[idx] = combo;
-                            std::string newComboStr = "(" + joinIniList(comboList) + ")";
+                            const std::string newComboStr = "(" + joinIniList(comboList) + ")";
                             setIniFileValue(settingsIniPath, entryName, "mode_combos", newComboStr);
                             tsl::hlp::loadEntryKeyCombos(); // reload combos
                         }
@@ -1959,7 +1959,7 @@ public:
                 // Step 2: If reload is needed, change to SettingsMenu with focus
                 if (reloadMenu2) {
                     reloadMenu2 = false;
-                    tsl::goBack(2);
+                    //tsl::goBack(2);
                     
                     //{
                     //    //std::lock_guard<std::mutex> lock(jumpItemMutex);
@@ -1970,7 +1970,8 @@ public:
                     g_overlayFilename = "";
                     //}
     
-                    tsl::changeTo<SettingsMenu>(
+                    tsl::swapTo<SettingsMenu>(
+                        SwapDepth(2),
                         rootEntryName,
                         rootEntryMode,
                         rootTitle,
@@ -4196,7 +4197,7 @@ bool drawCommandsMenu(
                 
                     // Set the SCRIPT_KEY listener
                     trackBar->setScriptKeyListener([commands, keyName = originalOptionName, packagePath, lastPackageHeader]() {
-                        const bool isFromMainMenu = (packagePath == PACKAGE_PATH);
+                        
                         
                         //const std::string valueStr = parseValueFromIniSection(packagePath+"config.ini", keyName, "value");
                         //std::string indexStr = parseValueFromIniSection(packagePath+"config.ini", keyName, "index");
@@ -4253,6 +4254,8 @@ bool drawCommandsMenu(
 
                         applyPlaceholderReplacementsToCommands(modifiedCmds, packagePath);
                 
+                        const bool isFromMainMenu = (packagePath == PACKAGE_PATH);
+
                         // Switch to ScriptOverlay
                         tsl::changeTo<ScriptOverlay>(std::move(modifiedCmds), packagePath, keyName, isFromMainMenu ? "main" : "package", false, lastPackageHeader);
                     });
@@ -4533,8 +4536,8 @@ bool drawCommandsMenu(
 
                                 // set forwarder pointer for updating
                                 //forwarderListItem = listItem;
-                                lastCommandMode = FORWARDER_STR;
-                                lastKeyName = keyName;
+                                //lastCommandMode = FORWARDER_STR;
+                                //lastKeyName = keyName;
                                 nestedMenuCount++;
 
                                 returnContextStack.push({
@@ -4703,7 +4706,7 @@ bool drawCommandsMenu(
                                     lastSelectedListItem->triggerClickAnimation();
                                 return true;
                             }  else if (keys & SCRIPT_KEY && !(keys & ~SCRIPT_KEY & ALL_KEYS_MASK)) {
-                                bool isFromMainMenu = (packagePath == PACKAGE_PATH);
+                                const bool isFromMainMenu = (packagePath == PACKAGE_PATH);
                                 //if (inMainMenu) {
                                 //    isFromMainMenu = true;
                                 //    inMainMenu.store(false, std::memory_order_release);
@@ -4895,8 +4898,9 @@ public:
                     auto exitCommands = loadSpecificSectionFromIni(packagePath + EXIT_PACKAGE_FILENAME, "exit");
                     
                     if (!exitCommands.empty()) {
-                        bool resetCommandSuccess = false;
-                        if (!commandSuccess.load(acquire)) resetCommandSuccess = true;
+                        //bool resetCommandSuccess = false;
+                        //if (!commandSuccess.load(acquire)) resetCommandSuccess = true;
+                        const bool resetCommandSuccess = !commandSuccess.load(std::memory_order_acquire);
                         
                         interpretAndExecuteCommands(std::move(exitCommands), packagePath, "exit");
                         resetPercentages();
@@ -5069,11 +5073,11 @@ public:
                 
                 // Function to handle the transition and state resetting
                 auto handleMenuTransition = [&] {
-                    const std::string lastPackagePath = packagePath;
-                    const std::string lastDropdownSection = dropdownSection;
-                    const std::string lastPage = currentPage;
-                    const std::string lastPackageName = packageName;
-                    const size_t lastNestedLayer = nestedLayer;
+                    //const std::string lastPackagePath = packagePath;
+                    //const std::string lastDropdownSection = dropdownSection;
+                    //const std::string lastPage = currentPage;
+                    //const std::string lastPackageName = packageName;
+                    //const size_t lastNestedLayer = nestedLayer;
                     
                     inSubPackageMenu = false;
                     inPackageMenu = false;
@@ -5082,7 +5086,7 @@ public:
                     //lastSelectedListItem = nullptr;
                     //tsl::clearGlyphCacheNow.store(true, release);
                     //tsl::goBack();
-                    tsl::swapTo<PackageMenu>(lastPackagePath, lastDropdownSection, lastPage, lastPackageName, lastNestedLayer, pageHeader);
+                    tsl::swapTo<PackageMenu>(packagePath, dropdownSection, currentPage, packageName, nestedLayer, pageHeader);
                 };
                 
                 if (inPackageMenu) {
@@ -5137,7 +5141,7 @@ public:
             const bool onTrack = onTrackBar.load(acquire);
             const bool slideAllowed = allowSlide.load(acquire);
             const bool slideUnlocked = unlockedSlide.load(acquire);
-            const bool slideCondition = ((!slideAllowed && onTrack && !slideUnlocked) || (keysDown & KEY_R)) || !onTrack;
+            const bool slideCondition = ((!slideAllowed && onTrack && !slideUnlocked) || (onTrack && keysHeld & KEY_R)) || !onTrack;
             
             // Helper lambda for slide transitions
             auto resetSlideState = [&]() {
@@ -5148,7 +5152,7 @@ public:
             };
     
             if (currentPage == LEFT_STR) {
-                if (!isTouching && slideCondition && (((keysDown & KEY_RIGHT) && !(keysHeld & ~KEY_RIGHT & ALL_KEYS_MASK)))) {
+                if (!isTouching && slideCondition && (keysDown & KEY_RIGHT) && (!onTrack ? !(keysHeld & ~KEY_RIGHT & ALL_KEYS_MASK) : !(keysHeld & ~KEY_R & ~KEY_RIGHT & ALL_KEYS_MASK))) {
                     {
                         std::lock_guard<std::mutex> lock(tsl::elm::s_safeToSwapMutex);
                         if (tsl::elm::s_safeToSwap.load(acquire)) {
@@ -5161,7 +5165,7 @@ public:
                     
                 }
             } else if (currentPage == RIGHT_STR) {
-                if (!isTouching && slideCondition && (((keysDown & KEY_LEFT) && !(keysHeld & ~KEY_LEFT & ALL_KEYS_MASK)))) {
+                if (!isTouching && slideCondition && (keysDown & KEY_LEFT) && (!onTrack ? !(keysHeld & ~KEY_LEFT & ALL_KEYS_MASK) : !(keysHeld & ~KEY_R & ~KEY_LEFT & ALL_KEYS_MASK))) {
                     {
                         std::lock_guard<std::mutex> lock(tsl::elm::s_safeToSwapMutex);
                         if (tsl::elm::s_safeToSwap.load(acquire)) {
@@ -5626,8 +5630,8 @@ public:
             #else
     
             // Check if the overlays INI file exists
-            std::ifstream overlaysIniFile(OVERLAYS_INI_FILEPATH);
-            if (!overlaysIniFile.is_open()) {
+            //std::ifstream overlaysIniFile(OVERLAYS_INI_FILEPATH);
+            if (!isFile(OVERLAYS_INI_FILEPATH)) {
                 // The INI file doesn't exist, so create an empty one.
                 std::ofstream createFile(OVERLAYS_INI_FILEPATH);
                 //if (createFile.is_open()) {
@@ -5636,7 +5640,7 @@ public:
                 //}
             }
     
-            overlaysIniFile.close(); // Close the file
+            //overlaysIniFile.close(); // Close the file
     
             #endif
     
@@ -5655,7 +5659,7 @@ public:
                         overlayFiles.begin(), 
                         overlayFiles.end(),
                         [&foundOvlmenu](const std::string& file) {
-                            std::string fileName = getNameFromPath(file);
+                            const std::string fileName = getNameFromPath(file);
                             if (!foundOvlmenu && fileName == "ovlmenu.ovl") {
                                 foundOvlmenu = true;  // Mark as found and continue to remove
                                 return true;
@@ -6032,26 +6036,26 @@ public:
                 
                 #if !USING_FSTREAM_DIRECTIVE
                 // Using stdio.h functions (FILE* and fopen)
-                FILE* packagesIniFile = fopen(PACKAGES_INI_FILEPATH.c_str(), "r");
-                if (!packagesIniFile) {
+                //FILE* packagesIniFile = fopen(PACKAGES_INI_FILEPATH.c_str(), "r");
+                if (!isFile(PACKAGES_INI_FILEPATH)) {
                     // The file doesn't exist, so create an empty one
                     FILE* createFile = fopen(PACKAGES_INI_FILEPATH.c_str(), "w");
                     if (createFile) {
                         //initializingSpawn = true;
                         fclose(createFile); // Close the file after creating it
                     }
-                } else {
-                    fclose(packagesIniFile); // Close the file if it exists
+                //} else {
+                //    fclose(packagesIniFile); // Close the file if it exists
                 }
                 #else
                 // Using fstream
-                std::fstream packagesIniFile(PACKAGES_INI_FILEPATH, std::ios::in);
-                if (!packagesIniFile.is_open()) {
+                //std::fstream packagesIniFile(PACKAGES_INI_FILEPATH, std::ios::in);
+                if (!isFile(PACKAGES_INI_FILEPATH)) {
                     std::ofstream createFile(PACKAGES_INI_FILEPATH); // Create an empty INI file if it doesn't exist
                     createFile.close();
                     //initializingSpawn = true;
-                } else {
-                    packagesIniFile.close();
+                //} else {
+                //    packagesIniFile.close();
                 }
                 #endif
     
@@ -6253,8 +6257,10 @@ public:
                                         auto bootCommands = loadSpecificSectionFromIni(packageFilePath + BOOT_PACKAGE_FILENAME, "boot");
                                     
                                         if (!bootCommands.empty()) {
-                                            bool resetCommandSuccess = false;
-                                            if (!commandSuccess.load(acquire)) resetCommandSuccess = true;
+                                            //bool resetCommandSuccess = false;
+                                            //if (!commandSuccess.load(acquire)) resetCommandSuccess = true;
+
+                                            const bool resetCommandSuccess = !commandSuccess.load(std::memory_order_acquire);
                                             
                                             interpretAndExecuteCommands(std::move(bootCommands), packageFilePath, "boot");
                                             resetPercentages();
@@ -6542,7 +6548,7 @@ public:
                 const bool onTrack = onTrackBar.load(acquire);
                 const bool slideAllowed = allowSlide.load(acquire);
                 const bool slideUnlocked = unlockedSlide.load(acquire);
-                const bool slideCondition = ((!slideAllowed && !slideUnlocked && onTrack) || (keysDown & KEY_R)) || !onTrack;
+                const bool slideCondition = ((!slideAllowed && !slideUnlocked && onTrack) || (onTrack && keysHeld & KEY_R)) || !onTrack;
                 
                 // Helper lambda to reset navigation state
                 auto resetNavState = [&]() {
@@ -6560,7 +6566,7 @@ public:
                 };
                 
                 //const bool switchToPackages = (!usePageSwap && menuMode != PACKAGES_STR) || (usePageSwap && menuMode != OVERLAYS_STR);
-                if (onLeftPage && !isTouching && slideCondition && (((keysDown & KEY_RIGHT) && !(keysHeld & ~KEY_RIGHT & ALL_KEYS_MASK)))) {
+                if (onLeftPage && !isTouching && slideCondition && (keysDown & KEY_RIGHT) && (!onTrack ? !(keysHeld & ~KEY_RIGHT & ALL_KEYS_MASK) : !(keysHeld & ~KEY_RIGHT & ~KEY_R & ALL_KEYS_MASK))) {
                     //bool safeToSwap = false;
                     {
                         std::lock_guard<std::mutex> lock(tsl::elm::s_safeToSwapMutex);
@@ -6582,7 +6588,7 @@ public:
                 }
                 
                 //const bool switchToOverlays = (!usePageSwap && menuMode != OVERLAYS_STR) || (usePageSwap && menuMode != PACKAGES_STR);
-                if (!onLeftPage && !isTouching && slideCondition && (((keysDown & KEY_LEFT) && !(keysHeld & ~KEY_LEFT & ALL_KEYS_MASK)))) {
+                if (!onLeftPage && !isTouching && slideCondition && (keysDown & KEY_LEFT) && (!onTrack ? !(keysHeld & ~KEY_LEFT & ALL_KEYS_MASK): !(keysHeld & ~KEY_LEFT & ~KEY_R  & ALL_KEYS_MASK))) {
                     //bool safeToSwap = false;
                     {
                         std::lock_guard<std::mutex> lock(tsl::elm::s_safeToSwapMutex);
@@ -7034,8 +7040,9 @@ public:
                         auto bootCommands = loadSpecificSectionFromIni(packageFilePath + BOOT_PACKAGE_FILENAME, "boot");
                     
                         if (!bootCommands.empty()) {
-                            bool resetCommandSuccess = false;
-                            if (!commandSuccess.load(acquire)) resetCommandSuccess = true;
+                            //bool resetCommandSuccess = false;
+                            //if (!commandSuccess.load(acquire)) resetCommandSuccess = true;
+                            const bool resetCommandSuccess = !commandSuccess.load(std::memory_order_acquire);
                             
                             interpretAndExecuteCommands(std::move(bootCommands), packageFilePath, "boot");
                             resetPercentages();
