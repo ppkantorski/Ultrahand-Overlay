@@ -2210,6 +2210,7 @@ public:
            noClickableItems);
         list->disableCaching();
         rootFrame->setContent(list);
+        //rootFrame->m_showWidget = (!packageHeader.show_widget.empty() && packageHeader.show_widget == TRUE_STR);
         return rootFrame;
     }
 
@@ -3475,6 +3476,7 @@ bool drawCommandsMenu(
     const std::string& packageIniPath,
     const std::string& packageConfigIniPath,
     const PackageHeader& packageHeader,
+    const std::string& pageHeader,
     std::string& pageLeftName,
     std::string& pageRightName,
     const std::string& packagePath,
@@ -3818,7 +3820,7 @@ bool drawCommandsMenu(
                         }
                         
                         if (packageMenuMode) {
-                            listItem->setClickListener([packagePath, dropdownSection, currentPage, packageName, nestedLayer, i, packageIniPath, optionName, cleanOptionName, lastPackageHeader](s64 keys) {
+                            listItem->setClickListener([packagePath, dropdownSection, currentPage, packageName, nestedLayer, i, packageIniPath, optionName, cleanOptionName, pageHeader, lastPackageHeader](s64 keys) {
                                 
                                 if (runningInterpreter.load(acquire))
                                     return false;
@@ -3835,7 +3837,7 @@ bool drawCommandsMenu(
                                         .sectionName = dropdownSection,
                                         .currentPage = currentPage,
                                         .packageName = packageName,
-                                        .pageHeader = lastPackageHeader,    // Move this before nestedLayer
+                                        .pageHeader = pageHeader,    // Move this before nestedLayer
                                         .option = cleanOptionName,
                                         .nestedLayer = nestedLayer          // Move this to the end
                                     });
@@ -4520,13 +4522,13 @@ bool drawCommandsMenu(
                         const std::string& forwarderPackagePath = getParentDirFromPath(packageSource);
                         const std::string& forwarderPackageIniName = getNameFromPath(packageSource);
                         listItem->setClickListener([commands, keyName = originalOptionName, dropdownSection, packagePath, currentPage, packageName, nestedLayer, cleanOptionName, listItem,
-                            forwarderPackagePath, forwarderPackageIniName, lastPackageHeader, i](s64 keys) mutable {
+                            forwarderPackagePath, forwarderPackageIniName, lastPackageHeader, pageHeader, i](s64 keys) mutable {
 
                             if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
                                 interpretAndExecuteCommands(std::move(getSourceReplacement(commands, keyName, i, packagePath)), packagePath, keyName);
                                 resetPercentages();
 
-                                //nestedMenuCount++;
+                                nestedMenuCount++;
                                 //lastPackagePath = forwarderPackagePath;
                                 //lastPackageName = forwarderPackageIniName;
                                 if (dropdownSection.empty())
@@ -4538,14 +4540,22 @@ bool drawCommandsMenu(
                                 //forwarderListItem = listItem;
                                 //lastCommandMode = FORWARDER_STR;
                                 //lastKeyName = keyName;
-                                nestedMenuCount++;
+                                
+
+                                // Fix: Don't pass section headers as pageHeader when returning to main package
+                                //std::string returnPageHeader = "";
+                                //if (nestedLayer > 0) {
+                                //    // Only preserve pageHeader for nested contexts, not main package
+                                //    returnPageHeader = lastPackageHeader;
+                                //}
+
 
                                 returnContextStack.push({
                                     .packagePath = packagePath,
                                     .sectionName = dropdownSection,
                                     .currentPage = currentPage,
                                     .packageName = packageName,
-                                    .pageHeader = lastPackageHeader,    // Move this before nestedLayer
+                                    .pageHeader = pageHeader,    // Move this before nestedLayer
                                     .option = cleanOptionName,
                                     .nestedLayer = nestedLayer          // Move this to the end
                                 });
@@ -4946,7 +4956,7 @@ public:
         
         
         std::string pageLeftName, pageRightName;
-        bool noClickableItems = drawCommandsMenu(list, packageIniPath, packageConfigIniPath, packageHeader, pageLeftName, pageRightName,
+        bool noClickableItems = drawCommandsMenu(list, packageIniPath, packageConfigIniPath, packageHeader, this->pageHeader, pageLeftName, pageRightName,
             this->packagePath, this->currentPage, this->packageName, this->dropdownSection, this->nestedLayer,
             this->pathPattern, this->pathPatternOn, this->pathPatternOff, this->usingPages, true
         );
@@ -6374,7 +6384,7 @@ public:
                 bool usingPages = false;
                 
                 PackageHeader packageHeader = getPackageHeaderFromIni(PACKAGE_PATH);
-                noClickableItems = drawCommandsMenu(list, packageIniPath, packageConfigIniPath, packageHeader, pageLeftName, pageRightName,
+                noClickableItems = drawCommandsMenu(list, packageIniPath, packageConfigIniPath, packageHeader, "", pageLeftName, pageRightName,
                     packagePath, currentPage, packageName, this->dropdownSection, nestedLayer,
                     pathPattern, pathPatternOn, pathPatternOff, usingPages, false);
     
