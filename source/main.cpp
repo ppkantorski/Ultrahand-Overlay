@@ -778,7 +778,13 @@ public:
                         listItem->triggerClickAnimation();
                         hasNotTriggeredAnimation = false;
                     }
+                    static bool triggerClick = false;
+
                     if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
+                        triggerClick = true;
+                    }
+                    if (triggerClick && tsl::elm::s_currentScrollVelocity <= 1.0f && tsl::elm::s_currentScrollVelocity >= -1.0f) {
+                        triggerClick = false;
                         setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, DEFAULT_LANG_STR, defaultLangMode);
                         reloadMenu = reloadMenu2 = true;
                         parseLanguage(langFile);
