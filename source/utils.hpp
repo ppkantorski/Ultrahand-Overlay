@@ -3792,6 +3792,16 @@ void handleMoveCommand(const std::vector<std::string>& cmd, const std::string& p
                     } else {
                         moveFileOrDirectory(sourcePath, destinationPath, logSource, logDestination);
                     }
+                } else {
+                    // It's a directory - only move if empty
+                    if (isDirectoryEmpty(sourcePath)) {
+                        moveFileOrDirectory(sourcePath, destinationPath, logSource, logDestination);
+                    }
+                    #if USING_LOGGING_DIRECTIVE
+                    else if (!disableLogging) {
+                        logMessage("Skipping non-empty directory: " + sourcePath);
+                    }
+                    #endif
                 }
             }
             
