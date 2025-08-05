@@ -1139,7 +1139,7 @@ public:
             createToggleListItem(list, PAGE_SWAP, usePageSwap, "page_swap", false);
             rightAlignmentState = useRightAlignment = getBoolValue("right_alignment", false); // FALSE_STR default
             createToggleListItem(list, RIGHT_SIDE_MODE, useRightAlignment, "right_alignment");
-            addHeader(list, "libultrahand Detection");
+            addHeader(list, "Theme Settings");
             highlightTitles = getBoolValue("highlight_titles", false); // FALSE_STR default
             createToggleListItem(list, "Highlight Titles", highlightTitles, "highlight_titles", false);
             highlightVersions = getBoolValue("highlight_versions", true); // TRUE_STR default
@@ -6993,8 +6993,8 @@ public:
      */
     virtual std::unique_ptr<tsl::Gui> loadInitialGui() override {
         //settingsInitialized.exchange(false, acq_rel);
-        tsl::gfx::FontManager::preloadPersistentGlyphs("0123456789%●", 20);
-        tsl::gfx::FontManager::preloadPersistentGlyphs(""+ult::HIDE+""+ult::CANCEL, 23);
+        //tsl::gfx::FontManager::preloadPersistentGlyphs("0123456789%●", 20);
+        //tsl::gfx::FontManager::preloadPersistentGlyphs(""+ult::HIDE+""+ult::CANCEL, 23);
         initializeSettingsAndDirectories();
 
         // Check if a package was specified via command line

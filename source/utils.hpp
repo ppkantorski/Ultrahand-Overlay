@@ -3446,7 +3446,9 @@ bool interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
         #if USING_LOGGING_DIRECTIVE
         if (interpreterLogging.load(std::memory_order_acquire)) {
             disableLogging = false;
-            
+        }
+
+        if (!disableLogging) {
             // Build log message efficiently
             messageBuffer.clear();
             messageBuffer += "Executing command: ";
@@ -3454,6 +3456,7 @@ bool interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
                 messageBuffer += token;
                 messageBuffer += ' ';
             }
+            
             logMessage(messageBuffer);
         }
         #endif
@@ -3602,14 +3605,16 @@ void handleCopyCommand(const std::vector<std::string>& cmd, const std::string& p
         // Single file/directory copying - early returns to avoid unnecessary work
         if (sourcePath.empty() || destinationPath.empty()) {
             #if USING_LOGGING_DIRECTIVE
-            logMessage("Source and destination paths must be specified.");
+            if (!disableLogging)
+                logMessage("Source and destination paths must be specified.");
             #endif
             return;
         }
         
         if (!isFileOrDirectory(sourcePath)) {
             #if USING_LOGGING_DIRECTIVE
-            logMessage("Source file or directory doesn't exist: " + sourcePath);
+            if (!disableLogging)
+                logMessage("Source file or directory doesn't exist: " + sourcePath);
             #endif
             return;
         }
@@ -3660,14 +3665,16 @@ void handleDeleteCommand(const std::vector<std::string>& cmd, const std::string&
         // Single file/directory deletion - early returns for error conditions
         if (sourcePath.empty()) {
             #if USING_LOGGING_DIRECTIVE
-            logMessage("Source path must be specified.");
+            if (!disableLogging)
+                logMessage("Source path must be specified.");
             #endif
             return;
         }
         
         if (isDangerousCombination(sourcePath)) {
             #if USING_LOGGING_DIRECTIVE
-            logMessage("Dangerous combination detected.");
+            if (!disableLogging)
+                logMessage("Dangerous combination detected.");
             #endif
             return;
         }
@@ -3686,7 +3693,8 @@ void handleMirrorCommand(const std::vector<std::string>& cmd, const std::string&
     // Early validation
     if (cmd.size() < 2) {
         #if USING_LOGGING_DIRECTIVE
-        logMessage("Mirror command requires at least a source path.");
+        if (!disableLogging)
+            logMessage("Mirror command requires at least a source path.");
         #endif
         return;
     }
@@ -3741,7 +3749,8 @@ void handleMoveCommand(const std::vector<std::string>& cmd, const std::string& p
         // Early validation of list sizes
         if (sourceFilesList.size() != destinationFilesList.size()) {
             #if USING_LOGGING_DIRECTIVE
-            logMessage("Source and destination lists must have the same number of entries.");
+            if (!disableLogging)
+                logMessage("Source and destination lists must have the same number of entries.");
             #endif
             return;
         }
@@ -3772,15 +3781,17 @@ void handleMoveCommand(const std::vector<std::string>& cmd, const std::string& p
             const bool shouldProcess = !filterSet || filterSet->find(sourcePath) == filterSet->end();
             
             if (shouldProcess) {
-                // Check if we should copy instead of move
-                const bool shouldCopy = copyFilterSet && copyFilterSet->find(sourcePath) != copyFilterSet->end();
-                
-                if (shouldCopy) {
-                    const long long totalSize = getTotalSize(sourcePath);
-                    long long totalBytesCopied = 0;
-                    copyFileOrDirectory(sourcePath, destinationPath, &totalBytesCopied, totalSize);
-                } else {
-                    moveFileOrDirectory(sourcePath, destinationPath, "", "");
+                if (sourcePath.back() != '/') {
+                    // It's a file - apply copy filter
+                    const bool shouldCopy = copyFilterSet && copyFilterSet->find(sourcePath) != copyFilterSet->end();
+                    
+                    if (shouldCopy) {
+                        const long long totalSize = getTotalSize(sourcePath);
+                        long long totalBytesCopied = 0;
+                        copyFileOrDirectory(sourcePath, destinationPath, &totalBytesCopied, totalSize);
+                    } else {
+                        moveFileOrDirectory(sourcePath, destinationPath, logSource, logDestination);
+                    }
                 }
             }
             
@@ -3793,14 +3804,16 @@ void handleMoveCommand(const std::vector<std::string>& cmd, const std::string& p
         // Single file/directory moving - early returns for error conditions
         if (sourcePath.empty() || destinationPath.empty()) {
             #if USING_LOGGING_DIRECTIVE
-            logMessage("Source and destination paths must be specified.");
+            if (!disableLogging)
+                logMessage("Source and destination paths must be specified.");
             #endif
             return;
         }
         
         if (isDangerousCombination(sourcePath)) {
             #if USING_LOGGING_DIRECTIVE
-            logMessage("Dangerous combination detected.");
+            if (!disableLogging)
+                logMessage("Dangerous combination detected.");
             #endif
             return;
         }
@@ -4065,8 +4078,15 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             createFlagFiles(wildcardPattern, outputDir);
         } else {
             #if USING_LOGGING_DIRECTIVE
-            logMessage("Usage: flag <wildcardPattern> <outputDir>");
+            if (!disableLogging)
+                logMessage("Usage: flag <wildcardPattern> <outputDir>");
             #endif
+        }
+    } else if (commandName == "dot-clean") {
+        if (cmd.size() >= 2) {
+            std::string path = cmd[1];
+            preprocessPath(path, packagePath);
+            dotCleanDirectory(path);
         }
     } else if (commandName.substr(0, 7) == "hex-by-") {
         if (cmd.size() >= 4) {
@@ -4374,7 +4394,8 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             }
         } else {
             #if USING_LOGGING_DIRECTIVE
-            logMessage("Volume command missing required argument.");
+            if (!disableLogging)
+                logMessage("Volume command missing required argument.");
             #endif
         }
     } else if (commandName == "open") {
@@ -4386,7 +4407,8 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             // Verify the overlay file exists
             if (!isFileOrDirectory(overlayPath)) {
                 #if USING_LOGGING_DIRECTIVE
-                logMessage("Overlay file not found: " + overlayPath);
+                if (!disableLogging)
+                    logMessage("Overlay file not found: " + overlayPath);
                 #endif
                 commandSuccess.store(false, std::memory_order_release);
                 return;
@@ -4435,13 +4457,15 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             }
             
             #if USING_LOGGING_DIRECTIVE
-            logMessage("Requesting overlay launch: " + overlayPath + " with args: " + launchArgs);
+            if (!disableLogging)
+                logMessage("Requesting overlay launch: " + overlayPath + " with args: " + launchArgs);
             #endif
 
             return;
         } else {
             #if USING_LOGGING_DIRECTIVE
-            logMessage("Usage: open <overlay_path> [launch_arguments...]");
+            if (!disableLogging)
+                logMessage("Usage: open <overlay_path> [launch_arguments...]");
             #endif
             commandSuccess.store(false, std::memory_order_release);
         }
@@ -4655,7 +4679,8 @@ void executeInterpreterCommands(std::vector<std::vector<std::string>>&& commands
         delete workData;
         
         #if USING_LOGGING_DIRECTIVE
-        logMessage("Failed to create interpreter thread.");
+        if (!disableLogging)
+            logMessage("Failed to create interpreter thread.");
         logFilePath = defaultLogFilePath;
         disableLogging = true;
         #endif
