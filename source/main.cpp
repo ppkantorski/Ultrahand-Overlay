@@ -612,7 +612,10 @@ private:
 
             static bool firstState = actualState;
 
-            if (iniKey == "clean_version_labels" || iniKey == "hide_overlay_versions" || iniKey == "hide_package_versions" || iniKey == "highlight_versions" || iniKey == "highlight_titles" || iniKey == "page_swap" || iniKey == "hide_hidden") {
+            if (iniKey == "clean_version_labels" || iniKey == "hide_overlay_versions" || iniKey == "hide_package_versions" ||
+                iniKey == "selection_bg" || iniKey == "selection_text" || iniKey == "selection_value" ||
+                iniKey == "libultrahand_versions" || iniKey == "libultrahand_titles" || iniKey == "package_titles" || iniKey == "package_versions"||
+                iniKey == "page_swap" || iniKey == "hide_hidden") {
                 
                 if (iniKey == "page_swap")
                     triggerMenuReload = firstState != state;
@@ -1106,8 +1109,8 @@ public:
             createToggleListItem(list, BACKDROP, hideWidgetBackdrop, "hide_widget_backdrop", true);
 
             addHeader(list, WIDGET_SETTINGS);
-            createToggleListItem(list, DYNAMIC_COLORS, dynamicWidgetColors, "dynamic_widget_colors", false);
-            createToggleListItem(list, CENTER_ALIGNMENT, centerWidgetAlignment, "center_widget_alignment", false);
+            createToggleListItem(list, DYNAMIC_COLORS, dynamicWidgetColors, "dynamic_widget_colors");
+            createToggleListItem(list, CENTER_ALIGNMENT, centerWidgetAlignment, "center_widget_alignment");
             createToggleListItem(list, EXTENDED_BACKDROP, extendedWidgetBackdrop, "extended_widget_backdrop", true);
 
         } else if (dropdownSelection == "miscMenu") {
@@ -1127,35 +1130,44 @@ public:
             createToggleListItem(list, OPAQUE_SCREENSHOTS, useOpaqueScreenshots, "opaque_screenshots");
             useSwipeToOpen = getBoolValue("swipe_to_open", true); // TRUE_STR default
             createToggleListItem(list, SWIPE_TO_OPEN, useSwipeToOpen, "swipe_to_open");
-            addHeader(list, "Menu Settings");
-            
-            hideUserGuide = getBoolValue("hide_user_guide", false); // FALSE_STR default
-            createToggleListItem(list, USER_GUIDE, hideUserGuide, "hide_user_guide", true);
+
+            addHeader(list, "Theme Settings");
             useDynamicLogo = getBoolValue("dynamic_logo", true); // TRUE_STR default
             createToggleListItem(list, DYNAMIC_LOGO, useDynamicLogo, "dynamic_logo");
+            useSelectionBG = getBoolValue("selection_bg", true); // TRUE_STR default
+            createToggleListItem(list, "Selection Background", useSelectionBG, "selection_bg");
+            useSelectionText = getBoolValue("selection_text", false); // TRUE_STR default
+            createToggleListItem(list, "Selection Text", useSelectionText, "selection_text");
+            useSelectionValue = getBoolValue("selection_value", false); // FALSE_STR default
+            createToggleListItem(list, "Selection Value", useSelectionValue, "selection_value");
+            useLibultrahandTitles = getBoolValue("libultrahand_titles", false); // FALSE_STR default
+            createToggleListItem(list, "libultrahand Titles", useLibultrahandTitles, "libultrahand_titles");
+            useLibultrahandVersions = getBoolValue("libultrahand_versions", true); // TRUE_STR default
+            createToggleListItem(list, "libultrahand Versions", useLibultrahandVersions, "libultrahand_versions");
+            usePackageTitles = getBoolValue("package_titles", false); // TRUE_STR default
+            createToggleListItem(list, "Package Titles", usePackageTitles, "package_titles");
+            usePackageVersions = getBoolValue("package_versions", true); // TRUE_STR default
+            createToggleListItem(list, "Package Versions", usePackageVersions, "package_versions");
+
+
+            addHeader(list, "Menu Settings");
+            hideUserGuide = getBoolValue("hide_user_guide", false); // FALSE_STR default
+            createToggleListItem(list, USER_GUIDE, hideUserGuide, "hide_user_guide", true);
             hideHidden = getBoolValue("hide_hidden", false); // FALSE_STR default
             createToggleListItem(list, SHOW_HIDDEN, hideHidden, "hide_hidden", true);
             usePageSwap = getBoolValue("page_swap", false); // FALSE_STR default
-            createToggleListItem(list, PAGE_SWAP, usePageSwap, "page_swap", false);
-            rightAlignmentState = useRightAlignment = getBoolValue("right_alignment", false); // FALSE_STR default
+            createToggleListItem(list, PAGE_SWAP, usePageSwap, "page_swap");
+            rightAlignmentState = useRightAlignment = getBoolValue("right_alignment"); // FALSE_STR default
             createToggleListItem(list, RIGHT_SIDE_MODE, useRightAlignment, "right_alignment");
-            addHeader(list, "Theme Settings");
-            highlightTitles = getBoolValue("highlight_titles", false); // FALSE_STR default
-            createToggleListItem(list, "Highlight Titles", highlightTitles, "highlight_titles", false);
-            highlightVersions = getBoolValue("highlight_versions", true); // TRUE_STR default
-            createToggleListItem(list, "Highlight Versions", highlightVersions, "highlight_versions", false);
-            
-            highlightPackages = getBoolValue("highlight_packages", true); // TRUE_STR default
-            createToggleListItem(list, "Highlight Packages", highlightPackages, "highlight_packages", false);
-            addHeader(list, "Version Labels");
+
             hideOverlayVersions = getBoolValue("hide_overlay_versions", false); // FALSE_STR default
             createToggleListItem(list, OVERLAY_VERSIONS, hideOverlayVersions, "hide_overlay_versions", true);
-            
             hidePackageVersions = getBoolValue("hide_package_versions", false); // FALSE_STR default
             createToggleListItem(list, PACKAGE_VERSIONS, hidePackageVersions, "hide_package_versions", true);
-            
             cleanVersionLabels = getBoolValue("clean_version_labels", false); // FALSE_STR default
             createToggleListItem(list, CLEAN_VERSIONS, cleanVersionLabels, "clean_version_labels", false, true);
+
+            //addHeader(list, "Version Labels");
 
         } else {
             addBasicListItem(list, FAILED_TO_OPEN + ": " + settingsIniPath);
@@ -5833,7 +5845,7 @@ public:
                             listItem->setValue(overlayVersion, true);
 
                             if (usingLibUltrahand) {
-                                listItem->setValueColor(highlightVersions ? tsl::overlayVersionHighlightTextColor : tsl::overlayVersionTextColor);
+                                listItem->setValueColor(useLibultrahandVersions ? tsl::ultOverlayVersionTextColor : tsl::overlayVersionTextColor);
                             }
                             else {
                                 listItem->setValueColor(tsl::overlayVersionTextColor);
@@ -5841,10 +5853,10 @@ public:
                         }
 
                         if (usingLibUltrahand) {
-                            listItem->setTextColor(highlightTitles ? tsl::overlayEntryHighlightTextColor : tsl::overlayEntryTextColor);
+                            listItem->setTextColor(useLibultrahandTitles ? tsl::ultOverlayTextColor : tsl::overlayTextColor);
                         }
                         else {
-                            listItem->setTextColor(tsl::overlayEntryTextColor);
+                            listItem->setTextColor(tsl::overlayTextColor);
                         }
                         
 
@@ -6239,10 +6251,10 @@ public:
                         tsl::elm::ListItem* listItem = new tsl::elm::ListItem(packageStarred ? STAR_SYMBOL + "  " + newPackageName : newPackageName, "", false, false);
                         if (!hidePackageVersions) {
                             listItem->setValue(packageVersion, true);
-                            listItem->setValueColor((highlightVersions && highlightPackages) ? tsl::packageVersionHighlightTextColor : tsl::packageVersionTextColor);
+                            listItem->setValueColor((usePackageVersions) ? tsl::ultPackageVersionTextColor : tsl::packageVersionTextColor);
                         }
 
-                        listItem->setTextColor(highlightTitles ? tsl::packageEntryHighlightTextColor : tsl::packageEntryTextColor);
+                        listItem->setTextColor((usePackageTitles) ? tsl::ultPackageTextColor : tsl::packageTextColor);
                         listItem->disableClickAnimation();
                         
                         // Add a click listener to load the overlay when clicked upon
@@ -6804,11 +6816,16 @@ void initializeSettingsAndDirectories() {
     setDefaultValue("clean_version_labels", FALSE_STR, cleanVersionLabels);
     setDefaultValue("hide_overlay_versions", FALSE_STR, hideOverlayVersions);
     setDefaultValue("hide_package_versions", FALSE_STR, hidePackageVersions);
-    setDefaultValue("highlight_titles", FALSE_STR, highlightTitles);
-    setDefaultValue("highlight_versions", TRUE_STR, highlightVersions);
-    setDefaultValue("highlight_packages", TRUE_STR, highlightPackages);
-    setDefaultValue("memory_expansion", FALSE_STR, useMemoryExpansion);
+
     setDefaultValue("dynamic_logo", TRUE_STR, useDynamicLogo);
+    setDefaultValue("selection_bg", TRUE_STR, useSelectionBG);
+    setDefaultValue("selection_text", FALSE_STR, useSelectionText);
+    setDefaultValue("selection_value", FALSE_STR, useSelectionValue);
+    setDefaultValue("libultrahand_titles", FALSE_STR, useLibultrahandTitles);
+    setDefaultValue("libultrahand_versions", TRUE_STR, useLibultrahandVersions);
+    setDefaultValue("package_titles", FALSE_STR, usePackageTitles);
+    setDefaultValue("package_versions", TRUE_STR, usePackageVersions);
+    setDefaultValue("memory_expansion", FALSE_STR, useMemoryExpansion);
     setDefaultValue("launch_combos", TRUE_STR, useLaunchCombos);
     setDefaultValue("page_swap", FALSE_STR, usePageSwap);
     setDefaultValue("swipe_to_open", TRUE_STR, useSwipeToOpen);
