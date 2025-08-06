@@ -1135,19 +1135,19 @@ public:
             useDynamicLogo = getBoolValue("dynamic_logo", true); // TRUE_STR default
             createToggleListItem(list, DYNAMIC_LOGO, useDynamicLogo, "dynamic_logo");
             useSelectionBG = getBoolValue("selection_bg", true); // TRUE_STR default
-            createToggleListItem(list, "Selection Background", useSelectionBG, "selection_bg");
+            createToggleListItem(list, SELECTION_BACKGROUND, useSelectionBG, "selection_bg");
             useSelectionText = getBoolValue("selection_text", false); // TRUE_STR default
-            createToggleListItem(list, "Selection Text", useSelectionText, "selection_text");
+            createToggleListItem(list, SELECTION_TEXT, useSelectionText, "selection_text");
             useSelectionValue = getBoolValue("selection_value", false); // FALSE_STR default
-            createToggleListItem(list, "Selection Value", useSelectionValue, "selection_value");
+            createToggleListItem(list, SELECTION_VALUE, useSelectionValue, "selection_value");
             useLibultrahandTitles = getBoolValue("libultrahand_titles", false); // FALSE_STR default
-            createToggleListItem(list, "libultrahand Titles", useLibultrahandTitles, "libultrahand_titles");
+            createToggleListItem(list, LIBULTRAHAND_TITLES, useLibultrahandTitles, "libultrahand_titles");
             useLibultrahandVersions = getBoolValue("libultrahand_versions", true); // TRUE_STR default
-            createToggleListItem(list, "libultrahand Versions", useLibultrahandVersions, "libultrahand_versions");
+            createToggleListItem(list, LIBULTRAHAND_VERSIONS, useLibultrahandVersions, "libultrahand_versions");
             usePackageTitles = getBoolValue("package_titles", false); // TRUE_STR default
-            createToggleListItem(list, "Package Titles", usePackageTitles, "package_titles");
+            createToggleListItem(list, PACKAGE_TITLES, usePackageTitles, "package_titles");
             usePackageVersions = getBoolValue("package_versions", true); // TRUE_STR default
-            createToggleListItem(list, "Package Versions", usePackageVersions, "package_versions");
+            createToggleListItem(list, PACKAGE_VERSIONS, usePackageVersions, "package_versions");
 
 
             addHeader(list, MENU_SETTINGS);
@@ -1580,6 +1580,15 @@ public:
             } else if (entryMode == PACKAGE_STR) {
                 createAndAddToggleListItem(
                     list,
+                    QUICK_LAUNCH,
+                    false,
+                    USE_QUICK_LAUNCH_STR,
+                    getSettingsValue(USE_QUICK_LAUNCH_STR),
+                    settingsIniPath,
+                    entryName
+                );
+                createAndAddToggleListItem(
+                    list,
                     BOOT_COMMANDS,
                     true,
                     USE_BOOT_PACKAGE_STR,
@@ -1593,15 +1602,6 @@ public:
                     true,
                     USE_EXIT_PACKAGE_STR,
                     getSettingsValue(USE_EXIT_PACKAGE_STR),
-                    settingsIniPath,
-                    entryName
-                );
-                createAndAddToggleListItem(
-                    list,
-                    "Quick Launch",
-                    false,
-                    USE_QUICK_LAUNCH_STR,
-                    getSettingsValue(USE_QUICK_LAUNCH_STR),
                     settingsIniPath,
                     entryName
                 );
