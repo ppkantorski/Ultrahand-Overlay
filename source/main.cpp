@@ -1131,7 +1131,7 @@ public:
             useSwipeToOpen = getBoolValue("swipe_to_open", true); // TRUE_STR default
             createToggleListItem(list, SWIPE_TO_OPEN, useSwipeToOpen, "swipe_to_open");
 
-            addHeader(list, "Theme Settings");
+            addHeader(list, THEME_SETTINGS);
             useDynamicLogo = getBoolValue("dynamic_logo", true); // TRUE_STR default
             createToggleListItem(list, DYNAMIC_LOGO, useDynamicLogo, "dynamic_logo");
             useSelectionBG = getBoolValue("selection_bg", true); // TRUE_STR default
@@ -1150,7 +1150,7 @@ public:
             createToggleListItem(list, "Package Versions", usePackageVersions, "package_versions");
 
 
-            addHeader(list, "Menu Settings");
+            addHeader(list, MENU_SETTINGS);
             hideUserGuide = getBoolValue("hide_user_guide", false); // FALSE_STR default
             createToggleListItem(list, USER_GUIDE, hideUserGuide, "hide_user_guide", true);
             hideHidden = getBoolValue("hide_hidden", false); // FALSE_STR default
