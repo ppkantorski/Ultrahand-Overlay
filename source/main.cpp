@@ -651,7 +651,13 @@ private:
             //    iniKey == "center_widget_alignment" || iniKey == "extended_widget_backdrop") {
             //    reinitializeWidgetVars();
             } else if (iniKey == "right_alignment") {
-                triggerMenuReload2 = firstState != state;
+                if (!state) {
+                    const auto [horizontalUnderscanPixels, verticalUnderscanPixels] = tsl::gfx::getUnderscanPixels();
+                    tsl::gfx::Renderer::get().setLayerPos(1280-32 - horizontalUnderscanPixels, 0);
+                } else {
+                    tsl::gfx::Renderer::get().setLayerPos(0, 0);
+                }
+                //triggerMenuReload2 = firstState != state;
             //} else if (iniKey == "dynamic_logo") {
             //    useDynamicLogo = !useDynamicLogo;
             //} else if (iniKey == "launch_combos") {
@@ -767,7 +773,7 @@ public:
                 listItem->setValue(defaultLangMode);
                 if (defaultLangMode == defaulLang) {
                     lastSelectedListItemFooter = defaultLangMode;
-                    listItem->setValue(CHECKMARK_SYMBOL);
+                    listItem->setValue(defaultLangMode+" "+CHECKMARK_SYMBOL);
                     //lastSelectedListItem = nullptr;
                     lastSelectedListItem = listItem;
                 }
@@ -796,7 +802,7 @@ public:
                             lastSelectedListItem->setValue(lastSelectedListItemFooter);
                         if (selectedListItem)
                             selectedListItem->setValue(defaultLangMode);
-                        listItem->setValue(CHECKMARK_SYMBOL);
+                        listItem->setValue(defaultLangMode + " " + CHECKMARK_SYMBOL);
                         //lastSelectedListItem = nullptr;
                         lastSelectedListItem = listItem;
                         shiftItemFocus(listItem);
@@ -1179,7 +1185,7 @@ public:
                 //std::lock_guard<std::mutex> lock(jumpItemMutex);
                 jumpItemName = "";
                 jumpItemValue = CHECKMARK_SYMBOL;
-                jumpItemExactMatch.store(true, release);
+                jumpItemExactMatch.store(false, release);
                 g_overlayFilename = "";
             }
             list->jumpToItem(jumpItemName, jumpItemValue, jumpItemExactMatch.load(acquire));
@@ -1730,7 +1736,7 @@ public:
                 modeTitle = labelList[idx];
             else
                 modeTitle = title;
-            const std::string headerText = KEY_COMBO + "  " + labelText;
+            const std::string headerText = KEY_COMBO + " "+DIVIDER_SYMBOL+" " + labelText;
             //labelList.clear();
             addHeader(list, headerText);
     

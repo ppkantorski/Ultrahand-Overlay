@@ -2843,7 +2843,7 @@ bool replacePlaceholdersRecursively(std::string& arg, const std::vector<std::pai
 
 
 
-std::unordered_map<std::string, std::string> generalPlaceholders ;
+std::unordered_map<std::string, std::string> generalPlaceholders;
 void updateGeneralPlaceholders() {
     generalPlaceholders = {
         {"{ram_vendor}", memoryVendor},
