@@ -1336,6 +1336,8 @@ public:
 int settingsMenuPageDepth = 0;
 std::string rootEntryName, rootEntryMode, rootTitle, rootVersion;
 
+bool modeComboModified = false;
+
 class SettingsMenu : public tsl::Gui {
 private:
     std::string entryName, entryMode, title, version, dropdownSelection, settingsIniPath;
@@ -1344,6 +1346,7 @@ private:
     int MAX_PRIORITY = 20;
 
     std::string modeTitle;
+    
 
 public:
     SettingsMenu(const std::string& name, const std::string& mode, const std::string& title = "", const std::string& version = "", const std::string& selection = "")
@@ -1520,68 +1523,19 @@ public:
                 );
     
                 const std::string argStr = getSettingsValue("mode_args");
-                const std::string comboStr = getSettingsValue("mode_combos");
-                const std::string labelStr = getSettingsValue("mode_labels");
-                
                 const std::vector<std::string> modeList = splitIniList(argStr);   // (-mini, -micro)
-                const std::vector<std::string> comboList = splitIniList(comboStr);     // (ZL+ZR+DRIGHT, '')
-                const std::vector<std::string> labelList = splitIniList(labelStr);     // (Mini Mode, Micro Mode)
                 
                 if (!modeList.empty()) {
-    
-                    std::vector<std::vector<std::string>> tableData = {
-                        {"", "", ""}  // Direct reuse without reallocation
-                    };
-                    addTable(list, tableData, "", 163, 0, 19-5, 0, "header", "header", DEFAULT_STR, RIGHT_STR, true, false, false, true, "none", false);
-                    tableData = {
-                        {MODE, "", KEY_COMBO}  // Direct reuse without reallocation
-                    };
-                    addTable(list, tableData, "", 165, 19-2, 19-2, 0, "header", "header", DEFAULT_STR, RIGHT_STR, true, true, false, true, "none", false);
-                    
-                    // Use already loaded comboStr instead of re-reading
-                    std::vector<std::string> comboListMutable = splitIniList(comboStr);
-                    // Ensure comboList is same size as modeList, fill with empty if missing
-                    if (comboListMutable.size() < modeList.size())
-                        comboListMutable.resize(modeList.size(), "");
-                    
-                    std::string mode, displayName, comboDisplay;
-                    for (size_t i = 0; i < modeList.size(); ++i) {
-                        mode = modeList[i];
-                        displayName = (i < labelList.size() && !labelList[i].empty()) ? labelList[i] : mode;
-                        const std::string& combo = comboListMutable[i];  // reference so we can modify
-    
-                        // Display combo or OPTION_SYMBOL if empty
-                        comboDisplay = combo.empty() ? OPTION_SYMBOL : combo;
-                        convertComboToUnicode(comboDisplay);
-    
-                        auto* item = new tsl::elm::ListItem(displayName);
-                        item->setValue(comboDisplay);
-    
-                        // Capture by pointer/ref so we can update comboList[i]
-                        item->setClickListener([entryName = entryName, settingsIniPath = settingsIniPath, i, mode, &comboListMutable, item, this](uint64_t keys) mutable {
-                            if (runningInterpreter.load(acquire)) return false;
-
-                            if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
-                                inMainMenu.store(false, std::memory_order_release);
-    
-                                // Open a new SettingsMenu specifically for editing this mode combo
-                                tsl::changeTo<SettingsMenu>(
-                                    entryName,
-                                    OVERLAY_STR,
-                                    mode,
-                                    "",
-                                    "mode_combo_" + std::to_string(i)
-                                );
-                                selectedListItem = item;
-                                if (lastSelectedListItem)
-                                    lastSelectedListItem->triggerClickAnimation();
-                                return true;
-                            }
-                            return false;
-                        });
-    
-                        list->addItem(item);
-                    }
+                    auto* listItem = new tsl::elm::ListItem(MODES);
+                    listItem->setValue(DROPDOWN_SYMBOL);
+                    listItem->setClickListener([entryName=entryName, entryMode=entryMode, overlayName=title, overlayVersion=version](uint64_t keys) {
+                        if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
+                            tsl::changeTo<SettingsMenu>(entryName, entryMode, overlayName, overlayVersion, MODE_STR);
+                            return true;
+                        }
+                        return false;
+                    });
+                    list->addItem(listItem);
                 }
             } else if (entryMode == PACKAGE_STR) {
                 createAndAddToggleListItem(
@@ -1621,6 +1575,77 @@ public:
                     entryName
                 );
             }
+        } else if (dropdownSelection == MODE_STR) {
+            const std::string argStr = getSettingsValue("mode_args");
+            const std::string comboStr = getSettingsValue("mode_combos");
+            const std::string labelStr = getSettingsValue("mode_labels");
+            
+            const std::vector<std::string> modeList = splitIniList(argStr);   // (-mini, -micro)
+            const std::vector<std::string> comboList = splitIniList(comboStr);     // (ZL+ZR+DRIGHT, '')
+            const std::vector<std::string> labelList = splitIniList(labelStr);     // (Mini Mode, Micro Mode)
+            
+            if (!modeList.empty()) {
+
+                //std::vector<std::vector<std::string>> tableData = {
+                //    {"", "", ""}  // Direct reuse without reallocation
+                //};
+                //addTable(list, tableData, "", 163, 0, 19-5, 0, "header", "header", DEFAULT_STR, RIGHT_STR, true, false, false, true, "none", false);
+                std::vector<std::vector<std::string>> tableData = {
+                    {MODE, "", KEY_COMBO}  // Direct reuse without reallocation
+                };
+                addTable(list, tableData, "", 165, 19-2, 19-2, 0, "header", "header", DEFAULT_STR, RIGHT_STR, true, true, false, true, "none", false);
+                
+                // Use already loaded comboStr instead of re-reading
+                std::vector<std::string> comboListMutable = splitIniList(comboStr);
+                // Ensure comboList is same size as modeList, fill with empty if missing
+                if (comboListMutable.size() < modeList.size())
+                    comboListMutable.resize(modeList.size(), "");
+                
+                std::string mode, displayName, comboDisplay;
+                for (size_t i = 0; i < modeList.size(); ++i) {
+                    mode = modeList[i];
+                    displayName = (i < labelList.size() && !labelList[i].empty()) ? labelList[i] : mode;
+                    const std::string& combo = comboListMutable[i];  // reference so we can modify
+                    
+                    // Display combo or OPTION_SYMBOL if empty
+                    comboDisplay = combo.empty() ? OPTION_SYMBOL : combo;
+                    convertComboToUnicode(comboDisplay);
+                    
+                    auto* item = new tsl::elm::ListItem(displayName);
+                    item->setValue(comboDisplay);
+                    
+                    // Capture by pointer/ref so we can update comboList[i]
+                    item->setClickListener([entryName = entryName, settingsIniPath = settingsIniPath, i, mode, &comboListMutable, item, this](uint64_t keys) mutable {
+                        if (runningInterpreter.load(acquire)) return false;
+
+                        if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
+                            inMainMenu.store(false, std::memory_order_release);
+                            
+                            // Open a new SettingsMenu specifically for editing this mode combo
+                            tsl::changeTo<SettingsMenu>(
+                                entryName,
+                                OVERLAY_STR,
+                                mode,
+                                "",
+                                "mode_combo_" + std::to_string(i)
+                            );
+                            selectedListItem = item;
+                            if (lastSelectedListItem)
+                                lastSelectedListItem->triggerClickAnimation();
+                            return true;
+                        }
+                        //if (keys & KEY_B) {
+                        //    modeTitle = MODES;
+                        //    reloadMenu2 = true;
+                        //    //return true;
+                        //}
+                        return false;
+                    });
+                    
+                    list->addItem(item);
+                }
+            }
+
         } else if (dropdownSelection == PRIORITY_STR) {
             addHeader(list, SORT_PRIORITY);
             const std::string priorityValue = getSettingsValue(PRIORITY_STR);
@@ -1762,7 +1787,7 @@ public:
                 noComboItem->setValue(CHECKMARK_SYMBOL);
                 lastSelectedListItem = noComboItem;
             }
-            noComboItem->setClickListener([entryName=entryName, settingsIniPath=settingsIniPath, idx, comboList, noComboItem](uint64_t keys) mutable {
+            noComboItem->setClickListener([this, entryName=entryName, settingsIniPath=settingsIniPath, idx, comboList, noComboItem](uint64_t keys) mutable {
                 if (runningInterpreter.load(acquire)) return false;
 
                 if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
@@ -1771,7 +1796,8 @@ public:
                     removeKeyComboFromOthers(newComboStr, entryName);
                     setIniFileValue(settingsIniPath, entryName, "mode_combos", newComboStr);
                     tsl::hlp::loadEntryKeyCombos(); // reload combos
-                    reloadMenu2 = true;
+                    //reloadMenu2 = true;
+                    modeComboModified = true;
                     if (lastSelectedListItem)
                         lastSelectedListItem->setValue("");
                     if (selectedListItem)
@@ -1801,8 +1827,8 @@ public:
                     comboItem->setValue(CHECKMARK_SYMBOL);
                     lastSelectedListItem = comboItem;
                 }
-        
-                comboItem->setClickListener([entryName=entryName, settingsIniPath=settingsIniPath, idx, combo, comboList, mappedCombo, comboItem](uint64_t keys) mutable {
+                
+                comboItem->setClickListener([this, entryName=entryName, settingsIniPath=settingsIniPath, idx, combo, comboList, mappedCombo, comboItem](uint64_t keys) mutable {
                     if (runningInterpreter.load(acquire)) return false;
 
                     if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
@@ -1821,7 +1847,8 @@ public:
                             tsl::hlp::loadEntryKeyCombos(); // reload combos
                         }
                         
-                        reloadMenu2 = true;
+                        //reloadMenu2 = true;
+                        modeComboModified = true;
                         if (lastSelectedListItem)
                             lastSelectedListItem->setValue("");
                         if (selectedListItem)
@@ -1976,8 +2003,18 @@ public:
                     allowSlide.store(false, release);
                 if (unlockedSlide.load(acquire))
                     unlockedSlide.store(false, release);
-                inSubSettingsMenu = false;
-                returningToSettings = true;
+                
+
+                if (dropdownSelection == MODE_STR) {
+                    modeTitle = MODES;
+                    reloadMenu2 = true;
+                }
+
+
+                else if (dropdownSelection.rfind("mode_combo_", 0) != 0) {
+                    inSubSettingsMenu = false;
+                    returningToSettings = true;
+                }
     
                 // Step 1: Go back one menu level
                 // Step 2: If reload is needed, change to SettingsMenu with focus
@@ -2002,7 +2039,35 @@ public:
                         rootVersion
                     );
                 } else {
-                    tsl::goBack();
+                    if (modeComboModified) {
+                        // Go back to MODE_STR screen to refresh the combo display
+                        jumpItemName = modeTitle;  // Focus on the mode that was just edited
+                        jumpItemValue = "";
+                        jumpItemExactMatch.store(true, release);
+                        g_overlayFilename = "";
+                        
+                        tsl::swapTo<SettingsMenu>(
+                            SwapDepth(2),
+                            rootEntryName,
+                            rootEntryMode,
+                            rootTitle,
+                            rootVersion,
+                            MODE_STR  // Go back to the modes list screen
+                        );
+                        // Keep modeComboModified true for the next level up
+                    } else {
+                        tsl::goBack();
+                    }
+                }
+
+                if (modeComboModified) {
+                    modeComboModified = false;
+                    //jumpItemName = MODES;
+                    //jumpItemValue = "";
+                    //jumpItemExactMatch.store(true, release);
+                    //g_overlayFilename = "";
+
+                    //reloadMenu2 = true;
                 }
     
                 return true;
