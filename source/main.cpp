@@ -3613,7 +3613,7 @@ bool drawCommandsMenu(
     //std::string jsonPath, jsonPathOn, jsonPathOff;
     //std::string jsonKey, jsonKeyOn, jsonKeyOff;
     
-    std::string iniFilePath;
+    //std::string iniFilePath;
 
     std::string optionName;
     std::vector<std::vector<std::string>> commands, commandsOn, commandsOff;
