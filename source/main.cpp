@@ -3939,7 +3939,7 @@ bool drawCommandsMenu(
                                         .nestedLayer = nestedLayer          // Move this to the end
                                     });
 
-                                    tsl::changeTo<PackageMenu>(packagePath, optionName, currentPage, packageName, nestedMenuCount, lastPackageHeader);
+                                    tsl::swapTo<PackageMenu>(packagePath, optionName, currentPage, packageName, nestedMenuCount, lastPackageHeader);
                                     
                                     return true;
                                 
@@ -3960,6 +3960,7 @@ bool drawCommandsMenu(
                                 }
                                 return false;
                             });
+                            listItem->disableClickAnimation();
                         } else {
                             listItem->setClickListener([optionName, i, packageIniPath, lastPackageHeader, showWidget](s64 keys) {
                                 if (runningInterpreter.load(acquire))
@@ -4665,7 +4666,7 @@ bool drawCommandsMenu(
                                     unlockedSlide.store(false, release);
 
                                 //tsl::clearGlyphCacheNow.store(true, release);
-                                tsl::changeTo<PackageMenu>(forwarderPackagePath, "", LEFT_STR, forwarderPackageIniName, nestedMenuCount, lastPackageHeader);
+                                tsl::swapTo<PackageMenu>(forwarderPackagePath, "", LEFT_STR, forwarderPackageIniName, nestedMenuCount, lastPackageHeader);
                                 
                                 return true;
                             } else if (keys & SCRIPT_KEY && !(keys & ~SCRIPT_KEY & ALL_KEYS_MASK)) {
@@ -4689,6 +4690,7 @@ bool drawCommandsMenu(
                             }
                             return false;
                         });
+                        listItem->disableClickAnimation();
                     } else {
                         listItem->setClickListener([commands, keyName = originalOptionName, dropdownSection, packagePath, packageName,
                             footer, lastSection, listItem, lastPackageHeader, commandMode, showWidget, i](uint64_t keys) {
