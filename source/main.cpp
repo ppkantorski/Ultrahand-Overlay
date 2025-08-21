@@ -3904,13 +3904,13 @@ bool drawCommandsMenu(
                         if (!commandFooter.empty() && commandFooter != NULL_STR){
                             footer = commandFooter;
                             cleanOptionName = optionName.substr(1);
-                            removeTag(cleanOptionName);
+                            //removeTag(cleanOptionName);
                             listItem = new tsl::elm::ListItem(cleanOptionName, "", isMini, true);
                             listItem->setValue(footer);
                         } else {
                             footer = !isSlot ? DROPDOWN_SYMBOL : OPTION_SYMBOL;
                             cleanOptionName = optionName.substr(1);
-                            removeTag(cleanOptionName);
+                            //removeTag(cleanOptionName);
                             // Create reference to PackageMenu with dropdownSection set to optionName
                             listItem = new tsl::elm::ListItem(cleanOptionName, footer, isMini, true);
                         }
@@ -4599,12 +4599,12 @@ bool drawCommandsMenu(
                     tsl::elm::ListItem* listItem;
                     if ((footer == DROPDOWN_SYMBOL) || (footer.empty()) || footer == commandFooter) {
                         cleanOptionName = optionName;
-                        removeTag(cleanOptionName);
+                        //removeTag(cleanOptionName);
                         listItem = new tsl::elm::ListItem(cleanOptionName, footer, isMini, true);
                     }
                     else {
                         cleanOptionName = optionName;
-                        removeTag(cleanOptionName);
+                        //removeTag(cleanOptionName);
                         listItem = new tsl::elm::ListItem(cleanOptionName, "", isMini, true);
 
                         if (commandMode == OPTION_STR)
@@ -4782,7 +4782,7 @@ bool drawCommandsMenu(
                     parentDirName = getParentDirNameFromPath(selectedItem);
                     if (commandMode == DEFAULT_STR  || commandMode == SLOT_STR || commandMode == OPTION_STR) { // for handiling toggles
                         cleanOptionName = optionName;
-                        removeTag(cleanOptionName);
+                        //removeTag(cleanOptionName);
                         tsl::elm::ListItem* listItem = new tsl::elm::ListItem(cleanOptionName, "", isMini, true);
                         if (commandMode == DEFAULT_STR)
                             listItem->setValue(footer, true);
@@ -4840,7 +4840,7 @@ bool drawCommandsMenu(
                         list->addItem(listItem);
                     } else if (commandMode == TOGGLE_STR) {
                         cleanOptionName = optionName;
-                        removeTag(cleanOptionName);
+                        //removeTag(cleanOptionName);
                         auto* toggleListItem = new tsl::elm::ToggleListItem(cleanOptionName, false, ON, OFF, isMini);
 
                         // Set the initial state of the toggle item
