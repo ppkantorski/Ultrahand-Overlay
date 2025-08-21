@@ -5302,6 +5302,13 @@ public:
             if (unlockedSlide.load(acquire))
                 unlockedSlide.store(false, release);
             
+            // Check if we have return context items to process first
+            if (!returnContextStack.empty()) {
+                // Don't set returning flags yet - let the return context handle navigation
+                return false; // Let tryReturnContext() handle this
+            }
+    
+
             if (nestedMenuCount == 0) {
                 inPackageMenu = false;
                 if (!inHiddenMode)
