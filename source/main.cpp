@@ -4041,10 +4041,10 @@ bool drawCommandsMenu(
 
             // Initial processing of commands (DUPLICATE CODE)
             for (auto& cmd : commands) {
-                for (auto& arg : cmd) {
-                    // Replace general placeholders
-                    replacePlaceholdersInArg(arg, generalPlaceholders);
-                }
+                //for (auto& arg : cmd) {
+                //    // Replace general placeholders
+                //    replacePlaceholdersInArg(arg, generalPlaceholders);
+                //}
                 
                 if (cmd.empty()) continue;
 
@@ -4183,10 +4183,10 @@ bool drawCommandsMenu(
                     }
                     
                     if (cmd.size() > 1) {
-                        if (commandName == "ini_file") {
-                            iniFilePath = cmd[1];
-                            preprocessPath(iniFilePath, packagePath);
-                        } else if (commandName == "file_source") {
+                        //if (commandName == "ini_file") {
+                        //    iniFilePath = cmd[1];
+                        //    preprocessPath(iniFilePath, packagePath);
+                        if (commandName == "file_source") {
                             if (currentSection == GLOBAL_STR) {
                                 pathPattern = cmd[1];
                                 preprocessPath(pathPattern, packagePath);

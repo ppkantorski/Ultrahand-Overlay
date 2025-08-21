@@ -1571,7 +1571,7 @@ static tsl::Color getRawColor(const std::string& c, tsl::Color defaultColor) {
 
 void drawTable(
     tsl::elm::List*      list,
-    std::vector<std::vector<std::string>>& tableData,
+    const std::vector<std::vector<std::string>>& tableData,
     std::vector<std::string>&             sectionLines,
     std::vector<std::string>&             infoLines,
     size_t columnOffset             = 163,
@@ -1681,7 +1681,7 @@ void drawTable(
 // ─── addTable simply forwards through ───────────────────────────────────────────
 void addTable(
     tsl::elm::List*       list,
-    std::vector<std::vector<std::string>>& tableData,
+    const std::vector<std::vector<std::string>>& tableData,
     const std::string&                     packagePath,
     const size_t&                          columnOffset                = 163,
     const size_t&                          tableStartGap               = 20,
