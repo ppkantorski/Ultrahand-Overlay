@@ -2791,53 +2791,158 @@ std::string handleLength(const std::string& placeholder) {
 //    }
 //};
 
-bool replacePlaceholdersRecursively(std::string& arg, const std::vector<std::pair<std::string, std::function<std::string(const std::string&)>>>& placeholders) {
-    bool anyReplacementsMade = false;
-    std::string lastArg;
-    std::string placeholderContent;
-    std::string replacement;
+// Finds the next occurrence of ANY function-style placeholder opener from `starts`,
+// beginning at `from`. On tie (same index), it prefers the LONGEST token.
+// Returns npos if none found, and sets matchedLen accordingly.
+static size_t findNextOpenToken(const std::string& s,
+                                size_t from,
+                                const std::vector<std::string>& starts,
+                                size_t& matchedLen)
+{
+    size_t bestPos = std::string::npos;
+    matchedLen = 0;
 
-    size_t startPos, endPos;
-    size_t nestedStartPos, nextStartPos, nextEndPos;
+    for (const auto& tok : starts) {
+        size_t pos = s.find(tok, from);
+        if (pos == std::string::npos) continue;
 
-    // Continue replacing until no more placeholders are found
-    bool placeholdersRemaining = true;
-    while (placeholdersRemaining) {
-        placeholdersRemaining = false; // Reset the flag at the beginning of each loop
-        
-        for (const auto& [placeholder, replacer] : placeholders) {
-            //size_t startPos, endPos;
-            //size_t nestedStartPos, nextStartPos, nextEndPos;
-            while ((startPos = arg.find(placeholder)) != std::string::npos) {
-                nestedStartPos = startPos;
-                while (true) {
-                    nextStartPos = arg.find(placeholder, nestedStartPos + 1);
-                    nextEndPos = arg.find(")}", nestedStartPos);
-                    if (nextStartPos != std::string::npos && nextStartPos < nextEndPos) {
-                        nestedStartPos = nextStartPos;
-                    } else {
-                        endPos = nextEndPos;
-                        break;
-                    }
-                }
-                if (endPos == std::string::npos || endPos <= startPos) break;
-                placeholderContent = arg.substr(startPos, endPos - startPos + 2);
-                replacement = replacer(placeholderContent);
-                if (replacement.empty()) {
-                    replacement = NULL_STR;
-                }
-                arg.replace(startPos, endPos - startPos + 2, replacement);
-                placeholdersRemaining = true; // Since we replaced something, we continue processing
-                anyReplacementsMade = true; // Track that we made a replacement
-                // To prevent infinite loops, if no change is made, break
-                if (arg == lastArg) {
-                    arg.replace(startPos, endPos - startPos + 2, NULL_STR);
-                    break;
-                }
-                lastArg = arg;
-            }
+        if (bestPos == std::string::npos || pos < bestPos ||
+            (pos == bestPos && tok.size() > matchedLen)) {
+            bestPos = pos;
+            matchedLen = tok.size();
         }
     }
+    return bestPos;
+}
+
+// Starting at `startPos` which points to the FIRST character of the opener of the
+// CURRENT placeholder (e.g., the '{' in "{slice("), find the matching closing
+// pair for that placeholder. We count nested openers of ANY placeholder type
+// and match on ")}" closes.
+//
+// Return value: index of the ')' in the matching closing ")}" (so you can substr
+// with +2 to include ")}"). Returns npos if unmatched.
+static size_t findMatchingClose(const std::string& s,
+                                size_t startPos,
+                                const std::vector<std::string>& starts,
+                                size_t outerOpenLen)
+{
+    // We have already seen one opener at startPos
+    int depth = 1;
+    size_t scan = startPos + outerOpenLen;
+
+    while (scan < s.size()) {
+        // Find next opener (any) and next closer ")}"
+        size_t nextCloser = s.find(")}", scan);
+
+        size_t openLen = 0;
+        size_t nextOpener = findNextOpenToken(s, scan, starts, openLen);
+
+        // Decide which token comes first
+        if (nextCloser == std::string::npos && nextOpener == std::string::npos) {
+            return std::string::npos; // no more tokens
+        }
+
+        bool openerFirst = false;
+        if (nextOpener != std::string::npos) {
+            if (nextCloser == std::string::npos) openerFirst = true;
+            else openerFirst = (nextOpener < nextCloser);
+        }
+
+        if (openerFirst) {
+            // Found a nested opener
+            ++depth;
+            scan = nextOpener + openLen; // continue after this opener
+        } else {
+            // Found a closer
+            --depth;
+            if (depth == 0) {
+                return nextCloser; // return index of ')'
+            }
+            scan = nextCloser + 2; // continue after ")}"
+        }
+    }
+
+    return std::string::npos; // unmatched
+}
+
+bool replacePlaceholdersRecursively(
+    std::string& arg,
+    const std::vector<std::pair<std::string, std::function<std::string(const std::string&)>>>& placeholders)
+{
+    bool anyReplacementsMade = false;
+
+    // Precompute all opener tokens ("{slice(", "{math(", ...).
+    std::vector<std::string> starts;
+    starts.reserve(placeholders.size());
+    for (const auto& pr : placeholders) {
+        starts.push_back(pr.first);
+    }
+
+    // Keep sweeping until no replacements occur.
+    for (;;) {
+        bool replacedThisPass = false;
+
+        // Try each placeholder type.
+        for (size_t t = 0; t < placeholders.size(); ++t) {
+            const auto& opener = placeholders[t].first;      // e.g., "{slice("
+            const auto& replacer = placeholders[t].second;
+
+            size_t searchPos = 0;
+
+            while (true) {
+                // Find the next occurrence of THIS opener
+                size_t startPos = arg.find(opener, searchPos);
+                if (startPos == std::string::npos) break;
+
+                // Find its matching ")}" by counting nested ANY opener
+                size_t closePos = findMatchingClose(arg, startPos, starts, opener.size());
+                if (closePos == std::string::npos) {
+                    // Unbalanced; skip this and move on to avoid infinite loop
+                    searchPos = startPos + opener.size();
+                    continue;
+                }
+
+                // Full placeholder text including wrapper: "{name(...)}"
+                const size_t fullLen = (closePos - startPos) + 2; // include the ")}"
+                std::string placeholderText = arg.substr(startPos, fullLen);
+
+                // Resolve INNER content first (exclude the outer wrapper)
+                const size_t innerStart = opener.size();
+                const size_t innerLen   = placeholderText.size() - innerStart - 2; // minus ")}"
+                std::string inner = placeholderText.substr(innerStart, innerLen);
+
+                // Recurse on inner only (so we don't re-match the outer opener)
+                replacePlaceholdersRecursively(inner, placeholders);
+
+                // Rebuild the outer placeholder with resolved args
+                std::string resolvedPlaceholder = opener + inner + ")}";
+
+                // Call the replacer on the resolved placeholder
+                std::string replacement = replacer(resolvedPlaceholder);
+                if (replacement.empty()) {
+                    replacement = NULL_STR; // preserve your NULL_STR convention
+                }
+
+                // Perform replacement if it changes anything
+                const std::string before = arg;
+                arg.replace(startPos, fullLen, replacement);
+
+                if (arg != before) {
+                    anyReplacementsMade = true;
+                    replacedThisPass = true;
+                    // Continue scanning after the replacement
+                    searchPos = startPos + replacement.size();
+                } else {
+                    // If nothing changed, advance to avoid re-hitting the same spot
+                    searchPos = startPos + opener.size();
+                }
+            }
+        }
+
+        if (!replacedThisPass) break;
+    }
+
     return anyReplacementsMade;
 }
 

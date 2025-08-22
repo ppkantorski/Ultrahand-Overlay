@@ -2637,6 +2637,8 @@ public:
                         if (currentSection == GLOBAL_STR) {
                             pathPattern = cmd[1];
                             preprocessPath(pathPattern, filePath);
+                            updateGeneralPlaceholders();
+                            replacePlaceholdersInArg(pathPattern, generalPlaceholders);
                             // Get files directly, avoid storing in intermediate variable
                             tempFiles.clear();
                             tempFiles = getFilesListByWildcards(pathPattern, maxItemsLimit);
@@ -2940,8 +2942,16 @@ public:
                 addHeader(list, cleanSpecificKey);
                 currentPackageHeader = cleanSpecificKey;
             }
-            tsl::elm::ListItem* listItem = new tsl::elm::ListItem(EMPTY);
-            list->addItem(listItem);
+            //tsl::elm::ListItem* listItem = new tsl::elm::ListItem(EMPTY);
+            //list->addItem(listItem);
+
+            addDummyListItem(list);
+            auto warning = new tsl::elm::CustomDrawer([](tsl::gfx::Renderer *renderer, u16 x, u16 y, u16 w, u16 h){
+                renderer->drawString("\uE150", false, 180, 274+50, 90, (tsl::defaultTextColor));
+                renderer->drawString("Selection is empty!", false, 110, 360+50, 25, (tsl::defaultTextColor));
+            });
+            list->addItem(warning);
+            noClickableItems = true;
         }
     
         std::string tmpSelectedItem;
@@ -5722,7 +5732,7 @@ public:
             inPackagesPage.store(false, std::memory_order_release);
             //closeInterpreterThread();
     
-            addHeader(list, !inHiddenMode ? OVERLAYS : HIDDEN_OVERLAYS);
+            addHeader(list, (!inHiddenMode ? OVERLAYS : HIDDEN_OVERLAYS)+" "+DIVIDER_SYMBOL+" \uE0E3 "+SETTINGS+" "+DIVIDER_SYMBOL+" \uE0E2 Star");
             
             
             // Load overlay files
@@ -6290,7 +6300,7 @@ public:
                 bool firstItem = true;
                 for (const auto& taintedPackageName : packageSet) {
                     if (firstItem) {
-                        addHeader(list, !inHiddenMode ? PACKAGES : HIDDEN_PACKAGES);
+                        addHeader(list, (!inHiddenMode ? PACKAGES : HIDDEN_PACKAGES)+" "+DIVIDER_SYMBOL+" \uE0E3 "+SETTINGS+" "+DIVIDER_SYMBOL+" \uE0E2 Star");
                         firstItem = false;
                     }
                     
