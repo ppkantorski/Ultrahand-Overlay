@@ -1567,7 +1567,7 @@ public:
             const std::vector<std::string> labelList = splitIniList(getValue("mode_labels"));
             
             if (!modeList.empty()) {
-                addTable(list, {{"Mode", "", KEY_COMBO}}, "", 165, 19-2, 19-2, 0, 
+                addTable(list, {{"Mode", "", KEY_COMBO}}, "", 165+2, 19-2, 19-2, 0, 
                         "header", "header", DEFAULT_STR, RIGHT_STR, true, true, false, true, "none", false);
                 
                 std::vector<std::string> combos = comboList;
@@ -4278,7 +4278,7 @@ bool drawCommandsMenu(
             if (!skipSection && !skipSystem) { // for skipping the drawing of sections
                 if (commandMode == TABLE_STR) {
                     if (useHeaderIndent) {
-                        tableColumnOffset = 165;
+                        tableColumnOffset = 165+2;
                         tableStartGap = tableEndGap = 19-2; // for perfect alignment for header tables
                         isScrollableTable = false;
                         lastPackageHeader = getFirstSectionText(tableData, packagePath);
