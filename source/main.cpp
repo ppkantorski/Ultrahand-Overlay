@@ -655,8 +655,10 @@ private:
                 if (!state) {
                     const auto [horizontalUnderscanPixels, verticalUnderscanPixels] = tsl::gfx::getUnderscanPixels();
                     tsl::gfx::Renderer::get().setLayerPos(1280-32 - horizontalUnderscanPixels, 0);
+                    ult::layerEdge = (1280-448);
                 } else {
                     tsl::gfx::Renderer::get().setLayerPos(0, 0);
+                    ult::layerEdge = 0;
                 }
                 //triggerMenuReload2 = firstState != state;
             //} else if (iniKey == "dynamic_logo") {
@@ -871,7 +873,7 @@ public:
                 {LOCAL_IP, "", getLocalIpAddress()}
             };
             nifmExit();
-            addTable(list, tableData, "", 163, 20, 28, 4);
+            addTable(list, tableData, "", 164, 20, 28, 4);
             
             // Hardware and storage info
             tableData = {
@@ -883,13 +885,13 @@ public:
                 {"└ eMMC ", "", getStorageInfo("emmc")},
                 {"└ SD Card", "", getStorageInfo("sdmc")}
             };
-            addTable(list, tableData, "", 163, 20, 30, 4);
+            addTable(list, tableData, "", 164, 20, 30, 4);
             
             // CPU, GPU, and SOC info
             tableData = {
                 {"", "", "CPU      GPU      SOC"}
             };
-            addTable(list, tableData, "", 162, 9, 3, 0, DEFAULT_STR, "section", "section", RIGHT_STR, true);
+            addTable(list, tableData, "", 163, 9, 3, 0, DEFAULT_STR, "section", "section", RIGHT_STR, true);
             
             tableData.clear();
             tableData.resize(2);
@@ -907,7 +909,7 @@ public:
                 tableData[0] = {"Speedo", "", "⋯    "+DIVIDER_SYMBOL+"    ⋯    "+DIVIDER_SYMBOL+"    ⋯  "};
                 tableData[1] = {"IDDQ", "", "⋯    "+DIVIDER_SYMBOL+"    ⋯    "+DIVIDER_SYMBOL+"    ⋯  "};
             }
-            addTable(list, tableData, "", 163, 20, -2, 4);
+            addTable(list, tableData, "", 164, 20, -2, 4);
             
             // The part that was moved to the end
             addHeader(list, COMMANDS);
@@ -936,7 +938,7 @@ public:
             tableData = {
                 {NOTICE, "", UTILIZES + " 2 MB (" + ramString + ")"}
             };
-            addTable(list, tableData, "", 163, 8, 7, 0, DEFAULT_STR, DEFAULT_STR, ramColor, RIGHT_STR, true);
+            addTable(list, tableData, "", 164, 8, 7, 0, DEFAULT_STR, DEFAULT_STR, ramColor, RIGHT_STR, true);
             // Memory expansion toggle
             useMemoryExpansion = (ult::expandedMemory || 
                                   parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "memory_expansion") == TRUE_STR);
@@ -946,7 +948,7 @@ public:
             tableData = {
                 {"", "", REBOOT_REQUIRED}  // Direct reuse without reallocation
             };
-            addTable(list, tableData, "", 163, 28, 0, 0, DEFAULT_STR, DEFAULT_STR, DEFAULT_STR, RIGHT_STR, true);
+            addTable(list, tableData, "", 164, 28, 0, 0, DEFAULT_STR, DEFAULT_STR, DEFAULT_STR, RIGHT_STR, true);
         
         } else if (dropdownSelection == "themeMenu") {
             addHeader(list, THEME);
@@ -1553,9 +1555,9 @@ public:
                     list->addItem(item);
                 }
             } else if (entryMode == PACKAGE_STR) {
-                auto* item = new tsl::elm::ListItem("Configure");
+                auto* item = new tsl::elm::ListItem("Options");
                 item->setValue(DROPDOWN_SYMBOL);
-                item->setClickListener(navClick(entryName, entryMode, title, version, "config", item));
+                item->setClickListener(navClick(entryName, entryMode, title, version, "options", item));
                 list->addItem(item);
             }
     
@@ -1596,8 +1598,8 @@ public:
                 }
             }
             
-        } else if (dropdownSelection == "config") {
-            addHeader(list, "Configure");
+        } else if (dropdownSelection == "options") {
+            addHeader(list, "Options");
             createAndAddToggleListItem(list, QUICK_LAUNCH, false, USE_QUICK_LAUNCH_STR, getValue(USE_QUICK_LAUNCH_STR), settingsIniPath, entryName);
             createAndAddToggleListItem(list, BOOT_COMMANDS, true, USE_BOOT_PACKAGE_STR, getValue(USE_BOOT_PACKAGE_STR), settingsIniPath, entryName);
             createAndAddToggleListItem(list, EXIT_COMMANDS, true, USE_EXIT_PACKAGE_STR, getValue(USE_EXIT_PACKAGE_STR), settingsIniPath, entryName);
@@ -2951,7 +2953,7 @@ public:
             addDummyListItem(list);
             auto* warning = new tsl::elm::CustomDrawer([](tsl::gfx::Renderer *renderer, u16 x, u16 y, u16 w, u16 h){
                 renderer->drawString("\uE150", false, 180, 274+50, 90, (tsl::defaultTextColor));
-                renderer->drawString("Selection is empty!", false, 110, 360+50, 25, (tsl::defaultTextColor));
+                renderer->drawString(SELECTION_IS_EMPTY, false, 110, 360+50, 25, (tsl::defaultTextColor));
             });
             list->addItem(warning);
             noClickableItems = true;
@@ -3708,7 +3710,7 @@ bool drawCommandsMenu(
         useHeaderIndent = false;
         tableStartGap = 20;
         tableEndGap = 9;
-        tableColumnOffset = 163;
+        tableColumnOffset = 164;
         tableSpacing = 0;
         tableSectionTextColor = DEFAULT_STR;
         tableInfoTextColor = DEFAULT_STR;
@@ -4278,7 +4280,7 @@ bool drawCommandsMenu(
             if (!skipSection && !skipSystem) { // for skipping the drawing of sections
                 if (commandMode == TABLE_STR) {
                     if (useHeaderIndent) {
-                        tableColumnOffset = 165+2;
+                        tableColumnOffset = 164;
                         tableStartGap = tableEndGap = 19-2; // for perfect alignment for header tables
                         isScrollableTable = false;
                         lastPackageHeader = getFirstSectionText(tableData, packagePath);
