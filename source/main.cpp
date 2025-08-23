@@ -1447,9 +1447,8 @@ public:
         };
         addTable(list, tableData, "", 165, 0, 10, 0, DEFAULT_STR, DEFAULT_STR, DEFAULT_STR, RIGHT_STR, true, false, false, true, "none", false);
 
-        const std::string deleteText = "Hold \uE0E0 to Delete";
-        deleteListItem = new tsl::elm::ListItem(deleteText);
-        deleteListItem->setValue("");
+        deleteListItem = new tsl::elm::ListItem("Hold \uE0E0 to Delete");
+        //deleteListItem->setValue("");
         
         deleteListItem->setClickListener([this](uint64_t keys) -> bool {
             if (runningInterpreter.load(std::memory_order_acquire))
@@ -1578,42 +1577,16 @@ public:
                     list->addItem(listItem);
                 }
             } else if (entryMode == PACKAGE_STR) {
-                createAndAddToggleListItem(
-                    list,
-                    QUICK_LAUNCH,
-                    false,
-                    USE_QUICK_LAUNCH_STR,
-                    getSettingsValue(USE_QUICK_LAUNCH_STR),
-                    settingsIniPath,
-                    entryName
-                );
-                createAndAddToggleListItem(
-                    list,
-                    BOOT_COMMANDS,
-                    true,
-                    USE_BOOT_PACKAGE_STR,
-                    getSettingsValue(USE_BOOT_PACKAGE_STR),
-                    settingsIniPath,
-                    entryName
-                );
-                createAndAddToggleListItem(
-                    list,
-                    EXIT_COMMANDS,
-                    true,
-                    USE_EXIT_PACKAGE_STR,
-                    getSettingsValue(USE_EXIT_PACKAGE_STR),
-                    settingsIniPath,
-                    entryName
-                );
-                createAndAddToggleListItem(
-                    list,
-                    ERROR_LOGGING,
-                    false,
-                    USE_LOGGING_STR,
-                    getSettingsValue(USE_LOGGING_STR),
-                    settingsIniPath,
-                    entryName
-                );
+                auto* listItem = new tsl::elm::ListItem("Configure");
+                listItem->setValue(DROPDOWN_SYMBOL);
+                listItem->setClickListener([entryName=entryName, entryMode=entryMode, packageTitle=title, packageVersion=version](uint64_t keys) {
+                    if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
+                        tsl::changeTo<SettingsMenu>(entryName, entryMode, packageTitle, packageVersion, "configure");
+                        return true;
+                    }
+                    return false;
+                });
+                list->addItem(listItem);
             }
             if (!hideDelete)
                 addDeleteItem(list);
@@ -1688,6 +1661,45 @@ public:
                 }
             }
 
+        } else if (dropdownSelection == "configure") {
+            //addHeader(list, "Configure"+std::string(" ")+DIVIDER_SYMBOL+std::string(" ") + header);
+            addHeader(list, "Configure");
+            createAndAddToggleListItem(
+                list,
+                QUICK_LAUNCH,
+                false,
+                USE_QUICK_LAUNCH_STR,
+                getSettingsValue(USE_QUICK_LAUNCH_STR),
+                settingsIniPath,
+                entryName
+            );
+            createAndAddToggleListItem(
+                list,
+                BOOT_COMMANDS,
+                true,
+                USE_BOOT_PACKAGE_STR,
+                getSettingsValue(USE_BOOT_PACKAGE_STR),
+                settingsIniPath,
+                entryName
+            );
+            createAndAddToggleListItem(
+                list,
+                EXIT_COMMANDS,
+                true,
+                USE_EXIT_PACKAGE_STR,
+                getSettingsValue(USE_EXIT_PACKAGE_STR),
+                settingsIniPath,
+                entryName
+            );
+            createAndAddToggleListItem(
+                list,
+                ERROR_LOGGING,
+                false,
+                USE_LOGGING_STR,
+                getSettingsValue(USE_LOGGING_STR),
+                settingsIniPath,
+                entryName
+            );
         } else if (dropdownSelection == PRIORITY_STR) {
             addHeader(list, SORT_PRIORITY);
             const std::string priorityValue = getSettingsValue(PRIORITY_STR);
@@ -5879,7 +5891,7 @@ public:
             inPackagesPage.store(false, std::memory_order_release);
             //closeInterpreterThread();
     
-            addHeader(list, (!inHiddenMode ? OVERLAYS : HIDDEN_OVERLAYS)+" "+DIVIDER_SYMBOL+" \uE0E3  "+SETTINGS+" "+DIVIDER_SYMBOL+" \uE0E2  Star");
+            addHeader(list, (!inHiddenMode ? OVERLAYS : HIDDEN_OVERLAYS)+" "+DIVIDER_SYMBOL+" \uE0E3 "+SETTINGS+" "+DIVIDER_SYMBOL+" \uE0E2 Star");
             
             
             // Load overlay files
@@ -6447,7 +6459,7 @@ public:
                 bool firstItem = true;
                 for (const auto& taintedPackageName : packageSet) {
                     if (firstItem) {
-                        addHeader(list, (!inHiddenMode ? PACKAGES : HIDDEN_PACKAGES)+" "+DIVIDER_SYMBOL+" \uE0E3  "+SETTINGS+" "+DIVIDER_SYMBOL+" \uE0E2  Star");
+                        addHeader(list, (!inHiddenMode ? PACKAGES : HIDDEN_PACKAGES)+" "+DIVIDER_SYMBOL+" \uE0E3 "+SETTINGS+" "+DIVIDER_SYMBOL+" \uE0E2 Star");
                         firstItem = false;
                     }
                     
