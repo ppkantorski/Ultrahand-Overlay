@@ -1290,6 +1290,15 @@ std::string getFirstSectionText(const std::vector<std::vector<std::string>>& tab
     return "";  // Or return a default message if appropriate
 }
 
+
+void addGap(tsl::elm::List* list, s32 gapHeight) {
+    list->addItem(new tsl::elm::CustomDrawer(
+        [](tsl::gfx::Renderer* renderer, s32 x, s32 y, s32 w, s32 h) {
+            // Empty drawer - just creates space
+        }
+    ), gapHeight);
+}
+
 std::vector<std::string> wrapText(const std::string& text, float maxWidth, const std::string& wrappingMode, bool useIndent, const std::string& indent, float indentWidth, size_t fontSize) {
     if (wrappingMode == "none" || (wrappingMode != "char" && wrappingMode != "word")) {
         return std::vector<std::string>{text};  // Return the entire text as a single line
@@ -3349,13 +3358,7 @@ bool applyPlaceholderReplacementsToCommands(std::vector<std::vector<std::string>
 }
 
 
-/**
- * @brief Interpret and execute a list of commands.
- *
- * This function interprets and executes a list of commands based on their names and arguments.
- *
- * @param commands A list of commands, where each command is represented as a vector of strings.
- */
+
 /**
  * @brief Interpret and execute a list of commands.
  *
