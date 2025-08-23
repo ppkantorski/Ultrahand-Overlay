@@ -5735,7 +5735,7 @@ public:
             inPackagesPage.store(false, std::memory_order_release);
             //closeInterpreterThread();
     
-            addHeader(list, (!inHiddenMode ? OVERLAYS : HIDDEN_OVERLAYS)+" "+DIVIDER_SYMBOL+" \uE0E3 "+SETTINGS+" "+DIVIDER_SYMBOL+" \uE0E2 Star");
+            addHeader(list, (!inHiddenMode ? OVERLAYS : HIDDEN_OVERLAYS)+" "+DIVIDER_SYMBOL+" \uE0E3 "+SETTINGS+" "+DIVIDER_SYMBOL+" \uE0E2 Favorite");
             
             
             // Load overlay files
@@ -6303,7 +6303,7 @@ public:
                 bool firstItem = true;
                 for (const auto& taintedPackageName : packageSet) {
                     if (firstItem) {
-                        addHeader(list, (!inHiddenMode ? PACKAGES : HIDDEN_PACKAGES)+" "+DIVIDER_SYMBOL+" \uE0E3 "+SETTINGS+" "+DIVIDER_SYMBOL+" \uE0E2 Star");
+                        addHeader(list, (!inHiddenMode ? PACKAGES : HIDDEN_PACKAGES)+" "+DIVIDER_SYMBOL+" \uE0E3 "+SETTINGS+" "+DIVIDER_SYMBOL+" \uE0E2 Favorite");
                         firstItem = false;
                     }
                     
