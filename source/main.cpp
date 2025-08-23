@@ -136,7 +136,8 @@ static std::string lastMenu = "";
 static std::string lastMenuMode = "";
 static std::string lastKeyName = "";
 static bool hideUserGuide = false;
-//static bool hideHidden = false;
+//static bool hideHidden = false; // moved to tesla.hpp
+static bool hideDelete = false;
 
 static std::string lastCommandMode;
 
@@ -615,7 +616,7 @@ private:
             if (iniKey == "clean_version_labels" || iniKey == "hide_overlay_versions" || iniKey == "hide_package_versions" ||
                 iniKey == "selection_bg" || iniKey == "selection_text" || iniKey == "selection_value" ||
                 iniKey == "libultrahand_versions" || iniKey == "libultrahand_titles" || iniKey == "package_titles" || iniKey == "package_versions"||
-                iniKey == "page_swap" || iniKey == "hide_hidden") {
+                iniKey == "page_swap" || iniKey == "hide_hidden" || iniKey == "hide_user_guide") {
                 
                 if (iniKey == "page_swap")
                     triggerMenuReload = firstState != state;
@@ -1161,6 +1162,8 @@ public:
             createToggleListItem(list, USER_GUIDE, hideUserGuide, "hide_user_guide", true);
             hideHidden = getBoolValue("hide_hidden", false); // FALSE_STR default
             createToggleListItem(list, SHOW_HIDDEN, hideHidden, "hide_hidden", true);
+            hideDelete = getBoolValue("hide_delete", false); // FALSE_STR default
+            createToggleListItem(list, "Show Delete", hideDelete, "hide_delete", true);
             usePageSwap = getBoolValue("page_swap", false); // FALSE_STR default
             createToggleListItem(list, PAGE_SWAP, usePageSwap, "page_swap");
             rightAlignmentState = useRightAlignment = getBoolValue("right_alignment"); // FALSE_STR default
@@ -1346,7 +1349,11 @@ private:
     int MAX_PRIORITY = 20;
 
     std::string modeTitle;
-    
+
+    u64 holdStartTick;
+    bool isHolding = false;
+    tsl::elm::ListItem* deleteListItem = nullptr;
+    bool deleteItemFocused = false;
 
 public:
     SettingsMenu(const std::string& name, const std::string& mode, const std::string& title = "", const std::string& version = "", const std::string& selection = "")
@@ -1432,6 +1439,39 @@ public:
         });
 
         list->addItem(listItem);
+    }
+    
+    void addDeleteItem(tsl::elm::List* list) {
+        static const std::vector<std::vector<std::string>> tableData = {
+            {"", "", ""}
+        };
+        addTable(list, tableData, "", 165, 0, 10, 0, DEFAULT_STR, DEFAULT_STR, DEFAULT_STR, RIGHT_STR, true, false, false, true, "none", false);
+
+        const std::string deleteText = "Hold \uE0E0 to Delete";
+        deleteListItem = new tsl::elm::ListItem(deleteText);
+        deleteListItem->setValue("");
+        
+        deleteListItem->setClickListener([this](uint64_t keys) -> bool {
+            if (runningInterpreter.load(std::memory_order_acquire))
+                return false;
+    
+            // Start holding when A key is first pressed
+            if ((keys & KEY_A) && !(keys & ~KEY_A & ALL_KEYS_MASK)) {
+                if (!isHolding) {
+                    isHolding = true;
+                    runningInterpreter.store(true, release);
+                    deleteListItem->setValue(INPROGRESS_SYMBOL);
+                    holdStartTick = armGetSystemTick();
+                    displayPercentage.store(1, std::memory_order_release);
+                }
+                return true;
+            }
+            
+            return false;
+        });
+        deleteListItem->disableClickAnimation();
+        
+        list->addItem(deleteListItem);
     }
     
     virtual tsl::elm::Element* createUI() override {
@@ -1575,6 +1615,8 @@ public:
                     entryName
                 );
             }
+            if (!hideDelete)
+                addDeleteItem(list);
         } else if (dropdownSelection == MODE_STR) {
             const std::string argStr = getSettingsValue("mode_args");
             const std::string comboStr = getSettingsValue("mode_combos");
@@ -1905,25 +1947,130 @@ public:
      */
     virtual bool handleInput(u64 keysDown, u64 keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
         
-        const bool isRunningInterp = runningInterpreter.load(acquire);
-        
-        if (isRunningInterp) {
-            return handleRunningInterpreter(keysDown, keysHeld);
-        }
-        
-        if (lastRunningInterpreter.load(acquire)) {
-            isDownloadCommand.store(false, release);
-            if (lastSelectedListItem)
-                lastSelectedListItem->setValue(commandSuccess.load(acquire) ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
-            closeInterpreterThread();
-            lastRunningInterpreter.store(false, std::memory_order_release);
-            return true;
-        }
+        //const bool isRunningInterp = runningInterpreter.load(acquire);
+        //
+        //if (isRunningInterp) {
+        //    return handleRunningInterpreter(keysDown, keysHeld);
+        //}
+        //
+        //if (lastRunningInterpreter.load(acquire)) {
+        //    isDownloadCommand.store(false, release);
+        //    if (lastSelectedListItem)
+        //        lastSelectedListItem->setValue(commandSuccess.load(acquire) ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
+        //    closeInterpreterThread();
+        //    lastRunningInterpreter.store(false, std::memory_order_release);
+        //    return true;
+        //}
         
         if (goBackAfter.load(acquire)) {
             goBackAfter.store(false, std::memory_order_release);
             simulatedBack.store(true, release);
             return true;
+        }
+
+        static bool runAfter = false;
+        if (runAfter) {
+            runAfter = false;
+            // Reset navigation state properly
+            inSettingsMenu = false;
+            inSubSettingsMenu = false;
+            
+            // Clear the current selection
+            //g_overlayFilename = "";
+            //entryName = "";
+            
+            // Determine return destination
+            if (lastMenu != "hiddenMenuMode")
+                returningToMain = true;
+            else
+                returningToHiddenMain = true;
+            
+            // Determine pop count and hidden mode settings
+            int popCount;
+            if (lastMenu == "hiddenMenuMode") {
+                popCount = 3;
+                inMainMenu.store(false, std::memory_order_release);
+                inHiddenMode = true;
+                if (entryMode == OVERLAY_STR)
+                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_OVERLAY_STR, TRUE_STR);
+                else
+                    popCount = 2;
+            } else {
+                popCount = 2;
+            }
+            
+            runningInterpreter.store(false, release);
+            jumpItemName = rootTitle;
+            jumpItemValue = rootVersion;
+            g_overlayFilename = "";
+            jumpItemExactMatch.store(false, release);
+            skipJumpReset.store(true, release);
+            
+            tsl::swapTo<MainMenu>(SwapDepth(popCount), lastMenuMode);
+            return true;
+        }
+
+        // Handle delete item continuous hold behavior
+        if (isHolding && deleteListItem) {
+            // Check if A key is still being held
+            if ((keysHeld & KEY_A) && !(keysHeld & ~KEY_A & ALL_KEYS_MASK)) {
+                // Update progress continuously using libnx timing
+                const u64 currentTick = armGetSystemTick();
+                const u64 elapsedTicks = currentTick - holdStartTick;
+                const u64 elapsedNs = armTicksToNs(elapsedTicks);
+                const u64 elapsedMs = elapsedNs / 1000000; // Convert nanoseconds to milliseconds
+                const int percentage = std::min(100, static_cast<int>((elapsedMs / 5000.0) * 100));
+                displayPercentage.store(percentage, std::memory_order_release);
+                
+                // Check if we've reached 100%
+                if (percentage >= 100) {
+                    isHolding = false;
+                    displayPercentage.store(0, std::memory_order_release);
+                    
+                    // Determine what to delete based on current menu context
+                    std::string targetPath;
+                    bool hasTarget = false;
+                    
+                    // Check if we're in settings menu with an overlay selected
+                    if (!entryName.empty() && entryMode == OVERLAY_STR) {
+                        // Delete overlay file
+                        targetPath = "/switch/.overlays/" + entryName;
+                        hasTarget = true;
+                    } else if (!entryName.empty()) {
+                        // Delete package folder
+                        targetPath = "/switch/.packages/" + entryName + "/";
+                        hasTarget = true;
+                    }
+                    
+                    if (hasTarget) {
+                        // Perform the deletion
+                        deleteFileOrDirectory(targetPath);
+
+                        // Remove ini settings
+                        removeIniSection(settingsIniPath, entryName);
+                        
+                        // Show completion
+                        deleteListItem->triggerClickAnimation();
+                        deleteListItem->setValue(CHECKMARK_SYMBOL);
+                        
+                        runAfter = true; // perform transition after
+                    } else {
+                        // No valid target found
+                        deleteListItem->setValue(CROSSMARK_SYMBOL);
+                    }
+                    
+                    return true;
+                }
+                
+                return true; // Continue holding
+            } else {
+                // Key released - reset everything
+                isHolding = false;
+                displayPercentage.store(0, std::memory_order_release);
+                runningInterpreter.store(false, release);
+                deleteListItem->setValue("");
+                return true;
+            }
         }
 
 
@@ -2946,7 +3093,7 @@ public:
             //list->addItem(listItem);
 
             addDummyListItem(list);
-            auto warning = new tsl::elm::CustomDrawer([](tsl::gfx::Renderer *renderer, u16 x, u16 y, u16 w, u16 h){
+            auto* warning = new tsl::elm::CustomDrawer([](tsl::gfx::Renderer *renderer, u16 x, u16 y, u16 w, u16 h){
                 renderer->drawString("\uE150", false, 180, 274+50, 90, (tsl::defaultTextColor));
                 renderer->drawString("Selection is empty!", false, 110, 360+50, 25, (tsl::defaultTextColor));
             });
@@ -5732,7 +5879,7 @@ public:
             inPackagesPage.store(false, std::memory_order_release);
             //closeInterpreterThread();
     
-            addHeader(list, (!inHiddenMode ? OVERLAYS : HIDDEN_OVERLAYS)+" "+DIVIDER_SYMBOL+" \uE0E3 "+SETTINGS+" "+DIVIDER_SYMBOL+" \uE0E2 Star");
+            addHeader(list, (!inHiddenMode ? OVERLAYS : HIDDEN_OVERLAYS)+" "+DIVIDER_SYMBOL+" \uE0E3  "+SETTINGS+" "+DIVIDER_SYMBOL+" \uE0E2  Star");
             
             
             // Load overlay files
@@ -6300,7 +6447,7 @@ public:
                 bool firstItem = true;
                 for (const auto& taintedPackageName : packageSet) {
                     if (firstItem) {
-                        addHeader(list, (!inHiddenMode ? PACKAGES : HIDDEN_PACKAGES)+" "+DIVIDER_SYMBOL+" \uE0E3 "+SETTINGS+" "+DIVIDER_SYMBOL+" \uE0E2 Star");
+                        addHeader(list, (!inHiddenMode ? PACKAGES : HIDDEN_PACKAGES)+" "+DIVIDER_SYMBOL+" \uE0E3  "+SETTINGS+" "+DIVIDER_SYMBOL+" \uE0E2  Star");
                         firstItem = false;
                     }
                     
@@ -6903,6 +7050,7 @@ void initializeSettingsAndDirectories() {
     // Set default values for various settings (works for both existing and new files)
     setDefaultValue("hide_user_guide", FALSE_STR, hideUserGuide);
     setDefaultValue("hide_hidden", FALSE_STR, hideHidden);
+    setDefaultValue("hide_delete", FALSE_STR, hideDelete);
     setDefaultValue("clean_version_labels", FALSE_STR, cleanVersionLabels);
     setDefaultValue("hide_overlay_versions", FALSE_STR, hideOverlayVersions);
     setDefaultValue("hide_package_versions", FALSE_STR, hidePackageVersions);
