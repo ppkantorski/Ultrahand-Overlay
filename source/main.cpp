@@ -584,6 +584,7 @@ private:
 
                 runningInterpreter.store(true, release);
                 executeInterpreterCommands(std::move(interpreterCommands), "", "");
+                listItem->disableClickAnimation();
                 //startInterpreterThread();
 
                 listItem->setValue(INPROGRESS_SYMBOL);
@@ -1243,8 +1244,10 @@ public:
         
         if (lastRunningInterpreter.load(acquire)) {
             isDownloadCommand.store(false, release);
-            if (lastSelectedListItem)
+            if (lastSelectedListItem) {
                 lastSelectedListItem->setValue(commandSuccess.load(acquire) ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
+                lastSelectedListItem->enableClickAnimation();
+            }
             closeInterpreterThread();
             lastRunningInterpreter.store(false, std::memory_order_release);
             return true;
@@ -2158,6 +2161,7 @@ private:
                 commandParts.shrink_to_fit();
 
                 executeInterpreterCommands(std::move(commandVec), filePath, specificKey);
+                listItem->disableClickAnimation();
                 //startInterpreterThread();
                 listItem->setValue(INPROGRESS_SYMBOL);
 
@@ -2319,8 +2323,10 @@ public:
         
         if (lastRunningInterpreter.load(acquire)) {
             isDownloadCommand.store(false, release);
-            if (lastSelectedListItem)
+            if (lastSelectedListItem) {
                 lastSelectedListItem->setValue(commandSuccess.load(acquire) ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
+                lastSelectedListItem->enableClickAnimation();
+            }
             closeInterpreterThread();
             lastRunningInterpreter.store(false, std::memory_order_release);
             return true;
@@ -3172,6 +3178,7 @@ public:
                         runningInterpreter.store(true, release);
     
                         executeInterpreterCommands(getSourceReplacement(selectionCommands, selectedItem, i, filePath), filePath, specificKey);
+                        listItem->disableClickAnimation();
                         //startInterpreterThread(filePath);
     
                         listItem->setValue(INPROGRESS_SYMBOL);
@@ -3373,8 +3380,10 @@ public:
         
         if (lastRunningInterpreter.load(acquire)) {
             isDownloadCommand.store(false, release);
-            if (lastSelectedListItem)
+            if (lastSelectedListItem) {
                 lastSelectedListItem->setValue(commandSuccess.load(acquire) ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
+                lastSelectedListItem->enableClickAnimation();
+            }
             closeInterpreterThread();
             lastRunningInterpreter.store(false, std::memory_order_release);
             return true;
@@ -4817,6 +4826,7 @@ bool drawCommandsMenu(
                                 runningInterpreter.store(true, release);
                                 executeInterpreterCommands(getSourceReplacement(commands, selectedItem, i, packagePath), packagePath, keyName);
                                 //startInterpreterThread(packagePath);
+                                listItem->disableClickAnimation();
                                 listItem->setValue(INPROGRESS_SYMBOL);
                                 
                                 //lastSelectedListItem = nullptr;
@@ -5180,6 +5190,8 @@ public:
                 }
                 else
                     lastSelectedListItem->setValue(commandSuccess ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
+
+                lastSelectedListItem->enableClickAnimation();
             }
     
             closeInterpreterThread();
@@ -6581,6 +6593,8 @@ public:
                 }
                 else
                     lastSelectedListItem->setValue(commandSuccess.load(acquire) ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
+                
+                lastSelectedListItem->enableClickAnimation();
             }
     
             closeInterpreterThread();
