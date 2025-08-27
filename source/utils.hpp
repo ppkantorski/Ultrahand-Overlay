@@ -1754,14 +1754,14 @@ void addHelpInfo(tsl::elm::List* list) {
 void addPackageInfo(tsl::elm::List* list, auto& packageHeader, std::string type = PACKAGE_STR) {
     // Add a section break with small text to indicate the "Commands" section
     addHeader(list, (type == PACKAGE_STR ? PACKAGE_INFO : OVERLAY_INFO));
-
+    
     const int maxLineLength = 28;  // Adjust the maximum line length as needed
     const int xOffset = 120;    // Adjust the horizontal offset as needed
     //int numEntries = 0;   // Count of the number of entries
-
+    
     std::vector<std::string> sectionLines;
     std::vector<std::string> infoLines;
-
+    
     // Helper function to add text with wrapping
     auto addWrappedText = [&](const std::string& header, const std::string& text) {
         sectionLines.push_back(header);

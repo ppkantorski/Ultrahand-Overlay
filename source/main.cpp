@@ -668,6 +668,17 @@ private:
             //    useLaunchCombos = !useLaunchCombos;
             //} else if (iniKey == "opaque_screenshots") {
             //    useOpaqueScreenshots = !useOpaqueScreenshots;
+            } else if (iniKey == "notifications") {
+                if (!state) {
+                    if (!ult::isFile(NOTIFICATIONS_FLAG_FILEPATH)) {
+                        FILE* file = std::fopen((NOTIFICATIONS_FLAG_FILEPATH).c_str(), "w");
+                        if (file) {
+                            std::fclose(file);
+                        }
+                    }
+                } else {
+                    deleteFileOrDirectory(NOTIFICATIONS_FLAG_FILEPATH);
+                }
             }
 
             state = !state;
@@ -1136,6 +1147,8 @@ public:
             addHeader(list, FEATURES);
             useLaunchCombos = getBoolValue("launch_combos", true); // TRUE_STR default
             createToggleListItem(list, LAUNCH_COMBOS, useLaunchCombos, "launch_combos");
+            useNotifications = getBoolValue("notifications", true); // TRUE_STR default
+            createToggleListItem(list, "Notifications", useNotifications, "notifications");
             useOpaqueScreenshots = getBoolValue("opaque_screenshots", true); // TRUE_STR default
             createToggleListItem(list, OPAQUE_SCREENSHOTS, useOpaqueScreenshots, "opaque_screenshots");
             useSwipeToOpen = getBoolValue("swipe_to_open", true); // TRUE_STR default
@@ -6941,6 +6954,7 @@ void initializeSettingsAndDirectories() {
     setDefaultValue("package_versions", TRUE_STR, usePackageVersions);
     setDefaultValue("memory_expansion", FALSE_STR, useMemoryExpansion);
     setDefaultValue("launch_combos", TRUE_STR, useLaunchCombos);
+    setDefaultValue("notifications", TRUE_STR, useNotifications);
     setDefaultValue("page_swap", FALSE_STR, usePageSwap);
     setDefaultValue("swipe_to_open", TRUE_STR, useSwipeToOpen);
     setDefaultValue("right_alignment", FALSE_STR, useRightAlignment);
@@ -7019,6 +7033,15 @@ void initializeSettingsAndDirectories() {
     if (needsUpdate) {
         saveIniFileData(ULTRAHAND_CONFIG_INI_PATH, iniData);
     }
+
+    if (useNotifications && !isFile(NOTIFICATIONS_FLAG_FILEPATH)) {
+        FILE* file = std::fopen((NOTIFICATIONS_FLAG_FILEPATH).c_str(), "w");
+        if (file) {
+            std::fclose(file);
+        }
+    } else {
+        deleteFileOrDirectory(NOTIFICATIONS_FLAG_FILEPATH);
+    }
     
     // Load language file
     const std::string langFile = LANG_PATH + defaultLang + ".json";
@@ -7077,7 +7100,7 @@ public:
             // initialize expanded memory on boot
             setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "memory_expansion", (loaderTitle == "nx-ovlloader+") ? TRUE_STR : FALSE_STR);
 
-            tsl::gPrompt.show("Ultrahand has started.");
+            tsl::notification.show("Ultrahand has started.");
             
         }
         
