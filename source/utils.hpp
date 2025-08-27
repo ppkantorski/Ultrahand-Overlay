@@ -1754,14 +1754,14 @@ void addHelpInfo(tsl::elm::List* list) {
 void addPackageInfo(tsl::elm::List* list, auto& packageHeader, std::string type = PACKAGE_STR) {
     // Add a section break with small text to indicate the "Commands" section
     addHeader(list, (type == PACKAGE_STR ? PACKAGE_INFO : OVERLAY_INFO));
-    
+
     const int maxLineLength = 28;  // Adjust the maximum line length as needed
     const int xOffset = 120;    // Adjust the horizontal offset as needed
     //int numEntries = 0;   // Count of the number of entries
-    
+
     std::vector<std::string> sectionLines;
     std::vector<std::string> infoLines;
-    
+
     // Helper function to add text with wrapping
     auto addWrappedText = [&](const std::string& header, const std::string& text) {
         sectionLines.push_back(header);
@@ -4636,6 +4636,12 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
         }
     } else if (commandName == "logging") {
         interpreterLogging.store(true, std::memory_order_release);
+    } else if (commandName == "notification" || commandName == "notify") {
+        if (cmd.size() > 1) {
+            std::string text = cmd[1];
+            removeQuotes(text);
+            tsl::notification.show(text);
+        }
     } else if (commandName == "clear") {
         if (cmd.size() >= 2) {
             std::string clearOption = cmd[1];
