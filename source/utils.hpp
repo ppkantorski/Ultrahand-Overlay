@@ -2290,7 +2290,8 @@ std::string replaceJsonPlaceholder(const std::string& arg, const std::string& co
             result.append(value->valuestring); // Append replacement value
         } else {
             // If replacement failed, keep the original placeholder
-            result.append(arg, startPos, endPos + 2 - startPos);
+            //result.append(arg, startPos, endPos + 2 - startPos);
+            result.append(NULL_STR);
         }
         
         lastPos = endPos + 2;

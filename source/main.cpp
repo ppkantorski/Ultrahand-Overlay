@@ -2957,7 +2957,7 @@ public:
             //list->addItem(listItem);
 
             addDummyListItem(list);
-            auto* warning = new tsl::elm::CustomDrawer([](tsl::gfx::Renderer *renderer, u16 x, u16 y, u16 w, u16 h){
+            auto* warning = new tsl::elm::CustomDrawer([](tsl::gfx::Renderer* renderer, u16 x, u16 y, u16 w, u16 h){
                 renderer->drawString("\uE150", false, 180, 274+50, 90, (tsl::defaultTextColor));
                 renderer->drawString(SELECTION_IS_EMPTY, false, 110, 360+50, 25, (tsl::defaultTextColor));
             });
@@ -5096,6 +5096,8 @@ public:
 
             if (!packageHeader.title.empty() && packageRootLayerTitle.empty())
                 packageRootLayerTitle = packageHeader.title;
+            if (!packageHeader.display_title.empty())
+                packageRootLayerTitle = packageHeader.display_title;
             if (!packageHeader.version.empty() && packageRootLayerVersion.empty())
                 packageRootLayerVersion = packageHeader.version;
             if (!packageHeader.color.empty() && packageRootLayerColor.empty())
@@ -5103,6 +5105,8 @@ public:
         }
         if (packageHeader.title.empty() || overrideTitle)
             packageHeader.title = packageRootLayerTitle;
+        if (!packageHeader.display_title.empty() || overrideTitle)
+            packageHeader.display_title = packageRootLayerTitle;
         if (packageHeader.version.empty() || overrideVersion)
             packageHeader.version = packageRootLayerVersion;
         if (packageHeader.color.empty())
@@ -5545,8 +5549,8 @@ public:
         // Fallback for lost navigations
         if (backKeyPressed) {
             if (!selectedPackage.empty()) {
-                tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
                 exitingUltrahand.store(true, release);
+                tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
                 tsl::Overlay::get()->close();
                 return true;
             }
@@ -6759,8 +6763,8 @@ public:
                         allowSlide.store(false, release);
                     if (unlockedSlide.load(acquire))
                         unlockedSlide.store(false, release);
-                    tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
                     exitingUltrahand.store(true, release);
+                    tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
                     tsl::Overlay::get()->close();
                     return true;
                 }
@@ -7072,6 +7076,9 @@ public:
 
             // initialize expanded memory on boot
             setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "memory_expansion", (loaderTitle == "nx-ovlloader+") ? TRUE_STR : FALSE_STR);
+
+            tsl::gPrompt.show("Ultrahand has started.");
+            
         }
         
         unpackDeviceInfo();
