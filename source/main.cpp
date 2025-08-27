@@ -645,7 +645,8 @@ private:
                         {"del", EXPANSION_PATH + (actualState ? "nx-ovlloader+/" : "nx-ovlloader/")},
                         {"unzip", EXPANSION_PATH + (actualState ? "nx-ovlloader+.zip" : "nx-ovlloader.zip"),
                          EXPANSION_PATH + (actualState ? "nx-ovlloader+/" : "nx-ovlloader/")},
-                        {"mv", EXPANSION_PATH + (actualState ? "nx-ovlloader+/" : "nx-ovlloader/"), "/"}
+                        {"mv", EXPANSION_PATH + (actualState ? "nx-ovlloader+/" : "nx-ovlloader/"), "/"},
+                        {"notify", "Reboot is required."}
                     });
                 }
             //} else if (iniKey == "hide_clock" || iniKey == "hide_soc_temp" || iniKey == "hide_pcb_temp" ||
@@ -6888,6 +6889,7 @@ void initializeSettingsAndDirectories() {
     createDirectory(PACKAGE_PATH);
     createDirectory(LANG_PATH);
     createDirectory(FLAGS_PATH);
+    createDirectory(NOTIFICATIONS_PATH);
     createDirectory(THEMES_PATH);
     createDirectory(WALLPAPERS_PATH);
     

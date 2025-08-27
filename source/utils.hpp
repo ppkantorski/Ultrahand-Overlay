@@ -621,6 +621,16 @@ const char* getMemoryType(uint64_t packed_version) {
         case 32: return "Micron_MT53E512M32D1NP-046 WT:B_4 GB LPDDR4X 4266 Mbps";
         case 33: return "Micron_MT53E512M32D1NP-046 WT:B_4 GB LPDDR4X 4266 Mbps";
         case 34: return "Micron_MT53E512M32D1NP-046 WT:B_4 GB LPDDR4X 4266 Mbps";
+
+        case 16: return "Hynix_NMEM-DIE (Copper)_null";
+        case 35: return "null_H54G46CYRBX267_null";
+        case 36: return "Magnesium_MT53E512M32D1NP-046 WT:B_null";
+        case 37: return "Samsung_K4FBE3D4HM-GHCL_null";
+        case 38: return "Samsung_K4FBE3D4HM-GFCL_null";
+        case 39: return "Samsung_K4FBE3D4HM-TFCL_null";
+        case 40: return "Samsung_K4FBE3D4HM-MGCJ_null";
+        case 41: return "Samsung_K4FBE3D4HM-THCL_null";
+        case 42: return "Samsung_K4FBE3D4HM-SGCL_null";
         default: return "";
     }
 }
@@ -4636,11 +4646,22 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
         }
     } else if (commandName == "logging") {
         interpreterLogging.store(true, std::memory_order_release);
-    } else if (commandName == "notification" || commandName == "notify") {
+    } else if (commandName == "notify" || commandName == "notification") {
         if (cmd.size() > 1) {
             std::string text = cmd[1];
             removeQuotes(text);
-            tsl::notification.show(text);
+            size_t fontSize = 28;
+            if (cmd.size() > 2) {
+                std::string fontSizeStr = cmd[2];
+                removeQuotes(fontSizeStr);
+                fontSize = std::stoi(fontSizeStr);
+
+                // Clamp font size to [1, 34]
+                if (fontSize < 1) fontSize = 1;
+                else if (fontSize > 34) fontSize = 34;
+
+            }
+            tsl::notification.show(text, fontSize);
         }
     } else if (commandName == "clear") {
         if (cmd.size() >= 2) {
