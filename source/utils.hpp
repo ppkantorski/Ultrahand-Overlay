@@ -4463,7 +4463,7 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
         exitingUltrahand.store(true, std::memory_order_release);
         //setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_OVERLAY_STR, TRUE_STR); // this is handled within tesla.hpp
         tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
-        tsl::Overlay::get()->close();
+        tsl::Overlay::get()->close(true);
         return;
     } else if (commandName == "back") {
         goBackAfter.store(true, std::memory_order_release);

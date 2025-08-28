@@ -6055,7 +6055,7 @@ public:
                                 else
                                     tsl::setNextOverlay(overlayFile);
                                 
-                                tsl::Overlay::get()->close();
+                                tsl::Overlay::get()->close(true);
                                 
                                 return true;
                             } else if (keys & STAR_KEY && !(keys & ~STAR_KEY & ALL_KEYS_MASK)) {
@@ -6779,9 +6779,16 @@ public:
                         allowSlide.store(false, release);
                     if (unlockedSlide.load(acquire))
                         unlockedSlide.store(false, release);
-                    exitingUltrahand.store(true, release);
-                    tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
-                    tsl::Overlay::get()->close();
+                    if (!tsl::notification.isActive()) {
+                        exitingUltrahand.store(true, release);
+                        tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
+                        tsl::Overlay::get()->close();
+                    } else {
+                        tsl::Overlay::get()->closeAfter();
+                        tsl::Overlay::get()->hide(true);
+                    }
+
+                    
                     return true;
                 }
     
