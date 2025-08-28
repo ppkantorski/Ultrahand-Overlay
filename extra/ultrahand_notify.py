@@ -3,9 +3,12 @@ import time
 import os
 from ftplib import FTP
 import sys
+from prompt_toolkit import PromptSession
+from prompt_toolkit.history import FileHistory
+from prompt_toolkit.formatted_text import HTML
 
 # --- Global FTP credentials ---
-FTP_HOST = "192.168.1.101"
+FTP_HOST = "192.168.6.101"
 FTP_PORT = 5000
 FTP_USERNAME = "root"
 FTP_PASSWORD = ""
@@ -52,20 +55,42 @@ def generate_and_upload_notify(text, font_size=28):
     ftp.quit()
     os.remove(local_file)
 
+def print_banner():
+    banner = r"""
+--------------------------------------------------------------------------------------
+  ▄• ▄▌▄▄▌  ▄▄▄▄▄▄▄▄   ▄▄▄·  ▄ .▄ ▄▄▄·  ▐ ▄ ·▄▄▄▄       ▐ ▄       ▄▄▄▄▄▪  ·▄▄▄ ▄· ▄▌
+  █▪██▌██•  •██  ▀▄ █·▐█ ▀█ ██▪▐█▐█ ▀█ •█▌▐███▪ ██     •█▌▐█▪     •██  ██ ▐▄▄·▐█▪██▌
+  █▌▐█▌██▪   ▐█.▪▐▀▀▄ ▄█▀▀█ ██▀▐█▄█▀▀█ ▐█▐▐▌▐█· ▐█▌    ▐█▐▐▌ ▄█▀▄  ▐█.▪▐█·██▪ ▐█▌▐█▪
+  ▐█▄█▌▐█▌▐▌ ▐█▌·▐█•█▌▐█ ▪▐▌██▌▐▀▐█ ▪▐▌██▐█▌██. ██     ██▐█▌▐█▌.▐▌ ▐█▌·▐█▌██▌. ▐█▀·.
+   ▀▀▀ .▀▀▀  ▀▀▀ .▀  ▀ ▀  ▀ ▀▀▀ · ▀  ▀ ▀▀ █▪▀▀▀▀▀•     ▀▀ █▪ ▀█▄▀▪ ▀▀▀ ▀▀▀▀▀▀   ▀ • 
+--------------------------------------------------------------------------------------
+"""
+    print(banner)
+
+
 # --- Interactive mode ---
 def interactive_mode():
+    os.system("clear; clear;")
+    print_banner()
+
     print("Entering interactive notification mode. Type 'quit' to exit.")
+
+    # Store history in a file next to script
+    history_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".notify_history")
+
+    # Create a prompt session with persistent history
+    session = PromptSession(history=FileHistory(history_file))
+
     while True:
-        text = input("Enter notification text: ")
-        if text.lower() in ["quit", "exit"]:
+        try:
+            # "notify" in purple + underlined, ">" plain
+            text = session.prompt(HTML('<ansimagenta><u>notify</u> > </ansimagenta>'))
+        except (EOFError, KeyboardInterrupt):
+            print("\nExiting interactive mode.")
             break
 
-        #font_size_input = input("Enter font size (1–34, default 28): ").strip()
-        #try:
-        #    font_size = int(font_size_input) if font_size_input else 28
-        #except ValueError:
-        #    print("Invalid font size. Using default 28.")
-        #    font_size = 28
+        if text.strip().lower() in ["quit", "exit"]:
+            break
 
         generate_and_upload_notify(text)
         print("Notification sent!\n")
