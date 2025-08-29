@@ -8,7 +8,7 @@ from prompt_toolkit.history import FileHistory
 from prompt_toolkit.formatted_text import HTML
 
 # --- Global FTP credentials ---
-FTP_HOST = "192.168.6.101"
+FTP_HOST = "192.168.1.101"
 FTP_PORT = 5000
 FTP_USERNAME = "root"
 FTP_PASSWORD = ""
@@ -33,7 +33,7 @@ def generate_and_upload_notify(text, font_size=28):
 
     notify_data = {
         "text": text,
-        "fontSize": font_size
+        "font_size": font_size
     }
 
     with open(local_file, "w") as f:
