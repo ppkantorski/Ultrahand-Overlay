@@ -1,14 +1,17 @@
 import json
 import time
 import os
+import platform
+
 from ftplib import FTP
 import sys
 from prompt_toolkit import PromptSession
 from prompt_toolkit.history import FileHistory
 from prompt_toolkit.formatted_text import HTML
+from prompt_toolkit.completion import WordCompleter
 
 # --- Global FTP credentials ---
-FTP_HOST = "192.168.1.101"
+FTP_HOST = "192.168.1.7"
 FTP_PORT = 5000
 FTP_USERNAME = "root"
 FTP_PASSWORD = ""
@@ -55,39 +58,55 @@ def generate_and_upload_notify(text, font_size=28):
     ftp.quit()
     os.remove(local_file)
 
+def clear_screen():
+    """
+    Clear the terminal screen in a cross-platform way.
+    Works on macOS, Linux, Windows, and a-Shell (iOS).
+    """
+    system_name = platform.system()
+    if system_name in ("Linux", "Darwin"):  # Darwin = macOS / a-Shell
+        os.system("clear")
+    elif system_name == "Windows":
+        os.system("cls")
+    else:
+        # fallback
+        print("\n" * 100)
+
 def print_banner():
-    banner = r"""
--------------------------------
-  ultrahand notify ¯\_(ツ)_/¯ 
-      *** *    **    R   R   
-   * *   *  **       X   X   
-  * *         *  *  *0   0*  
-      * *            1   1*  
-                    *2   2   
-   **         *      3   3   
-  *       *          4   4   
-         *  *        5*  5   
-             *  *    6  *6   
-                     7   7   
-       *         *  *8* *8   
-     *         *     9   9   
--------------------------------
+    banner = """
+  \033[37multra\033[31mhand\033[0m \033[35mnotify\033[0m \033[37m¯\\_(ツ)_/¯ \033[0m
+      \033[93m***\033[0m \033[93m*\033[0m    \033[93m**\033[0m    R    R   
+   \033[93m* \033[93m*\033[0m   \033[93m*  **\033[0m       X    X   
+  \033[93m* \033[93m*\033[0m         \033[93m*  \033[93m*  \033[93m*0\033[0m    0\033[93m*\033[0m  
+      \033[93m* \033[93m*\033[0m            1    1\033[93m*\033[0m  
+                    *2    2   
+   \033[93m**\033[0m         \033[93m* \033[0m     3    3   
+  \033[93m* \033[0m       \033[93m* \033[0m        4    4   
+         \033[93m*  \033[93m*\033[0m        5\033[93m*\033[0m   5   
+             \033[93m*  \033[93m*\033[0m    6   \033[93m*6\033[0m   
+                     7    7   
+       \033[93m* \033[0m         \033[93m*  \033[93m*8\033[0m  \033[93m*8\033[0m   
+     \033[93m* \033[0m         \033[93m* \033[0m   9    9   
 """
     print(banner)
 
 
 # --- Interactive mode ---
 def interactive_mode():
-    os.system("clear; clear;")
+    clear_screen()
     print_banner()
 
-    print("Entering interactive notification mode. Type 'quit' to exit.")
+    print("Entering interactive notification mode.\nType '/quit' to exit.")
 
     # Store history in a file next to script
     history_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".notify_history")
 
-    # Create a prompt session with persistent history
-    session = PromptSession(history=FileHistory(history_file))
+    # Built-in commands
+    commands = ["/quit", "/exit", "/clear"]
+    command_completer = WordCompleter(commands, ignore_case=True, match_middle=True)
+
+    # Create a prompt session with persistent history and autocomplete
+    session = PromptSession(history=FileHistory(history_file), completer=command_completer, complete_while_typing=True)
 
     while True:
         try:
@@ -97,11 +116,15 @@ def interactive_mode():
             print("\nExiting interactive mode.")
             break
 
-        if text.strip().lower() in ["quit", "exit"]:
+        cmd = text.strip().lower()
+        if cmd in ["/quit", "/exit"]:
             break
+        elif cmd == "/clear":
+            clear_screen()
+            continue
 
         generate_and_upload_notify(text)
-        print("Notification sent!\n")
+        print("Notification sent!")
 
 # --- Command line interface ---
 if __name__ == "__main__":
