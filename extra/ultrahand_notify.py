@@ -8,10 +8,10 @@ import sys
 from prompt_toolkit import PromptSession
 from prompt_toolkit.history import FileHistory
 from prompt_toolkit.formatted_text import HTML
-from prompt_toolkit.completion import WordCompleter
+from prompt_toolkit.completion import Completer, Completion, WordCompleter
 
 # --- Global FTP credentials ---
-FTP_HOST = "192.168.1.7"
+FTP_HOST = "192.168.1.107"
 FTP_PORT = 5000
 FTP_USERNAME = "root"
 FTP_PASSWORD = ""
@@ -20,15 +20,9 @@ REMOTE_PATH = "/config/ultrahand/notifications/"
 def generate_and_upload_notify(text, font_size=28):
     """
     Generates a notification JSON file with the given text and font size, then uploads it via FTP.
-
-    :param text: Notification text to display
-    :param font_size: Font size to use (default: 28)
     """
+    font_size = max(1, min(34, font_size))  # Clamp font size
 
-    # Clamp font size to 1–34
-    font_size = max(1, min(34, font_size))
-
-    # --- Generate local JSON file ---
     program_folder = os.path.dirname(os.path.abspath(__file__))
     timestamp = int(time.time())
     filename = f"ftp-{timestamp}.notify"
@@ -42,7 +36,6 @@ def generate_and_upload_notify(text, font_size=28):
     with open(local_file, "w") as f:
         json.dump(notify_data, f, indent=4)
 
-    # --- Upload via FTP ---
     ftp = FTP()
     ftp.connect(FTP_HOST, FTP_PORT)
     ftp.login(FTP_USERNAME, FTP_PASSWORD)
@@ -65,11 +58,10 @@ def clear_screen():
     """
     system_name = platform.system()
     if system_name in ("Linux", "Darwin"):  # Darwin = macOS / a-Shell
-        os.system("clear")
+        os.system("clear; clear")
     elif system_name == "Windows":
-        os.system("cls")
+        os.system("cls; cls")
     else:
-        # fallback
         print("\n" * 100)
 
 def print_banner():
@@ -90,43 +82,76 @@ def print_banner():
 """
     print(banner)
 
+def print_help():
+    print("""
+Available commands:
+  /help                Show this help message
+  /quit or /exit       Exit interactive mode
+  /clear               Clear the screen
+  /font_size N         Set font size (1–34)
+
+Just type any other text to send it as a notification.
+""")
+
 
 # --- Interactive mode ---
 def interactive_mode():
     clear_screen()
     print_banner()
+    print_help()
 
-    print("Entering interactive notification mode.\nType '/quit' to exit.")
-
-    # Store history in a file next to script
     history_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".notify_history")
 
-    # Built-in commands
-    commands = ["/quit", "/exit", "/clear"]
-    command_completer = WordCompleter(commands, ignore_case=True, match_middle=True)
+    commands = ["/quit", "/exit", "/clear", "/font_size", "/help"]
+    command_completer = WordCompleter(
+        commands,
+        ignore_case=True,
+        sentence=True,     # allow matching anywhere
+        #match_middle=True  # allow substring matching
+    )
 
-    # Create a prompt session with persistent history and autocomplete
-    session = PromptSession(history=FileHistory(history_file), completer=command_completer, complete_while_typing=True)
+    session = PromptSession(
+        history=FileHistory(history_file),
+        completer=command_completer,
+        complete_while_typing=True
+    )
+
+    current_font_size = 28
 
     while True:
         try:
-            # "notify" in purple + underlined, ">" plain
             text = session.prompt(HTML('<ansimagenta><u>notify</u> > </ansimagenta>'))
         except (EOFError, KeyboardInterrupt):
-            print("\nExiting interactive mode.")
             break
 
-        cmd = text.strip().lower()
-        if cmd in ["/quit", "/exit"]:
+        cmd = text.strip()
+
+        if cmd.lower() in ["/quit", "/exit"]:
             break
-        elif cmd == "/clear":
+        elif cmd.lower() == "/clear":
             clear_screen()
             continue
+        elif cmd.lower().startswith("/font_size"):
+            parts = cmd.split()
+            if len(parts) == 2 and parts[1].isdigit():
+                new_size = int(parts[1])
+                if 1 <= new_size <= 34:
+                    current_font_size = new_size
+                    print(f"Font size set to {current_font_size}")
+                else:
+                    print("⚠ Font size must be between 1 and 34")
+            else:
+                print("Usage: /font_size N")
+            continue
+        elif cmd.lower() == "/help":
+            print_help()
+            continue
 
-        generate_and_upload_notify(text)
-        print("Notification sent!")
+        # Otherwise, treat input as notification text
+        generate_and_upload_notify(text, font_size=current_font_size)
+        print(f"Notification sent! (font size {current_font_size})")
 
-# --- Command line interface ---
+# --- CLI entry ---
 if __name__ == "__main__":
     if len(sys.argv) >= 2 and sys.argv[1] == "-i":
         interactive_mode()
@@ -137,7 +162,6 @@ if __name__ == "__main__":
             sys.exit(1)
 
         notification_text = sys.argv[1]
-
         if len(sys.argv) >= 3:
             try:
                 font_size = int(sys.argv[2])
