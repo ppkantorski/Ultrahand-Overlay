@@ -371,9 +371,9 @@ private:
             auto overlaysIniData = getParsedDataFromIniFile(OVERLAYS_INI_FILEPATH);
             bool overlaysModified = false;
             
-            const auto overlayNames = getOverlayNames(); // Get all overlay names
+            //const auto overlayNames = getOverlayNames(); // Get all overlay names
             
-            for (const auto& overlayName : overlayNames) {
+            for (const auto& overlayName : getOverlayNames()) {
                 auto overlayIt = overlaysIniData.find(overlayName);
                 if (overlayIt == overlaysIniData.end()) continue; // Skip if overlay not in INI
                 
@@ -425,9 +425,9 @@ private:
             auto packagesIniData = getParsedDataFromIniFile(PACKAGES_INI_FILEPATH);
             bool packagesModified = false;
             
-            const auto packageNames = getPackageNames(); // Get all package names
+            //const auto packageNames = getPackageNames(); // Get all package names
             
-            for (const auto& packageName : packageNames) {
+            for (const auto& packageName : getPackageNames()) {
                 auto packageIt = packagesIniData.find(packageName);
                 if (packageIt == packagesIniData.end()) continue; // Skip if package not in INI
                 
@@ -602,9 +602,11 @@ private:
     }
 
     // Helper function to create toggle list items
-    auto createToggleListItem(tsl::elm::List* list, const std::string& title, bool& state, const std::string& iniKey, const bool invertLogic = false, const bool useReloadMenu2 = false, const bool isMini = true) {
+    auto createToggleListItem(tsl::elm::List* list, const std::string& title, bool& state, const std::string& iniKey,
+                              const bool invertLogic = false, const bool useReloadMenu = false, const bool useReloadMenu2 = false, const bool isMini = true) {
+
         auto* toggleListItem = new tsl::elm::ToggleListItem(title, invertLogic ? !state : state, ON, OFF, isMini);
-        toggleListItem->setStateChangedListener([&, listItem = toggleListItem, iniKey, invertLogic, useReloadMenu2](bool newState) {
+        toggleListItem->setStateChangedListener([&state, iniKey, invertLogic, useReloadMenu, useReloadMenu2, listItem = toggleListItem](bool newState) {
             tsl::Overlay::get()->getCurrentGui()->requestFocus(listItem, tsl::FocusDirection::None);
             
             // Calculate the actual logical state first
@@ -614,14 +616,8 @@ private:
 
             static bool firstState = actualState;
 
-            if (iniKey == "clean_version_labels" || iniKey == "hide_overlay_versions" || iniKey == "hide_package_versions" ||
-                iniKey == "selection_bg" || iniKey == "selection_text" || iniKey == "selection_value" ||
-                iniKey == "libultrahand_versions" || iniKey == "libultrahand_titles" || iniKey == "package_titles" || iniKey == "package_versions"||
-                iniKey == "page_swap" || iniKey == "hide_hidden" || iniKey == "hide_user_guide") {
-                
-                if (iniKey == "page_swap")
-                    triggerMenuReload = firstState != state;
-                reloadMenu = true;
+            if (iniKey == "page_swap") {
+                triggerMenuReload = firstState != state;
             } else if (iniKey == "memory_expansion") {
                 if (!isFile(EXPANSION_PATH + "nx-ovlloader.zip")) {
                     if (isVersionGreaterOrEqual(amsVersion,"1.8.0"))
@@ -649,10 +645,6 @@ private:
                         {"notify", "Reboot is required."}
                     });
                 }
-            //} else if (iniKey == "hide_clock" || iniKey == "hide_soc_temp" || iniKey == "hide_pcb_temp" ||
-            //    iniKey == "hide_battery" || iniKey == "hide_widget_backdrop" || iniKey == "dynamic_widget_colors" ||
-            //    iniKey == "center_widget_alignment" || iniKey == "extended_widget_backdrop") {
-            //    reinitializeWidgetVars();
             } else if (iniKey == "right_alignment") {
                 if (!state) {
                     const auto [horizontalUnderscanPixels, verticalUnderscanPixels] = tsl::gfx::getUnderscanPixels();
@@ -662,13 +654,6 @@ private:
                     tsl::gfx::Renderer::get().setLayerPos(0, 0);
                     ult::layerEdge = 0;
                 }
-                //triggerMenuReload2 = firstState != state;
-            //} else if (iniKey == "dynamic_logo") {
-            //    useDynamicLogo = !useDynamicLogo;
-            //} else if (iniKey == "launch_combos") {
-            //    useLaunchCombos = !useLaunchCombos;
-            //} else if (iniKey == "opaque_screenshots") {
-            //    useOpaqueScreenshots = !useOpaqueScreenshots;
             } else if (iniKey == "notifications") {
                 if (!state) {
                     if (!ult::isFile(NOTIFICATIONS_FLAG_FILEPATH)) {
@@ -684,6 +669,7 @@ private:
 
             state = !state;
             
+            if (useReloadMenu) reloadMenu = true;
             if (useReloadMenu2) reloadMenu2 = true;
         });
         list->addItem(toggleListItem);
@@ -957,7 +943,7 @@ public:
             // Memory expansion toggle
             useMemoryExpansion = (ult::expandedMemory || 
                                   parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "memory_expansion") == TRUE_STR);
-            createToggleListItem(list, MEMORY_EXPANSION, useMemoryExpansion, "memory_expansion", false, true, false);
+            createToggleListItem(list, MEMORY_EXPANSION, useMemoryExpansion, "memory_expansion", false, false, true, false);
 
             // Reboot required info
             tableData = {
@@ -1161,39 +1147,39 @@ public:
             useDynamicLogo = getBoolValue("dynamic_logo", true); // TRUE_STR default
             createToggleListItem(list, DYNAMIC_LOGO, useDynamicLogo, "dynamic_logo");
             useSelectionBG = getBoolValue("selection_bg", true); // TRUE_STR default
-            createToggleListItem(list, SELECTION_BACKGROUND, useSelectionBG, "selection_bg");
+            createToggleListItem(list, SELECTION_BACKGROUND, useSelectionBG, "selection_bg", false, true);
             useSelectionText = getBoolValue("selection_text", false); // TRUE_STR default
-            createToggleListItem(list, SELECTION_TEXT, useSelectionText, "selection_text");
+            createToggleListItem(list, SELECTION_TEXT, useSelectionText, "selection_text", false, true);
             useSelectionValue = getBoolValue("selection_value", false); // FALSE_STR default
-            createToggleListItem(list, SELECTION_VALUE, useSelectionValue, "selection_value");
+            createToggleListItem(list, SELECTION_VALUE, useSelectionValue, "selection_value", false, true);
             useLibultrahandTitles = getBoolValue("libultrahand_titles", false); // FALSE_STR default
-            createToggleListItem(list, LIBULTRAHAND_TITLES, useLibultrahandTitles, "libultrahand_titles");
+            createToggleListItem(list, LIBULTRAHAND_TITLES, useLibultrahandTitles, "libultrahand_titles", false, true);
             useLibultrahandVersions = getBoolValue("libultrahand_versions", true); // TRUE_STR default
-            createToggleListItem(list, LIBULTRAHAND_VERSIONS, useLibultrahandVersions, "libultrahand_versions");
+            createToggleListItem(list, LIBULTRAHAND_VERSIONS, useLibultrahandVersions, "libultrahand_versions", false, true);
             usePackageTitles = getBoolValue("package_titles", false); // TRUE_STR default
-            createToggleListItem(list, PACKAGE_TITLES, usePackageTitles, "package_titles");
+            createToggleListItem(list, PACKAGE_TITLES, usePackageTitles, "package_titles", false, true);
             usePackageVersions = getBoolValue("package_versions", true); // TRUE_STR default
-            createToggleListItem(list, PACKAGE_VERSIONS, usePackageVersions, "package_versions");
+            createToggleListItem(list, PACKAGE_VERSIONS, usePackageVersions, "package_versions", false, true);
 
 
             addHeader(list, MENU_SETTINGS);
             hideUserGuide = getBoolValue("hide_user_guide", false); // FALSE_STR default
-            createToggleListItem(list, USER_GUIDE, hideUserGuide, "hide_user_guide", true);
+            createToggleListItem(list, USER_GUIDE, hideUserGuide, "hide_user_guide", true, true, true);
             hideHidden = getBoolValue("hide_hidden", false); // FALSE_STR default
-            createToggleListItem(list, SHOW_HIDDEN, hideHidden, "hide_hidden", true);
+            createToggleListItem(list, SHOW_HIDDEN, hideHidden, "hide_hidden", true, true);
             hideDelete = getBoolValue("hide_delete", false); // FALSE_STR default
             createToggleListItem(list, SHOW_DELETE, hideDelete, "hide_delete", true);
             usePageSwap = getBoolValue("page_swap", false); // FALSE_STR default
-            createToggleListItem(list, PAGE_SWAP, usePageSwap, "page_swap");
+            createToggleListItem(list, PAGE_SWAP, usePageSwap, "page_swap", false, true);
             rightAlignmentState = useRightAlignment = getBoolValue("right_alignment"); // FALSE_STR default
             createToggleListItem(list, RIGHT_SIDE_MODE, useRightAlignment, "right_alignment");
 
             hideOverlayVersions = getBoolValue("hide_overlay_versions", false); // FALSE_STR default
-            createToggleListItem(list, OVERLAY_VERSIONS, hideOverlayVersions, "hide_overlay_versions", true);
+            createToggleListItem(list, OVERLAY_VERSIONS, hideOverlayVersions, "hide_overlay_versions", true, true);
             hidePackageVersions = getBoolValue("hide_package_versions", false); // FALSE_STR default
-            createToggleListItem(list, PACKAGE_VERSIONS, hidePackageVersions, "hide_package_versions", true);
+            createToggleListItem(list, PACKAGE_VERSIONS, hidePackageVersions, "hide_package_versions", true, true);
             cleanVersionLabels = getBoolValue("clean_version_labels", false); // FALSE_STR default
-            createToggleListItem(list, CLEAN_VERSIONS, cleanVersionLabels, "clean_version_labels", false, true);
+            createToggleListItem(list, CLEAN_VERSIONS, cleanVersionLabels, "clean_version_labels", false, true, true);
 
             //addHeader(list, "Version Labels");
 
@@ -2524,17 +2510,7 @@ public:
         //0lastSelectedListItemFooter2 = "";
         lastSelectedListItem = nullptr;
         //selectedFooterDict.clear();
-
-        //selectionCommands.clear();
-        //selectionCommands.shrink_to_fit();
-        //selectionCommandsOn.clear();
-        //selectionCommandsOn.shrink_to_fit();
-        //selectionCommandsOff.clear();
-        //selectionCommandsOff.shrink_to_fit();
-        //currentSelectedItems.clear();
-        //isInitialized.clear();
-        //toggleCount.clear();
-        //currentPatternIsOriginal.clear();
+        
         tsl::clearGlyphCacheNow.store(true, release);
     }
         

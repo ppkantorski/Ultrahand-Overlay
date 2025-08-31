@@ -1614,7 +1614,7 @@ void drawTable(
     std::vector<s32>         cacheYOff;
     std::vector<s32>         cacheXOff;
 
-    bool usingPlaceholders = buildTableDrawerLines(
+    const bool usingPlaceholders = buildTableDrawerLines(
         tableData, sectionLines, infoLines, packagePath,
         columnOffset, startGap, newlineGap,
         wrappingMode, alignment, useWrappedTextIndent,
@@ -2851,19 +2851,22 @@ static size_t findMatchingClose(const std::string& s,
     int depth = 1;
     size_t scan = startPos + outerOpenLen;
 
+    size_t openLen;
+    bool openerFirst;
+
     while (scan < s.size()) {
         // Find next opener (any) and next closer ")}"
-        size_t nextCloser = s.find(")}", scan);
+        const size_t nextCloser = s.find(")}", scan);
 
-        size_t openLen = 0;
-        size_t nextOpener = findNextOpenToken(s, scan, starts, openLen);
+        openLen = 0;
+        const size_t nextOpener = findNextOpenToken(s, scan, starts, openLen);
 
         // Decide which token comes first
         if (nextCloser == std::string::npos && nextOpener == std::string::npos) {
             return std::string::npos; // no more tokens
         }
 
-        bool openerFirst = false;
+        openerFirst = false;
         if (nextOpener != std::string::npos) {
             if (nextCloser == std::string::npos) openerFirst = true;
             else openerFirst = (nextOpener < nextCloser);
@@ -2899,24 +2902,29 @@ bool replacePlaceholdersRecursively(
         starts.push_back(pr.first);
     }
 
+    bool replacedThisPass;
+    size_t searchPos;
+    std::string replacement;
+    std::string inner;
+
     // Keep sweeping until no replacements occur.
     for (;;) {
-        bool replacedThisPass = false;
+        replacedThisPass = false;
 
         // Try each placeholder type.
         for (size_t t = 0; t < placeholders.size(); ++t) {
             const auto& opener = placeholders[t].first;      // e.g., "{slice("
             const auto& replacer = placeholders[t].second;
 
-            size_t searchPos = 0;
+            searchPos = 0;
 
             while (true) {
                 // Find the next occurrence of THIS opener
-                size_t startPos = arg.find(opener, searchPos);
+                const size_t startPos = arg.find(opener, searchPos);
                 if (startPos == std::string::npos) break;
 
                 // Find its matching ")}" by counting nested ANY opener
-                size_t closePos = findMatchingClose(arg, startPos, starts, opener.size());
+                const size_t closePos = findMatchingClose(arg, startPos, starts, opener.size());
                 if (closePos == std::string::npos) {
                     // Unbalanced; skip this and move on to avoid infinite loop
                     searchPos = startPos + opener.size();
@@ -2925,21 +2933,21 @@ bool replacePlaceholdersRecursively(
 
                 // Full placeholder text including wrapper: "{name(...)}"
                 const size_t fullLen = (closePos - startPos) + 2; // include the ")}"
-                std::string placeholderText = arg.substr(startPos, fullLen);
+                const std::string placeholderText = arg.substr(startPos, fullLen);
 
                 // Resolve INNER content first (exclude the outer wrapper)
                 const size_t innerStart = opener.size();
                 const size_t innerLen   = placeholderText.size() - innerStart - 2; // minus ")}"
-                std::string inner = placeholderText.substr(innerStart, innerLen);
+                inner = placeholderText.substr(innerStart, innerLen);
 
                 // Recurse on inner only (so we don't re-match the outer opener)
                 replacePlaceholdersRecursively(inner, placeholders);
 
                 // Rebuild the outer placeholder with resolved args
-                std::string resolvedPlaceholder = opener + inner + ")}";
+                const std::string resolvedPlaceholder = opener + inner + ")}";
 
                 // Call the replacer on the resolved placeholder
-                std::string replacement = replacer(resolvedPlaceholder);
+                replacement = replacer(resolvedPlaceholder);
                 if (replacement.empty()) {
                     replacement = NULL_STR; // preserve your NULL_STR convention
                 }
