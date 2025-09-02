@@ -4669,7 +4669,7 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                 else if (fontSize > 34) fontSize = 34;
 
             }
-            tsl::notification.show(text, fontSize);
+            tsl::notification->show(text, fontSize);
         }
     } else if (commandName == "clear") {
         if (cmd.size() >= 2) {

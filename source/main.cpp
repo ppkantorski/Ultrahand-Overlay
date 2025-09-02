@@ -828,7 +828,7 @@ public:
         } else if (dropdownSelection == "softwareUpdateMenu") {
             const std::string fullVersionLabel = cleanVersionLabel(parseValueFromIniSection((SETTINGS_PATH+"RELEASE.ini"), "Release Info", "latest_version"));
             if (isVersionGreaterOrEqual(fullVersionLabel.c_str(), APP_VERSION) && fullVersionLabel != APP_VERSION)
-                tsl::notification.show("New update is available! ("+fullVersionLabel+")", 24);
+                tsl::notification->show("New update is available! ("+fullVersionLabel+")", 24);
 
             addHeader(list, SOFTWARE_UPDATE);
             addUpdateButton(list, UPDATE_ULTRAHAND, ULTRAHAND_REPO_URL + "releases/latest/download/ovlmenu.ovl", "/config/ultrahand/downloads/ovlmenu.ovl", "/switch/.overlays/ovlmenu.ovl", fullVersionLabel);
@@ -2510,7 +2510,6 @@ public:
         //0lastSelectedListItemFooter2 = "";
         lastSelectedListItem = nullptr;
         //selectedFooterDict.clear();
-        
         tsl::clearGlyphCacheNow.store(true, release);
     }
         
@@ -6025,7 +6024,7 @@ public:
                                     saveIniFileData(ULTRAHAND_CONFIG_INI_PATH, iniData);
                                 }
 
-
+                                ult::launchingOverlay.store(true, release);
                                 if (useOverlayLaunchArgs == TRUE_STR)
                                     tsl::setNextOverlay(overlayFile, overlayLaunchArgs);
                                 else
@@ -6556,7 +6555,8 @@ public:
      * @return `true` if the input was handled within the overlay, `false` otherwise.
      */
     virtual bool handleInput(uint64_t keysDown, uint64_t keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
-        
+        if (ult::launchingOverlay.load(acquire)) return true;
+
         const bool isRunningInterp = runningInterpreter.load(acquire);
         const bool isTouching = stillTouching.load(acquire);
         
@@ -6755,7 +6755,7 @@ public:
                         allowSlide.store(false, release);
                     if (unlockedSlide.load(acquire))
                         unlockedSlide.store(false, release);
-                    if (!tsl::notification.isActive()) {
+                    if (!tsl::notification->isActive()) {
                         exitingUltrahand.store(true, release);
                         tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
                         tsl::Overlay::get()->close();
@@ -7087,7 +7087,7 @@ public:
             // initialize expanded memory on boot
             setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "memory_expansion", (loaderTitle == "nx-ovlloader+") ? TRUE_STR : FALSE_STR);
 
-            tsl::notification.show("Ultrahand has started.");
+            tsl::notification->show("Ultrahand has started.");
             
         }
         
