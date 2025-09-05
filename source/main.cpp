@@ -827,8 +827,9 @@ public:
             }
         } else if (dropdownSelection == "softwareUpdateMenu") {
             const std::string fullVersionLabel = cleanVersionLabel(parseValueFromIniSection((SETTINGS_PATH+"RELEASE.ini"), "Release Info", "latest_version"));
-            if (isVersionGreaterOrEqual(fullVersionLabel.c_str(), APP_VERSION) && fullVersionLabel != APP_VERSION)
+            if (isVersionGreaterOrEqual(fullVersionLabel.c_str(), APP_VERSION) && fullVersionLabel != APP_VERSION) {
                 tsl::notification->show("New update is available! ("+fullVersionLabel+")", 24);
+            }
 
             addHeader(list, SOFTWARE_UPDATE);
             addUpdateButton(list, UPDATE_ULTRAHAND, ULTRAHAND_REPO_URL + "releases/latest/download/ovlmenu.ovl", "/config/ultrahand/downloads/ovlmenu.ovl", "/switch/.overlays/ovlmenu.ovl", fullVersionLabel);
@@ -6756,9 +6757,12 @@ public:
                     if (unlockedSlide.load(acquire))
                         unlockedSlide.store(false, release);
                     if (!tsl::notification->isActive()) {
+                        
                         exitingUltrahand.store(true, release);
+
                         tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
                         tsl::Overlay::get()->close();
+                        ult::launchingOverlay.store(true, std::memory_order_release);
                     } else {
                         tsl::Overlay::get()->closeAfter();
                         tsl::Overlay::get()->hide(true);
@@ -7106,6 +7110,7 @@ public:
         if (exitingUltrahand.load(acquire))
             executeIniCommands(PACKAGE_PATH + EXIT_PACKAGE_FILENAME, "exit");
 
+        closeInterpreterThread();
         cleanupCurl();
         socketExit();
     }

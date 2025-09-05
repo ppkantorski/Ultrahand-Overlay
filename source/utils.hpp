@@ -4469,6 +4469,7 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             }
         }
         exitingUltrahand.store(true, std::memory_order_release);
+        ult::launchingOverlay.store(true, std::memory_order_release);
         //setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_OVERLAY_STR, TRUE_STR); // this is handled within tesla.hpp
         tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
         tsl::Overlay::get()->close(true);
@@ -4671,6 +4672,21 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             }
             tsl::notification->show(text, fontSize);
         }
+        //if (cmd.size() > 1) {
+        //    std::string text = cmd[1];
+        //    removeQuotes(text);
+        //    
+        //    size_t fontSize = 28;
+        //    if (cmd.size() > 2) {
+        //        std::string fontSizeStr = cmd[2];
+        //        removeQuotes(fontSizeStr);
+        //        fontSize = std::stoi(fontSizeStr);
+        //        fontSize = std::clamp(fontSize, size_t(1), size_t(34));
+        //    }
+        //    
+        //    // Push as cJSON
+        //    pushNotificationJson(text, fontSize);
+        //}
     } else if (commandName == "clear") {
         if (cmd.size() >= 2) {
             std::string clearOption = cmd[1];
