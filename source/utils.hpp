@@ -4670,7 +4670,8 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                 else if (fontSize > 34) fontSize = 34;
 
             }
-            tsl::notification->show(text, fontSize);
+            if (tsl::notification)
+                tsl::notification->show(text, fontSize);
         }
         //if (cmd.size() > 1) {
         //    std::string text = cmd[1];
@@ -4818,11 +4819,17 @@ int getInterpreterStackSize(const std::string& packagePath = "") {
     return cachedStackSize;
 }
 
+
+
 // Combined function - creates thread with work data directly
 void executeInterpreterCommands(std::vector<std::vector<std::string>>&& commands, 
                                const std::string& packagePath = "", 
                                const std::string& selectedCommand = "") {
     
+    // Wait for the existing thread to finish
+    threadWaitForExit(&interpreterThread);
+    threadClose(&interpreterThread);
+
     // Early exit if no commands
     if (commands.empty()) {
         return;
