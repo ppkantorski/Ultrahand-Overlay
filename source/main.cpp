@@ -7090,8 +7090,16 @@ public:
         ASSERT_FATAL(socketInitializeDefault());
         initializeCurl();
 
+        unpackDeviceInfo();
+
         // read commands from root package's boot_package.ini
         if (firstBoot) {
+            // Delete all pending notification jsons
+            {
+                std::lock_guard<std::mutex> jsonLock(tsl::notificationJsonMutex);
+                deleteFileOrDirectoryByPattern(ult::NOTIFICATIONS_PATH + "*.notify");
+            }
+
             // Load and execute "initial_boot" commands if they exist
             executeIniCommands(PACKAGE_PATH + BOOT_PACKAGE_FILENAME, "boot");
             
@@ -7103,11 +7111,11 @@ public:
             setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "memory_expansion", (loaderTitle == "nx-ovlloader+") ? TRUE_STR : FALSE_STR);
 
             if (tsl::notification)
-                tsl::notification->show("Ultrahand has started.");
+                tsl::notification->show(CAPITAL_ULTRAHAND_PROJECT_NAME+" has started.");
             
         }
         
-        unpackDeviceInfo();
+        
         //startInterpreterThread();
     }
     
@@ -7119,10 +7127,11 @@ public:
      * properly shut down services to avoid memory leaks.
      */
     virtual void exitServices() override {
+        closeInterpreterThread(); // just in case ¯\_(ツ)_/¯
+
         if (exitingUltrahand.load(acquire))
             executeIniCommands(PACKAGE_PATH + EXIT_PACKAGE_FILENAME, "exit");
 
-        closeInterpreterThread(); // just in case ¯\_(ツ)_/¯
         cleanupCurl();
         socketExit();
     }
