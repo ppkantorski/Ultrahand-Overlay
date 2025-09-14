@@ -11,7 +11,7 @@ from prompt_toolkit.formatted_text import HTML
 from prompt_toolkit.completion import Completer, Completion, WordCompleter
 
 # --- Global FTP credentials ---
-FTP_HOST = "192.168.1.107"
+FTP_HOST = "192.168.3.3"
 FTP_PORT = 5000
 FTP_USERNAME = "root"
 FTP_PASSWORD = ""
@@ -25,12 +25,13 @@ def generate_and_upload_notify(text, font_size=28):
 
     program_folder = os.path.dirname(os.path.abspath(__file__))
     timestamp = int(time.time())
-    filename = f"ftp-{timestamp}.notify"
+    filename = f"ultrahand_notify-{timestamp}.notify"
     local_file = os.path.join(program_folder, filename)
 
     notify_data = {
         "text": text,
-        "font_size": font_size
+        "font_size": font_size,
+        "priority": 10
     }
 
     with open(local_file, "w") as f:
@@ -149,7 +150,7 @@ def interactive_mode():
 
         # Otherwise, treat input as notification text
         generate_and_upload_notify(text, font_size=current_font_size)
-        print(f"Notification sent! (font size {current_font_size})")
+        print(f"> Notification sent! (font size {current_font_size})")
 
 # --- CLI entry ---
 if __name__ == "__main__":
