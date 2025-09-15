@@ -1576,7 +1576,7 @@ public:
             const std::vector<std::string> labelList = splitIniList(getValue("mode_labels"));
             
             if (!modeList.empty()) {
-                addTable(list, {{"Mode", "", KEY_COMBO}}, "", 165+2, 19-2, 19-2, 0, 
+                addTable(list, {{MODE, "", KEY_COMBO}}, "", 165+2, 19-2, 19-2, 0, 
                         "header", "header", DEFAULT_STR, RIGHT_STR, true, true, false, true, "none", false);
                 
                 std::vector<std::string> combos = comboList;
@@ -1657,10 +1657,11 @@ public:
             }
     
             // Predefined combos
+            std::string mapped;
             for (const auto& combo : defaultCombos) {
                 if (combo == globalDefault) continue;
                 
-                std::string mapped = combo;
+                mapped = combo;
                 convertComboToUnicode(mapped);
                 
                 auto* item = new tsl::elm::ListItem(mapped);
@@ -1742,10 +1743,11 @@ public:
             }
     
             // Valid combos
+            std::string mapped;
             for (const auto& combo : defaultCombos) {
                 if (combo == globalDefault) continue;
                 
-                std::string mapped = combo;
+                mapped = combo;
                 convertComboToUnicode(mapped);
                 
                 auto* item = new tsl::elm::ListItem(mapped);
