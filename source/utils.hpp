@@ -2989,7 +2989,8 @@ void updateGeneralPlaceholders() {
         {"{gpu_iddq}", ult::to_string(gpuIDDQ)},
         {"{soc_speedo}", ult::to_string(socSpeedo0)},
         {"{soc_iddq}", ult::to_string(socIDDQ)},
-        {"{title_id}", getTitleIdAsString()}
+        {"{title_id}", getTitleIdAsString()},
+        {"{local_ip}", getLocalIpAddress()}
     };
 }
 

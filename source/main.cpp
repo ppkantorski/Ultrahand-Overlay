@@ -642,7 +642,7 @@ private:
                         {"unzip", EXPANSION_PATH + (actualState ? "nx-ovlloader+.zip" : "nx-ovlloader.zip"),
                          EXPANSION_PATH + (actualState ? "nx-ovlloader+/" : "nx-ovlloader/")},
                         {"mv", EXPANSION_PATH + (actualState ? "nx-ovlloader+/" : "nx-ovlloader/"), "/"},
-                        {"notify", "Reboot is required."}
+                        {"notify", REBOOT_IS_REQUIRED}
                     });
                 }
             } else if (iniKey == "right_alignment") {
@@ -828,7 +828,7 @@ public:
         } else if (dropdownSelection == "softwareUpdateMenu") {
             const std::string fullVersionLabel = cleanVersionLabel(parseValueFromIniSection((SETTINGS_PATH+"RELEASE.ini"), "Release Info", "latest_version"));
             if (isVersionGreaterOrEqual(fullVersionLabel.c_str(), APP_VERSION) && fullVersionLabel != APP_VERSION && tsl::notification) {
-                tsl::notification->show("New update is available! ("+fullVersionLabel+")", 24);
+                tsl::notification->show(NEW_UPDATE_IS_AVAILABLE + " ("+fullVersionLabel+")", 24);
             }
 
             addHeader(list, SOFTWARE_UPDATE);
@@ -1138,7 +1138,7 @@ public:
             useLaunchCombos = getBoolValue("launch_combos", true); // TRUE_STR default
             createToggleListItem(list, LAUNCH_COMBOS, useLaunchCombos, "launch_combos");
             useNotifications = getBoolValue("notifications", true); // TRUE_STR default
-            createToggleListItem(list, "Notifications", useNotifications, "notifications");
+            createToggleListItem(list, NOTIFICATIONS, useNotifications, "notifications");
             useOpaqueScreenshots = getBoolValue("opaque_screenshots", true); // TRUE_STR default
             createToggleListItem(list, OPAQUE_SCREENSHOTS, useOpaqueScreenshots, "opaque_screenshots");
             useSwipeToOpen = getBoolValue("swipe_to_open", true); // TRUE_STR default
@@ -7111,7 +7111,7 @@ public:
             setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "memory_expansion", (loaderTitle == "nx-ovlloader+") ? TRUE_STR : FALSE_STR);
 
             if (tsl::notification)
-                tsl::notification->show(CAPITAL_ULTRAHAND_PROJECT_NAME+" has started.");
+                tsl::notification->show(ULTRAHAND_HAS_STARTED);
             
         }
         
