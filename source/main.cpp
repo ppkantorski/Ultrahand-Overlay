@@ -3926,13 +3926,13 @@ bool drawCommandsMenu(
                         if (!commandFooter.empty() && commandFooter != NULL_STR){
                             footer = commandFooter;
                             cleanOptionName = optionName.substr(1);
-                            //removeTag(cleanOptionName);
+                            removeTag(cleanOptionName);
                             listItem = new tsl::elm::ListItem(cleanOptionName, "", isMini, true);
                             listItem->setValue(footer);
                         } else {
                             footer = !isSlot ? DROPDOWN_SYMBOL : OPTION_SYMBOL;
                             cleanOptionName = optionName.substr(1);
-                            //removeTag(cleanOptionName);
+                            removeTag(cleanOptionName);
                             // Create reference to PackageMenu with dropdownSection set to optionName
                             listItem = new tsl::elm::ListItem(cleanOptionName, footer, isMini, true);
                         }
@@ -4314,7 +4314,7 @@ bool drawCommandsMenu(
                     onlyTables = false;
                 
                     // Create TrackBarV2 instance and configure it
-                    auto trackBar = new tsl::elm::TrackBarV2(originalOptionName, packagePath, minValue, maxValue, units,
+                    auto trackBar = new tsl::elm::TrackBarV2(optionName, packagePath, minValue, maxValue, units,
                         interpretAndExecuteCommands, getSourceReplacement, commands, originalOptionName, false, false, -1, unlockedTrackbar, onEveryTick);
                 
                     // Set the SCRIPT_KEY listener
