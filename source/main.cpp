@@ -1376,12 +1376,12 @@ public:
             }
             settingsMenuPageDepth++;
         }
-
+        
     ~SettingsMenu() {
         if (settingsMenuPageDepth > 0) {
             settingsMenuPageDepth--;
         }
-        //lastSelectedListItem = nullptr;
+        lastSelectedListItem = nullptr;
     }
 
     void createAndAddToggleListItem(
