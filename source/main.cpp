@@ -1920,6 +1920,7 @@ public:
                         if (lastSelectedListItem) {
                             lastSelectedListItem->triggerClickAnimation();
                             lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
+                            lastSelectedListItem = nullptr;
                         }
                         
                         runAfter = true; // perform transition after
@@ -1927,6 +1928,7 @@ public:
                         // No valid target found
                         if (lastSelectedListItem) {
                             lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
+                            lastSelectedListItem = nullptr;
                         }
                     }
                     
@@ -1941,6 +1943,7 @@ public:
                 runningInterpreter.store(false, release);
                 if (lastSelectedListItem) {
                     lastSelectedListItem->setValue("");
+                    lastSelectedListItem = nullptr;
                 }
                 return true;
             }
