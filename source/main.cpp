@@ -1376,7 +1376,7 @@ public:
             }
             settingsMenuPageDepth++;
         }
-        
+
     ~SettingsMenu() {
         if (settingsMenuPageDepth > 0) {
             settingsMenuPageDepth--;
@@ -1917,13 +1917,17 @@ public:
                         removeIniSection(settingsIniPath, entryName);
                         
                         // Show completion
-                        lastSelectedListItem->triggerClickAnimation();
-                        lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
+                        if (lastSelectedListItem) {
+                            lastSelectedListItem->triggerClickAnimation();
+                            lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
+                        }
                         
                         runAfter = true; // perform transition after
                     } else {
                         // No valid target found
-                        lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
+                        if (lastSelectedListItem) {
+                            lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
+                        }
                     }
                     
                     return true;
@@ -1935,7 +1939,9 @@ public:
                 isHolding = false;
                 displayPercentage.store(0, std::memory_order_release);
                 runningInterpreter.store(false, release);
-                lastSelectedListItem->setValue("");
+                if (lastSelectedListItem) {
+                    lastSelectedListItem->setValue("");
+                }
                 return true;
             }
         }
@@ -2333,6 +2339,7 @@ public:
             if (lastSelectedListItem) {
                 lastSelectedListItem->setValue(commandSuccess.load(acquire) ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
                 lastSelectedListItem->enableClickAnimation();
+                lastSelectedListItem = nullptr;
             }
             closeInterpreterThread();
             lastRunningInterpreter.store(false, std::memory_order_release);
@@ -3380,6 +3387,7 @@ public:
             if (lastSelectedListItem) {
                 lastSelectedListItem->setValue(commandSuccess.load(acquire) ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
                 lastSelectedListItem->enableClickAnimation();
+                lastSelectedListItem = nullptr;
             }
             closeInterpreterThread();
             lastRunningInterpreter.store(false, std::memory_order_release);
@@ -5043,6 +5051,7 @@ public:
                     }
                 }
             }
+            lastSelectedListItem = nullptr;
 
         //} else {
         //    hexSumCache.clear();
@@ -5194,8 +5203,9 @@ public:
                     lastSelectedListItem->setValue(commandSuccess ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
 
                 lastSelectedListItem->enableClickAnimation();
+                lastSelectedListItem = nullptr;
             }
-    
+            
             closeInterpreterThread();
             lastRunningInterpreter.store(false, std::memory_order_release);
             return true;
@@ -6603,6 +6613,7 @@ public:
                     lastSelectedListItem->setValue(commandSuccess.load(acquire) ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
                 
                 lastSelectedListItem->enableClickAnimation();
+                lastSelectedListItem = nullptr;
             }
     
             closeInterpreterThread();
