@@ -3854,7 +3854,7 @@ void handleMirrorCommand(const std::vector<std::string>& cmd, const std::string&
         // Process files one by one, freeing memory as we go
         for (size_t i = 0; i < fileList.size(); ++i) {
             // Move the string to avoid copy
-            auto sourceDirectory = std::move(fileList[i]);
+            const auto sourceDirectory = std::move(fileList[i]);
             fileList[i].shrink_to_fit();     // Free the capacity
             mirrorFiles(sourceDirectory, destinationPath, operation);
             
@@ -3870,20 +3870,7 @@ void handleMoveCommand(const std::vector<std::string>& cmd, const std::string& p
     parseCommandArguments(cmd, packagePath, sourceListPath, destinationListPath, logSource, logDestination, sourcePath, destinationPath, copyFilterListPath, filterListPath);
     
     if (!sourceListPath.empty() && !destinationListPath.empty()) {
-        // Process list-based moving
-        auto sourceFilesList = readListFromFile(sourceListPath);
-        auto destinationFilesList = readListFromFile(destinationListPath);
-        
-        // Early validation of list sizes
-        if (sourceFilesList.size() != destinationFilesList.size()) {
-            #if USING_LOGGING_DIRECTIVE
-            if (!disableLogging)
-                logMessage("Source and destination lists must have the same number of entries.");
-            #endif
-            return;
-        }
-        
-        // Only create filter sets if filter files exist
+        // Load filter sets (these are typically small)
         std::unique_ptr<std::unordered_set<std::string>> copyFilterSet;
         if (!copyFilterListPath.empty()) {
             copyFilterSet = std::make_unique<std::unordered_set<std::string>>(readSetFromFile(copyFilterListPath));
@@ -3893,24 +3880,70 @@ void handleMoveCommand(const std::vector<std::string>& cmd, const std::string& p
         if (!filterListPath.empty()) {
             filterSet = std::make_unique<std::unordered_set<std::string>>(readSetFromFile(filterListPath));
         }
+    
+        // Pre-allocate strings to avoid reallocations in loop
+        //sourcePath.reserve(1024);
+        //destinationPath.reserve(1024);
+    
+        // Stream process both files line by line
+    #if !USING_FSTREAM_DIRECTIVE
+        FILE* sourceFile = fopen(sourceListPath.c_str(), "r");
+        FILE* destFile = fopen(destinationListPath.c_str(), "r");
         
-        const size_t listSize = sourceFilesList.size(); // Both lists are same size now
-        for (size_t i = 0; i < listSize; ++i) {
-            // Move strings to avoid copies
-            sourcePath = std::move(sourceFilesList[i]);
-            sourceFilesList[i].shrink_to_fit();     // Free the capacity
-            preprocessPath(sourcePath, packagePath);
+        if (!sourceFile || !destFile) {
+            if (sourceFile) fclose(sourceFile);
+            if (destFile) fclose(destFile);
+            #if USING_LOGGING_DIRECTIVE
+            if (!disableLogging)
+                logMessage("Failed to open source or destination list files");
+            #endif
+            return;
+        }
+        
+        // Set larger buffers for better I/O performance
+        static constexpr size_t FILE_BUFFER_SIZE = 8192;
+        setvbuf(sourceFile, nullptr, _IOFBF, FILE_BUFFER_SIZE);
+        setvbuf(destFile, nullptr, _IOFBF, FILE_BUFFER_SIZE);
+        
+        static constexpr size_t BUFFER_SIZE = 8192;
+        char sourceBuffer[BUFFER_SIZE];
+        char destBuffer[BUFFER_SIZE];
+        
+        size_t sourceLen, destLen;
+
+        // Process files line by line simultaneously
+        while (fgets(sourceBuffer, BUFFER_SIZE, sourceFile) && 
+               fgets(destBuffer, BUFFER_SIZE, destFile)) {
             
-            destinationPath = std::move(destinationFilesList[i]);
-            destinationFilesList[i].shrink_to_fit();     // Free the capacity
+            // Fast newline removal - work backwards from end
+            sourceLen = strlen(sourceBuffer);
+            if (sourceLen > 0 && sourceBuffer[sourceLen - 1] == '\n') {
+                sourceBuffer[sourceLen - 1] = '\0';
+                --sourceLen;
+            }
+            
+            destLen = strlen(destBuffer);
+            if (destLen > 0 && destBuffer[destLen - 1] == '\n') {
+                destBuffer[destLen - 1] = '\0';
+                --destLen;
+            }
+            
+            // Direct assignment to avoid extra allocation
+            sourcePath.assign(sourceBuffer, sourceLen);
+            destinationPath.assign(destBuffer, destLen);
+            
+            preprocessPath(sourcePath, packagePath);
             preprocessPath(destinationPath, packagePath);
             
-            // Only check filter if it exists
+            // Cache filter lookup result
             const bool shouldProcess = !filterSet || filterSet->find(sourcePath) == filterSet->end();
             
             if (shouldProcess) {
-                if (sourcePath.back() != '/') {
-                    // It's a file - apply copy filter
+                // Check if it's a directory (ends with /)
+                const bool isDirectory = !sourcePath.empty() && sourcePath.back() == '/';
+                
+                if (!isDirectory) {
+                    // Check copy filter once and cache result
                     const bool shouldCopy = copyFilterSet && copyFilterSet->find(sourcePath) != copyFilterSet->end();
                     
                     if (shouldCopy) {
@@ -3921,7 +3954,6 @@ void handleMoveCommand(const std::vector<std::string>& cmd, const std::string& p
                         moveFileOrDirectory(sourcePath, destinationPath, logSource, logDestination);
                     }
                 } else {
-                    // It's a directory - only move if empty
                     if (isDirectoryEmpty(sourcePath)) {
                         moveFileOrDirectory(sourcePath, destinationPath, logSource, logDestination);
                     }
@@ -3932,11 +3964,65 @@ void handleMoveCommand(const std::vector<std::string>& cmd, const std::string& p
                     #endif
                 }
             }
-            
-            // Clear the vector elements immediately to free memory
-            //sourceFilesList[i].clear();
-            //destinationFilesList[i].clear();
         }
+        
+        fclose(sourceFile);
+        fclose(destFile);
+        
+    #else
+        std::ifstream sourceFile(sourceListPath);
+        std::ifstream destFile(destinationListPath);
+        
+        if (!sourceFile.is_open() || !destFile.is_open()) {
+            #if USING_LOGGING_DIRECTIVE
+            if (!disableLogging)
+                logMessage("Failed to open source or destination list files");
+            #endif
+            return;
+        }
+        
+        // Set larger buffers for better I/O performance
+        static char sourceFileBuffer[8192], destFileBuffer[8192];
+        sourceFile.rdbuf()->pubsetbuf(sourceFileBuffer, sizeof(sourceFileBuffer));
+        destFile.rdbuf()->pubsetbuf(destFileBuffer, sizeof(destFileBuffer));
+        
+        // Process files line by line simultaneously
+        while (std::getline(sourceFile, sourcePath) && std::getline(destFile, destinationPath)) {
+            preprocessPath(sourcePath, packagePath);
+            preprocessPath(destinationPath, packagePath);
+            
+            // Cache filter lookup result  
+            const bool shouldProcess = !filterSet || filterSet->find(sourcePath) == filterSet->end();
+            
+            if (shouldProcess) {
+                // Check if it's a directory (ends with /)
+                const bool isDirectory = !sourcePath.empty() && sourcePath.back() == '/';
+                
+                if (!isDirectory) {
+                    // Check copy filter once and cache result
+                    const bool shouldCopy = copyFilterSet && copyFilterSet->find(sourcePath) != copyFilterSet->end();
+                    
+                    if (shouldCopy) {
+                        const long long totalSize = getTotalSize(sourcePath);
+                        long long totalBytesCopied = 0;
+                        copyFileOrDirectory(sourcePath, destinationPath, &totalBytesCopied, totalSize);
+                    } else {
+                        moveFileOrDirectory(sourcePath, destinationPath, logSource, logDestination);
+                    }
+                } else {
+                    if (isDirectoryEmpty(sourcePath)) {
+                        moveFileOrDirectory(sourcePath, destinationPath, logSource, logDestination);
+                    }
+                    #if USING_LOGGING_DIRECTIVE
+                    else if (!disableLogging) {
+                        logMessage("Skipping non-empty directory: " + sourcePath);
+                    }
+                    #endif
+                }
+            }
+        }
+    #endif
+    
         
     } else {
         // Single file/directory moving - early returns for error conditions

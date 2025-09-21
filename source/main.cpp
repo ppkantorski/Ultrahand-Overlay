@@ -51,6 +51,8 @@ const size_t indexPlaceholderLength = indexPlaceholder.length();
 
 static std::string selectedPackage; // for package forwarders
 
+static std::string nextToggleState;
+
 // Overlay booleans
 static bool returningToMain = false;
 static bool returningToHiddenMain = false;
@@ -97,6 +99,9 @@ static const std::string WIDGET_PATTERN = ";widget=";
 
 static const std::string MINI_PATTERN = ";mini=";
 static const std::string SELECTION_MINI_PATTERN = ";selection_mini=";
+
+// Toggle option patterns
+static const std::string PROGRESS_PATTERN = ";progress=";
 
 // Table option patterns
 static const std::string POLLING_PATTERN = ";polling=";
@@ -295,7 +300,7 @@ bool handleRunningInterpreter(uint64_t& keysDown, uint64_t& keysHeld) {
         inProg = true;  // Reset inProg when we have active operations
     } else if (currentOp == 255 && inProg) {  // Remove lastPct < 0 condition
         displayPercentage.store(-1, release);
-        if (lastSelectedListItem)
+        if (lastSelectedListItem && nextToggleState.empty())
             lastSelectedListItem->setValue(INPROGRESS_SYMBOL);
         inProg = false;
         lastPct = -1;  // Reset lastPct for next cycle
@@ -2500,6 +2505,7 @@ private:
 
     bool showWidget = false;
 
+    bool usingProgress = false;
     bool isMini = false;
 
     size_t maxItemsLimit = 250;     // 0 = uncapped, any other value = max size
@@ -2546,10 +2552,11 @@ public:
         std::vector<std::string> matchedFiles, tempFiles;
     
         // Pre-cache pattern lengths for better performance
-        const size_t SYSTEM_PATTERN_LEN = SYSTEM_PATTERN.length();
-        const size_t MODE_PATTERN_LEN = MODE_PATTERN.length();
-        const size_t GROUPING_PATTERN_LEN = GROUPING_PATTERN.length();
-        const size_t SELECTION_MINI_PATTERN_LEN = SELECTION_MINI_PATTERN.length();
+        static const size_t SYSTEM_PATTERN_LEN = SYSTEM_PATTERN.length();
+        static const size_t MODE_PATTERN_LEN = MODE_PATTERN.length();
+        static const size_t GROUPING_PATTERN_LEN = GROUPING_PATTERN.length();
+        static const size_t SELECTION_MINI_PATTERN_LEN = SELECTION_MINI_PATTERN.length();
+        static const size_t PROGRESS_PATTERN_LEN = PROGRESS_PATTERN.length();
     
         updateGeneralPlaceholders();
         
@@ -2595,6 +2602,9 @@ public:
                 } else if (commandName.size() > SELECTION_MINI_PATTERN_LEN && 
                            commandName.compare(0, SELECTION_MINI_PATTERN_LEN, SELECTION_MINI_PATTERN) == 0) {
                     isMini = (commandName.substr(SELECTION_MINI_PATTERN_LEN) == TRUE_STR);
+                } else if (commandName.size() > PROGRESS_PATTERN_LEN && 
+                           commandName.compare(0, PROGRESS_PATTERN_LEN, PROGRESS_PATTERN) == 0) {
+                    usingProgress = (commandName.substr(PROGRESS_PATTERN_LEN) == TRUE_STR);
                 }
     
                 if (commandMode == TOGGLE_STR) {
@@ -3232,7 +3242,9 @@ public:
                 toggleListItem->setState(toggleStateOn);
     
                 toggleListItem->setStateChangedListener([this, i, toggleListItem, selectedItem, itemName](bool state) {
-    
+                    if (runningInterpreter.load(std::memory_order_acquire)) {
+                        return;
+                    }
                     tsl::Overlay::get()->getCurrentGui()->requestFocus(toggleListItem, tsl::FocusDirection::None);
                 
                     if (toggleCount.find(i) == toggleCount.end()) toggleCount[i] = 0;
@@ -3293,9 +3305,17 @@ public:
                             }
                         }
                     }
-                
-                    interpretAndExecuteCommands(std::move(modifiedCmds), filePath, specificKey);
-                    resetPercentages();
+                    
+                    if (usingProgress)
+                        toggleListItem->setValue(INPROGRESS_SYMBOL);
+
+                    nextToggleState = !state ? CAPITAL_OFF_STR : CAPITAL_ON_STR;
+                    runningInterpreter.store(true, release);
+                    lastRunningInterpreter.store(true, release);
+                    lastSelectedListItem = toggleListItem;
+                    //interpretAndExecuteCommands(std::move(modifiedCmds), filePath, specificKey);
+                    executeInterpreterCommands(std::move(modifiedCmds), filePath, specificKey);
+                    //resetPercentages();
                 
                     toggleCount[i]++;
                 });
@@ -3387,12 +3407,34 @@ public:
         
         if (lastRunningInterpreter.load(acquire)) {
             isDownloadCommand.store(false, release);
+        
             if (lastSelectedListItem) {
-                lastSelectedListItem->setValue(commandSuccess.load(acquire) ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
+                const bool success = commandSuccess.load(acquire);
+        
+                if (nextToggleState.empty()) {
+                    // No toggle state, just show a check or cross
+                    lastSelectedListItem->setValue(success ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
+                } else {
+                    // Update displayed value
+                    lastSelectedListItem->setValue(
+                        success
+                            ? nextToggleState
+                            : (nextToggleState == CAPITAL_ON_STR ? CAPITAL_OFF_STR : CAPITAL_ON_STR)
+                    );
+        
+                    // Update toggle state (single simplified line)
+                    static_cast<tsl::elm::ToggleListItem*>(lastSelectedListItem)
+                        ->setState(nextToggleState == CAPITAL_ON_STR ? success : !success);
+        
+                    nextToggleState.clear();
+                }
+        
                 lastSelectedListItem->enableClickAnimation();
                 lastSelectedListItem = nullptr;
             }
+        
             closeInterpreterThread();
+            resetPercentages();
             lastRunningInterpreter.store(false, std::memory_order_release);
             return true;
         }
@@ -3676,6 +3718,8 @@ bool drawCommandsMenu(
 
     size_t delimiterPos;
 
+    bool usingProgress;
+
     bool isPolling;
     bool isScrollableTable;
     bool usingTopPivot, usingBottomPivot;
@@ -3718,6 +3762,9 @@ bool drawCommandsMenu(
         useSelection = false;
 
         isMini = false;
+
+        // toggle settings
+        usingProgress = false;
 
         // Table settings
         isPolling = false;
@@ -4122,6 +4169,10 @@ bool drawCommandsMenu(
                         continue;
                     } else if (commandName.find(MINI_PATTERN) == 0) {
                         isMini = (commandName.substr(MINI_PATTERN.length()) == TRUE_STR);
+                        continue;
+                    } else if (commandName.find(PROGRESS_PATTERN) == 0) {
+                        usingProgress = (commandName.substr(PROGRESS_PATTERN.length()) == TRUE_STR);
+                        continue;
                     } else if (commandName.find(POLLING_PATTERN) == 0) {
                         isPolling = (commandName.substr(POLLING_PATTERN.length()) == TRUE_STR);
                         continue;
@@ -4896,18 +4947,30 @@ bool drawCommandsMenu(
 
                         toggleListItem->setState(toggleStateOn);
                         
-                        toggleListItem->setStateChangedListener([i, commandsOn, commandsOff, keyName = originalOptionName, packagePath,
-                            pathPatternOn, pathPatternOff, listItem = toggleListItem](bool state) {
+                        toggleListItem->setStateChangedListener([i, usingProgress, toggleListItem, commandsOn, commandsOff, keyName = originalOptionName, packagePath,
+                            pathPatternOn, pathPatternOff](bool state) {
+                            if (runningInterpreter.load(std::memory_order_acquire)) {
+                                return;
+                            }
                             
-                            tsl::Overlay::get()->getCurrentGui()->requestFocus(listItem, tsl::FocusDirection::None);
+                            tsl::Overlay::get()->getCurrentGui()->requestFocus(toggleListItem, tsl::FocusDirection::None);
                             
+                            if (usingProgress)
+                                toggleListItem->setValue(INPROGRESS_SYMBOL);
+                            nextToggleState = !state ? CAPITAL_OFF_STR : CAPITAL_ON_STR;
+                            runningInterpreter.store(true, release);
+                            lastRunningInterpreter.store(true, release);
+                            lastSelectedListItem = toggleListItem;
+
                             // Now pass the preprocessed paths to getSourceReplacement
-                            interpretAndExecuteCommands(std::move(state ? getSourceReplacement(commandsOn, pathPatternOn, i, packagePath) :
-                                getSourceReplacement(commandsOff, pathPatternOff, i, packagePath)), packagePath, keyName);
+                            //interpretAndExecuteCommands(std::move(state ? getSourceReplacement(commandsOn, pathPatternOn, i, packagePath) :
+                            //    getSourceReplacement(commandsOff, pathPatternOff, i, packagePath)), packagePath, keyName);
                             
-                            resetPercentages();
+                            executeInterpreterCommands(std::move(state ? getSourceReplacement(commandsOn, pathPatternOn, i, packagePath) :
+                                getSourceReplacement(commandsOff, pathPatternOff, i, packagePath)), packagePath, keyName);
+                            //resetPercentages();
                             // Set the ini file value after executing the command
-                            setIniFileValue((packagePath + CONFIG_FILENAME), keyName, FOOTER_STR, state ? CAPITAL_ON_STR : CAPITAL_OFF_STR);
+                            //setIniFileValue((packagePath + CONFIG_FILENAME), keyName, FOOTER_STR, state ? CAPITAL_ON_STR : CAPITAL_OFF_STR);
                             
                         });
 
@@ -5177,39 +5240,64 @@ public:
         if (isRunningInterp) {
             return handleRunningInterpreter(keysDown, keysHeld);
         }
-    
+            
         if (lastRunningInterpreter.load(acquire)) {
             //tsl::clearGlyphCacheNow.store(true, release);
             isDownloadCommand.store(false, release);
+        
             if (lastSelectedListItem) {
+                const bool success = commandSuccess.load(acquire);
+        
                 if (lastCommandMode == OPTION_STR || lastCommandMode == SLOT_STR) {
-                    if (commandSuccess) {
+                    if (success) {
                         if (isFile(packageConfigIniPath)) {
                             auto packageConfigData = getParsedDataFromIniFile(packageConfigIniPath);
-                            auto it = packageConfigData.find(lastKeyName);
-                            if (it != packageConfigData.end()) {
+        
+                            if (auto it = packageConfigData.find(lastKeyName); it != packageConfigData.end()) {
                                 auto& optionSection = it->second;
-                                auto footerIt = optionSection.find(FOOTER_STR);
-                                if (footerIt != optionSection.end() && (footerIt->second.find(NULL_STR) == std::string::npos)) {
+        
+                                // Update footer if valid
+                                if (auto footerIt = optionSection.find(FOOTER_STR);
+                                    footerIt != optionSection.end() &&
+                                    footerIt->second.find(NULL_STR) == std::string::npos)
+                                {
                                     lastSelectedListItem->setValue(footerIt->second);
                                 }
                             }
-                            lastCommandMode = "";
+        
+                            lastCommandMode.clear();
                         } else {
                             lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
                         }
                     } else {
                         lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
                     }
+                } else {
+                    // Handle toggle or checkmark logic
+                    if (nextToggleState.empty()) {
+                        lastSelectedListItem->setValue(success ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
+                    } else {
+                        // Update displayed value
+                        lastSelectedListItem->setValue(
+                            success
+                                ? nextToggleState
+                                : (nextToggleState == CAPITAL_ON_STR ? CAPITAL_OFF_STR : CAPITAL_ON_STR)
+                        );
+        
+                        // Update toggle state in a single line
+                        static_cast<tsl::elm::ToggleListItem*>(lastSelectedListItem)
+                            ->setState(nextToggleState == CAPITAL_ON_STR ? success : !success);
+        
+                        nextToggleState.clear();
+                    }
                 }
-                else
-                    lastSelectedListItem->setValue(commandSuccess ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
-
+        
                 lastSelectedListItem->enableClickAnimation();
                 lastSelectedListItem = nullptr;
             }
-            
+        
             closeInterpreterThread();
+            resetPercentages();
             lastRunningInterpreter.store(false, std::memory_order_release);
             return true;
         }
