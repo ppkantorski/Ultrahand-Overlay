@@ -419,35 +419,31 @@ void writeFuseIni(const std::string& outputPath, const char* data = nullptr) {
     // Use stdio.h functions for file operations
     FILE* outFile = fopen(outputPath.c_str(), "w");
     if (outFile) {
-        // Write the header message and section name
-        // Uncomment this line if needed to include the commented warning line
-        // fwrite("; do not adjust these values manually unless they were not dumped correctly\n", 1, 81, outFile);
+        // Write the header in one call instead of three separate fwrite calls
+        fputs("[", outFile);
+        fputs(FUSE_STR.c_str(), outFile); 
+        fputs("]\n", outFile);
         
-        fwrite("[", 1, 1, outFile);
-        fwrite(FUSE_STR.c_str(), 1, FUSE_STR.size(), outFile);
-        fwrite("]\n", 1, 2, outFile);
-
         if (data) {
-            // Write each key-value pair with `fprintf`
+            // fprintf is necessary here for actual formatting - keep these
             fprintf(outFile, "cpu_speedo_0=%u\n", *reinterpret_cast<const uint32_t*>(data + FUSE_CPU_SPEEDO_0_CALIB));
             fprintf(outFile, "cpu_speedo_2=%u\n", *reinterpret_cast<const uint32_t*>(data + FUSE_CPU_SPEEDO_2_CALIB));
             fprintf(outFile, "soc_speedo_0=%u\n", *reinterpret_cast<const uint32_t*>(data + FUSE_SOC_SPEEDO_0_CALIB));
             fprintf(outFile, "cpu_iddq=%u\n", *reinterpret_cast<const uint32_t*>(data + FUSE_CPU_IDDQ_CALIB));
             fprintf(outFile, "soc_iddq=%u\n", *reinterpret_cast<const uint32_t*>(data + FUSE_SOC_IDDQ_CALIB));
             fprintf(outFile, "gpu_iddq=%u\n", *reinterpret_cast<const uint32_t*>(data + FUSE_GPU_IDDQ_CALIB));
-            fprintf(outFile, "disable_reload=false\n");
-        } else {
-            // Write empty values if `data` is not provided
-            fputs("cpu_speedo_0=\n", outFile);
-            fputs("cpu_speedo_2=\n", outFile);
-            fputs("soc_speedo_0=\n", outFile);
-            fputs("cpu_iddq=\n", outFile);
-            fputs("soc_iddq=\n", outFile);
-            fputs("gpu_iddq=\n", outFile);
             fputs("disable_reload=false\n", outFile);
+        } else {
+            // Single fputs call instead of seven separate ones
+            fputs("cpu_speedo_0=\n"
+                  "cpu_speedo_2=\n"
+                  "soc_speedo_0=\n"
+                  "cpu_iddq=\n"
+                  "soc_iddq=\n"
+                  "gpu_iddq=\n"
+                  "disable_reload=false\n", outFile);
         }
-
-        fclose(outFile); // Close the file
+        fclose(outFile);
     }
 #else
     // Use fstream for file operations
@@ -542,6 +538,7 @@ std::string getLocalIpAddress() {
     Result rc;
     u32 ipAddress;
 
+    ASSERT_FATAL(nifmInitialize(NifmServiceType_User)); // for local IP
     
     // Get the current IP address
     rc = nifmGetCurrentIpAddress(&ipAddress);

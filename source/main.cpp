@@ -696,7 +696,11 @@ public:
         inSettingsMenu = dropdownSelection.empty();
         inSubSettingsMenu = !dropdownSelection.empty();
         
-        const std::vector<std::string> defaultLanguagesRepresentation = {ENGLISH, SPANISH, FRENCH, GERMAN, JAPANESE, KOREAN, ITALIAN, DUTCH, PORTUGUESE, RUSSIAN, UKRAINIAN, POLISH, SIMPLIFIED_CHINESE, TRADITIONAL_CHINESE};
+        static const std::array<const std::string*, 14> defaultLanguagesRepresentation = {
+            &ENGLISH, &SPANISH, &FRENCH, &GERMAN, &JAPANESE, &KOREAN, &ITALIAN,
+            &DUTCH, &PORTUGUESE, &RUSSIAN, &UKRAINIAN, &POLISH, 
+            &SIMPLIFIED_CHINESE, &TRADITIONAL_CHINESE
+        };
         static const std::vector<std::string> defaultLanguages = {"en", "es", "fr", "de", "ja", "ko", "it", "nl", "pt", "ru", "uk", "pl", "zh-cn", "zh-tw"};
         
         auto* list = new tsl::elm::List();
@@ -775,7 +779,7 @@ public:
                 langFile = LANG_PATH + defaultLangMode + ".json";
                 if (defaultLangMode != "en" && !isFile(langFile))  {index++; continue;}
 
-                tsl::elm::ListItem* listItem = new tsl::elm::ListItem(defaultLanguagesRepresentation[index]);
+                tsl::elm::ListItem* listItem = new tsl::elm::ListItem(*defaultLanguagesRepresentation[index]);
 
                 listItem->setValue(defaultLangMode);
                 if (defaultLangMode == defaulLang) {
@@ -837,8 +841,8 @@ public:
             }
 
             addHeader(list, SOFTWARE_UPDATE);
-            addUpdateButton(list, UPDATE_ULTRAHAND, ULTRAHAND_REPO_URL + "releases/latest/download/ovlmenu.ovl", "/config/ultrahand/downloads/ovlmenu.ovl", "/switch/.overlays/ovlmenu.ovl", fullVersionLabel);
-            addUpdateButton(list, UPDATE_LANGUAGES, ULTRAHAND_REPO_URL + "releases/latest/download/lang.zip", "/config/ultrahand/downloads/lang.zip", LANG_PATH, fullVersionLabel);
+            addUpdateButton(list, UPDATE_ULTRAHAND, ULTRAHAND_REPO_URL + "releases/latest/download/ovlmenu.ovl", DOWNLOADS_PATH+"ovlmenu.ovl", OVERLAY_PATH+"ovlmenu.ovl", fullVersionLabel);
+            addUpdateButton(list, UPDATE_LANGUAGES, ULTRAHAND_REPO_URL + "releases/latest/download/lang.zip", DOWNLOADS_PATH+"lang.zip", LANG_PATH, fullVersionLabel);
 
             PackageHeader overlayHeader;
             overlayHeader.title = "Ultrahand Overlay";
@@ -873,13 +877,13 @@ public:
                 case SetSysProductModel_Copper: modelRev = "CopperTegra X1 (Erista)"; break;
                 default: modelRev = UNAVAILABLE_SELECTION.c_str(); break;
             }
-            ASSERT_FATAL(nifmInitialize(NifmServiceType_User)); // for local IP
+            //ASSERT_FATAL(nifmInitialize(NifmServiceType_User)); // for local IP
             std::vector<std::vector<std::string>> tableData = {
                 {FIRMWARE, "", versionString},
                 {BOOTLOADER, "", hekateVersion.empty() ? "fusee" : "hekate " + hekateVersion},
                 {LOCAL_IP, "", getLocalIpAddress()}
             };
-            nifmExit();
+            //nifmExit();
             addTable(list, tableData, "", 164, 20, 28, 4);
             
             // Hardware and storage info
@@ -1906,11 +1910,11 @@ public:
                     // Check if we're in settings menu with an overlay selected
                     if (!entryName.empty() && entryMode == OVERLAY_STR) {
                         // Delete overlay file
-                        targetPath = "/switch/.overlays/" + entryName;
+                        targetPath = OVERLAY_PATH + entryName;
                         hasTarget = true;
                     } else if (!entryName.empty()) {
                         // Delete package folder
-                        targetPath = "/switch/.packages/" + entryName + "/";
+                        targetPath = PACKAGE_PATH + entryName + "/";
                         hasTarget = true;
                     }
                     
@@ -6238,10 +6242,10 @@ public:
 
             if (!isFile(PACKAGE_PATH + PACKAGE_FILENAME)) {
             #if !USING_FSTREAM_DIRECTIVE
-                // Using stdio.h functions (FILE* and fprintf)
+                // Using stdio.h functions (FILE* )
                 FILE* packageFileOut = fopen((PACKAGE_PATH + PACKAGE_FILENAME).c_str(), "w");
                 if (packageFileOut) {
-                    fprintf(packageFileOut,
+                    static constexpr const char packageContent[] = 
                         "[*Reboot To]\n"
                         "[*Boot Entry]\n"
                         "ini_file_source /bootloader/hekate_ipl.ini\n"
@@ -6253,9 +6257,10 @@ public:
                         "reboot UMS\n"
                         "\n[Commands]\n"
                         "[Shutdown - \uE0F3]\n"
-                        "shutdown\n"
-                    );
-                    fclose(packageFileOut); // Close the file after writing
+                        "shutdown\n";
+                    
+                    fwrite(packageContent, sizeof(packageContent) - 1, 1, packageFileOut);
+                    fclose(packageFileOut);
                 }
             #else
                 // Using ofstream
