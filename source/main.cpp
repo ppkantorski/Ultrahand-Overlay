@@ -1206,7 +1206,7 @@ public:
                 jumpItemExactMatch.store(false, release);
                 g_overlayFilename = "";
             }
-            list->jumpToItem(jumpItemName, jumpItemValue, jumpItemExactMatch.load(acquire));
+            //list->jumpToItem(jumpItemName, jumpItemValue, jumpItemExactMatch.load(acquire));
         } else {
             if (languageWasChanged.load(acquire)) {
                 {
@@ -1217,7 +1217,7 @@ public:
                     g_overlayFilename = "";
                 }
                 languageWasChanged.store(false, release);
-                list->jumpToItem(jumpItemName, jumpItemValue, jumpItemExactMatch.load(acquire));
+                //list->jumpToItem(jumpItemName, jumpItemValue, jumpItemExactMatch.load(acquire));
             } else if (themeWasChanged) {
                 {
                     //std::lock_guard<std::mutex> lock(jumpItemMutex);
@@ -1227,7 +1227,7 @@ public:
                     g_overlayFilename = "";
                 }
                 themeWasChanged = false;
-                list->jumpToItem(jumpItemName, jumpItemValue, jumpItemExactMatch.load(acquire));
+                //list->jumpToItem(jumpItemName, jumpItemValue, jumpItemExactMatch.load(acquire));
             } else {
                 {
                     //std::lock_guard<std::mutex> lock(jumpItemMutex);
@@ -1236,9 +1236,10 @@ public:
                     jumpItemExactMatch.store(true, release);
                     g_overlayFilename = "";
                 }
-                list->jumpToItem(jumpItemName, jumpItemValue, jumpItemExactMatch.load(acquire));
+                //list->jumpToItem(jumpItemName, jumpItemValue, jumpItemExactMatch.load(acquire));
             }
         }
+        list->jumpToItem(jumpItemName, jumpItemValue, jumpItemExactMatch.load(acquire));
 
         rootFrame->setContent(list);
         return rootFrame;
@@ -3239,7 +3240,7 @@ public:
                 list->addItem(listItem);
     
             } else if (commandMode == TOGGLE_STR) {
-                auto* toggleListItem = new tsl::elm::ToggleListItem(itemName, false, ON, OFF, isMini);
+                auto* toggleListItem = new tsl::elm::ToggleListItem(itemName, false, ON, OFF, isMini, true);
     
                 // Use const iterators for better performance
                 const bool toggleStateOn = std::find(selectedItemsListOn.cbegin(), selectedItemsListOn.cend(), selectedItem) != selectedItemsListOn.cend();
@@ -4930,7 +4931,7 @@ bool drawCommandsMenu(
                     } else if (commandMode == TOGGLE_STR) {
                         cleanOptionName = optionName;
                         //removeTag(cleanOptionName);
-                        auto* toggleListItem = new tsl::elm::ToggleListItem(cleanOptionName, false, ON, OFF, isMini);
+                        auto* toggleListItem = new tsl::elm::ToggleListItem(cleanOptionName, false, ON, OFF, isMini, true);
 
                         // Set the initial state of the toggle item
                         if (!pathPatternOn.empty()){

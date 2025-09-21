@@ -539,7 +539,7 @@ std::string getLocalIpAddress() {
     u32 ipAddress;
 
     ASSERT_FATAL(nifmInitialize(NifmServiceType_User)); // for local IP
-    
+
     // Get the current IP address
     rc = nifmGetCurrentIpAddress(&ipAddress);
     if (R_SUCCEEDED(rc)) {
@@ -920,8 +920,8 @@ void initializeTheme(const std::string& themeIniPath = THEME_CONFIG_INI_PATH) {
     bool needsUpdate = false;
     
     // Check if file exists and has theme section
-    bool fileExists = isFileOrDirectory(themeIniPath);
-    bool hasThemeSection = fileExists && (themeData.count(THEME_STR) > 0);
+    //const bool fileExists = isFileOrDirectory(themeIniPath);
+    const bool hasThemeSection = isFileOrDirectory(themeIniPath) && (themeData.count(THEME_STR) > 0);
     
     if (hasThemeSection) {
         // File exists with theme section - check for missing keys
@@ -1306,78 +1306,89 @@ void addGap(tsl::elm::List* list, s32 gapHeight) {
     ), gapHeight);
 }
 
-std::vector<std::string> wrapText(const std::string& text, float maxWidth, const std::string& wrappingMode, bool useIndent, const std::string& indent, float indentWidth, size_t fontSize) {
+std::vector<std::string> wrapText(
+    const std::string& text,
+    float maxWidth,
+    const std::string& wrappingMode,
+    bool useIndent,
+    const std::string& indent,
+    float indentWidth,
+    size_t fontSize
+) {
     if (wrappingMode == "none" || (wrappingMode != "char" && wrappingMode != "word")) {
-        return std::vector<std::string>{text};  // Return the entire text as a single line
+        return { text };
     }
-    
-    std::vector<std::string> wrappedLines;
-    bool firstLine = true;
 
-    float currentMaxWidth;
-    std::string testLine;
+    std::vector<std::string> wrappedLines;
+
+    bool firstLine = true;
+    std::string currentLine;
 
     if (wrappingMode == "char") {
-        std::string currentLine;
-        
-        size_t i = 0;
-        while (i < text.size()) {
-            // OPTIMIZED: Create test line fresh each iteration
-            testLine = currentLine + text[i];
-            currentMaxWidth = firstLine ? maxWidth : maxWidth - indentWidth;
-            
-            if (tsl::gfx::calculateStringWidth(testLine, fontSize, false) > currentMaxWidth) {
-                // Line would be too long, finish current line
-                wrappedLines.push_back(((firstLine && useIndent) || !useIndent) ? currentLine : indent + currentLine);
-                
-                // OPTIMIZED: Start fresh line instead of clearing
-                currentLine = std::string(1, text[i]);  // New line with current character
-                firstLine = false;
-            } else {
-                currentLine = std::move(testLine);  // Use the test line
-            }
-            i++;
-        }
-        if (!currentLine.empty()) {
-            wrappedLines.push_back(((firstLine && useIndent) || !useIndent) ? currentLine : indent + currentLine);
-        }
-    } else if (wrappingMode == "word") {
-        std::string currentLine;
-        std::string currentWord;  // Safe reuse - standard stream extraction pattern
-        
-        StringStream stream(text);
-        while (stream >> currentWord) {
-            currentMaxWidth = firstLine ? maxWidth : maxWidth - indentWidth;
-            
-            // OPTIMIZED: Create test line fresh each iteration
-            testLine = currentLine;
-            if (!testLine.empty()) {
-                testLine += " ";
-            }
-            testLine += currentWord;
-            
-            if (tsl::gfx::calculateStringWidth(testLine, fontSize, false) > currentMaxWidth) {
-                // Line would be too long, finish current line
+        for (char c : text) {
+            const float currentMaxWidth = firstLine ? maxWidth : maxWidth - indentWidth;
+
+            currentLine.push_back(c);
+            if (tsl::gfx::calculateStringWidth(currentLine, fontSize, false) > currentMaxWidth) {
+                // Remove last character and push line
+                const char lastChar = currentLine.back();
+                currentLine.pop_back();
                 if (!currentLine.empty()) {
-                    wrappedLines.push_back(((firstLine && useIndent) || !useIndent) ? currentLine : indent + currentLine);
+                    if (useIndent && !firstLine)
+                        wrappedLines.push_back(indent + currentLine);
+                    else
+                        wrappedLines.push_back(currentLine);
                 }
-                
-                // OPTIMIZED: Start fresh line instead of clearing
-                currentLine = currentWord;  // New line with current word
+                currentLine = lastChar;
                 firstLine = false;
-            } else {
-                currentLine = std::move(testLine);  // Use the test line
             }
         }
+
         if (!currentLine.empty()) {
-            wrappedLines.push_back(((firstLine && useIndent) || !useIndent) ? currentLine : indent + currentLine);
+            if (useIndent && !firstLine)
+                wrappedLines.push_back(indent + currentLine);
+            else
+                wrappedLines.push_back(currentLine);
+        }
+    } 
+    else {
+        // Word wrapping
+        StringStream stream(text);
+        std::string currentWord;
+
+        std::string testLine;
+
+        while (stream >> currentWord) {
+            const float currentMaxWidth = firstLine ? maxWidth : maxWidth - indentWidth;
+
+            testLine = currentLine;
+            if (!testLine.empty()) testLine.push_back(' ');
+            testLine += currentWord;
+
+            if (tsl::gfx::calculateStringWidth(testLine, fontSize, false) > currentMaxWidth) {
+                if (!currentLine.empty()) {
+                    if (useIndent && !firstLine)
+                        wrappedLines.push_back(indent + currentLine);
+                    else
+                        wrappedLines.push_back(currentLine);
+                }
+                currentLine = std::move(currentWord);
+                firstLine = false;
+            } else {
+                currentLine.swap(testLine);
+            }
+        }
+
+        if (!currentLine.empty()) {
+            if (useIndent && !firstLine)
+                wrappedLines.push_back(indent + currentLine);
+            else
+                wrappedLines.push_back(currentLine);
         }
     }
-    
+
     return wrappedLines;
 }
-
-
 
 // ─── Helper: flatten + placeholder + wrap & expand ─────────────────────────────
 static bool buildTableDrawerLines(
