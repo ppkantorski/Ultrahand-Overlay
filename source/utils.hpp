@@ -3917,28 +3917,32 @@ void handleMoveCommand(const std::vector<std::string>& cmd, const std::string& p
         char sourceBuffer[BUFFER_SIZE];
         char destBuffer[BUFFER_SIZE];
         
-        size_t sourceLen, destLen;
-
+        // Static string for repeated log messages to reduce allocations
+        #if USING_LOGGING_DIRECTIVE
+        static const std::string skipDirMsg = "Skipping non-empty directory: ";
+        #endif
+        
         // Process files line by line simultaneously
         while (fgets(sourceBuffer, BUFFER_SIZE, sourceFile) && 
                fgets(destBuffer, BUFFER_SIZE, destFile)) {
             
-            // Fast newline removal - work backwards from end
-            sourceLen = strlen(sourceBuffer);
-            if (sourceLen > 0 && sourceBuffer[sourceLen - 1] == '\n') {
-                sourceBuffer[sourceLen - 1] = '\0';
-                --sourceLen;
-            }
+            // Optimized newline removal - scan once instead of using strlen
+            char* srcEnd = sourceBuffer;
+            while (*srcEnd && *srcEnd != '\n') ++srcEnd;
+            const size_t sourceLen = srcEnd - sourceBuffer;
+            *srcEnd = '\0';
             
-            destLen = strlen(destBuffer);
-            if (destLen > 0 && destBuffer[destLen - 1] == '\n') {
-                destBuffer[destLen - 1] = '\0';
-                --destLen;
-            }
+            char* destEnd = destBuffer;
+            while (*destEnd && *destEnd != '\n') ++destEnd;
+            const size_t destLen = destEnd - destBuffer;
+            *destEnd = '\0';
             
-            // Direct assignment to avoid extra allocation
-            sourcePath.assign(sourceBuffer, sourceLen);
-            destinationPath.assign(destBuffer, destLen);
+            // Clear and append to reuse existing string capacity
+            sourcePath.clear();
+            sourcePath.append(sourceBuffer, sourceLen);
+            
+            destinationPath.clear();
+            destinationPath.append(destBuffer, destLen);
             
             preprocessPath(sourcePath, packagePath);
             preprocessPath(destinationPath, packagePath);
@@ -3947,8 +3951,8 @@ void handleMoveCommand(const std::vector<std::string>& cmd, const std::string& p
             const bool shouldProcess = !filterSet || filterSet->find(sourcePath) == filterSet->end();
             
             if (shouldProcess) {
-                // Check if it's a directory (ends with /)
-                const bool isDirectory = !sourcePath.empty() && sourcePath.back() == '/';
+                // Check if it's a directory using the buffer directly (avoid string access)
+                const bool isDirectory = sourceLen > 0 && sourcePath[sourceLen - 1] == '/';
                 
                 if (!isDirectory) {
                     // Check copy filter once and cache result
@@ -3967,10 +3971,19 @@ void handleMoveCommand(const std::vector<std::string>& cmd, const std::string& p
                     }
                     #if USING_LOGGING_DIRECTIVE
                     else if (!disableLogging) {
-                        logMessage("Skipping non-empty directory: " + sourcePath);
+                        logMessage(skipDirMsg + sourcePath);
                     }
                     #endif
                 }
+            }
+            
+            // Periodically shrink strings if they've grown too large
+            // This prevents unbounded memory growth for very long paths
+            if (sourcePath.capacity() > 8192) {
+                sourcePath.shrink_to_fit();
+            }
+            if (destinationPath.capacity() > 8192) {
+                destinationPath.shrink_to_fit();
             }
         }
         
