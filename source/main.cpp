@@ -5964,7 +5964,8 @@ public:
                         if (hide == TRUE_STR)
                             drawHiddenTab = true;
                         if ((!inHiddenMode && hide == FALSE_STR) || (inHiddenMode && hide == TRUE_STR)) {
-                            priority = getValueOrDefault(it->second, PRIORITY_STR, "20", formatPriorityString, 1);
+                            priority = (it->second.find(PRIORITY_STR) != it->second.end()) ? 
+                                        formatPriorityString(it->second[PRIORITY_STR]) : "0020";
                             starred = getValueOrDefault(it->second, STAR_STR, FALSE_STR);
                             
                             useLaunchArgs = getValueOrDefault(it->second, USE_LAUNCH_ARGS_STR, FALSE_STR);
