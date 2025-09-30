@@ -1260,8 +1260,11 @@ public:
             if (lastSelectedListItem) {
                 lastSelectedListItem->setValue(commandSuccess.load(acquire) ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
                 lastSelectedListItem->enableClickAnimation();
+                lastSelectedListItem = nullptr;
             }
+
             closeInterpreterThread();
+            resetPercentages();
             lastRunningInterpreter.store(false, std::memory_order_release);
             return true;
         }
@@ -4379,7 +4382,7 @@ bool drawCommandsMenu(
                     continue;
                 } else if (commandMode == TRACKBAR_STR) {
                     onlyTables = false;
-                
+                    
                     // Create TrackBarV2 instance and configure it
                     auto trackBar = new tsl::elm::TrackBarV2(optionName, packagePath, minValue, maxValue, units,
                         interpretAndExecuteCommands, getSourceReplacement, commands, originalOptionName, false, false, -1, unlockedTrackbar, onEveryTick);
@@ -5743,32 +5746,13 @@ public:
      */
     virtual tsl::elm::Element* createUI() override {
         std::lock_guard<std::mutex> lock(transitionMutex);
-        //menuIsGenerated = false;
     
-        //if (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_OVERLAY_STR) == TRUE_STR) {
-        //    inMainMenu.store(false, std::memory_order_release);
-        //    inHiddenMode = true;
-        //    hiddenMenuMode = OVERLAYS_STR;
-        //    skipJumpReset.store(true, release);
-        //    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_OVERLAY_STR, FALSE_STR);
-        //}
-        //
-        //else if (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_PACKAGE_STR) == TRUE_STR) {
-        //    inMainMenu.store(false, std::memory_order_release);
-        //    inHiddenMode = true;
-        //    hiddenMenuMode = PACKAGES_STR;
-        //    skipJumpReset.store(true, release);
-        //    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_PACKAGE_STR, FALSE_STR);
-        //}
-
+        // Handle hidden mode flags
         {
-            // Load INI once and check both values
             auto iniData = getParsedDataFromIniFile(ULTRAHAND_CONFIG_INI_PATH);
             auto& ultrahandSection = iniData[ULTRAHAND_PROJECT_NAME];
-            
             bool needsUpdate = false;
             
-            // Check for hidden overlay
             auto overlayIt = ultrahandSection.find(IN_HIDDEN_OVERLAY_STR);
             if (overlayIt != ultrahandSection.end() && overlayIt->second == TRUE_STR) {
                 inMainMenu.store(false, std::memory_order_release);
@@ -5777,9 +5761,7 @@ public:
                 skipJumpReset.store(true, release);
                 ultrahandSection[IN_HIDDEN_OVERLAY_STR] = FALSE_STR;
                 needsUpdate = true;
-            }
-            // Check for hidden package
-            else {
+            } else {
                 auto packageIt = ultrahandSection.find(IN_HIDDEN_PACKAGE_STR);
                 if (packageIt != ultrahandSection.end() && packageIt->second == TRUE_STR) {
                     inMainMenu.store(false, std::memory_order_release);
@@ -5791,569 +5773,347 @@ public:
                 }
             }
             
-            // Write back only if changes were made
             if (needsUpdate) {
                 saveIniFileData(ULTRAHAND_CONFIG_INI_PATH, iniData);
             }
         }
-
     
         if (!inHiddenMode && dropdownSection.empty())
             inMainMenu.store(true, std::memory_order_release);
         else
             inMainMenu.store(false, std::memory_order_release);
         
-        // Pre-declare all variables used in loops and throughout the function
-        std::string packagePath;
-        
-        bool noClickableItems = false;
-        
         lastMenuMode = hiddenMenuMode;
-        
-        
-        // Loop variables
-        bool usingLibUltrahand = false;
-        std::string overlayFileName, overlayName, overlayVersion, assignedOverlayName, assignedOverlayVersion;
-        std::string baseOverlayInfo, fullOverlayInfo, priority, starred, hide, useLaunchArgs, launchArgs;
-        std::string customName, customVersion, overlayFile, newOverlayName;
-        std::string taintedOverlayFileName, packageName, packageVersion, tempPackageName, newPackageName, packageFilePath;
-        //size_t lastColonPos, secondLastColonPos, thirdLastColonPos;
-        bool overlayStarred, newStarred, packageStarred;
-        bool foundOvlmenu = false;
         
         static bool hasInitialized = false;
         if (!hasInitialized) {
             if (!inOverlay) {
-                if (!usePageSwap)
-                    currentMenu = OVERLAYS_STR;
-                else
-                    currentMenu = PACKAGES_STR;
+                currentMenu = usePageSwap ? PACKAGES_STR : OVERLAYS_STR;
             }
-            
             hasInitialized = true;
-            
         }
         
         if (toPackages) {
-            setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "to_packages", FALSE_STR); // this is handled within tesla.hpp
+            setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "to_packages", FALSE_STR);
             toPackages = false;
             currentMenu = PACKAGES_STR;
         }
     
-        menuMode = currentMenu;
-        
-        //versionLabel = cleanVersionLabel(APP_VERSION) + "  " + loaderTitle + " " + cleanVersionLabel(loaderInfo);
-        //versionLabel = (cleanVersionLabels) ? std::string(APP_VERSION) : (std::string(APP_VERSION) + "   (" + extractTitle(loaderInfo) + " v" + cleanVersionLabel(loaderInfo) + ")");
+        menuMode = !hiddenMenuMode.empty() ? hiddenMenuMode : currentMenu;
         
         auto* list = new tsl::elm::List();
-        //list = std::make_unique<tsl::elm::List>();
-    
+        bool noClickableItems = false;
         
-        
-        if (!hiddenMenuMode.empty())
-            menuMode = hiddenMenuMode;
-        
-        
-        // Overlays menu
         if (menuMode == OVERLAYS_STR) {
-            inOverlaysPage.store(true, std::memory_order_release);
-            inPackagesPage.store(false, std::memory_order_release);
-            //closeInterpreterThread();
+            createOverlaysMenu(list);
+        } else if (menuMode == PACKAGES_STR) {
+            noClickableItems = createPackagesMenu(list);
+        }
     
-            addHeader(list, (!inHiddenMode ? OVERLAYS : HIDDEN_OVERLAYS)+" "+DIVIDER_SYMBOL+" \uE0E3 "+SETTINGS+" "+DIVIDER_SYMBOL+" \uE0E2 "+FAVORITE);
-            
-            
-            // Load overlay files
-            std::vector<std::string> overlayFiles = getFilesListByWildcards(OVERLAY_PATH+"*.ovl");
-            
-            
-            #if !USING_FSTREAM_DIRECTIVE
-            
-            // Check if the overlays INI file exists
-            //FILE* overlaysIniFile = fopen(OVERLAYS_INI_FILEPATH.c_str(), "r"); // Use .c_str() to convert to const char*
-            if (!isFile(OVERLAYS_INI_FILEPATH)) {
-                // The INI file doesn't exist, so create an empty one
-                FILE* createFile = fopen(OVERLAYS_INI_FILEPATH.c_str(), "w"); // Use .c_str() here as well
-                if (createFile) {
-                    //initializingSpawn = true;
-                    fclose(createFile); // Close the file after creating it
-                }
-            //} else {
-            //    fclose(overlaysIniFile); // Close the file if it exists
-            }
-            
-            
-            #else
-    
-            // Check if the overlays INI file exists
-            //std::ifstream overlaysIniFile(OVERLAYS_INI_FILEPATH);
-            if (!isFile(OVERLAYS_INI_FILEPATH)) {
-                // The INI file doesn't exist, so create an empty one.
-                std::ofstream createFile(OVERLAYS_INI_FILEPATH);
-                //if (createFile.is_open()) {
-                //initializingSpawn = true;
-                createFile.close(); // Close the file after creating it
-                //}
-            }
-    
-            //overlaysIniFile.close(); // Close the file
-    
-            #endif
-    
-            // load overlaySet from OVERLAYS_INI_FILEPATH.  this will be the overlayFilenames
-            std::set<std::string> overlaySet;
-            //std::set<std::string> hiddenOverlaySet;
-            
-            // Load subdirectories
-            if (!overlayFiles.empty()) {
-                // Load the INI file and parse its content.
-                std::map<std::string, std::map<std::string, std::string>> overlaysIniData = getParsedDataFromIniFile(OVERLAYS_INI_FILEPATH);
-                
-                // Single pass overlay filtering
-                overlayFiles.erase(
-                    std::remove_if(
-                        overlayFiles.begin(), 
-                        overlayFiles.end(),
-                        [&foundOvlmenu](const std::string& file) {
-                            const std::string fileName = getNameFromPath(file);
-                            if (!foundOvlmenu && fileName == "ovlmenu.ovl") {
-                                foundOvlmenu = true;  // Mark as found and continue to remove
-                                return true;
-                            }
-                            return fileName.front() == '.';
-                        }
-                    ),
-                    overlayFiles.end()
-                );
-    
-                auto it = overlaysIniData.end();
-                // Process overlay files
-                bool drawHiddenTab = false;
-
-                // Track if we need to write back
-                bool overlaysNeedsUpdate = false;
-
-                for (auto& overlayFile : overlayFiles) {
-                    overlayFileName = getNameFromPath(overlayFile);
-                    overlayFile = "";
-                    it = overlaysIniData.find(overlayFileName);
-                    if (it == overlaysIniData.end()) {
-                        // Initialization of new entries IN MEMORY (no file I/O)
-                        auto& overlaySection = overlaysIniData[overlayFileName];
-                        overlaySection[PRIORITY_STR] = "20";
-                        overlaySection[STAR_STR] = FALSE_STR;
-                        overlaySection[HIDE_STR] = FALSE_STR;
-                        overlaySection[USE_LAUNCH_ARGS_STR] = FALSE_STR;
-                        overlaySection[LAUNCH_ARGS_STR] = "";
-                        overlaySection["custom_name"] = "";
-                        overlaySection["custom_version"] = "";
-                        overlaysNeedsUpdate = true;
-                        
-                        const auto& [result, overlayName, overlayVersion, usingLibUltrahand] = getOverlayInfo(OVERLAY_PATH + overlayFileName);
-                        if (result != ResultSuccess) continue;
-                
-                        // Use retrieved overlay info
-                        assignedOverlayName = overlayName;
-                        assignedOverlayVersion = overlayVersion;
-                    
-                        //baseOverlayInfo = "0020" + assignedOverlayName + ":" + assignedOverlayName + ":" + assignedOverlayVersion + ":" + overlayFileName;
-                        baseOverlayInfo = "0020" + assignedOverlayName + ":" + assignedOverlayName + ":" + assignedOverlayVersion + ":" + overlayFileName + ":" + (usingLibUltrahand ? "1" : "0");
-                        overlaySet.insert(baseOverlayInfo);
-                    } else {
-                        hide = getValueOrDefault(it->second, HIDE_STR, FALSE_STR);
-                        if (hide == TRUE_STR)
-                            drawHiddenTab = true;
-                        if ((!inHiddenMode && hide == FALSE_STR) || (inHiddenMode && hide == TRUE_STR)) {
-                            priority = (it->second.find(PRIORITY_STR) != it->second.end()) ? 
-                                        formatPriorityString(it->second[PRIORITY_STR]) : "0020";
-                            starred = getValueOrDefault(it->second, STAR_STR, FALSE_STR);
-                            
-                            useLaunchArgs = getValueOrDefault(it->second, USE_LAUNCH_ARGS_STR, FALSE_STR);
-                            launchArgs = getValueOrDefault(it->second, LAUNCH_ARGS_STR, "");
-                            customName = getValueOrDefault(it->second, "custom_name", "");
-                            customVersion = getValueOrDefault(it->second, "custom_version", "");
-                            
-                            const auto& [result, overlayName, overlayVersion, usingLibUltrahand] = getOverlayInfo(OVERLAY_PATH + overlayFileName);
-                            if (result != ResultSuccess) continue;
-                            
-                            assignedOverlayName = !customName.empty() ? customName : overlayName;
-                            assignedOverlayVersion = !customVersion.empty() ? customVersion : overlayVersion;
-                            
-                            //baseOverlayInfo = priority + assignedOverlayName + ":" + assignedOverlayName + ":" + assignedOverlayVersion + ":" + overlayFileName;
-                            baseOverlayInfo = priority + assignedOverlayName + ":" + assignedOverlayName + ":" + assignedOverlayVersion + ":" + overlayFileName + ":" + (usingLibUltrahand ? "1" : "0");
-                            fullOverlayInfo = (starred == TRUE_STR) ? "-1:" + baseOverlayInfo : baseOverlayInfo;
-                            
-                            //if (!inHiddenMode) {
-                            overlaySet.insert(fullOverlayInfo);
-                            //} else {
-                            //    hiddenOverlaySet.insert(fullOverlayInfo);
-                            //}
-                        }
-                    }
-                }
-                overlayFiles = {};
-
-                //overlayFiles.clear();
-                //overlayFiles.shrink_to_fit();
-
-                // Write back file only if changes were made
-                if (overlaysNeedsUpdate) {
-                    saveIniFileData(OVERLAYS_INI_FILEPATH, overlaysIniData);
-                }
-
-                overlaysIniData = {};
-                //overlaysIniData.clear();
-                
-                //if (inHiddenMode) {
-                //    overlaySet = std::move(hiddenOverlaySet);
-                //    //hiddenOverlaySet.clear();
-                //}
-                
-                // Process overlay list items
-                for (const auto& taintedOverlayFileName : overlaySet) {
-                    usingLibUltrahand = false;
-                    overlayFileName = "";
-                    overlayStarred = false;
-                    overlayVersion = "";
-                    overlayName = "";
-                    
-                    // Detect if starred
-                    overlayStarred = (taintedOverlayFileName.substr(0, 3) == "-1:");
-                    
-                    // Find the position of the last colon (usingLibUltrahand flag)
-                    const size_t lastColonPos = taintedOverlayFileName.rfind(':');
-                    if (lastColonPos != std::string::npos) {
-                        // Extract usingLibUltrahand flag
-                        usingLibUltrahand = (taintedOverlayFileName.substr(lastColonPos + 1) == "1");
-                        
-                        // Find the position of the second-to-last colon (overlayFileName)
-                        const size_t secondLastColonPos = taintedOverlayFileName.rfind(':', lastColonPos - 1);
-                        if (secondLastColonPos != std::string::npos) {
-                            // Extract overlayFileName
-                            overlayFileName = taintedOverlayFileName.substr(secondLastColonPos + 1, lastColonPos - secondLastColonPos - 1);
-                            
-                            // Find the position of the third-to-last colon (overlayVersion)
-                            const size_t thirdLastColonPos = taintedOverlayFileName.rfind(':', secondLastColonPos - 1);
-                            if (thirdLastColonPos != std::string::npos) {
-                                // Extract overlayVersion
-                                overlayVersion = taintedOverlayFileName.substr(thirdLastColonPos + 1, secondLastColonPos - thirdLastColonPos - 1);
-                                
-                                // Find the position of the fourth-to-last colon (overlayName)
-                                const size_t fourthLastColonPos = taintedOverlayFileName.rfind(':', thirdLastColonPos - 1);
-                                if (fourthLastColonPos != std::string::npos) {
-                                    overlayName = taintedOverlayFileName.substr(fourthLastColonPos + 1, thirdLastColonPos - fourthLastColonPos - 1);
-                                }
-                            }
-                        }
-                    }
-
-                    overlayFile = OVERLAY_PATH+overlayFileName;
-                    newOverlayName = overlayStarred ? STAR_SYMBOL+"  "+overlayName : overlayName;
-                    
-                    // Toggle the starred status
-                    newStarred = !overlayStarred;
-                    
-                    if (isFile(overlayFile)) {
-                        tsl::elm::ListItem* listItem = new tsl::elm::ListItem(newOverlayName, "", false, false);
-                        overlayVersion = getFirstLongEntry(overlayVersion);
-                        //std::string originalOverlayVersion = overlayVersion.c_str();
-                        if (cleanVersionLabels)
-                            overlayVersion = cleanVersionLabel(overlayVersion);
-                        if (!hideOverlayVersions) {
-                            //listItem->setValue(overlayVersion, true, true);
-                            listItem->setValue(overlayVersion, true);
-
-                            if (usingLibUltrahand) {
-                                listItem->setValueColor(useLibultrahandVersions ? tsl::ultOverlayVersionTextColor : tsl::overlayVersionTextColor);
-                            }
-                            else {
-                                listItem->setValueColor(tsl::overlayVersionTextColor);
-                            }
-                        }
-
-                        if (usingLibUltrahand) {
-                            listItem->setTextColor(useLibultrahandTitles ? tsl::ultOverlayTextColor : tsl::overlayTextColor);
-                        }
-                        else {
-                            listItem->setTextColor(tsl::overlayTextColor);
-                        }
-                        
-
-                        if (overlayFileName == g_overlayFilename) {
-                            //std::lock_guard<std::mutex> lock(jumpItemMutex);
-                            jumpItemName = newOverlayName;
-                            jumpItemValue = hideOverlayVersions ? "" : overlayVersion;
-                            jumpItemExactMatch.store(true, release);
-                        }
-
-                        // Add a click listener to load the overlay when clicked upon
-                        listItem->setClickListener([overlayFile, newStarred, overlayFileName, overlayName, overlayVersion](s64 keys) {
-                            
-                            if (runningInterpreter.load(acquire))
-                                return false;
-                            
-    
-                            if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
-                                //tsl::notificationGeneration.fetch_add(1, std::memory_order_release);
-
-                                //std::string useOverlayLaunchArgs = parseValueFromIniSection(OVERLAYS_INI_FILEPATH, overlayFileName, USE_LAUNCH_ARGS_STR);
-                                //std::string overlayLaunchArgs = parseValueFromIniSection(OVERLAYS_INI_FILEPATH, overlayFileName, LAUNCH_ARGS_STR);
-
-                                std::string useOverlayLaunchArgs;
-                                std::string overlayLaunchArgs;
-                                {
-                                    // Load INI once and extract both values
-                                    auto overlaysIniData = getParsedDataFromIniFile(OVERLAYS_INI_FILEPATH);
-                                    
-                                    auto sectionIt = overlaysIniData.find(overlayFileName);
-                                    if (sectionIt != overlaysIniData.end()) {
-                                        auto useArgsIt = sectionIt->second.find(USE_LAUNCH_ARGS_STR);
-                                        if (useArgsIt != sectionIt->second.end()) {
-                                            useOverlayLaunchArgs = useArgsIt->second;
-                                        }
-                                        
-                                        auto argsIt = sectionIt->second.find(LAUNCH_ARGS_STR);
-                                        if (argsIt != sectionIt->second.end()) {
-                                            overlayLaunchArgs = argsIt->second;
-                                        }
-                                    }
-                                    removeQuotes(overlayLaunchArgs);
-                                }
-
-                                
-                                
-                                //if (inHiddenMode) {
-                                //    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_OVERLAY_STR, TRUE_STR);
-                                //}
-                                //setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_OVERLAY_STR, TRUE_STR); // this is handled within tesla.hpp
-
-                                {
-                                    // Load INI data once and modify in memory
-                                    auto iniData = getParsedDataFromIniFile(ULTRAHAND_CONFIG_INI_PATH);
-                                    auto& ultrahandSection = iniData[ULTRAHAND_PROJECT_NAME];
-                                    
-                                    // Make all changes in memory
-                                    if (inHiddenMode) {
-                                        ultrahandSection[IN_HIDDEN_OVERLAY_STR] = TRUE_STR;
-                                    }
-                                    ultrahandSection[IN_OVERLAY_STR] = TRUE_STR; // this is handled within tesla.hpp
-                                    
-                                    // Write back once
-                                    saveIniFileData(ULTRAHAND_CONFIG_INI_PATH, iniData);
-                                }
-
-                                ult::launchingOverlay.store(true, std::memory_order_release);
-
-                                if (useOverlayLaunchArgs == TRUE_STR)
-                                    tsl::setNextOverlay(overlayFile, overlayLaunchArgs);
-                                else
-                                    tsl::setNextOverlay(overlayFile);
-                                
-                                tsl::Overlay::get()->close(true);
-                                
-                                return true;
-                            } else if (keys & STAR_KEY && !(keys & ~STAR_KEY & ALL_KEYS_MASK)) {
-                                
-                                if (!overlayFile.empty()) {
-                                    // Update the INI file with the new value
-                                    setIniFileValue(OVERLAYS_INI_FILEPATH, overlayFileName, STAR_STR, newStarred ? TRUE_STR : FALSE_STR);
-                                    // Now, you can use the newStarred value for further processing if needed
-                                }
-                                {
-                                    //std::lock_guard<std::mutex> lock(jumpItemMutex);
-                                    skipJumpReset.store(true, release);
-                                    jumpItemName = newStarred ? STAR_SYMBOL + "  " + overlayName : overlayName;
-                                    jumpItemValue = hideOverlayVersions ? "" : overlayVersion;
-                                    jumpItemExactMatch.store(true, release);
-                                    // Also clear the global overlay filename since we're not on the main overlay list
-                                    g_overlayFilename = "";
-                                }
-
-                                wasInHiddenMode = inHiddenMode;
-
-                                if (inHiddenMode) {
-                                    //tsl::goBack();
-                                    inMainMenu.store(false, std::memory_order_release);
-                                    inHiddenMode = true;
-                                    reloadMenu2 = true;
-                                }
-                                refreshPage.store(true, release);
-                                
-                                return true;
-                            } else if (keys & SETTINGS_KEY && !(keys & ~SETTINGS_KEY & ALL_KEYS_MASK)) {
-                                if (!inHiddenMode) {
-                                    lastMenu = "";
-                                    inMainMenu.store(false, std::memory_order_release);
-                                } else {
-                                    lastMenu = "hiddenMenuMode";
-                                    inHiddenMode = false;
-                                }
-                                {
-                                    //std::lock_guard<std::mutex> lock(jumpItemMutex);
-                                    jumpItemName = newStarred ? STAR_SYMBOL + "  " + overlayName : overlayName;
-                                    jumpItemValue = hideOverlayVersions ? "" : overlayVersion;
-                                    jumpItemExactMatch.store(true, release);
-                                    // Also clear the global overlay filename since we're not on the main overlay list
-                                    g_overlayFilename = "";
-                                }
-                                
-                                tsl::changeTo<SettingsMenu>(overlayFileName, OVERLAY_STR, overlayName, overlayVersion);
-                                return true;
-                            }
-                            return false;
-                        });
-                        list->addItem(listItem);
-                    }
-                    //if (listItem != nullptr)
-                        
-                }
-                overlaySet.clear();
-                
-                if (drawHiddenTab && !inHiddenMode && !hideHidden) {
-                    tsl::elm::ListItem* listItem = new tsl::elm::ListItem(HIDDEN, DROPDOWN_SYMBOL);
-                    
-                    listItem->setClickListener([](uint64_t keys) {
-                        if (runningInterpreter.load(acquire))
-                            return false;
-    
-                        if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
-                            {
-                                //std::lock_guard<std::mutex> lock(jumpItemMutex);
-                                // reset tracking
-                                g_overlayFilename = "";
-                                jumpItemName = "";
-                                jumpItemValue = "";
-                                jumpItemExactMatch.store(true, release);
-                            }
-                            inMainMenu.store(false, std::memory_order_release);
-                            inHiddenMode = true;
-                            tsl::changeTo<MainMenu>(OVERLAYS_STR);
-                            return true;
-                        }
-                        return false;
-                    });
-                    
-                    list->addItem(listItem);
-                }
-            }
+        auto* rootFrame = new tsl::elm::OverlayFrame(CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel, noClickableItems, menuMode+hiddenMenuMode+dropdownSection, "", "", "");
+        
+        if (g_overlayFilename != "ovlmenu.ovl") {
+            list->jumpToItem(jumpItemName, jumpItemValue, jumpItemExactMatch.load(acquire));
+        } else {
+            g_overlayFilename = "";
         }
         
+        rootFrame->setContent(list);
+        return rootFrame;
+    }
+    
+    
+    void createOverlaysMenu(tsl::elm::List* list) {
+        inOverlaysPage.store(true, std::memory_order_release);
+        inPackagesPage.store(false, std::memory_order_release);
+    
+        addHeader(list, (!inHiddenMode ? OVERLAYS : HIDDEN_OVERLAYS)+" "+DIVIDER_SYMBOL+" \uE0E3 "+SETTINGS+" "+DIVIDER_SYMBOL+" \uE0E2 "+FAVORITE);
         
-        // Packages menu
-        if (menuMode == PACKAGES_STR ) {
-
-            if (!isFile(PACKAGE_PATH + PACKAGE_FILENAME)) {
-            #if !USING_FSTREAM_DIRECTIVE
-                // Using stdio.h functions (FILE* )
-                FILE* packageFileOut = fopen((PACKAGE_PATH + PACKAGE_FILENAME).c_str(), "w");
-                if (packageFileOut) {
-                    static constexpr const char packageContent[] = 
-                        "[*Reboot To]\n"
-                        "[*Boot Entry]\n"
-                        "ini_file_source /bootloader/hekate_ipl.ini\n"
-                        "filter config\n"
-                        "reboot boot '{ini_file_source(*)}'\n"
-                        "[hekate - \uE073]\n"
-                        "reboot HEKATE\n"
-                        "[hekate UMS - \uE073\uE08D]\n"
-                        "reboot UMS\n"
-                        "\n[Commands]\n"
-                        "[Shutdown - \uE0F3]\n"
-                        "shutdown\n";
+        std::vector<std::string> overlayFiles = getFilesListByWildcards(OVERLAY_PATH+"*.ovl");
+        
+        #if !USING_FSTREAM_DIRECTIVE
+        if (!isFile(OVERLAYS_INI_FILEPATH)) {
+            FILE* createFile = fopen(OVERLAYS_INI_FILEPATH.c_str(), "w");
+            if (createFile) fclose(createFile);
+        }
+        #else
+        if (!isFile(OVERLAYS_INI_FILEPATH)) {
+            std::ofstream createFile(OVERLAYS_INI_FILEPATH);
+            createFile.close();
+        }
+        #endif
+    
+        if (overlayFiles.empty()) return;
+    
+        std::set<std::string> overlaySet;
+        bool drawHiddenTab = false;
+        
+        // Scope to immediately free INI data after processing
+        {
+            auto overlaysIniData = getParsedDataFromIniFile(OVERLAYS_INI_FILEPATH);
+            bool overlaysNeedsUpdate = false;
+            bool foundOvlmenu = false;
+    
+            overlayFiles.erase(
+                std::remove_if(overlayFiles.begin(), overlayFiles.end(),
+                    [&foundOvlmenu](const std::string& file) {
+                        const std::string fileName = getNameFromPath(file);
+                        if (!foundOvlmenu && fileName == "ovlmenu.ovl") {
+                            foundOvlmenu = true;
+                            return true;
+                        }
+                        return fileName.front() == '.';
+                    }),
+                overlayFiles.end()
+            );
+    
+            for (auto& overlayFile : overlayFiles) {
+                const std::string overlayFileName = getNameFromPath(overlayFile);
+                overlayFile.clear();
+                
+                auto it = overlaysIniData.find(overlayFileName);
+                if (it == overlaysIniData.end()) {
+                    const auto& [result, overlayName, overlayVersion, usingLibUltrahand] = getOverlayInfo(OVERLAY_PATH + overlayFileName);
+                    if (result != ResultSuccess) continue;
+    
+                    auto& overlaySection = overlaysIniData[overlayFileName];
+                    overlaySection[PRIORITY_STR] = "20";
+                    overlaySection[STAR_STR] = FALSE_STR;
+                    overlaySection[HIDE_STR] = FALSE_STR;
+                    overlaySection[USE_LAUNCH_ARGS_STR] = FALSE_STR;
+                    overlaySection[LAUNCH_ARGS_STR] = "";
+                    overlaySection["custom_name"] = "";
+                    overlaySection["custom_version"] = "";
+                    overlaysNeedsUpdate = true;
                     
-                    fwrite(packageContent, sizeof(packageContent) - 1, 1, packageFileOut);
-                    fclose(packageFileOut);
+                    overlaySet.insert("0020" + overlayName + ":" + overlayName + ":" + overlayVersion + ":" + overlayFileName + ":" + (usingLibUltrahand ? "1" : "0"));
+                } else {
+                    const std::string hide = getValueOrDefault(it->second, HIDE_STR, FALSE_STR);
+                    if (hide == TRUE_STR) drawHiddenTab = true;
+                    
+                    if ((!inHiddenMode && hide == FALSE_STR) || (inHiddenMode && hide == TRUE_STR)) {
+                        const auto& [result, overlayName, overlayVersion, usingLibUltrahand] = getOverlayInfo(OVERLAY_PATH + overlayFileName);
+                        if (result != ResultSuccess) continue;
+                        
+                        const std::string priority = (it->second.find(PRIORITY_STR) != it->second.end()) ? formatPriorityString(it->second[PRIORITY_STR]) : "0020";
+                        const std::string starred = getValueOrDefault(it->second, STAR_STR, FALSE_STR);
+                        const std::string customName = getValueOrDefault(it->second, "custom_name", "");
+                        const std::string customVersion = getValueOrDefault(it->second, "custom_version", "");
+                        
+                        const std::string assignedName = !customName.empty() ? customName : overlayName;
+                        const std::string assignedVersion = !customVersion.empty() ? customVersion : overlayVersion;
+                        
+                        const std::string baseInfo = priority + assignedName + ":" + assignedName + ":" + assignedVersion + ":" + overlayFileName + ":" + (usingLibUltrahand ? "1" : "0");
+                        overlaySet.insert((starred == TRUE_STR) ? "-1:" + baseInfo : baseInfo);
+                    }
                 }
-            #else
-                // Using ofstream
-                std::ofstream packageFileOut(PACKAGE_PATH + PACKAGE_FILENAME);
-                if (packageFileOut) {
-                    packageFileOut <<
-                        "[*Reboot To]\n"
-                        "[*Boot Entry]\n"
-                        "ini_file_source /bootloader/hekate_ipl.ini\n"
-                        "filter config\n"
-                        "reboot boot '{ini_file_source(*)}'\n"
-                        "[hekate - \uE073]\n"
-                        "reboot HEKATE\n"
-                        "[hekate UMS - \uE073\uE08D]\n"
-                        "reboot UMS\n"
-                        "\n[Commands]\n"
-                        "[Shutdown - \uE0F3]\n"
-                        "shutdown\n";
-                    packageFileOut.close();
+            }
+            
+            if (overlaysNeedsUpdate) {
+                saveIniFileData(OVERLAYS_INI_FILEPATH, overlaysIniData);
+            }
+        } // overlaysIniData freed here
+        
+        overlayFiles.clear();
+        overlayFiles.shrink_to_fit();
+        
+        std::string overlayFileName, overlayName, overlayVersion;
+        bool usingLibUltrahand;
+
+        // Process overlay set and add to list
+        for (const auto& taintedOverlayFileName : overlaySet) {
+            overlayFileName = overlayName = overlayVersion = "";
+            const bool overlayStarred = (taintedOverlayFileName.substr(0, 3) == "-1:");
+            usingLibUltrahand = false;
+            
+            const size_t lastColonPos = taintedOverlayFileName.rfind(':');
+            if (lastColonPos != std::string::npos) {
+                usingLibUltrahand = (taintedOverlayFileName.substr(lastColonPos + 1) == "1");
+                const size_t secondLastColonPos = taintedOverlayFileName.rfind(':', lastColonPos - 1);
+                if (secondLastColonPos != std::string::npos) {
+                    overlayFileName = taintedOverlayFileName.substr(secondLastColonPos + 1, lastColonPos - secondLastColonPos - 1);
+                    const size_t thirdLastColonPos = taintedOverlayFileName.rfind(':', secondLastColonPos - 1);
+                    if (thirdLastColonPos != std::string::npos) {
+                        overlayVersion = taintedOverlayFileName.substr(thirdLastColonPos + 1, secondLastColonPos - thirdLastColonPos - 1);
+                        const size_t fourthLastColonPos = taintedOverlayFileName.rfind(':', thirdLastColonPos - 1);
+                        if (fourthLastColonPos != std::string::npos) {
+                            overlayName = taintedOverlayFileName.substr(fourthLastColonPos + 1, thirdLastColonPos - fourthLastColonPos - 1);
+                        }
+                    }
                 }
-            #endif
             }
     
-            inOverlaysPage.store(false, std::memory_order_release);
-            inPackagesPage.store(true, std::memory_order_release);
+            const std::string overlayFile = OVERLAY_PATH + overlayFileName;
+            if (!isFile(overlayFile)) continue;
     
-            if (dropdownSection.empty()) {
-                // Create the directory if it doesn't exist
-                createDirectory(PACKAGE_PATH);
-                
-                
-                #if !USING_FSTREAM_DIRECTIVE
-                // Using stdio.h functions (FILE* and fopen)
-                //FILE* packagesIniFile = fopen(PACKAGES_INI_FILEPATH.c_str(), "r");
-                if (!isFile(PACKAGES_INI_FILEPATH)) {
-                    // The file doesn't exist, so create an empty one
-                    FILE* createFile = fopen(PACKAGES_INI_FILEPATH.c_str(), "w");
-                    if (createFile) {
-                        //initializingSpawn = true;
-                        fclose(createFile); // Close the file after creating it
-                    }
-                //} else {
-                //    fclose(packagesIniFile); // Close the file if it exists
-                }
-                #else
-                // Using fstream
-                //std::fstream packagesIniFile(PACKAGES_INI_FILEPATH, std::ios::in);
-                if (!isFile(PACKAGES_INI_FILEPATH)) {
-                    std::ofstream createFile(PACKAGES_INI_FILEPATH); // Create an empty INI file if it doesn't exist
-                    createFile.close();
-                    //initializingSpawn = true;
-                //} else {
-                //    packagesIniFile.close();
-                }
-                #endif
+            const std::string newOverlayName = overlayStarred ? STAR_SYMBOL+"  "+overlayName : overlayName;
+            const bool newStarred = !overlayStarred;
     
-                
-                std::set<std::string> packageSet;
-                //std::set<std::string> hiddenPackageSet;
-                
-                // Load the INI file and parse its content.
-                std::map<std::string, std::map<std::string, std::string>> packagesIniData = getParsedDataFromIniFile(PACKAGES_INI_FILEPATH);
-                // Load subdirectories
-                std::vector<std::string> subdirectories = getSubdirectories(PACKAGE_PATH);
+            tsl::elm::ListItem* listItem = new tsl::elm::ListItem(newOverlayName, "", false, false);
+            
+            overlayVersion = getFirstLongEntry(overlayVersion);
+            if (cleanVersionLabels) overlayVersion = cleanVersionLabel(overlayVersion);
+            
+            if (!hideOverlayVersions) {
+                listItem->setValue(overlayVersion, true);
+                listItem->setValueColor(usingLibUltrahand ? (useLibultrahandVersions ? tsl::ultOverlayVersionTextColor : tsl::overlayVersionTextColor) : tsl::overlayVersionTextColor);
+            }
+            listItem->setTextColor(usingLibUltrahand ? (useLibultrahandTitles ? tsl::ultOverlayTextColor : tsl::overlayTextColor) : tsl::overlayTextColor);
     
-                // Remove subdirectories starting with a dot in single pass
-                subdirectories.erase(
-                    std::remove_if(
-                        subdirectories.begin(), 
-                        subdirectories.end(),
-                        [](const std::string& dirName) {
-                            return dirName.front() == '.';
+            if (overlayFileName == g_overlayFilename) {
+                jumpItemName = newOverlayName;
+                jumpItemValue = hideOverlayVersions ? "" : overlayVersion;
+                jumpItemExactMatch.store(true, release);
+            }
+    
+            listItem->setClickListener([overlayFile, newStarred, overlayFileName, overlayName, overlayVersion](s64 keys) {
+                if (runningInterpreter.load(acquire)) return false;
+    
+                if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
+                    std::string useOverlayLaunchArgs, overlayLaunchArgs;
+                    {
+                        auto overlaysIniData = getParsedDataFromIniFile(OVERLAYS_INI_FILEPATH);
+                        auto sectionIt = overlaysIniData.find(overlayFileName);
+                        if (sectionIt != overlaysIniData.end()) {
+                            auto useArgsIt = sectionIt->second.find(USE_LAUNCH_ARGS_STR);
+                            if (useArgsIt != sectionIt->second.end()) useOverlayLaunchArgs = useArgsIt->second;
+                            auto argsIt = sectionIt->second.find(LAUNCH_ARGS_STR);
+                            if (argsIt != sectionIt->second.end()) overlayLaunchArgs = argsIt->second;
                         }
-                    ),
+                        removeQuotes(overlayLaunchArgs);
+                    }
+    
+                    {
+                        auto iniData = getParsedDataFromIniFile(ULTRAHAND_CONFIG_INI_PATH);
+                        auto& ultrahandSection = iniData[ULTRAHAND_PROJECT_NAME];
+                        if (inHiddenMode) ultrahandSection[IN_HIDDEN_OVERLAY_STR] = TRUE_STR;
+                        ultrahandSection[IN_OVERLAY_STR] = TRUE_STR;
+                        saveIniFileData(ULTRAHAND_CONFIG_INI_PATH, iniData);
+                    }
+    
+                    ult::launchingOverlay.store(true, std::memory_order_release);
+                    if (useOverlayLaunchArgs == TRUE_STR) tsl::setNextOverlay(overlayFile, overlayLaunchArgs);
+                    else tsl::setNextOverlay(overlayFile);
+                    tsl::Overlay::get()->close(true);
+                    return true;
+                } else if (keys & STAR_KEY && !(keys & ~STAR_KEY & ALL_KEYS_MASK)) {
+                    if (!overlayFile.empty()) {
+                        setIniFileValue(OVERLAYS_INI_FILEPATH, overlayFileName, STAR_STR, newStarred ? TRUE_STR : FALSE_STR);
+                    }
+                    skipJumpReset.store(true, release);
+                    jumpItemName = newStarred ? STAR_SYMBOL + "  " + overlayName : overlayName;
+                    jumpItemValue = hideOverlayVersions ? "" : overlayVersion;
+                    jumpItemExactMatch.store(true, release);
+                    g_overlayFilename = "";
+                    wasInHiddenMode = inHiddenMode;
+                    if (inHiddenMode) {
+                        inMainMenu.store(false, std::memory_order_release);
+                        inHiddenMode = true;
+                        reloadMenu2 = true;
+                    }
+                    refreshPage.store(true, release);
+                    return true;
+                } else if (keys & SETTINGS_KEY && !(keys & ~SETTINGS_KEY & ALL_KEYS_MASK)) {
+                    if (!inHiddenMode) {
+                        lastMenu = "";
+                        inMainMenu.store(false, std::memory_order_release);
+                    } else {
+                        lastMenu = "hiddenMenuMode";
+                        inHiddenMode = false;
+                    }
+                    jumpItemName = newStarred ? STAR_SYMBOL + "  " + overlayName : overlayName;
+                    jumpItemValue = hideOverlayVersions ? "" : overlayVersion;
+                    jumpItemExactMatch.store(true, release);
+                    g_overlayFilename = "";
+                    tsl::changeTo<SettingsMenu>(overlayFileName, OVERLAY_STR, overlayName, overlayVersion);
+                    return true;
+                }
+                return false;
+            });
+            list->addItem(listItem);
+        }
+        
+        overlaySet.clear();
+        
+        if (drawHiddenTab && !inHiddenMode && !hideHidden) {
+            tsl::elm::ListItem* listItem = new tsl::elm::ListItem(HIDDEN, DROPDOWN_SYMBOL);
+            listItem->setClickListener([](uint64_t keys) {
+                if (runningInterpreter.load(acquire)) return false;
+                if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
+                    g_overlayFilename = "";
+                    jumpItemName = "";
+                    jumpItemValue = "";
+                    jumpItemExactMatch.store(true, release);
+                    inMainMenu.store(false, std::memory_order_release);
+                    inHiddenMode = true;
+                    tsl::changeTo<MainMenu>(OVERLAYS_STR);
+                    return true;
+                }
+                return false;
+            });
+            list->addItem(listItem);
+        }
+    }
+    
+    bool createPackagesMenu(tsl::elm::List* list) {
+        if (!isFile(PACKAGE_PATH + PACKAGE_FILENAME)) {
+            #if !USING_FSTREAM_DIRECTIVE
+            FILE* packageFileOut = fopen((PACKAGE_PATH + PACKAGE_FILENAME).c_str(), "w");
+            if (packageFileOut) {
+                static constexpr const char packageContent[] = "[*Reboot To]\n[*Boot Entry]\nini_file_source /bootloader/hekate_ipl.ini\nfilter config\nreboot boot '{ini_file_source(*)}'\n[hekate - \uE073]\nreboot HEKATE\n[hekate UMS - \uE073\uE08D]\nreboot UMS\n\n[Commands]\n[Shutdown - \uE0F3]\nshutdown\n";
+                fwrite(packageContent, sizeof(packageContent) - 1, 1, packageFileOut);
+                fclose(packageFileOut);
+            }
+            #else
+            std::ofstream packageFileOut(PACKAGE_PATH + PACKAGE_FILENAME);
+            if (packageFileOut) {
+                packageFileOut << "[*Reboot To]\n[*Boot Entry]\nini_file_source /bootloader/hekate_ipl.ini\nfilter config\nreboot boot '{ini_file_source(*)}'\n[hekate - \uE073]\nreboot HEKATE\n[hekate UMS - \uE073\uE08D]\nreboot UMS\n\n[Commands]\n[Shutdown - \uE0F3]\nshutdown\n";
+                packageFileOut.close();
+            }
+            #endif
+        }
+    
+        inOverlaysPage.store(false, std::memory_order_release);
+        inPackagesPage.store(true, std::memory_order_release);
+    
+        bool noClickableItems = false;
+    
+        if (dropdownSection.empty()) {
+            createDirectory(PACKAGE_PATH);
+            
+            #if !USING_FSTREAM_DIRECTIVE
+            if (!isFile(PACKAGES_INI_FILEPATH)) {
+                FILE* createFile = fopen(PACKAGES_INI_FILEPATH.c_str(), "w");
+                if (createFile) fclose(createFile);
+            }
+            #else
+            if (!isFile(PACKAGES_INI_FILEPATH)) {
+                std::ofstream createFile(PACKAGES_INI_FILEPATH);
+                createFile.close();
+            }
+            #endif
+    
+            std::set<std::string> packageSet;
+            bool drawHiddenTab = false;
+            
+            // Scope to immediately free INI data
+            {
+                auto packagesIniData = getParsedDataFromIniFile(PACKAGES_INI_FILEPATH);
+                auto subdirectories = getSubdirectories(PACKAGE_PATH);
+    
+                subdirectories.erase(
+                    std::remove_if(subdirectories.begin(), subdirectories.end(),
+                        [](const std::string& dirName) { return dirName.front() == '.'; }),
                     subdirectories.end()
                 );
     
-                PackageHeader packageHeader;
+                bool packagesNeedsUpdate = false;
     
-                auto packageIt = packagesIniData.end();
-
-                bool drawHiddenTab = false;
-                bool packagesNeedsUpdate = false;  // Track if we need to write back
-
-                for (auto& packageName: subdirectories) {
-                    packageIt = packagesIniData.find(packageName);
+                for (const auto& packageName : subdirectories) {
+                    auto packageIt = packagesIniData.find(packageName);
                     if (packageIt == packagesIniData.end()) {
-                        // Get package header info first for new packages
-                        packageHeader = getPackageHeaderFromIni(PACKAGE_PATH + packageName+ "/" +PACKAGE_FILENAME);
+                        const PackageHeader packageHeader = getPackageHeaderFromIni(PACKAGE_PATH + packageName+ "/" +PACKAGE_FILENAME);
                         
-                        // Initialize missing package data IN MEMORY (no file I/O)
                         auto& packageSection = packagesIniData[packageName];
                         packageSection[PRIORITY_STR] = "20";
                         packageSection[STAR_STR] = FALSE_STR;
@@ -6365,300 +6125,182 @@ public:
                         packageSection["custom_version"] = "";
                         packagesNeedsUpdate = true;
                 
-                        assignedOverlayName = packageHeader.title.empty() ? packageName : packageHeader.title;
-                        assignedOverlayVersion = packageHeader.version;
-                
-                        baseOverlayInfo = "0020:" + assignedOverlayName + ":" + assignedOverlayVersion + ":" + packageName;
-                        packageSet.insert(baseOverlayInfo);
-    
+                        const std::string assignedName = packageHeader.title.empty() ? packageName : packageHeader.title;
+                        packageSet.insert("0020:" + assignedName + ":" + packageHeader.version + ":" + packageName);
                     } else {
-                        // Process existing package data
-                        hide = (packageIt->second.find(HIDE_STR) != packageIt->second.end()) ? 
-                               packageIt->second[HIDE_STR] : FALSE_STR;
-
-                        if (hide == TRUE_STR)
-                            drawHiddenTab = true;
+                        const std::string hide = (packageIt->second.find(HIDE_STR) != packageIt->second.end()) ? packageIt->second[HIDE_STR] : FALSE_STR;
+                        if (hide == TRUE_STR) drawHiddenTab = true;
+                        
                         if ((!inHiddenMode && hide == FALSE_STR) || (inHiddenMode && hide == TRUE_STR)) {
-                            priority = (packageIt->second.find(PRIORITY_STR) != packageIt->second.end()) ? 
-                                        formatPriorityString(packageIt->second[PRIORITY_STR]) : "0020";
-                            starred = (packageIt->second.find(STAR_STR) != packageIt->second.end()) ? 
-                                      packageIt->second[STAR_STR] : FALSE_STR;
-                            
-                            customName = getValueOrDefault(packageIt->second, "custom_name", "");
-                            customVersion = getValueOrDefault(packageIt->second, "custom_version", "");
-                            
-                            packageHeader = getPackageHeaderFromIni(PACKAGE_PATH + packageName+ "/" +PACKAGE_FILENAME);
-                            
+                            PackageHeader packageHeader = getPackageHeaderFromIni(PACKAGE_PATH + packageName+ "/" +PACKAGE_FILENAME);
                             if (cleanVersionLabels) {
                                 packageHeader.version = cleanVersionLabel(packageHeader.version);
                                 removeQuotes(packageHeader.version);
                             }
                             
-                            assignedOverlayName = !customName.empty() ? customName : 
-                                                 (packageHeader.title.empty() ? packageName : packageHeader.title);
-                            assignedOverlayVersion = !customVersion.empty() ? customVersion : packageHeader.version;
+                            const std::string priority = (packageIt->second.find(PRIORITY_STR) != packageIt->second.end()) ? formatPriorityString(packageIt->second[PRIORITY_STR]) : "0020";
+                            const std::string starred = (packageIt->second.find(STAR_STR) != packageIt->second.end()) ? packageIt->second[STAR_STR] : FALSE_STR;
+                            const std::string customName = getValueOrDefault(packageIt->second, "custom_name", "");
+                            const std::string customVersion = getValueOrDefault(packageIt->second, "custom_version", "");
                             
-                            baseOverlayInfo = priority + ":" + assignedOverlayName + ":" + assignedOverlayVersion + ":" + packageName;
-                            fullOverlayInfo = (starred == TRUE_STR) ? "-1:" + baseOverlayInfo : baseOverlayInfo;
-                            //if (!inHiddenMode) {
-                            packageSet.insert(fullOverlayInfo);
-                            //} else {
-                            //    hiddenPackageSet.insert(fullOverlayInfo);
-                            //}
+                            const std::string assignedName = !customName.empty() ? customName : (packageHeader.title.empty() ? packageName : packageHeader.title);
+                            const std::string assignedVersion = !customVersion.empty() ? customVersion : packageHeader.version;
+                            
+                            const std::string baseInfo = priority + ":" + assignedName + ":" + assignedVersion + ":" + packageName;
+                            packageSet.insert((starred == TRUE_STR) ? "-1:" + baseInfo : baseInfo);
                         }
                     }
-                    packageName = "";
                 }
-                subdirectories = {};
-
-                //subdirectories.clear();
-                //subdirectories.shrink_to_fit();
-
-                // Write back file only if changes were made
+    
                 if (packagesNeedsUpdate) {
                     saveIniFileData(PACKAGES_INI_FILEPATH, packagesIniData);
                 }
-                packagesIniData = {};
+            } // packagesIniData freed here
+            
+            std::string packageName, packageVersion, newPackageName;
 
-                //packagesIniData.clear();
-                //subdirectories.clear();
-                //subdirectories.shrink_to_fit();
+            bool firstItem = true;
+            for (const auto& taintedPackageName : packageSet) {
+                if (firstItem) {
+                    addHeader(list, (!inHiddenMode ? PACKAGES : HIDDEN_PACKAGES)+" "+DIVIDER_SYMBOL+" \uE0E3 "+SETTINGS+" "+DIVIDER_SYMBOL+" \uE0E2 "+FAVORITE);
+                    firstItem = false;
+                }
                 
-                //if (inHiddenMode) {
-                //    packageSet = std::move(hiddenPackageSet);
-                //    //hiddenPackageSet.clear();
-                //}
-
-                bool firstItem = true;
-                for (const auto& taintedPackageName : packageSet) {
-                    if (firstItem) {
-                        addHeader(list, (!inHiddenMode ? PACKAGES : HIDDEN_PACKAGES)+" "+DIVIDER_SYMBOL+" \uE0E3 "+SETTINGS+" "+DIVIDER_SYMBOL+" \uE0E2 "+FAVORITE);
-                        firstItem = false;
-                    }
-                    
-                    packageName = "";
-                    packageVersion = "";
-                    packageStarred = false;
-                    
-                    // Detect if starred
-                    packageStarred = (taintedPackageName.substr(0, 3) == "-1:");
-                    tempPackageName = packageStarred ? taintedPackageName.substr(3) : taintedPackageName;
-                    
-                    // Find the position of the last colon
-                    const size_t lastColonPos = tempPackageName.rfind(':');
-                    if (lastColonPos != std::string::npos) {
-                        // Extract packageName starting from the character after the last colon
-                        packageName = tempPackageName.substr(lastColonPos + 1);
-                        
-                        // Now, find the position of the second-to-last colon
-                        const size_t secondLastColonPos = tempPackageName.rfind(':', lastColonPos - 1);
-                        
-                        if (secondLastColonPos != std::string::npos) {
-                            // Extract packageVersion between the two colons
-                            packageVersion = tempPackageName.substr(secondLastColonPos + 1, lastColonPos - secondLastColonPos - 1);
-                            // Now, find the position of the third-to-last colon
-                            const size_t thirdLastColonPos = tempPackageName.rfind(':', secondLastColonPos - 1);
-                            if (thirdLastColonPos != std::string::npos)
-                                newPackageName = tempPackageName.substr(thirdLastColonPos + 1, secondLastColonPos - thirdLastColonPos - 1);
+                packageName = packageVersion = newPackageName = "";
+                const bool packageStarred = (taintedPackageName.substr(0, 3) == "-1:");
+                const std::string tempPackageName = packageStarred ? taintedPackageName.substr(3) : taintedPackageName;
+                
+                const size_t lastColonPos = tempPackageName.rfind(':');
+                if (lastColonPos != std::string::npos) {
+                    packageName = tempPackageName.substr(lastColonPos + 1);
+                    const size_t secondLastColonPos = tempPackageName.rfind(':', lastColonPos - 1);
+                    if (secondLastColonPos != std::string::npos) {
+                        packageVersion = tempPackageName.substr(secondLastColonPos + 1, lastColonPos - secondLastColonPos - 1);
+                        const size_t thirdLastColonPos = tempPackageName.rfind(':', secondLastColonPos - 1);
+                        if (thirdLastColonPos != std::string::npos) {
+                            newPackageName = tempPackageName.substr(thirdLastColonPos + 1, secondLastColonPos - thirdLastColonPos - 1);
                         }
-                    }
-                    
-                    packageFilePath = PACKAGE_PATH + packageName + "/";
-                    
-                    // Toggle the starred status
-                    newStarred = !packageStarred;
-                    
-                    if (isFileOrDirectory(packageFilePath)) {
-
-                        tsl::elm::ListItem* listItem = new tsl::elm::ListItem(packageStarred ? STAR_SYMBOL + "  " + newPackageName : newPackageName, "", false, false);
-                        if (!hidePackageVersions) {
-                            listItem->setValue(packageVersion, true);
-                            listItem->setValueColor((usePackageVersions) ? tsl::ultPackageVersionTextColor : tsl::packageVersionTextColor);
-                        }
-
-                        listItem->setTextColor((usePackageTitles) ? tsl::ultPackageTextColor : tsl::packageTextColor);
-                        listItem->disableClickAnimation();
-                        
-                        // Add a click listener to load the overlay when clicked upon
-                        listItem->setClickListener([packageFilePath, newStarred, packageName, newPackageName, packageVersion, packageStarred](s64 keys) {
-                            if (runningInterpreter.load(acquire)) {
-                                return false;
-                            }
-                            
-                            if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
-                                inMainMenu.store(false, std::memory_order_release);
-                                
-                                if (isFile(packageFilePath + BOOT_PACKAGE_FILENAME)) {
-                                    //bool useBootPackage = !(parseValueFromIniSection(PACKAGES_INI_FILEPATH, packageName, USE_BOOT_PACKAGE_STR) == FALSE_STR);
-                                    //if (!selectedPackage.empty())
-                                    //    useBootPackage = (useBootPackage && !(parseValueFromIniSection(PACKAGES_INI_FILEPATH, packageName, USE_QUICK_LAUNCH_STR) == TRUE_STR));
-
-                                    bool useBootPackage = true;
-                                    {
-                                        // Load INI data once and extract both values
-                                        const auto packagesIniData = getParsedDataFromIniFile(PACKAGES_INI_FILEPATH);
-                                        auto sectionIt = packagesIniData.find(selectedPackage);
-                                        
-                                        
-                                        if (sectionIt != packagesIniData.end()) {
-                                            auto bootIt = sectionIt->second.find(USE_BOOT_PACKAGE_STR);
-                                            useBootPackage = (bootIt == sectionIt->second.end()) || (bootIt->second != FALSE_STR);
-                                            
-                                            if (!selectedPackage.empty()) {
-                                                auto quickIt = sectionIt->second.find(USE_QUICK_LAUNCH_STR);
-                                                const bool useQuickLaunch = (quickIt != sectionIt->second.end()) && (quickIt->second == TRUE_STR);
-                                                useBootPackage = useBootPackage && !useQuickLaunch;
-                                            }
-                                        }
-                                    }
-
-                                    if (useBootPackage) {
-                                        // Load only the commands from the specific section (bootCommandName)
-                                        auto bootCommands = loadSpecificSectionFromIni(packageFilePath + BOOT_PACKAGE_FILENAME, "boot");
-                                    
-                                        if (!bootCommands.empty()) {
-                                            //bool resetCommandSuccess = false;
-                                            //if (!commandSuccess.load(acquire)) resetCommandSuccess = true;
-
-                                            const bool resetCommandSuccess = !commandSuccess.load(std::memory_order_acquire);
-                                            
-                                            interpretAndExecuteCommands(std::move(bootCommands), packageFilePath, "boot");
-                                            resetPercentages();
-    
-                                            if (resetCommandSuccess) {
-                                                commandSuccess.store(false, release);
-                                            }
-                                        }
-                                    }
-                                }
-                                
-
-                                //lastPackagePath = packageFilePath;
-                                //lastPackageName = PACKAGE_FILENAME;
-    
-                                packageRootLayerTitle = newPackageName;
-                                packageRootLayerVersion = packageVersion;
-                                packageRootLayerIsStarred = packageStarred;
-                                //tsl::clearGlyphCacheNow.store(true, release);
-                                
-                                tsl::clearGlyphCacheNow.store(true, release);
-                                //tsl::pop(2);
-                                
-                                tsl::swapTo<PackageMenu>(SwapDepth(2), packageFilePath, ""); // 2 in case its already hidden
-
-                                return true;
-                            } else if (keys & STAR_KEY && !(keys & ~STAR_KEY & ALL_KEYS_MASK)) {
-                                if (!packageName.empty())
-                                    setIniFileValue(PACKAGES_INI_FILEPATH, packageName, STAR_STR, newStarred ? TRUE_STR : FALSE_STR);
-                                
-                                
-                                {
-                                    //std::lock_guard<std::mutex> lock(jumpItemMutex);
-                                    skipJumpReset.store(true, release);
-                                    jumpItemName = newStarred ? STAR_SYMBOL + "  " + newPackageName : newPackageName;
-                                    jumpItemValue = hidePackageVersions ? "" : packageVersion;
-                                    jumpItemExactMatch.store(true, release);
-                                    // Also clear the global overlay filename since we're not on the main overlay list
-                                    g_overlayFilename = "";
-                                }
-
-                                wasInHiddenMode = inHiddenMode;
-                                if (inHiddenMode) {
-                                    inMainMenu.store(false, std::memory_order_release);
-                                    inHiddenMode = true;
-                                    reloadMenu2 = true;
-                                }
-                                refreshPage.store(true, release);
-    
-                                return true;
-                            } else if (keys & SETTINGS_KEY && !(keys & ~SETTINGS_KEY & ALL_KEYS_MASK)) {
-                                
-                                if (!inHiddenMode) {
-                                    lastMenu = "";
-                                    inMainMenu.store(false, std::memory_order_release);
-                                } else {
-                                    lastMenu = "hiddenMenuMode";
-                                    inHiddenMode = false;
-                                }
-                                {
-                                    //std::lock_guard<std::mutex> lock(jumpItemMutex);
-                                    jumpItemName = newStarred ? STAR_SYMBOL + "  " + newPackageName : newPackageName;
-                                    jumpItemValue = hidePackageVersions ? "" : packageVersion;
-                                    jumpItemExactMatch.store(true, release);
-                                    // Also clear the global overlay filename since we're not on the main overlay list
-                                    g_overlayFilename = "";
-                                }
-                                
-                                tsl::changeTo<SettingsMenu>(packageName, PACKAGE_STR, newPackageName, packageVersion);
-                                return true;
-                            }
-                            return false;
-                        });
-                        
-                        if (listItem != nullptr)
-                            list->addItem(listItem);
                     }
                 }
-
-                packageSet.clear();
                 
-                if (drawHiddenTab && !inHiddenMode && !hideHidden) {
-                    tsl::elm::ListItem* listItem = new tsl::elm::ListItem(HIDDEN, DROPDOWN_SYMBOL);
-                    listItem->setClickListener([](uint64_t keys) {
-                        if (runningInterpreter.load(acquire))
-                            return false;
+                const std::string packageFilePath = PACKAGE_PATH + packageName + "/";
+                if (!isFileOrDirectory(packageFilePath)) continue;
+    
+                const bool newStarred = !packageStarred;
+    
+                tsl::elm::ListItem* listItem = new tsl::elm::ListItem(packageStarred ? STAR_SYMBOL + "  " + newPackageName : newPackageName, "", false, false);
+                if (!hidePackageVersions) {
+                    listItem->setValue(packageVersion, true);
+                    listItem->setValueColor(usePackageVersions ? tsl::ultPackageVersionTextColor : tsl::packageVersionTextColor);
+                }
+                listItem->setTextColor(usePackageTitles ? tsl::ultPackageTextColor : tsl::packageTextColor);
+                listItem->disableClickAnimation();
+                
+                listItem->setClickListener([packageFilePath, newStarred, packageName, newPackageName, packageVersion, packageStarred](s64 keys) {
+                    if (runningInterpreter.load(acquire)) return false;
+                    
+                    if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
+                        inMainMenu.store(false, std::memory_order_release);
                         
-                        if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
+                        if (isFile(packageFilePath + BOOT_PACKAGE_FILENAME)) {
+                            bool useBootPackage = true;
+                            {
+                                const auto packagesIniData = getParsedDataFromIniFile(PACKAGES_INI_FILEPATH);
+                                auto sectionIt = packagesIniData.find(selectedPackage);
+                                if (sectionIt != packagesIniData.end()) {
+                                    auto bootIt = sectionIt->second.find(USE_BOOT_PACKAGE_STR);
+                                    useBootPackage = (bootIt == sectionIt->second.end()) || (bootIt->second != FALSE_STR);
+                                    if (!selectedPackage.empty()) {
+                                        auto quickIt = sectionIt->second.find(USE_QUICK_LAUNCH_STR);
+                                        const bool useQuickLaunch = (quickIt != sectionIt->second.end()) && (quickIt->second == TRUE_STR);
+                                        useBootPackage = useBootPackage && !useQuickLaunch;
+                                    }
+                                }
+                            }
+    
+                            if (useBootPackage) {
+                                auto bootCommands = loadSpecificSectionFromIni(packageFilePath + BOOT_PACKAGE_FILENAME, "boot");
+                                if (!bootCommands.empty()) {
+                                    const bool resetCommandSuccess = !commandSuccess.load(std::memory_order_acquire);
+                                    interpretAndExecuteCommands(std::move(bootCommands), packageFilePath, "boot");
+                                    resetPercentages();
+                                    if (resetCommandSuccess) commandSuccess.store(false, release);
+                                }
+                            }
+                        }
+    
+                        packageRootLayerTitle = newPackageName;
+                        packageRootLayerVersion = packageVersion;
+                        packageRootLayerIsStarred = packageStarred;
+                        tsl::clearGlyphCacheNow.store(true, release);
+                        tsl::swapTo<PackageMenu>(SwapDepth(2), packageFilePath, "");
+                        return true;
+                    } else if (keys & STAR_KEY && !(keys & ~STAR_KEY & ALL_KEYS_MASK)) {
+                        if (!packageName.empty()) setIniFileValue(PACKAGES_INI_FILEPATH, packageName, STAR_STR, newStarred ? TRUE_STR : FALSE_STR);
+                        skipJumpReset.store(true, release);
+                        jumpItemName = newStarred ? STAR_SYMBOL + "  " + newPackageName : newPackageName;
+                        jumpItemValue = hidePackageVersions ? "" : packageVersion;
+                        jumpItemExactMatch.store(true, release);
+                        g_overlayFilename = "";
+                        wasInHiddenMode = inHiddenMode;
+                        if (inHiddenMode) {
                             inMainMenu.store(false, std::memory_order_release);
                             inHiddenMode = true;
-                            tsl::changeTo<MainMenu>(PACKAGES_STR);
-                            return true;
+                            reloadMenu2 = true;
                         }
-                        return false;
-                    });
-                    
-                    list->addItem(listItem);
-                }
-            }
-            
-            // ********* THIS PART NEEDS TO MIRROR WHAT IS WITHIN SUBMENU *********
-            
-            if (!inHiddenMode) {
-                packagePath = PACKAGE_PATH;
-                const std::string packageName = "package.ini";
-                std::string pageLeftName = "";
-                std::string pageRightName = "";
-                const std::string currentPage = "left";
-                const size_t nestedLayer = 0;
-                std::string pathPattern, pathPatternOn, pathPatternOff;
-                bool usingPages = false;
+                        refreshPage.store(true, release);
+                        return true;
+                    } else if (keys & SETTINGS_KEY && !(keys & ~SETTINGS_KEY & ALL_KEYS_MASK)) {
+                        if (!inHiddenMode) {
+                            lastMenu = "";
+                            inMainMenu.store(false, std::memory_order_release);
+                        } else {
+                            lastMenu = "hiddenMenuMode";
+                            inHiddenMode = false;
+                        }
+                        jumpItemName = newStarred ? STAR_SYMBOL + "  " + newPackageName : newPackageName;
+                        jumpItemValue = hidePackageVersions ? "" : packageVersion;
+                        jumpItemExactMatch.store(true, release);
+                        g_overlayFilename = "";
+                        tsl::changeTo<SettingsMenu>(packageName, PACKAGE_STR, newPackageName, packageVersion);
+                        return true;
+                    }
+                    return false;
+                });
                 
-                PackageHeader packageHeader = getPackageHeaderFromIni(PACKAGE_PATH);
-                noClickableItems = drawCommandsMenu(list, packageIniPath, packageConfigIniPath, packageHeader, "", pageLeftName, pageRightName,
-                    packagePath, currentPage, packageName, this->dropdownSection, nestedLayer,
-                    pathPattern, pathPatternOn, pathPatternOff, usingPages, false);
+                list->addItem(listItem);
+            }
     
-                if (!hideUserGuide && dropdownSection.empty())
-                    addHelpInfo(list);
+            packageSet.clear();
+            
+            if (drawHiddenTab && !inHiddenMode && !hideHidden) {
+                tsl::elm::ListItem* listItem = new tsl::elm::ListItem(HIDDEN, DROPDOWN_SYMBOL);
+                listItem->setClickListener([](uint64_t keys) {
+                    if (runningInterpreter.load(acquire)) return false;
+                    if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
+                        inMainMenu.store(false, std::memory_order_release);
+                        inHiddenMode = true;
+                        tsl::changeTo<MainMenu>(PACKAGES_STR);
+                        return true;
+                    }
+                    return false;
+                });
+                list->addItem(listItem);
             }
         }
         
-        //if (initializingSpawn) {
-        //    initializingSpawn = false;
-        //    return createUI(); 
-        //}
-        
-
-        auto* rootFrame = new tsl::elm::OverlayFrame(CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel, noClickableItems, menuMode+hiddenMenuMode+dropdownSection, "", "", "");
-        {
-            //std::lock_guard<std::mutex> lock(jumpItemMutex);
-            if (g_overlayFilename != "ovlmenu.ovl") 
-                list->jumpToItem(jumpItemName, jumpItemValue, jumpItemExactMatch.load(acquire));
-            else
-                g_overlayFilename = "";
+        if (!inHiddenMode) {
+            std::string pageLeftName, pageRightName, pathPattern, pathPatternOn, pathPatternOff;
+            bool usingPages = false;
+            
+            const PackageHeader packageHeader = getPackageHeaderFromIni(PACKAGE_PATH);
+            noClickableItems = drawCommandsMenu(list, packageIniPath, packageConfigIniPath, packageHeader, "", pageLeftName, pageRightName,
+                PACKAGE_PATH, "left", "package.ini", this->dropdownSection, 0, pathPattern, pathPatternOn, pathPatternOff, usingPages, false);
+    
+            if (!hideUserGuide && dropdownSection.empty()) addHelpInfo(list);
         }
-        rootFrame->setContent(list);
-        return rootFrame;
+        
+        return noClickableItems;
     }
 
     /**
@@ -6993,7 +6635,7 @@ public:
 
 // Extract the settings initialization logic into a separate method
 void initializeSettingsAndDirectories() {
-    versionLabel = cleanVersionLabel(APP_VERSION) + " "+DIVIDER_SYMBOL+" " + loaderTitle + " " + cleanVersionLabel(loaderInfo);
+    versionLabel = cleanVersionLabel(APP_VERSION) + " " + DIVIDER_SYMBOL + " " + loaderTitle + " " + cleanVersionLabel(loaderInfo);
     std::string defaultLang = "en";
 
     // Create necessary directories

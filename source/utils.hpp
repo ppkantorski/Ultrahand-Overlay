@@ -1615,7 +1615,7 @@ void drawTable(
     bool isScrollable               = true,
     const std::string& wrappingMode               = "none",
     bool useWrappedTextIndent        = false,
-    std::string packagePath          = ""
+    const std::string& packagePath          = ""
 ) {
     // Prebuild initial buffers
     std::vector<std::string> cacheExpSec, cacheExpInfo;
@@ -2831,7 +2831,7 @@ static size_t findNextOpenToken(const std::string& s,
     matchedLen = 0;
 
     for (const auto& tok : starts) {
-        size_t pos = s.find(tok, from);
+        const size_t pos = s.find(tok, from);
         if (pos == std::string::npos) continue;
 
         if (bestPos == std::string::npos || pos < bestPos ||
