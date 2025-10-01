@@ -2379,6 +2379,8 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
     std::string path;
     std::string raw;
 
+    const std::string indexStr = ult::to_string(entryIndex);
+
     for (const auto& cmd : commands) {
         if (cmd.empty()) {
             continue;
@@ -2440,10 +2442,11 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
                 path = getParentDirNameFromPath(entry);
                 removeQuotes(path);
                 replaceAllPlaceholders(modifiedArg, "{folder_name}", path);
+                replaceAllPlaceholders(modifiedArg, "{index}", indexStr);
 
                 // {list_source(...)} block
                 if (modifiedArg.find("{list_source(") != std::string::npos) {
-                    applyPlaceholderReplacement(modifiedArg, "*", ult::to_string(entryIndex));
+                    applyPlaceholderReplacement(modifiedArg, "*", indexStr);
                     startPos = modifiedArg.find("{list_source(");
                     endPos   = modifiedArg.find(")}");
                     if (endPos != std::string::npos && endPos > startPos) {
@@ -2457,7 +2460,7 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
 
                 // {list_file_source(...)} block
                 if (modifiedArg.find("{list_file_source(") != std::string::npos) {
-                    applyPlaceholderReplacement(modifiedArg, "*", ult::to_string(entryIndex));
+                    applyPlaceholderReplacement(modifiedArg, "*", indexStr);
                     startPos = modifiedArg.find("{list_file_source(");
                     endPos   = modifiedArg.find(")}");
                     if (endPos != std::string::npos && endPos > startPos) {
@@ -2469,7 +2472,7 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
 
                 // {ini_file_source(...)} block - FIXED
                 if (modifiedArg.find("{ini_file_source(") != std::string::npos) {
-                    applyPlaceholderReplacement(modifiedArg, "*", ult::to_string(entryIndex));
+                    applyPlaceholderReplacement(modifiedArg, "*", indexStr);
                     // applyReplaceIniPlaceholder modifies modifiedArg in place, so we just call it
                     applyReplaceIniPlaceholder(modifiedArg, "ini_file_source", iniPath);
                     // No additional replacement needed!
@@ -2477,7 +2480,7 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
 
                 // {json_source(...)} block
                 if (modifiedArg.find("{json_source(") != std::string::npos) {
-                    applyPlaceholderReplacement(modifiedArg, "*", ult::to_string(entryIndex));
+                    applyPlaceholderReplacement(modifiedArg, "*", indexStr);
                     startPos = modifiedArg.find("{json_source(");
                     endPos   = modifiedArg.find(")}");
                     if (endPos != std::string::npos && endPos > startPos) {
@@ -2493,7 +2496,7 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
 
                 // {json_file_source(...)} block
                 if (modifiedArg.find("{json_file_source(") != std::string::npos) {
-                    applyPlaceholderReplacement(modifiedArg, "*", ult::to_string(entryIndex));
+                    applyPlaceholderReplacement(modifiedArg, "*", indexStr);
                     startPos = modifiedArg.find("{json_file_source(");
                     endPos   = modifiedArg.find(")}");
                     if (endPos != std::string::npos && endPos > startPos) {
