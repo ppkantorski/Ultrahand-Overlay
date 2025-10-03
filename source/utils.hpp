@@ -432,6 +432,10 @@ void writeFuseIni(const std::string& outputPath, const char* data = nullptr) {
             fprintf(outFile, "cpu_iddq=%u\n", *reinterpret_cast<const uint32_t*>(data + FUSE_CPU_IDDQ_CALIB));
             fprintf(outFile, "soc_iddq=%u\n", *reinterpret_cast<const uint32_t*>(data + FUSE_SOC_IDDQ_CALIB));
             fprintf(outFile, "gpu_iddq=%u\n", *reinterpret_cast<const uint32_t*>(data + FUSE_GPU_IDDQ_CALIB));
+            // Add memory attributes
+            fprintf(outFile, "ram_vendor=%s\n", memoryVendor.c_str());
+            fprintf(outFile, "ram_model=%s\n", memoryModel.c_str());
+            fprintf(outFile, "ram_size=%s\n", memorySize.c_str());
             fputs("disable_reload=false\n", outFile);
         } else {
             // Single fputs call instead of seven separate ones
@@ -441,6 +445,9 @@ void writeFuseIni(const std::string& outputPath, const char* data = nullptr) {
                   "cpu_iddq=\n"
                   "soc_iddq=\n"
                   "gpu_iddq=\n"
+                  "ram_vendor=\n"
+                  "ram_model=\n"
+                  "ram_size=\n"
                   "disable_reload=false\n", outFile);
         }
         fclose(outFile);
@@ -463,6 +470,9 @@ void writeFuseIni(const std::string& outputPath, const char* data = nullptr) {
                     << "cpu_iddq=" << *reinterpret_cast<const uint32_t*>(data + FUSE_CPU_IDDQ_CALIB) << '\n'
                     << "soc_iddq=" << *reinterpret_cast<const uint32_t*>(data + FUSE_SOC_IDDQ_CALIB) << '\n'
                     << "gpu_iddq=" << *reinterpret_cast<const uint32_t*>(data + FUSE_GPU_IDDQ_CALIB) << '\n'
+                    << "ram_vendor=" << memoryVendor << '\n'
+                    << "ram_model=" << memoryModel << '\n'
+                    << "ram_size=" << memorySize << '\n'
                     << "disable_reload=false\n";
         } else {
             outFile << "cpu_speedo_0=\n"
@@ -471,6 +481,9 @@ void writeFuseIni(const std::string& outputPath, const char* data = nullptr) {
                     << "cpu_iddq=\n"
                     << "soc_iddq=\n"
                     << "gpu_iddq=\n"
+                    << "ram_vendor=\n"
+                    << "ram_model=\n"
+                    << "ram_size=\n"
                     << "disable_reload=false\n";
         }
 
@@ -727,9 +740,20 @@ void unpackDeviceInfo() {
             return (it != fuseSection.end() && !it->second.empty()) ? ult::stoi(it->second) : 0;
         };
         
+        // Helper lambda to safely get string values
+        auto getStringValue = [&](const std::string& key) -> std::string {
+            auto it = fuseSection.find(key);
+            return (it != fuseSection.end()) ? it->second : UNAVAILABLE_SELECTION;
+        };
+        
         for (const auto& key : keys) {
             *key.second = getU32Value(key.first);
         }
+        
+        // Read memory attributes from fuse.ini
+        memoryVendor = getStringValue("ram_vendor");
+        memoryModel = getStringValue("ram_model");
+        memorySize = getStringValue("ram_size");
     }
 }
 
@@ -4096,6 +4120,18 @@ void handleIniCommands(const std::vector<std::string>& cmd, const std::string& p
         std::string desiredSection = cmd[2];
         removeQuotes(desiredSection);
         removeIniSection(sourcePath, desiredSection);
+    } else if (cmd[0] == "set-ini-val-ifexist" && cmd.size() >= 5) {
+        std::string sourcePath = cmd[1];
+        preprocessPath(sourcePath, packagePath);
+        std::string desiredSection = cmd[2];
+        removeQuotes(desiredSection);
+        std::string desiredKey = cmd[3];
+        removeQuotes(desiredKey);
+        std::string desiredValue = cmd[4];
+        removeQuotes(desiredValue);
+        
+        // Set the value only if the section exists
+        setIniValueIfSectionExists(sourcePath, desiredSection, desiredKey, desiredValue);
     } else if (cmd[0] == "remove-ini-key" && cmd.size() >= 3) {
         std::string sourcePath = cmd[1];
         preprocessPath(sourcePath, packagePath);
@@ -4291,7 +4327,7 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
         handleMirrorCommand(cmd, packagePath);
     } else if (commandName == "mv" || commandName == "move" || commandName == "rename") {
         handleMoveCommand(cmd, packagePath);
-    } else if (commandName == "add-ini-section" || commandName == "rename-ini-section" || commandName == "remove-ini-section" || commandName == "remove-ini-key" || commandName == "set-ini-val" || commandName == "set-ini-value" || commandName == "set-ini-key") {
+    } else if (commandName == "add-ini-section" || commandName == "rename-ini-section" || commandName == "remove-ini-section" || commandName == "set-ini-val-ifexist" || commandName == "remove-ini-key" || commandName == "set-ini-val" || commandName == "set-ini-value" || commandName == "set-ini-key") {
         handleIniCommands(cmd, packagePath);
     } else if (commandName == "set-json-val" || commandName == "set-json-value" || commandName == "set-json-key") {
         handleJsonCommands(cmd, packagePath);

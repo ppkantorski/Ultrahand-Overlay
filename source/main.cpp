@@ -158,6 +158,9 @@ static std::atomic<bool> lastRunningInterpreter{false};
 
 
 
+
+
+
 template<typename Map, typename Func = std::function<std::string(const std::string&)>, typename... Args>
 std::string getValueOrDefault(const Map& data, const std::string& key, const std::string& defaultValue, Func formatFunc = nullptr, Args... args) {
     auto it = data.find(key);
@@ -5855,6 +5858,8 @@ public:
         std::set<std::string> overlaySet;
         bool drawHiddenTab = false;
         
+
+        
         // Scope to immediately free INI data after processing
         {
             auto overlaysIniData = getParsedDataFromIniFile(OVERLAYS_INI_FILEPATH);
@@ -5880,8 +5885,10 @@ public:
                 
                 auto it = overlaysIniData.find(overlayFileName);
                 if (it == overlaysIniData.end()) {
-                    const auto& [result, overlayName, overlayVersion, usingLibUltrahand] = getOverlayInfo(OVERLAY_PATH + overlayFileName);
+                    auto [result, overlayName, overlayVersion, usingLibUltrahand] = getOverlayInfo(OVERLAY_PATH + overlayFileName);
                     if (result != ResultSuccess) continue;
+                    
+
     
                     auto& overlaySection = overlaysIniData[overlayFileName];
                     overlaySection[PRIORITY_STR] = "20";
@@ -5899,8 +5906,10 @@ public:
                     if (hide == TRUE_STR) drawHiddenTab = true;
                     
                     if ((!inHiddenMode && hide == FALSE_STR) || (inHiddenMode && hide == TRUE_STR)) {
-                        const auto& [result, overlayName, overlayVersion, usingLibUltrahand] = getOverlayInfo(OVERLAY_PATH + overlayFileName);
+                        auto [result, overlayName, overlayVersion, usingLibUltrahand] = getOverlayInfo(OVERLAY_PATH + overlayFileName);
                         if (result != ResultSuccess) continue;
+                        
+
                         
                         const std::string priority = (it->second.find(PRIORITY_STR) != it->second.end()) ? formatPriorityString(it->second[PRIORITY_STR]) : "0020";
                         const std::string starred = getValueOrDefault(it->second, STAR_STR, FALSE_STR);
