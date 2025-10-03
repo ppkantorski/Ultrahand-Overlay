@@ -156,6 +156,72 @@ static tsl::elm::ListItem* lastSelectedListItem;
 
 static std::atomic<bool> lastRunningInterpreter{false};
 
+static Result setGlobalRegion() {
+    Result rc;
+    if (R_SUCCEEDED(rc = setsysSetT(false))) {
+        if (R_SUCCEEDED(rc = setsysSetRegionCode(SetRegion_JPN))) {
+            if (R_SUCCEEDED(rc = spsmInitialize())) {
+                spsmShutdown(true);
+                spsmExit();
+            }
+        }
+    }
+    return rc;
+}
+
+static void switchTencentVerToGlobalVer() {
+    Result rc;
+    std::string cfgFilePath;
+
+    if (R_FAILED(rc = setsysInitialize())) {
+        fatalThrow(MAKERESULT(Module_HomebrewLoader, R_DESCRIPTION(rc)));
+        return;
+    }
+
+    // 检查是否在emuMMC环境或允许在官方固件上运行
+    constexpr u32 ExosphereEmummcType = 65007;
+    u64 is_emummc;
+    if (R_SUCCEEDED(rc = splInitialize())) {
+        rc = splGetConfig(static_cast<SplConfigItem>(ExosphereEmummcType), &is_emummc);
+        splExit();
+        if (R_FAILED(rc)) {
+            setsysExit();
+            fatalThrow(MAKERESULT(Module_HomebrewLoader, R_DESCRIPTION(rc)));
+            return;
+        }
+
+        bool is_do_for_ofw = false;
+        cfgFilePath = std::string("sdmc:/config/") + APPTITLE + "/" + "enable_for_ofw.flag";
+        if (std::filesystem::exists(cfgFilePath))
+            is_do_for_ofw = true;
+        
+        // 如果不在emuMMC环境且没有enable_for_ofw.flag文件，则退出
+        if (!is_emummc && !is_do_for_ofw) {
+            setsysExit();
+            return;
+        }
+    }
+
+    // 检测是否为腾讯国行版本
+    bool isTencentVersion = false;
+    if (R_FAILED(rc = setsysGetT(&isTencentVersion))) {
+        setsysExit();
+        fatalThrow(MAKERESULT(Module_HomebrewLoader, R_DESCRIPTION(rc)));
+        return;
+    }
+
+    // 只有确认是腾讯国行版本才执行转区操作
+    if (isTencentVersion) {
+        rc = setGlobalRegion();
+        if (R_FAILED(rc)) {
+            setsysExit();
+            fatalThrow(MAKERESULT(Module_HomebrewLoader, R_DESCRIPTION(rc)));
+            return;
+        }
+    }
+
+    setsysExit();
+}
 
 
 template<typename Map, typename Func = std::function<std::string(const std::string&)>, typename... Args>
@@ -5855,6 +5921,8 @@ public:
         std::set<std::string> overlaySet;
         bool drawHiddenTab = false;
         
+
+        
         // Scope to immediately free INI data after processing
         {
             auto overlaysIniData = getParsedDataFromIniFile(OVERLAYS_INI_FILEPATH);
@@ -5880,8 +5948,10 @@ public:
                 
                 auto it = overlaysIniData.find(overlayFileName);
                 if (it == overlaysIniData.end()) {
-                    const auto& [result, overlayName, overlayVersion, usingLibUltrahand] = getOverlayInfo(OVERLAY_PATH + overlayFileName);
+                    auto [result, overlayName, overlayVersion, usingLibUltrahand] = getOverlayInfo(OVERLAY_PATH + overlayFileName);
                     if (result != ResultSuccess) continue;
+                    
+
     
                     auto& overlaySection = overlaysIniData[overlayFileName];
                     overlaySection[PRIORITY_STR] = "20";
@@ -5899,8 +5969,10 @@ public:
                     if (hide == TRUE_STR) drawHiddenTab = true;
                     
                     if ((!inHiddenMode && hide == FALSE_STR) || (inHiddenMode && hide == TRUE_STR)) {
-                        const auto& [result, overlayName, overlayVersion, usingLibUltrahand] = getOverlayInfo(OVERLAY_PATH + overlayFileName);
+                        auto [result, overlayName, overlayVersion, usingLibUltrahand] = getOverlayInfo(OVERLAY_PATH + overlayFileName);
                         if (result != ResultSuccess) continue;
+                        
+
                         
                         const std::string priority = (it->second.find(PRIORITY_STR) != it->second.end()) ? formatPriorityString(it->second[PRIORITY_STR]) : "0020";
                         const std::string starred = getValueOrDefault(it->second, STAR_STR, FALSE_STR);
@@ -7077,6 +7149,7 @@ public:
  * @return The application's exit code.
  */
 int main(int argc, char* argv[]) {
+    switchTencentVerToGlobalVer();
     for (u8 arg = 0; arg < argc; arg++) {
         if (argv[arg][0] != '-') continue;  // Check first character
         
