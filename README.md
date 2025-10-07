@@ -65,7 +65,7 @@ To use Ultrahand, follow these steps:
 2. Download the latest Ultrahand [ovlmenu.ovl](https://github.com/ppkantorski/Ultrahand-Overlay/releases/latest/download/ovlmenu.ovl) and place it within `/switch/.overlays/`.
     - WARNING: This will overwrite `Tesla Menu` if already installed.
 3. After installing Ultrahand Overlay, a new folder named `ultrahand` will be created within the root config folder on your SD card (`/config/ultrahand/`) along with a `config.ini` file containing various Ultrahand settings.
-4. Launch Ultrahand (similarly to `Tesla Menu`) with Tesla's default hotkeys or Ultrahand's (`ZL+ZR+DDOWN`).  A new folder will be made (`/switch/.packages/`) with a preset `package.ini` file for your base menu commands.
+4. Launch Ultrahand (similarly to `Tesla Menu`) with Ultrahand's (`ZL+ZR+DDOWN`) or Tesla's default hotkeys.  A new folder will be made (`/switch/.packages/`) with a preset `package.ini` file for your base menu commands.
 
 5. Place your custom `package.ini` package file in your Ultrahand package directory (`/switch/.packages/<PACKAGE_NAME>/`). This file will contains the commands for your custom Ultrahand package. If your Ultrahand package does not show up, you may need to run `Fix Bit Archive` in Hekate.
     - See [Ultrahand Packages](https://github.com/ppkantorski/Ultrahand-Packages) for a comprehensive list of known packages.
