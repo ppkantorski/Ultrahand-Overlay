@@ -1,0 +1,29 @@
+name: Update HB App Store downloads
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"  # every 6 hours (UTC)
+  workflow_dispatch:        # allows manual run
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Fetch and extract download count
+        run: |
+          mkdir -p .github
+          curl -s https://switch.cdn.fortheusers.org/repo.json \
+            | jq '.packages | map(select(.name == "UltrahandOverlay"))[0] | {app_dls: .app_dls, updated: (now | todate)}' \
+            > .github/hbappstore.json
+
+      - name: Commit and push changes
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add .github/hbappstore.json
+          git diff-index --quiet HEAD || git commit -m "Update HB App Store download count"
+          git push
