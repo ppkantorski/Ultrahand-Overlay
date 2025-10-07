@@ -1,4 +1,5 @@
 name: Update HB App Store downloads
+
 on:
   schedule:
     - cron: "0 */6 * * *"  # every 6 hours
@@ -13,9 +14,18 @@ jobs:
 
       - name: Fetch and extract download count
         run: |
-          count=$(curl -s https://switch.cdn.fortheusers.org/repo.json \
-            | jq '.packages | map(select(.name == "UltrahandOverlay"))[0].app_dls')
+          set -e
+          JSON_URL="https://switch.cdn.fortheusers.org/repo.json"
+
+          # Fetch download count
+          count=$(curl -s "$JSON_URL" \
+            | jq '.packages | map(select(.name == "UltrahandOverlay"))[0].app_dls // 0')
+
+          # Get UTC timestamp
           timestamp=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
+
+          # Write JSON to file
+          mkdir -p .github
           echo "{\"schemaVersion\":1,\"label\":\"HB App Store downloads\",\"message\":\"$count\",\"updated_at\":\"$timestamp\"}" > .github/hbappstore.json
 
       - name: Commit and push
@@ -24,4 +34,4 @@ jobs:
           git config user.email "github-actions@github.com"
           git add .github/hbappstore.json
           git diff-index --quiet HEAD || git commit -m "Update download count and timestamp"
-          git push
+          git push || echo "Nothing to push"
