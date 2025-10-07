@@ -94,8 +94,6 @@ To compile and run the software, you need to have the following C/C++ dependenci
 - switch-curl
 - switch-zziplib
 - switch-mbedtls
-- switch-jansson
-
 
 ## Contributing
 
