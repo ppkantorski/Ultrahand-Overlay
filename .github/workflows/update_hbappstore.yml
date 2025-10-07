@@ -34,4 +34,10 @@ jobs:
           git config user.email "github-actions@github.com"
           git add .github/hbappstore.json
           git diff-index --quiet HEAD || git commit -m "Update download count and timestamp"
-          git push || echo "Nothing to push"
+          
+          # Fetch latest remote changes and rebase to avoid push rejection
+          git fetch origin main
+          git rebase origin/main || echo "Rebase completed or nothing to rebase"
+          
+          # Push changes
+          git push origin main
