@@ -12,7 +12,7 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Fetch and extract download count
+      - name: Fetch and format download count
         run: |
           set -e
           JSON_URL="https://switch.cdn.fortheusers.org/repo.json"
@@ -21,19 +21,23 @@ jobs:
           count=$(curl -s "$JSON_URL" \
             | jq '.packages | map(select(.name == "UltrahandOverlay"))[0].app_dls // 0')
 
-          # Get UTC timestamp
-          timestamp=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          # Format as compact number (k for thousands)
+          if [ "$count" -ge 1000 ]; then
+            display=$(printf "%.0fk" $(echo "$count/1000" | bc -l))
+          else
+            display=$count
+          fi
 
           # Write JSON to file
           mkdir -p .github
-          echo "{\"schemaVersion\":1,\"label\":\"HB App Store downloads\",\"message\":\"$count\"}" > .github/hbappstore.json
+          echo "{\"schemaVersion\":1,\"label\":\"HB App Store downloads\",\"message\":\"$display\",\"color\":\"E60012\"}" > .github/hbappstore.json
 
       - name: Commit and push
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
           git add .github/hbappstore.json
-          git diff-index --quiet HEAD || git commit -m "Update download count and timestamp"
+          git diff-index --quiet HEAD || git commit -m "Update download count"
           
           # Fetch latest remote changes and rebase to avoid push rejection
           git fetch origin main
