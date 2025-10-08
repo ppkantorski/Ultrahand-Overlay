@@ -95,7 +95,7 @@ To compile and run the software, you need to have the following C/C++ dependenci
 - [libultrahand](https://github.com/ppkantorski/libultrahand)
 - libnx
 - switch-curl
-- switch-zziplib
+- switch-zlib
 - switch-mbedtls
 
 ## Contributing
