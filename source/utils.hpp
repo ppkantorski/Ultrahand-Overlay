@@ -2185,18 +2185,22 @@ void applyReplaceIniPlaceholder(std::string& arg, const std::string& commandName
         } else {
             // Check if the content is an integer
             if (std::all_of(placeholderContent.begin(), placeholderContent.end(), ::isdigit)) {
-                entryIndex = ult::stoi(placeholderContent);
-                
-                // Load section names only once when needed
-                if (!sectionsLoaded) {
-                    sectionNames = parseSectionsFromIni(iniPath);
-                    sectionsLoaded = true;
-                }
-                
-                if (entryIndex < sectionNames.size()) {
-                    replacement = sectionNames[entryIndex];
-                } else {
+                if (!isValidNumber(placeholderContent)) {
                     replacement = NULL_STR;
+                } else {
+                    entryIndex = ult::stoi(placeholderContent);
+                    
+                    // Load section names only once when needed
+                    if (!sectionsLoaded) {
+                        sectionNames = parseSectionsFromIni(iniPath);
+                        sectionsLoaded = true;
+                    }
+                    
+                    if (entryIndex < sectionNames.size()) {
+                        replacement = sectionNames[entryIndex];
+                    } else {
+                        replacement = NULL_STR;
+                    }
                 }
             } else {
                 replacement = NULL_STR;
@@ -2450,9 +2454,9 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
                     startPos = modifiedArg.find("{list_source(");
                     endPos   = modifiedArg.find(")}");
                     if (endPos != std::string::npos && endPos > startPos) {
-                        // Get the raw value (may be empty)
-                        raw = stringToList(listString)[entryIndex];
-                        // Use returnOrNull to turn empty → NULL_STR
+                        // SAFE: Use at() which does bounds checking, or catch the access
+                        const auto& listItems = stringToList(listString);  // const reference - no copy
+                        raw = (entryIndex < listItems.size()) ? listItems[entryIndex] : "";
                         replacement = returnOrNull(raw);
                         modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
                     }
@@ -3017,15 +3021,19 @@ bool applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
         }},
         {"{list(", [&](const std::string& placeholder) {
             const size_t startPos = placeholder.find('(') + 1;
-            //size_t endPos = placeholder.find(')');
-            //size_t listIndex = ult::stoi(placeholder.substr(startPos, placeholder.find(')') - startPos));
-            return returnOrNull(stringToList(listString)[ult::stoi(placeholder.substr(startPos, placeholder.find(')') - startPos))]);
+            const std::string indexStr = placeholder.substr(startPos, placeholder.find(')') - startPos);
+            if (!isValidNumber(indexStr)) {
+                return NULL_STR;
+            }
+            return returnOrNull(stringToList(listString)[ult::stoi(indexStr)]);
         }},
         {"{list_file(", [&](const std::string& placeholder) {
             const size_t startPos = placeholder.find('(') + 1;
-            //size_t endPos = placeholder.find(')');
-            //size_t listIndex = ult::stoi(placeholder.substr(startPos, placeholder.find(')') - startPos));
-            return returnOrNull(getEntryFromListFile(listPath, ult::stoi(placeholder.substr(startPos, placeholder.find(')') - startPos))));
+            std::string indexStr = placeholder.substr(startPos, placeholder.find(')') - startPos);
+            if (!isValidNumber(indexStr)) {
+                return NULL_STR;
+            }
+            return returnOrNull(getEntryFromListFile(listPath, ult::stoi(indexStr)));
         }},
         {"{json(", [&](const std::string& placeholder) { return replaceJsonPlaceholder(placeholder, JSON_STR, jsonString); }},
         {"{json_file(", [&](const std::string& placeholder) { return replaceJsonPlaceholder(placeholder, JSON_FILE_STR, jsonPath); }},
@@ -3038,13 +3046,12 @@ bool applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
         }},
         {"{decimal_to_hex(", [&](const std::string& placeholder) {
             const size_t startPos = placeholder.find("(") + 1;
-            //size_t endPos = placeholder.find(")");
             const std::string params = placeholder.substr(startPos, placeholder.find(")") - startPos);
-        
+            
             const size_t commaPos = params.find(",");
             std::string decimalValue;
             std::string order;
-        
+            
             if (commaPos != std::string::npos) {
                 decimalValue = params.substr(0, commaPos);
                 order = params.substr(commaPos + 1);
@@ -3054,10 +3061,13 @@ bool applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
                 decimalValue = params;
                 order = "";
             }
-        
+            
             if (order.empty()) {
                 return returnOrNull(decimalToHex(decimalValue));
             } else {
+                if (!isValidNumber(order)) {
+                    return NULL_STR;
+                }
                 return returnOrNull(decimalToHex(decimalValue, ult::stoi(order)));
             }
         }},
@@ -3088,10 +3098,16 @@ bool applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
             const size_t commaPos = parameters.find(',');
             
             if (commaPos != std::string::npos) {
-                const int lowValue = ult::stoi(parameters.substr(0, commaPos));
-                //int highValue = ult::stoi(parameters.substr(commaPos + 1));
-                //int randomValue = lowValue + rand() % (ult::stoi(parameters.substr(commaPos + 1)) - lowValue + 1);
-                return returnOrNull(ult::to_string(lowValue + rand() % (ult::stoi(parameters.substr(commaPos + 1)) - lowValue + 1)));
+                std::string lowStr = parameters.substr(0, commaPos);
+                std::string highStr = parameters.substr(commaPos + 1);
+                
+                if (!isValidNumber(lowStr) || !isValidNumber(highStr)) {
+                    return NULL_STR;
+                }
+                
+                const int lowValue = ult::stoi(lowStr);
+                const int highValue = ult::stoi(highStr);
+                return returnOrNull(ult::to_string(lowValue + rand() % (highValue - lowValue + 1)));
             }
             return returnOrNull(placeholder);
         }},
@@ -3099,14 +3115,14 @@ bool applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
             const size_t startPos = placeholder.find('(');
             const size_t endPos = placeholder.rfind(')');
             if (startPos == std::string::npos || endPos == std::string::npos || endPos <= startPos + 1) {
-                return returnOrNull(placeholder);
+                return NULL_STR;
             }
         
             const std::string parameters = placeholder.substr(startPos + 1, endPos - startPos - 1);
             const size_t firstComma = parameters.find(',');
             const size_t secondComma = (firstComma == std::string::npos) ? std::string::npos : parameters.find(',', firstComma + 1);
             if (firstComma == std::string::npos || secondComma == std::string::npos) {
-                return returnOrNull(placeholder);
+                return NULL_STR;
             }
         
             std::string strPart    = parameters.substr(0, firstComma);
@@ -3121,21 +3137,20 @@ bool applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
             removeQuotes(endIndex);
         
             if (startIndex.empty() || endIndex.empty() ||
-                !std::all_of(startIndex.begin(), startIndex.end(), ::isdigit) ||
-                !std::all_of(endIndex.begin(), endIndex.end(), ::isdigit)) {
-                return returnOrNull(placeholder);
+                !isValidNumber(startIndex) || !isValidNumber(endIndex)) {
+                return NULL_STR;
             }
         
             const size_t sliceStart = static_cast<size_t>(ult::stoi(startIndex));
             const size_t sliceEnd   = static_cast<size_t>(ult::stoi(endIndex));
         
             if (sliceEnd <= sliceStart || sliceStart >= strPart.length()) {
-                return returnOrNull(placeholder);
+                return NULL_STR;
             }
         
-            //std::string result = sliceString(strPart, sliceStart, sliceEnd);
             return returnOrNull(sliceString(strPart, sliceStart, sliceEnd));
         }},
+        
         {"{split(", [&](const std::string& placeholder) {
             const size_t openParen = placeholder.find('(');
             const size_t closeParen = placeholder.find(')');
@@ -3165,11 +3180,10 @@ bool applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
             removeQuotes(delimiter);
             trim(indexStr);
         
-            if (indexStr.empty() || !std::all_of(indexStr.begin(), indexStr.end(), ::isdigit)) {
+            if (indexStr.empty() || !isValidNumber(indexStr)) {
                 return NULL_STR;
             }
         
-            //size_t index = ult::stoi(indexStr);
             std::string result = splitStringAtIndex(str, delimiter, ult::stoi(indexStr));
         
             return result.empty() ? NULL_STR : result;
@@ -4174,7 +4188,10 @@ void handleHexEdit(const std::string& sourcePath, const std::string& secondArg, 
         hexEditByOffset(sourcePath, secondArg, thirdArg);
     } else if (commandName == "hex-by-swap") {
         if (cmd.size() >= 5) {
-            const size_t occurrence = std::stoul(fourthArg);
+            if (!isValidNumber(fourthArg)) {
+                return;
+            }
+            const size_t occurrence = ult::stoi(fourthArg);
             hexEditFindReplace(sourcePath, secondArg, thirdArg, occurrence);
         } else {
             hexEditFindReplace(sourcePath, secondArg, thirdArg);
@@ -4190,13 +4207,15 @@ void handleHexEdit(const std::string& sourcePath, const std::string& secondArg, 
         if (cmd.size() >= 5) {
             std::string selectedStr = cmd[4];
             removeQuotes(selectedStr);
-            const size_t occurrence = std::stoul(selectedStr);
+            if (!isValidNumber(selectedStr)) {
+                return;
+            }
+            const size_t occurrence = ult::stoi(selectedStr);
             hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, occurrence);
         } else {
             hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
         }
     } else if (commandName == "hex-by-decimal") {
-
         std::string hexDataToReplace;
         std::string hexDataReplacement;
     
@@ -4204,12 +4223,18 @@ void handleHexEdit(const std::string& sourcePath, const std::string& secondArg, 
             hexDataToReplace = decimalToHex(secondArg);
             hexDataReplacement = decimalToHex(thirdArg);
         } else {
+            if (!isValidNumber(fourthArg)) {
+                return;
+            }
             hexDataToReplace = decimalToHex(secondArg, ult::stoi(fourthArg));
             hexDataReplacement = decimalToHex(thirdArg, ult::stoi(fourthArg));
         }
     
         if (cmd.size() >= 6) {
-            const size_t occurrence = std::stoul(fifthArg);
+            if (!isValidNumber(fifthArg)) {
+                return;
+            }
+            const size_t occurrence = ult::stoi(fifthArg);
             hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, occurrence);
         } else {
             hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
@@ -4222,12 +4247,18 @@ void handleHexEdit(const std::string& sourcePath, const std::string& secondArg, 
             hexDataToReplace = decimalToReversedHex(secondArg);
             hexDataReplacement = decimalToReversedHex(thirdArg);
         } else {
+            if (!isValidNumber(fourthArg)) {
+                return;
+            }
             hexDataToReplace = decimalToReversedHex(secondArg, ult::stoi(fourthArg));
             hexDataReplacement = decimalToReversedHex(thirdArg, ult::stoi(fourthArg));
         }
     
         if (cmd.size() >= 6) {
-            const size_t occurrence = std::stoul(fifthArg);
+            if (!isValidNumber(fifthArg)) {
+                return;
+            }
+            const size_t occurrence = ult::stoi(fifthArg);
             hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, occurrence);
         } else {
             hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
@@ -4238,15 +4269,23 @@ void handleHexEdit(const std::string& sourcePath, const std::string& secondArg, 
 void handleHexByCustom(const std::string& sourcePath, const std::string& customPattern, const std::string& offset, std::string hexDataReplacement, const std::string& commandName, std::string byteGroupSize) {
     if (hexDataReplacement != NULL_STR) {
         if (commandName == "hex-by-custom-decimal-offset") {
-            if (!byteGroupSize.empty())
+            if (!byteGroupSize.empty()) {
+                if (!isValidNumber(byteGroupSize)) {
+                    return;
+                }
                 hexDataReplacement = decimalToHex(hexDataReplacement, ult::stoi(byteGroupSize));
-            else
+            } else {
                 hexDataReplacement = decimalToHex(hexDataReplacement);
+            }
         } else if (commandName == "hex-by-custom-rdecimal-offset") {
-            if (!byteGroupSize.empty())
+            if (!byteGroupSize.empty()) {
+                if (!isValidNumber(byteGroupSize)) {
+                    return;
+                }
                 hexDataReplacement = decimalToReversedHex(hexDataReplacement, ult::stoi(byteGroupSize));
-            else
+            } else {
                 hexDataReplacement = decimalToReversedHex(hexDataReplacement);
+            }
         }
         hexEditByCustomOffset(sourcePath, customPattern, offset, hexDataReplacement);
     }
@@ -4256,8 +4295,10 @@ void handleHexByCustom(const std::string& sourcePath, const std::string& customP
 void rebootToHekateConfig(Payload::HekateConfigList& configList, const std::string& option, bool isIni) {
     int rebootIndex = -1;  // Initialize rebootIndex to -1, indicating no match found
     auto configIterator = configList.begin();
-
     if (std::all_of(option.begin(), option.end(), ::isdigit)) {
+        if (!isValidNumber(option)) {
+            return;
+        }
         rebootIndex = ult::stoi(option);
         std::advance(configIterator, rebootIndex);
     } else {
@@ -4269,7 +4310,6 @@ void rebootToHekateConfig(Payload::HekateConfigList& configList, const std::stri
             }
         }
     }
-
     if (rebootIndex != -1) {
         Payload::RebootToHekateConfig(*configIterator, isIni);
     }
@@ -4730,7 +4770,8 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             else if (refreshPattern == "package")
                 refreshPackage.store(true, std::memory_order_release);
             else if (refreshPattern == "wallpaper") {
-                reloadWallpaper(true);
+                //reloadWallpaper(true);
+                refreshWallpaperNow.store(true, std::memory_order_release);
             //} else {
             //    std::string refreshPattern2 = "";
             //    if (cmd.size() > 2) {
@@ -4774,32 +4815,19 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             if (cmd.size() > 2) {
                 std::string fontSizeStr = cmd[2];
                 removeQuotes(fontSizeStr);
-                fontSize = std::stoi(fontSizeStr);
-
-                // Clamp font size to [1, 34]
-                if (fontSize < 1) fontSize = 1;
-                else if (fontSize > 34) fontSize = 34;
-
+                if (!isValidNumber(fontSizeStr)) {
+                    fontSize = 28; // Use default if conversion fails
+                } else {
+                    fontSize = std::stoi(fontSizeStr);
+                    // Clamp font size to [1, 34]
+                    if (fontSize < 1) fontSize = 1;
+                    else if (fontSize > 34) fontSize = 34;
+                }
             }
             if (tsl::notification)
                 tsl::notification->show(text, fontSize);
         }
-        //if (cmd.size() > 1) {
-        //    std::string text = cmd[1];
-        //    removeQuotes(text);
-        //    
-        //    size_t fontSize = 28;
-        //    if (cmd.size() > 2) {
-        //        std::string fontSizeStr = cmd[2];
-        //        removeQuotes(fontSizeStr);
-        //        fontSize = std::stoi(fontSizeStr);
-        //        fontSize = std::clamp(fontSize, size_t(1), size_t(34));
-        //    }
-        //    
-        //    // Push as cJSON
-        //    pushNotificationJson(text, fontSize);
-        //}
-    } else if (commandName == "clear") {
+    }else if (commandName == "clear") {
         if (cmd.size() >= 2) {
             std::string clearOption = cmd[1];
             removeQuotes(clearOption);
@@ -4917,12 +4945,25 @@ int getInterpreterStackSize(const std::string& packagePath = "") {
         logFilePath = packagePath + "log.txt";
     }
     #endif
-
     // Cache stack size parsing to avoid repeated INI file access
     if (cachedStackSize == 0) {
         const std::string interpreterHeap = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, MEMORY_STR, "interpreter_heap");
         if (!interpreterHeap.empty()) {
-            cachedStackSize = ult::stoi(interpreterHeap, nullptr, 16);  // Convert from base 16
+            // Validate hex string before conversion
+            bool validHex = true;
+            for (size_t i = 0; i < interpreterHeap.length(); ++i) {
+                char c = interpreterHeap[i];
+                if (!std::isxdigit(static_cast<unsigned char>(c))) {
+                    validHex = false;
+                    break;
+                }
+            }
+            
+            if (validHex) {
+                cachedStackSize = ult::stoi(interpreterHeap, nullptr, 16);  // Convert from base 16
+            } else {
+                cachedStackSize = 0x8000;  // Default value if invalid hex
+            }
         } else {
             cachedStackSize = 0x8000;  // Default value
         }

@@ -5316,6 +5316,11 @@ public:
             lastRunningInterpreter.store(false, std::memory_order_release);
             return true;
         }
+
+        if (ult::refreshWallpaperNow.load(std::memory_order_acquire)) {
+            ult::refreshWallpaperNow.store(false, std::memory_order_release);
+            ult::reloadWallpaper(true);
+        }
     
         if (goBackAfter.load(acquire)) {
             goBackAfter.store(false, std::memory_order_release);
@@ -6398,6 +6403,11 @@ public:
             return true;
         }
         
+        if (ult::refreshWallpaperNow.load(std::memory_order_acquire)) {
+            ult::refreshWallpaperNow.store(false, std::memory_order_release);
+            ult::reloadWallpaper(true);
+        }
+
         if (goBackAfter.load(acquire)) {
             goBackAfter.store(false, std::memory_order_release);
             simulatedBack.store(true, release);
