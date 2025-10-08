@@ -4730,7 +4730,7 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             else if (refreshPattern == "package")
                 refreshPackage.store(true, std::memory_order_release);
             else if (refreshPattern == "wallpaper") {
-                reloadWallpaper();
+                reloadWallpaper(true);
             //} else {
             //    std::string refreshPattern2 = "";
             //    if (cmd.size() > 2) {
