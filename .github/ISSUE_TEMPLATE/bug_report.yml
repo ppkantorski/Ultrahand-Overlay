@@ -75,8 +75,8 @@ body:
     id: modules
     attributes:
       label: Active System Modules
-      description: List all sysmodules currently in use (e.g., sys-clk, sys-ftpd, ...).
-      placeholder: "sys-clk, sys-ftpd, ..."
+      description: List all sys-modules currently in use.
+      placeholder: "e.g., sys-clk, sys-ftpd, ..."
     validations:
       required: true
 
@@ -125,7 +125,7 @@ body:
       label: Build Type
       description: Did you compile this yourself or use an official release?
       options:
-        - Official Release (from GitHub or HB App Store)
+        - Official Release (from this GitHub or HB App Store)
         - Unofficial Release (from 3rd-party)
         - Self-Compiled Build
     validations:
