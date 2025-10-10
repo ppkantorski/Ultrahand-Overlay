@@ -1,0 +1,162 @@
+name: "🐛 Bug Report"
+description: "Report a crash, compatibility issue, or malfunction in Status-Monitor-Overlay"
+title: "[Bug]: "
+labels: ["bug", "needs-triage"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 🧩 Bug Report Form
+        Please fill out **all required fields** so we can investigate efficiently.  
+        Reports missing key details may be closed without action.
+
+  - type: dropdown
+    id: nature
+    attributes:
+      label: Nature of Issue
+      description: What type of issue are you experiencing?
+      options:
+        - Crash / Fatal Error
+        - Visual or UI Bug
+        - Performance Problem
+        - Compatibility Issue
+        - Unexpected Behavior
+        - Other
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ### 🖥️ System Information
+
+  - type: input
+    id: firmware
+    attributes:
+      label: Firmware Version
+      placeholder: "e.g., 17.0.1"
+    validations:
+      required: true
+
+  - type: input
+    id: hos
+    attributes:
+      label: HOS (Horizon OS) Version
+      placeholder: "e.g., 17.0.1"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: language
+    attributes:
+      label: System Language
+      options:
+        - English
+        - Japanese
+        - Chinese (Simplified)
+        - Chinese (Traditional)
+        - French
+        - German
+        - Spanish
+        - Korean
+        - Italian
+        - Portuguese
+        - Russian
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: modules
+    attributes:
+      label: Active System Modules
+      description: List all sysmodules currently in use (e.g., Tesla, sys-clk, nx-ovlloader+).
+      placeholder: "Tesla, sys-clk, sys-ftpd, nx-ovlloader+"
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ### 🧠 Software Versions
+
+  - type: input
+    id: ultrahand
+    attributes:
+      label: Ultrahand Version
+      placeholder: "e.g., 2.1.3"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: ovlloader_type
+    attributes:
+      label: nx-ovlloader Type
+      description: Which version of ovlloader are you using?
+      options:
+        - nx-ovlloader
+        - nx-ovlloader+
+    validations:
+      required: true
+
+  - type: input
+    id: ovlloader_ver
+    attributes:
+      label: nx-ovlloader Version
+      placeholder: "e.g., 1.1.1"
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ### 🧱 Build Information
+
+  - type: dropdown
+    id: build_type
+    attributes:
+      label: Build Type
+      description: Did you compile this yourself or use an official release?
+      options:
+        - Official Release (from GitHub or HB App Store)
+        - Self-Compiled Build
+    validations:
+      required: true
+
+  - type: input
+    id: build_commit
+    attributes:
+      label: Commit / Source Details
+      description: If self-compiled, specify the commit hash or describe your build source.
+      placeholder: "e.g., commit 3a60dc0 (custom modifications)"
+    validations:
+      required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ### 🧾 Reproduction Details
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: Step-by-step instructions to trigger the issue.
+      placeholder: |
+        1. Launch the game
+        2. Open the overlay with (-)
+        3. Press D-Right → crash occurs
+    validations:
+      required: true
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Additional Notes or Logs
+      description: Add any crash logs, screenshots, or observations here.
+      placeholder: "Attach logs or add any relevant details..."
