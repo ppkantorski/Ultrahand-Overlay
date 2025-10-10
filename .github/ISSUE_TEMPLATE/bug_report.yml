@@ -126,6 +126,7 @@ body:
       description: Did you compile this yourself or use an official release?
       options:
         - Official Release (from GitHub or HB App Store)
+        - Unofficial Release (from 3rd-party)
         - Self-Compiled Build
     validations:
       required: true
