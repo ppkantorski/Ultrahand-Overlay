@@ -77,8 +77,8 @@ body:
       label: Custom Theme
       description: Select "Yes" if you are using a custom theme, otherwise select "No".
       options:
-        - "Yes"
         - "No"
+        - "Yes"
     validations:
       required: true
 
@@ -88,8 +88,8 @@ body:
       label: Wallpaper
       description: Select "Yes" if you are using a wallpaper, otherwise select "No". (nx-ovlloader+ only)
       options:
-        - "Yes"
         - "No"
+        - "Yes"
     validations:
       required: true
 
