@@ -71,6 +71,28 @@ body:
     validations:
       required: true
 
+  - type: dropdown
+    id: theme
+    attributes:
+      label: Custom Theme
+      description: Select Yes if you are using a custom theme, otherwise select No.
+      options:
+        - Yes
+        - No
+    validations:
+      required: true
+
+  - type: dropdown
+    id: wallpaper
+    attributes:
+      label: Wallpaper
+      description: Select Yes if you are using a wallpaper, otherwise select No. (nx-ovlloader+ only)
+      options:
+        - Yes
+        - No
+    validations:
+      required: true
+
   - type: input
     id: modules
     attributes:
