@@ -52,19 +52,22 @@ body:
     id: language
     attributes:
       label: System Language
+      description: Select the language set on your system.
       options:
-        - English
-        - Japanese
-        - Chinese (Simplified)
-        - Chinese (Traditional)
-        - French
-        - German
-        - Spanish
-        - Korean
-        - Italian
-        - Portuguese
-        - Russian
-        - Other
+        - English (en)
+        - German (de)
+        - Spanish (es)
+        - French (fr)
+        - Italian (it)
+        - Japanese (ja)
+        - Korean (ko)
+        - Dutch (nl)
+        - Polish (pl)
+        - Portuguese (pt)
+        - Russian (ru)
+        - Ukrainian (uk)
+        - Chinese (Simplified, zh-cn)
+        - Chinese (Traditional, zh-tw)
     validations:
       required: true
 
