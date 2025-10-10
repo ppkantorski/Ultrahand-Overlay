@@ -152,8 +152,8 @@ body:
       description: Step-by-step instructions to trigger the issue.
       placeholder: |
         1. Launch the game
-        2. Open the overlay with (-)
-        3. Press D-Right → crash occurs
+        2. Open the Ultrahand
+        3. ...
     validations:
       required: true
 
