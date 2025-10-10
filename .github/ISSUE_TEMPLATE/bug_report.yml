@@ -1,5 +1,5 @@
 name: "🐛 Bug Report"
-description: "Report a crash, compatibility issue, or malfunction in Status-Monitor-Overlay"
+description: "Report a crash, compatibility issue, or malfunction in Ultrahand Overlay"
 title: "[Bug]: "
 labels: ["bug", "needs-triage"]
 
