@@ -74,7 +74,7 @@ body:
   - type: dropdown
     id: custom_theme
     attributes:
-      label: Using Custom Theme?
+      label: Custom Theme
       description: Select "Yes" if you are using a custom theme, otherwise select "No".
       options:
         - "Yes"
@@ -85,7 +85,7 @@ body:
   - type: dropdown
     id: custom_wallpaper
     attributes:
-      label: Using Wallpaper?
+      label: Wallpaper
       description: Select "Yes" if you are using a wallpaper, otherwise select "No". (nx-ovlloader+ only)
       options:
         - "Yes"
