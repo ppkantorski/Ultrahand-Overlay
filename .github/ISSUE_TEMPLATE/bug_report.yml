@@ -33,18 +33,18 @@ body:
         ### 🖥️ System Information
 
   - type: input
-    id: firmware
+    id: hos_firmware
     attributes:
-      label: Firmware Version
-      placeholder: "e.g., 17.0.1"
+      label: HOS Firmware Version
+      placeholder: "e.g., 20.1.5"
     validations:
       required: true
 
   - type: input
-    id: hos
+    id: custom_firmware
     attributes:
-      label: HOS (Horizon OS) Version
-      placeholder: "e.g., 17.0.1"
+      label: Custom Firmware Version
+      placeholder: "e.g., AMS 1.9.5"
     validations:
       required: true
 
