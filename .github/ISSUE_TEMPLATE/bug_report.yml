@@ -98,7 +98,7 @@ body:
     id: ovlloader_type
     attributes:
       label: nx-ovlloader Type
-      description: Which version of ovlloader are you using?
+      description: Which version of nx-ovlloader are you using?
       options:
         - nx-ovlloader
         - nx-ovlloader+
@@ -134,7 +134,7 @@ body:
     id: build_commit
     attributes:
       label: Commit / Source Details
-      description: If self-compiled, specify the commit hash or describe your build source.
+      description: If self-compiled or provided by a 3rd-party, specify the commit hash or describe your build source.
       placeholder: "e.g., commit 3a60dc0 (custom modifications)"
     validations:
       required: false
