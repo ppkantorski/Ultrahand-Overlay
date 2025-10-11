@@ -19,7 +19,7 @@
 #include "rtc_r2p.hpp"
 #include "reboot_to_payload.h"
 #include "ams_bpc.h"
-#include "ini.h"
+#include "ini_funcs.hpp"  // Changed from "ini.h"
 
 #include <unistd.h>
 #include <cstring>
@@ -46,33 +46,36 @@ namespace Payload {
                 smc_reboot_to_payload();
         }
 
-        int HekateConfigHandler(void *user, char const *section, char const *name, char const *value) {
-            auto const list = reinterpret_cast<HekateConfigList *>(user);
-
-            /* Ignore pre-config and global config entries. */
-            if (section[0] == '\0' || std::strcmp(section, "config") == 0) {
-                return 1;
-            }
-
-            /* Find existing entry using simple linear search. */
-            HekateConfig *found = nullptr;
-            for (auto &cfg : *list) {
-                if (cfg.name == section) {
-                    found = &cfg;
-                    break;
+        // Refactored to use ini_funcs.cpp methods instead of callback
+        HekateConfigList ParseHekateIni(const std::string& iniPath, HekateConfigList& existingConfigs) {
+            HekateConfigList newConfigs;
+            
+            // Use parseSectionsFromIni to get sections in order
+            auto sections = ult::parseSectionsFromIni(iniPath);
+            
+            for (const auto& sectionName : sections) {
+                // Ignore pre-config and global config entries (matching original logic)
+                if (sectionName.empty() || sectionName == "config") {
+                    continue;
+                }
+                
+                // Check if this section already exists in the combined list
+                bool found = false;
+                for (auto &cfg : existingConfigs) {
+                    if (cfg.name == sectionName) {
+                        found = true;
+                        break;
+                    }
+                }
+                
+                // Only add if not already in the list
+                if (!found) {
+                    // Index is based on the combined list size + 1 (matching original behavior)
+                    newConfigs.emplace_back(sectionName, existingConfigs.size() + newConfigs.size() + 1);
                 }
             }
-
-            /* Create config entry if not existant. */
-            HekateConfig &config = found ? *found : list->emplace_back(section, list->size() + 1);
-
-            /* TODO: parse more information and display that. */
-            (void)config;
-
-            (void)name;
-            (void)value;
-
-            return 1;
+            
+            return newConfigs;
         }
 
         constexpr char const *const HekatePaths[] = {
@@ -144,7 +147,8 @@ namespace Payload {
 
     HekateConfigList LoadHekateConfigList() {
         HekateConfigList configs;
-        ini_parse("sdmc:/bootloader/hekate_ipl.ini", HekateConfigHandler, &configs);
+        auto newConfigs = ParseHekateIni("sdmc:/bootloader/hekate_ipl.ini", configs);
+        configs.splice(configs.end(), newConfigs);
         return configs;
     }
 
@@ -178,9 +182,11 @@ namespace Payload {
             SortEntries(dir_entries, count);
         }
 
-        /* parse config */
-        for (auto const &entry : std::span(dir_entries, count))
-            ini_parse(entry, HekateConfigHandler, &configs);
+        /* parse config - accumulating into the same list */
+        for (auto const &entry : std::span(dir_entries, count)) {
+            auto newConfigs = ParseHekateIni(entry, configs);
+            configs.splice(configs.end(), newConfigs);
+        }
 
         closedir(dirp);
 
