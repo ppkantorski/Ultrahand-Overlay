@@ -122,6 +122,14 @@ body:
     validations:
       required: true
 
+  - type: input
+    id: ovlloader_ver
+    attributes:
+      label: nx-ovlloader Version
+      placeholder: "e.g., 1.1.1"
+    validations:
+      required: true
+
   - type: dropdown
     id: ovlloader_type
     attributes:
@@ -130,14 +138,6 @@ body:
       options:
         - nx-ovlloader
         - nx-ovlloader+
-    validations:
-      required: true
-
-  - type: input
-    id: ovlloader_ver
-    attributes:
-      label: nx-ovlloader Version
-      placeholder: "e.g., 1.1.1"
     validations:
       required: true
 
