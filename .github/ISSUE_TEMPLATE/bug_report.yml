@@ -61,46 +61,6 @@ body:
     attributes:
       value: |
         ---
-        ### 🛠️ Ultrahand Settings
-
-  - type: dropdown
-    id: language
-    attributes:
-      label: System Language
-      description: Select the language set on your system.
-      options:
-        - English (en)
-        - German (de)
-        - Spanish (es)
-        - French (fr)
-        - Italian (it)
-        - Japanese (ja)
-        - Korean (ko)
-        - Dutch (nl)
-        - Polish (pl)
-        - Portuguese (pt)
-        - Russian (ru)
-        - Ukrainian (uk)
-        - Chinese (Simplified, zh-cn)
-        - Chinese (Traditional, zh-tw)
-    validations:
-      required: true
-  
-  - type: dropdown
-    id: custom_wallpaper
-    attributes:
-      label: Wallpaper
-      description: Select "Yes" if you are using a wallpaper, otherwise select "No". (nx-ovlloader+ only)
-      options:
-        - "No"
-        - "Yes"
-    validations:
-      required: true
-
-  - type: markdown
-    attributes:
-      value: |
-        ---
         ### 🧠 Software Versions
 
   - type: input
@@ -156,6 +116,46 @@ body:
       placeholder: "e.g., commit 3a60dc0 (custom modifications)"
     validations:
       required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ### 🛠️ Ultrahand Settings
+
+  - type: dropdown
+    id: language
+    attributes:
+      label: System Language
+      description: Select the language set on your system.
+      options:
+        - English (en)
+        - German (de)
+        - Spanish (es)
+        - French (fr)
+        - Italian (it)
+        - Japanese (ja)
+        - Korean (ko)
+        - Dutch (nl)
+        - Polish (pl)
+        - Portuguese (pt)
+        - Russian (ru)
+        - Ukrainian (uk)
+        - Chinese (Simplified, zh-cn)
+        - Chinese (Traditional, zh-tw)
+    validations:
+      required: true
+  
+  - type: dropdown
+    id: custom_wallpaper
+    attributes:
+      label: Wallpaper
+      description: Select "Yes" if you are using a wallpaper, otherwise select "No". (nx-ovlloader+ only)
+      options:
+        - "No"
+        - "Yes"
+    validations:
+      required: true
 
   - type: markdown
     attributes:
