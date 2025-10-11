@@ -48,6 +48,21 @@ body:
     validations:
       required: true
 
+  - type: input
+    id: modules
+    attributes:
+      label: Active System Modules
+      description: List all sys-modules currently in use.
+      placeholder: "e.g., sys-clk, sys-ftpd, ..."
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ### 🛠️ Ultrahand Settings
+
   - type: dropdown
     id: language
     attributes:
@@ -70,7 +85,7 @@ body:
         - Chinese (Traditional, zh-tw)
     validations:
       required: true
-
+        
   - type: dropdown
     id: custom_theme
     attributes:
@@ -90,15 +105,6 @@ body:
       options:
         - "No"
         - "Yes"
-    validations:
-      required: true
-
-  - type: input
-    id: modules
-    attributes:
-      label: Active System Modules
-      description: List all sys-modules currently in use.
-      placeholder: "e.g., sys-clk, sys-ftpd, ..."
     validations:
       required: true
 
