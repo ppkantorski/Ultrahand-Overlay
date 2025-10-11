@@ -85,18 +85,7 @@ body:
         - Chinese (Traditional, zh-tw)
     validations:
       required: true
-        
-  - type: dropdown
-    id: custom_theme
-    attributes:
-      label: Custom Theme
-      description: Select "Yes" if you are using a custom theme, otherwise select "No".
-      options:
-        - "No"
-        - "Yes"
-    validations:
-      required: true
-
+  
   - type: dropdown
     id: custom_wallpaper
     attributes:
