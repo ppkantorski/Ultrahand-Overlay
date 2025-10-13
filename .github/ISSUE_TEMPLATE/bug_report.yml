@@ -36,7 +36,7 @@ body:
     id: hos_firmware
     attributes:
       label: HOS Firmware Version
-      placeholder: "e.g., 20.1.5"
+      placeholder: "e.g., 20.5.0"
     validations:
       required: true
 
