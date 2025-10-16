@@ -96,6 +96,7 @@ def main():
         print("Creating folder structure...")
         folders = [
             "config/ultrahand",
+            "config/ultrahand/downloads",
             "config/ultrahand/expansion",
             "config/ultrahand/flags",
             "config/ultrahand/lang",
