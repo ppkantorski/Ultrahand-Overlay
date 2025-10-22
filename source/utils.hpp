@@ -1177,6 +1177,15 @@ void addDummyListItem(auto& list, s32 index = -1) {
     list->addItem(new tsl::elm::DummyListItem(), 0, index);
 }
 
+void addSelectionIsEmptyDrawer(auto& list) {
+    addDummyListItem(list);
+    auto* warning = new tsl::elm::CustomDrawer([](tsl::gfx::Renderer* renderer, u16 x, u16 y, u16 w, u16 h){
+        renderer->drawString("\uE150", false, 180, 274+50, 90, (tsl::defaultTextColor));
+        renderer->drawString(SELECTION_IS_EMPTY, false, 110, 360+50, 25, (tsl::defaultTextColor));
+    });
+    list->addItem(warning);
+}
+
 // Helper function to wrap text into multiple lines based on a maximum width (character count)
 // Subsequent lines are indented by 4 spaces
 //std::vector<std::string> wrapText(const std::string& text, size_t maxWidth) {
