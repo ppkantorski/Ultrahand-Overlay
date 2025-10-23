@@ -1148,10 +1148,14 @@ public:
             createToggleListItem(list, LAUNCH_COMBOS, useLaunchCombos, "launch_combos");
             useNotifications = getBoolValue("notifications", true); // TRUE_STR default
             createToggleListItem(list, NOTIFICATIONS, useNotifications, "notifications");
+            useHapticFeedback = getBoolValue("haptic_feedback", true); // TRUE_STR default
+            createToggleListItem(list, "Haptic Feedback", useHapticFeedback, "haptic_feedback");
             useOpaqueScreenshots = getBoolValue("opaque_screenshots", true); // TRUE_STR default
             createToggleListItem(list, OPAQUE_SCREENSHOTS, useOpaqueScreenshots, "opaque_screenshots");
             useSwipeToOpen = getBoolValue("swipe_to_open", true); // TRUE_STR default
             createToggleListItem(list, SWIPE_TO_OPEN, useSwipeToOpen, "swipe_to_open");
+            rightAlignmentState = useRightAlignment = getBoolValue("right_alignment"); // FALSE_STR default
+            createToggleListItem(list, RIGHT_SIDE_MODE, useRightAlignment, "right_alignment");
 
             addHeader(list, THEME_SETTINGS);
             useDynamicLogo = getBoolValue("dynamic_logo", true); // TRUE_STR default
@@ -1181,8 +1185,6 @@ public:
             createToggleListItem(list, SHOW_DELETE, hideDelete, "hide_delete", true);
             usePageSwap = getBoolValue("page_swap", false); // FALSE_STR default
             createToggleListItem(list, PAGE_SWAP, usePageSwap, "page_swap", false, true);
-            rightAlignmentState = useRightAlignment = getBoolValue("right_alignment"); // FALSE_STR default
-            createToggleListItem(list, RIGHT_SIDE_MODE, useRightAlignment, "right_alignment");
 
             hideOverlayVersions = getBoolValue("hide_overlay_versions", false); // FALSE_STR default
             createToggleListItem(list, OVERLAY_VERSIONS, hideOverlayVersions, "hide_overlay_versions", true, true);
@@ -2152,6 +2154,9 @@ private:
     std::string lastPackageHeader;
     bool showWidget = false;
 
+    //u64 holdStartTick;
+    //bool isHolding = false;
+
     void addListItem(tsl::elm::List* list, const std::string& line) {
         auto* listItem = new tsl::elm::ListItem(line);
 
@@ -2331,6 +2336,34 @@ public:
             addDummyListItem(list);
         }
 
+       //addGap(list, 20);
+       //
+       //auto* deleteListItem = new tsl::elm::ListItem(HOLD_A_TO_DELETE);
+       ////deleteListItem->setValue("");
+       //
+       //deleteListItem->setClickListener([this, deleteListItem](uint64_t keys) -> bool {
+       //    if (runningInterpreter.load(std::memory_order_acquire))
+       //        return false;
+       //    
+       //    // Start holding when A key is first pressed
+       //    if ((keys & KEY_A) && !(keys & ~KEY_A & ALL_KEYS_MASK)) {
+       //        if (!isHolding) {
+       //            isHolding = true;
+       //            runningInterpreter.store(true, release);
+       //            deleteListItem->setValue(INPROGRESS_SYMBOL);
+       //            lastSelectedListItem = deleteListItem;
+       //            holdStartTick = armGetSystemTick();
+       //            displayPercentage.store(1, std::memory_order_release);
+       //        }
+       //        return true;
+       //    }
+       //    
+       //    return false;
+       //});
+       //deleteListItem->disableClickAnimation();
+       //
+       //list->addItem(deleteListItem);
+
         const std::string packageVersion = isFromMainMenu ? "" : packageRootLayerVersion;
 
 
@@ -2348,6 +2381,75 @@ public:
         
         const bool isRunningInterp = runningInterpreter.load(acquire);
         
+
+        // Handle delete item continuous hold behavior
+        //if (isHolding) {
+        //    // Check if A key is still being held
+        //    if ((keysHeld & KEY_A) && !(keysHeld & ~KEY_A & ALL_KEYS_MASK)) {
+        //        // Update progress continuously using libnx timing
+        //        const u64 currentTick = armGetSystemTick();
+        //        const u64 elapsedTicks = currentTick - holdStartTick;
+        //        const u64 elapsedNs = armTicksToNs(elapsedTicks);
+        //        const u64 elapsedMs = elapsedNs / 1000000; // Convert nanoseconds to milliseconds
+        //        const int percentage = std::min(100, static_cast<int>((elapsedMs / 5000.0) * 100));
+        //        displayPercentage.store(percentage, std::memory_order_release);
+        //        
+        //        // Check if we've reached 100%
+        //        if (percentage >= 100) {
+        //            isHolding = false;
+        //            displayPercentage.store(0, std::memory_order_release);
+        //            runningInterpreter.store(false, release);
+        //            
+        //            // Remove ini entry for this specificKey from the filePath (the INI file)
+        //            if (!specificKey.empty() && !filePath.empty()) {
+        //                //disableLogging = false;
+        //                //logMessage(filePath);
+        //                //logMessage(specificKey);
+        //                removeIniSection(filePath, specificKey);
+        //            }
+        //            
+        //            // Show completion
+        //            if (lastSelectedListItem) {
+        //                lastSelectedListItem->triggerClickAnimation();
+        //                lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
+        //                lastSelectedListItem = nullptr;
+        //            }
+        //            
+        //            // Go back after deletion
+        //            inScriptMenu = false;
+        //            
+        //            // Handle return destination logic (same as your B button handling)
+        //            if (isFromPackage) {
+        //                returningToPackage = lastMenu == "packageMenu";
+        //                returningToSubPackage = lastMenu == "subPackageMenu";
+        //            }
+        //            else if (isFromSelectionMenu) {
+        //                returningToSelectionMenu = isFromSelectionMenu;
+        //            }
+        //            else if (isFromMainMenu) {
+        //                returningToMain = isFromMainMenu;
+        //            }
+        //            
+        //            tsl::goBack();
+        //            refreshPage.store(true, release);
+        //            return true;
+        //        }
+        //        
+        //        return true; // Continue holding
+        //    } else {
+        //        // Key released - reset everything
+        //        isHolding = false;
+        //        displayPercentage.store(0, std::memory_order_release);
+        //        runningInterpreter.store(false, release);
+        //        if (lastSelectedListItem) {
+        //            lastSelectedListItem->setValue("");
+        //            lastSelectedListItem = nullptr;
+        //        }
+        //        return true;
+        //    }
+        //}
+
+
         if (isRunningInterp) return handleRunningInterpreter(keysDown, keysHeld);
         
         if (lastRunningInterpreter.load(acquire)) {
@@ -5934,7 +6036,7 @@ public:
         
         std::string overlayFileName, overlayName, overlayVersion;
         bool usingLibUltrahand;
-        
+
         if (overlaySet.size() == 0) {
             addSelectionIsEmptyDrawer(list);
         } else {
@@ -6765,6 +6867,7 @@ void initializeSettingsAndDirectories() {
     setDefaultValue("memory_expansion", FALSE_STR, useMemoryExpansion);
     setDefaultValue("launch_combos", TRUE_STR, useLaunchCombos);
     setDefaultValue("notifications", TRUE_STR, useNotifications);
+    setDefaultValue("haptic_feedback", FALSE_STR, useHapticFeedback);
     setDefaultValue("page_swap", FALSE_STR, usePageSwap);
     setDefaultValue("swipe_to_open", TRUE_STR, useSwipeToOpen);
     setDefaultValue("right_alignment", FALSE_STR, useRightAlignment);
