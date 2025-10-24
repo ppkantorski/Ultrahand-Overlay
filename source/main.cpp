@@ -690,7 +690,7 @@ public:
 
     ~UltrahandSettingsMenu() {
         lastSelectedListItemFooter = "";
-        tsl::elm::clearFrameCache();
+        //tsl::elm::clearFrameCache();
     }
 
     virtual tsl::elm::Element* createUI() override {
@@ -1398,7 +1398,7 @@ public:
             settingsMenuPageDepth--;
         }
         lastSelectedListItem = nullptr;
-        tsl::elm::clearFrameCache();
+        //tsl::elm::clearFrameCache();
     }
 
     void createAndAddToggleListItem(
@@ -2226,7 +2226,7 @@ public:
 
     ~ScriptOverlay() {
         // reset cache (script overlay doesnt use it)
-        tsl::elm::clearFrameCache();
+        //tsl::elm::clearFrameCache();
     }
 
     virtual tsl::elm::Element* createUI() override {
@@ -2391,74 +2391,6 @@ public:
         
         const bool isRunningInterp = runningInterpreter.load(acquire);
         
-
-        // Handle delete item continuous hold behavior
-        //if (isHolding) {
-        //    // Check if A key is still being held
-        //    if ((keysHeld & KEY_A) && !(keysHeld & ~KEY_A & ALL_KEYS_MASK)) {
-        //        // Update progress continuously using libnx timing
-        //        const u64 currentTick = armGetSystemTick();
-        //        const u64 elapsedTicks = currentTick - holdStartTick;
-        //        const u64 elapsedNs = armTicksToNs(elapsedTicks);
-        //        const u64 elapsedMs = elapsedNs / 1000000; // Convert nanoseconds to milliseconds
-        //        const int percentage = std::min(100, static_cast<int>((elapsedMs / 5000.0) * 100));
-        //        displayPercentage.store(percentage, std::memory_order_release);
-        //        
-        //        // Check if we've reached 100%
-        //        if (percentage >= 100) {
-        //            isHolding = false;
-        //            displayPercentage.store(0, std::memory_order_release);
-        //            runningInterpreter.store(false, release);
-        //            
-        //            // Remove ini entry for this specificKey from the filePath (the INI file)
-        //            if (!specificKey.empty() && !filePath.empty()) {
-        //                //disableLogging = false;
-        //                //logMessage(filePath);
-        //                //logMessage(specificKey);
-        //                removeIniSection(filePath, specificKey);
-        //            }
-        //            
-        //            // Show completion
-        //            if (lastSelectedListItem) {
-        //                lastSelectedListItem->triggerClickAnimation();
-        //                lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
-        //                lastSelectedListItem = nullptr;
-        //            }
-        //            
-        //            // Go back after deletion
-        //            inScriptMenu = false;
-        //            
-        //            // Handle return destination logic (same as your B button handling)
-        //            if (isFromPackage) {
-        //                returningToPackage = lastMenu == "packageMenu";
-        //                returningToSubPackage = lastMenu == "subPackageMenu";
-        //            }
-        //            else if (isFromSelectionMenu) {
-        //                returningToSelectionMenu = isFromSelectionMenu;
-        //            }
-        //            else if (isFromMainMenu) {
-        //                returningToMain = isFromMainMenu;
-        //            }
-        //            
-        //            tsl::goBack();
-        //            refreshPage.store(true, release);
-        //            return true;
-        //        }
-        //        
-        //        return true; // Continue holding
-        //    } else {
-        //        // Key released - reset everything
-        //        isHolding = false;
-        //        displayPercentage.store(0, std::memory_order_release);
-        //        runningInterpreter.store(false, release);
-        //        if (lastSelectedListItem) {
-        //            lastSelectedListItem->setValue("");
-        //            lastSelectedListItem = nullptr;
-        //        }
-        //        return true;
-        //    }
-        //}
-
 
         if (isRunningInterp) return handleRunningInterpreter(keysDown, keysHeld);
         
@@ -2649,7 +2581,7 @@ public:
 
     ~SelectionOverlay() {
         std::lock_guard<std::mutex> lock(transitionMutex);
-        tsl::elm::clearFrameCache();
+        //tsl::elm::clearFrameCache();
         //0lastSelectedListItemFooter2 = "";
         lastSelectedListItem = nullptr;
         //selectedFooterDict.clear();
