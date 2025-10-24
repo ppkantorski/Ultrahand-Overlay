@@ -1149,7 +1149,9 @@ public:
             createToggleListItem(list, LAUNCH_COMBOS, useLaunchCombos, "launch_combos");
             useNotifications = getBoolValue("notifications", true); // TRUE_STR default
             createToggleListItem(list, NOTIFICATIONS, useNotifications, "notifications");
-            useHapticFeedback = getBoolValue("haptic_feedback", true); // TRUE_STR default
+            useSoundEffects = getBoolValue("sound_effects", false); // TRUE_STR default
+            createToggleListItem(list, "Sound Effects", useSoundEffects, "sound_effects");
+            useHapticFeedback = getBoolValue("haptic_feedback", false); // FALSE_STR default
             createToggleListItem(list, "Haptic Feedback", useHapticFeedback, "haptic_feedback");
             useOpaqueScreenshots = getBoolValue("opaque_screenshots", true); // TRUE_STR default
             createToggleListItem(list, OPAQUE_SCREENSHOTS, useOpaqueScreenshots, "opaque_screenshots");
@@ -6822,6 +6824,7 @@ void initializeSettingsAndDirectories() {
     setDefaultValue("memory_expansion", FALSE_STR, useMemoryExpansion);
     setDefaultValue("launch_combos", TRUE_STR, useLaunchCombos);
     setDefaultValue("notifications", TRUE_STR, useNotifications);
+    setDefaultValue("sound_effects", TRUE_STR, useSoundEffects);
     setDefaultValue("haptic_feedback", FALSE_STR, useHapticFeedback);
     setDefaultValue("page_swap", FALSE_STR, usePageSwap);
     setDefaultValue("swipe_to_open", TRUE_STR, useSwipeToOpen);
