@@ -690,6 +690,7 @@ public:
 
     ~UltrahandSettingsMenu() {
         lastSelectedListItemFooter = "";
+        tsl::elm::clearFrameCache();
     }
 
     virtual tsl::elm::Element* createUI() override {
@@ -1397,6 +1398,7 @@ public:
             settingsMenuPageDepth--;
         }
         lastSelectedListItem = nullptr;
+        tsl::elm::clearFrameCache();
     }
 
     void createAndAddToggleListItem(
@@ -2214,10 +2216,18 @@ public:
     ScriptOverlay(std::vector<std::vector<std::string>>&& cmds, const std::string& file, const std::string& key = "",
         const std::string& fromMenu = "", bool tableMode = false, const std::string& _lastPackageHeader = "", bool showWidget = false)
         : commands(cmds), filePath(file), specificKey(key), tableMode(tableMode), lastPackageHeader(_lastPackageHeader), showWidget(showWidget) {
+            triggerEnterSound.store(true, std::memory_order_release);
+            triggerRumbleClick.store(true, std::memory_order_release);
+
             isFromMainMenu = (fromMenu == "main");
             isFromPackage = (fromMenu == "package");
             isFromSelectionMenu = (fromMenu == "selection");
         }
+
+    ~ScriptOverlay() {
+        // reset cache (script overlay doesnt use it)
+        tsl::elm::clearFrameCache();
+    }
 
     virtual tsl::elm::Element* createUI() override {
         inScriptMenu = true;
@@ -2639,6 +2649,7 @@ public:
 
     ~SelectionOverlay() {
         std::lock_guard<std::mutex> lock(transitionMutex);
+        tsl::elm::clearFrameCache();
         //0lastSelectedListItemFooter2 = "";
         lastSelectedListItem = nullptr;
         //selectedFooterDict.clear();
@@ -5523,6 +5534,7 @@ public:
                         std::lock_guard<std::mutex> lock(tsl::elm::s_safeToSwapMutex);
                         if (tsl::elm::s_safeToSwap.load(acquire)) {
                             //lastPage = RIGHT_STR;
+                            triggerNavigationSound.store(true, std::memory_order_release);
                             tsl::swapTo<PackageMenu>(packagePath, dropdownSection, RIGHT_STR, packageName, nestedLayer, pageHeader);
                             resetSlideState();
                         }
@@ -5536,6 +5548,7 @@ public:
                         std::lock_guard<std::mutex> lock(tsl::elm::s_safeToSwapMutex);
                         if (tsl::elm::s_safeToSwap.load(acquire)) {
                             //lastPage = LEFT_STR;
+                            triggerNavigationSound.store(true, std::memory_order_release);
                             tsl::swapTo<PackageMenu>(packagePath, dropdownSection, LEFT_STR, packageName, nestedLayer, pageHeader);
                             resetSlideState();
                         }
@@ -6110,7 +6123,8 @@ public:
                             ultrahandSection[IN_OVERLAY_STR] = TRUE_STR;
                             saveIniFileData(ULTRAHAND_CONFIG_INI_PATH, iniData);
                         }
-        
+                        
+                        launchComboHasTriggered.store(true, std::memory_order_acquire); // for sound effect on exit isolation
                         ult::launchingOverlay.store(true, std::memory_order_release);
                         if (useOverlayLaunchArgs == TRUE_STR) tsl::setNextOverlay(overlayFile, overlayLaunchArgs);
                         else tsl::setNextOverlay(overlayFile);
@@ -6120,6 +6134,7 @@ public:
                         if (!overlayFile.empty()) {
                             setIniFileValue(OVERLAYS_INI_FILEPATH, overlayFileName, STAR_STR, newStarred ? TRUE_STR : FALSE_STR);
                         }
+                        triggerNavigationSound.store(true, std::memory_order_release);
                         skipJumpReset.store(true, release);
                         jumpItemName = newStarred ? STAR_SYMBOL + "  " + overlayName : overlayName;
                         jumpItemValue = hideOverlayVersions ? "" : overlayVersion;
@@ -6134,6 +6149,8 @@ public:
                         refreshPage.store(true, release);
                         return true;
                     } else if (keys & SETTINGS_KEY && !(keys & ~SETTINGS_KEY & ALL_KEYS_MASK)) {
+                        triggerEnterSound.store(true, std::memory_order_release);
+                        triggerRumbleClick.store(true, std::memory_order_release);
                         if (!inHiddenMode) {
                             lastMenu = "";
                             inMainMenu.store(false, std::memory_order_release);
@@ -6372,6 +6389,8 @@ public:
                         refreshPage.store(true, release);
                         return true;
                     } else if (keys & SETTINGS_KEY && !(keys & ~SETTINGS_KEY & ALL_KEYS_MASK)) {
+                        triggerRumbleClick.store(true, std::memory_order_release);
+                        triggerEnterSound.store(true, std::memory_order_release);
                         if (!inHiddenMode) {
                             lastMenu = "";
                             inMainMenu.store(false, std::memory_order_release);
@@ -6643,6 +6662,7 @@ public:
                             //tsl::elm::s_safeToSwap.store(false, release);
                             currentMenu = usePageSwap ? OVERLAYS_STR : PACKAGES_STR;
                             //tsl::pop();
+                            triggerNavigationSound.store(true, std::memory_order_release);
                             tsl::swapTo<MainMenu>();
                             resetNavState();
                         }
@@ -6665,6 +6685,7 @@ public:
                             //tsl::elm::s_safeToSwap.store(false, release);
                             currentMenu = usePageSwap ? PACKAGES_STR : OVERLAYS_STR;
                             //tsl::pop();
+                            triggerNavigationSound.store(true, std::memory_order_release);
                             tsl::swapTo<MainMenu>();
                             resetNavState();
                         }
@@ -6697,6 +6718,8 @@ public:
                 //}
     
                 if (!isTouching && (((keysDown & SYSTEM_SETTINGS_KEY && !(keysHeld & ~SYSTEM_SETTINGS_KEY & ALL_KEYS_MASK))) || simulatedMenu.exchange(false, acq_rel))) {
+                    triggerEnterSound.store(true, std::memory_order_release);
+                    triggerRumbleClick.store(true, std::memory_order_release);
                     inMainMenu.store(false, std::memory_order_release);
                     tsl::changeTo<UltrahandSettingsMenu>();
                     return true;
