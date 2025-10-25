@@ -6280,7 +6280,8 @@ public:
                             bool useBootPackage = true;
                             {
                                 const auto packagesIniData = getParsedDataFromIniFile(PACKAGES_INI_FILEPATH);
-                                auto sectionIt = packagesIniData.find(selectedPackage);
+                                auto sectionIt = packagesIniData.find(packageName);
+                                disableLogging=false;
                                 if (sectionIt != packagesIniData.end()) {
                                     auto bootIt = sectionIt->second.find(USE_BOOT_PACKAGE_STR);
                                     useBootPackage = (bootIt == sectionIt->second.end()) || (bootIt->second != FALSE_STR);
