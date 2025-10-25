@@ -2345,7 +2345,7 @@ public:
                 drawTable(list, dummyTableData, sectionLines, infoLines, tableColumnOffset, tableStartGap, tableEndGap, tableSpacing,
                           tableSectionTextColor, tableInfoTextColor, tableInfoTextColor, tableAlignment, hideTableBackground, useHeaderIndent, isPolling, isScrollableTable, wrappingMode, useWrappedTextIndent);
             }
-            addDummyListItem(list);
+            //addDummyListItem(list);
         }
 
        //addGap(list, 20);
@@ -5072,7 +5072,7 @@ bool drawCommandsMenu(
         //auto dummyItem = new tsl::elm::DummyListItem();
         //list->addItem(dummyItem, 0, 1);
         addDummyListItem(list, 1); // assuming a header is always above
-        addDummyListItem(list);
+        //addDummyListItem(list);
         //list->disableCaching(); // causes a visual glitch when entered fresh on return, may look into again later.
     }
 
@@ -5468,6 +5468,7 @@ public:
                         std::lock_guard<std::mutex> lock(tsl::elm::s_safeToSwapMutex);
                         if (tsl::elm::s_safeToSwap.load(acquire)) {
                             //lastPage = RIGHT_STR;
+                            triggerRumbleClick.store(true, std::memory_order_release);
                             triggerNavigationSound.store(true, std::memory_order_release);
                             tsl::swapTo<PackageMenu>(packagePath, dropdownSection, RIGHT_STR, packageName, nestedLayer, pageHeader);
                             resetSlideState();
@@ -5482,6 +5483,7 @@ public:
                         std::lock_guard<std::mutex> lock(tsl::elm::s_safeToSwapMutex);
                         if (tsl::elm::s_safeToSwap.load(acquire)) {
                             //lastPage = LEFT_STR;
+                            triggerRumbleClick.store(true, std::memory_order_release);
                             triggerNavigationSound.store(true, std::memory_order_release);
                             tsl::swapTo<PackageMenu>(packagePath, dropdownSection, LEFT_STR, packageName, nestedLayer, pageHeader);
                             resetSlideState();
@@ -6596,6 +6598,7 @@ public:
                             //tsl::elm::s_safeToSwap.store(false, release);
                             currentMenu = usePageSwap ? OVERLAYS_STR : PACKAGES_STR;
                             //tsl::pop();
+                            triggerRumbleClick.store(true, std::memory_order_release);
                             triggerNavigationSound.store(true, std::memory_order_release);
                             tsl::swapTo<MainMenu>();
                             resetNavState();
@@ -6619,6 +6622,7 @@ public:
                             //tsl::elm::s_safeToSwap.store(false, release);
                             currentMenu = usePageSwap ? PACKAGES_STR : OVERLAYS_STR;
                             //tsl::pop();
+                            triggerRumbleClick.store(true, std::memory_order_release);
                             triggerNavigationSound.store(true, std::memory_order_release);
                             tsl::swapTo<MainMenu>();
                             resetNavState();
