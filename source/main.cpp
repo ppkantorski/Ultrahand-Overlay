@@ -2218,7 +2218,7 @@ public:
     ScriptOverlay(std::vector<std::vector<std::string>>&& cmds, const std::string& file, const std::string& key = "",
         const std::string& fromMenu = "", bool tableMode = false, const std::string& _lastPackageHeader = "", bool showWidget = false)
         : commands(cmds), filePath(file), specificKey(key), tableMode(tableMode), lastPackageHeader(_lastPackageHeader), showWidget(showWidget) {
-            triggerEnterSound.store(true, std::memory_order_release);
+            triggerSettingsSound.store(true, std::memory_order_release);
             triggerRumbleClick.store(true, std::memory_order_release);
 
             isFromMainMenu = (fromMenu == "main");
@@ -6070,7 +6070,8 @@ public:
                         if (!overlayFile.empty()) {
                             setIniFileValue(OVERLAYS_INI_FILEPATH, overlayFileName, STAR_STR, newStarred ? TRUE_STR : FALSE_STR);
                         }
-                        triggerNavigationSound.store(true, std::memory_order_release);
+                        triggerMoveSound.store(true, std::memory_order_release);
+                        triggerRumbleClick.store(true, std::memory_order_release);
                         skipJumpReset.store(true, release);
                         jumpItemName = newStarred ? STAR_SYMBOL + "  " + overlayName : overlayName;
                         jumpItemValue = hideOverlayVersions ? "" : overlayVersion;
@@ -6085,7 +6086,7 @@ public:
                         refreshPage.store(true, release);
                         return true;
                     } else if (keys & SETTINGS_KEY && !(keys & ~SETTINGS_KEY & ALL_KEYS_MASK)) {
-                        triggerEnterSound.store(true, std::memory_order_release);
+                        triggerSettingsSound.store(true, std::memory_order_release);
                         triggerRumbleClick.store(true, std::memory_order_release);
                         if (!inHiddenMode) {
                             lastMenu = "";
@@ -6311,6 +6312,8 @@ public:
                         return true;
                     } else if (keys & STAR_KEY && !(keys & ~STAR_KEY & ALL_KEYS_MASK)) {
                         if (!packageName.empty()) setIniFileValue(PACKAGES_INI_FILEPATH, packageName, STAR_STR, newStarred ? TRUE_STR : FALSE_STR);
+                        triggerMoveSound.store(true, std::memory_order_release);
+                        triggerRumbleClick.store(true, std::memory_order_release);
                         skipJumpReset.store(true, release);
                         jumpItemName = newStarred ? STAR_SYMBOL + "  " + newPackageName : newPackageName;
                         jumpItemValue = hidePackageVersions ? "" : packageVersion;
@@ -6325,8 +6328,8 @@ public:
                         refreshPage.store(true, release);
                         return true;
                     } else if (keys & SETTINGS_KEY && !(keys & ~SETTINGS_KEY & ALL_KEYS_MASK)) {
+                        triggerSettingsSound.store(true, std::memory_order_release);
                         triggerRumbleClick.store(true, std::memory_order_release);
-                        triggerEnterSound.store(true, std::memory_order_release);
                         if (!inHiddenMode) {
                             lastMenu = "";
                             inMainMenu.store(false, std::memory_order_release);
@@ -6656,7 +6659,7 @@ public:
                 //}
     
                 if (!isTouching && (((keysDown & SYSTEM_SETTINGS_KEY && !(keysHeld & ~SYSTEM_SETTINGS_KEY & ALL_KEYS_MASK))) || simulatedMenu.exchange(false, acq_rel))) {
-                    triggerEnterSound.store(true, std::memory_order_release);
+                    triggerSettingsSound.store(true, std::memory_order_release);
                     triggerRumbleClick.store(true, std::memory_order_release);
                     inMainMenu.store(false, std::memory_order_release);
                     tsl::changeTo<UltrahandSettingsMenu>();
