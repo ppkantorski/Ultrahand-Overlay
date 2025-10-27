@@ -1179,9 +1179,14 @@ void addDummyListItem(auto& list, s32 index = -1) {
 
 void addSelectionIsEmptyDrawer(auto& list) {
     addDummyListItem(list);
-    auto* warning = new tsl::elm::CustomDrawer([](tsl::gfx::Renderer* renderer, u16 x, u16 y, u16 w, u16 h){
-        renderer->drawString("\uE150", false, 180, 274+50, 90, (tsl::defaultTextColor));
-        renderer->drawString(SELECTION_IS_EMPTY, false, 110, 360+50, 25, (tsl::defaultTextColor));
+    auto* warning = new tsl::elm::CustomDrawer([](tsl::gfx::Renderer* renderer, u16, u16, u16, u16){
+        // Icon
+        const size_t iconX = (448 - renderer->getTextDimensions("\uE150", false, 90).first) / 2;
+        renderer->drawString("\uE150", false, iconX, 324, 90, tsl::defaultTextColor);
+
+        // Text
+        const size_t textX = (448 - renderer->getTextDimensions(SELECTION_IS_EMPTY, false, 25).first) / 2;
+        renderer->drawString(SELECTION_IS_EMPTY, false, textX, 410, 25, tsl::defaultTextColor);
     });
     list->addItem(warning);
 }
@@ -3490,8 +3495,8 @@ bool interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
     // Process commands one by one, clearing each after processing
     for (size_t i = 0; i < commands.size(); ++i) {
         // Check for abort signal
-        if (abortCommand.load(std::memory_order_acquire)) {
-            abortCommand.store(false, std::memory_order_release);
+        if (abortCommand.exchange(false, std::memory_order_acq_rel)) {
+            //abortCommand.store(false, std::memory_order_release);
             commandSuccess.store(false, std::memory_order_release);
             // Clear all remaining commands
             //for (size_t j = i; j < commands.size(); ++j) {

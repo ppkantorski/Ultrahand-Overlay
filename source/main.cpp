@@ -239,8 +239,7 @@ bool handleRunningInterpreter(uint64_t& keysDown, uint64_t& keysHeld) {
         tsl::Overlay::get()->hide();
     }
     
-    if (threadFailure.load(acquire)) {
-        threadFailure.store(false, release);
+    if (threadFailure.exchange(false, std::memory_order_acq_rel)) {
         commandSuccess.store(false, release);
     }
     
@@ -1213,7 +1212,7 @@ public:
             }
             //list->jumpToItem(jumpItemName, jumpItemValue, jumpItemExactMatch.load(acquire));
         } else {
-            if (languageWasChanged.load(acquire)) {
+            if (languageWasChanged.exchange(false, std::memory_order_acq_rel)) {
                 {
                     //std::lock_guard<std::mutex> lock(jumpItemMutex);
                     jumpItemName = LANGUAGE;
@@ -1221,7 +1220,7 @@ public:
                     jumpItemExactMatch.store(true, release);
                     g_overlayFilename = "";
                 }
-                languageWasChanged.store(false, release);
+                //languageWasChanged.store(false, release);
                 //list->jumpToItem(jumpItemName, jumpItemValue, jumpItemExactMatch.load(acquire));
             } else if (themeWasChanged) {
                 {
@@ -1260,7 +1259,7 @@ public:
             return handleRunningInterpreter(keysDown, keysHeld);
         }
         
-        if (lastRunningInterpreter.load(acquire)) {
+        if (lastRunningInterpreter.exchange(false, std::memory_order_acq_rel)) {
             isDownloadCommand.store(false, release);
             if (lastSelectedListItem) {
                 lastSelectedListItem->setValue(commandSuccess.load(acquire) ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
@@ -1270,7 +1269,7 @@ public:
 
             closeInterpreterThread();
             resetPercentages();
-            lastRunningInterpreter.store(false, std::memory_order_release);
+            //lastRunningInterpreter.store(false, std::memory_order_release);
             return true;
         }
         
@@ -1288,19 +1287,19 @@ public:
         
         if (inSettingsMenu && !inSubSettingsMenu) {
             if (!returningToSettings) {
-                if (simulatedNextPage.load(acquire))
-                    simulatedNextPage.store(false, release);
-                if (simulatedMenu.load(acquire))
-                    simulatedMenu.store(false, release);
+                //if (simulatedNextPage.load(acquire))
+                //    simulatedNextPage.store(false, release);
+                //if (simulatedMenu.load(acquire))
+                //    simulatedMenu.store(false, release);
+                simulatedNextPage.exchange(false, std::memory_order_acq_rel);
+                simulatedMenu.exchange(false, std::memory_order_acq_rel);
                 
                 const bool isTouching = stillTouching.load(acquire);
                 const bool backKeyPressed = !isTouching && (((keysDown & KEY_B) && !(keysHeld & ~KEY_B & ALL_KEYS_MASK)));
                 
                 if (backKeyPressed) {
-                    if (allowSlide.load(acquire))
-                        allowSlide.store(false, release);
-                    if (unlockedSlide.load(acquire))
-                        unlockedSlide.store(false, release);
+                    allowSlide.exchange(false, std::memory_order_acq_rel);
+                    unlockedSlide.exchange(false, std::memory_order_acq_rel);
                     inSettingsMenu = false;
                     returningToMain = (lastMenu != "hiddenMenuMode");
                     returningToHiddenMain = !returningToMain;
@@ -1317,19 +1316,15 @@ public:
                 }
             }
         } else if (inSubSettingsMenu) {
-            if (simulatedNextPage.load(acquire))
-                simulatedNextPage.store(false, release);
-            if (simulatedMenu.load(acquire))
-                simulatedMenu.store(false, release);
+            simulatedNextPage.exchange(false, std::memory_order_acq_rel);
+            simulatedMenu.exchange(false, std::memory_order_acq_rel);
             
             const bool isTouching = stillTouching.load(acquire);
             const bool backKeyPressed = !isTouching && (((keysDown & KEY_B) && !(keysHeld & ~KEY_B & ALL_KEYS_MASK)));
             
             if (backKeyPressed) {
-                if (allowSlide.load(acquire))
-                    allowSlide.store(false, release);
-                if (unlockedSlide.load(acquire))
-                    unlockedSlide.store(false, release);
+                allowSlide.exchange(false, std::memory_order_acq_rel);
+                unlockedSlide.exchange(false, std::memory_order_acq_rel);
                 inSubSettingsMenu = false;
                 returningToSettings = true;
                 
@@ -1350,8 +1345,7 @@ public:
             tsl::impl::parseOverlaySettings();
         }
         
-        if (triggerExit.load(acquire)) {
-            triggerExit.store(false, release);
+        if (triggerExit.exchange(false, std::memory_order_acq_rel)) {
             ult::launchingOverlay.store(true, std::memory_order_release);
             tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
             tsl::Overlay::get()->close();
@@ -2046,10 +2040,8 @@ public:
                 }
             }
         } else if (inSubSettingsMenu) {
-            if (simulatedNextPage.load(acquire))
-                simulatedNextPage.store(false, release);
-            if (simulatedMenu.load(acquire))
-                simulatedMenu.store(false, release);
+            simulatedNextPage.exchange(false, std::memory_order_acq_rel);
+            simulatedMenu.exchange(false, std::memory_order_acq_rel);
             
             // Note: Original code uses stillTouching.load() here - preserving this difference
             const bool isTouching = stillTouching.load(acquire);
@@ -2057,10 +2049,8 @@ public:
             
             
             if (backKeyPressed) {
-                if (allowSlide.load(acquire))
-                    allowSlide.store(false, release);
-                if (unlockedSlide.load(acquire))
-                    unlockedSlide.store(false, release);
+                allowSlide.exchange(false, std::memory_order_acq_rel);
+                unlockedSlide.exchange(false, std::memory_order_acq_rel);
                 
 
                 if (dropdownSelection == MODE_STR) {
@@ -2137,8 +2127,7 @@ public:
             inSettingsMenu = true;
         }
     
-        if (triggerExit.load(acquire)) {
-            triggerExit.store(false, release);
+        if (triggerExit.exchange(false, std::memory_order_acq_rel)) {
             ult::launchingOverlay.store(true, std::memory_order_release);
             tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
             tsl::Overlay::get()->close();
@@ -2412,7 +2401,7 @@ public:
 
         if (isRunningInterp) return handleRunningInterpreter(keysDown, keysHeld);
         
-        if (lastRunningInterpreter.load(acquire)) {
+        if (lastRunningInterpreter.exchange(false, std::memory_order_acq_rel)) {
             isDownloadCommand.store(false, release);
             if (lastSelectedListItem) {
                 lastSelectedListItem->setValue(commandSuccess.load(acquire) ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
@@ -2420,7 +2409,7 @@ public:
                 lastSelectedListItem = nullptr;
             }
             closeInterpreterThread();
-            lastRunningInterpreter.store(false, std::memory_order_release);
+            //lastRunningInterpreter.store(false, std::memory_order_release);
             return true;
         }
         
@@ -2431,10 +2420,12 @@ public:
         }
         
         if (inScriptMenu) {
-            if (simulatedNextPage.load(acquire))
-                simulatedNextPage.store(false, release);
-            if (simulatedMenu.load(acquire))
-                simulatedMenu.store(false, release);
+            //if (simulatedNextPage.load(acquire))
+            //    simulatedNextPage.store(false, release);
+            //if (simulatedMenu.load(acquire))
+            //    simulatedMenu.store(false, release);
+            simulatedNextPage.exchange(false, std::memory_order_acq_rel);
+            simulatedMenu.exchange(false, std::memory_order_acq_rel);
             
             
             const bool isTouching = stillTouching.load(acquire);
@@ -2464,8 +2455,8 @@ public:
             }
         }
         
-        if (triggerExit.load(acquire)) {
-            triggerExit.store(false, release);
+        if (triggerExit.exchange(false, std::memory_order_acq_rel)) {
+            //triggerExit.store(false, release);
             ult::launchingOverlay.store(true, std::memory_order_release);
             tsl::setNextOverlay(OVERLAY_PATH + "ovlmenu.ovl");
             tsl::Overlay::get()->close();
@@ -3478,7 +3469,7 @@ public:
             return handleRunningInterpreter(keysDown, keysHeld);
         }
         
-        if (lastRunningInterpreter.load(acquire)) {
+        if (lastRunningInterpreter.exchange(false, std::memory_order_acq_rel)) {
             isDownloadCommand.store(false, release);
         
             if (lastSelectedListItem) {
@@ -3508,7 +3499,7 @@ public:
         
             closeInterpreterThread();
             resetPercentages();
-            lastRunningInterpreter.store(false, std::memory_order_release);
+            //lastRunningInterpreter.store(false, std::memory_order_release);
             return true;
         }
         
@@ -3532,10 +3523,8 @@ public:
         }
         
         if (inSelectionMenu) {
-            if (simulatedNextPage.load(acquire))
-                simulatedNextPage.store(false, release);
-            if (simulatedMenu.load(acquire))
-                simulatedMenu.store(false, release);
+            simulatedNextPage.exchange(false, std::memory_order_acq_rel);
+            simulatedMenu.exchange(false, std::memory_order_acq_rel);
             
             
             // Check touching state again for the key handling (different timing context)
@@ -3543,10 +3532,8 @@ public:
             const bool backKeyPressed = !isTouchingForKeys && (((keysDown & KEY_B) && !(keysHeld & ~KEY_B & ALL_KEYS_MASK)));
             
             if (backKeyPressed) {
-                if (allowSlide.load(acquire))
-                    allowSlide.store(false, release);
-                if (unlockedSlide.load(acquire))
-                    unlockedSlide.store(false, release);
+                allowSlide.exchange(false, std::memory_order_acq_rel);
+                unlockedSlide.exchange(false, std::memory_order_acq_rel);
                 inSelectionMenu = false;
                 
                 // Determine return destination
@@ -3584,8 +3571,7 @@ public:
             inSelectionMenu = true;
         }
         
-        if (triggerExit.load(acquire)) {
-            triggerExit.store(false, release);
+        if (triggerExit.exchange(false, std::memory_order_acq_rel)) {
             ult::launchingOverlay.store(true, std::memory_order_release);
             tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
             tsl::Overlay::get()->close();
@@ -4817,10 +4803,8 @@ bool drawCommandsMenu(
                                 
 
 
-                                if (allowSlide.load(acquire))
-                                    allowSlide.store(false, release);
-                                if (unlockedSlide.load(acquire))
-                                    unlockedSlide.store(false, release);
+                                allowSlide.exchange(false, std::memory_order_acq_rel);
+                                unlockedSlide.exchange(false, std::memory_order_acq_rel);
 
                                 //tsl::clearGlyphCacheNow.store(true, release);
                                 tsl::swapTo<PackageMenu>(forwarderPackagePath, "", LEFT_STR, forwarderPackageIniName, nestedMenuCount, lastPackageHeader);
@@ -5316,7 +5300,7 @@ public:
             return handleRunningInterpreter(keysDown, keysHeld);
         }
             
-        if (lastRunningInterpreter.load(acquire)) {
+        if (lastRunningInterpreter.exchange(false, std::memory_order_acq_rel)) {
             //tsl::clearGlyphCacheNow.store(true, release);
             isDownloadCommand.store(false, release);
         
@@ -5378,13 +5362,12 @@ public:
         
             closeInterpreterThread();
             resetPercentages();
-            lastRunningInterpreter.store(false, std::memory_order_release);
+            //lastRunningInterpreter.store(false, std::memory_order_release);
             return true;
         }
 
-        if (ult::refreshWallpaperNow.load(std::memory_order_acquire)) {
+        if (ult::refreshWallpaperNow.exchange(false, std::memory_order_acq_rel)) {
             closeInterpreterThread();
-            ult::refreshWallpaperNow.store(false, std::memory_order_release);
             ult::reloadWallpaper();
         }
     
@@ -5395,8 +5378,7 @@ public:
         }
     
         if (!returningToPackage && !isTouching) {
-            if (refreshPage.load(acquire)) {
-                refreshPage.store(false, release);
+            if (refreshPage.exchange(false, std::memory_order_acq_rel)) {
                 
                 // Function to handle the transition and state resetting
                 auto handleMenuTransition = [&] {
@@ -5447,13 +5429,11 @@ public:
         }
         
         if (usingPages) {
-            if (simulatedMenu.load(acquire))
-                simulatedMenu.store(false, release);
+            simulatedMenu.exchange(false, std::memory_order_acq_rel);
             
             {
                 //std::lock_guard<std::mutex> lock(ult::simulatedNextPageMutex);
-                if (simulatedNextPage.load(acquire)) {
-                    simulatedNextPage.store(false, release);
+                if (simulatedNextPage.exchange(false, std::memory_order_acq_rel)) {
                     if (currentPage == LEFT_STR) {
                         keysDown |= KEY_DRIGHT;
                     }
@@ -5517,10 +5497,8 @@ public:
         // Helper lambda for common back key handling logic
         auto handleBackKeyCommon = [&]() {
             //handleForwarderFooter();
-            if (allowSlide.load(acquire))
-                allowSlide.store(false, release);
-            if (unlockedSlide.load(acquire))
-                unlockedSlide.store(false, release);
+            allowSlide.exchange(false, std::memory_order_acq_rel);
+            unlockedSlide.exchange(false, std::memory_order_acq_rel);
             
             // Check if we have return context items to process first
             if (!returnContextStack.empty()) {
@@ -5642,10 +5620,8 @@ public:
         
         // Handle main package menu (dropdownSection is empty)
         if (!returningToPackage && inPackageMenu && nestedMenuCount == nestedLayer) {
-            if (simulatedNextPage.load(acquire))
-                simulatedNextPage.store(false, release);
-            if (simulatedMenu.load(acquire))
-                simulatedMenu.store(false, release);
+            simulatedNextPage.exchange(false, std::memory_order_acq_rel);
+            simulatedMenu.exchange(false, std::memory_order_acq_rel);
             
             if (!usingPages || (usingPages && currentPage == LEFT_STR)) {
                 if (backKeyPressed) {
@@ -5661,18 +5637,14 @@ public:
         
         // Handle sub-package menu (dropdownSection is not empty)
         if (!returningToSubPackage && inSubPackageMenu) {
-            if (simulatedNextPage.load(acquire))
-                simulatedNextPage.store(false, release);
-            if (simulatedMenu.load(acquire))
-                simulatedMenu.store(false, release);
+            simulatedNextPage.exchange(false, std::memory_order_acq_rel);
+            simulatedMenu.exchange(false, std::memory_order_acq_rel);
             
             if (!usingPages || (usingPages && currentPage == LEFT_STR)) {
                 if (backKeyPressed) {
                     //handleForwarderFooter();
-                    if (allowSlide.load(acquire))
-                        allowSlide.store(false, release);
-                    if (unlockedSlide.load(acquire))
-                        unlockedSlide.store(false, release);
+                    allowSlide.exchange(false, std::memory_order_acq_rel);
+                    unlockedSlide.exchange(false, std::memory_order_acq_rel);
                     
                     // Try return context first, fallback to normal navigation
                     if (tryReturnContext()) return true;
@@ -5686,10 +5658,8 @@ public:
             } else if (usingPages && currentPage == RIGHT_STR) {
                 if (backKeyPressed) {
                     //handleForwarderFooter();
-                    if (allowSlide.load(acquire))
-                        allowSlide.store(false, release);
-                    if (unlockedSlide.load(acquire))
-                        unlockedSlide.store(false, release);
+                    allowSlide.exchange(false, std::memory_order_acq_rel);
+                    unlockedSlide.exchange(false, std::memory_order_acq_rel);
                     
                     // Try return context first, fallback to normal navigation
                     if (tryReturnContext()) return true;
@@ -5727,8 +5697,7 @@ public:
             }
         }
         
-        if (triggerExit.load(acquire)) {
-            triggerExit.store(false, release);
+        if (triggerExit.exchange(false, std::memory_order_acq_rel)) {
             while (!returnContextStack.empty()) {
                 returnContextStack.pop();
             }
@@ -5747,10 +5716,8 @@ public:
                 return true;
             }
     
-            if (allowSlide.load(acquire))
-                allowSlide.store(false, release);
-            if (unlockedSlide.load(acquire))
-                unlockedSlide.store(false, release);
+            allowSlide.exchange(false, std::memory_order_acq_rel);
+            unlockedSlide.exchange(false, std::memory_order_acq_rel);
             
             // Try return context first for any lost navigation scenarios
             if (tryReturnContext()) return true;
@@ -5799,8 +5766,7 @@ public:
         //tsl::gfx::FontManager::clearCache();
         {
             //std::lock_guard<std::mutex> lock(jumpItemMutex);
-            if (skipJumpReset.load(acquire)) {
-                skipJumpReset.store(false, release);
+            if (skipJumpReset.exchange(false, std::memory_order_acq_rel)) {
                 return;
             }
             jumpItemName = "";
@@ -6056,7 +6022,7 @@ public:
         
                     if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
                         disableSound.store(true, std::memory_order_release);
-                        
+
                         std::string useOverlayLaunchArgs, overlayLaunchArgs;
                         {
                             auto overlaysIniData = getParsedDataFromIniFile(OVERLAYS_INI_FILEPATH);
@@ -6424,7 +6390,7 @@ public:
         if (isRunningInterp)
             return handleRunningInterpreter(keysDown, keysHeld);
     
-        if (lastRunningInterpreter.load(acquire)) {
+        if (lastRunningInterpreter.exchange(false, std::memory_order_acq_rel)) {
             //tsl::clearGlyphCacheNow.store(true, release);
             isDownloadCommand.store(false, release);
         
@@ -6486,13 +6452,12 @@ public:
         
             closeInterpreterThread();
             resetPercentages();
-            lastRunningInterpreter.store(false, std::memory_order_release);
+            //lastRunningInterpreter.store(false, std::memory_order_release);
             return true;
         }
         
-        if (ult::refreshWallpaperNow.load(std::memory_order_acquire)) {
+        if (ult::refreshWallpaperNow.exchange(false, std::memory_order_acq_rel)) {
             closeInterpreterThread();
-            ult::refreshWallpaperNow.store(false, std::memory_order_release);
             ult::reloadWallpaper();
         }
 
@@ -6522,16 +6487,12 @@ public:
         const bool backKeyPressed = !isTouching && ((((keysDown & KEY_B)) && !(keysHeld & ~KEY_B & ALL_KEYS_MASK)));
         
         if (!dropdownSection.empty() && !returningToMain) {
-            if (simulatedNextPage.load(acquire))
-                simulatedNextPage.store(false, release);
-            if (simulatedMenu.load(acquire))
-                simulatedMenu.store(false, release);
+            simulatedNextPage.exchange(false, std::memory_order_acq_rel);
+            simulatedMenu.exchange(false, std::memory_order_acq_rel);
     
             if (backKeyPressed) {
-                if (allowSlide.load(acquire))
-                    allowSlide.store(false, release);
-                if (unlockedSlide.load(acquire))
-                    unlockedSlide.store(false, release);
+                allowSlide.exchange(false, std::memory_order_acq_rel);
+                unlockedSlide.exchange(false, std::memory_order_acq_rel);
                 returningToMain = true;
                 tsl::goBack();
                 return true;
@@ -6575,8 +6536,7 @@ public:
                 const bool onLeftPage = (!usePageSwap && menuMode != PACKAGES_STR) || (usePageSwap && menuMode != OVERLAYS_STR);
                 {
                     //std::lock_guard<std::mutex> lock(ult::simulatedNextPageMutex);
-                    if (simulatedNextPage.load(acquire)) {
-                        simulatedNextPage.store(false, release);
+                    if (simulatedNextPage.exchange(false, std::memory_order_acq_rel)) {
                         if (onLeftPage) {
                             keysDown |= KEY_DRIGHT;
                         }
@@ -6655,10 +6615,8 @@ public:
                 }
     
                 if (backKeyPressed) {
-                    if (allowSlide.load(acquire))
-                        allowSlide.store(false, release);
-                    if (unlockedSlide.load(acquire))
-                        unlockedSlide.store(false, release);
+                    allowSlide.exchange(false, std::memory_order_acq_rel);
+                    unlockedSlide.exchange(false, std::memory_order_acq_rel);
                     if (tsl::notification && tsl::notification->isActive()) {
                         tsl::Overlay::get()->closeAfter();
                         tsl::Overlay::get()->hide(true);
@@ -6689,10 +6647,8 @@ public:
         }
         
         if (!inMainMenu.load(acquire) && inHiddenMode && !returningToHiddenMain && !returningToMain) {
-            if (simulatedNextPage.load(acquire))
-                simulatedNextPage.store(false, release);
-            if (simulatedMenu.load(acquire))
-                simulatedMenu.store(false, release);
+            simulatedNextPage.exchange(false, std::memory_order_acq_rel);
+            simulatedMenu.exchange(false, std::memory_order_acq_rel);
     
             if (backKeyPressed) {
                 // Check if we're in hidden mode with no underlying menu to go back to
@@ -6740,10 +6696,8 @@ public:
                     return true;
                 }
                 
-                if (allowSlide.load(acquire))
-                    allowSlide.store(false, release);
-                if (unlockedSlide.load(acquire))
-                    unlockedSlide.store(false, release);
+                allowSlide.exchange(false, std::memory_order_acq_rel);
+                unlockedSlide.exchange(false, std::memory_order_acq_rel);
                 tsl::goBack();
                 return true;
             }
@@ -6761,8 +6715,8 @@ public:
             inHiddenMode = true;
         }
     
-        if (triggerExit.load(acquire)) {
-            triggerExit.store(false, release);
+        if (triggerExit.exchange(false, std::memory_order_acq_rel)) {
+            //triggerExit.store(false, release);
             ult::launchingOverlay.store(true, std::memory_order_release);
             tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
             tsl::Overlay::get()->close();
@@ -6786,6 +6740,7 @@ void initializeSettingsAndDirectories() {
     createDirectory(NOTIFICATIONS_PATH);
     createDirectory(THEMES_PATH);
     createDirectory(WALLPAPERS_PATH);
+    createDirectory(SOUNDS_PATH);
     
     bool settingsLoaded = false;
     bool needsUpdate = false;
