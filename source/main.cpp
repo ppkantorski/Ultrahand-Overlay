@@ -1964,8 +1964,9 @@ public:
                 
                 return true; // Continue holding
             } else {
-                triggerRumbleDoubleClick.store(true, std::memory_order_release);
-                triggerExitSound.store(true, std::memory_order_release);
+                //triggerRumbleDoubleClick.store(true, std::memory_order_release);
+                //triggerExitSound.store(true, std::memory_order_release);
+                triggerExitFeedback();
                 // Key released - reset everything
                 isHolding = false;
                 displayPercentage.store(0, std::memory_order_release);
@@ -2007,7 +2008,7 @@ public:
                         reloadMenu = false;
                         
                         // Determine pop count and hidden mode settings
-                        int popCount;
+                        size_t popCount;
                         if (lastMenu == "hiddenMenuMode") {
                             popCount = 3;
                             inMainMenu.store(false, std::memory_order_release);
@@ -5466,8 +5467,9 @@ public:
                             //lastPage = RIGHT_STR;
                             tsl::swapTo<PackageMenu>(packagePath, dropdownSection, RIGHT_STR, packageName, nestedLayer, pageHeader);
                             resetSlideState();
-                            triggerRumbleClick.store(true, std::memory_order_release);
-                            triggerNavigationSound.store(true, std::memory_order_release);
+                            //triggerRumbleClick.store(true, std::memory_order_release);
+                            //triggerNavigationSound.store(true, std::memory_order_release);
+                            triggerNavigationFeedback();
                         }
                         return true;
                     }
@@ -5481,8 +5483,9 @@ public:
                             //lastPage = LEFT_STR;
                             tsl::swapTo<PackageMenu>(packagePath, dropdownSection, LEFT_STR, packageName, nestedLayer, pageHeader);
                             resetSlideState();
-                            triggerRumbleClick.store(true, std::memory_order_release);
-                            triggerNavigationSound.store(true, std::memory_order_release);
+                            //triggerRumbleClick.store(true, std::memory_order_release);
+                            //triggerNavigationSound.store(true, std::memory_order_release);
+                            triggerNavigationFeedback();
                         }
                         return true;
                     }
@@ -6583,8 +6586,9 @@ public:
                             //tsl::pop();
                             tsl::swapTo<MainMenu>();
                             resetNavState();
-                            triggerRumbleClick.store(true, std::memory_order_release);
-                            triggerNavigationSound.store(true, std::memory_order_release);
+                            //triggerRumbleClick.store(true, std::memory_order_release);
+                            //triggerNavigationSound.store(true, std::memory_order_release);
+                            triggerNavigationFeedback();
                         }
                         return true;
                     }
@@ -6607,8 +6611,9 @@ public:
                             //tsl::pop();
                             tsl::swapTo<MainMenu>();
                             resetNavState();
-                            triggerRumbleClick.store(true, std::memory_order_release);
-                            triggerNavigationSound.store(true, std::memory_order_release);
+                            //triggerRumbleClick.store(true, std::memory_order_release);
+                            //triggerNavigationSound.store(true, std::memory_order_release);
+                            triggerNavigationFeedback();
                         }
                         return true;
                     }
