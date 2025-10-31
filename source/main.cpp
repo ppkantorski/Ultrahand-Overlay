@@ -96,6 +96,7 @@ static const std::string MODE_PATTERN = ";mode=";
 static const std::string GROUPING_PATTERN = ";grouping=";
 static const std::string SYSTEM_PATTERN = ";system=";
 static const std::string WIDGET_PATTERN = ";widget=";
+static const std::string HEAP_SIZE_PATTERN = ";heap_size=";
 
 static const std::string MINI_PATTERN = ";mini=";
 static const std::string SELECTION_MINI_PATTERN = ";selection_mini=";
@@ -1269,6 +1270,7 @@ public:
 
             closeInterpreterThread();
             resetPercentages();
+            reloadSoundCacheNow.store(true, std::memory_order_release);
             //lastRunningInterpreter.store(false, std::memory_order_release);
             return true;
         }
@@ -2164,13 +2166,14 @@ private:
     std::string lastPackageHeader;
     bool showWidget = false;
 
+    int interpreterHeapSize = 0;
     //u64 holdStartTick;
     //bool isHolding = false;
 
     void addListItem(tsl::elm::List* list, const std::string& line) {
         auto* listItem = new tsl::elm::ListItem(line);
 
-        listItem->setClickListener([filePath=filePath, specificKey=specificKey, listItem, line](uint64_t keys) {
+        listItem->setClickListener([filePath=filePath, specificKey=specificKey, listItem, line, interpreterHeapSize=interpreterHeapSize](uint64_t keys) {
             if (runningInterpreter.load(acquire)) return false;
 
             if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
@@ -2204,7 +2207,7 @@ private:
                 commandVec.emplace_back(std::move(commandParts));
                 commandParts.shrink_to_fit();
 
-                executeInterpreterCommands(std::move(commandVec), filePath, specificKey);
+                executeInterpreterCommands(std::move(commandVec), filePath, specificKey, interpreterHeapSize);
                 listItem->disableClickAnimation();
                 //startInterpreterThread();
                 listItem->setValue(INPROGRESS_SYMBOL);
@@ -2222,8 +2225,8 @@ private:
 
 public:
     ScriptOverlay(std::vector<std::vector<std::string>>&& cmds, const std::string& file, const std::string& key = "",
-        const std::string& fromMenu = "", bool tableMode = false, const std::string& _lastPackageHeader = "", bool showWidget = false)
-        : commands(cmds), filePath(file), specificKey(key), tableMode(tableMode), lastPackageHeader(_lastPackageHeader), showWidget(showWidget) {
+        const std::string& fromMenu = "", bool tableMode = false, const std::string& _lastPackageHeader = "", bool showWidget = false, int interpreterHeapSize = 0)
+        : commands(cmds), filePath(file), specificKey(key), tableMode(tableMode), lastPackageHeader(_lastPackageHeader), showWidget(showWidget), interpreterHeapSize(interpreterHeapSize) {
 
             isFromMainMenu = (fromMenu == "main");
             isFromPackage = (fromMenu == "package");
@@ -2410,6 +2413,7 @@ public:
                 lastSelectedListItem = nullptr;
             }
             closeInterpreterThread();
+            reloadSoundCacheNow.store(true, std::memory_order_release);
             //lastRunningInterpreter.store(false, std::memory_order_release);
             return true;
         }
@@ -2570,6 +2574,8 @@ private:
     bool usingProgress = false;
     bool isMini = false;
 
+    int interpreterHeapSize = 0;
+
     size_t maxItemsLimit = 250;     // 0 = uncapped, any other value = max size
     
     // Helper function to apply size limit to any vector
@@ -2620,7 +2626,8 @@ public:
         static const size_t GROUPING_PATTERN_LEN = GROUPING_PATTERN.length();
         static const size_t SELECTION_MINI_PATTERN_LEN = SELECTION_MINI_PATTERN.length();
         static const size_t PROGRESS_PATTERN_LEN = PROGRESS_PATTERN.length();
-    
+        static const size_t HEAP_SIZE_PATTERN_LEN = HEAP_SIZE_PATTERN.length();
+        
         updateGeneralPlaceholders();
         
         for (auto& cmd : selectionCommands) {
@@ -2668,8 +2675,31 @@ public:
                 } else if (commandName.size() > PROGRESS_PATTERN_LEN && 
                            commandName.compare(0, PROGRESS_PATTERN_LEN, PROGRESS_PATTERN) == 0) {
                     usingProgress = (commandName.substr(PROGRESS_PATTERN_LEN) == TRUE_STR);
+                } else if (commandName.size() > HEAP_SIZE_PATTERN_LEN && 
+                           commandName.compare(0, HEAP_SIZE_PATTERN_LEN, HEAP_SIZE_PATTERN) == 0) {
+                
+                    std::string heapStr = commandName.substr(HEAP_SIZE_PATTERN_LEN);
+                
+                    // Trim whitespace/newlines
+                    heapStr.erase(0, heapStr.find_first_not_of(" \t\r\n"));
+                    heapStr.erase(heapStr.find_last_not_of(" \t\r\n") + 1);
+                
+                    // Parse as hex if valid
+                    bool validHex = true;
+                    for (char c : heapStr) {
+                        if (!std::isxdigit(static_cast<unsigned char>(c))) {
+                            validHex = false;
+                            break;
+                        }
+                    }
+                
+                    if (validHex && !heapStr.empty()) {
+                        interpreterHeapSize = ult::stoi(heapStr, nullptr, 16); // use parsed value
+                    } else {
+                        interpreterHeapSize = 0; // fallback: allow executeInterpreterCommands to use stackSize
+                    }
                 }
-    
+                
                 if (commandMode == TOGGLE_STR) {
                     if (commandName == "on:")
                         currentSection = ON_STR;
@@ -3259,7 +3289,7 @@ public:
                         isDownloadCommand.store(false, release);
                         runningInterpreter.store(true, release);
     
-                        executeInterpreterCommands(getSourceReplacement(selectionCommands, selectedItem, i, filePath), filePath, specificKey);
+                        executeInterpreterCommands(getSourceReplacement(selectionCommands, selectedItem, i, filePath), filePath, specificKey, interpreterHeapSize);
                         listItem->disableClickAnimation();
                         //startInterpreterThread(filePath);
     
@@ -3291,7 +3321,7 @@ public:
     
                         auto modifiedCmds = getSourceReplacement(selectionCommands, selectedItem, i, filePath);
                         applyPlaceholderReplacementsToCommands(modifiedCmds, filePath);
-                        tsl::changeTo<ScriptOverlay>(std::move(modifiedCmds), filePath, itemName, "selection", false, currentPackageHeader, showWidget);
+                        tsl::changeTo<ScriptOverlay>(std::move(modifiedCmds), filePath, itemName, "selection", false, currentPackageHeader, showWidget, interpreterHeapSize);
                         return true;
                     }
     
@@ -3379,7 +3409,7 @@ public:
                     lastRunningInterpreter.store(true, release);
                     lastSelectedListItem = toggleListItem;
                     //interpretAndExecuteCommands(std::move(modifiedCmds), filePath, specificKey);
-                    executeInterpreterCommands(std::move(modifiedCmds), filePath, specificKey);
+                    executeInterpreterCommands(std::move(modifiedCmds), filePath, specificKey, interpreterHeapSize);
                     //resetPercentages();
                 
                     toggleCount[i]++;
@@ -3397,7 +3427,7 @@ public:
                     // Custom logic for SCRIPT_KEY handling
                     auto modifiedCmds = getSourceReplacement(state ? selectionCommandsOn : selectionCommandsOff, currentSelectedItems[i], i, filePath);
                     applyPlaceholderReplacementsToCommands(modifiedCmds, filePath);
-                    tsl::changeTo<ScriptOverlay>(std::move(modifiedCmds), filePath, itemName, "selection", false, currentPackageHeader, showWidget);
+                    tsl::changeTo<ScriptOverlay>(std::move(modifiedCmds), filePath, itemName, "selection", false, currentPackageHeader, showWidget, interpreterHeapSize);
                 });
     
                 list->addItem(toggleListItem);
@@ -3500,6 +3530,7 @@ public:
         
             closeInterpreterThread();
             resetPercentages();
+            reloadSoundCacheNow.store(true, std::memory_order_release);
             //lastRunningInterpreter.store(false, std::memory_order_release);
             return true;
         }
@@ -3725,6 +3756,7 @@ bool drawCommandsMenu(
     //tsl::elm::ListItem* listItem;
     //auto toggleListItem = new tsl::elm::ToggleListItem("", true, "", "");
     
+    int interpreterHeapSize = 0;
     
     bool toggleStateOn;
     
@@ -3825,6 +3857,8 @@ bool drawCommandsMenu(
 
         // toggle settings
         usingProgress = false;
+
+        interpreterHeapSize = 0;
 
         // Table settings
         isPolling = false;
@@ -4057,7 +4091,7 @@ bool drawCommandsMenu(
                         
                         if (packageMenuMode) {
                             listItem->setClickListener([packagePath, dropdownSection, currentPage, packageName, nestedLayer, i,
-                                packageIniPath, optionName, cleanOptionName, pageHeader, lastPackageHeader, showWidget](s64 keys) {
+                                packageIniPath, optionName, cleanOptionName, pageHeader, lastPackageHeader, showWidget, interpreterHeapSize](s64 keys) {
                                 
                                 if (runningInterpreter.load(acquire))
                                     return false;
@@ -4095,14 +4129,14 @@ bool drawCommandsMenu(
                                     
                                     //auto options = loadOptionsFromIni(packageIniPath);
                                     // Pass all gathered commands to the ScriptOverlay
-                                    tsl::changeTo<ScriptOverlay>(std::move(gatherPromptCommands(optionName, std::move(loadOptionsFromIni(packageIniPath)))), packagePath, optionName, "package", true, lastPackageHeader, showWidget);
+                                    tsl::changeTo<ScriptOverlay>(std::move(gatherPromptCommands(optionName, std::move(loadOptionsFromIni(packageIniPath)))), packagePath, optionName, "package", true, lastPackageHeader, showWidget, interpreterHeapSize);
                                     return true;
                                 }
                                 return false;
                             });
                             listItem->disableClickAnimation();
                         } else {
-                            listItem->setClickListener([optionName, i, packageIniPath, lastPackageHeader, showWidget](s64 keys) {
+                            listItem->setClickListener([optionName, i, packageIniPath, lastPackageHeader, showWidget, interpreterHeapSize](s64 keys) {
                                 if (runningInterpreter.load(acquire))
                                     return false;
 
@@ -4121,7 +4155,7 @@ bool drawCommandsMenu(
                                     //const std::vector<std::vector<std::string>> promptCommands = gatherPromptCommands(optionName, options);
                                     //auto options = loadOptionsFromIni(packageIniPath);
 
-                                    tsl::changeTo<ScriptOverlay>(std::move(gatherPromptCommands(optionName, std::move(loadOptionsFromIni(packageIniPath)))), PACKAGE_PATH, optionName, "main", true, lastPackageHeader, showWidget);
+                                    tsl::changeTo<ScriptOverlay>(std::move(gatherPromptCommands(optionName, std::move(loadOptionsFromIni(packageIniPath)))), PACKAGE_PATH, optionName, "main", true, lastPackageHeader, showWidget, interpreterHeapSize);
                                     return true;
                                 }
                                 return false;
@@ -4300,6 +4334,29 @@ bool drawCommandsMenu(
                     } else if (commandName.find(ON_EVERY_TICK_PATTERN) == 0) {
                         onEveryTick = (commandName.substr(ON_EVERY_TICK_PATTERN.length()) == TRUE_STR);
                         continue;
+                    } else if (commandName.size() > HEAP_SIZE_PATTERN.length() && 
+                               commandName.compare(0, HEAP_SIZE_PATTERN.length(), HEAP_SIZE_PATTERN) == 0) {
+                        std::string heapStr = commandName.substr(HEAP_SIZE_PATTERN.length());
+                    
+                        // Trim whitespace/newlines
+                        heapStr.erase(0, heapStr.find_first_not_of(" \t\r\n"));
+                        heapStr.erase(heapStr.find_last_not_of(" \t\r\n") + 1);
+                    
+                        // Parse as hex if valid
+                        bool validHex = true;
+                        for (char c : heapStr) {
+                            if (!std::isxdigit(static_cast<unsigned char>(c))) {
+                                validHex = false;
+                                break;
+                            }
+                        }
+                    
+                        if (validHex && !heapStr.empty()) {
+                            interpreterHeapSize = ult::stoi(heapStr, nullptr, 16); // use parsed value
+                        } else {
+                            interpreterHeapSize = 0; // fallback: allow executeInterpreterCommands to use stackSize
+                        }
+                            continue;
                     } else if (commandName.find(";") == 0) {
                         continue;
                     }
@@ -4440,7 +4497,7 @@ bool drawCommandsMenu(
                         interpretAndExecuteCommands, getSourceReplacement, commands, originalOptionName, false, false, -1, unlockedTrackbar, onEveryTick);
                 
                     // Set the SCRIPT_KEY listener
-                    trackBar->setScriptKeyListener([commands, keyName = originalOptionName, packagePath, lastPackageHeader, showWidget]() {
+                    trackBar->setScriptKeyListener([commands, keyName = originalOptionName, packagePath, lastPackageHeader, showWidget, interpreterHeapSize]() {
                         
                         
                         //const std::string valueStr = parseValueFromIniSection(packagePath+"config.ini", keyName, "value");
@@ -4501,7 +4558,7 @@ bool drawCommandsMenu(
                         const bool isFromMainMenu = (packagePath == PACKAGE_PATH);
 
                         // Switch to ScriptOverlay
-                        tsl::changeTo<ScriptOverlay>(std::move(modifiedCmds), packagePath, keyName, isFromMainMenu ? "main" : "package", false, lastPackageHeader, showWidget);
+                        tsl::changeTo<ScriptOverlay>(std::move(modifiedCmds), packagePath, keyName, isFromMainMenu ? "main" : "package", false, lastPackageHeader, showWidget, interpreterHeapSize);
                     });
                 
                     // Add the TrackBarV2 to the list after setting the necessary listeners
@@ -4518,7 +4575,7 @@ bool drawCommandsMenu(
                         interpretAndExecuteCommands, getSourceReplacement, commands, originalOptionName, false, unlockedTrackbar, onEveryTick);
                     
                     // Set the SCRIPT_KEY listener
-                    stepTrackBar->setScriptKeyListener([commands, keyName = originalOptionName, packagePath, lastPackageHeader, showWidget]() {
+                    stepTrackBar->setScriptKeyListener([commands, keyName = originalOptionName, packagePath, lastPackageHeader, showWidget, interpreterHeapSize]() {
                         const bool isFromMainMenu = (packagePath == PACKAGE_PATH);
                         
                         // Parse the value and index from the INI file
@@ -4575,7 +4632,7 @@ bool drawCommandsMenu(
                         
                         // Apply placeholder replacements and switch to ScriptOverlay
                         applyPlaceholderReplacementsToCommands(modifiedCmds, packagePath);
-                        tsl::changeTo<ScriptOverlay>(std::move(modifiedCmds), packagePath, keyName, isFromMainMenu ? "main" : "package", false, lastPackageHeader, showWidget);
+                        tsl::changeTo<ScriptOverlay>(std::move(modifiedCmds), packagePath, keyName, isFromMainMenu ? "main" : "package", false, lastPackageHeader, showWidget, interpreterHeapSize);
                     });
                     
                     // Add the StepTrackBarV2 to the list
@@ -4667,7 +4724,7 @@ bool drawCommandsMenu(
                         interpretAndExecuteCommands, getSourceReplacement, commands, originalOptionName, unlockedTrackbar, onEveryTick);
                     
                     // Set the SCRIPT_KEY listener
-                    namedStepTrackBar->setScriptKeyListener([commands, keyName = originalOptionName, packagePath, entryList=entryList, lastPackageHeader, showWidget]() {
+                    namedStepTrackBar->setScriptKeyListener([commands, keyName = originalOptionName, packagePath, entryList=entryList, lastPackageHeader, showWidget, interpreterHeapSize]() {
                         const bool isFromMainMenu = (packagePath == PACKAGE_PATH);
                     
                         // Parse the value and index from the INI file
@@ -4730,7 +4787,7 @@ bool drawCommandsMenu(
                     
                         // Apply placeholder replacements and switch to ScriptOverlay
                         applyPlaceholderReplacementsToCommands(modifiedCmds, packagePath);
-                        tsl::changeTo<ScriptOverlay>(std::move(modifiedCmds), packagePath, keyName, isFromMainMenu ? "main" : "package", false, lastPackageHeader, showWidget);
+                        tsl::changeTo<ScriptOverlay>(std::move(modifiedCmds), packagePath, keyName, isFromMainMenu ? "main" : "package", false, lastPackageHeader, showWidget, interpreterHeapSize);
                     });
                     entryList.clear();
                     
@@ -4764,7 +4821,7 @@ bool drawCommandsMenu(
                         const std::string& forwarderPackagePath = getParentDirFromPath(packageSource);
                         const std::string& forwarderPackageIniName = getNameFromPath(packageSource);
                         listItem->setClickListener([commands, keyName = originalOptionName, dropdownSection, packagePath, currentPage, packageName, nestedLayer, cleanOptionName, listItem,
-                            forwarderPackagePath, forwarderPackageIniName, lastPackageHeader, pageHeader, showWidget, i](s64 keys) mutable {
+                            forwarderPackagePath, forwarderPackageIniName, lastPackageHeader, pageHeader, showWidget, interpreterHeapSize, i](s64 keys) mutable {
 
                             if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
                                 interpretAndExecuteCommands(std::move(getSourceReplacement(commands, keyName, i, packagePath)), packagePath, keyName);
@@ -4827,7 +4884,7 @@ bool drawCommandsMenu(
                                 std::string selectionItem = keyName;
                                 removeTag(selectionItem);
                                 // add lines ;mode=forwarder and package_source 'forwarderPackagePath' to front of modifiedCmds
-                                tsl::changeTo<ScriptOverlay>(std::move(getSourceReplacement(commands, keyName, i, packagePath)), packagePath, selectionItem, isFromMainMenu ? "main" : "package", true, lastPackageHeader, showWidget);
+                                tsl::changeTo<ScriptOverlay>(std::move(getSourceReplacement(commands, keyName, i, packagePath)), packagePath, selectionItem, isFromMainMenu ? "main" : "package", true, lastPackageHeader, showWidget, interpreterHeapSize);
                                 return true;
                             }
                             return false;
@@ -4835,7 +4892,7 @@ bool drawCommandsMenu(
                         listItem->disableClickAnimation();
                     } else {
                         listItem->setClickListener([commands, keyName = originalOptionName, dropdownSection, packagePath, packageName,
-                            footer, lastSection, listItem, lastPackageHeader, commandMode, showWidget, i](uint64_t keys) {
+                            footer, lastSection, listItem, lastPackageHeader, commandMode, showWidget, interpreterHeapSize, i](uint64_t keys) {
                             //listItemPtr = std::shared_ptr<tsl::elm::ListItem>(listItem, [](auto*){})](uint64_t keys) {
                             
                             if (runningInterpreter.load(acquire))
@@ -4902,7 +4959,7 @@ bool drawCommandsMenu(
                                 removeTag(selectionItem);
                                 auto modifiedCmds = commands;
                                 applyPlaceholderReplacementsToCommands(modifiedCmds, packagePath);
-                                tsl::changeTo<ScriptOverlay>(std::move(modifiedCmds), packagePath, selectionItem, isFromMainMenu ? "main" : "package", true, lastPackageHeader, showWidget);
+                                tsl::changeTo<ScriptOverlay>(std::move(modifiedCmds), packagePath, selectionItem, isFromMainMenu ? "main" : "package", true, lastPackageHeader, showWidget, interpreterHeapSize);
                                 return true;
                             }
                             return false;
@@ -4933,7 +4990,7 @@ bool drawCommandsMenu(
                         
                         
                         listItem->setClickListener([i, commands, keyName = originalOptionName, packagePath, packageName,
-                            selectedItem, listItem, lastPackageHeader, commandMode, showWidget](uint64_t keys) {
+                            selectedItem, listItem, lastPackageHeader, commandMode, showWidget, interpreterHeapSize](uint64_t keys) {
                             
                             if (runningInterpreter.load(acquire)) {
                                 return false;
@@ -4943,7 +5000,7 @@ bool drawCommandsMenu(
                                 isDownloadCommand.store(false, release);
                                 runningInterpreter.store(true, release);
                                 //logMessage("selectedItem: "+selectedItem+" keyName: "+keyName);
-                                executeInterpreterCommands(getSourceReplacement(commands, selectedItem, i, packagePath), packagePath, keyName);
+                                executeInterpreterCommands(getSourceReplacement(commands, selectedItem, i, packagePath), packagePath, keyName, interpreterHeapSize);
                                 //startInterpreterThread(packagePath);
                                 listItem->disableClickAnimation();
                                 listItem->setValue(INPROGRESS_SYMBOL);
@@ -4974,7 +5031,7 @@ bool drawCommandsMenu(
                                 //}
                                 auto modifiedCmds = getSourceReplacement(commands, selectedItem, i, packagePath);
                                 applyPlaceholderReplacementsToCommands(modifiedCmds, packagePath);
-                                tsl::changeTo<ScriptOverlay>(std::move(modifiedCmds), packagePath, keyName, isFromMainMenu ? "main" : "package", false, lastPackageHeader, showWidget);
+                                tsl::changeTo<ScriptOverlay>(std::move(modifiedCmds), packagePath, keyName, isFromMainMenu ? "main" : "package", false, lastPackageHeader, showWidget, interpreterHeapSize);
                                 return true;
                             }
                             return false;
@@ -5007,7 +5064,7 @@ bool drawCommandsMenu(
                         toggleListItem->setState(toggleStateOn);
                         
                         toggleListItem->setStateChangedListener([i, usingProgress, toggleListItem, commandsOn, commandsOff, keyName = originalOptionName, packagePath,
-                            pathPatternOn, pathPatternOff](bool state) {
+                            pathPatternOn, pathPatternOff, interpreterHeapSize](bool state) {
                             if (runningInterpreter.load(std::memory_order_acquire)) {
                                 return;
                             }
@@ -5027,7 +5084,7 @@ bool drawCommandsMenu(
                             //    getSourceReplacement(commandsOff, pathPatternOff, i, packagePath)), packagePath, keyName);
                             
                             executeInterpreterCommands(std::move(state ? getSourceReplacement(commandsOn, pathPatternOn, i, packagePath) :
-                                getSourceReplacement(commandsOff, pathPatternOff, i, packagePath)), packagePath, keyName);
+                                getSourceReplacement(commandsOff, pathPatternOff, i, packagePath)), packagePath, keyName, interpreterHeapSize);
                             //resetPercentages();
                             // Set the ini file value after executing the command
                             //setIniFileValue((packagePath + CONFIG_FILENAME), keyName, FOOTER_STR, state ? CAPITAL_ON_STR : CAPITAL_OFF_STR);
@@ -5036,7 +5093,7 @@ bool drawCommandsMenu(
 
                         // Set the script key listener (for SCRIPT_KEY)
                         toggleListItem->setScriptKeyListener([i, commandsOn, commandsOff, keyName = originalOptionName, packagePath,
-                            pathPatternOn, pathPatternOff, lastPackageHeader, showWidget](bool state) {
+                            pathPatternOn, pathPatternOff, lastPackageHeader, showWidget, interpreterHeapSize](bool state) {
 
                             const bool isFromMainMenu = (packagePath == PACKAGE_PATH);
                             //if (inPackageMenu)
@@ -5049,7 +5106,7 @@ bool drawCommandsMenu(
                                 getSourceReplacement(commandsOff, pathPatternOff, i, packagePath);
 
                             applyPlaceholderReplacementsToCommands(modifiedCmds, packagePath);
-                            tsl::changeTo<ScriptOverlay>(std::move(modifiedCmds), packagePath, keyName, isFromMainMenu ? "main" : "package", false, lastPackageHeader, showWidget);
+                            tsl::changeTo<ScriptOverlay>(std::move(modifiedCmds), packagePath, keyName, isFromMainMenu ? "main" : "package", false, lastPackageHeader, showWidget, interpreterHeapSize);
                         });
 
 
@@ -5363,6 +5420,7 @@ public:
         
             closeInterpreterThread();
             resetPercentages();
+            reloadSoundCacheNow.store(true, std::memory_order_release);
             //lastRunningInterpreter.store(false, std::memory_order_release);
             return true;
         }
@@ -5370,6 +5428,7 @@ public:
         if (ult::refreshWallpaperNow.exchange(false, std::memory_order_acq_rel)) {
             closeInterpreterThread();
             ult::reloadWallpaper();
+            reloadSoundCacheNow.store(true, std::memory_order_release);
         }
     
         if (goBackAfter.exchange(false, std::memory_order_acq_rel)) {
@@ -6455,6 +6514,7 @@ public:
         
             closeInterpreterThread();
             resetPercentages();
+            reloadSoundCacheNow.store(true, std::memory_order_release);
             //lastRunningInterpreter.store(false, std::memory_order_release);
             return true;
         }
@@ -6462,6 +6522,7 @@ public:
         if (ult::refreshWallpaperNow.exchange(false, std::memory_order_acq_rel)) {
             closeInterpreterThread();
             ult::reloadWallpaper();
+            reloadSoundCacheNow.store(true, std::memory_order_release);
         }
 
         if (goBackAfter.exchange(false, std::memory_order_acq_rel)) {

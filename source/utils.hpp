@@ -4828,6 +4828,10 @@ inline void clearInterpreterFlags(bool state = false) {
 }
 
 void backgroundInterpreter(void* workPtr) {
+    while (clearSoundCacheNow.load(std::memory_order_acquire)) {
+        svcSleepThread(100'000'000);
+    }
+
     // Get work data directly - no queue needed
     auto workData = static_cast<InterpreterWorkData*>(workPtr);
     
@@ -4837,6 +4841,7 @@ void backgroundInterpreter(void* workPtr) {
         return;
     }
     
+
     // Process the work if we have commands
     if (!workData->commands.empty()) {
         // Clear flags and setup for execution
@@ -4917,7 +4922,8 @@ int getInterpreterStackSize(const std::string& packagePath = "") {
 // Combined function - creates thread with work data directly
 void executeInterpreterCommands(std::vector<std::vector<std::string>>&& commands, 
                                const std::string& packagePath = "", 
-                               const std::string& selectedCommand = "") {
+                               const std::string& selectedCommand = "", 
+                               int stackSize = 0) {
     
     // Wait for the existing thread to finish
     threadWaitForExit(&interpreterThread);
@@ -4927,9 +4933,13 @@ void executeInterpreterCommands(std::vector<std::vector<std::string>>&& commands
     if (commands.empty()) {
         return;
     }
+
+    clearSoundCacheNow.store(true, std::memory_order_release);
     
-    // Get stack size and setup logging
-    const int stackSize = getInterpreterStackSize(packagePath);
+    // If no stack size provided, get from global config
+    if (stackSize == 0) {
+        stackSize = getInterpreterStackSize(packagePath);
+    }
     
     // Ensure exit flag is clear before starting
     interpreterThreadExit.store(false, std::memory_order_release);
