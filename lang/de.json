@@ -88,6 +88,8 @@
     "FAILED_TO_OPEN": "Konnte Paket nicht öffnen",
     "LAUNCH_COMBOS": "Start-Kombos",
     "NOTIFICATIONS": "Benachrichtigungen",
+    "SOUND_EFFECTS": "Sound Effects",
+    "HAPTIC_FEEDBACK": "Haptic Feedback",
     "OPAQUE_SCREENSHOTS": "Undurchsichtige Screenshots",
     "ON": "AN",
     "OFF": "AUS",
