@@ -88,6 +88,8 @@
     "FAILED_TO_OPEN": "No se pudo abrir",
     "LAUNCH_COMBOS": "Combos de Inicio",
     "NOTIFICATIONS": "Notificaciones",
+    "SOUND_EFFECTS": "Sound Effects",
+    "HAPTIC_FEEDBACK": "Haptic Feedback",
     "OPAQUE_SCREENSHOTS": "Capturas Opacas",
     "ON": "Encendido",
     "OFF": "Apagado",
