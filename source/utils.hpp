@@ -4828,9 +4828,9 @@ inline void clearInterpreterFlags(bool state = false) {
 }
 
 void backgroundInterpreter(void* workPtr) {
-    while (clearSoundCacheNow.load(std::memory_order_acquire)) {
-        svcSleepThread(100'000'000);
-    }
+    //if (ult::expandedMemory && ult::useSoundEffects) {
+    //    clearSoundCacheNow.wait(true, std::memory_order_acquire);
+    //}
 
     // Get work data directly - no queue needed
     auto workData = static_cast<InterpreterWorkData*>(workPtr);
@@ -4893,27 +4893,34 @@ int getInterpreterStackSize(const std::string& packagePath = "") {
     #endif
     // Cache stack size parsing to avoid repeated INI file access
     if (cachedStackSize == 0) {
-        const std::string interpreterHeap = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, MEMORY_STR, "interpreter_heap");
+        std::string interpreterHeap = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, MEMORY_STR, "interpreter_heap");
+
         if (!interpreterHeap.empty()) {
-            // Validate hex string before conversion
-            bool validHex = true;
-            for (size_t i = 0; i < interpreterHeap.length(); ++i) {
-                char c = interpreterHeap[i];
+            // Strip optional "0x" or "0X" prefix
+            if (interpreterHeap.size() > 2 && interpreterHeap[0] == '0' &&
+                (interpreterHeap[1] == 'x' || interpreterHeap[1] == 'X')) {
+                interpreterHeap = interpreterHeap.substr(2);
+            }
+
+            // Validate remaining string is hex
+            bool validHex = !interpreterHeap.empty();
+            for (char c : interpreterHeap) {
                 if (!std::isxdigit(static_cast<unsigned char>(c))) {
                     validHex = false;
                     break;
                 }
             }
-            
+
             if (validHex) {
                 cachedStackSize = ult::stoi(interpreterHeap, nullptr, 16);  // Convert from base 16
             } else {
-                cachedStackSize = 0x8000;  // Default value if invalid hex
+                cachedStackSize = 0x8000;  // Default if invalid
             }
         } else {
-            cachedStackSize = 0x8000;  // Default value
+            cachedStackSize = 0x8000;  // Default if empty
         }
     }
+
     return cachedStackSize;
 }
 
@@ -4922,8 +4929,7 @@ int getInterpreterStackSize(const std::string& packagePath = "") {
 // Combined function - creates thread with work data directly
 void executeInterpreterCommands(std::vector<std::vector<std::string>>&& commands, 
                                const std::string& packagePath = "", 
-                               const std::string& selectedCommand = "", 
-                               int stackSize = 0) {
+                               const std::string& selectedCommand = "") {
     
     // Wait for the existing thread to finish
     threadWaitForExit(&interpreterThread);
@@ -4934,12 +4940,19 @@ void executeInterpreterCommands(std::vector<std::vector<std::string>>&& commands
         return;
     }
 
-    clearSoundCacheNow.store(true, std::memory_order_release);
-    
-    // If no stack size provided, get from global config
-    if (stackSize == 0) {
-        stackSize = getInterpreterStackSize(packagePath);
+    if (ult::expandedMemory && ult::useSoundEffects) {
+        //clearSoundCacheNow.store(true, std::memory_order_release);
+        if (triggerEnterSound.exchange(false))
+            ult::AudioPlayer::playEnterSound();
+
+        ult::AudioPlayer::exit();
+
+        //ult::AudioPlayer::unloadAllSounds({ult::AudioPlayer::SoundType::Wall});
+        //clearSoundCacheNow.wait(true, std::memory_order_acquire);
     }
+    
+    // Get stack size and setup logging
+    const int stackSize = getInterpreterStackSize(packagePath);
     
     // Ensure exit flag is clear before starting
     interpreterThreadExit.store(false, std::memory_order_release);
