@@ -7123,6 +7123,7 @@ public:
         //if (R_SUCCEEDED(socketInitializeDefault())) {
             //initializeCurl();
         //}
+        socketInitializeDefault();
         unpackDeviceInfo();
 
         // read commands from root package's boot_package.ini
@@ -7166,7 +7167,7 @@ public:
             executeIniCommands(PACKAGE_PATH + EXIT_PACKAGE_FILENAME, "exit");
 
         //cleanupCurl();
-        //socketExit();
+        socketExit();
     }
     
 };

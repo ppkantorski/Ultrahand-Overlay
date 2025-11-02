@@ -4430,6 +4430,11 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                     break;
                 }
                 if (downloadSuccess) break;
+
+                // ADD THIS: Give time for cleanup before retry
+                if (i < 2) {  // Don't sleep after last attempt
+                    svcSleepThread(200'000'000);
+                }
             }
             commandSuccess.store(
                 downloadSuccess &&
