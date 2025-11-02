@@ -88,6 +88,8 @@
     "FAILED_TO_OPEN": "Файл не открывается",
     "LAUNCH_COMBOS": "Комбинации запуска",
     "NOTIFICATIONS": "Уведомления",
+    "SOUND_EFFECTS": "Sound Effects",
+    "HAPTIC_FEEDBACK": "Haptic Feedback",
     "OPAQUE_SCREENSHOTS": "Непрозрачные скриншоты",
     "ON": "Вкл",
     "OFF": "Выкл",
