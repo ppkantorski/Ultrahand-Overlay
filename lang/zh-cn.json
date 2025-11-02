@@ -88,6 +88,8 @@
     "FAILED_TO_OPEN": "未能打开该文件夹",
     "LAUNCH_COMBOS": "启动组合键",
     "NOTIFICATIONS": "通知",
+    "SOUND_EFFECTS": "Sound Effects",
+    "HAPTIC_FEEDBACK": "Haptic Feedback",
     "OPAQUE_SCREENSHOTS": "不透明的截图",
     "ON": "开启",
     "OFF": "关闭",
