@@ -88,6 +88,8 @@
     "FAILED_TO_OPEN": "ファイルを開けませんでした",
     "LAUNCH_COMBOS": "起動コンボ",
     "NOTIFICATIONS": "通知",
+    "SOUND_EFFECTS": "Sound Effects",
+    "HAPTIC_FEEDBACK": "Haptic Feedback",
     "OPAQUE_SCREENSHOTS": "不透明なスクリーンショット",
     "ON": "オン",
     "OFF": "オフ",
