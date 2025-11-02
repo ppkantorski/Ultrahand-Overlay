@@ -88,6 +88,8 @@
     "FAILED_TO_OPEN": "Failed to open file",
     "LAUNCH_COMBOS": "Launch Combos",
     "NOTIFICATIONS": "Notifications",
+    "SOUND_EFFECTS": "Sound Effects",
+    "HAPTIC_FEEDBACK": "Haptic Feedback",
     "OPAQUE_SCREENSHOTS": "Opaque Screenshots",
     "ON": "On",
     "OFF": "Off",
