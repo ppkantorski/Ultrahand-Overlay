@@ -1158,10 +1158,10 @@ public:
 
             if (ult::expandedMemory) {
                 useSoundEffects = getBoolValue("sound_effects", false); // TRUE_STR default
-                createToggleListItem(list, "Sound Effects", useSoundEffects, "sound_effects");
+                createToggleListItem(list, SOUND_EFFECTS, useSoundEffects, "sound_effects");
             }
             useHapticFeedback = getBoolValue("haptic_feedback", false); // FALSE_STR default
-            createToggleListItem(list, "Haptic Feedback", useHapticFeedback, "haptic_feedback");
+            createToggleListItem(list, HAPTIC_FEEDBACK, useHapticFeedback, "haptic_feedback");
             useOpaqueScreenshots = getBoolValue("opaque_screenshots", true); // TRUE_STR default
             createToggleListItem(list, OPAQUE_SCREENSHOTS, useOpaqueScreenshots, "opaque_screenshots");
             useSwipeToOpen = getBoolValue("swipe_to_open", true); // TRUE_STR default
