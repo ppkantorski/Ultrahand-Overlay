@@ -4947,12 +4947,17 @@ void executeInterpreterCommands(std::vector<std::vector<std::string>>&& commands
 
     if (ult::expandedMemory && ult::useSoundEffects) {
         //clearSoundCacheNow.store(true, std::memory_order_release);
-        if (triggerEnterSound.exchange(false))
+        if (triggerEnterSound.exchange(false)) {
             ult::AudioPlayer::playEnterSound();
+        } else if (triggerOnSound.exchange(false)) {
+            ult::AudioPlayer::playOnSound();
+        } else if (triggerOffSound.exchange(false)) {
+            ult::AudioPlayer::playOffSound();
+        }
 
-        ult::AudioPlayer::exit();
+        //ult::AudioPlayer::exit();
 
-        //ult::AudioPlayer::unloadAllSounds({ult::AudioPlayer::SoundType::Wall});
+        ult::AudioPlayer::unloadAllSounds({ult::AudioPlayer::SoundType::Wall});
         //clearSoundCacheNow.wait(true, std::memory_order_acquire);
     }
     
