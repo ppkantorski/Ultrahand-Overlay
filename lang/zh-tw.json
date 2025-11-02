@@ -88,6 +88,8 @@
     "FAILED_TO_OPEN": "未能打開文件夾",
     "LAUNCH_COMBOS": "啟動組合鍵",
     "NOTIFICATIONS": "通知",
+    "SOUND_EFFECTS": "Sound Effects",
+    "HAPTIC_FEEDBACK": "Haptic Feedback",
     "OPAQUE_SCREENSHOTS": "不透明的截圖",
     "ON": "啟用",
     "OFF": "停用",
