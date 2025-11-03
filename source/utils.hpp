@@ -4011,12 +4011,12 @@ void handleMoveCommand(const std::vector<std::string>& cmd, const std::string& p
             
             // Periodically shrink strings if they've grown too large
             // This prevents unbounded memory growth for very long paths
-            if (sourcePath.capacity() > 8192) {
-                sourcePath.shrink_to_fit();
-            }
-            if (destinationPath.capacity() > 8192) {
-                destinationPath.shrink_to_fit();
-            }
+            //if (sourcePath.capacity() > 8192) {
+            //    sourcePath.shrink_to_fit();
+            //}
+            //if (destinationPath.capacity() > 8192) {
+            //    destinationPath.shrink_to_fit();
+            //}
         }
         
         fclose(sourceFile);
@@ -4035,7 +4035,7 @@ void handleMoveCommand(const std::vector<std::string>& cmd, const std::string& p
         }
         
         // Set larger buffers for better I/O performance
-        static char sourceFileBuffer[8192], destFileBuffer[8192];
+        char sourceFileBuffer[8192], destFileBuffer[8192];
         sourceFile.rdbuf()->pubsetbuf(sourceFileBuffer, sizeof(sourceFileBuffer));
         destFile.rdbuf()->pubsetbuf(destFileBuffer, sizeof(destFileBuffer));
         

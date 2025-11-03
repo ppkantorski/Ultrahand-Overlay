@@ -1279,15 +1279,15 @@ public:
 
             closeInterpreterThread();
             resetPercentages();
-            //reloadSoundCacheNow.store(true, std::memory_order_release);
 
             if (!commandSuccess.load()) {
                 triggerRumbleDoubleClick.store(true, std::memory_order_release);
             }
 
-            if (expandedMemory && useSoundEffects)
+            if (expandedMemory && useSoundEffects) {
                 reloadSoundCacheNow.store(true, std::memory_order_release);
                 //ult::AudioPlayer::initialize();
+            }
             //lastRunningInterpreter.store(false, std::memory_order_release);
             return true;
         }
@@ -2430,14 +2430,14 @@ public:
                 lastSelectedListItem = nullptr;
             }
             closeInterpreterThread();
-            //reloadSoundCacheNow.store(true, std::memory_order_release);
 
             if (!commandSuccess.load()) {
                 triggerRumbleDoubleClick.store(true, std::memory_order_release);
             }
-            if (expandedMemory && useSoundEffects)
+            if (expandedMemory && useSoundEffects) {
                 reloadSoundCacheNow.store(true, std::memory_order_release);
                 //ult::AudioPlayer::initialize();
+            }
             //lastRunningInterpreter.store(false, std::memory_order_release);
             return true;
         }
@@ -3531,16 +3531,17 @@ public:
         
             closeInterpreterThread();
             resetPercentages();
-            //reloadSoundCacheNow.store(true, std::memory_order_release);
+            
 
 
             if (!commandSuccess.load()) {
                 triggerRumbleDoubleClick.store(true, std::memory_order_release);
             }
 
-            if (expandedMemory && useSoundEffects)
+            if (expandedMemory && useSoundEffects) {
                 reloadSoundCacheNow.store(true, std::memory_order_release);
                 //ult::AudioPlayer::initialize();
+            }
             //lastRunningInterpreter.store(false, std::memory_order_release);
             return true;
         }
@@ -5406,15 +5407,16 @@ public:
         
             closeInterpreterThread();
             resetPercentages();
-            //reloadSoundCacheNow.store(true, std::memory_order_release);
+            
 
             if (!commandSuccess.load()) {
                 triggerRumbleDoubleClick.store(true, std::memory_order_release);
             }
 
-            if (expandedMemory && useSoundEffects)
+            if (expandedMemory && useSoundEffects) {
                 reloadSoundCacheNow.store(true, std::memory_order_release);
                 //ult::AudioPlayer::initialize();
+            }
             //lastRunningInterpreter.store(false, std::memory_order_release);
             return true;
         }
@@ -5422,7 +5424,10 @@ public:
         if (ult::refreshWallpaperNow.exchange(false, std::memory_order_acq_rel)) {
             closeInterpreterThread();
             ult::reloadWallpaper();
-            //reloadSoundCacheNow.store(true, std::memory_order_release);
+            if (expandedMemory && useSoundEffects) {
+                reloadSoundCacheNow.store(true, std::memory_order_release);
+                //ult::AudioPlayer::initialize();
+            }
         }
     
         if (goBackAfter.exchange(false, std::memory_order_acq_rel)) {
@@ -6508,15 +6513,15 @@ public:
         
             closeInterpreterThread();
             resetPercentages();
-            //reloadSoundCacheNow.store(true, std::memory_order_release);
 
             if (!commandSuccess.load()) {
                 triggerRumbleDoubleClick.store(true, std::memory_order_release);
             }
 
-            if (expandedMemory && useSoundEffects)
+            if (expandedMemory && useSoundEffects) {
                 reloadSoundCacheNow.store(true, std::memory_order_release);
                 //ult::AudioPlayer::initialize();
+            }
             //lastRunningInterpreter.store(false, std::memory_order_release);
             return true;
         }
@@ -6524,11 +6529,11 @@ public:
         if (ult::refreshWallpaperNow.exchange(false, std::memory_order_acq_rel)) {
             closeInterpreterThread();
             ult::reloadWallpaper();
-            //reloadSoundCacheNow.store(true, std::memory_order_release);
 
-            if (expandedMemory && useSoundEffects)
+            if (expandedMemory && useSoundEffects) {
                 reloadSoundCacheNow.store(true, std::memory_order_release);
                 //ult::AudioPlayer::initialize();
+            }
         }
 
         if (goBackAfter.exchange(false, std::memory_order_acq_rel)) {
