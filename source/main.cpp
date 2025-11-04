@@ -534,6 +534,7 @@ private:
                 executingCommands = true;
                 isDownloadCommand.store(true, release);
                 const bool disableLoaderUpdate = isFile(FLAGS_PATH+"NO_LOADER_UPDATES.flag");
+                const bool disableSoundEffectsUpdate = isFile(FLAGS_PATH+"NO_SOUND_EFFECTS_UPDATES.flag");
                 if (title == UPDATE_ULTRAHAND) {
                     const std::string versionLabel = cleanVersionLabel(parseValueFromIniSection((SETTINGS_PATH+"RELEASE.ini"), "Release Info", "latest_version"));
                     std::string loaderUrl, loaderPlusUrl;
@@ -558,6 +559,10 @@ private:
                     if (!disableLoaderUpdate) {
                         interpreterCommands.push_back({"download", loaderUrl, EXPANSION_PATH});
                         interpreterCommands.push_back({"download", loaderPlusUrl, EXPANSION_PATH});
+                    }
+                    if (!disableSoundEffectsUpdate) {
+                        interpreterCommands.push_back({"download", SOUND_EFFECTS_URL, SOUNDS_PATH});
+                        interpreterCommands.push_back({"unzip", SOUNDS_PATH + "sounds.zip", SOUNDS_PATH});
                     }
                     
                     // Add the main download
