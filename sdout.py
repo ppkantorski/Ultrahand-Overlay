@@ -102,6 +102,7 @@ def main():
             "config/ultrahand/lang",
             "config/ultrahand/notifications",
             "config/ultrahand/payloads",
+            "config/ultrahand/sounds",
             "config/ultrahand/themes",
             "config/ultrahand/wallpapers",
             "switch/.overlays",
@@ -190,7 +191,19 @@ def main():
         else:
             print("Warning: themes folder not found in Ultrahand repository")
         
-        # Step 8: Copy ovlmenu.ovl
+        # Step 8: Copy sound files
+        print("Copying sound files...")
+        sounds_source = ultrahand_root / "sounds"
+        sounds_dest = sdout_dir / "config/ultrahand/sounds"
+        
+        if sounds_source.exists():
+            for wav_file in sounds_source.glob("*.wav"):
+                shutil.copy2(wav_file, sounds_dest)
+                print(f"Copied {wav_file.name}")
+        else:
+            print("Warning: sounds folder not found in Ultrahand repository")
+        
+        # Step 9: Copy ovlmenu.ovl
         print("Copying ovlmenu.ovl...")
         ovlmenu_source = script_dir / "ovlmenu.ovl"
         ovlmenu_dest = sdout_dir / "switch/.overlays"
@@ -201,12 +214,12 @@ def main():
         else:
             print("Warning: ovlmenu.ovl not found in script directory")
         
-        # Step 9: Clean up temporary files
+        # Step 10: Clean up temporary files
         print("Cleaning up temporary files...")
         shutil.rmtree(temp_dir)
         print("Temporary files deleted")
         
-        # Step 10: Create final zip
+        # Step 11: Create final zip
         output_zip = script_dir / "sdout.zip"
         create_zip_without_metadata(sdout_dir, output_zip)
         
