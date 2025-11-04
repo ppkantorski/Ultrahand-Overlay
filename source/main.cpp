@@ -6582,7 +6582,7 @@ public:
         if (inMainMenu.load(acquire) && !inHiddenMode && dropdownSection.empty()) {
             if (triggerMenuReload || triggerMenuReload2) {
                 triggerMenuReload = triggerMenuReload2 = false;
-
+                disableSound.store(true, std::memory_order_release);
                 ult::launchingOverlay.store(true, std::memory_order_release);
                 //if (menuMode == PACKAGES_STR)
                 //    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "to_packages", FALSE_STR);
@@ -6604,7 +6604,7 @@ public:
                     saveIniFileData(ULTRAHAND_CONFIG_INI_PATH, iniData);
                 }
 
-                tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl", "--skipCombo");
+                tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl", "--skipCombo --comboReturn");
                 tsl::Overlay::get()->close();
             }
             
