@@ -1333,7 +1333,7 @@ public:
                     
                     if (reloadMenu) {
                         //sl::pop(2);
-                        tsl::swapTo<MainMenu>(SwapDepth(2), lastMenuMode);
+                        tsl::swapTo<MainMenu>(SwapDepth(3), lastMenuMode);
                         reloadMenu = false;
                     } else {
                         tsl::goBack();
@@ -1356,7 +1356,7 @@ public:
                 
                 if (reloadMenu2) {
                     //tsl::goBack(2);
-                    tsl::swapTo<UltrahandSettingsMenu>(SwapDepth(2));
+                    tsl::swapTo<UltrahandSettingsMenu>(SwapDepth(3));
                     reloadMenu2 = false;
                 } else {
                     tsl::goBack();
