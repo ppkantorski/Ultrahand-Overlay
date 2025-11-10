@@ -1225,7 +1225,7 @@ public:
                 jumpItemName = "";
                 jumpItemValue = CHECKMARK_SYMBOL;
                 jumpItemExactMatch.store(false, release);
-                g_overlayFilename = "";
+                //g_overlayFilename = "";
             }
             //list->jumpToItem(jumpItemName, jumpItemValue, jumpItemExactMatch.load(acquire));
         } else {
@@ -1235,7 +1235,7 @@ public:
                     jumpItemName = LANGUAGE;
                     jumpItemValue = "";
                     jumpItemExactMatch.store(true, release);
-                    g_overlayFilename = "";
+                    //g_overlayFilename = "";
                 }
                 //languageWasChanged.store(false, release);
                 //list->jumpToItem(jumpItemName, jumpItemValue, jumpItemExactMatch.load(acquire));
@@ -1245,7 +1245,7 @@ public:
                     jumpItemName = THEME;
                     jumpItemValue = "";
                     jumpItemExactMatch.store(true, release);
-                    g_overlayFilename = "";
+                    //g_overlayFilename = "";
                 }
                 themeWasChanged = false;
                 //list->jumpToItem(jumpItemName, jumpItemValue, jumpItemExactMatch.load(acquire));
@@ -1255,7 +1255,7 @@ public:
                     jumpItemName = "";
                     jumpItemValue = "";
                     jumpItemExactMatch.store(true, release);
-                    g_overlayFilename = "";
+                    //g_overlayFilename = "";
                 }
                 //list->jumpToItem(jumpItemName, jumpItemValue, jumpItemExactMatch.load(acquire));
             }
@@ -1830,7 +1830,7 @@ public:
             jumpItemName = "";
             jumpItemValue = CHECKMARK_SYMBOL;
             jumpItemExactMatch.store(true, release);
-            g_overlayFilename = "";
+            //g_overlayFilename = "";
         }
         
         list->jumpToItem(jumpItemName, jumpItemValue, jumpItemExactMatch.load(acquire));
@@ -1882,7 +1882,7 @@ public:
             inSubSettingsMenu = false;
             
             // Clear the current selection
-            //g_overlayFilename = "";
+            ////g_overlayFilename = "";
             //entryName = "";
             
             // Determine return destination
@@ -1908,7 +1908,7 @@ public:
             runningInterpreter.store(false, release);
             jumpItemName = rootTitle;
             jumpItemValue = rootVersion;
-            g_overlayFilename = "";
+            //g_overlayFilename = "";
             jumpItemExactMatch.store(false, release);
             skipJumpReset.store(true, release);
             
@@ -2052,7 +2052,7 @@ public:
                         //    //std::lock_guard<std::mutex> lock(jumpItemMutex);
                         jumpItemName = rootTitle;
                         jumpItemValue = rootVersion;
-                        g_overlayFilename = "";
+                        //g_overlayFilename = "";
                         jumpItemExactMatch.store(false, release);
                         skipJumpReset.store(true, release);
                         //}
@@ -2103,7 +2103,7 @@ public:
                     jumpItemName = modeTitle;
                     jumpItemValue = "";
                     jumpItemExactMatch.store(true, release);
-                    g_overlayFilename = "";
+                    //g_overlayFilename = "";
                     //}
     
                     tsl::swapTo<SettingsMenu>(
@@ -2119,7 +2119,7 @@ public:
                         jumpItemName = modeTitle;  // Focus on the mode that was just edited
                         jumpItemValue = "";
                         jumpItemExactMatch.store(true, release);
-                        g_overlayFilename = "";
+                        //g_overlayFilename = "";
                         
                         tsl::swapTo<SettingsMenu>(
                             SwapDepth(2),
@@ -2140,7 +2140,7 @@ public:
                     //jumpItemName = MODES;
                     //jumpItemValue = "";
                     //jumpItemExactMatch.store(true, release);
-                    //g_overlayFilename = "";
+                    ////g_overlayFilename = "";
 
                     //reloadMenu2 = true;
                 }
@@ -2168,6 +2168,7 @@ public:
 
 // For persistent versions and colors across nested packages (when not specified)
 std::string packageRootLayerTitle;
+std::string packageRootLayerName;
 std::string packageRootLayerVersion;
 std::string packageRootLayerColor;
 bool packageRootLayerIsStarred = false;
@@ -4941,13 +4942,13 @@ bool drawCommandsMenu(
                                         jumpItemName = "";
                                         jumpItemValue = CHECKMARK_SYMBOL;
                                         jumpItemExactMatch.store(true, release);
-                                        g_overlayFilename = "";
+                                        //g_overlayFilename = "";
                                     } else {
                                         //std::lock_guard<std::mutex> lock(jumpItemMutex);
                                         jumpItemName = "";
                                         jumpItemValue = "";
                                         jumpItemExactMatch.store(true, release);
-                                        g_overlayFilename = "";
+                                        //g_overlayFilename = "";
                                     }
 
                                     tsl::changeTo<SelectionOverlay>(packagePath, keyName, newKey, lastPackageHeader, commands, showWidget);
@@ -5209,7 +5210,7 @@ public:
             //        jumpItemName = "";
             //        jumpItemValue = "";
             //        jumpItemExactMatch.store(true, release);
-            //        g_overlayFilename = "";
+            //        //g_overlayFilename = "";
             //    } else
             //        skipJumpReset.store(false, release);
             //}
@@ -5218,7 +5219,7 @@ public:
                 jumpItemName = "";
                 jumpItemValue = "";
                 jumpItemExactMatch.store(true, release);
-                g_overlayFilename = "";
+                //g_overlayFilename = "";
             } else
                 skipJumpReset.store(false, release);
             //tsl::clearGlyphCacheNow.store(true, release);
@@ -5237,9 +5238,7 @@ public:
             tsl::clearGlyphCacheNow.store(true, release);
             clearMemory();
             
-            packageRootLayerTitle = "";
-            packageRootLayerVersion = "";
-            packageRootLayerColor = "";
+            packageRootLayerTitle = packageRootLayerVersion = packageRootLayerColor = "";
             overrideTitle = false;
             overrideVersion = false;
 
@@ -5648,10 +5647,10 @@ public:
                 }
                 {
                     //std::lock_guard<std::mutex> lock(jumpItemMutex);
-                    jumpItemName = packageRootLayerIsStarred ? STAR_SYMBOL + "  " + packageRootLayerTitle : packageRootLayerTitle;
+                    jumpItemName = (packageRootLayerIsStarred ? STAR_SYMBOL + "  " + packageRootLayerTitle : packageRootLayerTitle) + "?" + packageRootLayerName;
                     jumpItemValue = hidePackageVersions ? "" : packageRootLayerVersion;
                     jumpItemExactMatch.store(true, release);
-                    g_overlayFilename = "";
+                    //g_overlayFilename = "";
                     skipJumpReset.store(true, release);
                 }
                 
@@ -5968,7 +5967,7 @@ public:
         //if (g_overlayFilename != "ovlmenu.ovl") {
         //    list->jumpToItem(jumpItemName, jumpItemValue, jumpItemExactMatch.load(acquire));
         //} else {
-        //    g_overlayFilename = "";
+        //    //g_overlayFilename = "";
         //}
 
         
@@ -6106,7 +6105,7 @@ public:
                 const std::string newOverlayName = overlayStarred ? STAR_SYMBOL+"  "+overlayName : overlayName;
                 const bool newStarred = !overlayStarred;
         
-                tsl::elm::ListItem* listItem = new tsl::elm::ListItem(newOverlayName, "", false, false);
+                tsl::elm::ListItem* listItem = new tsl::elm::ListItem(newOverlayName+"?"+overlayFileName, "", false, false);
                 
                 overlayVersion = getFirstLongEntry(overlayVersion);
                 if (cleanVersionLabels) overlayVersion = cleanVersionLabel(overlayVersion);
@@ -6117,8 +6116,9 @@ public:
                 }
                 listItem->setTextColor(usingLibUltrahand ? (useLibultrahandTitles ? tsl::ultOverlayTextColor : tsl::overlayTextColor) : tsl::overlayTextColor);
         
-                if (overlayFileName == g_overlayFilename) {
-                    jumpItemName = newOverlayName;
+                if (overlayFileName == lastOverlayFilename) {
+                    lastOverlayFilename = "";
+                    jumpItemName = newOverlayName + "?"+overlayFileName;
                     jumpItemValue = hideOverlayVersions ? "" : overlayVersion;
                     jumpItemExactMatch.store(true, release);
                 }
@@ -6167,10 +6167,10 @@ public:
                             setIniFileValue(OVERLAYS_INI_FILEPATH, overlayFileName, STAR_STR, newStarred ? TRUE_STR : FALSE_STR);
                         }
                         skipJumpReset.store(true, release);
-                        jumpItemName = newStarred ? STAR_SYMBOL + "  " + overlayName : overlayName;
+                        jumpItemName = (newStarred ? STAR_SYMBOL + "  " + overlayName : overlayName) + "?"+overlayFileName;
                         jumpItemValue = hideOverlayVersions ? "" : overlayVersion;
                         jumpItemExactMatch.store(true, release);
-                        g_overlayFilename = "";
+                        //g_overlayFilename = "";
                         wasInHiddenMode = inHiddenMode;
                         if (inHiddenMode) {
                             inMainMenu.store(false, std::memory_order_release);
@@ -6189,17 +6189,17 @@ public:
                             lastMenu = "hiddenMenuMode";
                             inHiddenMode = false;
                         }
-                        returnJumpItemName = !newStarred ? STAR_SYMBOL + "  " + overlayName : overlayName;
+                        returnJumpItemName = (!newStarred ? STAR_SYMBOL + "  " + overlayName : overlayName) + "?"+overlayFileName;
                         returnJumpItemValue = hideOverlayVersions ? "" : overlayVersion;
                         jumpItemName = jumpItemValue = "";
                         //jumpItemExactMatch.store(true, release);
-                        g_overlayFilename = "";
+                        //g_overlayFilename = "";
                         tsl::changeTo<SettingsMenu>(overlayFileName, OVERLAY_STR, overlayName, overlayVersion);
                         triggerRumbleClick.store(true, std::memory_order_release);
                         triggerSettingsSound.store(true, std::memory_order_release);
                         return true;
                     } else if (keys & SYSTEM_SETTINGS_KEY && !(keys & ~SYSTEM_SETTINGS_KEY & ALL_KEYS_MASK)) {
-                        returnJumpItemName = !newStarred ? STAR_SYMBOL + "  " + overlayName : overlayName;
+                        returnJumpItemName = (!newStarred ? STAR_SYMBOL + "  " + overlayName : overlayName) + "?"+overlayFileName;
                         returnJumpItemValue = hideOverlayVersions ? "" : overlayVersion;
                         return true;
                     }
@@ -6220,7 +6220,7 @@ public:
                 }
 
                 if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
-                    g_overlayFilename = "";
+                    //g_overlayFilename = "";
                     jumpItemName = "";
                     jumpItemValue = "";
                     jumpItemExactMatch.store(true, release);
@@ -6372,7 +6372,7 @@ public:
     
                 const bool newStarred = !packageStarred;
     
-                tsl::elm::ListItem* listItem = new tsl::elm::ListItem(packageStarred ? STAR_SYMBOL + "  " + newPackageName : newPackageName, "", false, false);
+                tsl::elm::ListItem* listItem = new tsl::elm::ListItem((packageStarred ? STAR_SYMBOL + "  " + newPackageName : newPackageName) + "?" + packageName, "", false, false);
                 if (!hidePackageVersions) {
                     listItem->setValue(packageVersion, true);
                     listItem->setValueColor(usePackageVersions ? tsl::ultPackageVersionTextColor : tsl::packageVersionTextColor);
@@ -6418,6 +6418,7 @@ public:
                         }
     
                         packageRootLayerTitle = newPackageName;
+                        packageRootLayerName = packageName;
                         packageRootLayerVersion = packageVersion;
                         packageRootLayerIsStarred = packageStarred;
                         tsl::clearGlyphCacheNow.store(true, release);
@@ -6426,10 +6427,10 @@ public:
                     } else if (keys & STAR_KEY && !(keys & ~STAR_KEY & ALL_KEYS_MASK)) {
                         if (!packageName.empty()) setIniFileValue(PACKAGES_INI_FILEPATH, packageName, STAR_STR, newStarred ? TRUE_STR : FALSE_STR);
                         skipJumpReset.store(true, release);
-                        jumpItemName = newStarred ? STAR_SYMBOL + "  " + newPackageName : newPackageName;
+                        jumpItemName = (newStarred ? STAR_SYMBOL + "  " + newPackageName : newPackageName) +"?"+packageName;
                         jumpItemValue = hidePackageVersions ? "" : packageVersion;
                         jumpItemExactMatch.store(true, release);
-                        g_overlayFilename = "";
+                        //g_overlayFilename = "";
                         wasInHiddenMode = inHiddenMode;
                         if (inHiddenMode) {
                             inMainMenu.store(false, std::memory_order_release);
@@ -6448,17 +6449,17 @@ public:
                             lastMenu = "hiddenMenuMode";
                             inHiddenMode = false;
                         }
-                        returnJumpItemName = !newStarred ? STAR_SYMBOL + "  " + newPackageName : newPackageName;
+                        returnJumpItemName = (!newStarred ? STAR_SYMBOL + "  " + newPackageName : newPackageName) +"?"+packageName;
                         returnJumpItemValue = hidePackageVersions ? "" : packageVersion;
                         //jumpItemExactMatch.store(true, release);
                         jumpItemName = jumpItemValue = "";
-                        g_overlayFilename = "";
+                        //g_overlayFilename = "";
                         tsl::changeTo<SettingsMenu>(packageName, PACKAGE_STR, newPackageName, packageVersion);
                         triggerRumbleClick.store(true, std::memory_order_release);
                         triggerSettingsSound.store(true, std::memory_order_release);
                         return true;
                     } else if (keys & SYSTEM_SETTINGS_KEY && !(keys & ~SYSTEM_SETTINGS_KEY & ALL_KEYS_MASK)) {
-                        returnJumpItemName = !newStarred ? STAR_SYMBOL + "  " + newPackageName : newPackageName;
+                        returnJumpItemName = (!newStarred ? STAR_SYMBOL + "  " + newPackageName : newPackageName) +"?"+packageName;
                         returnJumpItemValue = hidePackageVersions ? "" : packageVersion;
                         return true;
                     }
@@ -6631,7 +6632,7 @@ public:
                 jumpItemName = HIDDEN;
                 jumpItemValue = DROPDOWN_SYMBOL;
                 jumpItemExactMatch.store(true, release);
-                g_overlayFilename = "";
+                //g_overlayFilename = "";
                 wasInHiddenMode = false;
             }
             return true;
@@ -6711,7 +6712,7 @@ public:
                 auto resetNavState = [&]() {
                     {
                         //std::lock_guard<std::mutex> lock(jumpItemMutex);
-                        g_overlayFilename = "";
+                        //g_overlayFilename = "";
                         jumpItemName = "";
                         jumpItemValue = "";
                         jumpItemExactMatch.store(true, release);
@@ -6835,7 +6836,7 @@ public:
                         jumpItemName = HIDDEN;
                         jumpItemValue = DROPDOWN_SYMBOL;
                         jumpItemExactMatch.store(true, release);
-                        g_overlayFilename = "";
+                        //g_overlayFilename = "";
                     }
                     returningToMain = true;
                     //tsl::pop();
