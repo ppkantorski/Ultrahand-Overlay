@@ -6189,9 +6189,10 @@ public:
                             lastMenu = "hiddenMenuMode";
                             inHiddenMode = false;
                         }
-                        jumpItemName = !newStarred ? STAR_SYMBOL + "  " + overlayName : overlayName;
-                        jumpItemValue = hideOverlayVersions ? "" : overlayVersion;
-                        jumpItemExactMatch.store(true, release);
+                        returnJumpItemName = !newStarred ? STAR_SYMBOL + "  " + overlayName : overlayName;
+                        returnJumpItemValue = hideOverlayVersions ? "" : overlayVersion;
+                        jumpItemName = jumpItemValue = "";
+                        //jumpItemExactMatch.store(true, release);
                         g_overlayFilename = "";
                         tsl::changeTo<SettingsMenu>(overlayFileName, OVERLAY_STR, overlayName, overlayVersion);
                         triggerRumbleClick.store(true, std::memory_order_release);
@@ -6447,9 +6448,10 @@ public:
                             lastMenu = "hiddenMenuMode";
                             inHiddenMode = false;
                         }
-                        jumpItemName = !newStarred ? STAR_SYMBOL + "  " + newPackageName : newPackageName;
-                        jumpItemValue = hidePackageVersions ? "" : packageVersion;
-                        jumpItemExactMatch.store(true, release);
+                        returnJumpItemName = !newStarred ? STAR_SYMBOL + "  " + newPackageName : newPackageName;
+                        returnJumpItemValue = hidePackageVersions ? "" : packageVersion;
+                        //jumpItemExactMatch.store(true, release);
+                        jumpItemName = jumpItemValue = "";
                         g_overlayFilename = "";
                         tsl::changeTo<SettingsMenu>(packageName, PACKAGE_STR, newPackageName, packageVersion);
                         triggerRumbleClick.store(true, std::memory_order_release);
