@@ -326,7 +326,8 @@ private:
     int MAX_PRIORITY = 20;
     std::string comboLabel;
     //std::string lastSelectedListItemFooter = "";
-    
+    bool notifyNow = false;
+
     bool rightAlignmentState;
 
     void addListItem(tsl::elm::List* list, const std::string& title, const std::string& value, const std::string& targetMenu) {
@@ -618,7 +619,7 @@ private:
                               const bool invertLogic = false, const bool useReloadMenu = false, const bool useReloadMenu2 = false, const bool isMini = true) {
 
         auto* toggleListItem = new tsl::elm::ToggleListItem(title, invertLogic ? !state : state, ON, OFF, isMini);
-        toggleListItem->setStateChangedListener([&state, iniKey, invertLogic, useReloadMenu, useReloadMenu2, listItem = toggleListItem](bool newState) {
+        toggleListItem->setStateChangedListener([this, &state, iniKey, invertLogic, useReloadMenu, useReloadMenu2, listItem = toggleListItem](bool newState) {
             tsl::Overlay::get()->getCurrentGui()->requestFocus(listItem, tsl::FocusDirection::None);
             
             // Calculate the actual logical state first
@@ -648,14 +649,15 @@ private:
                 if (!isFile(EXPANSION_PATH + "nx-ovlloader.zip") || !isFile(EXPANSION_PATH + "nx-ovlloader+.zip")) {
                     listItem->setState(loaderTitle == "nx-ovlloader+");
                 } else {
-                    executeCommands({
-                        {"try:"},
-                        {"del", EXPANSION_PATH + (actualState ? "nx-ovlloader+/" : "nx-ovlloader/")},
-                        {"unzip", EXPANSION_PATH + (actualState ? "nx-ovlloader+.zip" : "nx-ovlloader.zip"),
-                         EXPANSION_PATH + (actualState ? "nx-ovlloader+/" : "nx-ovlloader/")},
-                        {"mv", EXPANSION_PATH + (actualState ? "nx-ovlloader+/" : "nx-ovlloader/"), "/"},
-                        {"notify", REBOOT_IS_REQUIRED}
-                    });
+                    //executeCommands({
+                    //    //{"try:"},
+                    //    //{"del", EXPANSION_PATH + (actualState ? "nx-ovlloader+/" : "nx-ovlloader/")},
+                    //    {"unzip", EXPANSION_PATH + (actualState ? "nx-ovlloader+.zip" : "nx-ovlloader.zip"), "/"}
+                    //    //{"notify", REBOOT_IS_REQUIRED}
+                    //});
+                    if (unzipFile(EXPANSION_PATH + (actualState ? "nx-ovlloader+.zip" : "nx-ovlloader.zip"), "sdmc:/") && (firstState != state)) {
+                        notifyNow = true;
+                    }
                 }
             } else if (iniKey == "right_alignment") {
                 if (!state) {
@@ -1303,6 +1305,18 @@ public:
             disableSound.store(true, std::memory_order_release);
             simulatedBack.store(true, std::memory_order_release);
             return true;
+        }
+
+        if (notifyNow && tsl::notification) {
+            static bool delayOnce = true;
+
+            if (delayOnce) {
+                delayOnce = false;
+            } else {
+                delayOnce = true;
+                notifyNow = false;
+                tsl::notification->show(REBOOT_IS_REQUIRED);
+            }
         }
 
         //if (refreshPage.load(acquire)) {
