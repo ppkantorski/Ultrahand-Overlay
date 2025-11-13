@@ -60,7 +60,7 @@ std::atomic<bool> usingMariko{util::IsMariko()};
 // Device info globals
 static char amsVersion[12];
 static char hosVersion[12];
-static bool usingHOS21orHigher = false;
+
 static std::string memoryType;
 static std::string memoryVendor = UNAVAILABLE_SELECTION;
 static std::string memoryModel = UNAVAILABLE_SELECTION;
@@ -706,7 +706,7 @@ void unpackDeviceInfo() {
     // Format HOS version
     formatVersion(packed_version, 24, 16, 8, hosVersion);
 
-    usingHOS21orHigher = (strcmp(hosVersion, "20.0.0") >= 0); // set global variable
+    //usingHOS21orHigher = (strcmp(hosVersion, "20.0.0") >= 0); // set global variable
 
     splGetConfig((SplConfigItem)65007, &packed_version);
     usingEmunand = (packed_version != 0);
