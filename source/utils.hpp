@@ -706,7 +706,7 @@ void unpackDeviceInfo() {
     // Format HOS version
     formatVersion(packed_version, 24, 16, 8, hosVersion);
 
-    usingHOS21orHigher = (strcmp(hosVersion, "21.0.0") >= 0); // set global variable
+    usingHOS21orHigher = (strcmp(hosVersion, "20.0.0") >= 0); // set global variable
 
     splGetConfig((SplConfigItem)65007, &packed_version);
     usingEmunand = (packed_version != 0);

@@ -143,7 +143,7 @@ static std::string lastKeyName = "";
 static bool hideUserGuide = false;
 //static bool hideHidden = false; // moved to tesla.hpp
 static bool hideDelete = false;
-static bool hideForceSupport = true;
+//static bool hideForceSupport = true;
 static bool hideUnsupported = false;
 
 static std::string lastCommandMode;
@@ -1207,8 +1207,8 @@ public:
             hideDelete = getBoolValue("hide_delete", false); // FALSE_STR default
             createToggleListItem(list, SHOW_DELETE, hideDelete, "hide_delete", true);
             if (usingHOS21orHigher) {
-                hideForceSupport = getBoolValue("hide_force_support", true); // FALSE_STR default
-                createToggleListItem(list, "Show Force Support", hideForceSupport, "hide_force_support", true);
+                //hideForceSupport = getBoolValue("hide_force_support", true); // FALSE_STR default
+                //createToggleListItem(list, "Show Force Support", hideForceSupport, "hide_force_support", true);
                 hideUnsupported = getBoolValue("hide_unsupported", false); // FALSE_STR default
                 createToggleListItem(list, "Show Unsupported", hideUnsupported, "hide_unsupported", true, true, true);
             }
@@ -1467,6 +1467,11 @@ public:
             if (handleReload) {
                 reloadMenu = state || (reloadMenu2 = !state);
             }
+            if (iniKey == "force_support") {
+                if (state && tsl::notification) {
+                    tsl::notification->show("  Forcing support can be dangerous.", 20);
+                }
+            }
         });
         list->addItem(toggleListItem);
     }
@@ -1624,8 +1629,9 @@ public:
                     item->setClickListener(navClick(entryName, entryMode, title, version, MODE_STR, item));
                     list->addItem(item);
                 }
-                if (!hideForceSupport && usingHOS21orHigher && requiresHOS21Handling) {
-                    createAndAddToggleListItem(list, "Force Support",
+                //if (!hideForceSupport && usingHOS21orHigher && requiresHOS21Handling) {
+                if (usingHOS21orHigher && requiresHOS21Handling) {
+                    createAndAddToggleListItem(list, "Force HOS21 Support",
                         false, "force_support", getValue("force_support"), settingsIniPath, entryName, true);
                 }
             } else if (entryMode == PACKAGE_STR) {
@@ -7148,7 +7154,7 @@ void initializeSettingsAndDirectories() {
     setDefaultValue("hide_hidden", FALSE_STR, hideHidden);
     setDefaultValue("hide_delete", FALSE_STR, hideDelete);
     if (usingHOS21orHigher) {
-        setDefaultValue("hide_force_support", TRUE_STR, hideForceSupport);
+        //setDefaultValue("hide_force_support", TRUE_STR, hideForceSupport);
         setDefaultValue("hide_unsupported", FALSE_STR, hideUnsupported);
     }
     setDefaultValue("clean_version_labels", FALSE_STR, cleanVersionLabels);
