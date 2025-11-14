@@ -1016,7 +1016,6 @@ constexpr int OverlayLoaderModuleId = 348;
 constexpr Result ResultSuccess = MAKERESULT(0, 0);
 constexpr Result ResultParseError = MAKERESULT(OverlayLoaderModuleId, 1);
 constexpr uint32_t ULTR_SIGNATURE  = 0x52544C55; // "ULTR"
-constexpr uint32_t HOS21_SIGNATURE = 0x2B313248; // "H21+" (little-endian)
 
 
 /**
@@ -1040,7 +1039,7 @@ std::tuple<Result, std::string, std::string, bool, bool> getOverlayInfo(const st
 
     // --- Strategy: Read front chunk that likely contains header + MOD0 ---
     // Most NRO files have MOD0 within first 8-16KB
-    constexpr size_t FRONT_READ_SIZE = 16384;  // 16KB
+    constexpr size_t FRONT_READ_SIZE = 8192;  // 16KB
     const size_t frontReadSize = (fileSz < FRONT_READ_SIZE) ? fileSz : FRONT_READ_SIZE;
     
     uint8_t* frontBuf = static_cast<uint8_t*>(malloc(frontReadSize));
@@ -1078,11 +1077,11 @@ std::tuple<Result, std::string, std::string, bool, bool> getOverlayInfo(const st
     const uint32_t mod0_rel = *reinterpret_cast<const uint32_t*>(frontBuf + 0x4);
     const uint32_t text_offset = *reinterpret_cast<const uint32_t*>(frontBuf + 0x20);
     
-    if (text_offset < fileSz && mod0_rel != 0) {
+    if (text_offset < fileSz && mod0_rel != 0 && text_offset <= fileSz - mod0_rel) {
         const uint32_t mod0_offset = text_offset + mod0_rel;
         
-        // Check if MOD0 is in our front buffer
-        if (mod0_offset + 60 <= frontReadSize) {
+        // Check if MOD0 is in our front buffer (must check both offset and end are in buffer)
+        if (mod0_offset < frontReadSize && mod0_offset <= frontReadSize - 60) {
             const uint8_t* mod0_ptr = frontBuf + mod0_offset;
             
             if (std::memcmp(mod0_ptr, "MOD0", 4) == 0 &&
@@ -1090,7 +1089,7 @@ std::tuple<Result, std::string, std::string, bool, bool> getOverlayInfo(const st
                 const uint32_t libnxVersion = *reinterpret_cast<const uint32_t*>(mod0_ptr + 56);
                 usesNewLibNX = (libnxVersion >= 1);
             }
-        } else if (mod0_offset + 60 < fileSz) {
+        } else if (mod0_offset < fileSz && mod0_offset <= fileSz - 60) {
             // MOD0 is beyond our buffer - need separate read
             uint8_t mod0Buf[60];
             fseek(file, mod0_offset, SEEK_SET);
@@ -1128,11 +1127,15 @@ std::tuple<Result, std::string, std::string, bool, bool> getOverlayInfo(const st
         return {ResultParseError, "", "", false, usesNewLibNX};
     }
 
-    // --- Check ULTR signature ---
+    // --- Check ULTR signature (last 4 bytes of file) ---
     uint32_t last4 = 0;
-    fseek(file, -4, SEEK_END);
-    const bool usingLibUltrahand = (fread(&last4, sizeof(last4), 1, file) == 1) && 
-                                   (last4 == ULTR_SIGNATURE);
+    bool usingLibUltrahand = false;
+    
+    if (fileSz >= 4) {
+        fseek(file, -4, SEEK_END);
+        usingLibUltrahand = (fread(&last4, sizeof(last4), 1, file) == 1) && 
+                           (last4 == ULTR_SIGNATURE);
+    }
 
     fclose(file);
 

@@ -6079,7 +6079,7 @@ public:
                     
                     if (isHidden) {
                         if (!hideUnsupported || !usingAMS110orHigher || 
-                            usesNewLibNX(OVERLAY_PATH + overlayFileName) || 
+                            usingLNY2(OVERLAY_PATH + overlayFileName) || 
                             getValueOrDefault(it->second, "force_support", FALSE_STR) == TRUE_STR) {
                             drawHiddenTab = true;
                         }
