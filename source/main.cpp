@@ -338,9 +338,9 @@ private:
         listItem->setClickListener([listItem, targetMenu](uint64_t keys) {
             if (runningInterpreter.load(acquire))
                 return false;
-
+            
             if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
-
+                
                 if (targetMenu == "softwareUpdateMenu") {
                     deleteFileOrDirectory(SETTINGS_PATH+"RELEASE.ini");
                     downloadFile(LATEST_RELEASE_INFO_URL, SETTINGS_PATH);
@@ -1185,7 +1185,7 @@ public:
             addHeader(list, MENU_SETTINGS);
             hideUserGuide = getBoolValue("hide_user_guide", false); // FALSE_STR default
             createToggleListItem(list, USER_GUIDE, hideUserGuide, "hide_user_guide", true, true, true);
-            if (usingHOS21orHigher) {
+            if (usingAMS110orHigher) {
                 //hideForceSupport = getBoolValue("hide_force_support", true); // FALSE_STR default
                 //createToggleListItem(list, "Show Force Support", hideForceSupport, "hide_force_support", true);
                 hideUnsupported = getBoolValue("hide_unsupported", false); // FALSE_STR default
@@ -1418,7 +1418,7 @@ class SettingsMenu : public tsl::Gui {
 private:
     std::string entryName, entryMode, title, version, dropdownSelection, settingsIniPath;
     
-    bool requiresHOS21Handling = false;
+    bool requiresAMS110Handling = false;
 
     bool isInSection, inQuotes, isFromMainMenu;
     int MAX_PRIORITY = 20;
@@ -1431,8 +1431,8 @@ private:
     bool deleteItemFocused = false;
 
 public:
-    SettingsMenu(const std::string& name, const std::string& mode, const std::string& title = "", const std::string& version = "", const std::string& selection = "", bool _requiresHOS21Handling = false)
-        : entryName(name), entryMode(mode), title(title), version(version), dropdownSelection(selection), requiresHOS21Handling(_requiresHOS21Handling) {
+    SettingsMenu(const std::string& name, const std::string& mode, const std::string& title = "", const std::string& version = "", const std::string& selection = "", bool _requiresAMS110Handling = false)
+        : entryName(name), entryMode(mode), title(title), version(version), dropdownSelection(selection), requiresAMS110Handling(_requiresAMS110Handling) {
             // Only store once
             if (settingsMenuPageDepth == 0) {
                rootEntryName = name;
@@ -1633,9 +1633,9 @@ public:
                     item->setClickListener(navClick(entryName, entryMode, title, version, MODE_STR, item));
                     list->addItem(item);
                 }
-                //if (!hideForceSupport && usingHOS21orHigher && requiresHOS21Handling) {
-                if (usingHOS21orHigher && requiresHOS21Handling) {
-                    createAndAddToggleListItem(list, "Force H21+ Support",
+                //if (!hideForceSupport && usingAMS110orHigher && requiresAMS110Handling) {
+                if (usingAMS110orHigher && requiresAMS110Handling) {
+                    createAndAddToggleListItem(list, "Force LNY2 Support",
                         false, "force_support", getValue("force_support"), settingsIniPath, entryName, true);
                 }
             } else if (entryMode == PACKAGE_STR) {
@@ -6042,7 +6042,7 @@ public:
                 
                 auto it = overlaysIniData.find(overlayFileName);
                 if (it == overlaysIniData.end()) {
-                    const auto& [result, overlayName, overlayVersion, usingLibUltrahand, supportsHOS21] = getOverlayInfo(OVERLAY_PATH + overlayFileName);
+                    const auto& [result, overlayName, overlayVersion, usingLibUltrahand, supportsAMS110] = getOverlayInfo(OVERLAY_PATH + overlayFileName);
                     if (result != ResultSuccess) continue;
     
                     auto& overlaySection = overlaysIniData[overlayFileName];
@@ -6070,7 +6070,7 @@ public:
                     overlayEntryKey += ':';
                     overlayEntryKey += (usingLibUltrahand ? '1' : '0');
                     overlayEntryKey += ':';
-                    overlayEntryKey += (supportsHOS21 ? '1' : '0');
+                    overlayEntryKey += (supportsAMS110 ? '1' : '0');
                     overlayEntryKey += ":0";
                     overlaySet.emplace(std::move(overlayEntryKey));
                 } else {
@@ -6078,15 +6078,15 @@ public:
                     const bool isHidden = (hide == TRUE_STR);
                     
                     if (isHidden) {
-                        if (!hideUnsupported || !usingHOS21orHigher || 
-                            hasHOS21Support(OVERLAY_PATH + overlayFileName) || 
+                        if (!hideUnsupported || !usingAMS110orHigher || 
+                            usesNewLibNX(OVERLAY_PATH + overlayFileName) || 
                             getValueOrDefault(it->second, "force_support", FALSE_STR) == TRUE_STR) {
                             drawHiddenTab = true;
                         }
                     }
                     
                     if ((!inHiddenMode && !isHidden) || (inHiddenMode && isHidden)) {
-                        const auto& [result, overlayName, overlayVersion, usingLibUltrahand, supportsHOS21] = getOverlayInfo(OVERLAY_PATH + overlayFileName);
+                        const auto& [result, overlayName, overlayVersion, usingLibUltrahand, supportsAMS110] = getOverlayInfo(OVERLAY_PATH + overlayFileName);
                         if (result != ResultSuccess) continue;
                         
                         const std::string& priority = (it->second.find(PRIORITY_STR) != it->second.end()) ? formatPriorityString(it->second[PRIORITY_STR]) : "0020";
@@ -6096,7 +6096,7 @@ public:
                         
                         const std::string& assignedName = !customName.empty() ? customName : overlayName;
                         const std::string& assignedVersion = !customVersion.empty() ? customVersion : overlayVersion;
-                        const bool forceHOS21Support = getValueOrDefault(it->second, "force_support", FALSE_STR) == TRUE_STR;
+                        const bool forceAMS110Support = getValueOrDefault(it->second, "force_support", FALSE_STR) == TRUE_STR;
     
                         // Build entry key with single allocation
                         overlayEntryKey.clear();
@@ -6118,9 +6118,9 @@ public:
                         overlayEntryKey += ':';
                         overlayEntryKey += (usingLibUltrahand ? '1' : '0');
                         overlayEntryKey += ':';
-                        overlayEntryKey += (supportsHOS21 ? '1' : '0');
+                        overlayEntryKey += (supportsAMS110 ? '1' : '0');
                         overlayEntryKey += ':';
-                        overlayEntryKey += (forceHOS21Support ? '1' : '0');
+                        overlayEntryKey += (forceAMS110Support ? '1' : '0');
                         overlaySet.emplace(std::move(overlayEntryKey));
                     }
                 }
@@ -6152,8 +6152,8 @@ public:
                 overlayVersion.clear();
                 const bool overlayStarred = (taintedOverlayFileName.compare(0, 3, "-1:") == 0);
                 bool usingLibUltrahand = false;
-                bool supportsHOS21 = false;
-                bool forceHOS21Support = false;
+                bool supportsAMS110 = false;
+                bool forceAMS110Support = false;
                 
                 // Parse from the end - optimized with fewer branches
                 const size_t len = taintedOverlayFileName.size();
@@ -6170,16 +6170,16 @@ public:
                 
                 if (count == 6) {
                     // Direct character access instead of substr for single chars
-                    forceHOS21Support = (taintedOverlayFileName[positions[0] + 1] == '1');
-                    supportsHOS21 = (taintedOverlayFileName[positions[1] + 1] == '1');
+                    forceAMS110Support = (taintedOverlayFileName[positions[0] + 1] == '1');
+                    supportsAMS110 = (taintedOverlayFileName[positions[1] + 1] == '1');
                     usingLibUltrahand = (taintedOverlayFileName[positions[2] + 1] == '1');
                     overlayFileName.assign(taintedOverlayFileName, positions[3] + 1, positions[2] - positions[3] - 1);
                     overlayVersion.assign(taintedOverlayFileName, positions[4] + 1, positions[3] - positions[4] - 1);
                     overlayName.assign(taintedOverlayFileName, positions[5] + 1, positions[4] - positions[5] - 1);
                 }
     
-                const bool requiresHOS21Handling = (usingHOS21orHigher && !supportsHOS21 && !forceHOS21Support);
-                if (hideUnsupported && requiresHOS21Handling)
+                const bool requiresAMS110Handling = (usingAMS110orHigher && !supportsAMS110 && !forceAMS110Support);
+                if (hideUnsupported && requiresAMS110Handling)
                     continue;
     
                 const std::string overlayFile = OVERLAY_PATH + overlayFileName;
@@ -6208,7 +6208,7 @@ public:
                     listItem->setValue(displayVersion, true);
                     listItem->setValueColor(usingLibUltrahand ? (useLibultrahandVersions ? tsl::ultOverlayVersionTextColor : tsl::overlayVersionTextColor) : tsl::overlayVersionTextColor);
                 }
-                listItem->setTextColor(requiresHOS21Handling ? tsl::warningTextColor : usingLibUltrahand ? (useLibultrahandTitles ? tsl::ultOverlayTextColor : tsl::overlayTextColor) : tsl::overlayTextColor);
+                listItem->setTextColor(requiresAMS110Handling ? tsl::warningTextColor : usingLibUltrahand ? (useLibultrahandTitles ? tsl::ultOverlayTextColor : tsl::overlayTextColor) : tsl::overlayTextColor);
                 
                 if (overlayFileName == lastOverlayFilename) {
                     lastOverlayFilename = "";
@@ -6217,14 +6217,14 @@ public:
                     jumpItemExactMatch.store(true, std::memory_order_release);
                 }
                 
-                listItem->setClickListener([overlayFile, newStarred, overlayFileName, overlayName, overlayVersion, requiresHOS21Handling, supportsHOS21](s64 keys) {
+                listItem->setClickListener([overlayFile, newStarred, overlayFileName, overlayName, overlayVersion, requiresAMS110Handling, supportsAMS110](s64 keys) {
                     if (runningInterpreter.load(std::memory_order_acquire)) return false;
                     
                     if (simulatedMenu.load(std::memory_order_acquire)) {
                         keys |= SYSTEM_SETTINGS_KEY;
                     }
                     
-                    if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) && !requiresHOS21Handling) {
+                    if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) && !requiresAMS110Handling) {
                         disableSound.store(true, std::memory_order_release);
                         
                         std::string useOverlayLaunchArgs, overlayLaunchArgs;
@@ -6306,7 +6306,7 @@ public:
                         returnJumpItemName = returnName;
                         returnJumpItemValue = hideOverlayVersions ? "" : overlayVersion;
                         jumpItemName = jumpItemValue = "";
-                        tsl::changeTo<SettingsMenu>(overlayFileName, OVERLAY_STR, overlayName, overlayVersion, "", !supportsHOS21);
+                        tsl::changeTo<SettingsMenu>(overlayFileName, OVERLAY_STR, overlayName, overlayVersion, "", !supportsAMS110);
                         triggerRumbleClick.store(true, std::memory_order_release);
                         triggerSettingsSound.store(true, std::memory_order_release);
                         return true;
@@ -6328,7 +6328,7 @@ public:
                     }
                     return false;
                 });
-                if (requiresHOS21Handling) {
+                if (requiresAMS110Handling) {
                     listItem->isLocked = true;
                 }
                 listItem->disableClickAnimation();
@@ -7157,7 +7157,7 @@ void initializeSettingsAndDirectories() {
     setDefaultValue("hide_user_guide", FALSE_STR, hideUserGuide);
     setDefaultValue("hide_hidden", FALSE_STR, hideHidden);
     setDefaultValue("hide_delete", FALSE_STR, hideDelete);
-    if (usingHOS21orHigher) {
+    if (usingAMS110orHigher) {
         //setDefaultValue("hide_force_support", TRUE_STR, hideForceSupport);
         setDefaultValue("hide_unsupported", FALSE_STR, hideUnsupported);
     }
