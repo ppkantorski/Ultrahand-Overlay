@@ -338,9 +338,9 @@ private:
         listItem->setClickListener([listItem, targetMenu](uint64_t keys) {
             if (runningInterpreter.load(acquire))
                 return false;
-            
+
             if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
-                
+
                 if (targetMenu == "softwareUpdateMenu") {
                     deleteFileOrDirectory(SETTINGS_PATH+"RELEASE.ini");
                     downloadFile(LATEST_RELEASE_INFO_URL, SETTINGS_PATH);
@@ -1185,7 +1185,7 @@ public:
             addHeader(list, MENU_SETTINGS);
             hideUserGuide = getBoolValue("hide_user_guide", false); // FALSE_STR default
             createToggleListItem(list, USER_GUIDE, hideUserGuide, "hide_user_guide", true, true, true);
-            if (usingAMS110orHigher) {
+            if (requiresLNY2) {
                 //hideForceSupport = getBoolValue("hide_force_support", true); // FALSE_STR default
                 //createToggleListItem(list, "Show Force Support", hideForceSupport, "hide_force_support", true);
                 hideUnsupported = getBoolValue("hide_unsupported", false); // FALSE_STR default
@@ -1633,8 +1633,8 @@ public:
                     item->setClickListener(navClick(entryName, entryMode, title, version, MODE_STR, item));
                     list->addItem(item);
                 }
-                //if (!hideForceSupport && usingAMS110orHigher && requiresAMS110Handling) {
-                if (usingAMS110orHigher && requiresAMS110Handling) {
+                //if (!hideForceSupport && requiresLNY2 && requiresAMS110Handling) {
+                if (requiresLNY2 && requiresAMS110Handling) {
                     createAndAddToggleListItem(list, "Force LNY2 Support",
                         false, "force_support", getValue("force_support"), settingsIniPath, entryName, true);
                 }
@@ -6056,29 +6056,21 @@ public:
                     overlaysNeedsUpdate = true;
     
                     // Build entry key with single allocation
-                    overlayEntryKey.clear();
-                    overlayEntryKey.reserve(4 + overlayName.size() + 1 + overlayName.size() + 1 + 
-                                           overlayVersion.size() + 1 + overlayFileName.size() + 8);
-                    overlayEntryKey = "0020";
-                    overlayEntryKey += overlayName;
-                    overlayEntryKey += ':';
-                    overlayEntryKey += overlayName;
-                    overlayEntryKey += ':';
-                    overlayEntryKey += overlayVersion;
-                    overlayEntryKey += ':';
-                    overlayEntryKey += overlayFileName;
-                    overlayEntryKey += ':';
-                    overlayEntryKey += (usingLibUltrahand ? '1' : '0');
-                    overlayEntryKey += ':';
-                    overlayEntryKey += (supportsAMS110 ? '1' : '0');
-                    overlayEntryKey += ":0";
+                    //overlayEntryKey.clear();
+                    //overlayEntryKey.reserve(4 + overlayName.size() + 1 + overlayName.size() + 1 + 
+                    //                       overlayVersion.size() + 1 + overlayFileName.size() + 8);
+
+                    overlayEntryKey = "0020" + overlayName + ':' + overlayName + ':' + 
+                                      overlayVersion + ':' + overlayFileName + ':' + 
+                                      (usingLibUltrahand ? '1' : '0') + ':' + 
+                                      (supportsAMS110 ? '1' : '0') + ":0";
                     overlaySet.emplace(std::move(overlayEntryKey));
                 } else {
                     const std::string& hide = getValueOrDefault(it->second, HIDE_STR, FALSE_STR);
                     const bool isHidden = (hide == TRUE_STR);
                     
                     if (isHidden) {
-                        if (!hideUnsupported || !usingAMS110orHigher || 
+                        if (!hideUnsupported || !requiresLNY2 || 
                             usingLNY2(OVERLAY_PATH + overlayFileName) || 
                             getValueOrDefault(it->second, "force_support", FALSE_STR) == TRUE_STR) {
                             drawHiddenTab = true;
@@ -6099,28 +6091,18 @@ public:
                         const bool forceAMS110Support = getValueOrDefault(it->second, "force_support", FALSE_STR) == TRUE_STR;
     
                         // Build entry key with single allocation
-                        overlayEntryKey.clear();
-                        const bool isStarred = (starred == TRUE_STR);
-                        const size_t estimatedSize = (isStarred ? 3 : 0) + priority.size() + 
-                                                    assignedName.size() * 2 + assignedVersion.size() + 
-                                                    overlayFileName.size() + 10;
-                        overlayEntryKey.reserve(estimatedSize);
+                        //overlayEntryKey.clear();
+                        //const bool isStarred = (starred == TRUE_STR);
+                        //const size_t estimatedSize = (isStarred ? 3 : 0) + priority.size() + 
+                        //                            assignedName.size() * 2 + assignedVersion.size() + 
+                        //                            overlayFileName.size() + 10;
+                        //overlayEntryKey.reserve(estimatedSize);
                         
-                        if (isStarred) overlayEntryKey = "-1:";
-                        overlayEntryKey += priority;
-                        overlayEntryKey += assignedName;
-                        overlayEntryKey += ':';
-                        overlayEntryKey += assignedName;
-                        overlayEntryKey += ':';
-                        overlayEntryKey += assignedVersion;
-                        overlayEntryKey += ':';
-                        overlayEntryKey += overlayFileName;
-                        overlayEntryKey += ':';
-                        overlayEntryKey += (usingLibUltrahand ? '1' : '0');
-                        overlayEntryKey += ':';
-                        overlayEntryKey += (supportsAMS110 ? '1' : '0');
-                        overlayEntryKey += ':';
-                        overlayEntryKey += (forceAMS110Support ? '1' : '0');
+                        overlayEntryKey = (starred == TRUE_STR ? "-1:" : "") + priority + assignedName + ':' + 
+                                          assignedName + ':' + assignedVersion + ':' + overlayFileName + ':' + 
+                                          (usingLibUltrahand ? '1' : '0') + ':' + 
+                                          (supportsAMS110 ? '1' : '0') + ':' + 
+                                          (forceAMS110Support ? '1' : '0');
                         overlaySet.emplace(std::move(overlayEntryKey));
                     }
                 }
@@ -6178,7 +6160,7 @@ public:
                     overlayName.assign(taintedOverlayFileName, positions[5] + 1, positions[4] - positions[5] - 1);
                 }
     
-                const bool requiresAMS110Handling = (usingAMS110orHigher && !supportsAMS110 && !forceAMS110Support);
+                const bool requiresAMS110Handling = (requiresLNY2 && !supportsAMS110 && !forceAMS110Support);
                 if (hideUnsupported && requiresAMS110Handling)
                     continue;
     
@@ -7157,7 +7139,7 @@ void initializeSettingsAndDirectories() {
     setDefaultValue("hide_user_guide", FALSE_STR, hideUserGuide);
     setDefaultValue("hide_hidden", FALSE_STR, hideHidden);
     setDefaultValue("hide_delete", FALSE_STR, hideDelete);
-    if (usingAMS110orHigher) {
+    if (requiresLNY2) {
         //setDefaultValue("hide_force_support", TRUE_STR, hideForceSupport);
         setDefaultValue("hide_unsupported", FALSE_STR, hideUnsupported);
     }
