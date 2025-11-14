@@ -2185,7 +2185,7 @@ void applyReplaceIniPlaceholder(std::string& arg, const std::string& commandName
             trim(iniKey);
             removeQuotes(iniKey);
             
-            replacement = parseValueFromIniSection(iniPath, iniSection, iniKey);
+            replacement = returnOrNull(parseValueFromIniSection(iniPath, iniSection, iniKey));
         } else {
             // Check if the content is an integer
             if (std::all_of(placeholderContent.begin(), placeholderContent.end(), ::isdigit)) {
