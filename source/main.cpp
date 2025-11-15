@@ -1185,16 +1185,16 @@ public:
             addHeader(list, MENU_SETTINGS);
             hideUserGuide = getBoolValue("hide_user_guide", false); // FALSE_STR default
             createToggleListItem(list, USER_GUIDE, hideUserGuide, "hide_user_guide", true, true, true);
+            hideHidden = getBoolValue("hide_hidden", false); // FALSE_STR default
+            createToggleListItem(list, SHOW_HIDDEN, hideHidden, "hide_hidden", true, true);
+            hideDelete = getBoolValue("hide_delete", false); // FALSE_STR default
+            createToggleListItem(list, SHOW_DELETE, hideDelete, "hide_delete", true);
             if (requiresLNY2) {
                 //hideForceSupport = getBoolValue("hide_force_support", true); // FALSE_STR default
                 //createToggleListItem(list, "Show Force Support", hideForceSupport, "hide_force_support", true);
                 hideUnsupported = getBoolValue("hide_unsupported", false); // FALSE_STR default
                 createToggleListItem(list, SHOW_UNSUPPORTED, hideUnsupported, "hide_unsupported", true, true, true);
             }
-            hideHidden = getBoolValue("hide_hidden", false); // FALSE_STR default
-            createToggleListItem(list, SHOW_HIDDEN, hideHidden, "hide_hidden", true, true);
-            hideDelete = getBoolValue("hide_delete", false); // FALSE_STR default
-            createToggleListItem(list, SHOW_DELETE, hideDelete, "hide_delete", true);
             usePageSwap = getBoolValue("page_swap", false); // FALSE_STR default
             createToggleListItem(list, PAGE_SWAP, usePageSwap, "page_swap", false, true);
 
@@ -1635,7 +1635,7 @@ public:
                 }
                 //if (!hideForceSupport && requiresLNY2 && requiresAMS110Handling) {
                 if (requiresLNY2 && requiresAMS110Handling) {
-                    createAndAddToggleListItem(list, "Force LNY2 Support",
+                    createAndAddToggleListItem(list, FORCE_LNY2_SUPPORT,
                         false, "force_support", getValue("force_support"), settingsIniPath, entryName, true);
                 }
             } else if (entryMode == PACKAGE_STR) {
