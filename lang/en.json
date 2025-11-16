@@ -26,7 +26,7 @@
     "HIDE_OVERLAY": "Hide Overlay",
     "HIDE_PACKAGE": "Hide Package",
     "LAUNCH_ARGUMENTS": "Launch Arguments",
-    "FORCE_LNY2_SUPPORT" "Force LNY2 Support",
+    "FORCE_LNY2_SUPPORT": "Force LNY2 Support",
     "QUICK_LAUNCH": "Quick Launch",
     "BOOT_COMMANDS": "Boot Commands",
     "EXIT_COMMANDS": "Exit Commands",
