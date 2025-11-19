@@ -4413,17 +4413,20 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             std::string destinationPath = cmd[2];
             preprocessPath(destinationPath, packagePath);
             bool downloadSuccess = false;
-            for (size_t i = 0; i < 3; ++i) {
-                downloadSuccess = downloadFile(fileUrl, destinationPath);
-                if (abortDownload.load(std::memory_order_acquire)) {
-                    downloadSuccess = false;
-                    break;
-                }
-                if (downloadSuccess) break;
 
-                // ADD THIS: Give time for cleanup before retry
-                if (i < 2) {  // Don't sleep after last attempt
-                    svcSleepThread(200'000'000);
+            if (!ult::limitedMemory) {
+                for (size_t i = 0; i < 3; ++i) {
+                    downloadSuccess = downloadFile(fileUrl, destinationPath);
+                    if (abortDownload.load(std::memory_order_acquire)) {
+                        downloadSuccess = false;
+                        break;
+                    }
+                    if (downloadSuccess) break;
+
+                    // ADD THIS: Give time for cleanup before retry
+                    if (i < 2) {  // Don't sleep after last attempt
+                        svcSleepThread(200'000'000);
+                    }
                 }
             }
             commandSuccess.store(

@@ -330,6 +330,8 @@ private:
     //std::string lastSelectedListItemFooter = "";
     bool notifyRebootIsRequiredNow = false;
 
+    bool exitOnBack = false;
+
     bool rightAlignmentState;
 
     void addListItem(tsl::elm::List* list, const std::string& title, const std::string& value, const std::string& targetMenu) {
@@ -784,6 +786,9 @@ public:
             }
             addListItem(list, WIDGET, DROPDOWN_SYMBOL, "widgetMenu");
             addListItem(list, MISCELLANEOUS, DROPDOWN_SYMBOL, "miscMenu");
+
+            addGap(list, 12);
+
         } else if (dropdownSelection == KEY_COMBO_STR) {
             addHeader(list, KEY_COMBO);
             std::string defaultCombo = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, KEY_COMBO_STR);
@@ -907,11 +912,11 @@ public:
             tableData.reserve(7); // Max size needed is 7 rows
             
             // Cache bootloader string to avoid redundant empty() check
-            const std::string bootloaderStr = hekateVersion.empty() ? "fusee" : "hekate " + hekateVersion;
+            const std::string hekateStr = hekateVersion.empty() ? UNAVAILABLE_SELECTION : hekateVersion;
             
             tableData = {
                 {FIRMWARE, "", versionString},
-                {BOOTLOADER, "", bootloaderStr},
+                {"└ hekate", "", hekateStr},
                 {LOCAL_IP, "", getLocalIpAddress()}
             };
             addTable(list, tableData, "", 164, 20, 28, 4);
@@ -927,7 +932,7 @@ public:
                 {"└ eMMC ", "", getStorageInfo("emmc")},
                 {"└ SD Card", "", getStorageInfo("sdmc")}
             };
-            addTable(list, tableData, "", 164, 20, 30, 4);
+            addTable(list, tableData, "", 164, 20, 28, 4);
             
             // CPU, GPU, and SOC info
             tableData.clear();
@@ -950,7 +955,9 @@ public:
             }
             addTable(list, tableData, "", 164, 20, -2, 4);
             
-            addHeader(list, COMMANDS);
+            //addHeader(list, COMMANDS);
+
+            addGap(list, 33);
             
             // Get system memory info
             u64 RAM_Used_system_u, RAM_Total_system_u;
@@ -966,18 +973,140 @@ public:
             const char* ramColor = freeRamMB >= 9.0f ? "healthy_ram" : (freeRamMB >= 3.0f ? "neutral_ram" : "bad_ram");
             
             tableData.clear();
-            tableData = {{NOTICE, "", UTILIZES + " 2 MB (" + ramString + ")"}};
-            addTable(list, tableData, "", 164, 8, 7, 0, DEFAULT_STR, DEFAULT_STR, ramColor, RIGHT_STR, true);
-            
+            tableData = {{"System Memory", "", ramString}};
+            addTable(list, tableData, "", 165+2, 19-2, 19-2, 0, "header", ramColor, DEFAULT_STR, RIGHT_STR, true, true);
+
+            //addGap(list, 12);
+
             // Memory expansion toggle - single evaluation, short-circuit OR
-            useMemoryExpansion = ult::expandedMemory || 
-                                 (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "memory_expansion") == TRUE_STR);
-            createToggleListItem(list, MEMORY_EXPANSION, useMemoryExpansion, "memory_expansion", false, false, false, false);
+            //useMemoryExpansion = ult::expandedMemory || 
+            //                     (parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "memory_expansion") == TRUE_STR);
+            //createToggleListItem(list, MEMORY_EXPANSION, useMemoryExpansion, "memory_expansion", false, false, false, false);
             
+            // At the top of your function/class, get current heap size
+            //OverlayHeapSize currentHeapSize = getCurrentHeapSize();
+            
+            // Create step descriptions for the trackbar
+            std::vector<std::string> heapSizeLabels = {"4 MB", "6 MB", "8 MB", "10 MB"};
+            
+            // Create the V2 trackbar
+            auto* heapTrackbar = new tsl::elm::NamedStepTrackBarV2(
+                "Overlay Heap Size",
+                "",  // Empty packagePath - callback will handle everything
+                heapSizeLabels,
+                nullptr, nullptr, {}, "",  // No command system needed
+                false,   // unlockedTrackbar - can drag immediately
+                false   // executeOnEveryTick - only save on release
+            );
+            
+            // Set the initial position based on current heap size
+            u8 initialStep = 1; // Default to 6MB (index 1)
+            switch (currentHeapSize) {
+                case OverlayHeapSize::Size_4MB:  initialStep = 0; break;
+                case OverlayHeapSize::Size_6MB:  initialStep = 1; break;
+                case OverlayHeapSize::Size_8MB:  initialStep = 2; break;
+                case OverlayHeapSize::Size_10MB: initialStep = 3; break;
+            }
+            
+            
+            // Create separate trackers for each notification type
+            auto downloadsNotificationShown = std::make_shared<bool>(false);
+            auto memoryNotificationShown = std::make_shared<bool>(false);
+            
+            // Use simple callback - gets called when user releases the trackbar
+            heapTrackbar->setSimpleCallback([this, freeRamMB, downloadsNotificationShown, memoryNotificationShown](s16 value, s16 index) {
+                // Map step index → heap size enum
+                OverlayHeapSize newHeapSize;
+                switch (index) {
+                    case 0: newHeapSize = OverlayHeapSize::Size_4MB; break;
+                    case 1: newHeapSize = OverlayHeapSize::Size_6MB; break;
+                    case 2: newHeapSize = OverlayHeapSize::Size_8MB; break;
+                    case 3: newHeapSize = OverlayHeapSize::Size_10MB; break;
+                    default: return;
+                }
+            
+                // Convert enum → megabytes
+                auto toMB = [](OverlayHeapSize s) -> u32 {
+                    switch (s) {
+                        case OverlayHeapSize::Size_4MB:  return 4;
+                        case OverlayHeapSize::Size_6MB:  return 6;
+                        case OverlayHeapSize::Size_8MB:  return 8;
+                        case OverlayHeapSize::Size_10MB: return 10;
+                    }
+                    return 0;
+                };
+            
+                const u32 oldMB = toMB(currentHeapSize);
+                const u32 newMB = toMB(newHeapSize);
+            
+                // If shrinking heap → ALWAYS allowed
+                if (newMB <= oldMB) {
+                    setOverlayHeapSize(newHeapSize);
+                    this->exitOnBack = (currentHeapSize != newHeapSize);
+                    if (newMB == 4 && tsl::notification) {
+                        // First time for THIS notification OR wait until not active
+                        if (!*downloadsNotificationShown || !tsl::notification->isActive()) {
+                            tsl::notification->show(std::string("  ")+"Downloads will be disabled.", 24);
+                            *downloadsNotificationShown = true;
+                        }
+                    }
+                    return;
+                }
+                
+                // Calculate total memory that would be available after freeing current heap
+                // When overlay restarts: current heap is freed, then new heap is allocated
+                const float totalAvailableMB = freeRamMB + static_cast<float>(oldMB);
+                
+                // Safety margin accounts for:
+                // - System overhead during overlay restart
+                // - Memory fragmentation
+                // - Other processes that might allocate memory between restart
+                constexpr float SAFETY_MARGIN_MB = 5.0f;
+            
+                // Check if new heap size fits in total available memory
+                if (static_cast<float>(newMB) > (totalAvailableMB - SAFETY_MARGIN_MB)) {
+                    // Not enough memory for the new heap size
+                    if (tsl::notification) {
+                        // First time for THIS notification OR wait until not active
+                        if (!*memoryNotificationShown || !tsl::notification->isActive()) {
+                            tsl::notification->show(std::string("  ")+"Not enough memory.");
+                            *memoryNotificationShown = true;
+                        }
+                    }
+                    setOverlayHeapSize(currentHeapSize);
+                    this->exitOnBack = false;
+                } else {
+                    // Enough RAM → allow change
+                    setOverlayHeapSize(newHeapSize);
+                    this->exitOnBack = (currentHeapSize != newHeapSize);
+                }
+            });
+            heapTrackbar->setProgress(initialStep);
+            heapTrackbar->disableClickAnimation();
+            list->addItem(heapTrackbar);
+
+            addGap(list, 12);
+
+            // Add an "Exit Overlay System" menu item
+            auto* exitItem = new tsl::elm::ListItem("Exit Overlay System", "", true);
+            exitItem->setClickListener([](uint64_t keys) {
+                if ((keys & KEY_A) && !(keys & ~KEY_A & ALL_KEYS_MASK)) {
+                    if (requestOverlayExit()) {
+                        // Optional: show toast "Exiting overlay system..."
+                        //tsl::goBack(4); // Go back to close current menu
+                        ult::launchingOverlay.store(true, std::memory_order_release);
+                        tsl::Overlay::get()->close(); // Close the overlay
+                    }
+                    return true;
+                }
+                return false;
+            });
+            list->addItem(exitItem);
+
             // Reboot required info
-            tableData.clear();
-            tableData = {{"", "", REBOOT_REQUIRED}};
-            addTable(list, tableData, "", 164, 28, 0, 0, DEFAULT_STR, DEFAULT_STR, DEFAULT_STR, RIGHT_STR, true);
+            //tableData.clear();
+            //tableData = {{"", "", REBOOT_REQUIRED}};
+            //addTable(list, tableData, "", 164, 28, 0, 0, DEFAULT_STR, DEFAULT_STR, DEFAULT_STR, RIGHT_STR, true);
         
                 
         } else if (dropdownSelection == "themeMenu") {
@@ -1348,6 +1477,7 @@ public:
                 const bool backKeyPressed = !isTouching && (((keysDown & KEY_B) && !(keysHeld & ~KEY_B & ALL_KEYS_MASK)));
                 
                 if (backKeyPressed) {
+
                     allowSlide.exchange(false, std::memory_order_acq_rel);
                     unlockedSlide.exchange(false, std::memory_order_acq_rel);
                     inSettingsMenu = false;
@@ -1375,6 +1505,12 @@ public:
             const bool backKeyPressed = !isTouching && (((keysDown & KEY_B) && !(keysHeld & ~KEY_B & ALL_KEYS_MASK)));
             
             if (backKeyPressed) {
+                if (exitOnBack) {
+                    ult::launchingOverlay.store(true, std::memory_order_release);
+                    tsl::Overlay::get()->close();
+                    return true;
+                }
+
                 allowSlide.exchange(false, std::memory_order_acq_rel);
                 unlockedSlide.exchange(false, std::memory_order_acq_rel);
                 inSubSettingsMenu = false;
@@ -7429,7 +7565,10 @@ public:
         //if (R_SUCCEEDED(socketInitializeDefault())) {
             //initializeCurl();
         //}
-        socketInitializeDefault();
+        if (!ult::limitedMemory)
+            socketInitializeDefault();
+
+
         unpackDeviceInfo();
 
         // read commands from root package's boot_package.ini
@@ -7448,10 +7587,10 @@ public:
                 deleteFileOrDirectory(FUSE_DATA_INI_PATH);
 
             // initialize expanded memory on boot
-            setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "memory_expansion", (loaderTitle == "nx-ovlloader+") ? TRUE_STR : FALSE_STR);
+            //setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "memory_expansion", (loaderTitle == "nx-ovlloader+") ? TRUE_STR : FALSE_STR);
 
             if (tsl::notification)
-                tsl::notification->show(ULTRAHAND_HAS_STARTED);
+                tsl::notification->show("  "+ULTRAHAND_HAS_STARTED);
             
         }
         
@@ -7473,7 +7612,8 @@ public:
             executeIniCommands(PACKAGE_PATH + EXIT_PACKAGE_FILENAME, "exit");
 
         //cleanupCurl();
-        socketExit();
+        if (!ult::limitedMemory)
+            socketExit();
     }
     
 };
