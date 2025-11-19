@@ -20,7 +20,7 @@
  *   of the project's documentation and must remain intact.
  *
  *  Licensed under GPLv2
- *  Copyright (c) 2024 ppkantorski
+ *  Copyright (c) 2023-2025 ppkantorski
  ********************************************************************************/
 
 #define NDEBUG
@@ -1051,7 +1051,7 @@ public:
                     if (newMB == 4 && tsl::notification) {
                         // First time for THIS notification OR wait until not active
                         if (!*downloadsNotificationShown || !tsl::notification->isActive()) {
-                            tsl::notification->show(std::string("  ")+"Downloads will be disabled.", 24);
+                            tsl::notification->show(std::string("  ")+"Downloads will be disabled.", 23);
                             *downloadsNotificationShown = true;
                         }
                     }
