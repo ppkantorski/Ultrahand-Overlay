@@ -522,13 +522,13 @@ private:
         }
     }
 
-
+    
     void addUpdateButton(tsl::elm::List* list, const std::string& title, const std::string& downloadUrl, const std::string& targetPath, const std::string& movePath, const std::string& versionLabel) {
         auto* listItem = new tsl::elm::ListItem(title);
         listItem->setValue(versionLabel, true);
         if (isVersionGreaterOrEqual(versionLabel.c_str(), APP_VERSION) && versionLabel != APP_VERSION)
             listItem->setValueColor(tsl::onTextColor);
-
+    
         listItem->setClickListener([listItem, title, downloadUrl, targetPath, movePath](uint64_t keys) {
             static bool executingCommands = false;
             if (runningInterpreter.load(acquire)) {
@@ -539,86 +539,74 @@ private:
                 }
                 executingCommands = false;
             }
-
-            std::vector<std::vector<std::string>> interpreterCommands;
-            if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
-                
-                executingCommands = true;
-                isDownloadCommand.store(true, release);
+    
+            if (!(keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
+                return false;
+            }
+    
+            executingCommands = true;
+            isDownloadCommand.store(true, release);
+            
+            std::vector<std::vector<std::string>> interpreterCommands = {
+                {"try:"},
+                {"delete", targetPath},
+                {"download", downloadUrl, DOWNLOADS_PATH}
+            };
+    
+            // === UPDATE_ULTRAHAND case ===
+            if (title == UPDATE_ULTRAHAND) {
                 const bool disableLoaderUpdate = isFile(FLAGS_PATH+"NO_LOADER_UPDATES.flag");
                 const bool disableSoundEffectsUpdate = isFile(FLAGS_PATH+"NO_SOUND_EFFECTS_UPDATES.flag");
-                if (title == UPDATE_ULTRAHAND) {
-                    const std::string versionLabel = cleanVersionLabel(parseValueFromIniSection((SETTINGS_PATH+"RELEASE.ini"), "Release Info", "latest_version"));
-                    std::string loaderUrl, loaderPlusUrl;
-                    if (isVersionGreaterOrEqual(amsVersion,"1.8.0")) {
-                        loaderUrl = NX_OVLLOADER_ZIP_URL;
-                        loaderPlusUrl = NX_OVLLOADER_PLUS_ZIP_URL;
-                    } else {
-                        loaderUrl = OLD_NX_OVLLOADER_ZIP_URL;
-                        loaderPlusUrl = OLD_NX_OVLLOADER_PLUS_ZIP_URL;
-                    }
-
-                    // Build base commands that are always needed
-                    interpreterCommands = {
-                        {"try:"},
-                        {"delete", targetPath},
-                        {"download", UPDATER_PAYLOAD_URL, PAYLOADS_PATH},
-                        {"download", INCLUDED_THEME_FOLDER_URL + "ultra.ini", THEMES_PATH},
-                        {"download", INCLUDED_THEME_FOLDER_URL + "ultra-blue.ini", THEMES_PATH}
-                    };
-                    
-                    // Conditionally add loader downloads only if not disabled
-                    if (!disableLoaderUpdate) {
-                        interpreterCommands.push_back({"download", loaderUrl, EXPANSION_PATH});
-                        interpreterCommands.push_back({"download", loaderPlusUrl, EXPANSION_PATH});
-                    }
-                    if (!disableSoundEffectsUpdate) {
-                        interpreterCommands.push_back({"download", SOUND_EFFECTS_URL, SOUNDS_PATH});
-                        interpreterCommands.push_back({"unzip", SOUNDS_PATH + "sounds.zip", SOUNDS_PATH});
-                    }
-                    
-                    // Add the main download
-                    interpreterCommands.push_back({"download", downloadUrl, DOWNLOADS_PATH});
-                    
-                    // Conditionally add version label
-                    if (!versionLabel.empty()) {
-                        interpreterCommands.push_back({"set-json-val", HB_APPSTORE_JSON, "version", versionLabel});
-                    }
-                } else {
-                    interpreterCommands = {
-                        {"try:"},
-                        {"delete", targetPath},
-                        {"download", downloadUrl, DOWNLOADS_PATH}
-                    };
+                const std::string versionLabel = cleanVersionLabel(parseValueFromIniSection((SETTINGS_PATH+"RELEASE.ini"), "Release Info", "latest_version"));
+                
+                // All downloads first
+                interpreterCommands.push_back({"download", UPDATER_PAYLOAD_URL, PAYLOADS_PATH});
+                interpreterCommands.push_back({"download", INCLUDED_THEME_FOLDER_URL + "ultra.ini", THEMES_PATH});
+                interpreterCommands.push_back({"download", INCLUDED_THEME_FOLDER_URL + "ultra-blue.ini", THEMES_PATH});
+                
+                if (!disableLoaderUpdate) {
+                    std::string loaderUrl = isVersionGreaterOrEqual(amsVersion,"1.8.0") ? NX_OVLLOADER_ZIP_URL : OLD_NX_OVLLOADER_ZIP_URL;
+                    interpreterCommands.push_back({"download", loaderUrl, DOWNLOADS_PATH});
                 }
                 
-                if (movePath == LANG_PATH) { // for language update commands
-                    interpreterCommands.push_back({"unzip", targetPath, movePath});
-                } else {
-                    //interpreterCommands.push_back({"download", INCLUDED_THEME_URL, THEMES_PATH});
-                    interpreterCommands.push_back({"move", targetPath, movePath});
-                    if (!disableLoaderUpdate)
-                        interpreterCommands.push_back({"unzip", EXPANSION_PATH + loaderTitle + ".zip", ROOT_PATH});
+                if (!disableSoundEffectsUpdate) {
+                    interpreterCommands.push_back({"download", SOUND_EFFECTS_URL, SOUNDS_PATH});
                 }
                 
-                interpreterCommands.push_back({"delete", targetPath});
-
-
-                runningInterpreter.store(true, release);
-                executeInterpreterCommands(std::move(interpreterCommands), "", "");
-                listItem->disableClickAnimation();
-                //startInterpreterThread();
-
-                listItem->setValue(INPROGRESS_SYMBOL);
-                //lastSelectedListItem = nullptr;
-                lastSelectedListItem = listItem;
-                shiftItemFocus(listItem);
-                lastRunningInterpreter.store(true, std::memory_order_release);
-                if (lastSelectedListItem)
-                    lastSelectedListItem->triggerClickAnimation();
-                return true;
+                // Process downloaded files
+                if (!disableSoundEffectsUpdate) {
+                    interpreterCommands.push_back({"unzip", SOUNDS_PATH + "sounds.zip", SOUNDS_PATH});
+                    interpreterCommands.push_back({"delete", SOUNDS_PATH + "sounds.zip"});
+                }
+                
+                if (!disableLoaderUpdate) {
+                    interpreterCommands.push_back({"unzip", DOWNLOADS_PATH + "nx-ovlloader.zip", ROOT_PATH});
+                    interpreterCommands.push_back({"delete", DOWNLOADS_PATH + "nx-ovlloader.zip"});
+                }
+                
+                interpreterCommands.push_back({"move", targetPath, movePath});
+                
+                if (!versionLabel.empty()) {
+                    interpreterCommands.push_back({"set-json-val", HB_APPSTORE_JSON, "version", versionLabel});
+                }
+            } 
+            // === UPDATE_LANGUAGES case ===
+            else {
+                interpreterCommands.push_back({"unzip", targetPath, movePath});
             }
-            return false;
+            
+            interpreterCommands.push_back({"delete", targetPath});
+    
+            runningInterpreter.store(true, release);
+            executeInterpreterCommands(std::move(interpreterCommands), "", "");
+            listItem->disableClickAnimation();
+            listItem->setValue(INPROGRESS_SYMBOL);
+            lastSelectedListItem = listItem;
+            shiftItemFocus(listItem);
+            lastRunningInterpreter.store(true, std::memory_order_release);
+            if (lastSelectedListItem)
+                lastSelectedListItem->triggerClickAnimation();
+            return true;
         });
         list->addItem(listItem);
     }
