@@ -984,7 +984,7 @@ public:
             
             // Create the V2 trackbar
             auto* heapTrackbar = new tsl::elm::NamedStepTrackBarV2(
-                "Overlay Heap Size",
+                "Overlay Memory",
                 "",  // Empty packagePath - callback will handle everything
                 heapSizeLabels,
                 nullptr, nullptr, {}, "",  // No command system needed
@@ -1651,9 +1651,11 @@ public:
     ) {
         if (currentValue.empty() && !initialState) currentValue = FALSE_STR;
 
+        auto forceSupportNotificationShown = std::make_shared<bool>(false);
+
         auto* toggleListItem = new tsl::elm::ToggleListItem(label, initialState, ON, OFF);
         toggleListItem->setState(currentValue != FALSE_STR);
-        toggleListItem->setStateChangedListener([this, iniKey, listItem = toggleListItem, handleReload](bool state) {
+        toggleListItem->setStateChangedListener([this, iniKey, listItem = toggleListItem, handleReload, forceSupportNotificationShown](bool state) {
             tsl::Overlay::get()->getCurrentGui()->requestFocus(listItem, tsl::FocusDirection::None);
             setIniFileValue(this->settingsIniPath, this->entryName, iniKey, state ? TRUE_STR : FALSE_STR);
             if (handleReload) {
@@ -1661,7 +1663,11 @@ public:
             }
             if (iniKey == "force_support") {
                 if (state && tsl::notification) {
-                    tsl::notification->show("  "+FORCED_SUPPORT_WARNING, 20);
+                    // First time for THIS notification OR wait until not active
+                    if (!*forceSupportNotificationShown || !tsl::notification->isActive()) {
+                        tsl::notification->show("  "+FORCED_SUPPORT_WARNING, 20);
+                        *forceSupportNotificationShown = true;
+                    }
                 }
             }
         });
@@ -1711,7 +1717,7 @@ public:
         list->addItem(listItem);
     }
     
-    void addDeleteItem(tsl::elm::List* list, const std::string& deleteType) {
+    void addDeleteItem(tsl::elm::List* list, bool isOverlay) {
         //static const std::vector<std::vector<std::string>> tableData = {
         //    {"", "", ""}
         //};
@@ -1719,7 +1725,7 @@ public:
 
         addGap(list, 12);
 
-        auto* deleteListItem = new tsl::elm::ListItem("Delete "+deleteType);
+        auto* deleteListItem = new tsl::elm::ListItem(isOverlay ? "Delete Overlay" : "Delete Package");
         deleteListItem->setValue("");
         
         deleteListItem->setClickListener([this, deleteListItem](uint64_t keys) -> bool {
@@ -1833,7 +1839,7 @@ public:
                 list->addItem(item);
             }
     
-            if (!hideDelete) addDeleteItem(list , (entryMode == OVERLAY_STR ? "Overlay" : "Package"));
+            if (!hideDelete) addDeleteItem(list , (entryMode == OVERLAY_STR));
             
         } else if (dropdownSelection == MODE_STR) {
             const std::vector<std::string> modeList = splitIniList(getValue("mode_args"));
@@ -7343,7 +7349,7 @@ void initializeSettingsAndDirectories() {
     setDefaultValue("libultrahand_versions", TRUE_STR, useLibultrahandVersions);
     setDefaultValue("package_titles", FALSE_STR, usePackageTitles);
     setDefaultValue("package_versions", TRUE_STR, usePackageVersions);
-    setDefaultValue("memory_expansion", FALSE_STR, useMemoryExpansion);
+    //setDefaultValue("memory_expansion", FALSE_STR, useMemoryExpansion);
     setDefaultValue("launch_combos", TRUE_STR, useLaunchCombos);
     setDefaultValue("notifications", TRUE_STR, useNotifications);
     setDefaultValue("sound_effects", TRUE_STR, useSoundEffects);
