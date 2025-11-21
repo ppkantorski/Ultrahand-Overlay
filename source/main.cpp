@@ -6779,6 +6779,10 @@ public:
                                 }
                             }
                         }
+
+                        packageRootLayerTitle = newPackageName;
+                        packageRootLayerName = packageName;
+                        packageRootLayerVersion = packageVersion;
                 
                         returnJumpItemName = buildReturnName(newStarred, packageName, newPackageName);
                         returnJumpItemValue = hidePackageVersions ? "" : packageVersion;
