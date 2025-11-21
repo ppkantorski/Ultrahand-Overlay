@@ -331,6 +331,7 @@ private:
     //bool notifyRebootIsRequiredNow = false;
 
     bool exitOnBack = false;
+    bool softwareHasUpdated = false;
 
     bool rightAlignmentState;
 
@@ -529,12 +530,13 @@ private:
         if (isVersionGreaterOrEqual(versionLabel.c_str(), APP_VERSION) && versionLabel != APP_VERSION)
             listItem->setValueColor(tsl::onTextColor);
     
-        listItem->setClickListener([listItem, title, downloadUrl, targetPath, movePath](uint64_t keys) {
+        listItem->setClickListener([this, listItem, title, downloadUrl, targetPath, movePath](uint64_t keys) {
             static bool executingCommands = false;
             if (runningInterpreter.load(acquire)) {
                 return false;
             } else {
                 if (executingCommands && commandSuccess.load(acquire) && movePath != LANG_PATH) {
+                    softwareHasUpdated = true;
                     triggerMenuReload = true;
                 }
                 executingCommands = false;
@@ -1587,8 +1589,12 @@ public:
         
         if (triggerExit.exchange(false, std::memory_order_acq_rel)) {
             ult::launchingOverlay.store(true, std::memory_order_release);
-            tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
-            tsl::Overlay::get()->close();
+
+            if (softwareHasUpdated && requestOverlayExit()) {
+            } else {
+                tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
+            }
+            tsl::Overlay::get()->close(); // Close the overlay
         }
         
         return false;
