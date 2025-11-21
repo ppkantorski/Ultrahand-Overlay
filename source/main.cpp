@@ -7438,7 +7438,7 @@ void initializeSettingsAndDirectories() {
         if (file) {
             std::fclose(file);
         }
-    } else {
+    } else if (!useNotifications) {
         deleteFileOrDirectory(NOTIFICATIONS_FLAG_FILEPATH);
     }
     
